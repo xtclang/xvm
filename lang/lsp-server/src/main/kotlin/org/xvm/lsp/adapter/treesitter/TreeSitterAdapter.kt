@@ -705,6 +705,22 @@ class TreeSitterAdapter : AbstractAdapter() {
         }
     }
 
+    override fun getLinkedEditingRanges(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): Adapter.LinkedEditingRanges? {
+        val (tree, name) = getIdentifierAt(uri, line, column, "linkedEditingRange") ?: return null
+        val locations = queryEngine.findAllIdentifiers(tree, name, uri)
+        if (locations.size < 2) return null
+        logger.info("linkedEditingRange '{}' -> {} ranges", name, locations.size)
+        return Adapter.LinkedEditingRanges(
+            ranges = locations.map { loc ->
+                Range(Position(loc.startLine, loc.startColumn), Position(loc.endLine, loc.endColumn))
+            },
+        )
+    }
+
     private fun isAssignmentTarget(node: XtcNode): Boolean {
         val parent = node.parent ?: return false
         return when (parent.type) {

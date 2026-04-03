@@ -9,6 +9,8 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
+    ConfigurationParams,
+    ConfigurationRequest,
     LanguageClient,
     LanguageClientOptions,
     ServerOptions,
@@ -27,25 +29,57 @@ export function activate(context: vscode.ExtensionContext) {
     const javaHome = process.env.JAVA_HOME;
     const javaExecutable = javaHome ? path.join(javaHome, 'bin', 'java') : 'java';
 
+    // Log level: XTC_LOG_LEVEL env var or INFO default
+    const logLevel = process.env.XTC_LOG_LEVEL?.toUpperCase() ?? 'INFO';
+
+    // Common JVM args for the LSP server process
+    const jvmArgs = [
+        '-Dapple.awt.UIElement=true',   // macOS: no dock icon
+        '-Djava.awt.headless=true',     // no GUI components
+        `-Dxtc.logLevel=${logLevel}`,   // pass log level to LSP server
+        '-jar', serverJar
+    ];
+
     // Server options - start the LSP server as a Java process
     const serverOptions: ServerOptions = {
         run: {
             command: javaExecutable,
-            args: ['-jar', serverJar],
+            args: jvmArgs,
             transport: TransportKind.stdio
         },
         debug: {
             command: javaExecutable,
-            args: ['-jar', serverJar, '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005'],
+            args: ['-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005', ...jvmArgs],
             transport: TransportKind.stdio
         }
     };
 
-    // Client options
+    // Client options with workspace/configuration middleware.
+    // When the LSP server sends workspace/configuration for section "xtc.formatting",
+    // we return the user's VS Code settings (or XTC defaults).
     const clientOptions: LanguageClientOptions = {
         documentSelector: [{ scheme: 'file', language: 'xtc' }],
         synchronize: {
             fileEvents: vscode.workspace.createFileSystemWatcher('**/*.x')
+        },
+        middleware: {
+            workspace: {
+                configuration: (params: ConfigurationParams, token, next) => {
+                    return params.items.map(item => {
+                        if (item.section === 'xtc.formatting') {
+                            const config = vscode.workspace.getConfiguration('xtc.formatting');
+                            return {
+                                indentSize: config.get<number>('indentSize', 4),
+                                continuationIndentSize: config.get<number>('continuationIndentSize', 8),
+                                tabSize: config.get<number>('tabSize', 4),
+                                insertSpaces: config.get<boolean>('insertSpaces', true),
+                                maxLineWidth: config.get<number>('maxLineWidth', 120)
+                            };
+                        }
+                        return next(params, token);
+                    });
+                }
+            }
         }
     };
 

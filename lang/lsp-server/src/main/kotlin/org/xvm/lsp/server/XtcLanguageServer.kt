@@ -381,7 +381,7 @@ class XtcLanguageServer(
                 // td?.typeHierarchy?.let { "typeHierarchy" }, // compiler(full): type tree
                 // td?.callHierarchy?.let { "callHierarchy" }, // compiler(full): call tree
                 // td?.moniker?.let { "moniker" }, // compiler(full): cross-project IDs
-                // td?.linkedEditingRange?.let { "linkedEditingRange" }, // treesitter: linked edits
+                td?.linkedEditingRange?.let { "linkedEditingRange" }, // treesitter: linked edits
                 // td?.inlineValue?.let { "inlineValue" }, // compiler(full): debug values
                 // td?.diagnostic?.let { "diagnostic" }, // compiler: pull diagnostics
             )
@@ -459,6 +459,9 @@ class XtcLanguageServer(
 
             // Code lenses: Run action on module declarations (TreeSitterAdapter)
             codeLensProvider = CodeLensOptions(false)
+
+            // Linked editing: rename-on-type for same-name identifiers (same-file, TreeSitterAdapter)
+            linkedEditingRangeProvider = Either.forLeft(true)
 
             // Not yet advertised (enable when implemented)
             // declarationProvider = Either.forLeft(true) // compiler: go-to-declaration

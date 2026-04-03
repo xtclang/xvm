@@ -767,6 +767,21 @@ at startup to confirm they're active.
 
 ## Future Enhancements
 
+### 20. Linked Editing Ranges
+
+Linked editing ranges enable rename-on-type: when the cursor is on an identifier,
+all same-name occurrences in the file are highlighted and edited simultaneously.
+
+| # | Test | Steps | Expected |
+|---|------|-------|----------|
+| 20.1 | Basic linked editing | Place cursor on a variable name used multiple times in a method → trigger linked editing (Ctrl+Shift+F2 in VS Code, or via LSP) | All occurrences highlighted; typing renames all simultaneously |
+| 20.2 | Single occurrence | Place cursor on identifier used only once | No linked editing ranges returned (need 2+ occurrences) |
+| 20.3 | Parameter name | Place cursor on a method parameter name used in the body | Parameter declaration and all uses linked |
+| 20.4 | Class name | Place cursor on a class name that appears in the file | All same-name occurrences linked (same-file, text-based) |
+| 20.5 | Non-identifier | Place cursor on a keyword or literal | No linked editing ranges |
+
+> **Adapter support**: TreeSitter (same-file text matching). Cross-file linked editing requires compiler/SemanticModel.
+
 ### Semantic Tokens Phase 2+ (TODO)
 
 Phase 1 (Tier 1+) is implemented and enabled by default. Future phases:

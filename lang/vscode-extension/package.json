@@ -59,7 +59,44 @@
                 "command": "xtc.createProject",
                 "title": "XTC: Create New Project"
             }
-        ]
+        ],
+        "configuration": {
+            "title": "XTC Language",
+            "properties": {
+                "xtc.formatting.indentSize": {
+                    "type": "integer",
+                    "default": 4,
+                    "description": "Number of spaces per indentation level"
+                },
+                "xtc.formatting.continuationIndentSize": {
+                    "type": "integer",
+                    "default": 8,
+                    "description": "Number of spaces for continuation lines"
+                },
+                "xtc.formatting.tabSize": {
+                    "type": "integer",
+                    "default": 4,
+                    "description": "Tab width in spaces"
+                },
+                "xtc.formatting.insertSpaces": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Use spaces instead of tabs"
+                },
+                "xtc.formatting.maxLineWidth": {
+                    "type": "integer",
+                    "default": 120,
+                    "description": "Maximum line width (right margin)"
+                }
+            }
+        },
+        "configurationDefaults": {
+            "[xtc]": {
+                "editor.tabSize": 4,
+                "editor.insertSpaces": true,
+                "editor.formatOnType": true
+            }
+        }
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
