@@ -696,6 +696,100 @@ class DocumentFormattingTest {
     }
 
     // ========================================================================
+    // Multi-line parameter alignment
+    // ========================================================================
+
+    @Nested
+    @DisplayName("Multi-line parameter alignment")
+    inner class MultiLineParamTests {
+        @Test
+        @DisplayName("multi-line method parameters get continuation indent")
+        fun methodParameters() {
+            val input =
+                """
+                module myapp {
+                    class Foo {
+                        void bar(
+                Int a,
+                String b,
+                        ) {
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            // Parameters indent = countIndentDepth(parenAncestor) * 4 + 4
+            // parenAncestor is inside class_body + module_body = depth 2 -> 2*4+4 = 12
+            val expected =
+                """
+                module myapp {
+                    class Foo {
+                        void bar(
+                            Int a,
+                            String b,
+                        ) {
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            assertFormatsTo(input, expected)
+        }
+
+        @Test
+        @DisplayName("multi-line call arguments get continuation indent")
+        fun callArguments() {
+            val input =
+                """
+                module myapp {
+                    class Foo {
+                        void bar() {
+                            foo(
+                1,
+                2,
+                            );
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            // Arguments indent = countIndentDepth(parenAncestor) * 4 + 4
+            // parenAncestor is inside block + class_body + module_body = depth 3 -> 3*4+4 = 16
+            val expected =
+                """
+                module myapp {
+                    class Foo {
+                        void bar() {
+                            foo(
+                                1,
+                                2,
+                            );
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            assertFormatsTo(input, expected)
+        }
+
+        @Test
+        @DisplayName("single-line parens are not affected")
+        fun singleLineParensUnchanged() {
+            val input =
+                """
+                module myapp {
+                    class Foo {
+                        void bar(Int a, String b) {
+                        }
+                    }
+                }
+                """.trimIndent() + "\n"
+
+            assertNoEdits(input)
+        }
+    }
+
+    // ========================================================================
     // Performance
     // ========================================================================
 

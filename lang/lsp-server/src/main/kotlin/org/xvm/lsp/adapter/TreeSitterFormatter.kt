@@ -244,6 +244,16 @@ class TreeSitterFormatter {
             }
         }
 
+        // 5b. Interior of multi-line paren construct -> continuation indent from owner
+        val parenAncestor =
+            generateSequence(node) { it.parent }.firstOrNull { ancestor ->
+                val firstChild = ancestor.children.firstOrNull()
+                firstChild != null && firstChild.type == "(" && ancestor.startLine < lineIndex
+            }
+        if (parenAncestor != null) {
+            return countIndentDepth(parenAncestor) * config.indentSize + config.indentSize
+        }
+
         // 6. Case labels -> same indent as switch
         if (trimmed.startsWith("case ") || trimmed.startsWith("default:") || trimmed.startsWith("default ")) {
             val switchNode =
