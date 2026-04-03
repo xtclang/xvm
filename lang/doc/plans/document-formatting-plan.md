@@ -39,11 +39,13 @@ exists, they walk every line (or the requested range), call `computeLineIndent`,
 edits where actual != desired. Falls back to the base (trailing whitespace + final newline
 only) when no tree is available.
 
-### Always-insert final newline
+### Final newline (configurable default)
 
-The formatter unconditionally ensures every XTC file ends with `\n`, regardless of the
-`insertFinalNewline` LSP option. This matches the XTC code style rule ("ALWAYS add a
-newline at the end of every file").
+The XTC default for `insertFinalNewline` is `true` (most XTC code ends with a newline).
+However, the user can override this via editor settings — if the editor sends
+`insertFinalNewline = false` in the LSP `FormattingOptions`, the formatter respects it.
+The defaults flow through the standard resolution chain: `xtc-format.toml > editor
+config > LSP options > XTC defaults`.
 
 ### Design choice: case labels at switch indent
 
@@ -83,7 +85,7 @@ All rules derived from `lib_ecstasy/` source conventions:
 | Line comments | Same indent as surrounding code | `// comment` |
 | String literals | Never modified | preserve exact whitespace |
 | Blank lines | Preserve (don't add or remove) | keep author's intent |
-| Final newline | Always ensure file ends with `\n` | XTC convention |
+| Final newline | Ensure file ends with `\n` (XTC default, user-overridable) | configurable |
 
 ## Algorithm
 
