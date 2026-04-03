@@ -1,5 +1,8 @@
 # 9 Tree-Sitter Improvements: Implementation Plans
 
+> **Status: ALL 9 COMPLETE** (2026-04-03). Shared adapter abstraction also extracted.
+> This plan is retained for reference only.
+
 ## Overview
 
 These 9 features use only the existing tree-sitter infrastructure — no semantic model

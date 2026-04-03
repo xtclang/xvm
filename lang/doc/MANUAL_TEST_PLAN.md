@@ -54,8 +54,9 @@ Requires `JAVA_HOME` or `XTC_JAVA_HOME` pointing to Java 25+.
 2. Search for `"Selected adapter:"` or `"XTC LSP Server started"`
 3. You should see one of:
    - `"Selected adapter: TreeSitterAdapter"` - Tree-sitter is active
-   - `"Selected adapter: MockXtcCompilerAdapter"` - Mock adapter is active
-   - `"Selected adapter: MockXtcCompilerAdapter (fallback - ...)"` - Tree-sitter failed
+   - `"Selected adapter: MockAdapter"` - Mock adapter is active
+   - `"Selected adapter: MockAdapter (fallback - ...)"` - Tree-sitter failed
+4. Also verify: `"semantic tokens ENABLED (23 types, 10 modifiers)"` in the log
 
 **VS Code:**
 1. Open Output panel (Ctrl+Shift+U / Cmd+Shift+U)
@@ -715,14 +716,60 @@ prefix and select from the completion popup).
 
 ---
 
+### 18. Code Lens (Run Actions)
+
+**LSP Method:** `textDocument/codeLens`
+**Status:** ✅ Done
+**Works with:** Tree-sitter adapter (both IntelliJ and VS Code)
+
+Code lenses appear as inline annotations above module declarations. LSP4IJ (IntelliJ)
+and VS Code render them automatically from the LSP server response — no plugin code needed.
+
+| # | Test | Steps | Expected Result |
+|---|------|-------|-----------------|
+| 18.1 | Run lens on module | Open a `.x` file with `module myapp { }` | "▶ Run myapp" appears above the module declaration |
+| 18.2 | No lens on class | Open a file with only `class Foo { }` (no module) | No code lens appears |
+| 18.3 | Lens position | Check the lens annotation position | Aligned with the `module` keyword line |
+| 18.4 | Multiple files | Open two `.x` files with different modules | Each shows its own module's Run lens |
+
+---
+
+### 19. Semantic Tokens
+
+**LSP Method:** `textDocument/semanticTokens/full`
+**Status:** ✅ Done (enabled by default)
+**Works with:** Tree-sitter adapter (both IntelliJ and VS Code)
+
+Semantic tokens layer on top of TextMate highlighting, providing AST-aware coloring
+that TextMate's regex patterns cannot achieve. The server logs `semantic tokens ENABLED`
+at startup to confirm they're active.
+
+**How to verify:**
+- *IntelliJ:* Open a `.x` file — types, methods, properties, and annotations should
+  have distinct colors. Check LSP server log for `semantic tokens ENABLED`.
+- *VS Code:* Same — semantic tokens are automatically layered on top of TextMate.
+
+| # | Test | Steps | Expected Result |
+|---|------|-------|-----------------|
+| 19.1 | Types colored distinctly | Open file with `String name;` and `Int count;` | `String` and `Int` have type color (different from `name`/`count`) |
+| 19.2 | Methods vs properties | Open file with `void foo()` and `String name;` | `foo` has method color, `name` has property color |
+| 19.3 | Annotations as decorators | Add `@Override` or `@Inject` | Annotation name has decorator color |
+| 19.4 | Deprecated strikethrough | Add `@Deprecated class Old {}` | `Old` shown with strikethrough |
+| 19.5 | new Foo() as type | Write `new Person()` | `Person` colored as type, not method |
+| 19.6 | Method call coloring | Write `getName()` | `getName` colored as method call |
+| 19.7 | Static modifier | Add `static void helper()` | `helper` may show italic (static modifier) |
+| 19.8 | Enum members | Write `enum Color { Red, Green, Blue }` | `Red`, `Green`, `Blue` colored as enum members |
+| 19.9 | Parameter highlighting | Write `void foo(Int count)` | `count` has parameter color |
+| 19.10 | Namespace coloring | `module myapp` declaration | `myapp` colored as namespace |
+| 19.11 | Server log confirmation | Check LSP server log at startup | Shows `semantic tokens ENABLED (23 types, 10 modifiers)` |
+
+---
+
 ## Future Enhancements
 
 ### Semantic Tokens Phase 2+ (TODO)
 
-Phase 1 (Tier 1+) is implemented: declarations, type references, annotations, call/member
-expressions, modifiers, enum member classification, constructor call distinction (`new Foo()`
-emits `type` instead of `method`), and `@Deprecated` annotation detection are all classified
-via `SemanticTokenEncoder`. Future phases:
+Phase 1 (Tier 1+) is implemented and enabled by default. Future phases:
 - **Tier 2**: Heuristic usage-site tokens (UpperCamelCase type detection, broader property/variable classification)
 - **Tier 3** (compiler): Override tree-sitter tokens with compiler-resolved classifications
 

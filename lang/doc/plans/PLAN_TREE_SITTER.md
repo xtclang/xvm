@@ -1,4 +1,11 @@
 # PLAN: Tree-sitter Integration for XTC Language Support
+
+> **Status: COMPLETE** (2026-04-03) — All 5 phases implemented and tested.
+> The 9 tree-sitter improvements are done. The shared adapter abstraction
+> (`AdapterTree`/`AdapterNode`) has been extracted. Semantic tokens are enabled
+> by default. Code lenses provide Run actions on module declarations.
+> This plan is retained for reference only.
+
 **Goal**: Use the existing `TreeSitterGenerator` to build a functional LSP with syntax-level
 intelligence, without requiring compiler modifications.
 

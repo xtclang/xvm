@@ -1035,6 +1035,43 @@ class TreeSitterAdapter : AbstractAdapter() {
     }
 
     // ========================================================================
+    // Code lenses (run/compile actions on module declarations)
+    // ========================================================================
+
+    override fun getCodeLenses(uri: String): List<Adapter.CodeLens> {
+        logger.info("getCodeLenses: uri={}", uri.substringAfterLast('/'))
+        val tree = parsedTrees[uri] ?: return emptyList()
+        val declarations = queryEngine.findAllDeclarations(tree, uri)
+
+        return buildList {
+            for (decl in declarations) {
+                if (decl.kind != SymbolKind.MODULE) continue
+
+                val range =
+                    Adapter.Range(
+                        start = Position(decl.location.startLine, decl.location.startColumn),
+                        end = Position(decl.location.endLine, decl.location.endColumn),
+                    )
+
+                // "Run" lens — modules are the entry point in XTC
+                add(
+                    Adapter.CodeLens(
+                        range = range,
+                        command =
+                            Adapter.CodeLensCommand(
+                                title = "\u25B6 Run ${decl.name}",
+                                command = "xtc.runModule",
+                                arguments = listOf(uri, decl.name),
+                            ),
+                    ),
+                )
+            }
+        }.also {
+            logger.info("getCodeLenses -> {} lenses", it.size)
+        }
+    }
+
+    // ========================================================================
     // Document formatting (delegates to AdapterFormatter)
     // ========================================================================
 

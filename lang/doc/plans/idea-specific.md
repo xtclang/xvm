@@ -13,6 +13,53 @@ LSP4IJ configuration, or plugin-side code.
 
 The goal is to reach parity with the Java development experience in IntelliJ.
 
+## What's Done So Far
+
+| Feature | Where | How | Date |
+|---------|-------|-----|------|
+| Comment toggling (Ctrl+/) | IntelliJ plugin | `XtcCommenter` extension | 2026-04-03 |
+| Live templates (30+ snippets) | IntelliJ plugin + VS Code | `liveTemplates/XTC.xml` + `snippets/xtc.json` | 2026-04-03 |
+| Semantic tokens | LSP server (Kotlin) | Enabled by default, auto-rendered by LSP4IJ and VS Code | 2026-04-03 |
+| Code lens (Run on modules) | LSP server (Kotlin) | `getCodeLenses()` in TreeSitterAdapter, auto-rendered by LSP4IJ | 2026-04-03 |
+| Brace matching | TextMate + LSP | `language-configuration.json` brackets + LSP highlight/indent | N/A (skip) |
+
+## What Tree-Sitter + Semantic Tokens Give Us (No Compiler Needed)
+
+The current tree-sitter adapter provides ~80% of a Java-like IDE experience
+without any compiler integration:
+
+**Syntax-level intelligence (tree-sitter AST):**
+- Document symbols / outline / breadcrumbs
+- Go-to-definition (same file + cross-file via workspace index)
+- Find references (same file, text-based)
+- Rename (same file, text-based)
+- Code actions (organize imports, remove unused imports, auto-import, generate doc comment)
+- Folding ranges (declarations, blocks, import groups, consecutive comments)
+- Selection ranges (smart expand/shrink via AST hierarchy)
+- Signature help (parameter info from same-file method declarations)
+- Formatting + on-type formatting (AST-aware indentation)
+- Code lens (Run action on module declarations)
+- Diagnostics (syntax errors from parser)
+
+**Semantic tokens (tree-sitter + SemanticTokenEncoder):**
+- Types colored differently from variables
+- Methods colored differently from properties
+- Annotations colored as decorators
+- `@Deprecated` shown with strikethrough
+- `new Foo()` recognized as type, `foo()` as method
+- Static/abstract/readonly modifiers reflected in styling
+- Enum members distinguished from regular properties
+- Declaration-site vs usage-site distinction
+
+**What still requires the XDK compiler adapter:**
+- Type inference (inlay hints showing inferred types)
+- Cross-file semantic references (accurate find-all-usages)
+- Cross-file rename (semantic, not text-based)
+- Semantic error reporting (type mismatches, missing methods)
+- Override/implements gutter markers (needs type hierarchy)
+- Smart completion (type-aware member suggestions)
+- Call hierarchy / type hierarchy views
+
 ---
 
 ## 1. Run Configuration: XDK Direct Mode
@@ -261,27 +308,19 @@ Templates:
 **Effort:** Small-medium
 **Priority:** **High** -- important for discoverability
 
-### 3e. Line Markers (Gutter Icons)
+### 3e. Line Markers (Gutter Icons) — REPLACED BY CODE LENS
 
-**What:** Gutter icons for:
-- **Run** icon next to `module` declarations with a `run()` method
-- **Override** arrow next to methods that override a parent method
-- **Implements** arrow next to interface method implementations
+**Status:** Replaced — LSP code lenses handle this better.
 
-The run marker is feasible now (just pattern-match `module` keyword).
-Override/implements markers require semantic info from the compiler adapter.
+IntelliJ's `LineMarkerProvider` requires structured PSI elements, but `.x` files
+use TextMate (flat PSI with no declaration nodes). Instead, the LSP server now
+provides `textDocument/codeLens` with "Run" actions on module declarations. LSP4IJ
+and VS Code render these automatically as inline annotations — no plugin code needed.
 
-**Implementation:**
-```xml
-<codeInsight.lineMarkerProvider language="Ecstasy"
-    implementationClass="org.xtclang.idea.XtcRunLineMarkerProvider"/>
-```
+Override/implements arrows still require the compiler adapter (type hierarchy).
 
-For the run marker, detect `module` declarations and add a green play icon that
-creates/runs an `XtcRunConfiguration`.
-
-**Effort:** Medium (run marker easy, override markers need LSP support)
-**Priority:** **Medium** -- nice visual polish, run marker is very useful
+**Done** (2026-04-03): `TreeSitterAdapter.getCodeLenses()` returns Run lens for
+every `module_declaration`.
 
 ### 3f. TODO Highlighting
 

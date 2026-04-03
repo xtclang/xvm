@@ -9,6 +9,7 @@ import org.eclipse.lsp4j.CallHierarchyPrepareParams
 import org.eclipse.lsp4j.CodeAction
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.CodeLens
+import org.eclipse.lsp4j.CodeLensOptions
 import org.eclipse.lsp4j.CodeLensParams
 import org.eclipse.lsp4j.Command
 import org.eclipse.lsp4j.CompletionItem
@@ -374,7 +375,7 @@ class XtcLanguageServer(
                 // td?.declaration?.let { "declaration" }, // compiler: go-to-declaration
                 // td?.typeDefinition?.let { "typeDefinition" }, // compiler(types): jump to type
                 // td?.implementation?.let { "implementation" }, // compiler(types): find impls
-                // td?.codeLens?.let { "codeLens" }, // compiler: inline actions
+                td?.codeLens?.let { "codeLens" }, // treesitter: run/compile actions on modules
                 // td?.colorProvider?.let { "colorProvider" }, // mock: color swatches
                 // td?.publishDiagnostics?.let { "publishDiagnostics" }, // compiler: error reporting
                 // td?.typeHierarchy?.let { "typeHierarchy" }, // compiler(full): type tree
@@ -460,7 +461,7 @@ class XtcLanguageServer(
             // declarationProvider = Either.forLeft(true) // compiler: go-to-declaration
             // typeDefinitionProvider = Either.forLeft(true) // compiler(types): jump to type
             // implementationProvider = Either.forLeft(true) // compiler(types): find implementations
-            // codeLensProvider = CodeLensOptions() // compiler: inline actions
+            codeLensProvider = CodeLensOptions(false)
             // typeHierarchyProvider = Either.forLeft(true) // compiler(full): type tree
             // callHierarchyProvider = Either.forLeft(true) // compiler(full): call tree
         }

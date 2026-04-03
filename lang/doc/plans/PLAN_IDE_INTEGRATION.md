@@ -42,17 +42,17 @@ The LSP server uses a pluggable adapter pattern to support different backends:
 ```
                      XtcLanguageServer
                             │
-                   XtcCompilerAdapter (interface)
+                      Adapter (interface)
                             │
          ┌──────────────────┼──────────────────┐
          │                  │                  │
          ▼                  ▼                  ▼
-  MockXtcCompiler-    TreeSitter-      XtcCompiler-
-  Adapter             Adapter          AdapterStub
-  (regex-based)       (syntax-aware)   (future: semantic)
+   MockAdapter       TreeSitter-         XdkAdapter
+   (adapter.mock)    Adapter             (adapter.xdk)
+   (regex-based)     (adapter.treesitter)(future: semantic)
 ```
 
-All adapters extend `AbstractXtcCompilerAdapter` which provides:
+All adapters extend `AbstractAdapter` which provides:
 - Per-adapter `[displayName]` prefixed logging via `logPrefix`
 - "Not yet implemented" defaults for all optional LSP features (with full input parameter logging)
 - Shared formatting logic (trailing whitespace removal, final newline insertion)

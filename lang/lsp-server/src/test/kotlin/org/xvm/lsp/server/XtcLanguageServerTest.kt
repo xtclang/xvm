@@ -269,7 +269,6 @@ class XtcLanguageServerTest {
                     "declaration",
                     "typeDefinition",
                     "implementation",
-                    "codeLens",
                     "colorProvider",
                     "typeHierarchy",
                     "callHierarchy",
