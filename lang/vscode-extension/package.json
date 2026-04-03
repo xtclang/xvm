@@ -48,6 +48,12 @@
                 "path": "./syntaxes/xtc.tmLanguage.json"
             }
         ],
+        "snippets": [
+            {
+                "language": "xtc",
+                "path": "./snippets/xtc.json"
+            }
+        ],
         "commands": [
             {
                 "command": "xtc.createProject",

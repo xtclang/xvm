@@ -624,6 +624,97 @@ the process management and health monitoring.
 
 ---
 
+### 16. Comment Toggling (IntelliJ)
+
+**Provider:** IntelliJ plugin (`XtcCommenter`)
+**Status:** ✅ Done
+**Works with:** IntelliJ only (VS Code uses `language-configuration.json` for this)
+
+This is a client-side editing feature — the LSP server handles comment *formatting*
+(alignment, continuation on Enter), but toggling comment delimiters is purely an IDE action.
+
+| # | Test | Steps | Expected Result |
+|---|------|-------|-----------------|
+| 16.1 | Line comment | Place cursor on a line, press Ctrl+/ | `// ` inserted at start of line |
+| 16.2 | Uncomment | On a `//`-commented line, press Ctrl+/ | `// ` removed |
+| 16.3 | Multi-line comment | Select 3 lines, press Ctrl+/ | All 3 lines get `// ` prefix |
+| 16.4 | Multi-line uncomment | Select 3 commented lines, press Ctrl+/ | `// ` removed from all 3 |
+| 16.5 | Block comment | Select text, press Ctrl+Shift+/ | Selection wrapped in `/* */` |
+| 16.6 | Block uncomment | With cursor inside `/* */`, press Ctrl+Shift+/ | `/* */` removed |
+
+---
+
+### 17. Live Templates (IntelliJ)
+
+**Provider:** IntelliJ plugin (`liveTemplates/XTC.xml`)
+**Status:** ✅ Done
+**Works with:** IntelliJ only (VS Code uses `snippets/xtc.json` separately)
+
+Live templates are code snippets triggered by abbreviation + Tab. Press Ctrl+J to
+see all available templates. The same snippets are available in VS Code (type the
+prefix and select from the completion popup).
+
+**Available templates:**
+
+| Prefix | Expansion | Category |
+|--------|-----------|----------|
+| `mod` | `module name { }` | Declaration |
+| `cls` | `class MyClass { }` | Declaration |
+| `iface` | `interface MyInterface { }` | Declaration |
+| `svc` | `service MyService { }` | Declaration |
+| `mix` | `mixin MyMixin into Base { }` | Declaration |
+| `enu` | `enum MyEnum { Value1, Value2 }` | Declaration |
+| `con` | `const MyConst(params);` | Declaration |
+| `pkg` | `package json import json.xtclang.org;` | Declaration |
+| `meth` | `void myMethod() { }` | Method |
+| `run` | `void run() { @Inject Console console; }` | Method |
+| `runa` | `void run(String[] args=[]) { ... }` | Method |
+| `construct` | `construct(params) { }` | Method |
+| `prop` | `String name;` | Property |
+| `roprop` | `@RO Boolean empty.get() = size == 0;` | Property |
+| `lazy` | `private @Lazy String value.calc() { }` | Property |
+| `if` | `if (condition) { }` | Control flow |
+| `ife` | `if (condition) { } else { }` | Control flow |
+| `ifv` | `if (Value value := get(key)) { }` | Control flow |
+| `fori` | `for (Int i : 0 ..< count) { }` | Control flow |
+| `forr` | `for (Int x : 1..100) { }` | Control flow |
+| `fore` | `for (Element item : collection) { }` | Control flow |
+| `while` | `while (condition) { }` | Control flow |
+| `switch` | `switch (value) { case 0: }` | Control flow |
+| `try` | `try { } catch (Exception e) { }` | Control flow |
+| `using` | `using (resource) { }` | Control flow |
+| `assert` | `assert condition;` | Control flow |
+| `assertm` | `assert condition as "message";` | Control flow |
+| `sout` | `@Inject Console console; console.print();` | Common |
+| `print` | `console.print();` | Common |
+| `inject` | `@Inject Console console;` | Common |
+| `lambda` | `(params) -> expr` | Common |
+| `cond` | `conditional Value find() { }` | Common |
+| `doc` | `/** description */` | Comment |
+| `todo` | `// TODO` | Comment |
+| `webapp` | Full @WebApp module with web service | Skeleton |
+| `websvc` | `@WebService("/") service { @Get ... }` | Web |
+| `hello` | Complete Hello World module | Skeleton |
+
+| # | Test | Steps | Expected Result |
+|---|------|-------|-----------------|
+| 17.1 | Module template | Type `mod` + Tab | Expands to `module name { }` with cursor on name |
+| 17.2 | Class template | Type `cls` + Tab | Expands to `class MyClass { }` |
+| 17.3 | For loop (range) | Type `fori` + Tab | Expands to `for (Int i : 0 ..< count) { }` |
+| 17.4 | For loop (inclusive) | Type `forr` + Tab | Expands to `for (Int x : 1..100) { }` |
+| 17.5 | For-each | Type `fore` + Tab | Expands to `for (Element item : collection) { }` |
+| 17.6 | Console print | Type `sout` + Tab | Expands to `@Inject Console console;` + `console.print();` |
+| 17.7 | If conditional assign | Type `ifv` + Tab | Expands to `if (Value value := get(key)) { }` |
+| 17.8 | Hello World | Type `hello` + Tab | Expands to complete Hello World module |
+| 17.9 | WebApp skeleton | Type `webapp` + Tab | Expands to full @WebApp module with web service |
+| 17.10 | Template list | Press Ctrl+J in editor | Shows all XTC templates with descriptions |
+| 17.11 | Tab navigation | Type `meth` + Tab, fill return type, Tab, fill name | Cursor moves through variables in order |
+| 17.12 | Inject template | Type `inject` + Tab | Expands to `@Inject Type name;` |
+| 17.13 | Mixin template | Type `mix` + Tab | Expands to `mixin Name into Base { }` |
+| 17.14 | Conditional method | Type `cond` + Tab | Expands to `conditional Value find() { }` |
+
+---
+
 ## Future Enhancements
 
 ### Semantic Tokens Phase 2+ (TODO)

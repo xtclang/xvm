@@ -197,21 +197,19 @@ class XtcCommenter : Commenter {
 **Priority:** **Critical** -- basic editing essential, users expect this
 **Status:** **Done** (2026-04-03) — `XtcCommenter.kt` + `plugin.xml` registration
 
-### 3b. Brace Matcher
+### 3b. Brace Matcher — NOT NEEDED
 
-**What:** Jump between matching `{}`, `()`, `[]`, `<>` with Ctrl+Shift+M.
-Highlights matching brace when cursor is adjacent.
+**Status:** Skipped — already covered by existing infrastructure.
 
-```xml
-<lang.braceMatcher language="Ecstasy"
-    implementationClass="org.xtclang.idea.XtcBraceMatcher"/>
-```
+The TextMate `language-configuration.json` declares bracket pairs (`()`, `[]`,
+`{}`, `<>`) with auto-closing and surrounding, so IntelliJ already highlights
+matching pairs and auto-closes braces. The LSP server covers the rest:
+- `textDocument/documentHighlight` highlights matching braces at cursor
+- `textDocument/onTypeFormatting` auto-indents after `{` and outdents after `}`
+- `textDocument/selectionRange` expands selection to enclosing brace blocks
 
-Note: TextMate may already handle some of this. If so, this is a no-op. Verify
-before implementing.
-
-**Effort:** Trivial
-**Priority:** **High** -- fundamental navigation
+A `lang.braceMatcher` extension would only add Ctrl+Shift+M (jump to matching
+brace), which is too niche to justify the code.
 
 ### 3c. Live Templates (Code Snippets)
 
@@ -238,6 +236,11 @@ in `plugin.xml` via `<defaultLiveTemplates>`.
 
 **Effort:** Small (1-2 hours for a good set)
 **Priority:** **High** -- big productivity boost
+**Status:** **Done** (2026-04-03) — `liveTemplates/XTC.xml` with 30+ templates covering
+declarations (mod, cls, iface, svc, mix, enu, con, pkg), methods (meth, run, runa, construct),
+properties (prop, roprop, lazy), control flow (if, ife, ifv, fori, forr, fore, while, switch,
+try, using, assert, assertm), common patterns (sout, print, inject, lambda, cond, doc, todo),
+web patterns (webapp, websvc), and full file skeletons (hello).
 
 ### 3d. File Templates
 

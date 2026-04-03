@@ -1,0 +1,345 @@
+<templateSet group="XTC">
+    <!-- ================================================================ -->
+    <!-- Declarations                                                     -->
+    <!-- ================================================================ -->
+
+    <template name="mod"
+              value="module $NAME$ {&#10;    $END$&#10;}"
+              description="Module declaration"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="NAME" expression="" defaultValue="&quot;mymodule&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="cls"
+              value="class $NAME$ {&#10;    $END$&#10;}"
+              description="Class declaration"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="NAME" expression="" defaultValue="&quot;MyClass&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="iface"
+              value="interface $NAME$ {&#10;    $END$&#10;}"
+              description="Interface declaration"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="NAME" expression="" defaultValue="&quot;MyInterface&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="svc"
+              value="service $NAME$ {&#10;    $END$&#10;}"
+              description="Service declaration"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="NAME" expression="" defaultValue="&quot;MyService&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="mix"
+              value="mixin $NAME$ into $BASE$ {&#10;    $END$&#10;}"
+              description="Mixin declaration"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="NAME" expression="" defaultValue="&quot;MyMixin&quot;" alwaysStopAt="true"/>
+        <variable name="BASE" expression="" defaultValue="&quot;Object&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="enu"
+              value="enum $NAME$ {&#10;    $VALUES$&#10;}"
+              description="Enum declaration"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="NAME" expression="" defaultValue="&quot;MyEnum&quot;" alwaysStopAt="true"/>
+        <variable name="VALUES" expression="" defaultValue="&quot;Value1, Value2&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="con"
+              value="const $NAME$($PARAMS$);"
+              description="Const (immutable class) declaration"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="NAME" expression="" defaultValue="&quot;MyConst&quot;" alwaysStopAt="true"/>
+        <variable name="PARAMS" expression="" defaultValue="&quot;&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="pkg"
+              value="package $ALIAS$ import $MODULE$;"
+              description="Package import declaration"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="ALIAS" expression="" defaultValue="&quot;json&quot;" alwaysStopAt="true"/>
+        <variable name="MODULE" expression="" defaultValue="&quot;json.xtclang.org&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <!-- ================================================================ -->
+    <!-- Methods and properties                                           -->
+    <!-- ================================================================ -->
+
+    <template name="meth"
+              value="$TYPE$ $NAME$($PARAMS$) {&#10;    $END$&#10;}"
+              description="Method declaration"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="TYPE" expression="" defaultValue="&quot;void&quot;" alwaysStopAt="true"/>
+        <variable name="NAME" expression="" defaultValue="&quot;myMethod&quot;" alwaysStopAt="true"/>
+        <variable name="PARAMS" expression="" defaultValue="&quot;&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="run"
+              value="void run() {&#10;    @Inject Console console;&#10;    $END$&#10;}"
+              description="Module run() method with Console injection"
+              toReformat="true" toShortenFQNames="false">
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="runa"
+              value="void run(String[] args=[]) {&#10;    @Inject Console console;&#10;    $END$&#10;}"
+              description="Module run() method with args and Console"
+              toReformat="true" toShortenFQNames="false">
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="prop"
+              value="$TYPE$ $NAME$;"
+              description="Property declaration"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="TYPE" expression="" defaultValue="&quot;String&quot;" alwaysStopAt="true"/>
+        <variable name="NAME" expression="" defaultValue="&quot;name&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="roprop"
+              value="@RO $TYPE$ $NAME$.get() = $EXPR$;"
+              description="Read-only computed property"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="TYPE" expression="" defaultValue="&quot;Boolean&quot;" alwaysStopAt="true"/>
+        <variable name="NAME" expression="" defaultValue="&quot;empty&quot;" alwaysStopAt="true"/>
+        <variable name="EXPR" expression="" defaultValue="&quot;size == 0&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="construct"
+              value="construct($PARAMS$) {&#10;    $END$&#10;}"
+              description="Constructor declaration"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="PARAMS" expression="" defaultValue="&quot;&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <!-- ================================================================ -->
+    <!-- Control flow                                                     -->
+    <!-- ================================================================ -->
+
+    <template name="if"
+              value="if ($COND$) {&#10;    $END$&#10;}"
+              description="If statement"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="COND" expression="" defaultValue="&quot;condition&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="ife"
+              value="if ($COND$) {&#10;    $THEN$&#10;} else {&#10;    $END$&#10;}"
+              description="If-else statement"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="COND" expression="" defaultValue="&quot;condition&quot;" alwaysStopAt="true"/>
+        <variable name="THEN" expression="" defaultValue="&quot;&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="ifv"
+              value="if ($TYPE$ $NAME$ := $EXPR$) {&#10;    $END$&#10;}"
+              description="If with conditional assignment"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="TYPE" expression="" defaultValue="&quot;Value&quot;" alwaysStopAt="true"/>
+        <variable name="NAME" expression="" defaultValue="&quot;value&quot;" alwaysStopAt="true"/>
+        <variable name="EXPR" expression="" defaultValue="&quot;get(key)&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="fori"
+              value="for (Int $VAR$ : 0 ..&lt; $LIMIT$) {&#10;    $END$&#10;}"
+              description="Indexed for loop (range-based)"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="VAR" expression="" defaultValue="&quot;i&quot;" alwaysStopAt="true"/>
+        <variable name="LIMIT" expression="" defaultValue="&quot;count&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="forr"
+              value="for (Int $VAR$ : $START$..$END_VAL$) {&#10;    $END$&#10;}"
+              description="For loop over inclusive range"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="VAR" expression="" defaultValue="&quot;x&quot;" alwaysStopAt="true"/>
+        <variable name="START" expression="" defaultValue="&quot;1&quot;" alwaysStopAt="true"/>
+        <variable name="END_VAL" expression="" defaultValue="&quot;100&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="fore"
+              value="for ($TYPE$ $VAR$ : $ITER$) {&#10;    $END$&#10;}"
+              description="For-each loop"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="TYPE" expression="" defaultValue="&quot;Element&quot;" alwaysStopAt="true"/>
+        <variable name="VAR" expression="" defaultValue="&quot;item&quot;" alwaysStopAt="true"/>
+        <variable name="ITER" expression="" defaultValue="&quot;collection&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="while"
+              value="while ($COND$) {&#10;    $END$&#10;}"
+              description="While loop"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="COND" expression="" defaultValue="&quot;condition&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="switch"
+              value="switch ($EXPR$) {&#10;    case $VAL$: $END$&#10;}"
+              description="Switch statement"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="EXPR" expression="" defaultValue="&quot;value&quot;" alwaysStopAt="true"/>
+        <variable name="VAL" expression="" defaultValue="&quot;0&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="try"
+              value="try {&#10;    $BODY$&#10;} catch ($TYPE$ e) {&#10;    $END$&#10;}"
+              description="Try-catch block"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="BODY" expression="" defaultValue="&quot;&quot;" alwaysStopAt="true"/>
+        <variable name="TYPE" expression="" defaultValue="&quot;Exception&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="using"
+              value="using ($RESOURCE$) {&#10;    $END$&#10;}"
+              description="Using statement (auto-close resource)"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="RESOURCE" expression="" defaultValue="&quot;resource&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="assert"
+              value="assert $COND$;"
+              description="Assert statement"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="COND" expression="" defaultValue="&quot;condition&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="assertm"
+              value="assert $COND$ as $MSG$;"
+              description="Assert with message"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="COND" expression="" defaultValue="&quot;condition&quot;" alwaysStopAt="true"/>
+        <variable name="MSG" expression="" defaultValue="&quot;\&quot;assertion failed\&quot;&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <!-- ================================================================ -->
+    <!-- Common patterns                                                  -->
+    <!-- ================================================================ -->
+
+    <template name="sout"
+              value="@Inject Console console;&#10;console.print($END$);"
+              description="Console print with @Inject"
+              toReformat="true" toShortenFQNames="false">
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="print"
+              value="console.print($END$);"
+              description="Console print (assumes console already injected)"
+              toReformat="true" toShortenFQNames="false">
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="inject"
+              value="@Inject $TYPE$ $NAME$;"
+              description="@Inject dependency"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="TYPE" expression="" defaultValue="&quot;Console&quot;" alwaysStopAt="true"/>
+        <variable name="NAME" expression="" defaultValue="&quot;console&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="lazy"
+              value="private @Lazy $TYPE$ $NAME$.calc() {&#10;    return $END$;&#10;}"
+              description="Lazy-initialized property"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="TYPE" expression="" defaultValue="&quot;String&quot;" alwaysStopAt="true"/>
+        <variable name="NAME" expression="" defaultValue="&quot;value&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="lambda"
+              value="($PARAMS$) -> $END$"
+              description="Lambda expression"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="PARAMS" expression="" defaultValue="&quot;&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="cond"
+              value="conditional $TYPE$ $NAME$() {&#10;    $END$&#10;}"
+              description="Conditional return method"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="TYPE" expression="" defaultValue="&quot;Value&quot;" alwaysStopAt="true"/>
+        <variable name="NAME" expression="" defaultValue="&quot;find&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <!-- ================================================================ -->
+    <!-- Comments and documentation                                       -->
+    <!-- ================================================================ -->
+
+    <template name="doc"
+              value="/**&#10; * $DESC$&#10; */"
+              description="Documentation comment"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="DESC" expression="" defaultValue="&quot;TODO: add description&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="todo"
+              value="// TODO $END$"
+              description="TODO comment"
+              toReformat="true" toShortenFQNames="false">
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <!-- ================================================================ -->
+    <!-- Web / server patterns                                            -->
+    <!-- ================================================================ -->
+
+    <template name="webapp"
+              value="@WebApp&#10;module $NAME$ {&#10;    package web   import web.xtclang.org;&#10;    package xenia import xenia.xtclang.org;&#10;&#10;    void run() {&#10;        xenia.createServer(this, new HostInfo(&quot;localhost&quot;, 8080, 8090));&#10;    }&#10;&#10;    @WebService(&quot;/&quot;)&#10;    service Root {&#10;        @Get&#10;        String hello() = &quot;Hello, World!&quot;;&#10;    }&#10;}"
+              description="WebApp module with web service"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="NAME" expression="" defaultValue="&quot;MyServer&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <template name="websvc"
+              value="@WebService(&quot;$PATH$&quot;)&#10;service $NAME$ {&#10;    @Get&#10;    String $METHOD$() = $END$;&#10;}"
+              description="WebService declaration"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="PATH" expression="" defaultValue="&quot;/&quot;" alwaysStopAt="true"/>
+        <variable name="NAME" expression="" defaultValue="&quot;MyService&quot;" alwaysStopAt="true"/>
+        <variable name="METHOD" expression="" defaultValue="&quot;hello&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+
+    <!-- ================================================================ -->
+    <!-- Full file skeletons                                              -->
+    <!-- ================================================================ -->
+
+    <template name="hello"
+              value="module $NAME$ {&#10;    void run() {&#10;        @Inject Console console;&#10;        console.print(&quot;Hello, World!&quot;);&#10;    }&#10;}"
+              description="Hello World module (complete file)"
+              toReformat="true" toShortenFQNames="false">
+        <variable name="NAME" expression="" defaultValue="&quot;HelloWorld&quot;" alwaysStopAt="true"/>
+        <context><option name="OTHER" value="true"/></context>
+    </template>
+</templateSet>

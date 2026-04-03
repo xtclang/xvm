@@ -287,6 +287,7 @@ JSON -- no TypeScript code.
 
 ### Effort: Small (JSON only, no TypeScript)
 ### Priority: **High** -- big productivity boost, zero maintenance
+### Status: **Done** (2026-04-03) — `snippets/xtc.json` with 30+ snippets matching the IntelliJ live templates
 
 ---
 

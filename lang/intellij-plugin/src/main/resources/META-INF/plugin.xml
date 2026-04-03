@@ -50,6 +50,9 @@
         <!-- IconProvider for .x files - provides icon without overriding TextMate highlighting -->
         <iconProvider implementation="org.xtclang.idea.XtcIconProvider"/>
 
+        <!-- Live templates: code snippets triggered by abbreviation + Tab (e.g. cls, fori, sout) -->
+        <defaultLiveTemplates>/liveTemplates/XTC</defaultLiveTemplates>
+
         <!-- Commenter for Ctrl+/ (line comment) and Ctrl+Shift+/ (block comment) -->
         <lang.commenter language="Ecstasy"
                         implementationClass="org.xtclang.idea.XtcCommenter"/>
