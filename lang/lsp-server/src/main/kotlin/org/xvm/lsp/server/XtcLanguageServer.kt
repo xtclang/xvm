@@ -173,7 +173,7 @@ class XtcLanguageServer(
     private val buildInfo = loadBuildInfo()
     private val version = buildInfo.getProperty("lsp.version", "?")
     private val buildTime = buildInfo.getProperty("lsp.build.time", "?")
-    private val semanticTokensEnabled = buildInfo.getProperty("lsp.semanticTokens", "false").toBoolean()
+    private val semanticTokensEnabled = buildInfo.getProperty("lsp.semanticTokens", "true").toBoolean()
 
     /**
      * Editor-provided formatting configuration, received via `workspace/configuration`.
@@ -433,8 +433,13 @@ class XtcLanguageServer(
 
             signatureHelpProvider = SignatureHelpOptions(listOf("(", ","))
 
-            // Semantic tokens: opt-in via -Plsp.semanticTokens=true in gradle.properties (default: disabled)
+            // Semantic tokens: enabled by default. Disable with -Plsp.semanticTokens=false if needed.
             if (semanticTokensEnabled) {
+                logger.info(
+                    "semantic tokens ENABLED ({} types, {} modifiers)",
+                    SemanticTokenLegend.tokenTypes.size,
+                    SemanticTokenLegend.tokenModifiers.size,
+                )
                 semanticTokensProvider =
                     SemanticTokensWithRegistrationOptions().apply {
                         legend =
@@ -444,6 +449,8 @@ class XtcLanguageServer(
                             )
                         full = Either.forLeft(true)
                     }
+            } else {
+                logger.warn("semantic tokens DISABLED (set lsp.semanticTokens=true to enable)")
             }
 
             // --- Workspace features ---
