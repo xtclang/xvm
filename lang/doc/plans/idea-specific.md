@@ -195,6 +195,7 @@ class XtcCommenter : Commenter {
 
 **Effort:** Trivial (15 minutes)
 **Priority:** **Critical** -- basic editing essential, users expect this
+**Status:** **Done** (2026-04-03) — `XtcCommenter.kt` + `plugin.xml` registration
 
 ### 3b. Brace Matcher
 

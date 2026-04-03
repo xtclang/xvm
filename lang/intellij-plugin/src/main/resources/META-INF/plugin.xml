@@ -50,6 +50,10 @@
         <!-- IconProvider for .x files - provides icon without overriding TextMate highlighting -->
         <iconProvider implementation="org.xtclang.idea.XtcIconProvider"/>
 
+        <!-- Commenter for Ctrl+/ (line comment) and Ctrl+Shift+/ (block comment) -->
+        <lang.commenter language="Ecstasy"
+                        implementationClass="org.xtclang.idea.XtcCommenter"/>
+
         <!-- Code Style settings for XTC (Settings > Editor > Code Style > Ecstasy) -->
         <langCodeStyleSettingsProvider
             implementation="org.xtclang.idea.style.XtcLanguageCodeStyleSettingsProvider"/>
