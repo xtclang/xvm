@@ -265,6 +265,69 @@ class ProtoCodeGenTest {
         assert files.get("PersonService.x");
     }
 
+    // ----- keyword escaping --------------------------------------------------------------------
+
+    @Test
+    void shouldEscapeKeywordFieldNames() {
+        Map<String, String> files = generate($|syntax = "proto3";
+                                              |message Msg \{
+                                              |  string class = 1;
+                                              |  int32 import = 2;
+                                              |}
+                                             );
+        assert String source := files.get("Msg.x");
+
+        // field names should have underscore appended
+        assert source.indexOf("MaybeString class_ = Unset");
+        assert source.indexOf("MaybeInt32 import_ = Unset");
+    }
+
+    // ----- empty message --------------------------------------------------------------------
+
+    @Test
+    void shouldGenerateEmptyMessage() {
+        Map<String, String> files = generate($|syntax = "proto3";
+                                              |message Empty \{}
+                                             );
+        assert String source := files.get("Empty.x");
+
+        // parseField should just return False, no switch
+        assert source.indexOf("return False;");
+        assert !source.indexOf("switch (WireType");
+    }
+
+    // ----- dotted type name in typedef -------------------------------------------------------
+
+    @Test
+    void shouldSanitizeDottedTypedefName() {
+        Map<String, String> files = generate($|syntax = "proto3";
+                                              |message Msg \{
+                                              |  google.protobuf.Timestamp ts = 1;
+                                              |}
+                                             );
+        assert String source := files.get("Msg.x");
+
+        // typedef alias should use underscores instead of dots
+        assert source.indexOf("as Maybegoogle_protobuf_Timestamp");
+    }
+
+    // ----- no Array import -------------------------------------------------------------------
+
+    @Test
+    void shouldNotImportArray() {
+        Map<String, String> files = generate($|syntax = "proto3";
+                                              |message Msg \{
+                                              |  repeated string items = 1;
+                                              |}
+                                             );
+        assert String source := files.get("Msg.x");
+
+        // Array is implicitly imported in Ecstasy
+        assert !source.indexOf("ecstasy.collections.Array");
+        // but the field should still use Array type
+        assert source.indexOf("Array<String>");
+    }
+
     // ----- helper --------------------------------------------------------------------------------
 
     private Map<String, String> generate(String protoSource) {

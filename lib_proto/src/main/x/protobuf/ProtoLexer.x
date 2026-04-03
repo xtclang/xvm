@@ -1,9 +1,16 @@
+import ecstasy.io.ByteArrayInputStream;
+import ecstasy.io.Reader;
+import ecstasy.io.UTF8Reader;
+
 /**
  * A tokenizer for Protocol Buffers `.proto` files.
  *
- * Breaks the source text into a stream of tokens, handling whitespace, single-line (`//`) and
- * block (`/* ... * /`) comments, string literals with escape sequences, numeric literals (decimal,
- * hex, octal, float), and identifier/keyword tokens.
+ * Breaks input from a [Reader] into a stream of tokens, handling whitespace, single-line (`//`)
+ * and block comments, string literals with escape sequences, numeric literals (decimal, hex,
+ * octal, float), and identifier/keyword tokens.
+ *
+ * The lexer maintains a 2-character lookahead (`current` and `nextChar`) so it can detect
+ * two-character sequences like `//`, `/*`, `0x`, and `.` followed by a digit.
  */
 class ProtoLexer {
 
@@ -45,25 +52,61 @@ class ProtoLexer {
         String toString() = $"{type}({text.quoted()}) at {line}:{column}";
     }
 
-    construct(String source) {
-        this.source = source;
-        this.len    = source.size;
+    /**
+     * Construct a lexer from a [Reader].
+     */
+    construct(Reader reader) {
+        this.reader = reader;
+        // prime the 2-character lookahead
+        if (Char ch := reader.next()) {
+            this.current = ch;
+            this.eof     = False;
+            if (Char ch2 := reader.next()) {
+                this.nextChar    = ch2;
+                this.hasNextChar = True;
+            } else {
+                this.nextChar    = '\0';
+                this.hasNextChar = False;
+            }
+        } else {
+            this.current     = '\0';
+            this.eof         = True;
+            this.nextChar    = '\0';
+            this.hasNextChar = False;
+        }
     }
 
     /**
-     * The source text.
+     * Construct a lexer from a source string.
      */
-    private String source;
+    construct(String source) {
+        construct ProtoLexer(new UTF8Reader(new ByteArrayInputStream(source.utf8())));
+    }
 
     /**
-     * The total length of the source text.
+     * The underlying character reader.
      */
-    private Int len;
+    private Reader reader;
 
     /**
-     * The current character position.
+     * The current (first lookahead) character.
      */
-    private Int pos = 0;
+    private Char current;
+
+    /**
+     * The second lookahead character.
+     */
+    private Char nextChar;
+
+    /**
+     * True when `nextChar` holds a valid character.
+     */
+    private Boolean hasNextChar;
+
+    /**
+     * True when the reader has been exhausted (no more `current` character).
+     */
+    private Boolean eof;
 
     /**
      * The current line number (1-based).
@@ -85,13 +128,13 @@ class ProtoLexer {
     Token next() {
         skipWhitespaceAndComments();
 
-        if (pos >= len) {
+        if (eof) {
             return new Token(Eof, "", line, col);
         }
 
         Int  startLine = line;
         Int  startCol  = col;
-        Char ch        = source[pos];
+        Char ch        = current;
 
         // single-character tokens
         switch (ch) {
@@ -115,7 +158,7 @@ class ProtoLexer {
             return readString(startLine, startCol);
         }
 
-        // numeric literal (including negative via parser, but handle leading digits and 0x)
+        // numeric literal
         if (ch.asciiDigit()) {
             return readNumber(startLine, startCol);
         }
@@ -140,23 +183,21 @@ class ProtoLexer {
      * Skip whitespace, single-line comments (`//`), and block comments.
      */
     private void skipWhitespaceAndComments() {
-        while (pos < len) {
-            Char ch = source[pos];
+        while (!eof) {
+            Char ch = current;
 
-            // whitespace
             if (ch.isWhitespace()) {
                 advance();
                 continue;
             }
 
-            // comments
-            if (ch == '/' && pos + 1 < len) {
-                Char next = source[pos + 1];
-                if (next == '/') {
+            if (ch == '/') {
+                Char? peeked = peek();
+                if (peeked == '/') {
                     skipLineComment();
                     continue;
                 }
-                if (next == '*') {
+                if (peeked == '*') {
                     skipBlockComment();
                     continue;
                 }
@@ -170,7 +211,7 @@ class ProtoLexer {
      * Skip a single-line comment (`// ... \n`).
      */
     private void skipLineComment() {
-        while (pos < len && source[pos] != '\n') {
+        while (!eof && current != '\n') {
             advance();
         }
     }
@@ -183,11 +224,13 @@ class ProtoLexer {
         Int startCol  = col;
         advance();  // '/'
         advance();  // '*'
-        while (pos < len) {
-            if (source[pos] == '*' && pos + 1 < len && source[pos + 1] == '/') {
-                advance();  // '*'
-                advance();  // '/'
-                return;
+        while (!eof) {
+            if (current == '*') {
+                if (peek() == '/') {
+                    advance();  // '*'
+                    advance();  // '/'
+                    return;
+                }
             }
             advance();
         }
@@ -200,12 +243,12 @@ class ProtoLexer {
      * Read a string literal, handling escape sequences.
      */
     private Token readString(Int startLine, Int startCol) {
-        Char        quote = source[pos];
+        Char         quote = current;
         StringBuffer buf   = new StringBuffer();
         advance();  // opening quote
 
-        while (pos < len) {
-            Char ch = source[pos];
+        while (!eof) {
+            Char ch = current;
             if (ch == quote) {
                 advance();  // closing quote
                 return new Token(StringLiteral, buf.toString(), startLine, startCol);
@@ -215,8 +258,8 @@ class ProtoLexer {
             }
             if (ch == '\\') {
                 advance();
-                assert pos < len as $"Unterminated escape sequence at {line}:{col}";
-                Char esc = source[pos];
+                assert !eof as $"Unterminated escape sequence at {line}:{col}";
+                Char esc = current;
                 switch (esc) {
                 case 'n':  buf.add('\n'); advance(); break;
                 case 'r':  buf.add('\r'); advance(); break;
@@ -252,9 +295,8 @@ class ProtoLexer {
     private Char readHexEscape() {
         Int value = 0;
         Int count = 0;
-        while (pos < len && count < 2) {
-            Char ch = source[pos];
-            if (Int digit := hexDigit(ch)) {
+        while (!eof && count < 2) {
+            if (Int digit := hexDigit(current)) {
                 value = value * 16 + digit;
                 advance();
                 count++;
@@ -272,8 +314,8 @@ class ProtoLexer {
     private Char readOctalEscape() {
         Int value = 0;
         Int count = 0;
-        while (pos < len && count < 3) {
-            Char ch = source[pos];
+        while (!eof && count < 3) {
+            Char ch = current;
             if (ch >= '0' && ch <= '7') {
                 value = value * 8 + (ch - '0');
                 advance();
@@ -289,80 +331,109 @@ class ProtoLexer {
      * Read a numeric literal (decimal, hex, octal, or float).
      */
     private Token readNumber(Int startLine, Int startCol) {
-        Int start = pos;
+        StringBuffer buf = new StringBuffer();
 
-        // hex literal
-        if (source[pos] == '0' && pos + 1 < len
-                && (source[pos + 1] == 'x' || source[pos + 1] == 'X')) {
-            advance();  // '0'
-            advance();  // 'x'
-            while (pos < len && hexDigit(source[pos])) {
-                advance();
+        // hex literal: 0x or 0X
+        if (current == '0') {
+            Char? next = peek();
+            if (next == 'x' || next == 'X') {
+                buf.add(current); advance();  // '0'
+                buf.add(current); advance();  // 'x'
+                while (!eof && hexDigit(current)) {
+                    buf.add(current);
+                    advance();
+                }
+                return new Token(IntLiteral, buf.toString(), startLine, startCol);
             }
-            return new Token(IntLiteral, source[start ..< pos], startLine, startCol);
         }
 
         // leading digits
-        while (pos < len && source[pos].asciiDigit()) {
+        while (!eof && current.asciiDigit()) {
+            buf.add(current);
             advance();
         }
 
         // check for float (decimal point or exponent)
         Boolean isFloat = False;
-        if (pos < len && source[pos] == '.' && pos + 1 < len && source[pos + 1].asciiDigit()) {
-            isFloat = True;
-            advance();  // '.'
-            while (pos < len && source[pos].asciiDigit()) {
-                advance();
+        if (!eof && current == '.') {
+            Char? next = peek();
+            if (next != Null && next.asciiDigit()) {
+                isFloat = True;
+                buf.add(current); advance();  // '.'
+                while (!eof && current.asciiDigit()) {
+                    buf.add(current);
+                    advance();
+                }
             }
         }
-        if (pos < len && (source[pos] == 'e' || source[pos] == 'E')) {
+        if (!eof && (current == 'e' || current == 'E')) {
             isFloat = True;
-            advance();
-            if (pos < len && (source[pos] == '+' || source[pos] == '-')) {
-                advance();
+            buf.add(current); advance();
+            if (!eof && (current == '+' || current == '-')) {
+                buf.add(current); advance();
             }
-            while (pos < len && source[pos].asciiDigit()) {
+            while (!eof && current.asciiDigit()) {
+                buf.add(current);
                 advance();
             }
         }
 
-        String text = source[start ..< pos];
-        return new Token(isFloat ? FloatLiteral : IntLiteral, text, startLine, startCol);
+        return new Token(isFloat ? FloatLiteral : IntLiteral, buf.toString(), startLine, startCol);
     }
 
     /**
      * Read an identifier token.
      */
     private Token readIdentifier(Int startLine, Int startCol) {
-        Int start = pos;
-        while (pos < len) {
-            Char ch = source[pos];
+        StringBuffer buf = new StringBuffer();
+        while (!eof) {
+            Char ch = current;
             if (ch.asciiLetter() || ch.asciiDigit() || ch == '_') {
+                buf.add(ch);
                 advance();
             } else {
                 break;
             }
         }
-        return new Token(Identifier, source[start ..< pos], startLine, startCol);
+        return new Token(Identifier, buf.toString(), startLine, startCol);
     }
 
     // ----- character helpers ----------------------------------------------------------------------
 
     /**
-     * Advance one character, tracking line and column numbers.
+     * Advance to the next character, shifting the 2-character lookahead buffer. Tracks line and
+     * column numbers based on the character being consumed.
      */
     private void advance() {
-        if (pos < len) {
-            if (source[pos] == '\n') {
-                line++;
-                col = 1;
+        if (eof) {
+            return;
+        }
+        if (current == '\n') {
+            line++;
+            col = 1;
+        } else {
+            col++;
+        }
+        if (hasNextChar) {
+            current = nextChar;
+            if (Char ch := reader.next()) {
+                nextChar = ch;
             } else {
-                col++;
+                nextChar    = '\0';
+                hasNextChar = False;
             }
-            pos++;
+        } else {
+            current = '\0';
+            eof     = True;
         }
     }
+
+    /**
+     * Peek at the next character without consuming it.
+     *
+     * @return the next character, or `Null` if at the end of input
+     */
+    private Char? peek() = hasNextChar ? nextChar : Null;
 
     /**
      * @return True and the hex digit value if the character is a hex digit

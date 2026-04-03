@@ -1,4 +1,4 @@
-import ecstasy.collections.Array;
+import ecstasy.io.Reader;
 import ecstasy.maps.ListMap;
 
 import ProtoLexer.Token;
@@ -16,8 +16,25 @@ import MessageDescriptor.ReservedRange;
  */
 class ProtoParser {
 
+    /**
+     * Construct a parser from a source string.
+     */
     construct(String source) {
-        this.lexer   = new ProtoLexer(source);
+        construct ProtoParser(new ProtoLexer(source));
+    }
+
+    /**
+     * Construct a parser from a [Reader].
+     */
+    construct(Reader reader) {
+        construct ProtoParser(new ProtoLexer(reader));
+    }
+
+    /**
+     * Construct a parser from a [ProtoLexer].
+     */
+    construct(ProtoLexer lexer) {
+        this.lexer   = lexer;
         this.current = lexer.next();
     }
 

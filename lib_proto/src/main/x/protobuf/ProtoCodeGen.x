@@ -1,4 +1,3 @@
-import ecstasy.collections.Array;
 import ecstasy.maps.ListMap;
 
 import FieldDescriptor.Label;
@@ -13,6 +12,18 @@ import FieldDescriptor.Label;
  * `protobuf` module for field presence tracking.
  */
 class ProtoCodeGen {
+
+    /**
+     * Ecstasy keywords that must be escaped when used as field names.
+     */
+    static String[] Keywords = [
+        "abstract", "annotation", "assert", "break", "case", "class", "conditional",
+        "const", "construct", "continue", "default", "do", "else", "enum", "extends",
+        "finally", "for", "function", "if", "immutable", "implements", "import",
+        "incorporates", "interface", "is", "mixin", "module", "new", "package",
+        "private", "protected", "public", "return", "service", "static", "switch",
+        "this", "throw", "try", "typedef", "using", "val", "var", "void", "while",
+    ];
 
     // ----- public interface -----------------------------------------------------------------------
 
@@ -258,7 +269,7 @@ class ProtoCodeGen {
                    .addAll("typedef Presence | ")
                    .addAll(tn)
                    .addAll(" as Maybe")
-                   .addAll(tn)
+                   .addAll(sanitizeTypedefName(tn))
                    .addAll(";\n");
                 emitted = True;
             }
@@ -282,7 +293,7 @@ class ProtoCodeGen {
             buf.addAll(pad)
                .addAll(fieldTypeName(field))
                .add(' ')
-               .addAll(toCamelCase(field.name))
+               .addAll(fieldName(field.name))
                .addAll(" = ")
                .addAll(fieldDefault(field))
                .addAll(";\n");
@@ -291,7 +302,7 @@ class ProtoCodeGen {
         for (OneofDescriptor oneof : oneofs) {
             buf.addAll(pad)
                .addAll("Oneof ")
-               .addAll(toCamelCase(oneof.name))
+               .addAll(fieldName(oneof.name))
                .addAll(" = new Oneof();\n");
         }
     }
@@ -311,7 +322,7 @@ class ProtoCodeGen {
         buf.addAll(pad1).addAll("construct AbstractMessage(other);\n");
 
         for (FieldDescriptor field : regularFields) {
-            String fname = toCamelCase(field.name);
+            String fname = fieldName(field.name);
             if (field.label == Repeated || field.isMapField) {
                 buf.addAll(pad1)
                    .addAll(fname)
@@ -328,7 +339,7 @@ class ProtoCodeGen {
         }
 
         for (OneofDescriptor oneof : msg.oneofs) {
-            String oname = toCamelCase(oneof.name);
+            String oname = fieldName(oneof.name);
             buf.addAll(pad1)
                .addAll(oname)
                .addAll(" = other.")
@@ -349,7 +360,7 @@ class ProtoCodeGen {
                                         Int indent) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
-        String oname = toCamelCase(oneof.name);
+        String oname = fieldName(oneof.name);
 
         for (FieldDescriptor field : oneofFields) {
             if (field.oneofIndex != oneofIndex) {
@@ -417,45 +428,52 @@ class ProtoCodeGen {
 
         buf.addAll(pad).addAll("@Override\n");
         buf.addAll(pad).addAll("Boolean parseField(CodedInput input, Int tag) {\n");
-        buf.addAll(pad1).addAll("switch (WireType.getFieldNumber(tag)) {\n");
 
-        // regular fields
-        for (FieldDescriptor field : regularFields) {
-            String fname = toCamelCase(field.name);
-            buf.addAll(pad1).addAll("case ").addAll(field.number.toString()).addAll(":\n");
+        if (regularFields.empty && oneofFields.empty) {
+            // no known fields — delegate to superclass for unknown field handling
+            buf.addAll(pad1).addAll("return False;\n");
+        } else {
+            buf.addAll(pad1).addAll("switch (WireType.getFieldNumber(tag)) {\n");
 
-            if (field.isMapField) {
-                generateParseMapField(buf, field, fname, indent + 2);
-            } else if (field.label == Repeated) {
-                generateParseRepeatedField(buf, field, fname, indent + 2);
-            } else if (field.type == FieldType.Msg) {
-                generateParseMessageField(buf, field, fname, indent + 2);
-            } else {
-                buf.addAll(pad2)
-                   .addAll(fname)
-                   .addAll(" = input.")
-                   .addAll(readMethod(field))
-                   .addAll(";\n");
+            // regular fields
+            for (FieldDescriptor field : regularFields) {
+                String fname = fieldName(field.name);
+                buf.addAll(pad1).addAll("case ").addAll(field.number.toString()).addAll(":\n");
+
+                if (field.isMapField) {
+                    generateParseMapField(buf, field, fname, indent + 2);
+                } else if (field.label == Repeated) {
+                    generateParseRepeatedField(buf, field, fname, indent + 2);
+                } else if (field.type == FieldType.Msg) {
+                    generateParseMessageField(buf, field, fname, indent + 2);
+                } else {
+                    buf.addAll(pad2)
+                       .addAll(fname)
+                       .addAll(" = input.")
+                       .addAll(readMethod(field))
+                       .addAll(";\n");
+                }
+                buf.addAll(pad2).addAll("return True;\n");
             }
-            buf.addAll(pad2).addAll("return True;\n");
+
+            // oneof fields
+            for (FieldDescriptor field : oneofFields) {
+                String oname = fieldName(msg.oneofs[field.oneofIndex].name);
+                buf.addAll(pad1).addAll("case ").addAll(field.number.toString()).addAll(":\n");
+                buf.addAll(pad2)
+                   .addAll(oname)
+                   .addAll(".set(")
+                   .addAll(field.number.toString())
+                   .addAll(", input.")
+                   .addAll(readMethod(field))
+                   .addAll(");\n");
+                buf.addAll(pad2).addAll("return True;\n");
+            }
+
+            buf.addAll(pad1).addAll("}\n");
+            buf.addAll(pad1).addAll("return False;\n");
         }
 
-        // oneof fields
-        for (FieldDescriptor field : oneofFields) {
-            String oname = toCamelCase(msg.oneofs[field.oneofIndex].name);
-            buf.addAll(pad1).addAll("case ").addAll(field.number.toString()).addAll(":\n");
-            buf.addAll(pad2)
-               .addAll(oname)
-               .addAll(".set(")
-               .addAll(field.number.toString())
-               .addAll(", input.")
-               .addAll(readMethod(field))
-               .addAll(");\n");
-            buf.addAll(pad2).addAll("return True;\n");
-        }
-
-        buf.addAll(pad1).addAll("}\n");
-        buf.addAll(pad1).addAll("return False;\n");
         buf.addAll(pad).addAll("}\n");
     }
 
@@ -579,7 +597,7 @@ class ProtoCodeGen {
 
         // regular fields
         for (FieldDescriptor field : regularFields) {
-            String fname = toCamelCase(field.name);
+            String fname = fieldName(field.name);
 
             if (field.isMapField) {
                 generateWriteMapField(buf, field, fname, indent + 1);
@@ -710,7 +728,7 @@ class ProtoCodeGen {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
         String pad2 = spaces(indent + 2);
-        String oname = toCamelCase(oneof.name);
+        String oname = fieldName(oneof.name);
 
         buf.addAll(pad)
            .addAll("switch (")
@@ -732,7 +750,7 @@ class ProtoCodeGen {
                .addAll("if (")
                .addAll(ecType)
                .addAll(" ")
-               .addAll(toCamelCase(field.name))
+               .addAll(fieldName(field.name))
                .addAll(" := get")
                .addAll(fname)
                .addAll("()) {\n");
@@ -742,7 +760,7 @@ class ProtoCodeGen {
                .addAll("(")
                .addAll(field.number.toString())
                .addAll(", ")
-               .addAll(toCamelCase(field.name))
+               .addAll(fieldName(field.name))
                .addAll(");\n");
             buf.addAll(pad1)
                .addAll("}\n");
@@ -770,7 +788,7 @@ class ProtoCodeGen {
 
         // regular fields
         for (FieldDescriptor field : regularFields) {
-            String fname = toCamelCase(field.name);
+            String fname = fieldName(field.name);
 
             if (field.isMapField) {
                 generateSizeMapField(buf, field, fname, indent + 1);
@@ -892,7 +910,7 @@ class ProtoCodeGen {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
         String pad2 = spaces(indent + 2);
-        String oname = toCamelCase(oneof.name);
+        String oname = fieldName(oneof.name);
 
         buf.addAll(pad)
            .addAll("switch (")
@@ -914,7 +932,7 @@ class ProtoCodeGen {
                .addAll("if (")
                .addAll(ecType)
                .addAll(" ")
-               .addAll(toCamelCase(field.name))
+               .addAll(fieldName(field.name))
                .addAll(" := get")
                .addAll(fname)
                .addAll("()) {\n");
@@ -957,7 +975,7 @@ class ProtoCodeGen {
         for (FieldDescriptor field : regularFields) {
             if (field.label == Repeated || field.isMapField) {
                 buf.addAll(pad1)
-                   .addAll(toCamelCase(field.name))
+                   .addAll(fieldName(field.name))
                    .addAll(".freeze(inPlace);\n");
             }
         }
@@ -1020,15 +1038,11 @@ class ProtoCodeGen {
         imports.add("protobuf.CodedOutput");
         imports.add("protobuf.WireType");
 
-        Boolean hasRepeated = False;
-        Boolean hasMap      = False;
-        Boolean hasOneof    = False;
-        Boolean hasEnum     = msg.enums.size > 0;
+        Boolean hasMap   = False;
+        Boolean hasOneof = False;
+        Boolean hasEnum  = msg.enums.size > 0;
 
         for (FieldDescriptor field : msg.fields) {
-            if (field.label == Repeated && !field.isMapField) {
-                hasRepeated = True;
-            }
             if (field.isMapField) {
                 hasMap = True;
             }
@@ -1040,9 +1054,6 @@ class ProtoCodeGen {
             }
         }
 
-        if (hasRepeated) {
-            imports.add("ecstasy.collections.Array");
-        }
         if (hasMap) {
             imports.add("ecstasy.maps.ListMap");
         }
@@ -1072,7 +1083,7 @@ class ProtoCodeGen {
             return $"Array<{ecstasyScalarType(field)}>";
         }
         if (field.type == FieldType.Msg) {
-            return $"Maybe{field.typeName}";
+            return $"Maybe{sanitizeTypedefName(field.typeName)}";
         }
         return maybeType(field);
     }
@@ -1104,7 +1115,7 @@ class ProtoCodeGen {
             case Bytes:             "MaybeByteString";
             case Dbl:               "MaybeFloat64";
             case Flt:               "MaybeFloat32";
-            case Enm:               $"Maybe{field.typeName}";
+            case Enm:               $"Maybe{sanitizeTypedefName(field.typeName)}";
             default:                "Object";
         };
     }
@@ -1237,7 +1248,7 @@ class ProtoCodeGen {
      */
     private String computeSizeMethod(FieldDescriptor field) {
         String fn = field.number.toString();
-        String fname = toCamelCase(field.name);
+        String fname = fieldName(field.name);
         return switch (field.type) {
             case Dbl:    $"computeFixed64Size({fn})";
             case Flt:    $"computeFixed32Size({fn})";
@@ -1276,7 +1287,7 @@ class ProtoCodeGen {
      */
     private String computePackedSizeMethod(FieldDescriptor field) {
         String fn = field.number.toString();
-        String fname = toCamelCase(field.name);
+        String fname = fieldName(field.name);
         return switch (field.type) {
             case Dbl:               $"computePackedDoublesSize({fn}, {fname})";
             case Flt:               $"computePackedFloatsSize({fn}, {fname})";
@@ -1297,7 +1308,7 @@ class ProtoCodeGen {
      */
     private String computeSizeMethodForOneof(FieldDescriptor field) {
         String fn = field.number.toString();
-        String fname = toCamelCase(field.name);
+        String fname = fieldName(field.name);
         return switch (field.type) {
             case Dbl:    $"computeFixed64Size({fn})";
             case Flt:    $"computeFixed32Size({fn})";
@@ -1384,6 +1395,11 @@ class ProtoCodeGen {
     // ----- naming helpers ------------------------------------------------------------------------
 
     /**
+     * Convert a proto field name to a safe Ecstasy camelCase identifier, escaping keywords.
+     */
+    private String fieldName(String name) = escapeKeyword(toCamelCase(name));
+
+    /**
      * Convert a `snake_case` or `UPPER_SNAKE_CASE` name to `camelCase`.
      */
     private String toCamelCase(String name) {
@@ -1443,6 +1459,33 @@ class ProtoCodeGen {
         return camel.size > 0 && camel[0] >= 'a' && camel[0] <= 'z'
                 ? $"{camel[0].uppercase}{camel[1..<camel.size]}"
                 : camel;
+    }
+
+    /**
+     * Escape a field name if it matches an Ecstasy keyword by appending an underscore.
+     */
+    private String escapeKeyword(String name) {
+        for (String kw : Keywords) {
+            if (kw == name) {
+                return name + "_";
+            }
+        }
+        return name;
+    }
+
+    /**
+     * Sanitize a type name for use in a typedef alias (convert dots to underscores).
+     */
+    private String sanitizeTypedefName(String typeName) {
+        if (!typeName.indexOf('.')) {
+            return typeName;
+        }
+        StringBuffer buf = new StringBuffer(typeName.size);
+        for (Int i = 0; i < typeName.size; i++) {
+            Char ch = typeName[i];
+            buf.add(ch == '.' ? '_' : ch);
+        }
+        return buf.toString();
     }
 
     // ----- formatting helpers --------------------------------------------------------------------
