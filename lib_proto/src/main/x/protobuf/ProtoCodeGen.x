@@ -67,8 +67,7 @@ class ProtoCodeGen {
      */
     private String generateTopLevelEnum(EnumDescriptor e, FileDescriptor file) {
         StringBuffer buf = new StringBuffer();
-        appendImport(buf, "protobuf.ProtoEnum");
-        buf.add('\n');
+        $"import protobuf.ProtoEnum;\n\n".appendTo(buf);
         generateEnum(buf, e, 0);
         return buf.toString();
     }
@@ -82,7 +81,7 @@ class ProtoCodeGen {
         // collect imports
         Array<String> imports = collectImports(msg);
         for (String imp : imports) {
-            appendImport(buf, imp);
+            $"import {imp};\n".appendTo(buf);
         }
         if (!imports.empty) {
             buf.add('\n');
@@ -107,46 +106,32 @@ class ProtoCodeGen {
      * Generate an enum declaration.
      */
     private void generateEnum(StringBuffer buf, EnumDescriptor e, Int indent) {
-        String pad = spaces(indent);
+        String pad  = spaces(indent);
+        String pad1 = spaces(indent + 1);
 
-        buf.addAll(pad)
-           .addAll("enum ")
-           .addAll(e.name)
-           .add('\n');
-        buf.addAll(pad)
-           .addAll("        implements ProtoEnum {\n");
+        $|{pad}enum {e.name}
+         |{pad}        implements ProtoEnum \{
+         |
+         .appendTo(buf);
 
         // enum values
         for (Int i = 0; i < e.values.size; i++) {
             EnumValueDescriptor v = e.values[i];
-            buf.addAll(pad)
-               .addAll("    ")
-               .addAll(toPascalCase(v.name))
-               .add('(')
-               .addAll(v.number.toString())
-               .add(')');
-            if (i < e.values.size - 1) {
-                buf.add(',');
-            } else {
-                buf.add(';');
-            }
+            $|{pad1}{toPascalCase(v.name)}({v.number})
+             .appendTo(buf);
+            buf.add(i < e.values.size - 1 ? ',' : ';');
             buf.add('\n');
         }
 
-        buf.add('\n');
-        buf.addAll(pad)
-           .addAll("    construct(Int protoValue) {\n");
-        buf.addAll(pad)
-           .addAll("        this.protoValue = protoValue;\n");
-        buf.addAll(pad)
-           .addAll("    }\n");
-        buf.add('\n');
-        buf.addAll(pad)
-           .addAll("    @Override\n");
-        buf.addAll(pad)
-           .addAll("    Int protoValue;\n");
-        buf.addAll(pad)
-           .addAll("}\n");
+        $|
+         |{pad1}construct(Int protoValue) \{
+         |{pad1}    this.protoValue = protoValue;
+         |{pad1}}
+         |
+         |{pad1}@Override
+         |{pad1}Int protoValue;
+         |{pad}}
+         .appendTo(buf);
     }
 
     // ----- message generation ---------------------------------------------------------------------
@@ -163,16 +148,13 @@ class ProtoCodeGen {
                                  Boolean nested) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
-        String pad2 = spaces(indent + 2);
 
         // class declaration
-        if (nested) {
-            buf.addAll(pad).addAll("static class ").addAll(msg.name).add('\n');
-        } else {
-            buf.addAll(pad).addAll("class ").addAll(msg.name).add('\n');
-        }
-        buf.addAll(pad).addAll("        extends AbstractMessage {\n");
-        buf.add('\n');
+        String classKind = nested ? "static class" : "class";
+        $|{pad}{classKind} {msg.name}
+         |{pad}        extends AbstractMessage \{
+         |
+         .appendTo(buf);
 
         // collect non-oneof fields and oneof descriptors
         Array<FieldDescriptor> regularFields = new Array();
@@ -189,10 +171,11 @@ class ProtoCodeGen {
         generateTypedefs(buf, msg, indent + 1);
 
         // default constructor
-        buf.addAll(pad1).addAll("construct() {\n");
-        buf.addAll(pad2).addAll("construct AbstractMessage();\n");
-        buf.addAll(pad1).addAll("}\n");
-        buf.add('\n');
+        $|{pad1}construct() \{
+         |{pad1}    construct AbstractMessage();
+         |{pad1}}
+         |
+         .appendTo(buf);
 
         // copy constructor
         generateCopyConstructor(buf, msg, regularFields, indent + 1);
@@ -204,8 +187,7 @@ class ProtoCodeGen {
 
         // oneof accessors
         if (!msg.oneofs.empty) {
-            buf.addAll(pad1).addAll(separator("oneof accessors", indent + 1)).add('\n');
-            buf.add('\n');
+            $"{pad1}{separator("oneof accessors", indent + 1)}\n\n".appendTo(buf);
             for (Int oi = 0; oi < msg.oneofs.size; oi++) {
                 generateOneofAccessors(buf, msg.oneofs[oi], oneofFields, oi, indent + 1);
             }
@@ -213,23 +195,20 @@ class ProtoCodeGen {
 
         // nested enums
         for (EnumDescriptor e : msg.enums) {
-            buf.addAll(pad1).addAll(separator("enum " + e.name, indent + 1)).add('\n');
-            buf.add('\n');
+            $"{pad1}{separator($"enum {e.name}", indent + 1)}\n\n".appendTo(buf);
             generateEnum(buf, e, indent + 1);
             buf.add('\n');
         }
 
         // nested messages
         for (MessageDescriptor nested2 : msg.nestedMessages) {
-            buf.addAll(pad1).addAll(separator("message " + nested2.name, indent + 1)).add('\n');
-            buf.add('\n');
+            $"{pad1}{separator($"message {nested2.name}", indent + 1)}\n\n".appendTo(buf);
             generateMessage(buf, nested2, indent + 1, True);
             buf.add('\n');
         }
 
         // serialization section
-        buf.addAll(pad1).addAll(separator("serialization", indent + 1)).add('\n');
-        buf.add('\n');
+        $"{pad1}{separator("serialization", indent + 1)}\n\n".appendTo(buf);
 
         // parseField
         generateParseField(buf, msg, regularFields, oneofFields, indent + 1);
@@ -246,7 +225,7 @@ class ProtoCodeGen {
         // freeze
         generateFreeze(buf, msg, regularFields, indent + 1);
 
-        buf.addAll(pad).addAll("}\n");
+        $"{pad}}\n".appendTo(buf);
     }
 
     // ----- typedef generation ---------------------------------------------------------------------
@@ -255,7 +234,7 @@ class ProtoCodeGen {
      * Generate inline typedefs for message and enum field references.
      */
     private void generateTypedefs(StringBuffer buf, MessageDescriptor msg, Int indent) {
-        String pad = spaces(indent);
+        String  pad     = spaces(indent);
         Boolean emitted = False;
 
         // collect unique type names that need Maybe typedefs
@@ -273,12 +252,7 @@ class ProtoCodeGen {
             String tn = field.typeName;
             if (tn.size > 0 && !seen.contains(tn)) {
                 seen.add(tn);
-                buf.addAll(pad)
-                   .addAll("typedef Presence | ")
-                   .addAll(tn)
-                   .addAll(" as Maybe")
-                   .addAll(sanitizeTypedefName(tn))
-                   .addAll(";\n");
+                $"{pad}typedef Presence | {tn} as Maybe{sanitizeTypedefName(tn)};\n".appendTo(buf);
                 emitted = True;
             }
         }
@@ -298,20 +272,14 @@ class ProtoCodeGen {
         String pad = spaces(indent);
 
         for (FieldDescriptor field : regularFields) {
-            buf.addAll(pad)
-               .addAll(fieldTypeName(field))
-               .add(' ')
-               .addAll(fieldName(field.name))
-               .addAll(" = ")
-               .addAll(fieldDefault(field))
-               .addAll(";\n");
+            String ftype = fieldTypeName(field);
+            String fname = fieldName(field.name);
+            String fdef  = fieldDefault(field);
+            $"{pad}{ftype} {fname} = {fdef};\n".appendTo(buf);
         }
 
         for (OneofDescriptor oneof : oneofs) {
-            buf.addAll(pad)
-               .addAll("Oneof ")
-               .addAll(fieldName(oneof.name))
-               .addAll(" = new Oneof();\n");
+            $"{pad}Oneof {fieldName(oneof.name)} = new Oneof();\n".appendTo(buf);
         }
     }
 
@@ -325,37 +293,26 @@ class ProtoCodeGen {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
 
-        buf.addAll(pad).addAll("@Override\n");
-        buf.addAll(pad).addAll("construct(").addAll(msg.name).addAll(" other) {\n");
-        buf.addAll(pad1).addAll("construct AbstractMessage(other);\n");
+        $|{pad}@Override
+         |{pad}construct({msg.name} other) \{
+         |{pad1}construct AbstractMessage(other);
+         .appendTo(buf);
 
         for (FieldDescriptor field : regularFields) {
             String fname = fieldName(field.name);
             if (field.label == Repeated || field.isMapField) {
-                buf.addAll(pad1)
-                   .addAll(fname)
-                   .addAll(" = other.")
-                   .addAll(fname)
-                   .addAll(".duplicate();\n");
+                $"\n{pad1}{fname} = other.{fname}.duplicate();".appendTo(buf);
             } else {
-                buf.addAll(pad1)
-                   .addAll(fname)
-                   .addAll(" = other.")
-                   .addAll(fname)
-                   .addAll(";\n");
+                $"\n{pad1}{fname} = other.{fname};".appendTo(buf);
             }
         }
 
         for (OneofDescriptor oneof : msg.oneofs) {
             String oname = fieldName(oneof.name);
-            buf.addAll(pad1)
-               .addAll(oname)
-               .addAll(" = other.")
-               .addAll(oname)
-               .addAll(".duplicate();\n");
+            $"\n{pad1}{oname} = other.{oname}.duplicate();".appendTo(buf);
         }
 
-        buf.addAll(pad).addAll("}\n");
+        $"\n{pad}}\n".appendTo(buf);
     }
 
     // ----- oneof accessor generation --------------------------------------------------------------
@@ -368,6 +325,7 @@ class ProtoCodeGen {
                                         Int indent) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
+        String pad2 = spaces(indent + 2);
         String oname = fieldName(oneof.name);
 
         for (FieldDescriptor field : oneofFields) {
@@ -379,45 +337,21 @@ class ProtoCodeGen {
             Int    fieldNum = field.number;
 
             // getter
-            buf.addAll(pad)
-               .addAll("conditional ")
-               .addAll(ecType)
-               .addAll(" get")
-               .addAll(fname)
-               .addAll("() {\n");
-            buf.addAll(pad1)
-               .addAll("if (Object v := ")
-               .addAll(oname)
-               .addAll(".get(")
-               .addAll(fieldNum.toString())
-               .addAll(")) {\n");
-            buf.addAll(spaces(indent + 2))
-               .addAll("return True, v.as(")
-               .addAll(ecType)
-               .addAll(");\n");
-            buf.addAll(pad1)
-               .addAll("}\n");
-            buf.addAll(pad1)
-               .addAll("return False;\n");
-            buf.addAll(pad)
-               .addAll("}\n");
-            buf.add('\n');
+            $|{pad}conditional {ecType} get{fname}() \{
+             |{pad1}if (Object v := {oname}.get({fieldNum})) \{
+             |{pad2}return True, v.as({ecType});
+             |{pad1}}
+             |{pad1}return False;
+             |{pad}}
+             |
+             .appendTo(buf);
 
             // setter
-            buf.addAll(pad)
-               .addAll("void set")
-               .addAll(fname)
-               .addAll("(")
-               .addAll(ecType)
-               .addAll(" value) {\n");
-            buf.addAll(pad1)
-               .addAll(oname)
-               .addAll(".set(")
-               .addAll(fieldNum.toString())
-               .addAll(", value);\n");
-            buf.addAll(pad)
-               .addAll("}\n");
-            buf.add('\n');
+            $|{pad}void set{fname}({ecType} value) \{
+             |{pad1}{oname}.set({fieldNum}, value);
+             |{pad}}
+             |
+             .appendTo(buf);
         }
     }
 
@@ -433,19 +367,23 @@ class ProtoCodeGen {
         String pad1 = spaces(indent + 1);
         String pad2 = spaces(indent + 2);
 
-        buf.addAll(pad).addAll("@Override\n");
-        buf.addAll(pad).addAll("Boolean parseField(CodedInput input, Int tag) {\n");
+        $|{pad}@Override
+         |{pad}Boolean parseField(CodedInput input, Int tag) \{
+         .appendTo(buf);
 
         if (regularFields.empty && oneofFields.empty) {
-            // no known fields — delegate to superclass for unknown field handling
-            buf.addAll(pad1).addAll("return False;\n");
+            $|
+             |{pad1}return False;
+             .appendTo(buf);
         } else {
-            buf.addAll(pad1).addAll("switch (WireType.getFieldNumber(tag)) {\n");
+            $|
+             |{pad1}switch (WireType.getFieldNumber(tag)) \{
+             .appendTo(buf);
 
             // regular fields
             for (FieldDescriptor field : regularFields) {
                 String fname = fieldName(field.name);
-                buf.addAll(pad1).addAll("case ").addAll(field.number.toString()).addAll(":\n");
+                $"\n{pad1}case {field.number}:\n".appendTo(buf);
 
                 if (field.isMapField) {
                     generateParseMapField(buf, field, fname, indent + 2);
@@ -456,50 +394,34 @@ class ProtoCodeGen {
                 } else if (field.type == FieldType.Msg) {
                     generateParseMessageField(buf, field, fname, indent + 2);
                 } else {
-                    buf.addAll(pad2)
-                       .addAll(fname)
-                       .addAll(" = input.")
-                       .addAll(readMethod(field))
-                       .addAll(";\n");
+                    $"{pad2}{fname} = input.{readMethod(field)};\n".appendTo(buf);
                 }
-                buf.addAll(pad2).addAll("return True;\n");
+                $"{pad2}return True;\n".appendTo(buf);
             }
 
             // oneof fields
             for (FieldDescriptor field : oneofFields) {
                 String oname = fieldName(msg.oneofs[field.oneofIndex].name);
-                buf.addAll(pad1).addAll("case ").addAll(field.number.toString()).addAll(":\n");
+                $"\n{pad1}case {field.number}:\n".appendTo(buf);
                 if (isEnumRef(field)) {
+                    String tn   = field.typeName;
                     String pad3 = spaces(indent + 3);
-                    buf.addAll(pad2)
-                       .addAll("if (")
-                       .addAll(field.typeName)
-                       .addAll(" v := ProtoEnum.byProtoValue(")
-                       .addAll(field.typeName)
-                       .addAll(".values, input.readEnum())) {\n");
-                    buf.addAll(pad3)
-                       .addAll(oname)
-                       .addAll(".set(")
-                       .addAll(field.number.toString())
-                       .addAll(", v);\n");
-                    buf.addAll(pad2).addAll("}\n");
+                    $|{pad2}if ({tn} v := ProtoEnum.byProtoValue({tn}.values, input.readEnum())) \{
+                     |{pad3}{oname}.set({field.number}, v);
+                     |{pad2}}
+                     .appendTo(buf);
                 } else {
-                    buf.addAll(pad2)
-                       .addAll(oname)
-                       .addAll(".set(")
-                       .addAll(field.number.toString())
-                       .addAll(", input.")
-                       .addAll(readMethod(field))
-                       .addAll(");\n");
+                    $"{pad2}{oname}.set({field.number}, input.{readMethod(field)});\n".appendTo(buf);
                 }
-                buf.addAll(pad2).addAll("return True;\n");
+                $"{pad2}return True;\n".appendTo(buf);
             }
 
-            buf.addAll(pad1).addAll("}\n");
-            buf.addAll(pad1).addAll("return False;\n");
+            $|{pad1}}
+             |{pad1}return False;
+             .appendTo(buf);
         }
 
-        buf.addAll(pad).addAll("}\n");
+        $"\n{pad}}\n".appendTo(buf);
     }
 
     /**
@@ -507,83 +429,48 @@ class ProtoCodeGen {
      */
     private void generateParseRepeatedField(StringBuffer buf, FieldDescriptor field,
                                             String fname, Int indent) {
-        String pad = spaces(indent);
+        String pad  = spaces(indent);
+        String pad1 = spaces(indent + 1);
+        String pad2 = spaces(indent + 2);
+        String pad3 = spaces(indent + 3);
+
         if (isEnumRef(field)) {
             // repeated enum: read varints and convert to enum values
-            String pad1 = spaces(indent + 1);
-            String pad2 = spaces(indent + 2);
-            buf.addAll(pad)
-               .addAll("if (WireType.getWireType(tag) == WireType.LEN) {\n");
-            buf.addAll(pad1)
-               .addAll("for (Int32 raw : input.readPackedInt32s()) {\n");
-            buf.addAll(pad2)
-               .addAll("if (")
-               .addAll(field.typeName)
-               .addAll(" v := ProtoEnum.byProtoValue(")
-               .addAll(field.typeName)
-               .addAll(".values, raw)) {\n");
-            buf.addAll(spaces(indent + 3))
-               .addAll(fname)
-               .addAll(".add(v);\n");
-            buf.addAll(pad2).addAll("}\n");
-            buf.addAll(pad1).addAll("}\n");
-            buf.addAll(pad).addAll("} else {\n");
-            buf.addAll(pad1)
-               .addAll("if (")
-               .addAll(field.typeName)
-               .addAll(" v := ProtoEnum.byProtoValue(")
-               .addAll(field.typeName)
-               .addAll(".values, input.readEnum())) {\n");
-            buf.addAll(pad2)
-               .addAll(fname)
-               .addAll(".add(v);\n");
-            buf.addAll(pad1).addAll("}\n");
-            buf.addAll(pad).addAll("}\n");
+            String tn = field.typeName;
+            $|{pad}if (WireType.getWireType(tag) == WireType.LEN) \{
+             |{pad1}for (Int32 raw : input.readPackedInt32s()) \{
+             |{pad2}if ({tn} v := ProtoEnum.byProtoValue({tn}.values, raw)) \{
+             |{pad3}{fname}.add(v);
+             |{pad2}}
+             |{pad1}}
+             |{pad}} else \{
+             |{pad1}if ({tn} v := ProtoEnum.byProtoValue({tn}.values, input.readEnum())) \{
+             |{pad2}{fname}.add(v);
+             |{pad1}}
+             |{pad}}
+             .appendTo(buf);
         } else if (field.type.packable) {
             // handle both packed (LEN) and unpacked wire types
-            String pad1 = spaces(indent + 1);
-            buf.addAll(pad)
-               .addAll("if (WireType.getWireType(tag) == WireType.LEN) {\n");
-            buf.addAll(pad1)
-               .addAll(fname)
-               .addAll(".addAll(input.")
-               .addAll(readPackedMethod(field))
-               .addAll(");\n");
-            buf.addAll(pad)
-               .addAll("} else {\n");
-            buf.addAll(pad1)
-               .addAll(fname)
-               .addAll(".add(input.")
-               .addAll(readMethod(field))
-               .addAll(");\n");
-            buf.addAll(pad)
-               .addAll("}\n");
+            $|{pad}if (WireType.getWireType(tag) == WireType.LEN) \{
+             |{pad1}{fname}.addAll(input.{readPackedMethod(field)});
+             |{pad}} else \{
+             |{pad1}{fname}.add(input.{readMethod(field)});
+             |{pad}}
+             .appendTo(buf);
         } else if (field.type == FieldType.Msg) {
             // repeated message
-            String pad1 = spaces(indent + 1);
-            buf.addAll(pad)
-               .addAll(field.typeName)
-               .addAll(" elem = new ")
-               .addAll(field.typeName)
-               .addAll("();\n");
-            buf.addAll(pad)
-               .addAll("Int len = input.readVarint().toInt();\n");
-            buf.addAll(pad)
-               .addAll("Int oldLimit = input.pushLimit(len);\n");
-            buf.addAll(pad)
-               .addAll("elem.mergeFrom(input);\n");
-            buf.addAll(pad)
-               .addAll("input.popLimit(oldLimit);\n");
-            buf.addAll(pad)
-               .addAll(fname)
-               .addAll(".add(elem);\n");
+            String tn = field.typeName;
+            $|{pad}{tn} elem = new {tn}();
+             |{pad}Int len = input.readVarint().toInt();
+             |{pad}Int oldLimit = input.pushLimit(len);
+             |{pad}elem.mergeFrom(input);
+             |{pad}input.popLimit(oldLimit);
+             |{pad}{fname}.add(elem);
+             |
+             .appendTo(buf);
         } else {
             // repeated non-packable scalar (string, bytes)
-            buf.addAll(pad)
-               .addAll(fname)
-               .addAll(".add(input.")
-               .addAll(readMethod(field))
-               .addAll(");\n");
+            $"{pad}{fname}.add(input.{readMethod(field)});\n".appendTo(buf);
         }
     }
 
@@ -593,22 +480,15 @@ class ProtoCodeGen {
     private void generateParseMessageField(StringBuffer buf, FieldDescriptor field,
                                            String fname, Int indent) {
         String pad = spaces(indent);
-        buf.addAll(pad)
-           .addAll(field.typeName)
-           .addAll(" msg = new ")
-           .addAll(field.typeName)
-           .addAll("();\n");
-        buf.addAll(pad)
-           .addAll("Int len = input.readVarint().toInt();\n");
-        buf.addAll(pad)
-           .addAll("Int oldLimit = input.pushLimit(len);\n");
-        buf.addAll(pad)
-           .addAll("msg.mergeFrom(input);\n");
-        buf.addAll(pad)
-           .addAll("input.popLimit(oldLimit);\n");
-        buf.addAll(pad)
-           .addAll(fname)
-           .addAll(" = msg;\n");
+        String tn  = field.typeName;
+        $|{pad}{tn} msg = new {tn}();
+         |{pad}Int len = input.readVarint().toInt();
+         |{pad}Int oldLimit = input.pushLimit(len);
+         |{pad}msg.mergeFrom(input);
+         |{pad}input.popLimit(oldLimit);
+         |{pad}{fname} = msg;
+         |{pad}
+         .appendTo(buf);
     }
 
     /**
@@ -618,16 +498,12 @@ class ProtoCodeGen {
                                         String fname, Int indent) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
-        buf.addAll(pad)
-           .addAll("if (")
-           .addAll(field.typeName)
-           .addAll(" v := ProtoEnum.byProtoValue(")
-           .addAll(field.typeName)
-           .addAll(".values, input.readEnum())) {\n");
-        buf.addAll(pad1)
-           .addAll(fname)
-           .addAll(" = v;\n");
-        buf.addAll(pad).addAll("}\n");
+        String tn   = field.typeName;
+        $|{pad}if ({tn} v := ProtoEnum.byProtoValue({tn}.values, input.readEnum())) \{
+         |{pad1}{fname} = v;
+         |{pad}}
+         |
+         .appendTo(buf);
     }
 
     /**
@@ -635,23 +511,16 @@ class ProtoCodeGen {
      */
     private void generateParseMapField(StringBuffer buf, FieldDescriptor field,
                                        String fname, Int indent) {
-        String pad  = spaces(indent);
+        String pad = spaces(indent);
         String readMapMethod = mapReadMethod(field);
         if (readMapMethod.size > 0) {
-            buf.addAll(pad)
-               .addAll("(")
-               .addAll(ecstasyType(field.mapKeyType))
-               .addAll(" k, ")
-               .addAll(ecstasyType(field.mapValueType))
-               .addAll(" v) = input.")
-               .addAll(readMapMethod)
-               .addAll(";\n");
-            buf.addAll(pad)
-               .addAll(fname)
-               .addAll(".put(k, v);\n");
+            String kt = ecstasyType(field.mapKeyType);
+            String vt = ecstasyType(field.mapValueType);
+            $|{pad}({kt} k, {vt} v) = input.{readMapMethod};
+             |{pad}{fname}.put(k, v);
+             .appendTo(buf);
         } else {
-            // fallback: inline sub-message parsing
-            buf.addAll(pad).addAll("// TODO: unsupported map type combination\n");
+            $"{pad}// TODO: unsupported map type combination\n".appendTo(buf);
         }
     }
 
@@ -667,12 +536,14 @@ class ProtoCodeGen {
         String pad1 = spaces(indent + 1);
         String pad2 = spaces(indent + 2);
 
-        buf.addAll(pad).addAll("@Override\n");
-        buf.addAll(pad).addAll("void writeKnownFields(CodedOutput out) {\n");
+        $|{pad}@Override
+         |{pad}void writeKnownFields(CodedOutput out) \{
+         .appendTo(buf);
 
         // regular fields
         for (FieldDescriptor field : regularFields) {
             String fname = fieldName(field.name);
+            Int    fn    = field.number;
 
             if (field.isMapField) {
                 generateWriteMapField(buf, field, fname, indent + 1);
@@ -680,69 +551,28 @@ class ProtoCodeGen {
                 generateWriteRepeatedField(buf, field, fname, indent + 1);
             } else if (isEnumRef(field)) {
                 String ecType = field.typeName;
-                buf.addAll(pad1)
-                   .addAll("var ")
-                   .addAll(fname)
-                   .addAll(" = this.")
-                   .addAll(fname)
-                   .addAll(";\n");
-                buf.addAll(pad1)
-                   .addAll("if (")
-                   .addAll(fname)
-                   .addAll(".is(")
-                   .addAll(ecType)
-                   .addAll(")) {\n");
-                buf.addAll(pad2)
-                   .addAll("out.writeEnum(")
-                   .addAll(field.number.toString())
-                   .addAll(", ")
-                   .addAll(fname)
-                   .addAll(");\n");
-                buf.addAll(pad1).addAll("}\n");
+                $|
+                 |{pad1}var {fname} = this.{fname};
+                 |{pad1}if ({fname}.is({ecType})) \{
+                 |{pad2}out.writeEnum({fn}, {fname});
+                 |{pad1}}
+                 .appendTo(buf);
             } else if (field.type == FieldType.Msg) {
                 String ecType = field.typeName;
-                buf.addAll(pad1)
-                   .addAll("var ")
-                   .addAll(fname)
-                   .addAll(" = this.")
-                   .addAll(fname)
-                   .addAll(";\n");
-                buf.addAll(pad1)
-                   .addAll("if (")
-                   .addAll(fname)
-                   .addAll(".is(")
-                   .addAll(ecType)
-                   .addAll(")) {\n");
-                buf.addAll(pad2)
-                   .addAll("out.writeMessage(")
-                   .addAll(field.number.toString())
-                   .addAll(", ")
-                   .addAll(fname)
-                   .addAll(");\n");
-                buf.addAll(pad1).addAll("}\n");
+                $|
+                 |{pad1}var {fname} = this.{fname};
+                 |{pad1}if ({fname}.is({ecType})) \{
+                 |{pad2}out.writeMessage({fn}, {fname});
+                 |{pad1}}
+                 .appendTo(buf);
             } else {
                 String ecType = ecstasyScalarType(field);
-                buf.addAll(pad1)
-                   .addAll("var ")
-                   .addAll(fname)
-                   .addAll(" = this.")
-                   .addAll(fname)
-                   .addAll(";\n");
-                buf.addAll(pad1)
-                   .addAll("if (")
-                   .addAll(fname)
-                   .addAll(".is(")
-                   .addAll(ecType)
-                   .addAll(")) {\n");
-                buf.addAll(pad2)
-                   .addAll("out.")
-                   .addAll(writeMethod(field))
-                   .addAll("(")
-                   .addAll(field.number.toString())
-                   .addAll(", ")
-                   .addAll(fname)
-                   .addAll(");\n");
-                buf.addAll(pad1).addAll("}\n");
+                $|
+                 |{pad1}var {fname} = this.{fname};
+                 |{pad1}if ({fname}.is({ecType})) \{
+                 |{pad2}out.{writeMethod(field)}({fn}, {fname});
+                 |{pad1}}
+                 .appendTo(buf);
             }
         }
 
@@ -751,7 +581,7 @@ class ProtoCodeGen {
             generateWriteOneof(buf, oneof, oneofFields, indent + 1);
         }
 
-        buf.addAll(pad).addAll("}\n");
+        $"\n{pad}}\n".appendTo(buf);
     }
 
     /**
@@ -761,56 +591,32 @@ class ProtoCodeGen {
                                             String fname, Int indent) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
+        Int    fn   = field.number;
+
         if (isEnumRef(field)) {
             // repeated enum: write each value individually using writeEnum
-            buf.addAll(pad)
-               .addAll("for (")
-               .addAll(field.typeName)
-               .addAll(" v : ")
-               .addAll(fname)
-               .addAll(") {\n");
-            buf.addAll(pad1)
-               .addAll("out.writeEnum(")
-               .addAll(field.number.toString())
-               .addAll(", v);\n");
-            buf.addAll(pad).addAll("}\n");
+            String tn = field.typeName;
+            $|
+             |{pad}for ({tn} v : {fname}) \{
+             |{pad1}out.writeEnum({fn}, v);
+             |{pad}}
+             .appendTo(buf);
         } else if (field.type.packable) {
-            buf.addAll(pad)
-               .addAll("if (!")
-               .addAll(fname)
-               .addAll(".empty) {\n");
-            buf.addAll(pad1)
-               .addAll("out.")
-               .addAll(writePackedMethod(field))
-               .addAll("(")
-               .addAll(field.number.toString())
-               .addAll(", ")
-               .addAll(fname)
-               .addAll(");\n");
-            buf.addAll(pad).addAll("}\n");
+            $|
+             |{pad}if (!{fname}.empty) \{
+             |{pad1}out.{writePackedMethod(field)}({fn}, {fname});
+             |{pad}}
+             .appendTo(buf);
         } else {
-            String ecType = field.type == FieldType.Msg ? field.typeName
-                                                        : ecstasyScalarType(field);
-            buf.addAll(pad)
-               .addAll("for (")
-               .addAll(ecType)
-               .addAll(" v : ")
-               .addAll(fname)
-               .addAll(") {\n");
-            if (field.type == FieldType.Msg) {
-                buf.addAll(pad1)
-                   .addAll("out.writeMessage(")
-                   .addAll(field.number.toString())
-                   .addAll(", v);\n");
-            } else {
-                buf.addAll(pad1)
-                   .addAll("out.")
-                   .addAll(writeMethod(field))
-                   .addAll("(")
-                   .addAll(field.number.toString())
-                   .addAll(", v);\n");
-            }
-            buf.addAll(pad).addAll("}\n");
+            String ecType = field.type == FieldType.Msg ? field.typeName : ecstasyScalarType(field);
+            String writeCall = field.type == FieldType.Msg
+                    ? $"out.writeMessage({fn}, v)"
+                    : $"out.{writeMethod(field)}({fn}, v)";
+            $|
+             |{pad}for ({ecType} v : {fname}) \{
+             |{pad1}{writeCall};
+             |{pad}}
+             .appendTo(buf);
         }
     }
 
@@ -823,21 +629,14 @@ class ProtoCodeGen {
         String pad1 = spaces(indent + 1);
         String writeMapMethod = mapWriteMethod(field);
         if (writeMapMethod.size > 0) {
-            buf.addAll(pad)
-               .addAll("for ((")
-               .addAll(ecstasyType(field.mapKeyType))
-               .addAll(" k, ")
-               .addAll(ecstasyType(field.mapValueType))
-               .addAll(" v) : ")
-               .addAll(fname)
-               .addAll(") {\n");
-            buf.addAll(pad1)
-               .addAll("out.")
-               .addAll(writeMapMethod)
-               .addAll("(")
-               .addAll(field.number.toString())
-               .addAll(", k, v);\n");
-            buf.addAll(pad).addAll("}\n");
+            String kt = ecstasyType(field.mapKeyType);
+            String vt = ecstasyType(field.mapValueType);
+            Int    fn = field.number;
+            $|
+             |{pad}for (({kt} k, {vt} v) : {fname}) \{
+             |{pad1}out.{writeMapMethod}({fn}, k, v);
+             |{pad}}
+             .appendTo(buf);
         }
     }
 
@@ -851,44 +650,28 @@ class ProtoCodeGen {
         String pad2 = spaces(indent + 2);
         String oname = fieldName(oneof.name);
 
-        buf.addAll(pad)
-           .addAll("switch (")
-           .addAll(oname)
-           .addAll(".activeFieldNumber) {\n");
+        $|
+         |{pad}switch ({oname}.activeFieldNumber) \{
+         .appendTo(buf);
 
         for (FieldDescriptor field : oneofFields) {
             if (!Oneof.contains(field.number, oneof.fieldNumbers)) {
                 continue;
             }
-            String fname   = toPascalCase(field.name);
-            String ecType  = ecstasyScalarType(field);
+            String fname  = toPascalCase(field.name);
+            String ecType = ecstasyScalarType(field);
+            String fvar   = fieldName(field.name);
+            Int    fn     = field.number;
 
-            buf.addAll(pad)
-               .addAll("case ")
-               .addAll(field.number.toString())
-               .addAll(":\n");
-            buf.addAll(pad1)
-               .addAll("if (")
-               .addAll(ecType)
-               .addAll(" ")
-               .addAll(fieldName(field.name))
-               .addAll(" := get")
-               .addAll(fname)
-               .addAll("()) {\n");
-            buf.addAll(pad2)
-               .addAll("out.")
-               .addAll(writeMethod(field))
-               .addAll("(")
-               .addAll(field.number.toString())
-               .addAll(", ")
-               .addAll(fieldName(field.name))
-               .addAll(");\n");
-            buf.addAll(pad1)
-               .addAll("}\n");
-            buf.addAll(pad1).addAll("break;\n");
+            $|{pad}case {fn}:
+             |{pad1}if ({ecType} {fvar} := get{fname}()) \{
+             |{pad2}out.{writeMethod(field)}({fn}, {fvar});
+             |{pad1}}
+             |{pad1}break;
+             .appendTo(buf);
         }
 
-        buf.addAll(pad).addAll("}\n");
+        $"{pad}}\n".appendTo(buf);
     }
 
     // ----- knownFieldsSize generation -------------------------------------------------------------
@@ -903,9 +686,10 @@ class ProtoCodeGen {
         String pad1 = spaces(indent + 1);
         String pad2 = spaces(indent + 2);
 
-        buf.addAll(pad).addAll("@Override\n");
-        buf.addAll(pad).addAll("Int knownFieldsSize() {\n");
-        buf.addAll(pad1).addAll("Int size = 0;\n");
+        $|{pad}@Override
+         |{pad}Int knownFieldsSize() \{
+         |{pad1}Int size = 0;
+         .appendTo(buf);
 
         // regular fields
         for (FieldDescriptor field : regularFields) {
@@ -917,65 +701,30 @@ class ProtoCodeGen {
                 generateSizeRepeatedField(buf, field, fname, indent + 1);
             } else if (isEnumRef(field)) {
                 String ecType = field.typeName;
-                buf.addAll(pad1)
-                   .addAll("var ")
-                   .addAll(fname)
-                   .addAll(" = this.")
-                   .addAll(fname)
-                   .addAll(";\n");
-                buf.addAll(pad1)
-                   .addAll("if (")
-                   .addAll(fname)
-                   .addAll(".is(")
-                   .addAll(ecType)
-                   .addAll(")) {\n");
-                buf.addAll(pad2)
-                   .addAll("size += CodedOutput.computeEnumSize(")
-                   .addAll(field.number.toString())
-                   .addAll(", ")
-                   .addAll(fname)
-                   .addAll(");\n");
-                buf.addAll(pad1).addAll("}\n");
+                Int    fn     = field.number;
+                $|
+                 |{pad1}var {fname} = this.{fname};
+                 |{pad1}if ({fname}.is({ecType})) \{
+                 |{pad2}size += CodedOutput.computeEnumSize({fn}, {fname});
+                 |{pad1}}
+                 .appendTo(buf);
             } else if (field.type == FieldType.Msg) {
                 String ecType = field.typeName;
-                buf.addAll(pad1)
-                   .addAll("var ")
-                   .addAll(fname)
-                   .addAll(" = this.")
-                   .addAll(fname)
-                   .addAll(";\n");
-                buf.addAll(pad1)
-                   .addAll("if (")
-                   .addAll(fname)
-                   .addAll(".is(")
-                   .addAll(ecType)
-                   .addAll(")) {\n");
-                buf.addAll(pad2)
-                   .addAll("size += CodedOutput.computeMessageSize(")
-                   .addAll(field.number.toString())
-                   .addAll(", ")
-                   .addAll(fname)
-                   .addAll(");\n");
-                buf.addAll(pad1).addAll("}\n");
+                Int    fn     = field.number;
+                $|
+                 |{pad1}var {fname} = this.{fname};
+                 |{pad1}if ({fname}.is({ecType})) \{
+                 |{pad2}size += CodedOutput.computeMessageSize({fn}, {fname});
+                 |{pad1}}
+                 .appendTo(buf);
             } else {
                 String ecType = ecstasyScalarType(field);
-                buf.addAll(pad1)
-                   .addAll("var ")
-                   .addAll(fname)
-                   .addAll(" = this.")
-                   .addAll(fname)
-                   .addAll(";\n");
-                buf.addAll(pad1)
-                   .addAll("if (")
-                   .addAll(fname)
-                   .addAll(".is(")
-                   .addAll(ecType)
-                   .addAll(")) {\n");
-                buf.addAll(pad2)
-                   .addAll("size += CodedOutput.")
-                   .addAll(computeSizeMethod(field))
-                   .addAll(";\n");
-                buf.addAll(pad1).addAll("}\n");
+                $|
+                 |{pad1}var {fname} = this.{fname};
+                 |{pad1}if ({fname}.is({ecType})) \{
+                 |{pad2}size += CodedOutput.{computeSizeMethod(field)};
+                 |{pad1}}
+                 .appendTo(buf);
             }
         }
 
@@ -984,8 +733,10 @@ class ProtoCodeGen {
             generateSizeOneof(buf, oneof, oneofFields, indent + 1);
         }
 
-        buf.addAll(pad1).addAll("return size;\n");
-        buf.addAll(pad).addAll("}\n");
+        $|
+         |{pad1}return size;
+         |{pad}}
+         .appendTo(buf);
     }
 
     /**
@@ -995,50 +746,32 @@ class ProtoCodeGen {
                                            String fname, Int indent) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
+        Int    fn   = field.number;
+
         if (isEnumRef(field)) {
             // repeated enum: compute size for each element individually
-            buf.addAll(pad)
-               .addAll("for (")
-               .addAll(field.typeName)
-               .addAll(" v : ")
-               .addAll(fname)
-               .addAll(") {\n");
-            buf.addAll(pad1)
-               .addAll("size += CodedOutput.computeEnumSize(")
-               .addAll(field.number.toString())
-               .addAll(", v);\n");
-            buf.addAll(pad).addAll("}\n");
+            String tn = field.typeName;
+            $|
+             |{pad}for ({tn} v : {fname}) \{
+             |{pad1}size += CodedOutput.computeEnumSize({fn}, v);
+             |{pad}}
+             .appendTo(buf);
         } else if (field.type.packable) {
-            buf.addAll(pad)
-               .addAll("if (!")
-               .addAll(fname)
-               .addAll(".empty) {\n");
-            buf.addAll(pad1)
-               .addAll("size += CodedOutput.")
-               .addAll(computePackedSizeMethod(field))
-               .addAll(";\n");
-            buf.addAll(pad).addAll("}\n");
+            $|
+             |{pad}if (!{fname}.empty) \{
+             |{pad1}size += CodedOutput.{computePackedSizeMethod(field)};
+             |{pad}}
+             .appendTo(buf);
         } else {
-            String ecType = field.type == FieldType.Msg ? field.typeName
-                                                        : ecstasyScalarType(field);
-            buf.addAll(pad)
-               .addAll("for (")
-               .addAll(ecType)
-               .addAll(" v : ")
-               .addAll(fname)
-               .addAll(") {\n");
-            if (field.type == FieldType.Msg) {
-                buf.addAll(pad1)
-                   .addAll("size += CodedOutput.computeMessageSize(")
-                   .addAll(field.number.toString())
-                   .addAll(", v);\n");
-            } else {
-                buf.addAll(pad1)
-                   .addAll("size += CodedOutput.")
-                   .addAll(computeSizeMethodForElement(field))
-                   .addAll(";\n");
-            }
-            buf.addAll(pad).addAll("}\n");
+            String ecType = field.type == FieldType.Msg ? field.typeName : ecstasyScalarType(field);
+            String sizeCall = field.type == FieldType.Msg
+                    ? $"CodedOutput.computeMessageSize({fn}, v)"
+                    : $"CodedOutput.{computeSizeMethodForElement(field)}";
+            $|
+             |{pad}for ({ecType} v : {fname}) \{
+             |{pad1}size += {sizeCall};
+             |{pad}}
+             .appendTo(buf);
         }
     }
 
@@ -1051,21 +784,14 @@ class ProtoCodeGen {
         String pad1 = spaces(indent + 1);
         String computeMapMethod = mapComputeSizeMethod(field);
         if (computeMapMethod.size > 0) {
-            buf.addAll(pad)
-               .addAll("for ((")
-               .addAll(ecstasyType(field.mapKeyType))
-               .addAll(" k, ")
-               .addAll(ecstasyType(field.mapValueType))
-               .addAll(" v) : ")
-               .addAll(fname)
-               .addAll(") {\n");
-            buf.addAll(pad1)
-               .addAll("size += CodedOutput.")
-               .addAll(computeMapMethod)
-               .addAll("(")
-               .addAll(field.number.toString())
-               .addAll(", k, v);\n");
-            buf.addAll(pad).addAll("}\n");
+            String kt = ecstasyType(field.mapKeyType);
+            String vt = ecstasyType(field.mapValueType);
+            Int    fn = field.number;
+            $|
+             |{pad}for (({kt} k, {vt} v) : {fname}) \{
+             |{pad1}size += CodedOutput.{computeMapMethod}({fn}, k, v);
+             |{pad}}
+             .appendTo(buf);
         }
     }
 
@@ -1079,10 +805,9 @@ class ProtoCodeGen {
         String pad2 = spaces(indent + 2);
         String oname = fieldName(oneof.name);
 
-        buf.addAll(pad)
-           .addAll("switch (")
-           .addAll(oname)
-           .addAll(".activeFieldNumber) {\n");
+        $|
+         |{pad}switch ({oname}.activeFieldNumber) \{
+         .appendTo(buf);
 
         for (FieldDescriptor field : oneofFields) {
             if (!Oneof.contains(field.number, oneof.fieldNumbers)) {
@@ -1090,29 +815,18 @@ class ProtoCodeGen {
             }
             String fname  = toPascalCase(field.name);
             String ecType = ecstasyScalarType(field);
+            String fvar   = fieldName(field.name);
+            Int    fn     = field.number;
 
-            buf.addAll(pad)
-               .addAll("case ")
-               .addAll(field.number.toString())
-               .addAll(":\n");
-            buf.addAll(pad1)
-               .addAll("if (")
-               .addAll(ecType)
-               .addAll(" ")
-               .addAll(fieldName(field.name))
-               .addAll(" := get")
-               .addAll(fname)
-               .addAll("()) {\n");
-            buf.addAll(pad2)
-               .addAll("size += CodedOutput.")
-               .addAll(computeSizeMethodForOneof(field))
-               .addAll(";\n");
-            buf.addAll(pad1)
-               .addAll("}\n");
-            buf.addAll(pad1).addAll("break;\n");
+            $|{pad}case {fn}:
+             |{pad1}if ({ecType} {fvar} := get{fname}()) \{
+             |{pad2}size += CodedOutput.{computeSizeMethodForOneof(field)};
+             |{pad1}}
+             |{pad1}break;
+             .appendTo(buf);
         }
 
-        buf.addAll(pad).addAll("}\n");
+        $"{pad}}\n".appendTo(buf);
     }
 
     // ----- freeze generation ----------------------------------------------------------------------
@@ -1124,31 +838,28 @@ class ProtoCodeGen {
                                 Array<FieldDescriptor> regularFields, Int indent) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
+        String pad2 = spaces(indent + 2);
 
-        buf.addAll(pad).addAll("@Override\n");
-        buf.addAll(pad)
-           .addAll("immutable ")
-           .addAll(msg.name)
-           .addAll(" freeze(Boolean inPlace = False) {\n");
-        buf.addAll(pad1)
-           .addAll("if (this.is(immutable ")
-           .addAll(msg.name)
-           .addAll(")) {\n");
-        buf.addAll(spaces(indent + 2)).addAll("return this;\n");
-        buf.addAll(pad1).addAll("}\n");
+        $|{pad}@Override
+         |{pad}immutable {msg.name} freeze(Boolean inPlace = False) \{
+         |{pad1}if (this.is(immutable {msg.name})) \{
+         |{pad2}return this;
+         |{pad1}}
+         |{pad1}unknownFields.freeze(inPlace);
+         .appendTo(buf);
 
         // freeze mutable collections
-        buf.addAll(pad1).addAll("unknownFields.freeze(inPlace);\n");
         for (FieldDescriptor field : regularFields) {
             if (field.label == Repeated || field.isMapField) {
-                buf.addAll(pad1)
-                   .addAll(fieldName(field.name))
-                   .addAll(".freeze(inPlace);\n");
+                $"\n{pad1}{fieldName(field.name)}.freeze(inPlace);".appendTo(buf);
             }
         }
 
-        buf.addAll(pad1).addAll("return this.makeImmutable();\n");
-        buf.addAll(pad).addAll("}\n");
+        $|
+         |{pad1}return this.makeImmutable();
+         |{pad}}
+         |
+         .appendTo(buf);
     }
 
     // ----- service generation ---------------------------------------------------------------------
@@ -1160,37 +871,24 @@ class ProtoCodeGen {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
 
-        buf.addAll(pad).addAll("interface ").addAll(svc.name).addAll(" {\n");
+        $"{pad}interface {svc.name} \{\n".appendTo(buf);
 
         for (MethodDescriptor method : svc.methods) {
             buf.add('\n');
             String methodName = toCamelCase(method.name);
 
             if (method.clientStreaming || method.serverStreaming) {
-                buf.addAll(pad1)
-                   .addAll("// TODO: streaming RPC\n");
-                buf.addAll(pad1)
-                   .addAll("// ")
-                   .addAll(method.name)
-                   .addAll("(")
-                   .addAll(method.clientStreaming ? "stream " : "")
-                   .addAll(method.inputType)
-                   .addAll(") returns (")
-                   .addAll(method.serverStreaming ? "stream " : "")
-                   .addAll(method.outputType)
-                   .addAll(")\n");
+                String clientStr = method.clientStreaming ? "stream " : "";
+                String serverStr = method.serverStreaming ? "stream " : "";
+                $|{pad1}// TODO: streaming RPC
+                 |{pad1}// {method.name}({clientStr}{method.inputType}) returns ({serverStr}{method.outputType})
+                 .appendTo(buf);
             } else {
-                buf.addAll(pad1)
-                   .addAll(method.outputType)
-                   .addAll(" ")
-                   .addAll(methodName)
-                   .addAll("(")
-                   .addAll(method.inputType)
-                   .addAll(" request);\n");
+                $"{pad1}{method.outputType} {methodName}({method.inputType} request);\n".appendTo(buf);
             }
         }
 
-        buf.addAll(pad).addAll("}\n");
+        $"{pad}}\n".appendTo(buf);
     }
 
     // ----- import collection ---------------------------------------------------------------------
@@ -1754,12 +1452,5 @@ class ProtoCodeGen {
             buf.add('-');
         }
         return buf.toString();
-    }
-
-    /**
-     * Append an import statement.
-     */
-    private void appendImport(StringBuffer buf, String imp) {
-        buf.addAll("import ").addAll(imp).addAll(";\n");
     }
 }
