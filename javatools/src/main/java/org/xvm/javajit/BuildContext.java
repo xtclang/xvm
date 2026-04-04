@@ -64,7 +64,6 @@ import static java.lang.constant.ConstantDescs.CD_MethodHandles_Lookup;
 import static java.lang.constant.ConstantDescs.CD_MethodType;
 import static java.lang.constant.ConstantDescs.CD_Object;
 import static java.lang.constant.ConstantDescs.CD_String;
-import static java.lang.constant.ConstantDescs.CD_Throwable;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
@@ -79,8 +78,6 @@ import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.EXT;
-import static org.xvm.javajit.Builder.N_OutOfBounds;
-import static org.xvm.javajit.Builder.N_TypeMismatch;
 import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.JitFlavor.AlwaysNull;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
@@ -1018,12 +1015,14 @@ public class BuildContext {
         if (argId >= 0) {
             return adjustRegister(code, getRegisterInfo(code, argId), false);
         }
+
+        if (argId == Op.A_THIS) {
+            return getRegisterInfo(code, Op.A_THIS);
+        }
+
         RegisterInfo reg = argId <= Op.CONSTANT_OFFSET
                 ? loadConstant(code, argId)
                 : loadPredefineArgument(code, argId);
-        if (reg.slot() == 0) {
-            return reg; // Op.A_THIS;
-        }
 
         return reg.storeTempValue(this, code, argId);
     }
@@ -1367,7 +1366,7 @@ public class BuildContext {
                 if (cdFrom.isPrimitive()) {
                     // this can only be caused by a dead/unreachable code
                     ensureVarScope(code, regTo);
-                    throwTypeMismatch(code, "Unreconcilable types " +
+                    Builder.throwTypeMismatch(code, "Unreconcilable types " +
                             typeFrom.getValueString() + " -> " + typeTo.getValueString());
                     // unfortunately, if generated for any reachable code, this will throw
                     // during the verification phase without any useful information to debug
@@ -1377,7 +1376,7 @@ public class BuildContext {
                 }
 
                 // trust the compiler
-                generateCheckCast(code, typeTo);
+                builder.generateCheckCast(code, typeTo);
             }
         }
 
@@ -1650,7 +1649,7 @@ public class BuildContext {
             switch (srcFlavor) {
             case Specific:
                 switch (dstFlavor) {
-                case Specific, SpecificWithDefault, Widened, WidenedWithDefault:
+                case SpecificWithDefault, Widened, WidenedWithDefault:
                     // nothing to do
                     continue;
 
@@ -2408,7 +2407,7 @@ public class BuildContext {
                     switch (destFlavor) {
                     case Specific:
                         if (retType.isAutoNarrowing()) {
-                            generateCheckCast(code, destType);
+                            builder.generateCheckCast(code, destType);
                         }
                         break;
 
@@ -2417,13 +2416,13 @@ public class BuildContext {
                         break;
 
                     case Primitive:
-                        generateCheckCast(code, destType);
+                        builder.generateCheckCast(code, destType);
                         Builder.unbox(code, destType);
                         break;
 
                     case NullablePrimitive:
                         // TODO: resolve the type parameter and check for Null if necessary
-                        generateCheckCast(code, destType.removeNullable());
+                        builder.generateCheckCast(code, destType.removeNullable());
                         Builder.unbox(code, destType);
                         code.iconst_0();
                         break;
@@ -2537,57 +2536,6 @@ public class BuildContext {
             .invokestatic(CD_Exception, "$unsupported",
                 MethodTypeDesc.of(CD_nException, CD_Ctx, CD_JavaString))
             .athrow();
-    }
-
-    /**
-     * Add the code to throw a "TypeMismatch" exception.
-     */
-    public void throwTypeMismatch(CodeBuilder code, String text) {
-        throwException(code, ClassDesc.of(N_TypeMismatch), text);
-    }
-
-    /**
-     * Add the code to throw an Ecstasy exception. The code we produce is equivalent to:
-     * {@code throw new Exception(ctx).$init(ctx, text, null);}
-     *
-     * @param exCD  the ClassDesc for the Ecstasy exception (e.g. TypeMismatch)
-     * @param text  the exception text
-     */
-    public void throwException(CodeBuilder code, ClassDesc exCD, String text) {
-        Builder.invokeDefaultConstructor(code, exCD);
-        loadCtx(code);
-        code.loadConstant(text);
-        code.aconst_null()
-            .invokevirtual(exCD, "$init", MethodTypeDesc.of(
-                CD_nException, CD_Ctx, CD_JavaString, CD_Throwable))
-            .athrow();
-    }
-
-    /**
-     * Add the code to throw an "OutOfBounds" exception.
-     */
-    public void throwOutOfBounds(CodeBuilder code, String text) {
-        throwException(code, ClassDesc.of(N_OutOfBounds), text);
-    }
-
-    /**
-     * Generate a "checkcast" that transforms a potential CCE into a TypeMismatch.
-     */
-    public void generateCheckCast(CodeBuilder code, TypeConstant typeTo) {
-        Label startLabel   = code.newLabel();
-        Label endLabel     = code.newLabel();
-        Label successLabel = code.newLabel();
-
-        ClassDesc cd = builder.ensureClassDesc(typeTo);
-        code.labelBinding(startLabel)
-            .checkcast(cd)
-            .goto_(successLabel)
-            .labelBinding(endLabel);
-        throwTypeMismatch(code, cd.descriptorString());
-
-        code.labelBinding(successLabel)
-            .exceptionCatch(startLabel, endLabel, endLabel,
-                ClassDesc.of("java.lang.ClassCastException"));
     }
 
     /**

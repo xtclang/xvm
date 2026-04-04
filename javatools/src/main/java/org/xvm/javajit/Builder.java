@@ -49,6 +49,7 @@ import org.xvm.util.PackedInteger;
 
 import static java.lang.constant.ConstantDescs.CD_Double;
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
+import static java.lang.constant.ConstantDescs.CD_Throwable;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_char;
 import static java.lang.constant.ConstantDescs.CD_double;
@@ -1152,6 +1153,59 @@ public abstract class Builder {
                     .aastore();
             }
         }
+    }
+
+    /**
+     * Generate a "checkcast" that transforms a potential CCE into a TypeMismatch.
+     */
+    public void generateCheckCast(CodeBuilder code, TypeConstant typeTo) {
+        Label startLabel   = code.newLabel();
+        Label endLabel     = code.newLabel();
+        Label successLabel = code.newLabel();
+
+        ClassDesc cd = ensureClassDesc(typeTo);
+        code.labelBinding(startLabel)
+            .checkcast(cd)
+            .goto_(successLabel)
+            .labelBinding(endLabel);
+        Builder.throwTypeMismatch(code, cd.descriptorString());
+
+        code.labelBinding(successLabel)
+            .exceptionCatch(startLabel, endLabel, endLabel,
+                ClassDesc.of("java.lang.ClassCastException"));
+    }
+
+    /**
+     * Add the code to throw an Ecstasy exception. The code we produce is equivalent to:
+     * {@code throw new Exception(ctx).$init(ctx, text, null);}
+     *
+     * @param code
+     * @param exCD         the ClassDesc for the Ecstasy exception (e.g. TypeMismatch)
+     * @param text         the exception text
+     * @param buildContext
+     */
+    public static void throwException(CodeBuilder code, ClassDesc exCD, String text) {
+        invokeDefaultConstructor(code, exCD);
+        code.aload(code.parameterSlot(0)) // ctx
+            .loadConstant(text)
+            .aconst_null()
+            .invokevirtual(exCD, "$init", MethodTypeDesc.of(
+                CD_nException, CD_Ctx, CD_JavaString, CD_Throwable))
+            .athrow();
+    }
+
+    /**
+     * Add the code to throw a "TypeMismatch" exception.
+     */
+    public static void throwTypeMismatch(CodeBuilder code, String text) {
+        throwException(code, ClassDesc.of(N_TypeMismatch), text);
+    }
+
+    /**
+     * Add the code to throw an "OutOfBounds" exception.
+     */
+    public static void throwOutOfBounds(CodeBuilder code, String text) {
+        throwException(code, ClassDesc.of(N_OutOfBounds), text);
     }
 
     /**

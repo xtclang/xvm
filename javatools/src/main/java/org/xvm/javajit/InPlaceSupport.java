@@ -62,7 +62,7 @@ public interface InPlaceSupport
                     throw new IllegalStateException();
             }
             code.if_icmpne(labelOK);
-            bctx.throwOutOfBounds(code, msg);
+            Builder.throwOutOfBounds(code, msg);
             code.labelBinding(labelOK);
         }
 
