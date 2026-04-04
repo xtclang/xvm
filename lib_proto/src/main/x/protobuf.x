@@ -55,6 +55,11 @@ module protobuf.xtclang.org {
      */
     typedef Presence | ByteString as MaybeByteString;
 
+    /**
+     * A type alias for a Protobuf field that may be a Byte array or unset.
+     */
+    typedef Presence | Byte[] as MaybeBytes;
+
 
     void run(String[] args) {
         @Inject Console console;

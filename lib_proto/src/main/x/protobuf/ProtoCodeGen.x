@@ -515,7 +515,7 @@ class ProtoCodeGen {
             buf.addAll(pad)
                .addAll("if (WireType.getWireType(tag) == WireType.LEN) {\n");
             buf.addAll(pad1)
-               .addAll("for (Int32 raw : input.readPackedVarints()) {\n");
+               .addAll("for (Int32 raw : input.readPackedInt32s()) {\n");
             buf.addAll(pad2)
                .addAll("if (")
                .addAll(field.typeName)
@@ -1299,7 +1299,7 @@ class ProtoCodeGen {
             case UI64, FIX64:       "MaybeUInt64";
             case Bool:              "MaybeBoolean";
             case Str:               "MaybeString";
-            case Bytes:             "MaybeByteString";
+            case Bytes:             "MaybeBytes";
             case Dbl:               "MaybeFloat64";
             case Flt:               "MaybeFloat32";
             case Enm:               $"Maybe{sanitizeTypedefName(field.typeName)}";
@@ -1373,12 +1373,12 @@ class ProtoCodeGen {
             case Dbl:               "readPackedDoubles()";
             case Flt:               "readPackedFloats()";
             case I64, SI64:         "readPackedVarints()";
-            case UI64:              "readPackedVarints()";
-            case I32, SI32:         "readPackedVarints()";
+            case UI64:              "readPackedUInt64s()";
+            case I32, SI32:         "readPackedInt32s()";
             case FIX64, SFIX64:     "readPackedFixed64s()";
             case FIX32, SFIX32:     "readPackedFixed32s()";
             case Bool:              "readPackedBools()";
-            case UI32:              "readPackedVarints()";
+            case UI32:              "readPackedInt32s()";
             case Enm:               "readPackedVarints()";
             default:                "readPackedVarints()";
         };

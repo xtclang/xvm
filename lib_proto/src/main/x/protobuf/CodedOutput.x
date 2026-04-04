@@ -431,11 +431,11 @@ class CodedOutput {
         }
         writeTag(fieldNumber, WireType.LEN);
         Int dataSize = 0;
-        for (Int64 v : values) {
+        for (IntNumber v : values) {
             dataSize += computeVarintSize(v);
         }
         writeVarint(dataSize);
-        for (Int64 v : values) {
+        for (IntNumber v : values) {
             writeVarint(v.toInt64());
         }
     }
@@ -487,7 +487,7 @@ class CodedOutput {
         writeTag(fieldNumber, WireType.LEN);
         Int dataSize = 0;
         for (Int32 v : values) {
-            dataSize += computeVarintSize(((v << 1) ^ (v >> 31)).toInt64());
+            dataSize += computeVarintSize(((v << 1) ^ (v >> 31)));
         }
         writeVarint(dataSize.toInt64());
         for (Int32 v : values) {
@@ -600,13 +600,13 @@ class CodedOutput {
      * @return the number of bytes required for the tag
      */
     static Int computeTagSize(Int fieldNumber) =
-        computeVarintSize(WireType.makeTag(fieldNumber, WireType.VARINT).toInt64());
+        computeVarintSize(WireType.makeTag(fieldNumber, WireType.VARINT));
 
     /**
      * Compute the total bytes needed to encode an `int32` field (tag + varint).
      */
     static Int computeInt32Size(Int fieldNumber, Int32 value) =
-        computeTagSize(fieldNumber) + computeVarintSize(value.toInt64());
+        computeTagSize(fieldNumber) + computeVarintSize(value);
 
     /**
      * Compute the total bytes needed to encode an `int64` field (tag + varint).
@@ -618,20 +618,20 @@ class CodedOutput {
      * Compute the total bytes needed to encode a `uint32` field (tag + varint).
      */
     static Int computeUInt32Size(Int fieldNumber, UInt32 value) =
-        computeTagSize(fieldNumber) + computeVarintSize(value.toInt64());
+        computeTagSize(fieldNumber) + computeVarintSize(value);
 
     /**
      * Compute the total bytes needed to encode a `uint64` field (tag + varint).
      */
     static Int computeUInt64Size(Int fieldNumber, UInt64 value) =
-        computeTagSize(fieldNumber) + computeVarintSize(value.toInt64());
+        computeTagSize(fieldNumber) + computeVarintSize(value);
 
     /**
      * Compute the total bytes needed to encode a `sint32` field (tag + ZigZag varint).
      */
     static Int computeSInt32Size(Int fieldNumber, Int32 value) {
         return computeTagSize(fieldNumber)
-                + computeVarintSize(((value << 1) ^ (value >> 31)).toInt64());
+                + computeVarintSize(((value << 1) ^ (value >> 31)));
     }
 
     /**
@@ -673,14 +673,14 @@ class CodedOutput {
      */
     static Int computeStringSize(Int fieldNumber, String value) {
         Int utf8Length = value.utf8().size;
-        return computeTagSize(fieldNumber) + computeVarintSize(utf8Length.toInt64()) + utf8Length;
+        return computeTagSize(fieldNumber) + computeVarintSize(utf8Length) + utf8Length;
     }
 
     /**
      * Compute the total bytes needed to encode a `bytes` field (tag + length varint + raw bytes).
      */
     static Int computeBytesSize(Int fieldNumber, Byte[] value) =
-        computeTagSize(fieldNumber) + computeVarintSize(value.size.toInt64()) + value.size;
+        computeTagSize(fieldNumber) + computeVarintSize(value.size) + value.size;
 
     /**
      * Compute the total bytes needed to encode an embedded message field (tag + length varint +
@@ -688,7 +688,7 @@ class CodedOutput {
      */
     static Int computeMessageSize(Int fieldNumber, MessageLite value) {
         Int messageSize = value.serializedSize();
-        return computeTagSize(fieldNumber) + computeVarintSize(messageSize.toInt64()) + messageSize;
+        return computeTagSize(fieldNumber) + computeVarintSize(messageSize) + messageSize;
     }
 
     // ----- map size computation ------------------------------------------------------------------
@@ -702,7 +702,7 @@ class CodedOutput {
      * @return the total bytes needed
      */
     static Int computeMapEntrySize(Int fieldNumber, Int entrySize) =
-        computeTagSize(fieldNumber) + computeVarintSize(entrySize.toInt64()) + entrySize;
+        computeTagSize(fieldNumber) + computeVarintSize(entrySize) + entrySize;
 
     /**
      * Compute the size of a map<string, string> entry.
@@ -797,7 +797,7 @@ class CodedOutput {
         for (Int64 v : values) {
             dataSize += computeVarintSize(v);
         }
-        return computeTagSize(fieldNumber) + computeVarintSize(dataSize.toInt64()) + dataSize;
+        return computeTagSize(fieldNumber) + computeVarintSize(dataSize) + dataSize;
     }
 
     /**
@@ -808,7 +808,7 @@ class CodedOutput {
             return 0;
         }
         Int dataSize = values.size * 4;
-        return computeTagSize(fieldNumber) + computeVarintSize(dataSize.toInt64()) + dataSize;
+        return computeTagSize(fieldNumber) + computeVarintSize(dataSize) + dataSize;
     }
 
     /**
@@ -819,7 +819,7 @@ class CodedOutput {
             return 0;
         }
         Int dataSize = values.size * 8;
-        return computeTagSize(fieldNumber) + computeVarintSize(dataSize.toInt64()) + dataSize;
+        return computeTagSize(fieldNumber) + computeVarintSize(dataSize) + dataSize;
     }
 
     /**
@@ -831,9 +831,9 @@ class CodedOutput {
         }
         Int dataSize = 0;
         for (Int32 v : values) {
-            dataSize += computeVarintSize(((v << 1) ^ (v >> 31)).toInt64());
+            dataSize += computeVarintSize(((v << 1) ^ (v >> 31)));
         }
-        return computeTagSize(fieldNumber) + computeVarintSize(dataSize.toInt64()) + dataSize;
+        return computeTagSize(fieldNumber) + computeVarintSize(dataSize) + dataSize;
     }
 
     /**
@@ -847,7 +847,7 @@ class CodedOutput {
         for (Int64 v : values) {
             dataSize += computeVarintSize((v << 1) ^ (v >> 63));
         }
-        return computeTagSize(fieldNumber) + computeVarintSize(dataSize.toInt64()) + dataSize;
+        return computeTagSize(fieldNumber) + computeVarintSize(dataSize) + dataSize;
     }
 
     /**
@@ -858,7 +858,7 @@ class CodedOutput {
             return 0;
         }
         Int dataSize = values.size * 4;
-        return computeTagSize(fieldNumber) + computeVarintSize(dataSize.toInt64()) + dataSize;
+        return computeTagSize(fieldNumber) + computeVarintSize(dataSize) + dataSize;
     }
 
     /**
@@ -869,7 +869,7 @@ class CodedOutput {
             return 0;
         }
         Int dataSize = values.size * 8;
-        return computeTagSize(fieldNumber) + computeVarintSize(dataSize.toInt64()) + dataSize;
+        return computeTagSize(fieldNumber) + computeVarintSize(dataSize) + dataSize;
     }
 
     /**
@@ -880,7 +880,7 @@ class CodedOutput {
             return 0;
         }
         Int dataSize = values.size;
-        return computeTagSize(fieldNumber) + computeVarintSize(dataSize.toInt64()) + dataSize;
+        return computeTagSize(fieldNumber) + computeVarintSize(dataSize) + dataSize;
     }
 
     // ----- raw byte access -----------------------------------------------------------------------
