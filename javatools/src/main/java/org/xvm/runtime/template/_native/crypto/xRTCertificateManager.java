@@ -87,7 +87,6 @@ public class xRTCertificateManager
         markNativeMethod("revokeCertificateImpl" , null, null);
         markNativeMethod("createSymmetricKeyImpl", null, null);
         markNativeMethod("createPasswordImpl"    , null, null);
-        markNativeMethod("changeStorePasswordImpl", null, null);
         markNativeMethod("extractKeyImpl"        , null, null);
 
         invalidateTypeInfo();
@@ -135,8 +134,6 @@ public class xRTCertificateManager
                 invokeAsIOTask(frame, () -> invokeCreateSymmetricKey(frame, ahArg));
             case "createPasswordImpl" ->
                 invokeAsIOTask(frame, () -> invokeCreatePassword(frame, ahArg));
-            case "changeStorePasswordImpl" ->
-                invokeAsIOTask(frame, () -> invokeChangeStorePassword(frame, ahArg));
             case "extractKeyImpl" ->
                 invokeExtractKey(frame, ahArg, iReturn);
             default ->
@@ -552,23 +549,13 @@ public class xRTCertificateManager
 
     /**
      * Native implementation of
-     *     "encryptKeystoreImpl(String path, Password pwd, String newPwd)"
-     *
-     * Delegates to invokeChangeStorePassword — same operation, different native method name.
-     */
-    private ExceptionHandle invokeEncryptKeystore(Frame frame, ObjectHandle[] ahArg) {
-        return invokeChangeStorePassword(frame, ahArg);
-    }
-
-    /**
-     * Native implementation of
-     *     "changeStorePasswordImpl(String path, Password pwd, String newPwd)"
+     *     "encryptKeyStoreImpl(String path, Password pwd, String newPwd)"
      * <p>
      * Loads the keystore with the old password and saves with the new one — the same
      * operation that keytool's {@code -storepasswd} performs internally via the JDK
      * {@link java.security.KeyStore} API.
      */
-    private ExceptionHandle invokeChangeStorePassword(Frame frame, ObjectHandle[] ahArg) {
+    private ExceptionHandle invokeEncryptKeystore(Frame frame, ObjectHandle[] ahArg) {
         var sPath     = ((StringHandle) ahArg[0]).getStringValue();
         var achPwd    = xRTKeyStore.getPassword(frame, ahArg[1]).getValue();
         var achPwdNew = ((StringHandle) ahArg[2]).getValue();
