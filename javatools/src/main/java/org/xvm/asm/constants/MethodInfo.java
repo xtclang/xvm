@@ -1243,11 +1243,9 @@ public class MethodInfo
      * @return the JitMethodDesc
      */
     public JitMethodDesc getJitDesc(Builder builder, TypeConstant typeContainer) {
-//        return isCapped()
-//            ? getChain()[1].getJitDesc(builder, typeContainer)
-//            : getHead().getJitDesc(builder, typeContainer);
-
-        return getHead().getJitDesc(builder, typeContainer);
+        return isCapped()
+            ? getChain()[1].getJitDesc(builder, typeContainer)
+            : getHead().getJitDesc(builder, typeContainer);
     }
 
     // ----- Object methods ------------------------------------------------------------------------

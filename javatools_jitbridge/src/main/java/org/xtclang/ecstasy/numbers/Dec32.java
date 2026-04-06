@@ -318,18 +318,6 @@ public class Dec32 extends DecimalFPNumber {
         return $bits;
     }
 
-    // we must override the method here otherwise the JIT will add its own implementation
-    @Override
-    public long toDec64$p(Ctx ctx) {
-        return super.toDec64$p(ctx);
-    }
-
-    // we must override the method here otherwise the JIT will add its own implementation
-    @Override
-    public long toDec128$p(Ctx ctx) {
-        return super.toDec128$p(ctx);
-    }
-
     // ----- Orderable interface -------------------------------------------------------------------
 
     /**

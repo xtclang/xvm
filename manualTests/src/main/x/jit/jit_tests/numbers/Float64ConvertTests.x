@@ -21,6 +21,7 @@ class Float64ConvertTests {
         testFloat64ToDec128(1000.456, 1000.456);
 
         testFloat64ToInt8(-200, 56);
+        testFloat64ToInt8AsNumber(-200, 56);
         testFloat64ToInt8(-128.4, -128);
         testFloat64ToInt8(-100, -100);
         testFloat64ToInt8(0, 0);
@@ -196,6 +197,8 @@ class Float64ConvertTests {
         testFloat64ToUInt8(0, 0);
         testFloat64ToUInt8(100, 100);
         testFloat64ToUInt8(256.4, 0);
+        testFloat64ToUInt8AsNumber(100, 100);
+        testFloat64ToUInt8AsNumber(256.4, 0);
         testFloat64ToUInt8Rounding(10.5, 10, TowardZero);
         testFloat64ToUInt8Rounding(10.5, 10, TiesToEven);
         testFloat64ToUInt8Rounding(10.5, 11, TiesToAway);
@@ -736,4 +739,28 @@ class Float64ConvertTests {
             assert b == expected;
         }
     }
+
+    void testFloat64ToInt8AsNumber(Float64 a, Int8 expected){
+        console.print("Test Float64 ", True);
+        console.print(a, True);
+        console.print(" as Number to Int8 expected=", True);
+        console.print(expected, True);
+        Number b = asNumber(a).toInt8();
+        console.print(" actual=", True);
+        console.print(b);
+        assert b.as(Int8) == expected;
+    }
+
+    void testFloat64ToUInt8AsNumber(Float64 a, UInt8 expected){
+        console.print("Test Float64 ", True);
+        console.print(a, True);
+        console.print(" as Number to UInt8 expected=", True);
+        console.print(expected, True);
+        Number b = asNumber(a).toUInt8();
+        console.print(" actual=", True);
+        console.print(b);
+        assert b.as(UInt8) == expected;
+    }
+
+    Number asNumber(Number n) = n;
 }

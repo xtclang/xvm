@@ -998,7 +998,7 @@ public class BuildContext {
                 reg = new Narrowed(regId, reg.slots(), mtxType, Specific, narrowedCD, reg.slotCds(),
                         reg.name(), depth, !loaded, reg);
                 registerInfos.put(regId, reg);
-                if (loaded) {
+                    if (loaded) {
                     code.checkcast(narrowedCD);
                 }
             }
@@ -1991,13 +1991,16 @@ public class BuildContext {
     /**
      * Get the property value.
      */
-    public void buildGetProperty(CodeBuilder code, RegisterInfo targetSlot, int propIdIndex, int retId) {
-        if (!targetSlot.isSingle()) {
+    public void buildGetProperty(CodeBuilder code, RegisterInfo targetReg, int propIdIndex, int retId) {
+        if (!targetReg.isSingle()) {
             throw new UnsupportedOperationException("Multislot P_Get");
         }
 
         PropertyConstant propId = getConstant(propIdIndex, PropertyConstant.class);
-        JitMethodDesc    jmdGet = builder.loadProperty(code, targetSlot.type(), propId);
+        if (targetReg.cd().isPrimitive()) {
+            Builder.box(code, targetReg);
+        }
+        JitMethodDesc jmdGet = builder.loadProperty(code, targetReg.type(), propId);
 
         assignReturns(code, jmdGet, 1, new int[] {retId});
     }

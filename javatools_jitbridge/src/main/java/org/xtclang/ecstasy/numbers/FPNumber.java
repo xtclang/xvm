@@ -65,7 +65,7 @@ public abstract class FPNumber extends Number {
      *
      * @return this Dec32 value converted to an Int8 value inside a Java {@code int}
      */
-    public int toInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
+    public int toInt8$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits >= Byte.SIZE)) {
@@ -91,7 +91,7 @@ public abstract class FPNumber extends Number {
      *
      * @return this Dec32 value converted to an Int16 value inside a Java {@code int}
      */
-    public int toInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
+    public int toInt16$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits >= Short.SIZE)) {
@@ -117,7 +117,7 @@ public abstract class FPNumber extends Number {
      *
      * @return this Dec32 value converted to an Int32 value inside a Java {@code int}
      */
-    public int toInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
+    public int toInt32$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits >= Integer.SIZE)) {
@@ -143,8 +143,8 @@ public abstract class FPNumber extends Number {
      *
      * @return this Dec32 value converted to an Int64 value inside a Java {@code long}
      */
-    public long toInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
-                          Rounding direction) {
+    public long toInt64$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
+                             Rounding direction) {
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits >= Long.SIZE)) {
@@ -173,10 +173,8 @@ public abstract class FPNumber extends Number {
      * @return the low 64-bits of this Dec32 value converted to an Int128 value inside a
      *         Java {@code long}
      */
-    public long toInt128$p(Ctx      ctx,
-                           boolean  checkBounds,
-                           boolean  dfltCheckBounds,
-                           Rounding direction) {
+    public long toInt128$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
+                              Rounding direction) {
 
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
@@ -203,10 +201,8 @@ public abstract class FPNumber extends Number {
      *
      * @return this Dec32 value converted to an UInt8 value inside a Java {@code int}
      */
-    public int toUInt8$p(Ctx      ctx,
-                         boolean  checkBounds,
-                         boolean  dfltCheckBounds,
-                         Rounding direction) {
+    public int toUInt8$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
+                            Rounding direction) {
         if ($isSigned()) {
             OutOfBounds oob = new OutOfBounds(ctx);
             throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
@@ -237,10 +233,8 @@ public abstract class FPNumber extends Number {
      *
      * @return this Dec32 value converted to an UInt16 value inside a Java {@code int}
      */
-    public int toUInt16$p(Ctx      ctx,
-                          boolean  checkBounds,
-                          boolean  dfltCheckBounds,
-                          Rounding direction) {
+    public int toUInt16$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
+                             Rounding direction) {
         if ($isSigned()) {
             OutOfBounds oob = new OutOfBounds(ctx);
             throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
@@ -271,10 +265,8 @@ public abstract class FPNumber extends Number {
      *
      * @return this Dec32 value converted to an UInt32 value inside a Java {@code int}
      */
-    public int toUInt32$p(Ctx      ctx,
-                          boolean  checkBounds,
-                          boolean  dfltCheckBounds,
-                          Rounding direction) {
+    public int toUInt32$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
+                             Rounding direction) {
         if ($isSigned()) {
             OutOfBounds oob = new OutOfBounds(ctx);
             throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
@@ -305,10 +297,8 @@ public abstract class FPNumber extends Number {
      *
      * @return this Dec32 value converted to an UInt64 value inside a Java {@code long}
      */
-    public long toUInt64$p(Ctx      ctx,
-                           boolean  checkBounds,
-                           boolean  dfltCheckBounds,
-                           Rounding direction) {
+    public long toUInt64$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
+                              Rounding direction) {
         if ($isSigned()) {
             OutOfBounds oob = new OutOfBounds(ctx);
             throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
@@ -342,10 +332,8 @@ public abstract class FPNumber extends Number {
      * @return the low 64-bits of this Dec32 value converted to an UInt128 value inside a
      *         Java {@code long}
      */
-    public long toUInt128$p(Ctx      ctx,
-                            boolean  checkBounds,
-                            boolean  dfltCheckBounds,
-                            Rounding direction) {
+    public long toUInt128$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
+                               Rounding direction) {
         if ($isSigned()) {
             OutOfBounds oob = new OutOfBounds(ctx);
             throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()

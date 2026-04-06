@@ -1579,7 +1579,192 @@ public class CommonBuilder
      */
     protected void assembleRoutingMethod(String className, ClassBuilder classBuilder,
                                          MethodInfo srcMethod, MethodInfo dstMethod) {
-        // TODO
+        JitMethodDesc jmdSrc = srcMethod.getJitDesc(this, typeInfo.getType());
+        JitMethodDesc jmdDst = dstMethod.getJitDesc(this, typeInfo.getType());
+
+        String srcName = srcMethod.ensureJitMethodName(typeSystem);
+        String dstName = dstMethod.ensureJitMethodName(typeSystem);
+
+        if (srcName.equals(dstName)) {
+            // it must be a cap with a covariant return;
+            // at the moment SignatureConstant.ensureJitMethodName() ignore the return values,
+            // but we may need to change that...
+            return;
+        }
+
+        assert jmdSrc.getImplicitParamCount() == jmdDst.getImplicitParamCount();
+
+        if (srcMethod.isCapped()) {
+            assert !srcMethod.isFunction() && !srcMethod.isCtorOrValidator();
+
+            assembleStandardCap(className, classBuilder, srcName, dstName, jmdSrc, jmdDst);
+            if (jmdSrc.isOptimized) {
+                assert jmdDst.isOptimized;
+                assembleOptimizedCap(className, classBuilder, srcName+OPT, dstName+OPT, jmdSrc, jmdDst);
+            }
+        } else {
+            PropertyConstant propDelegate = srcMethod.getHead().getPropertyConstant();
+            System.err.println("TODO delegation to " + propDelegate);
+        }
+    }
+
+    /**
+     * Assemble a "standard" routing call from a cap to its target method.
+     */
+    private void assembleStandardCap(String className, ClassBuilder classBuilder,
+                                     String srcName, String dstName,
+                                     JitMethodDesc jmdSrc, JitMethodDesc jmdDst) {
+        classBuilder.withMethodBody(srcName, jmdSrc.standardMD, ClassFile.ACC_PUBLIC, code -> {
+            code.aload(0); // this
+
+            int extraCount = jmdSrc.getImplicitParamCount();
+            for (int i = 0; i < extraCount; i++) {
+                code.aload(code.parameterSlot(i));
+            }
+
+            JitParamDesc[] srcParams = jmdSrc.standardParams;
+            JitParamDesc[] dstParams = jmdDst.standardParams;
+            for (int i = 0, c = srcParams.length; i < c; i++) {
+                JitParamDesc srcPd        = srcParams[i];
+                int          srcParamSlot = code.parameterSlot(extraCount + srcPd.index);
+                TypeConstant srcParamType = srcPd.type;
+                JitParamDesc dstPd        = dstParams[i];
+                TypeConstant dstParamType = dstPd.type;
+
+                code.aload(srcParamSlot);
+                if (!srcParamType.equals(dstParamType)) {
+                    generateCheckCast(code, dstParamType);
+                }
+            }
+            for (int i = srcParams.length, c = dstParams.length; i < c; i++) {
+                code.aconst_null();
+            }
+            code.invokevirtual(ClassDesc.of(className), dstName, jmdDst.standardMD);
+
+            JitParamDesc[] srcReturns = jmdSrc.standardReturns;
+            int            retCount   = srcReturns.length;
+            if (retCount == 0) {
+                code.return_();
+                return;
+            }
+
+            JitParamDesc[] dstReturns = jmdDst.standardReturns;
+            TypeConstant   srcRetType = srcReturns[0].type;
+            TypeConstant   dstRetType = dstReturns[0].type;
+
+            // the natural return is at the top of the stack now;
+            // TEMPORARY: assume the same Ctx positions for returns TODO
+            code.areturn();
+        });
+    }
+
+    /**
+     * Assemble an "optimized" routing call from a cap to its target method.
+     */
+    private void assembleOptimizedCap(String className, ClassBuilder classBuilder,
+                                      String srcName, String dstName,
+                                      JitMethodDesc jmdSrc, JitMethodDesc jmdDst) {
+        classBuilder.withMethodBody(srcName, jmdSrc.optimizedMD, ClassFile.ACC_PUBLIC, code -> {
+            code.aload(0); // this
+
+            int extraCount = jmdSrc.getImplicitParamCount();
+            for (int i = 0; i < extraCount; i++) {
+                code.aload(code.parameterSlot(i));
+            }
+
+            JitParamDesc[] srcParams = jmdSrc.optimizedParams;
+            JitParamDesc[] dstParams = jmdDst.optimizedParams;
+            for (int i = 0, c = srcParams.length; i < c; i++) {
+                JitParamDesc srcPd     = srcParams[i];
+                int          srcSlot   = code.parameterSlot(extraCount + srcPd.index);
+                TypeConstant srcType   = srcPd.type;
+                JitParamDesc dstPd     = dstParams[i];
+                TypeConstant dstType   = dstPd.type;
+                JitFlavor    srcFlavor = srcPd.flavor;
+                JitFlavor    dstFlavor = dstPd.flavor;
+                boolean      checkCast = false;
+                boolean      invalid   = false;
+
+                if (srcFlavor == dstFlavor) {
+                    load(code, srcPd.cd, srcSlot);
+                    checkCast = !srcType.isJitPrimitive();
+                } else {
+                    AddTransformation:
+                    switch (srcPd.flavor) {
+                    case Specific:
+                        switch (dstPd.flavor) {
+                        case Primitive, XvmPrimitive:
+                            code.aload(srcSlot);
+                            if (!srcType.equals(dstType)) {
+                                generateCheckCast(code, dstType);
+                            }
+                            Builder.unbox(code, dstType);
+                            break AddTransformation;
+
+                        default:
+                            invalid = true;
+                            break;
+                    }
+
+                    default:
+                        invalid = true;
+                        break;
+                    }
+                }
+
+                if (checkCast && !srcType.equals(dstType)) {
+                    generateCheckCast(code, dstType);
+                }
+                if (invalid) {
+                    throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
+                                                            "; dst=" + dstFlavor);
+                }
+            }
+
+            for (int i = srcParams.length, c = dstParams.length; i < c; i++) {
+                JitParamDesc dstPd = dstParams[i];
+
+                switch (dstPd.flavor) {
+                case PrimitiveWithDefault:
+                    defaultLoad(code, dstPd.cd);
+                    code.iconst_1(); // default = true
+                    i++;             // consume the extension
+                    break;
+
+                case NullablePrimitiveWithDefault:
+                    defaultLoad(code, dstPd.cd);
+                    code.iconst_m1(); // default = true
+                    i++;              // consume the extension
+                    break;
+
+                case SpecificWithDefault, WidenedWithDefault:
+                    code.aconst_null();
+                    break;
+
+                default:
+                    throw new UnsupportedOperationException("Not implemented: dst=" + dstPd.flavor);
+                }
+            }
+
+            code.invokevirtual(ClassDesc.of(className), dstName, jmdDst.optimizedMD);
+
+            JitParamDesc[] srcReturns = jmdSrc.optimizedReturns;
+            int            retCount   = srcReturns.length;
+            if (retCount == 0) {
+                code.return_();
+                return;
+            }
+
+            JitParamDesc[] dstReturns = jmdDst.optimizedReturns;
+
+            JitParamDesc srcPd = srcReturns[0];
+            JitParamDesc dstPd = dstReturns[0];
+
+            // the natural return is at the top of the stack now;
+            // TEMPORARY: assume the same Ctx positions for returns TODO
+            assert srcPd.flavor == dstPd.flavor;
+            addReturn(code, srcPd.cd);
+        });
     }
 
     /**
@@ -1844,6 +2029,16 @@ public class CommonBuilder
      */
     protected void assembleMethod(String className, ClassBuilder classBuilder, MethodInfo method,
                                   String jitName, JitMethodDesc jmd) {
+        int flags = ClassFile.ACC_PUBLIC;
+        if (!method.getHead().getMethodStructure().hasCode()) {
+            if (method.isAbstract()) {
+                flags |= ClassFile.ACC_ABSTRACT;
+            } else {
+                // this must be a "sans-code" override; just ignore it
+                return;
+            }
+        }
+
         MethodTypeDesc md;
         if (jmd.isOptimized) {
             assembleMethodWrapper(className, classBuilder, jitName, jmd, method.isFunction());
@@ -1853,10 +2048,6 @@ public class CommonBuilder
             md = jmd.standardMD;
         }
 
-        int flags = ClassFile.ACC_PUBLIC;
-        if (method.isAbstract()) {
-            flags |= ClassFile.ACC_ABSTRACT;
-        }
         if (method.isFunction() || method.isCtorOrValidator()) {
             if (method.isAbstract() && classStruct.getFormat() == Format.INTERFACE) {
                 // this must be a funky interface method; just ignore
@@ -1942,6 +2133,7 @@ public class CommonBuilder
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
         "Boolean", "Ordered",
         "Orderable",
+        "Float64",
 //        "StringBuffer",
 //        "Int64",
         "Array",
