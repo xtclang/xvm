@@ -14,6 +14,8 @@ import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 
+import java.time.Duration;
+
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -227,7 +229,11 @@ public class xRTCertificateManager
         csrBuilder.sign(domainKeyPair);
         order.execute(csrBuilder.getEncoded());
 
-        pollUntilValid(order, "Certificate order failed for " + sDomain);
+        var orderStatus = order.waitForCompletion(ACME_TIMEOUT);
+        if (orderStatus != Status.VALID) {
+            throw new AcmeException("Certificate order failed for " + sDomain
+                    + " (status: " + orderStatus + ")");
+        }
 
         var certChain = order.getCertificate().getCertificateChain();
 
@@ -265,44 +271,14 @@ public class xRTCertificateManager
 
             try {
                 challenge.trigger();
-                pollAuthUntilValid(auth, sDomain);
+                var authStatus = auth.waitForCompletion(ACME_TIMEOUT);
+                if (authStatus != Status.VALID) {
+                    throw new AcmeException("Challenge failed for " + sDomain
+                            + " (status: " + authStatus + ")");
+                }
             } finally {
                 challengeFile.delete();
             }
-        }
-    }
-
-    /**
-     * Poll an authorization until it is valid, invalid, or we time out.
-     */
-    private void pollAuthUntilValid(Authorization auth, String sDomain)
-            throws AcmeException, InterruptedException {
-        for (int i = 0; i < MAX_POLL_ATTEMPTS && auth.getStatus() != Status.VALID; i++) {
-            Thread.sleep(POLL_INTERVAL_MS);
-            auth.update();
-            if (auth.getStatus() == Status.INVALID) {
-                throw new AcmeException("Challenge failed for " + sDomain);
-            }
-        }
-        if (auth.getStatus() != Status.VALID) {
-            throw new AcmeException("Challenge timed out for " + sDomain);
-        }
-    }
-
-    /**
-     * Poll an order until it reaches VALID status.
-     */
-    private void pollUntilValid(Order order, String sErrorMsg)
-            throws AcmeException, InterruptedException {
-        for (int i = 0; i < MAX_POLL_ATTEMPTS && order.getStatus() != Status.VALID; i++) {
-            Thread.sleep(POLL_INTERVAL_MS);
-            order.update();
-            if (order.getStatus() == Status.INVALID) {
-                throw new AcmeException(sErrorMsg);
-            }
-        }
-        if (order.getStatus() != Status.VALID) {
-            throw new AcmeException(sErrorMsg + " (timed out)");
         }
     }
 
@@ -530,7 +506,6 @@ public class xRTCertificateManager
 
     // ----- data fields and constants -------------------------------------------------------------
 
-    private static final int MAX_POLL_ATTEMPTS = 60;
-    private static final long POLL_INTERVAL_MS = 5000L;
+    private static final Duration ACME_TIMEOUT = Duration.ofMinutes(5);
     private TypeConstant m_typeCanonical;
 }
