@@ -8,7 +8,6 @@ import java.io.IOException;
 
 import java.math.BigInteger;
 
-import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
@@ -28,7 +27,6 @@ import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
-import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
 
@@ -47,7 +45,7 @@ public class KeyStoreOperations {
      * Load an existing PKCS12 keystore or create a new empty one.
      */
     public static KeyStore loadOrCreateKeyStore(String sPath, char[] achPwd)
-            throws GeneralSecurityException, IOException {
+            throws Exception { // TODO: tighten to GeneralSecurityException | IOException
         var keyStore = KeyStore.getInstance("PKCS12");
         var file = new File(sPath);
         if (file.exists()) {
@@ -64,7 +62,7 @@ public class KeyStoreOperations {
      * Save a keystore to disk.
      */
     public static void saveKeyStore(KeyStore keyStore, String sPath, char[] achPwd)
-            throws GeneralSecurityException, IOException {
+            throws Exception { // TODO: tighten to GeneralSecurityException | IOException
         try (var out = new FileOutputStream(sPath)) {
             keyStore.store(out, achPwd);
         }
@@ -88,7 +86,7 @@ public class KeyStoreOperations {
                 keyStore.deleteEntry(sAlias);
                 saveKeyStore(keyStore, sPath, achPwd);
             }
-        } catch (GeneralSecurityException | IOException _) {
+        } catch (Exception _) { // TODO: tighten to GeneralSecurityException | IOException
             // intentionally silent — entry may not exist, and that's fine
         }
     }
@@ -102,7 +100,7 @@ public class KeyStoreOperations {
      */
     public static void createSelfSignedCertificate(String sStorePath, char[] achPwd,
                                                    String sName, String sDName)
-            throws GeneralSecurityException, IOException, OperatorCreationException {
+            throws Exception { // TODO: tighten to GeneralSecurityException | IOException | OperatorCreationException
         var keyPairGen = KeyPairGenerator.getInstance("RSA");
         keyPairGen.initialize(2048, new SecureRandom());
         var keyPair = keyPairGen.generateKeyPair();
@@ -132,7 +130,7 @@ public class KeyStoreOperations {
      * JDK {@link javax.crypto.KeyGenerator} API that keytool uses internally.
      */
     public static void createSymmetricKey(String sPath, char[] achPwd, String sName)
-            throws GeneralSecurityException, IOException {
+            throws Exception { // TODO: tighten to GeneralSecurityException | IOException
         deleteKeyStoreEntry(sPath, achPwd, sName);
 
         var keyGen = KeyGenerator.getInstance("AES");
@@ -155,7 +153,7 @@ public class KeyStoreOperations {
      */
     public static void createPassword(String sPath, char[] achPwd,
                                       String sName, String sPwdValue)
-            throws GeneralSecurityException, IOException {
+            throws Exception { // TODO: tighten to GeneralSecurityException | IOException
         deleteKeyStoreEntry(sPath, achPwd, sName);
 
         var pbeKey = SecretKeyFactory.getInstance("PBE")
@@ -175,7 +173,7 @@ public class KeyStoreOperations {
      * Equivalent to {@code keytool -storepasswd -keystore <path> -storepass <old> -new <new>}.
      */
     public static void changeStorePassword(String sPath, char[] achPwd, char[] achPwdNew)
-            throws GeneralSecurityException, IOException {
+            throws Exception { // TODO: tighten to GeneralSecurityException | IOException
         var keyStore = loadOrCreateKeyStore(sPath, achPwd);
         saveKeyStore(keyStore, sPath, achPwdNew);
     }
@@ -192,7 +190,7 @@ public class KeyStoreOperations {
                 keyStore.load(in, achPwd);
             }
             return keyStore.getKey(sName, achPwd);
-        } catch (GeneralSecurityException | IOException e) {
+        } catch (Exception e) { // TODO: tighten to GeneralSecurityException | IOException
             // TODO: swallowing the exception here loses the root cause; callers have no
             //  way to distinguish "key not found" from "keystore corrupt" or "wrong password"
             return null;

@@ -8,7 +8,6 @@ import java.io.IOException;
 
 import java.nio.file.Path;
 
-import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyStore;
@@ -217,7 +216,7 @@ public class xRTCertificateManager
                 default -> xException.makeHandle(frame,
                         "Unsupported certificate provider: " + sProvider);
             };
-        } catch (AcmeException | GeneralSecurityException | IOException | InterruptedException e) {
+        } catch (Exception e) { // TODO: tighten to AcmeException | GeneralSecurityException | IOException | InterruptedException
             return xException.obscureIoException(frame, e.getMessage());
         }
     }
@@ -238,7 +237,7 @@ public class xRTCertificateManager
     private void createCertificateWithAcme(String sStorePath, char[] achPwd,
                                            String sName, String sDName,
                                            boolean fStaging, StringHandle hStorePath)
-            throws AcmeException, GeneralSecurityException, IOException, InterruptedException {
+            throws Exception { // TODO: tighten to AcmeException | GeneralSecurityException | IOException | InterruptedException
         int ofDomain = sDName.indexOf("CN=");
         assert ofDomain >= 0;
         var sDomain      = sDName.substring(ofDomain + 3);
@@ -288,7 +287,7 @@ public class xRTCertificateManager
      */
     private void processHttpChallenges(List<Authorization> authorizations,
                                        File dirChallenge, String sDomain)
-            throws AcmeException, IOException, InterruptedException {
+            throws Exception { // TODO: tighten to AcmeException | IOException | InterruptedException
         for (var auth : authorizations) {
             if (auth.getStatus() != Status.PENDING) {
                 continue;
@@ -383,7 +382,7 @@ public class xRTCertificateManager
 
             KeyStoreOperations.deleteKeyStoreEntry(sPath, achPwd, sName);
             return null;
-        } catch (AcmeException | GeneralSecurityException | IOException e) {
+        } catch (Exception e) { // TODO: tighten to AcmeException | GeneralSecurityException | IOException
             return xException.obscureIoException(frame, e.getMessage());
         }
     }
@@ -399,7 +398,7 @@ public class xRTCertificateManager
      * is always in the keystore alongside the certificate.
      */
     private void revokeWithAcme(String sStorePath, char[] achPwd, String sName, boolean fStaging)
-            throws AcmeException, GeneralSecurityException, IOException {
+            throws Exception { // TODO: tighten to AcmeException | GeneralSecurityException | IOException
         var keyStore = KeyStoreOperations.loadOrCreateKeyStore(sStorePath, achPwd);
         var cert     = keyStore.getCertificate(sName);
 
@@ -443,7 +442,7 @@ public class xRTCertificateManager
         try {
             KeyStoreOperations.createSymmetricKey(sPath, achPwd, sName);
             return null;
-        } catch (GeneralSecurityException | IOException e) {
+        } catch (Exception e) { // TODO: tighten to GeneralSecurityException | IOException
             return xException.obscureIoException(frame, e.getMessage());
         }
     }
@@ -471,7 +470,7 @@ public class xRTCertificateManager
         try {
             KeyStoreOperations.createPassword(sPath, achPwd, sName, sPwdValue);
             return null;
-        } catch (GeneralSecurityException | IOException e) {
+        } catch (Exception e) { // TODO: tighten to GeneralSecurityException | IOException
             return xException.obscureIoException(frame, e.getMessage());
         }
     }
@@ -523,7 +522,7 @@ public class xRTCertificateManager
                 keyStore = ((KeyStoreHandle) hPathOrStore).f_keyStore;
             }
             return keyStore.getKey(sKey, achPwd);
-        } catch (GeneralSecurityException | IOException e) {
+        } catch (Exception e) { // TODO: tighten to GeneralSecurityException | IOException
             // TODO: swallowing the exception here loses the root cause; callers have no
             //  way to distinguish "key not found" from "keystore corrupt" or "wrong password".
             //  We should use a proper logging framework (e.g. SLF4J) instead of System.err;
@@ -563,7 +562,7 @@ public class xRTCertificateManager
         try {
             KeyStoreOperations.changeStorePassword(sPath, achPwd, achPwdNew);
             return null;
-        } catch (GeneralSecurityException | IOException e) {
+        } catch (Exception e) { // TODO: tighten to GeneralSecurityException | IOException
             return xException.obscureIoException(frame, e.getMessage());
         }
     }
