@@ -10,7 +10,9 @@ import java.nio.file.Path;
 
 import java.security.GeneralSecurityException;
 import java.security.Key;
+import java.security.KeyPair;
 import java.security.KeyStore;
+import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 
@@ -339,7 +341,9 @@ public class xRTCertificateManager
     }
 
     /**
-     * Revoke a certificate using the ACME protocol via acme4j.
+     * Revoke a certificate using the ACME protocol via acme4j. Uses the domain keypair
+     * (the key that signed the CSR) for authentication, which is stored in the keystore
+     * alongside the certificate.
      */
     private void revokeWithAcme(String sStorePath, char[] achPwd, String sName, boolean fStaging)
             throws AcmeException, GeneralSecurityException, IOException {
@@ -347,16 +351,17 @@ public class xRTCertificateManager
         var cert     = keyStore.getCertificate(sName);
 
         if (cert instanceof X509Certificate x509Cert) {
-            var session = new Session(acmeServerUri(fStaging));
-            var accountKeyPair = KeyPairUtils.createKeyPair(2048);
+            var privateKey = keyStore.getKey(sName, achPwd);
+            if (privateKey == null) {
+                throw new AcmeException(
+                        "Cannot revoke certificate '" + sName
+                                + "': private key not found in keystore");
+            }
 
-            // register an account (needed for authenticated revocation)
-            new AccountBuilder()
-                    .agreeToTermsOfService()
-                    .useKeyPair(accountKeyPair)
-                    .create(session);
+            var domainKeyPair = new KeyPair(x509Cert.getPublicKey(), (PrivateKey) privateKey);
+            var session       = new Session(acmeServerUri(fStaging));
 
-            org.shredzone.acme4j.Certificate.revoke(session, accountKeyPair, x509Cert, null);
+            org.shredzone.acme4j.Certificate.revoke(session, domainKeyPair, x509Cert, null);
         }
     }
 
