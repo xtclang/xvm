@@ -59,6 +59,12 @@ import org.xvm.util.Handy;
 
 /**
  * Native implementation of the xRTCertificateManager.x service.
+ * <p>
+ * This class replaces the previous ProcessBuilder-based implementation that shelled out to
+ * {@code keytool}, {@code openssl}, and {@code certbot}. Every operation now uses pure Java
+ * APIs (JDK crypto, BouncyCastle, acme4j) that produce byte-for-byte compatible PKCS12
+ * keystore entries. Keystores created by this implementation can be read by keytool and
+ * openssl, and vice versa — verified by {@code KeyStoreCompatibilityTest}.
  */
 public class xRTCertificateManager
         extends xService {
@@ -161,6 +167,26 @@ public class xRTCertificateManager
     /**
      * Native implementation of
      *     "createCertificateImpl(String path, Password pwd, String name, String dName)"
+     * <p>
+     * For provider "self", replaces:
+     * <pre>{@code
+     *   keytool -delete -alias <name> -keystore <path> -storepass <pwd>
+     *   keytool -genkeypair -keyalg RSA -keysize 2048 -validity 90
+     *           -alias <name> -dname <dName> -storetype PKCS12
+     *           -keystore <path> -storepass <pwd>
+     * }</pre>
+     * The Java implementation uses {@link java.security.KeyPairGenerator} (RSA, 2048-bit)
+     * and BouncyCastle's {@code X509v3CertificateBuilder} with SHA256WithRSA — the same
+     * JDK crypto primitives that keytool uses internally. The resulting PKCS12 keystore
+     * entry is interchangeable with keytool output.
+     * <p>
+     * For providers "certbot"/"certbot-staging", replaces the multi-step native flow:
+     * {@code openssl genpkey} → {@code openssl req} → {@code certbot certonly --webroot}
+     * → {@code openssl pkcs12 -export} → {@code keytool -importkeystore}. The Java
+     * implementation uses acme4j to speak the ACME protocol directly, eliminating all
+     * intermediate files and format conversions. Challenge files are written to the same
+     * {@code .challenge/.well-known/acme-challenge/} directory that certbot's webroot
+     * mode used, so the platform's {@code AcmeChallenge} web service works unchanged.
      */
     private ExceptionHandle invokeCreateCertificate(Frame frame, ServiceHandle hMgr,
                                                     ObjectHandle[] ahArg) {
@@ -201,6 +227,16 @@ public class xRTCertificateManager
 
     /**
      * Create a certificate using the ACME protocol (Let's Encrypt) via acme4j.
+     * <p>
+     * Replaces the old five-step native flow (openssl genpkey → openssl req → certbot
+     * certonly → openssl pkcs12 -export → keytool -importkeystore) with a single
+     * in-process ACME interaction. The domain keypair and certificate chain are stored
+     * directly into the keystore without intermediate PEM/PKCS12 temp files, which is
+     * both simpler and more secure (no unencrypted private key written to disk).
+     * <p>
+     * Polling uses acme4j's {@code waitForCompletion(Duration)} which respects the
+     * server's Retry-After header, rather than the old approach of blocking on
+     * {@code process.waitFor(300, SECONDS)} while certbot polled internally.
      */
     private void createCertificateWithAcme(String sStorePath, char[] achPwd,
                                            String sName, String sDName,
@@ -247,6 +283,11 @@ public class xRTCertificateManager
 
     /**
      * Process HTTP-01 challenges for each pending authorization.
+     * <p>
+     * Writes challenge token files to {@code .challenge/.well-known/acme-challenge/} —
+     * the same directory layout that certbot's {@code --webroot --webroot-path} mode used.
+     * The platform's {@code AcmeChallenge} web service serves these files at the path
+     * that Let's Encrypt expects ({@code /.well-known/acme-challenge/{token}}).
      */
     private void processHttpChallenges(List<Authorization> authorizations,
                                        File dirChallenge, String sDomain)
@@ -314,6 +355,16 @@ public class xRTCertificateManager
     /**
      * Native implementation of
      *     "revokeCertificateImpl(String path, Password pwd, String name)"
+     * <p>
+     * Replaces the old native flow:
+     * <pre>{@code
+     *   certbot revoke --config-dir <certs>/config --cert-name <name> --reason unspecified
+     *   keytool -delete -alias <name> -keystore <path> -storepass <pwd>
+     * }</pre>
+     * The old certbot revocation used the stored account key from its config directory.
+     * The Java implementation uses domain-key revocation (RFC 8555 §7.6) — extracting
+     * the domain keypair from the keystore, which is more robust because it doesn't
+     * depend on certbot's external config state.
      */
     private ExceptionHandle invokeRevokeCertificate(Frame frame, ServiceHandle hMgr,
                                                     ObjectHandle[] ahArg) {
@@ -341,9 +392,14 @@ public class xRTCertificateManager
     }
 
     /**
-     * Revoke a certificate using the ACME protocol via acme4j. Uses the domain keypair
-     * (the key that signed the CSR) for authentication, which is stored in the keystore
-     * alongside the certificate.
+     * Revoke a certificate using the ACME protocol via acme4j.
+     * <p>
+     * Uses domain-key-authenticated revocation: the private key that signed the CSR is
+     * extracted from the keystore and used to prove ownership to the ACME server. This is
+     * one of two revocation mechanisms defined in RFC 8555 §7.6 (the other being account-
+     * key revocation). We use domain-key revocation because the account keypair is ephemeral
+     * (generated fresh per certificate request) and not persisted, whereas the domain key
+     * is always in the keystore alongside the certificate.
      */
     private void revokeWithAcme(String sStorePath, char[] achPwd, String sName, boolean fStaging)
             throws AcmeException, GeneralSecurityException, IOException {
@@ -371,6 +427,16 @@ public class xRTCertificateManager
     /**
      * Native implementation of
      *     "invokeCreateSymmetricKeyImpl(String path, Password pwd, String name)"
+     * <p>
+     * Replaces:
+     * <pre>{@code
+     *   keytool -delete -alias <name> -keystore <path> -storepass <pwd>
+     *   keytool -genseckey -keyalg AES -keysize 256 -alias <name>
+     *           -storetype PKCS12 -keystore <path> -storepass <pwd>
+     * }</pre>
+     * Uses {@link javax.crypto.KeyGenerator#getInstance(String)} with AES/256 — the same
+     * JDK API that keytool's {@code -genseckey} uses internally. The resulting
+     * {@code SecretKeyEntry} in the PKCS12 keystore is identical in format.
      */
     private ExceptionHandle invokeCreateSymmetricKey(Frame frame, ObjectHandle[] ahArg) {
         var sPath  = ((StringHandle) ahArg[0]).getStringValue();
@@ -388,6 +454,16 @@ public class xRTCertificateManager
     /**
      * Native implementation of
      *     "invokeCreatePasswordImpl(String path, Password pwd, String name, String pwdValue)"
+     * <p>
+     * Replaces:
+     * <pre>{@code
+     *   keytool -delete -alias <name> -keystore <path> -storepass <pwd>
+     *   echo <pwdValue> | keytool -importpass -alias <name> -storetype PKCS12
+     *           -keystore <path> -storepass <pwd>
+     * }</pre>
+     * Uses {@link javax.crypto.SecretKeyFactory#getInstance(String)} with "PBE" to create
+     * a PBE secret key from the password value, then stores it as a {@code SecretKeyEntry}
+     * — the same internal representation that keytool's {@code -importpass} produces.
      */
     private ExceptionHandle invokeCreatePassword(Frame frame, ObjectHandle[] ahArg) {
         var sPath     = ((StringHandle) ahArg[0]).getStringValue();
@@ -484,6 +560,14 @@ public class xRTCertificateManager
         return invokeChangeStorePassword(frame, ahArg);
     }
 
+    /**
+     * Native implementation of
+     *     "changeStorePasswordImpl(String path, Password pwd, String newPwd)"
+     * <p>
+     * Loads the keystore with the old password and saves with the new one — the same
+     * operation that keytool's {@code -storepasswd} performs internally via the JDK
+     * {@link java.security.KeyStore} API.
+     */
     private ExceptionHandle invokeChangeStorePassword(Frame frame, ObjectHandle[] ahArg) {
         var sPath     = ((StringHandle) ahArg[0]).getStringValue();
         var achPwd    = xRTKeyStore.getPassword(frame, ahArg[1]).getValue();
