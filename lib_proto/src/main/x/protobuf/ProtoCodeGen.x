@@ -302,7 +302,6 @@ class ProtoCodeGen {
         String pad1 = spaces(indent + 1);
         String pad2 = spaces(indent + 2);
 
-        Boolean emitted = False;
         for (FieldDescriptor field : regularFields) {
             if (field.label == Repeated || field.isMapField) {
                 continue;
@@ -312,17 +311,27 @@ class ProtoCodeGen {
             String realType  = ecstasyScalarType(field);
             String maybeType = fieldTypeName(field);
 
-            $|{pad}conditional {realType} has{pascName}() \{
-             |{pad1}{maybeType} {fname} = this.{fname};
-             |{pad1}if ({fname}.is({realType})) \{
-             |{pad2}return True, {fname};
-             |{pad1}}
-             |{pad1}return False;
-             |{pad}}
-             |
-             |
-             .appendTo(buf);
-            emitted = True;
+            if (field.type == FieldType.TypeBool) {
+                $|{pad}Boolean is{pascName}() \{
+                 |{pad1}{maybeType} {fname} = this.{fname};
+                 |{pad1}if ({fname}.is(Boolean)) \{
+                 |{pad2}return {fname};
+                 |{pad1}}
+                 |{pad1}return False;
+                 |{pad}}
+                 |
+                 .appendTo(buf);
+            } else {
+                $|{pad}conditional {realType} has{pascName}() \{
+                 |{pad1}{maybeType} {fname} = this.{fname};
+                 |{pad1}if ({fname}.is({realType})) \{
+                 |{pad2}return True, {fname};
+                 |{pad1}}
+                 |{pad1}return False;
+                 |{pad}}
+                 |
+                 .appendTo(buf);
+            }
         }
     }
 
