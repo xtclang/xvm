@@ -190,6 +190,9 @@ class ProtoCodeGen {
         generateFieldDeclarations(buf, regularFields, msg.oneofs, indent + 1);
         buf.add('\n');
 
+        // field accessors
+        generateFieldAccessors(buf, regularFields, indent + 1);
+
         // oneof accessors
         if (!msg.oneofs.empty) {
             $"{pad1}{separator("oneof accessors", indent + 1)}\n\n".appendTo(buf);
@@ -285,6 +288,41 @@ class ProtoCodeGen {
 
         for (OneofDescriptor oneof : oneofs) {
             $"{pad}Oneof {fieldName(oneof.name)} = new Oneof();\n".appendTo(buf);
+        }
+    }
+
+    // ----- field accessor generation -----------------------------------------------------------------
+
+    /**
+     * Generate conditional accessor methods for scalar, message, and enum fields.
+     */
+    private void generateFieldAccessors(StringBuffer buf, Array<FieldDescriptor> regularFields,
+                                        Int indent) {
+        String pad  = spaces(indent);
+        String pad1 = spaces(indent + 1);
+        String pad2 = spaces(indent + 2);
+
+        Boolean emitted = False;
+        for (FieldDescriptor field : regularFields) {
+            if (field.label == Repeated || field.isMapField) {
+                continue;
+            }
+            String fname     = fieldName(field.name);
+            String pascName  = toPascalCase(field.name);
+            String realType  = ecstasyScalarType(field);
+            String maybeType = fieldTypeName(field);
+
+            $|{pad}conditional {realType} has{pascName}() \{
+             |{pad1}{maybeType} {fname} = this.{fname};
+             |{pad1}if ({fname}.is({realType})) \{
+             |{pad2}return True, {fname};
+             |{pad1}}
+             |{pad1}return False;
+             |{pad}}
+             |
+             |
+             .appendTo(buf);
+            emitted = True;
         }
     }
 
