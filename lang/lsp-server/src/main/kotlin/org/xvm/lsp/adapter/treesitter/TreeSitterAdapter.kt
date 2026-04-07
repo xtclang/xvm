@@ -715,9 +715,10 @@ class TreeSitterAdapter : AbstractAdapter() {
         if (locations.size < 2) return null
         logger.info("linkedEditingRange '{}' -> {} ranges", name, locations.size)
         return Adapter.LinkedEditingRanges(
-            ranges = locations.map { loc ->
-                Range(Position(loc.startLine, loc.startColumn), Position(loc.endLine, loc.endColumn))
-            },
+            ranges =
+                locations.map { loc ->
+                    Range(Position(loc.startLine, loc.startColumn), Position(loc.endLine, loc.endColumn))
+                },
         )
     }
 
