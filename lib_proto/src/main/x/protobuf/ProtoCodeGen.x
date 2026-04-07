@@ -28,7 +28,7 @@ class ProtoCodeGen {
 
     /**
      * Set of known enum type names collected during generation, used to distinguish
-     * enum references from message references (the parser treats both as FieldType.Msg).
+     * enum references from message references (the parser treats both as TypeMessage).
      */
     private Set<String> enumNames = new HashSet();
 
@@ -453,7 +453,7 @@ class ProtoCodeGen {
                     generateParseRepeatedField(buf, field, fname, indent + 2);
                 } else if (isEnumRef(field)) {
                     generateParseEnumField(buf, field, fname, indent + 2);
-                } else if (field.type == FieldType.Msg) {
+                } else if (field.type == TypeMessage) {
                     generateParseMessageField(buf, field, fname, indent + 2);
                 } else {
                     $"{pad2}{fname} = input.{readMethod(field)};\n".appendTo(buf);
@@ -526,7 +526,7 @@ class ProtoCodeGen {
              |{pad1}{fname}.add(input.{readMethod(field)});
              |{pad}}
              .appendTo(buf);
-        } else if (field.type == FieldType.Msg) {
+        } else if (field.type == TypeMessage) {
             // repeated message
             String tn = field.typeName;
             $|{pad}{tn} elem = new {tn}();
@@ -633,7 +633,7 @@ class ProtoCodeGen {
                  |{pad2}out.writeEnum({fn}, {fname});
                  |{pad1}}
                  .appendTo(buf);
-            } else if (field.type == FieldType.Msg) {
+            } else if (field.type == TypeMessage) {
                 String ecType = field.typeName;
                 $|
                  |{pad1}var {fname} = this.{fname};
@@ -684,8 +684,8 @@ class ProtoCodeGen {
              |{pad}}
              .appendTo(buf);
         } else {
-            String ecType = field.type == FieldType.Msg ? field.typeName : ecstasyScalarType(field);
-            String writeCall = field.type == FieldType.Msg
+            String ecType = field.type == TypeMessage ? field.typeName : ecstasyScalarType(field);
+            String writeCall = field.type == TypeMessage
                     ? $"out.writeMessage({fn}, v)"
                     : $"out.{writeMethod(field)}({fn}, v)";
             $|
@@ -782,7 +782,7 @@ class ProtoCodeGen {
                  |{pad2}size += CodedOutput.computeEnumSize({fn}, {fname});
                  |{pad1}}
                  .appendTo(buf);
-            } else if (field.type == FieldType.Msg) {
+            } else if (field.type == TypeMessage) {
                 String ecType = field.typeName;
                 Int    fn     = field.number;
                 $|
@@ -838,8 +838,8 @@ class ProtoCodeGen {
              |{pad}}
              .appendTo(buf);
         } else {
-            String ecType = field.type == FieldType.Msg ? field.typeName : ecstasyScalarType(field);
-            String sizeCall = field.type == FieldType.Msg
+            String ecType = field.type == TypeMessage ? field.typeName : ecstasyScalarType(field);
+            String sizeCall = field.type == TypeMessage
                     ? $"CodedOutput.computeMessageSize({fn}, v)"
                     : $"CodedOutput.{computeSizeMethodForElement(field)}";
             $|
@@ -939,7 +939,7 @@ class ProtoCodeGen {
                  .appendTo(buf);
             } else if (field.label == Repeated) {
                 $"\n{pad1}{fname}.freeze(True);".appendTo(buf);
-            } else if (field.type == FieldType.Msg && !isEnumRef(field)) {
+            } else if (field.type == TypeMessage && !isEnumRef(field)) {
                 String tn = field.typeName;
                 $|
                  |{pad1}var {fname} = this.{fname};
@@ -1040,7 +1040,7 @@ class ProtoCodeGen {
                 continue;
             }
             // singular non-map, non-oneof field: uses a Maybe type or inline typedef
-            if (field.type == FieldType.Msg || isEnumRef(field)) {
+            if (field.type == TypeMessage || isEnumRef(field)) {
                 imports.add("protobuf.Presence");
             } else {
                 String mt = maybeType(field);
@@ -1065,12 +1065,12 @@ class ProtoCodeGen {
             return $"Map<{ecstasyType(field.mapKeyType)}, {ecstasyType(field.mapValueType)}>";
         }
         if (field.label == Repeated) {
-            if (field.type == FieldType.Msg) {
+            if (field.type == TypeMessage) {
                 return $"Array<{field.typeName}>";
             }
             return $"Array<{ecstasyScalarType(field)}>";
         }
-        if (field.type == FieldType.Msg) {
+        if (field.type == TypeMessage) {
             return $"Maybe{sanitizeTypedefName(field.typeName)}";
         }
         return maybeType(field);
@@ -1088,48 +1088,48 @@ class ProtoCodeGen {
      */
     private String maybeType(FieldDescriptor field) {
         return switch (field.type) {
-            case I32, SI32, SFIX32: "MaybeInt32";
-            case I64, SI64, SFIX64: "MaybeInt64";
-            case UI32, FIX32:       "MaybeUInt32";
-            case UI64, FIX64:       "MaybeUInt64";
-            case Bool:              "MaybeBoolean";
-            case Str:               "MaybeString";
-            case Bytes:             "MaybeBytes";
-            case Dbl:               "MaybeFloat64";
-            case Flt:               "MaybeFloat32";
-            case Enm:               $"Maybe{sanitizeTypedefName(field.typeName)}";
-            default:                "Object";
+            case TypeInt32, TypeSint32, TypeSfixed32: "MaybeInt32";
+            case TypeInt64, TypeSint64, TypeSfixed64: "MaybeInt64";
+            case TypeUint32, TypeFixed32:             "MaybeUInt32";
+            case TypeUint64, TypeFixed64:             "MaybeUInt64";
+            case TypeBool:                            "MaybeBoolean";
+            case TypeString:                          "MaybeString";
+            case TypeBytes:                           "MaybeBytes";
+            case TypeDouble:                          "MaybeFloat64";
+            case TypeFloat:                           "MaybeFloat32";
+            case TypeEnum:                            $"Maybe{sanitizeTypedefName(field.typeName)}";
+            default:                                  "Object";
         };
     }
 
     /**
-     * @return the raw Ecstasy type name for a scalar FieldType (no Maybe wrapper)
+     * @return the raw Ecstasy type name for a scalar field type (no Maybe wrapper)
      */
     private String ecstasyScalarType(FieldDescriptor field) {
-        if (field.type == FieldType.Msg) {
+        if (field.type == TypeMessage) {
             return field.typeName;
         }
-        if (field.type == FieldType.Enm) {
+        if (field.type == TypeEnum) {
             return field.typeName;
         }
         return ecstasyType(field.type);
     }
 
     /**
-     * @return the Ecstasy type name for a FieldType
+     * @return the Ecstasy type name for a field type
      */
     private String ecstasyType(FieldType type) {
         return switch (type) {
-            case Dbl:               "Float64";
-            case Flt:               "Float32";
-            case I64, SI64, SFIX64: "Int64";
-            case UI64, FIX64:       "UInt64";
-            case I32, SI32, SFIX32: "Int32";
-            case UI32, FIX32:       "UInt32";
-            case Bool:              "Boolean";
-            case Str:               "String";
-            case Bytes:             "Byte[]";
-            default:                "Object";
+            case TypeDouble:                          "Float64";
+            case TypeFloat:                           "Float32";
+            case TypeInt64, TypeSint64, TypeSfixed64: "Int64";
+            case TypeUint64, TypeFixed64:             "UInt64";
+            case TypeInt32, TypeSint32, TypeSfixed32: "Int32";
+            case TypeUint32, TypeFixed32:             "UInt32";
+            case TypeBool:                            "Boolean";
+            case TypeString:                          "String";
+            case TypeBytes:                           "Byte[]";
+            default:                                  "Object";
         };
     }
 
@@ -1140,23 +1140,23 @@ class ProtoCodeGen {
      */
     private String readMethod(FieldDescriptor field) {
         return switch (field.type) {
-            case Dbl:    "readDouble()";
-            case Flt:    "readFloat()";
-            case I64:    "readInt64()";
-            case UI64:   "readUInt64()";
-            case I32:    "readInt32()";
-            case FIX64:  "readFixed64()";
-            case FIX32:  "readFixed32()";
-            case Bool:   "readBool()";
-            case Str:    "readString()";
-            case Bytes:  "readBytes()";
-            case UI32:   "readUInt32()";
-            case Enm:    "readEnum()";
-            case SFIX32: "readSFixed32()";
-            case SFIX64: "readSFixed64()";
-            case SI32:   "readSInt32()";
-            case SI64:   "readSInt64()";
-            default:     "readVarint()";
+            case TypeDouble:   "readDouble()";
+            case TypeFloat:    "readFloat()";
+            case TypeInt64:    "readInt64()";
+            case TypeUint64:   "readUInt64()";
+            case TypeInt32:    "readInt32()";
+            case TypeFixed64:  "readFixed64()";
+            case TypeFixed32:  "readFixed32()";
+            case TypeBool:     "readBool()";
+            case TypeString:   "readString()";
+            case TypeBytes:    "readBytes()";
+            case TypeUint32:   "readUInt32()";
+            case TypeEnum:     "readEnum()";
+            case TypeSfixed32: "readSFixed32()";
+            case TypeSfixed64: "readSFixed64()";
+            case TypeSint32:   "readSInt32()";
+            case TypeSint64:   "readSInt64()";
+            default:           "readVarint()";
         };
     }
 
@@ -1165,17 +1165,17 @@ class ProtoCodeGen {
      */
     private String readPackedMethod(FieldDescriptor field) {
         return switch (field.type) {
-            case Dbl:               "readPackedDoubles()";
-            case Flt:               "readPackedFloats()";
-            case I64, SI64:         "readPackedVarints()";
-            case UI64:              "readPackedUInt64s()";
-            case I32, SI32:         "readPackedInt32s()";
-            case FIX64, SFIX64:     "readPackedFixed64s()";
-            case FIX32, SFIX32:     "readPackedFixed32s()";
-            case Bool:              "readPackedBools()";
-            case UI32:              "readPackedInt32s()";
-            case Enm:               "readPackedVarints()";
-            default:                "readPackedVarints()";
+            case TypeDouble:                "readPackedDoubles()";
+            case TypeFloat:                 "readPackedFloats()";
+            case TypeInt64, TypeSint64:     "readPackedVarints()";
+            case TypeUint64:                "readPackedUInt64s()";
+            case TypeInt32, TypeSint32:     "readPackedInt32s()";
+            case TypeFixed64, TypeSfixed64: "readPackedFixed64s()";
+            case TypeFixed32, TypeSfixed32: "readPackedFixed32s()";
+            case TypeBool:                  "readPackedBools()";
+            case TypeUint32:                "readPackedInt32s()";
+            case TypeEnum:                  "readPackedVarints()";
+            default:                        "readPackedVarints()";
         };
     }
 
@@ -1184,23 +1184,23 @@ class ProtoCodeGen {
      */
     private String writeMethod(FieldDescriptor field) {
         return switch (field.type) {
-            case Dbl:    "writeDouble";
-            case Flt:    "writeFloat";
-            case I64:    "writeInt64";
-            case UI64:   "writeUInt64";
-            case I32:    "writeInt32";
-            case FIX64:  "writeFixed64";
-            case FIX32:  "writeFixed32";
-            case Bool:   "writeBool";
-            case Str:    "writeString";
-            case Bytes:  "writeBytes";
-            case UI32:   "writeUInt32";
-            case Enm:    "writeEnum";
-            case SFIX32: "writeSFixed32";
-            case SFIX64: "writeSFixed64";
-            case SI32:   "writeSInt32";
-            case SI64:   "writeSInt64";
-            default:     "writeVarint";
+            case TypeDouble:   "writeDouble";
+            case TypeFloat:    "writeFloat";
+            case TypeInt64:    "writeInt64";
+            case TypeUint64:   "writeUInt64";
+            case TypeInt32:    "writeInt32";
+            case TypeFixed64:  "writeFixed64";
+            case TypeFixed32:  "writeFixed32";
+            case TypeBool:     "writeBool";
+            case TypeString:   "writeString";
+            case TypeBytes:    "writeBytes";
+            case TypeUint32:   "writeUInt32";
+            case TypeEnum:     "writeEnum";
+            case TypeSfixed32: "writeSFixed32";
+            case TypeSfixed64: "writeSFixed64";
+            case TypeSint32:   "writeSInt32";
+            case TypeSint64:   "writeSInt64";
+            default:           "writeVarint";
         };
     }
 
@@ -1209,17 +1209,17 @@ class ProtoCodeGen {
      */
     private String writePackedMethod(FieldDescriptor field) {
         return switch (field.type) {
-            case Dbl:               "writePackedDoubles";
-            case Flt:               "writePackedFloats";
-            case I64, SI64:         "writePackedVarints";
-            case UI64:              "writePackedVarints";
-            case I32, SI32:         "writePackedVarints";
-            case FIX64, SFIX64:     "writePackedFixed64s";
-            case FIX32, SFIX32:     "writePackedFixed32s";
-            case Bool:              "writePackedBools";
-            case UI32:              "writePackedVarints";
-            case Enm:               "writePackedVarints";
-            default:                "writePackedVarints";
+            case TypeDouble:                "writePackedDoubles";
+            case TypeFloat:                 "writePackedFloats";
+            case TypeInt64, TypeSint64:     "writePackedVarints";
+            case TypeUint64:                "writePackedVarints";
+            case TypeInt32, TypeSint32:     "writePackedVarints";
+            case TypeFixed64, TypeSfixed64: "writePackedFixed64s";
+            case TypeFixed32, TypeSfixed32: "writePackedFixed32s";
+            case TypeBool:                  "writePackedBools";
+            case TypeUint32:                "writePackedVarints";
+            case TypeEnum:                  "writePackedVarints";
+            default:                        "writePackedVarints";
         };
     }
 
@@ -1232,23 +1232,23 @@ class ProtoCodeGen {
         String fn = field.number.toString();
         String fname = fieldName(field.name);
         return switch (field.type) {
-            case Dbl:    $"computeFixed64Size({fn})";
-            case Flt:    $"computeFixed32Size({fn})";
-            case I64:    $"computeInt64Size({fn}, {fname})";
-            case UI64:   $"computeUInt64Size({fn}, {fname})";
-            case I32:    $"computeInt32Size({fn}, {fname})";
-            case FIX64:  $"computeFixed64Size({fn})";
-            case FIX32:  $"computeFixed32Size({fn})";
-            case Bool:   $"computeBoolSize({fn})";
-            case Str:    $"computeStringSize({fn}, {fname})";
-            case Bytes:  $"computeBytesSize({fn}, {fname})";
-            case UI32:   $"computeUInt32Size({fn}, {fname})";
-            case Enm:    $"computeEnumSize({fn}, {fname})";
-            case SFIX32: $"computeFixed32Size({fn})";
-            case SFIX64: $"computeFixed64Size({fn})";
-            case SI32:   $"computeSInt32Size({fn}, {fname})";
-            case SI64:   $"computeSInt64Size({fn}, {fname})";
-            default:     $"computeVarintSize({fname})";
+            case TypeDouble:   $"computeFixed64Size({fn})";
+            case TypeFloat:    $"computeFixed32Size({fn})";
+            case TypeInt64:    $"computeInt64Size({fn}, {fname})";
+            case TypeUint64:   $"computeUInt64Size({fn}, {fname})";
+            case TypeInt32:    $"computeInt32Size({fn}, {fname})";
+            case TypeFixed64:  $"computeFixed64Size({fn})";
+            case TypeFixed32:  $"computeFixed32Size({fn})";
+            case TypeBool:     $"computeBoolSize({fn})";
+            case TypeString:   $"computeStringSize({fn}, {fname})";
+            case TypeBytes:    $"computeBytesSize({fn}, {fname})";
+            case TypeUint32:   $"computeUInt32Size({fn}, {fname})";
+            case TypeEnum:     $"computeEnumSize({fn}, {fname})";
+            case TypeSfixed32: $"computeFixed32Size({fn})";
+            case TypeSfixed64: $"computeFixed64Size({fn})";
+            case TypeSint32:   $"computeSInt32Size({fn}, {fname})";
+            case TypeSint64:   $"computeSInt64Size({fn}, {fname})";
+            default:           $"computeVarintSize({fname})";
         };
     }
 
@@ -1258,9 +1258,9 @@ class ProtoCodeGen {
     private String computeSizeMethodForElement(FieldDescriptor field) {
         String fn = field.number.toString();
         return switch (field.type) {
-            case Str:   $"computeStringSize({fn}, v)";
-            case Bytes: $"computeBytesSize({fn}, v)";
-            default:    $"computeBytesSize({fn}, v)";
+            case TypeString: $"computeStringSize({fn}, v)";
+            case TypeBytes:  $"computeBytesSize({fn}, v)";
+            default:         $"computeBytesSize({fn}, v)";
         };
     }
 
@@ -1271,17 +1271,17 @@ class ProtoCodeGen {
         String fn = field.number.toString();
         String fname = fieldName(field.name);
         return switch (field.type) {
-            case Dbl:               $"computePackedDoublesSize({fn}, {fname})";
-            case Flt:               $"computePackedFloatsSize({fn}, {fname})";
-            case I64, SI64:         $"computePackedVarintsSize({fn}, {fname})";
-            case UI64:              $"computePackedVarintsSize({fn}, {fname})";
-            case I32, SI32:         $"computePackedVarintsSize({fn}, {fname})";
-            case FIX64, SFIX64:     $"computePackedFixed64sSize({fn}, {fname})";
-            case FIX32, SFIX32:     $"computePackedFixed32sSize({fn}, {fname})";
-            case Bool:              $"computePackedBoolsSize({fn}, {fname})";
-            case UI32:              $"computePackedVarintsSize({fn}, {fname})";
-            case Enm:               $"computePackedVarintsSize({fn}, {fname})";
-            default:                $"computePackedVarintsSize({fn}, {fname})";
+            case TypeDouble:                $"computePackedDoublesSize({fn}, {fname})";
+            case TypeFloat:                 $"computePackedFloatsSize({fn}, {fname})";
+            case TypeInt64, TypeSint64:     $"computePackedVarintsSize({fn}, {fname})";
+            case TypeUint64:                $"computePackedVarintsSize({fn}, {fname})";
+            case TypeInt32, TypeSint32:     $"computePackedVarintsSize({fn}, {fname})";
+            case TypeFixed64, TypeSfixed64: $"computePackedFixed64sSize({fn}, {fname})";
+            case TypeFixed32, TypeSfixed32: $"computePackedFixed32sSize({fn}, {fname})";
+            case TypeBool:                  $"computePackedBoolsSize({fn}, {fname})";
+            case TypeUint32:                $"computePackedVarintsSize({fn}, {fname})";
+            case TypeEnum:                  $"computePackedVarintsSize({fn}, {fname})";
+            default:                        $"computePackedVarintsSize({fn}, {fname})";
         };
     }
 
@@ -1292,23 +1292,23 @@ class ProtoCodeGen {
         String fn = field.number.toString();
         String fname = fieldName(field.name);
         return switch (field.type) {
-            case Dbl:    $"computeFixed64Size({fn})";
-            case Flt:    $"computeFixed32Size({fn})";
-            case I64:    $"computeInt64Size({fn}, {fname})";
-            case UI64:   $"computeUInt64Size({fn}, {fname})";
-            case I32:    $"computeInt32Size({fn}, {fname})";
-            case FIX64:  $"computeFixed64Size({fn})";
-            case FIX32:  $"computeFixed32Size({fn})";
-            case Bool:   $"computeBoolSize({fn})";
-            case Str:    $"computeStringSize({fn}, {fname})";
-            case Bytes:  $"computeBytesSize({fn}, {fname})";
-            case UI32:   $"computeUInt32Size({fn}, {fname})";
-            case Enm:    $"computeEnumSize({fn}, {fname})";
-            case SFIX32: $"computeFixed32Size({fn})";
-            case SFIX64: $"computeFixed64Size({fn})";
-            case SI32:   $"computeSInt32Size({fn}, {fname})";
-            case SI64:   $"computeSInt64Size({fn}, {fname})";
-            default:     $"computeVarintSize({fname})";
+            case TypeDouble:   $"computeFixed64Size({fn})";
+            case TypeFloat:    $"computeFixed32Size({fn})";
+            case TypeInt64:    $"computeInt64Size({fn}, {fname})";
+            case TypeUint64:   $"computeUInt64Size({fn}, {fname})";
+            case TypeInt32:    $"computeInt32Size({fn}, {fname})";
+            case TypeFixed64:  $"computeFixed64Size({fn})";
+            case TypeFixed32:  $"computeFixed32Size({fn})";
+            case TypeBool:     $"computeBoolSize({fn})";
+            case TypeString:   $"computeStringSize({fn}, {fname})";
+            case TypeBytes:    $"computeBytesSize({fn}, {fname})";
+            case TypeUint32:   $"computeUInt32Size({fn}, {fname})";
+            case TypeEnum:     $"computeEnumSize({fn}, {fname})";
+            case TypeSfixed32: $"computeFixed32Size({fn})";
+            case TypeSfixed64: $"computeFixed64Size({fn})";
+            case TypeSint32:   $"computeSInt32Size({fn}, {fname})";
+            case TypeSint64:   $"computeSInt64Size({fn}, {fname})";
+            default:           $"computeVarintSize({fname})";
         };
     }
 
@@ -1408,14 +1408,14 @@ class ProtoCodeGen {
     }
 
     /**
-     * @return True if the field references an enum type (either via FieldType.Enm or by
+     * @return True if the field references an enum type (either via TypeEnum or by
      *         having a typeName that matches a known enum)
      */
     private Boolean isEnumRef(FieldDescriptor field) {
-        if (field.type == FieldType.Enm) {
+        if (field.type == TypeEnum) {
             return True;
         }
-        if (field.type != FieldType.Msg || field.typeName.size == 0) {
+        if (field.type != TypeMessage || field.typeName.size == 0) {
             return False;
         }
         if (enumNames.contains(field.typeName)) {

@@ -27,8 +27,8 @@ const FieldDescriptor {
               Int       oneofIndex       = -1,
               String    defaultValue     = "",
               Boolean   isMapField       = False,
-              FieldType mapKeyType       = FieldType.I32,
-              FieldType mapValueType     = FieldType.I32,
+              FieldType mapKeyType       = FieldType.TypeInt32,
+              FieldType mapValueType     = FieldType.TypeInt32,
               String    mapValueTypeName = "",
               String    jsonName         = "",
               Map<String, String> options = Map:[]) {
@@ -125,12 +125,12 @@ const FieldDescriptor {
     /**
      * @return True if this field references a message type
      */
-    Boolean isMessage.get() = type == FieldType.Msg;
+    Boolean isMessage.get() = type == FieldType.TypeMessage;
 
     /**
      * @return True if this field references an enum type
      */
-    Boolean isEnum.get() = type == FieldType.Enm;
+    Boolean isEnum.get() = type == FieldType.TypeEnum;
 
     /**
      * @return True if this field can use packed encoding

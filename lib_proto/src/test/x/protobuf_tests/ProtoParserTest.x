@@ -80,12 +80,12 @@ class ProtoParserTest {
         FieldDescriptor name = msg.fields[0];
         assert name.name == "name";
         assert name.number == 1;
-        assert name.type == FieldType.Str;
+        assert name.type == TypeString;
 
         FieldDescriptor id = msg.fields[1];
         assert id.name == "id";
         assert id.number == 2;
-        assert id.type == FieldType.I32;
+        assert id.type == TypeInt32;
     }
 
     // ----- repeated fields -----------------------------------------------------------------------
@@ -99,7 +99,7 @@ class ProtoParserTest {
                                     );
         FieldDescriptor field = file.messages[0].fields[0];
         assert field.isRepeated;
-        assert field.type == FieldType.Str;
+        assert field.type == TypeString;
     }
 
     // ----- nested messages -----------------------------------------------------------------------
@@ -168,8 +168,8 @@ class ProtoParserTest {
         FieldDescriptor field = file.messages[0].fields[0];
         assert field.name == "labels";
         assert field.isMapField;
-        assert field.mapKeyType == FieldType.Str;
-        assert field.mapValueType == FieldType.I32;
+        assert field.mapKeyType == TypeString;
+        assert field.mapValueType == TypeInt32;
     }
 
     // ----- oneof ---------------------------------------------------------------------------------
@@ -367,7 +367,7 @@ class ProtoParserTest {
                                      |}
                                     );
         FieldDescriptor field = file.messages[1].fields[0];
-        assert field.type == FieldType.Msg;
+        assert field.type == TypeMessage;
         assert field.typeName == "Inner";
     }
 
@@ -379,7 +379,7 @@ class ProtoParserTest {
                                      |}
                                     );
         FieldDescriptor field = file.messages[0].fields[0];
-        assert field.type == FieldType.Msg;
+        assert field.type == TypeMessage;
         assert field.typeName == "google.protobuf.Timestamp";
     }
 
@@ -408,21 +408,21 @@ class ProtoParserTest {
                                     );
         MessageDescriptor msg = file.messages[0];
         assert msg.fields.size == 15;
-        assert msg.fields[0].type == FieldType.Dbl;
-        assert msg.fields[1].type == FieldType.Flt;
-        assert msg.fields[2].type == FieldType.I32;
-        assert msg.fields[3].type == FieldType.I64;
-        assert msg.fields[4].type == FieldType.UI32;
-        assert msg.fields[5].type == FieldType.UI64;
-        assert msg.fields[6].type == FieldType.SI32;
-        assert msg.fields[7].type == FieldType.SI64;
-        assert msg.fields[8].type == FieldType.FIX32;
-        assert msg.fields[9].type == FieldType.FIX64;
-        assert msg.fields[10].type == FieldType.SFIX32;
-        assert msg.fields[11].type == FieldType.SFIX64;
-        assert msg.fields[12].type == FieldType.Bool;
-        assert msg.fields[13].type == FieldType.Str;
-        assert msg.fields[14].type == FieldType.Bytes;
+        assert msg.fields[0].type == TypeDouble;
+        assert msg.fields[1].type == TypeFloat;
+        assert msg.fields[2].type == TypeInt32;
+        assert msg.fields[3].type == TypeInt64;
+        assert msg.fields[4].type == TypeUint32;
+        assert msg.fields[5].type == TypeUint64;
+        assert msg.fields[6].type == TypeSint32;
+        assert msg.fields[7].type == TypeSint64;
+        assert msg.fields[8].type == TypeFixed32;
+        assert msg.fields[9].type == TypeFixed64;
+        assert msg.fields[10].type == TypeSfixed32;
+        assert msg.fields[11].type == TypeSfixed64;
+        assert msg.fields[12].type == TypeBool;
+        assert msg.fields[13].type == TypeString;
+        assert msg.fields[14].type == TypeBytes;
     }
 
     // ----- helper --------------------------------------------------------------------------------

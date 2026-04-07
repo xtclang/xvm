@@ -7,27 +7,27 @@
  * types (e.g. `Str` for `"string"`, `Msg` for `"message"`).
  */
 enum FieldType(String protoName, WireType wireType) {
-    Dbl     ("double",   WireType.I64),
-    Flt     ("float",    WireType.I32),
-    I64     ("int64",    WireType.VARINT),
-    UI64    ("uint64",   WireType.VARINT),
-    I32     ("int32",    WireType.VARINT),
-    FIX64   ("fixed64",  WireType.I64),
-    FIX32   ("fixed32",  WireType.I32),
-    Bool    ("bool",     WireType.VARINT),
-    Str     ("string",   WireType.LEN),
-    Grp     ("group",    WireType.SGROUP),
-    Msg     ("message",  WireType.LEN),
-    Bytes   ("bytes",    WireType.LEN),
-    UI32    ("uint32",   WireType.VARINT),
-    Enm     ("enum",     WireType.VARINT),
-    SFIX32  ("sfixed32", WireType.I32),
-    SFIX64  ("sfixed64", WireType.I64),
-    SI32    ("sint32",   WireType.VARINT),
-    SI64    ("sint64",   WireType.VARINT);
+    TypeDouble    ("double",   WireType.I64),
+    TypeFloat     ("float",    WireType.I32),
+    TypeInt64     ("int64",    WireType.VARINT),
+    TypeUint64    ("uint64",   WireType.VARINT),
+    TypeInt32     ("int32",    WireType.VARINT),
+    TypeFixed64   ("fixed64",  WireType.I64),
+    TypeFixed32   ("fixed32",  WireType.I32),
+    TypeBool      ("bool",     WireType.VARINT),
+    TypeString    ("string",   WireType.LEN),
+    TypeGroup     ("group",    WireType.SGROUP),
+    TypeMessage   ("message",  WireType.LEN),
+    TypeBytes     ("bytes",    WireType.LEN),
+    TypeUint32    ("uint32",   WireType.VARINT),
+    TypeEnum      ("enum",     WireType.VARINT),
+    TypeSfixed32  ("sfixed32", WireType.I32),
+    TypeSfixed64  ("sfixed64", WireType.I64),
+    TypeSint32    ("sint32",   WireType.VARINT),
+    TypeSint64    ("sint64",   WireType.VARINT);
 
     /**
-     * Look up a `FieldType` by its `.proto` file name.
+     * Look up a field type by its `.proto` file name.
      *
      * @param name  the proto type name (e.g. `"int32"`, `"string"`)
      *
@@ -47,8 +47,8 @@ enum FieldType(String protoName, WireType wireType) {
      */
     Boolean packable.get() {
         return switch (this) {
-            case Dbl, Flt, I64, UI64, I32, FIX64, FIX32,
-                 Bool, UI32, Enm, SFIX32, SFIX64, SI32, SI64:
+            case TypeDouble, TypeFloat, TypeInt64, TypeUint64, TypeInt32, TypeFixed64, TypeFixed32,
+                 TypeBool, TypeUint32, TypeEnum, TypeSfixed32, TypeSfixed64, TypeSint32, TypeSint64:
                 True;
             default:
                 False;

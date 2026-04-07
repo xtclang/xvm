@@ -264,7 +264,7 @@ class ProtoParser {
         if (FieldType scalar := FieldType.byProtoName(typeName)) {
             type = scalar;
         } else {
-            type    = FieldType.Msg;
+            type    = TypeMessage;
             typeRef = typeName;
         }
 
@@ -310,7 +310,7 @@ class ProtoParser {
             if (FieldType scalar := FieldType.byProtoName(typeName)) {
                 type = scalar;
             } else {
-                type    = FieldType.Msg;
+                type    = TypeMessage;
                 typeRef = typeName;
             }
 
@@ -364,11 +364,11 @@ class ProtoParser {
         if (FieldType scalar := FieldType.byProtoName(valueTypeName)) {
             valueType = scalar;
         } else {
-            valueType    = FieldType.Msg;
+            valueType    = TypeMessage;
             valueTypeRef = valueTypeName;
         }
 
-        return new FieldDescriptor(fieldName, fieldNumber, FieldType.Msg, Repeated,
+        return new FieldDescriptor(fieldName, fieldNumber, TypeMessage, Repeated,
                 isMapField=True, mapKeyType=keyType, mapValueType=valueType,
                 mapValueTypeName=valueTypeRef, options=options.freeze(inPlace=True));
     }
