@@ -1,3 +1,6 @@
+import ecstasy.lang.src.Compiler;
+import ecstasy.mgmt.ModuleRepository;
+
 import protobuf.FileDescriptor;
 import protobuf.ProtoCodeGen;
 import protobuf.ProtoParser;
@@ -64,9 +67,9 @@ class ProtoCodeGenTest {
         assert String source := files.get("List.x");
 
         // repeated string uses Array, not Maybe
-        assert source.indexOf("Array<String> items = new Array()");
+        assert source.indexOf("Array<String> items = []");
         // repeated int32 uses packed encoding
-        assert source.indexOf("Array<Int32> numbers = new Array()");
+        assert source.indexOf("Array<Int32> numbers = []");
         assert source.indexOf("writePackedVarints");
         assert source.indexOf("computePackedVarintsSize");
     }
@@ -102,7 +105,7 @@ class ProtoCodeGenTest {
                                               |}
                                              );
         assert String source := files.get("Config.x");
-        assert source.indexOf("ListMap<String, Int32> labels = new ListMap()");
+        assert source.indexOf("Map<String, Int32> labels = Map:[]");
         assert source.indexOf("readMapStringInt32()");
         assert source.indexOf("writeMapStringInt32");
         assert source.indexOf("computeMapStringInt32Size");
@@ -430,10 +433,189 @@ class ProtoCodeGenTest {
         assert source.indexOf("computeEnumSize(1,");
     }
 
+    // ----- compilation tests --------------------------------------------------------------------
+
+    @Test
+    void shouldCompileSimpleScalarMessage() {
+        testCompile(generate($|syntax = "proto3";
+                              |message Person \{
+                              |  string name = 1;
+                              |  int32 id = 2;
+                              |  bool active = 3;
+                              |}
+                             ));
+    }
+
+    @Test
+    void shouldCompileRepeatedFields() {
+        testCompile(generate($|syntax = "proto3";
+                              |message Msg \{
+                              |  repeated string items = 1;
+                              |  repeated int32 numbers = 2;
+                              |  repeated bool flags = 3;
+                              |}
+                             ));
+    }
+
+    @Test
+    void shouldCompileMapFields() {
+        testCompile(generate($|syntax = "proto3";
+                              |message Config \{
+                              |  map<string, string> labels = 1;
+                              |  map<string, int32> counts = 2;
+                              |  map<int32, string> names = 3;
+                              |}
+                             ));
+    }
+
+    @Test
+    void shouldCompileNestedEnum() {
+        testCompile(generate($|syntax = "proto3";
+                              |message Msg \{
+                              |  enum Color \{
+                              |    RED = 0;
+                              |    GREEN = 1;
+                              |    BLUE = 2;
+                              |  }
+                              |  Color color = 1;
+                              |  repeated Color colors = 2;
+                              |}
+                             ));
+    }
+
+    @Test
+    void shouldCompileNestedMessage() {
+        testCompile(generate($|syntax = "proto3";
+                              |message Outer \{
+                              |  message Inner \{
+                              |    string value = 1;
+                              |  }
+                              |  Inner inner = 1;
+                              |  repeated Inner items = 2;
+                              |}
+                             ));
+    }
+
+    @Test
+    void shouldCompileOneof() {
+        testCompile(generate($|syntax = "proto3";
+                              |message Result \{
+                              |  int32 id = 1;
+                              |  oneof value \{
+                              |    string name = 2;
+                              |    int32 code = 3;
+                              |    bool flag = 4;
+                              |  }
+                              |}
+                             ));
+    }
+
+    @Test
+    void shouldCompileEmptyMessage() {
+        testCompile(generate($|syntax = "proto3";
+                              |message Empty \{}
+                             ));
+    }
+
+    @Test
+    void shouldCompileAllScalarTypes() {
+        testCompile(generate($|syntax = "proto3";
+                              |message AllTypes \{
+                              |  double   f_double   = 1;
+                              |  float    f_float    = 2;
+                              |  int32    f_int32    = 3;
+                              |  int64    f_int64    = 4;
+                              |  uint32   f_uint32   = 5;
+                              |  uint64   f_uint64   = 6;
+                              |  sint32   f_sint32   = 7;
+                              |  sint64   f_sint64   = 8;
+                              |  fixed32  f_fixed32  = 9;
+                              |  fixed64  f_fixed64  = 10;
+                              |  sfixed32 f_sfixed32 = 11;
+                              |  sfixed64 f_sfixed64 = 12;
+                              |  bool     f_bool     = 13;
+                              |  string   f_string   = 14;
+                              |  bytes    f_bytes    = 15;
+                              |}
+                             ));
+    }
+
+    @Test
+    void shouldCompileKeywordFieldNames() {
+        testCompile(generate($|syntax = "proto3";
+                              |message Msg \{
+                              |  string class = 1;
+                              |  int32 import = 2;
+                              |  bool return = 3;
+                              |}
+                             ));
+    }
+
+    @Test
+    void shouldCompileComplexMessage() {
+        testCompile(generate($|syntax = "proto3";
+                              |message Complex \{
+                              |  enum Status \{
+                              |    UNKNOWN = 0;
+                              |    ACTIVE = 1;
+                              |  }
+                              |  message Address \{
+                              |    string street = 1;
+                              |    int32 zip = 2;
+                              |  }
+                              |  string name = 1;
+                              |  int32 id = 2;
+                              |  Status status = 3;
+                              |  Address address = 4;
+                              |  repeated string tags = 5;
+                              |  map<string, string> metadata = 6;
+                              |}
+                             ));
+    }
+
     // ----- helper --------------------------------------------------------------------------------
 
     private Map<String, String> generate(String protoSource) {
         FileDescriptor file = new ProtoParser(protoSource).parseFile("test.proto");
         return new ProtoCodeGen().generate(file);
+    }
+
+    /**
+     * Test that the generated source code compiles successfully.
+     *
+     * @param sources  a map of source file names to source code
+     */
+    private void testCompile(Map<String, String> sources) {
+        @Inject("testOutput") Directory testOutput;
+
+        String moduleSource = $|module testModule \{
+                               |
+                               |    package protobuf import protobuf.xtclang.org;
+                               |}
+                               |
+                               ;
+
+        File moduleFile = testOutput.fileFor("testModule.x");
+        moduleFile.contents = moduleSource.utf8();
+
+        Directory packageDir = testOutput.dirFor("testModule").ensure();
+
+        for (Map.Entry<String, String> entry : sources.entries) {
+            String sourceFileName = entry.key;
+            String source         = entry.value;
+            if (!sourceFileName.endsWith(".x")) {
+                sourceFileName += ".x";
+            }
+            File sourceFile = packageDir.fileFor(sourceFileName);
+            sourceFile.contents = source.utf8();
+        }
+
+        @Inject Compiler         compiler;
+        @Inject ModuleRepository repository;
+        compiler.setLibraryRepository(repository);
+        compiler.setResultLocation(testOutput);
+
+        (Boolean success, String[] errors) = compiler.compile([moduleFile]);
+        assert success as $"compilation failed:\n{errors}";
     }
 }

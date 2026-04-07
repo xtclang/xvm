@@ -51,19 +51,59 @@ module protobuf.xtclang.org {
     typedef Presence | String as MaybeString;
 
     /**
-     * A type alias for a Protobuf field that may be a ByteString or unset.
-     */
-    typedef Presence | ByteString as MaybeByteString;
-
-    /**
      * A type alias for a Protobuf field that may be a Byte array or unset.
      */
     typedef Presence | Byte[] as MaybeBytes;
 
 
     void run(String[] args) {
-        @Inject Console console;
-        console.print("Ecstasy Protocol Buffers");
+//        import ecstasy.io.FileInputStream;
+//        import ecstasy.io.FileOutputStream;
+//
+//        import google.DescriptorProto;
+//        import google.FileDescriptorProto;
+//
+//        import google.compiler.CodeGeneratorRequest;
+//        import google.compiler.CodeGeneratorResponse;
+//
+//        assert args.size > 0;
+//        @Inject Directory curDir;
+//        File requestFile  = curDir.fileFor(args[0]);
+//        File responseFile = curDir.fileFor("response-" + args[0]);
+//
+//        CodedInput in = new CodedInput(new FileInputStream(requestFile));
+//
+//        CodeGeneratorResponse response = new  CodeGeneratorResponse();
+//        CodeGeneratorRequest  request  = new  CodeGeneratorRequest();
+//        request.mergeFrom(in);
+//
+//        Map<String, FileDescriptorProto> fileMap = new HashMap();
+//        for (FileDescriptorProto fd : request.protoFile) {
+//            MaybeString name = fd.name;
+//            assert name.is(String);
+//            fileMap.put(name, fd);
+//        }
+//
+//        ProtoCodeGen codeGen = new ProtoCodeGen();
+//        for (String fileToGenerate : request.fileToGenerate) {
+//            assert FileDescriptorProto descriptor := fileMap.get(fileToGenerate);
+//
+//            for (DescriptorProto messageDescriptor : descriptor.getMessageTypeList()) {
+//                Map<String, String> sourceMap = codeGen.generate(messageDescriptor);
+//                for (Map.Entry<String, String> entry : sourceMap.entrySet()) {
+//                    String key = entry.key;
+//                    String value = entry.value;
+//                    CodeGeneratorResponse.File sourceFile = new CodeGeneratorResponse();
+//                    sourceFile.name    = entry.key;
+//                    sourceFile.content = entry.value;
+//                    response.file.add(sourceFile);
+//                }
+//            }
+//        }
+//
+//        CodedOutput out = new CodedOutput(new FileOutputStream(responseFile));
+//        response.writeTo(out);
+
     }
 
 }

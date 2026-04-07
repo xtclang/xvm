@@ -215,13 +215,6 @@ class CodedInput {
         return decodeUtf8(readRawBytes(length));
     }
 
-    /**
-     * Read a protobuf `bytes` field value as a ByteString.
-     *
-     * @return a ByteString containing the bytes read from the stream
-     */
-    ByteString readByteString() = new ByteString(readBytes());
-
     // ----- map entry readers ---------------------------------------------------------------------
 
     /**

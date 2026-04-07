@@ -262,16 +262,6 @@ class CodedOutput {
     }
 
     /**
-     * Write a protobuf `bytes` field from a ByteString (tag + length varint + raw bytes).
-     *
-     * @param fieldNumber  the field number
-     * @param value        the ByteString
-     */
-    void writeByteString(Int fieldNumber, ByteString value) {
-        writeBytes(fieldNumber, value.bytes);
-    }
-
-    /**
      * Write a protobuf embedded message field (tag + length varint + serialized message).
      *
      * The message's [serializedSize] is used to compute the length prefix, then the message is
@@ -418,6 +408,17 @@ class CodedOutput {
     }
 
     // ----- packed repeated field writers ---------------------------------------------------------
+
+    /**
+     * Write a packed repeated varint field (tag + length + concatenated varints).
+     *
+     * @param fieldNumber  the field number
+     * @param values       the varint values to pack
+     */
+    void writePackedVarints(Int fieldNumber, List<IntLiteral> values) {
+        List<UInt64> uint64Values = values.map(v -> v.toUInt64()).toArray();
+        writePackedVarints(fieldNumber, uint64Values);
+    }
 
     /**
      * Write a packed repeated varint field (tag + length + concatenated varints).
@@ -582,9 +583,21 @@ class CodedOutput {
      *
      * @return the number of bytes required
      */
+    static Int computeVarintSize(IntLiteral value) {
+        UInt64 bits = value.toUInt64();
+        return computeVarintSize(bits);
+    }
+
+    /**
+     * Compute the number of bytes needed to encode a varint value.
+     *
+     * @param value  the value to measure
+     *
+     * @return the number of bytes required
+     */
     static Int computeVarintSize(IntNumber value) {
         UInt64 bits = value.toUInt64();
-        Int    size = 1;
+        Int size = 1;
         while (bits > 0x7F) {
             size++;
             bits >>>= 7;
