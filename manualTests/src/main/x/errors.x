@@ -201,10 +201,10 @@ module TestCompilerErrors {
         }
     }
 
-    package testUnreachable {
+    package testUnreachableCondition {
         class Test {
-            <Key, Value> Boolean test(Key[]? keys, Value[]? vals) {
-                if (keys?.is(immutable) : True || vals?.all(v -> v.is(immutable)) : True) {
+            Boolean test(Int[] vals) {
+                if (True || vals.all(v -> v > 0)) {
                     return True;
                 }
                 return False;

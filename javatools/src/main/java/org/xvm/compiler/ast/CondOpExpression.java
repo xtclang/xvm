@@ -131,12 +131,16 @@ public class CondOpExpression
         switch (combine(const1, getOperatorString(), const2)) {
         case UandF:
         case UorT:
-            if (expr2 instanceof NameExpression) {
-                expr1.log(errs, Severity.ERROR, Compiler.EXPRESSION_UNREACHABLE,
-                    expr1, operator, expr2);
-                return null;
+            // even though the right expr is a constant, we must process the left side due to side
+            // effects
+            if (!expr1.hasSideEffects()) {
+                if (expr2 instanceof NameExpression) {
+                    expr1.log(errs, Severity.ERROR, Compiler.EXPRESSION_UNREACHABLE,
+                        expr1, operator, expr2);
+                    return null;
+                }
+                constResult = const2;
             }
-            constResult = const2;
             break;
 
         case FandU:
