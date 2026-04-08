@@ -165,6 +165,7 @@ public class NativeTypeSystem
                     }
                     String       typeString = path.substring(typeStart + 1, typeEnd);
                     TypeConstant type = switch (typeString) {
+                        case "Bit"     -> pool().typeBit();
                         case "Char"    -> pool().typeChar();
                         case "Dec32"   -> pool().typeDec32();
                         case "Dec64"   -> pool().typeDec64();
@@ -172,6 +173,7 @@ public class NativeTypeSystem
                         case "Float32" -> pool().typeFloat32();
                         case "Float64" -> pool().typeFloat64();
                         case "Int8"    -> pool().typeInt8();
+                        case "Nibble"  -> pool().typeNibble();
                         case "Int16"   -> pool().typeInt16();
                         case "Int32"   -> pool().typeInt32();
                         case "Int64"   -> pool().typeInt64();

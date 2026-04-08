@@ -2598,6 +2598,8 @@ public class BuildContext {
             case "Int32",
                  "UInt32",
                  "Char"   -> {}
+            case "Bit"    -> code.i2b().ldc(0x01).iand();
+            case "Nibble" -> code.i2b().ldc(0x0F).iand();
             default       -> throw new IllegalStateException();
         }
     }

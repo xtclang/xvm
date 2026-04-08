@@ -151,5 +151,5 @@ public class JitConnector
     /**
      * The result of "main" method invocation.
      */
-    private long result = 1;
+    private long result = 0;
 }

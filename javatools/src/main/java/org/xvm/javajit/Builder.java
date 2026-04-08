@@ -412,6 +412,13 @@ public abstract class Builder {
 
 
                 switch (elType.getSingleUnderlyingClass(false).getName()) {
+                case "Bit":
+                    // ArrayᐸBitᐳ array = ArrayᐸBitᐳ.$new$p(ctx, type, capacity, false);
+                    cdArray   = CD_ArrayBit;
+                    className = N_ArrayBit;
+                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                    break;
+
                 case "Char":
                     // ArrayᐸCharᐳ array = ArrayᐸCharᐳ.$new$p(ctx, type, capacity, false);
                     cdArray   = CD_ArrayChar;
@@ -487,6 +494,13 @@ public abstract class Builder {
                     cdArray   = CD_ArrayInt128;
                     className = N_ArrayInt128;
                     mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
+                    break;
+
+                case "Nibble":
+                    // ArrayᐸNibbleᐳ array = ArrayᐸNibbleᐳ.$new$p(ctx, type, capacity, false);
+                    cdArray   = CD_ArrayNibble;
+                    className = N_ArrayNibble;
+                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                     break;
 
                 case "UInt8":
@@ -888,6 +902,7 @@ public abstract class Builder {
                 .getName();
 
         switch (name) {
+            case "Bit"     -> code.getfield(CD_Bit,     "$value", CD_int);
             case "Boolean" -> code.getfield(CD_Boolean, "$value", CD_boolean);
             case "Char"    -> code.getfield(CD_Char,    "$value", CD_int);
             case "Dec32"   -> code.getfield(CD_Dec32,   "$bits",  CD_int);
@@ -921,6 +936,7 @@ public abstract class Builder {
                 code.getfield(CD_Int128, "$highValue", CD_long);
                 // stack is long long_2
             }
+            case "Nibble"  -> code.getfield(CD_Nibble, "$value", CD_int);
             case "UInt8"   -> code.getfield(CD_UInt8,  "$value", CD_int);
             case "UInt16"  -> code.getfield(CD_UInt16, "$value", CD_int);
             case "UInt32"  -> code.getfield(CD_UInt32, "$value", CD_int);
@@ -968,6 +984,7 @@ public abstract class Builder {
                           .getName();
 
         switch (name) {
+            case "Bit"     -> code.invokestatic(CD_Bit,     "$box", MD_Bit_box);
             case "Boolean" -> code.invokestatic(CD_Boolean, "$box", MD_Boolean_box);
             case "Char"    -> code.invokestatic(CD_Char,    "$box", MD_Char_box);
             case "Dec32"   -> code.invokestatic(CD_Dec32,   "$box", MD_Dec32_box);
@@ -981,6 +998,7 @@ public abstract class Builder {
             case "Int32"   -> code.invokestatic(CD_Int32,   "$box", MD_Int32_box);
             case "Int64"   -> code.invokestatic(CD_Int64,   "$box", MD_Int64_box);
             case "Int128"  -> code.invokestatic(CD_Int128,  "$box", MD_Int128_box);
+            case "Nibble"  -> code.invokestatic(CD_Nibble,  "$box", MD_Nibble_box);
             case "UInt8"   -> code.invokestatic(CD_UInt8,   "$box", MD_UInt8_box);
             case "UInt16"  -> code.invokestatic(CD_UInt16,  "$box", MD_UInt16_box);
             case "UInt32"  -> code.invokestatic(CD_UInt32,  "$box", MD_UInt32_box);
@@ -1257,12 +1275,14 @@ public abstract class Builder {
     // ----- native class names --------------------------------------------------------------------
 
     public static final String N_Array        = "org.xtclang.ecstasy.collections.Array";
+    public static final String N_ArrayBit     = "org.xtclang.ecstasy.collections.ArrayᐸBitᐳ";
     public static final String N_ArrayChar    = "org.xtclang.ecstasy.collections.ArrayᐸCharᐳ";
     public static final String N_ArrayDec32   = "org.xtclang.ecstasy.collections.ArrayᐸDec32ᐳ";
     public static final String N_ArrayDec64   = "org.xtclang.ecstasy.collections.ArrayᐸDec64ᐳ";
     public static final String N_ArrayDec128  = "org.xtclang.ecstasy.collections.ArrayᐸDec128ᐳ";
     public static final String N_ArrayFloat32 = "org.xtclang.ecstasy.collections.ArrayᐸFloat32ᐳ";
     public static final String N_ArrayFloat64 = "org.xtclang.ecstasy.collections.ArrayᐸFloat64ᐳ";
+    public static final String N_ArrayNibble  = "org.xtclang.ecstasy.collections.ArrayᐸNibbleᐳ";
     public static final String N_ArrayInt8    = "org.xtclang.ecstasy.collections.ArrayᐸInt8ᐳ";
     public static final String N_ArrayInt16   = "org.xtclang.ecstasy.collections.ArrayᐸInt16ᐳ";
     public static final String N_ArrayInt32   = "org.xtclang.ecstasy.collections.ArrayᐸInt32ᐳ";
@@ -1274,6 +1294,7 @@ public abstract class Builder {
     public static final String N_ArrayUInt64  = "org.xtclang.ecstasy.collections.ArrayᐸUInt64ᐳ";
     public static final String N_ArrayUInt128 = "org.xtclang.ecstasy.collections.ArrayᐸUInt128ᐳ";
     public static final String N_ArrayObj     = "org.xtclang.ecstasy.collections.ArrayᐸObjectᐳ";
+    public static final String N_Bit          = "org.xtclang.ecstasy.numbers.Bit";
     public static final String N_Boolean      = "org.xtclang.ecstasy.Boolean";
     public static final String N_Char         = "org.xtclang.ecstasy.text.Char";
     public static final String N_Class        = "org.xtclang.ecstasy.reflect.Class";
@@ -1291,6 +1312,7 @@ public abstract class Builder {
     public static final String N_Int32        = "org.xtclang.ecstasy.numbers.Int32";
     public static final String N_Int64        = "org.xtclang.ecstasy.numbers.Int64";
     public static final String N_Int128       = "org.xtclang.ecstasy.numbers.Int128";
+    public static final String N_Nibble       = "org.xtclang.ecstasy.numbers.Nibble";
     public static final String N_Nullable     = "org.xtclang.ecstasy.Nullable";
     public static final String N_Object       = "org.xtclang.ecstasy.Object";
     public static final String N_Orderable    = "org.xtclang.ecstasy.Orderable";
@@ -1328,6 +1350,7 @@ public abstract class Builder {
     // ----- well-known class descriptors ----------------------------------------------------------
 
     public static final ClassDesc CD_Array         = ClassDesc.of(N_Array);
+    public static final ClassDesc CD_ArrayBit      = ClassDesc.of(N_ArrayBit  );
     public static final ClassDesc CD_ArrayChar     = ClassDesc.of(N_ArrayChar);
     public static final ClassDesc CD_ArrayDec32    = ClassDesc.of(N_ArrayDec32);
     public static final ClassDesc CD_ArrayDec64    = ClassDesc.of(N_ArrayDec64);
@@ -1339,6 +1362,7 @@ public abstract class Builder {
     public static final ClassDesc CD_ArrayInt32    = ClassDesc.of(N_ArrayInt32);
     public static final ClassDesc CD_ArrayInt64    = ClassDesc.of(N_ArrayInt64);
     public static final ClassDesc CD_ArrayInt128   = ClassDesc.of(N_ArrayInt128);
+    public static final ClassDesc CD_ArrayNibble   = ClassDesc.of(N_ArrayNibble);
     public static final ClassDesc CD_ArrayUInt8    = ClassDesc.of(N_ArrayUInt8);
     public static final ClassDesc CD_ArrayUInt16   = ClassDesc.of(N_ArrayUInt16);
     public static final ClassDesc CD_ArrayUInt32   = ClassDesc.of(N_ArrayUInt32);
@@ -1361,6 +1385,7 @@ public abstract class Builder {
     public static final ClassDesc CD_nObj          = ClassDesc.of(N_nObj);
     public static final ClassDesc CD_nType         = ClassDesc.of(N_nType);
 
+    public static final ClassDesc CD_Bit           = ClassDesc.of(N_Bit);
     public static final ClassDesc CD_Boolean       = ClassDesc.of(N_Boolean);
     public static final ClassDesc CD_Char          = ClassDesc.of(N_Char);
     public static final ClassDesc CD_Dec32         = ClassDesc.of(N_Dec32);
@@ -1374,6 +1399,7 @@ public abstract class Builder {
     public static final ClassDesc CD_Int32         = ClassDesc.of(N_Int32);
     public static final ClassDesc CD_Int64         = ClassDesc.of(N_Int64);
     public static final ClassDesc CD_Int128        = ClassDesc.of(N_Int128);
+    public static final ClassDesc CD_Nibble        = ClassDesc.of(N_Nibble);
     public static final ClassDesc CD_Nullable      = ClassDesc.of(N_Nullable);
     public static final ClassDesc CD_Object        = ClassDesc.of(N_Object);
     public static final ClassDesc CD_Orderable     = ClassDesc.of(N_Orderable);
@@ -1419,6 +1445,7 @@ public abstract class Builder {
     public static final String DataType = "$dataType";
 
     // various commonly used MethodDesc constants
+    public static final MethodTypeDesc MD_Bit_box     = MethodTypeDesc.of(CD_Bit,     CD_int);
     public static final MethodTypeDesc MD_Boolean_box = MethodTypeDesc.of(CD_Boolean, CD_boolean);
     public static final MethodTypeDesc MD_Char_box    = MethodTypeDesc.of(CD_Char,    CD_int);
     public static final MethodTypeDesc MD_Char_addInt = MethodTypeDesc.of(CD_int,     CD_Ctx, CD_int, CD_long);
@@ -1429,6 +1456,7 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_Float16_box = MethodTypeDesc.of(CD_Float16, CD_float);
     public static final MethodTypeDesc MD_Float32_box = MethodTypeDesc.of(CD_Float32, CD_float);
     public static final MethodTypeDesc MD_Float64_box = MethodTypeDesc.of(CD_Float64, CD_double);
+    public static final MethodTypeDesc MD_Nibble_box  = MethodTypeDesc.of(CD_Nibble,  CD_int);
     public static final MethodTypeDesc MD_Int8_box    = MethodTypeDesc.of(CD_Int8,    CD_int);
     public static final MethodTypeDesc MD_Int16_box   = MethodTypeDesc.of(CD_Int16,   CD_int);
     public static final MethodTypeDesc MD_Int32_box   = MethodTypeDesc.of(CD_Int32,   CD_int);

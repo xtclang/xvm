@@ -98,6 +98,20 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
     protected abstract long $storageCapacity();
 
     /**
+     * @return the current storage capacity when storing 1-bit values
+     */
+    protected long $storageCapacity1bit() {
+        return $storage.length * 64L;
+    }
+
+    /**
+     * @return the current storage capacity when storing 4-bit values
+     */
+    protected long $storageCapacity4bit() {
+        return $storage.length * 16L;
+    }
+
+    /**
      * @return the current storage capacity when storing 8-bit values
      */
     protected long $storageCapacity8bit() {
@@ -247,6 +261,36 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
      * @throws ArrayIndexOutOfBoundsException if the specified index is out of range
      */
     protected abstract long $getElement(Ctx ctx, long index);
+
+    /**
+     * Return the 1-bit value from the specified array index.
+     * <p>
+     * This method assumes that sixty-four 1-bit elements have been packed into each long value in
+     * the long array.
+     *
+     * @param index  the index of the 1-bit value to obtain
+     *
+     * @return  the 1-bit value (0 or 1) at the specified array index
+     */
+    protected long $get1bitElement(long index) {
+        return ($storage[(int) (index >>> 6)] >>> (63 - ((int) (index & 0x3F)))) & 1L;
+    }
+
+    /**
+     * Return the 4-bit value from the specified array index.
+     * <p>
+     * This method will NOT sign-extend the 4-bit value to a full 64-bit long value.
+     * <p>
+     * This method assumes that sixteen 4-bit elements have been packed into each long value in
+     * the long array.
+     *
+     * @param index  the index of the 4-bit value to obtain
+     *
+     * @return  the 4-bit value at the specified array index
+     */
+    protected long $get4bitUnsignedElement(long index) {
+        return ($storage[(int) (index >>> 4)] >>> ((15 - ((int) (index & 0xF))) << 2)) & 0xFL;
+    }
 
     /**
      * Return the 8-bit value from the specified array index.
@@ -432,6 +476,36 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
     protected abstract void $setElement(Ctx ctx, long index, long value);
 
     /**
+     * Store a 1-bit element value into the array.
+     * <p>
+     * This method will pack sixty-four 1-bit elements into each long value in the long array.
+     *
+     * @param index  the index to store the element at
+     * @param value  the value to store (0 or 1)
+     */
+    protected void $set1bitElement(long index, long value) {
+        int idx = (int) index;
+        int i = idx >>> 6;
+        int s = 63 - (idx & 0x3F);
+        $storage[i] = $storage[i] & ~(1L << s) | ((value & 1L) << s);
+    }
+
+    /**
+     * Store a 4-bit element value into the array.
+     * <p>
+     * This method will pack sixteen 4-bit elements into each long value in the long array.
+     *
+     * @param index  the index to store the element at
+     * @param value  the value to store (0-15)
+     */
+    protected void $set4bitElement(long index, long value) {
+        int idx = (int) index;
+        int i = idx >>> 4;
+        int s = (15 - (idx & 0xF)) << 2;
+        $storage[i] = $storage[i] & ~(0xFL << s) | ((value & 0xFL) << s);
+    }
+
+    /**
      * Store an 8-bit element value into the array.
      * <p>
      * This method will pack eight 8-bit elements into each long value in the long array.
@@ -546,6 +620,28 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
      * @return the number of longs required
      */
     protected abstract int $cap2len(int cap);
+
+    /**
+     * Return the {@link #$cap2len(int)} value for 1-bit elements.
+     *
+     * @param cap  the array capacity
+     *
+     * @return  the storage length required to hold the specified array capacity of 1-bit values
+     */
+    protected int $cap2len1bit(int cap) {
+        return (cap + 63) / 64;
+    }
+
+    /**
+     * Return the {@link #$cap2len(int)} value for 4-bit elements.
+     *
+     * @param cap  the array capacity
+     *
+     * @return  the storage length required to hold the specified array capacity of 4-bit values
+     */
+    protected int $cap2len4bits(int cap) {
+        return (cap + 15) / 16;
+    }
 
     /**
      * Return the {@link #$cap2len(int)} value for 8-bit elements.

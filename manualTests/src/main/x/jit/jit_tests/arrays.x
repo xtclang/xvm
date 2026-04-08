@@ -27,6 +27,8 @@ package arrays {
                 passed &= runTest(() -> dec128ArrayTests.run());
                 passed &= runTest(() -> float32ArrayTests.run());
                 passed &= runTest(() -> float64ArrayTests.run());
+                passed &= runTest(() -> bitArrayTests.run());
+                passed &= runTest(() -> nibbleArrayTests.run());
             } catch (IllegalState e) {
                 console.print(e);
             }

@@ -6508,6 +6508,7 @@ public abstract class TypeConstant
                 IdentityConstant idEl = typeEl.getSingleUnderlyingClass(false);
 
                 return switch (idEl.getName()) {
+                    case "Bit"     -> Builder.N_ArrayBit;
                     case "Boolean" -> Builder.N_ArrayObj; // TODO JK
                     case "Char"    -> Builder.N_ArrayChar;
                     case "Dec32"   -> Builder.N_ArrayDec32;
@@ -6515,6 +6516,7 @@ public abstract class TypeConstant
                     case "Dec128"  -> Builder.N_ArrayDec128;
                     case "Float32" -> Builder.N_ArrayFloat32;
                     case "Float64" -> Builder.N_ArrayFloat64;
+                    case "Nibble"  -> Builder.N_ArrayNibble;
                     case "Int8"    -> Builder.N_ArrayInt8;
                     case "Int16"   -> Builder.N_ArrayInt16;
                     case "Int32"   -> Builder.N_ArrayInt32;

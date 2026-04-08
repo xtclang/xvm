@@ -18,6 +18,7 @@ class GpOrTests {
         testGpOrUInt32();
         testGpOrInt128();
         testGpOrUInt128();
+        testGpOrBit();
         console.print("<<<< Finished GpOrTests <<<<<");
     }
 
@@ -104,5 +105,23 @@ class GpOrTests {
 //        UInt128 value3 = 0xF0F0F0F0;
 //        value1 = value2 | value3;
 //        assert value1 == 0xFAFAFAFA;
+    }
+
+    void testGpOrBit() {
+        Bit value1 = 0;
+        Bit value2 = 1;
+        Bit value3 = 0;
+        value1 = value2 | value3;
+        assert value1 == 1;
+
+        value1 = value3 | value2;
+        assert value1 == 1;
+
+        value1 = 0 | 0;
+        assert value1 == 0;
+
+        Bit one = 1;
+        value1 = one | one;
+        assert value1 == 1;
     }
 }
