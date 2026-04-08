@@ -48,6 +48,7 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -2203,7 +2204,7 @@ public abstract class Component
         assert getContaining() == null || getContaining() instanceof Component;
 
         out.writeShort(m_nFlags);
-        writePackedLong(out, m_constId.getPosition());
+        writeMagnitude(out, m_constId.getPosition());
 
         // write out the contributions
         List<Contribution> listContribs = m_listContribs;
@@ -3075,7 +3076,7 @@ public abstract class Component
         protected void assemble(DataOutput out)
                 throws IOException {
             out.writeByte(m_composition.ordinal());
-            writePackedLong(out, m_typeContrib.getPosition());
+            writeMagnitude(out, m_typeContrib.getPosition());
 
             switch (m_composition) {
             case Annotation:
@@ -3096,8 +3097,8 @@ public abstract class Component
                         StringConstant constName = entry.getKey();
                         TypeConstant   type      = entry.getValue();
 
-                        writePackedLong(out, constName.getPosition());
-                        writePackedLong(out, type == null ? 0 : type.getPosition());
+                        writeMagnitude(out, constName.getPosition());
+                        writeMagnitude(out, type == null ? 0 : type.getPosition());
                     }
                 }
                 break;

@@ -18,6 +18,7 @@ import org.xvm.util.Handy;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -415,7 +416,7 @@ public class Parameter
             throws IOException {
         writePackedLong(out, m_aAnnotations.length);
         for (Annotation anno : m_aAnnotations) {
-            writePackedLong(out, anno.getPosition());
+            writeMagnitude(out, anno.getPosition());
         }
 
         writePackedLong(out, Constant.indexOf(m_constType));

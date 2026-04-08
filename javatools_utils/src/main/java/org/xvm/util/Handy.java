@@ -909,14 +909,15 @@ public final class Handy {
     }
 
     /**
-     * @param cMillis  date/time in millis
-     *
      * @return date/time string in "yyyy-MM-dd HH:mm:ss.SSS" format in UTC time zone
      */
     public static String logTime() {
         return logTime(System.currentTimeMillis(), DATE_TIME_MILLS_FORMATTER);
     }
 
+    /**
+     * @return date/time string in specified format in UTC time zone
+     */
     public static String logTime(final long cMillis, final DateTimeFormatter formatter) {
         return Instant.ofEpochMilli(cMillis)
             .atZone(ZoneId.of("UTC"))
@@ -971,6 +972,22 @@ public final class Handy {
         }
 
         return (int) n;
+    }
+
+    /**
+     * Write a variable-length encoded integer magnitude from a stream.
+     *
+     * @param out  the <tt>DataOutput</tt> stream to write to
+     * @param n    the <tt>long</tt> value to write
+     *
+     * @throws IOException  if an I/O exception occurs
+     */
+    public static void writeMagnitude(final DataOutput out, final int n)
+            throws IOException {
+        if (n < 0) {
+            throw new IOException("negative magnitude (" + n + ") is illegal");
+        }
+        PackedInteger.writeLong(out, n);
     }
 
     /**

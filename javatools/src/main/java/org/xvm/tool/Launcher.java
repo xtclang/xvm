@@ -442,6 +442,7 @@ public abstract class Launcher<T extends LauncherOptions>
 
         // FATAL errors abort immediately
         if (sev == FATAL) {
+            m_console.log(sev, cause, "");
             throw new LauncherException(true, Console.formatTemplate(template, params), cause);
         }
 

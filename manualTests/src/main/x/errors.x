@@ -200,4 +200,15 @@ module TestCompilerErrors {
             void route() = TODO
         }
     }
+
+    package testUnreachable {
+        class Test {
+            <Key, Value> Boolean test(Key[]? keys, Value[]? vals) {
+                if (keys?.is(immutable) : True || vals?.all(v -> v.is(immutable)) : True) {
+                    return True;
+                }
+                return False;
+            }
+        }
+    }
 }

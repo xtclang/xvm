@@ -27,6 +27,7 @@ import org.xvm.asm.MethodStructure.ConcurrencySafety;
 import org.xvm.util.LinkedIterator;
 
 import static org.xvm.util.Handy.readIndex;
+import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -727,7 +728,7 @@ public class PropertyStructure
         super.assemble(out);
 
         out.writeByte(m_accessVar == null ? -1 : m_accessVar.ordinal());
-        writePackedLong(out, m_type.getPosition());
+        writeMagnitude(out, m_type.getPosition());
         writePackedLong(out, Constant.indexOf(m_constVal));
     }
 

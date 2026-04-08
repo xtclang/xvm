@@ -17,6 +17,7 @@ import org.xvm.util.Handy;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -282,12 +283,12 @@ public abstract class MultiCondition
             throws IOException {
         out.writeByte(getFormat().ordinal());
 
-        final ConditionalConstant[] aconstCond = m_aconstCond;
+        ConditionalConstant[] aconstCond = m_aconstCond;
 
         writePackedLong(out, aconstCond.length);
 
         for (ConditionalConstant constCond : aconstCond) {
-            writePackedLong(out, constCond.getPosition());
+            writeMagnitude(out, constCond.getPosition());
         }
     }
 

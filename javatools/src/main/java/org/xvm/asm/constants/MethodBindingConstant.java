@@ -21,7 +21,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
-import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.writeMagnitude;
 
 
 /**
@@ -154,7 +154,7 @@ public class MethodBindingConstant
             throws IOException {
         super.assemble(out);
 
-        writePackedLong(out, m_idMethod.getPosition());
+        writeMagnitude(out, m_idMethod.getPosition());
     }
 
     @Override

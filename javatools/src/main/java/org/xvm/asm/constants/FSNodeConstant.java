@@ -18,7 +18,7 @@ import org.xvm.util.Handy;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
-import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.writeMagnitude;
 
 
 /**
@@ -323,10 +323,10 @@ public class FSNodeConstant
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_constName    .getPosition());
-        writePackedLong(out, m_constCreated .getPosition());
-        writePackedLong(out, m_constModified.getPosition());
-        writePackedLong(out, m_constData    .getPosition());
+        writeMagnitude(out, m_constName    .getPosition());
+        writeMagnitude(out, m_constCreated .getPosition());
+        writeMagnitude(out, m_constModified.getPosition());
+        writeMagnitude(out, m_constData    .getPosition());
     }
 
     @Override

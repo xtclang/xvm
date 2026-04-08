@@ -22,6 +22,7 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -231,8 +232,8 @@ public class DynamicFormalConstant
             writePackedLong(out, m_reg.getIndex());
             writePackedLong(out, m_reg.getId());
         }
-        writePackedLong(out, m_typeReg.getPosition());
-        writePackedLong(out, m_constFormal.getPosition());
+        writeMagnitude(out, m_typeReg.getPosition());
+        writeMagnitude(out, m_constFormal.getPosition());
     }
 
     @Override

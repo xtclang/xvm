@@ -27,6 +27,7 @@ import org.xvm.util.Severity;
 import static org.xvm.util.Handy.checkElementsNonNull;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -303,10 +304,10 @@ public class Annotation
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, getAnnotationClass().getPosition());
+        writeMagnitude(out, getAnnotationClass().getPosition());
         writePackedLong(out, m_aParams.length);
         for (Constant param : m_aParams) {
-            writePackedLong(out, param.getPosition());
+            writeMagnitude(out, param.getPosition());
         }
     }
 

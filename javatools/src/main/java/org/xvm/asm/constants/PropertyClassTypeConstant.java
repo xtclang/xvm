@@ -29,7 +29,7 @@ import org.xvm.util.Hash;
 import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
-import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.writeMagnitude;
 
 
 /**
@@ -434,7 +434,7 @@ public class PropertyClassTypeConstant
             throws IOException {
         super.assemble(out);
 
-        writePackedLong(out, m_idProp.getPosition());
+        writeMagnitude(out, m_idProp.getPosition());
     }
 
 

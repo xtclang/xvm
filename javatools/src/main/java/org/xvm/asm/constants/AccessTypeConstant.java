@@ -21,6 +21,7 @@ import org.xvm.util.Hash;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
+import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -267,7 +268,7 @@ public class AccessTypeConstant
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_constType.getPosition());
+        writeMagnitude(out, m_constType.getPosition());
         writePackedLong(out, m_access.ordinal());
     }
 

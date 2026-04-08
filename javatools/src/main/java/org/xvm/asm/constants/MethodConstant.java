@@ -23,6 +23,7 @@ import org.xvm.javajit.TypeSystem;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -616,7 +617,7 @@ public class MethodConstant
         assert !isNascent();
 
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_constParent.getPosition());
+        writeMagnitude(out, m_constParent.getPosition());
         writePackedLong(out, Constant.indexOf(m_constSig));
         writePackedLong(out, m_iLambda);
     }

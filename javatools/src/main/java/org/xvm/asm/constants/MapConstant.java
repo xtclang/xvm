@@ -19,6 +19,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -318,15 +319,15 @@ public class MapConstant
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_constType.getPosition());
+        writeMagnitude(out, m_constType.getPosition());
 
         Constant[] aconstKey = m_aconstKey;
         Constant[] aconstVal = m_aconstVal;
         int        cEntries  = aconstKey.length;
         writePackedLong(out, cEntries);
         for (int i = 0; i < cEntries; ++i) {
-            writePackedLong(out, aconstKey[i].getPosition());
-            writePackedLong(out, aconstVal[i].getPosition());
+            writeMagnitude(out, aconstKey[i].getPosition());
+            writeMagnitude(out, aconstVal[i].getPosition());
         }
     }
 

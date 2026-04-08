@@ -25,7 +25,7 @@ import org.xvm.util.PackedInteger;
 
 import static org.xvm.util.Handy.hexitValue;
 import static org.xvm.util.Handy.readMagnitude;
-import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.writeMagnitude;
 
 
 /**
@@ -1625,7 +1625,7 @@ public class LiteralConstant
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_constStr.getPosition());
+        writeMagnitude(out, m_constStr.getPosition());
     }
 
     @Override

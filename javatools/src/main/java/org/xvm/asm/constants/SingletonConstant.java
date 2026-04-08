@@ -15,7 +15,7 @@ import org.xvm.runtime.ObjectHandle.InitializingHandle;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
-import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.writeMagnitude;
 
 
 /**
@@ -195,7 +195,7 @@ public class SingletonConstant
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_constClass.getPosition());
+        writeMagnitude(out, m_constClass.getPosition());
     }
 
     @Override

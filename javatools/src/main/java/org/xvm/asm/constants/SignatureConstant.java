@@ -22,6 +22,7 @@ import org.xvm.javajit.TypeSystem;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -772,7 +773,7 @@ public class SignatureConstant
         }
 
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_constName.getPosition());
+        writeMagnitude(out, m_constName.getPosition());
         writeTypes(out, m_aconstParams);
         writeTypes(out, m_aconstReturns);
     }
@@ -846,7 +847,7 @@ public class SignatureConstant
         writePackedLong(out, aconst.length);
 
         for (TypeConstant typeConstant : aconst) {
-            writePackedLong(out, typeConstant.getPosition());
+            writeMagnitude(out, typeConstant.getPosition());
         }
     }
 

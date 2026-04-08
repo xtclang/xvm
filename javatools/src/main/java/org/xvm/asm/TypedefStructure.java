@@ -10,7 +10,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypedefConstant;
 
 import static org.xvm.util.Handy.readIndex;
-import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.writeMagnitude;
 
 
 /**
@@ -82,17 +82,12 @@ public class TypedefStructure
     throws IOException {
         super.assemble(out);
 
-        writePackedLong(out, m_type.getPosition());
+        writeMagnitude(out, m_type.getPosition());
     }
 
     @Override
     public String getDescription() {
-        return new StringBuilder()
-                .append("type=")
-                .append(m_type)
-                .append(", ")
-                .append(super.getDescription())
-                .toString();
+        return "type=" + m_type + ", " + super.getDescription();
     }
 
 

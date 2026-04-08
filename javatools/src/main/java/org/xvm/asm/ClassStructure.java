@@ -48,6 +48,7 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -3507,8 +3508,8 @@ public class ClassStructure
         }
 
         for (Map.Entry<StringConstant, TypeConstant> entry : map.entrySet()) {
-            writePackedLong(out, entry.getKey().getPosition());
-            writePackedLong(out, entry.getValue().getPosition());
+            writeMagnitude(out, entry.getKey().getPosition());
+            writeMagnitude(out, entry.getValue().getPosition());
         }
     }
 
