@@ -2,28 +2,34 @@ package org.xvm.lsp.adapter.treesitter
 
 import org.xvm.lsp.adapter.AbstractAdapter
 import org.xvm.lsp.adapter.Adapter
-import org.xvm.lsp.adapter.Adapter.CodeAction
-import org.xvm.lsp.adapter.Adapter.CompletionItem
-import org.xvm.lsp.adapter.Adapter.CompletionItem.CompletionKind
-import org.xvm.lsp.adapter.Adapter.DocumentHighlight
-import org.xvm.lsp.adapter.Adapter.DocumentHighlight.HighlightKind
-import org.xvm.lsp.adapter.Adapter.FoldingRange
-import org.xvm.lsp.adapter.Adapter.ParameterInfo
-import org.xvm.lsp.adapter.Adapter.Position
-import org.xvm.lsp.adapter.Adapter.PrepareRenameResult
-import org.xvm.lsp.adapter.Adapter.Range
-import org.xvm.lsp.adapter.Adapter.SelectionRange
-import org.xvm.lsp.adapter.Adapter.SignatureHelp
-import org.xvm.lsp.adapter.Adapter.SignatureInfo
-import org.xvm.lsp.adapter.Adapter.TextEdit
-import org.xvm.lsp.adapter.Adapter.WorkspaceEdit
 import org.xvm.lsp.adapter.AdapterCodeActions
 import org.xvm.lsp.adapter.AdapterFormatter
+import org.xvm.lsp.adapter.CodeAction
 import org.xvm.lsp.adapter.CodeActionQueryData
+import org.xvm.lsp.adapter.CodeLens
+import org.xvm.lsp.adapter.CodeLensCommand
+import org.xvm.lsp.adapter.CompletionItem
+import org.xvm.lsp.adapter.CompletionItem.CompletionKind
+import org.xvm.lsp.adapter.DocumentHighlight
+import org.xvm.lsp.adapter.DocumentHighlight.HighlightKind
+import org.xvm.lsp.adapter.DocumentLink
+import org.xvm.lsp.adapter.FoldingRange
 import org.xvm.lsp.adapter.FormattingConfig
+import org.xvm.lsp.adapter.FormattingOptions
 import org.xvm.lsp.adapter.LanguageConstants.builtInTypeCompletions
 import org.xvm.lsp.adapter.LanguageConstants.keywordCompletions
 import org.xvm.lsp.adapter.LanguageConstants.toCompletionKind
+import org.xvm.lsp.adapter.LinkedEditingRanges
+import org.xvm.lsp.adapter.ParameterInfo
+import org.xvm.lsp.adapter.Position
+import org.xvm.lsp.adapter.PrepareRenameResult
+import org.xvm.lsp.adapter.Range
+import org.xvm.lsp.adapter.SelectionRange
+import org.xvm.lsp.adapter.SemanticTokens
+import org.xvm.lsp.adapter.SignatureHelp
+import org.xvm.lsp.adapter.SignatureInfo
+import org.xvm.lsp.adapter.TextEdit
+import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.index.WorkspaceIndex
 import org.xvm.lsp.index.WorkspaceIndexer
 import org.xvm.lsp.model.CompilationResult
@@ -709,12 +715,12 @@ class TreeSitterAdapter : AbstractAdapter() {
         uri: String,
         line: Int,
         column: Int,
-    ): Adapter.LinkedEditingRanges? {
+    ): LinkedEditingRanges? {
         val (tree, name) = getIdentifierAt(uri, line, column, "linkedEditingRange") ?: return null
         val locations = queryEngine.findAllIdentifiers(tree, name, uri)
         if (locations.size < 2) return null
         logger.info("linkedEditingRange '{}' -> {} ranges", name, locations.size)
-        return Adapter.LinkedEditingRanges(
+        return LinkedEditingRanges(
             ranges =
                 locations.map { loc ->
                     Range(Position(loc.startLine, loc.startColumn), Position(loc.endLine, loc.endColumn))
@@ -1055,7 +1061,7 @@ class TreeSitterAdapter : AbstractAdapter() {
     // Code lenses (run/compile actions on module declarations)
     // ========================================================================
 
-    override fun getCodeLenses(uri: String): List<Adapter.CodeLens> {
+    override fun getCodeLenses(uri: String): List<CodeLens> {
         logger.info("getCodeLenses: uri={}", uri.substringAfterLast('/'))
         val tree = parsedTrees[uri] ?: return emptyList()
         val declarations = queryEngine.findAllDeclarations(tree, uri)
@@ -1065,17 +1071,17 @@ class TreeSitterAdapter : AbstractAdapter() {
                 if (decl.kind != SymbolKind.MODULE) continue
 
                 val range =
-                    Adapter.Range(
+                    Range(
                         start = Position(decl.location.startLine, decl.location.startColumn),
                         end = Position(decl.location.endLine, decl.location.endColumn),
                     )
 
                 // "Run" lens — modules are the entry point in XTC
                 add(
-                    Adapter.CodeLens(
+                    CodeLens(
                         range = range,
                         command =
-                            Adapter.CodeLensCommand(
+                            CodeLensCommand(
                                 title = "\u25B6 Run ${decl.name}",
                                 command = "xtc.runModule",
                                 arguments = listOf(uri, decl.name),
@@ -1095,7 +1101,7 @@ class TreeSitterAdapter : AbstractAdapter() {
     override fun formatDocument(
         uri: String,
         content: String,
-        options: Adapter.FormattingOptions,
+        options: FormattingOptions,
     ): List<TextEdit> {
         val tree =
             parsedTrees[uri] ?: run {
@@ -1110,7 +1116,7 @@ class TreeSitterAdapter : AbstractAdapter() {
         uri: String,
         content: String,
         range: Range,
-        options: Adapter.FormattingOptions,
+        options: FormattingOptions,
     ): List<TextEdit> {
         val tree =
             parsedTrees[uri] ?: run {
@@ -1130,7 +1136,7 @@ class TreeSitterAdapter : AbstractAdapter() {
         line: Int,
         column: Int,
         ch: String,
-        options: Adapter.FormattingOptions,
+        options: FormattingOptions,
     ): List<TextEdit> {
         val tree =
             parsedTrees[uri] ?: run {
@@ -1144,7 +1150,7 @@ class TreeSitterAdapter : AbstractAdapter() {
     override fun getDocumentLinks(
         uri: String,
         content: String,
-    ): List<Adapter.DocumentLink> {
+    ): List<DocumentLink> {
         logger.info("getDocumentLinks: uri={}, {} bytes", uri.substringAfterLast('/'), content.length)
         val tree =
             parsedTrees[uri] ?: run {
@@ -1160,11 +1166,11 @@ class TreeSitterAdapter : AbstractAdapter() {
                     .takeIf { indexReady.get() }
                     ?.let { workspaceIndex.findByName(it).firstOrNull()?.uri }
             val range = Range(Position(loc.startLine, loc.startColumn), Position(loc.endLine, loc.endColumn))
-            Adapter.DocumentLink(range, targetUri, "import $importPath")
+            DocumentLink(range, targetUri, "import $importPath")
         }
     }
 
-    override fun getSemanticTokens(uri: String): Adapter.SemanticTokens? {
+    override fun getSemanticTokens(uri: String): SemanticTokens? {
         logger.info("getSemanticTokens: uri={}", uri.substringAfterLast('/'))
         val tree =
             parsedTrees[uri] ?: run {
@@ -1173,7 +1179,7 @@ class TreeSitterAdapter : AbstractAdapter() {
             }
         val data = SemanticTokenEncoder().encode(tree.root)
         logger.info("getSemanticTokens -> {} data items ({} tokens)", data.size, data.size / 5)
-        return data.takeIf { it.isNotEmpty() }?.let { Adapter.SemanticTokens(it) }
+        return data.takeIf { it.isNotEmpty() }?.let { SemanticTokens(it) }
     }
 
     /**

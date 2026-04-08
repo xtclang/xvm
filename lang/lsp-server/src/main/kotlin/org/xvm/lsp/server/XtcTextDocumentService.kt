@@ -82,11 +82,15 @@ import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.model.toRange
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
-import org.xvm.lsp.adapter.Adapter.CompletionItem.CompletionKind as AdapterCompletionKind
-import org.xvm.lsp.adapter.Adapter.FormattingOptions as AdapterFormattingOptions
-import org.xvm.lsp.adapter.Adapter.Position as AdapterPosition
-import org.xvm.lsp.adapter.Adapter.Range as AdapterRange
-import org.xvm.lsp.adapter.Adapter.SelectionRange as AdapterSelectionRange
+import org.xvm.lsp.adapter.CallHierarchyIncomingCall as AdapterCallHierarchyIncomingCall
+import org.xvm.lsp.adapter.CallHierarchyItem as AdapterCallHierarchyItem
+import org.xvm.lsp.adapter.CallHierarchyOutgoingCall as AdapterCallHierarchyOutgoingCall
+import org.xvm.lsp.adapter.CompletionItem as AdapterCompletionItem
+import org.xvm.lsp.adapter.FormattingOptions as AdapterFormattingOptions
+import org.xvm.lsp.adapter.Position as AdapterPosition
+import org.xvm.lsp.adapter.Range as AdapterRange
+import org.xvm.lsp.adapter.SelectionRange as AdapterSelectionRange
+import org.xvm.lsp.adapter.TypeHierarchyItem as AdapterTypeHierarchyItem
 
 /**
  * Text document service for XTC Language Server.
@@ -214,15 +218,15 @@ class XtcTextDocumentService(
             Either.forLeft(items)
         }
 
-    private fun toCompletionItemKind(kind: AdapterCompletionKind): CompletionItemKind =
+    private fun toCompletionItemKind(kind: AdapterCompletionItem.CompletionKind): CompletionItemKind =
         when (kind) {
-            AdapterCompletionKind.CLASS -> CompletionItemKind.Class
-            AdapterCompletionKind.INTERFACE -> CompletionItemKind.Interface
-            AdapterCompletionKind.METHOD -> CompletionItemKind.Method
-            AdapterCompletionKind.PROPERTY -> CompletionItemKind.Property
-            AdapterCompletionKind.VARIABLE -> CompletionItemKind.Variable
-            AdapterCompletionKind.KEYWORD -> CompletionItemKind.Keyword
-            AdapterCompletionKind.MODULE -> CompletionItemKind.Module
+            AdapterCompletionItem.CompletionKind.CLASS -> CompletionItemKind.Class
+            AdapterCompletionItem.CompletionKind.INTERFACE -> CompletionItemKind.Interface
+            AdapterCompletionItem.CompletionKind.METHOD -> CompletionItemKind.Method
+            AdapterCompletionItem.CompletionKind.PROPERTY -> CompletionItemKind.Property
+            AdapterCompletionItem.CompletionKind.VARIABLE -> CompletionItemKind.Variable
+            AdapterCompletionItem.CompletionKind.KEYWORD -> CompletionItemKind.Keyword
+            AdapterCompletionItem.CompletionKind.MODULE -> CompletionItemKind.Module
         }
 
     /**
@@ -327,12 +331,12 @@ class XtcTextDocumentService(
             "${params.textDocument.uri} positions=${params.positions.map { it.fmt() }}",
             { result -> "${result.size} ranges" },
         ) {
-            val adapterPositions = params.positions.map { Position(it.line, it.character).toAdapterPosition() }
+            val adapterPositions = params.positions.map { AdapterPosition(it.line, it.character) }
             adapter.getSelectionRanges(params.textDocument.uri, adapterPositions).map { toLspSelectionRange(it) }
         }
 
-    private fun toLspSelectionRange(range: AdapterSelectionRange): SelectionRange =
-        SelectionRange().apply {
+    private fun toLspSelectionRange(range: AdapterSelectionRange): org.eclipse.lsp4j.SelectionRange =
+        org.eclipse.lsp4j.SelectionRange().apply {
             this.range = range.range.toLsp()
             this.parent = range.parent?.let { toLspSelectionRange(it) }
         }
@@ -417,7 +421,7 @@ class XtcTextDocumentService(
         supplyAsync(
             "textDocument/prepareRename",
             "${params.textDocument.uri} at ${params.position.fmt()}",
-            { result -> if (result == null) "rename not allowed" else "valid" },
+            { _ -> "valid" },
         ) {
             adapter.prepareRename(params.textDocument.uri, params.position.line, params.position.character)?.let { result ->
                 Either3.forSecond<Range, PrepareRenameResult, PrepareRenameDefaultBehavior>(
@@ -805,20 +809,22 @@ class XtcTextDocumentService(
     // Conversion helpers for hierarchy types
     // ====================================================================
 
-    private fun Adapter.TypeHierarchyItem.toLsp(defaultUri: String): TypeHierarchyItem {
+    private fun AdapterTypeHierarchyItem.toLsp(defaultUri: String): org.eclipse.lsp4j.TypeHierarchyItem {
         val resolvedUri = this.uri.ifEmpty { defaultUri }
-        return TypeHierarchyItem(
-            this.name,
-            this.kind.toLsp(),
-            resolvedUri,
-            this.range.toLsp(),
-            this.selectionRange.toLsp(),
-            this.detail,
-        )
+        return org.eclipse.lsp4j
+            .TypeHierarchyItem(
+                this.name,
+                this.kind.toLsp(),
+                resolvedUri,
+                this.range.toLsp(),
+                this.selectionRange.toLsp(),
+            ).apply {
+                this.detail = this@toLsp.detail
+            }
     }
 
-    private fun TypeHierarchyItem.toAdapter(): Adapter.TypeHierarchyItem =
-        Adapter.TypeHierarchyItem(
+    private fun org.eclipse.lsp4j.TypeHierarchyItem.toAdapter(): AdapterTypeHierarchyItem =
+        AdapterTypeHierarchyItem(
             name = name,
             kind = SymbolInfo.SymbolKind.CLASS,
             uri = uri,
@@ -827,14 +833,21 @@ class XtcTextDocumentService(
             detail = detail,
         )
 
-    private fun Adapter.CallHierarchyItem.toLspCallItem(): CallHierarchyItem {
-        val result = CallHierarchyItem(this.name, this.kind.toLsp(), this.uri, this.range.toLsp(), this.selectionRange.toLsp())
+    private fun AdapterCallHierarchyItem.toLspCallItem(): org.eclipse.lsp4j.CallHierarchyItem {
+        val result =
+            org.eclipse.lsp4j.CallHierarchyItem(
+                this.name,
+                this.kind.toLsp(),
+                this.uri,
+                this.range.toLsp(),
+                this.selectionRange.toLsp(),
+            )
         result.detail = this.detail
         return result
     }
 
-    private fun CallHierarchyItem.toAdapterCallItem(): Adapter.CallHierarchyItem =
-        Adapter.CallHierarchyItem(
+    private fun org.eclipse.lsp4j.CallHierarchyItem.toAdapterCallItem(): AdapterCallHierarchyItem =
+        AdapterCallHierarchyItem(
             name = name,
             kind = SymbolInfo.SymbolKind.METHOD,
             uri = uri,
@@ -843,19 +856,17 @@ class XtcTextDocumentService(
             detail = detail,
         )
 
-    private fun Position.toAdapterPosition() = AdapterPosition(line, character)
-
-    private fun toAdapterRange(range: Range) =
+    private fun toAdapterRange(range: org.eclipse.lsp4j.Range) =
         AdapterRange(
-            Position(range.start.line, range.start.character).toAdapterPosition(),
-            Position(range.end.line, range.end.character).toAdapterPosition(),
+            AdapterPosition(range.start.line, range.start.character),
+            AdapterPosition(range.end.line, range.end.character),
         )
 
     private fun toAdapterFormattingOptions(lsp: org.eclipse.lsp4j.FormattingOptions) =
         AdapterFormattingOptions(
             tabSize = lsp.tabSize,
             insertSpaces = lsp.isInsertSpaces,
-            trimTrailingWhitespace = lsp.isTrimTrailingWhitespace ?: true,
-            insertFinalNewline = lsp.isInsertFinalNewline ?: true,
+            trimTrailingWhitespace = lsp.isTrimTrailingWhitespace,
+            insertFinalNewline = lsp.isInsertFinalNewline,
         )
 }

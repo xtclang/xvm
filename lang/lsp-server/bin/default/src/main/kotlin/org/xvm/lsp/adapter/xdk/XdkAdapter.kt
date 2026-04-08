@@ -1,0 +1,86 @@
+package org.xvm.lsp.adapter.xdk
+
+import org.xvm.lsp.adapter.AbstractAdapter
+import org.xvm.lsp.adapter.Adapter
+import org.xvm.lsp.model.CompilationResult
+import org.xvm.lsp.model.Location
+import org.xvm.lsp.model.SymbolInfo
+import org.xvm.lsp.util.WorkInProgress
+
+/**
+ * XDK compiler adapter — placeholder for future full compiler integration.
+ *
+ * Returns null/empty for all operations. Use for testing LSP infrastructure
+ * without tree-sitter or regex parsing dependencies.
+ *
+ * To use: `./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler`
+ */
+@WorkInProgress("Awaiting full compiler integration")
+class XdkAdapter : AbstractAdapter() {
+    override val displayName: String = "XDK (stub)"
+
+    // TODO: Integrate with XTC compiler to produce real diagnostics and symbols.
+    //       Needs: Lexer/Parser from Phase 1-3 for accurate AST
+    override fun compile(
+        uri: String,
+        content: String,
+    ): CompilationResult {
+        logger.info("compile: uri={}, content={} bytes (stub -- no diagnostics or symbols)", uri, content.length)
+        return CompilationResult.success(uri, emptyList())
+    }
+
+    // TODO: Use compiler's symbol table to find symbol at position.
+    //       Needs: Phase 4 NameResolver for symbol resolution
+    override fun findSymbolAt(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): SymbolInfo? {
+        logger.info("findSymbolAt: uri={}, line={}, column={} (stub -- returning null)", uri, line, column)
+        return null
+    }
+
+    // TODO: Provide type-aware completions from compiler's type system.
+    //       Needs: Phase 5 TypeResolver for member completion after '.'
+    //       Should include: local vars, members, imported types, smart ranking
+    override fun getCompletions(
+        uri: String,
+        line: Int,
+        column: Int,
+        triggerCharacter: String?,
+    ): List<CompletionItem> {
+        logger.info("getCompletions: uri={}, line={}, column={}, trigger={} (stub -- returning empty)", uri, line, column, triggerCharacter)
+        return emptyList()
+    }
+
+    // TODO: Resolve definition across files using compiler's symbol table.
+    //       Needs: Phase 4 NameResolver for cross-file navigation
+    //       Should handle: imports, inherited members, overloads
+    override fun findDefinition(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): Location? {
+        logger.info("findDefinition: uri={}, line={}, column={} (stub -- returning null)", uri, line, column)
+        return null
+    }
+
+    // TODO: Find all references using compiler's semantic model.
+    //       Needs: Phase 4 NameResolver + workspace-wide index
+    //       Should include: usages across all files, inherited references
+    override fun findReferences(
+        uri: String,
+        line: Int,
+        column: Int,
+        includeDeclaration: Boolean,
+    ): List<Location> {
+        logger.info(
+            "findReferences: uri={}, line={}, column={}, includeDeclaration={} (stub -- returning empty)",
+            uri,
+            line,
+            column,
+            includeDeclaration,
+        )
+        return emptyList()
+    }
+}

@@ -218,7 +218,8 @@ class XtcLanguageServerTest {
             assertThat(caps.documentOnTypeFormattingProvider?.moreTriggerCharacter)
                 .describedAs("onTypeFormatting moreTriggers")
                 .containsExactly("}", ";", ")")
-            assertThat(caps.inlayHintProvider?.left).describedAs("inlayHint").isTrue()
+            assertThat(caps.codeLensProvider).describedAs("codeLens").isNotNull()
+            assertThat(caps.linkedEditingRangeProvider?.left).describedAs("linkedEditingRange").isTrue()
 
             // Workspace features
             assertThat(caps.workspaceSymbolProvider?.left).describedAs("workspaceSymbol").isTrue()
@@ -235,12 +236,11 @@ class XtcLanguageServerTest {
             if (caps.declarationProvider == null) notYetImplemented.add("declaration")
             if (caps.typeDefinitionProvider == null) notYetImplemented.add("typeDefinition")
             if (caps.implementationProvider == null) notYetImplemented.add("implementation")
-            if (caps.codeLensProvider == null) notYetImplemented.add("codeLens")
             if (caps.colorProvider == null) notYetImplemented.add("colorProvider")
             if (caps.typeHierarchyProvider == null) notYetImplemented.add("typeHierarchy")
             if (caps.callHierarchyProvider == null) notYetImplemented.add("callHierarchy")
             if (caps.monikerProvider == null) notYetImplemented.add("moniker")
-            if (caps.linkedEditingRangeProvider == null) notYetImplemented.add("linkedEditingRange")
+            if (caps.inlayHintProvider == null) notYetImplemented.add("inlayHint")
             if (caps.inlineValueProvider == null) notYetImplemented.add("inlineValue")
             if (caps.diagnosticProvider == null) notYetImplemented.add("diagnosticProvider")
 
@@ -248,12 +248,12 @@ class XtcLanguageServerTest {
             println("========================================")
             println("LSP Capabilities Audit")
             println("========================================")
-            println("Implemented (${20} capabilities):")
+            println("Implemented (${21} capabilities):")
             println("  hover, completion, definition, references, documentSymbol,")
             println("  documentHighlight, selectionRange, foldingRange,")
             println("  documentLink, signatureHelp, workspaceSymbol,")
-            println("  rename (with prepareRename), codeAction,")
-            println("  formatting, rangeFormatting, onTypeFormatting, inlayHint,")
+            println("  rename (with prepareRename), codeAction, codeLens,")
+            println("  formatting, rangeFormatting, onTypeFormatting, linkedEditingRange,")
             println("  textDocumentSync, semanticTokens")
             println()
             println("Not yet implemented (${notYetImplemented.size} capabilities):")
@@ -270,10 +270,10 @@ class XtcLanguageServerTest {
                     "typeDefinition",
                     "implementation",
                     "colorProvider",
+                    "inlayHint",
                     "typeHierarchy",
                     "callHierarchy",
                     "moniker",
-                    "linkedEditingRange",
                     "inlineValue",
                     "diagnosticProvider",
                 )

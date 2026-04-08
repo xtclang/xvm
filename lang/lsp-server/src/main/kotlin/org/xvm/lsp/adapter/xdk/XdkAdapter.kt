@@ -2,6 +2,7 @@ package org.xvm.lsp.adapter.xdk
 
 import org.xvm.lsp.adapter.AbstractAdapter
 import org.xvm.lsp.adapter.Adapter
+import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
@@ -48,7 +49,7 @@ class XdkAdapter : AbstractAdapter() {
         line: Int,
         column: Int,
         triggerCharacter: String?,
-    ): List<Adapter.CompletionItem> {
+    ): List<CompletionItem> {
         logger.info("getCompletions: uri={}, line={}, column={}, trigger={} (stub -- returning empty)", uri, line, column, triggerCharacter)
         return emptyList()
     }

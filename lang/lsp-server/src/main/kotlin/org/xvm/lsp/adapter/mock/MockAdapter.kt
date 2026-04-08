@@ -2,19 +2,21 @@ package org.xvm.lsp.adapter.mock
 
 import org.xvm.lsp.adapter.AbstractAdapter
 import org.xvm.lsp.adapter.Adapter
-import org.xvm.lsp.adapter.Adapter.CodeAction
-import org.xvm.lsp.adapter.Adapter.CodeAction.CodeActionKind
-import org.xvm.lsp.adapter.Adapter.DocumentHighlight
-import org.xvm.lsp.adapter.Adapter.DocumentHighlight.HighlightKind
-import org.xvm.lsp.adapter.Adapter.FoldingRange
-import org.xvm.lsp.adapter.Adapter.Position
-import org.xvm.lsp.adapter.Adapter.PrepareRenameResult
-import org.xvm.lsp.adapter.Adapter.Range
-import org.xvm.lsp.adapter.Adapter.TextEdit
-import org.xvm.lsp.adapter.Adapter.WorkspaceEdit
+import org.xvm.lsp.adapter.CodeAction
+import org.xvm.lsp.adapter.CodeAction.CodeActionKind
+import org.xvm.lsp.adapter.CompletionItem
+import org.xvm.lsp.adapter.DocumentHighlight
+import org.xvm.lsp.adapter.DocumentHighlight.HighlightKind
+import org.xvm.lsp.adapter.DocumentLink
+import org.xvm.lsp.adapter.FoldingRange
 import org.xvm.lsp.adapter.LanguageConstants.builtInTypeCompletions
 import org.xvm.lsp.adapter.LanguageConstants.keywordCompletions
 import org.xvm.lsp.adapter.LanguageConstants.toCompletionKind
+import org.xvm.lsp.adapter.Position
+import org.xvm.lsp.adapter.PrepareRenameResult
+import org.xvm.lsp.adapter.Range
+import org.xvm.lsp.adapter.TextEdit
+import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
@@ -219,7 +221,7 @@ class MockAdapter : AbstractAdapter() {
         line: Int,
         column: Int,
         triggerCharacter: String?,
-    ): List<Adapter.CompletionItem> {
+    ): List<CompletionItem> {
         val fileName = uri.substringAfterLast('/')
         logger.info("getCompletions(uri={}, line={}, column={})", fileName, line, column)
 
@@ -230,7 +232,7 @@ class MockAdapter : AbstractAdapter() {
             // Add symbols from current document
             compiledDocuments[uri]?.symbols?.forEach { symbol ->
                 add(
-                    Adapter.CompletionItem(
+                    CompletionItem(
                         label = symbol.name,
                         kind = toCompletionKind(symbol.kind),
                         detail = symbol.typeSignature ?: symbol.kind.name,
@@ -433,7 +435,7 @@ class MockAdapter : AbstractAdapter() {
     override fun getDocumentLinks(
         uri: String,
         content: String,
-    ): List<Adapter.DocumentLink> =
+    ): List<DocumentLink> =
         buildList {
             importPattern.findAll(content).forEach { match ->
                 val importPath = match.groupValues[1]
@@ -441,7 +443,7 @@ class MockAdapter : AbstractAdapter() {
                 val importStart = match.value.indexOf(importPath)
                 val col = match.value.indexOf(importPath, importStart)
                 add(
-                    Adapter.DocumentLink(
+                    DocumentLink(
                         range =
                             Range(
                                 start = Position(line, col),

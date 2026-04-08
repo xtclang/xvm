@@ -115,11 +115,6 @@ import java.util.Properties
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.measureTimedValue
-import org.xvm.lsp.adapter.Adapter.CompletionItem.CompletionKind as AdapterCompletionKind
-import org.xvm.lsp.adapter.Adapter.FormattingOptions as AdapterFormattingOptions
-import org.xvm.lsp.adapter.Adapter.Position as AdapterPosition
-import org.xvm.lsp.adapter.Adapter.Range as AdapterRange
-import org.xvm.lsp.adapter.Adapter.SelectionRange as AdapterSelectionRange
 
 /**
  * XTC Language Server implementation using LSP4J.
