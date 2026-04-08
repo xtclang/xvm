@@ -15,6 +15,12 @@ import org.xvm.lsp.adapter.Adapter
 // Extension functions for converting between LSP model types and LSP4J types.
 // Keeps the model classes pure while centralizing conversion logic.
 
+/** Format Position as "line:character" (0-based) */
+fun Position.fmt(): String = "$line:$character"
+
+/** Format Range as "startLine:startChar-endLine:endChar" */
+fun Range.fmt(): String = "${start.fmt()}-${end.fmt()}"
+
 /** Check whether an LSP `changeType` int represents a file creation or modification. */
 fun isFileCreatedOrChanged(changeType: Int): Boolean =
     changeType == FileChangeType.Created.value || changeType == FileChangeType.Changed.value
