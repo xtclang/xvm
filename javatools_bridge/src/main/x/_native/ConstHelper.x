@@ -64,11 +64,10 @@ class ConstHelper {
      * Helper function to "freeze" all the Freezable fields for a Const class.
      */
     static void freeze(Object[] fields) {
-        Freeze:
-        for (Object field : fields) {
-            assert field.is(Freezable);
-
-            fields[Freeze.count] = field.freeze();
+        Freeze: for (Object field : fields) {
+            if (!(fields[Freeze.count] := Service.passable(field))) {
+                throw new NotShareable("Cannot freeze type: {&field.type}");
+            }
         }
     }
 

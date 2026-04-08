@@ -8,11 +8,14 @@ class MappedCollection<Element, FromElement>
     /**
      * Construct a MappedCollection based on an original collection and a transformer.
      *
-     * @param original    the untransformed collection
-     * @param transform   the transformer
+     * @param original     the untransformed collection
+     * @param transform    the transformer
+     * @param fromService  if the [MappedCollection] is exposed over a service boundary
      */
-    construct(Collection<FromElement> original, function Element(FromElement) transform) {
-        construct DeferredCollection(original);
+    construct(Collection<FromElement>       original,
+              function Element(FromElement) transform,
+              Boolean                       fromService = False) {
+        construct DeferredCollection(original, fromService);
         this.transform = transform;
     }
 

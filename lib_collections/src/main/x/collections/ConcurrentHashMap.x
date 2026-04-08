@@ -12,7 +12,7 @@ import ecstasy.collections.Hasher;
  * partition. Furthermore blocking writes such as by [#process] on a key will not block concurrent
  * reads of that same key. Writes to any given key are ordered.
  */
-const ConcurrentHashMap<Key extends immutable Hashable, Value extends Shareable>
+const ConcurrentHashMap<Key extends immutable Hashable, Value extends AutoPassable>
         extends ConcurrentHasherMap<Key, Value>
         implements Replicable {
     // ----- constructors --------------------------------------------------------------------------

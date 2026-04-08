@@ -7,7 +7,7 @@ import ecstasy.reflect.TypeTemplate;
 /**
  * The native reflected PropertyTemplate implementation.
  */
-class RTPropertyTemplate
+const RTPropertyTemplate
         extends RTComponentTemplate
         implements PropertyTemplate {
     @Override @RO TypeTemplate                   type;

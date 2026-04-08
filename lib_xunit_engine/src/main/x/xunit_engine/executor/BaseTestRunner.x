@@ -28,7 +28,7 @@ import xunit.extensions.Extension;
             }
         }
 
-        ExecutionListener listener = new CompositeExecutionListener(listeners.freeze(True));
+        ExecutionListener listener = new CompositeExecutionListener(listeners.toArray(Constant, inPlace=True));
         TestEngine        engine   = createTestEngine(testConfig, listener);
         engine.execute();
         return statusListener.success;

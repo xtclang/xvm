@@ -44,6 +44,8 @@ class IdentityMap<Key, Value>
     }
 
     assert() {
+        // if the key and value types are Shareable, then this Map becomes Freezable, which means
+        // that the storage map also needs to be Shareable (so that this Map can freeze)
         if (Key.is(Type<Shareable>) && Value.is(Type<Shareable>)) {
             assert storage.is(Shareable);
         }
@@ -199,7 +201,7 @@ class IdentityMap<Key, Value>
 
             // otherwise, just duplicate, freezing the storage
             IdentityMapFreezer that = duplicate();
-            that.storage.as(Freezable).freeze(inPlace=False);
+            that.storage = that.storage.as(Freezable).freeze(inPlace=False);
             return that.makeImmutable();
         }
     }

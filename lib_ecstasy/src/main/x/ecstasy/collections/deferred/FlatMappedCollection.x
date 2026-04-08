@@ -8,11 +8,14 @@ class FlatMappedCollection<Element, FromElement>
     /**
      * Construct a FlatMappedCollection based on an original collection and a flattener.
      *
-     * @param original    the unflattened collection
-     * @param flatten   the flattener
+     * @param original     the unflattened collection
+     * @param flatten      the flattener
+     * @param fromService  if the [FlatMappedCollection] is exposed over a service boundary
      */
-    construct(Collection<FromElement> original, function void(FromElement, Appender<Element>) flatten) {
-        construct DeferredCollection(original);
+    construct(Collection<FromElement>                       original,
+              function void(FromElement, Appender<Element>) flatten,
+              Boolean                                       fromService = False) {
+        construct DeferredCollection(original, fromService);
         this.flatten = flatten;
     }
 

@@ -2,7 +2,7 @@
  * An Argument represents a value for a parameter. The argument optionally supports a name that
  * can be used to specify the name of the parameter for which the argument's value is intended.
  */
-const Argument<Referent extends immutable|service>(Referent value, String? name = Null) {
+const Argument<Referent extends Passable>(Referent value, String? name = Null) {
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override

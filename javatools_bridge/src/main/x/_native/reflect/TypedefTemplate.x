@@ -5,7 +5,7 @@ import ecstasy.reflect.TypeTemplate;
 /**
  * The native reflected TypedefTemplate implementation.
  */
-class RTTypedefTemplate
+const RTTypedefTemplate
         extends RTComponentTemplate
         implements TypedefTemplate {
 

@@ -64,7 +64,7 @@ class OrderedMapSlice<Key extends Orderable, Value>
                 ? (orig.prev, orig.next)
                 : (orig.next, orig.prev);
     } finally {
-        if (orig.is(immutable | service)) {
+        if (orig.is(immutable)) {
             makeImmutable();
         }
     }

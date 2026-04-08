@@ -43,12 +43,12 @@
 interface Collection<Element>
         extends Iterable<Element>
         extends Appender<Element>
+        extends Service.Aware
         extends Stringable {
     /**
      * An Orderer is a function that compares two elements for order.
      */
     typedef Element.Orderer as Orderer;
-
 
     // ----- abstract methods ----------------------------------------------------------------------
 
@@ -66,7 +66,6 @@ interface Collection<Element>
      */
     @Override
     Iterator<Element> iterator();
-
 
     // ----- metadata ------------------------------------------------------------------------------
 
@@ -108,7 +107,6 @@ interface Collection<Element>
         // expensive than O(1)
         return True, size;
     }
-
 
     // ----- read operations -----------------------------------------------------------------------
 
@@ -207,6 +205,11 @@ interface Collection<Element>
         using (val iter = values.iterator()) {
             return iter.whileEach(contains(_));
         }
+    }
+
+    @Override
+    Element[] toArray(Array.Mutability? mutability = Null) {
+        return super(mutability ?: (fromService() ? Constant : Null));
     }
 
     /**
@@ -785,8 +788,8 @@ interface Collection<Element>
     /**
      * Create a sorted `List` from this `Collection`.
      *
-     * @param order  an optional [Type.Orderer] to control the sort order; `Null` means to use the
-     *               element type's natural order
+     * @param order      an optional [Type.Orderer] to control the sort order; `Null` means to use
+     *                   the element type's natural order
      * @param collector  an optional [Aggregator] to use to collect the results
      *
      * @return a sorted list, further reduced by the collector (if specified)

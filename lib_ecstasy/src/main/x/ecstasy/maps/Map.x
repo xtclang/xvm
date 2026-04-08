@@ -9,6 +9,7 @@
  */
 interface Map<Key, Value>
         extends MapAppender<Key, Value>
+        extends Service.Aware
         extends Stringable {
     /**
      * An Orderer is a function that compares two keys for order.

@@ -53,7 +53,7 @@ service Registry
     /**
      * The internal registry-by-name of various singleton-like resources.
      */
-    protected Map<String, Shareable> resources = new HashMap();
+    protected Map<String, AutoPassable> resources = new HashMap();
 
     /**
       * The JSON Schema to use if one is not specified externally.
@@ -271,7 +271,7 @@ service Registry
      * @param name      the name to register the resource under
      * @param resource  the resource to register
      */
-    void registerResource(String name, Shareable resource)
+    void registerResource(String name, AutoPassable resource)
         {
         resources.put(name, resource);
         }
@@ -284,7 +284,7 @@ service Registry
      * @return `True` iff there exists a resource for the specified name
      * @return (conditional) the resource for the specified name
      */
-    conditional Shareable getResource(String name)
+    conditional AutoPassable getResource(String name)
         {
         return resources.get(name);
         }

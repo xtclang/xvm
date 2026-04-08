@@ -9,10 +9,16 @@
     /**
      * Construct a `DeferredMap` based on an original [Map].
      *
-     * @param original  the [Map] from which this `Map`'s contents will be drawn
+     * @param original     the [Map] from which this `Map`'s contents will be drawn
+     * @param fromService  if the [DeferredMap] is exposed over a service boundary
      */
-    construct(Map<Key, FromValue> original) {
-        this.original = original;
+    construct(Map<Key, FromValue> original, Boolean fromService = False) {
+        this.original  = original;
+        this.isService = fromService || original.fromService();
+    } finally {
+        // the real "this" reference isn't available until the constructor's finally block; the
+        // "this" in the constructor is just the Struct
+        this.isService ||= this.is(service);
     }
 
     // ----- internal ------------------------------------------------------------------------------
@@ -21,7 +27,12 @@
      * The `Map` from which the contents of this `Map` will be drawn, or `Null` after this
      * Map has been reified (to allow memory to be collected).
      */
-    protected Map<Key, FromValue>? original;
+    protected/private Map<Key, FromValue>? original;
+
+    /**
+     * Whether or not this DeferredMap needs to act as a service.
+     */
+    protected/private Boolean isService;
 
     /**
      * The cached reified copy of this `Map`.
@@ -47,14 +58,12 @@
             evaluateInto(accumulator);
             actualReified = result <- collector.reduce(accumulator);
             postReifyCleanup();
-        } else { // already reified
-            if (collector == Null) {
-                result = reified.as(Result);
-            } else {
-                var accumulator = collector.init();
-                accumulator.putAll(reified);
-                result = collector.reduce(accumulator);
-            }
+        } else if (collector == Null) {
+            result = actualReified?.as(Result) : assert;
+        } else {
+            var accumulator = collector.init();
+            accumulator.putAll(reified);
+            result = collector.reduce(accumulator);
         }
         return result;
     }
@@ -235,6 +244,9 @@
             return reified.knownSize();
         }
     }
+
+    @Override
+    Boolean fromService() = isService;
 
     @Override
     @RO Int size.get() {

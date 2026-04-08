@@ -258,7 +258,7 @@ const TemplateModel
             Array<ExtensionProvider> providers = new Array();
             providers.addAll(delegate.extensionProviders);
             providers.add(this);
-            return providers.freeze(True);
+            return providers.toArray(Constant, inPlace=True);
         }
 
         @Override @Lazy String displayName.calc() {
@@ -298,7 +298,7 @@ const TemplateModel
             Array<ExtensionProvider> providers = new Array();
             providers.addAll(delegate.extensionProviders);
             providers.add(this);
-            return providers.freeze(True);
+            return providers.toArray(Constant, inPlace=True);
         }
 
         @Override @Lazy String displayName.calc() {

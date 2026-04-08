@@ -2,12 +2,12 @@
  * An Aggregator that collects into any specified `Collection` type of elements.
  */
 const Collect<Element, Result extends Replicable+Collection<Element>>(Type<Result> result,
-                                                                      Boolean freeze=False)
+                                                                      Boolean      doFreeze = False)
         implements Aggregator<Element, Result> {
 
     assert() {
         assert:arg result == Result;
-        assert:arg freeze == False || Element.is(Type<Shareable>) && result.is(Type<Freezable>);
+        assert:arg doFreeze == False || Element.is(Type<Shareable>) && result.is(Type<Freezable>);
     }
 
     /**
@@ -18,9 +18,10 @@ const Collect<Element, Result extends Replicable+Collection<Element>>(Type<Resul
      *
      * @return an CollectArray
      */
-    static <Element, Result extends Replicable+Collection<Element>>
-            Collect!<Element, Result> to(Type<Result> result, Boolean freeze=False) {
-        return new Collect<Element, Result>(result, freeze);
+    static <Element, Result extends Replicable+Collection<Element>> Collect!<Element, Result> to(
+            Type<Result> result,
+            Boolean      doFreeze = False) {
+        return new Collect<Element, Result>(result, doFreeze);
     }
 
     /**
@@ -36,7 +37,7 @@ const Collect<Element, Result extends Replicable+Collection<Element>>(Type<Resul
         // ideally this would have an "immutable Result", but since the same type is used both for
         // collecting (via the init() method) and the final result (via reduce()), it is not
         // possible to assume immutable for the instance used during the collecting phase
-        return Collect.to(result, freeze=True);
+        return Collect.to(result, doFreeze=True);
     }
 
     @Override
@@ -46,7 +47,7 @@ const Collect<Element, Result extends Replicable+Collection<Element>>(Type<Resul
 
     @Override
     Result reduce(Accumulator accumulator) {
-        if (freeze) {
+        if (doFreeze) {
             accumulator = accumulator.as(Freezable).freeze(inPlace=True);
         }
         return accumulator.as(Result);

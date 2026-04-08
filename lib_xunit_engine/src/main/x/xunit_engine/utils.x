@@ -51,7 +51,7 @@ package utils {
         findExtensions(type.methods,    providers);
         findExtensions(type.properties, providers);
         findExtensions(type.constants,  providers);
-        return providers.freeze(True);
+        return providers.toArray(Constant, inPlace=True).as(immutable);
     }
 
     private void findExtensions(Iterable iter, ExtensionProvider[] providers) {

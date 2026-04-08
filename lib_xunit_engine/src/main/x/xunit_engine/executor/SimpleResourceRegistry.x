@@ -56,7 +56,7 @@ service SimpleResourceRegistry
                 result.add(entry.value.resource.as(ResourceType));
             }
         }
-        return result.freeze(True);
+        return result.toArray(Constant, inPlace=True);
     }
 
     @Override

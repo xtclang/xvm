@@ -9,10 +9,11 @@ class DistinctCollection<Element>
     /**
      * Construct a DistinctCollection based on an original collection.
      *
-     * @param original  the potentially non-distinct collection
+     * @param original     the potentially non-distinct collection
+     * @param fromService  if the [DistinctCollection] is exposed over a service boundary
      */
-    construct(Collection<Element> original) {
-        construct DeferredCollection(original);
+    construct(Collection<Element> original, Boolean fromService = False) {
+        construct DeferredCollection(original, fromService);
     }
 
 

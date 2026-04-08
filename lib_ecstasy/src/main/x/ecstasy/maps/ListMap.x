@@ -151,13 +151,15 @@ class ListMap<Key, Value>
      * @return vals  an array of `Value` of `Persistent` or `Constant` [Array.Mutability], or `Null`
      */
     static <Key, Value> (Key[] keys, Value[]? vals) ensurePersistent(Key[] keys, Value[]? vals) {
-        if (keys.mutability > Persistent || vals?.mutability > Persistent : False) { // <- TODO GG
-            if (keys.all(k -> k.is(immutable | service))
-                    && vals?.all(v -> v.is(immutable | service)) : True) {
+        if (keys.mutability > Persistent || vals?.mutability > Persistent : False) {
+            if ((keys.is(Freezable) || keys.all(k -> k.is(Shareable)))
+                    && ((vals?.is(Freezable) : True) || (vals?.all(v -> v.is(Shareable)) : True))) {
                 // both arrays can be safely made as "Constant" mutability without mutating
                 // any of their elements; this will copy the array(s) if necessary
-                keys = keys.freeze();
-                vals = vals == Null || vals.empty ? Null : vals.freeze();
+                keys = keys.is(Freezable) ? keys.freeze() : new Array<Key>(Constant, keys).as(immutable);
+                vals = vals == Null || vals.empty
+                        ? Null
+                        : vals.is(Freezable) ? vals.freeze() : new Array<Value>(Constant, vals).as(immutable);
                 return keys, vals;
             } else {
                 // make sure both arrays are at least "Persistent" mutability (to avoid
@@ -519,6 +521,7 @@ class ListMap<Key, Value>
             extends MapKeys<Key, Value>(this.Map) {
         @Override
         Key[] toArray(Mutability? mutability = Null) {
+            mutability ?:= fromService() ? Constant : Null;
             return keyArray.toArray(mutability);
         }
     }
@@ -532,6 +535,7 @@ class ListMap<Key, Value>
             extends MapValues<Key, Value>(this.Map) {
         @Override
         Value[] toArray(Mutability? mutability = Null) {
+            mutability ?:= fromService() ? Constant : Null;
             return valArray?.toArray(mutability) : empty ? [] :  makeNulls(size, mutability);
         }
     }

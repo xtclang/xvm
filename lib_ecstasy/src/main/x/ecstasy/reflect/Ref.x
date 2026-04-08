@@ -103,6 +103,30 @@ interface Ref<Referent> {
     @RO Class class;
 
     /**
+     * A reference identity is an object that performs three tasks:
+     *
+     * * It prevents the reference from being garbage collected;
+     * * It provides a hash code for the reference;
+     * * It provides comparison of any two references.
+     */
+    static interface Identity
+            extends immutable Hashable {
+        @Override
+        static <CompileType extends Identity> Int64 hashCode(CompileType value) {
+            // the implementation of the Identity hash code is naturally self-referential; this code
+            // cannot work in actuality; see also: infinite recursion
+            return value.hashCode();
+        }
+
+        @Override
+        static <CompileType extends Identity> Boolean equals(CompileType value1, CompileType value2) {
+            // the implementation of the Identity equality is naturally self-referential; this code
+            // cannot work in actuality; see also: infinite recursion
+            return value1 == value2;
+        }
+    }
+
+    /**
      * Obtain an opaque object that represents the identity of the reference held by this [Ref]. An
      * [Identity] can be compared with another [Identity] to determine whether the two identities
      * originate from the same object.
@@ -141,7 +165,7 @@ interface Ref<Referent> {
      *
      * @return a reference of the desired type
      */
-    <Masked> Masked maskAs<Masked>(Type<Masked> maskType);
+    <Masked> Masked maskAs(Type<Masked> maskType);
 
     /**
      * Obtain a new reference to the referent such that the reference contains the methods and
@@ -176,6 +200,21 @@ interface Ref<Referent> {
      * @return (conditional) the [Struct] of the referred-to [Object]
      */
     <SpecificStruct extends Struct> conditional SpecificStruct revealStruct();
+
+    /**
+     * Obtain a new reference to the referent that (i) is of the specified type, and (ii) is a
+     * service proxy. The members of the requested type must be satisfied by the members defined by
+     * the object's class. The requested type must be a pure type or an interface type, and it
+     * must be a subset of the referent's [type].
+     *
+     * This method will result in a reference that only contains the members in the specified type,
+     * stripping the runtime reference of any members that are not present in the specified type.
+     *
+     * @param proxyType  the pure or interface type to proxy this reference as
+     *
+     * @return a reference of the desired type, as a service proxy
+     */
+    <Proxy> ((service)+Proxy) proxyAs(Type<Proxy> proxyType);
 
     /**
      * Each object exists within a container, and a `Zone` describes the relationship between the
@@ -265,29 +304,5 @@ interface Ref<Referent> {
     @Override
     static <CompileType extends Ref> Boolean equals(CompileType value1, CompileType value2) {
         return value1.identity == value2.identity;
-    }
-
-    /**
-     * A reference identity is an object that performs three tasks:
-     *
-     * * It prevents the reference from being garbage collected;
-     * * It provides a hash code for the reference;
-     * * It provides comparison of any two references.
-     */
-    static interface Identity
-            extends immutable Hashable {
-        @Override
-        static <CompileType extends Identity> Int64 hashCode(CompileType value) {
-            // the implementation of the Identity hash code is naturally self-referential; this code
-            // cannot work in actuality; see also: infinite recursion
-            return value.hashCode();
-        }
-
-        @Override
-        static <CompileType extends Identity> Boolean equals(CompileType value1, CompileType value2) {
-            // the implementation of the Identity equality is naturally self-referential; this code
-            // cannot work in actuality; see also: infinite recursion
-            return value1 == value2;
-        }
     }
 }

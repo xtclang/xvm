@@ -10,7 +10,7 @@ class MapKeys<Key, Value>(Map<Key, Value> contents)
     construct(Map<Key, Value> contents) {
         this.contents = contents;
     } finally {
-        if (contents.is(immutable | service)) {
+        if (contents.is(immutable)) {
             makeImmutable();
         }
     }
@@ -29,15 +29,29 @@ class MapKeys<Key, Value>(Map<Key, Value> contents)
 
     /**
      * Iterator that relies on an iterator of entries to produce a corresponding sequence of keys.
+     *
+     * If the Map is `fromService()` and the `Key` type is neither an immutable nor a service type,
+     * then the keys will be frozen by the Iterator; if the keys are not [Freezable], then doing so
+     * will raise an exception.
      */
     protected class KeyIterator(EntryIterator entryIterator)
             implements Iterator<Key> {
+        /**
+         * The underlying iterator of entries.
+         */
+        protected/private EntryIterator entryIterator;
+
         @Override
         conditional Key next() {
             if (Map.Entry<Key, Value> entry := entryIterator.next()) {
                 return True, entry.key;
             }
             return False;
+        }
+
+        @Override
+        Key[] toArray(Array.Mutability? mutability = Null) {
+            return super(mutability ?: (fromService() ? Constant : Null));
         }
 
         @Override
@@ -78,6 +92,9 @@ class MapKeys<Key, Value>(Map<Key, Value> contents)
 
     @Override
     conditional Int knownSize() = contents.knownSize();
+
+    @Override
+    Boolean fromService() = super() || contents.fromService();
 
     @Override
     Int size.get() = contents.size;

@@ -11,11 +11,14 @@ class PartitionedCollection<Element>
     /**
      * Construct the "matches" PartitionedCollection for the specified matching filter.
      *
-     * @param original  the unpartitioned collection
-     * @param match     the inclusion filter for the "matches" result of the partition
+     * @param original     the unpartitioned collection
+     * @param match        the inclusion filter for the "matches" result of the partition
+     * @param fromService  if the [PartitionedCollection] is exposed over a service boundary
      */
-    construct(Collection<Element> original, function Boolean(Element) match) {
-        construct DeferredCollection(original);
+    construct(Collection<Element>       original,
+              function Boolean(Element) match,
+              Boolean                   fromService = False) {
+        construct DeferredCollection(original, fromService);
         this.primary = True;
         this.match   = match;
     } finally {

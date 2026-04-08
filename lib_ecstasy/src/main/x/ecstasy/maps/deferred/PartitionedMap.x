@@ -8,11 +8,14 @@ class PartitionedMap<Key, Value>
     /**
      * Construct a PartitionedMap based on an original `Map` and a filter.
      *
-     * @param original  the unpartitioned `Map`
-     * @param include   the inclusion filter
+     * @param original     the unpartitioned `Map`
+     * @param include      the inclusion filter
+     * @param fromService  if the [PartitionedMap] is exposed over a service boundary
      */
-    construct(Map<Key, FromValue> original, function Boolean(Entry<Key, Value>) include) {
-        construct DeferredMap(original);
+    construct(Map<Key, FromValue>                 original,
+              function Boolean(Entry<Key, Value>) include,
+              Boolean                             fromService = False) {
+        construct DeferredMap(original, fromService);
         this.primary = True;
         this.include = include;
     } finally {

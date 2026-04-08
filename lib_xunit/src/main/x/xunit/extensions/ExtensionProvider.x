@@ -1,7 +1,8 @@
 /**
  * A named provider of `Extension`s.
  */
-interface ExtensionProvider {
+interface ExtensionProvider
+        extends immutable Const {
     /**
      * The name of this provider.
      */
