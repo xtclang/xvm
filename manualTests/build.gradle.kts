@@ -2,6 +2,10 @@ import org.xtclang.plugin.launchers.ExecutionMode
 import org.xtclang.plugin.tasks.XtcRunTask
 import org.xtclang.plugin.tasks.XtcTestTask
 
+val ciBuild: Provider<Boolean> = providers.environmentVariable("CI")
+    .map { it.equals("true", ignoreCase = true) }
+    .orElse(false)
+
 /**
  * This is the manualTests project.
  *
@@ -473,6 +477,12 @@ val testModuleNames = listOf(
 val runParallel by tasks.registering(XtcRunTask::class) {
     group = "application"
     description = "Run all known tests in parallel through the parallel test runner."
+    if (ciBuild.get()) {
+        // CI produces a very large amount of successful xunit/test-runner stdout.
+        // Capture that firehose to a file so the console keeps the Gradle task outcome,
+        // the per-module SUCCESS/FAILURE summary, and any stderr/failure signal.
+        stdoutPath(layout.buildDirectory.file("logs/runParallel-stdout.log"))
+    }
     module {
         verbose = false
         moduleName = "Runner"

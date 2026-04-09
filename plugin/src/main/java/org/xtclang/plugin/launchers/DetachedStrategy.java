@@ -28,7 +28,7 @@ public class DetachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrate
     protected StreamPlan configureIO(final ProcessBuilder pb, final XtcLauncherTask<?> task) {
         final var buildDir = task.getBuildDirectory().get().getAsFile();
         final String taskType = task.getClass().getSimpleName().toLowerCase(Locale.ROOT).replace("task", "");
-        logger.lifecycle("[plugin] [DetachedStrategy] task: {}, taskType: {}", task.getName(), taskType);
+        logger.info("[plugin] [DetachedStrategy] task: {}, taskType: {}", task.getName(), taskType);
         configureStream(pb, task, buildDir, taskType, true);
         configureStream(pb, task, buildDir, taskType, false);
         return new StreamPlan(false, false); // Streams are redirected to files, no need to manually copy
@@ -60,14 +60,14 @@ public class DetachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrate
         ensureParentDirectoryExists(file);
         final var redirect = ProcessBuilder.Redirect.to(file);
         if (isStdout) pb.redirectOutput(redirect); else pb.redirectError(redirect);
-        logger.lifecycle(msg, file.getAbsolutePath());
+        logger.info(msg, file.getAbsolutePath());
     }
 
     @Override
     protected int waitForProcess(final Process process) {
         // For detached processes, log PID and don't wait - return success immediately
         final long pid = process.pid();
-        logger.lifecycle("[plugin] Started detached process with PID: {}", pid);
+        logger.info("[plugin] Started detached process with PID: {}", pid);
         return 0;
     }
 

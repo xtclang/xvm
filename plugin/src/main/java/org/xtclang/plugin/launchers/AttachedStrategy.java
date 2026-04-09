@@ -26,7 +26,7 @@ public class AttachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrate
             final var stdoutFile = configuredRedirectFile(task, true);
             ensureParentDirectoryExists(stdoutFile);
             pb.redirectOutput(ProcessBuilder.Redirect.to(stdoutFile));
-            logger.lifecycle("[plugin] Configured stdout redirect to: {}", stdoutFile.getAbsolutePath());
+            logger.info("[plugin] Configured stdout redirect to: {}", stdoutFile.getAbsolutePath());
             copyStdout = false;
         }
 
@@ -35,7 +35,7 @@ public class AttachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrate
             final var stderrFile = configuredRedirectFile(task, false);
             ensureParentDirectoryExists(stderrFile);
             pb.redirectError(ProcessBuilder.Redirect.to(stderrFile));
-            logger.lifecycle("[plugin] Configured stderr redirect to: {}", stderrFile.getAbsolutePath());
+            logger.info("[plugin] Configured stderr redirect to: {}", stderrFile.getAbsolutePath());
             copyStderr = false;
         }
 
