@@ -79,7 +79,7 @@ import java.nio.file.Paths
  * | `Boolean.x` | `lib_ecstasy/.../ecstasy/Boolean.x` | Enum with methods, `@Op` annotations, many self-references |
  * | `Exception.x` | `lib_ecstasy/.../ecstasy/Exception.x` | Const class, constructor, properties, methods |
  * | `Closeable.x` | `lib_ecstasy/.../ecstasy/Closeable.x` | Small interface with doc comments |
- * | `TestSimple.x` | `manualTests/.../TestSimple.x` | Module with `@Inject`, local vars |
+ * | `TestSimple.x` | `lang/lsp-server/src/test/resources/fixtures/TestSimple.x` | Stable local fixture for module with `@Inject`, local vars |
  *
  * ## How it works
  *
@@ -121,7 +121,7 @@ class LspIntegrationTest {
                 "Boolean.x" to loadTestFile(root, "lib_ecstasy/src/main/x/ecstasy/Boolean.x"),
                 "Exception.x" to loadTestFile(root, "lib_ecstasy/src/main/x/ecstasy/Exception.x"),
                 "Closeable.x" to loadTestFile(root, "lib_ecstasy/src/main/x/ecstasy/Closeable.x"),
-                "TestSimple.x" to loadTestFile(root, "manualTests/src/main/x/TestSimple.x"),
+                "TestSimple.x" to loadTestFile(root, "lang/lsp-server/src/test/resources/fixtures/TestSimple.x"),
             )
     }
 
@@ -279,8 +279,8 @@ class LspIntegrationTest {
     @DisplayName("textDocument/completion")
     inner class CompletionTests {
         @Test
-        @DisplayName("should return keywords and types")
-        fun shouldReturnKeywordsAndTypes() {
+        @DisplayName("should return visible names and built-in types at module body positions")
+        fun shouldReturnVisibleNamesAndBuiltInTypes() {
             val tf = openFile("TestSimple.x")
 
             val result =
@@ -291,7 +291,8 @@ class LspIntegrationTest {
             assertThat(result.isLeft).isTrue()
             val items = result.left
             assertThat(items).isNotEmpty()
-            assertThat(items).anyMatch { it.label == "class" }
+            assertThat(items).anyMatch { it.label == "run" }
+            assertThat(items).anyMatch { it.label == "test1" }
             assertThat(items).anyMatch { it.label == "String" }
         }
     }
