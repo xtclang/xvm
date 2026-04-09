@@ -25,13 +25,13 @@ public class DetachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrate
     }
 
     @Override
-    protected boolean configureIO(final ProcessBuilder pb, final XtcLauncherTask<?> task) {
+    protected StreamPlan configureIO(final ProcessBuilder pb, final XtcLauncherTask<?> task) {
         final var buildDir = task.getBuildDirectory().get().getAsFile();
         final String taskType = task.getClass().getSimpleName().toLowerCase(Locale.ROOT).replace("task", "");
         logger.lifecycle("[plugin] [DetachedStrategy] task: {}, taskType: {}", task.getName(), taskType);
         configureStream(pb, task, buildDir, taskType, true);
         configureStream(pb, task, buildDir, taskType, false);
-        return false; // Streams are redirected to files, no need to manually copy
+        return new StreamPlan(false, false); // Streams are redirected to files, no need to manually copy
     }
 
     private void configureStream(
@@ -48,9 +48,7 @@ public class DetachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrate
         final String msg;
 
         if (hasRedirect) {
-            final String configuredPath = expandTimestampPlaceholder(isStdout ? task.getStdoutPath().get() : task.getStderrPath().get());
-            // User-configured paths are relative to project directory
-            file = new File(task.getProjectDirectory().get().getAsFile(), configuredPath);
+            file = configuredRedirectFile(task, isStdout);
             msg = "[plugin] Configured " + streamName + " redirect to: {}";
         } else {
             // Default paths go in build/xtc directory (build directory from layout)
@@ -76,17 +74,5 @@ public class DetachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrate
     @Override
     protected String getDesc() {
         return "Invoking in detached background process (fork=true, detach=true)";
-    }
-
-    private void ensureParentDirectoryExists(final File file) {
-        final File parentDir = file.getParentFile();
-        if (parentDir == null) {
-            logger.error("[plugin] Parent directory does not exist: {}", file.getAbsolutePath());
-        }
-        if (parentDir != null && !parentDir.exists()) {
-            if (!parentDir.mkdirs()) {
-                throw failure("ensureParentDirectoryExists; failed to create directory: {}", parentDir.getAbsolutePath());
-            }
-        }
     }
 }

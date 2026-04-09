@@ -271,8 +271,7 @@ class ConfigurationCacheCompatibilityTest {
     private GradleRunner createGradleRunner() {
         return GradleRunner.create()
             .withProjectDir(testProjectDir.toFile())
-            .withPluginClasspath()
-            .forwardOutput();
+            .withPluginClasspath();
     }
 
     private BuildResult runBuildWithArgs(final String... args) {

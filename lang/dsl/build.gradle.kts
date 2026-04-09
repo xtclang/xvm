@@ -60,11 +60,19 @@ fun JavaExec.configureGenerator(
     dependsOn(tasks.compileKotlin, tasks.processResources)
     classpath = configurations.runtimeClasspath.get() + sourceSets.main.get().output
     mainClass.set("org.xtclang.tooling.LanguageModelCliKt")
+    val generatorLogLevel =
+        when (gradle.startParameter.logLevel) {
+            org.gradle.api.logging.LogLevel.DEBUG -> "DEBUG"
+            org.gradle.api.logging.LogLevel.INFO -> "INFO"
+            else -> "WARN"
+        }
     // Pass project version to CLI so generated files have correct version metadata
     val projectVersion = project.version.toString()
     systemProperty("project.version", projectVersion)
+    systemProperty("xtc.logLevel", generatorLogLevel)
     // Declare version as input for proper Gradle caching
     inputs.property("projectVersion", projectVersion)
+    inputs.property("generatorLogLevel", generatorLogLevel)
 
     val outputPath =
         if (outputFileNames.isNotEmpty()) {
@@ -119,11 +127,19 @@ val generateTreeSitter by tasks.registering(JavaExec::class) {
     dependsOn(tasks.compileKotlin, tasks.processResources)
     classpath = configurations.runtimeClasspath.get() + sourceSets.main.get().output
     mainClass.set("org.xtclang.tooling.LanguageModelCliKt")
+    val generatorLogLevel =
+        when (gradle.startParameter.logLevel) {
+            org.gradle.api.logging.LogLevel.DEBUG -> "DEBUG"
+            org.gradle.api.logging.LogLevel.INFO -> "INFO"
+            else -> "WARN"
+        }
     // Pass project version to CLI so generated files have correct version metadata
     val projectVersion = project.version.toString()
     systemProperty("project.version", projectVersion)
+    systemProperty("xtc.logLevel", generatorLogLevel)
     // Declare version as input for proper Gradle caching
     inputs.property("projectVersion", projectVersion)
+    inputs.property("generatorLogLevel", generatorLogLevel)
     // Tree-sitter expects a directory, not a file
     args("tree-sitter", generatedDir.get().asFile.absolutePath)
     inputs.files(
@@ -149,6 +165,14 @@ val generateScannerC by tasks.registering(JavaExec::class) {
     dependsOn(tasks.compileKotlin, tasks.processResources, generateTreeSitter)
     classpath = configurations.runtimeClasspath.get() + sourceSets.main.get().output
     mainClass.set("org.xtclang.tooling.scanner.ScannerCGeneratorDslKt")
+    val generatorLogLevel =
+        when (gradle.startParameter.logLevel) {
+            org.gradle.api.logging.LogLevel.DEBUG -> "DEBUG"
+            org.gradle.api.logging.LogLevel.INFO -> "INFO"
+            else -> "WARN"
+        }
+    systemProperty("xtc.logLevel", generatorLogLevel)
+    inputs.property("generatorLogLevel", generatorLogLevel)
     args(
         generatedDir
             .map {

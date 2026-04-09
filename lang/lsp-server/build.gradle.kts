@@ -73,7 +73,7 @@ val logLevel: String =
             System.getenv("XTC_LOG_LEVEL")?.uppercase() ?: "INFO",
         ).uppercase()
 
-logger.lifecycle("LSP Server adapter: $lspAdapter, semanticTokens: $lspSemanticTokens, logLevel: $logLevel")
+logger.info("[lsp] LSP Server adapter: $lspAdapter, semanticTokens: $lspSemanticTokens, logLevel: $logLevel")
 
 // Generate build info for version verification and adapter selection
 val generateBuildInfo by tasks.registering {
@@ -212,7 +212,7 @@ val classes by tasks.existing
 tasks.test {
     useJUnitPlatform()
     testLogging {
-        events("passed", "skipped", "failed")
+        events("skipped", "failed")
     }
 
     // Enable FFM native access for tree-sitter integration tests (suppresses JDK warning)

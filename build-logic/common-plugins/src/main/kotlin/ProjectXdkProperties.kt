@@ -124,13 +124,13 @@ fun Task.logTimed(startMsg: String, endMsg: (kotlin.time.Duration) -> String) {
     val key = "gradle.task.timer.${path.replace(":", ".")}"
     doFirstTask {
         System.setProperty(key, System.nanoTime().toString())
-        logger.lifecycle(startMsg)
+        logger.info(startMsg)
     }
     doLastTask {
         val start = System.getProperty(key)?.toLongOrNull() ?: System.nanoTime()
         val elapsed = (System.nanoTime() - start).nanoseconds
         System.clearProperty(key)
-        logger.lifecycle(endMsg(elapsed))
+        logger.info(endMsg(elapsed))
     }
 }
 
@@ -143,7 +143,7 @@ fun Long.humanSize(): String =
     }
 
 /**
- * Log files in a directory with sizes at lifecycle level.
+ * Log files in a directory with sizes at info level.
  * [rootDir] must be captured at configuration time for CC safety.
  */
 fun Task.logCopiedFiles(
@@ -154,9 +154,9 @@ fun Task.logCopiedFiles(
 ) {
     val files = dir.listFiles().orEmpty()
     val relPath = dir.relativeTo(rootDir)
-    logger.lifecycle("[$tag] ${files.size} file(s) -> $relPath/ (${files.sumOf { it.length() }.humanSize()})")
+    logger.info("[$tag] ${files.size} file(s) -> $relPath/ (${files.sumOf { it.length() }.humanSize()})")
     files.forEach { f ->
-        logger.lifecycle("[$tag]   ${f.name} (${f.length().humanSize()})")
+        logger.info("[$tag]   ${f.name} (${f.length().humanSize()})")
     }
-    notes.forEach { logger.lifecycle("[$tag]   $it") }
+    notes.forEach { logger.info("[$tag]   $it") }
 }

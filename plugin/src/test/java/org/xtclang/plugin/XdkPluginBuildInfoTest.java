@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Properties;
 import java.util.regex.Pattern;
 
@@ -32,7 +33,7 @@ import org.junit.jupiter.api.io.TempDir;
  */
 public class XdkPluginBuildInfoTest {
 
-    private static final String[] GRADLE_FLAGS = {"--stacktrace", "--info", "--configuration-cache"};
+    private static final String[] GRADLE_FLAGS = {"--configuration-cache"};
     private static final Pattern VERSION_PATTERN = Pattern.compile("\\d+\\.\\d+\\.\\d+(-SNAPSHOT)?");
     private static final Pattern VERSION_NUMBER_PATTERN = Pattern.compile("\\d+");
 
@@ -55,6 +56,14 @@ public class XdkPluginBuildInfoTest {
         return args;
     }
 
+    private Properties loadBuildInfoProperties() throws IOException {
+        final var resourceStream = getClass().getResourceAsStream(PLUGIN_BUILD_INFO_RESOURCE_PATH);
+        assertNotNull(resourceStream, "plugin-build-info.properties should exist in plugin resources");
+        final var props = new Properties();
+        props.load(resourceStream);
+        return props;
+    }
+
     /**
      * Helper method to validate JVM args match expected values from plugin-build-info.properties.
      * This validation logic is used by multiple tests to ensure consistency.
@@ -64,31 +73,26 @@ public class XdkPluginBuildInfoTest {
      * @throws IOException if plugin-build-info.properties cannot be read
      */
     private void validateJvmArgsMatchBuildInfo(final String actualJvmArgs, final String testContext) throws IOException {
-        // Load the expected args from plugin-build-info.properties
-        final var resourceStream = getClass().getResourceAsStream(PLUGIN_BUILD_INFO_RESOURCE_PATH);
-        assertNotNull(resourceStream, "plugin-build-info.properties should exist in plugin resources");
-        final var props = new Properties();
-        props.load(resourceStream);
+        final var props = loadBuildInfoProperties();
         final var expectedJvmArgs = props.getProperty("defaultJvmArgs");
         assertNotNull(expectedJvmArgs, "defaultJvmArgs should be present in plugin-build-info.properties");
+        final var expectedArgs = List.of(expectedJvmArgs.split(","));
+        final var actualArgs = List.of(actualJvmArgs.split(","));
 
-        System.out.println("[test] " + testContext + ": Validating JVM args");
-        System.out.println("[test]   Expected (from plugin-build-info.properties): " + expectedJvmArgs);
-        System.out.println("[test]   Actual: " + actualJvmArgs);
-
-        // -ea should always be present
-        assertTrue(actualJvmArgs.contains("-ea"),
+        assertTrue(actualArgs.contains("-ea"),
             testContext + ": JVM args should always include -ea");
+        assertTrue(actualArgs.equals(expectedArgs),
+            testContext + ": JVM args should exactly match plugin-build-info.properties");
 
         // Only check for --enable-preview if it's in the build-time config
         if (expectedJvmArgs.contains("--enable-preview")) {
-            assertTrue(actualJvmArgs.contains("--enable-preview"),
+            assertTrue(actualArgs.contains("--enable-preview"),
                 testContext + ": JVM args should include --enable-preview (found in plugin-build-info.properties)");
         }
 
         // Only check for --enable-native-access if it's in the build-time config
         if (expectedJvmArgs.contains("--enable-native-access=ALL-UNNAMED")) {
-            assertTrue(actualJvmArgs.contains("--enable-native-access=ALL-UNNAMED"),
+            assertTrue(actualArgs.contains("--enable-native-access=ALL-UNNAMED"),
                 testContext + ": JVM args should include --enable-native-access=ALL-UNNAMED (found in plugin-build-info.properties)");
         }
     }
@@ -96,11 +100,7 @@ public class XdkPluginBuildInfoTest {
     @Test
     public void testBuildInfoPropertiesFileIsGenerated() throws IOException {
         // Load the plugin-build-info.properties from the plugin's resources
-        final var resourceStream = getClass().getResourceAsStream(PLUGIN_BUILD_INFO_RESOURCE_PATH);
-        assertNotNull(resourceStream, "plugin-build-info.properties should exist in plugin resources");
-
-        final var props = new Properties();
-        props.load(resourceStream);
+        final var props = loadBuildInfoProperties();
 
         // Verify xdk.version is present and valid
         final var xdkVersion = props.getProperty("xdk.version");
@@ -117,10 +117,6 @@ public class XdkPluginBuildInfoTest {
         assertNotNull(defaultJvmArgs, "defaultJvmArgs should be present in plugin-build-info.properties");
         validateJvmArgsMatchBuildInfo(defaultJvmArgs, "testBuildInfoPropertiesFileIsGenerated");
 
-        System.out.println("[test] ✓ plugin-build-info.properties contains correct values:");
-        System.out.println("[test]   xdk.version = " + xdkVersion);
-        System.out.println("[test]   jdk.version = " + jdkVersion);
-        System.out.println("[test]   defaultJvmArgs = " + defaultJvmArgs);
     }
 
     @Test
@@ -160,9 +156,6 @@ public class XdkPluginBuildInfoTest {
             .build();
 
         final var output = result.getOutput();
-        System.out.println("[test] TestKit output:");
-        System.out.println(output);
-
         // Parse the output to check if xtcVersion was resolved
         final var lines = output.lines()
             .filter(line -> line.contains("XTC_VERSION_TEST_OUTPUT:"))
@@ -180,20 +173,14 @@ public class XdkPluginBuildInfoTest {
             .findFirst()
             .orElseThrow();
 
-        System.out.println("[test] " + isPresentLine.trim());
-        System.out.println("[test] " + valueLine.trim());
-
         // The plugin should successfully read XDK version from plugin-build-info.properties
         assertTrue(isPresentLine.contains("isPresent=true"),
             "Plugin should read XDK version from plugin-build-info.properties");
         assertTrue(valueLine.contains("value=") && !valueLine.contains("value=null"),
             "Plugin should have a valid XDK version value");
+        assertTrue(valueLine.equals("XTC_VERSION_TEST_OUTPUT: value=" + loadBuildInfoProperties().getProperty("xdk.version")),
+            "Plugin should resolve the exact XDK version from plugin-build-info.properties");
 
-        // Verify it read from plugin-build-info.properties
-        assertTrue(output.contains("Read XDK version from plugin-build-info.properties"),
-            "Plugin should log that it read from plugin-build-info.properties");
-
-        System.out.println("[test] ✓ Plugin successfully read XDK version from plugin-build-info.properties");
     }
 
     @Test
@@ -235,7 +222,6 @@ public class XdkPluginBuildInfoTest {
         assertTrue(output.contains("OVERRIDE_TEST_OUTPUT: 1.2.3-OVERRIDE"),
             "Should use overridden xtcVersion");
 
-        System.out.println("[test] ✓ Successfully verified xtcVersion can be overridden");
     }
 
     @Test
@@ -272,10 +258,6 @@ public class XdkPluginBuildInfoTest {
 
         final var output = result.getOutput();
 
-        // Verify default JVM args were loaded from plugin-build-info.properties
-        assertTrue(output.contains("Loaded default JVM args:"),
-            "Plugin should log that it loaded default JVM args");
-
         // Parse the actual JVM args output
         final var argsLine = output.lines()
             .filter(line -> line.contains("JVM_ARGS_TEST_OUTPUT:"))
@@ -286,6 +268,5 @@ public class XdkPluginBuildInfoTest {
         final var actualJvmArgs = argsLine.substring(argsLine.indexOf(':') + 1).trim();
         // Use shared validation logic to verify the args match what's in plugin-build-info.properties
         validateJvmArgsMatchBuildInfo(actualJvmArgs, "testPluginReadsDefaultJvmArgsFromBuildInfo");
-        System.out.println("[test] ✓ Plugin successfully read default JVM args from plugin-build-info.properties");
     }
 }

@@ -5,6 +5,7 @@ import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.process.CommandLineArgumentProvider
@@ -60,18 +61,26 @@ private class JavaCompilerArgsProvider(
 
 /** Top-level typed Action for Test logging (no script capture). */
 private class ConfigureTestLoggingAction(
-    private val showStdout: Provider<Boolean>
+    private val showStdout: Provider<Boolean>,
+    private val failFastTests: Provider<Boolean>
 ) : Action<Test> {
     override fun execute(t: Test) {
         val on = showStdout.get()
+        t.failFast = failFastTests.get()
+        t.testLogging.events(
+            TestLogEvent.SKIPPED,
+            TestLogEvent.FAILED
+        )
+        t.testLogging.exceptionFormat = TestExceptionFormat.SHORT
+        t.testLogging.showExceptions = true
+        t.testLogging.showCauses = true
+        t.testLogging.showStackTraces = false
         t.testLogging.showStandardStreams = on
         if (on) {
             t.testLogging.events(
                 TestLogEvent.STANDARD_OUT,
                 TestLogEvent.STANDARD_ERROR,
                 TestLogEvent.SKIPPED,
-                TestLogEvent.STARTED,
-                TestLogEvent.PASSED,
                 TestLogEvent.FAILED
             )
         }
@@ -97,6 +106,7 @@ val maxErrors          = xdkProperties.int("$pprefix.maxErrors", 0)
 val maxWarnings        = xdkProperties.int("$pprefix.maxWarnings", 0)
 val warningsAsErrors   = xdkProperties.boolean("$pprefix.warningsAsErrors", true)
 val showTestStdout     = xdkProperties.boolean("$pprefix.test.stdout", false)
+val failFastTests      = xdkProperties.boolean("$pprefix.test.failFast", false)
 
 /* JVM args composed lazily */
 val defaultJvmArgs: Provider<List<String>> =
@@ -175,11 +185,12 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 // Test: JVM args provider + typed Action for logging (no doFirst lambda)
-tasks.withType<Test>().configureEach(ConfigureTestLoggingAction(showTestStdout))
+tasks.withType<Test>().configureEach(ConfigureTestLoggingAction(showTestStdout, failFastTests))
 tasks.withType<Test>().configureEach {
     jvmArgumentProviders.add(DefaultJvmArgsProvider(defaultJvmArgs))
     inputs.property("defaultJvmArgs", defaultJvmArgs)
     inputs.property("showTestStdout", showTestStdout)
+    inputs.property("failFastTests", failFastTests)
     // Skip all tests when -PskipAllTests is set (configuration cache safe)
     onlyIf(SkipAllTestsSpec(project.hasProperty("skipAllTests")))
 }

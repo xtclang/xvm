@@ -3,6 +3,7 @@ package org.xtclang.plugin.launchers;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -25,6 +26,7 @@ import static org.xtclang.plugin.tasks.XtcLauncherTask.EXIT_CODE_ERROR;
 public abstract class ForkedStrategy implements ExecutionStrategy {
 
     private static final int STD_BUFFER_SIZE = 8192;
+    protected record StreamPlan(boolean copyStdout, boolean copyStderr) {}
 
     protected final ExecutionMode mode;
     protected final Logger logger;
@@ -54,7 +56,7 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
             // Use relative paths for forked mode to preserve build caching
             final var options = optionsBuilder().buildCompilerOptions(task);
             final ProcessBuilder pb = buildProcess(task, options.toCommandLine());
-            final boolean shouldCopyStreams = configureIO(pb, task);
+            final StreamPlan streamPlan = configureIO(pb, task);
 
             final Process process = pb.start();
 
@@ -62,12 +64,10 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
             // We need to wait for stream copying threads to finish.
             // NOTE: The javaexec task does this automatically, but it is hard to configure it as detachable,
             //   and the ProcessBuilder solution is not Java centric, and is more extensible.
-            final var streamThreads = shouldCopyStreams ? copyProcessStreams(process) : null;
+            final var streamThreads = copyProcessStreams(process, streamPlan);
             final int exitCode = waitForProcess(process);
-            if (streamThreads != null) {
-                for (final var thread : streamThreads) {
-                    thread.join();
-                }
+            for (final var thread : streamThreads) {
+                thread.join();
             }
 
             return exitCode;
@@ -90,10 +90,10 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
             final var moduleArgs = runConfig.getModuleArgs().get();
             final var options = optionsBuilder().buildRunnerOptions(task, moduleName, moduleArgs);
             final var pb = buildProcess(task, options.toCommandLine());
-            final boolean shouldCopyStreams = configureIO(pb, task);
+            final StreamPlan streamPlan = configureIO(pb, task);
             final Process process = pb.start();
             // Copy streams if needed (when inheritIO doesn't work due to Gradle redirects)
-            final List<Thread> streamThreads = shouldCopyStreams ? copyProcessStreams(process) : List.of();
+            final List<Thread> streamThreads = copyProcessStreams(process, streamPlan);
             final int exitCode = waitForProcess(process);
             for (final Thread thread : streamThreads) {
                 thread.join();
@@ -118,10 +118,10 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
             final var moduleArgs = runConfig.getModuleArgs().get();
             final var options = optionsBuilder().buildTestRunnerOptions(task, moduleName, moduleArgs);
             final var pb = buildProcess(task, options.toCommandLine());
-            final boolean shouldCopyStreams = configureIO(pb, task);
+            final StreamPlan streamPlan = configureIO(pb, task);
             final Process process = pb.start();
             // Copy streams if needed (when inheritIO doesn't work due to Gradle redirects)
-            final List<Thread> streamThreads = shouldCopyStreams ? copyProcessStreams(process) : List.of();
+            final List<Thread> streamThreads = copyProcessStreams(process, streamPlan);
             final int exitCode = waitForProcess(process);
             for (final Thread thread : streamThreads) {
                 thread.join();
@@ -159,7 +159,7 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
      *
      * @return true if streams should be manually copied (for ATTACHED mode), false otherwise
      */
-    protected abstract boolean configureIO(ProcessBuilder pb, XtcLauncherTask<?> task) throws IOException;
+    protected abstract StreamPlan configureIO(ProcessBuilder pb, XtcLauncherTask<?> task) throws IOException;
 
     /**
      * Copies process stdout/stderr to System.out/err in background threads.
@@ -170,13 +170,16 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
      * @param process the process whose streams to copy
      * @return list of threads copying the streams
      */
-    protected List<Thread> copyProcessStreams(final Process process) {
+    protected List<Thread> copyProcessStreams(final Process process, final StreamPlan streamPlan) {
         record StreamCopy(InputStream input, OutputStream output, String name) {}
 
-        final var streams = List.of(
-            new StreamCopy(process.getInputStream(), System.out, "stdout"),
-            new StreamCopy(process.getErrorStream(), System.err, "stderr")
-        );
+        final var streams = new ArrayList<StreamCopy>(2);
+        if (streamPlan.copyStdout()) {
+            streams.add(new StreamCopy(process.getInputStream(), System.out, "stdout"));
+        }
+        if (streamPlan.copyStderr()) {
+            streams.add(new StreamCopy(process.getErrorStream(), System.err, "stderr"));
+        }
 
         final var threads = new ArrayList<Thread>(streams.size());
         for (final var stream : streams) {
@@ -217,4 +220,18 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
      * TODO: Change to execution mode and have excution mode provide toString dsscs and its name()
      */
     protected abstract String getDesc();
+
+    protected static File configuredRedirectFile(final XtcLauncherTask<?> task, final boolean isStdout) {
+        final String configuredPath = org.xtclang.plugin.XtcPluginUtils.expandTimestampPlaceholder(
+            isStdout ? task.getStdoutPath().get() : task.getStderrPath().get()
+        );
+        return new File(task.getProjectDirectory().get().getAsFile(), configuredPath);
+    }
+
+    protected void ensureParentDirectoryExists(final File file) {
+        final File parentDir = file.getParentFile();
+        if (parentDir != null && !parentDir.exists() && !parentDir.mkdirs()) {
+            throw failure("failed to create directory for redirected output: {}", parentDir.getAbsolutePath());
+        }
+    }
 }

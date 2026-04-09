@@ -50,10 +50,10 @@ val ideVersion =
 val localIdePath: String? = providers.gradleProperty("intellijLocalPath").orNull
 
 if (localIdePath != null) {
-    logger.lifecycle("[ide] Using local IntelliJ IDE: $localIdePath")
+    logger.info("[ide] Using local IntelliJ IDE: $localIdePath")
 } else {
-    logger.lifecycle("[ide] IntelliJ IDEA $ideVersion (managed by IntelliJ Platform Gradle Plugin)")
-    logger.lifecycle("[ide]   First-time download may take several minutes if not already cached.")
+    logger.info("[ide] IntelliJ IDEA $ideVersion (managed by IntelliJ Platform Gradle Plugin)")
+    logger.info("[ide]   First-time download may take several minutes if not already cached.")
 }
 
 repositories {
@@ -245,6 +245,14 @@ kotlin {
 }
 
 intellijPlatform {
+    caching {
+        ides {
+            enabled = true
+            path = rootProject.layout.projectDirectory.dir(".intellijPlatform/ides")
+            name = { requested -> "${requested.type}-${requested.version}" }
+        }
+    }
+
     pluginConfiguration {
         id = "org.xtclang.idea"
         name = "XTC Language Support"
@@ -319,11 +327,14 @@ val buildSearchableOptionsEnabled = xdkProperties.booleanValue("lsp.buildSearcha
 
 val searchableOptionsStatus =
     if (buildSearchableOptionsEnabled) "enabled" else "disabled (use -Plsp.buildSearchableOptions=true to enable)"
-logger.lifecycle("[ide] Searchable options: $searchableOptionsStatus")
+logger.info("[ide] Searchable options: $searchableOptionsStatus")
 
 val buildSearchableOptions by tasks.existing {
     enabled = buildSearchableOptionsEnabled
     inputs.property("buildSearchableOptionsEnabled", buildSearchableOptionsEnabled)
+    // IntelliJ headless tasks use custom classloading that triggers harmless CDS/class-sharing
+    // warnings from the JVM. Suppress them consistently so normal builds stay readable.
+    (this as JavaExec).jvmArgs("-Xlog:cds=off")
 }
 
 // =============================================================================
@@ -341,13 +352,17 @@ val buildPlugin by tasks.existing {
         if (zipFiles.isNotEmpty()) {
             val zip = zipFiles.first()
             val relPath = zip.relativeTo(rootDir)
-            logger.lifecycle("[plugin] Distribution ZIP: $relPath (${zip.length().humanSize()})")
-            logger.lifecycle("[plugin] Absolute path:    ${zip.absolutePath}")
-            logger.lifecycle("[plugin]")
-            logger.lifecycle("[plugin] To install in IntelliJ IDEA:")
-            logger.lifecycle("[plugin]   1. Open Settings -> Plugins -> gear icon -> Install Plugin from Disk...")
-            logger.lifecycle("[plugin]   2. Select: ${zip.absolutePath}")
-            logger.lifecycle("[plugin]   3. Restart the IDE")
+            logger.info(
+                """
+                |[plugin] Distribution ZIP: $relPath (${zip.length().humanSize()})
+                |[plugin] Absolute path:    ${zip.absolutePath}
+                |[plugin]
+                |[plugin] To install in IntelliJ IDEA:
+                |[plugin]   1. Open Settings -> Plugins -> gear icon -> Install Plugin from Disk...
+                |[plugin]   2. Select: ${zip.absolutePath}
+                |[plugin]   3. Restart the IDE
+                """.trimMargin(),
+            )
         }
     }
 }
@@ -457,7 +472,7 @@ val configureDisabledPlugins by tasks.registering {
         val disabledPluginsFile = configDir.get().resolve("disabled_plugins.txt")
         disabledPluginsFile.parentFile.mkdirs()
         disabledPluginsFile.writeText(pluginsList.joinToString("\n") + "\n")
-        logger.lifecycle("[sandbox] Disabled ${pluginsList.size} Ultimate-only plugins in sandbox config")
+        logger.info("[sandbox] Disabled ${pluginsList.size} Ultimate-only plugins in sandbox config")
     }
 }
 
@@ -484,7 +499,7 @@ val configureSandboxLogging by tasks.registering {
             |</application>
             """.trimMargin() + "\n",
         )
-        logger.lifecycle("[sandbox] Configured INFO-level logging for org.xtclang")
+        logger.info("[sandbox] Configured INFO-level logging for org.xtclang")
     }
 }
 
@@ -568,6 +583,9 @@ val runIde by tasks.existing {
         environment("XTC_LOG_LEVEL", logLevel)
         systemProperty("xtc.lsp.semanticTokens", ideLspSemanticTokens)
         environment("XTC_LSP_SEMANTIC_TOKENS", ideLspSemanticTokens)
+        // IntelliJ's classloader setup disables JVM CDS optimizations and otherwise prints
+        // harmless class-sharing warnings. Suppress those so runIde output stays focused.
+        jvmArgs("-Xlog:cds=off")
         // Sandbox plugin auto-reload is convenient during plugin development, but in this
         // project it can leave IntelliJ holding a stale or partially reloaded plugin JAR
         // while Gradle is still rebuilding and copying artifacts into the sandbox.
@@ -602,6 +620,6 @@ val test by tasks.existing(Test::class) {
     useJUnitPlatform()
     jvmArgs("-Xlog:cds=off")
     testLogging {
-        events("passed", "skipped", "failed")
+        events("skipped", "failed")
     }
 }
