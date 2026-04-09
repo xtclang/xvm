@@ -250,6 +250,7 @@ jobs:
               env:
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
               run: |
+                ${{ env.GRADLE_CACHE_INSPECT }}
                 GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }} ${{ github.event.inputs.extra-gradle-options }}"
                 # Run manual tests inline if enabled (avoids cache rebuild)
                 if [ "${{ env.skip_manual_tests }}" == "true" ]; then
