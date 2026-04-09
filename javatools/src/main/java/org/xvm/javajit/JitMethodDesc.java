@@ -341,6 +341,11 @@ public class JitMethodDesc {
         }
     }
 
+    @Override
+    public String toString() {
+        return isOptimized ? optimizedMD.toString() : standardMD.toString();
+    }
+
 
     // ----- fields --------------------------------------------------------------------------------
 

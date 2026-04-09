@@ -6603,10 +6603,7 @@ public abstract class TypeConstant
      *         cast explicitly to {@code nObj} class to invoke its methods
      */
     public boolean isJitInterface() {
-        // TODO: replace with isInterfaceType()
-        return isSingleUnderlyingClass(true)
-            && getSingleUnderlyingClass(true).getComponent() instanceof ClassStructure clz
-            && clz.getFormat() == Component.Format.INTERFACE;
+        return isInterfaceType();
     }
 
     /**

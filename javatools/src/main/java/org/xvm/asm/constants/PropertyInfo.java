@@ -1,8 +1,6 @@
 package org.xvm.asm.constants;
 
 
-import java.lang.constant.ClassDesc;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -603,8 +601,7 @@ public class PropertyInfo
 
         if (typeParent != null && hasField()) {
             // The reason we are doing this is to cover scenarios such as one in String.x:
-            //     immutable Char[] toCharArray()
-            //        {
+            //     immutable Char[] toCharArray() {
             //        return chars;
             //    }
             // The property "chars" is declared as "Char[]", String itself is a "const", therefore

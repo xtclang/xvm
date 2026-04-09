@@ -12,6 +12,7 @@ package basic {
             try {
                 passed &= runTest(() -> callTests.run());
                 passed &= runTest(() -> condMixinTests.run());
+                passed &= runTest(() -> delegationTests.run());
                 passed &= runTest(() -> enumTests.run());
                 passed &= runTest(() -> genericTests.run());
                 passed &= runTest(() -> invocationTests.run());

@@ -7,7 +7,6 @@ import java.lang.constant.ClassDesc;
 import java.util.Arrays;
 import java.util.Objects;
 
-import org.jetbrains.annotations.NotNull;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;

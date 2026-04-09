@@ -30,7 +30,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -1120,21 +1119,14 @@ public class CommonBuilder
      * Assemble the method(s) for the "Impl" shape of the specified Ecstasy method.
      */
     protected void assembleImplMethod(String className, ClassBuilder classBuilder, MethodInfo method) {
-        boolean cap    = method.isCapped();
-        boolean router = false;
-
-        if (!cap) {
-            MethodBody[] chain = method.ensureOptimizedMethodChain(typeInfo);
-            int          depth = chain.length;
-            if (depth > 0) {
-                router = chain[0].getImplementation() == Implementation.Delegating;
-            }
-        }
-
-        if (cap || router) {
-            MethodInfo targetMethod = cap ? typeInfo.getNarrowingMethod(method) : method;
+        if (method.isCapped()) {
+            MethodInfo targetMethod = typeInfo.getNarrowingMethod(method);
             assert targetMethod != null;
-            assembleRoutingMethod(className, classBuilder, method, targetMethod);
+            assembleCapRouting(className, classBuilder, method, targetMethod);
+        } else if (method.isDelegating()) {
+            PropertyConstant propDelegate = method.getHead().getPropertyConstant();
+            assert propDelegate != null;
+            assemblePropertyDelegation(className, classBuilder, method, propDelegate);
         } else {
             String jitName = method.ensureJitMethodName(typeSystem);
 
@@ -1575,10 +1567,10 @@ public class CommonBuilder
     }
 
     /**
-     * Assemble the "routing" method(s).
+     * Assemble the "routing" method for a capped method.
      */
-    protected void assembleRoutingMethod(String className, ClassBuilder classBuilder,
-                                         MethodInfo srcMethod, MethodInfo dstMethod) {
+    protected void assembleCapRouting(String className, ClassBuilder classBuilder,
+                                      MethodInfo srcMethod, MethodInfo dstMethod) {
         JitMethodDesc jmdSrc = srcMethod.getJitDesc(this, typeInfo.getType());
         JitMethodDesc jmdDst = dstMethod.getJitDesc(this, typeInfo.getType());
 
@@ -1593,18 +1585,13 @@ public class CommonBuilder
         }
 
         assert jmdSrc.getImplicitParamCount() == jmdDst.getImplicitParamCount();
+        assert !srcMethod.isFunction() && !srcMethod.isCtorOrValidator() ||
+                srcMethod.containsVirtualConstructor();
 
-        if (srcMethod.isCapped()) {
-            assert !srcMethod.isFunction() && !srcMethod.isCtorOrValidator();
-
-            assembleStandardCap(className, classBuilder, srcName, dstName, jmdSrc, jmdDst);
-            if (jmdSrc.isOptimized) {
-                assert jmdDst.isOptimized;
-                assembleOptimizedCap(className, classBuilder, srcName+OPT, dstName+OPT, jmdSrc, jmdDst);
-            }
-        } else {
-            PropertyConstant propDelegate = srcMethod.getHead().getPropertyConstant();
-            System.err.println("TODO delegation to " + propDelegate);
+        assembleStandardCap(className, classBuilder, srcName, dstName, jmdSrc, jmdDst);
+        if (jmdSrc.isOptimized) {
+            assert jmdDst.isOptimized;
+            assembleOptimizedCap(className, classBuilder, srcName+OPT, dstName+OPT, jmdSrc, jmdDst);
         }
     }
 
@@ -1653,7 +1640,7 @@ public class CommonBuilder
             TypeConstant   dstRetType = dstReturns[0].type;
 
             // the natural return is at the top of the stack now;
-            // TEMPORARY: assume the same Ctx positions for returns TODO
+            // TODO TEMPORARY: assume the same Ctx positions for returns
             code.areturn();
         });
     }
@@ -1764,6 +1751,71 @@ public class CommonBuilder
             // TEMPORARY: assume the same Ctx positions for returns TODO
             assert srcPd.flavor == dstPd.flavor;
             addReturn(code, srcPd.cd);
+        });
+    }
+
+    /**
+     * Assemble the "routing" method for a capped method.
+     */
+    protected void assemblePropertyDelegation(String className, ClassBuilder classBuilder,
+                                              MethodInfo srcMethod, PropertyConstant propDelegate) {
+        String        srcName   = srcMethod.ensureJitMethodName(typeSystem);
+        JitMethodDesc jmd       = srcMethod.getJitDesc(this, typeInfo.getType());
+        PropertyInfo  propInfo  = typeInfo.findProperty(propDelegate);
+        TypeConstant  dstType   = propInfo.getType();
+        TypeInfo      dstInfo   = dstType.ensureTypeInfo();
+        MethodInfo    dstMethod = dstInfo.getMethodById(srcMethod.getIdentity());
+        String        dstName   = dstMethod.ensureJitMethodName(typeSystem);
+
+        assert srcMethod.getJitDesc(this, typeInfo.getType()).equals(jmd);
+        assert !srcName.equals(dstName);
+
+        int extraCount = jmd.getImplicitParamCount();
+
+        assembleDelegation(classBuilder, propDelegate, srcName, dstMethod, dstName,
+            jmd.standardMD, extraCount, jmd.standardParams, jmd.standardReturns);
+
+        if (jmd.isOptimized) {
+            assembleDelegation(classBuilder, propDelegate, srcName+OPT, dstMethod, dstName+OPT,
+                jmd.optimizedMD, extraCount, jmd.optimizedParams, jmd.optimizedReturns);
+        }
+    }
+
+    private void assembleDelegation(ClassBuilder classBuilder, PropertyConstant propDelegate,
+                                    String srcName, MethodInfo dstMethod, String dstName,
+                                    MethodTypeDesc md, int extraCount,
+                                    JitParamDesc[] params, JitParamDesc[] returns) {
+        classBuilder.withMethodBody(srcName, md, ClassFile.ACC_PUBLIC, code -> {
+            code.aload(0); // this
+            loadProperty(code, typeInfo.getType(), propDelegate, /*don't unbox*/ false);
+
+            TypeConstant dstType = dstMethod.getJitIdentity().getNamespace().getType();
+
+            boolean objectDelegation = dstType.isJitInterface() && dstType.equals(pool().typeObject());
+            if (objectDelegation) {
+                // we are delegating an nObj method for an interface; need a cast
+                code.checkcast(CD_nObj);
+            }
+
+            code.aload(code.parameterSlot(0)); // ctx
+
+            for (JitParamDesc pd : params) {
+                Builder.load(code, pd.cd, code.parameterSlot(extraCount + pd.index));
+            }
+
+            if (dstType.isJitInterface() && dstMethod.isAbstract() && !objectDelegation) {
+                code.invokeinterface(ensureClassDesc(dstType), dstName, md);
+            } else {
+                code.invokevirtual(ensureClassDesc(dstType), dstName, md);
+            }
+
+            if (returns.length == 0) {
+                code.return_();
+            } else {
+                Builder.addReturn(code, returns[0].cd);
+
+                // we assume that all Ctx values stay at the same positions
+            }
         });
     }
 
@@ -2133,12 +2185,14 @@ public class CommonBuilder
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
         "Boolean", "Ordered",
         "Orderable",
+        "Stringable",
         "Float",
+//        "String",
+//        "StringBuffer",
 //        "Dec32", "Dec64", // need to change to SingleSlot
 //        "UInt",     // depends on GP_DIVREM
 //        "FPNumber", // depends on Bit support
 //        "Int",      // depends on "switch" implementation
-//        "StringBuffer",
         "Array",
         "TerminalConsole",
     };

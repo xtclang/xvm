@@ -808,6 +808,13 @@ public class MethodInfo
     }
 
     /**
+     * @return true iff the method chain is delegating
+     */
+    public boolean isDelegating() {
+        return getHead().getImplementation() == Implementation.Delegating;
+    }
+
+    /**
      * Determine if the method can be overridden.
      *
      * @return true iff the method is virtual and not capped
@@ -1236,16 +1243,34 @@ public class MethodInfo
      * Ensure a unique name for this method at the specified TypeSystem.
      */
     public String ensureJitMethodName(TypeSystem ts) {
-        return getJitIdentity().ensureJitMethodName(ts);
+        String name = getJitIdentity().ensureJitMethodName(ts);
+        return isDelegating()
+            ? name + Builder.DELEGATE
+            : name;
     }
 
     /**
      * @return the JitMethodDesc
      */
     public JitMethodDesc getJitDesc(Builder builder, TypeConstant typeContainer) {
-        return isCapped()
-            ? getChain()[1].getJitDesc(builder, typeContainer)
-            : getHead().getJitDesc(builder, typeContainer);
+        MethodBody head = getHead();
+        return switch (head.getImplementation()) {
+            case Capped
+                -> getChain()[1].getJitDesc(builder, typeContainer);
+
+            case Delegating -> {
+                // there could be multiple delegates; take the first "real" one
+                for (MethodBody body : getChain()) {
+                    if (body.getImplementation() != Implementation.Delegating) {
+                        yield body.getJitDesc(builder, typeContainer);
+                    }
+                }
+                throw new IllegalStateException();
+            }
+
+            default
+                -> head.getJitDesc(builder, typeContainer);
+        };
     }
 
     // ----- Object methods ------------------------------------------------------------------------

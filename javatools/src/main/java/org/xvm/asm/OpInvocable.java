@@ -12,7 +12,6 @@ import java.lang.constant.MethodTypeDesc;
 import org.xvm.asm.Constants.Access;
 
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
@@ -363,9 +362,8 @@ public abstract class OpInvocable extends Op {
         TypeConstant   typeTarget = regTarget.type();
         MethodConstant idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
 
-        // If the bctx.cd() is the same as cdTarget then we are invoking a method on the same class
+        // if the bctx.cd() is the same as cdTarget then we are invoking a method on the same class
         // as the build context, so we can use the context's type, which has private access
-        // ToDo GG: How to simplify to typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo()
         ClassDesc      cdThis     = JitTypeDesc.getJitClass(bctx.builder, bctx.typeInfo.getType());
         TypeInfo       infoTarget = cdThis.equals(cdTarget)
                                         ? bctx.typeInfo
@@ -384,16 +382,12 @@ public abstract class OpInvocable extends Op {
             assert infoMethod != null;
         }
 
-        if (infoMethod.getHead().getImplementation() == MethodBody.Implementation.Delegating) {
-            // TODO: delegation
-        }
-
         JitMethodDesc  jmd        = infoMethod.getJitDesc(bctx.builder, typeTarget);
         String         methodName = infoMethod.ensureJitMethodName(bctx.typeSystem);
         boolean        fOptimized = jmd.isOptimized;
         MethodTypeDesc md;
 
-        if (cdTarget.isPrimitive() || typeTarget.isXvmPrimitive()) {
+        if (regTarget.flavor().isOptimized) {
             Builder.box(code, regTarget);
             cdTarget = bctx.builder.ensureClassDesc(regTarget.type());
         }
@@ -409,7 +403,7 @@ public abstract class OpInvocable extends Op {
         bctx.loadCtx(code);
         bctx.loadCallArguments(code, jmd, anArgValue);
 
-        if (infoTarget.getFormat() == Component.Format.INTERFACE) {
+        if (infoTarget.getType().isJitInterface()) {
             code.invokeinterface(cdTarget, methodName, md);
         } else {
             code.invokevirtual(cdTarget, methodName, md);

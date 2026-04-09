@@ -637,6 +637,20 @@ public abstract class Builder {
      */
     public JitMethodDesc loadProperty(CodeBuilder code, TypeConstant typeContainer,
                                       PropertyConstant propId) {
+        return loadProperty(code, typeContainer, propId, true);
+    }
+
+    /**
+     * Build the code to load a local property on the Java stack.
+     *
+     * This method assumes the "owner" ref is loaded on Java stack.
+     *
+     * @param allowUnboxing  if true, allow property access optimization
+     *
+     * @return the JitMethodDesc for the "get" method
+     */
+    public JitMethodDesc loadProperty(CodeBuilder code, TypeConstant typeContainer,
+                                      PropertyConstant propId, boolean allowUnboxing) {
         PropertyInfo  xvmInfo    = propId.getPropertyInfo(typeContainer);
         PropertyInfo  jitInfo    = propId.getPropertyInfo(typeContainer.getCanonicalJitType());
         TypeConstant  typeOwner  = jitInfo.getOwnerType(this, typeContainer);
@@ -644,7 +658,7 @@ public abstract class Builder {
         String        getterName = jitInfo.ensureGetterJitMethodName(typeSystem);
 
         MethodTypeDesc md;
-        if (jmdGet.isOptimized) {
+        if (jmdGet.isOptimized && allowUnboxing) {
             md         = jmdGet.optimizedMD;
             getterName += Builder.OPT;
         } else {
@@ -1346,6 +1360,7 @@ public abstract class Builder {
     public static final String INIT           = "$init";   // the singleton initialization instance method
     public static final String NEW            = "$new";    // the instance creation static method
     public static final String OPT            = "$p";      // methods that contains primitive types
+    public static final String DELEGATE       = "$d";      // methods that delegates to an underlying property
 
     // ----- well-known class descriptors ----------------------------------------------------------
 

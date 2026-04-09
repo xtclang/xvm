@@ -927,6 +927,13 @@ public class BuildContext {
                     type = type.resolveGenerics(pool(), typeInfo.getType());
                 }
 
+                if (constant instanceof PropertyConstant propId) {
+                    PropertyInfo propInfo = typeInfo.findProperty(propId);
+                    if (propInfo != null) {
+                        type = propInfo.inferImmutable(typeInfo.getType());
+                    }
+                }
+
                 // if the type is an enum value, widen it to its parent Enumeration
                 if (type.isEnumValue()) {
                     type = type.getSingleUnderlyingClass(false).getNamespace().getType();
