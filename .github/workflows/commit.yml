@@ -77,10 +77,14 @@ env:
     # Default to parallel mode (true) for push/PR events; for workflow_dispatch, use the input value
     run_manual_tests_parallel: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.parallel-test-mode == true || github.event.inputs.parallel-test-mode == 'true' }}
     trigger_publishing: ${{ github.event.inputs.publish-snapshots == true || github.event.inputs.publish-snapshots == 'true' }}
+    GRADLE_CACHE_INSPECT_ENABLED: false
 
     # Gradle cache inspection function
     GRADLE_CACHE_INSPECT: |
         inspect_gradle_cache() {
+            if [ "${GRADLE_CACHE_INSPECT_ENABLED:-false}" != "true" ]; then
+                return 0
+            fi
             local label="${1:-}"
             local gradle_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
             echo "🔍 Gradle Cache Inspection${label:+ ($label)}:"
