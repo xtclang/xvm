@@ -13,7 +13,7 @@ import org.xvm.type.Decimal;
 
 import org.xvm.util.Hash;
 
-import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.writeMagnitude;
 
 
 /**
@@ -154,7 +154,7 @@ public class DecimalAutoConstant
     protected void assemble(DataOutput out)
         throws IOException {
         out.writeByte(Format.Dec64.ordinal());
-        writePackedLong(out, m_dec.getPosition());
+        writeMagnitude(out, m_dec.getPosition());
     }
 
     @Override

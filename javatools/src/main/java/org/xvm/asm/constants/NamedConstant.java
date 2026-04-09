@@ -12,7 +12,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
-import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.writeMagnitude;
 
 
 /**
@@ -166,8 +166,8 @@ public abstract class NamedConstant
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_constParent.getPosition());
-        writePackedLong(out, m_constName.getPosition());
+        writeMagnitude(out, m_constParent.getPosition());
+        writeMagnitude(out, m_constName.getPosition());
     }
 
     @Override

@@ -21,10 +21,12 @@ import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Var;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Handy;
+import org.xvm.util.Severity;
 
 
 /**
@@ -128,27 +130,39 @@ public class CondOpExpression
         Constant constResult = null;
         switch (combine(const1, getOperatorString(), const2)) {
         case UandF:
-            if (expr1.hasSideEffects()) {
-                break;
+        case UorT:
+            // even though the right expr is a constant, we must process the left side due to side
+            // effects
+            if (!expr1.hasSideEffects()) {
+                if (expr2 instanceof NameExpression) {
+                    expr1.log(errs, Severity.ERROR, Compiler.EXPRESSION_UNREACHABLE,
+                        expr1, operator, expr2);
+                    return null;
+                }
+                constResult = const2;
             }
-            // fall through
+            break;
+
+        case FandU:
+        case TorU:
+            if (expr1 instanceof NameExpression) {
+                expr2.log(errs, Severity.ERROR, Compiler.EXPRESSION_UNREACHABLE,
+                    expr2, operator, expr1);
+                return null;
+            }
+            constResult = const1;
+            break;
+
         case ForF:
         case FandF:
         case FandT:
-        case FandU:
         case TandF:
             constResult = pool.valFalse();
             break;
 
-        case UorT:
-            if (expr1.hasSideEffects()) {
-                break;
-            }
-            // fall through
         case ForT:
         case TorF:
         case TorT:
-        case TorU:
         case TandT:
             constResult = pool.valTrue();
             break;

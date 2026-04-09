@@ -38,7 +38,7 @@ import org.xvm.util.LinkedIterator;
 import static org.xvm.util.Handy.intToHexString;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.toInputStream;
-import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.writeMagnitude;
 
 
 /**
@@ -923,7 +923,7 @@ public class FileStructure
         out.writeInt(VERSION_MAJOR_CUR);
         out.writeInt(VERSION_MINOR_CUR);
         m_pool.assemble(out);
-        writePackedLong(out, getModuleId().getPosition());
+        writeMagnitude(out, getModuleId().getPosition());
         assembleChildren(out);
     }
 

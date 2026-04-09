@@ -13,7 +13,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
-import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.writeMagnitude;
 
 
 /**
@@ -181,7 +181,7 @@ public class ParentClassConstant
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_constChild.getPosition());
+        writeMagnitude(out, m_constChild.getPosition());
     }
 
     @Override

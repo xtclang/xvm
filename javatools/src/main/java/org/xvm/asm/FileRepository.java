@@ -95,7 +95,8 @@ public class FileRepository
             err = false;
         } catch (IOException e) {
             err = true;
-            throw new IOException("Error writing module to file: " + file);
+            file.delete(); // don't leave a corrupted file; it may prevent the next compilation
+            throw new IOException("Error writing module to file: " + file, e);
         }
 
         this.name      = module.getIdentityConstant().getName();

@@ -18,7 +18,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 
 import static org.xvm.util.Handy.readIndex;
-import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.writeMagnitude;
 
 
 /**
@@ -314,7 +314,7 @@ public abstract class AbstractDependantTypeConstant
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_typeParent.getPosition());
+        writeMagnitude(out, m_typeParent.getPosition());
     }
 
 

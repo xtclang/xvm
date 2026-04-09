@@ -200,4 +200,15 @@ module TestCompilerErrors {
             void route() = TODO
         }
     }
+
+    package testUnreachableCondition {
+        class Test {
+            Boolean test(Int[] vals) {
+                if (True || vals.all(v -> v > 0)) {
+                    return True;
+                }
+                return False;
+            }
+        }
+    }
 }

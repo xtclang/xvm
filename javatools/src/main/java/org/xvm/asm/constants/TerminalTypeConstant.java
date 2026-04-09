@@ -31,7 +31,7 @@ import org.xvm.util.Hash;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
-import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.writeMagnitude;
 
 
 /**
@@ -2021,7 +2021,7 @@ public class TerminalTypeConstant
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, ensureResolvedConstant().getPosition());
+        writeMagnitude(out, ensureResolvedConstant().getPosition());
     }
 
     @Override

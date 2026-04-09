@@ -14,7 +14,7 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
-import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.writeMagnitude;
 
 
 /**
@@ -347,8 +347,8 @@ public class RangeConstant
             out.writeByte((m_fExclude1 ? 1 : 0) | (m_fExclude2 ? 2 : 0));
         }
 
-        writePackedLong(out, m_const1.getPosition());
-        writePackedLong(out, m_const2.getPosition());
+        writeMagnitude(out, m_const1.getPosition());
+        writeMagnitude(out, m_const2.getPosition());
     }
 
     @Override

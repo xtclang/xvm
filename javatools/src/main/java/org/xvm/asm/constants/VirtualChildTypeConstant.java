@@ -15,7 +15,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readIndex;
-import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.writeMagnitude;
 
 
 /**
@@ -332,7 +332,7 @@ public class VirtualChildTypeConstant
 
         super.assemble(out);
 
-        writePackedLong(out, m_constName.getPosition());
+        writeMagnitude(out, m_constName.getPosition());
         out.writeBoolean(m_fThisClass);
     }
 

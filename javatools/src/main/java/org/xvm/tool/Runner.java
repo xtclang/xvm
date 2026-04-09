@@ -123,10 +123,10 @@ public class Runner extends Launcher<RunnerOptions> {
 
             boolean fCompile = false;
             if (!binExists) {
-                var qualName = info.getQualifiedModuleName();
+                String qualName = info.getQualifiedModuleName();
                 module = repo.loadModule(qualName);
                 if (module == null) {
-                    var fileSrc = info.getSourceFile();
+                    File fileSrc = info.getSourceFile();
                     if (fileSrc != null && fileSrc.exists() && !opts.isCompileDisabled()) {
                         log(INFO, "The compiled module {} is missing; attempting to compile it from {} ...",
                                 quoted(info.getQualifiedModuleName()), info.getSourceFile());
@@ -168,7 +168,8 @@ public class Runner extends Launcher<RunnerOptions> {
                         .enableDeduction(opts.mayDeduceLocations())
                         .enableVerbose(opts.isVerbose());
                 outFile.ifPresent(builder::setOutputLocation);
-                final var exitCode = new Compiler(builder.build(), m_console, m_errors).run();
+
+                int exitCode = new Compiler(builder.build(), m_console, m_errors).run();
                 if (exitCode != 0) {
                     log(ERROR, "Runner invoked compilation failed with exit code {}", exitCode);
                     return checkErrors("compilation");
@@ -209,7 +210,7 @@ public class Runner extends Launcher<RunnerOptions> {
         }
         checkErrors("module storage");
 
-        var sName = requireNonNull(module).getName();
+        String sName = requireNonNull(module).getName();
         if (sName.equals(module.getSimpleName())) {
             // quote the "simpleName" to visually differentiate it (there is no qualified name)
             sName = quoted(sName);
@@ -217,9 +218,9 @@ public class Runner extends Launcher<RunnerOptions> {
 
         log(INFO, "Executing {} from {}", sName, binLocDesc);
 
-        var connector = createConnector(repo, module);
+        Connector connector = createConnector(repo, module);
 
-        var pool = connector.getConstantPool();
+        ConstantPool pool = connector.getConstantPool();
         try (var _ = ConstantPool.withPool(pool)) {
             final var sMethod    = opts.getMethodName();
             final var setMethods = connector.findMethods(sMethod);
@@ -245,7 +246,7 @@ public class Runner extends Launcher<RunnerOptions> {
             throw e;
         } catch (Exception e) {
             e.printStackTrace(System.err);
-            log(FATAL, e, "Unexpected error");
+            log(FATAL, e, "Unhandled exception");
             return 1;  // Unreachable - log(FATAL) throws
         }
     }

@@ -30,6 +30,7 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -1084,7 +1085,7 @@ public class ParameterizedTypeConstant
         writePackedLong(out, indexOf(m_constType));
         writePackedLong(out, m_atypeParams.length);
         for (TypeConstant constType : m_atypeParams) {
-            writePackedLong(out, constType.getPosition());
+            writeMagnitude(out, constType.getPosition());
         }
     }
 

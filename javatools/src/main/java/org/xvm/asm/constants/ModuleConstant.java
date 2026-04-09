@@ -23,6 +23,7 @@ import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -293,7 +294,7 @@ public class ModuleConstant
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_constName.getPosition());
+        writeMagnitude(out, m_constName.getPosition());
         writePackedLong(out, Constant.indexOf(m_constVersion));
     }
 

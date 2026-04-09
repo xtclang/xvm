@@ -12,6 +12,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -288,11 +289,11 @@ public class ArrayConstant
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_constType.getPosition());
+        writeMagnitude(out, m_constType.getPosition());
         Constant[] aconst  = m_aconstVal;
         writePackedLong(out, aconst.length);
         for (Constant constant : aconst) {
-            writePackedLong(out, constant.getPosition());
+            writeMagnitude(out, constant.getPosition());
         }
     }
 

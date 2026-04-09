@@ -29,6 +29,7 @@ import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -763,21 +764,21 @@ public class ModuleStructure
             VersionTree<Boolean> vtreeAllow = m_vtreeImportAllowVers;
             writePackedLong(out, vtreeAllow.size());
             for (Version ver : vtreeAllow) {
-                writePackedLong(out, pool.ensureVersionConstant(ver).getPosition());
+                writeMagnitude(out, pool.ensureVersionConstant(ver).getPosition());
                 out.writeBoolean(vtreeAllow.get(ver));
             }
 
             List<Version> listPrefer = m_listImportPreferVers;
             writePackedLong(out, listPrefer.size());
             for (Version ver : listPrefer) {
-                writePackedLong(out, pool.ensureVersionConstant(ver).getPosition());
+                writeMagnitude(out, pool.ensureVersionConstant(ver).getPosition());
             }
         } else {
             if (m_constVersion == null) {
                 out.writeBoolean(false);
             } else {
                 out.writeBoolean(true);
-                writePackedLong(out, m_constVersion.getPosition());
+                writeMagnitude(out, m_constVersion.getPosition());
             }
         }
 

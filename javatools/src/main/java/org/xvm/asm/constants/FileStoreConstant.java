@@ -14,7 +14,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
-import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.writeMagnitude;
 
 
 /**
@@ -174,8 +174,8 @@ public class FileStoreConstant
     protected void assemble(DataOutput out)
             throws IOException {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_constPath.getPosition());
-        writePackedLong(out, m_constDir .getPosition());
+        writeMagnitude(out, m_constPath.getPosition());
+        writeMagnitude(out, m_constDir .getPosition());
     }
 
     @Override

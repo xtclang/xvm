@@ -68,6 +68,7 @@ import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -1936,7 +1937,7 @@ public class MethodStructure
 
         writePackedLong(out, m_aAnnotations.length);
         for (Annotation anno : m_aAnnotations) {
-            writePackedLong(out, anno.getPosition());
+            writeMagnitude(out, anno.getPosition());
         }
 
         writePackedLong(out, Constant.indexOf(m_idFinally));
@@ -1964,7 +1965,7 @@ public class MethodStructure
         int        cConsts = aconst == null ? 0 : aconst.length;
         writePackedLong(out, cConsts);
         for (int i = 0; i < cConsts; ++i) {
-            writePackedLong(out, aconst[i].getPosition());
+            writeMagnitude(out, aconst[i].getPosition());
         }
 
         // produce the op bytes if necessary

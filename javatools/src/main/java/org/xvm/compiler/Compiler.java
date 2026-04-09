@@ -1386,6 +1386,12 @@ public class Compiler {
      */
     public static final String SWITCH_CONDITION_ILLEGAL_ARITY      = "COMPILER-207";
     /**
+     * As the result of a short-circuiting conditional operator, the expression is unreachable. This
+     * may indicate an operator precedence error in the expression, and parenthesis may be required
+     * to enforce the desired precedence.
+     */
+    public static String EXPRESSION_UNREACHABLE                    = "COMPILER-208";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

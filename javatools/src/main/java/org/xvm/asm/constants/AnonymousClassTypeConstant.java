@@ -17,7 +17,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readIndex;
-import static org.xvm.util.Handy.writePackedLong;
+import static org.xvm.util.Handy.writeMagnitude;
 
 
 /**
@@ -257,7 +257,7 @@ public class AnonymousClassTypeConstant
             throws IOException {
         super.assemble(out);
 
-        writePackedLong(out, m_idAnon.getPosition());
+        writeMagnitude(out, m_idAnon.getPosition());
     }
 
 
