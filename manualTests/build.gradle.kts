@@ -6,6 +6,16 @@ val ciBuild: Provider<Boolean> = providers.environmentVariable("CI")
     .map { it.equals("true", ignoreCase = true) }
     .orElse(false)
 
+tasks.withType<XtcRunTask>().configureEach {
+    if (ciBuild.get()) {
+        // Keep CI console output focused on Gradle/task status and plugin success/failure summaries.
+        // Capture bulk module stdout per task to build/logs/<task>-stdout.log while still leaving stderr
+        // attached for failures. Also disable task-level verbose launcher chatter in CI.
+        verbose = false
+        stdoutPath(layout.buildDirectory.file("logs/${name}-stdout.log"))
+    }
+}
+
 /**
  * This is the manualTests project.
  *
@@ -477,12 +487,6 @@ val testModuleNames = listOf(
 val runParallel by tasks.registering(XtcRunTask::class) {
     group = "application"
     description = "Run all known tests in parallel through the parallel test runner."
-    if (ciBuild.get()) {
-        // CI produces a very large amount of successful xunit/test-runner stdout.
-        // Capture that firehose to a file so the console keeps the Gradle task outcome,
-        // the per-module SUCCESS/FAILURE summary, and any stderr/failure signal.
-        stdoutPath(layout.buildDirectory.file("logs/runParallel-stdout.log"))
-    }
     module {
         verbose = false
         moduleName = "Runner"

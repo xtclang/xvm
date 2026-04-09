@@ -7,32 +7,36 @@ module Runner {
     @Inject Console console;
 
     void run(String[] modules=[]) {
-        Tuple<Future, ConsoleBuffer>?[] results =
+        Tuple<Future, ConsoleBuffer>[] results =
             new Array(modules.size, i -> loadAndRun(modules[i]));
-        reportResults(results, 0);
+        reportResults(results);
     }
 
-    void reportResults(Tuple<Future, ConsoleBuffer>?[] results, Int index) {
-        try {
-            while (index < results.size) {
-                Tuple<Future, ConsoleBuffer>? resultTuple = results[index++];
-                if (resultTuple != Null) {
-                    resultTuple[0].whenComplete((_, e) -> {
-                        console.print(resultTuple[1].backService.toString());
-                        if (e != Null) {
-                            console.print($"Exception during execution of module #{index}: {e}");
-                        }
-                        reportResults(results, index);
-                    });
-                return;
-                }
+    void reportResults(Tuple<Future, ConsoleBuffer>[] results) {
+        Exception? failure = Null;
+
+        for (Int index : 0 ..< results.size) {
+            (Future future, ConsoleBuffer buffer) = results[index];
+
+            future.waitForCompletion();
+            console.print(buffer.backService.toString());
+
+            try {
+                // TODO: Use get() after waiting instead of peekException(): in practice the latter
+                // hit an "Un-initialized property \"failure\"" edge case for completed module
+                // futures, while get() reliably rethrows exceptional completion and stays silent
+                // on success.
+                future.get();
+            } catch (Exception e) {
+                console.print($"Exception during execution of module #{index + 1}: {e}");
+                failure ?:= e;
             }
-        } catch (Exception e) {
-            console.print($"Failure to report results for module #{index}: {e}");
         }
+
+        throw failure?;
     }
 
-    Tuple<Future, ConsoleBuffer>? loadAndRun(String moduleName) {
+    Tuple<Future, ConsoleBuffer> loadAndRun(String moduleName) {
         @Inject("repository") ModuleRepository repository;
 
         try {
@@ -50,7 +54,7 @@ module Runner {
             }
         } catch (Exception e) {
             console.print($"Failed to run module {moduleName.quoted()}: {e.text}");
-            return Null;
+            throw e;
         }
     }
 
