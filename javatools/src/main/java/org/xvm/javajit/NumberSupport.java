@@ -331,7 +331,7 @@ public interface NumberSupport
      * @param regTarget  the register containing the target of the operation
      */
     default void buildXvmPrimitiveNeg(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
-        switch (regTarget.type().getValueString()) {
+        switch (regTarget.type().removeAccess().getValueString()) {
             case "Int128"  -> buildLongLongNeg(code, (MultipleSlot) regTarget);
             case "UInt128" -> bctx.throwUnsupported(code);
             case "Dec32" ->

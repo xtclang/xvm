@@ -7,6 +7,7 @@ import java.lang.constant.ClassDesc;
 import java.util.Arrays;
 import java.util.Objects;
 
+import org.jetbrains.annotations.NotNull;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -108,7 +109,7 @@ public record MultipleSlot(BuildContext bctx, int regId, int[] slots, int extSlo
 
     @Override
     public boolean isSingle() {
-        return false;
+        return slots.length == 1;
     }
 
     @Override
@@ -202,5 +203,14 @@ public record MultipleSlot(BuildContext bctx, int regId, int[] slots, int extSlo
             Builder.store(code, slotCds[lastIx], javaSlots[lastIx]);
         }
         return new MultipleSlot(bctx, regId, javaSlots, extSlot, flavor, type, cd, slotCds, name);
+    }
+
+    @Override
+    public String toString() {
+        return "regId="    + regId
+            + ", slots="   + Arrays.toString(slots)
+            + ", flavor="  + flavor
+            + ", type="    + type.getValueString()
+            + ", slotCds=" + Arrays.toString(slotCds);
     }
 }

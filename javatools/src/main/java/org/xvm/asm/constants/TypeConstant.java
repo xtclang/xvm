@@ -6579,7 +6579,7 @@ public abstract class TypeConstant
      * @return true iff objects of this type can be represented by a single primitive Java value
      */
     public boolean isJavaPrimitive() {
-        return false;
+        return isModifyingType() && getUnderlyingType().isJitPrimitive();
     }
 
     /**
@@ -6587,7 +6587,7 @@ public abstract class TypeConstant
      *         more Java primitive values
      */
     public boolean isXvmPrimitive() {
-        return false;
+        return isModifyingType() && getUnderlyingType().isXvmPrimitive();
     }
 
     /**

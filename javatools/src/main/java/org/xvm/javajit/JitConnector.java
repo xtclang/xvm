@@ -88,8 +88,10 @@ public class JitConnector
                 Method method = clz.getMethod("run", Ctx.class, String.class.arrayType());
                 result = method.invoke(module, ctx, asArg); // TODO create xStr args
             }
-            if (result instanceof Long lr) {
-                this.result = lr;
+            switch (result) {
+                case Long l -> this.result = l;
+                case Void _ -> this.result = 0;
+                case null, default -> {}
             }
         } catch (ClassNotFoundException | NoClassDefFoundError e) {
             e.printStackTrace(System.err);
@@ -151,5 +153,5 @@ public class JitConnector
     /**
      * The result of "main" method invocation.
      */
-    private long result = 0;
+    private long result = 1;
 }

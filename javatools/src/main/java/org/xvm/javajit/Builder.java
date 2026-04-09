@@ -1452,7 +1452,7 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_Char_subInt = MethodTypeDesc.of(CD_int,     CD_Ctx, CD_int, CD_long);
     public static final MethodTypeDesc MD_Dec32_box   = MethodTypeDesc.of(CD_Dec32,   CD_int);
     public static final MethodTypeDesc MD_Dec64_box   = MethodTypeDesc.of(CD_Dec64,   CD_long);
-    public static final MethodTypeDesc MD_Dec128_box   = MethodTypeDesc.of(CD_Dec128, CD_long, CD_long);
+    public static final MethodTypeDesc MD_Dec128_box  = MethodTypeDesc.of(CD_Dec128,  CD_long, CD_long);
     public static final MethodTypeDesc MD_Float16_box = MethodTypeDesc.of(CD_Float16, CD_float);
     public static final MethodTypeDesc MD_Float32_box = MethodTypeDesc.of(CD_Float32, CD_float);
     public static final MethodTypeDesc MD_Float64_box = MethodTypeDesc.of(CD_Float64, CD_double);

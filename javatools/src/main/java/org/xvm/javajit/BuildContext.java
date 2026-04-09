@@ -1397,7 +1397,7 @@ public class BuildContext {
             switch (srcFlavor) {
             case Specific:
                 switch (dstFlavor) {
-                case Primitive:
+                case Primitive, XvmPrimitive:
                     Builder.unbox(code, typeTo);
                     break AddTransformation;
 
@@ -1997,8 +1997,8 @@ public class BuildContext {
         }
 
         PropertyConstant propId = getConstant(propIdIndex, PropertyConstant.class);
-        if (targetReg.cd().isPrimitive()) {
-            Builder.box(code, targetReg);
+        switch (targetReg.flavor()) {
+            case Primitive, XvmPrimitive -> Builder.box(code, targetReg);
         }
         JitMethodDesc jmdGet = builder.loadProperty(code, targetReg.type(), propId);
 
@@ -2517,6 +2517,9 @@ public class BuildContext {
 
                 default:
                     Builder.loadFromContext(code, cdRet, pdRet.altIndex);
+                    if (!cdRet.isPrimitive()) {
+                        code.checkcast(cdRet);
+                    }
                     break;
                 }
             }
@@ -2591,6 +2594,8 @@ public class BuildContext {
      */
     public void adjustIntValue(CodeBuilder code, TypeConstant type) {
         switch (type.getSingleUnderlyingClass(false).getName()) {
+            case "Bit"    -> code.i2b().ldc(0x01).iand();
+            case "Nibble" -> code.i2b().ldc(0x0F).iand();
             case "Int8"   -> code.i2b();
             case "UInt8"  -> code.ldc(0xFF).iand();
             case "Int16"  -> code.i2s();
@@ -2598,8 +2603,6 @@ public class BuildContext {
             case "Int32",
                  "UInt32",
                  "Char"   -> {}
-            case "Bit"    -> code.i2b().ldc(0x01).iand();
-            case "Nibble" -> code.i2b().ldc(0x0F).iand();
             default       -> throw new IllegalStateException();
         }
     }

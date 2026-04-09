@@ -1906,7 +1906,7 @@ public class TerminalTypeConstant
         if (isSingleDefiningConstant() && getDefiningConstant() instanceof ClassConstant id
                 && id.getModuleConstant().isEcstasyModule()) {
             return switch (id.getName()) {
-                case "Bit", "Nibble",
+                case "Bit", "Nibble", "Byte",
                      "Int8",  "Int16",  "Int32",  "Int64",
                      "UInt8", "UInt16", "UInt32", "UInt64",
                      "Float16", "Float32", "Float64",

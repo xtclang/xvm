@@ -2133,9 +2133,12 @@ public class CommonBuilder
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
         "Boolean", "Ordered",
         "Orderable",
-        "Float64",
+        "Float",
+//        "Dec32", "Dec64", // need to change to SingleSlot
+//        "UInt",     // depends on GP_DIVREM
+//        "FPNumber", // depends on Bit support
+//        "Int",      // depends on "switch" implementation
 //        "StringBuffer",
-//        "Int64",
         "Array",
         "TerminalConsole",
     };
