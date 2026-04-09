@@ -124,6 +124,7 @@ jobs:
               with:
                   fetch-depth: 0  # Need full history for path filtering
                   show-progress: true
+                  persist-credentials: false
 
             - name: Check for lang-related changes
               id: changes
