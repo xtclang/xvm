@@ -7,36 +7,44 @@ module Runner {
     @Inject Console console;
 
     void run(String[] modules=[]) {
-        Tuple<Future, ConsoleBuffer>[] results =
+        Tuple<String, Future, ConsoleBuffer>[] results =
             new Array(modules.size, i -> loadAndRun(modules[i]));
-        reportResults(results);
+        @Future Tuple done;
+        reportResults(results, 0, &done);
+        return done;
     }
 
-    void reportResults(Tuple<Future, ConsoleBuffer>[] results) {
-        Exception? failure = Null;
-
-        for (Int index : 0 ..< results.size) {
-            (Future future, ConsoleBuffer buffer) = results[index];
-
-            future.waitForCompletion();
-            console.print(buffer.backService.toString());
-
-            try {
-                // TODO: Use get() after waiting instead of peekException(): in practice the latter
-                // hit an "Un-initialized property \"failure\"" edge case for completed module
-                // futures, while get() reliably rethrows exceptional completion and stays silent
-                // on success.
-                future.get();
-            } catch (Exception e) {
-                console.print($"Exception during execution of module #{index + 1}: {e}");
-                failure ?:= e;
-            }
+    void reportResults(Tuple<String, Future, ConsoleBuffer>[] results, Int index, Future<Tuple> done) {
+        if (index >= results.size) {
+            done.complete(());
+            return;
         }
 
-        throw failure?;
+        (String moduleName, Future future, ConsoleBuffer buffer) = results[index];
+        future.whenComplete((_, e) -> {
+            console.print(buffer.backService.toString());
+
+            if (e != Null) {
+                console.print($"Exception during execution of module {moduleName.quoted()} (#{index + 1}): {e}");
+
+                String[] abandoned = new String[];
+                for (Int pending : index + 1 ..< results.size) {
+                    (String pendingModule, Future ignoredFuture, ConsoleBuffer ignoredBuffer) = results[pending];
+                    abandoned.add(pendingModule);
+                }
+                if (!abandoned.empty) {
+                    console.print($"Abandoning remaining modules after failure in {moduleName.quoted()}: {abandoned}");
+                }
+
+                done.completeExceptionally(e);
+                return;
+            }
+
+            reportResults(results, index + 1, done);
+        });
     }
 
-    Tuple<Future, ConsoleBuffer> loadAndRun(String moduleName) {
+    Tuple<String, Future, ConsoleBuffer> loadAndRun(String moduleName) {
         @Inject("repository") ModuleRepository repository;
 
         try {
@@ -50,7 +58,7 @@ module Runner {
             buffer.print($"++++++ Loading module: {moduleName} +++++++\n");
             using (new Timeout(Duration:1m)) {
                 @Future Tuple result = container.invoke("run", ());
-                return (&result, buffer);
+                return (moduleName, &result, buffer);
             }
         } catch (Exception e) {
             console.print($"Failed to run module {moduleName.quoted()}: {e.text}");
