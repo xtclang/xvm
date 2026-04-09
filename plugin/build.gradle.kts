@@ -53,6 +53,7 @@ tasks.processResources {
 }
 
 private val pprefix = "org.xtclang"
+private val pluginJavaLint = xdkProperties.boolean("$pprefix.plugin.java.lint", false)
 
 // Plugin metadata - resolved at configuration time (acceptable for static plugin metadata)
 private val pluginIdValue: String = xdkProperties.stringValue("$pprefix.plugin.id")
@@ -126,10 +127,11 @@ tasks.withType<Javadoc>().configureEach {
     // TODO: Write JavaDocs for plugin.
 }
 
-// Enable overriding lint warnings specifically for the plugin project.
-// TODO: Should be global default, but javatools has many linting errors.
 tasks.withType<JavaCompile>().configureEach {
-    options.compilerArgs.add("-Xlint:all")
+    inputs.property("pluginJavaLint", pluginJavaLint)
+    if (pluginJavaLint.get()) {
+        options.compilerArgs.add("-Xlint:all")
+    }
 }
 
 tasks.withType<Jar>().configureEach {
