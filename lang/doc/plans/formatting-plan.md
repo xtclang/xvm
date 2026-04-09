@@ -1,5 +1,9 @@
 # Implementation Plan: LSP `textDocument/onTypeFormatting` for XTC
 
+> Historical design note. The canonical current-status document for formatting is
+> [`document-formatting-plan.md`](./document-formatting-plan.md). This file is kept for
+> detailed design rationale and phased implementation notes.
+
 ## Overview
 
 This plan describes how to implement on-type formatting in the XTC language server. The feature auto-adjusts indentation as the developer types, providing immediate feedback for `\n` (Enter), `}` (closing brace), and `;` (statement end). The implementation uses tree-sitter AST context from the `TreeSitterAdapter` to determine correct indentation levels.
@@ -116,7 +120,7 @@ data class XtcFormattingConfig(
         /**
          * Create from LSP FormattingOptions (VS Code / editor fallback).
          */
-        fun fromLspOptions(options: XtcCompilerAdapter.FormattingOptions): XtcFormattingConfig {
+        fun fromLspOptions(options: Adapter.FormattingOptions): XtcFormattingConfig {
             return DEFAULT.copy(
                 indentSize = if (options.insertSpaces) options.tabSize else DEFAULT.indentSize,
                 insertSpaces = options.insertSpaces,
@@ -195,8 +199,8 @@ The plumbing is already in place:
 | Component | File | Status |
 |-----------|------|--------|
 | LSP handler | `XtcLanguageServer.kt:1306` | Complete -- delegates to adapter |
-| Adapter interface | `XtcCompilerAdapter.kt:883` | Complete -- `onTypeFormatting()` signature defined |
-| Base adapter stub | `AbstractXtcCompilerAdapter.kt:366` | Returns `emptyList()` with `NOT IMPLEMENTED` warning |
+| Adapter interface | `Adapter.kt:883` | Complete -- `onTypeFormatting()` signature defined |
+| Base adapter stub | `AbstractAdapter.kt:366` | Returns `emptyList()` with `NOT IMPLEMENTED` warning |
 | Capability registration | `XtcLanguageServer.kt:337-393` | Commented out -- needs `DocumentOnTypeFormattingOptions` |
 | Client-side wiring | LSP4IJ | Built-in handlers activate automatically when server advertises the capability |
 
@@ -252,7 +256,7 @@ td?.onTypeFormatting?.let { "onTypeFormatting" }, // treesitter: auto-indent
 
 ### 2. Override `onTypeFormatting` in TreeSitterAdapter.kt
 
-Replace the inherited stub from `AbstractXtcCompilerAdapter` with a real implementation. This is the core of the feature.
+Replace the inherited stub from `AbstractAdapter` with a real implementation. This is the core of the feature.
 
 #### Method Signature
 
@@ -262,8 +266,8 @@ override fun onTypeFormatting(
     line: Int,
     column: Int,
     ch: String,
-    options: XtcCompilerAdapter.FormattingOptions,
-): List<XtcCompilerAdapter.TextEdit>
+    options: Adapter.FormattingOptions,
+): List<Adapter.TextEdit>
 ```
 
 **Parameter semantics from LSP spec:**
@@ -373,11 +377,11 @@ private fun makeIndentEdit(
     line: Int,
     currentIndent: Int,
     desiredIndent: Int,
-): XtcCompilerAdapter.TextEdit {
-    return XtcCompilerAdapter.TextEdit(
-        range = XtcCompilerAdapter.Range(
-            start = XtcCompilerAdapter.Position(line, 0),
-            end = XtcCompilerAdapter.Position(line, currentIndent),
+): Adapter.TextEdit {
+    return Adapter.TextEdit(
+        range = Adapter.Range(
+            start = Adapter.Position(line, 0),
+            end = Adapter.Position(line, currentIndent),
         ),
         newText = " ".repeat(desiredIndent),
     )
@@ -505,8 +509,8 @@ override fun onTypeFormatting(
     line: Int,
     column: Int,
     ch: String,
-    options: XtcCompilerAdapter.FormattingOptions,
-): List<XtcCompilerAdapter.TextEdit> {
+    options: Adapter.FormattingOptions,
+): List<Adapter.TextEdit> {
     val tree = parsedTrees[uri]
     if (tree == null) {
         logger.info("onTypeFormatting: no parsed tree for {}", uri.substringAfterLast('/'))
@@ -533,7 +537,7 @@ private fun handleEnter(
     line: Int,
     column: Int,
     config: XtcFormattingConfig,
-): List<XtcCompilerAdapter.TextEdit> {
+): List<Adapter.TextEdit> {
     val source = tree.source
     val lines = source.split("\n")
 
@@ -592,7 +596,7 @@ private fun handleCloseBrace(
     line: Int,
     column: Int,
     config: XtcFormattingConfig,
-): List<XtcCompilerAdapter.TextEdit> {
+): List<Adapter.TextEdit> {
     val source = tree.source
     val lines = source.split("\n")
     if (line < 0 || line >= lines.size) return emptyList()
@@ -929,7 +933,7 @@ The `onTypeFormatting` handler is called on every keystroke for trigger characte
 4. ~~Parse config response and store as `XtcFormattingConfig` on both the server and adapter~~
 5. ~~Update `didChangeConfiguration` handler to re-request config from the client~~
 6. ~~Update `XtcFormattingConfig.resolve()` to accept editor config: editor config > LSP options > defaults~~
-7. ~~Add `editorFormattingConfig` property to `XtcCompilerAdapter` interface and `TreeSitterAdapter`~~
+7. ~~Add `editorFormattingConfig` property to `Adapter` interface and `TreeSitterAdapter`~~
 8. ~~Write round-trip integration tests (`FormattingConfigRoundTripTest.kt` — 10 tests)~~
 
 **Phase 4: Project Config File (`xtc-format.toml`)**
@@ -983,7 +987,7 @@ The `onTypeFormatting` handler is called on every keystroke for trigger characte
 | `lang/intellij-plugin/.../XtcIntelliJLanguage.kt` | Changed ID from `"xtc"` to `"Ecstasy"` (TextMate collision fix) |
 | `lang/lsp-server/.../server/XtcLanguageServer.kt` | Added `initialized()` callback, `requestFormattingConfig()`, `editorFormattingConfig` field; updated `didChangeConfiguration` to re-request config |
 | `lang/lsp-server/.../adapter/XtcFormattingConfig.kt` | Updated `resolve()` to accept optional `editorConfig` parameter (editor config > LSP options > defaults) |
-| `lang/lsp-server/.../adapter/XtcCompilerAdapter.kt` | Added `editorFormattingConfig` property with default null |
+| `lang/lsp-server/.../adapter/Adapter.kt` | Added `editorFormattingConfig` property with default null |
 | `lang/lsp-server/.../adapter/TreeSitterAdapter.kt` | Implemented `editorFormattingConfig` property; passes it to `XtcFormattingConfig.resolve()` |
 | `lang/lsp-server/src/test/.../server/FormattingConfigRoundTripTest.kt` | New — 10 round-trip tests verifying config flows from client → server → formatting |
 
@@ -997,5 +1001,5 @@ The `onTypeFormatting` handler is called on every keystroke for trigger characte
 
 | File | Reason |
 |------|--------|
-| `AbstractXtcCompilerAdapter.kt` | Stub remains as fallback for other adapter implementations |
+| `AbstractAdapter.kt` | Stub remains as fallback for other adapter implementations |
 | `language-configuration.json` | TextMate indentation rules remain unchanged as fallback for editors without LSP |

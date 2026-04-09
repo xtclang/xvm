@@ -13,9 +13,14 @@
 | Document | Description |
 |----------|-------------|
 | [PLAN_TREE_SITTER](./PLAN_TREE_SITTER.md) | Tree-sitter integration — all phases complete |
-| [existing-tree-sitter-functionality-missing](./existing-tree-sitter-functionality-missing.md) | 9 tree-sitter improvements — all done, shared adapter extracted |
-| [document-formatting-plan](./document-formatting-plan.md) | AST-aware document formatting — implemented |
-| [formatting-plan](./formatting-plan.md) | On-type formatting with config architecture — implemented |
+| [existing-tree-sitter-functionality-missing](./existing-tree-sitter-functionality-missing.md) | Current tree-sitter implemented-vs-remaining gap summary |
+| [document-formatting-plan](./document-formatting-plan.md) | Canonical current-status doc for formatting |
+
+## Retained Design Notes
+
+| Document | Description |
+|----------|-------------|
+| [formatting-plan](./formatting-plan.md) | Historical detailed design/rationale for on-type formatting and config architecture |
 
 ## Summary Docs
 

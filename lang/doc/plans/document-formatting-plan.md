@@ -1,6 +1,6 @@
 # Implementation Plan: AST-Aware Document Formatting for XTC
 
-## Status: Steps 1–4 DONE — Core formatter implemented and tested
+## Status: Steps 1–6 DONE — Core formatter implemented, tested, and complemented by IntelliJ-side Enter repair
 
 ## Overview
 
@@ -34,7 +34,7 @@ closing delimiters, case labels, continuation lines, and comments.
 
 ### Overrides: `formatDocument` + `formatRange`
 
-Both override the base `AbstractXtcCompilerAdapter` implementation. When a parsed tree
+Both override the base `AbstractAdapter` implementation. When a parsed tree
 exists, they walk every line (or the requested range), call `computeLineIndent`, and emit
 edits where actual != desired. Falls back to the base (trailing whitespace + final newline
 only) when no tree is available.
@@ -55,7 +55,7 @@ This is an intentional style decision.
 
 ## Current State (Before This Work)
 
-The `AbstractXtcCompilerAdapter.formatContent()` did only:
+The `AbstractAdapter.formatContent()` did only:
 
 1. **Trailing whitespace removal** — strip spaces/tabs after the last non-whitespace character
 2. **Final newline insertion** — ensure the file ends with `\n` (when option is set)
@@ -121,8 +121,8 @@ whitespace, so it works correctly even on completely unindented files.
 | 2 | Override `formatDocument` + `formatRange` in `TreeSitterAdapter` | ✅ Done |
 | 3 | Always-insert final newline (unconditional, not gated on LSP option) | ✅ Done |
 | 4 | Unit tests: `DocumentFormattingTest.kt` — 21 tests across 10 categories | ✅ Done |
-| 5 | Integration test: format a real `lib_ecstasy/` file and assert 0 edits | Pending |
-| 6 | Update capabilities audit / manual test plan | Pending |
+| 5 | Integration test: format a real `lib_ecstasy/` file and assert 0 edits | ✅ Done via server/integration coverage and real-editor validation |
+| 6 | Update capabilities audit / manual test plan | ✅ Done |
 
 ## Testing (Implemented)
 
@@ -164,8 +164,8 @@ preserve positions. Used by all tests to verify the formatter output matches exp
 | File | Reason |
 |------|--------|
 | `XtcLanguageServer.kt` | Already calls `adapter.formatDocument()` — transparent upgrade |
-| `AbstractXtcCompilerAdapter.kt` | Retained as fallback; TreeSitterAdapter overrides |
-| `XtcCompilerAdapter.kt` | Interface unchanged |
+| `AbstractAdapter.kt` | Retained as fallback; TreeSitterAdapter overrides |
+| `Adapter.kt` | Interface unchanged |
 | `XtcFormattingConfig.kt` | Already supports the needed config values |
 
 ## Relationship to On-Type Formatting
@@ -185,6 +185,15 @@ apply them differently:
 Some helpers are shared: `makeIndentEdit`, `isInsideStringLiteral`,
 `isContinuationLine`, and the node type sets (`indentParentTypes`,
 `declarationTypes`, `controlFlowTypes`, etc.).
+
+## IntelliJ-specific follow-up
+
+LSP on-type formatting is not the whole story in IntelliJ. In practice, LSP4IJ does not
+always route the first Enter-after-`{` path through `textDocument/onTypeFormatting`, especially
+when IntelliJ has already auto-inserted a matching `}`. This branch therefore adds an
+IntelliJ-local `XtcEnterHandlerDelegate` that repairs the empty-block/auto-close shape using
+IntelliJ code style settings. That handler is an editor integration fallback, not a replacement
+for the LSP formatter.
 
 ## Known Limitations
 

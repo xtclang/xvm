@@ -16,38 +16,14 @@ specific APIs or data structures needed.
 
 ---
 
-## Quick Reference: Current State
+## Current State
 
-### Advertised LSP Capabilities (XtcLanguageServer.buildServerCapabilities)
+For the canonical current implementation matrix, use
+[`PLAN_IDE_INTEGRATION.md`](./PLAN_IDE_INTEGRATION.md).
 
-| Capability | Advertised | Implementation | Tier for "Done" |
-|------------|-----------|----------------|-----------------|
-| textDocumentSync (Full) | Yes | Full reparse on every change | 1 (incremental in T2) |
-| completionProvider | Yes | Keywords + built-ins + same-file symbols + imports | 1+ (member completion in T2) |
-| hoverProvider | Yes | Symbol name + kind + type signature | 1+ (type info in T2) |
-| definitionProvider | Yes | Same-file + cross-file via workspace index | 1+ (semantic in T2) |
-| referencesProvider | Yes | Same-file text matching + cross-file index | 1+ (scope-aware in T2) |
-| documentSymbolProvider | Yes | Tree-sitter query extraction | 1 (done) |
-| documentHighlightProvider | Yes | Same-file text matching | 1+ (scope-aware in T2) |
-| documentFormattingProvider | Yes | AST-aware re-indentation | 1 (done) |
-| documentRangeFormattingProvider | Yes | AST-aware range re-indentation | 1 (done) |
-| documentOnTypeFormattingProvider | Yes | Auto-indent on Enter, }, ), ; | 1 (done) |
-| codeActionProvider | Yes | Organize imports | 1+ (more actions in T2) |
-| renameProvider + prepare | Yes | Same-file text-based rename | 1+ (scope-aware in T2) |
-| foldingRangeProvider | Yes | Declaration + comment + import folding | 1 (done) |
-| selectionRangeProvider | Yes | AST-based expand/shrink selection | 1 (done) |
-| signatureHelpProvider | Yes | Same-file method parameter info | 1+ (cross-file in T2) |
-| semanticTokensProvider | Yes | 10 token types, 4 modifiers | 1 (done) |
-| documentLinkProvider | Yes | Import statement highlighting | 1 (done) |
-| inlayHintProvider | Yes | Stub (returns empty) | 2 |
-| declarationProvider | No | Stub (returns null) | 2 |
-| typeDefinitionProvider | No | Stub (returns null) | 2 |
-| implementationProvider | No | Stub (returns empty) | 2 |
-| typeHierarchyProvider | No | Stub | 2 |
-| callHierarchyProvider | No | Stub | 2 |
-| codeLensProvider | No | Stub | 2-3 |
-| linkedEditingRangeProvider | No | Stub | 2 |
-| workspaceSymbolProvider | Yes | Cross-file fuzzy search via WorkspaceIndex | 1 (done) |
+This document is intentionally narrower: it explains which remaining capabilities belong to
+the tree-sitter tier, which ones fit a future semantic-model tier, and which truly require
+full compiler/runtime integration.
 
 ---
 

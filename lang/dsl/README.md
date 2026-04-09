@@ -663,10 +663,10 @@ All three IDEs connect to the same LSP server, which lives in `lang/lsp-server/s
 | File                          | Purpose                                          |
 |-------------------------------|--------------------------------------------------|
 | `XtcLanguageServer.kt`        | Main server implementing LSP protocol (includes document and workspace services) |
-| `XtcCompilerAdapter.kt`       | Interface to actual XTC compiler                 |
-| `AbstractXtcCompilerAdapter.kt` | Abstract base class with default "not yet implemented" stubs |
+| `Adapter.kt`                 | Core adapter interface for LSP backends          |
+| `AbstractAdapter.kt`         | Abstract base class with default "not yet implemented" stubs |
 | `TreeSitterAdapter.kt`        | Syntax-aware adapter using tree-sitter           |
-| `MockXtcCompilerAdapter.kt`   | Regex-based adapter for testing and fallback      |
+| `MockAdapter.kt`             | Regex-based adapter for testing and fallback     |
 
 ### LSP Capabilities Provided
 
