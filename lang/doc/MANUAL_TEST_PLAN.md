@@ -57,6 +57,10 @@ Requires `JAVA_HOME` or `XTC_JAVA_HOME` pointing to Java 25+.
    - `"Selected adapter: MockAdapter"` - Mock adapter is active
    - `"Selected adapter: MockAdapter (fallback - ...)"` - Tree-sitter failed
 4. Also verify: `"semantic tokens ENABLED (23 types, 10 modifiers)"` in the log
+5. For IntelliJ plugin runs from this repo, also verify the startup command line in the IDE log:
+   - `XTC LSP command configured`
+   - `-Dxtc.lsp.semanticTokens=true`
+   This confirms you are exercising the branch's semantic-token path rather than a stale fallback.
 
 **VS Code:**
 1. Open Output panel (Ctrl+Shift+U / Cmd+Shift+U)
@@ -114,6 +118,8 @@ module TestModule {
 | 1.3 | Strings | Add `"hello"` literal | String color |
 | 1.4 | Comments | Add `// comment` and `/* block */` | Comment color |
 | 1.5 | Numbers | Add `42`, `3.14` | Number color |
+| 1.6 | Editor color scheme sanity | Open a `.x` file in IntelliJ | Editor background matches the active theme (not a solid white fallback) |
+| 1.7 | TextMate + semantic token layering | Open a `.x` file with types, methods, and annotations | Base TextMate colors remain sane; semantic tokens refine symbols instead of washing out the theme |
 
 **Note:** Semantic tokens Tier 1 (declaration-site classification, type refs, annotations, calls) is implemented. Tier 2+ (distinguishing field vs local vs parameter at usage sites) requires compiler integration.
 
@@ -403,6 +409,14 @@ character. No manual action needed.
 | 13a.16 | Indented doc comment | Inside a class (indent 4), type `/**` then Enter | New line gets `     * ` (4 spaces + ` * `) |
 | 13a.17 | Block comment continuation | Type `/*` then Enter | New line gets ` * ` prefix |
 | 13a.18 | No continuation after `*/` | Press Enter after a `*/` line | Normal indentation (no ` * ` prefix) |
+| 13a.19 | IntelliJ auto-close brace skeleton | In IntelliJ, type `void bepa() {` and press Enter | Creates an indented blank body line and leaves the auto-inserted `}` aligned with `void`, not under the method name |
+| 13a.20 | Repeated Enter inside fresh method | After 13a.19, press Enter again on the blank body line | Next line stays at method-body indent instead of drifting to 8/12 spaces |
+
+**High-value log checks while running 13a tests:**
+- `textDocument/onTypeFormatting: ... ch='\n'`
+- `onTypeFormatting[enter]: ... reason=... desiredIndent=... currentIndent=...`
+- `textDocument/onTypeFormatting: 1 edits [...]`
+- For IntelliJ auto-close skeleton cases: `onTypeFormatting[enter]: auto-close skeleton ... bodyIndent=... closingIndent=...`
 
 ---
 
@@ -454,6 +468,7 @@ these settings for on-type formatting when no project-level `xtc-format.toml` is
 | 13c.4 | Nested indent with custom config | Set indent to 3, type class inside module, then method, press Enter after `{` | Indent at 9 (3 * 3 levels) |
 | 13c.5 | No TextMate interference | Open a `.x` file with custom indent | Syntax highlighting works normally (no white background, correct colors) |
 | 13c.6 | VS Code fallback | Open same project in VS Code with `editor.tabSize: 2` | On-type formatting uses 2-space indent from LSP FormattingOptions |
+| 13c.7 | Auto-close brace honors custom indent | Set indent to 2, type `void foo() {` then Enter in IntelliJ | Blank body line indents to 4 spaces and the auto-inserted `}` aligns to 2 spaces |
 
 **How to restart the LSP server** (to pick up changed Code Style settings):
 - *IntelliJ:* Open the LSP4IJ Language Servers panel → right-click "XTC Language Server" → Restart
@@ -511,6 +526,22 @@ If settings don't update immediately, restart the server as a workaround.
 ---
 
 ## Troubleshooting
+
+### IntelliJ Theme / Sandbox Looks Wrong
+
+If IntelliJ suddenly shows `.x` files with a white fallback background, washed-out colors,
+or obviously stale plugin behavior:
+
+```bash
+./gradlew --stop
+rm -rf lang/.intellijPlatform/sandbox
+rm -rf lang/.intellijPlatform/localPlatformArtifacts
+```
+
+Then rerun `:lang:intellij-plugin:runIde`.
+
+This should not be required for normal development, but it is a useful reset when plugin
+auto-reload or stale sandbox state has clearly contaminated the test run.
 
 ### Tree-sitter Not Loading
 

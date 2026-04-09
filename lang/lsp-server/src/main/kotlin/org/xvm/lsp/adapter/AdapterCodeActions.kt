@@ -65,10 +65,22 @@ class AdapterCodeActions {
         indexReady: Boolean,
     ): List<CodeAction> =
         buildList {
-            buildOrganizeImportsAction(tree, uri)?.let { add(it) }
-            addAll(buildRemoveUnusedImportActions(uri, queryData))
-            addAll(buildGenerateDocCommentActions(tree, uri, range, queryData.declarations))
-            addAll(buildAutoImportActions(tree, uri, queryData, workspaceIndex, indexReady))
+            buildOrganizeImportsAction(tree, uri)?.let {
+                logger.info("getCodeActions: adding organize-imports action")
+                add(it)
+            } ?: logger.info("getCodeActions: organize-imports not applicable")
+
+            val removeUnused = buildRemoveUnusedImportActions(uri, queryData)
+            logger.info("getCodeActions: remove-unused-import candidates={}", removeUnused.map { it.title })
+            addAll(removeUnused)
+
+            val docComments = buildGenerateDocCommentActions(tree, uri, range, queryData.declarations)
+            logger.info("getCodeActions: doc-comment candidates={}", docComments.map { it.title })
+            addAll(docComments)
+
+            val autoImports = buildAutoImportActions(tree, uri, queryData, workspaceIndex, indexReady)
+            logger.info("getCodeActions: auto-import candidates={}", autoImports.map { it.title })
+            addAll(autoImports)
         }.also {
             logger.info("getCodeActions -> {} actions", it.size)
         }
@@ -78,11 +90,17 @@ class AdapterCodeActions {
         uri: String,
     ): CodeAction? {
         val importNodes = tree.root.children.filter { it.type == "import_statement" }
-        if (importNodes.size < 2) return null
+        if (importNodes.size < 2) {
+            logger.info("getCodeActions: organize-imports skipped, import count={}", importNodes.size)
+            return null
+        }
 
         val sortedTexts = importNodes.map { it.text }.sorted()
         val currentTexts = importNodes.map { it.text }
-        if (sortedTexts == currentTexts) return null
+        if (sortedTexts == currentTexts) {
+            logger.info("getCodeActions: organize-imports skipped, imports already sorted")
+            return null
+        }
 
         val firstImport = importNodes.first()
         val lastImport = importNodes.last()
@@ -106,10 +124,18 @@ class AdapterCodeActions {
             val allOccurrences = queryData.findIdentifiers(simpleName)
             // If the name appears only in the import itself (or not at all), it's unused
             val usagesOutsideImport = allOccurrences.count { it.startLine != loc.startLine }
-            if (usagesOutsideImport > 0) return@mapNotNull null
+            if (usagesOutsideImport > 0) {
+                logger.info(
+                    "getCodeActions: import '{}' kept, usagesOutsideImport={}",
+                    simpleName,
+                    usagesOutsideImport,
+                )
+                return@mapNotNull null
+            }
 
             val deleteRange = Range(Position(loc.startLine, 0), Position(loc.startLine + 1, 0))
             val edit = WorkspaceEdit(mapOf(uri to listOf(TextEdit(deleteRange, ""))))
+            logger.info("getCodeActions: import '{}' marked unused at line {}", simpleName, loc.startLine)
             CodeAction("Remove unused import '$simpleName'", CodeActionKind.SOURCE, edit = edit)
         }
     }
@@ -126,12 +152,21 @@ class AdapterCodeActions {
     ): List<CodeAction> {
         val lines = tree.source.split("\n")
         val filtered = declarations.filter { it.location.startLine in range.start.line..range.end.line }
+        logger.info(
+            "getCodeActions: doc-comment scan range={}..{} declarationsInRange={}",
+            range.start.line,
+            range.end.line,
+            filtered.map { "${it.kind}:${it.name}@${it.location.startLine}" },
+        )
 
         return filtered.mapNotNull { decl ->
             val declLine = decl.location.startLine
             // Check if there is already a doc comment above
             val prevLine = if (declLine > 0) lines[declLine - 1].trimEnd() else ""
-            if (prevLine.endsWith("*/")) return@mapNotNull null
+            if (prevLine.endsWith("*/")) {
+                logger.info("getCodeActions: doc-comment skipped for '{}' at line {}, already documented", decl.name, declLine)
+                return@mapNotNull null
+            }
 
             val skeleton = buildDocSkeleton(tree, decl.kind, declLine, lines)
             val insertEdit =
@@ -203,9 +238,23 @@ class AdapterCodeActions {
 
         // Deduplicate candidate names
         val uniqueCandidates = candidates.distinct()
+        logger.info(
+            "getCodeActions: auto-import unresolvedCandidates={} knownNamesCount={}",
+            uniqueCandidates,
+            knownNames.size,
+        )
 
         return uniqueCandidates.flatMap { name ->
             val indexed = workspaceIndex.findByName(name).filter { it.kind in typeKinds }
+            logger.info(
+                "getCodeActions: auto-import lookup '{}' -> {} match(es): {}",
+                name,
+                indexed.size,
+                indexed.map { it.qualifiedName },
+            )
+            if (indexed.isEmpty()) {
+                logger.info("getCodeActions: no indexed candidates available for unresolved type '{}'", name)
+            }
             indexed.map { symbol ->
                 val importText = "import ${symbol.qualifiedName};"
                 val insertLine = findImportInsertLine(tree)

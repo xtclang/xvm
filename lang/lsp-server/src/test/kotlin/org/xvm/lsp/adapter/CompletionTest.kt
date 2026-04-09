@@ -185,5 +185,34 @@ class CompletionTest : TreeSitterTestBase() {
             assertThat(completions).anyMatch { it.label == "parse" }
             assertThat(completions).anyMatch { it.label == "tokenize" }
         }
+
+        @Test
+        @DisplayName("should include visible names and control-flow keywords in method body")
+        fun shouldIncludeBodyContextSuggestions() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Calculator {
+                        Int add(Int a, Int b) {
+                            return a + b;
+                        }
+
+                        void bepa5() {
+
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            val completions = logged("shouldIncludeBodyContextSuggestions", ts.getCompletions(uri, 7, 8))
+            logger.info("  completion labels: {}", completions.take(20).map { it.label })
+
+            assertThat(completions).anyMatch { it.label == "add" }
+            assertThat(completions).anyMatch { it.label == "bepa5" }
+            assertThat(completions).anyMatch { it.label == "return" }
+            assertThat(completions).anyMatch { it.label == "this" }
+        }
     }
 }

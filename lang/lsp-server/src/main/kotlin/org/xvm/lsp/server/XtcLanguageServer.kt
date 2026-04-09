@@ -1,5 +1,7 @@
 package org.xvm.lsp.server
 
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import org.eclipse.lsp4j.CallHierarchyIncomingCall
 import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
 import org.eclipse.lsp4j.CallHierarchyItem
@@ -150,6 +152,8 @@ class XtcLanguageServer(
 
     companion object {
         private val logger = LoggerFactory.getLogger(XtcLanguageServer::class.java)
+        private const val SEMANTIC_TOKENS_SYSTEM_PROPERTY = "xtc.lsp.semanticTokens"
+        private const val SEMANTIC_TOKENS_ENV = "XTC_LSP_SEMANTIC_TOKENS"
 
         private fun loadBuildInfo(): Properties =
             Properties().apply {
@@ -160,7 +164,12 @@ class XtcLanguageServer(
     private val buildInfo = loadBuildInfo()
     private val version = buildInfo.getProperty("lsp.version", "?")
     private val buildTime = buildInfo.getProperty("lsp.build.time", "?")
-    private val semanticTokensEnabled = buildInfo.getProperty("lsp.semanticTokens", "true").toBoolean()
+    private val semanticTokensEnabled =
+        (
+            System.getProperty(SEMANTIC_TOKENS_SYSTEM_PROPERTY)
+                ?: System.getenv(SEMANTIC_TOKENS_ENV)
+                ?: buildInfo.getProperty("lsp.semanticTokens", "true")
+        ).toBoolean()
 
     /**
      * Editor-provided formatting configuration, received via `workspace/configuration`.
@@ -260,29 +269,127 @@ class XtcLanguageServer(
     fun requestFormattingConfig() {
         val c = client ?: return
         val item = ConfigurationItem().apply { section = "xtc.formatting" }
+        logger.info("workspace/configuration: requesting section='{}'", item.section)
         c
             .configuration(ConfigurationParams(listOf(item)))
             .thenAccept { results ->
+                logger.info("workspace/configuration: raw response={}", results)
                 val config = results?.firstOrNull()
-                if (config is Map<*, *>) {
-                    val formattingConfig =
-                        FormattingConfig(
-                            indentSize = (config["indentSize"] as? Number)?.toInt() ?: 4,
-                            continuationIndentSize = (config["continuationIndentSize"] as? Number)?.toInt() ?: 8,
-                            insertSpaces = config["insertSpaces"] as? Boolean ?: true,
-                            maxLineWidth = (config["maxLineWidth"] as? Number)?.toInt() ?: 120,
-                        )
+                val formattingConfig = parseFormattingConfig(config)
+                if (formattingConfig != null) {
                     editorFormattingConfig = formattingConfig
                     adapter.editorFormattingConfig = formattingConfig
-                    logger.info("workspace/configuration: editor formatting config: {}", formattingConfig)
+                    logger.info(
+                        "workspace/configuration: effective formatting config from client -> {} (fallback if absent would be request LSP FormattingOptions, then defaults)",
+                        formattingConfig,
+                    )
                 } else {
-                    logger.info("workspace/configuration: no formatting config from client (using defaults)")
+                    logger.info(
+                        "workspace/configuration: no usable formatting config from client (type={}); effective config will come from per-request LSP FormattingOptions or XTC defaults",
+                        config?.javaClass?.name ?: "null",
+                    )
                 }
             }.exceptionally { ex ->
                 logger.warn("initialized: failed to get formatting config: {}", ex.message)
                 null
             }
     }
+
+    private fun parseFormattingConfig(raw: Any?): FormattingConfig? {
+        val map =
+            when (raw) {
+                is Map<*, *> -> {
+                    raw
+                }
+
+                is JsonObject -> {
+                    raw.entrySet().associate { it.key to it.value }
+                }
+
+                is JsonElement -> {
+                    raw
+                        .takeIf { it.isJsonObject }
+                        ?.asJsonObject
+                        ?.entrySet()
+                        ?.associate { it.key to it.value }
+                }
+
+                else -> {
+                    null
+                }
+            } ?: return null
+
+        val indentSize = map.intValue("indentSize") ?: 4
+        val continuationIndentSize = map.intValue("continuationIndentSize") ?: 8
+        val insertSpaces = map.booleanValue("insertSpaces") ?: true
+        val maxLineWidth = map.intValue("maxLineWidth") ?: 120
+        val tabSize = map.intValue("tabSize")
+        logger.info(
+            "workspace/configuration: parsed config type={} indentSize={} continuationIndentSize={} tabSize={} insertSpaces={} maxLineWidth={}",
+            raw?.javaClass?.name ?: "null",
+            indentSize,
+            continuationIndentSize,
+            tabSize,
+            insertSpaces,
+            maxLineWidth,
+        )
+        return FormattingConfig(
+            indentSize = indentSize,
+            continuationIndentSize = continuationIndentSize,
+            insertSpaces = insertSpaces,
+            maxLineWidth = maxLineWidth,
+        )
+    }
+
+    private fun Map<*, *>.intValue(key: String): Int? =
+        when (val value = this[key]) {
+            is Number -> {
+                value.toInt()
+            }
+
+            is String -> {
+                value.toIntOrNull()
+            }
+
+            is JsonElement -> {
+                value.takeUnless { it.isJsonNull }?.let {
+                    when {
+                        it.isJsonPrimitive && it.asJsonPrimitive.isNumber -> it.asInt
+                        it.isJsonPrimitive && it.asJsonPrimitive.isString -> it.asString.toIntOrNull()
+                        else -> null
+                    }
+                }
+            }
+
+            else -> {
+                null
+            }
+        }
+
+    private fun Map<*, *>.booleanValue(key: String): Boolean? =
+        when (val value = this[key]) {
+            is Boolean -> {
+                value
+            }
+
+            is String -> {
+                value.toBooleanStrictOrNull()
+            }
+
+            is JsonElement -> {
+                value.takeUnless { it.isJsonNull }?.let {
+                    when {
+                        it.isJsonPrimitive && it.asJsonPrimitive.isBoolean -> it.asBoolean
+                        it.isJsonPrimitive && it.asJsonPrimitive.isString -> it.asString.toBooleanStrictOrNull()
+                        else -> null
+                    }
+                }
+            }
+
+            else -> {
+                null
+            }
+        }
 
     private fun logServerBanner() {
         val pid = ProcessHandle.current().pid()
@@ -445,7 +552,14 @@ class XtcLanguageServer(
             // Semantic tokens: enabled by default. Disable with -Plsp.semanticTokens=false if needed.
             if (semanticTokensEnabled) {
                 logger.info(
-                    "semantic tokens ENABLED ({} types, {} modifiers)",
+                    "semantic tokens ENABLED via {} ({} types, {} modifiers)",
+                    System
+                        .getProperty(SEMANTIC_TOKENS_SYSTEM_PROPERTY)
+                        ?.let { "system property $SEMANTIC_TOKENS_SYSTEM_PROPERTY=$it" }
+                        ?: System
+                            .getenv(SEMANTIC_TOKENS_ENV)
+                            ?.let { "environment $SEMANTIC_TOKENS_ENV=$it" }
+                        ?: "build property lsp.semanticTokens=${buildInfo.getProperty("lsp.semanticTokens", "true")}",
                     SemanticTokenLegend.tokenTypes.size,
                     SemanticTokenLegend.tokenModifiers.size,
                 )
@@ -459,7 +573,16 @@ class XtcLanguageServer(
                         full = Either.forLeft(true)
                     }
             } else {
-                logger.warn("semantic tokens DISABLED (set lsp.semanticTokens=true to enable)")
+                logger.warn(
+                    "semantic tokens DISABLED via {}",
+                    System
+                        .getProperty(SEMANTIC_TOKENS_SYSTEM_PROPERTY)
+                        ?.let { "system property $SEMANTIC_TOKENS_SYSTEM_PROPERTY=$it" }
+                        ?: System
+                            .getenv(SEMANTIC_TOKENS_ENV)
+                            ?.let { "environment $SEMANTIC_TOKENS_ENV=$it" }
+                        ?: "build property lsp.semanticTokens=${buildInfo.getProperty("lsp.semanticTokens", "true")}",
+                )
             }
 
             // --- Workspace features ---

@@ -66,7 +66,15 @@ class OnTypeFormattingTest {
         val uri = freshUri()
         ts.compile(uri, source)
         val edits = ts.onTypeFormatting(uri, line, column, ch, defaultOptions)
-        return if (edits.isEmpty()) -1 else edits.first().newText.length
+        return if (edits.isEmpty()) {
+            -1
+        } else {
+            edits
+                .first()
+                .newText
+                .substringBefore('\n')
+                .length
+        }
     }
 
     /**
@@ -128,6 +136,35 @@ class OnTypeFormattingTest {
                 """.trimIndent()
             val indent = formatAfterTrigger(source, line = 2, column = 0, ch = "\n")
             assertThat(indent).isEqualTo(8)
+        }
+
+        @Test
+        @DisplayName("auto-closed method brace skeleton keeps blank body line and aligned closing brace")
+        fun autoClosedMethodBraceSkeleton() {
+            val source =
+                """
+                module myapp {
+                    void foo() {
+                            }
+                }
+                """.trimIndent()
+            val edits = formatEdits(source, line = 2, column = 8, ch = "\n")
+            assertThat(edits).hasSize(1)
+            assertThat(edits.first().newText).isEqualTo("        \n    ")
+        }
+
+        @Test
+        @DisplayName("compact empty block on previous line splits into body and closing brace")
+        fun compactEmptyBlockSplitsOnEnter() {
+            val source =
+                """
+                module myapp {
+                    void foo() {}
+                }
+                """.trimIndent()
+            val edits = formatEdits(source, line = 2, column = 8, ch = "\n")
+            assertThat(edits).hasSize(1)
+            assertThat(edits.first().newText).isEqualTo("        \n    ")
         }
 
         @Test
@@ -463,7 +500,13 @@ class OnTypeFormattingTest {
                 )
             val edits = ts.onTypeFormatting(uri, line = 1, column = 0, ch = "\n", options = customOptions)
             assertThat(edits).isNotEmpty
-            assertThat(edits.first().newText.length).isEqualTo(2)
+            assertThat(
+                edits
+                    .first()
+                    .newText
+                    .substringBefore('\n')
+                    .length,
+            ).isEqualTo(2)
         }
 
         @Test

@@ -143,6 +143,19 @@ class XtcTextDocumentService(
             logger.warn("textDocument/didChange: no content changes for: {}", uri)
             return
         }
+        logger.info(
+            "textDocument/didChange: {} change(s): {}",
+            changes.size,
+            changes.joinToString(" | ") { change ->
+                val rangeText = change.range?.fmt() ?: "<full>"
+                val preview =
+                    change.text
+                        .replace("\n", "\\n")
+                        .replace("\t", "\\t")
+                        .take(80)
+                "range=$rangeText len=${change.text.length} text='$preview'"
+            },
+        )
         val content = changes.first().text
 
         logger.info("textDocument/didChange: {} ({} bytes)", uri, content.length)
@@ -203,8 +216,12 @@ class XtcTextDocumentService(
     override fun completion(params: CompletionParams): CompletableFuture<Either<List<CompletionItem>, CompletionList>> =
         supplyAsync(
             "textDocument/completion",
-            "${params.textDocument.uri} at ${params.position.fmt()}",
-            { result -> "${result.left.size} items" },
+            "${params.textDocument.uri} at ${params.position.fmt()} trigger=${params.context?.triggerKind}/${params.context?.triggerCharacter}",
+            { result ->
+                val items = result.left
+                val preview = items.take(5).joinToString { it.label }
+                "${items.size} items${if (preview.isNotEmpty()) " [$preview]" else ""}"
+            },
         ) {
             val trigger = params.context?.triggerCharacter
             val items =
@@ -237,7 +254,14 @@ class XtcTextDocumentService(
         supplyAsync(
             "textDocument/definition",
             "${params.textDocument.uri} at ${params.position.fmt()}",
-            { result -> if (result.left.isEmpty()) "no result" else "found" },
+            { result ->
+                if (result.left.isEmpty()) {
+                    "no result"
+                } else {
+                    val loc = result.left.first()
+                    "found ${loc.uri.substringAfterLast('/')}@${loc.range.start.fmt()}"
+                }
+            },
         ) {
             adapter.findDefinition(params.textDocument.uri, params.position.line, params.position.character)?.let {
                 Either.forLeft<List<Location>, List<LocationLink>>(listOf(it.toLsp()))
@@ -252,7 +276,13 @@ class XtcTextDocumentService(
         supplyAsync(
             "textDocument/references",
             "${params.textDocument.uri} at ${params.position.fmt()}",
-            { result -> "${result.size} references" },
+            { result ->
+                val preview =
+                    result.take(5).joinToString { loc ->
+                        "${loc.uri.substringAfterLast('/')}@${loc.range.start.fmt()}"
+                    }
+                "${result.size} references${if (preview.isNotEmpty()) " [$preview]" else ""}"
+            },
         ) {
             adapter
                 .findReferences(
@@ -478,7 +508,13 @@ class XtcTextDocumentService(
         supplyAsync(
             "textDocument/codeAction",
             "${params.textDocument.uri} range=${params.range.fmt()} diagnostics=${params.context.diagnostics?.size ?: 0}",
-            { result -> "${result.size} actions" },
+            { result ->
+                val titles =
+                    result.take(5).joinToString { either ->
+                        either.right?.title ?: either.left?.title ?: "<unknown>"
+                    }
+                "${result.size} actions${if (titles.isNotEmpty()) " [$titles]" else ""}"
+            },
         ) {
             val adapterDiagnostics = params.context.diagnostics.map { Diagnostic.fromLsp(params.textDocument.uri, it) }
 
@@ -520,7 +556,9 @@ class XtcTextDocumentService(
         supplyAsync(
             "textDocument/semanticTokens/full",
             params.textDocument.uri,
-            { result -> if (result == null) "no tokens" else "${result.data.size} items" },
+            { result ->
+                if (result == null) "no tokens" else "${result.data.size} items (${result.data.size / 5} tokens)"
+            },
         ) {
             adapter.getSemanticTokens(params.textDocument.uri)?.let { tokens ->
                 SemanticTokens().apply {
@@ -760,7 +798,21 @@ class XtcTextDocumentService(
         supplyAsync(
             "textDocument/onTypeFormatting",
             "${params.textDocument.uri} at ${params.position.fmt()} ch='${params.ch}'",
-            { result -> "${result.size} edits" },
+            { result ->
+                if (result.isEmpty()) {
+                    "0 edits"
+                } else {
+                    val preview =
+                        result.take(2).joinToString("; ") { edit ->
+                            val text =
+                                edit.newText
+                                    .replace("\n", "\\n")
+                                    .replace("\t", "\\t")
+                            "${edit.range.start.line}:${edit.range.start.character}-${edit.range.end.line}:${edit.range.end.character}='$text'"
+                        }
+                    "${result.size} edits [$preview]"
+                }
+            },
         ) {
             val options =
                 AdapterFormattingOptions(

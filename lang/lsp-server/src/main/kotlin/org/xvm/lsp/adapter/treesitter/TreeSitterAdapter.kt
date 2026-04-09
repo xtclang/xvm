@@ -40,6 +40,7 @@ import org.xvm.lsp.model.SymbolInfo.SymbolKind
 import org.xvm.lsp.model.isFileCreatedOrChanged
 import org.xvm.lsp.model.isFileDeleted
 import org.xvm.lsp.treesitter.SemanticTokenEncoder
+import org.xvm.lsp.treesitter.SemanticTokenLegend
 import org.xvm.lsp.treesitter.XtcNode
 import org.xvm.lsp.treesitter.XtcParser
 import org.xvm.lsp.treesitter.XtcQueryEngine
@@ -331,51 +332,66 @@ class TreeSitterAdapter : AbstractAdapter() {
         logger.info("getCompletions: uri={}, line={}, column={}, trigger={}", uri, line, column, triggerCharacter)
 
         val tree = parsedTrees[uri]
+        val contextNode =
+            tree?.nodeAt(line, maxOf(0, column - 1))
         val context =
             if (tree != null) {
-                val contextNode = tree.nodeAt(line, maxOf(0, column - 1))
                 classifyCompletionContext(contextNode, triggerCharacter)
             } else {
                 CompletionContext.DEFAULT
             }
-        logger.info("getCompletions: context={}", context)
+        logger.info(
+            "getCompletions: context={} node={} text='{}' indexReady={}",
+            context,
+            contextNode?.type,
+            contextNode?.text?.replace("\n", "\\n")?.take(60),
+            indexReady.get(),
+        )
 
         return buildList {
             when (context) {
                 CompletionContext.MEMBER -> {
                     // After '.': show members from the enclosing class body
                     if (tree != null) {
-                        addAll(collectClassMembers(tree, uri, line, column))
+                        val members = collectClassMembers(tree, uri, line, column)
+                        logger.info("getCompletions: member-context candidates={}", members.map { it.label })
+                        addAll(members)
                     }
                 }
 
                 CompletionContext.TYPE -> {
                     // In type position: only type completions (classes, interfaces, etc.)
-                    addAll(builtInTypeCompletions())
+                    val builtIns = builtInTypeCompletions()
+                    logger.info("getCompletions: type-context builtIns={}", builtIns.map { it.label })
+                    addAll(builtIns)
                     if (tree != null) {
-                        queryEngine
-                            .findAllDeclarations(tree, uri)
-                            .filter { it.kind in typeSymbolKinds }
-                            .forEach { symbol ->
-                                add(
-                                    CompletionItem(
-                                        label = symbol.name,
-                                        kind = toCompletionKind(symbol.kind),
-                                        detail = symbol.typeSignature ?: symbol.kind.name.lowercase(),
-                                        insertText = symbol.name,
-                                    ),
-                                )
-                            }
+                        val fileTypes =
+                            queryEngine
+                                .findAllDeclarations(tree, uri)
+                                .filter { it.kind in typeSymbolKinds }
+                        logger.info("getCompletions: type-context fileTypes={}", fileTypes.map { it.name })
+                        fileTypes.forEach { symbol ->
+                            add(
+                                CompletionItem(
+                                    label = symbol.name,
+                                    kind = toCompletionKind(symbol.kind),
+                                    detail = symbol.typeSignature ?: symbol.kind.name.lowercase(),
+                                    insertText = symbol.name,
+                                ),
+                            )
+                        }
                         // Add workspace index types
                         if (indexReady.get()) {
-                            addAll(workspaceIndexTypeCompletions())
+                            val workspaceTypes = workspaceIndexTypeCompletions()
+                            logger.info("getCompletions: type-context workspaceTypes(sample)={}", workspaceTypes.take(10).map { it.label })
+                            addAll(workspaceTypes)
                         }
                     }
                 }
 
                 CompletionContext.ANNOTATION -> {
                     // After '@': known annotation names
-                    addAll(
+                    val common =
                         commonAnnotations.map { name ->
                             CompletionItem(
                                 label = name,
@@ -383,11 +399,14 @@ class TreeSitterAdapter : AbstractAdapter() {
                                 detail = "annotation",
                                 insertText = name,
                             )
-                        },
-                    )
+                        }
+                    logger.info("getCompletions: annotation-context common={}", common.map { it.label })
+                    addAll(common)
                     // Also add annotations found in the current file
                     if (tree != null) {
-                        collectAnnotationNames(tree.root).forEach { name ->
+                        val fileAnnotations = collectAnnotationNames(tree.root)
+                        logger.info("getCompletions: annotation-context fileAnnotations={}", fileAnnotations)
+                        fileAnnotations.forEach { name ->
                             add(
                                 CompletionItem(
                                     label = name,
@@ -403,7 +422,13 @@ class TreeSitterAdapter : AbstractAdapter() {
                 CompletionContext.IMPORT -> {
                     // In import statement: qualified names from workspace index
                     if (indexReady.get()) {
-                        workspaceIndex.search("", limit = 200).forEach { symbol ->
+                        val importSymbols = workspaceIndex.search("", limit = 200)
+                        logger.info(
+                            "getCompletions: import-context workspaceSymbols={} sample={}",
+                            importSymbols.size,
+                            importSymbols.take(10).map { it.qualifiedName },
+                        )
+                        importSymbols.forEach { symbol ->
                             add(
                                 CompletionItem(
                                     label = symbol.qualifiedName,
@@ -416,12 +441,11 @@ class TreeSitterAdapter : AbstractAdapter() {
                     }
                 }
 
-                CompletionContext.DEFAULT -> {
-                    // Full default: keywords + built-in types + document symbols + imports
-                    addAll(keywordCompletions())
-                    addAll(builtInTypeCompletions())
+                CompletionContext.BODY -> {
                     if (tree != null) {
-                        queryEngine.findAllDeclarations(tree, uri).forEach { symbol ->
+                        val declarations = queryEngine.findAllDeclarations(tree, uri)
+                        logger.info("getCompletions: body-context declarations={}", declarations.map { "${it.kind}:${it.name}" })
+                        declarations.forEach { symbol ->
                             add(
                                 CompletionItem(
                                     label = symbol.name,
@@ -431,7 +455,79 @@ class TreeSitterAdapter : AbstractAdapter() {
                                 ),
                             )
                         }
-                        queryEngine.findImports(tree).forEach { importPath ->
+                    }
+                    val flowKeywords =
+                        setOf(
+                            "if",
+                            "else",
+                            "switch",
+                            "case",
+                            "default",
+                            "for",
+                            "while",
+                            "do",
+                            "break",
+                            "continue",
+                            "return",
+                            "try",
+                            "catch",
+                            "finally",
+                            "throw",
+                            "using",
+                            "assert",
+                            "new",
+                            "this",
+                            "super",
+                            "outer",
+                            "val",
+                            "var",
+                            "True",
+                            "False",
+                            "Null",
+                        )
+                    val bodyKeywords = keywordCompletions().filter { it.label in flowKeywords }
+                    val builtIns = builtInTypeCompletions()
+                    logger.info(
+                        "getCompletions: body-context keywords={} builtIns(sample)={}",
+                        bodyKeywords.map { it.label },
+                        builtIns.take(10).map { it.label },
+                    )
+                    addAll(bodyKeywords)
+                    addAll(builtIns)
+                    if (indexReady.get()) {
+                        val workspaceTypes = workspaceIndexTypeCompletions()
+                        logger.info("getCompletions: body-context workspaceTypes(sample)={}", workspaceTypes.take(10).map { it.label })
+                        addAll(workspaceTypes)
+                    }
+                }
+
+                CompletionContext.DEFAULT -> {
+                    // Full default: keywords + built-in types + document symbols + imports
+                    val keywords = keywordCompletions()
+                    val builtIns = builtInTypeCompletions()
+                    logger.info(
+                        "getCompletions: default-context keywords={} builtIns={}",
+                        keywords.map { it.label },
+                        builtIns.map { it.label },
+                    )
+                    addAll(keywords)
+                    addAll(builtIns)
+                    if (tree != null) {
+                        val declarations = queryEngine.findAllDeclarations(tree, uri)
+                        logger.info("getCompletions: default-context declarations={}", declarations.map { "${it.kind}:${it.name}" })
+                        declarations.forEach { symbol ->
+                            add(
+                                CompletionItem(
+                                    label = symbol.name,
+                                    kind = toCompletionKind(symbol.kind),
+                                    detail = symbol.typeSignature ?: symbol.kind.name.lowercase(),
+                                    insertText = symbol.name,
+                                ),
+                            )
+                        }
+                        val imports = queryEngine.findImports(tree)
+                        logger.info("getCompletions: default-context imports={}", imports)
+                        imports.forEach { importPath ->
                             val simpleName = importPath.substringAfterLast(".")
                             add(
                                 CompletionItem(
@@ -457,6 +553,7 @@ class TreeSitterAdapter : AbstractAdapter() {
         TYPE, // In type position — only types
         ANNOTATION, // After '@' — annotation names
         IMPORT, // Inside import statement — qualified names
+        BODY, // Inside module/class/method bodies — visible names first
         DEFAULT, // Everything
     }
 
@@ -483,6 +580,10 @@ class TreeSitterAdapter : AbstractAdapter() {
 
                 "import_statement" -> {
                     return CompletionContext.IMPORT
+                }
+
+                "module_body", "class_body", "package_body", "enum_body", "block" -> {
+                    return CompletionContext.BODY
                 }
 
                 "type_expression", "type_name", "generic_type" -> {
@@ -623,6 +724,11 @@ class TreeSitterAdapter : AbstractAdapter() {
                     name,
                     best.uri.substringAfterLast('/'),
                     best.kind,
+                )
+                logger.info(
+                    "definition '{}' strategy=workspace-index candidates={}",
+                    name,
+                    indexed.map { "${it.kind}:${it.qualifiedName}" },
                 )
                 return best.location
             }
@@ -1144,6 +1250,14 @@ class TreeSitterAdapter : AbstractAdapter() {
                 return emptyList()
             }
         val config = FormattingConfig.resolve(uri, options, editorFormattingConfig)
+        logger.info(
+            "onTypeFormatting: uri={} line={} column={} ch='{}' config={}",
+            uri.substringAfterLast('/'),
+            line,
+            column,
+            ch,
+            config,
+        )
         return formatter.onTypeFormatting(tree, line, column, ch, config)
     }
 
@@ -1178,7 +1292,15 @@ class TreeSitterAdapter : AbstractAdapter() {
                 return null
             }
         val data = SemanticTokenEncoder().encode(tree.root)
-        logger.info("getSemanticTokens -> {} data items ({} tokens)", data.size, data.size / 5)
+        val tokenTypeCounts =
+            data
+                .chunked(5)
+                .mapNotNull { chunk ->
+                    val tokenTypeIndex = chunk.getOrNull(3) ?: return@mapNotNull null
+                    SemanticTokenLegend.tokenTypes.getOrNull(tokenTypeIndex)
+                }.groupingBy { it }
+                .eachCount()
+        logger.info("getSemanticTokens -> {} data items ({} tokens) types={}", data.size, data.size / 5, tokenTypeCounts)
         return data.takeIf { it.isNotEmpty() }?.let { SemanticTokens(it) }
     }
 

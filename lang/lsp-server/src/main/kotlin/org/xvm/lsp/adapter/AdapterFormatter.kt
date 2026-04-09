@@ -331,6 +331,8 @@ class AdapterFormatter {
         val prevLine = lines[prevLineIndex]
         val prevTrimmed = prevLine.trimEnd()
         val prevIndent = prevLine.takeWhile { it == ' ' }.length
+        val currentLine = lines.getOrNull(line).orEmpty()
+        val currentTrimmed = currentLine.trimStart()
 
         // Doc/block comment continuation: insert " * " prefix on Enter inside comments.
         // Try multiple column positions since tree.nodeAt(line, 0) may return a node
@@ -338,42 +340,115 @@ class AdapterFormatter {
         val commentEdit = handleCommentContinuation(tree, prevLineIndex, line, lines, prevTrimmed, prevIndent)
         if (commentEdit != null) return commentEdit
 
-        val desiredIndent =
+        // IntelliJ may compact an auto-inserted empty block onto the previous line as "{}"
+        // before sending Enter formatting. Split that compact empty block into an indented
+        // body line plus a correctly aligned closing brace line.
+        if (prevTrimmed.endsWith("{}")) {
+            val bodyIndent =
+                when {
+                    isContinuationLine(prevTrimmed) -> findDeclarationIndent(tree, prevLineIndex) + config.indentSize
+                    else -> prevIndent + config.indentSize
+                }
+            val closingIndent =
+                when {
+                    isContinuationLine(prevTrimmed) -> findDeclarationIndent(tree, prevLineIndex)
+                    else -> prevIndent
+                }
+            val currentIndent = currentLine.takeWhile { it == ' ' }.length
+            val replacement = " ".repeat(bodyIndent) + "\n" + " ".repeat(closingIndent)
+            logger.info(
+                "onTypeFormatting[enter]: compact-empty-block split at line {} prev='{}' bodyIndent={} closingIndent={} currentIndent={}",
+                line,
+                summarizeLine(prevTrimmed),
+                bodyIndent,
+                closingIndent,
+                currentIndent,
+            )
+            return listOf(
+                TextEdit(
+                    range =
+                        Range(
+                            start = Position(line, 0),
+                            end = Position(line, currentIndent),
+                        ),
+                    newText = replacement,
+                ),
+            )
+        }
+
+        // IntelliJ commonly auto-inserts a matching closing brace when Enter is pressed
+        // after "{". When that happens, the current line already contains only "}" with
+        // editor-provided indentation. Replace that indentation with a proper skeleton:
+        // an indented blank body line plus a correctly aligned closing brace line.
+        if (prevTrimmed.endsWith("{") && currentTrimmed.startsWith("}")) {
+            val currentIndent = currentLine.takeWhile { it == ' ' }.length
+            val bodyIndent =
+                when {
+                    isContinuationLine(prevTrimmed) -> findDeclarationIndent(tree, prevLineIndex) + config.indentSize
+                    else -> prevIndent + config.indentSize
+                }
+            val closingIndent =
+                when {
+                    isContinuationLine(prevTrimmed) -> findDeclarationIndent(tree, prevLineIndex)
+                    else -> prevIndent
+                }
+            val replacement = " ".repeat(bodyIndent) + "\n" + " ".repeat(closingIndent)
+            logger.info(
+                "onTypeFormatting[enter]: auto-close skeleton at line {} prev='{}' bodyIndent={} closingIndent={} currentIndent={}",
+                line,
+                summarizeLine(prevTrimmed),
+                bodyIndent,
+                closingIndent,
+                currentIndent,
+            )
+            return listOf(
+                TextEdit(
+                    range =
+                        Range(
+                            start = Position(line, 0),
+                            end = Position(line, currentIndent),
+                        ),
+                    newText = replacement,
+                ),
+            )
+        }
+
+        val (reason, desiredIndent) =
             when {
                 // Continuation keyword ending with '{' -> body indent from declaration start.
                 // Must be checked BEFORE the generic endsWith("{") to avoid matching as plain brace.
                 isContinuationLine(prevTrimmed) && prevTrimmed.endsWith("{") -> {
-                    findDeclarationIndent(tree, prevLineIndex) + config.indentSize
+                    "continuation-with-brace" to (findDeclarationIndent(tree, prevLineIndex) + config.indentSize)
                 }
 
                 // Continuation keyword (extends, implements, etc.) NOT ending with '{'
                 isContinuationLine(prevTrimmed) && !prevTrimmed.endsWith("{") -> {
-                    findDeclarationIndent(tree, prevLineIndex) + config.continuationIndentSize
+                    "continuation" to (findDeclarationIndent(tree, prevLineIndex) + config.continuationIndentSize)
                 }
 
                 // Previous line ends with '{' -> indent one level deeper
                 prevTrimmed.endsWith("{") -> {
-                    prevIndent + config.indentSize
+                    "open-brace" to (prevIndent + config.indentSize)
                 }
 
                 // Previous line ends with ':' inside a case_clause -> indent for case body
                 prevTrimmed.endsWith(":") && isInsideCaseClause(tree, prevLineIndex) -> {
-                    prevIndent + config.indentSize
+                    "case-clause" to (prevIndent + config.indentSize)
                 }
 
                 // Previous line ends with '->' -> indent lambda/case expression body
                 prevTrimmed.endsWith("->") -> {
-                    prevIndent + config.indentSize
+                    "arrow-body" to (prevIndent + config.indentSize)
                 }
 
                 // Previous line ends with '}' -> maintain the brace's indent level
                 prevTrimmed.endsWith("}") -> {
-                    prevIndent
+                    "after-closing-brace" to prevIndent
                 }
 
                 // Default: use AST context
                 else -> {
-                    computeDesiredIndent(tree, prevLineIndex, prevIndent, config.indentSize)
+                    "ast-context" to computeDesiredIndent(tree, prevLineIndex, prevIndent, config.indentSize)
                 }
             }
 
@@ -383,6 +458,16 @@ class AdapterFormatter {
             } else {
                 0
             }
+
+        logger.info(
+            "onTypeFormatting[enter]: line={} reason={} prev='{}' current='{}' desiredIndent={} currentIndent={}",
+            line,
+            reason,
+            summarizeLine(prevTrimmed),
+            summarizeLine(currentTrimmed),
+            desiredIndent,
+            currentIndent,
+        )
 
         if (desiredIndent == currentIndent) return emptyList()
 
@@ -437,6 +522,15 @@ class AdapterFormatter {
 
         val desiredIndent = getLineIndent(source, refLine)
 
+        logger.info(
+            "onTypeFormatting[close-brace]: line={} column={} refLine={} desiredIndent={} currentIndent={}",
+            line,
+            column,
+            refLine,
+            desiredIndent,
+            currentIndent,
+        )
+
         if (desiredIndent == currentIndent) return emptyList()
 
         return listOf(makeIndentEdit(line, currentIndent, desiredIndent))
@@ -476,6 +570,14 @@ class AdapterFormatter {
             } ?: return emptyList()
 
         val desiredIndent = getLineIndent(source, enclosing.startLine)
+        logger.info(
+            "onTypeFormatting[close-paren]: line={} column={} refLine={} desiredIndent={} currentIndent={}",
+            line,
+            column,
+            enclosing.startLine,
+            desiredIndent,
+            currentIndent,
+        )
         if (desiredIndent == currentIndent) return emptyList()
 
         return listOf(makeIndentEdit(line, currentIndent, desiredIndent))
@@ -642,4 +744,9 @@ class AdapterFormatter {
                 ),
             newText = " ".repeat(desiredIndent),
         )
+
+    private fun summarizeLine(text: String): String =
+        text
+            .replace("\t", "\\t")
+            .take(80)
 }
