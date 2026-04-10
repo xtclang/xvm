@@ -211,7 +211,7 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-            - name: Determine ref to build
+            - name: Determine source CI run and commit
               id: commit
               shell: bash
               env:
@@ -222,76 +222,64 @@ jobs:
                       GH_COMMIT=$(gh api /repos/${{ github.repository }}/actions/runs/$RUN_ID --jq '.head_sha')
                       echo "📌 Using CI run from input: $RUN_ID (commit: $GH_COMMIT)"
                   else
-                      GH_COMMIT="${{ github.sha }}"
-                      echo "📌 Manual trigger - commit: $GH_COMMIT"
+                      echo "❌ ERROR: ci-run-id is required for IntelliJ plugin snapshot publication"
+                      echo "This workflow now promotes the CI-built plugin artifact instead of rebuilding from source."
+                      exit 1
                   fi
+                  echo "run-id=$RUN_ID" >> $GITHUB_OUTPUT
                   echo "commit=$GH_COMMIT" >> $GITHUB_OUTPUT
 
-            - name: Fetch Sources
-              uses: actions/checkout@v6
+            - name: Download IntelliJ plugin artifact from CI
+              uses: actions/download-artifact@v4
               with:
-                  ref: ${{ steps.commit.outputs.commit }}
-                  fetch-depth: 1
-                  show-progress: true
+                  name: intellij-plugin-dist-${{ steps.commit.outputs.commit }}
+                  path: ./artifacts/intellij-plugin
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  repository: ${{ github.repository }}
+                  run-id: ${{ steps.commit.outputs.run-id }}
 
-            - name: Setup XVM Project
-              id: versions
-              uses: ./.github/actions/setup-xvm-project
-              with:
-                  setup-build: true
-                  cache-read-only: false
-                  enable-debug: false
-
-            - name: Validate snapshot version
+            - name: Validate IntelliJ plugin artifact
+              id: artifact
               shell: bash
               run: |
-                  VERSION="${{ steps.versions.outputs.xdk-version }}"
-                  if [[ "$VERSION" != *-SNAPSHOT ]]; then
-                      echo "❌ ERROR: Cannot publish IntelliJ plugin snapshot for non-SNAPSHOT version"
-                      echo "Current version: $VERSION"
+                  ARTIFACT_ROOT="$PWD/artifacts/intellij-plugin/intellij-plugin-dist"
+                  METADATA_FILE="$ARTIFACT_ROOT/intellij-plugin-metadata.json"
+
+                  if [ ! -f "$METADATA_FILE" ]; then
+                      echo "❌ ERROR: IntelliJ plugin metadata file not found"
+                      find "$PWD/artifacts/intellij-plugin" -maxdepth 4 -type f | sed -n '1,120p' || true
                       exit 1
                   fi
-                  echo "✅ Validated snapshot version: $VERSION"
 
-            - name: Compute IntelliJ publish version suffix
-              id: publish-version
-              shell: bash
-              run: |
-                  SUFFIX=$(date -u +%Y%m%d%H%M%S)
-                  BASE_VERSION="${{ steps.versions.outputs.xdk-version }}"
-                  PUBLISH_VERSION="${BASE_VERSION}.${SUFFIX}"
-                  echo "suffix=$SUFFIX" >> $GITHUB_OUTPUT
+                  ZIP_FILE=$(find "$ARTIFACT_ROOT" -maxdepth 1 -name "*.zip" | head -1)
+                  CHECKSUM_FILE="$ARTIFACT_ROOT/SHA256SUMS.txt"
+
+                  if [ -z "$ZIP_FILE" ] || [ ! -f "$CHECKSUM_FILE" ]; then
+                      echo "❌ ERROR: IntelliJ plugin artifact bundle is incomplete"
+                      find "$ARTIFACT_ROOT" -maxdepth 3 -type f | sed -n '1,120p' || true
+                      exit 1
+                  fi
+
+                  BASE_VERSION=$(jq -r '.baseVersion' "$METADATA_FILE")
+                  PUBLISH_VERSION=$(jq -r '.publishVersion' "$METADATA_FILE")
+                  RELEASE_CHANNEL=$(jq -r '.releaseChannel' "$METADATA_FILE")
+                  XML_ID=$(jq -r '.xmlId' "$METADATA_FILE")
+
+                  echo "artifact-root=$ARTIFACT_ROOT" >> $GITHUB_OUTPUT
+                  echo "zip-file=$ZIP_FILE" >> $GITHUB_OUTPUT
+                  echo "checksum-file=$CHECKSUM_FILE" >> $GITHUB_OUTPUT
+                  echo "metadata-file=$METADATA_FILE" >> $GITHUB_OUTPUT
+                  echo "base-version=$BASE_VERSION" >> $GITHUB_OUTPUT
                   echo "publish-version=$PUBLISH_VERSION" >> $GITHUB_OUTPUT
-                  echo "🔖 IntelliJ Marketplace publish version: $PUBLISH_VERSION"
+                  echo "release-channel=$RELEASE_CHANNEL" >> $GITHUB_OUTPUT
+                  echo "xml-id=$XML_ID" >> $GITHUB_OUTPUT
 
-            - name: Build IntelliJ plugin ZIP
-              shell: bash
-              env:
-                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
-              run: |
-                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }} ${{ github.event.inputs.extra-gradle-options }}"
-                  PUBLISH_SUFFIX="${{ steps.publish-version.outputs.suffix }}"
-
-                  echo "🔌 Building installable IntelliJ plugin ZIP..."
-                  ./gradlew $GRADLE_OPTIONS \
-                    -PincludeBuildLang=true \
-                    -PincludeBuildAttachLang=true \
-                    -PenablePublish=true \
-                    -Pjetbrains.publish.suffix=$PUBLISH_SUFFIX \
-                    -Plsp.buildSearchableOptions=true \
-                    :lang:intellij-plugin:buildSearchableOptions \
-                    :lang:intellij-plugin:buildPlugin \
-                    :lang:intellij-plugin:verifyPlugin
-
-                  cd lang/intellij-plugin/build/distributions
-                  ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -1)
-                  if [ -z "$ZIP_FILE" ]; then
-                      echo "❌ ERROR: No IntelliJ plugin ZIP found after build"
-                      ls -la
-                      exit 1
-                  fi
-                  shasum -a 256 "$ZIP_FILE" > SHA256SUMS.txt
-                  cat SHA256SUMS.txt
+                  echo "✅ IntelliJ plugin artifact validated"
+                  echo "  Base version:    $BASE_VERSION"
+                  echo "  Publish version: $PUBLISH_VERSION"
+                  echo "  Channel:         $RELEASE_CHANNEL"
+                  echo "  XML ID:          $XML_ID"
+                  echo "  ZIP:             $(basename "$ZIP_FILE")"
 
             - name: Publish IntelliJ plugin to JetBrains Marketplace alpha
               shell: bash
@@ -311,32 +299,31 @@ jobs:
               shell: bash
               env:
                   JETBRAINS_TOKEN: ${{ secrets.JETBRAINS_TOKEN }}
-                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
               run: |
-                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }} ${{ github.event.inputs.extra-gradle-options }}"
-                  PUBLISH_SUFFIX="${{ steps.publish-version.outputs.suffix }}"
+                  ZIP_FILE="${{ steps.artifact.outputs.zip-file }}"
+                  XML_ID="${{ steps.artifact.outputs.xml-id }}"
+                  CHANNEL="${{ steps.artifact.outputs.release-channel }}"
 
                   echo "🚀 Publishing IntelliJ plugin to JetBrains Marketplace alpha..."
-                  ./gradlew $GRADLE_OPTIONS \
-                    -PincludeBuildLang=true \
-                    -PincludeBuildAttachLang=true \
-                    -PenablePublish=true \
-                    -Pjetbrains.publish.suffix=$PUBLISH_SUFFIX \
-                    -Plsp.buildSearchableOptions=true \
-                    :lang:intellij-plugin:publishPlugin
+                  curl --fail-with-body --silent --show-error \
+                    -H "Authorization: Bearer $JETBRAINS_TOKEN" \
+                    -F "xmlId=$XML_ID" \
+                    -F "channel=$CHANNEL" \
+                    -F "file=@$ZIP_FILE" \
+                    https://plugins.jetbrains.com/api/updates/upload
 
             - name: Prepare release assets
               id: prepare
               shell: bash
               run: |
-                  VERSION="${{ steps.publish-version.outputs.publish-version }}"
-                  DIST_DIR="lang/intellij-plugin/build/distributions"
-                  PLUGIN_ZIP=$(find "$DIST_DIR" -maxdepth 1 -name "*.zip" | head -1)
+                  VERSION="${{ steps.artifact.outputs.publish-version }}"
+                  PLUGIN_ZIP="${{ steps.artifact.outputs.zip-file }}"
+                  CHECKSUM_FILE="${{ steps.artifact.outputs.checksum-file }}"
                   PUBLIC_ZIP="xtc-intellij-plugin-${VERSION}.zip"
                   PUBLIC_SUMS="${PUBLIC_ZIP}.sha256"
 
                   cp "$PLUGIN_ZIP" "$PUBLIC_ZIP"
-                  awk '{print $1}' "$DIST_DIR/SHA256SUMS.txt" | {
+                  awk '{print $1}' "$CHECKSUM_FILE" | {
                       read -r SUM
                       printf "%s  %s\n" "$SUM" "$PUBLIC_ZIP" > "$PUBLIC_SUMS"
                   }
@@ -353,7 +340,7 @@ jobs:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   RELEASE_TAG="intellij-plugin-snapshots"
-                  VERSION="${{ steps.versions.outputs.xdk-version }}"
+                  VERSION="${{ steps.artifact.outputs.publish-version }}"
                   COMMIT="${{ steps.commit.outputs.commit }}"
                   ASSET_NAME="${{ steps.prepare.outputs.asset-name }}"
                   CHECKSUM_NAME="${{ steps.prepare.outputs.checksum-name }}"
@@ -394,11 +381,11 @@ jobs:
               run: |
                   echo "### ✅ IntelliJ Plugin Snapshot Published" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "- **Base version:** ${{ steps.versions.outputs.xdk-version }}" >> $GITHUB_STEP_SUMMARY
-                  echo "- **Published version:** ${{ steps.publish-version.outputs.publish-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Base version:** ${{ steps.artifact.outputs.base-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Published version:** ${{ steps.artifact.outputs.publish-version }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Commit:** ${{ steps.commit.outputs.commit }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Release tag:** intellij-plugin-snapshots" >> $GITHUB_STEP_SUMMARY
-                  echo "- **Marketplace channel:** alpha" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Marketplace channel:** ${{ steps.artifact.outputs.release-channel }}" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "**Assets:**" >> $GITHUB_STEP_SUMMARY
                   echo "- \`${{ steps.prepare.outputs.asset-name }}\`" >> $GITHUB_STEP_SUMMARY
