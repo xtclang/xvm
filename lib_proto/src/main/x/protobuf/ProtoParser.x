@@ -4,15 +4,22 @@ import ecstasy.maps.ListMap;
 import ProtoLexer.Token;
 import ProtoLexer.TokenType;
 
-import FieldDescriptor.Label;
-
-import MessageDescriptor.ReservedRange;
+import wellknown.DescriptorProto;
+import wellknown.EnumDescriptorProto;
+import wellknown.EnumValueDescriptorProto;
+import wellknown.FieldDescriptorProto;
+import wellknown.FieldDescriptorProto.Type as FieldType;
+import wellknown.FieldDescriptorProto.Label;
+import wellknown.FileDescriptorProto;
+import wellknown.MethodDescriptorProto;
+import wellknown.OneofDescriptorProto;
+import wellknown.ServiceDescriptorProto;
 
 /**
  * A recursive-descent parser for Protocol Buffers `.proto` files.
  *
- * Produces a [FileDescriptor] from the source text, representing all message, enum, and service
- * definitions along with file-level metadata.
+ * Produces a [FileDescriptorProto] from the source text, representing all message, enum, and
+ * service definitions along with file-level metadata.
  */
 class ProtoParser {
 
@@ -48,24 +55,45 @@ class ProtoParser {
      */
     private Token current;
 
+    /**
+     * Map from proto type name to FieldType enum value.
+     */
+    private static Map<String, FieldType> ProtoNameToType = Map:[
+        "double"   = TypeDouble,
+        "float"    = TypeFloat,
+        "int64"    = TypeInt64,
+        "uint64"   = TypeUint64,
+        "int32"    = TypeInt32,
+        "fixed64"  = TypeFixed64,
+        "fixed32"  = TypeFixed32,
+        "bool"     = TypeBool,
+        "string"   = TypeString,
+        "group"    = TypeGroup,
+        "bytes"    = TypeBytes,
+        "uint32"   = TypeUint32,
+        "sfixed32" = TypeSfixed32,
+        "sfixed64" = TypeSfixed64,
+        "sint32"   = TypeSint32,
+        "sint64"   = TypeSint64,
+    ];
+
     // ----- public interface -----------------------------------------------------------------------
 
     /**
-     * Parse the source text and return a [FileDescriptor].
+     * Parse the source text and return a [FileDescriptorProto].
      *
      * @param fileName  the file name to record in the descriptor
      *
      * @return the parsed file descriptor
      */
-    FileDescriptor parseFile(String fileName) {
-        String                    syntax       = "proto3";
-        String                    packageName  = "";
-        Array<String>             deps         = new Array();
-        Array<String>             publicDeps   = new Array();
-        Array<MessageDescriptor>  messages     = new Array();
-        Array<EnumDescriptor>     enums        = new Array();
-        Array<ServiceDescriptor>  services     = new Array();
-        ListMap<String, String>   options      = new ListMap();
+    FileDescriptorProto parseFile(String fileName) {
+        String                          syntax     = "proto3";
+        String                          pkg        = "";
+        Array<String>                   deps       = new Array();
+        Array<Int32>                    publicDeps = new Array();
+        Array<DescriptorProto>          messages   = new Array();
+        Array<EnumDescriptorProto>      enums      = new Array();
+        Array<ServiceDescriptorProto>   services   = new Array();
 
         while (current.type != Eof) {
             String text = current.text;
@@ -75,20 +103,19 @@ class ProtoParser {
                 break;
 
             case "package":
-                packageName = parsePackage();
+                pkg = parsePackage();
                 break;
 
             case "import":
                 (String path, Boolean isPublic) = parseImport();
-                deps.add(path);
                 if (isPublic) {
-                    publicDeps.add(path);
+                    publicDeps.add(deps.size.toInt32());
                 }
+                deps.add(path);
                 break;
 
             case "option":
-                (String name, String value) = parseOption();
-                options.put(name, value);
+                parseOption();
                 break;
 
             case "message":
@@ -110,10 +137,16 @@ class ProtoParser {
             }
         }
 
-        return new FileDescriptor(fileName, syntax, packageName,
-                deps.freeze(inPlace=True), publicDeps.freeze(inPlace=True),
-                messages.freeze(inPlace=True), enums.freeze(inPlace=True),
-                services.freeze(inPlace=True), options.freeze(inPlace=True));
+        FileDescriptorProto file = new FileDescriptorProto();
+        file.name             = fileName;
+        file.syntax           = syntax;
+        file.package_         = pkg;
+        file.dependency       = deps;
+        file.publicDependency = publicDeps;
+        file.messageType      = messages;
+        file.enumType         = enums;
+        file.service_         = services;
+        return file;
     }
 
     // ----- top-level statement parsers -------------------------------------------------------------
@@ -175,24 +208,23 @@ class ProtoParser {
     /**
      * Parse a `message Name { ... }` definition.
      */
-    private MessageDescriptor parseMessage() {
+    private DescriptorProto parseMessage() {
         expectIdentifier("message");
         String name = expect(Identifier).text;
         expect(LeftBrace);
 
-        Array<FieldDescriptor>    fields         = new Array();
-        Array<OneofDescriptor>    oneofs         = new Array();
-        Array<EnumDescriptor>     enums          = new Array();
-        Array<MessageDescriptor>  nestedMessages = new Array();
-        Array<ReservedRange>      reservedRanges = new Array();
-        Array<String>             reservedNames  = new Array();
-        ListMap<String, String>   options        = new ListMap();
+        Array<FieldDescriptorProto>    fields         = new Array();
+        Array<OneofDescriptorProto>    oneofs         = new Array();
+        Array<EnumDescriptorProto>     enums          = new Array();
+        Array<DescriptorProto>         nestedTypes    = new Array();
+        Array<DescriptorProto.ReservedRange> reservedRanges = new Array();
+        Array<String>                  reservedNames  = new Array();
 
         while (current.type != RightBrace && current.type != Eof) {
             String text = current.text;
             switch (text) {
             case "message":
-                nestedMessages.add(parseMessage());
+                nestedTypes.add(parseMessage());
                 break;
 
             case "enum":
@@ -201,18 +233,20 @@ class ProtoParser {
 
             case "oneof":
                 Int oneofIndex = oneofs.size;
-                (OneofDescriptor oneof, Array<FieldDescriptor> oneofFields) =
+                (OneofDescriptorProto oneof, Array<FieldDescriptorProto> oneofFields) =
                         parseOneof(oneofIndex);
                 oneofs.add(oneof);
                 fields.addAll(oneofFields);
                 break;
 
             case "map":
-                fields.add(parseMapField());
+                (FieldDescriptorProto mapField, DescriptorProto entryMsg) = parseMapField();
+                fields.add(mapField);
+                nestedTypes.add(entryMsg);
                 break;
 
             case "reserved":
-                (Array<ReservedRange> ranges, Array<String> names) = parseReserved();
+                (Array<DescriptorProto.ReservedRange> ranges, Array<String> names) = parseReserved();
                 reservedRanges.addAll(ranges);
                 reservedNames.addAll(names);
                 break;
@@ -222,8 +256,7 @@ class ProtoParser {
                 break;
 
             case "option":
-                (String optName, String optValue) = parseOption();
-                options.put(optName, optValue);
+                parseOption();
                 break;
 
             case "optional", "required", "repeated":
@@ -239,11 +272,15 @@ class ProtoParser {
         }
         expect(RightBrace);
 
-        return new MessageDescriptor(name,
-                fields.freeze(inPlace=True), oneofs.freeze(inPlace=True),
-                enums.freeze(inPlace=True), nestedMessages.freeze(inPlace=True),
-                reservedRanges.freeze(inPlace=True), reservedNames.freeze(inPlace=True),
-                options.freeze(inPlace=True));
+        DescriptorProto msg = new DescriptorProto();
+        msg.name         = name;
+        msg.field        = fields;
+        msg.oneofDecl    = oneofs;
+        msg.enumType     = enums;
+        msg.nestedType   = nestedTypes;
+        msg.reservedRange = reservedRanges;
+        msg.reservedName = reservedNames;
+        return msg;
     }
 
     /**
@@ -251,17 +288,17 @@ class ProtoParser {
      *
      * The label keyword (`optional`, `required`, `repeated`) has already been consumed.
      */
-    private FieldDescriptor parseField(String labelText) {
+    private FieldDescriptorProto parseField(String labelText) {
         Label label = switch (labelText) {
-            case "required": Required;
-            case "repeated": Repeated;
-            default: Optional;
+            case "required": LabelRequired;
+            case "repeated": LabelRepeated;
+            default: LabelOptional;
         };
 
-        String    typeName   = parseTypeName();
+        String   typeName = parseTypeName();
         FieldType type;
-        String    typeRef    = "";
-        if (FieldType scalar := FieldType.byProtoName(typeName)) {
+        String    typeRef  = "";
+        if (FieldType scalar := ProtoNameToType.get(typeName)) {
             type = scalar;
         } else {
             type    = TypeMessage;
@@ -272,30 +309,38 @@ class ProtoParser {
         expect(Equals);
         Int fieldNumber = parseIntValue();
 
-        ListMap<String, String> options  = new ListMap();
-        String                  jsonName = "";
+        String jsonName = "";
         if (current.type == LeftBracket) {
-            options = parseFieldOptions();
+            ListMap<String, String> options = parseFieldOptions();
             if (String jn := options.get("json_name")) {
                 jsonName = jn;
             }
         }
         expect(Semicolon);
 
-        return new FieldDescriptor(fieldName, fieldNumber, type, label, typeRef,
-                options=options.freeze(inPlace=True), jsonName=jsonName);
+        FieldDescriptorProto field = new FieldDescriptorProto();
+        field.name    = fieldName;
+        field.number  = fieldNumber.toInt32();
+        field.type    = type;
+        field.label   = label;
+        if (typeRef.size > 0) {
+            field.typeName = typeRef;
+        }
+        if (jsonName.size > 0) {
+            field.jsonName = jsonName;
+        }
+        return field;
     }
 
     /**
      * Parse a `oneof name { ... }` block.
      */
-    private (OneofDescriptor, Array<FieldDescriptor>) parseOneof(Int oneofIndex) {
+    private (OneofDescriptorProto, Array<FieldDescriptorProto>) parseOneof(Int oneofIndex) {
         expectIdentifier("oneof");
         String name = expect(Identifier).text;
         expect(LeftBrace);
 
-        Array<FieldDescriptor> fields       = new Array();
-        Array<Int>             fieldNumbers = new Array();
+        Array<FieldDescriptorProto> fields = new Array();
 
         while (current.type != RightBrace && current.type != Eof) {
             if (checkIdentifier("option")) {
@@ -307,7 +352,7 @@ class ProtoParser {
             String    typeName = parseTypeName();
             FieldType type;
             String    typeRef  = "";
-            if (FieldType scalar := FieldType.byProtoName(typeName)) {
+            if (FieldType scalar := ProtoNameToType.get(typeName)) {
                 type = scalar;
             } else {
                 type    = TypeMessage;
@@ -318,25 +363,35 @@ class ProtoParser {
             expect(Equals);
             Int    fieldNumber = parseIntValue();
 
-            ListMap<String, String> options = new ListMap();
             if (current.type == LeftBracket) {
-                options = parseFieldOptions();
+                parseFieldOptions();
             }
             expect(Semicolon);
 
-            fields.add(new FieldDescriptor(fieldName, fieldNumber, type, Optional, typeRef,
-                    oneofIndex, options=options.freeze(inPlace=True)));
-            fieldNumbers.add(fieldNumber);
+            FieldDescriptorProto field = new FieldDescriptorProto();
+            field.name       = fieldName;
+            field.number     = fieldNumber.toInt32();
+            field.type       = type;
+            field.label      = LabelOptional;
+            field.oneofIndex = oneofIndex.toInt32();
+            if (typeRef.size > 0) {
+                field.typeName = typeRef;
+            }
+            fields.add(field);
         }
         expect(RightBrace);
 
-        return (new OneofDescriptor(name, fieldNumbers.freeze(inPlace=True)), fields);
+        OneofDescriptorProto oneof = new OneofDescriptorProto();
+        oneof.name = name;
+        return (oneof, fields);
     }
 
     /**
      * Parse a `map<KeyType, ValueType> name = number [options];` field.
+     *
+     * Returns the field descriptor and a synthetic entry message for the map type.
      */
-    private FieldDescriptor parseMapField() {
+    private (FieldDescriptorProto, DescriptorProto) parseMapField() {
         expectIdentifier("map");
         expect(LessThan);
         String keyTypeName = expect(Identifier).text;
@@ -348,29 +403,59 @@ class ProtoParser {
         expect(Equals);
         Int fieldNumber = parseIntValue();
 
-        ListMap<String, String> options = new ListMap();
         if (current.type == LeftBracket) {
-            options = parseFieldOptions();
+            parseFieldOptions();
         }
         expect(Semicolon);
 
         // resolve key type (must be a scalar)
-        assert FieldType keyType := FieldType.byProtoName(keyTypeName)
+        assert FieldType keyType := ProtoNameToType.get(keyTypeName)
                 as $"Invalid map key type: {keyTypeName}";
 
         // resolve value type
         FieldType valueType;
         String    valueTypeRef = "";
-        if (FieldType scalar := FieldType.byProtoName(valueTypeName)) {
+        if (FieldType scalar := ProtoNameToType.get(valueTypeName)) {
             valueType = scalar;
         } else {
             valueType    = TypeMessage;
             valueTypeRef = valueTypeName;
         }
 
-        return new FieldDescriptor(fieldName, fieldNumber, TypeMessage, Repeated,
-                isMapField=True, mapKeyType=keyType, mapValueType=valueType,
-                mapValueTypeName=valueTypeRef, options=options.freeze(inPlace=True));
+        // create synthetic entry message (e.g., LabelsEntry)
+        String entryName = $"{toPascalCase(fieldName)}Entry";
+
+        FieldDescriptorProto keyField = new FieldDescriptorProto();
+        keyField.name   = "key";
+        keyField.number = 1;
+        keyField.type   = keyType;
+        keyField.label  = LabelOptional;
+
+        FieldDescriptorProto valueField = new FieldDescriptorProto();
+        valueField.name   = "value";
+        valueField.number = 2;
+        valueField.type   = valueType;
+        valueField.label  = LabelOptional;
+        if (valueTypeRef.size > 0) {
+            valueField.typeName = valueTypeRef;
+        }
+
+        wellknown.MessageOptions entryOptions = new wellknown.MessageOptions();
+        entryOptions.mapEntry = True;
+
+        DescriptorProto entryMsg = new DescriptorProto();
+        entryMsg.name    = entryName;
+        entryMsg.field   = [keyField, valueField];
+        entryMsg.options = entryOptions;
+
+        // the field itself is repeated with typeName pointing to the entry message
+        FieldDescriptorProto field = new FieldDescriptorProto();
+        field.name     = fieldName;
+        field.number   = fieldNumber.toInt32();
+        field.type     = TypeMessage;
+        field.label    = LabelRepeated;
+        field.typeName = entryName;
+        return (field, entryMsg);
     }
 
     /**
@@ -379,11 +464,11 @@ class ProtoParser {
      * Handles both numeric ranges (`reserved 2, 15, 9 to 11;`) and field names
      * (`reserved "foo", "bar";`).
      */
-    private (Array<ReservedRange>, Array<String>) parseReserved() {
+    private (Array<DescriptorProto.ReservedRange>, Array<String>) parseReserved() {
         expectIdentifier("reserved");
 
-        Array<ReservedRange> ranges = new Array();
-        Array<String>        names  = new Array();
+        Array<DescriptorProto.ReservedRange> ranges = new Array();
+        Array<String>                        names  = new Array();
 
         if (current.type == StringLiteral) {
             // reserved field names
@@ -403,9 +488,15 @@ class ProtoParser {
                     } else {
                         end = parseIntValue();
                     }
-                    ranges.add(new ReservedRange(start, end + 1));
+                    DescriptorProto.ReservedRange range = new DescriptorProto.ReservedRange();
+                    range.start = start.toInt32();
+                    range.end   = (end + 1).toInt32();
+                    ranges.add(range);
                 } else {
-                    ranges.add(new ReservedRange(start, start + 1));
+                    DescriptorProto.ReservedRange range = new DescriptorProto.ReservedRange();
+                    range.start = start.toInt32();
+                    range.end   = (start + 1).toInt32();
+                    ranges.add(range);
                 }
             } while (matchToken(Comma));
         }
@@ -446,22 +537,16 @@ class ProtoParser {
     /**
      * Parse an `enum Name { ... }` definition.
      */
-    private EnumDescriptor parseEnum() {
+    private EnumDescriptorProto parseEnum() {
         expectIdentifier("enum");
         String name = expect(Identifier).text;
         expect(LeftBrace);
 
-        Array<EnumValueDescriptor> values     = new Array();
-        ListMap<String, String>    options     = new ListMap();
-        Boolean                    allowAlias = False;
+        Array<EnumValueDescriptorProto> values = new Array();
 
         while (current.type != RightBrace && current.type != Eof) {
             if (checkIdentifier("option")) {
-                (String optName, String optValue) = parseOption();
-                options.put(optName, optValue);
-                if (optName == "allow_alias" && optValue == "true") {
-                    allowAlias = True;
-                }
+                parseOption();
                 continue;
             }
             if (checkIdentifier("reserved")) {
@@ -484,19 +569,22 @@ class ProtoParser {
                 number = -number;
             }
 
-            ListMap<String, String> valueOptions = new ListMap();
             if (current.type == LeftBracket) {
-                valueOptions = parseFieldOptions();
+                parseFieldOptions();
             }
             expect(Semicolon);
 
-            values.add(new EnumValueDescriptor(valueName, number,
-                    valueOptions.freeze(inPlace=True)));
+            EnumValueDescriptorProto v = new EnumValueDescriptorProto();
+            v.name   = valueName;
+            v.number = number.toInt32();
+            values.add(v);
         }
         expect(RightBrace);
 
-        return new EnumDescriptor(name, values.freeze(inPlace=True),
-                options.freeze(inPlace=True), allowAlias);
+        EnumDescriptorProto e = new EnumDescriptorProto();
+        e.name  = name;
+        e.value = values;
+        return e;
     }
 
     // ----- service parsing ------------------------------------------------------------------------
@@ -504,18 +592,16 @@ class ProtoParser {
     /**
      * Parse a `service Name { ... }` definition.
      */
-    private ServiceDescriptor parseService() {
+    private ServiceDescriptorProto parseService() {
         expectIdentifier("service");
         String name = expect(Identifier).text;
         expect(LeftBrace);
 
-        Array<MethodDescriptor> methods = new Array();
-        ListMap<String, String> options = new ListMap();
+        Array<MethodDescriptorProto> methods = new Array();
 
         while (current.type != RightBrace && current.type != Eof) {
             if (checkIdentifier("option")) {
-                (String optName, String optValue) = parseOption();
-                options.put(optName, optValue);
+                parseOption();
             } else if (checkIdentifier("rpc")) {
                 methods.add(parseRpc());
             } else {
@@ -526,14 +612,16 @@ class ProtoParser {
         }
         expect(RightBrace);
 
-        return new ServiceDescriptor(name, methods.freeze(inPlace=True),
-                options.freeze(inPlace=True));
+        ServiceDescriptorProto svc = new ServiceDescriptorProto();
+        svc.name   = name;
+        svc.method = methods;
+        return svc;
     }
 
     /**
      * Parse an `rpc MethodName (RequestType) returns (ResponseType) [{ ... }|;]` method.
      */
-    private MethodDescriptor parseRpc() {
+    private MethodDescriptorProto parseRpc() {
         expectIdentifier("rpc");
         String name = expect(Identifier).text;
 
@@ -561,13 +649,11 @@ class ProtoParser {
         expect(RightParen);
 
         // method body or semicolon
-        ListMap<String, String> options = new ListMap();
         if (current.type == LeftBrace) {
             advance();
             while (current.type != RightBrace && current.type != Eof) {
                 if (checkIdentifier("option")) {
-                    (String optName, String optValue) = parseOption();
-                    options.put(optName, optValue);
+                    parseOption();
                 } else {
                     advance();  // skip unknown tokens in rpc body
                 }
@@ -577,8 +663,13 @@ class ProtoParser {
             expect(Semicolon);
         }
 
-        return new MethodDescriptor(name, inputType, outputType,
-                clientStreaming, serverStreaming, options.freeze(inPlace=True));
+        MethodDescriptorProto method = new MethodDescriptorProto();
+        method.name             = name;
+        method.inputType        = inputType;
+        method.outputType       = outputType;
+        method.clientStreaming  = clientStreaming;
+        method.serverStreaming  = serverStreaming;
+        return method;
     }
 
     // ----- helper methods -------------------------------------------------------------------------
@@ -784,5 +875,26 @@ class ProtoParser {
         } while (current.type != Eof && depth > 0);
 
         return buf.toString().trim();
+    }
+
+    /**
+     * Convert a snake_case field name to PascalCase for map entry message names.
+     */
+    private String toPascalCase(String name) {
+        StringBuffer buf       = new StringBuffer();
+        Boolean      upperNext = True;
+
+        for (Int i = 0; i < name.size; i++) {
+            Char ch = name[i];
+            if (ch == '_') {
+                upperNext = True;
+            } else if (upperNext) {
+                buf.add(ch >= 'a' && ch <= 'z' ? ch.uppercase : ch);
+                upperNext = False;
+            } else {
+                buf.add(ch);
+            }
+        }
+        return buf.toString();
     }
 }

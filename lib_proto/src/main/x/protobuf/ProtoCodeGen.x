@@ -1,7 +1,16 @@
 import ecstasy.collections.HashSet;
 import ecstasy.maps.ListMap;
 
-import FieldDescriptor.Label;
+import wellknown.DescriptorProto;
+import wellknown.EnumDescriptorProto;
+import wellknown.EnumValueDescriptorProto;
+import wellknown.FieldDescriptorProto;
+import wellknown.FieldDescriptorProto.Type as FieldType;
+import wellknown.FieldDescriptorProto.Label;
+import wellknown.FileDescriptorProto;
+import wellknown.MethodDescriptorProto;
+import wellknown.OneofDescriptorProto;
+import wellknown.ServiceDescriptorProto;
 
 /**
  * Generates Ecstasy source files from parsed `.proto` file descriptors.
@@ -32,28 +41,92 @@ class ProtoCodeGen {
      */
     private Set<String> enumNames = new HashSet();
 
+    /**
+     * Information about a map field's key and value types, extracted from the synthetic
+     * entry message in the descriptor.
+     */
+    private static const MapFieldInfo(FieldType keyType, FieldType valueType,
+                                      String valueTypeName);
+
+    /**
+     * Build a map from entry message typeName to MapFieldInfo for all map fields in a message.
+     */
+    private Map<String, MapFieldInfo> buildMapFieldInfo(DescriptorProto msg) {
+        ListMap<String, MapFieldInfo> map = new ListMap();
+        for (DescriptorProto nested : msg.nestedType) {
+            if (isMapEntryMessage(nested)) {
+                FieldDescriptorProto keyField   = nested.field[0];
+                FieldDescriptorProto valueField = nested.field[1];
+                assert FieldType keyType   := keyField.hasType();
+                assert FieldType valueType := valueField.hasType();
+                map.put(nested.name, new MapFieldInfo(keyType, valueType, valueField.typeName));
+            }
+        }
+        return map;
+    }
+
+    /**
+     * @return True if the field is a map field (references a synthetic map entry message)
+     */
+    private Boolean isMapField(FieldDescriptorProto field, Map<String, MapFieldInfo> mapInfo) {
+        return field.label == LabelRepeated && mapInfo.contains(field.typeName);
+    }
+
+    /**
+     * @return True if the message is a synthetic map entry message
+     */
+    private Boolean isMapEntryMessage(DescriptorProto msg) {
+        import wellknown.MessageOptions;
+        MessageOptions? opts = msg.options;
+        return opts != Null && opts.mapEntry;
+    }
+
+    /**
+     * @return True if the given field type is packable (numeric, bool, or enum)
+     */
+    private Boolean isPackable(FieldType type) {
+        return switch (type) {
+            case TypeDouble, TypeFloat:                                True;
+            case TypeInt64, TypeUint64, TypeInt32, TypeUint32:         True;
+            case TypeFixed64, TypeFixed32, TypeSfixed32, TypeSfixed64: True;
+            case TypeSint32, TypeSint64:                               True;
+            case TypeBool, TypeEnum:                                   True;
+            default:                                                   False;
+        };
+    }
+
+    /**
+     * @return the Ecstasy type name for a map value, handling both scalar types and message/enum types
+     */
+    private String mapValueEcstasyType(MapFieldInfo info) {
+        if (info.valueType == TypeMessage || info.valueType == TypeEnum) {
+            return info.valueTypeName;
+        }
+        return ecstasyType(info.valueType);
+    }
+
     // ----- public interface -----------------------------------------------------------------------
 
     /**
      * Generate Ecstasy source files from a parsed proto file descriptor.
      *
-     * @param file  the parsed FileDescriptor
+     * @param file  the parsed FileDescriptorProto
      *
      * @return a map from file name (e.g. `"Person.x"`) to source text
      */
-    Map<String, String> generate(FileDescriptor file) {
+    Map<String, String> generate(FileDescriptorProto file) {
         enumNames = collectEnumNames(file);
         ListMap<String, String> result = new ListMap();
 
-        for (EnumDescriptor e : file.enums) {
+        for (EnumDescriptorProto e : file.enumType) {
             result.put($"{e.name}.x", generateTopLevelEnum(e, file));
         }
 
-        for (MessageDescriptor msg : file.messages) {
+        for (DescriptorProto msg : file.messageType) {
             result.put($"{msg.name}.x", generateTopLevelMessage(msg, file));
         }
 
-        for (ServiceDescriptor svc : file.services) {
+        for (ServiceDescriptorProto svc : file.service_) {
             result.put($"{svc.name}.x", generateTopLevelService(svc, file));
         }
 
@@ -65,7 +138,7 @@ class ProtoCodeGen {
     /**
      * Generate a top-level enum file.
      */
-    private String generateTopLevelEnum(EnumDescriptor e, FileDescriptor file) {
+    private String generateTopLevelEnum(EnumDescriptorProto e, FileDescriptorProto file) {
         StringBuffer buf = new StringBuffer();
         generateEnum(buf, e, file, 0);
         return buf.toString();
@@ -74,7 +147,7 @@ class ProtoCodeGen {
     /**
      * Generate a top-level message file.
      */
-    private String generateTopLevelMessage(MessageDescriptor msg, FileDescriptor file) {
+    private String generateTopLevelMessage(DescriptorProto msg, FileDescriptorProto file) {
         StringBuffer buf = new StringBuffer();
         generateMessage(buf, msg, file, 0, False);
         return buf.toString();
@@ -83,7 +156,7 @@ class ProtoCodeGen {
     /**
      * Generate a top-level service interface file.
      */
-    private String generateTopLevelService(ServiceDescriptor svc, FileDescriptor file) {
+    private String generateTopLevelService(ServiceDescriptorProto svc, FileDescriptorProto file) {
         StringBuffer buf = new StringBuffer();
         generateService(buf, svc, file, 0);
         return buf.toString();
@@ -94,7 +167,8 @@ class ProtoCodeGen {
     /**
      * Generate an enum declaration.
      */
-    private void generateEnum(StringBuffer buf, EnumDescriptor e, FileDescriptor file, Int indent) {
+    private void generateEnum(StringBuffer buf, EnumDescriptorProto e, FileDescriptorProto file,
+                              Int indent) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
 
@@ -108,11 +182,11 @@ class ProtoCodeGen {
          .appendTo(buf);
 
         // enum values
-        for (Int i = 0; i < e.values.size; i++) {
-            EnumValueDescriptor v = e.values[i];
+        for (Int i = 0; i < e.value.size; i++) {
+            EnumValueDescriptorProto v = e.value[i];
             $|{pad1}{toPascalCase(v.name)}({v.number})
              .appendTo(buf);
-            buf.add(i < e.values.size - 1 ? ',' : ';');
+            buf.add(i < e.value.size - 1 ? ',' : ';');
             buf.add('\n');
         }
 
@@ -138,7 +212,7 @@ class ProtoCodeGen {
      * @param indent   the indentation level
      * @param nested   True if this is a nested (inner static) class
      */
-    private void generateMessage(StringBuffer buf, MessageDescriptor msg, FileDescriptor file,
+    private void generateMessage(StringBuffer buf, DescriptorProto msg, FileDescriptorProto file,
                                  Int indent, Boolean nested) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
@@ -154,11 +228,14 @@ class ProtoCodeGen {
          |
          .appendTo(buf);
 
+        // build map field info from nested entry messages
+        Map<String, MapFieldInfo> mapInfo = buildMapFieldInfo(msg);
+
         // collect non-oneof fields and oneof descriptors
-        Array<FieldDescriptor> regularFields = new Array();
-        Array<FieldDescriptor> oneofFields   = new Array();
-        for (FieldDescriptor field : msg.fields) {
-            if (field.oneofIndex >= 0) {
+        Array<FieldDescriptorProto> regularFields = new Array();
+        Array<FieldDescriptorProto> oneofFields   = new Array();
+        for (FieldDescriptorProto field : msg.field) {
+            if (field.hasOneofIndex()) {
                 oneofFields.add(field);
             } else {
                 regularFields.add(field);
@@ -166,33 +243,36 @@ class ProtoCodeGen {
         }
 
         // build presence tracking map for scalar fields
-        Map<String, Int> presenceMap = buildPresenceMap(regularFields);
+        Map<String, Int> presenceMap = buildPresenceMap(regularFields, mapInfo);
 
         // oneof typedefs
-        generateOneofTypedefs(buf, msg.oneofs, oneofFields, indent + 1);
+        generateOneofTypedefs(buf, msg.oneofDecl, oneofFields, indent + 1);
 
         // default constructor with field parameters
-        generateConstructor(buf, regularFields, msg.oneofs, indent + 1, presenceMap);
+        generateConstructor(buf, regularFields, msg.oneofDecl, indent + 1, presenceMap, mapInfo);
 
         // copy constructor
-        generateCopyConstructor(buf, msg, regularFields, indent + 1, presenceMap);
+        generateCopyConstructor(buf, msg, regularFields, indent + 1, presenceMap, mapInfo);
         buf.add('\n');
 
         // field declarations
-        generateFieldDeclarations(buf, regularFields, msg.oneofs, indent + 1, presenceMap);
+        generateFieldDeclarations(buf, regularFields, msg.oneofDecl, indent + 1, presenceMap, mapInfo);
 
         // has methods
-        generateHasMethods(buf, regularFields, msg.oneofs, oneofFields, indent + 1, presenceMap);
+        generateHasMethods(buf, regularFields, msg.oneofDecl, oneofFields, indent + 1, presenceMap, mapInfo);
 
         // nested enums
-        for (EnumDescriptor e : msg.enums) {
+        for (EnumDescriptorProto e : msg.enumType) {
             $"{pad1}{separator($"enum {e.name}", indent + 1)}\n\n".appendTo(buf);
             generateEnum(buf, e, file, indent + 1);
             buf.add('\n');
         }
 
-        // nested messages
-        for (MessageDescriptor nested2 : msg.nestedMessages) {
+        // nested messages (skip map entry messages)
+        for (DescriptorProto nested2 : msg.nestedType) {
+            if (isMapEntryMessage(nested2)) {
+                continue;
+            }
             $"{pad1}{separator($"message {nested2.name}", indent + 1)}\n\n".appendTo(buf);
             generateMessage(buf, nested2, file, indent + 1, True);
             buf.add('\n');
@@ -202,19 +282,19 @@ class ProtoCodeGen {
         $"{pad1}{separator("serialization", indent + 1)}\n\n".appendTo(buf);
 
         // parseField (no changes - virtual property setters handle presence bits)
-        generateParseField(buf, msg, regularFields, oneofFields, indent + 1);
+        generateParseField(buf, msg, regularFields, oneofFields, indent + 1, mapInfo);
         buf.add('\n');
 
         // writeKnownFields
-        generateWriteKnownFields(buf, msg, regularFields, oneofFields, indent + 1, presenceMap);
+        generateWriteKnownFields(buf, msg, regularFields, oneofFields, indent + 1, presenceMap, mapInfo);
         buf.add('\n');
 
         // knownFieldsSize
-        generateKnownFieldsSize(buf, msg, regularFields, oneofFields, indent + 1, presenceMap);
+        generateKnownFieldsSize(buf, msg, regularFields, oneofFields, indent + 1, presenceMap, mapInfo);
         buf.add('\n');
 
         // freeze
-        generateFreeze(buf, msg, regularFields, indent + 1);
+        generateFreeze(buf, msg, regularFields, indent + 1, mapInfo);
 
         $"{pad}}\n".appendTo(buf);
     }
@@ -224,15 +304,15 @@ class ProtoCodeGen {
     /**
      * Generate typedefs for oneof groups.
      */
-    private void generateOneofTypedefs(StringBuffer buf, OneofDescriptor[] oneofs,
-                                       Array<FieldDescriptor> oneofFields, Int indent) {
+    private void generateOneofTypedefs(StringBuffer buf, Array<OneofDescriptorProto> oneofs,
+                                       Array<FieldDescriptorProto> oneofFields, Int indent) {
         String pad = spaces(indent);
 
         for (Int oi = 0; oi < oneofs.size; oi++) {
-            OneofDescriptor oneof = oneofs[oi];
+            OneofDescriptorProto oneof = oneofs[oi];
             StringBuffer types = new StringBuffer();
             Boolean first = True;
-            for (FieldDescriptor field : oneofFields) {
+            for (FieldDescriptorProto field : oneofFields) {
                 if (field.oneofIndex != oi) {
                     continue;
                 }
@@ -257,9 +337,10 @@ class ProtoCodeGen {
      * Generate field declarations for regular (non-oneof) fields and oneof instances.
      */
     private void generateFieldDeclarations(StringBuffer buf,
-                                           Array<FieldDescriptor> regularFields,
-                                           OneofDescriptor[] oneofs, Int indent,
-                                           Map<String, Int> presenceMap) {
+                                           Array<FieldDescriptorProto> regularFields,
+                                           Array<OneofDescriptorProto> oneofs, Int indent,
+                                           Map<String, Int> presenceMap,
+                                           Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
         String pad2 = spaces(indent + 2);
@@ -273,10 +354,10 @@ class ProtoCodeGen {
             buf.add('\n');
         }
 
-        for (FieldDescriptor field : regularFields) {
-            String ftype = fieldTypeName(field);
+        for (FieldDescriptorProto field : regularFields) {
+            String ftype = fieldTypeName(field, mapInfo);
             String fname = fieldName(field.name);
-            String fdef  = fieldDefault(field);
+            String fdef  = fieldDefault(field, mapInfo);
 
             if (presenceMap.contains(fname)) {
                 assert Int bitIndex := presenceMap.get(fname);
@@ -306,7 +387,7 @@ class ProtoCodeGen {
             }
         }
 
-        for (OneofDescriptor oneof : oneofs) {
+        for (OneofDescriptorProto oneof : oneofs) {
             String typedefName = $"{toPascalCase(oneof.name)}Type";
             String propName    = toCamelCase(oneof.name);
             $"{pad}{typedefName}? {propName} = Null;\n".appendTo(buf);
@@ -318,9 +399,10 @@ class ProtoCodeGen {
     /**
      * Generate the default constructor with field parameters.
      */
-    private void generateConstructor(StringBuffer buf, Array<FieldDescriptor> regularFields,
-                                     OneofDescriptor[] oneofs, Int indent,
-                                     Map<String, Int> presenceMap) {
+    private void generateConstructor(StringBuffer buf, Array<FieldDescriptorProto> regularFields,
+                                     Array<OneofDescriptorProto> oneofs, Int indent,
+                                     Map<String, Int> presenceMap,
+                                     Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
 
@@ -328,7 +410,7 @@ class ProtoCodeGen {
 
         // parameters
         Boolean first = True;
-        for (FieldDescriptor field : regularFields) {
+        for (FieldDescriptorProto field : regularFields) {
             if (first) {
                 first = False;
             } else {
@@ -337,15 +419,15 @@ class ProtoCodeGen {
             String fname = fieldName(field.name);
             if (presenceMap.contains(fname)) {
                 // scalar fields with presence tracking use nullable parameter
-                String ftype = $"{fieldTypeName(field)}?";
+                String ftype = $"{fieldTypeName(field, mapInfo)}?";
                 $"\n{pad1}{pad}{ftype} {fname} = Null".appendTo(buf);
             } else {
-                String ftype = fieldTypeName(field);
-                String fdef  = constructorDefault(field);
+                String ftype = fieldTypeName(field, mapInfo);
+                String fdef  = constructorDefault(field, mapInfo);
                 $"\n{pad1}{pad}{ftype} {fname} = {fdef}".appendTo(buf);
             }
         }
-        for (OneofDescriptor oneof : oneofs) {
+        for (OneofDescriptorProto oneof : oneofs) {
             if (first) {
                 first = False;
             } else {
@@ -359,20 +441,20 @@ class ProtoCodeGen {
         $") \{\n{pad1}construct protobuf.AbstractMessage();\n".appendTo(buf);
 
         // constructor body: non-scalar fields and oneofs
-        for (FieldDescriptor field : regularFields) {
+        for (FieldDescriptorProto field : regularFields) {
             String fname = fieldName(field.name);
             if (!presenceMap.contains(fname)) {
                 $"{pad1}this.{fname} = {fname};\n".appendTo(buf);
             }
         }
-        for (OneofDescriptor oneof : oneofs) {
+        for (OneofDescriptorProto oneof : oneofs) {
             String propName = toCamelCase(oneof.name);
             $"{pad1}this.{propName} = {propName};\n".appendTo(buf);
         }
 
         // finally block: scalar fields with presence tracking using ?= operator
         Boolean hasPresenceFields = False;
-        for (FieldDescriptor field : regularFields) {
+        for (FieldDescriptorProto field : regularFields) {
             String fname = fieldName(field.name);
             if (presenceMap.contains(fname)) {
                 if (!hasPresenceFields) {
@@ -389,24 +471,26 @@ class ProtoCodeGen {
     /**
      * @return the default value literal for a constructor parameter
      */
-    private String constructorDefault(FieldDescriptor field) {
-        if (field.isMapField) {
+    private String constructorDefault(FieldDescriptorProto field,
+                                      Map<String, MapFieldInfo> mapInfo) {
+        if (isMapField(field, mapInfo)) {
             return "Map:[]";
         }
-        if (field.label == Repeated) {
+        if (field.label == LabelRepeated) {
             return "[]";
         }
-        if (field.type == TypeMessage || isEnumRef(field)) {
+        assert FieldType fieldType := field.hasType();
+        if (fieldType == TypeMessage || isEnumRef(field)) {
             return "Null";
         }
-        return scalarDefault(field);
+        return scalarDefault(fieldType);
     }
 
     /**
-     * @return the protobuf default value literal for a scalar field
+     * @return the protobuf default value literal for a scalar field type
      */
-    private String scalarDefault(FieldDescriptor field) {
-        return switch (field.type) {
+    private String scalarDefault(FieldType fieldType) {
+        return switch (fieldType) {
             case TypeInt32, TypeSint32, TypeSfixed32:     "0";
             case TypeInt64, TypeSint64, TypeSfixed64:     "0";
             case TypeUint32, TypeFixed32:                  "0";
@@ -425,9 +509,10 @@ class ProtoCodeGen {
     /**
      * Generate the Duplicable copy constructor.
      */
-    private void generateCopyConstructor(StringBuffer buf, MessageDescriptor msg,
-                                         Array<FieldDescriptor> regularFields, Int indent,
-                                         Map<String, Int> presenceMap) {
+    private void generateCopyConstructor(StringBuffer buf, DescriptorProto msg,
+                                         Array<FieldDescriptorProto> regularFields, Int indent,
+                                         Map<String, Int> presenceMap,
+                                         Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
         String pad2 = spaces(indent + 2);
@@ -437,9 +522,9 @@ class ProtoCodeGen {
          |{pad1}construct protobuf.AbstractMessage(other);
          .appendTo(buf);
 
-        for (FieldDescriptor field : regularFields) {
+        for (FieldDescriptorProto field : regularFields) {
             String fname = fieldName(field.name);
-            if (field.isMapField) {
+            if (isMapField(field, mapInfo)) {
                 $|
                  |{pad1}if (other.{fname}.is(immutable)) \{
                  |{pad2}{fname} = other.{fname};
@@ -447,7 +532,7 @@ class ProtoCodeGen {
                  |{pad2}{fname} = new ecstasy.maps.ListMap(other.{fname});
                  |{pad1}}
                  .appendTo(buf);
-            } else if (field.label == Repeated) {
+            } else if (field.label == LabelRepeated) {
                 $"\n{pad1}{fname} = other.{fname}.duplicate();".appendTo(buf);
             } else if (presenceMap.contains(fname)) {
                 $"\n{pad1}_{fname} = other.{fname};".appendTo(buf);
@@ -456,7 +541,7 @@ class ProtoCodeGen {
             }
         }
 
-        for (OneofDescriptor oneof : msg.oneofs) {
+        for (OneofDescriptorProto oneof : msg.oneofDecl) {
             String propName = toCamelCase(oneof.name);
             $"\n{pad1}{propName} = other.{propName};".appendTo(buf);
         }
@@ -477,10 +562,11 @@ class ProtoCodeGen {
     /**
      * Generate conditional has*() methods for fields that support presence checking.
      */
-    private void generateHasMethods(StringBuffer buf, Array<FieldDescriptor> regularFields,
-                                    OneofDescriptor[] oneofs,
-                                    Array<FieldDescriptor> oneofFields, Int indent,
-                                    Map<String, Int> presenceMap) {
+    private void generateHasMethods(StringBuffer buf, Array<FieldDescriptorProto> regularFields,
+                                    Array<OneofDescriptorProto> oneofs,
+                                    Array<FieldDescriptorProto> oneofFields, Int indent,
+                                    Map<String, Int> presenceMap,
+                                    Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
         String pad2 = spaces(indent + 2);
@@ -488,11 +574,11 @@ class ProtoCodeGen {
         Boolean any = False;
 
         // scalar fields with presence bitmask
-        for (FieldDescriptor field : regularFields) {
+        for (FieldDescriptorProto field : regularFields) {
             String fname = fieldName(field.name);
             if (presenceMap.contains(fname)) {
                 any = True;
-                String ftype   = fieldTypeName(field);
+                String ftype   = fieldTypeName(field, mapInfo);
                 String hasName = $"has{toPascalCase(field.name)}";
                 String cond    = presenceCondition(presenceMap, fname);
                 $|
@@ -508,12 +594,13 @@ class ProtoCodeGen {
         }
 
         // message and enum fields (nullable, non-map, non-repeated)
-        for (FieldDescriptor field : regularFields) {
+        for (FieldDescriptorProto field : regularFields) {
             String fname = fieldName(field.name);
-            if (field.isMapField || field.label == Repeated) {
+            assert FieldType fieldType := field.hasType();
+            if (isMapField(field, mapInfo) || field.label == LabelRepeated) {
                 continue;
             }
-            if (field.type == TypeMessage && !isEnumRef(field)) {
+            if (fieldType == TypeMessage && !isEnumRef(field)) {
                 any = True;
                 String ecType  = field.typeName;
                 String hasName = $"has{toPascalCase(field.name)}";
@@ -526,7 +613,7 @@ class ProtoCodeGen {
                  |{pad1}return False;
                  |{pad}}
                  .appendTo(buf);
-            } else if (isEnumRef(field) && field.label != Repeated) {
+            } else if (isEnumRef(field) && field.label != LabelRepeated) {
                 any = True;
                 String ecType  = field.typeName;
                 String hasName = $"has{toPascalCase(field.name)}";
@@ -544,7 +631,7 @@ class ProtoCodeGen {
 
         // oneof fields (with type parameter and multi-switch)
         for (Int oi = 0; oi < oneofs.size; oi++) {
-            OneofDescriptor oneof = oneofs[oi];
+            OneofDescriptorProto oneof = oneofs[oi];
             any = True;
             String typedefName = $"{toPascalCase(oneof.name)}Type";
             String propName    = toCamelCase(oneof.name);
@@ -561,7 +648,7 @@ class ProtoCodeGen {
             $"{pad2}    return True, value;\n".appendTo(buf);
 
             // cases for each member type
-            for (FieldDescriptor field : oneofFields) {
+            for (FieldDescriptorProto field : oneofFields) {
                 if (field.oneofIndex != oi) {
                     continue;
                 }
@@ -587,9 +674,10 @@ class ProtoCodeGen {
     /**
      * Generate the parseField override.
      */
-    private void generateParseField(StringBuffer buf, MessageDescriptor msg,
-                                    Array<FieldDescriptor> regularFields,
-                                    Array<FieldDescriptor> oneofFields, Int indent) {
+    private void generateParseField(StringBuffer buf, DescriptorProto msg,
+                                    Array<FieldDescriptorProto> regularFields,
+                                    Array<FieldDescriptorProto> oneofFields, Int indent,
+                                    Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
         String pad2 = spaces(indent + 2);
@@ -608,17 +696,18 @@ class ProtoCodeGen {
              .appendTo(buf);
 
             // regular fields
-            for (FieldDescriptor field : regularFields) {
+            for (FieldDescriptorProto field : regularFields) {
                 String fname = fieldName(field.name);
                 $"\n{pad1}case {field.number}:\n".appendTo(buf);
+                assert FieldType fieldType := field.hasType();
 
-                if (field.isMapField) {
-                    generateParseMapField(buf, field, fname, indent + 2);
-                } else if (field.label == Repeated) {
+                if (isMapField(field, mapInfo)) {
+                    generateParseMapField(buf, field, fname, indent + 2, mapInfo);
+                } else if (field.label == LabelRepeated) {
                     generateParseRepeatedField(buf, field, fname, indent + 2);
                 } else if (isEnumRef(field)) {
                     generateParseEnumField(buf, field, fname, indent + 2);
-                } else if (field.type == TypeMessage) {
+                } else if (fieldType == TypeMessage) {
                     generateParseMessageField(buf, field, fname, indent + 2);
                 } else {
                     $"{pad2}{fname} = input.{readMethod(field)};\n".appendTo(buf);
@@ -627,8 +716,8 @@ class ProtoCodeGen {
             }
 
             // oneof fields
-            for (FieldDescriptor field : oneofFields) {
-                String propName = toCamelCase(msg.oneofs[field.oneofIndex].name);
+            for (FieldDescriptorProto field : oneofFields) {
+                String propName = toCamelCase(msg.oneofDecl[field.oneofIndex].name);
                 $"\n{pad1}case {field.number}:\n".appendTo(buf);
                 if (isEnumRef(field)) {
                     String tn   = field.typeName;
@@ -656,7 +745,7 @@ class ProtoCodeGen {
     /**
      * Generate parse logic for a repeated field.
      */
-    private void generateParseRepeatedField(StringBuffer buf, FieldDescriptor field,
+    private void generateParseRepeatedField(StringBuffer buf, FieldDescriptorProto field,
                                             String fname, Int indent) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
@@ -685,7 +774,7 @@ class ProtoCodeGen {
              |{pad1}}
              |{pad}}
              .appendTo(buf);
-        } else if (field.type.packable) {
+        } else if (FieldType ft := field.hasType(), isPackable(ft)) {
             // handle both packed (LEN) and unpacked wire types
             $|{pad}if (protobuf.WireType.getWireType(tag) == protobuf.WireType.LEN) \{
              |{pad1}{fname}.addAll(input.{readPackedMethod(field)});
@@ -713,7 +802,7 @@ class ProtoCodeGen {
     /**
      * Generate parse logic for a singular message field.
      */
-    private void generateParseMessageField(StringBuffer buf, FieldDescriptor field,
+    private void generateParseMessageField(StringBuffer buf, FieldDescriptorProto field,
                                            String fname, Int indent) {
         String pad = spaces(indent);
         String tn  = field.typeName;
@@ -730,7 +819,7 @@ class ProtoCodeGen {
     /**
      * Generate parse logic for a singular enum field.
      */
-    private void generateParseEnumField(StringBuffer buf, FieldDescriptor field,
+    private void generateParseEnumField(StringBuffer buf, FieldDescriptorProto field,
                                         String fname, Int indent) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
@@ -745,14 +834,16 @@ class ProtoCodeGen {
     /**
      * Generate parse logic for a map field.
      */
-    private void generateParseMapField(StringBuffer buf, FieldDescriptor field,
-                                       String fname, Int indent) {
+    private void generateParseMapField(StringBuffer buf, FieldDescriptorProto field,
+                                       String fname, Int indent,
+                                       Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
-        String readMapMethod = mapReadMethod(field);
+        assert MapFieldInfo info := mapInfo.get(field.typeName);
+        String readMapMethod = mapReadMethod(info.keyType, info.valueType);
         if (readMapMethod.size > 0) {
-            String kt = ecstasyType(field.mapKeyType);
-            String vt = ecstasyType(field.mapValueType);
+            String kt = ecstasyType(info.keyType);
+            String vt = ecstasyType(info.valueType);
 
             // ensure the map is mutable (may be immutable from default parameter)
             $|{pad}if ({fname}.is(immutable)) \{
@@ -772,10 +863,11 @@ class ProtoCodeGen {
     /**
      * Generate the writeKnownFields override.
      */
-    private void generateWriteKnownFields(StringBuffer buf, MessageDescriptor msg,
-                                          Array<FieldDescriptor> regularFields,
-                                          Array<FieldDescriptor> oneofFields, Int indent,
-                                          Map<String, Int> presenceMap) {
+    private void generateWriteKnownFields(StringBuffer buf, DescriptorProto msg,
+                                          Array<FieldDescriptorProto> regularFields,
+                                          Array<FieldDescriptorProto> oneofFields, Int indent,
+                                          Map<String, Int> presenceMap,
+                                          Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
         String pad2 = spaces(indent + 2);
@@ -785,13 +877,14 @@ class ProtoCodeGen {
          .appendTo(buf);
 
         // regular fields
-        for (FieldDescriptor field : regularFields) {
+        for (FieldDescriptorProto field : regularFields) {
             String fname = fieldName(field.name);
             Int    fn    = field.number;
+            assert FieldType fieldType := field.hasType();
 
-            if (field.isMapField) {
-                generateWriteMapField(buf, field, fname, indent + 1);
-            } else if (field.label == Repeated) {
+            if (isMapField(field, mapInfo)) {
+                generateWriteMapField(buf, field, fname, indent + 1, mapInfo);
+            } else if (field.label == LabelRepeated) {
                 generateWriteRepeatedField(buf, field, fname, indent + 1);
             } else if (isEnumRef(field)) {
                 String ecType = field.typeName;
@@ -801,7 +894,7 @@ class ProtoCodeGen {
                  |{pad2}out.writeEnum({fn}, {fname});
                  |{pad1}}
                  .appendTo(buf);
-            } else if (field.type == TypeMessage) {
+            } else if (fieldType == TypeMessage) {
                 String ecType = field.typeName;
                 $|
                  |{pad1}{ecType}? {fname} = this.{fname};
@@ -820,8 +913,8 @@ class ProtoCodeGen {
         }
 
         // oneof fields
-        for (OneofDescriptor oneof : msg.oneofs) {
-            generateWriteOneof(buf, oneof, oneofFields, indent + 1);
+        for (Int oi = 0; oi < msg.oneofDecl.size; oi++) {
+            generateWriteOneof(buf, msg.oneofDecl[oi], oi, oneofFields, indent + 1);
         }
 
         $"\n{pad}}\n".appendTo(buf);
@@ -830,11 +923,12 @@ class ProtoCodeGen {
     /**
      * Generate write logic for a repeated field.
      */
-    private void generateWriteRepeatedField(StringBuffer buf, FieldDescriptor field,
+    private void generateWriteRepeatedField(StringBuffer buf, FieldDescriptorProto field,
                                             String fname, Int indent) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
         Int    fn   = field.number;
+        assert FieldType fieldType := field.hasType();
 
         if (isEnumRef(field)) {
             // repeated enum: write each value individually using writeEnum
@@ -844,15 +938,15 @@ class ProtoCodeGen {
              |{pad1}out.writeEnum({fn}, v);
              |{pad}}
              .appendTo(buf);
-        } else if (field.type.packable) {
+        } else if (isPackable(fieldType)) {
             $|
              |{pad}if (!{fname}.empty) \{
              |{pad1}out.{writePackedMethod(field)}({fn}, {fname});
              |{pad}}
              .appendTo(buf);
         } else {
-            String ecType = field.type == TypeMessage ? field.typeName : ecstasyScalarType(field);
-            String writeCall = field.type == TypeMessage
+            String ecType = fieldType == TypeMessage ? field.typeName : ecstasyScalarType(field);
+            String writeCall = fieldType == TypeMessage
                     ? $"out.writeMessage({fn}, v)"
                     : $"out.{writeMethod(field)}({fn}, v)";
             $|
@@ -866,14 +960,16 @@ class ProtoCodeGen {
     /**
      * Generate write logic for a map field.
      */
-    private void generateWriteMapField(StringBuffer buf, FieldDescriptor field,
-                                       String fname, Int indent) {
+    private void generateWriteMapField(StringBuffer buf, FieldDescriptorProto field,
+                                       String fname, Int indent,
+                                       Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
-        String writeMapMethod = mapWriteMethod(field);
+        assert MapFieldInfo info := mapInfo.get(field.typeName);
+        String writeMapMethod = mapWriteMethod(info.keyType, info.valueType);
         if (writeMapMethod.size > 0) {
-            String kt = ecstasyType(field.mapKeyType);
-            String vt = ecstasyType(field.mapValueType);
+            String kt = ecstasyType(info.keyType);
+            String vt = ecstasyType(info.valueType);
             Int    fn = field.number;
             $|
              |{pad}for (({kt} k, {vt} v) : {fname}) \{
@@ -886,8 +982,8 @@ class ProtoCodeGen {
     /**
      * Generate write logic for a oneof group.
      */
-    private void generateWriteOneof(StringBuffer buf, OneofDescriptor oneof,
-                                    Array<FieldDescriptor> oneofFields, Int indent) {
+    private void generateWriteOneof(StringBuffer buf, OneofDescriptorProto oneof, Int oi,
+                                    Array<FieldDescriptorProto> oneofFields, Int indent) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
         String pad2 = spaces(indent + 2);
@@ -897,8 +993,8 @@ class ProtoCodeGen {
         $"\n{pad}{typedefName}? {propName} = this.{propName};\n".appendTo(buf);
 
         Boolean first = True;
-        for (FieldDescriptor field : oneofFields) {
-            if (!Oneof.contains(field.number, oneof.fieldNumbers)) {
+        for (FieldDescriptorProto field : oneofFields) {
+            if (field.oneofIndex != oi) {
                 continue;
             }
             String ecType = ecstasyScalarType(field);
@@ -931,10 +1027,11 @@ class ProtoCodeGen {
     /**
      * Generate the knownFieldsSize override.
      */
-    private void generateKnownFieldsSize(StringBuffer buf, MessageDescriptor msg,
-                                         Array<FieldDescriptor> regularFields,
-                                         Array<FieldDescriptor> oneofFields, Int indent,
-                                         Map<String, Int> presenceMap) {
+    private void generateKnownFieldsSize(StringBuffer buf, DescriptorProto msg,
+                                         Array<FieldDescriptorProto> regularFields,
+                                         Array<FieldDescriptorProto> oneofFields, Int indent,
+                                         Map<String, Int> presenceMap,
+                                         Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
         String pad2 = spaces(indent + 2);
@@ -945,12 +1042,13 @@ class ProtoCodeGen {
          .appendTo(buf);
 
         // regular fields
-        for (FieldDescriptor field : regularFields) {
+        for (FieldDescriptorProto field : regularFields) {
             String fname = fieldName(field.name);
+            assert FieldType fieldType := field.hasType();
 
-            if (field.isMapField) {
-                generateSizeMapField(buf, field, fname, indent + 1);
-            } else if (field.label == Repeated) {
+            if (isMapField(field, mapInfo)) {
+                generateSizeMapField(buf, field, fname, indent + 1, mapInfo);
+            } else if (field.label == LabelRepeated) {
                 generateSizeRepeatedField(buf, field, fname, indent + 1);
             } else if (isEnumRef(field)) {
                 String ecType = field.typeName;
@@ -961,7 +1059,7 @@ class ProtoCodeGen {
                  |{pad2}size += protobuf.CodedOutput.computeEnumSize({fn}, {fname});
                  |{pad1}}
                  .appendTo(buf);
-            } else if (field.type == TypeMessage) {
+            } else if (fieldType == TypeMessage) {
                 String ecType = field.typeName;
                 Int    fn     = field.number;
                 $|
@@ -981,8 +1079,8 @@ class ProtoCodeGen {
         }
 
         // oneof fields
-        for (OneofDescriptor oneof : msg.oneofs) {
-            generateSizeOneof(buf, oneof, oneofFields, indent + 1);
+        for (Int oi = 0; oi < msg.oneofDecl.size; oi++) {
+            generateSizeOneof(buf, msg.oneofDecl[oi], oi, oneofFields, indent + 1);
         }
 
         $|
@@ -995,11 +1093,12 @@ class ProtoCodeGen {
     /**
      * Generate size logic for a repeated field.
      */
-    private void generateSizeRepeatedField(StringBuffer buf, FieldDescriptor field,
+    private void generateSizeRepeatedField(StringBuffer buf, FieldDescriptorProto field,
                                            String fname, Int indent) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
         Int    fn   = field.number;
+        assert FieldType fieldType := field.hasType();
 
         if (isEnumRef(field)) {
             // repeated enum: compute size for each element individually
@@ -1009,15 +1108,15 @@ class ProtoCodeGen {
              |{pad1}size += protobuf.CodedOutput.computeEnumSize({fn}, v);
              |{pad}}
              .appendTo(buf);
-        } else if (field.type.packable) {
+        } else if (isPackable(fieldType)) {
             $|
              |{pad}if (!{fname}.empty) \{
              |{pad1}size += protobuf.CodedOutput.{computePackedSizeMethod(field)};
              |{pad}}
              .appendTo(buf);
         } else {
-            String ecType = field.type == TypeMessage ? field.typeName : ecstasyScalarType(field);
-            String sizeCall = field.type == TypeMessage
+            String ecType = fieldType == TypeMessage ? field.typeName : ecstasyScalarType(field);
+            String sizeCall = fieldType == TypeMessage
                     ? $"protobuf.CodedOutput.computeMessageSize({fn}, v)"
                     : $"protobuf.CodedOutput.{computeSizeMethodForElement(field)}";
             $|
@@ -1031,14 +1130,16 @@ class ProtoCodeGen {
     /**
      * Generate size logic for a map field.
      */
-    private void generateSizeMapField(StringBuffer buf, FieldDescriptor field,
-                                      String fname, Int indent) {
+    private void generateSizeMapField(StringBuffer buf, FieldDescriptorProto field,
+                                      String fname, Int indent,
+                                      Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
-        String computeMapMethod = mapComputeSizeMethod(field);
+        assert MapFieldInfo info := mapInfo.get(field.typeName);
+        String computeMapMethod = mapComputeSizeMethod(info.keyType, info.valueType);
         if (computeMapMethod.size > 0) {
-            String kt = ecstasyType(field.mapKeyType);
-            String vt = ecstasyType(field.mapValueType);
+            String kt = ecstasyType(info.keyType);
+            String vt = ecstasyType(info.valueType);
             Int    fn = field.number;
             $|
              |{pad}for (({kt} k, {vt} v) : {fname}) \{
@@ -1051,8 +1152,8 @@ class ProtoCodeGen {
     /**
      * Generate size logic for a oneof group.
      */
-    private void generateSizeOneof(StringBuffer buf, OneofDescriptor oneof,
-                                   Array<FieldDescriptor> oneofFields, Int indent) {
+    private void generateSizeOneof(StringBuffer buf, OneofDescriptorProto oneof, Int oi,
+                                   Array<FieldDescriptorProto> oneofFields, Int indent) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
         String typedefName = $"{toPascalCase(oneof.name)}Type";
@@ -1061,8 +1162,8 @@ class ProtoCodeGen {
         $"\n{pad}{typedefName}? {propName} = this.{propName};\n".appendTo(buf);
 
         Boolean first = True;
-        for (FieldDescriptor field : oneofFields) {
-            if (!Oneof.contains(field.number, oneof.fieldNumbers)) {
+        for (FieldDescriptorProto field : oneofFields) {
+            if (field.oneofIndex != oi) {
                 continue;
             }
             String ecType = ecstasyScalarType(field);
@@ -1086,8 +1187,9 @@ class ProtoCodeGen {
     /**
      * Generate the freeze override.
      */
-    private void generateFreeze(StringBuffer buf, MessageDescriptor msg,
-                                Array<FieldDescriptor> regularFields, Int indent) {
+    private void generateFreeze(StringBuffer buf, DescriptorProto msg,
+                                Array<FieldDescriptorProto> regularFields, Int indent,
+                                Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
         String pad2 = spaces(indent + 2);
@@ -1105,9 +1207,10 @@ class ProtoCodeGen {
          .appendTo(buf);
 
         // freeze mutable fields (arrays, maps, messages)
-        for (FieldDescriptor field : regularFields) {
+        for (FieldDescriptorProto field : regularFields) {
             String fname = fieldName(field.name);
-            if (field.isMapField) {
+            assert FieldType fieldType := field.hasType();
+            if (isMapField(field, mapInfo)) {
                 $|
                  |{pad1}Map {fname} = this.{fname};
                  |{pad1}if ({fname}.is(Freezable)) \{
@@ -1116,9 +1219,9 @@ class ProtoCodeGen {
                  |{pad2}this.{fname} = new ecstasy.maps.ListMap({fname}).freeze(True);
                  |{pad1}}
                  .appendTo(buf);
-            } else if (field.label == Repeated) {
+            } else if (field.label == LabelRepeated) {
                 $"\n{pad1}{fname}.freeze(True);".appendTo(buf);
-            } else if (field.type == TypeMessage && !isEnumRef(field)) {
+            } else if (fieldType == TypeMessage && !isEnumRef(field)) {
                 $"\n{pad1}{fname}?.freeze(True);".appendTo(buf);
             }
         }
@@ -1135,8 +1238,8 @@ class ProtoCodeGen {
     /**
      * Generate a service interface.
      */
-    private void generateService(StringBuffer buf, ServiceDescriptor svc, FileDescriptor file,
-                                 Int indent) {
+    private void generateService(StringBuffer buf, ServiceDescriptorProto svc,
+                                 FileDescriptorProto file, Int indent) {
 
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
@@ -1149,7 +1252,7 @@ class ProtoCodeGen {
          |
          .appendTo(buf);
 
-        for (MethodDescriptor method : svc.methods) {
+        for (MethodDescriptorProto method : svc.method) {
             buf.add('\n');
             String methodName = toCamelCase(method.name);
 
@@ -1172,17 +1275,19 @@ class ProtoCodeGen {
     /**
      * @return the Ecstasy type name for a field declaration
      */
-    private String fieldTypeName(FieldDescriptor field) {
-        if (field.isMapField) {
-            return $"Map<{ecstasyType(field.mapKeyType)}, {ecstasyType(field.mapValueType)}>";
+    private String fieldTypeName(FieldDescriptorProto field, Map<String, MapFieldInfo> mapInfo) {
+        if (isMapField(field, mapInfo)) {
+            assert MapFieldInfo info := mapInfo.get(field.typeName);
+            return $"Map<{ecstasyType(info.keyType)}, {mapValueEcstasyType(info)}>";
         }
-        if (field.label == Repeated) {
-            if (field.type == TypeMessage) {
+        assert FieldType fieldType := field.hasType();
+        if (field.label == LabelRepeated) {
+            if (fieldType == TypeMessage) {
                 return $"Array<{field.typeName}>";
             }
             return $"Array<{ecstasyScalarType(field)}>";
         }
-        if (field.type == TypeMessage || isEnumRef(field)) {
+        if (fieldType == TypeMessage || isEnumRef(field)) {
             return $"{field.typeName}?";
         }
         return ecstasyScalarType(field);
@@ -1191,21 +1296,22 @@ class ProtoCodeGen {
     /**
      * @return the default value literal for a field
      */
-    private String fieldDefault(FieldDescriptor field) {
-        return constructorDefault(field);
+    private String fieldDefault(FieldDescriptorProto field, Map<String, MapFieldInfo> mapInfo) {
+        return constructorDefault(field, mapInfo);
     }
 
     /**
      * @return the raw Ecstasy type name for a scalar field type (no Maybe wrapper)
      */
-    private String ecstasyScalarType(FieldDescriptor field) {
-        if (field.type == TypeMessage) {
+    private String ecstasyScalarType(FieldDescriptorProto field) {
+        assert FieldType fieldType := field.hasType();
+        if (fieldType == TypeMessage) {
             return field.typeName;
         }
-        if (field.type == TypeEnum) {
+        if (fieldType == TypeEnum) {
             return field.typeName;
         }
-        return ecstasyType(field.type);
+        return ecstasyType(fieldType);
     }
 
     /**
@@ -1231,8 +1337,9 @@ class ProtoCodeGen {
     /**
      * @return the CodedInput read method call for a field (without "input." prefix)
      */
-    private String readMethod(FieldDescriptor field) {
-        return switch (field.type) {
+    private String readMethod(FieldDescriptorProto field) {
+        assert FieldType fieldType := field.hasType();
+        return switch (fieldType) {
             case TypeDouble:   "readDouble()";
             case TypeFloat:    "readFloat()";
             case TypeInt64:    "readInt64()";
@@ -1256,8 +1363,9 @@ class ProtoCodeGen {
     /**
      * @return the CodedInput packed read method call for a repeated field
      */
-    private String readPackedMethod(FieldDescriptor field) {
-        return switch (field.type) {
+    private String readPackedMethod(FieldDescriptorProto field) {
+        assert FieldType fieldType := field.hasType();
+        return switch (fieldType) {
             case TypeDouble:                "readPackedDoubles()";
             case TypeFloat:                 "readPackedFloats()";
             case TypeInt64, TypeSint64:     "readPackedVarints()";
@@ -1275,8 +1383,9 @@ class ProtoCodeGen {
     /**
      * @return the CodedOutput write method name for a field (without "out." prefix)
      */
-    private String writeMethod(FieldDescriptor field) {
-        return switch (field.type) {
+    private String writeMethod(FieldDescriptorProto field) {
+        assert FieldType fieldType := field.hasType();
+        return switch (fieldType) {
             case TypeDouble:   "writeDouble";
             case TypeFloat:    "writeFloat";
             case TypeInt64:    "writeInt64";
@@ -1300,8 +1409,9 @@ class ProtoCodeGen {
     /**
      * @return the CodedOutput packed write method name for a repeated field
      */
-    private String writePackedMethod(FieldDescriptor field) {
-        return switch (field.type) {
+    private String writePackedMethod(FieldDescriptorProto field) {
+        assert FieldType fieldType := field.hasType();
+        return switch (fieldType) {
             case TypeDouble:                "writePackedDoubles";
             case TypeFloat:                 "writePackedFloats";
             case TypeInt64, TypeSint64:     "writePackedVarints";
@@ -1321,10 +1431,11 @@ class ProtoCodeGen {
     /**
      * @return the CodedOutput.compute*Size call for a singular field (using fname as the value)
      */
-    private String computeSizeMethod(FieldDescriptor field) {
+    private String computeSizeMethod(FieldDescriptorProto field) {
+        assert FieldType fieldType := field.hasType();
         String fn = field.number.toString();
         String fname = fieldName(field.name);
-        return switch (field.type) {
+        return switch (fieldType) {
             case TypeDouble:   $"computeFixed64Size({fn})";
             case TypeFloat:    $"computeFixed32Size({fn})";
             case TypeInt64:    $"computeInt64Size({fn}, {fname})";
@@ -1348,9 +1459,10 @@ class ProtoCodeGen {
     /**
      * @return the compute size call for a repeated element (uses "v" as variable name)
      */
-    private String computeSizeMethodForElement(FieldDescriptor field) {
+    private String computeSizeMethodForElement(FieldDescriptorProto field) {
+        assert FieldType fieldType := field.hasType();
         String fn = field.number.toString();
-        return switch (field.type) {
+        return switch (fieldType) {
             case TypeString: $"computeStringSize({fn}, v)";
             case TypeBytes:  $"computeBytesSize({fn}, v)";
             default:         $"computeBytesSize({fn}, v)";
@@ -1360,10 +1472,11 @@ class ProtoCodeGen {
     /**
      * @return the compute packed size call for a repeated packable field
      */
-    private String computePackedSizeMethod(FieldDescriptor field) {
+    private String computePackedSizeMethod(FieldDescriptorProto field) {
+        assert FieldType fieldType := field.hasType();
         String fn = field.number.toString();
         String fname = fieldName(field.name);
-        return switch (field.type) {
+        return switch (fieldType) {
             case TypeDouble:                $"computePackedDoublesSize({fn}, {fname})";
             case TypeFloat:                 $"computePackedFloatsSize({fn}, {fname})";
             case TypeInt64, TypeSint64:     $"computePackedVarintsSize({fn}, {fname})";
@@ -1381,9 +1494,10 @@ class ProtoCodeGen {
     /**
      * @return the compute size call for a oneof field (uses the local variable name)
      */
-    private String computeSizeMethodForOneof(FieldDescriptor field, String varName) {
+    private String computeSizeMethodForOneof(FieldDescriptorProto field, String varName) {
+        assert FieldType fieldType := field.hasType();
         String fn = field.number.toString();
-        return switch (field.type) {
+        return switch (fieldType) {
             case TypeDouble:   $"computeFixed64Size({fn})";
             case TypeFloat:    $"computeFixed32Size({fn})";
             case TypeInt64:    $"computeInt64Size({fn}, {varName})";
@@ -1409,19 +1523,17 @@ class ProtoCodeGen {
     /**
      * @return the CodedInput read method for a map field, or "" if unsupported
      */
-    private String mapReadMethod(FieldDescriptor field) {
-        String key = field.mapKeyType.protoName;
-        String val = field.mapValueType.protoName;
-        return switch (key, val) {
-            case ("string", "string"): "readMapStringString()";
-            case ("string", "int32"):  "readMapStringInt32()";
-            case ("string", "int64"):  "readMapStringInt64()";
-            case ("string", "bytes"):  "readMapStringBytes()";
-            case ("int32",  "string"): "readMapInt32String()";
-            case ("int32",  "int32"):  "readMapInt32Int32()";
-            case ("int64",  "string"): "readMapInt64String()";
-            case ("int64",  "int64"):  "readMapInt64Int64()";
-            case ("bool",   "string"): "readMapBoolString()";
+    private String mapReadMethod(FieldType keyType, FieldType valueType) {
+        return switch (keyType, valueType) {
+            case (TypeString, TypeString): "readMapStringString()";
+            case (TypeString, TypeInt32):  "readMapStringInt32()";
+            case (TypeString, TypeInt64):  "readMapStringInt64()";
+            case (TypeString, TypeBytes):  "readMapStringBytes()";
+            case (TypeInt32,  TypeString): "readMapInt32String()";
+            case (TypeInt32,  TypeInt32):  "readMapInt32Int32()";
+            case (TypeInt64,  TypeString): "readMapInt64String()";
+            case (TypeInt64,  TypeInt64):  "readMapInt64Int64()";
+            case (TypeBool,   TypeString): "readMapBoolString()";
             default: "";
         };
     }
@@ -1429,19 +1541,17 @@ class ProtoCodeGen {
     /**
      * @return the CodedOutput write method for a map field, or "" if unsupported
      */
-    private String mapWriteMethod(FieldDescriptor field) {
-        String key = field.mapKeyType.protoName;
-        String val = field.mapValueType.protoName;
-        return switch (key, val) {
-            case ("string", "string"): "writeMapStringString";
-            case ("string", "int32"):  "writeMapStringInt32";
-            case ("string", "int64"):  "writeMapStringInt64";
-            case ("string", "bytes"):  "writeMapStringBytes";
-            case ("int32",  "string"): "writeMapInt32String";
-            case ("int32",  "int32"):  "writeMapInt32Int32";
-            case ("int64",  "string"): "writeMapInt64String";
-            case ("int64",  "int64"):  "writeMapInt64Int64";
-            case ("bool",   "string"): "writeMapBoolString";
+    private String mapWriteMethod(FieldType keyType, FieldType valueType) {
+        return switch (keyType, valueType) {
+            case (TypeString, TypeString): "writeMapStringString";
+            case (TypeString, TypeInt32):  "writeMapStringInt32";
+            case (TypeString, TypeInt64):  "writeMapStringInt64";
+            case (TypeString, TypeBytes):  "writeMapStringBytes";
+            case (TypeInt32,  TypeString): "writeMapInt32String";
+            case (TypeInt32,  TypeInt32):  "writeMapInt32Int32";
+            case (TypeInt64,  TypeString): "writeMapInt64String";
+            case (TypeInt64,  TypeInt64):  "writeMapInt64Int64";
+            case (TypeBool,   TypeString): "writeMapBoolString";
             default: "";
         };
     }
@@ -1449,19 +1559,17 @@ class ProtoCodeGen {
     /**
      * @return the CodedOutput compute size method for a map field, or "" if unsupported
      */
-    private String mapComputeSizeMethod(FieldDescriptor field) {
-        String key = field.mapKeyType.protoName;
-        String val = field.mapValueType.protoName;
-        return switch (key, val) {
-            case ("string", "string"): "computeMapStringStringSize";
-            case ("string", "int32"):  "computeMapStringInt32Size";
-            case ("string", "int64"):  "computeMapStringInt64Size";
-            case ("string", "bytes"):  "computeMapStringBytesSize";
-            case ("int32",  "string"): "computeMapInt32StringSize";
-            case ("int32",  "int32"):  "computeMapInt32Int32Size";
-            case ("int64",  "string"): "computeMapInt64StringSize";
-            case ("int64",  "int64"):  "computeMapInt64Int64Size";
-            case ("bool",   "string"): "computeMapBoolStringSize";
+    private String mapComputeSizeMethod(FieldType keyType, FieldType valueType) {
+        return switch (keyType, valueType) {
+            case (TypeString, TypeString): "computeMapStringStringSize";
+            case (TypeString, TypeInt32):  "computeMapStringInt32Size";
+            case (TypeString, TypeInt64):  "computeMapStringInt64Size";
+            case (TypeString, TypeBytes):  "computeMapStringBytesSize";
+            case (TypeInt32,  TypeString): "computeMapInt32StringSize";
+            case (TypeInt32,  TypeInt32):  "computeMapInt32Int32Size";
+            case (TypeInt64,  TypeString): "computeMapInt64StringSize";
+            case (TypeInt64,  TypeInt64):  "computeMapInt64Int64Size";
+            case (TypeBool,   TypeString): "computeMapBoolStringSize";
             default: "";
         };
     }
@@ -1471,12 +1579,12 @@ class ProtoCodeGen {
     /**
      * Collect all enum type names from the file (top-level and nested).
      */
-    private Set<String> collectEnumNames(FileDescriptor file) {
+    private Set<String> collectEnumNames(FileDescriptorProto file) {
         HashSet<String> names = new HashSet();
-        for (EnumDescriptor e : file.enums) {
+        for (EnumDescriptorProto e : file.enumType) {
             names.add(e.name);
         }
-        for (MessageDescriptor msg : file.messages) {
+        for (DescriptorProto msg : file.messageType) {
             collectEnumNamesFromMessage(msg, "", names);
         }
         return names;
@@ -1487,14 +1595,14 @@ class ProtoCodeGen {
      * Adds both the simple name and the dot-qualified name so that references like
      * `VisibilityFeature.DefaultSymbolVisibility` are recognized as enum references.
      */
-    private void collectEnumNamesFromMessage(MessageDescriptor msg, String prefix,
+    private void collectEnumNamesFromMessage(DescriptorProto msg, String prefix,
                                              HashSet<String> names) {
         String qualifiedPrefix = prefix.size == 0 ? msg.name : $"{prefix}.{msg.name}";
-        for (EnumDescriptor e : msg.enums) {
+        for (EnumDescriptorProto e : msg.enumType) {
             names.add(e.name);
             names.add($"{qualifiedPrefix}.{e.name}");
         }
-        for (MessageDescriptor nested : msg.nestedMessages) {
+        for (DescriptorProto nested : msg.nestedType) {
             collectEnumNamesFromMessage(nested, qualifiedPrefix, names);
         }
     }
@@ -1503,11 +1611,12 @@ class ProtoCodeGen {
      * @return True if the field references an enum type (either via TypeEnum or by
      *         having a typeName that matches a known enum)
      */
-    private Boolean isEnumRef(FieldDescriptor field) {
-        if (field.type == TypeEnum) {
+    private Boolean isEnumRef(FieldDescriptorProto field) {
+        assert FieldType fieldType := field.hasType();
+        if (fieldType == TypeEnum) {
             return True;
         }
-        if (field.type != TypeMessage || field.typeName.size == 0) {
+        if (fieldType != TypeMessage || field.typeName.size == 0) {
             return False;
         }
         if (enumNames.contains(field.typeName)) {
@@ -1525,21 +1634,23 @@ class ProtoCodeGen {
     /**
      * @return True if this field needs a presence bit in the bitmask
      */
-    private Boolean needsPresenceBit(FieldDescriptor field) {
-        return !field.isMapField
-            && field.label != Repeated
-            && field.type != TypeMessage
+    private Boolean needsPresenceBit(FieldDescriptorProto field, Map<String, MapFieldInfo> mapInfo) {
+        assert FieldType fieldType := field.hasType();
+        return !isMapField(field, mapInfo)
+            && field.label != LabelRepeated
+            && fieldType != TypeMessage
             && !isEnumRef(field);
     }
 
     /**
      * Build a map from escaped field name to bit index for all fields that need presence tracking.
      */
-    private Map<String, Int> buildPresenceMap(Array<FieldDescriptor> regularFields) {
+    private Map<String, Int> buildPresenceMap(Array<FieldDescriptorProto> regularFields,
+                                              Map<String, MapFieldInfo> mapInfo) {
         ListMap<String, Int> map = new ListMap();
         Int bitIndex = 0;
-        for (FieldDescriptor field : regularFields) {
-            if (needsPresenceBit(field)) {
+        for (FieldDescriptorProto field : regularFields) {
+            if (needsPresenceBit(field, mapInfo)) {
                 map.put(fieldName(field.name), bitIndex++);
             }
         }

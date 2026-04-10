@@ -1,9 +1,9 @@
 import ecstasy.lang.src.Compiler;
 import ecstasy.mgmt.ModuleRepository;
 
-import protobuf.FileDescriptor;
 import protobuf.ProtoCodeGen;
 import protobuf.ProtoParser;
+import protobuf.wellknown.FileDescriptorProto;
 
 class ProtoCodeGenTest {
 
@@ -575,7 +575,7 @@ class ProtoCodeGenTest {
     // ----- helper --------------------------------------------------------------------------------
 
     private Map<String, String> generate(String protoSource) {
-        FileDescriptor file = new ProtoParser(protoSource).parseFile("test.proto");
+        FileDescriptorProto file = new ProtoParser(protoSource).parseFile("test.proto");
         return new ProtoCodeGen().generate(file);
     }
 
