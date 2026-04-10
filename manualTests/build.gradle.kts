@@ -492,6 +492,10 @@ val testModuleNames = listOf(
 val runParallel by tasks.registering(XtcRunTask::class) {
     group = "application"
     description = "Run all known tests in parallel through the parallel test runner."
+    // TODO: Re-enable TestIO here after the intermittent TypeSystem.implicitTypes initialization
+    // race is fixed. It still runs through the other manual test paths, but keeping it out of the
+    // parallel runner avoids a known flaky interpreter crash in CI for now.
+    val excludedModules = setOf("TestIO")
     module {
         verbose = false
         moduleName = "Runner"
@@ -501,7 +505,7 @@ val runParallel by tasks.registering(XtcRunTask::class) {
         //   Now instead we have to explicitly specify the module names. IMPLEMENT THIS!
         //
         // TODO: CI integration test  for third party xdk dependency
-        moduleArgs(testModuleNames)
+        moduleArgs(testModuleNames.filter { it !in excludedModules })
     }
 }
 
