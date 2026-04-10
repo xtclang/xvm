@@ -14,6 +14,18 @@ import org.xvm.lsp.model.SymbolInfo.SymbolKind
  * - Hover text formatting
  */
 object LanguageConstants {
+    private val declarationKeywordsInTypePositions =
+        listOf(
+            "class",
+            "interface",
+            "mixin",
+            "service",
+            "const",
+            "enum",
+            "module",
+            "package",
+        )
+
     /**
      * XTC language keywords for code completion.
      *
@@ -87,7 +99,7 @@ object LanguageConstants {
      *
      * Sourced from the Ecstasy standard library (lib_ecstasy).
      */
-    val BUILT_IN_TYPES: List<String> =
+    val builtInTypes: List<String> =
         listOf(
             // Integer types
             "Int",
@@ -209,12 +221,38 @@ object LanguageConstants {
      * @return list of completion items for built-in types
      */
     fun builtInTypeCompletions(): List<CompletionItem> =
-        BUILT_IN_TYPES.map { type ->
+        builtInTypes.map { type ->
             CompletionItem(
                 label = type,
                 kind = CompletionKind.CLASS,
                 detail = "built-in type",
                 insertText = type,
+            )
+        }
+
+    fun declarationContextBuiltInTypeCompletions(): List<CompletionItem> =
+        builtInTypes
+            .filterNot { it in setOf("Class", "Module", "Package", "Service", "Const", "Type", "Property", "Method") }
+            .map { type ->
+                CompletionItem(
+                    label = type,
+                    kind = CompletionKind.CLASS,
+                    detail = "built-in type",
+                    insertText = type,
+                )
+            }
+
+    /**
+     * Keywords that are valid and useful at declaration starts, even when the parser has
+     * temporarily classified the cursor as being in a type-like position.
+     */
+    fun declarationKeywordCompletions(): List<CompletionItem> =
+        declarationKeywordsInTypePositions.map { keyword ->
+            CompletionItem(
+                label = keyword,
+                kind = CompletionKind.KEYWORD,
+                detail = "declaration keyword",
+                insertText = keyword,
             )
         }
 

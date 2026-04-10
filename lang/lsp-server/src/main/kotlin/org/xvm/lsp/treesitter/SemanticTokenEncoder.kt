@@ -61,6 +61,18 @@ object SemanticTokenLegend {
  * Thread-safe since each `supplyAsync` gets its own instance.
  */
 class SemanticTokenEncoder {
+    private val declarationKeywords =
+        setOf(
+            "module",
+            "package",
+            "class",
+            "interface",
+            "mixin",
+            "service",
+            "const",
+            "enum",
+        )
+
     private val tokens = mutableListOf<RawToken>()
     private val classified = mutableSetOf<Long>()
 
@@ -113,6 +125,9 @@ class SemanticTokenEncoder {
         tokenType: String,
         vararg extraMods: String,
     ) {
+        emitDeclarationKeyword(node)
+        emitModifierTokens(node)
+        classifyTypeParameters(node)
         val typeName = node.childByFieldName("name") ?: return
         val deprecated = "deprecated".takeIf { hasDeprecatedAnnotation(node) }
         val allMods = listOfNotNull("declaration", *extraMods, deprecated).toTypedArray()
@@ -129,6 +144,8 @@ class SemanticTokenEncoder {
     }
 
     private fun classifyMethodDeclaration(node: XtcNode) {
+        emitModifierTokens(node)
+        classifyTypeParameters(node)
         node.childByFieldName("return_type")?.let { returnType ->
             classifyTypeExpression(returnType)
             markClassified(returnType)
@@ -152,6 +169,7 @@ class SemanticTokenEncoder {
             }
         }
 
+        emitModifierTokens(node)
         classifyParameterChildren(node)
     }
 
@@ -167,6 +185,7 @@ class SemanticTokenEncoder {
     }
 
     private fun classifyPropertyDeclaration(node: XtcNode) {
+        emitModifierTokens(node)
         node.childByFieldName("type")?.let { typeExpr ->
             classifyTypeExpression(typeExpr)
             markClassified(typeExpr)
@@ -200,6 +219,7 @@ class SemanticTokenEncoder {
     }
 
     private fun classifyModuleDeclaration(node: XtcNode) {
+        emitDeclarationKeyword(node)
         val qname = node.childByFieldName("name")
         if (qname != null) {
             emitToken(qname, "namespace", SemanticTokenLegend.modifierBitmask("declaration"))
@@ -208,6 +228,7 @@ class SemanticTokenEncoder {
     }
 
     private fun classifyPackageDeclaration(node: XtcNode) {
+        emitDeclarationKeyword(node)
         val id = node.childByFieldName("name")
         if (id != null) {
             emitToken(id, "namespace", SemanticTokenLegend.modifierBitmask("declaration"))
@@ -240,6 +261,49 @@ class SemanticTokenEncoder {
                 markClassified(child)
             } else if (child.type == "type_expression") {
                 classifyTypeExpression(child)
+                markClassified(child)
+            }
+        }
+    }
+
+    private fun emitDeclarationKeyword(node: XtcNode) {
+        node.children.firstOrNull { it.text in declarationKeywords }?.let { keyword ->
+            emitToken(keyword, "keyword", 0)
+        }
+    }
+
+    private fun emitModifierTokens(node: XtcNode) {
+        for (child in node.children) {
+            when {
+                child.type == "visibility_modifier" -> {
+                    emitToken(child, "modifier", 0)
+                }
+
+                child.type == "static" || child.type == "abstract" -> {
+                    emitToken(child, "modifier", 0)
+                }
+
+                child.text == "override" || child.text == "final" || child.text == "native" ||
+                    child.text == "lazy" || child.text == "atomic" || child.text == "inject" ||
+                    child.text == "delegate" || child.text == "readonly" || child.text == "immutable" -> {
+                    emitToken(child, "modifier", 0)
+                }
+            }
+        }
+    }
+
+    private fun classifyTypeParameters(node: XtcNode) {
+        val typeParams = node.childByFieldName("type_params") ?: return
+        for (child in typeParams.children) {
+            if (child.type == "type_parameter") {
+                child.childByFieldName("name")?.let { id ->
+                    emitToken(id, "typeParameter", SemanticTokenLegend.modifierBitmask("declaration"))
+                    markClassified(id)
+                }
+                child.childByFieldName("constraint")?.let { constraint ->
+                    classifyTypeExpression(constraint)
+                    markClassified(constraint)
+                }
                 markClassified(child)
             }
         }

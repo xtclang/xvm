@@ -1,6 +1,6 @@
 # XTC Language Support Implementation
 
-> **Last Updated**: 2026-04-09
+> **Last Updated**: 2026-04-10
 
 This document describes the language tooling implemented in the `lang/` directory and what remains to be done.
 
@@ -186,10 +186,24 @@ Full tree-sitter support for fast, incremental parsing:
    - Build and test plugin ZIP
    - Test out-of-process LSP server launch on all platforms
    - Continue reducing IntelliJ/TextMate/LSP overlap issues and stale sandbox failure modes
+   - Keep the startup diagnostics in `XtcEditorStartupActivity` until the runIde sandbox behavior is fully stable
+   - If sandbox editor/theme issues recur, log both UI theme and editor color scheme together instead of forcing only one side
+   - Document or automate sandbox reset for stale color/folding state during local plugin development
+
+5. **Highlighting and completion follow-up**
+   - Improve semantic-token granularity for declaration names vs type references
+   - Distinguish field/property references from locals and parameters more consistently
+   - Improve generic/type-parameter highlighting in both semantic tokens and TextMate fallback
+   - Continue aligning semantic-token classifications with TextMate scopes so the two paths do not fight each other in IntelliJ/LSP4IJ
+   - Add focused regression tests for `TestModule.x`-style cases:
+     - declaration-start completion should prefer `class` over `Class`
+     - module/package hover should resolve
+     - return type / parameter / property coloring should not collapse into one broad scope
+   - Review auto-import suggestions for built-in/meta-types like `Class`, `Module`, and `Type` so they do not produce noisy quick-fix candidates in declaration contexts
 
 ### Medium-term (Compiler Integration)
 
-5. **Implement full compiler adapter**
+6. **Implement full compiler adapter**
    - Replace `XdkAdapter` stub with real compiler integration
    - Extract type information from XTC compiler
    - Provide cross-file go-to-definition
@@ -202,20 +216,20 @@ Full tree-sitter support for fast, incremental parsing:
 
    See *Internal documentation* for detailed plans.
 
-6. **Hybrid adapter strategy**
+7. **Hybrid adapter strategy**
    - Use tree-sitter for fast syntax feedback
    - Use compiler adapter for semantic features when available
    - Graceful degradation when compiler is unavailable
 
 ### Long-term (Advanced Features)
 
-7. **Refactoring support (cross-file)**
+8. **Refactoring support (cross-file)**
    - ~~Rename symbol (same file)~~ ✅ COMPLETE (both adapters)
    - Cross-file rename (requires compiler)
    - Extract method/variable
    - Safe delete
 
-8. **Code actions (semantic)**
+9. **Code actions (semantic)**
    - ~~Organize imports~~ ✅ COMPLETE (both adapters)
    - ~~Auto-import (workspace-index-backed)~~ ✅ COMPLETE (tree-sitter)
    - ~~Generate doc comment~~ ✅ COMPLETE (tree-sitter)

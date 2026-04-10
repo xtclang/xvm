@@ -17,6 +17,8 @@ import org.xvm.lsp.adapter.FoldingRange
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.FormattingOptions
 import org.xvm.lsp.adapter.LanguageConstants.builtInTypeCompletions
+import org.xvm.lsp.adapter.LanguageConstants.declarationContextBuiltInTypeCompletions
+import org.xvm.lsp.adapter.LanguageConstants.declarationKeywordCompletions
 import org.xvm.lsp.adapter.LanguageConstants.keywordCompletions
 import org.xvm.lsp.adapter.LanguageConstants.toCompletionKind
 import org.xvm.lsp.adapter.LinkedEditingRanges
@@ -361,8 +363,26 @@ class TreeSitterAdapter : AbstractAdapter() {
 
                 CompletionContext.TYPE -> {
                     // In type position: only type completions (classes, interfaces, etc.)
-                    val builtIns = builtInTypeCompletions()
-                    logger.info("getCompletions: type-context builtIns={}", builtIns.map { it.label })
+                    val declarationKeywords = declarationKeywordCompletions()
+                    val declarationContext =
+                        contextNode?.text?.firstOrNull()?.isLowerCase() == true &&
+                            generateSequence(contextNode) { it.parent }
+                                .any { it.type in setOf("module_body", "class_body", "package_body", "enum_body", "block") }
+                    val builtIns =
+                        if (declarationContext) {
+                            declarationContextBuiltInTypeCompletions()
+                        } else {
+                            builtInTypeCompletions()
+                        }
+                    val declarationKeywordLabels = declarationKeywords.map(CompletionItem::label)
+                    val builtInLabels = builtIns.map(CompletionItem::label)
+                    logger.info(
+                        "getCompletions: type-context declarationContext={} declarationKeywords={} builtIns={}",
+                        declarationContext,
+                        declarationKeywordLabels,
+                        builtInLabels,
+                    )
+                    addAll(declarationKeywords)
                     addAll(builtIns)
                     if (tree != null) {
                         val fileTypes =
