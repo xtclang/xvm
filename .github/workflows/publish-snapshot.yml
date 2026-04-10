@@ -297,6 +297,20 @@ jobs:
               shell: bash
               env:
                   JETBRAINS_TOKEN: ${{ secrets.JETBRAINS_TOKEN }}
+              run: |
+                  if [ -z "$JETBRAINS_TOKEN" ]; then
+                      echo "❌ ERROR: JETBRAINS_TOKEN secret is not available to this workflow."
+                      echo "Check GitHub Actions secret scope for the xtclang organization secret:"
+                      echo "  - Secret name: JETBRAINS_TOKEN"
+                      echo "  - Repository access must include: xtclang/xvm"
+                      exit 1
+                  fi
+                  echo "✅ JETBRAINS_TOKEN is available"
+
+            - name: Publish IntelliJ plugin to JetBrains Marketplace alpha
+              shell: bash
+              env:
+                  JETBRAINS_TOKEN: ${{ secrets.JETBRAINS_TOKEN }}
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
               run: |
                   GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }} ${{ github.event.inputs.extra-gradle-options }}"
