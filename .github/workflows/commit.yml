@@ -388,6 +388,112 @@ jobs:
                       ci-artifacts/metadata/consumer-artifacts.json
                   retention-days: 10
 
+            - name: Compute IntelliJ plugin publish version
+              if: |
+                  success() &&
+                  matrix.os == 'ubuntu-latest' &&
+                  (
+                      (github.ref == 'refs/heads/master' && github.event_name == 'push')
+                      ||
+                      (github.event_name == 'workflow_dispatch' &&
+                       (github.event.inputs.publish-intellij-plugin == true || github.event.inputs.publish-intellij-plugin == 'true'))
+                  )
+              id: intellij-version
+              shell: bash
+              run: |
+                  SUFFIX=$(date -u +%Y%m%d%H%M%S)
+                  BASE_VERSION="${{ steps.versions.outputs.xdk-version }}"
+                  PUBLISH_VERSION="${BASE_VERSION}.${SUFFIX}"
+                  RELEASE_CHANNEL=$(grep "^xdk.intellij.release.channel=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
+                  echo "suffix=$SUFFIX" >> $GITHUB_OUTPUT
+                  echo "publish-version=$PUBLISH_VERSION" >> $GITHUB_OUTPUT
+                  echo "release-channel=$RELEASE_CHANNEL" >> $GITHUB_OUTPUT
+                  echo "🔖 IntelliJ Marketplace publish version: $PUBLISH_VERSION"
+
+            - name: Build release-grade IntelliJ plugin artifact
+              if: |
+                  success() &&
+                  matrix.os == 'ubuntu-latest' &&
+                  (
+                      (github.ref == 'refs/heads/master' && github.event_name == 'push')
+                      ||
+                      (github.event_name == 'workflow_dispatch' &&
+                       (github.event.inputs.publish-intellij-plugin == true || github.event.inputs.publish-intellij-plugin == 'true'))
+                  )
+              shell: bash
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }} ${{ github.event.inputs.extra-gradle-options }}"
+                  PUBLISH_SUFFIX="${{ steps.intellij-version.outputs.suffix }}"
+                  PUBLISH_VERSION="${{ steps.intellij-version.outputs.publish-version }}"
+                  RELEASE_CHANNEL="${{ steps.intellij-version.outputs.release-channel }}"
+                  STAGING_DIR="$PWD/ci-artifacts/intellij-plugin-dist"
+                  VERIFIER_DIR="$PWD/lang/intellij-plugin/build/reports/pluginVerifier"
+
+                  rm -rf "$STAGING_DIR"
+                  mkdir -p "$STAGING_DIR"
+
+                  echo "🔌 Building release-grade IntelliJ plugin artifact..."
+                  ./gradlew $GRADLE_OPTIONS \
+                    -PincludeBuildLang=true \
+                    -PincludeBuildAttachLang=true \
+                    -PenablePublish=true \
+                    -Pjetbrains.publish.suffix=$PUBLISH_SUFFIX \
+                    -Plsp.buildSearchableOptions=true \
+                    :lang:intellij-plugin:buildSearchableOptions \
+                    :lang:intellij-plugin:buildPlugin \
+                    :lang:intellij-plugin:verifyPlugin
+
+                  DIST_DIR="$PWD/lang/intellij-plugin/build/distributions"
+                  ZIP_FILE=$(find "$DIST_DIR" -maxdepth 1 -name "*.zip" | head -1)
+                  if [ -z "$ZIP_FILE" ]; then
+                      echo "❌ ERROR: No IntelliJ plugin ZIP found after build"
+                      ls -la "$DIST_DIR"
+                      exit 1
+                  fi
+
+                  shasum -a 256 "$ZIP_FILE" > "$DIST_DIR/SHA256SUMS.txt"
+                  cp "$ZIP_FILE" "$STAGING_DIR/"
+                  cp "$DIST_DIR/SHA256SUMS.txt" "$STAGING_DIR/"
+
+                  if [ -d "$VERIFIER_DIR" ]; then
+                      cp -R "$VERIFIER_DIR" "$STAGING_DIR/pluginVerifier"
+                  fi
+
+                  cat > "$STAGING_DIR/intellij-plugin-metadata.json" <<EOF
+                  {
+                    "commit": "${{ github.sha }}",
+                    "branch": "${{ github.ref_name }}",
+                    "runId": "${{ github.run_id }}",
+                    "baseVersion": "${{ steps.versions.outputs.xdk-version }}",
+                    "publishVersion": "$PUBLISH_VERSION",
+                    "publishSuffix": "$PUBLISH_SUFFIX",
+                    "releaseChannel": "$RELEASE_CHANNEL",
+                    "xmlId": "org.xtclang.idea",
+                    "zipName": "$(basename "$ZIP_FILE")"
+                  }
+                  EOF
+
+                  echo "✅ IntelliJ plugin artifact staged at: $STAGING_DIR"
+                  find "$STAGING_DIR" -maxdepth 3 -type f | sed -n '1,80p'
+
+            - name: Upload IntelliJ plugin artifact
+              if: |
+                  success() &&
+                  matrix.os == 'ubuntu-latest' &&
+                  (
+                      (github.ref == 'refs/heads/master' && github.event_name == 'push')
+                      ||
+                      (github.event_name == 'workflow_dispatch' &&
+                       (github.event.inputs.publish-intellij-plugin == true || github.event.inputs.publish-intellij-plugin == 'true'))
+                  )
+              uses: actions/upload-artifact@v7
+              with:
+                  name: intellij-plugin-dist-${{ github.sha }}
+                  path: ci-artifacts/intellij-plugin-dist
+                  retention-days: 10
+
             - name: List manual test logs
               if: always() && matrix.os == 'ubuntu-latest' && env.skip_manual_tests != 'true'
               shell: bash
@@ -565,8 +671,7 @@ jobs:
                       PUBLISH_XDK_SNAPSHOTS=true
                   fi
                   if [ "${{ github.event_name }}" = "workflow_dispatch" ] && \
-                     [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ] && \
-                     [ "${{ github.event.inputs.include-lang }}" = "true" ]; then
+                     [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ]; then
                       PUBLISH_INTELLIJ_PLUGIN=true
                   fi
 
