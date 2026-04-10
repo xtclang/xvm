@@ -333,13 +333,20 @@ jobs:
                   path: xdk/build/distributions/xdk-*.zip
                   retention-days: 10
 
+            - name: List manual test logs
+              if: always() && matrix.os == 'ubuntu-latest' && env.skip_manual_tests != 'true'
+              shell: bash
+              run: |
+                  echo "Manual test log directory contents:"
+                  ls -la manualTests/build/logs || true
+
             - name: Upload manual test logs
               if: always() && matrix.os == 'ubuntu-latest' && env.skip_manual_tests != 'true'
               uses: actions/upload-artifact@v7
               with:
                   name: manual-tests-logs-${{ github.sha }}
                   path: manualTests/build/logs/*.log
-                  if-no-files-found: ignore
+                  if-no-files-found: error
                   retention-days: 10
 
             - name: Summary
