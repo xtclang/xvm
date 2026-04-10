@@ -10,7 +10,7 @@
         "url": "https://github.com/xtclang/xvm"
     },
     "engines": {
-        "vscode": "^1.75.0"
+        "vscode": "^1.96.0"
     },
     "categories": [
         "Programming Languages"
