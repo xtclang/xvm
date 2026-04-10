@@ -382,6 +382,54 @@ class FileDescriptorProto
     }
 
     @Override
+    FileDescriptorProto! mergeFrom(FileDescriptorProto other) {
+        if (this.is(immutable)) {
+            return new FileDescriptorProto(this).mergeFrom(other);
+        }
+        if (other.presentBits_0 & 0x01 != 0) {
+            _name = other._name;
+            presentBits_0 |= 0x01;
+        }
+        if (other.presentBits_0 & 0x02 != 0) {
+            _package_ = other._package_;
+            presentBits_0 |= 0x02;
+        }
+        dependency.addAll(other.dependency);
+        publicDependency.addAll(other.publicDependency);
+        weakDependency.addAll(other.weakDependency);
+        optionDependency.addAll(other.optionDependency);
+        messageType.addAll(other.messageType);
+        enumType.addAll(other.enumType);
+        service_.addAll(other.service_);
+        extension.addAll(other.extension);
+        FileOptions? _optionsOther = other.options;
+        if (_optionsOther != Null) {
+            if (other.is(immutable)) {
+                options = _optionsOther;
+            } else {
+                options = _optionsOther.duplicate();
+            }
+        }
+        SourceCodeInfo? _sourceCodeInfoOther = other.sourceCodeInfo;
+        if (_sourceCodeInfoOther != Null) {
+            if (other.is(immutable)) {
+                sourceCodeInfo = _sourceCodeInfoOther;
+            } else {
+                sourceCodeInfo = _sourceCodeInfoOther.duplicate();
+            }
+        }
+        if (other.presentBits_0 & 0x04 != 0) {
+            _syntax = other._syntax;
+            presentBits_0 |= 0x04;
+        }
+        if (other.edition != Null) {
+            edition = other.edition;
+        }
+        super(other);
+        return this;
+    }
+
+    @Override
     immutable FileDescriptorProto freeze(Boolean inPlace = False) {
         if (this.is(immutable FileDescriptorProto)) {
             return this;

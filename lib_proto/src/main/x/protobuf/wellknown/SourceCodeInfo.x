@@ -183,6 +183,26 @@ class SourceCodeInfo
         }
 
         @Override
+        Location! mergeFrom(Location other) {
+            if (this.is(immutable)) {
+                return new Location(this).mergeFrom(other);
+            }
+            path.addAll(other.path);
+            span.addAll(other.span);
+            if (other.presentBits_0 & 0x01 != 0) {
+                _leadingComments = other._leadingComments;
+                presentBits_0 |= 0x01;
+            }
+            if (other.presentBits_0 & 0x02 != 0) {
+                _trailingComments = other._trailingComments;
+                presentBits_0 |= 0x02;
+            }
+            leadingDetachedComments.addAll(other.leadingDetachedComments);
+            super(other);
+            return this;
+        }
+
+        @Override
         immutable Location freeze(Boolean inPlace = False) {
             if (this.is(immutable Location)) {
                 return this;
@@ -232,6 +252,16 @@ class SourceCodeInfo
             size += protobuf.CodedOutput.computeMessageSize(1, v);
         }
         return size;
+    }
+
+    @Override
+    SourceCodeInfo! mergeFrom(SourceCodeInfo other) {
+        if (this.is(immutable)) {
+            return new SourceCodeInfo(this).mergeFrom(other);
+        }
+        location.addAll(other.location);
+        super(other);
+        return this;
     }
 
     @Override

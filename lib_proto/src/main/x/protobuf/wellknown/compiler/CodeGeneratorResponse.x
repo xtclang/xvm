@@ -308,6 +308,35 @@ class CodeGeneratorResponse
         }
 
         @Override
+        File! mergeFrom(File other) {
+            if (this.is(immutable)) {
+                return new File(this).mergeFrom(other);
+            }
+            if (other.presentBits_0 & 0x01 != 0) {
+                _name = other._name;
+                presentBits_0 |= 0x01;
+            }
+            if (other.presentBits_0 & 0x02 != 0) {
+                _insertionPoint = other._insertionPoint;
+                presentBits_0 |= 0x02;
+            }
+            if (other.presentBits_0 & 0x04 != 0) {
+                _content = other._content;
+                presentBits_0 |= 0x04;
+            }
+            GeneratedCodeInfo? _generatedCodeInfoOther = other.generatedCodeInfo;
+            if (_generatedCodeInfoOther != Null) {
+                if (other.is(immutable)) {
+                    generatedCodeInfo = _generatedCodeInfoOther;
+                } else {
+                    generatedCodeInfo = _generatedCodeInfoOther.duplicate();
+                }
+            }
+            super(other);
+            return this;
+        }
+
+        @Override
         immutable File freeze(Boolean inPlace = False) {
             if (this.is(immutable File)) {
                 return this;
@@ -395,6 +424,32 @@ class CodeGeneratorResponse
             size += protobuf.CodedOutput.computeMessageSize(15, v);
         }
         return size;
+    }
+
+    @Override
+    CodeGeneratorResponse! mergeFrom(CodeGeneratorResponse other) {
+        if (this.is(immutable)) {
+            return new CodeGeneratorResponse(this).mergeFrom(other);
+        }
+        if (other.presentBits_0 & 0x01 != 0) {
+            _error = other._error;
+            presentBits_0 |= 0x01;
+        }
+        if (other.presentBits_0 & 0x02 != 0) {
+            _supportedFeatures = other._supportedFeatures;
+            presentBits_0 |= 0x02;
+        }
+        if (other.presentBits_0 & 0x04 != 0) {
+            _minimumEdition = other._minimumEdition;
+            presentBits_0 |= 0x04;
+        }
+        if (other.presentBits_0 & 0x08 != 0) {
+            _maximumEdition = other._maximumEdition;
+            presentBits_0 |= 0x08;
+        }
+        file.addAll(other.file);
+        super(other);
+        return this;
     }
 
     @Override

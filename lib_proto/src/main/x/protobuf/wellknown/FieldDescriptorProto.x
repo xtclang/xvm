@@ -440,6 +440,61 @@ class FieldDescriptorProto
     }
 
     @Override
+    FieldDescriptorProto! mergeFrom(FieldDescriptorProto other) {
+        if (this.is(immutable)) {
+            return new FieldDescriptorProto(this).mergeFrom(other);
+        }
+        if (other.presentBits_0 & 0x01 != 0) {
+            _name = other._name;
+            presentBits_0 |= 0x01;
+        }
+        if (other.presentBits_0 & 0x02 != 0) {
+            _number = other._number;
+            presentBits_0 |= 0x02;
+        }
+        if (other.label != Null) {
+            label = other.label;
+        }
+        if (other.type != Null) {
+            type = other.type;
+        }
+        if (other.presentBits_0 & 0x04 != 0) {
+            _typeName = other._typeName;
+            presentBits_0 |= 0x04;
+        }
+        if (other.presentBits_0 & 0x08 != 0) {
+            _extendee = other._extendee;
+            presentBits_0 |= 0x08;
+        }
+        if (other.presentBits_0 & 0x10 != 0) {
+            _defaultValue = other._defaultValue;
+            presentBits_0 |= 0x10;
+        }
+        if (other.presentBits_0 & 0x20 != 0) {
+            _oneofIndex = other._oneofIndex;
+            presentBits_0 |= 0x20;
+        }
+        if (other.presentBits_0 & 0x40 != 0) {
+            _jsonName = other._jsonName;
+            presentBits_0 |= 0x40;
+        }
+        FieldOptions? _optionsOther = other.options;
+        if (_optionsOther != Null) {
+            if (other.is(immutable)) {
+                options = _optionsOther;
+            } else {
+                options = _optionsOther.duplicate();
+            }
+        }
+        if (other.presentBits_0 & 0x80 != 0) {
+            _proto3Optional = other._proto3Optional;
+            presentBits_0 |= 0x80;
+        }
+        super(other);
+        return this;
+    }
+
+    @Override
     immutable FieldDescriptorProto freeze(Boolean inPlace = False) {
         if (this.is(immutable FieldDescriptorProto)) {
             return this;

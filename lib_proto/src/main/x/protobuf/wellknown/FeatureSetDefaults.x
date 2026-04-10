@@ -158,6 +158,34 @@ class FeatureSetDefaults
         }
 
         @Override
+        FeatureSetEditionDefault! mergeFrom(FeatureSetEditionDefault other) {
+            if (this.is(immutable)) {
+                return new FeatureSetEditionDefault(this).mergeFrom(other);
+            }
+            if (other.edition != Null) {
+                edition = other.edition;
+            }
+            FeatureSet? _overridableFeaturesOther = other.overridableFeatures;
+            if (_overridableFeaturesOther != Null) {
+                if (other.is(immutable)) {
+                    overridableFeatures = _overridableFeaturesOther;
+                } else {
+                    overridableFeatures = _overridableFeaturesOther.duplicate();
+                }
+            }
+            FeatureSet? _fixedFeaturesOther = other.fixedFeatures;
+            if (_fixedFeaturesOther != Null) {
+                if (other.is(immutable)) {
+                    fixedFeatures = _fixedFeaturesOther;
+                } else {
+                    fixedFeatures = _fixedFeaturesOther.duplicate();
+                }
+            }
+            super(other);
+            return this;
+        }
+
+        @Override
         immutable FeatureSetEditionDefault freeze(Boolean inPlace = False) {
             if (this.is(immutable FeatureSetEditionDefault)) {
                 return this;
@@ -234,6 +262,22 @@ class FeatureSetDefaults
             size += protobuf.CodedOutput.computeEnumSize(5, maximumEdition);
         }
         return size;
+    }
+
+    @Override
+    FeatureSetDefaults! mergeFrom(FeatureSetDefaults other) {
+        if (this.is(immutable)) {
+            return new FeatureSetDefaults(this).mergeFrom(other);
+        }
+        defaults.addAll(other.defaults);
+        if (other.minimumEdition != Null) {
+            minimumEdition = other.minimumEdition;
+        }
+        if (other.maximumEdition != Null) {
+            maximumEdition = other.maximumEdition;
+        }
+        super(other);
+        return this;
     }
 
     @Override

@@ -292,6 +292,15 @@ class FeatureSet
         }
 
         @Override
+        VisibilityFeature! mergeFrom(VisibilityFeature other) {
+            if (this.is(immutable)) {
+                return new VisibilityFeature(this).mergeFrom(other);
+            }
+            super(other);
+            return this;
+        }
+
+        @Override
         immutable VisibilityFeature freeze(Boolean inPlace = False) {
             if (this.is(immutable VisibilityFeature)) {
                 return this;
@@ -432,6 +441,39 @@ class FeatureSet
             size += protobuf.CodedOutput.computeEnumSize(8, defaultSymbolVisibility);
         }
         return size;
+    }
+
+    @Override
+    FeatureSet! mergeFrom(FeatureSet other) {
+        if (this.is(immutable)) {
+            return new FeatureSet(this).mergeFrom(other);
+        }
+        if (other.fieldPresence != Null) {
+            fieldPresence = other.fieldPresence;
+        }
+        if (other.enumType != Null) {
+            enumType = other.enumType;
+        }
+        if (other.repeatedFieldEncoding != Null) {
+            repeatedFieldEncoding = other.repeatedFieldEncoding;
+        }
+        if (other.utf8Validation != Null) {
+            utf8Validation = other.utf8Validation;
+        }
+        if (other.messageEncoding != Null) {
+            messageEncoding = other.messageEncoding;
+        }
+        if (other.jsonFormat != Null) {
+            jsonFormat = other.jsonFormat;
+        }
+        if (other.enforceNamingStyle != Null) {
+            enforceNamingStyle = other.enforceNamingStyle;
+        }
+        if (other.defaultSymbolVisibility != Null) {
+            defaultSymbolVisibility = other.defaultSymbolVisibility;
+        }
+        super(other);
+        return this;
     }
 
     @Override

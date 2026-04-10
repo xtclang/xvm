@@ -743,6 +743,99 @@ class FileOptions
     }
 
     @Override
+    FileOptions! mergeFrom(FileOptions other) {
+        if (this.is(immutable)) {
+            return new FileOptions(this).mergeFrom(other);
+        }
+        if (other.presentBits_0 & 0x01 != 0) {
+            _javaPackage = other._javaPackage;
+            presentBits_0 |= 0x01;
+        }
+        if (other.presentBits_0 & 0x02 != 0) {
+            _javaOuterClassname = other._javaOuterClassname;
+            presentBits_0 |= 0x02;
+        }
+        if (other.presentBits_0 & 0x04 != 0) {
+            _javaMultipleFiles = other._javaMultipleFiles;
+            presentBits_0 |= 0x04;
+        }
+        if (other.presentBits_0 & 0x08 != 0) {
+            _javaGenerateEqualsAndHash = other._javaGenerateEqualsAndHash;
+            presentBits_0 |= 0x08;
+        }
+        if (other.presentBits_0 & 0x10 != 0) {
+            _javaStringCheckUtf8 = other._javaStringCheckUtf8;
+            presentBits_0 |= 0x10;
+        }
+        if (other.optimizeFor != Null) {
+            optimizeFor = other.optimizeFor;
+        }
+        if (other.presentBits_0 & 0x20 != 0) {
+            _goPackage = other._goPackage;
+            presentBits_0 |= 0x20;
+        }
+        if (other.presentBits_0 & 0x40 != 0) {
+            _ccGenericServices = other._ccGenericServices;
+            presentBits_0 |= 0x40;
+        }
+        if (other.presentBits_0 & 0x80 != 0) {
+            _javaGenericServices = other._javaGenericServices;
+            presentBits_0 |= 0x80;
+        }
+        if (other.presentBits_0 & 0x0100 != 0) {
+            _pyGenericServices = other._pyGenericServices;
+            presentBits_0 |= 0x0100;
+        }
+        if (other.presentBits_0 & 0x0200 != 0) {
+            _deprecated = other._deprecated;
+            presentBits_0 |= 0x0200;
+        }
+        if (other.presentBits_0 & 0x0400 != 0) {
+            _ccEnableArenas = other._ccEnableArenas;
+            presentBits_0 |= 0x0400;
+        }
+        if (other.presentBits_0 & 0x0800 != 0) {
+            _objcClassPrefix = other._objcClassPrefix;
+            presentBits_0 |= 0x0800;
+        }
+        if (other.presentBits_0 & 0x1000 != 0) {
+            _csharpNamespace = other._csharpNamespace;
+            presentBits_0 |= 0x1000;
+        }
+        if (other.presentBits_0 & 0x2000 != 0) {
+            _swiftPrefix = other._swiftPrefix;
+            presentBits_0 |= 0x2000;
+        }
+        if (other.presentBits_0 & 0x4000 != 0) {
+            _phpClassPrefix = other._phpClassPrefix;
+            presentBits_0 |= 0x4000;
+        }
+        if (other.presentBits_0 & 0x8000 != 0) {
+            _phpNamespace = other._phpNamespace;
+            presentBits_0 |= 0x8000;
+        }
+        if (other.presentBits_0 & 0x00010000 != 0) {
+            _phpMetadataNamespace = other._phpMetadataNamespace;
+            presentBits_0 |= 0x00010000;
+        }
+        if (other.presentBits_0 & 0x00020000 != 0) {
+            _rubyPackage = other._rubyPackage;
+            presentBits_0 |= 0x00020000;
+        }
+        FeatureSet? _featuresOther = other.features;
+        if (_featuresOther != Null) {
+            if (other.is(immutable)) {
+                features = _featuresOther;
+            } else {
+                features = _featuresOther.duplicate();
+            }
+        }
+        uninterpretedOption.addAll(other.uninterpretedOption);
+        super(other);
+        return this;
+    }
+
+    @Override
     immutable FileOptions freeze(Boolean inPlace = False) {
         if (this.is(immutable FileOptions)) {
             return this;

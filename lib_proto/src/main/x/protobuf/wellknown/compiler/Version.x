@@ -173,6 +173,31 @@ class Version
     }
 
     @Override
+    Version! mergeFrom(Version other) {
+        if (this.is(immutable)) {
+            return new Version(this).mergeFrom(other);
+        }
+        if (other.presentBits_0 & 0x01 != 0) {
+            _major = other._major;
+            presentBits_0 |= 0x01;
+        }
+        if (other.presentBits_0 & 0x02 != 0) {
+            _minor = other._minor;
+            presentBits_0 |= 0x02;
+        }
+        if (other.presentBits_0 & 0x04 != 0) {
+            _patch = other._patch;
+            presentBits_0 |= 0x04;
+        }
+        if (other.presentBits_0 & 0x08 != 0) {
+            _suffix = other._suffix;
+            presentBits_0 |= 0x08;
+        }
+        super(other);
+        return this;
+    }
+
+    @Override
     immutable Version freeze(Boolean inPlace = False) {
         if (this.is(immutable Version)) {
             return this;

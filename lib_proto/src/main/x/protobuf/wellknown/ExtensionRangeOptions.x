@@ -273,6 +273,35 @@ class ExtensionRangeOptions
         }
 
         @Override
+        Declaration! mergeFrom(Declaration other) {
+            if (this.is(immutable)) {
+                return new Declaration(this).mergeFrom(other);
+            }
+            if (other.presentBits_0 & 0x01 != 0) {
+                _number = other._number;
+                presentBits_0 |= 0x01;
+            }
+            if (other.presentBits_0 & 0x02 != 0) {
+                _fullName = other._fullName;
+                presentBits_0 |= 0x02;
+            }
+            if (other.presentBits_0 & 0x04 != 0) {
+                _type = other._type;
+                presentBits_0 |= 0x04;
+            }
+            if (other.presentBits_0 & 0x08 != 0) {
+                _reserved = other._reserved;
+                presentBits_0 |= 0x08;
+            }
+            if (other.presentBits_0 & 0x10 != 0) {
+                _repeated = other._repeated;
+                presentBits_0 |= 0x10;
+            }
+            super(other);
+            return this;
+        }
+
+        @Override
         immutable Declaration freeze(Boolean inPlace = False) {
             if (this.is(immutable Declaration)) {
                 return this;
@@ -368,6 +397,28 @@ class ExtensionRangeOptions
             size += protobuf.CodedOutput.computeEnumSize(3, verification);
         }
         return size;
+    }
+
+    @Override
+    ExtensionRangeOptions! mergeFrom(ExtensionRangeOptions other) {
+        if (this.is(immutable)) {
+            return new ExtensionRangeOptions(this).mergeFrom(other);
+        }
+        uninterpretedOption.addAll(other.uninterpretedOption);
+        declaration.addAll(other.declaration);
+        FeatureSet? _featuresOther = other.features;
+        if (_featuresOther != Null) {
+            if (other.is(immutable)) {
+                features = _featuresOther;
+            } else {
+                features = _featuresOther.duplicate();
+            }
+        }
+        if (other.verification != Null) {
+            verification = other.verification;
+        }
+        super(other);
+        return this;
     }
 
     @Override

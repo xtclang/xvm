@@ -121,6 +121,28 @@ class ServiceDescriptorProto
     }
 
     @Override
+    ServiceDescriptorProto! mergeFrom(ServiceDescriptorProto other) {
+        if (this.is(immutable)) {
+            return new ServiceDescriptorProto(this).mergeFrom(other);
+        }
+        if (other.presentBits_0 & 0x01 != 0) {
+            _name = other._name;
+            presentBits_0 |= 0x01;
+        }
+        method.addAll(other.method);
+        ServiceOptions? _optionsOther = other.options;
+        if (_optionsOther != Null) {
+            if (other.is(immutable)) {
+                options = _optionsOther;
+            } else {
+                options = _optionsOther.duplicate();
+            }
+        }
+        super(other);
+        return this;
+    }
+
+    @Override
     immutable ServiceDescriptorProto freeze(Boolean inPlace = False) {
         if (this.is(immutable ServiceDescriptorProto)) {
             return this;

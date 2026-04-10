@@ -233,6 +233,31 @@ class DescriptorProto
         }
 
         @Override
+        ExtensionRange! mergeFrom(ExtensionRange other) {
+            if (this.is(immutable)) {
+                return new ExtensionRange(this).mergeFrom(other);
+            }
+            if (other.presentBits_0 & 0x01 != 0) {
+                _start = other._start;
+                presentBits_0 |= 0x01;
+            }
+            if (other.presentBits_0 & 0x02 != 0) {
+                _end = other._end;
+                presentBits_0 |= 0x02;
+            }
+            ExtensionRangeOptions? _optionsOther = other.options;
+            if (_optionsOther != Null) {
+                if (other.is(immutable)) {
+                    options = _optionsOther;
+                } else {
+                    options = _optionsOther.duplicate();
+                }
+            }
+            super(other);
+            return this;
+        }
+
+        @Override
         immutable ExtensionRange freeze(Boolean inPlace = False) {
             if (this.is(immutable ExtensionRange)) {
                 return this;
@@ -352,6 +377,23 @@ class DescriptorProto
                 size += protobuf.CodedOutput.computeInt32Size(2, end);
             }
             return size;
+        }
+
+        @Override
+        ReservedRange! mergeFrom(ReservedRange other) {
+            if (this.is(immutable)) {
+                return new ReservedRange(this).mergeFrom(other);
+            }
+            if (other.presentBits_0 & 0x01 != 0) {
+                _start = other._start;
+                presentBits_0 |= 0x01;
+            }
+            if (other.presentBits_0 & 0x02 != 0) {
+                _end = other._end;
+                presentBits_0 |= 0x02;
+            }
+            super(other);
+            return this;
         }
 
         @Override
@@ -563,6 +605,38 @@ class DescriptorProto
             size += protobuf.CodedOutput.computeEnumSize(11, visibility);
         }
         return size;
+    }
+
+    @Override
+    DescriptorProto! mergeFrom(DescriptorProto other) {
+        if (this.is(immutable)) {
+            return new DescriptorProto(this).mergeFrom(other);
+        }
+        if (other.presentBits_0 & 0x01 != 0) {
+            _name = other._name;
+            presentBits_0 |= 0x01;
+        }
+        field.addAll(other.field);
+        extension.addAll(other.extension);
+        nestedType.addAll(other.nestedType);
+        enumType.addAll(other.enumType);
+        extensionRange.addAll(other.extensionRange);
+        oneofDecl.addAll(other.oneofDecl);
+        MessageOptions? _optionsOther = other.options;
+        if (_optionsOther != Null) {
+            if (other.is(immutable)) {
+                options = _optionsOther;
+            } else {
+                options = _optionsOther.duplicate();
+            }
+        }
+        reservedRange.addAll(other.reservedRange);
+        reservedName.addAll(other.reservedName);
+        if (other.visibility != Null) {
+            visibility = other.visibility;
+        }
+        super(other);
+        return this;
     }
 
     @Override

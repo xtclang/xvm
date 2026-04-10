@@ -83,6 +83,24 @@ class OneofOptions
     }
 
     @Override
+    OneofOptions! mergeFrom(OneofOptions other) {
+        if (this.is(immutable)) {
+            return new OneofOptions(this).mergeFrom(other);
+        }
+        FeatureSet? _featuresOther = other.features;
+        if (_featuresOther != Null) {
+            if (other.is(immutable)) {
+                features = _featuresOther;
+            } else {
+                features = _featuresOther.duplicate();
+            }
+        }
+        uninterpretedOption.addAll(other.uninterpretedOption);
+        super(other);
+        return this;
+    }
+
+    @Override
     immutable OneofOptions freeze(Boolean inPlace = False) {
         if (this.is(immutable OneofOptions)) {
             return this;

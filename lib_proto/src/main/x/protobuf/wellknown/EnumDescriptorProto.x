@@ -185,6 +185,23 @@ class EnumDescriptorProto
         }
 
         @Override
+        EnumReservedRange! mergeFrom(EnumReservedRange other) {
+            if (this.is(immutable)) {
+                return new EnumReservedRange(this).mergeFrom(other);
+            }
+            if (other.presentBits_0 & 0x01 != 0) {
+                _start = other._start;
+                presentBits_0 |= 0x01;
+            }
+            if (other.presentBits_0 & 0x02 != 0) {
+                _end = other._end;
+                presentBits_0 |= 0x02;
+            }
+            super(other);
+            return this;
+        }
+
+        @Override
         immutable EnumReservedRange freeze(Boolean inPlace = False) {
             if (this.is(immutable EnumReservedRange)) {
                 return this;
@@ -303,6 +320,33 @@ class EnumDescriptorProto
             size += protobuf.CodedOutput.computeEnumSize(6, visibility);
         }
         return size;
+    }
+
+    @Override
+    EnumDescriptorProto! mergeFrom(EnumDescriptorProto other) {
+        if (this.is(immutable)) {
+            return new EnumDescriptorProto(this).mergeFrom(other);
+        }
+        if (other.presentBits_0 & 0x01 != 0) {
+            _name = other._name;
+            presentBits_0 |= 0x01;
+        }
+        value.addAll(other.value);
+        EnumOptions? _optionsOther = other.options;
+        if (_optionsOther != Null) {
+            if (other.is(immutable)) {
+                options = _optionsOther;
+            } else {
+                options = _optionsOther.duplicate();
+            }
+        }
+        reservedRange.addAll(other.reservedRange);
+        reservedName.addAll(other.reservedName);
+        if (other.visibility != Null) {
+            visibility = other.visibility;
+        }
+        super(other);
+        return this;
     }
 
     @Override

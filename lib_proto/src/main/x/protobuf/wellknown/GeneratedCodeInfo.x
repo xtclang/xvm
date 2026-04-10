@@ -224,6 +224,31 @@ class GeneratedCodeInfo
         }
 
         @Override
+        Annotation! mergeFrom(Annotation other) {
+            if (this.is(immutable)) {
+                return new Annotation(this).mergeFrom(other);
+            }
+            path.addAll(other.path);
+            if (other.presentBits_0 & 0x01 != 0) {
+                _sourceFile = other._sourceFile;
+                presentBits_0 |= 0x01;
+            }
+            if (other.presentBits_0 & 0x02 != 0) {
+                _begin = other._begin;
+                presentBits_0 |= 0x02;
+            }
+            if (other.presentBits_0 & 0x04 != 0) {
+                _end = other._end;
+                presentBits_0 |= 0x04;
+            }
+            if (other.semantic != Null) {
+                semantic = other.semantic;
+            }
+            super(other);
+            return this;
+        }
+
+        @Override
         immutable Annotation freeze(Boolean inPlace = False) {
             if (this.is(immutable Annotation)) {
                 return this;
@@ -271,6 +296,16 @@ class GeneratedCodeInfo
             size += protobuf.CodedOutput.computeMessageSize(1, v);
         }
         return size;
+    }
+
+    @Override
+    GeneratedCodeInfo! mergeFrom(GeneratedCodeInfo other) {
+        if (this.is(immutable)) {
+            return new GeneratedCodeInfo(this).mergeFrom(other);
+        }
+        annotation_.addAll(other.annotation_);
+        super(other);
+        return this;
     }
 
     @Override

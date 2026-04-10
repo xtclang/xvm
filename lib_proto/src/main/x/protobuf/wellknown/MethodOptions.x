@@ -165,6 +165,31 @@ class MethodOptions
     }
 
     @Override
+    MethodOptions! mergeFrom(MethodOptions other) {
+        if (this.is(immutable)) {
+            return new MethodOptions(this).mergeFrom(other);
+        }
+        if (other.presentBits_0 & 0x01 != 0) {
+            _deprecated = other._deprecated;
+            presentBits_0 |= 0x01;
+        }
+        if (other.idempotencyLevel != Null) {
+            idempotencyLevel = other.idempotencyLevel;
+        }
+        FeatureSet? _featuresOther = other.features;
+        if (_featuresOther != Null) {
+            if (other.is(immutable)) {
+                features = _featuresOther;
+            } else {
+                features = _featuresOther.duplicate();
+            }
+        }
+        uninterpretedOption.addAll(other.uninterpretedOption);
+        super(other);
+        return this;
+    }
+
+    @Override
     immutable MethodOptions freeze(Boolean inPlace = False) {
         if (this.is(immutable MethodOptions)) {
             return this;

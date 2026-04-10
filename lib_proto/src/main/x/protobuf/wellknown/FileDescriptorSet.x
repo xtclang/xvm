@@ -54,6 +54,16 @@ class FileDescriptorSet
     }
 
     @Override
+    FileDescriptorSet! mergeFrom(FileDescriptorSet other) {
+        if (this.is(immutable)) {
+            return new FileDescriptorSet(this).mergeFrom(other);
+        }
+        file.addAll(other.file);
+        super(other);
+        return this;
+    }
+
+    @Override
     immutable FileDescriptorSet freeze(Boolean inPlace = False) {
         if (this.is(immutable FileDescriptorSet)) {
             return this;

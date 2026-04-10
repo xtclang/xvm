@@ -235,6 +235,43 @@ class MethodDescriptorProto
     }
 
     @Override
+    MethodDescriptorProto! mergeFrom(MethodDescriptorProto other) {
+        if (this.is(immutable)) {
+            return new MethodDescriptorProto(this).mergeFrom(other);
+        }
+        if (other.presentBits_0 & 0x01 != 0) {
+            _name = other._name;
+            presentBits_0 |= 0x01;
+        }
+        if (other.presentBits_0 & 0x02 != 0) {
+            _inputType = other._inputType;
+            presentBits_0 |= 0x02;
+        }
+        if (other.presentBits_0 & 0x04 != 0) {
+            _outputType = other._outputType;
+            presentBits_0 |= 0x04;
+        }
+        MethodOptions? _optionsOther = other.options;
+        if (_optionsOther != Null) {
+            if (other.is(immutable)) {
+                options = _optionsOther;
+            } else {
+                options = _optionsOther.duplicate();
+            }
+        }
+        if (other.presentBits_0 & 0x08 != 0) {
+            _clientStreaming = other._clientStreaming;
+            presentBits_0 |= 0x08;
+        }
+        if (other.presentBits_0 & 0x10 != 0) {
+            _serverStreaming = other._serverStreaming;
+            presentBits_0 |= 0x10;
+        }
+        super(other);
+        return this;
+    }
+
+    @Override
     immutable MethodDescriptorProto freeze(Boolean inPlace = False) {
         if (this.is(immutable MethodDescriptorProto)) {
             return this;

@@ -412,6 +412,22 @@ class FieldOptions
         }
 
         @Override
+        EditionDefault! mergeFrom(EditionDefault other) {
+            if (this.is(immutable)) {
+                return new EditionDefault(this).mergeFrom(other);
+            }
+            if (other.edition != Null) {
+                edition = other.edition;
+            }
+            if (other.presentBits_0 & 0x01 != 0) {
+                _value = other._value;
+                presentBits_0 |= 0x01;
+            }
+            super(other);
+            return this;
+        }
+
+        @Override
         immutable EditionDefault freeze(Boolean inPlace = False) {
             if (this.is(immutable EditionDefault)) {
                 return this;
@@ -605,6 +621,32 @@ class FieldOptions
                 size += protobuf.CodedOutput.computeStringSize(5, removalError);
             }
             return size;
+        }
+
+        @Override
+        FeatureSupport! mergeFrom(FeatureSupport other) {
+            if (this.is(immutable)) {
+                return new FeatureSupport(this).mergeFrom(other);
+            }
+            if (other.editionIntroduced != Null) {
+                editionIntroduced = other.editionIntroduced;
+            }
+            if (other.editionDeprecated != Null) {
+                editionDeprecated = other.editionDeprecated;
+            }
+            if (other.presentBits_0 & 0x01 != 0) {
+                _deprecationWarning = other._deprecationWarning;
+                presentBits_0 |= 0x01;
+            }
+            if (other.editionRemoved != Null) {
+                editionRemoved = other.editionRemoved;
+            }
+            if (other.presentBits_0 & 0x02 != 0) {
+                _removalError = other._removalError;
+                presentBits_0 |= 0x02;
+            }
+            super(other);
+            return this;
         }
 
         @Override
@@ -830,6 +872,67 @@ class FieldOptions
             size += protobuf.CodedOutput.computeMessageSize(999, v);
         }
         return size;
+    }
+
+    @Override
+    FieldOptions! mergeFrom(FieldOptions other) {
+        if (this.is(immutable)) {
+            return new FieldOptions(this).mergeFrom(other);
+        }
+        if (other.ctype != Null) {
+            ctype = other.ctype;
+        }
+        if (other.presentBits_0 & 0x01 != 0) {
+            _packed = other._packed;
+            presentBits_0 |= 0x01;
+        }
+        if (other.jstype != Null) {
+            jstype = other.jstype;
+        }
+        if (other.presentBits_0 & 0x02 != 0) {
+            _lazy = other._lazy;
+            presentBits_0 |= 0x02;
+        }
+        if (other.presentBits_0 & 0x04 != 0) {
+            _unverifiedLazy = other._unverifiedLazy;
+            presentBits_0 |= 0x04;
+        }
+        if (other.presentBits_0 & 0x08 != 0) {
+            _deprecated = other._deprecated;
+            presentBits_0 |= 0x08;
+        }
+        if (other.presentBits_0 & 0x10 != 0) {
+            _weak = other._weak;
+            presentBits_0 |= 0x10;
+        }
+        if (other.presentBits_0 & 0x20 != 0) {
+            _debugRedact = other._debugRedact;
+            presentBits_0 |= 0x20;
+        }
+        if (other.retention != Null) {
+            retention = other.retention;
+        }
+        targets.addAll(other.targets);
+        editionDefaults.addAll(other.editionDefaults);
+        FeatureSet? _featuresOther = other.features;
+        if (_featuresOther != Null) {
+            if (other.is(immutable)) {
+                features = _featuresOther;
+            } else {
+                features = _featuresOther.duplicate();
+            }
+        }
+        FeatureSupport? _featureSupportOther = other.featureSupport;
+        if (_featureSupportOther != Null) {
+            if (other.is(immutable)) {
+                featureSupport = _featureSupportOther;
+            } else {
+                featureSupport = _featureSupportOther.duplicate();
+            }
+        }
+        uninterpretedOption.addAll(other.uninterpretedOption);
+        super(other);
+        return this;
     }
 
     @Override

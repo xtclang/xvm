@@ -121,6 +121,28 @@ class ServiceOptions
     }
 
     @Override
+    ServiceOptions! mergeFrom(ServiceOptions other) {
+        if (this.is(immutable)) {
+            return new ServiceOptions(this).mergeFrom(other);
+        }
+        FeatureSet? _featuresOther = other.features;
+        if (_featuresOther != Null) {
+            if (other.is(immutable)) {
+                features = _featuresOther;
+            } else {
+                features = _featuresOther.duplicate();
+            }
+        }
+        if (other.presentBits_0 & 0x01 != 0) {
+            _deprecated = other._deprecated;
+            presentBits_0 |= 0x01;
+        }
+        uninterpretedOption.addAll(other.uninterpretedOption);
+        super(other);
+        return this;
+    }
+
+    @Override
     immutable ServiceOptions freeze(Boolean inPlace = False) {
         if (this.is(immutable ServiceOptions)) {
             return this;

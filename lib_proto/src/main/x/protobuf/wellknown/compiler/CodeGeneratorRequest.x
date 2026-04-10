@@ -160,6 +160,30 @@ class CodeGeneratorRequest
     }
 
     @Override
+    CodeGeneratorRequest! mergeFrom(CodeGeneratorRequest other) {
+        if (this.is(immutable)) {
+            return new CodeGeneratorRequest(this).mergeFrom(other);
+        }
+        fileToGenerate.addAll(other.fileToGenerate);
+        if (other.presentBits_0 & 0x01 != 0) {
+            _parameter = other._parameter;
+            presentBits_0 |= 0x01;
+        }
+        protoFile.addAll(other.protoFile);
+        sourceFileDescriptors.addAll(other.sourceFileDescriptors);
+        Version? _compilerVersionOther = other.compilerVersion;
+        if (_compilerVersionOther != Null) {
+            if (other.is(immutable)) {
+                compilerVersion = _compilerVersionOther;
+            } else {
+                compilerVersion = _compilerVersionOther.duplicate();
+            }
+        }
+        super(other);
+        return this;
+    }
+
+    @Override
     immutable CodeGeneratorRequest freeze(Boolean inPlace = False) {
         if (this.is(immutable CodeGeneratorRequest)) {
             return this;

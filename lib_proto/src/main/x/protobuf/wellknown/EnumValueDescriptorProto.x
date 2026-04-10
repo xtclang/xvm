@@ -133,6 +133,31 @@ class EnumValueDescriptorProto
     }
 
     @Override
+    EnumValueDescriptorProto! mergeFrom(EnumValueDescriptorProto other) {
+        if (this.is(immutable)) {
+            return new EnumValueDescriptorProto(this).mergeFrom(other);
+        }
+        if (other.presentBits_0 & 0x01 != 0) {
+            _name = other._name;
+            presentBits_0 |= 0x01;
+        }
+        if (other.presentBits_0 & 0x02 != 0) {
+            _number = other._number;
+            presentBits_0 |= 0x02;
+        }
+        EnumValueOptions? _optionsOther = other.options;
+        if (_optionsOther != Null) {
+            if (other.is(immutable)) {
+                options = _optionsOther;
+            } else {
+                options = _optionsOther.duplicate();
+            }
+        }
+        super(other);
+        return this;
+    }
+
+    @Override
     immutable EnumValueDescriptorProto freeze(Boolean inPlace = False) {
         if (this.is(immutable EnumValueDescriptorProto)) {
             return this;

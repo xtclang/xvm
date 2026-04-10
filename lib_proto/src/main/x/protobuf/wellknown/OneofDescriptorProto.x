@@ -99,6 +99,27 @@ class OneofDescriptorProto
     }
 
     @Override
+    OneofDescriptorProto! mergeFrom(OneofDescriptorProto other) {
+        if (this.is(immutable)) {
+            return new OneofDescriptorProto(this).mergeFrom(other);
+        }
+        if (other.presentBits_0 & 0x01 != 0) {
+            _name = other._name;
+            presentBits_0 |= 0x01;
+        }
+        OneofOptions? _optionsOther = other.options;
+        if (_optionsOther != Null) {
+            if (other.is(immutable)) {
+                options = _optionsOther;
+            } else {
+                options = _optionsOther.duplicate();
+            }
+        }
+        super(other);
+        return this;
+    }
+
+    @Override
     immutable OneofDescriptorProto freeze(Boolean inPlace = False) {
         if (this.is(immutable OneofDescriptorProto)) {
             return this;

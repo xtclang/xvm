@@ -183,6 +183,40 @@ class EnumValueOptions
     }
 
     @Override
+    EnumValueOptions! mergeFrom(EnumValueOptions other) {
+        if (this.is(immutable)) {
+            return new EnumValueOptions(this).mergeFrom(other);
+        }
+        if (other.presentBits_0 & 0x01 != 0) {
+            _deprecated = other._deprecated;
+            presentBits_0 |= 0x01;
+        }
+        FeatureSet? _featuresOther = other.features;
+        if (_featuresOther != Null) {
+            if (other.is(immutable)) {
+                features = _featuresOther;
+            } else {
+                features = _featuresOther.duplicate();
+            }
+        }
+        if (other.presentBits_0 & 0x02 != 0) {
+            _debugRedact = other._debugRedact;
+            presentBits_0 |= 0x02;
+        }
+        FieldOptions.FeatureSupport? _featureSupportOther = other.featureSupport;
+        if (_featureSupportOther != Null) {
+            if (other.is(immutable)) {
+                featureSupport = _featureSupportOther;
+            } else {
+                featureSupport = _featureSupportOther.duplicate();
+            }
+        }
+        uninterpretedOption.addAll(other.uninterpretedOption);
+        super(other);
+        return this;
+    }
+
+    @Override
     immutable EnumValueOptions freeze(Boolean inPlace = False) {
         if (this.is(immutable EnumValueOptions)) {
             return this;

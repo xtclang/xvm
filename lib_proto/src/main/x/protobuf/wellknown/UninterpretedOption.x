@@ -275,6 +275,23 @@ class UninterpretedOption
         }
 
         @Override
+        NamePart! mergeFrom(NamePart other) {
+            if (this.is(immutable)) {
+                return new NamePart(this).mergeFrom(other);
+            }
+            if (other.presentBits_0 & 0x01 != 0) {
+                _namePart = other._namePart;
+                presentBits_0 |= 0x01;
+            }
+            if (other.presentBits_0 & 0x02 != 0) {
+                _isExtension = other._isExtension;
+                presentBits_0 |= 0x02;
+            }
+            super(other);
+            return this;
+        }
+
+        @Override
         immutable NamePart freeze(Boolean inPlace = False) {
             if (this.is(immutable NamePart)) {
                 return this;
@@ -381,6 +398,40 @@ class UninterpretedOption
             size += protobuf.CodedOutput.computeStringSize(8, aggregateValue);
         }
         return size;
+    }
+
+    @Override
+    UninterpretedOption! mergeFrom(UninterpretedOption other) {
+        if (this.is(immutable)) {
+            return new UninterpretedOption(this).mergeFrom(other);
+        }
+        name.addAll(other.name);
+        if (other.presentBits_0 & 0x01 != 0) {
+            _identifierValue = other._identifierValue;
+            presentBits_0 |= 0x01;
+        }
+        if (other.presentBits_0 & 0x02 != 0) {
+            _positiveIntValue = other._positiveIntValue;
+            presentBits_0 |= 0x02;
+        }
+        if (other.presentBits_0 & 0x04 != 0) {
+            _negativeIntValue = other._negativeIntValue;
+            presentBits_0 |= 0x04;
+        }
+        if (other.presentBits_0 & 0x08 != 0) {
+            _doubleValue = other._doubleValue;
+            presentBits_0 |= 0x08;
+        }
+        if (other.presentBits_0 & 0x10 != 0) {
+            _stringValue = other._stringValue;
+            presentBits_0 |= 0x10;
+        }
+        if (other.presentBits_0 & 0x20 != 0) {
+            _aggregateValue = other._aggregateValue;
+            presentBits_0 |= 0x20;
+        }
+        super(other);
+        return this;
     }
 
     @Override

@@ -189,6 +189,36 @@ class EnumOptions
     }
 
     @Override
+    EnumOptions! mergeFrom(EnumOptions other) {
+        if (this.is(immutable)) {
+            return new EnumOptions(this).mergeFrom(other);
+        }
+        if (other.presentBits_0 & 0x01 != 0) {
+            _allowAlias = other._allowAlias;
+            presentBits_0 |= 0x01;
+        }
+        if (other.presentBits_0 & 0x02 != 0) {
+            _deprecated = other._deprecated;
+            presentBits_0 |= 0x02;
+        }
+        if (other.presentBits_0 & 0x04 != 0) {
+            _deprecatedLegacyJsonFieldConflicts = other._deprecatedLegacyJsonFieldConflicts;
+            presentBits_0 |= 0x04;
+        }
+        FeatureSet? _featuresOther = other.features;
+        if (_featuresOther != Null) {
+            if (other.is(immutable)) {
+                features = _featuresOther;
+            } else {
+                features = _featuresOther.duplicate();
+            }
+        }
+        uninterpretedOption.addAll(other.uninterpretedOption);
+        super(other);
+        return this;
+    }
+
+    @Override
     immutable EnumOptions freeze(Boolean inPlace = False) {
         if (this.is(immutable EnumOptions)) {
             return this;

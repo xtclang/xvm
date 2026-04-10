@@ -257,6 +257,44 @@ class MessageOptions
     }
 
     @Override
+    MessageOptions! mergeFrom(MessageOptions other) {
+        if (this.is(immutable)) {
+            return new MessageOptions(this).mergeFrom(other);
+        }
+        if (other.presentBits_0 & 0x01 != 0) {
+            _messageSetWireFormat = other._messageSetWireFormat;
+            presentBits_0 |= 0x01;
+        }
+        if (other.presentBits_0 & 0x02 != 0) {
+            _noStandardDescriptorAccessor = other._noStandardDescriptorAccessor;
+            presentBits_0 |= 0x02;
+        }
+        if (other.presentBits_0 & 0x04 != 0) {
+            _deprecated = other._deprecated;
+            presentBits_0 |= 0x04;
+        }
+        if (other.presentBits_0 & 0x08 != 0) {
+            _mapEntry = other._mapEntry;
+            presentBits_0 |= 0x08;
+        }
+        if (other.presentBits_0 & 0x10 != 0) {
+            _deprecatedLegacyJsonFieldConflicts = other._deprecatedLegacyJsonFieldConflicts;
+            presentBits_0 |= 0x10;
+        }
+        FeatureSet? _featuresOther = other.features;
+        if (_featuresOther != Null) {
+            if (other.is(immutable)) {
+                features = _featuresOther;
+            } else {
+                features = _featuresOther.duplicate();
+            }
+        }
+        uninterpretedOption.addAll(other.uninterpretedOption);
+        super(other);
+        return this;
+    }
+
+    @Override
     immutable MessageOptions freeze(Boolean inPlace = False) {
         if (this.is(immutable MessageOptions)) {
             return this;
