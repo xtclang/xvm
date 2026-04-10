@@ -1584,6 +1584,16 @@ public class BuildContext {
      * Load arguments for a method invocation.
      */
     public void loadCallArguments(CodeBuilder code, JitMethodDesc jmd, int[] anArgValue) {
+        loadCallArguments(code, jmd, anArgValue, null);
+    }
+
+    /**
+     * Load arguments for a method invocation.
+     *
+     * @param typeTarget if not null, the call represents a "new" call for the specified target
+     */
+    public void loadCallArguments(CodeBuilder code, JitMethodDesc jmd, int[] anArgValue,
+                                  TypeConstant typeTarget) {
         boolean isOptimized = jmd.isOptimized;
         int     argCount    = anArgValue.length;
 
@@ -1633,6 +1643,25 @@ public class BuildContext {
                     code.iconst_m1();
                     break;
                 }
+
+                case Widened: {
+                    // in general, this should not happen, but there is one place where the
+                    // Ecstasy compiler generates a default argument for a non-default signature -
+                    // for fix size Array constructor (see  NewExpression.java):
+                    //      construct(Int size, Element | function Element (Int) supply)
+                    // we need to replace it with the default value for the Element type
+                    if (typeTarget != null && typeTarget.isArray() &&
+                            typeTarget.getParamType(0).getDefaultValue() instanceof Constant dfltValue) {
+                        RegisterInfo regValue = loadConstant(code, dfltValue);
+                        if (regValue.flavor().isOptimized) {
+                            // the corresponding array constructor always takes an "nObj"
+                            Builder.box(code, regValue);
+                        }
+                        break;
+                    }
+                    // fall through
+                }
+
                 default:
                     throw new UnsupportedOperationException(
                         "Unsupported default argument for: " + dstFlavor);
@@ -2296,9 +2325,9 @@ public class BuildContext {
 
         loadCtx(code);
         if (infoTarget.hasGenericTypes()) {
-            loadTypeConstant(code, infoTarget.getType());
+            loadTypeConstant(code, typeTarget);
         }
-        loadCallArguments(code, jmdNew, anArgValue);
+        loadCallArguments(code, jmdNew, anArgValue, typeTarget);
 
         code.invokestatic(cdTarget, sJitNew, md);
         return cdTarget;

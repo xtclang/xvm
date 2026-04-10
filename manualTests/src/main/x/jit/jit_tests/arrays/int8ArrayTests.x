@@ -7,6 +7,7 @@ package int8ArrayTests {
         console.print(">>>> Running Int8 Array Tests >>>>");
 
         shouldCreateWithCapacity();
+        shouldCreateFixedSize();
         shouldCreateConstantArray();
         shouldBeEmpty();
         shouldAddElement();
@@ -32,8 +33,13 @@ package int8ArrayTests {
     }
 
     void shouldCreateWithCapacity() {
-        Int8[] array = new Array(10);
+        Int8[] array = new Int8[](10);
         assert array.capacity == 10;
+    }
+
+    void shouldCreateFixedSize() {
+        Int8[] array = new Int8[4];
+        assert array.size == 4 && array[3] == 0;
     }
 
     void shouldCreateConstantArray() {

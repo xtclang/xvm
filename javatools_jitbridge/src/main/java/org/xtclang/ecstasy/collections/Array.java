@@ -592,10 +592,9 @@ public abstract class Array
     /**
      * @param size  the size to store
      */
-    protected int $size(int size) {
+    protected void $size(int size) {
         assert size >= 0 && size <= $SIZE_MASK;
         $sizeEtc = $sizeEtc & $MUT_MASK | size;
-        return size;
     }
 
     /**
