@@ -13,10 +13,21 @@ Current verified plugin version at time of writing:
 ## Goals
 
 1. Remove deprecated IntelliJ Platform API usages reported by Plugin Verifier.
-2. Understand, isolate, and where possible reduce experimental LSP4IJ DAP API usage.
+2. Eliminate avoidable experimental API findings from the published plugin.
 3. Keep alpha-channel publication moving while making the eventual stable release less risky.
 
-## Current Findings
+## Status Summary
+
+Current status after the first alpha publication hardening pass:
+
+- Deprecated Plugin Verifier findings: `0`
+- Experimental Plugin Verifier findings: `0`
+- DAP registration: disabled in the published plugin until the feature is implemented
+- Searchable options: enabled for release-grade ZIP/publish builds
+
+Remaining work is now mostly operational/documentation work rather than verifier cleanup.
+
+## Completed Fixes
 
 ### Deprecated API usages
 
@@ -25,51 +36,40 @@ Current verified plugin version at time of writing:
 Location:
 - [XtcEditorStartupActivity.kt](/Users/marcus/src/xtclang3/lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/editor/XtcEditorStartupActivity.kt#L69)
 
-Current use:
+Original use:
 - `ReadAction.compute { PsiManager.getInstance(project).findFile(virtualFile) }`
 
-Why this matters:
-- Verifier reports this API as deprecated and potentially removable in a future IDE.
+Fix applied:
+- replaced with `ApplicationManager.getApplication().runReadAction { ... }`
 
-Likely fix:
-- Replace with the current recommended read-action API, likely one of:
-  - `ReadAction.compute<T, Throwable> { ... }` successor if still available under a non-deprecated shape
-  - `ReadAction.nonBlocking(...)`
-  - `readAction { ... }`
-- Choose the simplest replacement that preserves synchronous usage in this logging path.
+Result:
+- deprecated verifier finding removed
 
 Risk:
 - Low. This is diagnostic-only startup logging.
 
-Priority:
-- High, because it is a direct deprecation with a straightforward likely fix.
-
-#### 2. `CodeStyleSettingsManager.getCurrentSettings()`
+#### 2. `CodeStyleSettingsManager.getCurrentSettings()` and `getSettings(Project)`
 
 Location:
 - [XtcLanguageClient.kt](/Users/marcus/src/xtclang3/lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcLanguageClient.kt#L58)
 
-Current use:
+Original use:
 - fallback from `mainProjectCodeStyle` to `currentSettings`
+- intermediate fallback attempt used deprecated `getSettings(project)`
 
-Why this matters:
-- Verifier reports `currentSettings` as deprecated.
+Fix applied:
+- replaced with `com.intellij.application.options.CodeStyle.getProjectOrDefaultSettings(project)`
 
-Likely fix:
-- Revisit the correct fallback chain for 2026.1 APIs.
-- Prefer explicit project-level or scheme-level settings access rather than deprecated
-  implicit current settings.
-- Confirm the replacement does not regress formatting config propagation to the LSP.
+Result:
+- deprecated verifier finding removed
+- formatting settings lookup still works without deprecated APIs
 
 Risk:
 - Medium. This affects runtime formatting settings sent to the LSP server.
 
-Priority:
-- High.
-
 ### Experimental API usages
 
-All current experimental findings are concentrated in the DAP integration.
+All original experimental findings were concentrated in the dormant DAP integration.
 
 Primary location:
 - [XtcDebugAdapterFactory.kt](/Users/marcus/src/xtclang3/lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/dap/XtcDebugAdapterFactory.kt)
@@ -96,60 +96,99 @@ Specific reported usages:
 - `getServerDefinition()`
   - used indirectly through `serverDefinition` in [XtcDebugAdapterFactory.kt](/Users/marcus/src/xtclang3/lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/dap/XtcDebugAdapterFactory.kt#L40)
 
-Why this matters:
-- Experimental APIs can change without normal compatibility guarantees.
+Fix applied:
+- removed DAP classes from the published plugin source set
+- commented out the `debugAdapterServer` registration in
+  [plugin.xml](/Users/marcus/src/xtclang3/lang/intellij-plugin/src/main/resources/META-INF/plugin.xml)
+- left a `TODO` marker so the intended registration is preserved for later implementation
 
-What this probably means in practice:
-- This is currently a conscious dependency on LSP4IJ's DAP extension layer.
-- These findings may not be removable without either:
-  - switching to a stable alternative API, if one now exists
-  - isolating the experimental dependency surface further
-  - accepting the experimental risk until LSP4IJ stabilizes the DAP API
+Result:
+- all experimental verifier findings removed from the published plugin
 
 Risk:
 - Medium to high for future compatibility.
 - Low immediate release blocker risk if alpha-only and tested against the target IDE.
 
-Priority:
-- Medium.
+## Remaining Work
 
-## Proposed Work Plan
+### 1. DAP reintroduction plan
 
-### Phase 1: Eliminate deprecated usages
+Before re-enabling DAP:
 
-1. Replace deprecated `ReadAction.compute(...)` usage in startup logging.
-2. Replace deprecated code style fallback in `XtcLanguageClient`.
-3. Re-run:
-   - `:lang:intellij-plugin:verifyPlugin`
-4. Confirm deprecated findings drop to zero.
+1. implement the feature end-to-end
+2. confirm whether LSP4IJ exposes a stable DAP API for the target IDE/plugin versions
+3. only restore the `debugAdapterServer` registration when verifier stays clean or the remaining risk is explicitly accepted
 
-### Phase 2: Audit the DAP experimental surface
+### 2. Searchable options log-noise documentation
 
-1. Check current LSP4IJ DAP API/docs/changelog for stable replacements.
-2. Determine whether `DebugAdapterDescriptorFactory` is still the intended API for 2026.1.
-3. If no stable replacement exists:
-   - document this as an accepted alpha/stable risk decision
-   - minimize the code surface touching experimental APIs
-4. If a stable replacement exists:
-   - migrate `XtcDebugAdapterFactory`
-   - re-run verifier
+`buildSearchableOptions` currently emits a large amount of headless IDE noise, including:
 
-### Phase 3: Release gating decision
+- daemon discovery warnings
+- cancelled background Marketplace/UI requests
+- theme deprecation warnings from bundled JetBrains themes
+- JCEF/headless warnings
 
-Before broader rollout:
+These do not currently fail the build or indicate plugin verifier problems. This should be documented in the plugin README so developers do not misread a successful build as failed.
 
-1. Deprecated findings should be zero.
-2. Experimental findings should be either:
-   - removed, or
-   - explicitly accepted with rationale and owner.
+### 3. Semantic token color-quality tuning
+
+The current IntelliJ sandbox diagnostics confirm that semantic tokens are active and contributing to editor coloring:
+
+- the IDE launches with `xtc.lsp.semanticTokens=true`
+- the LSP server receives `textDocument/semanticTokens/full` requests
+- the server returns semantic token payloads for XTC source files
+- the editor output shows LSP semantic token markup/categories rather than pure TextMate-only highlighting
+
+The remaining issue is therefore not "semantic tokens missing", but rather:
+
+- weak/default color mappings for some token categories in the active scheme
+- token kind/modifier choices that may be too generic for important Ecstasy constructs
+
+Follow-up work:
+
+1. inspect representative source snippets in the LSP4IJ Semantic Tokens Inspector
+2. capture the emitted token types/modifiers for weak-looking constructs such as:
+   - return types
+   - interface/class names
+   - method declarations
+   - decorators/annotations
+3. compare those emitted categories with the actual intended Ecstasy semantics
+4. tighten server-side token classification where needed so important constructs map to stronger categories
+5. if necessary, add or document LSP4IJ semantic-token color customizations for XTC-oriented development
+
+Success criteria:
+
+- high-value constructs in XTC source are visually distinct in IntelliJ without relying on accidental scheme behavior
+- semantic-token-driven coloring remains stable in both sandbox `runIde` and installed ZIP/plugin builds
+
+### 4. Sandbox color-scheme stability
+
+The `runIde` sandbox previously persisted a broken user-derived color scheme entry (`_@user_Default`) that caused washed-out/white-editor rendering even when semantic tokens were active.
+
+Mitigations now in place:
+
+- `:lang:intellij-plugin:clean` deletes the actual `.intellijPlatform` sandbox used by `runIde`
+- sandbox startup scrubs persisted `_@user_...` color-scheme overrides instead of hardcoding Darcula or another explicit theme
+
+Follow-up:
+
+1. verify this remains stable across several clean/relaunch cycles
+2. only add stronger sandbox appearance forcing if IntelliJ recreates broken scheme state again
+
+### 5. CI stabilization
+
+Keep verifying that the release-grade path continues to run with:
+
+- `-Plsp.buildSearchableOptions=true`
+- timestamped Marketplace snapshot publish versions
+- JetBrains alpha-channel publication via `JETBRAINS_TOKEN`
 
 ## Suggested Acceptance Criteria
 
 - `verifyPlugin` completes with:
   - zero deprecated API findings
-- any remaining experimental findings are:
-  - limited to DAP integration
-  - documented in release notes / internal risk tracking
+- zero experimental API findings in the published plugin
+- searchable-options build noise is documented so it does not cause false alarms
 
 ## Commands
 

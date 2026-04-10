@@ -1,7 +1,10 @@
+import groovy.json.JsonSlurper
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import java.io.File
@@ -117,6 +120,59 @@ abstract class PublishCheckTask : DefaultTask() {
             |  JETBRAINS_CERTIFICATE_CHAIN - Base64-encoded certificate chain
             |  JETBRAINS_PRIVATE_KEY - Base64-encoded private key
             |  JETBRAINS_PRIVATE_KEY_PASSWORD - Private key password
+            """.trimMargin(),
+        )
+    }
+}
+
+abstract class SummarizeSearchableOptionsTask : DefaultTask() {
+    @get:InputFile
+    abstract val manifestFile: RegularFileProperty
+
+    @TaskAction
+    fun summarize() {
+        val manifestFile = manifestFile.get().asFile
+        val outputDir = manifestFile.parentFile
+        if (!manifestFile.isFile) {
+            throw GradleException(
+                """
+                |Searchable options output not found at:
+                |  ${manifestFile.absolutePath}
+                |
+                |Run one of:
+                |  ./gradlew -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.buildSearchableOptions=true :lang:intellij-plugin:buildPlugin
+                |  ./gradlew -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.buildSearchableOptions=true :lang:intellij-plugin:buildSearchableOptions
+                """.trimMargin(),
+            )
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        val manifest = JsonSlurper().parse(manifestFile) as Map<String, List<Map<String, Any>>>
+        val bundleNames = manifest.keys.sorted()
+        val xtcBundles =
+            bundleNames.filter { name ->
+                name.contains("xtc", ignoreCase = true) || name.contains("ecstasy", ignoreCase = true)
+            }
+        val bundleFiles =
+            manifest.entries
+                .flatMap { (_, records) -> records }
+                .mapNotNull { record ->
+                    val file = record["file"]?.toString() ?: return@mapNotNull null
+                    val size = (record["size"] as? Number)?.toLong() ?: 0L
+                    file to size
+                }.sortedByDescending { (_, size) -> size }
+
+        logger.lifecycle(
+            """
+            |[searchable-options] Output directory: ${outputDir.absolutePath}
+            |[searchable-options] Bundle manifest: ${manifestFile.absolutePath}
+            |[searchable-options] Bundles indexed: ${bundleNames.size}
+            |[searchable-options] XTC/Ecstasy bundles: ${if (xtcBundles.isEmpty()) "none detected" else xtcBundles.joinToString()}
+            |[searchable-options] Largest bundles:
+            |${bundleFiles.take(10).joinToString("\n") { (file, size) -> "  - $file (${size.humanSize()})" }}
+            |
+            |[searchable-options] Sample bundle names:
+            |${bundleNames.take(20).joinToString("\n") { "  - $it" }}
             """.trimMargin(),
         )
     }
@@ -392,6 +448,13 @@ val publishCheck by tasks.registering(PublishCheckTask::class) {
     publishVersion.set(jetbrainsPublishVersionProvider)
 }
 
+val summarizeSearchableOptions by tasks.registering(SummarizeSearchableOptionsTask::class) {
+    group = "verification"
+    description = "Summarize the generated searchable options manifest for the IntelliJ plugin build."
+    mustRunAfter(buildSearchableOptions)
+    manifestFile.set(layout.buildDirectory.file("tmp/buildSearchableOptions/content.json"))
+}
+
 val publishPlugin by tasks.existing {
     enabled = enablePublish
     dependsOn(publishCheck)
@@ -585,6 +648,33 @@ val configureSandboxLogging by tasks.registering {
     }
 }
 
+val configureSandboxAppearance by tasks.registering {
+    group = "intellij platform"
+    description = "Remove broken user-derived color-scheme overrides from the sandbox IDE config"
+
+    dependsOn(prepareSandbox)
+    mustRunAfter(prepareSandbox)
+
+    val configDir = sandboxConfigDir
+    outputs.dir(configDir)
+
+    doLast {
+        val colorsSchemeFile = configDir.get().resolve("options/colors.scheme.xml")
+        if (!colorsSchemeFile.isFile) {
+            return@doLast
+        }
+
+        val text = colorsSchemeFile.readText()
+        if ("_@user_" !in text) {
+            logger.info("[sandbox] Preserving sandbox color scheme override: ${colorsSchemeFile.absolutePath}")
+            return@doLast
+        }
+
+        colorsSchemeFile.delete()
+        logger.info("[sandbox] Removed user-derived sandbox color scheme override: ${colorsSchemeFile.absolutePath}")
+    }
+}
+
 // Ensure the XTC Gradle plugin and XDK are published to mavenLocal before the sandbox IDE starts.
 // The sandbox IDE resolves the plugin from mavenLocal (not from the composite includeBuild),
 // so publishToMavenLocal must complete first. gradle.parent reaches the root build that has
@@ -611,6 +701,7 @@ val runIdeInfo by tasks.registering(RunIdeEnvironmentReportTask::class) {
         copyLspServerToSandbox,
         configureDisabledPlugins,
         configureSandboxLogging,
+        configureSandboxAppearance,
     )
     ideVersion.set(runIdeCapturedIdeVersion)
     sinceBuild.set(runIdeCapturedSinceBuild)
@@ -654,6 +745,7 @@ val runIde by tasks.existing {
         copyLspServerToSandbox,
         configureDisabledPlugins,
         configureSandboxLogging,
+        configureSandboxAppearance,
         runIdeInfo,
         startLspLogTail,
     )
@@ -681,15 +773,14 @@ val runIde by tasks.existing {
 // =============================================================================
 // Clean sandbox when running 'clean'
 // =============================================================================
-// The IntelliJ Platform Gradle Plugin stores the sandbox under build/idea-sandbox/.
+// The IntelliJ Platform Gradle Plugin stores the sandbox under lang/.intellijPlatform/sandbox/.
 // By default, Gradle's clean task only deletes build/classes, build/libs, etc.
-// We extend clean to also delete the sandbox so that version or dependency changes
-// are picked up on the next run. The downloaded IDE distribution itself is cached
-// in $GRADLE_USER_HOME and is NOT affected by clean (only re-downloaded when the
-// version in libs.versions.toml changes, managed by Gradle's dependency resolution).
+// We extend clean to also delete the actual sandbox used by runIde so that version
+// or dependency changes are picked up on the next run. The downloaded IDE distribution
+// itself is cached separately and is NOT affected by clean.
 
 val clean by tasks.existing(Delete::class) {
-    delete(layout.buildDirectory.dir("idea-sandbox"))
+    delete(layout.projectDirectory.dir("../.intellijPlatform/sandbox/intellij-plugin"))
 }
 
 // The IntelliJ Platform Gradle Plugin sets -Djava.system.class.loader=com.intellij.util.lang.PathClassLoader
