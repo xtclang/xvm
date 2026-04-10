@@ -225,7 +225,8 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
         final String configuredPath = org.xtclang.plugin.XtcPluginUtils.expandTimestampPlaceholder(
             isStdout ? task.getStdoutPath().get() : task.getStderrPath().get()
         );
-        return new File(task.getProjectDirectory().get().getAsFile(), configuredPath);
+        final var file = new File(configuredPath);
+        return file.isAbsolute() ? file : new File(task.getProjectDirectory().get().getAsFile(), configuredPath);
     }
 
     protected void ensureParentDirectoryExists(final File file) {
