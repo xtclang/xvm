@@ -1,4 +1,14 @@
 # PLAN: Tree-sitter Integration for XTC Language Support
+
+> **Status: COMPLETE with follow-up polish** (updated 2026-04-09)
+> All 5 phases are implemented and the original tree-sitter-only feature set is in
+> place. Since the initial completion date, this branch has added context-aware
+> completions, auto-import/doc-comment code actions, read/write highlights,
+> resolved import links, richer semantic-token/on-type-formatting logging, and
+> IntelliJ-specific Enter handling to cover editor paths that do not reliably hit
+> LSP on-type formatting.
+> This plan is retained for reference only.
+
 **Goal**: Use the existing `TreeSitterGenerator` to build a functional LSP with syntax-level
 intelligence, without requiring compiler modifications.
 
@@ -156,7 +166,17 @@ Uses jtreesitter's Foreign Function API:
 - [x] Cross-file go-to-definition (via workspace index)
 - [x] Workspace symbol search (`workspace/symbol` with 4-tier fuzzy matching)
 - [x] Background indexing via `WorkspaceIndexer` (dedicated parser/queryEngine, thread-safe)
+- [x] Import document links with best-effort target URIs via workspace index
+- [x] Auto-import code actions backed by workspace index
 - [ ] Incremental re-indexing on file change (currently re-scans on `didChangeWatchedFiles`)
+
+### Post-plan polish implemented after the original completion
+
+- [x] Context-aware completion buckets (`DEFAULT`, `BODY`, `MEMBER`, `TYPE`, `IMPORT`, `ANNOTATION`)
+- [x] Read/write `DocumentHighlightKind` mapping
+- [x] On-type formatting fixes for compact `{}` / IntelliJ auto-close skeleton cases
+- [x] Request/decision tracing for completion, code actions, definition, semantic tokens, and on-type formatting
+- [x] Formatting config round-trip tests
 
 ---
 
@@ -167,11 +187,11 @@ The LSP server uses a pluggable adapter pattern with three available backends:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     XtcLanguageServer                       │
-│            (takes XtcCompilerAdapter via constructor)       │
+│                 (takes Adapter via constructor)             │
 └────────────────────────────┬────────────────────────────────┘
                              │
                ┌─────────────┴─────────────┐
-               │    XtcCompilerAdapter     │  ← Interface with defaults
+               │          Adapter          │  ← Interface with defaults
                └─────────────┬─────────────┘
                              │
         ┌────────────────────┼────────────────────┐

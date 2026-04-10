@@ -209,10 +209,10 @@ Generated files:
 ┌─────────────────────────▼───────────────────────────────────────┐
 │                   lsp-server                                    │
 │  ┌─────────────────────────────────────────────────────────┐    │
-│  │               XtcCompilerAdapter (interface)            │    │
+│  │                  Adapter (interface)                    │    │
 │  │  ┌──────────────┬──────────────┬──────────────┐         │    │
-│  │  │ Mock         │ TreeSitter   │ Compiler     │         │    │
-│  │  │ (regex)      │ (syntax)     │ (stub)       │         │    │
+│  │  │ Mock         │ TreeSitter   │ Xdk          │         │    │
+│  │  │ (regex)      │ (syntax)     │ (future)     │         │    │
 │  │  └──────────────┴──────────────┴──────────────┘         │    │
 │  └─────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────┘
@@ -227,22 +227,25 @@ Generated files:
 # Mock - regex-based, for testing without native libraries
 ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock
 
-# Compiler stub - all methods logged, placeholder for future compiler
-./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler
+# XDK adapter stub - placeholder for future compiler / semantic integration
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=xdk
 ```
 
-## Tree-sitter Feature Matrix
+## Canonical Status Documents
 
-For detailed documentation on what Tree-sitter can and cannot provide for LSP features, including
-exact implementation locations in the codebase, see:
+To avoid duplicating stale implementation matrices across multiple READMEs, the canonical
+status documents are:
 
-**[tree-sitter/doc/functionality.md](./tree-sitter/doc/functionality.md)**
-
-This covers:
-- LSP feature implementation matrix (which adapter handles what)
-- What Tree-sitter can do (syntax highlighting, document symbols, basic navigation)
-- What Tree-sitter cannot do (type inference, cross-file references, semantic diagnostics)
-- File-by-file reference for all LSP implementation code
+- [`doc/plans/PLAN_IDE_INTEGRATION.md`](./doc/plans/PLAN_IDE_INTEGRATION.md)
+  - current implementation matrix across adapters and IDE integration status
+- [`doc/plans/PLAN_TREE_SITTER.md`](./doc/plans/PLAN_TREE_SITTER.md)
+  - tree-sitter architecture and implementation status
+- [`doc/plans/existing-tree-sitter-functionality-missing.md`](./doc/plans/existing-tree-sitter-functionality-missing.md)
+  - current tree-sitter implemented vs remaining functionality
+- [`lsp-server/README.md`](./lsp-server/README.md)
+  - LSP-server-specific build, runtime, and configuration details
+- [`intellij-plugin/README.md`](./intellij-plugin/README.md)
+  - IntelliJ-plugin-specific build/testing/runtime details
 
 ## Dependency Versions & Compatibility
 
@@ -258,8 +261,8 @@ The lang tooling uses several interdependent libraries. This section documents v
 **How they work together:**
 - **lsp4j** provides the LSP protocol implementation (types, JSON-RPC, message handling)
 - **lsp4ij** is an IntelliJ plugin that provides LSP client support for any language
-- Our `XtcLanguageServerFactory` creates an in-process LSP server using lsp4j
-- lsp4ij connects to it via piped streams
+- Our IntelliJ plugin launches the LSP server out-of-process
+- lsp4ij connects to it over stdio via `ProcessStreamConnectionProvider`
 
 ### Tree-sitter Stack
 
@@ -286,7 +289,7 @@ crash/memory isolation.
 |---------|---------|---------|
 | **intellij-ide** | 2026.1 | Target IDE version |
 | **intellij-jdk** | 25 | Plugin JDK requirement |
-| **intellij-platform-gradle-plugin** | 2.13.1 | Build plugin for IntelliJ plugins |
+| **intellij-platform-gradle-plugin** | 2.14.0 | Build plugin for IntelliJ plugins |
 
 ### Compatibility Matrix
 
@@ -302,9 +305,8 @@ All versions are defined in `/gradle/libs.versions.toml`.
 
 ## Documentation
 
-- [Language Support Overview](./doc/LANGUAGE_SUPPORT.md) - Comprehensive guide to implementing LSP and DAP support for Ecstasy
+- [Implementation Plans](./doc/plans/README.md) - Current plans, status docs, and retained design notes for language tooling
 - [LSP Implementation Survey](./doc/LSP_IMPLEMENTATIONS_SURVEY.md) - Survey of how other languages implement language server support
-- [Implementation Plans](./doc/plans/) - Detailed implementation plans for IDE integration and Tree-sitter grammar
 
 Architecture analysis and research documentation: *Internal documentation*
 

@@ -1,27 +1,29 @@
 # XTC Language Support Plans
 
-This directory contains implementation plans and status documentation for XTC language tooling.
-
-## Documents
+## Active Plans
 
 | Document | Description |
 |----------|-------------|
-| [PLAN_IDE_INTEGRATION](./PLAN_IDE_INTEGRATION.md) | **What's implemented and what's next** - summary of current state |
-| [PLAN_TREE_SITTER](./PLAN_TREE_SITTER.md) | Tree-sitter grammar - main plan and roadmap |
-| [tree-sitter/](./tree-sitter/) | Tree-sitter implementation details and task docs |
+| [idea-specific](./idea-specific.md) | IntelliJ IDEA plugin enhancements (XDK SDK, run configs, templates) |
+| [vscode-specific](./vscode-specific.md) | VS Code extension enhancements (snippets, settings, DAP) |
+| [lsp-feature-tiers](./lsp-feature-tiers.md) | Feature tier mapping: tree-sitter now, semantic model next, compiler later |
 
-## Quick Start
+## Completed Plans
 
-**To understand what's built:** Read [PLAN_IDE_INTEGRATION](./PLAN_IDE_INTEGRATION.md)
+| Document | Description |
+|----------|-------------|
+| [PLAN_TREE_SITTER](./PLAN_TREE_SITTER.md) | Tree-sitter integration — all phases complete |
+| [existing-tree-sitter-functionality-missing](./existing-tree-sitter-functionality-missing.md) | Current tree-sitter implemented-vs-remaining gap summary |
+| [document-formatting-plan](./document-formatting-plan.md) | Canonical current-status doc for formatting |
 
-**To work on the tree-sitter grammar:** Read [PLAN_TREE_SITTER](./PLAN_TREE_SITTER.md) and [tree-sitter/](./tree-sitter/)
+## Retained Design Notes
 
-## Compiler Integration
+| Document | Description |
+|----------|-------------|
+| [formatting-plan](./formatting-plan.md) | Historical detailed design/rationale for on-type formatting and config architecture |
 
-For detailed plans on compiler modifications to enable full semantic LSP support: *Internal documentation*
+## Summary Docs
 
-Topics covered:
-- Architecture analysis of the XTC compiler
-- Quick path: State externalization approach
-- Parallel path: Modern rewrite approach (recommended)
-- Component-by-component implementation plans
+| Document | Description |
+|----------|-------------|
+| [PLAN_IDE_INTEGRATION](./PLAN_IDE_INTEGRATION.md) | What's implemented across the language tooling stack |

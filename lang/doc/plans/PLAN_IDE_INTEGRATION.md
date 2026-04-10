@@ -1,6 +1,6 @@
 # XTC Language Support Implementation
 
-> **Last Updated**: 2026-04-02
+> **Last Updated**: 2026-04-10
 
 This document describes the language tooling implemented in the `lang/` directory and what remains to be done.
 
@@ -42,30 +42,30 @@ The LSP server uses a pluggable adapter pattern to support different backends:
 ```
                      XtcLanguageServer
                             │
-                   XtcCompilerAdapter (interface)
+                      Adapter (interface)
                             │
          ┌──────────────────┼──────────────────┐
          │                  │                  │
          ▼                  ▼                  ▼
-  MockXtcCompiler-    TreeSitter-      XtcCompiler-
-  Adapter             Adapter          AdapterStub
-  (regex-based)       (syntax-aware)   (future: semantic)
+   MockAdapter       TreeSitter-         XdkAdapter
+   (adapter.mock)    Adapter             (adapter.xdk)
+   (regex-based)     (adapter.treesitter)(future: semantic)
 ```
 
-All adapters extend `AbstractXtcCompilerAdapter` which provides:
+All adapters extend `AbstractAdapter` which provides:
 - Per-adapter `[displayName]` prefixed logging via `logPrefix`
 - "Not yet implemented" defaults for all optional LSP features (with full input parameter logging)
 - Shared formatting logic (trailing whitespace removal, final newline insertion)
 - Utility method for position-in-range checking
 
-`XtcCompilerAdapter` is a pure interface (method signatures only). Concrete adapters override
+`Adapter` is a pure interface (method signatures only). Concrete adapters override
 only the methods they actually implement -- all others inherit traceable logging stubs.
 
 | Adapter | Backend | LSP Feature Coverage | Status |
 |---------|---------|----------------------|--------|
-| `MockXtcCompilerAdapter` | Regex patterns | ~60% (syntax-level, no AST) | Implemented |
-| `TreeSitterAdapter` | Tree-sitter grammar | ~80% (syntax + structure) | **DEFAULT** - Implemented |
-| `XtcCompilerAdapterStub` | XTC Compiler | 100% (semantic) | Placeholder |
+| `MockAdapter` | Regex patterns | ~60% (syntax-level, no AST) | Implemented |
+| `TreeSitterAdapter` | Tree-sitter grammar | ~85% (syntax + structure + workspace index) | **DEFAULT** - Implemented |
+| `XdkAdapter` | XTC / semantic future path | 100% (semantic) | Placeholder |
 
 **Note:** TreeSitterAdapter requires Java 25+ (FFM API). The IntelliJ plugin runs the LSP server
 out-of-process for classloader and crash isolation (IntelliJ 2026.1 runs on JBR 25).
@@ -79,17 +79,17 @@ out-of-process for classloader and crash isolation (IntelliJ 2026.1 runs on JBR 
 | Go-to-definition (same file) | By name | By name | Semantic |
 | Go-to-definition (cross-file) | - | Via workspace index | Full |
 | Find references (same file) | Decl only | By name | Full |
-| Completions | Keywords | Keywords + locals + members | Types + members |
+| Completions | Keywords | Context-aware keywords/types/locals/members/imports | Types + members |
 | Syntax errors | Markers | Full | Full |
 | Semantic errors | - | - | Full |
 | Hover (signature) | Basic | Basic | Full types |
-| Document highlights | Text match | AST identifiers | Semantic |
+| Document highlights | Text match | AST identifiers with READ/WRITE distinction | Semantic |
 | Selection ranges | - | AST walk-up | AST walk-up |
 | Folding ranges | Braces | AST nodes | AST nodes |
-| Document links | Regex | AST nodes | Resolved URIs |
+| Document links | Regex | AST nodes + best-effort import targets | Resolved URIs |
 | Signature help | - | Same-file | Cross-file |
 | Rename (same file) | Text | AST | Semantic |
-| Code actions | Organize imports | Organize imports | Quick fixes |
+| Code actions | Organize imports | Organize imports + auto-import + doc-comments | Quick fixes |
 | Formatting | Trailing WS | Trailing WS | Full formatter |
 | Workspace symbols | - | Fuzzy search (4-tier) | Full |
 | Semantic tokens | - | Lexer-based (18 contexts) | Full semantic |
@@ -110,6 +110,8 @@ An IntelliJ IDEA plugin providing XTC support:
 - **`XtcRunConfiguration`** / **`XtcRunConfigurationType`** / **`XtcRunConfigurationProducer`** - Run configurations
 - **`XtcTextMateBundleProvider`** - TextMate grammar for syntax highlighting
 - **`XtcIconProvider`** - XTC file icons
+- **`XtcEnterHandlerDelegate`** - IntelliJ-local Enter repair for brace/empty-block indentation
+- **`XtcLanguageCodeStyleSettingsProvider`** / **`XtcCodeStyleSettings`** - IntelliJ code-style integration consumed by editor-side indentation repair
 
 **LSP Server Launch:**
 - Uses LSP4IJ's `ProcessStreamConnectionProvider` to launch the LSP server as a separate process
@@ -120,6 +122,8 @@ An IntelliJ IDEA plugin providing XTC support:
 - Downloads IntelliJ Community 2026.1 by default (cached by Gradle)
 - Use `-PintellijLocalPath=/path` to use a local IntelliJ installation instead
 - Plugin bytecode target is Java 25
+- Searchable-options indexing is disabled by default for ordinary builds
+- IntelliJ Platform IDE caching is enabled under `lang/.intellijPlatform/ides`
 
 ### 4. VS Code Extension (`lang/vscode-extension/`)
 
@@ -181,11 +185,26 @@ Full tree-sitter support for fast, incremental parsing:
    - Verify run configurations work
    - Build and test plugin ZIP
    - Test out-of-process LSP server launch on all platforms
+   - Continue reducing IntelliJ/TextMate/LSP overlap issues and stale sandbox failure modes
+   - Keep the startup diagnostics in `XtcEditorStartupActivity` until the runIde sandbox behavior is fully stable
+   - If sandbox editor/theme issues recur, log both UI theme and editor color scheme together instead of forcing only one side
+   - Document or automate sandbox reset for stale color/folding state during local plugin development
+
+5. **Highlighting and completion follow-up**
+   - Improve semantic-token granularity for declaration names vs type references
+   - Distinguish field/property references from locals and parameters more consistently
+   - Improve generic/type-parameter highlighting in both semantic tokens and TextMate fallback
+   - Continue aligning semantic-token classifications with TextMate scopes so the two paths do not fight each other in IntelliJ/LSP4IJ
+   - Add focused regression tests for `TestModule.x`-style cases:
+     - declaration-start completion should prefer `class` over `Class`
+     - module/package hover should resolve
+     - return type / parameter / property coloring should not collapse into one broad scope
+   - Review auto-import suggestions for built-in/meta-types like `Class`, `Module`, and `Type` so they do not produce noisy quick-fix candidates in declaration contexts
 
 ### Medium-term (Compiler Integration)
 
-5. **Implement full compiler adapter**
-   - Replace `XtcCompilerAdapterStub` with real compiler integration
+6. **Implement full compiler adapter**
+   - Replace `XdkAdapter` stub with real compiler integration
    - Extract type information from XTC compiler
    - Provide cross-file go-to-definition
    - Provide semantic error reporting
@@ -197,21 +216,23 @@ Full tree-sitter support for fast, incremental parsing:
 
    See *Internal documentation* for detailed plans.
 
-6. **Hybrid adapter strategy**
+7. **Hybrid adapter strategy**
    - Use tree-sitter for fast syntax feedback
    - Use compiler adapter for semantic features when available
    - Graceful degradation when compiler is unavailable
 
 ### Long-term (Advanced Features)
 
-7. **Refactoring support (cross-file)**
+8. **Refactoring support (cross-file)**
    - ~~Rename symbol (same file)~~ ✅ COMPLETE (both adapters)
    - Cross-file rename (requires compiler)
    - Extract method/variable
    - Safe delete
 
-8. **Code actions (semantic)**
+9. **Code actions (semantic)**
    - ~~Organize imports~~ ✅ COMPLETE (both adapters)
+   - ~~Auto-import (workspace-index-backed)~~ ✅ COMPLETE (tree-sitter)
+   - ~~Generate doc comment~~ ✅ COMPLETE (tree-sitter)
    - Quick fixes for common errors (requires compiler)
    - Generate code (getters, toString, etc.)
 
@@ -275,7 +296,9 @@ The IntelliJ plugin uses Red Hat's [LSP4IJ](https://github.com/redhat-developer/
 | LSP Console (debug traces) | Yes | No |
 | DAP Client | Yes | No |
 
-Code Lens, Call Hierarchy, and Type Hierarchy are on the roadmap (see `plan-next-steps-lsp.md`).
+Code Lens, Call Hierarchy, and Type Hierarchy remain on the roadmap. See
+[`lsp-feature-tiers.md`](./lsp-feature-tiers.md) for the LSP capability tiering and
+[`idea-specific.md`](./idea-specific.md) for IntelliJ-specific follow-up work.
 
 **Standard protocol types.** LSP4IJ uses Eclipse LSP4J types (`org.eclipse.lsp4j.services.LanguageServer`, `IDebugProtocolServer`) -- the same library our LSP and DAP servers use. IntelliJ's built-in LSP uses internal IntelliJ types.
 
@@ -306,7 +329,7 @@ The `xtc-intellij-plugin-dev` reference repo demonstrates IntelliJ's built-in LS
 
 ## Known Issues and Follow-ups
 
-> **Last Updated**: 2026-04-02
+> **Last Updated**: 2026-04-09
 
 ### DAP Integration (Blocking for Debug Support)
 
@@ -324,6 +347,18 @@ The `xtc-intellij-plugin-dev` reference repo demonstrates IntelliJ's built-in LS
 2. **DAP server launch** -- The DAP descriptor's `startServer()` needs to use
    `JavaProcessCommandBuilder` (matching the LSP connection provider pattern) to launch
    the DAP server out-of-process with the IDE's JBR 25.
+
+3. **Formatting config / editor path split** -- LSP on-type formatting is implemented and
+   well tested, but IntelliJ does not always send the first Enter-after-`{` path through
+   `textDocument/onTypeFormatting`. The plugin now includes a local Enter repair that
+   respects IntelliJ code style settings; keep treating that as an IntelliJ-specific
+   complement to the LSP formatter, not as the primary formatting engine.
+
+4. **Root composite configuration-cache reuse still misses with lang attached** --
+   isolated `:lang:intellij-plugin:build` now reuses configuration cache with
+   IntelliJ IDE caching enabled, but the outer root `./gradlew build` graph still
+   misses on `JavaRuntimeMetadataValueSource`. This appears tied to the IntelliJ
+   Platform Gradle plugin / composite-build runtime metadata path.
 
 ### Tree-sitter / Semantic Tokens
 
@@ -358,5 +393,7 @@ composite root's `gradle.properties` at settings time).
 ## Related Documentation
 
 - **[PLAN_TREE_SITTER.md](./PLAN_TREE_SITTER.md)** - Tree-sitter grammar status and development guide
-- **[plan-next-steps-lsp.md](../plan-next-steps-lsp.md) § 13** - Multi-IDE strategy with market share data, priority rankings, effort estimates, and configuration examples for Neovim, Helix, Eclipse, Sublime Text, Zed, Emacs, Vim, and Kate
+- **[lsp-feature-tiers.md](./lsp-feature-tiers.md)** - LSP capability tiering: what tree-sitter can still add, what fits a future semantic-model layer, and what truly requires compiler-backed semantics
+- **[idea-specific.md](./idea-specific.md)** - IntelliJ-specific roadmap beyond standard LSP behavior
+- **[vscode-specific.md](./vscode-specific.md)** - VS Code-specific roadmap beyond standard LSP behavior
 - *Internal documentation* - Comprehensive architecture analysis and compiler modification plans

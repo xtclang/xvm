@@ -15,6 +15,8 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
+import org.xtclang.plugin.XtcPlugin
+import org.xtclang.plugin.XtcTestExtension
 import org.xtclang.plugin.tasks.XtcCompileTask
 import java.io.File
 
@@ -67,6 +69,33 @@ val xdkProvider by configurations.registering {
 repositories {
     mavenCentral()
     gradlePluginPortal()
+}
+
+subprojects {
+    plugins.withType<XtcPlugin> {
+        extensions.configure<XtcTestExtension> {
+            // TODO:
+            // We redirect XTC test stdout here because testXtc is a custom launcher task, not a Gradle Test task,
+            // and the current ATTACHED execution path used to mirror the xunit runner's "Started/Finished" stream
+            // directly to the console. That creates much noisier builds than normal Java/JUnit test execution.
+            //
+            // This is only a partial ergonomics fix. The long-term goal should be to make XTC test execution feel
+            // equivalent to Gradle's built-in Test task model instead of relying on raw process stream redirection.
+            // Relevant Gradle/Java equivalents we should aim to support conceptually are:
+            // - Test.failFast
+            // - testLogging.events(...)
+            // - testLogging.showStandardStreams
+            // - testLogging.exceptionFormat
+            // - testLogging.showCauses / showExceptions / showStackTraces
+            // - maxParallelForks / forkEvery
+            // - reports (HTML / XML)
+            // - onOutput { ... } style output handling
+            //
+            // Ideally the plugin should capture xunit output structurally, show concise progress/failure summaries,
+            // preserve stderr visibility, and only surface detailed stdout when explicitly requested or on failure.
+            stdoutPath(layout.buildDirectory.file("logs/testXtc-stdout.log"))
+        }
+    }
 }
 
 dependencies {
@@ -373,20 +402,10 @@ tasks.withType<Tar>().configureEach {
     archiveExtension = "tar.gz"
 }
 
-// Resolve test stdout property at configuration time (acceptable - static test configuration)
-val showTestStdout = xdkProperties.booleanValue("org.xtclang.java.test.stdout", false)
-
 // Configure test task to run integration tests after XDK is fully built
 tasks.test {
     // Tests require the XDK to be fully installed with all XTC libraries
     dependsOn(tasks.installDist)
-
-    useJUnitPlatform()
-
-    testLogging {
-        events("passed", "skipped", "failed")
-        showStandardStreams = showTestStdout
-    }
 
     // Set working directory for tests
     workingDir = projectDir

@@ -38,9 +38,9 @@ import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
-import org.xvm.lsp.adapter.MockXtcCompilerAdapter
-import org.xvm.lsp.adapter.TreeSitterAdapter
-import org.xvm.lsp.adapter.XtcCompilerAdapter
+import org.xvm.lsp.adapter.Adapter
+import org.xvm.lsp.adapter.mock.MockAdapter
+import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -48,7 +48,7 @@ import java.nio.file.Paths
 /**
  * Integration test that exercises the LSP server against real `.x` source files from
  * the repository. Unlike [XtcLanguageServerTest], which uses synthetic inline snippets
- * with the [MockXtcCompilerAdapter], this test opens actual XTC standard library and
+ * with the [MockAdapter], this test opens actual XTC standard library and
  * manual test files and verifies that each LSP capability returns meaningful results.
  *
  * ## How to run
@@ -70,7 +70,7 @@ import java.nio.file.Paths
  * native tree-sitter library is available (which it is when the `tree-sitter` subproject
  * has been built), all tests run against the real syntax-aware parser. If the native lib
  * is unavailable (e.g. in a CI environment without native builds), the test falls back to
- * [MockXtcCompilerAdapter] and the tests still pass -- they just exercise regex-based parsing.
+ * [MockAdapter] and the tests still pass -- they just exercise regex-based parsing.
  *
  * ## Test files
  *
@@ -79,7 +79,7 @@ import java.nio.file.Paths
  * | `Boolean.x` | `lib_ecstasy/.../ecstasy/Boolean.x` | Enum with methods, `@Op` annotations, many self-references |
  * | `Exception.x` | `lib_ecstasy/.../ecstasy/Exception.x` | Const class, constructor, properties, methods |
  * | `Closeable.x` | `lib_ecstasy/.../ecstasy/Closeable.x` | Small interface with doc comments |
- * | `TestSimple.x` | `manualTests/.../TestSimple.x` | Module with `@Inject`, local vars |
+ * | `TestSimple.x` | `lang/lsp-server/src/test/resources/fixtures/TestSimple.x` | Stable local fixture for module with `@Inject`, local vars |
  *
  * ## How it works
  *
@@ -96,7 +96,7 @@ import java.nio.file.Paths
 @DisplayName("LspIntegrationTest")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class LspIntegrationTest {
-    private lateinit var adapter: XtcCompilerAdapter
+    private lateinit var adapter: Adapter
     private lateinit var testFiles: Map<String, TestFile>
     private lateinit var server: XtcLanguageServer
     private lateinit var mockClient: LanguageClient
@@ -112,7 +112,7 @@ class LspIntegrationTest {
 
     @BeforeAll
     fun setUpAdapter() {
-        adapter = createTreeSitterAdapterOrNull() ?: MockXtcCompilerAdapter()
+        adapter = createTreeSitterAdapterOrNull() ?: MockAdapter()
         isTreeSitter = adapter is TreeSitterAdapter
 
         val root = resolveProjectRoot()
@@ -121,7 +121,7 @@ class LspIntegrationTest {
                 "Boolean.x" to loadTestFile(root, "lib_ecstasy/src/main/x/ecstasy/Boolean.x"),
                 "Exception.x" to loadTestFile(root, "lib_ecstasy/src/main/x/ecstasy/Exception.x"),
                 "Closeable.x" to loadTestFile(root, "lib_ecstasy/src/main/x/ecstasy/Closeable.x"),
-                "TestSimple.x" to loadTestFile(root, "manualTests/src/main/x/TestSimple.x"),
+                "TestSimple.x" to loadTestFile(root, "lang/lsp-server/src/test/resources/fixtures/TestSimple.x"),
             )
     }
 
@@ -279,8 +279,8 @@ class LspIntegrationTest {
     @DisplayName("textDocument/completion")
     inner class CompletionTests {
         @Test
-        @DisplayName("should return keywords and types")
-        fun shouldReturnKeywordsAndTypes() {
+        @DisplayName("should return visible names and built-in types at module body positions")
+        fun shouldReturnVisibleNamesAndBuiltInTypes() {
             val tf = openFile("TestSimple.x")
 
             val result =
@@ -291,7 +291,8 @@ class LspIntegrationTest {
             assertThat(result.isLeft).isTrue()
             val items = result.left
             assertThat(items).isNotEmpty()
-            assertThat(items).anyMatch { it.label == "class" }
+            assertThat(items).anyMatch { it.label == "run" }
+            assertThat(items).anyMatch { it.label == "test1" }
             assertThat(items).anyMatch { it.label == "String" }
         }
     }

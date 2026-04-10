@@ -49,6 +49,24 @@
 
         <!-- IconProvider for .x files - provides icon without overriding TextMate highlighting -->
         <iconProvider implementation="org.xtclang.idea.XtcIconProvider"/>
+
+        <!-- Live templates: code snippets triggered by abbreviation + Tab (e.g. cls, fori, sout) -->
+        <defaultLiveTemplates>/liveTemplates/XTC</defaultLiveTemplates>
+
+        <!-- Commenter for Ctrl+/ (line comment) and Ctrl+Shift+/ (block comment) -->
+        <lang.commenter language="Ecstasy"
+                        implementationClass="org.xtclang.idea.XtcCommenter"/>
+
+        <!-- Code Style settings for XTC (Settings > Editor > Code Style > Ecstasy) -->
+        <langCodeStyleSettingsProvider
+            implementation="org.xtclang.idea.style.XtcLanguageCodeStyleSettingsProvider"/>
+
+        <!-- Repair local IntelliJ Enter handling for .x empty-block splits using IDE code style -->
+        <enterHandlerDelegate implementation="org.xtclang.idea.editor.XtcEnterHandlerDelegate"/>
+
+        <!-- Probe active editor delegates in the sandbox so we can verify registration -->
+        <postStartupActivity implementation="org.xtclang.idea.editor.XtcEditorStartupActivity"/>
+
     </extensions>
 
     <!-- LSP4IJ Language Server registration -->

@@ -13,7 +13,7 @@ val textMateGrammar by configurations.creating {
 }
 
 dependencies {
-    textMateGrammar(project(path = ":", configuration = "textMateElements"))
+    textMateGrammar(project(path = ":dsl", configuration = "textMateElements"))
 }
 
 // Copy TextMate grammar files

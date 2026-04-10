@@ -16,11 +16,30 @@ public class AttachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrate
     }
 
     @Override
-    protected boolean configureIO(final ProcessBuilder pb, final XtcLauncherTask<?> task) {
+    protected StreamPlan configureIO(final ProcessBuilder pb, final XtcLauncherTask<?> task) {
         // NOTE: Don't use inheritIO() - it doesn't work when Gradle redirects file descriptors
         // Leave streams as PIPE (default) and manually copy them
         pb.redirectInput(ProcessBuilder.Redirect.INHERIT);
-        return true; // Signal that we need to manually copy stdout/stderr
+
+        boolean copyStdout = true;
+        if (task.hasStdoutRedirect()) {
+            final var stdoutFile = configuredRedirectFile(task, true);
+            ensureParentDirectoryExists(stdoutFile);
+            pb.redirectOutput(ProcessBuilder.Redirect.to(stdoutFile));
+            logger.info("[plugin] Configured stdout redirect to: {}", stdoutFile.getAbsolutePath());
+            copyStdout = false;
+        }
+
+        boolean copyStderr = true;
+        if (task.hasStderrRedirect()) {
+            final var stderrFile = configuredRedirectFile(task, false);
+            ensureParentDirectoryExists(stderrFile);
+            pb.redirectError(ProcessBuilder.Redirect.to(stderrFile));
+            logger.info("[plugin] Configured stderr redirect to: {}", stderrFile.getAbsolutePath());
+            copyStderr = false;
+        }
+
+        return new StreamPlan(copyStdout, copyStderr);
     }
 
     @Override

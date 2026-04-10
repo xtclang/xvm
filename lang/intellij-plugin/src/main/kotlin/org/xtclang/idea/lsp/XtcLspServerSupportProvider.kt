@@ -6,7 +6,6 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
-import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import org.eclipse.lsp4j.services.LanguageServer
@@ -50,7 +49,7 @@ class XtcLanguageServerFactory : LanguageServerFactory {
             logger.info("Creating XTC LSP connection provider (out-of-process) - ${LspBuildProperties.buildInfo}")
         }
 
-    override fun createLanguageClient(project: Project) = LanguageClientImpl(project)
+    override fun createLanguageClient(project: Project) = XtcLanguageClient(project)
 
     override fun getServerInterface(): Class<out LanguageServer> = LanguageServer::class.java
 }
@@ -75,6 +74,8 @@ class XtcLspConnectionProvider(
     companion object {
         private const val LSP_SERVER_JAR = "xtc-lsp-server.jar"
         private const val LANGUAGE_SERVER_ID = "xtcLanguageServer"
+        private const val SEMANTIC_TOKENS_SYSTEM_PROPERTY = "xtc.lsp.semanticTokens"
+        private const val SEMANTIC_TOKENS_ENV = "XTC_LSP_SEMANTIC_TOKENS"
 
         /** Ensures we only show the "started" notification once per IDE session. */
         private val startNotificationShown = AtomicBoolean(false)
@@ -94,6 +95,10 @@ class XtcLspConnectionProvider(
             System.getProperty("xtc.logLevel")?.uppercase()
                 ?: System.getenv("XTC_LOG_LEVEL")?.uppercase()
                 ?: "INFO"
+        val semanticTokens =
+            System.getProperty(SEMANTIC_TOKENS_SYSTEM_PROPERTY)
+                ?: System.getenv(SEMANTIC_TOKENS_ENV)
+                ?: "false"
 
         // JavaProcessCommandBuilder resolves IntelliJ's JBR java binary automatically
         // and handles debug port configuration from LSP4IJ's per-server settings.
@@ -110,6 +115,7 @@ class XtcLspConnectionProvider(
                 "-Dapple.awt.UIElement=true", // macOS: no dock icon
                 "-Djava.awt.headless=true", // No GUI components
                 "-Dxtc.logLevel=$logLevel", // Pass log level to LSP server
+                "-D$SEMANTIC_TOKENS_SYSTEM_PROPERTY=$semanticTokens", // Keep semantic tokens opt-in until client rendering is stable
             ),
         )
 
@@ -124,7 +130,7 @@ class XtcLspConnectionProvider(
 
         logger.info(
             "XTC LSP command configured (v${LspBuildProperties.version}, " +
-                "adapter=${LspBuildProperties.adapter}): ${commandLine.commandLineString}",
+                "adapter=${LspBuildProperties.adapter}, semanticTokens=$semanticTokens): ${commandLine.commandLineString}",
         )
     }
 

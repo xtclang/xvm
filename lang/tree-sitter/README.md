@@ -262,7 +262,7 @@ The `TreeSitterAdapter` uses `XtcParser` to load the native library and parse XT
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    TreeSitterAdapter                            │
-│  (implements XtcCompilerAdapter for LSP)                        │
+│     (implements the shared Adapter interface for LSP)           │
 └────────────────────────────┬────────────────────────────────────┘
                              │ uses
 ┌────────────────────────────▼────────────────────────────────────┐

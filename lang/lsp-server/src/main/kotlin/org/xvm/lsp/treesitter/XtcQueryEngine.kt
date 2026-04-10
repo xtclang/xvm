@@ -206,6 +206,8 @@ class XtcQueryEngine(
 
     private fun nodeTypeToSymbolKind(type: String): SymbolKind? =
         when (type) {
+            "module_declaration" -> SymbolKind.MODULE
+            "package_declaration" -> SymbolKind.PACKAGE
             "class_declaration" -> SymbolKind.CLASS
             "interface_declaration" -> SymbolKind.INTERFACE
             "mixin_declaration" -> SymbolKind.MIXIN

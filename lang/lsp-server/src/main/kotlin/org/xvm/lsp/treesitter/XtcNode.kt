@@ -1,6 +1,7 @@
 package org.xvm.lsp.treesitter
 
 import io.github.treesitter.jtreesitter.Node
+import org.xvm.lsp.adapter.AdapterNode
 import java.util.Optional
 
 /**
@@ -29,11 +30,11 @@ import java.util.Optional
 class XtcNode internal constructor(
     private val tsNode: Node,
     private val source: String,
-) {
+) : AdapterNode {
     /**
      * The type of this node (e.g., "class_declaration", "identifier").
      */
-    val type: String
+    override val type: String
         get() = tsNode.type
 
     /**
@@ -44,7 +45,7 @@ class XtcNode internal constructor(
      * character offsets. For non-ASCII sources we convert via the UTF-8 byte array to get
      * the correct substring.
      */
-    val text: String
+    override val text: String
         get() {
             val start = tsNode.startByte
             val end = tsNode.endByte
@@ -77,13 +78,13 @@ class XtcNode internal constructor(
     /**
      * Whether this node represents a syntax error.
      */
-    val isError: Boolean
+    override val isError: Boolean
         get() = tsNode.isError
 
     /**
      * Whether this node is missing (inserted by error recovery).
      */
-    val isMissing: Boolean
+    override val isMissing: Boolean
         get() = tsNode.isMissing
 
     /**
@@ -95,25 +96,25 @@ class XtcNode internal constructor(
     /**
      * The 0-based start line of this node.
      */
-    val startLine: Int
+    override val startLine: Int
         get() = tsNode.startPoint.row()
 
     /**
      * The 0-based start column of this node.
      */
-    val startColumn: Int
+    override val startColumn: Int
         get() = tsNode.startPoint.column()
 
     /**
      * The 0-based end line of this node.
      */
-    val endLine: Int
+    override val endLine: Int
         get() = tsNode.endPoint.row()
 
     /**
      * The 0-based end column of this node.
      */
-    val endColumn: Int
+    override val endColumn: Int
         get() = tsNode.endPoint.column()
 
     /**
@@ -147,7 +148,7 @@ class XtcNode internal constructor(
     /**
      * Get the parent node, or null if this is the root.
      */
-    val parent: XtcNode?
+    override val parent: XtcNode?
         get() = tsNode.parent.wrap()
 
     /**
@@ -195,7 +196,7 @@ class XtcNode internal constructor(
      *
      * @see childByType for fallback when a grammar node type lacks field definitions
      */
-    fun childByFieldName(fieldName: String): XtcNode? = tsNode.getChildByFieldName(fieldName).wrap()
+    override fun childByFieldName(fieldName: String): XtcNode? = tsNode.getChildByFieldName(fieldName).wrap()
 
     /**
      * Get the first child node with the given type (O(n) linear scan).
@@ -206,12 +207,12 @@ class XtcNode internal constructor(
      * Prefer [childByFieldName] when a field is available -- it is faster (O(1)),
      * position-independent, and self-documenting.
      */
-    fun childByType(nodeType: String): XtcNode? = children.find { it.type == nodeType }
+    override fun childByType(nodeType: String): XtcNode? = children.find { it.type == nodeType }
 
     /**
      * Get all children of this node.
      */
-    val children: List<XtcNode>
+    override val children: List<XtcNode>
         get() = (0 until tsNode.childCount).mapNotNull { child(it) }
 
     /**

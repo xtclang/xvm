@@ -3,16 +3,34 @@ package org.xvm.lsp.model
 import org.eclipse.lsp4j.CodeActionKind
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.DocumentHighlightKind
+import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FoldingRangeKind
 import org.eclipse.lsp4j.InlayHintKind
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.jsonrpc.messages.Either
-import org.xvm.lsp.adapter.XtcCompilerAdapter
+import org.xvm.lsp.adapter.CodeAction
+import org.xvm.lsp.adapter.DocumentHighlight
+import org.xvm.lsp.adapter.FoldingRange
+import org.xvm.lsp.adapter.InlayHint
+import org.xvm.lsp.adapter.Range as AdapterRange
 
 // Extension functions for converting between LSP model types and LSP4J types.
 // Keeps the model classes pure while centralizing conversion logic.
+
+/** Format Position as "line:character" (0-based) */
+fun Position.fmt(): String = "$line:$character"
+
+/** Format Range as "startLine:startChar-endLine:endChar" */
+fun Range.fmt(): String = "${start.fmt()}-${end.fmt()}"
+
+/** Check whether an LSP `changeType` int represents a file creation or modification. */
+fun isFileCreatedOrChanged(changeType: Int): Boolean =
+    changeType == FileChangeType.Created.value || changeType == FileChangeType.Changed.value
+
+/** Check whether an LSP `changeType` int represents a file deletion. */
+fun isFileDeleted(changeType: Int): Boolean = changeType == FileChangeType.Deleted.value
 
 /** Convert this Location to an LSP4J Range. */
 fun Location.toRange(): Range =
@@ -112,43 +130,43 @@ fun SymbolInfo.SymbolKind.toLsp(): SymbolKind =
     }
 
 /** Convert adapter HighlightKind to LSP4J DocumentHighlightKind. */
-fun XtcCompilerAdapter.DocumentHighlight.HighlightKind.toLsp(): DocumentHighlightKind =
+fun DocumentHighlight.HighlightKind.toLsp(): DocumentHighlightKind =
     when (this) {
-        XtcCompilerAdapter.DocumentHighlight.HighlightKind.TEXT -> DocumentHighlightKind.Text
-        XtcCompilerAdapter.DocumentHighlight.HighlightKind.READ -> DocumentHighlightKind.Read
-        XtcCompilerAdapter.DocumentHighlight.HighlightKind.WRITE -> DocumentHighlightKind.Write
+        DocumentHighlight.HighlightKind.TEXT -> DocumentHighlightKind.Text
+        DocumentHighlight.HighlightKind.READ -> DocumentHighlightKind.Read
+        DocumentHighlight.HighlightKind.WRITE -> DocumentHighlightKind.Write
     }
 
 /** Convert adapter FoldingKind to LSP4J FoldingRangeKind. */
-fun XtcCompilerAdapter.FoldingRange.FoldingKind.toLsp(): String =
+fun FoldingRange.FoldingKind.toLsp(): String =
     when (this) {
-        XtcCompilerAdapter.FoldingRange.FoldingKind.COMMENT -> FoldingRangeKind.Comment
-        XtcCompilerAdapter.FoldingRange.FoldingKind.IMPORTS -> FoldingRangeKind.Imports
-        XtcCompilerAdapter.FoldingRange.FoldingKind.REGION -> FoldingRangeKind.Region
+        FoldingRange.FoldingKind.COMMENT -> FoldingRangeKind.Comment
+        FoldingRange.FoldingKind.IMPORTS -> FoldingRangeKind.Imports
+        FoldingRange.FoldingKind.REGION -> FoldingRangeKind.Region
     }
 
 /** Convert adapter InlayHintKind to LSP4J InlayHintKind. */
-fun XtcCompilerAdapter.InlayHint.InlayHintKind.toLsp(): InlayHintKind =
+fun InlayHint.InlayHintKind.toLsp(): InlayHintKind =
     when (this) {
-        XtcCompilerAdapter.InlayHint.InlayHintKind.TYPE -> InlayHintKind.Type
-        XtcCompilerAdapter.InlayHint.InlayHintKind.PARAMETER -> InlayHintKind.Parameter
+        InlayHint.InlayHintKind.TYPE -> InlayHintKind.Type
+        InlayHint.InlayHintKind.PARAMETER -> InlayHintKind.Parameter
     }
 
 /** Convert adapter Range to LSP4J Range. */
-fun XtcCompilerAdapter.Range.toLsp(): Range =
+fun AdapterRange.toLsp(): Range =
     Range(
         Position(start.line, start.column),
         Position(end.line, end.column),
     )
 
 /** Convert adapter CodeActionKind to LSP4J CodeActionKind string. */
-fun XtcCompilerAdapter.CodeAction.CodeActionKind.toLsp(): String =
+fun CodeAction.CodeActionKind.toLsp(): String =
     when (this) {
-        XtcCompilerAdapter.CodeAction.CodeActionKind.QUICKFIX -> CodeActionKind.QuickFix
-        XtcCompilerAdapter.CodeAction.CodeActionKind.REFACTOR -> CodeActionKind.Refactor
-        XtcCompilerAdapter.CodeAction.CodeActionKind.REFACTOR_EXTRACT -> CodeActionKind.RefactorExtract
-        XtcCompilerAdapter.CodeAction.CodeActionKind.REFACTOR_INLINE -> CodeActionKind.RefactorInline
-        XtcCompilerAdapter.CodeAction.CodeActionKind.REFACTOR_REWRITE -> CodeActionKind.RefactorRewrite
-        XtcCompilerAdapter.CodeAction.CodeActionKind.SOURCE -> CodeActionKind.Source
-        XtcCompilerAdapter.CodeAction.CodeActionKind.SOURCE_ORGANIZE_IMPORTS -> CodeActionKind.SourceOrganizeImports
+        CodeAction.CodeActionKind.QUICKFIX -> CodeActionKind.QuickFix
+        CodeAction.CodeActionKind.REFACTOR -> CodeActionKind.Refactor
+        CodeAction.CodeActionKind.REFACTOR_EXTRACT -> CodeActionKind.RefactorExtract
+        CodeAction.CodeActionKind.REFACTOR_INLINE -> CodeActionKind.RefactorInline
+        CodeAction.CodeActionKind.REFACTOR_REWRITE -> CodeActionKind.RefactorRewrite
+        CodeAction.CodeActionKind.SOURCE -> CodeActionKind.Source
+        CodeAction.CodeActionKind.SOURCE_ORGANIZE_IMPORTS -> CodeActionKind.SourceOrganizeImports
     }

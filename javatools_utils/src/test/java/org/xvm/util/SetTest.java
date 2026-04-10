@@ -128,14 +128,14 @@ public class SetTest {
     static boolean randomTest(final int cSteps) {
         ArrayList<Op> listOps = new ArrayList<>(cSteps);
         Data data = new StringData(1+rnd.nextInt(1+rnd.nextInt(100000)));
-        Set<Object>   setControl = createControlSet();
-        Set<Object>[] aTestSets  = createTestSets();
+        var setControl = createControlSet();
+        var testSets   = createTestSets();
         for (int iStep = 0; iStep < cSteps; ++iStep) {
             Op op = randomOp(setControl, data);
             listOps.add(op);
             op.init(setControl);
-            for (int iSet = 0, cSets = aTestSets.length; iSet < cSets; ++iSet) {
-                Set<Object> set = aTestSets[iSet];
+            for (int iSet = 0, cSets = testSets.size(); iSet < cSets; ++iSet) {
+                var set = testSets.get(iSet);
                 try {
                     op.test(set);
                 } catch (final Exception | AssertionError e) {
@@ -166,11 +166,11 @@ public class SetTest {
             }
         }
 
-        Set<Object>[] aSet = createTestSets();
+        var testSets = createTestSets();
         for (int i = 0, cOps = listOps.size(); i < cOps; ++i) {
             Op op = listOps.get(i);
-            for (int iSet = 0, cSets = aSet.length; iSet < cSets; ++iSet) {
-                Set<Object> set = aSet[iSet];
+            for (int iSet = 0, cSets = testSets.size(); iSet < cSets; ++iSet) {
+                var set = testSets.get(iSet);
                 try {
                     op.test(set);
                 } catch (final Exception | AssertionError e) {
@@ -255,19 +255,18 @@ public class SetTest {
         return new HashSet<>();
     }
 
-    @SuppressWarnings("unchecked")
-    static Set<Object>[] createTestSets() {
+    static List<Set<Object>> createTestSets() {
         return fReplay
-                ? new Set[] {
+                ? List.of(
                         new ListSet<>(),
-                        new ListSet<>().disableHashIndex(),
-                    }
-                : new Set[] {
+                        new ListSet<>().disableHashIndex()
+                    )
+                : List.of(
                         new ListSet<>(),
                         new ListSet<>().disableHashIndex(),
                         new ListSet<>().useIdentityEquality(),
-                        new ListSet<>().disableHashIndex().useIdentityEquality(),
-                    };
+                        new ListSet<>().disableHashIndex().useIdentityEquality()
+                    );
     }
 
     @FunctionalInterface
@@ -591,57 +590,58 @@ public class SetTest {
         // 	at org.xvm.util.SetTest.randomTest(SetTest.java:147)
         // 	at org.xvm.util.SetTest.main(SetTest.java:119)
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("[0] remove HTM -> false\n")
-          .append("[1] add FQP -> true\n")
-          .append("[2] add FQP -> false\n")
-          .append("[3] remove DMTJ -> false\n")
-          .append("[4] add FQP -> false\n")
-          .append("[5] add IZGG -> true\n")
-          .append("[6] add FQP -> false\n")
-          .append("[7] add IZGG -> false\n")
-          .append("[8] add EVWM -> true\n")
-          .append("[9] remove EVWM -> true\n")
-          .append("[10] add YZKK -> true\n")
-          .append("[11] remove NLES -> false\n")
-          .append("[12] add IZGG -> false\n")
-          .append("[13] iterate -> 3\n")
-          .append("[14] size -> 3\n")
-          .append("[15] add FQP -> false\n")
-          .append("[16] remove FQP -> true\n")
-          .append("[17] add YZKK -> false\n")
-          .append("[18] add UHV -> true\n")
-          .append("[19] add PGX -> true\n")
-          .append("[20] iterate -> 4\n")
-          .append("[21] add WGP -> true\n")
-          .append("[22] add WGP -> false\n")
-          .append("[23] add UHV -> false\n")
-          .append("[24] size -> 5\n")
-          .append("[25] remove YZKK -> true\n")
-          .append("[26] add ZIWT -> true\n")
-          .append("[27] add NMOQ -> true\n")
-          .append("[28] add NZD -> true\n")
-          .append("[29] iterate -> 7\n")
-          .append("[30] size -> 7\n")
-          .append("[31] remove NMOQ -> true\n")
-          .append("[32] iterate -> 6\n")
-          .append("[33] add AUH -> true\n")
-          .append("[34] add CJCD -> true\n")
-          .append("[35] add OLX -> true\n")
-          .append("[36] add DLG -> true\n")
-          .append("[37] remove JKQ -> false\n")
-          .append("[38] add HFF -> true\n")
-          .append("[39] remove AUH -> true\n")
-          .append("[40] iterate -> 10\n")
-          .append("[41] add EXN -> true\n")
-          .append("[42] add LAFL -> true\n")
-          .append("[43] add IZGG -> false\n")
-          .append("[44] add QZI -> true\n")
-          .append("[45] size -> 13\n")
-          .append("[46] size -> 13\n")
-          .append("[47] add BZX -> true\n")
-          .append("[48] iterate -> 14\n");
-        replayTest(sb.toString());
+        String sb = """
+                [0] remove HTM -> false
+                [1] add FQP -> true
+                [2] add FQP -> false
+                [3] remove DMTJ -> false
+                [4] add FQP -> false
+                [5] add IZGG -> true
+                [6] add FQP -> false
+                [7] add IZGG -> false
+                [8] add EVWM -> true
+                [9] remove EVWM -> true
+                [10] add YZKK -> true
+                [11] remove NLES -> false
+                [12] add IZGG -> false
+                [13] iterate -> 3
+                [14] size -> 3
+                [15] add FQP -> false
+                [16] remove FQP -> true
+                [17] add YZKK -> false
+                [18] add UHV -> true
+                [19] add PGX -> true
+                [20] iterate -> 4
+                [21] add WGP -> true
+                [22] add WGP -> false
+                [23] add UHV -> false
+                [24] size -> 5
+                [25] remove YZKK -> true
+                [26] add ZIWT -> true
+                [27] add NMOQ -> true
+                [28] add NZD -> true
+                [29] iterate -> 7
+                [30] size -> 7
+                [31] remove NMOQ -> true
+                [32] iterate -> 6
+                [33] add AUH -> true
+                [34] add CJCD -> true
+                [35] add OLX -> true
+                [36] add DLG -> true
+                [37] remove JKQ -> false
+                [38] add HFF -> true
+                [39] remove AUH -> true
+                [40] iterate -> 10
+                [41] add EXN -> true
+                [42] add LAFL -> true
+                [43] add IZGG -> false
+                [44] add QZI -> true
+                [45] size -> 13
+                [46] size -> 13
+                [47] add BZX -> true
+                [48] iterate -> 14
+                """;
+        replayTest(sb);
     }
 
     @Test
@@ -659,40 +659,41 @@ public class SetTest {
         // 	at org.xvm.util.SetTest.replayTest(SetTest.java:296)
         // 	at org.xvm.util.SetTest.repro2(SetTest.java:174)
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("[0] add UAY -> true\n")
-          .append("[1] add NBT -> true\n")
-          .append("[2] size -> 2\n")
-          .append("[3] size -> 2\n")
-          .append("[4] remove MRP -> false\n")
-          .append("[5] add ZIW -> true\n")
-          .append("[6] add GFW -> true\n")
-          .append("[7] add SZMV -> true\n")
-          .append("[8] add SZMV -> false\n")
-          .append("[9] add ADX -> true\n")
-          .append("[10] add ADX -> false\n")
-          .append("[11] add BWK -> true\n")
-          .append("[12] add SZMV -> false\n")
-          .append("[13] remove SZMV -> true\n")
-          .append("[14] add NBT -> false\n")
-          .append("[15] add NKDK -> true\n")
-          .append("[16] add RHV -> true\n")
-          .append("[17] iterate -> 8\n")
-          .append("[18] iterate -> 8\n")
-          .append("[19] add DHH -> true\n")
-          .append("[20] add TLT -> true\n")
-          .append("[21] add TRB -> true\n")
-          .append("[22] add WYCV -> true\n")
-          .append("[23] iterate -> 12\n")
-          .append("[24] add SFJ -> true\n")
-          .append("[25] remove NKDK -> true\n")
-          .append("[26] size -> 12\n")
-          .append("[27] add MTW -> true\n")
-          .append("[28] remove ZIW -> true\n")
-          .append("[29] iterate -> 12\n")
-          .append("[30] add ADX -> false\n")
-          .append("[31] add UAY -> false\n");
-        replayTest(sb.toString());
+        String sb = """
+                [0] add UAY -> true
+                [1] add NBT -> true
+                [2] size -> 2
+                [3] size -> 2
+                [4] remove MRP -> false
+                [5] add ZIW -> true
+                [6] add GFW -> true
+                [7] add SZMV -> true
+                [8] add SZMV -> false
+                [9] add ADX -> true
+                [10] add ADX -> false
+                [11] add BWK -> true
+                [12] add SZMV -> false
+                [13] remove SZMV -> true
+                [14] add NBT -> false
+                [15] add NKDK -> true
+                [16] add RHV -> true
+                [17] iterate -> 8
+                [18] iterate -> 8
+                [19] add DHH -> true
+                [20] add TLT -> true
+                [21] add TRB -> true
+                [22] add WYCV -> true
+                [23] iterate -> 12
+                [24] add SFJ -> true
+                [25] remove NKDK -> true
+                [26] size -> 12
+                [27] add MTW -> true
+                [28] remove ZIW -> true
+                [29] iterate -> 12
+                [30] add ADX -> false
+                [31] add UAY -> false
+                """;
+        replayTest(sb);
     }
 
     @Test
@@ -710,80 +711,81 @@ public class SetTest {
         //     at org.xvm.util.SetTest.replayTest(SetTest.java:388)
         //     at org.xvm.util.SetTest.repro3(SetTest.java:266)
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("[0] size -> 0\n")
-          .append("[1] add LA -> true\n")
-          .append("[2] add HJZ -> true\n")
-          .append("[3] remove LA -> true\n")
-          .append("[4] add VB -> true\n")
-          .append("[5] add WED -> true\n")
-          .append("[6] iterate -> 3\n")
-          .append("[7] iterate -> 3\n")
-          .append("[8] add ER -> true\n")
-          .append("[9] remove VB -> true\n")
-          .append("[10] add JDE -> true\n")
-          .append("[11] add KIM -> true\n")
-          .append("[12] iterate -> 5\n")
-          .append("[13] add NE -> true\n")
-          .append("[14] add YZ -> true\n")
-          .append("[15] iterate -> 7\n")
-          .append("[16] size -> 7\n")
-          .append("[17] add YZ -> false\n")
-          .append("[18] remove N -> false\n")
-          .append("[19] add NE -> false\n")
-          .append("[20] add WED -> false\n")
-          .append("[21] size -> 7\n")
-          .append("[22] add JE -> true\n")
-          .append("[23] iterate -> 8\n")
-          .append("[24] add NE -> false\n")
-          .append("[25] add WED -> false\n")
-          .append("[26] remove NE -> true\n")
-          .append("[27] remove YZ -> true\n")
-          .append("[28] add CZ -> true\n")
-          .append("[29] add KIM -> false\n")
-          .append("[30] size -> 7\n")
-          .append("[31] add AG -> true\n")
-          .append("[32] remove ZXO -> false\n")
-          .append("[33] size -> 8\n")
-          .append("[34] add HJZ -> false\n")
-          .append("[35] add JDE -> false\n")
-          .append("[36] add ER -> false\n")
-          .append("[37] add KIM -> false\n")
-          .append("[38] add AF -> true\n")
-          .append("[39] add U -> true\n")
-          .append("[40] iterate -> 10\n")
-          .append("[41] add PG -> true\n")
-          .append("[42] remove SRO -> false\n")
-          .append("[43] add XZ -> true\n")
-          .append("[44] remove KIM -> true\n")
-          .append("[45] iterate -> 11\n")
-          .append("[46] add CVO -> true\n")
-          .append("[47] remove U -> true\n")
-          .append("[48] iterate -> 11\n")
-          .append("[49] add JA -> true\n")
-          .append("[50] remove CVO -> true\n")
-          .append("[51] iterate -> 11\n")
-          .append("[52] add EXF -> true\n")
-          .append("[53] remove CZ -> true\n")
-          .append("[54] iterate -> 11\n")
-          .append("[55] remove LG -> false\n")
-          .append("[56] add EXF -> false\n")
-          .append("[57] add OS -> true\n")
-          .append("[58] remove UO -> false\n")
-          .append("[59] add S -> true\n")
-          .append("[60] size -> 13\n")
-          .append("[61] add WU -> true\n")
-          .append("[62] add MKL -> true\n")
-          .append("[63] add NRF -> true\n")
-          .append("[64] remove AA -> false\n")
-          .append("[65] add KFM -> true\n")
-          .append("[66] size -> 17\n")
-          .append("[67] add ST -> true\n")
-          .append("[68] add PG -> false\n")
-          .append("[69] add AI -> true\n")
-          .append("[70] add RN -> true\n")
-          .append("[71] remove EXF -> true\n");
-        replayTest(sb.toString());
+        String sb = """
+                [0] size -> 0
+                [1] add LA -> true
+                [2] add HJZ -> true
+                [3] remove LA -> true
+                [4] add VB -> true
+                [5] add WED -> true
+                [6] iterate -> 3
+                [7] iterate -> 3
+                [8] add ER -> true
+                [9] remove VB -> true
+                [10] add JDE -> true
+                [11] add KIM -> true
+                [12] iterate -> 5
+                [13] add NE -> true
+                [14] add YZ -> true
+                [15] iterate -> 7
+                [16] size -> 7
+                [17] add YZ -> false
+                [18] remove N -> false
+                [19] add NE -> false
+                [20] add WED -> false
+                [21] size -> 7
+                [22] add JE -> true
+                [23] iterate -> 8
+                [24] add NE -> false
+                [25] add WED -> false
+                [26] remove NE -> true
+                [27] remove YZ -> true
+                [28] add CZ -> true
+                [29] add KIM -> false
+                [30] size -> 7
+                [31] add AG -> true
+                [32] remove ZXO -> false
+                [33] size -> 8
+                [34] add HJZ -> false
+                [35] add JDE -> false
+                [36] add ER -> false
+                [37] add KIM -> false
+                [38] add AF -> true
+                [39] add U -> true
+                [40] iterate -> 10
+                [41] add PG -> true
+                [42] remove SRO -> false
+                [43] add XZ -> true
+                [44] remove KIM -> true
+                [45] iterate -> 11
+                [46] add CVO -> true
+                [47] remove U -> true
+                [48] iterate -> 11
+                [49] add JA -> true
+                [50] remove CVO -> true
+                [51] iterate -> 11
+                [52] add EXF -> true
+                [53] remove CZ -> true
+                [54] iterate -> 11
+                [55] remove LG -> false
+                [56] add EXF -> false
+                [57] add OS -> true
+                [58] remove UO -> false
+                [59] add S -> true
+                [60] size -> 13
+                [61] add WU -> true
+                [62] add MKL -> true
+                [63] add NRF -> true
+                [64] remove AA -> false
+                [65] add KFM -> true
+                [66] size -> 17
+                [67] add ST -> true
+                [68] add PG -> false
+                [69] add AI -> true
+                [70] add RN -> true
+                [71] remove EXF -> true
+                """;
+        replayTest(sb);
     }
 
     @Test
@@ -797,346 +799,352 @@ public class SetTest {
         //     at org.xvm.util.SetTest$OpAdd.test(SetTest.java:589)
         //     at org.xvm.util.SetTest.randomTest(SetTest.java:360)
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("[0] add IL -> true\n")
-          .append("[1] add IL -> false\n")
-          .append("[2] add JP -> true\n")
-          .append("[3] add WQ -> true\n")
-          .append("[4] add IL -> false\n")
-          .append("[5] remove WQ -> true\n")
-          .append("[6] iterate -> 2\n")
-          .append("[7] remove JP -> true\n")
-          .append("[8] size -> 1\n")
-          .append("[9] add IL -> false\n")
-          .append("[10] add LB -> true\n")
-          .append("[11] add MSS -> true\n")
-          .append("[12] size -> 3\n")
-          .append("[13] add MS -> true\n")
-          .append("[14] add OC -> true\n")
-          .append("[15] add JP -> true\n")
-          .append("[16] add IL -> false\n")
-          .append("[17] add CG -> true\n")
-          .append("[18] add V -> true\n")
-          .append("[19] remove JP -> true\n")
-          .append("[20] add I -> true\n")
-          .append("[21] add IL -> false\n")
-          .append("[22] remove ZB -> false\n")
-          .append("[23] add JPQ -> true\n")
-          .append("[24] add JPQ -> false\n")
-          .append("[25] iterate -> 9\n")
-          .append("[26] add NL -> true\n")
-          .append("[27] add Z -> true\n")
-          .append("[28] size -> 11\n")
-          .append("[29] add AU -> true\n")
-          .append("[30] remove Y -> false\n")
-          .append("[31] remove IL -> true\n")
-          .append("[32] remove AU -> true\n")
-          .append("[33] remove MSS -> true\n")
-          .append("[34] iterate -> 9\n")
-          .append("[35] add AC -> true\n")
-          .append("[36] add ZB -> true\n")
-          .append("[37] add Z -> false\n")
-          .append("[38] add V -> false\n")
-          .append("[39] add B -> true\n")
-          .append("[40] add G -> true\n")
-          .append("[41] remove N -> false\n")
-          .append("[42] add Z -> false\n")
-          .append("[43] add PN -> true\n")
-          .append("[44] remove LB -> true\n")
-          .append("[45] add V -> false\n")
-          .append("[46] add RC -> true\n")
-          .append("[47] add TK -> true\n")
-          .append("[48] remove B -> true\n")
-          .append("[49] add N -> true\n")
-          .append("[50] size -> 15\n")
-          .append("[51] remove OC -> true\n")
-          .append("[52] iterate -> 14\n")
-          .append("[53] size -> 14\n")
-          .append("[54] add MS -> false\n")
-          .append("[55] add C -> true\n")
-          .append("[56] add ME -> true\n")
-          .append("[57] size -> 16\n")
-          .append("[58] remove RC -> true\n")
-          .append("[59] size -> 15\n")
-          .append("[60] iterate -> 15\n")
-          .append("[61] add W -> true\n")
-          .append("[62] remove NL -> true\n")
-          .append("[63] add K -> true\n")
-          .append("[64] add CG -> false\n")
-          .append("[65] remove Z -> true\n")
-          .append("[66] add XD -> true\n")
-          .append("[67] add I -> false\n")
-          .append("[68] add TK -> false\n")
-          .append("[69] add O -> true\n")
-          .append("[70] add JPQ -> false\n")
-          .append("[71] add P -> true\n")
-          .append("[72] add XD -> false\n")
-          .append("[73] size -> 18\n")
-          .append("[74] iterate -> 18\n")
-          .append("[75] remove C -> true\n")
-          .append("[76] size -> 17\n")
-          .append("[77] add M -> true\n")
-          .append("[78] add N -> false\n")
-          .append("[79] iterate -> 18\n")
-          .append("[80] add T -> true\n")
-          .append("[81] size -> 19\n")
-          .append("[82] remove P -> true\n")
-          .append("[83] add CG -> false\n")
-          .append("[84] add MK -> true\n")
-          .append("[85] iterate -> 19\n")
-          .append("[86] add UE -> true\n")
-          .append("[87] add R -> true\n")
-          .append("[88] remove M -> true\n")
-          .append("[89] iterate -> 20\n")
-          .append("[90] add AK -> true\n")
-          .append("[91] remove CG -> true\n")
-          .append("[92] add P -> true\n")
-          .append("[93] add MSS -> true\n")
-          .append("[94] add AU -> true\n")
-          .append("[95] size -> 23\n")
-          .append("[96] add TK -> false\n")
-          .append("[97] add J -> true\n")
-          .append("[98] add T -> false\n")
-          .append("[99] iterate -> 24\n")
-          .append("[100] remove JP -> false\n")
-          .append("[101] add XT -> true\n")
-          .append("[102] remove AU -> true\n")
-          .append("[103] remove MSS -> true\n")
-          .append("[104] iterate -> 23\n")
-          .append("[105] add KL -> true\n")
-          .append("[106] iterate -> 24\n")
-          .append("[107] remove ZB -> true\n")
-          .append("[108] iterate -> 23\n")
-          .append("[109] add RM -> true\n")
-          .append("[110] add N -> false\n")
-          .append("[111] remove ME -> true\n")
-          .append("[112] add WM -> true\n")
-          .append("[113] remove K -> true\n")
-          .append("[114] add MS -> false\n")
-          .append("[115] remove PN -> true\n")
-          .append("[116] add AU -> true\n");
-        replayTest(sb.toString());
+        String sb = """
+                [0] add IL -> true
+                [1] add IL -> false
+                [2] add JP -> true
+                [3] add WQ -> true
+                [4] add IL -> false
+                [5] remove WQ -> true
+                [6] iterate -> 2
+                [7] remove JP -> true
+                [8] size -> 1
+                [9] add IL -> false
+                [10] add LB -> true
+                [11] add MSS -> true
+                [12] size -> 3
+                [13] add MS -> true
+                [14] add OC -> true
+                [15] add JP -> true
+                [16] add IL -> false
+                [17] add CG -> true
+                [18] add V -> true
+                [19] remove JP -> true
+                [20] add I -> true
+                [21] add IL -> false
+                [22] remove ZB -> false
+                [23] add JPQ -> true
+                [24] add JPQ -> false
+                [25] iterate -> 9
+                [26] add NL -> true
+                [27] add Z -> true
+                [28] size -> 11
+                [29] add AU -> true
+                [30] remove Y -> false
+                [31] remove IL -> true
+                [32] remove AU -> true
+                [33] remove MSS -> true
+                [34] iterate -> 9
+                [35] add AC -> true
+                [36] add ZB -> true
+                [37] add Z -> false
+                [38] add V -> false
+                [39] add B -> true
+                [40] add G -> true
+                [41] remove N -> false
+                [42] add Z -> false
+                [43] add PN -> true
+                [44] remove LB -> true
+                [45] add V -> false
+                [46] add RC -> true
+                [47] add TK -> true
+                [48] remove B -> true
+                [49] add N -> true
+                [50] size -> 15
+                [51] remove OC -> true
+                [52] iterate -> 14
+                [53] size -> 14
+                [54] add MS -> false
+                [55] add C -> true
+                [56] add ME -> true
+                [57] size -> 16
+                [58] remove RC -> true
+                [59] size -> 15
+                [60] iterate -> 15
+                [61] add W -> true
+                [62] remove NL -> true
+                [63] add K -> true
+                [64] add CG -> false
+                [65] remove Z -> true
+                [66] add XD -> true
+                [67] add I -> false
+                [68] add TK -> false
+                [69] add O -> true
+                [70] add JPQ -> false
+                [71] add P -> true
+                [72] add XD -> false
+                [73] size -> 18
+                [74] iterate -> 18
+                [75] remove C -> true
+                [76] size -> 17
+                [77] add M -> true
+                [78] add N -> false
+                [79] iterate -> 18
+                [80] add T -> true
+                [81] size -> 19
+                [82] remove P -> true
+                [83] add CG -> false
+                [84] add MK -> true
+                [85] iterate -> 19
+                [86] add UE -> true
+                [87] add R -> true
+                [88] remove M -> true
+                [89] iterate -> 20
+                [90] add AK -> true
+                [91] remove CG -> true
+                [92] add P -> true
+                [93] add MSS -> true
+                [94] add AU -> true
+                [95] size -> 23
+                [96] add TK -> false
+                [97] add J -> true
+                [98] add T -> false
+                [99] iterate -> 24
+                [100] remove JP -> false
+                [101] add XT -> true
+                [102] remove AU -> true
+                [103] remove MSS -> true
+                [104] iterate -> 23
+                [105] add KL -> true
+                [106] iterate -> 24
+                [107] remove ZB -> true
+                [108] iterate -> 23
+                [109] add RM -> true
+                [110] add N -> false
+                [111] remove ME -> true
+                [112] add WM -> true
+                [113] remove K -> true
+                [114] add MS -> false
+                [115] remove PN -> true
+                [116] add AU -> true
+                """;
+        replayTest(sb);
     }
 
     @Test
     public void repro5() {
         // Exception on set# 0 in step# 41: expected:<false> but was:<true>
-        StringBuilder sb = new StringBuilder();
-        sb.append("[0] size -> 0\n")
-          .append("[1] iterate -> 0\n")
-          .append("[2] iterate -> 0\n")
-          .append("[3] add POP -> true\n")
-          .append("[4] add SMPV -> true\n")
-          .append("[5] add HYW -> true\n")
-          .append("[6] add RXYN -> true\n")
-          .append("[7] add LRSY -> true\n")
-          .append("[8] add WLD -> true\n")
-          .append("[9] remove DDKH -> false\n")
-          .append("[10] add EHN -> true\n")
-          .append("[11] add ZCK -> true\n")
-          .append("[12] remove RXYN -> true\n")
-          .append("[13] add UAPK -> true\n")
-          .append("[14] iterate -> 8\n")
-          .append("[15] add EHN -> false\n")
-          .append("[16] add HYW -> false\n")
-          .append("[17] add POP -> false\n")
-          .append("[18] add SMPV -> false\n")
-          .append("[19] add TRFI -> true\n")
-          .append("[20] remove DMWB -> false\n")
-          .append("[21] size -> 9\n")
-          .append("[22] add RXU -> true\n")
-          .append("[23] remove YEPT -> false\n")
-          .append("[24] add XGU -> true\n")
-          .append("[25] add ACJY -> true\n")
-          .append("[26] add ACJY -> false\n")
-          .append("[27] add FXK -> true\n")
-          .append("[28] add FUY -> true\n")
-          .append("[29] iterate -> 14\n")
-          .append("[30] iterate -> 14\n")
-          .append("[31] add FUY -> false\n")
-          .append("[32] add ZSQ -> true\n")
-          .append("[33] add IMOO -> true\n")
-          .append("[34] iterate -> 16\n")
-          .append("[35] add BXR -> true\n")
-          .append("[36] size -> 17\n")
-          .append("[37] add TRFI -> false\n")
-          .append("[38] remove ACJY -> true\n")
-          .append("[39] add SMPV -> false\n")
-          .append("[40] add XGU -> false\n")
-          .append("[41] add LRSY -> false\n");
-        replayTest(sb.toString());
+        String sb = """
+                [0] size -> 0
+                [1] iterate -> 0
+                [2] iterate -> 0
+                [3] add POP -> true
+                [4] add SMPV -> true
+                [5] add HYW -> true
+                [6] add RXYN -> true
+                [7] add LRSY -> true
+                [8] add WLD -> true
+                [9] remove DDKH -> false
+                [10] add EHN -> true
+                [11] add ZCK -> true
+                [12] remove RXYN -> true
+                [13] add UAPK -> true
+                [14] iterate -> 8
+                [15] add EHN -> false
+                [16] add HYW -> false
+                [17] add POP -> false
+                [18] add SMPV -> false
+                [19] add TRFI -> true
+                [20] remove DMWB -> false
+                [21] size -> 9
+                [22] add RXU -> true
+                [23] remove YEPT -> false
+                [24] add XGU -> true
+                [25] add ACJY -> true
+                [26] add ACJY -> false
+                [27] add FXK -> true
+                [28] add FUY -> true
+                [29] iterate -> 14
+                [30] iterate -> 14
+                [31] add FUY -> false
+                [32] add ZSQ -> true
+                [33] add IMOO -> true
+                [34] iterate -> 16
+                [35] add BXR -> true
+                [36] size -> 17
+                [37] add TRFI -> false
+                [38] remove ACJY -> true
+                [39] add SMPV -> false
+                [40] add XGU -> false
+                [41] add LRSY -> false
+                """;
+        replayTest(sb);
     }
 
     @Test
     public void repro6() {
         // Exception on set# 0 in step# 34: expected:<true> but was:<false>
-        StringBuilder sb = new StringBuilder();
-        sb.append("[0] remove SD -> false\n")
-          .append("[1] add DUM -> true\n")
-          .append("[2] add IZE -> true\n")
-          .append("[3] add YNE -> true\n")
-          .append("[4] add YNE -> false\n")
-          .append("[5] add DUM -> false\n")
-          .append("[6] add PRB -> true\n")
-          .append("[7] add WA -> true\n")
-          .append("[8] add TJ -> true\n")
-          .append("[9] add JHD -> true\n")
-          .append("[10] iterate -> 7\n")
-          .append("[11] add MFN -> true\n")
-          .append("[12] remove MFN -> true\n")
-          .append("[13] add BV -> true\n")
-          .append("[14] remove XM -> false\n")
-          .append("[15] add YP -> true\n")
-          .append("[16] add GTE -> true\n")
-          .append("[17] size -> 10\n")
-          .append("[18] add DGM -> true\n")
-          .append("[19] add TIX -> true\n")
-          .append("[20] remove WA -> true\n")
-          .append("[21] add ARQ -> true\n")
-          .append("[22] add DUM -> false\n")
-          .append("[23] iterate -> 12\n")
-          .append("[24] add BV -> false\n")
-          .append("[25] size -> 12\n")
-          .append("[26] iterate -> 12\n")
-          .append("[27] add PRB -> false\n")
-          .append("[28] add EOG -> true\n")
-          .append("[29] add NBX -> true\n")
-          .append("[30] add EOG -> false\n")
-          .append("[31] remove TIX -> true\n")
-          .append("[32] add VW -> true\n")
-          .append("[33] add WK -> true\n")
-          .append("[34] remove ARQ -> true\n");
-        replayTest(sb.toString());
+        String sb = """
+                [0] remove SD -> false
+                [1] add DUM -> true
+                [2] add IZE -> true
+                [3] add YNE -> true
+                [4] add YNE -> false
+                [5] add DUM -> false
+                [6] add PRB -> true
+                [7] add WA -> true
+                [8] add TJ -> true
+                [9] add JHD -> true
+                [10] iterate -> 7
+                [11] add MFN -> true
+                [12] remove MFN -> true
+                [13] add BV -> true
+                [14] remove XM -> false
+                [15] add YP -> true
+                [16] add GTE -> true
+                [17] size -> 10
+                [18] add DGM -> true
+                [19] add TIX -> true
+                [20] remove WA -> true
+                [21] add ARQ -> true
+                [22] add DUM -> false
+                [23] iterate -> 12
+                [24] add BV -> false
+                [25] size -> 12
+                [26] iterate -> 12
+                [27] add PRB -> false
+                [28] add EOG -> true
+                [29] add NBX -> true
+                [30] add EOG -> false
+                [31] remove TIX -> true
+                [32] add VW -> true
+                [33] add WK -> true
+                [34] remove ARQ -> true
+                """;
+        replayTest(sb);
     }
 
     @Test
     public void repro7() {
         // Exception on set# 0 in step# 55: expected:<true> but was:<false>
-        StringBuilder sb = new StringBuilder();
-        sb.append("[0] add SAN -> true\n")
-          .append("[1] iterate -> 1\n")
-          .append("[2] add SAN -> false\n")
-          .append("[3] add SAN -> false\n")
-          .append("[4] add SAN -> false\n")
-          .append("[5] size -> 1\n")
-          .append("[6] add TA -> true\n")
-          .append("[7] add OWB -> true\n")
-          .append("[8] add NQQ -> true\n")
-          .append("[9] remove LDL -> false\n")
-          .append("[10] remove DHJ -> false\n")
-          .append("[11] remove LCX -> false\n")
-          .append("[12] add CJJ -> true\n")
-          .append("[13] add TA -> false\n")
-          .append("[14] add NWI -> true\n")
-          .append("[15] add OWB -> false\n")
-          .append("[16] add CYU -> true\n")
-          .append("[17] iterate -> 7\n")
-          .append("[18] add KIT -> true\n")
-          .append("[19] add CL -> true\n")
-          .append("[20] size -> 9\n")
-          .append("[21] add IGC -> true\n")
-          .append("[22] add TA -> false\n")
-          .append("[23] iterate -> 10\n")
-          .append("[24] add TUK -> true\n")
-          .append("[25] remove ATP -> false\n")
-          .append("[26] iterate -> 11\n")
-          .append("[27] remove JDB -> false\n")
-          .append("[28] add LWA -> true\n")
-          .append("[29] add DUS -> true\n")
-          .append("[30] remove DUS -> true\n")
-          .append("[31] add TBI -> true\n")
-          .append("[32] remove TD -> false\n")
-          .append("[33] add WEJ -> true\n")
-          .append("[34] size -> 14\n")
-          .append("[35] add XRX -> true\n")
-          .append("[36] add VAZ -> true\n")
-          .append("[37] add NXP -> true\n")
-          .append("[38] add JDM -> true\n")
-          .append("[39] remove TUK -> true\n")
-          .append("[40] iterate -> 17\n")
-          .append("[41] add OXM -> true\n")
-          .append("[42] size -> 18\n")
-          .append("[43] remove TBI -> true\n")
-          .append("[44] add ULL -> true\n")
-          .append("[45] add ZCGV -> true\n")
-          .append("[46] remove WEJ -> true\n")
-          .append("[47] remove XXG -> false\n")
-          .append("[48] remove ULL -> true\n")
-          .append("[49] size -> 17\n")
-          .append("[50] add UP -> true\n")
-          .append("[51] size -> 18\n")
-          .append("[52] remove LWA -> true\n")
-          .append("[53] remove SAN -> true\n")
-          .append("[54] add UP -> false\n")
-          .append("[55] remove NQQ -> true\n");
-        replayTest(sb.toString());
+        String sb = """
+                [0] add SAN -> true
+                [1] iterate -> 1
+                [2] add SAN -> false
+                [3] add SAN -> false
+                [4] add SAN -> false
+                [5] size -> 1
+                [6] add TA -> true
+                [7] add OWB -> true
+                [8] add NQQ -> true
+                [9] remove LDL -> false
+                [10] remove DHJ -> false
+                [11] remove LCX -> false
+                [12] add CJJ -> true
+                [13] add TA -> false
+                [14] add NWI -> true
+                [15] add OWB -> false
+                [16] add CYU -> true
+                [17] iterate -> 7
+                [18] add KIT -> true
+                [19] add CL -> true
+                [20] size -> 9
+                [21] add IGC -> true
+                [22] add TA -> false
+                [23] iterate -> 10
+                [24] add TUK -> true
+                [25] remove ATP -> false
+                [26] iterate -> 11
+                [27] remove JDB -> false
+                [28] add LWA -> true
+                [29] add DUS -> true
+                [30] remove DUS -> true
+                [31] add TBI -> true
+                [32] remove TD -> false
+                [33] add WEJ -> true
+                [34] size -> 14
+                [35] add XRX -> true
+                [36] add VAZ -> true
+                [37] add NXP -> true
+                [38] add JDM -> true
+                [39] remove TUK -> true
+                [40] iterate -> 17
+                [41] add OXM -> true
+                [42] size -> 18
+                [43] remove TBI -> true
+                [44] add ULL -> true
+                [45] add ZCGV -> true
+                [46] remove WEJ -> true
+                [47] remove XXG -> false
+                [48] remove ULL -> true
+                [49] size -> 17
+                [50] add UP -> true
+                [51] size -> 18
+                [52] remove LWA -> true
+                [53] remove SAN -> true
+                [54] add UP -> false
+                [55] remove NQQ -> true
+                """;
+        replayTest(sb);
     }
 
     @Test
     public void repro8() {
         // Exception on set# 0 in step# 39: expected:<true> but was:<false>
-        StringBuilder sb = new StringBuilder();
-        sb.append("[0] add JWD -> true\n")
-          .append("[1] add JWD -> false\n")
-          .append("[2] iterate -> 1\n")
-          .append("[3] add XMH -> true\n")
-          .append("[4] remove JWD -> true\n")
-          .append("[5] remove ALQ -> false\n")
-          .append("[6] add RMD -> true\n")
-          .append("[7] add RMD -> false\n")
-          .append("[8] remove RMD -> true\n")
-          .append("[9] iterate -> 1\n")
-          .append("[10] add SOYW -> true\n")
-          .append("[11] add CRT -> true\n")
-          .append("[12] add CRT -> false\n")
-          .append("[13] remove SOYW -> true\n")
-          .append("[14] add JDYH -> true\n")
-          .append("[15] add SBKA -> true\n")
-          .append("[16] iterate -> 4\n")
-          .append("[17] size -> 4\n")
-          .append("[18] add UKBB -> true\n")
-          .append("[19] add DHG -> true\n")
-          .append("[20] add ZCK -> true\n")
-          .append("[21] remove SBKA -> true\n")
-          .append("[22] add AQDD -> true\n")
-          .append("[23] size -> 7\n")
-          .append("[24] size -> 7\n")
-          .append("[25] remove KDL -> false\n")
-          .append("[26] add GOD -> true\n")
-          .append("[27] add FNP -> true\n")
-          .append("[28] add ZPZZ -> true\n")
-          .append("[29] remove DUOZ -> false\n")
-          .append("[30] add SGN -> true\n")
-          .append("[31] add ZOCZ -> true\n")
-          .append("[32] add MCOA -> true\n")
-          .append("[33] remove AQDD -> true\n")
-          .append("[34] iterate -> 12\n")
-          .append("[35] add HHQZ -> true\n")
-          .append("[36] remove XMH -> true\n")
-          .append("[37] remove APUG -> false\n")
-          .append("[38] add ZPZZ -> false\n")
-          .append("[39] remove GOD -> true\n");          // sacrilege?
-        replayTest(sb.toString());
+        String sb = """
+                [0] add JWD -> true
+                [1] add JWD -> false
+                [2] iterate -> 1
+                [3] add XMH -> true
+                [4] remove JWD -> true
+                [5] remove ALQ -> false
+                [6] add RMD -> true
+                [7] add RMD -> false
+                [8] remove RMD -> true
+                [9] iterate -> 1
+                [10] add SOYW -> true
+                [11] add CRT -> true
+                [12] add CRT -> false
+                [13] remove SOYW -> true
+                [14] add JDYH -> true
+                [15] add SBKA -> true
+                [16] iterate -> 4
+                [17] size -> 4
+                [18] add UKBB -> true
+                [19] add DHG -> true
+                [20] add ZCK -> true
+                [21] remove SBKA -> true
+                [22] add AQDD -> true
+                [23] size -> 7
+                [24] size -> 7
+                [25] remove KDL -> false
+                [26] add GOD -> true
+                [27] add FNP -> true
+                [28] add ZPZZ -> true
+                [29] remove DUOZ -> false
+                [30] add SGN -> true
+                [31] add ZOCZ -> true
+                [32] add MCOA -> true
+                [33] remove AQDD -> true
+                [34] iterate -> 12
+                [35] add HHQZ -> true
+                [36] remove XMH -> true
+                [37] remove APUG -> false
+                [38] add ZPZZ -> false
+                [39] remove GOD -> true
+                """;          // sacrilege?
+        replayTest(sb);
     }
 
     @Test
     public void repro9() {
         // Exception on set# 0 in step# 13: expected:<7> but was:<6>
-        StringBuilder sb = new StringBuilder();
-        sb.append("[0] iterate -> 0\n")
-          .append("[1] add TV -> true\n")
-          .append("[2] add BQK -> true\n")
-          .append("[3] add KZ -> true\n")
-          .append("[4] add BQK -> false\n")
-          .append("[5] add EGP -> true\n")
-          .append("[6] size -> 4\n")
-          .append("[7] add RY -> true\n")
-          .append("[8] iterate -> 5\n")
-          .append("[9] add RTS -> true\n")
-          .append("[10] add QOP -> true\n")
-          .append("[11] remove RTS -> true\n")
-          .append("[12] add ZVN -> true\n")
-          .append("[13] size -> 7\n");
-        replayTest(sb.toString());
+        String sb = """
+                [0] iterate -> 0
+                [1] add TV -> true
+                [2] add BQK -> true
+                [3] add KZ -> true
+                [4] add BQK -> false
+                [5] add EGP -> true
+                [6] size -> 4
+                [7] add RY -> true
+                [8] iterate -> 5
+                [9] add RTS -> true
+                [10] add QOP -> true
+                [11] remove RTS -> true
+                [12] add ZVN -> true
+                [13] size -> 7
+                """;
+        replayTest(sb);
     }
 }

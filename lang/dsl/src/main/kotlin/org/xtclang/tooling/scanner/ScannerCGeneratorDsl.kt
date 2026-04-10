@@ -718,5 +718,4 @@ fun main(args: Array<String>) {
         return
     }
     File(outputPath).writeText(generated)
-    println("Generated scanner.c at: $outputPath" + if (debug) " (with debug enabled)" else "")
 }

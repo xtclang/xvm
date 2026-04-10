@@ -5,10 +5,15 @@ import static org.gradle.api.logging.LogLevel.INFO;
 import static org.gradle.api.logging.LogLevel.LIFECYCLE;
 
 import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_CLASS_NAME;
+import static org.xtclang.plugin.XtcPluginUtils.expandTimestampPlaceholder;
 import static org.xtclang.plugin.XtcPluginUtils.failure;
 
 import java.io.File;
+import java.io.IOException;
 
+import java.nio.file.Files;
+
+import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -372,9 +377,75 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         executedModules.put(runConfig, exitCode);
         logger.info("[plugin]    Finished executing: {}", runConfig.getModuleName().get());
         if (exitCode != 0) {
-            throw failure("Module execution failed with exit code: {}", exitCode);
+            throw failure("Module '{}' execution failed with exit code: {}{}",
+                runConfig.getModuleName().get(),
+                exitCode,
+                redirectedOutputFailureContext());
         }
         return exitCode;
+    }
+
+    private String redirectedOutputFailureContext() {
+        final var details = new StringBuilder();
+        appendRedirectFailureContext(details, true);
+        appendRedirectFailureContext(details, false);
+        return details.toString();
+    }
+
+    private void appendRedirectFailureContext(final StringBuilder details, final boolean stdout) {
+        final var redirect = resolveRedirectFile(stdout);
+        if (redirect == null) {
+            return;
+        }
+        final var streamName = stdout ? "stdout" : "stderr";
+        details.append(System.lineSeparator())
+            .append("Captured ")
+            .append(streamName)
+            .append(": ")
+            .append(redirect.getAbsolutePath());
+
+        if (!redirect.isFile()) {
+            details.append(System.lineSeparator())
+                .append("Captured ")
+                .append(streamName)
+                .append(" log file was not found.");
+            return;
+        }
+
+        final var tail = readTail(redirect, 60);
+        if (!tail.isBlank()) {
+            details.append(System.lineSeparator())
+                .append("Last lines from captured ")
+                .append(streamName)
+                .append(':')
+                .append(System.lineSeparator())
+                .append(tail);
+        }
+    }
+
+    private File resolveRedirectFile(final boolean stdout) {
+        final var property = stdout ? getStdoutPath() : getStderrPath();
+        if (!property.isPresent()) {
+            return null;
+        }
+        final var configuredPath = expandTimestampPlaceholder(property.get());
+        final var file = new File(configuredPath);
+        return file.isAbsolute() ? file : new File(getProjectDirectory().get().getAsFile(), configuredPath);
+    }
+
+    private static String readTail(final File file, final int maxLines) {
+        try {
+            final var lines = new ArrayDeque<String>(maxLines);
+            for (final var line : Files.readAllLines(file.toPath())) {
+                if (lines.size() == maxLines) {
+                    lines.removeFirst();
+                }
+                lines.addLast(line);
+            }
+            return String.join(System.lineSeparator(), lines);
+        } catch (final IOException e) {
+            return "[plugin] Failed to read redirected log '" + file.getAbsolutePath() + "': " + e.getMessage();
+        }
     }
 
     protected int executeStrategy(final XtcRunModule runConfig, final ExecutionStrategy strategy) {

@@ -1,26 +1,24 @@
-package org.xvm.lsp.adapter
+package org.xvm.lsp.adapter.xdk
 
+import org.xvm.lsp.adapter.AbstractAdapter
+import org.xvm.lsp.adapter.Adapter
+import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.util.WorkInProgress
 
 /**
- * Stub implementation of the XTC compiler adapter.
+ * XDK compiler adapter — placeholder for future full compiler integration.
  *
- * Minimal placeholder for future full compiler integration.
  * Returns null/empty for all operations. Use for testing LSP infrastructure
  * without tree-sitter or regex parsing dependencies.
  *
  * To use: `./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler`
- *
- * @see AbstractXtcCompilerAdapter for shared functionality
- * @see TreeSitterAdapter for syntax-level features
- * @see MockXtcCompilerAdapter for regex-based testing
  */
 @WorkInProgress("Awaiting full compiler integration")
-class XtcCompilerAdapterStub : AbstractXtcCompilerAdapter() {
-    override val displayName: String = "Compiler (stub)"
+class XdkAdapter : AbstractAdapter() {
+    override val displayName: String = "XDK (stub)"
 
     // TODO: Integrate with XTC compiler to produce real diagnostics and symbols.
     //       Needs: Lexer/Parser from Phase 1-3 for accurate AST
@@ -50,8 +48,9 @@ class XtcCompilerAdapterStub : AbstractXtcCompilerAdapter() {
         uri: String,
         line: Int,
         column: Int,
-    ): List<XtcCompilerAdapter.CompletionItem> {
-        logger.info("getCompletions: uri={}, line={}, column={} (stub -- returning empty)", uri, line, column)
+        triggerCharacter: String?,
+    ): List<CompletionItem> {
+        logger.info("getCompletions: uri={}, line={}, column={}, trigger={} (stub -- returning empty)", uri, line, column, triggerCharacter)
         return emptyList()
     }
 

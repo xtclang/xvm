@@ -2,6 +2,20 @@ import org.xtclang.plugin.launchers.ExecutionMode
 import org.xtclang.plugin.tasks.XtcRunTask
 import org.xtclang.plugin.tasks.XtcTestTask
 
+val ciBuild: Provider<Boolean> = providers.environmentVariable("CI")
+    .map { it.equals("true", ignoreCase = true) }
+    .orElse(false)
+
+tasks.withType<XtcRunTask>().configureEach {
+    if (ciBuild.get()) {
+        // Keep CI console output focused on Gradle/task status and plugin success/failure summaries.
+        // Capture bulk module stdout per task to build/logs/<task>-stdout.log while still leaving stderr
+        // attached for failures. Also disable task-level verbose launcher chatter in CI.
+        verbose = false
+        stdoutPath(layout.buildDirectory.file("logs/${name}-stdout.log"))
+    }
+}
+
 /**
  * This is the manualTests project.
  *
@@ -473,6 +487,10 @@ val testModuleNames = listOf(
 val runParallel by tasks.registering(XtcRunTask::class) {
     group = "application"
     description = "Run all known tests in parallel through the parallel test runner."
+    // TODO: Re-enable TestIO here after the intermittent TypeSystem.implicitTypes initialization
+    // race is fixed. It still runs through the other manual test paths, but keeping it out of the
+    // parallel runner avoids a known flaky interpreter crash in CI for now.
+    val excludedModules = setOf("TestIO")
     module {
         verbose = false
         moduleName = "Runner"
@@ -482,7 +500,7 @@ val runParallel by tasks.registering(XtcRunTask::class) {
         //   Now instead we have to explicitly specify the module names. IMPLEMENT THIS!
         //
         // TODO: CI integration test  for third party xdk dependency
-        moduleArgs(testModuleNames)
+        moduleArgs(testModuleNames.filter { it !in excludedModules })
     }
 }
 

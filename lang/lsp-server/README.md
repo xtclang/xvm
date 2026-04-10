@@ -16,6 +16,10 @@ This project provides the LSP server that powers IDE features like:
 The server is used by both the [IntelliJ plugin](../intellij-plugin/) and
 [VS Code extension](../vscode-extension/).
 
+For the canonical cross-adapter feature matrix and current implementation status, see
+[`../doc/plans/PLAN_IDE_INTEGRATION.md`](../doc/plans/PLAN_IDE_INTEGRATION.md). This
+README focuses on LSP-server-specific build/runtime/configuration details.
+
 > **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite Build Properties](../../CLAUDE.md) in the project CLAUDE.md for details.
 
 ## Adapter Architecture
@@ -29,23 +33,22 @@ The LSP server uses a pluggable adapter pattern to support different parsing bac
                             │ JSON-RPC over stdio
 ┌───────────────────────────▼───────────────────────────────────┐
 │                    XtcLanguageServer                          │
-│              (takes XtcCompilerAdapter via constructor)       │
+│                 (takes Adapter via constructor)               │
 └───────────────────────────┬───────────────────────────────────┘
                             │
               ┌─────────────┴─────────────┐
-              │    XtcCompilerAdapter     │  ← Interface with defaults
+              │          Adapter          │
               └─────────────┬─────────────┘
                             │
-        ┌───────────────────┼───────────────────┐
-        │                   │                   │
+              ┌───────────────────┼───────────────────┐
+              │                   │                   │
 ┌───────┴───────┐   ┌───────┴───────┐   ┌───────┴───────┐
-│ MockXtc-      │   │ TreeSitter-   │   │ XtcCompiler-  │
-│ Compiler-     │   │ Adapter       │   │ AdapterStub   │
-│ Adapter       │   │               │   │               │
+│ MockAdapter   │   │ TreeSitter-   │   │ XdkAdapter    │
+│               │   │ Adapter       │   │               │
 │               │   │               │   │               │
 │ - Regex-based │   │ - Tree-sitter │   │ - Stub for    │
 │ - For testing │   │ - Syntax AST  │   │   future      │
-│               │   │ - Default     │   │   compiler    │
+│               │   │ - Default     │   │   semantic    │
 └───────────────┘   └───────────────┘   └───────────────┘
 ```
 
@@ -60,7 +63,7 @@ The selection is embedded in `lsp-version.properties` inside the JAR.
 |---------|-------|-------------|
 | **Mock** | `mock` | Regex-based parsing. No native dependencies. Good for testing. |
 | **Tree-sitter** (default) | `treesitter` | AST-based parsing using tree-sitter. Requires native library. |
-| **Compiler** | `compiler` | Stub adapter. All methods logged but return empty. For testing infrastructure. |
+| **XDK** | `xdk` | Stub adapter. All methods logged but return empty. Placeholder for future semantic integration. |
 
 ### Build Commands
 
@@ -71,8 +74,8 @@ The selection is embedded in `lsp-version.properties` inside the JAR.
 # Build with Mock adapter (no native dependencies)
 ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock
 
-# Build with Compiler stub (all calls logged)
-./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler
+# Build with XDK stub (all calls logged)
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=xdk
 
 # Run IntelliJ with specific adapter
 ./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter
@@ -109,61 +112,84 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 | Syntax errors | ❌ Basic patterns | ✅ Precise location | ❌ None |
 | Error recovery | ❌ None | ✅ Continues parsing | ❌ None |
 | Rename | ✅ Same-file (text) | ✅ Same-file (AST) | ❌ None |
-| Code actions | ✅ Organize imports | ✅ Organize imports | ❌ None |
-| Formatting | ✅ Trailing WS | ✅ Trailing WS | ❌ None |
+| Code actions | ✅ Organize imports | ✅ Organize/remove imports + doc comment + auto-import | ❌ None |
+| Formatting | ✅ Trailing WS | ✅ Trailing WS + auto-indent | ❌ None |
 | Folding ranges | ✅ Brace matching | ✅ AST node boundaries | ❌ None |
 | Signature help | ❌ None | ✅ Same-file methods | ❌ None |
-| Document links | ✅ Import regex | ✅ Import AST nodes | ❌ None |
+| Document links | ✅ Import regex | ✅ Import AST + workspace index navigation | ❌ None |
 | Native library | Not needed | Required | Not needed |
 | All LSP calls logged | ✅ | ✅ | ✅ |
 
 ## Supported LSP Features
 
-All 17 LSP capabilities are advertised by the server and wired up in
-`XtcLanguageServer`. Each method delegates to the active `XtcCompilerAdapter`.
-Capabilities not yet implemented in an adapter use default interface methods
-(returning empty results or null).
+The canonical feature matrix lives in
+[`../doc/plans/PLAN_IDE_INTEGRATION.md`](../doc/plans/PLAN_IDE_INTEGRATION.md).
+At a high level, the current tree-sitter-backed default provides:
 
-| Feature | Mock | TreeSitter | Compiler | LSP Method |
-|---------|:----:|:----------:|:--------:|------------|
-| **Navigation** |
-| Go to Definition | ✅ | ✅ | 🔮 | `textDocument/definition` |
-| Find References | ⚠️ | ✅ | 🔮 | `textDocument/references` |
-| Document Symbols | ✅ | ✅ | 🔮 | `textDocument/documentSymbol` |
-| Document Highlight | ✅ | ✅ | 🔮 | `textDocument/documentHighlight` |
-| Selection Ranges | ❌ | ✅ | 🔮 | `textDocument/selectionRange` |
-| Document Links | ✅ | ✅ | 🔮 | `textDocument/documentLink` |
-| **Editing** |
-| Hover | ✅ | ✅ | 🔮 | `textDocument/hover` |
-| Completion | ⚠️ | ✅ | 🔮 | `textDocument/completion` |
-| Signature Help | ❌ | ✅ | 🔮 | `textDocument/signatureHelp` |
-| **Refactoring** |
-| Rename / Prepare Rename | ✅ | ✅ | 🔮 | `textDocument/rename` |
-| Code Actions | ✅ | ✅ | 🔮 | `textDocument/codeAction` |
-| **Formatting** |
-| Format Document | ✅ | ✅ | 🔮 | `textDocument/formatting` |
-| Format Selection | ✅ | ✅ | 🔮 | `textDocument/rangeFormatting` |
-| **Code Intelligence** |
-| Diagnostics | ⚠️ | ✅ | 🔮 | `textDocument/publishDiagnostics` |
-| Folding Ranges | ✅ | ✅ | 🔮 | `textDocument/foldingRange` |
-| **Code Intelligence (cont.)** |
-| Semantic Tokens | ❌ | ✅ | 🔮 | `textDocument/semanticTokens/full` |
-| Workspace Symbols | ❌ | ✅ | 🔮 | `workspace/symbol` |
-| Inlay Hints | ❌ | ❌ | 🔮 | `textDocument/inlayHint` |
+- document symbols, same-file navigation, workspace-symbol search, and best-effort cross-file navigation
+- context-aware completion
+- code actions including organize imports, auto-import, and doc-comment generation
+- semantic tokens
+- document/range formatting and on-type formatting
+- selection ranges, linked editing, folding ranges, document links, and signature help
 
-Legend: ✅ = Implemented, ⚠️ = Partial/limited, ❌ = Not implemented, 🔮 = Future (compiler adapter)
+The XDK adapter remains a placeholder for future semantic/compiler-backed behavior.
+
+## Context-Aware Completion
+
+The tree-sitter adapter classifies the cursor context before returning completions,
+filtering results to show only what makes sense at that position:
+
+| Context | Trigger | What is shown |
+|---------|---------|---------------|
+| After `.` | `.` trigger char | Methods and properties from the enclosing class body |
+| In type position | Typed | Only type names (classes, interfaces, enums, mixins, services, consts) |
+| After `extends`/`implements` | Typed | Only type names |
+| After `@` | Typed | Known annotation names (common ones + annotations found in the file) |
+| Inside `import` statement | Typed | Qualified names from the workspace index |
+| Default (anywhere else) | Typed or Ctrl+Space | Full set: keywords + built-in types + document symbols + imports |
+
+Context detection works by examining the AST node ancestry at the cursor position.
+For example, if the cursor is inside an `annotation` node, only annotation names are
+returned; if inside a `type_expression` or `type_name` node, only type completions
+appear.
+
+### Limitations of syntax-only completion
+
+Because the tree-sitter adapter has no semantic model, member completion after `.`
+is limited to the current class body's declarations. It cannot resolve:
+- The actual type of the expression before the `.` (e.g., `person.` cannot show
+  `Person`'s members if `Person` is defined in another file)
+- Inherited members from supertypes
+- Method overloads or return type narrowing
+- Conditional mixins or generic type parameters
+
+### What a semantic compiler adapter would add
+
+A future compiler adapter with full type resolution would enable:
+- **Type-resolved member access**: `person.` would show all members of `Person`,
+  including inherited ones from `Object`, `Hashable`, etc.
+- **Overload-aware signatures**: Show all applicable overloads ranked by match quality
+- **Smart import suggestions**: Suggest imports for unresolved types based on what
+  would make the code compile
+- **Generic type inference**: Show members on `List<String>` with `String`-substituted
+  type parameters
+- **Scope-aware locals**: Only show variables that are actually in scope at the cursor,
+  respecting shadowing and block structure
+- **Ranked results**: Sort completions by relevance (local > member > imported > global)
 
 ## Key Components
 
 | Component | Description |
 |-----------|-------------|
 | `XtcLanguageServer` | LSP protocol handler, wires all LSP methods to adapter |
-| `XtcCompilerAdapter` | Interface defining core LSP operations |
-| `AbstractXtcCompilerAdapter` | Base class with shared logging, hover formatting, utilities |
+| `Adapter` | Interface defining core LSP operations |
+| `AbstractAdapter` | Base class with shared logging, hover formatting, utilities |
+| `XtcFormattingConfig` | Formatting configuration with defaults and config file resolution |
 | `XtcLanguageConstants` | Shared keywords, built-in types, symbol mappings |
-| `MockXtcCompilerAdapter` | Regex-based implementation for testing |
+| `MockAdapter` | Regex-based implementation for testing |
 | `TreeSitterAdapter` | Tree-sitter based syntax intelligence |
-| `XtcCompilerAdapterStub` | Minimal placeholder for future compiler integration |
+| `XdkAdapter` | Minimal placeholder for future compiler / semantic integration |
 
 ## Building
 
@@ -263,7 +289,7 @@ Log messages use SLF4J with a short class name (`%logger{0}`) to identify their 
 | `XtcLanguageServer` | LSP protocol handler |
 | `XtcLanguageServerLauncherKt` | Server startup |
 | `TreeSitterAdapter` | Syntax-level intelligence |
-| `MockXtcCompilerAdapter` | Regex-based adapter |
+| `MockAdapter` | Regex-based adapter |
 | `XtcParser` | Tree-sitter native parser |
 | `XtcQueryEngine` | Tree-sitter query execution |
 | `WorkspaceIndexer` | Background file scanner |
@@ -274,6 +300,83 @@ Log messages use SLF4J with a short class name (`%logger{0}`) to identify their 
 ```bash
 tail -f ~/.xtc/logs/lsp-server.log
 ```
+
+## Code Formatting
+
+The LSP server provides three levels of formatting support:
+
+| Capability | Trigger | What It Does |
+|------------|---------|--------------|
+| **Document Formatting** | Reformat action (`Ctrl+Alt+L`) | Cleans trailing whitespace and final newline |
+| **Range Formatting** | Format selection | Same cleanup on a selected region |
+| **On-Type Formatting** | Typing `Enter`, `}`, `;` | AST-aware auto-indentation as you type |
+
+### On-Type Formatting (Auto-Indent)
+
+When you type a trigger character, the LSP server uses tree-sitter AST context to
+determine the correct indentation and sends back edits to fix it. This is strictly
+better than regex-based TextMate indentation rules because it understands:
+
+- Nesting depth (counts matched braces across the entire file, not just the current line)
+- Continuation lines (`extends`, `implements`, `incorporates`, `delegates` get double indent)
+- Switch/case indentation (`case` labels at the same indent as `switch`)
+- String literal awareness (no indent adjustment inside strings)
+
+**Trigger characters:**
+
+| Character | Behavior |
+|-----------|----------|
+| `\n` (Enter) | Indent the new line based on what the previous line ends with: `{` adds one indent level, `case ...:` adds one level, continuation keywords use double indent, `}` maintains brace indent |
+| `}` | Outdent the closing brace to match the line where the corresponding `{` lives |
+| `;` | Reserved for future use (currently no-op) |
+
+### Formatting Configuration
+
+The XTC LSP server follows the industry-standard approach used by rust-analyzer (rustfmt),
+clangd (clang-format), Metals (Scalafmt), Biome, and Prettier: a **project-level config
+file** is the single source of truth, with editor settings as fallback.
+
+**Resolution order** (highest priority first):
+
+1. `xtc-format.toml` in the project tree *(not yet implemented)*
+2. IntelliJ Code Style settings for XTC (Settings > Editor > Code Style > Ecstasy) — forwarded via `workspace/configuration`
+3. LSP `FormattingOptions` from the editor (`tabSize`, `insertSpaces`)
+4. XTC defaults (4-space indent, 8-space continuation, no tabs)
+
+This means formatting works out of the box with sensible defaults matching the XTC standard
+library conventions. Teams that want to customize formatting will be able to check in an
+`xtc-format.toml` file that is respected by all editors and CI.
+
+**Why this approach?**
+
+The LSP specification only provides `tabSize` and `insertSpaces` in `FormattingOptions`.
+Language-specific settings (continuation indent, brace style, max line width) cannot be
+expressed through the LSP protocol alone. Every mature language ecosystem that needed
+configurable formatting has converged on the same solution: an external config file that
+the language server reads directly, independent of the editor.
+
+This ensures:
+- Consistent formatting across IntelliJ, VS Code, Neovim, and CLI
+- No editor-specific configuration to keep in sync
+- CI formatting checks match what developers see in their editors
+
+**Current defaults:**
+
+| Setting | Value | Convention |
+|---------|-------|------------|
+| Indent size | 4 spaces | Matches `lib_ecstasy/` source style |
+| Continuation indent | 8 spaces | For `extends`/`implements` lines |
+| Tab character | Never (spaces only) | XTC convention |
+| Max line width | 120 | Standard for modern codebases |
+| Brace style | K&R (opening `{` on same line) | XTC convention |
+
+The IntelliJ plugin provides a Code Style settings page (Settings > Editor > Code Style > Ecstasy)
+where users can configure indent size, continuation indent, tab usage, and right margin. These
+settings are forwarded to the LSP server via `workspace/configuration` at startup and whenever
+the configuration changes. The server uses them as a fallback when no `xtc-format.toml` is present.
+
+See [formatting-plan.md](../doc/plans/formatting-plan.md) for the full implementation plan
+including the `xtc-format.toml` config file schema and the configuration architecture.
 
 ## Known Issues: IntelliJ Platform and LSP4IJ
 
@@ -330,3 +433,4 @@ in slow operation reports:
 
 - [Tree-sitter Feature Matrix](../tree-sitter/doc/functionality.md) - What Tree-sitter can/cannot do
 - [Tree-sitter Integration Plan](../doc/plans/PLAN_TREE_SITTER.md) - Full implementation details
+- [Formatting Plan](../doc/plans/formatting-plan.md) - On-type formatting design, configuration architecture, industry survey

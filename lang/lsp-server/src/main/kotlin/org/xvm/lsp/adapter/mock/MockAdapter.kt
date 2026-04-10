@@ -1,18 +1,22 @@
-package org.xvm.lsp.adapter
+package org.xvm.lsp.adapter.mock
 
-import org.xvm.lsp.adapter.XtcCompilerAdapter.CodeAction
-import org.xvm.lsp.adapter.XtcCompilerAdapter.CodeAction.CodeActionKind
-import org.xvm.lsp.adapter.XtcCompilerAdapter.DocumentHighlight
-import org.xvm.lsp.adapter.XtcCompilerAdapter.DocumentHighlight.HighlightKind
-import org.xvm.lsp.adapter.XtcCompilerAdapter.FoldingRange
-import org.xvm.lsp.adapter.XtcCompilerAdapter.Position
-import org.xvm.lsp.adapter.XtcCompilerAdapter.PrepareRenameResult
-import org.xvm.lsp.adapter.XtcCompilerAdapter.Range
-import org.xvm.lsp.adapter.XtcCompilerAdapter.TextEdit
-import org.xvm.lsp.adapter.XtcCompilerAdapter.WorkspaceEdit
-import org.xvm.lsp.adapter.XtcLanguageConstants.builtInTypeCompletions
-import org.xvm.lsp.adapter.XtcLanguageConstants.keywordCompletions
-import org.xvm.lsp.adapter.XtcLanguageConstants.toCompletionKind
+import org.xvm.lsp.adapter.AbstractAdapter
+import org.xvm.lsp.adapter.Adapter
+import org.xvm.lsp.adapter.CodeAction
+import org.xvm.lsp.adapter.CodeAction.CodeActionKind
+import org.xvm.lsp.adapter.CompletionItem
+import org.xvm.lsp.adapter.DocumentHighlight
+import org.xvm.lsp.adapter.DocumentHighlight.HighlightKind
+import org.xvm.lsp.adapter.DocumentLink
+import org.xvm.lsp.adapter.FoldingRange
+import org.xvm.lsp.adapter.LanguageConstants.builtInTypeCompletions
+import org.xvm.lsp.adapter.LanguageConstants.keywordCompletions
+import org.xvm.lsp.adapter.LanguageConstants.toCompletionKind
+import org.xvm.lsp.adapter.Position
+import org.xvm.lsp.adapter.PrepareRenameResult
+import org.xvm.lsp.adapter.Range
+import org.xvm.lsp.adapter.TextEdit
+import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
@@ -85,9 +89,9 @@ private val identifierPattern = Regex("""\b(\w+)\b""")
  * - Smart completion based on types
  *
  * // TODO LSP: This is a MOCK - not connected to any real compiler!
- * // Replace with XtcCompilerAdapterImpl that uses the parallel compiler.
+ * // Replace with AdapterImpl that uses the parallel compiler.
  */
-class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
+class MockAdapter : AbstractAdapter() {
     override val displayName: String = "Mock"
 
     // ConcurrentHashMap is required because compile() is called from the LSP message thread
@@ -216,7 +220,8 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         uri: String,
         line: Int,
         column: Int,
-    ): List<XtcCompilerAdapter.CompletionItem> {
+        triggerCharacter: String?,
+    ): List<CompletionItem> {
         val fileName = uri.substringAfterLast('/')
         logger.info("getCompletions(uri={}, line={}, column={})", fileName, line, column)
 
@@ -227,7 +232,7 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
             // Add symbols from current document
             compiledDocuments[uri]?.symbols?.forEach { symbol ->
                 add(
-                    XtcCompilerAdapter.CompletionItem(
+                    CompletionItem(
                         label = symbol.name,
                         kind = toCompletionKind(symbol.kind),
                         detail = symbol.typeSignature ?: symbol.kind.name,
@@ -430,7 +435,7 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
     override fun getDocumentLinks(
         uri: String,
         content: String,
-    ): List<XtcCompilerAdapter.DocumentLink> =
+    ): List<DocumentLink> =
         buildList {
             importPattern.findAll(content).forEach { match ->
                 val importPath = match.groupValues[1]
@@ -438,7 +443,7 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
                 val importStart = match.value.indexOf(importPath)
                 val col = match.value.indexOf(importPath, importStart)
                 add(
-                    XtcCompilerAdapter.DocumentLink(
+                    DocumentLink(
                         range =
                             Range(
                                 start = Position(line, col),

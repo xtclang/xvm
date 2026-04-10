@@ -101,7 +101,6 @@ private fun generateTextMate(outputPath: String?) {
     if (outputPath != null) {
         File(outputPath).writeText(grammar)
         logger.info("TextMate grammar written to: {}", outputPath)
-        println("TextMate grammar written to: $outputPath")
     } else {
         println(grammar)
     }
@@ -147,9 +146,6 @@ private fun generateTreeSitter(outputDir: String?) {
         File(dir, "tree-sitter.json").writeText(config + "\n")
         File(dir, "highlights.scm").writeText(highlights)
         logger.info("Tree-sitter files written to: {}", outputDir)
-        println("Tree-sitter grammar written to: $outputDir/grammar.js")
-        println("Tree-sitter config written to: $outputDir/tree-sitter.json")
-        println("Tree-sitter highlights written to: $outputDir/highlights.scm")
     } else {
         println("// grammar.js")
         println(grammar)
@@ -189,7 +185,6 @@ private fun writeOutput(
         file.parentFile?.mkdirs()
         file.writeText(content)
         logger.info("{} written to: {}", name, outputPath)
-        println("$name written to: $outputPath")
     } else {
         println(content)
     }

@@ -2,7 +2,25 @@ package org.xvm.lsp.adapter
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.xvm.lsp.adapter.XtcLanguageConstants.toHoverMarkdown
+import org.xvm.lsp.adapter.CallHierarchyItem
+import org.xvm.lsp.adapter.CodeAction
+import org.xvm.lsp.adapter.CodeLens
+import org.xvm.lsp.adapter.DocumentHighlight
+import org.xvm.lsp.adapter.DocumentLink
+import org.xvm.lsp.adapter.FoldingRange
+import org.xvm.lsp.adapter.FormattingConfig
+import org.xvm.lsp.adapter.FormattingOptions
+import org.xvm.lsp.adapter.InlayHint
+import org.xvm.lsp.adapter.LanguageConstants.toHoverMarkdown
+import org.xvm.lsp.adapter.LinkedEditingRanges
+import org.xvm.lsp.adapter.Position
+import org.xvm.lsp.adapter.PrepareRenameResult
+import org.xvm.lsp.adapter.Range
+import org.xvm.lsp.adapter.SelectionRange
+import org.xvm.lsp.adapter.SemanticTokens
+import org.xvm.lsp.adapter.SignatureHelp
+import org.xvm.lsp.adapter.TypeHierarchyItem
+import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
@@ -22,12 +40,13 @@ import org.xvm.lsp.model.SymbolInfo
  * so the log trace shows exactly what the IDE requested even when the feature
  * is not yet available.
  *
- * @see [MockXtcCompilerAdapter] for regex-based testing adapter
- * @see [TreeSitterAdapter] for syntax-aware adapter
- * @see [XtcCompilerAdapterStub] for placeholder adapter
+ * Concrete implementations live in subpackages:
+ * - `adapter.mock.MockAdapter` — regex-based testing adapter
+ * - `adapter.treesitter.TreeSitterAdapter` — syntax-aware adapter
+ * - `adapter.xdk.XdkAdapter` — XDK compiler adapter (placeholder)
  */
 @Suppress("LoggingSimilarMessage")
-abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
+abstract class AbstractAdapter : Adapter {
     /**
      * Logger instance for this adapter, using the concrete class name.
      * Lazily initialized to use the actual subclass type.
@@ -90,20 +109,20 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         uri: String,
         line: Int,
         column: Int,
-    ): List<XtcCompilerAdapter.DocumentHighlight> {
+    ): List<DocumentHighlight> {
         logger.warn("[NOT IMPLEMENTED] getDocumentHighlights: uri={}, line={}, column={}", uri, line, column)
         return emptyList()
     }
 
     override fun getSelectionRanges(
         uri: String,
-        positions: List<XtcCompilerAdapter.Position>,
-    ): List<XtcCompilerAdapter.SelectionRange> {
+        positions: List<Position>,
+    ): List<SelectionRange> {
         logger.warn("[NOT IMPLEMENTED] getSelectionRanges: uri={}, positions={}", uri, positions)
         return emptyList()
     }
 
-    override fun getFoldingRanges(uri: String): List<XtcCompilerAdapter.FoldingRange> {
+    override fun getFoldingRanges(uri: String): List<FoldingRange> {
         logger.warn("[NOT IMPLEMENTED] getFoldingRanges: uri={}", uri)
         return emptyList()
     }
@@ -111,7 +130,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
     override fun getDocumentLinks(
         uri: String,
         content: String,
-    ): List<XtcCompilerAdapter.DocumentLink> {
+    ): List<DocumentLink> {
         logger.warn("[NOT IMPLEMENTED] getDocumentLinks: uri={}, content={} bytes", uri, content.length)
         return emptyList()
     }
@@ -124,7 +143,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         uri: String,
         line: Int,
         column: Int,
-    ): XtcCompilerAdapter.SignatureHelp? {
+    ): SignatureHelp? {
         logger.warn("[NOT IMPLEMENTED] getSignatureHelp: uri={}, line={}, column={}", uri, line, column)
         return null
     }
@@ -133,7 +152,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         uri: String,
         line: Int,
         column: Int,
-    ): XtcCompilerAdapter.PrepareRenameResult? {
+    ): PrepareRenameResult? {
         logger.warn("[NOT IMPLEMENTED] prepareRename: uri={}, line={}, column={}", uri, line, column)
         return null
     }
@@ -143,7 +162,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         line: Int,
         column: Int,
         newName: String,
-    ): XtcCompilerAdapter.WorkspaceEdit? {
+    ): WorkspaceEdit? {
         logger.warn(
             "[NOT IMPLEMENTED] rename: uri={}, line={}, column={}, newName='{}'",
             uri,
@@ -156,9 +175,9 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
 
     override fun getCodeActions(
         uri: String,
-        range: XtcCompilerAdapter.Range,
+        range: Range,
         diagnostics: List<Diagnostic>,
-    ): List<XtcCompilerAdapter.CodeAction> {
+    ): List<CodeAction> {
         logger.warn(
             "[NOT IMPLEMENTED] getCodeActions: uri={}, range={}:{}-{}:{}, diagnostics={}",
             uri,
@@ -171,15 +190,15 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         return emptyList()
     }
 
-    override fun getSemanticTokens(uri: String): XtcCompilerAdapter.SemanticTokens? {
+    override fun getSemanticTokens(uri: String): SemanticTokens? {
         logger.warn("[NOT IMPLEMENTED] getSemanticTokens: uri={}", uri)
         return null
     }
 
     override fun getInlayHints(
         uri: String,
-        range: XtcCompilerAdapter.Range,
-    ): List<XtcCompilerAdapter.InlayHint> {
+        range: Range,
+    ): List<InlayHint> {
         logger.warn(
             "[NOT IMPLEMENTED] getInlayHints: uri={}, range={}:{}-{}:{}",
             uri,
@@ -194,15 +213,15 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
     override fun formatDocument(
         uri: String,
         content: String,
-        options: XtcCompilerAdapter.FormattingOptions,
-    ): List<XtcCompilerAdapter.TextEdit> = formatContent(content, options, null)
+        options: FormattingOptions,
+    ): List<TextEdit> = formatContent(content, options, null)
 
     override fun formatRange(
         uri: String,
         content: String,
-        range: XtcCompilerAdapter.Range,
-        options: XtcCompilerAdapter.FormattingOptions,
-    ): List<XtcCompilerAdapter.TextEdit> = formatContent(content, options, range)
+        range: Range,
+        options: FormattingOptions,
+    ): List<TextEdit> = formatContent(content, options, range)
 
     /**
      * Basic formatting: trailing whitespace removal and final newline insertion.
@@ -213,9 +232,9 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
      */
     private fun formatContent(
         content: String,
-        options: XtcCompilerAdapter.FormattingOptions,
-        range: XtcCompilerAdapter.Range?,
-    ): List<XtcCompilerAdapter.TextEdit> =
+        options: FormattingOptions,
+        range: Range?,
+    ): List<TextEdit> =
         buildList {
             val lines = content.split("\n")
             val startLine = range?.start?.line ?: 0
@@ -227,11 +246,11 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
                 val trimmed = line.trimEnd()
                 if (trimmed.length < line.length && (options.trimTrailingWhitespace || range == null)) {
                     add(
-                        XtcCompilerAdapter.TextEdit(
+                        TextEdit(
                             range =
-                                XtcCompilerAdapter.Range(
-                                    start = XtcCompilerAdapter.Position(i, trimmed.length),
-                                    end = XtcCompilerAdapter.Position(i, line.length),
+                                Range(
+                                    start = Position(i, trimmed.length),
+                                    end = Position(i, line.length),
                                 ),
                             newText = "",
                         ),
@@ -244,11 +263,11 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
                 val lastLine = lines.size - 1
                 val lastCol = lines[lastLine].length
                 add(
-                    XtcCompilerAdapter.TextEdit(
+                    TextEdit(
                         range =
-                            XtcCompilerAdapter.Range(
-                                start = XtcCompilerAdapter.Position(lastLine, lastCol),
-                                end = XtcCompilerAdapter.Position(lastLine, lastCol),
+                            Range(
+                                start = Position(lastLine, lastCol),
+                                end = Position(lastLine, lastCol),
                             ),
                         newText = "\n",
                     ),
@@ -303,7 +322,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         uri: String,
         line: Int,
         column: Int,
-    ): List<XtcCompilerAdapter.TypeHierarchyItem> {
+    ): List<TypeHierarchyItem> {
         logger.warn(
             "[NOT IMPLEMENTED] prepareTypeHierarchy: uri={}, line={}, column={}",
             uri,
@@ -313,12 +332,12 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         return emptyList()
     }
 
-    override fun getSupertypes(item: XtcCompilerAdapter.TypeHierarchyItem): List<XtcCompilerAdapter.TypeHierarchyItem> {
+    override fun getSupertypes(item: TypeHierarchyItem): List<TypeHierarchyItem> {
         logger.warn("[NOT IMPLEMENTED] getSupertypes: item={}", item.name)
         return emptyList()
     }
 
-    override fun getSubtypes(item: XtcCompilerAdapter.TypeHierarchyItem): List<XtcCompilerAdapter.TypeHierarchyItem> {
+    override fun getSubtypes(item: TypeHierarchyItem): List<TypeHierarchyItem> {
         logger.warn("[NOT IMPLEMENTED] getSubtypes: item={}", item.name)
         return emptyList()
     }
@@ -327,7 +346,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         uri: String,
         line: Int,
         column: Int,
-    ): List<XtcCompilerAdapter.CallHierarchyItem> {
+    ): List<CallHierarchyItem> {
         logger.warn(
             "[NOT IMPLEMENTED] prepareCallHierarchy: uri={}, line={}, column={}",
             uri,
@@ -337,22 +356,22 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         return emptyList()
     }
 
-    override fun getIncomingCalls(item: XtcCompilerAdapter.CallHierarchyItem): List<XtcCompilerAdapter.CallHierarchyIncomingCall> {
+    override fun getIncomingCalls(item: CallHierarchyItem): List<CallHierarchyIncomingCall> {
         logger.warn("[NOT IMPLEMENTED] getIncomingCalls: item={}", item.name)
         return emptyList()
     }
 
-    override fun getOutgoingCalls(item: XtcCompilerAdapter.CallHierarchyItem): List<XtcCompilerAdapter.CallHierarchyOutgoingCall> {
+    override fun getOutgoingCalls(item: CallHierarchyItem): List<CallHierarchyOutgoingCall> {
         logger.warn("[NOT IMPLEMENTED] getOutgoingCalls: item={}", item.name)
         return emptyList()
     }
 
-    override fun getCodeLenses(uri: String): List<XtcCompilerAdapter.CodeLens> {
+    override fun getCodeLenses(uri: String): List<CodeLens> {
         logger.warn("[NOT IMPLEMENTED] getCodeLenses: uri={}", uri)
         return emptyList()
     }
 
-    override fun resolveCodeLens(lens: XtcCompilerAdapter.CodeLens): XtcCompilerAdapter.CodeLens {
+    override fun resolveCodeLens(lens: CodeLens): CodeLens {
         logger.warn(
             "[NOT IMPLEMENTED] resolveCodeLens: lens range={}:{}-{}:{}",
             lens.range.start.line,
@@ -368,8 +387,8 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         line: Int,
         column: Int,
         ch: String,
-        options: XtcCompilerAdapter.FormattingOptions,
-    ): List<XtcCompilerAdapter.TextEdit> {
+        options: FormattingOptions,
+    ): List<TextEdit> {
         logger.warn("[NOT IMPLEMENTED] onTypeFormatting: uri={}, line={}, column={}, ch='{}'", uri, line, column, ch)
         return emptyList()
     }
@@ -378,7 +397,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         uri: String,
         line: Int,
         column: Int,
-    ): XtcCompilerAdapter.LinkedEditingRanges? {
+    ): LinkedEditingRanges? {
         logger.warn("[NOT IMPLEMENTED] getLinkedEditingRanges: uri={}, line={}, column={}", uri, line, column)
         return null
     }

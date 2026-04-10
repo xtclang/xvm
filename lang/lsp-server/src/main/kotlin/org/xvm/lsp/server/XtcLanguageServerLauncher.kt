@@ -6,10 +6,10 @@ import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.launch.LSPLauncher
 import org.eclipse.lsp4j.services.LanguageClient
 import org.slf4j.LoggerFactory
-import org.xvm.lsp.adapter.MockXtcCompilerAdapter
-import org.xvm.lsp.adapter.TreeSitterAdapter
-import org.xvm.lsp.adapter.XtcCompilerAdapter
-import org.xvm.lsp.adapter.XtcCompilerAdapterStub
+import org.xvm.lsp.adapter.Adapter
+import org.xvm.lsp.adapter.mock.MockAdapter
+import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
+import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.io.InputStream
 import java.io.OutputStream
 import java.lang.invoke.MethodHandles
@@ -70,14 +70,14 @@ private enum class AdapterBackend(
  * @param adapterType The adapter type from build properties: "mock", "treesitter", or "compiler"
  * @return The configured adapter and which backend is active
  */
-private fun createAdapter(adapterType: String): Pair<XtcCompilerAdapter, AdapterBackend> =
+private fun createAdapter(adapterType: String): Pair<Adapter, AdapterBackend> =
     when (adapterType.lowercase()) {
         "compiler", "xtc", "full" -> {
             // Stub adapter - all methods log warnings, no actual compiler integration yet
             // TODO: Replace with real compiler adapter when parallel compiler integration is ready
             // See PLAN_LSP_PARALLEL_LEXER.md for the integration roadmap
             logger.info("using compiler stub adapter - all LSP calls will be logged but return empty results")
-            XtcCompilerAdapterStub() to AdapterBackend.COMPILER
+            XdkAdapter() to AdapterBackend.COMPILER
         }
 
         "treesitter", "tree-sitter" -> {
@@ -88,15 +88,15 @@ private fun createAdapter(adapterType: String): Pair<XtcCompilerAdapter, Adapter
                 logger.warn(
                     "to use tree-sitter, build the native library: ./gradlew :lang:tree-sitter:buildAllNativeLibrariesOnDemand",
                 )
-                MockXtcCompilerAdapter() to AdapterBackend.MOCK
+                MockAdapter() to AdapterBackend.MOCK
             } catch (e: Exception) {
                 logger.error("failed to initialize tree-sitter adapter, falling back to mock", e)
-                MockXtcCompilerAdapter() to AdapterBackend.MOCK
+                MockAdapter() to AdapterBackend.MOCK
             }
         }
 
         else -> {
-            MockXtcCompilerAdapter() to AdapterBackend.MOCK
+            MockAdapter() to AdapterBackend.MOCK
         }
     }
 

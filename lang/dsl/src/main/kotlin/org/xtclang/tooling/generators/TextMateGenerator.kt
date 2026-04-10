@@ -313,18 +313,75 @@ class TextMateGenerator(
                         }
                     }
 
+                    // Property declaration
+                    putJsonObject("property-declaration") {
+                        put("name", "meta.property.xtc")
+                        put("match", "\\b([A-Z][a-zA-Z0-9_<>?,\\s]*)\\s+([a-z_][a-zA-Z0-9_]*)\\s*(?=[=;])")
+                        putJsonObject("captures") {
+                            putJsonObject("1") {
+                                put("name", "support.type.property.xtc")
+                            }
+                            putJsonObject("2") {
+                                put("name", "variable.other.member.xtc")
+                            }
+                        }
+                    }
+
+                    // Parameters
+                    putJsonObject("parameter-declaration") {
+                        put("name", "meta.parameter.xtc")
+                        put("match", "\\b([A-Z][a-zA-Z0-9_<>?,\\s]*)\\s+([a-z_][a-zA-Z0-9_]*)\\b")
+                        putJsonObject("captures") {
+                            putJsonObject("1") {
+                                put("name", "support.type.parameter.xtc")
+                            }
+                            putJsonObject("2") {
+                                put("name", "variable.parameter.xtc")
+                            }
+                        }
+                    }
+
+                    putJsonObject("parameters") {
+                        put("name", "meta.parameters.xtc")
+                        put("begin", "\\(")
+                        put("end", "\\)")
+                        putJsonArray("patterns") {
+                            addJsonObject { put("include", "#parameter-declaration") }
+                            addJsonObject { put("include", "#types") }
+                            addJsonObject { put("include", "#constants") }
+                            addJsonObject { put("include", "#operators") }
+                            addJsonObject { put("include", "#strings") }
+                            addJsonObject { put("include", "#numbers") }
+                        }
+                    }
+
                     // Method declaration
                     putJsonObject("method-declaration") {
                         put("name", "meta.method.xtc")
-                        put("begin", "\\b([a-zA-Z_][a-zA-Z0-9_<>,\\s]*)\\s+([a-z_][a-zA-Z0-9_]*)\\s*(?=\\()")
+                        put(
+                            "begin",
+                            "\\b((?:(?:public|private|protected|static|abstract|final|native|lazy|atomic|inject|delegate|override)\\s+)*)" +
+                                "(<[^>]+>\\s+)?" +
+                                "([A-Z][a-zA-Z0-9_<>?,\\s]*)\\s+" +
+                                "([a-z_][a-zA-Z0-9_]*)\\s*(?=\\()",
+                        )
                         put("end", "(?=\\{|;)")
                         putJsonObject("beginCaptures") {
                             putJsonObject("1") {
-                                put("name", "storage.type.return.xtc")
+                                put("name", "storage.modifier.xtc")
                             }
                             putJsonObject("2") {
+                                put("name", "entity.name.type.type-parameter.xtc")
+                            }
+                            putJsonObject("3") {
+                                put("name", "storage.type.return.xtc")
+                            }
+                            putJsonObject("4") {
                                 put("name", "entity.name.function.xtc")
                             }
+                        }
+                        putJsonArray("patterns") {
+                            addJsonObject { put("include", "#parameters") }
                         }
                     }
 
@@ -343,6 +400,7 @@ class TextMateGenerator(
                         "annotations",
                         "module-declaration",
                         "class-declaration",
+                        "property-declaration",
                         "method-declaration",
                         "keywords",
                         "types",

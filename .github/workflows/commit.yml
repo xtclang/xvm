@@ -61,9 +61,10 @@ on:
                 default: false
 
 env:
-    # Add manual tests as included builds - defaults to true for push/PR, controlled by include-lang for workflow_dispatch
-    ORG_GRADLE_PROJECT_includeBuildManualTests: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true' }}
-    ORG_GRADLE_PROJECT_includeBuildAttachManualTests: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true' }}
+    # Add manual tests as included builds - defaults to true for push/PR and for workflow_dispatch
+    # unless manual tests are explicitly skipped. This must not depend on include-lang.
+    ORG_GRADLE_PROJECT_includeBuildManualTests: ${{ github.event_name != 'workflow_dispatch' || !(github.event.inputs.skip-tests == true || github.event.inputs.skip-tests == 'true') }}
+    ORG_GRADLE_PROJECT_includeBuildAttachManualTests: ${{ github.event_name != 'workflow_dispatch' || !(github.event.inputs.skip-tests == true || github.event.inputs.skip-tests == 'true') }}
     ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
     RUN_INTEGRATION_TESTS: true
 
@@ -77,10 +78,14 @@ env:
     # Default to parallel mode (true) for push/PR events; for workflow_dispatch, use the input value
     run_manual_tests_parallel: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.parallel-test-mode == true || github.event.inputs.parallel-test-mode == 'true' }}
     trigger_publishing: ${{ github.event.inputs.publish-snapshots == true || github.event.inputs.publish-snapshots == 'true' }}
+    GRADLE_CACHE_INSPECT_ENABLED: false
 
     # Gradle cache inspection function
     GRADLE_CACHE_INSPECT: |
         inspect_gradle_cache() {
+            if [ "${GRADLE_CACHE_INSPECT_ENABLED:-false}" != "true" ]; then
+                return 0
+            fi
             local label="${1:-}"
             local gradle_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
             echo "🔍 Gradle Cache Inspection${label:+ ($label)}:"
@@ -120,6 +125,7 @@ jobs:
               with:
                   fetch-depth: 0  # Need full history for path filtering
                   show-progress: true
+                  persist-credentials: false
 
             - name: Check for lang-related changes
               id: changes
@@ -229,7 +235,9 @@ jobs:
 
                 inspect_gradle_cache "before build"
                 ./gradlew $GRADLE_OPTIONS clean
-                ./gradlew $GRADLE_OPTIONS distZip check -Porg.xtclang.java.lint=true -Porg.xtclang.java.warningsAsErrors=false -Porg.xtclang.java.test.stdout=true
+                ./gradlew $GRADLE_OPTIONS distZip check :plugin:compileJava \
+                  -Porg.xtclang.java.test.failFast=true \
+                  -Porg.xtclang.plugin.java.lint=true
 
                 # Run manual tests inline if enabled (avoids cache rebuild)
                 if [ "${{ env.skip_manual_tests }}" == "true" ]; then
@@ -241,7 +249,10 @@ jobs:
                 inspect_gradle_cache "before manual tests"
                 manual_task_main=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runAllTestTasksParallel" || echo "runAllTestTasks" )
                 echo "Running manual tests (main task: $manual_task_main)"
-                ./gradlew $GRADLE_OPTIONS manualTests:runXtc manualTests:runOne -PtestName=TestMisc manualTests:runTwoTestsInSequence "manualTests:$manual_task_main"        
+                mkdir -p manualTests/build/logs
+                ./gradlew $GRADLE_OPTIONS manualTests:runXtc manualTests:runOne -PtestName=TestMisc manualTests:runTwoTestsInSequence
+                ./gradlew $GRADLE_OPTIONS "manualTests:$manual_task_main"
+                echo "🧾 Manual test logs captured under manualTests/build/logs and uploaded as CI artifacts."
                 inspect_gradle_cache "after manual tests"
                 echo "✅ Manual tests completed"
 
@@ -320,6 +331,22 @@ jobs:
               with:
                   name: xdk-dist-${{ github.sha }}
                   path: xdk/build/distributions/xdk-*.zip
+                  retention-days: 10
+
+            - name: List manual test logs
+              if: always() && matrix.os == 'ubuntu-latest' && env.skip_manual_tests != 'true'
+              shell: bash
+              run: |
+                  echo "Manual test log directory contents:"
+                  ls -la manualTests/build/logs || true
+
+            - name: Upload manual test logs
+              if: always() && matrix.os == 'ubuntu-latest' && env.skip_manual_tests != 'true'
+              uses: actions/upload-artifact@v7
+              with:
+                  name: manual-tests-logs-${{ github.sha }}
+                  path: manualTests/build/logs/*.log
+                  if-no-files-found: error
                   retention-days: 10
 
             - name: Summary

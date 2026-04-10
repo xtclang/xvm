@@ -54,8 +54,13 @@ Requires `JAVA_HOME` or `XTC_JAVA_HOME` pointing to Java 25+.
 2. Search for `"Selected adapter:"` or `"XTC LSP Server started"`
 3. You should see one of:
    - `"Selected adapter: TreeSitterAdapter"` - Tree-sitter is active
-   - `"Selected adapter: MockXtcCompilerAdapter"` - Mock adapter is active
-   - `"Selected adapter: MockXtcCompilerAdapter (fallback - ...)"` - Tree-sitter failed
+   - `"Selected adapter: MockAdapter"` - Mock adapter is active
+   - `"Selected adapter: MockAdapter (fallback - ...)"` - Tree-sitter failed
+4. Also verify: `"semantic tokens ENABLED (23 types, 10 modifiers)"` in the log
+5. For IntelliJ plugin runs from this repo, also verify the startup command line in the IDE log:
+   - `XTC LSP command configured`
+   - `-Dxtc.lsp.semanticTokens=true`
+   This confirms you are exercising the branch's semantic-token path rather than a stale fallback.
 
 **VS Code:**
 1. Open Output panel (Ctrl+Shift+U / Cmd+Shift+U)
@@ -113,6 +118,8 @@ module TestModule {
 | 1.3 | Strings | Add `"hello"` literal | String color |
 | 1.4 | Comments | Add `// comment` and `/* block */` | Comment color |
 | 1.5 | Numbers | Add `42`, `3.14` | Number color |
+| 1.6 | Editor color scheme sanity | Open a `.x` file in IntelliJ | Editor background matches the active theme (not a solid white fallback) |
+| 1.7 | TextMate + semantic token layering | Open a `.x` file with types, methods, and annotations | Base TextMate colors remain sane; semantic tokens refine symbols instead of washing out the theme |
 
 **Note:** Semantic tokens Tier 1 (declaration-site classification, type refs, annotations, calls) is implemented. Tier 2+ (distinguishing field vs local vs parameter at usage sites) requires compiler integration.
 
@@ -260,6 +267,9 @@ module TestModule {
 | 8.2 | Property highlight | Click on `name` | All `name` occurrences highlighted |
 | 8.3 | Method highlight | Click on `getName` | All `getName` occurrences highlighted |
 | 8.4 | No highlight on whitespace | Click on empty space | No highlights |
+| 8.5 | Write highlight | Click on `x` in `Int x = 42;` | Declaration site shows as **write** highlight (different color/style from reads) |
+| 8.6 | Read highlight | Click on `x` in `return x;` | Usage site shows as **read** highlight |
+| 8.7 | Assignment write | Click on `age` in `age = newAge;` | Assignment target shows as **write** highlight |
 
 ---
 
@@ -298,6 +308,8 @@ module TestModule {
 | 10.3 | Import fold | Add 3+ import statements, fold | Import block collapses |
 | 10.4 | Nested fold | Fold method inside class | Method folds independently |
 | 10.5 | Fold all | Ctrl+Shift+Minus / Ctrl+K Ctrl+0 | All regions collapse |
+| 10.6 | Consecutive line comments | Add 3+ consecutive `//` comments | Fold arrow appears; comments collapse as one region |
+| 10.7 | Non-adjacent comments | Add `//` comments separated by code | Each group folds independently |
 
 ---
 
@@ -324,7 +336,7 @@ module TestModule {
 ### 12. Code Actions
 
 **LSP Method:** `textDocument/codeAction`
-**Status:** ✅ Done (organize imports)
+**Status:** ✅ Done (organize imports + remove unused imports)
 **Works with:** Both adapters
 
 **How to trigger:**
@@ -336,6 +348,8 @@ module TestModule {
 | 12.1 | Organize imports (unsorted) | Add unsorted imports: `import b; import a;`, trigger code action | Imports sorted alphabetically |
 | 12.2 | No action (already sorted) | With sorted imports, open code actions | No "Organize Imports" offered |
 | 12.3 | No action (single import) | With 1 import, open code actions | No action offered |
+| 12.4 | Remove unused import | Add `import foo.Unused;` where `Unused` is never referenced, trigger code action | "Remove unused import 'Unused'" action offered |
+| 12.5 | Used import not flagged | Add `import foo.Bar;` and use `Bar` in code, trigger code action | No "Remove unused import" for `Bar` |
 
 ---
 
@@ -359,6 +373,109 @@ module TestModule {
 | 13.2 | Insert final newline | Remove final newline from file, format | Final newline added |
 | 13.3 | Range format | Select 2-3 lines with trailing spaces, format selection | Only selected lines cleaned |
 | 13.4 | No-op on clean file | Format a file with no trailing whitespace | No changes |
+
+---
+
+### 13a. On-Type Formatting (Auto-Indent)
+
+**LSP Method:** `textDocument/onTypeFormatting`
+**Status:** ✅ Done
+**Works with:** Tree-sitter adapter only
+
+The LSP server uses tree-sitter AST context to auto-indent as you type. Trigger characters
+are `Enter`, `}`, and `;`. This is strictly better than regex-based TextMate indentation
+because it understands nesting depth, continuation lines, and string literals.
+
+**How it works:** Automatic — indentation is adjusted immediately when you type a trigger
+character. No manual action needed.
+
+| # | Test | Steps | Expected Result |
+|---|------|-------|-----------------|
+| 13a.1 | Indent after `{` in class | Type `class Foo {` then Enter | New line indented +4 from class keyword |
+| 13a.2 | Indent after `{` in method | Inside a class, type `void foo() {` then Enter | New line indented +4 from method |
+| 13a.3 | Indent after `{` in if | Inside a method, type `if (True) {` then Enter | New line indented +4 from if |
+| 13a.4 | Outdent `}` for class | Type `}` to close a class body | `}` aligns with the `class` keyword |
+| 13a.5 | Outdent `}` for method | Type `}` to close a method body | `}` aligns with the method declaration |
+| 13a.6 | Outdent `}` for if block | Type `}` to close an if block | `}` aligns with the `if` keyword |
+| 13a.7 | Maintain indent after statement | After `x = 1;` press Enter | New line at same indent level |
+| 13a.8 | Continuation + `{` | Type `implements Closeable {` then Enter | Body indent from declaration start (+4), not from continuation (+8) |
+| 13a.9 | Module body indent | Type `module myapp {` then Enter | New line indented +4 |
+| 13a.10 | No indent inside string | Press Enter inside a string literal | No indentation adjustment |
+| 13a.11 | Nested constructs (3+ levels) | Class > method > if > Enter after `{` | Correct cumulative indent (e.g. 12 for 3 levels) |
+| 13a.12 | After `}` line | Press Enter after a `}` line | New line at same indent as `}` |
+| 13a.13 | Large file performance | Open a `.x` file > 1000 lines, type normally | < 5ms per formatting request (check LSP log) |
+| 13a.14 | Doc comment continuation | Type `/**` then Enter | New line gets ` * ` prefix aligned with `/**` |
+| 13a.15 | Doc comment mid-line | Press Enter on a ` * existing text` line inside `/** */` | New line gets ` * ` prefix |
+| 13a.16 | Indented doc comment | Inside a class (indent 4), type `/**` then Enter | New line gets `     * ` (4 spaces + ` * `) |
+| 13a.17 | Block comment continuation | Type `/*` then Enter | New line gets ` * ` prefix |
+| 13a.18 | No continuation after `*/` | Press Enter after a `*/` line | Normal indentation (no ` * ` prefix) |
+| 13a.19 | IntelliJ auto-close brace skeleton | In IntelliJ, type `void bepa() {` and press Enter | Creates an indented blank body line and leaves the auto-inserted `}` aligned with `void`, not under the method name |
+| 13a.20 | Repeated Enter inside fresh method | After 13a.19, press Enter again on the blank body line | Next line stays at method-body indent instead of drifting to 8/12 spaces |
+
+**High-value log checks while running 13a tests:**
+- `textDocument/onTypeFormatting: ... ch='\n'`
+- `onTypeFormatting[enter]: ... reason=... desiredIndent=... currentIndent=...`
+- `textDocument/onTypeFormatting: 1 edits [...]`
+- For IntelliJ auto-close skeleton cases: `onTypeFormatting[enter]: auto-close skeleton ... bodyIndent=... closingIndent=...`
+
+---
+
+### 13b. Code Style Settings (IntelliJ)
+
+**Provider:** IntelliJ plugin (`XtcLanguageCodeStyleSettingsProvider`)
+**Status:** ✅ Done
+**Works with:** IntelliJ only (VS Code uses `editor.tabSize` / `editor.insertSpaces`)
+
+Code Style settings for XTC appear under Settings > Editor > Code Style > Ecstasy.
+
+**How to access:**
+- *IntelliJ:* Settings/Preferences > Editor > Code Style > Ecstasy
+
+| # | Test | Steps | Expected Result |
+|---|------|-------|-----------------|
+| 13b.1 | Settings page exists | Open Settings > Editor > Code Style | "Ecstasy" appears in the language list |
+| 13b.2 | Default indent size | Open Code Style > Ecstasy > Tabs and Indents | Indent: 4, Continuation indent: 8, Tab size: 4, Use tab character: unchecked |
+| 13b.3 | Code preview | Look at the preview pane | XTC code sample with classes, methods, switch/case |
+| 13b.4 | Change indent size | Set indent to 2, look at preview | Preview re-indents with 2-space indent |
+| 13b.5 | Change continuation indent | Set continuation indent to 4 | Preview adjusts `implements` line indent |
+| 13b.6 | Tab character toggle | Check "Use tab character" | Preview switches from spaces to tabs |
+| 13b.7 | Right margin | Check the right margin value | Should default to 120 |
+| 13b.8 | Settings persist | Change indent to 3, close and reopen Settings | Indent still shows 3 |
+| 13b.9 | Reset to defaults | Click "Reset" or "Set from..." > "Ecstasy" | Values revert to 4/8/4/false |
+
+---
+
+### 13c. Code Style → LSP Server Round-Trip (IntelliJ)
+
+**Provider:** `XtcLanguageClient` (workspace/configuration) + `XtcLanguageServer`
+**Status:** ✅ Done
+**Works with:** IntelliJ only (VS Code falls back to LSP `FormattingOptions`)
+
+IntelliJ Code Style settings are forwarded to the LSP server via `workspace/configuration`
+at startup. Changes are pushed via `workspace/didChangeConfiguration`. The server uses
+these settings for on-type formatting when no project-level `xtc-format.toml` is present.
+
+**How to verify the config flow:**
+1. Open an IntelliJ instance running the XTC plugin
+2. Check the LSP server log for `workspace/configuration: editor formatting config:` — this
+   confirms the server received the settings
+
+| # | Test | Steps | Expected Result |
+|---|------|-------|-----------------|
+| 13c.1 | Default config flows to server | Open a `.x` file, check LSP log | Log shows `editor formatting config: XtcFormattingConfig(indentSize=4, ...)` |
+| 13c.2 | Custom indent flows to server | Set Code Style indent to 2, restart LSP server | Log shows `indentSize=2` |
+| 13c.3 | 2-space indent affects formatting | Set Code Style indent to 2, type `module Foo {` then Enter | New line indented by 2 spaces (not 4) |
+| 13c.4 | Nested indent with custom config | Set indent to 3, type class inside module, then method, press Enter after `{` | Indent at 9 (3 * 3 levels) |
+| 13c.5 | No TextMate interference | Open a `.x` file with custom indent | Syntax highlighting works normally (no white background, correct colors) |
+| 13c.6 | VS Code fallback | Open same project in VS Code with `editor.tabSize: 2` | On-type formatting uses 2-space indent from LSP FormattingOptions |
+| 13c.7 | Auto-close brace honors custom indent | Set indent to 2, type `void foo() {` then Enter in IntelliJ | Blank body line indents to 4 spaces and the auto-inserted `}` aligns to 2 spaces |
+
+**How to restart the LSP server** (to pick up changed Code Style settings):
+- *IntelliJ:* Open the LSP4IJ Language Servers panel → right-click "XTC Language Server" → Restart
+
+**Note:** The `workspace/didChangeConfiguration` notification is sent when IntelliJ detects
+a configuration change, which should propagate settings without a manual server restart.
+If settings don't update immediately, restart the server as a workaround.
 
 ---
 
@@ -395,8 +512,10 @@ module TestModule {
 | 15.1 | Import link | Add `import ecstasy.text.String;` | Path is clickable/underlined |
 | 15.2 | Tooltip | Hover over import path | Shows `import ecstasy.text.String` tooltip |
 | 15.3 | Multiple imports | Add 3 import statements | All paths are links |
+| 15.4 | Import navigation | Ctrl+Click on an import path whose type exists in the workspace | Navigates to the source file of the imported type |
+| 15.5 | Unresolved import | Ctrl+Click on an import path not in the workspace | Shows tooltip but does not navigate |
 
-**Note:** Links are not resolvable (target is null) until the compiler adapter provides file resolution.
+**Note:** Import navigation (target resolution) is implemented via the workspace index. When the index is populated, Ctrl+Click on an import navigates to the imported type's source file. If the type is not indexed, the link shows a tooltip only.
 
 ---
 
@@ -407,6 +526,22 @@ module TestModule {
 ---
 
 ## Troubleshooting
+
+### IntelliJ Theme / Sandbox Looks Wrong
+
+If IntelliJ suddenly shows `.x` files with a white fallback background, washed-out colors,
+or obviously stale plugin behavior:
+
+```bash
+./gradlew --stop
+rm -rf lang/.intellijPlatform/sandbox
+rm -rf lang/.intellijPlatform/localPlatformArtifacts
+```
+
+Then rerun `:lang:intellij-plugin:runIde`.
+
+This should not be required for normal development, but it is a useful reset when plugin
+auto-reload or stale sandbox state has clearly contaminated the test run.
 
 ### Tree-sitter Not Loading
 
@@ -521,21 +656,175 @@ the process management and health monitoring.
 
 ---
 
+### 16. Comment Toggling (IntelliJ)
+
+**Provider:** IntelliJ plugin (`XtcCommenter`)
+**Status:** ✅ Done
+**Works with:** IntelliJ only (VS Code uses `language-configuration.json` for this)
+
+This is a client-side editing feature — the LSP server handles comment *formatting*
+(alignment, continuation on Enter), but toggling comment delimiters is purely an IDE action.
+
+| # | Test | Steps | Expected Result |
+|---|------|-------|-----------------|
+| 16.1 | Line comment | Place cursor on a line, press Ctrl+/ | `// ` inserted at start of line |
+| 16.2 | Uncomment | On a `//`-commented line, press Ctrl+/ | `// ` removed |
+| 16.3 | Multi-line comment | Select 3 lines, press Ctrl+/ | All 3 lines get `// ` prefix |
+| 16.4 | Multi-line uncomment | Select 3 commented lines, press Ctrl+/ | `// ` removed from all 3 |
+| 16.5 | Block comment | Select text, press Ctrl+Shift+/ | Selection wrapped in `/* */` |
+| 16.6 | Block uncomment | With cursor inside `/* */`, press Ctrl+Shift+/ | `/* */` removed |
+
+---
+
+### 17. Live Templates (IntelliJ)
+
+**Provider:** IntelliJ plugin (`liveTemplates/XTC.xml`)
+**Status:** ✅ Done
+**Works with:** IntelliJ only (VS Code uses `snippets/xtc.json` separately)
+
+Live templates are code snippets triggered by abbreviation + Tab. Press Ctrl+J to
+see all available templates. The same snippets are available in VS Code (type the
+prefix and select from the completion popup).
+
+**Available templates:**
+
+| Prefix | Expansion | Category |
+|--------|-----------|----------|
+| `mod` | `module name { }` | Declaration |
+| `cls` | `class MyClass { }` | Declaration |
+| `iface` | `interface MyInterface { }` | Declaration |
+| `svc` | `service MyService { }` | Declaration |
+| `mix` | `mixin MyMixin into Base { }` | Declaration |
+| `enu` | `enum MyEnum { Value1, Value2 }` | Declaration |
+| `con` | `const MyConst(params);` | Declaration |
+| `pkg` | `package json import json.xtclang.org;` | Declaration |
+| `meth` | `void myMethod() { }` | Method |
+| `run` | `void run() { @Inject Console console; }` | Method |
+| `runa` | `void run(String[] args=[]) { ... }` | Method |
+| `construct` | `construct(params) { }` | Method |
+| `prop` | `String name;` | Property |
+| `roprop` | `@RO Boolean empty.get() = size == 0;` | Property |
+| `lazy` | `private @Lazy String value.calc() { }` | Property |
+| `if` | `if (condition) { }` | Control flow |
+| `ife` | `if (condition) { } else { }` | Control flow |
+| `ifv` | `if (Value value := get(key)) { }` | Control flow |
+| `fori` | `for (Int i : 0 ..< count) { }` | Control flow |
+| `forr` | `for (Int x : 1..100) { }` | Control flow |
+| `fore` | `for (Element item : collection) { }` | Control flow |
+| `while` | `while (condition) { }` | Control flow |
+| `switch` | `switch (value) { case 0: }` | Control flow |
+| `try` | `try { } catch (Exception e) { }` | Control flow |
+| `using` | `using (resource) { }` | Control flow |
+| `assert` | `assert condition;` | Control flow |
+| `assertm` | `assert condition as "message";` | Control flow |
+| `sout` | `@Inject Console console; console.print();` | Common |
+| `print` | `console.print();` | Common |
+| `inject` | `@Inject Console console;` | Common |
+| `lambda` | `(params) -> expr` | Common |
+| `cond` | `conditional Value find() { }` | Common |
+| `doc` | `/** description */` | Comment |
+| `todo` | `// TODO` | Comment |
+| `webapp` | Full @WebApp module with web service | Skeleton |
+| `websvc` | `@WebService("/") service { @Get ... }` | Web |
+| `hello` | Complete Hello World module | Skeleton |
+
+| # | Test | Steps | Expected Result |
+|---|------|-------|-----------------|
+| 17.1 | Module template | Type `mod` + Tab | Expands to `module name { }` with cursor on name |
+| 17.2 | Class template | Type `cls` + Tab | Expands to `class MyClass { }` |
+| 17.3 | For loop (range) | Type `fori` + Tab | Expands to `for (Int i : 0 ..< count) { }` |
+| 17.4 | For loop (inclusive) | Type `forr` + Tab | Expands to `for (Int x : 1..100) { }` |
+| 17.5 | For-each | Type `fore` + Tab | Expands to `for (Element item : collection) { }` |
+| 17.6 | Console print | Type `sout` + Tab | Expands to `@Inject Console console;` + `console.print();` |
+| 17.7 | If conditional assign | Type `ifv` + Tab | Expands to `if (Value value := get(key)) { }` |
+| 17.8 | Hello World | Type `hello` + Tab | Expands to complete Hello World module |
+| 17.9 | WebApp skeleton | Type `webapp` + Tab | Expands to full @WebApp module with web service |
+| 17.10 | Template list | Press Ctrl+J in editor | Shows all XTC templates with descriptions |
+| 17.11 | Tab navigation | Type `meth` + Tab, fill return type, Tab, fill name | Cursor moves through variables in order |
+| 17.12 | Inject template | Type `inject` + Tab | Expands to `@Inject Type name;` |
+| 17.13 | Mixin template | Type `mix` + Tab | Expands to `mixin Name into Base { }` |
+| 17.14 | Conditional method | Type `cond` + Tab | Expands to `conditional Value find() { }` |
+
+---
+
+### 18. Code Lens (Run Actions)
+
+**LSP Method:** `textDocument/codeLens`
+**Status:** ✅ Done
+**Works with:** Tree-sitter adapter (both IntelliJ and VS Code)
+
+Code lenses appear as inline annotations above module declarations. LSP4IJ (IntelliJ)
+and VS Code render them automatically from the LSP server response — no plugin code needed.
+
+| # | Test | Steps | Expected Result |
+|---|------|-------|-----------------|
+| 18.1 | Run lens on module | Open a `.x` file with `module myapp { }` | "▶ Run myapp" appears above the module declaration |
+| 18.2 | No lens on class | Open a file with only `class Foo { }` (no module) | No code lens appears |
+| 18.3 | Lens position | Check the lens annotation position | Aligned with the `module` keyword line |
+| 18.4 | Multiple files | Open two `.x` files with different modules | Each shows its own module's Run lens |
+
+---
+
+### 19. Semantic Tokens
+
+**LSP Method:** `textDocument/semanticTokens/full`
+**Status:** ✅ Done (enabled by default)
+**Works with:** Tree-sitter adapter (both IntelliJ and VS Code)
+
+Semantic tokens layer on top of TextMate highlighting, providing AST-aware coloring
+that TextMate's regex patterns cannot achieve. The server logs `semantic tokens ENABLED`
+at startup to confirm they're active.
+
+**How to verify:**
+- *IntelliJ:* Open a `.x` file — types, methods, properties, and annotations should
+  have distinct colors. Check LSP server log for `semantic tokens ENABLED`.
+- *VS Code:* Same — semantic tokens are automatically layered on top of TextMate.
+
+| # | Test | Steps | Expected Result |
+|---|------|-------|-----------------|
+| 19.1 | Types colored distinctly | Open file with `String name;` and `Int count;` | `String` and `Int` have type color (different from `name`/`count`) |
+| 19.2 | Methods vs properties | Open file with `void foo()` and `String name;` | `foo` has method color, `name` has property color |
+| 19.3 | Annotations as decorators | Add `@Override` or `@Inject` | Annotation name has decorator color |
+| 19.4 | Deprecated strikethrough | Add `@Deprecated class Old {}` | `Old` shown with strikethrough |
+| 19.5 | new Foo() as type | Write `new Person()` | `Person` colored as type, not method |
+| 19.6 | Method call coloring | Write `getName()` | `getName` colored as method call |
+| 19.7 | Static modifier | Add `static void helper()` | `helper` may show italic (static modifier) |
+| 19.8 | Enum members | Write `enum Color { Red, Green, Blue }` | `Red`, `Green`, `Blue` colored as enum members |
+| 19.9 | Parameter highlighting | Write `void foo(Int count)` | `count` has parameter color |
+| 19.10 | Namespace coloring | `module myapp` declaration | `myapp` colored as namespace |
+| 19.11 | Server log confirmation | Check LSP server log at startup | Shows `semantic tokens ENABLED (23 types, 10 modifiers)` |
+
+---
+
 ## Future Enhancements
+
+### 20. Linked Editing Ranges
+
+Linked editing ranges enable rename-on-type: when the cursor is on an identifier,
+all same-name occurrences in the file are highlighted and edited simultaneously.
+
+| # | Test | Steps | Expected |
+|---|------|-------|----------|
+| 20.1 | Basic linked editing | Place cursor on a variable name used multiple times in a method → trigger linked editing (Ctrl+Shift+F2 in VS Code, or via LSP) | All occurrences highlighted; typing renames all simultaneously |
+| 20.2 | Single occurrence | Place cursor on identifier used only once | No linked editing ranges returned (need 2+ occurrences) |
+| 20.3 | Parameter name | Place cursor on a method parameter name used in the body | Parameter declaration and all uses linked |
+| 20.4 | Class name | Place cursor on a class name that appears in the file | All same-name occurrences linked (same-file, text-based) |
+| 20.5 | Non-identifier | Place cursor on a keyword or literal | No linked editing ranges |
+
+> **Adapter support**: TreeSitter (same-file text matching). Cross-file linked editing requires compiler/SemanticModel.
 
 ### Semantic Tokens Phase 2+ (TODO)
 
-Phase 1 (Tier 1) is implemented: declarations, type references, annotations, call/member
-expressions, and modifiers are classified via `SemanticTokenEncoder`. Future phases:
+Phase 1 (Tier 1+) is implemented and enabled by default. Future phases:
 - **Tier 2**: Heuristic usage-site tokens (UpperCamelCase type detection, broader property/variable classification)
 - **Tier 3** (compiler): Override tree-sitter tokens with compiler-resolved classifications
 
 ### Cross-File References (TODO)
 
 Cross-file go-to-definition and workspace symbols are implemented via the workspace index.
+Import link navigation is now implemented (resolves import paths to file URIs via workspace index).
 Still remaining:
 - Cross-file find-references (workspace-wide name search)
-- Import resolution (resolve import paths to file URIs)
 - Cross-file rename refactoring
 
 ### Full Compiler Integration (TODO)
