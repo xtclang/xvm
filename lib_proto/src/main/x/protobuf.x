@@ -55,6 +55,17 @@ module protobuf.xtclang.org {
      */
     typedef Presence | Byte[] as MaybeBytes;
 
+    /**
+     * A type alias for a Protobuf scalar type.
+     */
+    typedef Int32 | Int64 | UInt32 | UInt64 | Float32 | Float64 | Boolean
+            | String | Byte[] as ProtoScalarType;
+
+    /**
+     * A type alias for a Protobuf message field type.
+     */
+    typedef ProtoScalarType | ProtoScalarType[] | MessageLite | MessageLite[]
+            | ProtoEnum | ProtoEnum[] as ProtoFieldType;
 
     void run(String[] args) {
 //        import ecstasy.io.FileInputStream;

@@ -21,29 +21,31 @@ class ProtoCodeGenTest {
         assert files.size == 1;
         assert String source := files.get("Person.x");
 
-        // imports for Maybe types
-        assert source.indexOf("import protobuf.MaybeString;");
-        assert source.indexOf("import protobuf.MaybeInt32;");
-        assert source.indexOf("import protobuf.MaybeBoolean;");
-
         // class declaration
         assert source.indexOf("class Person");
-        assert source.indexOf("extends AbstractMessage");
+        assert source.indexOf("extends protobuf.AbstractMessage");
 
-        // fields with Maybe types
-        assert source.indexOf("MaybeString name = Unset");
-        assert source.indexOf("MaybeInt32 id = Unset");
-        assert source.indexOf("MaybeBoolean active = Unset");
+        // presence bitmask field
+        assert source.indexOf("private Int presentBits_0 = 0");
+
+        // private backing fields with protobuf defaults
+        assert source.indexOf("private String _name = \"\"");
+        assert source.indexOf("private Int32 _id = 0");
+        assert source.indexOf("private Boolean _active = False");
+
+        // virtual property with presence tracking setter
+        assert source.indexOf("String name {");
+        assert source.indexOf("presentBits_0 |= 0x01");
 
         // parseField
         assert source.indexOf("input.readString()");
         assert source.indexOf("input.readInt32()");
         assert source.indexOf("input.readBool()");
 
-        // writeKnownFields with .is() checks
-        assert source.indexOf("name.is(String)");
-        assert source.indexOf("id.is(Int32)");
-        assert source.indexOf("active.is(Boolean)");
+        // writeKnownFields with presence bit checks
+        assert source.indexOf("presentBits_0 & 0x01 != 0");
+        assert source.indexOf("presentBits_0 & 0x02 != 0");
+        assert source.indexOf("presentBits_0 & 0x04 != 0");
 
         // knownFieldsSize
         assert source.indexOf("computeStringSize(1, name)");
@@ -88,7 +90,7 @@ class ProtoCodeGenTest {
         assert files.size == 1;
         assert String source := files.get("Status.x");
         assert source.indexOf("enum Status");
-        assert source.indexOf("implements ProtoEnum");
+        assert source.indexOf("implements protobuf.ProtoEnum");
         assert source.indexOf("Unknown(0)");
         assert source.indexOf("Active(1)");
         assert source.indexOf("Inactive(2)");
@@ -126,21 +128,19 @@ class ProtoCodeGenTest {
                                              );
         assert String source := files.get("Result.x");
 
-        // oneof field
-        assert source.indexOf("Oneof value = new Oneof()");
+        // oneof typedef
+        assert source.indexOf("typedef String | Int32 as ValueType");
 
-        // typed accessors
-        assert source.indexOf("conditional String getName()");
-        assert source.indexOf("void setName(String value)");
-        assert source.indexOf("conditional Int32 getCode()");
-        assert source.indexOf("void setCode(Int32 value)");
+        // oneof field declaration
+        assert source.indexOf("ValueType? value = Null");
 
-        // parseField uses oneof.set
-        assert source.indexOf("value.set(2, input.readString())");
-        assert source.indexOf("value.set(3, input.readInt32())");
+        // parseField assigns directly
+        assert source.indexOf("value = input.readString()");
+        assert source.indexOf("value = input.readInt32()");
 
-        // writeKnownFields uses switch
-        assert source.indexOf("switch (value.activeFieldNumber)");
+        // writeKnownFields uses is checks
+        assert source.indexOf("value.is(String)");
+        assert source.indexOf("value.is(Int32)");
     }
 
     // ----- nested message ------------------------------------------------------------------------
@@ -161,11 +161,8 @@ class ProtoCodeGenTest {
         // nested message as static class
         assert source.indexOf("static class Inner");
 
-        // typedef for inner message presence
-        assert source.indexOf("typedef Presence | Inner as MaybeInner");
-
-        // field uses Maybe type
-        assert source.indexOf("MaybeInner inner = Unset");
+        // field uses nullable type
+        assert source.indexOf("Inner? inner = Null");
     }
 
     // ----- service generation --------------------------------------------------------------------
@@ -232,7 +229,7 @@ class ProtoCodeGenTest {
         assert String source := files.get("Msg.x");
 
         // parseField should use ProtoEnum.byProtoValue, not raw readEnum
-        assert source.indexOf("ProtoEnum.byProtoValue(Color.values, input.readEnum())");
+        assert source.indexOf("protobuf.ProtoEnum.byProtoValue(Color.values, input.readEnum())");
         assert source.indexOf("color = v");
     }
 
@@ -253,7 +250,7 @@ class ProtoCodeGenTest {
         assert source.indexOf("Array<Color> colors");
 
         // parseField should convert packed varints to enum values
-        assert source.indexOf("ProtoEnum.byProtoValue(Color.values");
+        assert source.indexOf("protobuf.ProtoEnum.byProtoValue(Color.values");
 
         // writeKnownFields should use writeEnum per element
         assert source.indexOf("out.writeEnum(1, v)");
@@ -275,10 +272,8 @@ class ProtoCodeGenTest {
                                               |}
                                              );
         assert String source := files.get("Outer.x");
-        assert source.indexOf("import protobuf.Presence;");
-        assert source.indexOf("typedef Presence | Inner as MaybeInner");
-        assert source.indexOf("MaybeInner nested = Unset");
-        assert source.indexOf("nested.is(Inner)");
+        assert source.indexOf("Inner? nested = Null");
+        assert source.indexOf("nested != Null");
         assert source.indexOf("writeMessage(1, nested)");
     }
 
@@ -294,7 +289,7 @@ class ProtoCodeGenTest {
                                              );
         assert String source := files.get("Msg.x");
         assert source.indexOf("construct(Msg other)");
-        assert source.indexOf("construct AbstractMessage(other)");
+        assert source.indexOf("construct protobuf.AbstractMessage(other)");
         assert source.indexOf("name = other.name");
         assert source.indexOf("ids = other.ids.duplicate()");
     }
@@ -332,9 +327,11 @@ class ProtoCodeGenTest {
                                              );
         assert String source := files.get("Msg.x");
 
-        // field names should have underscore appended
-        assert source.indexOf("MaybeString class_ = Unset");
-        assert source.indexOf("MaybeInt32 import_ = Unset");
+        // field names should have underscore appended, with private backing fields
+        assert source.indexOf("private String _class_ = \"\"");
+        assert source.indexOf("private Int32 _import_ = 0");
+        assert source.indexOf("String class_ {");
+        assert source.indexOf("Int32 import_ {");
     }
 
     // ----- empty message --------------------------------------------------------------------
@@ -348,13 +345,13 @@ class ProtoCodeGenTest {
 
         // parseField should just return False, no switch
         assert source.indexOf("return False;");
-        assert !source.indexOf("switch (WireType");
+        assert !source.indexOf("switch (protobuf.WireType");
     }
 
-    // ----- dotted type name in typedef -------------------------------------------------------
+    // ----- dotted type name as nullable ---------------------------------------------------------
 
     @Test
-    void shouldSanitizeDottedTypedefName() {
+    void shouldGenerateNullableDottedTypeName() {
         Map<String, String> files = generate($|syntax = "proto3";
                                               |message Msg \{
                                               |  google.protobuf.Timestamp ts = 1;
@@ -362,8 +359,8 @@ class ProtoCodeGenTest {
                                              );
         assert String source := files.get("Msg.x");
 
-        // typedef alias should use underscores instead of dots
-        assert source.indexOf("as Maybegoogle_protobuf_Timestamp");
+        // dotted message type should be nullable
+        assert source.indexOf("google.protobuf.Timestamp? ts = Null");
     }
 
     // ----- no Array import -------------------------------------------------------------------
@@ -397,10 +394,12 @@ class ProtoCodeGenTest {
                                              );
         assert String source := files.get("Outer.x");
 
-        // Presence is needed for the Outer.inner typedef
-        assert source.indexOf("import protobuf.Presence;");
-        // MaybeInt32 is needed by the nested Inner message
-        assert source.indexOf("import protobuf.MaybeInt32;");
+        // no Presence or Maybe imports needed
+        assert !source.indexOf("import protobuf.Presence;");
+        assert !source.indexOf("MaybeInt32");
+
+        // nullable message field
+        assert source.indexOf("Inner? inner = Null");
     }
 
     // ----- dotted enum reference ---------------------------------------------------------------
@@ -421,7 +420,7 @@ class ProtoCodeGenTest {
         assert String source := files.get("Outer.x");
 
         // parseField should use ProtoEnum.byProtoValue, not mergeFrom
-        assert source.indexOf("ProtoEnum.byProtoValue(");
+        assert source.indexOf("protobuf.ProtoEnum.byProtoValue(");
         assert source.indexOf("input.readEnum()");
         assert !source.indexOf("mergeFrom");
 
