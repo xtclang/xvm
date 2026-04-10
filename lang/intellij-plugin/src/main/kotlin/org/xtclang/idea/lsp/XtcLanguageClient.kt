@@ -1,8 +1,8 @@
 package org.xtclang.idea.lsp
 
+import com.intellij.application.options.CodeStyle
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
-import com.intellij.psi.codeStyle.CodeStyleSettingsManager
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import org.eclipse.lsp4j.ConfigurationItem
 import org.eclipse.lsp4j.ConfigurationParams
@@ -52,11 +52,8 @@ class XtcLanguageClient(
             }
         }
 
-    @Suppress("deprecation") // currentSettings is the correct fallback when no project-level code style exists
     private fun readFormattingSettings(): Map<String, Any> {
-        val settings =
-            CodeStyleSettingsManager.getInstance(project).mainProjectCodeStyle
-                ?: CodeStyleSettingsManager.getInstance(project).currentSettings
+        val settings = CodeStyle.getProjectOrDefaultSettings(project)
         val commonSettings = settings.getCommonSettings(XtcIntelliJLanguage)
         val indentOptions = commonSettings.indentOptions
 

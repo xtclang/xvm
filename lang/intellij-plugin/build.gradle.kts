@@ -1,5 +1,13 @@
+import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.TaskAction
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import java.io.File
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 plugins {
     alias(libs.plugins.xdk.build.properties)
@@ -14,6 +22,30 @@ val releaseChannel: String = xdkProperties.stringValue("xdk.intellij.release.cha
 
 // Publishing is disabled by default. Enable with: ./gradlew publishPlugin -PenablePublish=true
 val enablePublish = providers.gradleProperty("enablePublish").map { it.toBoolean() }.getOrElse(false)
+val enablePublishProvider = providers.gradleProperty("enablePublish").map { it.toBoolean() }.orElse(false)
+val xdkVersionProvider = providers.provider { project.version.toString() }
+val releaseChannelProvider = xdkProperties.string("xdk.intellij.release.channel", "alpha")
+// NOTE: For CI, this token is also stored as the xtclang GitHub organization Actions secret
+// named JETBRAINS_TOKEN. xdkProperties resolves that env var via the local key "jetbrains.token".
+val jetbrainsTokenProvider = xdkProperties.string("jetbrains.token", "")
+val jetbrainsPublishSuffixOverrideProvider = xdkProperties.string("jetbrains.publish.suffix", "")
+val utcPublishTimestamp: String =
+    DateTimeFormatter
+        .ofPattern("yyyyMMddHHmmss")
+        .withZone(ZoneOffset.UTC)
+        .format(Instant.now())
+val jetbrainsPublishVersionProvider =
+    providers.provider {
+        val baseVersion = xdkVersionProvider.get()
+        val publishEnabled = enablePublishProvider.get()
+        if (!publishEnabled || !baseVersion.endsWith("-SNAPSHOT")) {
+            return@provider baseVersion
+        }
+        val suffix = jetbrainsPublishSuffixOverrideProvider.get().ifBlank { utcPublishTimestamp }
+        "$baseVersion.$suffix"
+    }
+val usesGeneratedJetBrainsPublishSuffix: Boolean =
+    enablePublish && xdkVersion.endsWith("-SNAPSHOT") && jetbrainsPublishSuffixOverrideProvider.get().isBlank()
 
 // Log level: -Plog=DEBUG or XTC_LOG_LEVEL=DEBUG (default: INFO)
 // Propagated to the IDE JVM as a system property and environment variable, so the
@@ -29,6 +61,66 @@ val logLevel: String =
 // Run the branch's full editor path by default: LSP semantic tokens on.
 // Override with -Pxtc.intellij.semanticTokens=false when debugging TextMate-only behavior.
 val ideLspSemanticTokens: String = xdkProperties.stringValue("xtc.intellij.semanticTokens", "true")
+
+abstract class PublishCheckTask : DefaultTask() {
+    @get:Input
+    abstract val publishEnabled: Property<Boolean>
+
+    @get:Input
+    abstract val xdkVersion: Property<String>
+
+    @get:Input
+    abstract val releaseChannel: Property<String>
+
+    @get:Input
+    abstract val jetbrainsTokenPresent: Property<Boolean>
+
+    @get:Input
+    abstract val publishVersion: Property<String>
+
+    @TaskAction
+    fun validate() {
+        if (publishEnabled.get()) {
+            if (!jetbrainsTokenPresent.get()) {
+                throw GradleException(
+                    """
+                    |JetBrains Marketplace token missing.
+                    |
+                    |Set one of:
+                    |  jetbrains.token=perm:...
+                    |  JETBRAINS_TOKEN=perm:...
+                    |
+                    |Base version: ${xdkVersion.get()}
+                    |Publish version: ${publishVersion.get()}
+                    |Release channel: ${releaseChannel.get()}
+                    """.trimMargin(),
+                )
+            }
+            return
+        }
+
+        throw GradleException(
+            """
+            |Publishing is disabled by default.
+            |To publish the plugin, run:
+            |  ./gradlew publishPlugin -PenablePublish=true
+            |
+            |Base version: ${xdkVersion.get()}
+            |Publish version: ${publishVersion.get()}
+            |Release channel: ${releaseChannel.get()}
+            |
+            |Required credential sources:
+            |  jetbrains.token=perm:...    (recommended in ~/.gradle/gradle.properties)
+            |  JETBRAINS_TOKEN=perm:...    (CI / environment variable)
+            |
+            |Optional (for signed releases):
+            |  JETBRAINS_CERTIFICATE_CHAIN - Base64-encoded certificate chain
+            |  JETBRAINS_PRIVATE_KEY - Base64-encoded private key
+            |  JETBRAINS_PRIVATE_KEY_PASSWORD - Private key password
+            """.trimMargin(),
+        )
+    }
+}
 
 // =============================================================================
 // IntelliJ IDE Resolution
@@ -95,6 +187,10 @@ val syncGradleWrapperResources by tasks.registering(Copy::class) {
 sourceSets.main {
     java.srcDir(syncedJavaSourceDir)
     resources.srcDir(syncedResourcesDir)
+    // TODO: Re-enable org/xtclang/idea/dap/** once DAP is implemented and user-visible.
+    // Exclude it from the published plugin for now so Plugin Verifier does not report
+    // experimental LSP4IJ DAP APIs that users cannot currently access.
+    kotlin.exclude("org/xtclang/idea/dap/**")
 }
 
 val compileJava by tasks.existing {
@@ -256,7 +352,7 @@ intellijPlatform {
     pluginConfiguration {
         id = "org.xtclang.idea"
         name = "XTC Language Support"
-        version = project.version.toString()
+        version = jetbrainsPublishVersionProvider.get()
 
         ideaVersion {
             sinceBuild = intellijSinceBuild
@@ -283,39 +379,25 @@ intellijPlatform {
     }
 
     publishing {
-        token = providers.environmentVariable("JETBRAINS_TOKEN")
+        token = jetbrainsTokenProvider
         channels = listOf(releaseChannel)
     }
 }
 
-val publishCheck by tasks.registering {
-    doFirst {
-        if (!enablePublish) {
-            throw GradleException(
-                """
-                |Publishing is disabled by default.
-                |To publish the plugin, run:
-                |  ./gradlew publishPlugin -PenablePublish=true
-                |
-                |Current version: $xdkVersion
-                |Release channel: $releaseChannel
-                |
-                |Required environment variables:
-                |  JETBRAINS_TOKEN - Your JetBrains Marketplace token
-                |
-                |Optional (for signed releases):
-                |  JETBRAINS_CERTIFICATE_CHAIN - Base64-encoded certificate chain
-                |  JETBRAINS_PRIVATE_KEY - Base64-encoded private key
-                |  JETBRAINS_PRIVATE_KEY_PASSWORD - Private key password
-                """.trimMargin(),
-            )
-        }
-    }
+val publishCheck by tasks.registering(PublishCheckTask::class) {
+    publishEnabled.set(enablePublishProvider)
+    xdkVersion.set(xdkVersionProvider)
+    releaseChannel.set(releaseChannelProvider)
+    jetbrainsTokenPresent.set(jetbrainsTokenProvider.map { it.isNotBlank() })
+    publishVersion.set(jetbrainsPublishVersionProvider)
 }
 
 val publishPlugin by tasks.existing {
     enabled = enablePublish
     dependsOn(publishCheck)
+    if (usesGeneratedJetBrainsPublishSuffix) {
+        notCompatibleWithConfigurationCache("JetBrains snapshot publish version uses a generated UTC timestamp suffix for uniqueness.")
+    }
 }
 
 // Searchable options allow IntelliJ's Settings search (Cmd+Shift+A / Ctrl+Shift+A) to index

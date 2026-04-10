@@ -1,7 +1,7 @@
 package org.xtclang.idea.editor
 
 import com.intellij.codeInsight.editorActions.enter.EnterHandlerDelegate
-import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -66,7 +66,7 @@ class XtcEditorStartupActivity : ProjectActivity {
         val fileEditorManager = FileEditorManager.getInstance(project)
         val virtualFile = fileEditorManager.openFiles.firstOrNull { it.path == filePath } ?: return
         val psiFile =
-            ReadAction.compute<com.intellij.psi.PsiFile?, RuntimeException> {
+            ApplicationManager.getApplication().runReadAction<com.intellij.psi.PsiFile?> {
                 PsiManager.getInstance(project).findFile(virtualFile)
             }
         val fileType = virtualFile.fileType
