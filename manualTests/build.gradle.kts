@@ -11,13 +11,8 @@ tasks.withType<XtcRunTask>().configureEach {
         // Keep CI console output focused on Gradle/task status and plugin success/failure summaries.
         // Capture bulk module stdout per task to build/logs/<task>-stdout.log while still leaving stderr
         // attached for failures. Also disable task-level verbose launcher chatter in CI.
-        //
-        // TODO: Keep runParallel live on stdout in CI for now. When the interpreter/runner failure
-        // paths are stable enough, we should be able to redirect it again like the other tasks.
         verbose = false
-        if (name != "runParallel") {
-            stdoutPath(layout.buildDirectory.file("logs/${name}-stdout.log"))
-        }
+        stdoutPath(layout.buildDirectory.file("logs/${name}-stdout.log"))
     }
 }
 
