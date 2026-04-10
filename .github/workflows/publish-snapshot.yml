@@ -5,6 +5,7 @@
 # - GitHub Packages (Maven artifacts)
 # - Maven Central Snapshots
 # - GitHub Releases (XDK snapshot release)
+# - GitHub Releases (optional IntelliJ plugin snapshot ZIP)
 #
 # Triggered by verify_commit workflow when:
 # - Running on master branch (automatic)
@@ -26,6 +27,17 @@ on:
             ci-run-id:
                 description: 'CI run ID to download artifact from (leave empty to skip artifact download)'
                 required: false
+            publish-xdk-snapshots:
+                description: 'Publish Maven and XDK GitHub snapshot artifacts'
+                required: false
+                default: 'true'
+            publish-intellij-plugin:
+                description: 'Also build and publish the IntelliJ plugin snapshot ZIP'
+                required: false
+                default: 'false'
+            extra-gradle-options:
+                description: 'Extra Gradle options to pass to the publish steps'
+                required: false
 
 # Concurrency settings: ensure only one publish runs at a time to avoid upload conflicts
 # Queue multiple triggers instead of cancelling in-progress uploads
@@ -36,6 +48,7 @@ concurrency:
 jobs:
     publish-snapshots:
         name: Publish snapshot artifacts
+        if: ${{ github.event.inputs.publish-xdk-snapshots != 'false' }}
         runs-on: ubuntu-latest
 
         steps:
@@ -191,3 +204,188 @@ jobs:
                   echo "- XDK distribution" >> $GITHUB_STEP_SUMMARY
                   echo "- javatools JAR" >> $GITHUB_STEP_SUMMARY
                   echo "- Gradle plugin" >> $GITHUB_STEP_SUMMARY
+
+    publish-intellij-plugin-snapshot:
+        name: Publish IntelliJ plugin snapshot
+        if: ${{ github.event.inputs.publish-intellij-plugin == 'true' }}
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Determine ref to build
+              id: commit
+              shell: bash
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  if [ -n "${{ github.event.inputs.ci-run-id }}" ]; then
+                      RUN_ID="${{ github.event.inputs.ci-run-id }}"
+                      GH_COMMIT=$(gh api /repos/${{ github.repository }}/actions/runs/$RUN_ID --jq '.head_sha')
+                      echo "📌 Using CI run from input: $RUN_ID (commit: $GH_COMMIT)"
+                  else
+                      GH_COMMIT="${{ github.sha }}"
+                      echo "📌 Manual trigger - commit: $GH_COMMIT"
+                  fi
+                  echo "commit=$GH_COMMIT" >> $GITHUB_OUTPUT
+
+            - name: Fetch Sources
+              uses: actions/checkout@v6
+              with:
+                  ref: ${{ steps.commit.outputs.commit }}
+                  fetch-depth: 1
+                  show-progress: true
+
+            - name: Setup XVM Project
+              id: versions
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: true
+                  cache-read-only: false
+                  enable-debug: false
+
+            - name: Validate snapshot version
+              shell: bash
+              run: |
+                  VERSION="${{ steps.versions.outputs.xdk-version }}"
+                  if [[ "$VERSION" != *-SNAPSHOT ]]; then
+                      echo "❌ ERROR: Cannot publish IntelliJ plugin snapshot for non-SNAPSHOT version"
+                      echo "Current version: $VERSION"
+                      exit 1
+                  fi
+                  echo "✅ Validated snapshot version: $VERSION"
+
+            - name: Compute IntelliJ publish version suffix
+              id: publish-version
+              shell: bash
+              run: |
+                  SUFFIX=$(date -u +%Y%m%d%H%M%S)
+                  BASE_VERSION="${{ steps.versions.outputs.xdk-version }}"
+                  PUBLISH_VERSION="${BASE_VERSION}.${SUFFIX}"
+                  echo "suffix=$SUFFIX" >> $GITHUB_OUTPUT
+                  echo "publish-version=$PUBLISH_VERSION" >> $GITHUB_OUTPUT
+                  echo "🔖 IntelliJ Marketplace publish version: $PUBLISH_VERSION"
+
+            - name: Build IntelliJ plugin ZIP
+              shell: bash
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }} ${{ github.event.inputs.extra-gradle-options }}"
+                  PUBLISH_SUFFIX="${{ steps.publish-version.outputs.suffix }}"
+
+                  echo "🔌 Building installable IntelliJ plugin ZIP..."
+                  ./gradlew $GRADLE_OPTIONS \
+                    -PincludeBuildLang=true \
+                    -PincludeBuildAttachLang=true \
+                    -PenablePublish=true \
+                    -Pjetbrains.publish.suffix=$PUBLISH_SUFFIX \
+                    -Plsp.buildSearchableOptions=true \
+                    :lang:intellij-plugin:buildSearchableOptions \
+                    :lang:intellij-plugin:buildPlugin \
+                    :lang:intellij-plugin:verifyPlugin
+
+                  cd lang/intellij-plugin/build/distributions
+                  ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -1)
+                  if [ -z "$ZIP_FILE" ]; then
+                      echo "❌ ERROR: No IntelliJ plugin ZIP found after build"
+                      ls -la
+                      exit 1
+                  fi
+                  shasum -a 256 "$ZIP_FILE" > SHA256SUMS.txt
+                  cat SHA256SUMS.txt
+
+            - name: Publish IntelliJ plugin to JetBrains Marketplace alpha
+              shell: bash
+              env:
+                  JETBRAINS_TOKEN: ${{ secrets.JETBRAINS_TOKEN }}
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }} ${{ github.event.inputs.extra-gradle-options }}"
+                  PUBLISH_SUFFIX="${{ steps.publish-version.outputs.suffix }}"
+
+                  echo "🚀 Publishing IntelliJ plugin to JetBrains Marketplace alpha..."
+                  ./gradlew $GRADLE_OPTIONS \
+                    -PincludeBuildLang=true \
+                    -PincludeBuildAttachLang=true \
+                    -PenablePublish=true \
+                    -Pjetbrains.publish.suffix=$PUBLISH_SUFFIX \
+                    -Plsp.buildSearchableOptions=true \
+                    :lang:intellij-plugin:publishPlugin
+
+            - name: Prepare release assets
+              id: prepare
+              shell: bash
+              run: |
+                  VERSION="${{ steps.publish-version.outputs.publish-version }}"
+                  DIST_DIR="lang/intellij-plugin/build/distributions"
+                  PLUGIN_ZIP=$(find "$DIST_DIR" -maxdepth 1 -name "*.zip" | head -1)
+                  PUBLIC_ZIP="xtc-intellij-plugin-${VERSION}.zip"
+                  PUBLIC_SUMS="${PUBLIC_ZIP}.sha256"
+
+                  cp "$PLUGIN_ZIP" "$PUBLIC_ZIP"
+                  awk '{print $1}' "$DIST_DIR/SHA256SUMS.txt" | {
+                      read -r SUM
+                      printf "%s  %s\n" "$SUM" "$PUBLIC_ZIP" > "$PUBLIC_SUMS"
+                  }
+
+                  echo "asset-name=$PUBLIC_ZIP" >> $GITHUB_OUTPUT
+                  echo "checksum-name=$PUBLIC_SUMS" >> $GITHUB_OUTPUT
+
+                  echo "📦 Prepared release assets:"
+                  ls -lh "$PUBLIC_ZIP" "$PUBLIC_SUMS"
+
+            - name: Publish IntelliJ plugin snapshot release
+              shell: bash
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  RELEASE_TAG="intellij-plugin-snapshots"
+                  VERSION="${{ steps.versions.outputs.xdk-version }}"
+                  COMMIT="${{ steps.commit.outputs.commit }}"
+                  ASSET_NAME="${{ steps.prepare.outputs.asset-name }}"
+                  CHECKSUM_NAME="${{ steps.prepare.outputs.checksum-name }}"
+                  BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+                  RELEASE_NOTES="**Automated IntelliJ plugin snapshot builds**
+
+                  Latest snapshot version: **${VERSION}**
+                  Build commit: \`${COMMIT}\`
+                  Build date: ${BUILD_DATE}
+
+                  Install in IntelliJ IDEA via Settings -> Plugins -> gear icon -> Install Plugin from Disk...
+
+                  Download the \`${ASSET_NAME}\` asset below."
+
+                  echo "📥 Publishing IntelliJ plugin snapshot to: $RELEASE_TAG"
+
+                  if gh release view "$RELEASE_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+                      echo "Updating existing IntelliJ plugin snapshot release..."
+                      gh release delete "$RELEASE_TAG" --yes --repo "${{ github.repository }}" --cleanup-tag
+                  fi
+
+                  gh release create "$RELEASE_TAG" \
+                      "$ASSET_NAME" \
+                      "$CHECKSUM_NAME" \
+                      --repo "${{ github.repository }}" \
+                      --title "XTC IntelliJ Plugin Snapshots" \
+                      --notes "$RELEASE_NOTES" \
+                      --prerelease \
+                      --latest=false \
+                      --target "$COMMIT"
+
+                  echo "✅ IntelliJ plugin snapshot published"
+
+            - name: Summary
+              if: success()
+              shell: bash
+              run: |
+                  echo "### ✅ IntelliJ Plugin Snapshot Published" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Base version:** ${{ steps.versions.outputs.xdk-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Published version:** ${{ steps.publish-version.outputs.publish-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Commit:** ${{ steps.commit.outputs.commit }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Release tag:** intellij-plugin-snapshots" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Marketplace channel:** alpha" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Assets:**" >> $GITHUB_STEP_SUMMARY
+                  echo "- \`${{ steps.prepare.outputs.asset-name }}\`" >> $GITHUB_STEP_SUMMARY
+                  echo "- \`${{ steps.prepare.outputs.checksum-name }}\`" >> $GITHUB_STEP_SUMMARY

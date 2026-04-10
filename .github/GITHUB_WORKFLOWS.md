@@ -44,10 +44,10 @@ The XVM CI/CD pipeline follows a clear separation between internal build artifac
         ┌───────────────────┼───────────────────┐
         │                   │                   │
         ▼                   ▼                   ▼
-┌──────────────┐   ┌──────────────┐   ┌──────────────────┐
-│publish-docker│   │homebrew      │   │publish-snapshot  │
-│.yml          │   │-update.yml   │   │.yml              │
-├──────────────┤   ├──────────────┤   ├──────────────────┤
+┌──────────────┐   ┌──────────────┐   ┌──────────────────────────────────────┐
+│publish-docker│   │homebrew      │   │publish-snapshot.yml                  │
+│.yml          │   │-update.yml   │   │(XDK snapshots + optional IntelliJ    │
+├──────────────┤   ├──────────────┤   │ plugin ZIP snapshot)                 │
 │Receive       │   │Receive       │   │Receive           │
 │ci-run-id     │   │ci-run-id     │   │ci-run-id         │
 │              │   │              │   │                  │
@@ -59,10 +59,10 @@ The XVM CI/CD pipeline follows a clear separation between internal build artifac
 │images        │   │formula       │   │snapshots         │
 │              │   │              │   │                  │
 │Push to GHCR  │   │Push to tap   │   │Publish GitHub    │
-│              │   │              │   │Release           │
-└──────────────┘   └──────────────┘   └──────────────────┘
+│              │   │              │   │Release and optional plugin ZIP       │
+└──────────────┘   └──────────────┘   └──────────────────────────────────────┘
      multi-arch         xdk-latest         xdk-snapshots
-     amd64/arm64        .rb formula        .zip release
+     amd64/arm64        .rb formula        .zip release + optional intellij-plugin-snapshots
 ```
 
 ### Flow Summary
@@ -76,7 +76,7 @@ The XVM CI/CD pipeline follows a clear separation between internal build artifac
    - `commit.yml` directly triggers workflows via `gh workflow run --field ci-run-id=...`
    - `publish-docker.yml` - Builds multi-platform Docker images
    - `homebrew-update.yml` - Updates Homebrew tap formula
-   - `publish-snapshot.yml` - Publishes Maven + GitHub snapshot release
+   - `publish-snapshot.yml` - Publishes Maven + GitHub snapshot release, and can optionally publish an installable IntelliJ plugin ZIP snapshot
    - Each workflow receives `ci-run-id` to download artifacts from CI run
 
 3. **Manual Release** (two-phase process):
@@ -210,9 +210,10 @@ All workflows support `workflow_dispatch` for manual testing from any branch.
 5. Generate summary
 
 **Manual Trigger Inputs**:
-- `publish-snapshots`: Trigger publishing workflows after build (default: false)
-  - Set `true` to test full publishing pipeline on non-master branches
-  - Publishing workflows: snapshot, docker, homebrew
+- `publish-snapshots`: Trigger snapshot, Docker, and Homebrew publishing after build (default: false)
+  - Set `true` to test the existing snapshot publication pipeline on non-master branches
+- `publish-intellij-plugin`: Trigger IntelliJ plugin snapshot publication after build (default: false)
+  - Requires `include-lang=true` on manual runs
 - `platforms`: Run on specific platform(s) or all
   - Options: `ubuntu-latest`, `windows-latest`, `all`
   - Default: `ubuntu-latest`
