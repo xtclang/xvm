@@ -1,6 +1,8 @@
 package org.xtclang.ecstasy.text;
 
+import org.xtclang.ecstasy.Comparable;
 import org.xtclang.ecstasy.Exception;
+import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.nConst;
 import org.xtclang.ecstasy.nType;
 
@@ -366,6 +368,31 @@ public class String
             }
         }
         return next == null ? buf : next.toStringContinued(buf);
+    }
+
+    // ----- Orderable interface -------------------------------------------------------------------
+
+    /**
+     * The primitive implementation of:
+     *
+     * static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
+     */
+    public static Ordered compare(Ctx ctx, nType type, String value1, String value2) {
+        // ToDo Optimize???
+        int i = value1.toString().compareTo(value2.toString());
+        return i < 0 ? Ordered.Lesser.$INSTANCE
+                     : i == 0 ? Ordered.Equal.$INSTANCE
+                     : Ordered.Greater.$INSTANCE;
+    }
+
+    /**
+     * The primitive implementation of:
+     *
+     *  static <CompileType extends String> Boolean equals(CompileType value1, CompileType value2);
+     */
+    public static Boolean equals(Ctx ctx, nType type, Comparable value1, Comparable value2) {
+        return String.equals$p(ctx, type, (String) value1, (String) value2)
+                ? Boolean.TRUE : Boolean.FALSE;
     }
 
     // ----- xObj internal -------------------------------------------------------------------------

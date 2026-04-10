@@ -4,6 +4,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
+
 import java.util.List;
 
 import org.xvm.asm.Argument;
@@ -12,13 +15,24 @@ import org.xvm.asm.Op;
 import org.xvm.asm.OpJump;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.ArrayConstant;
+import org.xvm.asm.constants.MatchAnyConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
+import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.RegisterInfo;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
+
+import static org.xvm.javajit.Builder.CD_TypeConstant;
+import static org.xvm.javajit.Builder.MD_TypeIsA;
+import static org.xvm.javajit.Builder.MD_xvmType;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
@@ -277,6 +291,152 @@ public abstract class OpSwitch
             bctx.typeMatrix.follow(nAddrThis, nAddrThis + ofCase, -1);
         }
         bctx.typeMatrix.follow(nAddrThis, nAddrThis + m_ofDefault, -1);
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    protected void buildIfLadder(BuildContext bctx, CodeBuilder code, RegisterInfo... regArgs) {
+        assert regArgs.length != 0;
+
+        int[] aofCase   = m_aofCase;
+        int   cRows     = aofCase.length;
+        int   nThis     = getAddress();
+        Label labelDflt = bctx.ensureLabel(code, nThis + m_ofDefault);
+        Label rowLabel  = code.newLabel();
+
+        for (int iRow = 0; iRow < cRows; iRow++) {
+            Label    label    = bctx.ensureLabel(code, nThis + aofCase[iRow]);
+            Constant constant = bctx.getConstant(m_anConstCase[iRow]);
+            if (constant instanceof ArrayConstant array) {
+                Constant[] caseConsts = array.getValue();
+                assert caseConsts.length == regArgs.length;
+
+                Label colLabel = code.newLabel();
+                int   numCases = caseConsts.length - 1;
+                for (int column = 0; column <= numCases; column++) {
+                    if (caseConsts[column] instanceof MatchAnyConstant) {
+                        if (column == numCases) {
+                            code.goto_(label);
+                        }
+                        continue;
+                    }
+                    Label jmp = column == numCases ? label : colLabel;
+                    buildSwitchCase(bctx, code, regArgs[column], caseConsts[column], jmp);
+                    code.goto_(rowLabel)
+                        .labelBinding(colLabel);
+                    colLabel = code.newLabel();
+                }
+                code.labelBinding(rowLabel);
+                rowLabel = code.newLabel();
+            } else {
+                assert regArgs.length == 1;
+                buildSwitchCase(bctx, code, regArgs[0], constant, label);
+            }
+        }
+        code.goto_(labelDflt);
+    }
+
+    /**
+     * Build the check for a specific case
+     *
+     * @param bctx     the current build context
+     * @param code      the CodeBuilder
+     * @param reg       the register referencing the value being switched on
+     * @param constant  the constant for this case test
+     * @param label     the label to jump to if the case is matched
+     */
+    private static void buildSwitchCase(BuildContext bctx, CodeBuilder code, RegisterInfo reg,
+                                        Constant constant, Label label) {
+        TypeConstant type = reg.type();
+        if (constant.getType().isOnlyNullable()) {
+            // case argument is Null, reg must be a nullable type, so just build a Null check
+            if (type.isNullable()) {
+                // only build a null check if the type is nullable
+                // the type may not be nullable if we already built the null check
+                // (e.g. in JumpVal)
+                Builder.pop(code, reg.cd());
+                Builder.checkNull(code, reg, label);
+            }
+        } else {
+            Label isNull = null;
+            if (reg.type().isNullable()) {
+                // the type is nullable, but this case is not Null, so we first need a Null check
+                // then a narrow. If the value is Null, we will jump over the rest of this case
+                // check as it will never match.
+                Builder.pop(code, reg.cd());
+                isNull = code.newLabel();
+                Builder.checkNull(code, reg, isNull);
+                // now narrow the register for the rest of the case check
+                reg = bctx.narrowRegister(code, reg, type.removeNullable());
+                reg.load(code);
+            }
+
+            switch (constant) {
+                case RangeConstant range -> buildRangeCase(bctx, code, reg, range, label);
+                case ParameterizedTypeConstant typeConst ->
+                        buildTypeCase(bctx, code, reg, typeConst, label);
+                default -> reg.type().buildCompare(bctx, code, OP_IS_EQ, reg, constant, label);
+            }
+
+            if (isNull != null) {
+                // we did a null check so bind the label here
+                code.labelBinding(isNull);
+            }
+        }
+    }
+
+    /**
+     * Build the check for a range case: 1..10
+     *
+     * @param bctx   the current build context
+     * @param code   the CodeBuilder
+     * @param reg    the register referencing the value being switched on
+     * @param range  the {@link RangeConstant} for this case test
+     * @param label  the label to jump to if the case is matched
+     */
+    protected static void buildRangeCase(BuildContext bctx, CodeBuilder code, RegisterInfo reg,
+            RangeConstant range, Label label) {
+
+        TypeConstant type       = reg.type();
+        Constant     first      = range.getFirst();
+        Constant     last       = range.getLast();
+        Label        rangeLabel = code.newLabel();
+        int          nOpFirst   = range.isFirstExcluded() ? OP_IS_LTE : OP_IS_LT;
+        int          nOpLast    = range.isFirstExcluded() ? OP_IS_LT : OP_IS_LTE;
+        type.buildCompare(bctx, code, nOpFirst, reg, first, rangeLabel);
+        type.buildCompare(bctx, code, nOpLast, reg, last, label);
+        code.labelBinding(rangeLabel);
+    }
+
+    /**
+     * Build the check for a type case: o.is(_)
+     *
+     * @param bctx       the current build context
+     * @param code       the CodeBuilder
+     * @param reg        the register referencing the value being switched on
+     * @param typeConst  the {@link ParameterizedTypeConstant} for this case test
+     * @param label      the label to jump to if the case is matched
+     */
+    protected static void buildTypeCase(BuildContext bctx, CodeBuilder code, RegisterInfo reg,
+            TypeConstant typeConst, Label label) {
+
+        assert typeConst.isTypeOfType();
+        typeConst = typeConst.getParamType(0);
+
+        TypeConstant type = reg.type();
+        if (type.isJavaPrimitive()) {
+            // we can statically compute the result
+            if (type.isA(typeConst)) {
+                code.ifne(label);
+            }
+        } else {
+            reg.load(code);
+            bctx.loadCtx(code);
+            code.invokevirtual(reg.cd(), "$xvmType", MD_xvmType);
+            bctx.loadTypeConstant(code, typeConst);
+            code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
+            code.ifne(label);
+        }
     }
 
     // ----- fields and enums ----------------------------------------------------------------------

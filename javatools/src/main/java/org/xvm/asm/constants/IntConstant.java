@@ -66,6 +66,10 @@ public class IntConstant
         int     cBytes;
         boolean fUnsigned;
         switch (format) {
+        case Int8:
+            cBytes    = 1;
+            fUnsigned = false;
+            break;
         case Int16:
             cBytes    = 2;
             fUnsigned = false;
@@ -88,6 +92,10 @@ public class IntConstant
             fUnsigned = false;
             break;
 
+        case UInt8:
+            cBytes    = 1;
+            fUnsigned = true;
+            break;
         case UInt16:
             cBytes    = 2;
             fUnsigned = true;

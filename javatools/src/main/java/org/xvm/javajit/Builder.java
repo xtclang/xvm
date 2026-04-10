@@ -770,7 +770,7 @@ public abstract class Builder {
             code.iload(extSlot.extSlot())
                 .ifne(lblNull);
         } else if (reg instanceof MultipleSlot multiSlot) {
-            assert reg.type().isXvmPrimitive();
+            assert reg.type().removeNullable().isXvmPrimitive();
 
             code.iload(multiSlot.extSlot())
                 .ifne(lblNull);

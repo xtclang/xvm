@@ -385,6 +385,13 @@ public class xString
         }
 
         @Override
+        public int compareTo(ObjectHandle that) {
+            return that instanceof StringHandle hThat
+                    ? getStringValue().compareTo(hThat.getStringValue())
+                    : -1;
+        }
+
+        @Override
         public String toString() {
             StringBuilder sb = new StringBuilder(super.toString());
             sb.append('\"');

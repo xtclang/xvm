@@ -7,7 +7,7 @@ module jit_tests.examples.org {
 
     @Inject Console console;
 
-    void run() {
+    Int run() {
         console.print(">>>> Running JIT tests >>>>");
         Boolean passed = True;
 
@@ -17,6 +17,7 @@ module jit_tests.examples.org {
         passed &= new arrays.TestRunner().run();
         passed &= new numbers.TestRunner().run();
         passed &= new ranges.TestRunner().run();
+        passed &= new switch_.TestRunner().run();
 
         console.print("<<<< Finished JIT tests <<<<");
         if (passed) {
@@ -24,5 +25,6 @@ module jit_tests.examples.org {
         } else {
             console.print("One or more JIT tests failed");
         }
+        return passed ? 0 : 1;
     }
 }

@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.xvm.asm.Annotation;
@@ -6657,10 +6658,50 @@ public abstract class TypeConstant
      */
     public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
                              RegisterInfo reg1, RegisterInfo reg2, Label lblTrue) {
-        assert isSingleUnderlyingClass(true);
+        buildCompare(bctx, code, nOp, reg1, reg2.type(), reg2.cd(), reg2::load, lblTrue);
+    }
+
+    /**
+     * Generate the code that compares a register and a constant and either jumps to one of the
+     * specified labels or falls through.
+     *
+     * @param bctx      the current build context
+     * @param code      the {@link CodeBuilder} to use to generate byte-codes
+     * @param nOp       the compare op to generate
+     * @param reg1      the first register to compare
+     * @param constant  the constant compare argument
+     * @param lblTrue   (optional) the label to go to in the case the positive result has been
+     *                  computed and the jump needs be generated; otherwise the result of the
+     *                  comparison should be placed on the Java stack
+     */
+    public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
+                             RegisterInfo reg1, Constant constant, Label lblTrue) {
+        TypeConstant          argType = constant.getType();
+        ClassDesc             argCd   = JitTypeDesc.getJitClass(bctx.builder, argType);
+        Consumer<CodeBuilder> loader  = c -> bctx.loadConstant(c, constant);
+        buildCompare(bctx, code, nOp, reg1, argType, argCd, loader, lblTrue);
+    }
+
+    /**
+     * Generate the code that compares the registers and either jumps to one of the specified labels
+     * or falls through.
+     *
+     * @param bctx       the current build context
+     * @param code       the {@link CodeBuilder} to use to generate byte-codes
+     * @param nOp        the compare op to generate
+     * @param reg1       the first register to compare
+     * @param argType    the type of the compare argument
+     * @param cdArg      the {@link ClassDesc} of the compare argument
+     * @param argLoader  the {@link Consumer} to load the compare argument onto the stack
+     * @param lblTrue    (optional) the label to go to in the case the positive result has been
+     *                   computed and the jump needs be generated; otherwise the result of the
+     *                   comparison should be placed on the Java stack
+     */
+    public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
+                             RegisterInfo reg1, TypeConstant argType, ClassDesc cdArg,
+                             Consumer<CodeBuilder> argLoader, Label lblTrue) {
         TypeConstant type1 = reg1.type();
-        TypeConstant type2 = reg2.type();
-        assert type1.isA(this) && type2.isA(this) || this.isFormalType();
+        assert type1.isA(this) && argType.isA(this) || this.isFormalType();
 
         boolean fLocalTrue = lblTrue == null;
         if (fLocalTrue) {
@@ -6676,8 +6717,8 @@ public abstract class TypeConstant
                 Builder.unbox(code, this);
             }
             convertIfUnsignedPrimitive(code);
-            reg2.load(code);
-            if (!reg2.cd().isPrimitive()) {
+            argLoader.accept(code);
+            if (!cdArg.isPrimitive()) {
                 Builder.unbox(code, this);
             }
             convertIfUnsignedPrimitive(code);
@@ -6754,7 +6795,7 @@ public abstract class TypeConstant
 
             bctx.loadCtx(code);
             reg1.load(code);
-            reg2.load(code);
+            argLoader.accept(code);
 
             switch (nOp) {
                 case Op.OP_IS_EQ, Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
@@ -6861,7 +6902,7 @@ public abstract class TypeConstant
                 bctx.loadType(code, getType()); // type of this type
             }
             reg1.load(code);
-            reg2.load(code);
+            argLoader.accept(code);
 
             switch (nOp) {
             case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
