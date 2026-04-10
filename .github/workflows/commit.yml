@@ -238,14 +238,6 @@ jobs:
                   -Porg.xtclang.java.test.failFast=true \
                   -Porg.xtclang.plugin.java.lint=true
 
-            - name: Run manual tests
-              if: ${{ env.skip_manual_tests != 'true' }}
-              shell: bash
-              env:
-                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
-              run: |
-                ${{ env.GRADLE_CACHE_INSPECT }}
-                GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }} ${{ github.event.inputs.extra-gradle-options }}"
                 # Run manual tests inline if enabled (avoids cache rebuild)
                 if [ "${{ env.skip_manual_tests }}" == "true" ]; then
                     echo "⏭️ Manual tests skipped (disabled)"
