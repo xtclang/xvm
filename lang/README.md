@@ -289,7 +289,7 @@ crash/memory isolation.
 |---------|---------|---------|
 | **intellij-ide** | 2026.1 | Target IDE version |
 | **intellij-jdk** | 25 | Plugin JDK requirement |
-| **intellij-platform-gradle-plugin** | 2.13.1 | Build plugin for IntelliJ plugins |
+| **intellij-platform-gradle-plugin** | 2.14.0 | Build plugin for IntelliJ plugins |
 
 ### Compatibility Matrix
 
