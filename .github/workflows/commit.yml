@@ -553,9 +553,14 @@ jobs:
               id: versions
               uses: ./.github/actions/setup-xvm-project
               with:
-                  setup-build: true
-                  cache-read-only: true
+                  setup-build: false
                   enable-debug: false
+
+            - name: Setup Java
+              uses: actions/setup-java@v5
+              with:
+                  distribution: ${{ steps.versions.outputs.java-distribution }}
+                  java-version: ${{ steps.versions.outputs.java-version }}
 
             - name: Download staged consumer Maven repository
               uses: actions/download-artifact@v4
