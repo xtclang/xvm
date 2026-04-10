@@ -360,18 +360,29 @@ jobs:
 
                   if gh release view "$RELEASE_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
                       echo "Updating existing IntelliJ plugin snapshot release..."
-                      gh release delete "$RELEASE_TAG" --yes --repo "${{ github.repository }}" --cleanup-tag
+                      gh release edit "$RELEASE_TAG" \
+                          --repo "${{ github.repository }}" \
+                          --title "XTC IntelliJ Plugin Snapshots" \
+                          --notes "$RELEASE_NOTES" \
+                          --prerelease \
+                          --latest=false
+                      gh release upload "$RELEASE_TAG" \
+                          "$ASSET_NAME" \
+                          "$CHECKSUM_NAME" \
+                          --repo "${{ github.repository }}" \
+                          --clobber
+                  else
+                      echo "Creating IntelliJ plugin snapshot release..."
+                      gh release create "$RELEASE_TAG" \
+                          "$ASSET_NAME" \
+                          "$CHECKSUM_NAME" \
+                          --repo "${{ github.repository }}" \
+                          --title "XTC IntelliJ Plugin Snapshots" \
+                          --notes "$RELEASE_NOTES" \
+                          --prerelease \
+                          --latest=false \
+                          --target "$COMMIT"
                   fi
-
-                  gh release create "$RELEASE_TAG" \
-                      "$ASSET_NAME" \
-                      "$CHECKSUM_NAME" \
-                      --repo "${{ github.repository }}" \
-                      --title "XTC IntelliJ Plugin Snapshots" \
-                      --notes "$RELEASE_NOTES" \
-                      --prerelease \
-                      --latest=false \
-                      --target "$COMMIT"
 
                   echo "✅ IntelliJ plugin snapshot published"
 
