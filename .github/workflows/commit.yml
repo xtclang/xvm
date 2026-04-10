@@ -228,24 +228,54 @@ jobs:
                   echo "*** XDK Version            : ${{ steps.versions.outputs.xdk-version }}"
                   echo "*** Java Version           : ${{ steps.versions.outputs.java-version }}"
 
+            - name: Compute IntelliJ plugin publish version
+              if: |
+                  success() &&
+                  matrix.os == 'ubuntu-latest' &&
+                  (
+                      (github.ref == 'refs/heads/master' && github.event_name == 'push')
+                      ||
+                      (github.event_name == 'workflow_dispatch' &&
+                       (github.event.inputs.publish-intellij-plugin == true || github.event.inputs.publish-intellij-plugin == 'true'))
+                  )
+              id: intellij-version
+              shell: bash
+              run: |
+                  SUFFIX=$(date -u +%Y%m%d%H%M%S)
+                  BASE_VERSION="${{ steps.versions.outputs.xdk-version }}"
+                  PUBLISH_VERSION="${BASE_VERSION}.${SUFFIX}"
+                  RELEASE_CHANNEL=$(grep "^xdk.intellij.release.channel=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
+                  echo "suffix=$SUFFIX" >> $GITHUB_OUTPUT
+                  echo "publish-version=$PUBLISH_VERSION" >> $GITHUB_OUTPUT
+                  echo "release-channel=$RELEASE_CHANNEL" >> $GITHUB_OUTPUT
+                  echo "🔖 IntelliJ Marketplace publish version: $PUBLISH_VERSION"
+
             - name: Build the XDK and create a distribution
               shell: bash
               env:
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+                  ENABLE_INTELLIJ_RELEASE_BUILD: ${{ matrix.os == 'ubuntu-latest' && ((github.ref == 'refs/heads/master' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.publish-intellij-plugin == true || github.event.inputs.publish-intellij-plugin == 'true'))) }}
               run: |
                 ${{ env.GRADLE_CACHE_INSPECT }}
                 # Combine standard options with optional extra options
                 GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }} ${{ github.event.inputs.extra-gradle-options }}"
+                BUILD_TASKS="distZip check :plugin:compileJava"
+                BUILD_PROPS="-Porg.xtclang.java.test.failFast=true -Porg.xtclang.plugin.java.lint=true"
 
                 cwd_path=$(pwd)
-                echo "Executing Gradle 'clean', 'check', and 'distZip' tasks from: '$cwd_path'"
+                echo "Executing primary Gradle build from: '$cwd_path'"
                 ls -la build/ 2>/dev/null && echo "Build directory exists - will be cleaned" || echo "✅ No previous build outputs"
 
                 inspect_gradle_cache "before build"
                 ./gradlew $GRADLE_OPTIONS clean
-                ./gradlew $GRADLE_OPTIONS distZip check :plugin:compileJava \
-                  -Porg.xtclang.java.test.failFast=true \
-                  -Porg.xtclang.plugin.java.lint=true
+
+                if [ "${ENABLE_INTELLIJ_RELEASE_BUILD}" = "true" ]; then
+                    echo "🔌 Folding IntelliJ release-grade plugin build into the main CI build..."
+                    BUILD_TASKS="$BUILD_TASKS :lang:intellij-plugin:buildSearchableOptions :lang:intellij-plugin:buildPlugin :lang:intellij-plugin:verifyPlugin"
+                    BUILD_PROPS="$BUILD_PROPS -PincludeBuildLang=true -PincludeBuildAttachLang=true -PenablePublish=true -Pjetbrains.publish.suffix=${{ steps.intellij-version.outputs.suffix }} -Plsp.buildSearchableOptions=true"
+                fi
+
+                ./gradlew $GRADLE_OPTIONS $BUILD_PROPS $BUILD_TASKS
 
                 # Run manual tests inline if enabled (avoids cache rebuild)
                 if [ "${{ env.skip_manual_tests }}" == "true" ]; then
@@ -388,29 +418,7 @@ jobs:
                       ci-artifacts/metadata/consumer-artifacts.json
                   retention-days: 10
 
-            - name: Compute IntelliJ plugin publish version
-              if: |
-                  success() &&
-                  matrix.os == 'ubuntu-latest' &&
-                  (
-                      (github.ref == 'refs/heads/master' && github.event_name == 'push')
-                      ||
-                      (github.event_name == 'workflow_dispatch' &&
-                       (github.event.inputs.publish-intellij-plugin == true || github.event.inputs.publish-intellij-plugin == 'true'))
-                  )
-              id: intellij-version
-              shell: bash
-              run: |
-                  SUFFIX=$(date -u +%Y%m%d%H%M%S)
-                  BASE_VERSION="${{ steps.versions.outputs.xdk-version }}"
-                  PUBLISH_VERSION="${BASE_VERSION}.${SUFFIX}"
-                  RELEASE_CHANNEL=$(grep "^xdk.intellij.release.channel=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
-                  echo "suffix=$SUFFIX" >> $GITHUB_OUTPUT
-                  echo "publish-version=$PUBLISH_VERSION" >> $GITHUB_OUTPUT
-                  echo "release-channel=$RELEASE_CHANNEL" >> $GITHUB_OUTPUT
-                  echo "🔖 IntelliJ Marketplace publish version: $PUBLISH_VERSION"
-
-            - name: Build release-grade IntelliJ plugin artifact
+            - name: Stage release-grade IntelliJ plugin artifact
               if: |
                   success() &&
                   matrix.os == 'ubuntu-latest' &&
@@ -424,7 +432,6 @@ jobs:
               env:
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
               run: |
-                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }} ${{ github.event.inputs.extra-gradle-options }}"
                   PUBLISH_SUFFIX="${{ steps.intellij-version.outputs.suffix }}"
                   PUBLISH_VERSION="${{ steps.intellij-version.outputs.publish-version }}"
                   RELEASE_CHANNEL="${{ steps.intellij-version.outputs.release-channel }}"
@@ -434,16 +441,7 @@ jobs:
                   rm -rf "$STAGING_DIR"
                   mkdir -p "$STAGING_DIR"
 
-                  echo "🔌 Building release-grade IntelliJ plugin artifact..."
-                  ./gradlew $GRADLE_OPTIONS \
-                    -PincludeBuildLang=true \
-                    -PincludeBuildAttachLang=true \
-                    -PenablePublish=true \
-                    -Pjetbrains.publish.suffix=$PUBLISH_SUFFIX \
-                    -Plsp.buildSearchableOptions=true \
-                    :lang:intellij-plugin:buildSearchableOptions \
-                    :lang:intellij-plugin:buildPlugin \
-                    :lang:intellij-plugin:verifyPlugin
+                  echo "📦 Staging release-grade IntelliJ plugin artifact from outputs built in the main CI build..."
 
                   DIST_DIR="$PWD/lang/intellij-plugin/build/distributions"
                   ZIP_FILE=$(find "$DIST_DIR" -maxdepth 1 -name "*.zip" | head -1)
@@ -732,8 +730,7 @@ jobs:
                       echo "- ✅ Snapshot publishing" >> $GITHUB_STEP_SUMMARY
                       echo "- ✅ Docker publishing" >> $GITHUB_STEP_SUMMARY
                       echo "- ✅ Homebrew update" >> $GITHUB_STEP_SUMMARY
-                      if [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ] && \
-                         [ "${{ github.event.inputs.include-lang }}" = "true" ]; then
+                      if [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ]; then
                           echo "- ✅ IntelliJ plugin snapshot publishing" >> $GITHUB_STEP_SUMMARY
                       else
                           echo "- ⏭️ IntelliJ plugin snapshot publishing (not enabled for this run)" >> $GITHUB_STEP_SUMMARY
@@ -743,18 +740,11 @@ jobs:
                       echo "- ⏭️ Docker publishing" >> $GITHUB_STEP_SUMMARY
                       echo "- ⏭️ Homebrew update" >> $GITHUB_STEP_SUMMARY
                       if [ "${{ github.event_name }}" = "workflow_dispatch" ] && \
-                         [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ] && \
-                         [ "${{ github.event.inputs.include-lang }}" = "true" ]; then
+                         [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ]; then
                           echo "- ✅ IntelliJ plugin snapshot publishing" >> $GITHUB_STEP_SUMMARY
                       else
                           echo "- ⏭️ IntelliJ plugin snapshot publishing (not enabled for this run)" >> $GITHUB_STEP_SUMMARY
                       fi
-                  fi
-                  if [ "${{ github.event_name }}" = "workflow_dispatch" ] && \
-                     [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ] && \
-                     [ "${{ github.event.inputs.include-lang }}" != "true" ]; then
-                      echo "" >> $GITHUB_STEP_SUMMARY
-                      echo "IntelliJ plugin publishing requires \`include-lang=true\` on manual runs." >> $GITHUB_STEP_SUMMARY
                   fi
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "Check the [Actions tab](https://github.com/${{ github.repository }}/actions) for workflow status." >> $GITHUB_STEP_SUMMARY
