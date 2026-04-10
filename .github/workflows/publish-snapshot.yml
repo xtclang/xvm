@@ -303,14 +303,29 @@ jobs:
                   ZIP_FILE="${{ steps.artifact.outputs.zip-file }}"
                   XML_ID="${{ steps.artifact.outputs.xml-id }}"
                   CHANNEL="${{ steps.artifact.outputs.release-channel }}"
+                  RESPONSE_FILE="$RUNNER_TEMP/jetbrains-upload-response.json"
 
                   echo "🚀 Publishing IntelliJ plugin to JetBrains Marketplace alpha..."
-                  curl --fail-with-body --silent --show-error \
+                  if curl --fail-with-body --silent --show-error \
                     -H "Authorization: Bearer $JETBRAINS_TOKEN" \
                     -F "xmlId=$XML_ID" \
                     -F "channel=$CHANNEL" \
                     -F "file=@$ZIP_FILE" \
-                    https://plugins.jetbrains.com/api/updates/upload
+                    https://plugins.jetbrains.com/api/updates/upload \
+                    >"$RESPONSE_FILE"; then
+                      echo "✅ JetBrains Marketplace upload completed"
+                  else
+                      STATUS=$?
+                      RESPONSE=$(cat "$RESPONSE_FILE" 2>/dev/null || true)
+                      if [[ "$RESPONSE" == *"already contains version"* ]]; then
+                          echo "ℹ️ JetBrains Marketplace already has this exact plugin version in channel '$CHANNEL'."
+                          echo "ℹ️ Continuing so GitHub release assets can still be updated for this CI artifact."
+                      else
+                          echo "❌ JetBrains Marketplace upload failed"
+                          [ -n "$RESPONSE" ] && echo "$RESPONSE"
+                          exit "$STATUS"
+                      fi
+                  fi
 
             - name: Prepare release assets
               id: prepare
