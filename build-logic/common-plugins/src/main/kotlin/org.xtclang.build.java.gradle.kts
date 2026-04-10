@@ -68,7 +68,6 @@ private class ConfigureTestLoggingAction(
         val on = showStdout.get()
         t.failFast = failFastTests.get()
         t.testLogging.events(
-            TestLogEvent.SKIPPED,
             TestLogEvent.FAILED
         )
         t.testLogging.exceptionFormat = TestExceptionFormat.SHORT
@@ -80,7 +79,6 @@ private class ConfigureTestLoggingAction(
             t.testLogging.events(
                 TestLogEvent.STANDARD_OUT,
                 TestLogEvent.STANDARD_ERROR,
-                TestLogEvent.SKIPPED,
                 TestLogEvent.FAILED
             )
         }
