@@ -341,6 +341,53 @@ jobs:
                   path: xdk/build/distributions/xdk-*.zip
                   retention-days: 10
 
+            - name: Stage consumer Maven repository artifact
+              if: success() && matrix.os == 'ubuntu-latest'
+              shell: bash
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }} ${{ github.event.inputs.extra-gradle-options }}"
+                  STAGING_DIR="$PWD/ci-artifacts/consumer-maven-repo"
+                  METADATA_DIR="$PWD/ci-artifacts/metadata"
+
+                  echo "📦 Publishing XDK/plugin artifacts to isolated Maven Local for CI artifact staging..."
+                  rm -rf "$STAGING_DIR" "$METADATA_DIR"
+                  mkdir -p "$STAGING_DIR" "$METADATA_DIR"
+
+                  ./gradlew $GRADLE_OPTIONS -Dmaven.repo.local="$STAGING_DIR" publishLocal
+
+                  echo "📦 Staging consumer Maven repository artifact..."
+                  if [ ! -d "$STAGING_DIR/org/xtclang" ]; then
+                      echo "❌ ERROR: Expected isolated Maven Local subtree not found: $STAGING_DIR/org/xtclang"
+                      exit 1
+                  fi
+
+                  cat > "$METADATA_DIR/consumer-artifacts.json" <<EOF
+                  {
+                    "commit": "${{ github.sha }}",
+                    "branch": "${{ github.ref_name }}",
+                    "xdkVersion": "${{ steps.versions.outputs.xdk-version }}",
+                    "javaVersion": "${{ steps.versions.outputs.java-version }}",
+                    "runId": "${{ github.run_id }}",
+                    "artifact": "consumer-maven-repo-${{ github.sha }}",
+                    "mavenRepoLocal": "consumer-maven-repo"
+                  }
+                  EOF
+
+                  echo "✅ Consumer Maven repository staged at: $STAGING_DIR"
+                  find "$STAGING_DIR" -maxdepth 4 -type f | sed -n '1,80p'
+
+            - name: Upload consumer Maven repository artifact
+              if: success() && matrix.os == 'ubuntu-latest'
+              uses: actions/upload-artifact@v7
+              with:
+                  name: consumer-maven-repo-${{ github.sha }}
+                  path: |
+                      ci-artifacts/consumer-maven-repo
+                      ci-artifacts/metadata/consumer-artifacts.json
+                  retention-days: 10
+
             - name: List manual test logs
               if: always() && matrix.os == 'ubuntu-latest' && env.skip_manual_tests != 'true'
               shell: bash
@@ -406,13 +453,11 @@ jobs:
                   cache-read-only: true
                   enable-debug: false
 
-            - name: Publish XDK to Maven Local
-              env:
-                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
-              run: |
-                  echo "📦 Publishing XDK to Maven Local..."
-                  ./gradlew ${{ steps.versions.outputs.gradle-options }} publishLocal
-                  echo "✅ XDK published to Maven Local"
+            - name: Download staged consumer Maven repository
+              uses: actions/download-artifact@v4
+              with:
+                  name: consumer-maven-repo-${{ github.sha }}
+                  path: ./artifacts
 
             - name: Clone xtc-app-template
               run: |
@@ -436,8 +481,14 @@ jobs:
             - name: Run xtc-app-template with local XDK
               working-directory: ../xtc-app-template
               run: |
+                  LOCAL_REPO_PATH="$GITHUB_WORKSPACE/artifacts/consumer-maven-repo"
+                  if [ ! -d "$LOCAL_REPO_PATH/org/xtclang" ]; then
+                      echo "❌ ERROR: Staged consumer Maven repository not found at $LOCAL_REPO_PATH"
+                      find "$GITHUB_WORKSPACE/artifacts" -maxdepth 4 -type f | sed -n '1,80p' || true
+                      exit 1
+                  fi
                   echo "🧪 Running xtc-app-template with locally published XDK..."
-                  ./gradlew greet -PlocalOnly=true --no-daemon --refresh-dependencies
+                  ./gradlew greet -PlocalOnly=true --no-daemon --refresh-dependencies -Dmaven.repo.local="$LOCAL_REPO_PATH"
                   echo "✅ Integration test passed - plugin works with external projects"
 
             - name: Summary
