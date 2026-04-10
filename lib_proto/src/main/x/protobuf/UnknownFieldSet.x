@@ -114,6 +114,19 @@ class UnknownFieldSet
     }
 
     /**
+     * Merge all fields from another [UnknownFieldSet] into this one.
+     *
+     * @param other  the unknown field set to merge from
+     */
+    void mergeFrom(UnknownFieldSet other) {
+        for ((Int fieldNumber, List<FieldValue> values) : other.fields) {
+            for (FieldValue value : values) {
+                addField(fieldNumber, value);
+            }
+        }
+    }
+
+    /**
      * Remove all stored unknown fields.
      */
     void clear() {

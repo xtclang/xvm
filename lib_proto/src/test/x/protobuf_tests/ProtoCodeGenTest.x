@@ -419,10 +419,11 @@ class ProtoCodeGenTest {
                                              );
         assert String source := files.get("Outer.x");
 
-        // parseField should use ProtoEnum.byProtoValue, not mergeFrom
+        // parseField should use ProtoEnum.byProtoValue for enum fields
         assert source.indexOf("protobuf.ProtoEnum.byProtoValue(");
         assert source.indexOf("input.readEnum()");
-        assert !source.indexOf("mergeFrom");
+        // parseField should not contain message-style mergeFrom for this enum field
+        assert !source.indexOf("elem.mergeFrom");
 
         // writeKnownFields should use writeEnum, not writeMessage
         assert source.indexOf("writeEnum(1,");

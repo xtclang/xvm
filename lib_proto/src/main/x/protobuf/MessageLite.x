@@ -30,7 +30,9 @@ interface MessageLite
      *
      * @return the message with the merged fields (may be `this` for mutable implementations)
      */
-    MessageLite mergeFrom(CodedInput input);
+    MessageLite! mergeFrom(CodedInput input);
+
+    MessageLite! mergeFrom(MessageLite other);
 
     /**
      * @return the number of bytes required to serialize this message (excluding any tag or length

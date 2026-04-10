@@ -293,6 +293,10 @@ class ProtoCodeGen {
         generateKnownFieldsSize(buf, msg, regularFields, oneofFields, indent + 1, presenceMap, mapInfo);
         buf.add('\n');
 
+        // mergeFrom
+        generateMergeFrom(buf, msg, regularFields, indent + 1, presenceMap, mapInfo);
+        buf.add('\n');
+
         // freeze
         generateFreeze(buf, msg, regularFields, indent + 1, mapInfo);
 
@@ -1180,6 +1184,84 @@ class ProtoCodeGen {
              .appendTo(buf);
         }
         buf.add('\n');
+    }
+
+    // ----- mergeFrom generation --------------------------------------------------------------------
+
+    /**
+     * Generate the mergeFrom(MessageLite) override.
+     */
+    private void generateMergeFrom(StringBuffer buf, DescriptorProto msg,
+                                   Array<FieldDescriptorProto> regularFields, Int indent,
+                                   Map<String, Int> presenceMap,
+                                   Map<String, MapFieldInfo> mapInfo) {
+        String pad  = spaces(indent);
+        String pad1 = spaces(indent + 1);
+        String pad2 = spaces(indent + 2);
+        String pad3 = spaces(indent + 3);
+
+        $|{pad}@Override
+         |{pad}{msg.name}! mergeFrom({msg.name} other) \{
+         |{pad1}if (this.is(immutable)) \{
+         |{pad2}return new {msg.name}(this).mergeFrom(other);
+         |{pad1}}
+         .appendTo(buf);
+
+        for (FieldDescriptorProto field : regularFields) {
+            String fname = fieldName(field.name);
+            assert FieldType fieldType := field.hasType();
+
+            if (isMapField(field, mapInfo)) {
+                $"\n{pad1}{fname}.putAll(other.{fname});".appendTo(buf);
+            } else if (field.label == LabelRepeated) {
+                $"\n{pad1}{fname}.addAll(other.{fname});".appendTo(buf);
+            } else if (isEnumRef(field)) {
+                $|
+                 |{pad1}if (other.{fname} != Null) \{
+                 |{pad2}{fname} = other.{fname};
+                 |{pad1}}
+                 .appendTo(buf);
+            } else if (fieldType == TypeMessage) {
+                String tn = field.typeName;
+                $|
+                 |{pad1}{tn}? _{fname}Other = other.{fname};
+                 |{pad1}if (_{fname}Other != Null) \{
+                 |{pad2}if (other.is(immutable)) \{
+                 |{pad3}{fname} = _{fname}Other;
+                 |{pad2}} else \{
+                 |{pad3}{fname} = _{fname}Other.duplicate();
+                 |{pad2}}
+                 |{pad1}}
+                 .appendTo(buf);
+            } else if (presenceMap.contains(fname)) {
+                assert Int bitIndex := presenceMap.get(fname);
+                String wordName = presenceWordName(bitIndex);
+                String mask     = presenceMaskLiteral(bitIndex);
+                $|
+                 |{pad1}if (other.{wordName} & {mask} != 0) \{
+                 |{pad2}_{fname} = other._{fname};
+                 |{pad2}{wordName} |= {mask};
+                 |{pad1}}
+                 .appendTo(buf);
+            }
+        }
+
+        // oneof fields
+        for (OneofDescriptorProto oneof : msg.oneofDecl) {
+            String propName = toCamelCase(oneof.name);
+            $|
+             |{pad1}if (other.{propName} != Null) \{
+             |{pad2}{propName} = other.{propName};
+             |{pad1}}
+             .appendTo(buf);
+        }
+
+        $|
+         |{pad1}super(other);
+         |{pad1}return this;
+         |{pad}}
+         |
+         .appendTo(buf);
     }
 
     // ----- freeze generation ----------------------------------------------------------------------

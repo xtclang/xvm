@@ -37,7 +37,7 @@ class GenericMessage
     }
 
     @Override
-    GenericMessage mergeFrom(CodedInput input) {
+    GenericMessage! mergeFrom(CodedInput input) {
         while (!input.isAtEnd()) {
             Int      tag         = input.readTag();
             if (tag == 0) {
@@ -68,6 +68,16 @@ class GenericMessage
                 // Groups are deprecated; skip them
                 input.skipField(wireType);
                 break;
+            }
+        }
+        return this;
+    }
+
+    @Override
+    GenericMessage! mergeFrom(GenericMessage other) {
+        for ((Int fieldNumber, List<FieldValue> values) : other.fields) {
+            for (FieldValue value : values) {
+                addFieldValue(fieldNumber, value);
             }
         }
         return this;

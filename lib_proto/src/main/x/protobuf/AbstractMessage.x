@@ -49,7 +49,7 @@ class AbstractMessage
     }
 
     @Override
-    AbstractMessage mergeFrom(CodedInput input) {
+    AbstractMessage! mergeFrom(CodedInput input) {
         while (!input.isAtEnd()) {
             Int tag = input.readTag();
             if (tag == 0) {
@@ -59,6 +59,12 @@ class AbstractMessage
                 unknownFields.mergeFieldFrom(input, tag);
             }
         }
+        return this;
+    }
+
+    @Override
+    AbstractMessage! mergeFrom(AbstractMessage other) {
+        unknownFields.mergeFrom(other.unknownFields);
         return this;
     }
 
