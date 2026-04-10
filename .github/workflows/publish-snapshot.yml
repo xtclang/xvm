@@ -242,7 +242,7 @@ jobs:
               id: artifact
               shell: bash
               run: |
-                  ARTIFACT_ROOT="$PWD/artifacts/intellij-plugin/intellij-plugin-dist"
+                  ARTIFACT_ROOT="$PWD/artifacts/intellij-plugin"
                   METADATA_FILE="$ARTIFACT_ROOT/intellij-plugin-metadata.json"
 
                   if [ ! -f "$METADATA_FILE" ]; then
