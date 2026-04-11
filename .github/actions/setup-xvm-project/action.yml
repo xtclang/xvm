@@ -189,6 +189,7 @@ runs:
           if: ${{ inputs.setup-build == 'true' }}
           uses: gradle/actions/setup-gradle@v6
           with:
+              add-job-summary: never
               cache-disabled: false
               cache-read-only: ${{ inputs.cache-read-only }}
               gradle-version: ${{ steps.get-versions.outputs.gradle-version }}
