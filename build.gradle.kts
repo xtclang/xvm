@@ -80,6 +80,7 @@ val publishSnapshotBundle by tasks.registering {
     description = "Publish XDK and plugin snapshot artifacts to an isolated file-backed Maven repository."
 
     val snapshotBundleRepoProvider = xdkProperties.string("org.xtclang.publish.snapshotBundleRepo")
+    val versionProvider = xdkProperties.string("xdk.version")
 
     doFirst {
         val snapshotBundleRepo = snapshotBundleRepoProvider.orNull?.trim().orEmpty()
@@ -88,7 +89,7 @@ val publishSnapshotBundle by tasks.registering {
                 "❌ Missing required property: -Porg.xtclang.publish.snapshotBundleRepo=/path/to/staged/maven/repo"
             )
         }
-        val currentVersion = project.version.toString()
+        val currentVersion = versionProvider.get()
         if (!currentVersion.endsWith("-SNAPSHOT")) {
             throw GradleException(
                 "❌ publishSnapshotBundle only supports SNAPSHOT versions. Current version: $currentVersion"
