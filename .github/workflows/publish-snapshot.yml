@@ -431,9 +431,13 @@ jobs:
               shell: bash
               run: |
                   VERSION="${{ steps.artifact.outputs.publish-version }}"
+                  BASE_VERSION="${{ steps.artifact.outputs.base-version }}"
                   PLUGIN_ZIP="${{ steps.artifact.outputs.zip-file }}"
                   CHECKSUM_FILE="${{ steps.artifact.outputs.checksum-file }}"
-                  PUBLIC_ZIP="xtc-intellij-plugin-${VERSION}.zip"
+                  # Keep the GitHub snapshot release asset stable within the base snapshot line.
+                  # The Marketplace artifact version remains timestamped and immutable, but the
+                  # GitHub release asset should be replaced in place instead of accumulating.
+                  PUBLIC_ZIP="xtc-intellij-plugin-${BASE_VERSION}.zip"
                   PUBLIC_SUMS="${PUBLIC_ZIP}.sha256"
 
                   cp "$PLUGIN_ZIP" "$PUBLIC_ZIP"
@@ -476,7 +480,8 @@ jobs:
 
                   Install in IntelliJ IDEA via Settings -> Plugins -> gear icon -> Install Plugin from Disk...
 
-                  Download the \`${ASSET_NAME}\` asset below."
+                  Download the current GitHub snapshot ZIP: \`${ASSET_NAME}\`.
+                  Marketplace snapshot version: \`${VERSION}\`."
 
                   echo "📥 Publishing IntelliJ plugin snapshot to: $RELEASE_TAG"
 
