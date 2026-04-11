@@ -73,6 +73,15 @@ The guiding rule is:
   - is still XDK-centric and still uses delete/recreate semantics for snapshot releases
   - downstream IntelliJ publishing needed workflow-local fixes instead of a shared release-promotion primitive
 
+### CI Signal Noise
+
+- `testapp`, `testlib`, `testsvc`, and `testmulti` annotations in GitHub Checks are emitted by nested Gradle builds
+  started by [`XtcProjectCreatorIntegrationTest`](../../../javatools/src/test/java/org/xvm/tool/XtcProjectCreatorIntegrationTest.java)
+- they are not required branch-protection checks
+- they appear to come from the child generated projects' own Gradle/Develocity integration under CI
+- the main branch-protection signal should remain the outer workflow/job status, especially `All builds complete`
+- cleanup is still worth doing so the Checks UI reflects only repo-level CI signals
+
 ### Action Runtime Maintenance
 
 - official action majors currently in use or updated:
@@ -104,16 +113,55 @@ The guiding rule is:
 - [x] Add clearer artifact/publishing summaries in `commit.yml`
 - [x] Upgrade `actions/download-artifact` to `@v8`
 - [x] Upgrade `gradle/actions` usages to `@v6`
+- [x] Stage `snapshot-maven-repo-${sha}` in `commit.yml`
+- [x] Replace the normal snapshot publication path in `publish-snapshot.yml` with artifact promotion from a staged Maven repository bundle
+- [x] Keep a source fallback path only for manual runs without `ci-run-id`
 
 ## Highest-Value Remaining Tasks
 
-1. Convert XDK snapshot Maven publication in [`publish-snapshot.yml`](../../../.github/workflows/publish-snapshot.yml) from source rebuild to artifact promotion.
-2. Add release-flow parity for IntelliJ publication:
+1. Add release-flow parity for IntelliJ publication:
    - gated staging in [`prepare-release.yml`](../../../.github/workflows/prepare-release.yml)
    - gated promotion in [`promote-release.yml`](../../../.github/workflows/promote-release.yml)
    - default disabled, mirroring the snapshot gating model
-3. Generalize artifact metadata/download helpers so XDK, consumer Maven repo, and IntelliJ bundle all use the same validation pattern.
-4. Decide whether Gradle Plugin Portal publication can also become artifact-driven, or document it as the one intentional source-build exception.
+2. Generalize artifact metadata/download helpers so XDK, consumer Maven repo, snapshot Maven publication bundle, and IntelliJ bundle all use the same validation pattern.
+3. Decide whether Gradle Plugin Portal publication can also become artifact-driven, or document it as the one intentional source-build exception.
+4. Suppress or isolate nested Gradle check-run noise from generated-project integration tests so GitHub Checks only shows meaningful repo-level signals.
+
+## Current Test Plan
+
+The latest uncommitted changes should be validated in this order:
+
+1. Run `Verify Commit` manually on this branch with:
+   - `platforms=ubuntu-latest`
+   - `skip-tests=true`
+   - `publish-snapshots=true`
+   - `publish-intellij-plugin=false`
+   - `include-lang=false`
+2. Confirm in [`commit.yml`](../../../.github/workflows/commit.yml):
+   - the main build runs `publishSnapshotBundle` in the consolidated Gradle session
+   - `snapshot-maven-repo-${sha}` is uploaded
+   - the summary shows:
+     - snapshot Maven publication bundle built
+     - manual tests skipped
+     - lang validation skipped
+3. Confirm in [`publish-snapshot.yml`](../../../.github/workflows/publish-snapshot.yml):
+   - the workflow downloads `snapshot-maven-repo-${sha}`
+   - provenance validation succeeds
+   - publication logs explicitly show:
+     - `GitHub Packages (SNAPSHOT)`
+     - `Maven Central Snapshots`
+   - the source fallback path is not used
+4. After that succeeds, run one manual `Verify Commit` with:
+   - `platforms=ubuntu-latest`
+   - `skip-tests=true`
+   - `publish-snapshots=true`
+   - `publish-intellij-plugin=true`
+   - `include-lang=true`
+5. Confirm the combined path still works:
+   - snapshot Maven bundle publication
+   - IntelliJ artifact staging
+   - downstream IntelliJ snapshot publish
+   - summary includes IntelliJ publish version/channel
 
 ## Non-Goals
 

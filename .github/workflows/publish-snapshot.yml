@@ -62,8 +62,7 @@ jobs:
               id: versions
               uses: ./.github/actions/setup-xvm-project
               with:
-                  setup-build: true
-                  cache-read-only: true  # Read-only since CI build already populated cache
+                  setup-build: false
                   enable-debug: false
 
             - name: Validate snapshot version
@@ -117,7 +116,99 @@ jobs:
                   repository: ${{ github.repository }}
                   output-path: ./artifacts
 
-            - name: Publish Maven snapshots
+            - name: Download snapshot Maven publication bundle from CI
+              if: steps.commit.outputs.has-artifact == 'true'
+              uses: actions/download-artifact@v8
+              with:
+                  name: snapshot-maven-repo-${{ steps.commit.outputs.commit }}
+                  path: ./artifacts/snapshot-maven-repo
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  repository: ${{ github.repository }}
+                  run-id: ${{ steps.commit.outputs.run-id }}
+
+            - name: Validate snapshot Maven publication bundle
+              if: steps.commit.outputs.has-artifact == 'true'
+              id: snapshot-bundle
+              shell: bash
+              run: |
+                  ARTIFACT_ROOT="$PWD/artifacts/snapshot-maven-repo"
+                  METADATA_FILE=$(find "$ARTIFACT_ROOT" -maxdepth 3 -name snapshot-publish-artifacts.json | head -1)
+                  REPO_ROOT="$ARTIFACT_ROOT/snapshot-maven-repo"
+
+                  if [ -z "$METADATA_FILE" ] || [ ! -f "$METADATA_FILE" ]; then
+                      echo "❌ ERROR: snapshot-publish-artifacts.json not found in downloaded artifact"
+                      find "$ARTIFACT_ROOT" -maxdepth 4 -type f | sed -n '1,120p' || true
+                      exit 1
+                  fi
+
+                  if [ ! -d "$REPO_ROOT/org/xtclang" ]; then
+                      echo "❌ ERROR: Snapshot Maven repository root missing: $REPO_ROOT/org/xtclang"
+                      find "$ARTIFACT_ROOT" -maxdepth 4 -type f | sed -n '1,120p' || true
+                      exit 1
+                  fi
+
+                  ARTIFACT_COMMIT=$(jq -r '.commit' "$METADATA_FILE")
+                  ARTIFACT_BRANCH=$(jq -r '.branch' "$METADATA_FILE")
+                  ARTIFACT_VERSION=$(jq -r '.xdkVersion' "$METADATA_FILE")
+                  ARTIFACT_RUN_ID=$(jq -r '.runId' "$METADATA_FILE")
+                  ARTIFACT_NAME=$(jq -r '.artifact' "$METADATA_FILE")
+
+                  echo "📦 Snapshot publication bundle provenance"
+                  echo "  Metadata file : $METADATA_FILE"
+                  echo "  Commit        : $ARTIFACT_COMMIT"
+                  echo "  Branch        : $ARTIFACT_BRANCH"
+                  echo "  XDK Version   : $ARTIFACT_VERSION"
+                  echo "  Source Run ID : $ARTIFACT_RUN_ID"
+                  echo "  Artifact Name : $ARTIFACT_NAME"
+
+                  if [ "$ARTIFACT_COMMIT" != "${{ steps.commit.outputs.commit }}" ]; then
+                      echo "❌ ERROR: Snapshot publication bundle commit does not match requested commit"
+                      exit 1
+                  fi
+
+                  echo "repo-root=$REPO_ROOT" >> $GITHUB_OUTPUT
+                  echo "metadata-file=$METADATA_FILE" >> $GITHUB_OUTPUT
+                  echo "artifact-name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
+                  echo "✅ Snapshot publication bundle commit matches requested CI artifact"
+
+            - name: Setup build environment for source fallback
+              if: steps.commit.outputs.has-artifact != 'true'
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: true
+                  cache-read-only: true
+                  enable-debug: false
+
+            - name: Publish staged Maven snapshots to GitHub Packages
+              if: steps.commit.outputs.has-artifact == 'true'
+              env:
+                  GITHUB_USERNAME: ${{ github.actor }}
+                  GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  echo "📦 Publishing staged SNAPSHOT Maven repository to GitHub Packages..."
+                  ./.github/scripts/upload-maven-repo.sh \
+                    "${{ steps.snapshot-bundle.outputs.repo-root }}" \
+                    "https://maven.pkg.github.com/xtclang/xvm" \
+                    "$GITHUB_USERNAME" \
+                    "$GITHUB_PASSWORD" \
+                    "GitHub Packages (SNAPSHOT)"
+
+            - name: Publish staged Maven snapshots to Maven Central Snapshots
+              if: steps.commit.outputs.has-artifact == 'true'
+              env:
+                  MAVEN_CENTRAL_USERNAME: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
+                  MAVEN_CENTRAL_PASSWORD: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
+              run: |
+                  echo "📦 Publishing staged SNAPSHOT Maven repository to Maven Central Snapshots..."
+                  ./.github/scripts/upload-maven-repo.sh \
+                    "${{ steps.snapshot-bundle.outputs.repo-root }}" \
+                    "https://central.sonatype.com/repository/maven-snapshots" \
+                    "$MAVEN_CENTRAL_USERNAME" \
+                    "$MAVEN_CENTRAL_PASSWORD" \
+                    "Maven Central Snapshots"
+
+            - name: Publish Maven snapshots from source fallback
+              if: steps.commit.outputs.has-artifact != 'true'
               env:
                   # GitHub CLI (used for GitHub API operations)
                   GITHUB_ACTOR: ${{ github.actor }}
@@ -139,8 +230,11 @@ jobs:
                   # Gradle Plugin Portal is automatically skipped (doesn't accept snapshots)
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
               run: |
-                  echo "📦 Publishing Maven snapshot artifacts to GitHub Packages and Maven Central..."
-                  echo "   (please note that gradlePluginPortal is skipped, since does not support SNAPSHOT versions.)"
+                  echo "📦 Publishing SNAPSHOT Maven artifacts from source fallback..."
+                  echo "   Target repositories:"
+                  echo "   - GitHub Packages"
+                  echo "   - Maven Central Snapshots"
+                  echo "   (please note that gradlePluginPortal is skipped, since it does not support SNAPSHOT versions.)"
                   ./gradlew ${{ steps.versions.outputs.gradle-options }} publish
                   echo "✅ Maven snapshots published"
 
@@ -194,6 +288,11 @@ jobs:
                   echo "**Published to:**" >> $GITHUB_STEP_SUMMARY
                   echo "- ✅ GitHub Packages (Maven artifacts)" >> $GITHUB_STEP_SUMMARY
                   echo "- ✅ Maven Central Snapshots" >> $GITHUB_STEP_SUMMARY
+                  if [ "${{ steps.commit.outputs.has-artifact }}" = "true" ]; then
+                      echo "- ✅ Publication mode: artifact promotion from \`${{ steps.snapshot-bundle.outputs.artifact-name }}\`" >> $GITHUB_STEP_SUMMARY
+                  else
+                      echo "- ⚠️ Publication mode: source fallback (no ci-run-id provided)" >> $GITHUB_STEP_SUMMARY
+                  fi
                   if [ "${{ steps.commit.outputs.has-artifact }}" = "true" ]; then
                       echo "- ✅ GitHub Releases (xdk-snapshots)" >> $GITHUB_STEP_SUMMARY
                   else

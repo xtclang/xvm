@@ -132,6 +132,16 @@ extensions.configure<PublishingExtension> {
             // Or use the secret gradle properties file
             credentials(PasswordCredentials::class)
         }
+
+        val snapshotBundleRepo = xdkProperties.string("org.xtclang.publish.snapshotBundleRepo", "").orNull
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+        if (snapshotBundleRepo != null) {
+            maven {
+                name = "snapshotBundle"
+                url = uri(snapshotBundleRepo)
+            }
+        }
     }
 }
 

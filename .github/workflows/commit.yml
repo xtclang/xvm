@@ -255,6 +255,7 @@ jobs:
               env:
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
                   ENABLE_INTELLIJ_RELEASE_BUILD: ${{ matrix.os == 'ubuntu-latest' && ((github.ref == 'refs/heads/master' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.publish-intellij-plugin == true || github.event.inputs.publish-intellij-plugin == 'true'))) }}
+                  ENABLE_SNAPSHOT_BUNDLE_BUILD: ${{ matrix.os == 'ubuntu-latest' && ((github.ref == 'refs/heads/master' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.publish-snapshots == true || github.event.inputs.publish-snapshots == 'true'))) }}
               run: |
                 ${{ env.GRADLE_CACHE_INSPECT }}
                 # Combine standard options with optional extra options
@@ -263,6 +264,7 @@ jobs:
                 BUILD_PROPS="-Porg.xtclang.java.test.failFast=true -Porg.xtclang.plugin.java.lint=true"
                 BUILD_JVM_ARGS=""
                 CONSUMER_REPO_DIR="$PWD/ci-artifacts/consumer-maven-repo"
+                SNAPSHOT_REPO_DIR="$PWD/ci-artifacts/snapshot-maven-repo"
 
                 cwd_path=$(pwd)
                 echo "Executing primary Gradle build from: '$cwd_path'"
@@ -277,6 +279,14 @@ jobs:
                     mkdir -p "$CONSUMER_REPO_DIR"
                     BUILD_TASKS="$BUILD_TASKS publishLocal"
                     BUILD_JVM_ARGS="-Dmaven.repo.local=$CONSUMER_REPO_DIR"
+                fi
+
+                if [ "${ENABLE_SNAPSHOT_BUNDLE_BUILD}" = "true" ]; then
+                    echo "📦 Folding snapshot publication bundle generation into the main CI build..."
+                    rm -rf "$SNAPSHOT_REPO_DIR"
+                    mkdir -p "$SNAPSHOT_REPO_DIR"
+                    BUILD_TASKS="$BUILD_TASKS publishSnapshotBundle"
+                    BUILD_PROPS="$BUILD_PROPS -Porg.xtclang.publish.snapshotBundleRepo=$SNAPSHOT_REPO_DIR"
                 fi
 
                 if [ "${ENABLE_INTELLIJ_RELEASE_BUILD}" = "true" ]; then
@@ -423,6 +433,63 @@ jobs:
                       ci-artifacts/metadata/consumer-artifacts.json
                   retention-days: 10
 
+            - name: Stage snapshot Maven repository artifact
+              if: |
+                  success() &&
+                  matrix.os == 'ubuntu-latest' &&
+                  (
+                      (github.ref == 'refs/heads/master' && github.event_name == 'push')
+                      ||
+                      (github.event_name == 'workflow_dispatch' &&
+                       (github.event.inputs.publish-snapshots == true || github.event.inputs.publish-snapshots == 'true'))
+                  )
+              shell: bash
+              run: |
+                  STAGING_DIR="$PWD/ci-artifacts/snapshot-maven-repo"
+                  METADATA_DIR="$PWD/ci-artifacts/metadata"
+
+                  echo "📦 Validating snapshot Maven repository produced by the main CI build..."
+                  mkdir -p "$METADATA_DIR"
+
+                  if [ ! -d "$STAGING_DIR/org/xtclang" ]; then
+                      echo "❌ ERROR: Expected snapshot Maven repository subtree not found: $STAGING_DIR/org/xtclang"
+                      find "$PWD/ci-artifacts" -maxdepth 4 -type f | sed -n '1,120p' || true
+                      exit 1
+                  fi
+
+                  cat > "$METADATA_DIR/snapshot-publish-artifacts.json" <<EOF
+                  {
+                    "commit": "${{ github.sha }}",
+                    "branch": "${{ github.ref_name }}",
+                    "xdkVersion": "${{ steps.versions.outputs.xdk-version }}",
+                    "javaVersion": "${{ steps.versions.outputs.java-version }}",
+                    "runId": "${{ github.run_id }}",
+                    "artifact": "snapshot-maven-repo-${{ github.sha }}",
+                    "snapshotRepo": "snapshot-maven-repo"
+                  }
+                  EOF
+
+                  echo "✅ Snapshot Maven repository staged at: $STAGING_DIR"
+                  find "$STAGING_DIR" -maxdepth 4 -type f | sed -n '1,80p'
+
+            - name: Upload snapshot Maven repository artifact
+              if: |
+                  success() &&
+                  matrix.os == 'ubuntu-latest' &&
+                  (
+                      (github.ref == 'refs/heads/master' && github.event_name == 'push')
+                      ||
+                      (github.event_name == 'workflow_dispatch' &&
+                       (github.event.inputs.publish-snapshots == true || github.event.inputs.publish-snapshots == 'true'))
+                  )
+              uses: actions/upload-artifact@v7
+              with:
+                  name: snapshot-maven-repo-${{ github.sha }}
+                  path: |
+                      ci-artifacts/snapshot-maven-repo
+                      ci-artifacts/metadata/snapshot-publish-artifacts.json
+                  retention-days: 10
+
             - name: Stage release-grade IntelliJ plugin artifact
               if: |
                   success() &&
@@ -519,6 +586,34 @@ jobs:
               run: |
                   INTELLIJ_ARTIFACT_STATUS="⏭️ Skipped"
                   INTELLIJ_ARTIFACT_REASON="not enabled for this run"
+                  SNAPSHOT_REPO_STATUS="⏭️ Skipped"
+                  SNAPSHOT_REPO_REASON="not enabled for this run"
+                  MANUAL_TEST_STATUS="✅ Passed"
+                  MANUAL_TEST_REASON="executed in the main CI build"
+                  LANG_VALIDATION_STATUS="⏭️ Skipped"
+                  LANG_VALIDATION_REASON="lang build not enabled for this run"
+                  if [ "${{ matrix.os }}" = "ubuntu-latest" ] && {
+                       [ "${{ github.ref }}" = "refs/heads/master" ] && [ "${{ github.event_name }}" = "push" ];
+                     } || {
+                       [ "${{ github.event_name }}" = "workflow_dispatch" ] &&
+                       [ "${{ github.event.inputs.publish-snapshots }}" = "true" ];
+                     }; then
+                      SNAPSHOT_REPO_STATUS="✅ Built"
+                      SNAPSHOT_REPO_REASON="artifact staged for downstream snapshot publication"
+                  fi
+                  if [ "${{ env.skip_manual_tests }}" = "true" ]; then
+                      MANUAL_TEST_STATUS="⏭️ Skipped"
+                      MANUAL_TEST_REASON="disabled for this run"
+                  fi
+                  if [ "${{ matrix.os }}" = "ubuntu-latest" ] && [ "${{ env.ORG_GRADLE_PROJECT_includeBuildLang }}" = "true" ]; then
+                      if [ "${{ steps.changes.outputs.lang }}" = "true" ]; then
+                          LANG_VALIDATION_STATUS="✅ Ran"
+                          LANG_VALIDATION_REASON="lang build enabled and path filter matched"
+                      else
+                          LANG_VALIDATION_STATUS="⏭️ Skipped"
+                          LANG_VALIDATION_REASON="lang build enabled but path filter found no relevant changes"
+                      fi
+                  fi
                   if [ "${{ matrix.os }}" = "ubuntu-latest" ] && {
                        [ "${{ github.ref }}" = "refs/heads/master" ] && [ "${{ github.event_name }}" = "push" ];
                      } || {
@@ -540,9 +635,17 @@ jobs:
                   if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
                       echo "- ✅ XDK distribution: \`xdk-dist-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
                       echo "- ✅ Consumer Maven repository: \`consumer-maven-repo-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+                      echo "- $SNAPSHOT_REPO_STATUS Snapshot Maven publication bundle: \`snapshot-maven-repo-${{ github.sha }}\` ($SNAPSHOT_REPO_REASON)" >> $GITHUB_STEP_SUMMARY
                       echo "- $INTELLIJ_ARTIFACT_STATUS IntelliJ plugin distribution: \`intellij-plugin-dist-${{ github.sha }}\` ($INTELLIJ_ARTIFACT_REASON)" >> $GITHUB_STEP_SUMMARY
                   else
                       echo "- ⏭️ Artifact staging summary shown only for the Ubuntu publishing lane" >> $GITHUB_STEP_SUMMARY
+                  fi
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Validation:**" >> $GITHUB_STEP_SUMMARY
+                  echo "- $MANUAL_TEST_STATUS Manual tests ($MANUAL_TEST_REASON)" >> $GITHUB_STEP_SUMMARY
+                  echo "- $LANG_VALIDATION_STATUS Lang/tree-sitter validation ($LANG_VALIDATION_REASON)" >> $GITHUB_STEP_SUMMARY
+                  if [ "$INTELLIJ_ARTIFACT_STATUS" = "✅ Built" ]; then
+                      echo "- ✅ IntelliJ publish version: \`${{ steps.intellij-version.outputs.publish-version }}\` on channel \`${{ steps.intellij-version.outputs.release-channel }}\`" >> $GITHUB_STEP_SUMMARY
                   fi
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "**Publication Gating:**" >> $GITHUB_STEP_SUMMARY
