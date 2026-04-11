@@ -15,7 +15,9 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.TypeSystem;
 
@@ -68,32 +70,37 @@ public class EnumBuilder extends CommonBuilder {
     @Override
     protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
         // generate "equals" and "compare" functions
-        SignatureConstant eqSig    = pool().sigEquals();
+        generateOrderable(classBuilder, this);
+
+        super.assembleImplMethods(className, classBuilder);
+    }
+
+    public static void generateOrderable(ClassBuilder classBuilder, CommonBuilder builder) {
+        TypeInfo          typeInfo = builder.typeInfo;
+        SignatureConstant eqSig    = builder.pool().sigEquals();
         MethodInfo        eqMethod = typeInfo.getMethodBySignature(eqSig);
-        JitMethodDesc     eqJmd    = eqMethod.getJitDesc(this, typeInfo.getType());
+        JitMethodDesc     eqJmd    = eqMethod.getJitDesc(builder, typeInfo.getType());
 
         assert eqMethod != null;
 
         classBuilder.withMethodBody(eqSig.getName()+OPT, eqJmd.optimizedMD,
-            ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, this::assembleEquals);
+            ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, EnumBuilder::assembleEquals);
 
-        SignatureConstant cmpSig    = pool().sigCompare();
+        SignatureConstant cmpSig    = builder.pool().sigCompare();
         MethodInfo        cmpMethod = typeInfo.getMethodBySignature(cmpSig);
-        JitMethodDesc     cmpJmd    = cmpMethod.getJitDesc(this, typeInfo.getType());
+        JitMethodDesc     cmpJmd    = cmpMethod.getJitDesc(builder, typeInfo.getType());
 
         assert cmpMethod != null;
 
         classBuilder.withMethodBody(cmpSig.getName(), cmpJmd.standardMD,
-            ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, this::assembleCompare);
-
-        super.assembleImplMethods(className, classBuilder);
+            ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, (code) -> assembleCompare(builder, code));
     }
 
     /**
      * The signature of the function we generate is:
      *    "public boolean equals$p(Ctx ctx, nType CompileType, [EnumType] o1, {EnumType} o2)"
      */
-    private void assembleEquals(CodeBuilder code) {
+    private static void assembleEquals(CodeBuilder code) {
         // all we need is to call the equivalent function on xEnum
         code.aload(0)
             .aload(1)
@@ -109,13 +116,13 @@ public class EnumBuilder extends CommonBuilder {
      * The signature of the function we generate is:
      *    "public Ordered compare(Ctx ctx, nType CompileType, [EnumType] o1, {EnumType} o2)"
      */
-    private void assembleCompare(CodeBuilder code) {
+    private static void assembleCompare(Builder builder, CodeBuilder code) {
         // there is a custom primitivized function on nEnum:
         //      long compare$p(Ctx ctx, nType CompileType, nEnum o1, nEnum o2)
         // which returns a negative, zero or positive value that needs to be translated into
         // the corresponding Ordered value
 
-        ConstantPool pool = pool();
+        ConstantPool pool = builder.pool();
 
         // long c = nEnum.compare$p(ctx, CompileType, o1, o2);
         code.aload(0)
@@ -137,7 +144,7 @@ public class EnumBuilder extends CommonBuilder {
         code.ifge(labelGe);
 
         // return Lesser;
-        loadConstant(code, pool.valLesser());
+        builder.loadConstant(code, pool.valLesser());
         code.areturn();
 
         // else if (l > 0)
@@ -148,12 +155,12 @@ public class EnumBuilder extends CommonBuilder {
         code.ifeq(labelEq);             // if <= 0, jump to else
 
         // return Greater;
-        loadConstant(code, pool.valGreater());
+        builder.loadConstant(code, pool.valGreater());
         code.areturn();
 
         // else return Equal;
         code.labelBinding(labelEq);
-        loadConstant(code, pool.valEqual());
+        builder.loadConstant(code, pool.valEqual());
         code.areturn();
     }
 }

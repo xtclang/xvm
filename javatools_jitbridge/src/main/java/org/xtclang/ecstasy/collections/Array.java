@@ -496,6 +496,21 @@ public abstract class Array
         throw new UnsupportedOperationException("TODO");
     }
 
+    /**
+     * Native implementation of:
+     *
+     *   Mutability mutability.get()
+     */
+    public Mutability mutability$get(Ctx ctx) {
+        return switch ($mut()) {
+            case 0  -> Mutability.Constant;
+            case 1  -> Mutability.Persistent;
+            case 2  -> Mutability.Fixed;
+            case 3  -> Mutability.Mutable;
+            default -> throw new IllegalStateException();
+        };
+    }
+
     // ----- TEMPORARY: SHOULD BE NATURAL ----------------------------------------------------------
 
     public Array duplicate(Ctx ctx) {

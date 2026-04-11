@@ -34,16 +34,19 @@ package int8ArrayTests {
 
     void shouldCreateWithCapacity() {
         Int8[] array = new Int8[](10);
+        assert array.mutability == Mutable;
         assert array.capacity == 10;
     }
 
     void shouldCreateFixedSize() {
         Int8[] array = new Int8[4];
+        assert array.mutability == Fixed;
         assert array.size == 4 && array[3] == 0;
     }
 
     void shouldCreateConstantArray() {
         Int8[] array = [10, 20, Int8.MaxValue];
+        assert array.mutability == Constant;
         assert array.size == 3;
         assert array[0] == 10;
         assert array[1] == 20;
