@@ -592,6 +592,37 @@ jobs:
                   echo "📄 Updated libs.versions.toml:"
                   cat ../xtc-app-template/gradle/libs.versions.toml
 
+            - name: Verify staged consumer artifact provenance
+              shell: bash
+              run: |
+                  METADATA_FILE=$(find "$GITHUB_WORKSPACE/artifacts" -maxdepth 3 -name consumer-artifacts.json | head -1)
+                  if [ -z "$METADATA_FILE" ] || [ ! -f "$METADATA_FILE" ]; then
+                      echo "❌ ERROR: consumer-artifacts.json not found in downloaded artifact"
+                      find "$GITHUB_WORKSPACE/artifacts" -maxdepth 4 -type f | sed -n '1,120p' || true
+                      exit 1
+                  fi
+
+                  ARTIFACT_COMMIT=$(jq -r '.commit' "$METADATA_FILE")
+                  ARTIFACT_BRANCH=$(jq -r '.branch' "$METADATA_FILE")
+                  ARTIFACT_VERSION=$(jq -r '.xdkVersion' "$METADATA_FILE")
+                  ARTIFACT_RUN_ID=$(jq -r '.runId' "$METADATA_FILE")
+                  ARTIFACT_NAME=$(jq -r '.artifact' "$METADATA_FILE")
+
+                  echo "📦 Consumer artifact provenance"
+                  echo "  Metadata file : $METADATA_FILE"
+                  echo "  Commit        : $ARTIFACT_COMMIT"
+                  echo "  Branch        : $ARTIFACT_BRANCH"
+                  echo "  XDK Version   : $ARTIFACT_VERSION"
+                  echo "  Source Run ID : $ARTIFACT_RUN_ID"
+                  echo "  Artifact Name : $ARTIFACT_NAME"
+
+                  if [ "$ARTIFACT_COMMIT" != "${{ github.sha }}" ]; then
+                      echo "❌ ERROR: Downloaded consumer artifact commit does not match this CI run commit"
+                      exit 1
+                  fi
+
+                  echo "✅ Consumer artifact commit matches current branch build"
+
             - name: Run xtc-app-template with local XDK
               working-directory: ../xtc-app-template
               run: |
@@ -601,6 +632,8 @@ jobs:
                       find "$GITHUB_WORKSPACE/artifacts" -maxdepth 4 -type f | sed -n '1,80p' || true
                       exit 1
                   fi
+                  echo "📦 Using staged local Maven repo at: $LOCAL_REPO_PATH"
+                  find "$LOCAL_REPO_PATH/org/xtclang" -maxdepth 3 -type f | sed -n '1,40p'
                   echo "🧪 Running xtc-app-template with locally published XDK..."
                   ./gradlew greet -PlocalOnly=true --no-daemon --refresh-dependencies -Dmaven.repo.local="$LOCAL_REPO_PATH"
                   echo "✅ Integration test passed - plugin works with external projects"
