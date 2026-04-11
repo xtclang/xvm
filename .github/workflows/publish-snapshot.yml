@@ -492,7 +492,8 @@ jobs:
                           --title "XTC IntelliJ Plugin Snapshots" \
                           --notes "$RELEASE_NOTES" \
                           --prerelease \
-                          --latest=false
+                          --latest=false \
+                          --target "$COMMIT"
                       gh release upload "$RELEASE_TAG" \
                           "$ASSET_NAME" \
                           "$CHECKSUM_NAME" \
