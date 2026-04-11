@@ -10,7 +10,8 @@
 # 6. Validates Gradle Plugin Portal credentials (doesn't publish yet)
 # 7. Creates PR to master for final approval
 #
-# After merging the PR, the promote-release workflow automatically publishes everything.
+# After merging the PR, master moves to the next snapshot version.
+# Public release promotion is a separate manual step via promote-release.yml.
 #
 name: Prepare Release
 
@@ -301,22 +302,31 @@ jobs:
 
                   ### 🚀 What Happens When Merged
 
-                  **This merge will make the release PUBLIC! The following actions will be triggered automatically:**
+                  **Merging this PR does _not_ publish the release automatically.**
+
+                  What merge does:
 
                   1. ✅ **Master branch** updated to $NEXT_VERSION
-                  2. 🏛️ **Maven Central staging** → Released to production
-                  3. 📦 **GitHub draft release** → Published
-                  4. 🔌 **Gradle Plugin Portal** → Published (IMMEDIATE, cannot be undone)
+                  2. ✅ **Release tag** `v$VERSION` remains available for promotion
+
+                  What must happen next, manually:
+
+                  3. 🎛️ Run **promote-release.yml**
+                  4. 🏛️ **Maven Central staging** → Released to production (if enabled)
+                  5. 📦 **GitHub draft release** → Published (if enabled)
+                  6. 🔌 **Gradle Plugin Portal** → Published (if enabled, immediate and cannot be undone)
 
                   ### ⚠️ Important Notes
 
-                  - **This action is FINAL** - artifacts will be publicly available
+                  - **Merging is not the final public release action**
+                  - **promote-release.yml** is the final public release action
                   - Maven Central releases cannot be deleted (only deprecated)
                   - Gradle Plugin Portal releases cannot be undone
 
                   ### 📚 Post-Release Tasks
 
                   After merge completes:
+                  - [ ] Manually run `promote-release.yml` for version $VERSION
                   - [ ] Wait 10-30 minutes for Maven Central sync
                   - [ ] Verify artifacts on Maven Central
                   - [ ] Announce release
@@ -332,9 +342,10 @@ jobs:
                       --label "release")
 
                   echo "✅ Created release PR: $PR_URL"
-                  echo "   Gradle Plugin Portal will be published during promotion"
+                  echo "   Release promotion remains a separate manual workflow step"
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
                   echo "1. Review PR: $PR_URL" >> $GITHUB_STEP_SUMMARY
                   echo "2. Verify staged artifacts" >> $GITHUB_STEP_SUMMARY
-                  echo "3. Merge PR to promote release to production" >> $GITHUB_STEP_SUMMARY
+                  echo "3. Merge PR to move master to $NEXT_VERSION" >> $GITHUB_STEP_SUMMARY
+                  echo "4. Manually run promote-release.yml for $VERSION" >> $GITHUB_STEP_SUMMARY
