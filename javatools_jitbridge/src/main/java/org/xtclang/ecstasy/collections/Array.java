@@ -361,7 +361,8 @@ public abstract class Array
      *   immutable Array makeImmutable()
      */
     public Array makeImmutable(Ctx ctx) {
-        throw new UnsupportedOperationException("TODO");
+        $mut($CONSTANT);
+        return this;
     }
 
     /**
