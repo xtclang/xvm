@@ -1,10 +1,10 @@
 # Release Process
 
-This document describes the automated release workflow for the XVM project.
+This document describes the current release workflow for the XVM project.
 
 ## Quick Reference
 
-### Normal Release (3 Steps)
+### Normal Release (4 Steps)
 
 ```bash
 # 1. Prepare (creates PR with staged artifacts)
@@ -13,8 +13,11 @@ gh workflow run prepare-release.yml
 
 # 2. Review staged artifacts (Maven Central, GitHub draft release)
 
-# 3. Merge PR (auto-promotes to production)
+# 3. Merge PR (moves master to next snapshot)
 gh pr merge <PR-NUMBER>
+
+# 4. Promote staged release manually
+gh workflow run promote-release.yml --field release-version=0.4.4
 ```
 
 ### Manual Re-promotion
@@ -38,9 +41,9 @@ gh workflow run promote-release.yml \
 
 ## Overview
 
-The release process is **two-phase** with full automation:
+The release process is **two-phase**:
 1. **Prepare Phase**: Stage artifacts for review
-2. **Promote Phase**: Publish staged artifacts to production (automatic on PR merge)
+2. **Promote Phase**: Publish staged artifacts to production (manual workflow_dispatch)
 
 ### Understanding "Staging"
 
@@ -51,7 +54,7 @@ Not all publishing targets support staging equally:
 | **GitHub Packages** (Maven) | ❌ None | Published immediately | Already live |
 | **Maven Central** | ✅ Full staging | Artifacts in staging repo | Close & release to production |
 | **GitHub Release** (zip) | ✅ Draft releases | Uploaded as DRAFT | Publish draft → public |
-| **Gradle Plugin Portal** | ❌ None | Credentials validated only | Published immediately |
+| **Gradle Plugin Portal** | ❌ None | Credentials validated only | Published immediately if enabled during promotion |
 
 **Important**: GitHub Packages artifacts are **immediately public** when prepare-release runs. This is acceptable because:
 - Few users consume artifacts from GitHub Packages (most use Maven Central)
@@ -66,8 +69,8 @@ Not all publishing targets support staging equally:
 | **Release branches** | Isolates release work from ongoing development |
 | **Automatic version bumps** | Next snapshot version computed automatically |
 | **Staging before production** | Review artifacts before they go live |
-| **PR-based promotion** | Clear approval gate with full audit trail |
-| **Auto-promotion on merge** | One merge = complete release |
+| **PR-based release prep** | Clear approval gate with full audit trail |
+| **Manual promotion** | Explicit production release step |
 
 ## Complete Release Flow
 
@@ -102,19 +105,19 @@ Not all publishing targets support staging equally:
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│ 3. Merge PR to Master (One Click)                               │
+│ 3. Merge PR to Master                                           │
 ├─────────────────────────────────────────────────────────────────┤
 │ • Master updated to 0.4.5-SNAPSHOT                              │
 │ • v0.4.4 tag points to release commit                           │
 └────────────────────────┬────────────────────────────────────────┘
                          │
-                         ▼ (Automatic Promotion Triggered)
+                         ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│ 4. Promote Release (Automatic)                                  │
+│ 4. Promote Release (Manual workflow_dispatch)                   │
 ├─────────────────────────────────────────────────────────────────┤
 │ • Maven Central staging → Released                              │
 │ • GitHub draft → Published                                      │
-│ • Gradle Plugin Portal → Published                              │
+│ • Gradle Plugin Portal → Published if enabled                   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -139,7 +142,7 @@ Configure these secrets in **GitHub repository settings** (Settings → Secrets 
 - `ORG_XTCLANG_SIGNING_PASSWORD` - GPG key password
 - `ORG_XTCLANG_SIGNING_KEY` - GPG private key (ASCII-armored with escaped `\n`)
 
-**Gradle Plugin Portal** (required - always published for real releases):
+**Gradle Plugin Portal** (optional during manual promotion):
 - `ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY` - API key
 - `ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET` - API secret
 
@@ -251,7 +254,7 @@ curl -O https://oss.sonatype.org/service/local/repositories/orgxtclang-1234/cont
 gpg --verify xdk-0.4.4.jar.asc xdk-0.4.4.jar
 ```
 
-### 3. Merge PR (Promote Release)
+### 3. Merge PR
 
 When all checks pass and artifacts are verified:
 
@@ -263,18 +266,33 @@ Or click "Merge pull request" in the GitHub UI.
 
 **⚠️ IMPORTANT: This makes the release PUBLIC!**
 
-**What happens automatically:**
+**What happens on merge:**
 - ✅ PR merged to `master`
 - ✅ Master is now at `0.4.5-SNAPSHOT`
-- ✅ `promote-release` workflow triggers automatically
-- ✅ **Maven Central**: Closes and releases staging repository
-- ✅ **GitHub Release**: Publishes draft
-- ✅ **Gradle Plugin Portal**: Publishes plugin
+- ❌ release promotion does not happen automatically
 - ✅ **GitHub Packages**: No action needed (already published in prepare phase)
 
-**Time:** ~2-5 minutes
+### 4. Promote Release
 
-### 4. Post-Release
+```bash
+gh workflow run promote-release.yml \
+  --field release-version=0.4.4 \
+  --field promote-maven-central=true \
+  --field publish-github-release=true \
+  --field publish-gradle-plugin-portal=false
+```
+
+If you explicitly want Gradle Plugin Portal publication too:
+
+```bash
+gh workflow run promote-release.yml \
+  --field release-version=0.4.4 \
+  --field promote-maven-central=true \
+  --field publish-github-release=true \
+  --field publish-gradle-plugin-portal=true
+```
+
+### 5. Post-Release
 
 After merge completes:
 
@@ -348,18 +366,12 @@ This ensures:
 - ✅ No manual version entry errors
 - ✅ Consistent version incrementing
 
-### Why Gradle Plugin Portal Always Published
+### Why Gradle Plugin Portal Is Not Assumed
 
-**Previous approach**: Optional plugin publishing via workflow input.
+Current workflow behavior is:
 
-**Problem**: Extra complexity, easy to forget, inconsistent releases.
-
-**Solution**: Always validate and publish Gradle Plugin Portal for real releases.
-
-This ensures:
-- ✅ Simpler workflow (no conditional logic)
-- ✅ Consistent releases (all targets published together)
-- ✅ Early credential validation
+- credentials are validated during prepare
+- publication is controlled explicitly during manual promotion
 
 ### Why Release Branch Has Two Commits
 
@@ -483,7 +495,7 @@ A: The workflow reads `version.properties` from your branch and strips `-SNAPSHO
 A: Update `version.properties` to `0.5.0-SNAPSHOT` on master first, then run prepare-release. The auto-bump will create `0.5.1-SNAPSHOT`.
 
 **Q: Can I skip Gradle Plugin Portal for a release?**
-A: No, for real releases the plugin is always published. You can test on a feature branch if needed.
+A: Yes. The current `promote-release.yml` inputs allow that.
 
 **Q: How do I do a hotfix release?**
 A: Either use a maintenance branch with the appropriate snapshot version, or create from a release tag and update `version.properties` to the hotfix version (e.g., `0.4.4-hotfix.1-SNAPSHOT`).
@@ -501,9 +513,8 @@ A: No, one release at a time per branch. Each release creates a PR that must be 
 - ✅ Audit trail (PR + workflow logs)
 - ✅ Industry best practices (staging, signed artifacts, semantic versioning)
 
-**The only manual steps:**
+**The manual steps are:**
 1. Trigger prepare-release workflow (version computed automatically)
 2. Review staged artifacts
 3. Merge PR
-
-Everything else is automated!
+4. Trigger promote-release workflow

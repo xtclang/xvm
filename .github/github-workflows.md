@@ -81,8 +81,8 @@ The XVM CI/CD pipeline follows a clear separation between internal build artifac
 
 3. **Manual Release** (two-phase process):
    - `prepare-release.yml` - Creates release branch, stages artifacts, creates PR
-   - `promote-release.yml` - Promotes staged artifacts to production (auto on PR merge)
-   - See [RELEASE_PROCESS.md](RELEASE_PROCESS.md) for complete documentation
+   - `promote-release.yml` - Promotes staged artifacts to production (manual workflow_dispatch)
+   - See [github-release-process.md](github-release-process.md) for complete documentation
 
 ---
 
@@ -422,7 +422,7 @@ brew reinstall xdk-latest               # Alternative: always gets latest
 **⚠️ Note**: GitHub Packages artifacts are **immediately public** when prepare-release runs, before PR approval. Most users consume from Maven Central, which remains staged until promotion.
 
 **For complete release workflow documentation, see:**
-**[📖 RELEASE_PROCESS.md](RELEASE_PROCESS.md)**
+**[📖 github-release-process.md](github-release-process.md)**
 
 **Quick Summary**:
 
@@ -456,7 +456,7 @@ brew reinstall xdk-latest               # Alternative: always gets latest
 - ✅ Single merge = complete release
 - ✅ Selective publishing via PR labels
 
-**See [RELEASE_PROCESS.md](RELEASE_PROCESS.md) for**:
+**See [github-release-process.md](github-release-process.md) for**:
 - Complete step-by-step instructions
 - Selective publishing control
 - Manual re-promotion

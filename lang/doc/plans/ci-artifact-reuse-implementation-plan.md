@@ -25,6 +25,51 @@ The guiding rule is:
 - publish/download a commit-scoped artifact bundle
 - let downstream jobs consume or promote those artifacts
 
+## Current Audit
+
+### Already In Good Shape
+
+- [`commit.yml`](../../../.github/workflows/commit.yml)
+  - now stages:
+    - `xdk-dist-${sha}`
+    - `consumer-maven-repo-${sha}`
+    - `intellij-plugin-dist-${sha}`
+  - integration-test now consumes the staged consumer Maven repository artifact instead of running `publishLocal`
+  - IntelliJ release-grade ZIP is built in the main CI session, then staged and uploaded
+- [`publish-snapshot.yml`](../../../.github/workflows/publish-snapshot.yml)
+  - IntelliJ plugin publication is now a true promotion job
+  - it downloads `intellij-plugin-dist-${sha}` and publishes that exact ZIP
+- [`publish-docker.yml`](../../../.github/workflows/publish-docker.yml)
+  - already behaves like an artifact promotion workflow
+  - it downloads `xdk-dist-${sha}` and builds Docker images from that ZIP
+- [`homebrew-update.yml`](../../../.github/workflows/homebrew-update.yml)
+  - already behaves like an artifact promotion workflow
+  - it downloads `xdk-dist-${sha}`, computes SHA-256, and updates the tap formula without rebuilding XDK
+
+### Still Rebuilds From Source
+
+- [`publish-snapshot.yml`](../../../.github/workflows/publish-snapshot.yml)
+  - `publish-snapshots` still checks out the repo and runs `./gradlew publish`
+  - this republishes Maven snapshot artifacts from source instead of promoting a commit-scoped publication bundle
+- [`prepare-release.yml`](../../../.github/workflows/prepare-release.yml)
+  - `stage-artifacts` still checks out the release tag and rebuilds the XDK with `:xdk:distZip`
+  - it also republishes/stages Maven artifacts from source with `./gradlew publish`
+- [`promote-release.yml`](../../../.github/workflows/promote-release.yml)
+  - does not rebuild XDK itself for GitHub release or Maven Central promotion
+  - but it still checks out source and runs `:plugin:publishPlugins` from source for Gradle Plugin Portal publication
+
+### Shared Action Gaps
+
+- [`download-ci-artifact/action.yml`](../../../.github/actions/download-ci-artifact/action.yml)
+  - is still XDK-specific
+  - it should be generalized or paralleled with a small metadata-aware action for:
+    - XDK ZIP
+    - consumer Maven repository
+    - IntelliJ plugin bundle
+- [`publish-github-release/action.yml`](../../../.github/actions/publish-github-release/action.yml)
+  - is still XDK-centric and still uses delete/recreate semantics for snapshot releases
+  - downstream IntelliJ publishing needed workflow-local fixes instead of a shared release-promotion primitive
+
 ## Non-Goals
 
 - Do not remove local developer workflows like `publishLocal`
@@ -242,6 +287,100 @@ Implementation notes:
 - use the same helper actions where practical
 - prefer small generalizations of existing artifact-download actions over workflow-specific shell glue
 
+### Task 5.3: Convert snapshot Maven publication into artifact promotion
+
+Refactor the XDK snapshot publication path in [`publish-snapshot.yml`](../../../.github/workflows/publish-snapshot.yml) so it no longer runs `./gradlew publish` from a fresh checkout.
+
+Target shape:
+
+1. originating `build-and-test` run produces a Maven-consumer bundle and a publish-ready snapshot publication bundle
+2. `publish-snapshot.yml` downloads that publication bundle
+3. downstream job publishes staged artifacts to:
+   - GitHub Packages
+   - Maven Central Snapshots
+   - GitHub release asset
+
+Implementation notes:
+
+- do not try to infer publication identity from source checkout at publish time
+- include coordinate metadata, checksums, and expected package list in the staged bundle
+- if exact remote publication still requires Gradle task execution, make it consume the staged publication repository rather than rebuilding modules
+
+### Task 5.4: Convert release staging into artifact promotion where possible
+
+Refactor [`prepare-release.yml`](../../../.github/workflows/prepare-release.yml) so `stage-artifacts` does not rebuild more than necessary.
+
+Target shape:
+
+1. release-tag build produces:
+   - release XDK ZIP
+   - release Maven publication bundle
+   - release plugin publication bundle
+2. GitHub draft release and Maven Central staging consume those outputs
+
+Implementation notes:
+
+- keep the explicit release-tag build for correctness
+- but split build from publication, just like snapshot CI now does
+- if a single release-tag build must remain, stage all publication bundles from that one build session and never re-enter a second Gradle graph in the workflow
+
+### Task 5.5: Decide whether Gradle Plugin Portal promotion can be artifact-driven
+
+Investigate whether [`promote-release.yml`](../../../.github/workflows/promote-release.yml) must keep running `:plugin:publishPlugins` from source, or whether it can publish from a staged plugin publication bundle.
+
+Implementation notes:
+
+- if the portal plugin requires source-driven publication, document that as an intentional exception
+- if it can publish from staged plugin artifacts, convert it to the same promotion pattern
+- this should be the only acceptable remaining source-build exception if no staged alternative exists
+
+### Task 5.6: Keep Docker and Homebrew on the current promotion model
+
+No architecture change is needed for:
+
+- [`publish-docker.yml`](../../../.github/workflows/publish-docker.yml)
+- [`homebrew-update.yml`](../../../.github/workflows/homebrew-update.yml)
+
+Implementation notes:
+
+- these already consume CI-built XDK artifacts correctly
+- keep them aligned with the shared metadata contract so commit/run provenance can be enforced consistently
+- do not over-refactor these unless helper-action simplification materially reduces maintenance
+
+## Phase 5A: Standardize Artifact Metadata
+
+### Task 5A.1: Use one metadata schema across staged artifacts
+
+Every staged artifact family should provide a metadata file with at least:
+
+- commit
+- branch
+- runId
+- workflow
+- version
+- artifact name
+- checksum or expected file list
+
+Apply this to:
+
+- XDK ZIP artifact
+- consumer Maven repository
+- IntelliJ plugin distribution
+- future publish-ready Maven snapshot bundle
+
+### Task 5A.2: Add provenance validation to all downstream promotion jobs
+
+Downstream jobs should explicitly validate:
+
+- downloaded artifact commit equals source CI commit
+- artifact run ID equals the triggering `ci-run-id`
+- required files are present before publish starts
+
+Implementation notes:
+
+- the consumer Maven repository provenance check in `integration-test` is now the reference implementation
+- Docker, Homebrew, and XDK snapshot publication should adopt the same pattern
+
 ## Phase 6: Instrumentation And Guardrails
 
 ### Task 6.1: Add fast-fail checks for required downstream inputs
@@ -291,4 +430,3 @@ The refactor is successful when all of the following are true:
 
 This order reduces risk because the integration test is the simplest consumer of the staged
 artifact bundle and validates the artifact contract before publication workflows depend on it.
-
