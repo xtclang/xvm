@@ -38,7 +38,7 @@ runs:
     using: 'composite'
     steps:
         - name: Download XDK artifact from CI
-          uses: actions/download-artifact@v4
+          uses: actions/download-artifact@v8
           with:
               name: xdk-dist-${{ inputs.commit }}
               path: ${{ inputs.output-path }}

@@ -230,7 +230,7 @@ jobs:
                   echo "commit=$GH_COMMIT" >> $GITHUB_OUTPUT
 
             - name: Download IntelliJ plugin artifact from CI
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v8
               with:
                   name: intellij-plugin-dist-${{ steps.commit.outputs.commit }}
                   path: ./artifacts/intellij-plugin

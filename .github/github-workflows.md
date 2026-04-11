@@ -98,12 +98,12 @@ The XVM CI/CD pipeline follows a clear separation between internal build artifac
 - Artifact identifier includes full 40-character commit hash
 - File inside artifact: `xdk-{VERSION}.zip` (from distZip task)
 
-**Download**: Using `actions/download-artifact@v4` with `run-id`
+**Download**: Using `actions/download-artifact@v8` with `run-id`
 
 **Example**:
 ```yaml
 - name: Download XDK build artifact
-  uses: actions/download-artifact@v4
+  uses: actions/download-artifact@v8
   with:
       name: xdk-dist-abc123def456...  # Full commit hash
       path: ./artifacts
@@ -1028,7 +1028,7 @@ curl -sL {URL} | sha256sum
       echo "run-id=$RUN_ID" >> $GITHUB_OUTPUT
 
 - name: Download XDK build artifact
-  uses: actions/download-artifact@v4
+  uses: actions/download-artifact@v8
   with:
       name: xdk-dist-${{ steps.commit.outputs.commit }}
       path: ./artifacts

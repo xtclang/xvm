@@ -187,7 +187,7 @@ runs:
 
         - name: Setup Gradle
           if: ${{ inputs.setup-build == 'true' }}
-          uses: gradle/actions/setup-gradle@v5
+          uses: gradle/actions/setup-gradle@v6
           with:
               cache-disabled: false
               cache-read-only: ${{ inputs.cache-read-only }}
@@ -198,7 +198,7 @@ runs:
 
         - name: Validate Gradle Wrapper
           if: ${{ inputs.setup-build == 'true' }}
-          uses: gradle/actions/wrapper-validation@v5
+          uses: gradle/actions/wrapper-validation@v6
 
 branding:
     icon: 'package'

@@ -39,6 +39,9 @@ The guiding rule is:
 - [`publish-snapshot.yml`](../../../.github/workflows/publish-snapshot.yml)
   - IntelliJ plugin publication is now a true promotion job
   - it downloads `intellij-plugin-dist-${sha}` and publishes that exact ZIP
+  - it publishes the IntelliJ ZIP to both:
+    - JetBrains Marketplace alpha
+    - GitHub release assets
 - [`publish-docker.yml`](../../../.github/workflows/publish-docker.yml)
   - already behaves like an artifact promotion workflow
   - it downloads `xdk-dist-${sha}` and builds Docker images from that ZIP
@@ -69,6 +72,48 @@ The guiding rule is:
 - [`publish-github-release/action.yml`](../../../.github/actions/publish-github-release/action.yml)
   - is still XDK-centric and still uses delete/recreate semantics for snapshot releases
   - downstream IntelliJ publishing needed workflow-local fixes instead of a shared release-promotion primitive
+
+### Action Runtime Maintenance
+
+- official action majors currently in use or updated:
+  - `actions/checkout@v6`
+  - `actions/setup-java@v5`
+  - `actions/upload-artifact@v7`
+  - `actions/download-artifact@v8`
+  - `gradle/actions/setup-gradle@v6`
+  - `gradle/actions/wrapper-validation@v6`
+- this removes the immediate Node 20 deprecation warning caused by `actions/download-artifact@v4`
+- cache-provider behavior for `gradle/actions@v6` remains unchanged for now; only the action version was bumped
+
+## Completed Work
+
+- [x] Stage `xdk-dist-${sha}` in `commit.yml`
+- [x] Stage `consumer-maven-repo-${sha}` in `commit.yml`
+- [x] Stage `intellij-plugin-dist-${sha}` in `commit.yml`
+- [x] Move consumer Maven repo publication into the main Gradle session
+- [x] Remove `publishLocal` from `integration-test`
+- [x] Make `integration-test` consume only the staged consumer Maven repository artifact
+- [x] Add provenance validation in `integration-test` so artifact commit must match `${github.sha}`
+- [x] Remove the huge Gradle cache restore from `integration-test`
+- [x] Move IntelliJ release-grade build into the main CI Gradle session
+- [x] Convert IntelliJ snapshot publication into a downstream artifact-promotion job
+- [x] Publish IntelliJ snapshot ZIP to JetBrains Marketplace alpha
+- [x] Publish IntelliJ snapshot ZIP to GitHub release assets as a fallback download channel
+- [x] Add fast-fail secret validation for IntelliJ publication
+- [x] Fix downloaded-artifact path assumptions in IntelliJ promotion
+- [x] Add clearer artifact/publishing summaries in `commit.yml`
+- [x] Upgrade `actions/download-artifact` to `@v8`
+- [x] Upgrade `gradle/actions` usages to `@v6`
+
+## Highest-Value Remaining Tasks
+
+1. Convert XDK snapshot Maven publication in [`publish-snapshot.yml`](../../../.github/workflows/publish-snapshot.yml) from source rebuild to artifact promotion.
+2. Add release-flow parity for IntelliJ publication:
+   - gated staging in [`prepare-release.yml`](../../../.github/workflows/prepare-release.yml)
+   - gated promotion in [`promote-release.yml`](../../../.github/workflows/promote-release.yml)
+   - default disabled, mirroring the snapshot gating model
+3. Generalize artifact metadata/download helpers so XDK, consumer Maven repo, and IntelliJ bundle all use the same validation pattern.
+4. Decide whether Gradle Plugin Portal publication can also become artifact-driven, or document it as the one intentional source-build exception.
 
 ## Non-Goals
 
@@ -106,6 +151,14 @@ Implementation notes:
 - `versions.json` should include XDK version and any publish-specific derived versions
 - `publications.json` should list expected coordinates, filenames, and checksums
 
+Status:
+
+- partially complete
+- current metadata is artifact-family-specific:
+  - `consumer-artifacts.json`
+  - `intellij-plugin-metadata.json`
+- still worth normalizing into a shared schema
+
 ### Task 1.2: Decide artifact naming and retention
 
 Define stable GitHub Actions artifact names, for example:
@@ -120,6 +173,10 @@ Implementation notes:
 - make names deterministic from commit SHA to simplify downstream lookup
 - keep artifact contents minimal enough to upload/download quickly
 
+Status:
+
+- complete for current snapshot CI artifact families
+
 ### Task 1.3: Decide where version suffixes are computed
 
 For any publish path where the artifact embeds its final version:
@@ -132,6 +189,10 @@ Implementation notes:
 
 - IntelliJ Marketplace suffixes must not be recomputed later if the ZIP already contains the version
 - downstream jobs should treat version metadata as input, not derive it again
+
+Status:
+
+- complete for IntelliJ snapshot publication
 
 ## Phase 2: Extend The Originating CI Build
 
@@ -149,6 +210,10 @@ Implementation notes:
 - repository layout should be directly consumable as a `maven { url = uri(...) }` repo
 - use generated POMs/module metadata from the build, not hand-written placeholders
 
+Status:
+
+- complete
+
 ### Task 2.2: Stage IntelliJ plugin distribution artifacts during `build-and-test`
 
 When IntelliJ publication is requested, or on `master`, add a release-grade plugin build in the
@@ -165,6 +230,11 @@ Implementation notes:
 - use the final publication suffix here, not later
 - upload both the binary and metadata
 
+Status:
+
+- complete for snapshot CI and snapshot publication
+- not yet mirrored into formal release workflows
+
 ### Task 2.3: Upload the artifact bundles
 
 Upload the staged artifact directories as named GitHub Actions artifacts.
@@ -174,6 +244,10 @@ Implementation notes:
 - one artifact may be enough if the layout is clean
 - separate artifacts are also acceptable if that simplifies consumers
 - prefer explicit metadata files over trying to infer everything from filenames later
+
+Status:
+
+- complete for current snapshot CI artifact families
 
 ## Phase 3: Refactor The Plugin Integration Test
 
@@ -190,6 +264,10 @@ Implementation notes:
 - this job should no longer rebuild `:xdk:*:compileXtc`
 - it should behave as an external consumer of built artifacts
 
+Status:
+
+- complete
+
 ### Task 3.2: Add repository override support to `xtc-app-template` if needed
 
 If the template only supports `-PlocalOnly=true` with Maven Local semantics, add support for:
@@ -203,6 +281,11 @@ Implementation notes:
 - prefer a file-backed repo path over writing into `~/.m2`
 - keep `-PlocalOnly=true` for local-dev convenience
 
+Status:
+
+- not needed for the current validated flow
+- current approach works by pointing `-Dmaven.repo.local` at the staged repo artifact
+
 ### Task 3.3: Verify no second XDK publication build occurs
 
 Acceptance criteria for the integration-test job:
@@ -210,6 +293,10 @@ Acceptance criteria for the integration-test job:
 - no `publishLocal`
 - no `:xdk:distZip`
 - no long `:xdk:*:compileXtc` chain
+
+Status:
+
+- complete
 
 ## Phase 4: Refactor IntelliJ Plugin Publication
 
@@ -226,6 +313,10 @@ Implementation notes:
 
 - downstream publish jobs should no longer own the build identity
 - the ZIP built here is the one to be published later
+
+Status:
+
+- complete
 
 ### Task 4.2: Convert `publish-intellij-plugin-snapshot` into a promotion job
 
@@ -246,6 +337,10 @@ Implementation notes:
 - if possible, avoid using a Gradle publish task for the upload step if it forces a rebuild graph
 - if Gradle upload must remain, make it consume the already-built ZIP and metadata only
 
+Status:
+
+- complete
+
 ### Task 4.3: Add an explicit fallback rebuild mode
 
 If manual emergency publication without a CI artifact is still needed, add an explicit workflow
@@ -257,6 +352,11 @@ Implementation notes:
 
 - default should be artifact promotion
 - fallback mode should be opt-in and clearly labeled slower
+
+Status:
+
+- not implemented
+- still optional
 
 ## Phase 5: Audit Other Downstream Jobs
 
