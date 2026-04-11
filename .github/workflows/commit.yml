@@ -261,6 +261,8 @@ jobs:
                 GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }} ${{ github.event.inputs.extra-gradle-options }}"
                 BUILD_TASKS="distZip check :plugin:compileJava"
                 BUILD_PROPS="-Porg.xtclang.java.test.failFast=true -Porg.xtclang.plugin.java.lint=true"
+                BUILD_JVM_ARGS=""
+                CONSUMER_REPO_DIR="$PWD/ci-artifacts/consumer-maven-repo"
 
                 cwd_path=$(pwd)
                 echo "Executing primary Gradle build from: '$cwd_path'"
@@ -269,13 +271,21 @@ jobs:
                 inspect_gradle_cache "before build"
                 ./gradlew $GRADLE_OPTIONS clean
 
+                if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+                    echo "📦 Folding consumer Maven repository publication into the main CI build..."
+                    rm -rf "$CONSUMER_REPO_DIR"
+                    mkdir -p "$CONSUMER_REPO_DIR"
+                    BUILD_TASKS="$BUILD_TASKS publishLocal"
+                    BUILD_JVM_ARGS="-Dmaven.repo.local=$CONSUMER_REPO_DIR"
+                fi
+
                 if [ "${ENABLE_INTELLIJ_RELEASE_BUILD}" = "true" ]; then
                     echo "🔌 Folding IntelliJ release-grade plugin build into the main CI build..."
                     BUILD_TASKS="$BUILD_TASKS :lang:intellij-plugin:buildSearchableOptions :lang:intellij-plugin:buildPlugin :lang:intellij-plugin:verifyPlugin"
                     BUILD_PROPS="$BUILD_PROPS -PincludeBuildLang=true -PincludeBuildAttachLang=true -PenablePublish=true -Pjetbrains.publish.suffix=${{ steps.intellij-version.outputs.suffix }} -Plsp.buildSearchableOptions=true"
                 fi
 
-                ./gradlew $GRADLE_OPTIONS $BUILD_PROPS $BUILD_TASKS
+                ./gradlew $GRADLE_OPTIONS $BUILD_JVM_ARGS $BUILD_PROPS $BUILD_TASKS
 
                 # Run manual tests inline if enabled (avoids cache rebuild)
                 if [ "${{ env.skip_manual_tests }}" == "true" ]; then
@@ -374,18 +384,13 @@ jobs:
             - name: Stage consumer Maven repository artifact
               if: success() && matrix.os == 'ubuntu-latest'
               shell: bash
-              env:
-                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
               run: |
-                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }} ${{ github.event.inputs.extra-gradle-options }}"
                   STAGING_DIR="$PWD/ci-artifacts/consumer-maven-repo"
                   METADATA_DIR="$PWD/ci-artifacts/metadata"
 
-                  echo "📦 Publishing XDK/plugin artifacts to isolated Maven Local for CI artifact staging..."
-                  rm -rf "$STAGING_DIR" "$METADATA_DIR"
-                  mkdir -p "$STAGING_DIR" "$METADATA_DIR"
-
-                  ./gradlew $GRADLE_OPTIONS -Dmaven.repo.local="$STAGING_DIR" publishLocal
+                  echo "📦 Validating consumer Maven repository produced by the main CI build..."
+                  rm -rf "$METADATA_DIR"
+                  mkdir -p "$METADATA_DIR"
 
                   echo "📦 Staging consumer Maven repository artifact..."
                   if [ ! -d "$STAGING_DIR/org/xtclang" ]; then
