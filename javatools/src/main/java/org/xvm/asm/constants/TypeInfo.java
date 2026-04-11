@@ -1672,7 +1672,7 @@ public class TypeInfo {
      *
      * @return the matching constructor id (null if none found)
      */
-    public MethodConstant findConstructor(TypeConstant[] aArgs) {
+    public MethodConstant findConstructor(TypeConstant... aArgs) {
         return findCallable("construct", false, false, TypeConstant.NO_TYPES, aArgs);
     }
 

@@ -500,7 +500,7 @@ public class CommonBuilder
                 // $INSTANCE = new Singleton($ctx);
                 // $ctx.allocated(implSize);
                 // $INSTANCE.$init($ctx);
-                MethodConstant ctorId  = typeInfo.findConstructor(TypeConstant.NO_TYPES);
+                MethodConstant ctorId  = typeInfo.findConstructor();
                 String         jitInit = ctorId.ensureJitMethodName(ts).replace("construct", INIT);
                 invokeDefaultConstructor(code, CD_this);
                 code.dup()

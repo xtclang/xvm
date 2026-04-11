@@ -10,8 +10,12 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import java.util.Set;
+
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
@@ -210,11 +214,7 @@ public abstract class OpIndex
     public void computeTypes(BuildContext bctx) {
         if (isAssignOp()) {
             TypeConstant typeFrom = bctx.getArgumentType(m_nTarget);
-            TypeConstant typeEl   = typeFrom.resolveGenericType("Element");
-            if (typeEl == null) {
-                throw new RuntimeException("Cannot find the element type for " + typeFrom);
-            }
-            bctx.typeMatrix.assign(getAddress(), m_nRetValue, typeEl);
+            bctx.typeMatrix.assign(getAddress(), m_nRetValue, computeElementType(typeFrom));
         } else {
             super.computeTypes(bctx);
         }
@@ -225,7 +225,7 @@ public abstract class OpIndex
         ConstantPool pool      = bctx.pool();
         RegisterInfo reg       = bctx.loadArgument(code, m_nTarget);
         TypeConstant type      = reg.type();
-        TypeConstant typeEl    = type.resolveGenericType("Element");
+        TypeConstant typeEl    = computeElementType(type);
         boolean      primitive = typeEl.isJitPrimitive();
 
         if (type.isArray()) {
@@ -295,7 +295,11 @@ public abstract class OpIndex
             bctx.loadCtx(code);
             bctx.loadCallArguments(code, jmd, new int[] {m_nIndex});
 
-            code.invokevirtual(reg.cd(), sJitName, mdCall);
+            if (type.isJitInterface()) {
+                code.invokeinterface(reg.cd(), sJitName, mdCall);
+            } else {
+                code.invokevirtual(reg.cd(), sJitName, mdCall);
+            }
         }
 
         if (isAssignOp()) {
@@ -316,6 +320,19 @@ public abstract class OpIndex
             }
         }
         return -1;
+    }
+
+    /**
+     * Compute the return type for the "getElement" op on the specified type.
+     */
+    public static TypeConstant computeElementType(TypeConstant typeFrom) {
+        TypeInfo            infoFrom   = typeFrom.ensureTypeInfo();
+        Set<MethodConstant> setMethods = infoFrom.findOpMethods("getElement", "[]", 1);
+        if (setMethods.size() != 1) {
+            throw new RuntimeException("Cannot find the element type for " + typeFrom);
+        }
+
+        return setMethods.iterator().next().getSignature().getRawReturns()[0];
     }
 
 

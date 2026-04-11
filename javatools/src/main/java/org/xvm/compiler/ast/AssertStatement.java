@@ -13,7 +13,6 @@ import org.xvm.asm.Assignment;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.AssertStmtAST;
@@ -533,7 +532,7 @@ public class AssertStatement
      * @return the desired constructor MethodConstant
      */
     public static MethodConstant findExceptionConstructor(ConstantPool pool, String sName, ErrorListener errs) {
-        return pool.ensureEcstasyTypeConstant(sName).ensureTypeInfo(errs).findConstructor(null);
+        return pool.ensureEcstasyTypeConstant(sName).ensureTypeInfo(errs).findConstructor();
     }
 
     /**

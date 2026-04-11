@@ -16,28 +16,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.asm.constants.ArrayConstant;
-import org.xvm.asm.constants.ByteConstant;
-import org.xvm.asm.constants.CharConstant;
-import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.DecimalConstant;
-import org.xvm.asm.constants.DecoratedClassConstant;
-import org.xvm.asm.constants.EnumValueConstant;
-import org.xvm.asm.constants.Float64Constant;
-import org.xvm.asm.constants.FloatConstant;
-import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.IntConstant;
-import org.xvm.asm.constants.LiteralConstant;
-import org.xvm.asm.constants.MethodBody;
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.MethodInfo;
-import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.PropertyInfo;
-import org.xvm.asm.constants.RangeConstant;
-import org.xvm.asm.constants.SingletonConstant;
-import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.*;
 
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
@@ -398,179 +377,46 @@ public abstract class Builder {
         }
 
         case ArrayConstant arrayConst: {
-            TypeConstant   arrayType = arrayConst.getType();
-            TypeConstant   elType    = arrayType.getParamType(0);
-            Constant[]     values    = arrayConst.getValue();
-            ClassDesc      cdArray;
-            String         className;
-            String         addMethod;
-            MethodTypeDesc mdAdd;
+            TypeConstant arrayType = arrayConst.getType();
+            Constant[]   values    = arrayConst.getValue();
+            return loadArray(bctx, code, arrayType, values);
+        }
 
-            // TODO: how/where to cache the result
-            if (elType.isJitPrimitive()) {
-                addMethod = "add$p";
+        case MapConstant mapConstant: {
+            ConstantPool pool     = pool();
+            TypeConstant mapType  = mapConstant.getType();
+            TypeConstant keyType  = mapType.getParamType(0);
+            TypeConstant valType  = mapType.getParamType(1);
+            TypeConstant keysType = pool.ensureArrayType(keyType);
+            TypeConstant valsType = pool.ensureArrayType(valType);
+            var          constMap = mapConstant.getValue();
 
+            // actual implementation is the ListMap
+            mapType = pool.ensureParameterizedTypeConstant(
+                pool.ensureEcstasyTypeConstant("maps.ListMap"), keyType, valType);
 
-                switch (elType.getSingleUnderlyingClass(false).getName()) {
-                case "Bit":
-                    // ArrayᐸBitᐳ array = ArrayᐸBitᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_ArrayBit;
-                    className = N_ArrayBit;
-                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
-                    break;
+            TypeInfo       typeInfo = mapType.ensureTypeInfo();
+            MethodConstant ctorId   = typeInfo.findConstructor(keysType, valsType.freeze(), pool.typeBoolean());
+            MethodInfo     ctorInfo = typeInfo.getMethodById(ctorId);
+            JitCtorDesc    ctorJmd  = (JitCtorDesc) ctorInfo.getJitDesc(this, mapType);
+            String         ctorName = ctorInfo.ensureJitMethodName(typeSystem).replace("construct", NEW);
+            String         clzName  = ensureJitClassName(mapType);
+            ClassDesc      mapCd    = ClassDesc.of(clzName);
+            JitMethodDesc  newJmd   = convertConstructToNew(typeInfo, mapCd, ctorJmd);
 
-                case "Char":
-                    // ArrayᐸCharᐳ array = ArrayᐸCharᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_ArrayChar;
-                    className = N_ArrayChar;
-                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
-                    break;
+            assert newJmd.isOptimized;
 
-                case "Dec32":
-                    // ArrayᐸDec32ᐳ array = ArrayᐸDec32ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_ArrayDec32;
-                    className = N_ArrayDec32;
-                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
-                    break;
+            // call construct(Key[] keys, Value[]? vals, Boolean inPlace = False)
+            loadCtx(code);
+            loadTypeConstant(code, clzName, mapType);
+            loadArray(bctx, code, keysType, constMap.keySet().toArray(Constant.NO_CONSTS));
+            loadArray(bctx, code, valsType, constMap.values().toArray(Constant.NO_CONSTS));
 
-                case "Dec64":
-                    // ArrayᐸDec64ᐳ array = ArrayᐸDec64ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_ArrayDec64;
-                    className = N_ArrayDec64;
-                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
-                    break;
+            code.iconst_1() // inPlace = True
+                .iconst_0() // dflt = False
+                .invokestatic(mapCd, ctorName+OPT, newJmd.optimizedMD);
 
-                case "Dec128":
-                    // ArrayᐸDec128ᐳ array = ArrayᐸDec128ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_ArrayDec128;
-                    className = N_ArrayDec128;
-                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
-                    break;
-
-                case "Float32":
-                    // ArrayᐸFloat32ᐳ array = ArrayᐸFloat32ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_ArrayFloat32;
-                    className = N_ArrayFloat32;
-                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_float);
-                    break;
-
-                case "Float64":
-                    // ArrayᐸFloat64ᐳ array = ArrayᐸFloat64ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_ArrayFloat64;
-                    className = N_ArrayFloat64;
-                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_double);
-                    break;
-
-                case "Int8":
-                    // ArrayᐸInt8ᐳ array = ArrayᐸInt8ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_ArrayInt8;
-                    className = N_ArrayInt8;
-                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
-                    break;
-
-                case "Int16":
-                    // ArrayᐸInt16ᐳ array = ArrayᐸInt16ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_ArrayInt16;
-                    className = N_ArrayInt16;
-                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
-                    break;
-
-                case "Int32":
-                    // ArrayᐸInt32ᐳ array = ArrayᐸInt32ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_ArrayInt32;
-                    className = N_ArrayInt32;
-                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
-                    break;
-
-                case "Int64":
-                    // ArrayᐸIntᐳ array = ArrayᐸIntᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_ArrayInt64;
-                    className = N_ArrayInt64;
-                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
-                    break;
-
-                case "Int128":
-                    // ArrayᐸInt128ᐳ array = ArrayᐸInt128ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_ArrayInt128;
-                    className = N_ArrayInt128;
-                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
-                    break;
-
-                case "Nibble":
-                    // ArrayᐸNibbleᐳ array = ArrayᐸNibbleᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_ArrayNibble;
-                    className = N_ArrayNibble;
-                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
-                    break;
-
-                case "UInt8":
-                    // ArrayᐸUInt8ᐳ array = ArrayᐸUInt8ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_ArrayUInt8;
-                    className = N_ArrayUInt8;
-                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
-                    break;
-
-                case "UInt16":
-                    // ArrayᐸUInt16ᐳ array = ArrayᐸUInt16ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_ArrayUInt16;
-                    className = N_ArrayUInt16;
-                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
-                    break;
-
-                case "UInt32":
-                    // ArrayᐸUInt32ᐳ array = ArrayᐸUInt32ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_ArrayUInt32;
-                    className = N_ArrayUInt32;
-                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
-                    break;
-
-                case "UInt64":
-                    // ArrayᐸUIntᐳ array = ArrayᐸUIntᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_ArrayUInt64;
-                    className = N_ArrayUInt64;
-                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
-                    break;
-
-                case "UInt128":
-                    // ArrayᐸUInt128ᐳ array = ArrayᐸUInt128ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_ArrayUInt128;
-                    className = N_ArrayUInt128;
-                    mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException("TODO");
-                }
-            } else {
-                // ArrayᐸObjectᐳ array = ArrayᐸObjectᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayObj;
-                className = N_ArrayObj;
-                addMethod = "add";
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_nObj);
-            }
-
-            // Note: we remove the immutability here; it will be added back upon "$makeImmut"
-            code.aload(code.parameterSlot(0));
-            loadTypeConstant(code, className, arrayType.removeImmutable());
-            code.loadConstant((long) values.length)
-                .iconst_0()
-                .invokestatic(cdArray, "$new$p",
-                        MethodTypeDesc.of(cdArray, CD_Ctx, CD_TypeConstant, CD_long, CD_boolean));
-
-            for (Constant value : values) {
-                // array.add(ctx, loadConstant(constValue));
-                code.dup()
-                    .aload(code.parameterSlot(0));
-                loadConstant(bctx, code, value);
-                code.invokevirtual(cdArray, addMethod, mdAdd)
-                    .pop();
-            }
-
-            // array.makeImmutable();
-            code.dup()
-                .aload(code.parameterSlot(0))
-                .invokevirtual(cdArray, "$makeImmut", MethodTypeDesc.of(CD_void, CD_Ctx));
-            return new SingleSlot(arrayType, Specific, ensureClassDesc(arrayType), "");
+            return new SingleSlot(mapType, Specific, mapCd, "");
         }
 
         case RangeConstant rangeConst: {
@@ -599,7 +445,7 @@ public abstract class Builder {
                 throw new UnsupportedOperationException("TODO");
             }
 
-            code.aload(code.parameterSlot(0));
+            loadCtx(code);
             loadTypeConstant(code, className, rangeType);
             loadConstant(bctx, code, values[0]);
             loadConstant(bctx, code, values[1]);
@@ -619,12 +465,186 @@ public abstract class Builder {
         throw new UnsupportedOperationException(constant.toString());
     }
 
+    private SingleSlot loadArray(BuildContext bctx, CodeBuilder code, TypeConstant arrayType,
+                                 Constant[] values) {
+        TypeConstant   elType = arrayType.getParamType(0);
+        ClassDesc      cdArray;
+        String         className;
+        String         addMethod;
+        MethodTypeDesc mdAdd;
+
+        // TODO: how/where to cache the result
+        if (elType.isJitPrimitive()) {
+            addMethod = "add$p";
+
+            switch (elType.getSingleUnderlyingClass(false).getName()) {
+            case "Bit":
+                // ArrayᐸBitᐳ array = ArrayᐸBitᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayBit;
+                className = N_ArrayBit;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                break;
+
+            case "Char":
+                // ArrayᐸCharᐳ array = ArrayᐸCharᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayChar;
+                className = N_ArrayChar;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                break;
+
+            case "Dec32":
+                // ArrayᐸDec32ᐳ array = ArrayᐸDec32ᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayDec32;
+                className = N_ArrayDec32;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                break;
+
+            case "Dec64":
+                // ArrayᐸDec64ᐳ array = ArrayᐸDec64ᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayDec64;
+                className = N_ArrayDec64;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
+                break;
+
+            case "Dec128":
+                // ArrayᐸDec128ᐳ array = ArrayᐸDec128ᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayDec128;
+                className = N_ArrayDec128;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
+                break;
+
+            case "Float32":
+                // ArrayᐸFloat32ᐳ array = ArrayᐸFloat32ᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayFloat32;
+                className = N_ArrayFloat32;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_float);
+                break;
+
+            case "Float64":
+                // ArrayᐸFloat64ᐳ array = ArrayᐸFloat64ᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayFloat64;
+                className = N_ArrayFloat64;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_double);
+                break;
+
+            case "Int8":
+                // ArrayᐸInt8ᐳ array = ArrayᐸInt8ᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayInt8;
+                className = N_ArrayInt8;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                break;
+
+            case "Int16":
+                // ArrayᐸInt16ᐳ array = ArrayᐸInt16ᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayInt16;
+                className = N_ArrayInt16;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                break;
+
+            case "Int32":
+                // ArrayᐸInt32ᐳ array = ArrayᐸInt32ᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayInt32;
+                className = N_ArrayInt32;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                break;
+
+            case "Int64":
+                // ArrayᐸIntᐳ array = ArrayᐸIntᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayInt64;
+                className = N_ArrayInt64;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
+                break;
+
+            case "Int128":
+                // ArrayᐸInt128ᐳ array = ArrayᐸInt128ᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayInt128;
+                className = N_ArrayInt128;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
+                break;
+
+            case "Nibble":
+                // ArrayᐸNibbleᐳ array = ArrayᐸNibbleᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayNibble;
+                className = N_ArrayNibble;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                break;
+
+            case "UInt8":
+                // ArrayᐸUInt8ᐳ array = ArrayᐸUInt8ᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayUInt8;
+                className = N_ArrayUInt8;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                break;
+
+            case "UInt16":
+                // ArrayᐸUInt16ᐳ array = ArrayᐸUInt16ᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayUInt16;
+                className = N_ArrayUInt16;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                break;
+
+            case "UInt32":
+                // ArrayᐸUInt32ᐳ array = ArrayᐸUInt32ᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayUInt32;
+                className = N_ArrayUInt32;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                break;
+
+            case "UInt64":
+                // ArrayᐸUIntᐳ array = ArrayᐸUIntᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayUInt64;
+                className = N_ArrayUInt64;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
+                break;
+
+            case "UInt128":
+                // ArrayᐸUInt128ᐳ array = ArrayᐸUInt128ᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayUInt128;
+                className = N_ArrayUInt128;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
+                break;
+
+            default:
+                throw new UnsupportedOperationException("TODO");
+            }
+        } else {
+            // ArrayᐸObjectᐳ array = ArrayᐸObjectᐳ.$new$p(ctx, type, capacity, false);
+            cdArray   = CD_ArrayObj;
+            className = N_ArrayObj;
+            addMethod = "add";
+            mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_nObj);
+        }
+
+        // Note: we remove the immutability here; it will be added back upon "$makeImmut"
+        loadCtx(code);
+        loadTypeConstant(code, className, arrayType.removeImmutable());
+        code.loadConstant((long) values.length)
+            .iconst_0()
+            .invokestatic(cdArray, "$new$p",
+                    MethodTypeDesc.of(cdArray, CD_Ctx, CD_TypeConstant, CD_long, CD_boolean));
+
+        for (Constant value : values) {
+            // array.add(ctx, loadConstant(constValue));
+            code.dup()
+                .aload(code.parameterSlot(0));
+            loadConstant(bctx, code, value);
+            code.invokevirtual(cdArray, addMethod, mdAdd)
+                .pop();
+        }
+
+        // array.makeImmutable();
+        code.dup()
+            .aload(code.parameterSlot(0))
+            .invokevirtual(cdArray, "$makeImmut", MethodTypeDesc.of(CD_void, CD_Ctx));
+        return new SingleSlot(arrayType, Specific, ensureClassDesc(arrayType), "");
+    }
+
     /**
      * Build the code to load an XTC String value on the Java stack.
      */
     public static void loadString(CodeBuilder code, String value) {
-        code.aload(code.parameterSlot(0)) // $ctx
-            .ldc(value)
+        loadCtx(code);
+        code.ldc(value)
             .invokestatic(CD_String, "of", MD_StringOf);
     }
 
@@ -665,7 +685,7 @@ public abstract class Builder {
             md = jmdGet.standardMD;
         }
 
-        code.aload(code.parameterSlot(0)); // $ctx
+        loadCtx(code);
         if (!jitInfo.isNative() && typeOwner.isJitInterface()) {
             code.invokeinterface(ensureClassDesc(typeOwner), getterName, md);
         } else {
@@ -1077,6 +1097,14 @@ public abstract class Builder {
     }
 
     /**
+     * Build the code to load the Ctx instance on the Java stack.
+     */
+    public static CodeBuilder loadCtx(CodeBuilder code) {
+        code.aload(code.parameterSlot(0));
+        return code;
+    }
+
+    /**
      * Generate a "load the return value from the context" for the specified Java class. Out: The
      * loaded value is at the java stack top.
      *
@@ -1085,8 +1113,7 @@ public abstract class Builder {
     public static void loadFromContext(CodeBuilder code, ClassDesc cd, int returnIndex) {
         assert returnIndex >= 0;
 
-        code.aload(code.parameterSlot(0)); // $ctx
-
+        loadCtx(code);
         if (cd.isPrimitive()) {
             if (returnIndex < 8) {
                 code // r = $ctx.i"returnIndex"
@@ -1134,7 +1161,8 @@ public abstract class Builder {
     public static void storeToContext(CodeBuilder code, ClassDesc cd, int returnIndex) {
         assert returnIndex >= 0;
 
-        code.aload(code.parameterSlot(0)); // $ctx
+        loadCtx(code);
+
         String descriptor = cd.descriptorString();
         if (cd.isPrimitive() && (descriptor.equals("J") || descriptor.equals("D"))) {
              // the value is a "long" or "double" that occupies two slots
@@ -1218,8 +1246,8 @@ public abstract class Builder {
      */
     public static void throwException(CodeBuilder code, ClassDesc exCD, String text) {
         invokeDefaultConstructor(code, exCD);
-        code.aload(code.parameterSlot(0)) // ctx
-            .loadConstant(text)
+        loadCtx(code);
+        code.loadConstant(text)
             .aconst_null()
             .invokevirtual(exCD, "$init", MethodTypeDesc.of(
                 CD_nException, CD_Ctx, CD_JavaString, CD_Throwable))
