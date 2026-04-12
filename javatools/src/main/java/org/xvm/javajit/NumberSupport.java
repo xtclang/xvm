@@ -135,7 +135,7 @@ public interface NumberSupport
                 code.iconst_m1().ixor();
                 bctx.adjustIntValue(code, regTarget.type());
             }
-            case "Z" -> code.iconst_m1().ixor();
+            case "Z" -> code.iconst_1().ixor();
             case "J" -> code.ldc(-1L).lxor();
             default  -> throw new IllegalStateException();
         }
