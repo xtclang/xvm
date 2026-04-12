@@ -164,15 +164,18 @@ runs:
                   exit 1
               fi
 
+              XDK_ZIP_ABS=$(realpath "$XDK_ZIP")
+              METADATA_FILE_ABS=$(realpath "$METADATA_FILE")
+
               echo "✅ Artifact validation successful"
               echo "  File:     $(basename "$XDK_ZIP")"
               echo "  Size:     $FILE_SIZE"
-              echo "  Location: $XDK_ZIP"
+              echo "  Location: $XDK_ZIP_ABS"
               echo ""
 
-              # Output the full path
-              echo "artifact-path=$XDK_ZIP" >> $GITHUB_OUTPUT
-              echo "metadata-file=$METADATA_FILE" >> $GITHUB_OUTPUT
+              # Output absolute paths so downstream steps can safely use different working directories.
+              echo "artifact-path=$XDK_ZIP_ABS" >> $GITHUB_OUTPUT
+              echo "metadata-file=$METADATA_FILE_ABS" >> $GITHUB_OUTPUT
 
 branding:
     icon: 'download-cloud'
