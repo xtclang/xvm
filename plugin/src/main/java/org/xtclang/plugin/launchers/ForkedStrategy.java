@@ -148,9 +148,21 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
         command.addAll(Arrays.asList(programArgs));
         final ProcessBuilder pb = new ProcessBuilder(command).directory(projectDir);
         if (task.hasVerboseLogging()) {
-            logger.lifecycle("[plugin] Forked process command: {}", String.join(" ", command));
+            logForkedCommand(task, command);
         }
         return pb;
+    }
+
+    private void logForkedCommand(final XtcLauncherTask<?> task, final List<String> command) {
+        final var message = new StringBuilder();
+        message.append("[plugin] Forked process command:\n");
+        message.append("[plugin]   task      : ").append(task.getPath()).append('\n');
+        message.append("[plugin]   work dir  : ").append(task.getProjectDirectory().get().getAsFile().getAbsolutePath()).append('\n');
+        message.append("[plugin]   argv:\n");
+        for (int i = 0; i < command.size(); i++) {
+            message.append("[plugin]     [").append(i).append("] ").append(command.get(i)).append('\n');
+        }
+        logger.lifecycle(message.toString().stripTrailing());
     }
 
     /**
