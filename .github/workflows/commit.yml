@@ -642,6 +642,50 @@ jobs:
                   if-no-files-found: error
                   retention-days: 10
 
+            - name: Collect CI diagnostics
+              if: failure() && matrix.os == 'ubuntu-latest'
+              shell: bash
+              run: |
+                  set -euo pipefail
+
+                  DIAG_DIR="$PWD/ci-artifacts/diagnostics"
+                  rm -rf "$DIAG_DIR"
+                  mkdir -p "$DIAG_DIR"
+
+                  copy_if_exists() {
+                      local src="$1"
+                      local dest="$2"
+                      if [ -e "$src" ]; then
+                          mkdir -p "$(dirname "$dest")"
+                          cp -R "$src" "$dest"
+                      fi
+                  }
+
+                  echo "📦 Collecting failure diagnostics..."
+
+                  copy_if_exists "$PWD/manualTests/build/logs" "$DIAG_DIR/manualTests/build/logs"
+                  copy_if_exists "$PWD/build/reports" "$DIAG_DIR/root/build/reports"
+                  copy_if_exists "$PWD/build/test-results" "$DIAG_DIR/root/build/test-results"
+                  copy_if_exists "$PWD/xdk/build/reports" "$DIAG_DIR/xdk/build/reports"
+                  copy_if_exists "$PWD/xdk/build/test-results" "$DIAG_DIR/xdk/build/test-results"
+                  copy_if_exists "$PWD/plugin/build/reports" "$DIAG_DIR/plugin/build/reports"
+                  copy_if_exists "$PWD/plugin/build/test-results" "$DIAG_DIR/plugin/build/test-results"
+                  copy_if_exists "$PWD/lang/lsp-server/build/reports" "$DIAG_DIR/lang/lsp-server/build/reports"
+                  copy_if_exists "$PWD/lang/lsp-server/build/test-results" "$DIAG_DIR/lang/lsp-server/build/test-results"
+                  copy_if_exists "$PWD/lang/intellij-plugin/build/reports" "$DIAG_DIR/lang/intellij-plugin/build/reports"
+                  copy_if_exists "$PWD/lang/intellij-plugin/build/test-results" "$DIAG_DIR/lang/intellij-plugin/build/test-results"
+
+                  find "$DIAG_DIR" -maxdepth 5 -type f | sed -n '1,200p'
+
+            - name: Upload CI diagnostics
+              if: failure() && matrix.os == 'ubuntu-latest'
+              uses: actions/upload-artifact@v7
+              with:
+                  name: ci-diagnostics-${{ github.sha }}
+                  path: ci-artifacts/diagnostics
+                  if-no-files-found: ignore
+                  retention-days: 7
+
             - name: Summary
               if: success()
               shell: bash
