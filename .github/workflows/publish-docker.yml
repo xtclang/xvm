@@ -154,7 +154,7 @@ jobs:
                   commit: ${{ steps.commit.outputs.commit }}
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   repository: ${{ github.repository }}
-                  output-path: ./docker
+                  output-path: ./docker/artifacts
 
             - name: Build and push Docker image (${{ matrix.arch }})
               shell: bash
