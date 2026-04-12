@@ -106,7 +106,7 @@ class SourceCodeInfo
             switch (protobuf.WireType.getFieldNumber(tag)) {
             case 1:
                 if (path.is(immutable)) {
-                    path = new Array(path);
+                    path = new Array(Mutable, path);
                 }
                 if (protobuf.WireType.getWireType(tag) == protobuf.WireType.LEN) {
                     path.addAll(input.readPackedInt32s());
@@ -116,7 +116,7 @@ class SourceCodeInfo
 
             case 2:
                 if (span.is(immutable)) {
-                    span = new Array(span);
+                    span = new Array(Mutable, span);
                 }
                 if (protobuf.WireType.getWireType(tag) == protobuf.WireType.LEN) {
                     span.addAll(input.readPackedInt32s());
@@ -134,7 +134,7 @@ class SourceCodeInfo
 
             case 6:
                 if (leadingDetachedComments.is(immutable)) {
-                    leadingDetachedComments = new Array(leadingDetachedComments);
+                    leadingDetachedComments = new Array(Mutable, leadingDetachedComments);
                 }
                 leadingDetachedComments.add(input.readString());
                 return True;
@@ -225,7 +225,7 @@ class SourceCodeInfo
         switch (protobuf.WireType.getFieldNumber(tag)) {
         case 1:
             if (location.is(immutable)) {
-                location = new Array(location);
+                location = new Array(Mutable, location);
             }
             Location elem = new Location();
             Int len = input.readVarint().toInt();

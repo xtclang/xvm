@@ -170,14 +170,14 @@ class FileDescriptorProto
 
         case 3:
             if (dependency.is(immutable)) {
-                dependency = new Array(dependency);
+                dependency = new Array(Mutable, dependency);
             }
             dependency.add(input.readString());
             return True;
 
         case 10:
             if (publicDependency.is(immutable)) {
-                publicDependency = new Array(publicDependency);
+                publicDependency = new Array(Mutable, publicDependency);
             }
             if (protobuf.WireType.getWireType(tag) == protobuf.WireType.LEN) {
                 publicDependency.addAll(input.readPackedInt32s());
@@ -187,7 +187,7 @@ class FileDescriptorProto
 
         case 11:
             if (weakDependency.is(immutable)) {
-                weakDependency = new Array(weakDependency);
+                weakDependency = new Array(Mutable, weakDependency);
             }
             if (protobuf.WireType.getWireType(tag) == protobuf.WireType.LEN) {
                 weakDependency.addAll(input.readPackedInt32s());
@@ -197,14 +197,14 @@ class FileDescriptorProto
 
         case 15:
             if (optionDependency.is(immutable)) {
-                optionDependency = new Array(optionDependency);
+                optionDependency = new Array(Mutable, optionDependency);
             }
             optionDependency.add(input.readString());
             return True;
 
         case 4:
             if (messageType.is(immutable)) {
-                messageType = new Array(messageType);
+                messageType = new Array(Mutable, messageType);
             }
             DescriptorProto elem = new DescriptorProto();
             Int len = input.readVarint().toInt();
@@ -216,7 +216,7 @@ class FileDescriptorProto
 
         case 5:
             if (enumType.is(immutable)) {
-                enumType = new Array(enumType);
+                enumType = new Array(Mutable, enumType);
             }
             EnumDescriptorProto elem = new EnumDescriptorProto();
             Int len = input.readVarint().toInt();
@@ -228,7 +228,7 @@ class FileDescriptorProto
 
         case 6:
             if (service_.is(immutable)) {
-                service_ = new Array(service_);
+                service_ = new Array(Mutable, service_);
             }
             ServiceDescriptorProto elem = new ServiceDescriptorProto();
             Int len = input.readVarint().toInt();
@@ -240,7 +240,7 @@ class FileDescriptorProto
 
         case 7:
             if (extension.is(immutable)) {
-                extension = new Array(extension);
+                extension = new Array(Mutable, extension);
             }
             FieldDescriptorProto elem = new FieldDescriptorProto();
             Int len = input.readVarint().toInt();

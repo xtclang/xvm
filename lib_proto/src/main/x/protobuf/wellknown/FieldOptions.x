@@ -711,7 +711,7 @@ class FieldOptions
 
         case 19:
             if (targets.is(immutable)) {
-                targets = new Array(targets);
+                targets = new Array(Mutable, targets);
             }
             if (protobuf.WireType.getWireType(tag) == protobuf.WireType.LEN) {
                 for (Int32 raw : input.readPackedInt32s()) {
@@ -727,7 +727,7 @@ class FieldOptions
 
         case 20:
             if (editionDefaults.is(immutable)) {
-                editionDefaults = new Array(editionDefaults);
+                editionDefaults = new Array(Mutable, editionDefaults);
             }
             EditionDefault elem = new EditionDefault();
             Int len = input.readVarint().toInt();
@@ -757,7 +757,7 @@ class FieldOptions
 
         case 999:
             if (uninterpretedOption.is(immutable)) {
-                uninterpretedOption = new Array(uninterpretedOption);
+                uninterpretedOption = new Array(Mutable, uninterpretedOption);
             }
             UninterpretedOption elem = new UninterpretedOption();
             Int len = input.readVarint().toInt();

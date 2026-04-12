@@ -7,7 +7,7 @@
  * round-tripping.
  */
 class AbstractMessage
-        implements MessageLite, Duplicable {
+        implements MessageLite, Freezable, Duplicable {
 
     /**
      * Construct a new message.

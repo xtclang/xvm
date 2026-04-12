@@ -207,7 +207,7 @@ class FeatureSetDefaults
         switch (protobuf.WireType.getFieldNumber(tag)) {
         case 1:
             if (defaults.is(immutable)) {
-                defaults = new Array(defaults);
+                defaults = new Array(Mutable, defaults);
             }
             FeatureSetEditionDefault elem = new FeatureSetEditionDefault();
             Int len = input.readVarint().toInt();

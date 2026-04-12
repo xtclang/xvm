@@ -321,7 +321,7 @@ class ExtensionRangeOptions
         switch (protobuf.WireType.getFieldNumber(tag)) {
         case 999:
             if (uninterpretedOption.is(immutable)) {
-                uninterpretedOption = new Array(uninterpretedOption);
+                uninterpretedOption = new Array(Mutable, uninterpretedOption);
             }
             UninterpretedOption elem = new UninterpretedOption();
             Int len = input.readVarint().toInt();
@@ -333,7 +333,7 @@ class ExtensionRangeOptions
 
         case 2:
             if (declaration.is(immutable)) {
-                declaration = new Array(declaration);
+                declaration = new Array(Mutable, declaration);
             }
             Declaration elem = new Declaration();
             Int len = input.readVarint().toInt();

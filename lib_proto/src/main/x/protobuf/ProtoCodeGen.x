@@ -42,6 +42,12 @@ class ProtoCodeGen {
     private Set<String> enumNames = new HashSet();
 
     /**
+     * Map from string-encoded SourceCodeInfo path (e.g. `"4.0.2.3"`) to the leading comment text
+     * from the original `.proto` file. Empty when `sourceCodeInfo` is absent.
+     */
+    private Map<String, String> commentMap = Map:[];
+
+    /**
      * Information about a map field's key and value types, extracted from the synthetic
      * entry message in the descriptor.
      */
@@ -105,6 +111,83 @@ class ProtoCodeGen {
         return ecstasyType(info.valueType);
     }
 
+    /**
+     * Build a map from string-encoded SourceCodeInfo paths to leading comment text.
+     */
+    private Map<String, String> buildCommentMap(FileDescriptorProto file) {
+        import wellknown.SourceCodeInfo;
+        ListMap<String, String> comments = new ListMap();
+        SourceCodeInfo? sci = file.sourceCodeInfo;
+        if (sci != Null) {
+            for (SourceCodeInfo.Location loc : sci.location) {
+                if (String comment := loc.hasLeadingComments()) {
+                    StringBuffer key = new StringBuffer();
+                    for (Int i = 0; i < loc.path.size; i++) {
+                        if (i > 0) {
+                            key.add('.');
+                        }
+                        loc.path[i].appendTo(key);
+                    }
+                    comments.put(key.toString(), comment);
+                }
+            }
+        }
+        return comments;
+    }
+
+    /**
+     * Create a new path by appending a field number and index to an existing path.
+     */
+    private static Int[] childPath(Int[] parent, Int fieldNum, Int index) {
+        Int[] result = new Array(parent.size + 2);
+        result.addAll(parent);
+        result.add(fieldNum);
+        result.add(index);
+        return result;
+    }
+
+    /**
+     * Convert a path array to a dot-separated string key for comment map lookup.
+     */
+    private static String pathKey(Int[] path) {
+        StringBuffer key = new StringBuffer();
+        for (Int i = 0; i < path.size; i++) {
+            if (i > 0) {
+                key.add('.');
+            }
+            path[i].appendTo(key);
+        }
+        return key.toString();
+    }
+
+    /**
+     * Look up a proto source comment for the given path and return it as trimmed text,
+     * or return `False` if no comment exists.
+     */
+    private conditional String protoComment(Int[] path) {
+        if (String comment := commentMap.get(pathKey(path))) {
+            comment = comment.trim();
+            if (comment.size > 0) {
+                return True, comment;
+            }
+        }
+        return False;
+    }
+
+    /**
+     * Format a proto source comment as doc comment lines (without the surrounding delimiters).
+     */
+    private void appendCommentLines(StringBuffer buf, String comment, String pad) {
+        for (String line : comment.split('\n')) {
+            line = line.trim();
+            if (line.size == 0) {
+                $"{pad} *\n".appendTo(buf);
+            } else {
+                $"{pad} * {line}\n".appendTo(buf);
+            }
+        }
+    }
+
     // ----- public interface -----------------------------------------------------------------------
 
     /**
@@ -115,19 +198,23 @@ class ProtoCodeGen {
      * @return a map from file name (e.g. `"Person.x"`) to source text
      */
     Map<String, String> generate(FileDescriptorProto file) {
-        enumNames = collectEnumNames(file);
+        enumNames  = collectEnumNames(file);
+        commentMap = buildCommentMap(file);
         ListMap<String, String> result = new ListMap();
 
-        for (EnumDescriptorProto e : file.enumType) {
-            result.put($"{e.name}.x", generateTopLevelEnum(e, file));
+        for (Int i = 0; i < file.enumType.size; i++) {
+            EnumDescriptorProto e = file.enumType[i];
+            result.put($"{e.name}.x", generateTopLevelEnum(e, file, i));
         }
 
-        for (DescriptorProto msg : file.messageType) {
-            result.put($"{msg.name}.x", generateTopLevelMessage(msg, file));
+        for (Int i = 0; i < file.messageType.size; i++) {
+            DescriptorProto msg = file.messageType[i];
+            result.put($"{msg.name}.x", generateTopLevelMessage(msg, file, i));
         }
 
-        for (ServiceDescriptorProto svc : file.service_) {
-            result.put($"{svc.name}.x", generateTopLevelService(svc, file));
+        for (Int i = 0; i < file.service_.size; i++) {
+            ServiceDescriptorProto svc = file.service_[i];
+            result.put($"{svc.name}.x", generateTopLevelService(svc, file, i));
         }
 
         return result.freeze(inPlace=True);
@@ -138,27 +225,30 @@ class ProtoCodeGen {
     /**
      * Generate a top-level enum file.
      */
-    private String generateTopLevelEnum(EnumDescriptorProto e, FileDescriptorProto file) {
+    private String generateTopLevelEnum(EnumDescriptorProto e, FileDescriptorProto file,
+                                        Int index) {
         StringBuffer buf = new StringBuffer();
-        generateEnum(buf, e, file, 0);
+        generateEnum(buf, e, file, 0, [5, index]);
         return buf.toString();
     }
 
     /**
      * Generate a top-level message file.
      */
-    private String generateTopLevelMessage(DescriptorProto msg, FileDescriptorProto file) {
+    private String generateTopLevelMessage(DescriptorProto msg, FileDescriptorProto file,
+                                           Int index) {
         StringBuffer buf = new StringBuffer();
-        generateMessage(buf, msg, file, 0, False);
+        generateMessage(buf, msg, file, 0, False, [4, index]);
         return buf.toString();
     }
 
     /**
      * Generate a top-level service interface file.
      */
-    private String generateTopLevelService(ServiceDescriptorProto svc, FileDescriptorProto file) {
+    private String generateTopLevelService(ServiceDescriptorProto svc, FileDescriptorProto file,
+                                           Int index) {
         StringBuffer buf = new StringBuffer();
-        generateService(buf, svc, file, 0);
+        generateService(buf, svc, file, 0, [6, index]);
         return buf.toString();
     }
 
@@ -168,12 +258,17 @@ class ProtoCodeGen {
      * Generate an enum declaration.
      */
     private void generateEnum(StringBuffer buf, EnumDescriptorProto e, FileDescriptorProto file,
-                              Int indent) {
+                              Int indent, Int[] path) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
 
-        $|{pad}/**
-         |{pad} * This enum has been generated by the Ecstasy protoc plugin from the message type
+        // doc comment — optionally prepend proto source comment
+        $"{pad}/**\n".appendTo(buf);
+        if (String comment := protoComment(path)) {
+            appendCommentLines(buf, comment, pad);
+            $"{pad} *\n".appendTo(buf);
+        }
+        $|{pad} * This enum has been generated by the Ecstasy protoc plugin from the message type
          |{pad} * {e.name} defined in the proto file {file.name}
          |{pad} */
          |{pad}enum {e.name}
@@ -184,6 +279,12 @@ class ProtoCodeGen {
         // enum values
         for (Int i = 0; i < e.value.size; i++) {
             EnumValueDescriptorProto v = e.value[i];
+            // emit proto source comment for enum value
+            if (String vComment := protoComment(childPath(path, 2, i))) {
+                $"{pad1}/**\n".appendTo(buf);
+                appendCommentLines(buf, vComment, pad1);
+                $"{pad1} */\n".appendTo(buf);
+            }
             $|{pad1}{toPascalCase(v.name)}({v.number})
              .appendTo(buf);
             buf.add(i < e.value.size - 1 ? ',' : ';');
@@ -213,14 +314,18 @@ class ProtoCodeGen {
      * @param nested   True if this is a nested (inner static) class
      */
     private void generateMessage(StringBuffer buf, DescriptorProto msg, FileDescriptorProto file,
-                                 Int indent, Boolean nested) {
+                                 Int indent, Boolean nested, Int[] path) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
 
-        // class declaration
+        // class declaration with optional proto source comment
         String classKind = nested ? "static class" : "class";
-        $|{pad}/**
-         |{pad} * This class has been generated by the Ecstasy protoc plugin from the message type
+        $"{pad}/**\n".appendTo(buf);
+        if (String comment := protoComment(path)) {
+            appendCommentLines(buf, comment, pad);
+            $"{pad} *\n".appendTo(buf);
+        }
+        $|{pad} * This class has been generated by the Ecstasy protoc plugin from the message type
          |{pad} * {msg.name} defined in the proto file {file.name}
          |{pad} */
          |{pad}{classKind} {msg.name}
@@ -256,25 +361,27 @@ class ProtoCodeGen {
         buf.add('\n');
 
         // field declarations
-        generateFieldDeclarations(buf, regularFields, msg.oneofDecl, indent + 1, presenceMap, mapInfo);
+        generateFieldDeclarations(buf, regularFields, msg.oneofDecl, indent + 1, presenceMap, mapInfo, path, msg.field);
 
         // has methods
         generateHasMethods(buf, regularFields, msg.oneofDecl, oneofFields, indent + 1, presenceMap, mapInfo);
 
         // nested enums
-        for (EnumDescriptorProto e : msg.enumType) {
+        for (Int ei = 0; ei < msg.enumType.size; ei++) {
+            EnumDescriptorProto e = msg.enumType[ei];
             $"{pad1}{separator($"enum {e.name}", indent + 1)}\n\n".appendTo(buf);
-            generateEnum(buf, e, file, indent + 1);
+            generateEnum(buf, e, file, indent + 1, childPath(path, 4, ei));
             buf.add('\n');
         }
 
         // nested messages (skip map entry messages)
-        for (DescriptorProto nested2 : msg.nestedType) {
+        for (Int ni = 0; ni < msg.nestedType.size; ni++) {
+            DescriptorProto nested2 = msg.nestedType[ni];
             if (isMapEntryMessage(nested2)) {
                 continue;
             }
             $"{pad1}{separator($"message {nested2.name}", indent + 1)}\n\n".appendTo(buf);
-            generateMessage(buf, nested2, file, indent + 1, True);
+            generateMessage(buf, nested2, file, indent + 1, True, childPath(path, 3, ni));
             buf.add('\n');
         }
 
@@ -344,7 +451,9 @@ class ProtoCodeGen {
                                            Array<FieldDescriptorProto> regularFields,
                                            Array<OneofDescriptorProto> oneofs, Int indent,
                                            Map<String, Int> presenceMap,
-                                           Map<String, MapFieldInfo> mapInfo) {
+                                           Map<String, MapFieldInfo> mapInfo,
+                                           Int[] msgPath,
+                                           Array<FieldDescriptorProto> allFields) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
         String pad2 = spaces(indent + 2);
@@ -358,6 +467,12 @@ class ProtoCodeGen {
             buf.add('\n');
         }
 
+        // build a map from field name to its original index in msg.field for comment lookup
+        ListMap<String, Int> fieldIndexByName = new ListMap();
+        for (Int fi = 0; fi < allFields.size; fi++) {
+            fieldIndexByName.put(allFields[fi].name, fi);
+        }
+
         for (FieldDescriptorProto field : regularFields) {
             String ftype = fieldTypeName(field, mapInfo);
             String fname = fieldName(field.name);
@@ -369,7 +484,22 @@ class ProtoCodeGen {
                 String mask     = presenceMaskLiteral(bitIndex);
 
                 // private backing field
-                $"{pad}private {ftype} _{fname} = {fdef};\n\n".appendTo(buf);
+                $|{pad}/**
+                 |{pad} * Internal storage for the {field.name} field.
+                 |{pad} */
+                 |{pad}private {ftype} _{fname} = {fdef};
+                 |
+                 |
+                 .appendTo(buf);
+
+                // emit proto source comment for field
+                if (Int origIdx := fieldIndexByName.get(field.name)) {
+                    if (String fComment := protoComment(childPath(msgPath, 2, origIdx))) {
+                        $"{pad}/**\n".appendTo(buf);
+                        appendCommentLines(buf, fComment, pad);
+                        $"{pad} */\n".appendTo(buf);
+                    }
+                }
 
                 // virtual property with presence-tracking setter
                 $|{pad}{ftype} {fname} \{
@@ -387,6 +517,15 @@ class ProtoCodeGen {
                  |
                  .appendTo(buf);
             } else {
+                // emit proto source comment for field
+                if (Int origIdx := fieldIndexByName.get(field.name)) {
+                    if (String fComment := protoComment(childPath(msgPath, 2, origIdx))) {
+                        $"{pad}/**\n".appendTo(buf);
+                        appendCommentLines(buf, fComment, pad);
+                        $"{pad} */\n".appendTo(buf);
+                    }
+                }
+
                 $"{pad}{ftype} {fname} = {fdef};\n".appendTo(buf);
             }
         }
@@ -758,7 +897,7 @@ class ProtoCodeGen {
 
         // ensure the array is mutable (may be immutable from default parameter)
         $|{pad}if ({fname}.is(immutable)) \{
-         |{pad1}{fname} = new Array({fname});
+         |{pad1}{fname} = new Array(Mutable, {fname});
          |{pad}}
          |
          .appendTo(buf);
@@ -1321,21 +1460,33 @@ class ProtoCodeGen {
      * Generate a service interface.
      */
     private void generateService(StringBuffer buf, ServiceDescriptorProto svc,
-                                 FileDescriptorProto file, Int indent) {
+                                 FileDescriptorProto file, Int indent, Int[] path) {
 
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
 
-        $|{pad}/**
-         |{pad} * This service has been generated by the Ecstasy protoc plugin from the message type
+        // doc comment — optionally prepend proto source comment
+        $"{pad}/**\n".appendTo(buf);
+        if (String comment := protoComment(path)) {
+            appendCommentLines(buf, comment, pad);
+            $"{pad} *\n".appendTo(buf);
+        }
+        $|{pad} * This service has been generated by the Ecstasy protoc plugin from the message type
          |{pad} * {svc.name} defined in the proto file {file.name}
          |{pad} */
          |{pad}interface {svc.name} \{
          |
          .appendTo(buf);
 
-        for (MethodDescriptorProto method : svc.method) {
+        for (Int mi = 0; mi < svc.method.size; mi++) {
+            MethodDescriptorProto method = svc.method[mi];
             buf.add('\n');
+            // emit proto source comment for method
+            if (String mComment := protoComment(childPath(path, 2, mi))) {
+                $"{pad1}/**\n".appendTo(buf);
+                appendCommentLines(buf, mComment, pad1);
+                $"{pad1} */\n".appendTo(buf);
+            }
             String methodName = toCamelCase(method.name);
 
             if (method.clientStreaming || method.serverStreaming) {

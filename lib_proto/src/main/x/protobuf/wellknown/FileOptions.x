@@ -589,7 +589,7 @@ class FileOptions
 
         case 999:
             if (uninterpretedOption.is(immutable)) {
-                uninterpretedOption = new Array(uninterpretedOption);
+                uninterpretedOption = new Array(Mutable, uninterpretedOption);
             }
             UninterpretedOption elem = new UninterpretedOption();
             Int len = input.readVarint().toInt();

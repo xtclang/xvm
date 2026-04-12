@@ -72,7 +72,7 @@ class CodeGeneratorRequest
         switch (protobuf.WireType.getFieldNumber(tag)) {
         case 1:
             if (fileToGenerate.is(immutable)) {
-                fileToGenerate = new Array(fileToGenerate);
+                fileToGenerate = new Array(Mutable, fileToGenerate);
             }
             fileToGenerate.add(input.readString());
             return True;
@@ -83,7 +83,7 @@ class CodeGeneratorRequest
 
         case 15:
             if (protoFile.is(immutable)) {
-                protoFile = new Array(protoFile);
+                protoFile = new Array(Mutable, protoFile);
             }
             FileDescriptorProto elem = new FileDescriptorProto();
             Int len = input.readVarint().toInt();
@@ -95,7 +95,7 @@ class CodeGeneratorRequest
 
         case 17:
             if (sourceFileDescriptors.is(immutable)) {
-                sourceFileDescriptors = new Array(sourceFileDescriptors);
+                sourceFileDescriptors = new Array(Mutable, sourceFileDescriptors);
             }
             FileDescriptorProto elem = new FileDescriptorProto();
             Int len = input.readVarint().toInt();

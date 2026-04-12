@@ -225,7 +225,7 @@ class EnumDescriptorProto
 
         case 2:
             if (value.is(immutable)) {
-                value = new Array(value);
+                value = new Array(Mutable, value);
             }
             EnumValueDescriptorProto elem = new EnumValueDescriptorProto();
             Int len = input.readVarint().toInt();
@@ -246,7 +246,7 @@ class EnumDescriptorProto
 
         case 4:
             if (reservedRange.is(immutable)) {
-                reservedRange = new Array(reservedRange);
+                reservedRange = new Array(Mutable, reservedRange);
             }
             EnumReservedRange elem = new EnumReservedRange();
             Int len = input.readVarint().toInt();
@@ -258,7 +258,7 @@ class EnumDescriptorProto
 
         case 5:
             if (reservedName.is(immutable)) {
-                reservedName = new Array(reservedName);
+                reservedName = new Array(Mutable, reservedName);
             }
             reservedName.add(input.readString());
             return True;

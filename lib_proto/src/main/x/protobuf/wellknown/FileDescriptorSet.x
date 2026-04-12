@@ -24,7 +24,7 @@ class FileDescriptorSet
         switch (protobuf.WireType.getFieldNumber(tag)) {
         case 1:
             if (file.is(immutable)) {
-                file = new Array(file);
+                file = new Array(Mutable, file);
             }
             FileDescriptorProto elem = new FileDescriptorProto();
             Int len = input.readVarint().toInt();

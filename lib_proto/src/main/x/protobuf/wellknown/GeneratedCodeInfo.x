@@ -152,7 +152,7 @@ class GeneratedCodeInfo
             switch (protobuf.WireType.getFieldNumber(tag)) {
             case 1:
                 if (path.is(immutable)) {
-                    path = new Array(path);
+                    path = new Array(Mutable, path);
                 }
                 if (protobuf.WireType.getWireType(tag) == protobuf.WireType.LEN) {
                     path.addAll(input.readPackedInt32s());
@@ -269,7 +269,7 @@ class GeneratedCodeInfo
         switch (protobuf.WireType.getFieldNumber(tag)) {
         case 1:
             if (annotation_.is(immutable)) {
-                annotation_ = new Array(annotation_);
+                annotation_ = new Array(Mutable, annotation_);
             }
             Annotation elem = new Annotation();
             Int len = input.readVarint().toInt();

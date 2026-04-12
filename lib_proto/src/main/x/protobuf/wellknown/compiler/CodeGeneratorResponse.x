@@ -373,7 +373,7 @@ class CodeGeneratorResponse
 
         case 15:
             if (file.is(immutable)) {
-                file = new Array(file);
+                file = new Array(Mutable, file);
             }
             File elem = new File();
             Int len = input.readVarint().toInt();

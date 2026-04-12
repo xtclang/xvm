@@ -420,7 +420,7 @@ class DescriptorProto
 
         case 2:
             if (field.is(immutable)) {
-                field = new Array(field);
+                field = new Array(Mutable, field);
             }
             FieldDescriptorProto elem = new FieldDescriptorProto();
             Int len = input.readVarint().toInt();
@@ -432,7 +432,7 @@ class DescriptorProto
 
         case 6:
             if (extension.is(immutable)) {
-                extension = new Array(extension);
+                extension = new Array(Mutable, extension);
             }
             FieldDescriptorProto elem = new FieldDescriptorProto();
             Int len = input.readVarint().toInt();
@@ -444,7 +444,7 @@ class DescriptorProto
 
         case 3:
             if (nestedType.is(immutable)) {
-                nestedType = new Array(nestedType);
+                nestedType = new Array(Mutable, nestedType);
             }
             DescriptorProto elem = new DescriptorProto();
             Int len = input.readVarint().toInt();
@@ -456,7 +456,7 @@ class DescriptorProto
 
         case 4:
             if (enumType.is(immutable)) {
-                enumType = new Array(enumType);
+                enumType = new Array(Mutable, enumType);
             }
             EnumDescriptorProto elem = new EnumDescriptorProto();
             Int len = input.readVarint().toInt();
@@ -468,7 +468,7 @@ class DescriptorProto
 
         case 5:
             if (extensionRange.is(immutable)) {
-                extensionRange = new Array(extensionRange);
+                extensionRange = new Array(Mutable, extensionRange);
             }
             ExtensionRange elem = new ExtensionRange();
             Int len = input.readVarint().toInt();
@@ -480,7 +480,7 @@ class DescriptorProto
 
         case 8:
             if (oneofDecl.is(immutable)) {
-                oneofDecl = new Array(oneofDecl);
+                oneofDecl = new Array(Mutable, oneofDecl);
             }
             OneofDescriptorProto elem = new OneofDescriptorProto();
             Int len = input.readVarint().toInt();
@@ -501,7 +501,7 @@ class DescriptorProto
 
         case 9:
             if (reservedRange.is(immutable)) {
-                reservedRange = new Array(reservedRange);
+                reservedRange = new Array(Mutable, reservedRange);
             }
             ReservedRange elem = new ReservedRange();
             Int len = input.readVarint().toInt();
@@ -513,7 +513,7 @@ class DescriptorProto
 
         case 10:
             if (reservedName.is(immutable)) {
-                reservedName = new Array(reservedName);
+                reservedName = new Array(Mutable, reservedName);
             }
             reservedName.add(input.readString());
             return True;

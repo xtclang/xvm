@@ -68,7 +68,7 @@ class ServiceDescriptorProto
 
         case 2:
             if (method.is(immutable)) {
-                method = new Array(method);
+                method = new Array(Mutable, method);
             }
             MethodDescriptorProto elem = new MethodDescriptorProto();
             Int len = input.readVarint().toInt();

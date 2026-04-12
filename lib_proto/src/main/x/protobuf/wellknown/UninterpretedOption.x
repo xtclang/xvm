@@ -311,7 +311,7 @@ class UninterpretedOption
         switch (protobuf.WireType.getFieldNumber(tag)) {
         case 2:
             if (name.is(immutable)) {
-                name = new Array(name);
+                name = new Array(Mutable, name);
             }
             NamePart elem = new NamePart();
             Int len = input.readVarint().toInt();
