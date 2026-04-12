@@ -58,11 +58,16 @@ runs:
               fi
 
               JAVA_VERSION=$(grep "^org.xtclang.java.jdk=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
+              KOTLIN_JAVA_VERSION=$(grep "^org.xtclang.kotlin.jdk=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
               XDK_VERSION=$(grep "^xdk.version=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
               GRADLE_VERSION=$(grep "^distributionUrl=" gradle/wrapper/gradle-wrapper.properties | sed 's/.*gradle-\(.*\)-bin.zip/\1/')
 
               if [ -z "$JAVA_VERSION" ]; then
                   echo "❌ org.xtclang.java.jdk not found in version.properties"
+                  exit 1
+              fi
+              if [ -z "$KOTLIN_JAVA_VERSION" ]; then
+                  echo "❌ org.xtclang.kotlin.jdk not found in version.properties"
                   exit 1
               fi
               if [ -z "$XDK_VERSION" ]; then
@@ -97,9 +102,6 @@ runs:
               JAVA_DISTRIBUTION="temurin"
               GRADLE_OPTIONS="-Dorg.gradle.vfs.watch=false -Dorg.gradle.vfs.verbose=false -Dorg.gradle.workers.max=3 --console=plain --warning-mode=summary"
               GRADLE_JVM_OPTS="-Xmx4g -XX:+UseParallelGC -XX:+UseStringDeduplication"
-
-              # Compute Kotlin toolchain Java version (main version - 1)
-              KOTLIN_JAVA_VERSION=$((JAVA_VERSION - 1))
 
               echo "📋 Java Version             : $JAVA_VERSION"
               echo "📋 Java Version (Kotlin)    : $KOTLIN_JAVA_VERSION"
@@ -171,7 +173,7 @@ runs:
               echo ""
 
         - name: Setup Java for Kotlin toolchain
-          if: ${{ inputs.setup-build == 'true' }}
+          if: ${{ inputs.setup-build == 'true' && steps.get-versions.outputs.kotlin-java-version != steps.get-versions.outputs.java-version }}
           uses: actions/setup-java@v5
           with:
               distribution: ${{ steps.get-versions.outputs.java-distribution }}
