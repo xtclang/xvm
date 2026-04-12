@@ -176,9 +176,9 @@ jobs:
                   echo "$TAGS"
 
                   # Rename artifact to expected name in Docker context
-                  DIST_ZIP_FILE="$(basename "${{ steps.artifact.outputs.artifact-path }}")"
-                  mv "$DIST_ZIP_FILE" xdk-dist.zip
-                  echo "📦 Renamed: $DIST_ZIP_FILE → xdk-dist.zip"
+                  DIST_ZIP_FILE="${{ steps.artifact.outputs.artifact-path }}"
+                  cp "$DIST_ZIP_FILE" xdk-dist.zip
+                  echo "📦 Copied: $DIST_ZIP_FILE → xdk-dist.zip"
 
                   # Build and push
                   docker buildx build \
