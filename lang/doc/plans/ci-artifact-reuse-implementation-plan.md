@@ -127,41 +127,51 @@ The guiding rule is:
 3. Decide whether Gradle Plugin Portal publication can also become artifact-driven, or document it as the one intentional source-build exception.
 4. Suppress or isolate nested Gradle check-run noise from generated-project integration tests so GitHub Checks only shows meaningful repo-level signals.
 
-## Current Test Plan
+## Branch Assessment
 
-The latest uncommitted changes should be validated in this order:
+The branch has completed the core snapshot-path artifact-reuse work:
 
-1. Run `Verify Commit` manually on this branch with:
-   - `platforms=ubuntu-latest`
-   - `skip-tests=true`
-   - `publish-snapshots=true`
-   - `publish-intellij-plugin=false`
-   - `include-lang=false`
-2. Confirm in [`commit.yml`](../../../.github/workflows/commit.yml):
-   - the main build runs `publishSnapshotBundle` in the consolidated Gradle session
-   - `snapshot-maven-repo-${sha}` is uploaded
-   - the summary shows:
-     - snapshot Maven publication bundle built
-     - manual tests skipped
-     - lang validation skipped
-3. Confirm in [`publish-snapshot.yml`](../../../.github/workflows/publish-snapshot.yml):
-   - the workflow downloads `snapshot-maven-repo-${sha}`
-   - provenance validation succeeds
-   - publication logs explicitly show:
-     - `GitHub Packages (SNAPSHOT)`
-     - `Maven Central Snapshots`
-   - the source fallback path is not used
-4. After that succeeds, run one manual `Verify Commit` with:
-   - `platforms=ubuntu-latest`
-   - `skip-tests=true`
-   - `publish-snapshots=true`
-   - `publish-intellij-plugin=true`
-   - `include-lang=true`
-5. Confirm the combined path still works:
-   - snapshot Maven bundle publication
-   - IntelliJ artifact staging
-   - downstream IntelliJ snapshot publish
-   - summary includes IntelliJ publish version/channel
+- snapshot CI now stages commit-scoped artifacts and reuses them downstream
+- integration-test consumes the staged Maven repo artifact instead of rebuilding from source
+- XDK snapshot publication is artifact-driven
+- IntelliJ snapshot publication is artifact-driven and manual-only
+- Docker and Homebrew already reuse CI-built XDK artifacts
+
+The remaining items are not part of the same risk profile. They are:
+
+- release-flow feature work
+- metadata/helper normalization
+- Gradle Plugin Portal exception handling
+- GitHub Checks/UI cleanup
+
+Recommended decision for this branch:
+
+- do **not** keep extending it into release-flow parity and helper abstraction work
+- land the validated snapshot-path work as-is
+- treat the remaining items as explicit follow-up work unless a release-flow change is immediately needed
+
+Rationale:
+
+- the snapshot path is already validated end-to-end
+- release workflows are less exercised and higher-risk
+- helper abstraction is useful but not required for correctness
+- GitHub Checks noise cleanup is orthogonal and should not block the branch
+
+## Validation Summary
+
+The original snapshot-path validation sequence has already been completed on this branch:
+
+1. Baseline no-snapshot/no-IntelliJ path:
+   - validated
+2. Non-IntelliJ snapshot publication path:
+   - validated
+   - XDK snapshot, Docker, and Homebrew updates all completed from CI-built artifacts
+3. IntelliJ-enabled snapshot publication path:
+   - validated
+   - IntelliJ snapshot publication reused the staged plugin artifact and updated the stable GitHub snapshot assets in place
+
+Remaining validation work belongs to any future release-flow changes, not to the already-finished
+snapshot-path implementation in this branch.
 
 ## Non-Goals
 
@@ -206,6 +216,7 @@ Status:
   - `consumer-artifacts.json`
   - `intellij-plugin-metadata.json`
 - still worth normalizing into a shared schema
+- not recommended to complete in this branch unless a downstream workflow is blocked by the mismatch
 
 ### Task 1.2: Decide artifact naming and retention
 
@@ -405,6 +416,7 @@ Status:
 
 - not implemented
 - still optional
+- do not add this in this branch unless emergency manual publication without `ci-run-id` is needed
 
 ## Phase 5: Audit Other Downstream Jobs
 
@@ -422,6 +434,10 @@ Implementation notes:
 - identify which jobs already behave as artifact-promotion jobs
 - identify which still check out source and rebuild large graphs
 
+Status:
+
+- complete
+
 ### Task 5.2: Normalize on one reuse pattern
 
 Pick a standard downstream pattern:
@@ -434,6 +450,12 @@ Implementation notes:
 
 - use the same helper actions where practical
 - prefer small generalizations of existing artifact-download actions over workflow-specific shell glue
+
+Status:
+
+- partially complete
+- the workflows mostly follow the same pattern now, but helper abstraction and metadata shape are still uneven
+- not required to land this branch safely
 
 ### Task 5.3: Convert snapshot Maven publication into artifact promotion
 
@@ -454,6 +476,10 @@ Implementation notes:
 - include coordinate metadata, checksums, and expected package list in the staged bundle
 - if exact remote publication still requires Gradle task execution, make it consume the staged publication repository rather than rebuilding modules
 
+Status:
+
+- complete
+
 ### Task 5.4: Convert release staging into artifact promotion where possible
 
 Refactor [`prepare-release.yml`](../../../.github/workflows/prepare-release.yml) so `stage-artifacts` does not rebuild more than necessary.
@@ -472,6 +498,12 @@ Implementation notes:
 - but split build from publication, just like snapshot CI now does
 - if a single release-tag build must remain, stage all publication bundles from that one build session and never re-enter a second Gradle graph in the workflow
 
+Status:
+
+- incomplete
+- this is the highest-value remaining feature follow-up
+- recommended as a separate follow-up branch unless release-flow work is immediately needed
+
 ### Task 5.5: Decide whether Gradle Plugin Portal promotion can be artifact-driven
 
 Investigate whether [`promote-release.yml`](../../../.github/workflows/promote-release.yml) must keep running `:plugin:publishPlugins` from source, or whether it can publish from a staged plugin publication bundle.
@@ -481,6 +513,12 @@ Implementation notes:
 - if the portal plugin requires source-driven publication, document that as an intentional exception
 - if it can publish from staged plugin artifacts, convert it to the same promotion pattern
 - this should be the only acceptable remaining source-build exception if no staged alternative exists
+
+Status:
+
+- incomplete
+- current recommendation is to treat this as the likely intentional source-build exception
+- do not pursue it further in this branch
 
 ### Task 5.6: Keep Docker and Homebrew on the current promotion model
 
@@ -494,6 +532,10 @@ Implementation notes:
 - these already consume CI-built XDK artifacts correctly
 - keep them aligned with the shared metadata contract so commit/run provenance can be enforced consistently
 - do not over-refactor these unless helper-action simplification materially reduces maintenance
+
+Status:
+
+- complete
 
 ## Phase 5A: Standardize Artifact Metadata
 
@@ -516,7 +558,19 @@ Apply this to:
 - IntelliJ plugin distribution
 - future publish-ready Maven snapshot bundle
 
+Status:
+
+- partially complete
+- provenance exists, but the schemas are still artifact-family-specific
+- useful follow-up, but not urgent for this branch
+
 ### Task 5A.2: Add provenance validation to all downstream promotion jobs
+
+Status:
+
+- complete for the current snapshot-era downstream jobs
+- integration-test, snapshot publication, Docker, and Homebrew now validate source commit/run provenance before promotion
+- any future downstream job should follow the same pattern, but this branch closes the current gap
 
 Downstream jobs should explicitly validate:
 
@@ -527,7 +581,8 @@ Downstream jobs should explicitly validate:
 Implementation notes:
 
 - the consumer Maven repository provenance check in `integration-test` is now the reference implementation
-- Docker, Homebrew, and XDK snapshot publication should adopt the same pattern
+- Docker and Homebrew now inherit explicit XDK artifact provenance validation through the shared `download-ci-artifact` action
+- the remaining follow-up is schema normalization under Task 5A.1, not missing downstream provenance checks
 
 ## Phase 6: Instrumentation And Guardrails
 

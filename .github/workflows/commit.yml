@@ -417,12 +417,46 @@ jobs:
             #  ## 3) cd into the xtc-app-template folder and run ./gradlew greet, which should work and not fail
             #  uses: act
 
+            - name: Stage XDK distribution artifact metadata
+              if: success() && matrix.os == 'ubuntu-latest'
+              shell: bash
+              run: |
+                  METADATA_DIR="$PWD/ci-artifacts/metadata"
+                  mkdir -p "$METADATA_DIR"
+
+                  ZIP_FILE=$(find "$PWD/xdk/build/distributions" -maxdepth 1 -name "xdk-*.zip" | head -1)
+                  if [ -z "$ZIP_FILE" ] || [ ! -f "$ZIP_FILE" ]; then
+                      echo "❌ ERROR: No XDK distribution ZIP found to stage metadata"
+                      exit 1
+                  fi
+
+                  ZIP_NAME=$(basename "$ZIP_FILE")
+                  ZIP_SHA256=$(shasum -a 256 "$ZIP_FILE" | awk '{print $1}')
+
+                  cat > "$METADATA_DIR/xdk-dist-artifact.json" <<EOF
+                  {
+                    "commit": "${{ github.sha }}",
+                    "branch": "${{ github.ref_name }}",
+                    "runId": "${{ github.run_id }}",
+                    "workflow": "${{ github.workflow }}",
+                    "xdkVersion": "${{ steps.versions.outputs.xdk-version }}",
+                    "javaVersion": "${{ steps.versions.outputs.java-version }}",
+                    "artifact": "xdk-dist-${{ github.sha }}",
+                    "file": "$ZIP_NAME",
+                    "sha256": "$ZIP_SHA256"
+                  }
+                  EOF
+
+                  echo "✅ XDK distribution metadata staged for: $ZIP_NAME"
+
             - name: Upload XDK distribution artifact
               if: success() && matrix.os == 'ubuntu-latest'
               uses: actions/upload-artifact@v7
               with:
                   name: xdk-dist-${{ github.sha }}
-                  path: xdk/build/distributions/xdk-*.zip
+                  path: |
+                      xdk/build/distributions/xdk-*.zip
+                      ci-artifacts/metadata/xdk-dist-artifact.json
                   retention-days: 10
 
             - name: Stage consumer Maven repository artifact

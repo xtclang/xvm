@@ -213,6 +213,7 @@ jobs:
                   echo "- **Version:** $VERSION" >> $GITHUB_STEP_SUMMARY
                   echo "- **Platform:** ${{ matrix.platform }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Commit:** $COMMIT" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Source CI Run:** ${{ steps.commit.outputs.run-id }}" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "**Published architecture-specific tags:**" >> $GITHUB_STEP_SUMMARY
                   echo '```' >> $GITHUB_STEP_SUMMARY
