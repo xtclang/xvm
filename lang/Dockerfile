@@ -109,12 +109,10 @@ RUN ARCH=$(uname -m) && \
 # =============================================================================
 # JDK Configuration
 # =============================================================================
-# The XDK uses multiple JDK versions (defined in version.properties):
-#   - JDK 25: Main build and Gradle runtime (org.xtclang.java.jdk)
-#   - JDK 24: Kotlin/LSP server (org.xtclang.kotlin.jdk)
+# The XDK uses JDK toolchain versions defined in version.properties.
+# The current build runs consistently on JDK 25 for both Java and Kotlin toolchains.
 #
-# Base image provides JDK 25 for running Gradle.
-# JDK 24 is installed directly to avoid Foojay API dependency.
+# Base image provides JDK 25 for running Gradle and the Kotlin toolchain.
 # =============================================================================
 
 ENV JAVA_HOME=/opt/java/openjdk
@@ -125,17 +123,6 @@ RUN java -version 2>&1 | head -1 | grep -q "25" || \
     (echo "ASSERTION FAILED: Base JDK must be version 25 (org.xtclang.java.jdk)" && exit 1)
 
 # JDK 21 is provided by IntelliJ's bundled JBR at /opt/idea-IC/jbr
-
-# Install JDK 24 for Kotlin toolchain (avoids Foojay API dependency)
-ARG JDK24_VERSION=24.0.1+9
-RUN ARCH=$(uname -m) && \
-    if [ "$ARCH" = "aarch64" ]; then JDK_ARCH="aarch64"; \
-    elif [ "$ARCH" = "x86_64" ]; then JDK_ARCH="x64"; \
-    else echo "Unsupported architecture: $ARCH" && exit 1; fi && \
-    mkdir -p /opt/jdk-24 && \
-    curl -fsSL "https://github.com/adoptium/temurin24-binaries/releases/download/jdk-${JDK24_VERSION}/OpenJDK24U-jdk_${JDK_ARCH}_linux_hotspot_$(echo ${JDK24_VERSION} | tr '+' '_').tar.gz" \
-    | tar -xz -C /opt/jdk-24 --strip-components=1 && \
-    /opt/jdk-24/bin/java -version
 
 # =============================================================================
 # Configure virtual display for headless operation

@@ -17,14 +17,13 @@ val versionProps = Properties().apply {
     versionPropsFile.inputStream().use { load(it) }
 }
 
-// Kotlin doesn't support Java 25 yet (as of Kotlin 2.2.21, embedded in Gradle 9.4), so use Kotlin JDK from version.properties
+// Keep Kotlin build logic on the same JDK/toolchain level as the rest of the build.
+// Gradle 9.4.x embeds Kotlin 2.3.0, which supports JVM target 25.
 val jdkVersion = versionProps.getProperty("org.xtclang.java.jdk")?.toInt() ?: error("org.xtclang.java.jdk not found in version.properties")
 val kotlinJdkVersion = versionProps.getProperty("org.xtclang.kotlin.jdk")?.toInt() ?: error("org.xtclang.kotlin.jdk not found in version.properties")
 
 logger.info("[settings] Boostrap properties: ${versionProps.size} direct properties (jdk=$jdkVersion, kotlin=$kotlinJdkVersion)")
 
-// NOTE: This avoids kotlin warnings, but the build system will run with Java 24.
-// The produced output will still be Java 25.
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(kotlinJdkVersion))
