@@ -793,6 +793,6 @@ val test by tasks.existing(Test::class) {
     useJUnitPlatform()
     jvmArgs("-Xlog:cds=off")
     testLogging {
-        events("skipped", "failed")
+        events("failed")
     }
 }

@@ -212,7 +212,7 @@ val classes by tasks.existing
 tasks.test {
     useJUnitPlatform()
     testLogging {
-        events("skipped", "failed")
+        events("failed")
     }
 
     // Enable FFM native access for tree-sitter integration tests (suppresses JDK warning)
