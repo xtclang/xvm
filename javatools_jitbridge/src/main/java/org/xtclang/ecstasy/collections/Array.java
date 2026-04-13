@@ -361,7 +361,8 @@ public abstract class Array
      *   immutable Array makeImmutable()
      */
     public Array makeImmutable(Ctx ctx) {
-        throw new UnsupportedOperationException("TODO");
+        $mut($CONSTANT);
+        return this;
     }
 
     /**
@@ -496,6 +497,21 @@ public abstract class Array
         throw new UnsupportedOperationException("TODO");
     }
 
+    /**
+     * Native implementation of:
+     *
+     *   Mutability mutability.get()
+     */
+    public Mutability mutability$get(Ctx ctx) {
+        return switch ($mut()) {
+            case 0  -> Mutability.Constant;
+            case 1  -> Mutability.Persistent;
+            case 2  -> Mutability.Fixed;
+            case 3  -> Mutability.Mutable;
+            default -> throw new IllegalStateException();
+        };
+    }
+
     // ----- TEMPORARY: SHOULD BE NATURAL ----------------------------------------------------------
 
     public Array duplicate(Ctx ctx) {
@@ -592,10 +608,9 @@ public abstract class Array
     /**
      * @param size  the size to store
      */
-    protected int $size(int size) {
+    protected void $size(int size) {
         assert size >= 0 && size <= $SIZE_MASK;
         $sizeEtc = $sizeEtc & $MUT_MASK | size;
-        return size;
     }
 
     /**

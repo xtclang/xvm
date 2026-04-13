@@ -457,7 +457,9 @@ public class TypeSystem {
      */
     public static boolean isEnumerationClass(String name) {
         assert !name.isEmpty();
-        return name.codePointAt(0) == ENUM || name.equals("Enumeration");
+
+        // enumeration class could be an inner class
+        return name.codePointAt(name.lastIndexOf('$') + 1) == ENUM || name.equals("Enumeration");
     }
 
     /**
@@ -480,7 +482,7 @@ public class TypeSystem {
     /**
      * @param name  a class name to be used as part of a Java ClassFile
      *
-     * @return the passed in `name` but with any special characters (reserved by the JIT) escaped
+     * @return the passed in name but with any special characters (reserved by the JIT) escaped
      */
     public static String escapeJitClassName(String name) {
         StringBuilder buf = null;

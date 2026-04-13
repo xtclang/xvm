@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.xvm.asm.Annotation;
@@ -6503,33 +6504,35 @@ public abstract class TypeConstant
         if (id.equals(pool.clzArray())) {
             TypeConstant typeEl = getParamType(0);
             if (typeEl.isFormalType() || typeEl.equals(pool.typeObject())) {
-                return Builder.N_nArrayObj;
-            } else if (typeEl.isJavaPrimitive()){
-                ClassDesc        cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
+                return Builder.N_ArrayObj;
+            } else if (typeEl.isJitPrimitive()) {
                 IdentityConstant idEl = typeEl.getSingleUnderlyingClass(false);
 
-                return switch (cdEl.descriptorString().charAt(0)) {
-                    case 'Z' ->          Builder.N_nArrayObj;
-                    case 'J' -> switch (idEl.getName()) {
-                        case "Int64"  -> Builder.N_nArrayObj;
-                        case "UInt64" -> Builder.N_nArrayObj;
-                        default -> throw new IllegalStateException();
-                    };
-                    case 'I' -> switch (idEl.getName()) {
-                        case "Char"   -> Builder.N_nArrayChar;
-                        case "Int8"   -> Builder.N_nArrayObj;
-                        case "Int16"  -> Builder.N_nArrayObj;
-                        case "Int32"  -> Builder.N_nArrayObj;
-                        case "UInt8"  -> Builder.N_nArrayObj;
-                        case "UInt16" -> Builder.N_nArrayObj;
-                        case "UInt32" -> Builder.N_nArrayObj;
-                        default -> throw new IllegalStateException();
-                    };
-                    default -> throw new UnsupportedOperationException();
+                return switch (idEl.getName()) {
+                    case "Bit"     -> Builder.N_ArrayBit;
+                    case "Boolean" -> Builder.N_ArrayObj; // TODO JK
+                    case "Char"    -> Builder.N_ArrayChar;
+                    case "Dec32"   -> Builder.N_ArrayDec32;
+                    case "Dec64"   -> Builder.N_ArrayDec64;
+                    case "Dec128"  -> Builder.N_ArrayDec128;
+                    case "Float32" -> Builder.N_ArrayFloat32;
+                    case "Float64" -> Builder.N_ArrayFloat64;
+                    case "Nibble"  -> Builder.N_ArrayNibble;
+                    case "Int8"    -> Builder.N_ArrayInt8;
+                    case "Int16"   -> Builder.N_ArrayInt16;
+                    case "Int32"   -> Builder.N_ArrayInt32;
+                    case "Int64"   -> Builder.N_ArrayInt64;
+                    case "Int128"  -> Builder.N_ArrayInt128;
+                    case "UInt8"   -> Builder.N_ArrayUInt8;
+                    case "UInt16"  -> Builder.N_ArrayUInt16;
+                    case "UInt32"  -> Builder.N_ArrayUInt32;
+                    case "UInt64"  -> Builder.N_ArrayUInt64;
+                    case "UInt128" -> Builder.N_ArrayUInt128;
+                    default        -> throw new UnsupportedOperationException();
                 };
             } else {
                 // REVIEW CP: this is wrong
-                return Builder.N_nArrayObj;
+                return Builder.N_ArrayObj;
             }
         }
 
@@ -6577,7 +6580,7 @@ public abstract class TypeConstant
      * @return true iff objects of this type can be represented by a single primitive Java value
      */
     public boolean isJavaPrimitive() {
-        return false;
+        return isModifyingType() && getUnderlyingType().isJitPrimitive();
     }
 
     /**
@@ -6585,7 +6588,23 @@ public abstract class TypeConstant
      *         more Java primitive values
      */
     public boolean isXvmPrimitive() {
-        return false;
+        return isModifyingType() && getUnderlyingType().isXvmPrimitive();
+    }
+
+    /**
+     * @return {@code true} if this type is either a Java primitive or an Ecstasy primitive type.
+     */
+    public boolean isJitPrimitive() {
+        return isJavaPrimitive() || isXvmPrimitive();
+    }
+
+
+    /**
+     * @return true iff the specified type is represented by the Java interface and needs to be
+     *         cast explicitly to {@code nObj} class to invoke its methods
+     */
+    public boolean isJitInterface() {
+        return isInterfaceType();
     }
 
     /**
@@ -6639,10 +6658,50 @@ public abstract class TypeConstant
      */
     public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
                              RegisterInfo reg1, RegisterInfo reg2, Label lblTrue) {
-        assert isSingleUnderlyingClass(true);
+        buildCompare(bctx, code, nOp, reg1, reg2.type(), reg2.cd(), reg2::load, lblTrue);
+    }
+
+    /**
+     * Generate the code that compares a register and a constant and either jumps to one of the
+     * specified labels or falls through.
+     *
+     * @param bctx      the current build context
+     * @param code      the {@link CodeBuilder} to use to generate byte-codes
+     * @param nOp       the compare op to generate
+     * @param reg1      the first register to compare
+     * @param constant  the constant compare argument
+     * @param lblTrue   (optional) the label to go to in the case the positive result has been
+     *                  computed and the jump needs be generated; otherwise the result of the
+     *                  comparison should be placed on the Java stack
+     */
+    public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
+                             RegisterInfo reg1, Constant constant, Label lblTrue) {
+        TypeConstant          argType = constant.getType();
+        ClassDesc             argCd   = JitTypeDesc.getJitClass(bctx.builder, argType);
+        Consumer<CodeBuilder> loader  = c -> bctx.loadConstant(c, constant);
+        buildCompare(bctx, code, nOp, reg1, argType, argCd, loader, lblTrue);
+    }
+
+    /**
+     * Generate the code that compares the registers and either jumps to one of the specified labels
+     * or falls through.
+     *
+     * @param bctx       the current build context
+     * @param code       the {@link CodeBuilder} to use to generate byte-codes
+     * @param nOp        the compare op to generate
+     * @param reg1       the first register to compare
+     * @param argType    the type of the compare argument
+     * @param cdArg      the {@link ClassDesc} of the compare argument
+     * @param argLoader  the {@link Consumer} to load the compare argument onto the stack
+     * @param lblTrue    (optional) the label to go to in the case the positive result has been
+     *                   computed and the jump needs be generated; otherwise the result of the
+     *                   comparison should be placed on the Java stack
+     */
+    public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
+                             RegisterInfo reg1, TypeConstant argType, ClassDesc cdArg,
+                             Consumer<CodeBuilder> argLoader, Label lblTrue) {
         TypeConstant type1 = reg1.type();
-        TypeConstant type2 = reg2.type();
-        assert type1.isA(this) && type2.isA(this) || this.isFormalType();
+        assert type1.isA(this) && argType.isA(this) || this.isFormalType();
 
         boolean fLocalTrue = lblTrue == null;
         if (fLocalTrue) {
@@ -6658,8 +6717,8 @@ public abstract class TypeConstant
                 Builder.unbox(code, this);
             }
             convertIfUnsignedPrimitive(code);
-            reg2.load(code);
-            if (!reg2.cd().isPrimitive()) {
+            argLoader.accept(code);
+            if (!cdArg.isPrimitive()) {
                 Builder.unbox(code, this);
             }
             convertIfUnsignedPrimitive(code);
@@ -6736,7 +6795,7 @@ public abstract class TypeConstant
 
             bctx.loadCtx(code);
             reg1.load(code);
-            reg2.load(code);
+            argLoader.accept(code);
 
             switch (nOp) {
                 case Op.OP_IS_EQ, Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
@@ -6843,7 +6902,7 @@ public abstract class TypeConstant
                 bctx.loadType(code, getType()); // type of this type
             }
             reg1.load(code);
-            reg2.load(code);
+            argLoader.accept(code);
 
             switch (nOp) {
             case Op.OP_IS_EQ,  Op.OP_JMP_EQ,

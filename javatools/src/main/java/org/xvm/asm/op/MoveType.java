@@ -4,16 +4,27 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
+import java.lang.constant.MethodTypeDesc;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.OpMove;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.RegisterInfo;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
+import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_Object;
+import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.CD_nType;
 
 
 /**
@@ -64,14 +75,33 @@ public class MoveType
     }
 
     protected int complete(Frame frame, ObjectHandle hValue) {
-        ConstantPool pool = frame.poolContext();
         int          nTo  = m_nToValue;
         TypeConstant type = hValue.getComposition().getType(); // don't augment the value type
 
         if (frame.isNextRegister(nTo)) {
-            frame.introduceResolvedVar(nTo,
-                pool.ensureParameterizedTypeConstant(pool.typeType(), type));
+            frame.introduceResolvedVar(nTo, type.getType());
         }
         return frame.assignValue(nTo, type.ensureTypeHandle(frame.f_context.f_container));
+    }
+
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        bctx.typeMatrix.assign(getAddress(), m_nToValue,
+            bctx.getArgumentType(m_nFromValue).getType());
+    }
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        RegisterInfo regFrom = bctx.loadArgument(code, m_nFromValue);
+
+        bctx.loadCtx(code);
+        if (regFrom.type().isJitInterface()) {
+            code.invokeinterface(CD_Object, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx));
+        } else {
+            code.invokevirtual(CD_nObj, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx));
+        }
+
+        bctx.storeValue(code, m_nToValue, regFrom.type().getType());
+        return -1;
     }
 }

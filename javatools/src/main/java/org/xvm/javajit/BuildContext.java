@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Annotation;
-import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -65,7 +64,6 @@ import static java.lang.constant.ConstantDescs.CD_MethodHandles_Lookup;
 import static java.lang.constant.ConstantDescs.CD_MethodType;
 import static java.lang.constant.ConstantDescs.CD_Object;
 import static java.lang.constant.ConstantDescs.CD_String;
-import static java.lang.constant.ConstantDescs.CD_Throwable;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
@@ -80,7 +78,6 @@ import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.EXT;
-import static org.xvm.javajit.Builder.N_TypeMismatch;
 import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.JitFlavor.AlwaysNull;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
@@ -563,16 +560,6 @@ public class BuildContext {
     }
 
     /**
-     * @return true iff the specified type is represented by the Java interface and needs to be
-     *         cast explicitly to {@code nObj} class to invoke its methods
-     */
-    public boolean isJavaInterface(TypeConstant type) {
-        return type.isSingleUnderlyingClass(true)
-            && type.getSingleUnderlyingClass(true).getComponent() instanceof ClassStructure clz
-            && clz.getFormat() == Component.Format.INTERFACE;
-    }
-
-    /**
      * Prepare the compilation.
      */
     public void enterMethod(CodeBuilder code) {
@@ -940,6 +927,13 @@ public class BuildContext {
                     type = type.resolveGenerics(pool(), typeInfo.getType());
                 }
 
+                if (constant instanceof PropertyConstant propId) {
+                    PropertyInfo propInfo = typeInfo.findProperty(propId);
+                    if (propInfo != null) {
+                        type = propInfo.inferImmutable(typeInfo.getType());
+                    }
+                }
+
                 // if the type is an enum value, widen it to its parent Enumeration
                 if (type.isEnumValue()) {
                     type = type.getSingleUnderlyingClass(false).getNamespace().getType();
@@ -982,7 +976,7 @@ public class BuildContext {
     protected RegisterInfo adjustRegister(CodeBuilder code, RegisterInfo reg, boolean loaded) {
         TypeConstant regType  = reg.type();
         TypeConstant baseType = regType.removeNullable();
-        if (!baseType.isJavaPrimitive() && !baseType.isXvmPrimitive()) {
+        if (!baseType.isJitPrimitive()) {
             int          regId   = reg.regId();
             TypeConstant mtxType = typeMatrix.getType(regId, currOpAddr);
 
@@ -1011,7 +1005,7 @@ public class BuildContext {
                 reg = new Narrowed(regId, reg.slots(), mtxType, Specific, narrowedCD, reg.slotCds(),
                         reg.name(), depth, !loaded, reg);
                 registerInfos.put(regId, reg);
-                if (loaded) {
+                    if (loaded) {
                     code.checkcast(narrowedCD);
                 }
             }
@@ -1028,12 +1022,14 @@ public class BuildContext {
         if (argId >= 0) {
             return adjustRegister(code, getRegisterInfo(code, argId), false);
         }
+
+        if (argId == Op.A_THIS) {
+            return getRegisterInfo(code, Op.A_THIS);
+        }
+
         RegisterInfo reg = argId <= Op.CONSTANT_OFFSET
                 ? loadConstant(code, argId)
                 : loadPredefineArgument(code, argId);
-        if (reg.slot() == 0) {
-            return reg; // Op.A_THIS;
-        }
 
         return reg.storeTempValue(this, code, argId);
     }
@@ -1377,7 +1373,7 @@ public class BuildContext {
                 if (cdFrom.isPrimitive()) {
                     // this can only be caused by a dead/unreachable code
                     ensureVarScope(code, regTo);
-                    throwTypeMismatch(code, "Unreconcilable types " +
+                    Builder.throwTypeMismatch(code, "Unreconcilable types " +
                             typeFrom.getValueString() + " -> " + typeTo.getValueString());
                     // unfortunately, if generated for any reachable code, this will throw
                     // during the verification phase without any useful information to debug
@@ -1387,7 +1383,7 @@ public class BuildContext {
                 }
 
                 // trust the compiler
-                generateCheckCast(code, typeTo);
+                builder.generateCheckCast(code, typeTo);
             }
         }
 
@@ -1408,7 +1404,7 @@ public class BuildContext {
             switch (srcFlavor) {
             case Specific:
                 switch (dstFlavor) {
-                case Primitive:
+                case Primitive, XvmPrimitive:
                     Builder.unbox(code, typeTo);
                     break AddTransformation;
 
@@ -1588,6 +1584,16 @@ public class BuildContext {
      * Load arguments for a method invocation.
      */
     public void loadCallArguments(CodeBuilder code, JitMethodDesc jmd, int[] anArgValue) {
+        loadCallArguments(code, jmd, anArgValue, null);
+    }
+
+    /**
+     * Load arguments for a method invocation.
+     *
+     * @param typeTarget if not null, the call represents a "new" call for the specified target
+     */
+    public void loadCallArguments(CodeBuilder code, JitMethodDesc jmd, int[] anArgValue,
+                                  TypeConstant typeTarget) {
         boolean isOptimized = jmd.isOptimized;
         int     argCount    = anArgValue.length;
 
@@ -1637,6 +1643,25 @@ public class BuildContext {
                     code.iconst_m1();
                     break;
                 }
+
+                case Widened: {
+                    // in general, this should not happen, but there is one place where the
+                    // Ecstasy compiler generates a default argument for a non-default signature -
+                    // for fix size Array constructor (see  NewExpression.java):
+                    //      construct(Int size, Element | function Element (Int) supply)
+                    // we need to replace it with the default value for the Element type
+                    if (typeTarget != null && typeTarget.isArray() &&
+                            typeTarget.getParamType(0).getDefaultValue() instanceof Constant dfltValue) {
+                        RegisterInfo regValue = loadConstant(code, dfltValue);
+                        if (regValue.flavor().isOptimized) {
+                            // the corresponding array constructor always takes an "nObj"
+                            Builder.box(code, regValue);
+                        }
+                        break;
+                    }
+                    // fall through
+                }
+
                 default:
                     throw new UnsupportedOperationException(
                         "Unsupported default argument for: " + dstFlavor);
@@ -1660,7 +1685,7 @@ public class BuildContext {
             switch (srcFlavor) {
             case Specific:
                 switch (dstFlavor) {
-                case Specific, SpecificWithDefault, Widened, WidenedWithDefault:
+                case SpecificWithDefault, Widened, WidenedWithDefault:
                     // nothing to do
                     continue;
 
@@ -2002,13 +2027,16 @@ public class BuildContext {
     /**
      * Get the property value.
      */
-    public void buildGetProperty(CodeBuilder code, RegisterInfo targetSlot, int propIdIndex, int retId) {
-        if (!targetSlot.isSingle()) {
+    public void buildGetProperty(CodeBuilder code, RegisterInfo targetReg, int propIdIndex, int retId) {
+        if (!targetReg.isSingle()) {
             throw new UnsupportedOperationException("Multislot P_Get");
         }
 
         PropertyConstant propId = getConstant(propIdIndex, PropertyConstant.class);
-        JitMethodDesc    jmdGet = builder.loadProperty(code, targetSlot.type(), propId);
+        switch (targetReg.flavor()) {
+            case Primitive, XvmPrimitive -> Builder.box(code, targetReg);
+        }
+        JitMethodDesc jmdGet = builder.loadProperty(code, targetReg.type(), propId);
 
         assignReturns(code, jmdGet, 1, new int[] {retId});
     }
@@ -2297,9 +2325,9 @@ public class BuildContext {
 
         loadCtx(code);
         if (infoTarget.hasGenericTypes()) {
-            loadTypeConstant(code, infoTarget.getType());
+            loadTypeConstant(code, typeTarget);
         }
-        loadCallArguments(code, jmdNew, anArgValue);
+        loadCallArguments(code, jmdNew, anArgValue, typeTarget);
 
         code.invokestatic(cdTarget, sJitNew, md);
         return cdTarget;
@@ -2416,18 +2444,24 @@ public class BuildContext {
 
                 case Specific:
                     switch (destFlavor) {
-                    case Specific, Widened:
+                    case Specific:
+                        if (retType.isAutoNarrowing()) {
+                            builder.generateCheckCast(code, destType);
+                        }
+                        break;
+
+                    case Widened:
                         // nothing to do
                         break;
 
                     case Primitive:
-                        generateCheckCast(code, destType);
+                        builder.generateCheckCast(code, destType);
                         Builder.unbox(code, destType);
                         break;
 
                     case NullablePrimitive:
                         // TODO: resolve the type parameter and check for Null if necessary
-                        generateCheckCast(code, destType.removeNullable());
+                        builder.generateCheckCast(code, destType.removeNullable());
                         Builder.unbox(code, destType);
                         code.iconst_0();
                         break;
@@ -2519,6 +2553,9 @@ public class BuildContext {
 
                 default:
                     Builder.loadFromContext(code, cdRet, pdRet.altIndex);
+                    if (!cdRet.isPrimitive()) {
+                        code.checkcast(cdRet);
+                    }
                     break;
                 }
             }
@@ -2541,50 +2578,6 @@ public class BuildContext {
             .invokestatic(CD_Exception, "$unsupported",
                 MethodTypeDesc.of(CD_nException, CD_Ctx, CD_JavaString))
             .athrow();
-    }
-
-    /**
-     * Add the code to throw a "TypeMismatch" exception.
-     */
-    public void throwTypeMismatch(CodeBuilder code, String text) {
-        throwException(code, ClassDesc.of(N_TypeMismatch), text);
-    }
-
-    /**
-     * Add the code to throw an Ecstasy exception. The code we produce is equivalent to:
-     * {@code throw new Exception(ctx).$init(ctx, text, null);}
-     *
-     * @param exCD  the ClassDesc for the Ecstasy exception (e.g. TypeMismatch)
-     * @param text  the exception text
-     */
-    public void throwException(CodeBuilder code, ClassDesc exCD, String text) {
-        Builder.invokeDefaultConstructor(code, exCD);
-        loadCtx(code);
-        code.loadConstant(text);
-        code.aconst_null()
-            .invokevirtual(exCD, "$init", MethodTypeDesc.of(
-                CD_nException, CD_Ctx, CD_JavaString, CD_Throwable))
-            .athrow();
-    }
-
-    /**
-     * Generate a "checkcast" that transforms a potential CCE into a TypeMismatch.
-     */
-    public void generateCheckCast(CodeBuilder code, TypeConstant typeTo) {
-        Label startLabel   = code.newLabel();
-        Label endLabel     = code.newLabel();
-        Label successLabel = code.newLabel();
-
-        ClassDesc cd = builder.ensureClassDesc(typeTo);
-        code.labelBinding(startLabel)
-            .checkcast(cd)
-            .goto_(successLabel)
-            .labelBinding(endLabel);
-        throwTypeMismatch(code, cd.descriptorString());
-
-        code.labelBinding(successLabel)
-            .exceptionCatch(startLabel, endLabel, endLabel,
-                ClassDesc.of("java.lang.ClassCastException"));
     }
 
     /**
@@ -2637,6 +2630,8 @@ public class BuildContext {
      */
     public void adjustIntValue(CodeBuilder code, TypeConstant type) {
         switch (type.getSingleUnderlyingClass(false).getName()) {
+            case "Bit"    -> code.i2b().ldc(0x01).iand();
+            case "Nibble" -> code.i2b().ldc(0x0F).iand();
             case "Int8"   -> code.i2b();
             case "UInt8"  -> code.ldc(0xFF).iand();
             case "Int16"  -> code.i2s();
@@ -2918,6 +2913,15 @@ public class BuildContext {
             return wideType.equals(origType)
                 ? origReg
                 : bctx.narrowRegister(code, origReg, wideType).store(bctx, code, wideType);
+        }
+
+        @Override
+        public String toString() {
+            return "regId="    + regId
+                + ", slots="   + Arrays.toString(slots)
+                + ", flavor="  + flavor
+                + ", type="    + type.getValueString()
+                + ", slotCds=" + Arrays.toString(slotCds);
         }
     }
 

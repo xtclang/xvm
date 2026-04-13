@@ -4,9 +4,16 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpIndexInPlace;
+
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -81,5 +88,20 @@ public class IIP_Shl
         default:
             throw new IllegalStateException();
         }
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    protected TypeConstant buildOptimizedBinary(BuildContext bctx, CodeBuilder code,
+                                                RegisterInfo regTarget, int nArgValue) {
+        return buildPrimitiveShl(bctx, code, regTarget, nArgValue);
+    }
+
+    @Override
+    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder  code,
+                                                   RegisterInfo regTarget, int nArgValue) {
+        buildXvmPrimitiveShl(bctx, code, regTarget, nArgValue);
+        return regTarget;
     }
 }

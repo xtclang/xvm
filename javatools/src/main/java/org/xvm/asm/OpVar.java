@@ -23,9 +23,9 @@ import org.xvm.runtime.template.collections.xArray;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_long;
 
+import static org.xvm.javajit.Builder.CD_ArrayObj;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
-import static org.xvm.javajit.Builder.CD_nArrayObj;
 import static org.xvm.javajit.Builder.CD_nObj;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -255,13 +255,13 @@ public abstract class OpVar
         bctx.loadTypeConstant(code, type);
         code.loadConstant((long) anArgValue.length)
                 .iconst_0()
-                .invokestatic(CD_nArrayObj, "$new$p", MD_newArray);
+                .invokestatic(CD_ArrayObj, "$new$p", MD_newArray);
 
         for (int nArg : anArgValue) {
             code.dup()
                     .aload(code.parameterSlot(0));
             bctx.loadArgument(code, nArg);
-            code.invokevirtual(CD_nArrayObj, "add", MD_add)
+            code.invokevirtual(CD_ArrayObj, "add", MD_add)
                     .pop();
         }
         reg.store(bctx, code, type);
@@ -274,12 +274,12 @@ public abstract class OpVar
      * The method description for Array.$new$p().
      */
     private static final MethodTypeDesc MD_newArray
-            = MethodTypeDesc.of(CD_nArrayObj, CD_Ctx, CD_TypeConstant, CD_long, CD_boolean);
+            = MethodTypeDesc.of(CD_ArrayObj, CD_Ctx, CD_TypeConstant, CD_long, CD_boolean);
 
     /**
      * The method description for Array.add().
      */
-    private static final MethodTypeDesc MD_add = MethodTypeDesc.of(CD_nArrayObj, CD_Ctx, CD_nObj);
+    private static final MethodTypeDesc MD_add = MethodTypeDesc.of(CD_ArrayObj, CD_Ctx, CD_nObj);
 
     /**
      * The register that the VAR op is responsible for creating.

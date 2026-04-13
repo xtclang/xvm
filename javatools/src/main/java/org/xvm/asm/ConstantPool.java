@@ -506,11 +506,13 @@ public class ConstantPool
      */
     public IntConstant ensureIntConstant(PackedInteger pint, Format format) {
         switch (format) {
+        case Int8:
         case Int16:
         case Int32:
         case Int64:
         case Int128:
         case IntN:
+        case UInt8:
         case UInt16:
         case UInt32:
         case UInt64:

@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -20,6 +22,9 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.MatchAnyConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.ConstHeap;
 import org.xvm.runtime.Frame;
@@ -522,6 +527,17 @@ public class JumpVal_N
         }
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        RegisterInfo[] regArgs = new RegisterInfo[m_anArgCond.length];
+        for (int i = 0; i < m_anArgCond.length; i++) {
+            regArgs[i] = bctx.loadArgument(code, m_anArgCond[i]);
+        }
+        buildIfLadder(bctx, code, regArgs);
+        return -1;
+    }
 
     // ----- fields --------------------------------------------------------------------------------
 

@@ -68,8 +68,18 @@ public class AugmentingBuilder extends CommonBuilder {
             new ExceptionBuilder(typeSystem, type).assembleCreateException(className, classBuilder);
         }
 
-        // for now, native enum values need to be fully functional (no code gen)
-        return typeInfo.getFormat() != Component.Format.ENUMVALUE;
+        switch (typeInfo.getFormat()) {
+        case ENUMVALUE:
+            // for now, native enum values need to be fully functional (no code gen)
+            return false;
+
+        case ENUM:
+            // for all native enums generate the "equals" and "compare"
+            EnumBuilder.generateOrderable(classBuilder, this);
+            // fall through
+        default:
+            return true;
+        }
     }
 
     @Override

@@ -25,6 +25,7 @@ class GpSubTests {
         testGpSubFloat64();
         testGpSubIntFromChar();
         testGpSubCharFromChar();
+        testGpSubNibble();
         console.print("<<<< Finished GpSubTests <<<<");
     }
 
@@ -167,5 +168,20 @@ class GpSubTests {
         Char   value3 = 'a';
         value1 = value2 - value3;
         assert value1 == 3;
+    }
+
+    void testGpSubNibble() {
+        Nibble value1 = 0;
+        Nibble value2 = 0x08;
+        Nibble value3 = 0x03;
+        value1 = value2 - value3;
+        assert value1 == 0x05;
+
+        value1 = 0x0F - 0x0A;
+        assert value1 == 0x05;
+
+        Nibble one = 0x01;
+        value1 = one - 0x01;
+        assert value1 == 0x00;
     }
 }

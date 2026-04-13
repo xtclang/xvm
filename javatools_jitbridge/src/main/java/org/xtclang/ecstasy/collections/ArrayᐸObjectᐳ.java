@@ -16,16 +16,16 @@ import org.xvm.javajit.Ctx;
 import static java.lang.Math.max;
 import static java.lang.System.arraycopy;
 
-public class nArrayᐸObjectᐳ
+public class ArrayᐸObjectᐳ
     extends Array {
 
-    public nArrayᐸObjectᐳ(Ctx ctx, TypeConstant type) {
+    public ArrayᐸObjectᐳ(Ctx ctx, TypeConstant type) {
         super(ctx);
         $type = type;
     }
 
     public TypeConstant $type;
-    public nArrayᐸObjectᐳ $delegate;
+    public ArrayᐸObjectᐳ $delegate;
     public nObj[] $storage;
 
     // ----- xObj API ------------------------------------------------------------------------------
@@ -63,11 +63,11 @@ public class nArrayᐸObjectᐳ
      * Array Constructor:
      *      construct(Int capacity = 0)
      */
-    public static nArrayᐸObjectᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
+    public static ArrayᐸObjectᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
 
         ctx.alloc(64); // REVIEW how big?
-        nArrayᐸObjectᐳ array = new nArrayᐸObjectᐳ(ctx, type);
+        ArrayᐸObjectᐳ array = new ArrayᐸObjectᐳ(ctx, type);
         array.$mut($MUTABLE);
         array.$capCfg(ctx, capacity);
         return array;
@@ -77,7 +77,7 @@ public class nArrayᐸObjectᐳ
      * Array Constructor:
      *      construct(Int size, Element | function Element (Int) supply)
      */
-    public static nArrayᐸObjectᐳ $new$2(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
+    public static ArrayᐸObjectᐳ $new$2(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         // TODO
         throw new UnsupportedOperationException();
     }
@@ -86,16 +86,25 @@ public class nArrayᐸObjectᐳ
      * Array Constructor:
      *      construct(Mutability mutability, Iterable<Element> elements = [])
      */
-    public static nArrayᐸObjectᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
-        // TODO
-        throw new UnsupportedOperationException();
+    public static ArrayᐸObjectᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+        ctx.alloc(size * 8); // REVIEW + HEADER_SIZE?
+        ArrayᐸObjectᐳ array = new ArrayᐸObjectᐳ(ctx, type);
+        array.$mut($FIXED);
+
+        if (array.$growInPlace(ctx, size)) {
+            Arrays.fill(array.$storage, supply);
+            array.$size((int) size);
+            return array;
+        } else {
+            throw array.$oob(ctx, size);
+        }
     }
 
     /**
      * Array Constructor:
      *      construct(Array that)
      */
-    public static nArrayᐸObjectᐳ $new$3$p(Ctx ctx, TypeConstant type, nArrayᐸObjectᐳ that) {
+    public static ArrayᐸObjectᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸObjectᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
     }
@@ -156,7 +165,7 @@ public class nArrayᐸObjectᐳ
     }
 
     @Override
-    public nArrayᐸObjectᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸObjectᐳ add(Ctx ctx, nObj element) {
         if ($delegate != null) {
             $delegate.add(ctx, element);
             return this;
@@ -183,16 +192,16 @@ public class nArrayᐸObjectᐳ
         }
     }
 
-    @Override public nArrayᐸObjectᐳ delete$p(Ctx ctx, long index) {
+    @Override public ArrayᐸObjectᐳ delete$p(Ctx ctx, long index) {
         $delete(ctx, index, 1);
         return this;
     }
 
-    @Override public nArrayᐸObjectᐳ deleteAll(Ctx ctx, Range indexes) {
+    @Override public ArrayᐸObjectᐳ deleteAll(Ctx ctx, Range indexes) {
         throw new UnsupportedOperationException("TODO CP");
     }
 
-    @Override public nArrayᐸObjectᐳ clear(Ctx ctx) {
+    @Override public ArrayᐸObjectᐳ clear(Ctx ctx) {
 //        if (empty$get$p(ctx)) {
 //            return this;
 //        }
@@ -208,7 +217,7 @@ public class nArrayᐸObjectᐳ
         throw new UnsupportedOperationException("TODO CP");
     }
 
-    @Override public nArrayᐸObjectᐳ slice$p(Ctx ctx, long n1, long n2) {
+    @Override public ArrayᐸObjectᐳ slice$p(Ctx ctx, long n1, long n2) {
         // slice must be in-range
         // TODO check lower bound as well
         long upper = nRangeᐸInt64ᐳ.$effectiveUpperBound(ctx, n1, n2);
@@ -227,7 +236,7 @@ public class nArrayᐸObjectᐳ
 
     // ----- Array internals -----------------------------------------------------------------------
 
-    @Override protected nArrayᐸObjectᐳ $delegate() {
+    @Override protected ArrayᐸObjectᐳ $delegate() {
         return $delegate;
     }
 

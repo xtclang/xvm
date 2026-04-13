@@ -10,15 +10,14 @@ package basic {
 
             Boolean passed = True;
             try {
-                passed &= runTest(() -> arrayTests.run());
                 passed &= runTest(() -> callTests.run());
                 passed &= runTest(() -> condMixinTests.run());
+                passed &= runTest(() -> delegationTests.run());
                 passed &= runTest(() -> enumTests.run());
                 passed &= runTest(() -> genericTests.run());
                 passed &= runTest(() -> invocationTests.run());
                 passed &= runTest(() -> lambdaTests.run());
                 passed &= runTest(() -> mixinTests.run());
-                passed &= runTest(() -> switchTests.run());
                 passed &= runTest(() -> tryTests.run());
                 passed &= runTest(() -> setPropertyTests.run());
                 passed &= runTest(() -> propertyInitTests.run());

@@ -17,6 +17,7 @@ class GpXorTests {
         testGpXorUInt32();
         testGpXorInt128();
         testGpXorUInt128();
+        testGpXorBit();
         console.print("<<<< Finished GpXorTests <<<<<");
     }
 
@@ -103,5 +104,23 @@ class GpXorTests {
 //        UInt128 value3 = 0xF0F0F0F0;
 //        value1 = value2 ^ value3;
 //        assert value1 == 0x5A5A5A5A;
+    }
+
+    void testGpXorBit() {
+        Bit value1 = 0;
+        Bit value2 = 1;
+        Bit value3 = 1;
+        value1 = value2 ^ value3;
+        assert value1 == 0;
+
+        value1 = value2 ^ 0;
+        assert value1 == 1;
+
+        value1 = 0 ^ value3;
+        assert value1 == 1;
+
+        Bit zero = 0;
+        value1 = zero ^ zero;
+        assert value1 == 0;
     }
 }

@@ -69,10 +69,9 @@ public class EnumValueBuilder extends CommonBuilder {
         assert ord >= 0;
 
         final long ordinal = ord;
-        classBuilder.withMethod(getterName+OPT, jmDesc.optimizedMD, ClassFile.ACC_PUBLIC,
-            methodBuilder -> methodBuilder.withCode(code ->
-                code.loadConstant(ordinal)
-                    .lreturn()));
+        classBuilder.withMethodBody(getterName+OPT, jmDesc.optimizedMD, ClassFile.ACC_PUBLIC, code ->
+            code.loadConstant(ordinal)
+                .lreturn());
     }
 
     private void assembleNameProp(String className, ClassBuilder classBuilder) {
@@ -80,10 +79,9 @@ public class EnumValueBuilder extends CommonBuilder {
         String        getterName = prop.ensureGetterJitMethodName(typeSystem);
         JitMethodDesc jmDesc     = prop.getGetterJitDesc(this);
 
-        classBuilder.withMethod(getterName, jmDesc.standardMD, ClassFile.ACC_PUBLIC,
-            methodBuilder -> methodBuilder.withCode(code ->
-                code.getstatic(ClassDesc.of(className), NAME, CD_String)
-                    .areturn()));
+        classBuilder.withMethodBody(getterName, jmDesc.standardMD, ClassFile.ACC_PUBLIC, code ->
+            code.getstatic(ClassDesc.of(className), NAME, CD_String)
+                .areturn());
     }
 
     /**

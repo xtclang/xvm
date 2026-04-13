@@ -54,7 +54,8 @@ public class JitTypeDesc {
     public static ClassDesc getPrimitiveClass(TypeConstant type) {
         if (type.isJavaPrimitive()) {
             return switch (type.getSingleUnderlyingClass(false).getName()) {
-                case "Char", "Int8", "Int16", "Int32", "UInt8", "UInt16", "UInt32"
+                case "Bit", "Nibble", "Char", "Byte",
+                     "Int8", "Int16", "Int32", "UInt8", "UInt16", "UInt32"
                     -> CD_int;
                 case "Int64", "UInt64"
                     -> CD_long;

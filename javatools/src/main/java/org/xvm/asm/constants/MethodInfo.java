@@ -741,12 +741,19 @@ public class MethodInfo
      * @return true iff the method covers a virtual constructor
      */
     public boolean containsVirtualConstructor() {
+        return getVirtualConstructor() != null;
+    }
+
+    /**
+     * @return the body that represents a virtual constructor
+     */
+    public MethodBody getVirtualConstructor() {
         for (MethodBody body : getChain()) {
             if (body.isVirtualConstructor()) {
-                return true;
+                return body;
             }
         }
-        return false;
+        return null;
     }
 
     /**
@@ -759,11 +766,30 @@ public class MethodInfo
     }
 
     /**
-     * @return true iff this is an abstract function (declared on an interface)
+     * @return true iff this is an abstract function (declared on a funky interface) that must be
+     *         overridden by all extending classes
      */
     public boolean isAbstractFunction() {
-        MethodBody head = getHead();
-        return head.isFunction() && head.getImplementation() == Implementation.Declared;
+        return getHead().isAbstractFunction();
+    }
+
+    /**
+     * @return true iff the method covers a funky interface abstract function
+     */
+    public boolean containsAbstractFunction() {
+        return getAbstractFunction() != null;
+    }
+
+    /**
+     * @return the body that represents an abstract function
+     */
+    public MethodBody getAbstractFunction() {
+        for (MethodBody body : getChain()) {
+            if (body.isAbstractFunction()) {
+                return body;
+            }
+        }
+        return null;
     }
 
     /**
@@ -779,6 +805,13 @@ public class MethodInfo
      */
     public boolean isCapped() {
         return getHead().getImplementation() == Implementation.Capped;
+    }
+
+    /**
+     * @return true iff the method chain is delegating
+     */
+    public boolean isDelegating() {
+        return getHead().getImplementation() == Implementation.Delegating;
     }
 
     /**
@@ -1167,32 +1200,77 @@ public class MethodInfo
      * @return the identity of the method to be used by the JIT compiler
      */
     public static MethodConstant getJitIdentity(MethodBody[] aBody) {
-        // for methods   - get the lowest non-implicit in the chain
-        // for functions - get the highest in the chain
-        MethodConstant id = null;
+        // for methods   -  get the lowest in the chain with the same signature; ignore implicits
+        // for functions -  get the highest in the chain
+        MethodConstant    id  = null;
+        SignatureConstant sig = null;
         for (MethodBody body : aBody) {
-            if (id == null || body.getImplementation() != Implementation.Implicit) {
+            if (id == null) {
                 id = body.getIdentity();
-                if (body.isFunction()) {
+                if (body.isFunction() || body.isVirtualConstructor()) {
                     break;
                 }
+                sig = body.getSignature();
+            } else if (body.getImplementation() == Implementation.Implicit) {
+                // ignore
+            } else if (isJitEquivalent(body.getSignature(), sig)) {
+                id = body.getIdentity();
+            } else {
+                break;
             }
         }
         return id;
+    }
+
+    private static boolean isJitEquivalent(SignatureConstant sig1, SignatureConstant sig2) {
+        TypeConstant[] atype1  = sig1.getRawParams();
+        TypeConstant[] atype2  = sig2.getRawParams();
+        int            cParams = atype1.length;
+
+        if (atype2.length != cParams) {
+            return false;
+        }
+
+        for (int i = 0; i < cParams; i++) {
+            if (!atype1[i].equals(atype2[i])) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
      * Ensure a unique name for this method at the specified TypeSystem.
      */
     public String ensureJitMethodName(TypeSystem ts) {
-        return getJitIdentity().ensureJitMethodName(ts);
+        String name = getJitIdentity().ensureJitMethodName(ts);
+        return isDelegating()
+            ? name + Builder.DELEGATE
+            : name;
     }
 
     /**
      * @return the JitMethodDesc
      */
     public JitMethodDesc getJitDesc(Builder builder, TypeConstant typeContainer) {
-        return getHead().getJitDesc(builder, typeContainer);
+        MethodBody head = getHead();
+        return switch (head.getImplementation()) {
+            case Capped
+                -> getChain()[1].getJitDesc(builder, typeContainer);
+
+            case Delegating -> {
+                // there could be multiple delegates; take the first "real" one
+                for (MethodBody body : getChain()) {
+                    if (body.getImplementation() != Implementation.Delegating) {
+                        yield body.getJitDesc(builder, typeContainer);
+                    }
+                }
+                throw new IllegalStateException();
+            }
+
+            default
+                -> head.getJitDesc(builder, typeContainer);
+        };
     }
 
     // ----- Object methods ------------------------------------------------------------------------

@@ -2,6 +2,7 @@ package org.xtclang.ecstasy;
 
 import org.xtclang.ecstasy.numbers.Int64;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.Ctx;
 
 public class nRangeᐸInt64ᐳ
@@ -34,6 +35,14 @@ public class nRangeᐸInt64ᐳ
 
     // ----- Range / Interval API ------------------------------------------------------------------
 
+    public static nRangeᐸInt64ᐳ $new$p(Ctx ctx, TypeConstant type, long first, long last,
+            boolean firstExclusive, boolean _firstExclusive, boolean lastExclusive,
+            boolean _lastExclusive) {
+
+        return new nRangeᐸInt64ᐳ(ctx, first, last, !_firstExclusive && firstExclusive,
+                !_lastExclusive && lastExclusive);
+    }
+
     long first$get$p(Ctx ctx) {
         return $descending ? $upperBound : $lowerBound;
     }
@@ -59,7 +68,7 @@ public class nRangeᐸInt64ᐳ
         return $descending ? $lowerExclusive : $upperExclusive;
     }
 
-    public long lowerBound$get$p$get$p(Ctx ctx) {
+    public long lowerBound$get$p(Ctx ctx) {
         return $lowerBound;
     }
 

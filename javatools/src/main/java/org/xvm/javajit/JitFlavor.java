@@ -124,11 +124,11 @@ public enum JitFlavor {
     AlwaysNull(false, null)
     ;
 
-    JitFlavor(boolean canOptimize, JitFlavor baseFlavor) {
-        this.canOptimize = canOptimize;
+    JitFlavor(boolean isOptimized, JitFlavor baseFlavor) {
+        this.isOptimized = isOptimized;
         this.baseFlavor  = baseFlavor;
     }
 
-    public final boolean   canOptimize;
+    public final boolean   isOptimized;
     public final JitFlavor baseFlavor;
 }

@@ -1672,7 +1672,7 @@ public class TypeInfo {
      *
      * @return the matching constructor id (null if none found)
      */
-    public MethodConstant findConstructor(TypeConstant[] aArgs) {
+    public MethodConstant findConstructor(TypeConstant... aArgs) {
         return findCallable("construct", false, false, TypeConstant.NO_TYPES, aArgs);
     }
 
@@ -1707,6 +1707,41 @@ public class TypeInfo {
             }
         }
         return methodBest;
+    }
+
+    /**
+     * @return true iff this TypeInfo represents a funky interface with virtual constructors
+     */
+    public boolean containsVirtualConstructors() {
+        assert getFormat() == Format.INTERFACE;
+
+        Set<MethodConstant> setConstruct =
+                findMethods("construct", -1, MethodKind.Constructor);
+
+        for (MethodConstant idTest : setConstruct) {
+            MethodInfo methodTest = getMethodById(idTest);
+            if (methodTest.isVirtualConstructor()) {
+                return true;
+            }
+        }
+        return false;
+    }
+    /**
+     * @return true iff this TypeInfo represents a funky interface with abstract functions
+     */
+    public boolean containsAbstractFunctions() {
+        assert getFormat() == Format.INTERFACE;
+
+        Set<MethodConstant> setConstruct =
+                findMethods("construct", -1, MethodKind.Constructor);
+
+        for (MethodConstant idTest : setConstruct) {
+            MethodInfo methodTest = getMethodById(idTest);
+            if (methodTest.isAbstractFunction()) {
+                return true;
+            }
+        }
+        return false;
     }
 
 

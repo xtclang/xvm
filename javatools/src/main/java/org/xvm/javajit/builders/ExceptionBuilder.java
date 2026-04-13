@@ -54,15 +54,13 @@ public class ExceptionBuilder extends CommonBuilder {
         ClassDesc      thisCD   = ClassDesc.of(className);
         MethodTypeDesc initMD   = MethodTypeDesc.of(CD_void, CD_Throwable, thisCD);
 
-        classBuilder.withMethod(jitName, createMD, ClassFile.ACC_PUBLIC,
-            methodBuilder -> methodBuilder.withCode(code ->
-                code.new_(javaExCD)
-                    .dup()
-                    .aload(code.parameterSlot(0))
-                    .aload(0)
-                    .invokespecial(javaExCD, INIT_NAME, initMD)
-                    .areturn()
-            )
+        classBuilder.withMethodBody(jitName, createMD, ClassFile.ACC_PUBLIC, code ->
+            code.new_(javaExCD)
+                .dup()
+                .aload(code.parameterSlot(0))
+                .aload(0)
+                .invokespecial(javaExCD, INIT_NAME, initMD)
+                .areturn()
         );
     }
 
@@ -89,19 +87,18 @@ public class ExceptionBuilder extends CommonBuilder {
 
         classBuilder.withFlags(ClassFile.ACC_PUBLIC)
                     .withSuperclass(superCD);
-        classBuilder.withMethod(INIT_NAME,
-            MethodTypeDesc.of(CD_void, CD_Throwable, exCD),
-            ClassFile.ACC_PUBLIC,
-            methodBuilder -> methodBuilder.withCode(code -> {
-                MethodTypeDesc superMD =  MethodTypeDesc.of(CD_void,
-                        CD_Throwable, ensureClassDesc(superType));
-                code.aload(0)
-                    .aload(1)
-                    .aload(2)
-                    .checkcast(CD_Exception)
-                    .invokespecial(superCD, INIT_NAME, superMD)
-                    .return_();
-            })
+
+        classBuilder.withMethodBody(INIT_NAME, MethodTypeDesc.of(CD_void, CD_Throwable, exCD),
+                ClassFile.ACC_PUBLIC, code -> {
+            MethodTypeDesc superMD =  MethodTypeDesc.of(CD_void,
+                    CD_Throwable, ensureClassDesc(superType));
+            code.aload(0)
+                .aload(1)
+                .aload(2)
+                .checkcast(CD_Exception)
+                .invokespecial(superCD, INIT_NAME, superMD)
+                .return_();
+            }
         );
     }
 }

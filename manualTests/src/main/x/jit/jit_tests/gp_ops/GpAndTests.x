@@ -18,6 +18,7 @@ class GpAndTests {
         testGpAndUInt32();
         testGpAndInt128();
         testGpAndUInt128();
+        testGpAndBit();
         console.print("<<<< Finished GpAndTests <<<<<");
     }
 
@@ -104,5 +105,23 @@ class GpAndTests {
         UInt128 value3 = 0xF0F0F0F0;
         value1 = value2 & value3;
         assert value1 == 0xA0A0A0A0;
+    }
+
+    void testGpAndBit() {
+        Bit value1 = 0;
+        Bit value2 = 1;
+        Bit value3 = 1;
+        value1 = value2 & value3;
+        assert value1 == 1;
+
+        value1 = value2 & 0;
+        assert value1 == 0;
+
+        value1 = 0 & value3;
+        assert value1 == 0;
+
+        Bit zero = 0;
+        value1 = zero & zero;
+        assert value1 == 0;
     }
 }

@@ -83,7 +83,7 @@ public class Dec32 extends DecimalFPNumber {
     /**
      * The value of this IEEE-754-2008 32-bit decimal contained in an {@code int}.
      */
-    private final int $bits;
+    public final int $bits;
 
     /**
      * Construct a decimal value from a Java <tt>int</tt> whose format is that of an IEEE-754-2008
@@ -316,18 +316,6 @@ public class Dec32 extends DecimalFPNumber {
     @Override
     public int toDec32$p(Ctx ctx) {
         return $bits;
-    }
-
-    // we must override the method here otherwise the JIT will add its own implementation
-    @Override
-    public long toDec64$p(Ctx ctx) {
-        return super.toDec64$p(ctx);
-    }
-
-    // we must override the method here otherwise the JIT will add its own implementation
-    @Override
-    public long toDec128$p(Ctx ctx) {
-        return super.toDec128$p(ctx);
     }
 
     // ----- Orderable interface -------------------------------------------------------------------

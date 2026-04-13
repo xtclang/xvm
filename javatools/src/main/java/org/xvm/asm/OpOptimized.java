@@ -2,9 +2,13 @@ package org.xvm.asm;
 
 import java.lang.classfile.CodeBuilder;
 
+import java.lang.constant.ClassDesc;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.RegisterInfo;
 
 /**
@@ -33,7 +37,12 @@ public abstract class OpOptimized
                                                 int          nArgValue) {
         RegisterInfo regLoaded = regTarget.load(code);
         RegisterInfo regArg    = bctx.loadArgument(code, nArgValue);
-        if (!regArg.cd().equals(regLoaded.cd())) {
+        ClassDesc    cdArg     = regArg.cd();
+        if (!cdArg.isPrimitive()) {
+            Builder.unbox(code, regArg);
+            cdArg = JitTypeDesc.getPrimitiveClass(regArg.type());
+        }
+        if (!cdArg.equals(regLoaded.cd())) {
             throw new UnsupportedOperationException("Convert " +
                     regArg.type().getValueString() + " to " + regLoaded.type().getValueString());
         }

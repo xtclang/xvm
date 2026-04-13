@@ -18,6 +18,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.InPlaceSupport;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.NumberSupport;
@@ -41,7 +42,7 @@ import static org.xvm.util.Handy.writePackedLong;
  */
 public abstract class OpInPlace
         extends Op
-        implements NumberSupport {
+        implements InPlaceSupport, NumberSupport {
     /**
      * Construct an "in-place" op for the passed target.
      *
@@ -230,7 +231,7 @@ public abstract class OpInPlace
             if (reg.cd().isPrimitive()) {
                 assert reg.isSingle();
 
-                buildPrimitiveLocal(code, reg);
+                buildPrimitiveLocal(bctx, code, reg);
                 if (isAssignOp()) {
                     bctx.storeValue(code, m_nRetValue, reg.type());
                 } else {
@@ -268,256 +269,6 @@ public abstract class OpInPlace
             }
         }
         return -1;
-    }
-
-    /**
-     * Build the primitive local ops.
-     *
-     * In:  nothing on the Java stack
-     * Out: the result on Java stack
-     */
-    protected void buildPrimitiveLocal(CodeBuilder code, RegisterInfo reg) {
-        switch (reg.cd().descriptorString()) {
-        case "I", "S", "B", "C", "Z":
-            switch (getOpCode()) {
-            case OP_IP_DEC:
-                code.iinc(reg.slot(), -1);
-                break;
-
-            case OP_IP_INC:
-                code.iinc(reg.slot(), +1);
-                break;
-
-            case OP_IP_DECA:
-                code.iload(reg.slot())
-                    .iinc(reg.slot(), -1); // leaves the old value on Java stack
-                break;
-
-            case OP_IP_INCA:
-                code.iload(reg.slot())
-                    .iinc(reg.slot(), +1);
-                break;
-
-            case OP_IP_DECB:
-                code.iinc(reg.slot(), -1)
-                    .iload(reg.slot());
-                break;
-
-            case OP_IP_INCB:
-                code.iinc(reg.slot(), +1)
-                    .iload(reg.slot());
-                break;
-
-            default:
-                throw new IllegalStateException();
-            }
-            break;
-
-        case "J":
-            code.lload(reg.slot());
-            switch (getOpCode()) {
-            case OP_IP_DEC:
-                code.lconst_1()
-                    .lsub();
-                break;
-
-            case OP_IP_INC:
-                code.lconst_1()
-                    .ladd();
-                break;
-
-            case OP_IP_DECA:
-                code.dup2()
-                    .lconst_1()
-                    .lsub();
-                break;
-
-            case OP_IP_INCA:
-                code.dup2()
-                    .lconst_1()
-                    .ladd();
-                break;
-
-            case OP_IP_DECB:
-                code.lconst_1()
-                    .lsub()
-                    .dup2();
-                break;
-
-            case OP_IP_INCB:
-                code.lconst_1()
-                    .ladd()
-                    .dup2();
-                break;
-
-            default:
-                throw new IllegalStateException();
-            }
-            code.lstore(reg.slot());
-            break;
-
-        case "F":
-            code.fload(reg.slot());
-            switch (getOpCode()) {
-            case OP_IP_DEC:
-                code.fconst_1()
-                    .fsub();
-                break;
-
-            case OP_IP_INC:
-                code.fconst_1()
-                    .fadd();
-                break;
-
-            case OP_IP_DECA:
-                code.dup2()
-                    .fconst_1()
-                    .fsub();
-                break;
-
-            case OP_IP_INCA:
-                code.dup2()
-                    .fconst_1()
-                    .fadd();
-                break;
-
-            case OP_IP_DECB:
-                code.fconst_1()
-                    .fsub()
-                    .dup2();
-                break;
-
-            case OP_IP_INCB:
-                code.fconst_1()
-                    .fadd()
-                    .dup2();
-                break;
-
-            default:
-                throw new IllegalStateException();
-            }
-            code.fstore(reg.slot());
-            break;
-
-        case "D":
-            code.dload(reg.slot());
-            switch (getOpCode()) {
-            case OP_IP_DEC:
-                code.dconst_1()
-                    .dsub();
-                break;
-
-            case OP_IP_INC:
-                code.dconst_1()
-                    .dadd();
-                break;
-
-            case OP_IP_DECA:
-                code.dup2()
-                    .dconst_1()
-                    .dsub();
-                break;
-
-            case OP_IP_INCA:
-                code.dup2()
-                    .dconst_1()
-                    .dadd();
-                break;
-
-            case OP_IP_DECB:
-                code.dconst_1()
-                    .dsub()
-                    .dup2();
-                break;
-
-            case OP_IP_INCB:
-                code.dconst_1()
-                    .dadd()
-                    .dup2();
-                break;
-
-            default:
-                throw new IllegalStateException();
-            }
-            code.dstore(reg.slot());
-            break;
-
-        default:
-            throw new IllegalStateException();
-        }
-    }
-
-    /**
-     * Build the XVM primitive local ops.
-     * <p>
-     * Nothing is on the Java stack before this method executes. The result will be on the Java
-     * stack when the method completes.
-     *
-     * @param bctx  the current BuildContext
-     * @param code  the CodeBuilder to use to generate the operation byte codes
-     * @param reg   the register containing the XVM prmitive value the operation is performed on
-     */
-    protected void buildXvmPrimitiveLocal(BuildContext bctx, CodeBuilder code, RegisterInfo reg) {
-        TypeConstant baseType = reg.type().removeNullable();
-        String       typeName = baseType.getSingleUnderlyingClass(false).getName();
-        int          op       = getOpCode();
-        switch (typeName) {
-            case "Int128", "UInt128":
-                int[] slots = reg.slots();
-                switch (getOpCode()) {
-                case OP_IP_DEC:
-                    buildLongLongSub(bctx, code, slots[0], slots[1], 1L, 0L);
-                    code.lstore(slots[1])
-                        .lstore(slots[0]);
-                    break;
-
-                case OP_IP_INC:
-                    buildLongLongAdd(bctx, code, slots[0], slots[1], 1L, 0L);
-                    code.lstore(slots[1])
-                        .lstore(slots[0]);
-                    break;
-
-                case OP_IP_DECA:
-                    code.lload(slots[0])
-                        .lload(slots[1]);
-                    buildLongLongSub(bctx, code, slots[0], slots[1], 1L, 0L);
-                    code.lstore(slots[1])
-                        .lstore(slots[0]);
-                    break;
-
-                case OP_IP_INCA:
-                    code.lload(slots[0])
-                        .lload(slots[1]);
-                    buildLongLongAdd(bctx, code, slots[0], slots[1], 1L, 0L);
-                    code.lstore(slots[1])
-                        .lstore(slots[0]);
-                    break;
-
-                case OP_IP_DECB:
-                    buildLongLongSub(bctx, code, slots[0], slots[1], 1L, 0L);
-                    code.lstore(slots[1])
-                        .lstore(slots[0])
-                        .lload(slots[0])
-                        .lload(slots[1]);
-                    break;
-
-                case OP_IP_INCB:
-                    buildLongLongAdd(bctx, code, slots[0], slots[1], 1L, 0L);
-                    code.lstore(slots[1])
-                        .lstore(slots[0])
-                        .lload(slots[0])
-                        .lload(slots[1]);
-                    break;
-
-                default:
-                    throw new IllegalStateException("Unsupported XVM primitive op " + op
-                            + " on type: " + typeName);
-                }
-                break;
-
-            default:
-                throw new IllegalStateException("Unsupported XVM primitive type: " + typeName);
-            }
     }
 
     /**

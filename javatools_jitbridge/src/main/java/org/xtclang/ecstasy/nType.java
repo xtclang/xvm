@@ -101,7 +101,7 @@ public class nType
         }
     }
 
-    private Method ensureMethod(java.lang.String methodName, Class paramClass) {
+    private Method ensureMethod(java.lang.String methodName, java.lang.Class paramClass) {
         java.lang.String clzName = $dataType.ensureJitClassName($ctx.container.typeSystem);
         java.lang.Class  clz;
         try {

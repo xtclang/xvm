@@ -15,6 +15,7 @@ class GpComplTests {
         testGpComplUInt16();
         testGpComplInt32();
         testGpComplUInt32();
+        testGpComplBit();
         console.print("<<<< Finished GpComplTests <<<<<");
     }
 
@@ -78,5 +79,15 @@ class GpComplTests {
         UInt32 value3 = 5;
         value1 = ~value2;
         assert value1 == 0x0543ABCD;
+    }
+
+    void testGpComplBit() {
+        Bit value1 = 0;
+        Bit value2 = 1;
+        value1 = ~value2;
+        assert value1 == 0;
+
+        value1 = ~value1;
+        assert value1 == 1;
     }
 }

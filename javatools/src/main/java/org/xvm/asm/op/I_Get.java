@@ -4,10 +4,17 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpIndex;
+
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassTemplate;
@@ -78,5 +85,22 @@ public class I_Get
         }
 
         return chain.invoke(frame, hTarget, hIndex, m_nRetValue);
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    /**
+     * Build the operation to execute on an array element.
+     * <p>
+     * The array reference is already loaded onto the stack.
+     *
+     * @param bctx      the current {@link BuildContext}
+     * @param code      the {@link CodeBuilder} to use to generate byte codes
+     * @param regArray  the {@link RegisterInfo} for the array reference
+     * @param typeEl    the {@link TypeConstant} of the array element
+     */
+    protected void buildPrimitiveArrayOp(BuildContext bctx, CodeBuilder code, RegisterInfo regArray,
+                                         TypeConstant typeEl) {
+        loadArrayElementToStack(bctx, code, regArray);
     }
 }

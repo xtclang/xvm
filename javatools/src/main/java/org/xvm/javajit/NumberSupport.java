@@ -135,7 +135,7 @@ public interface NumberSupport
                 code.iconst_m1().ixor();
                 bctx.adjustIntValue(code, regTarget.type());
             }
-            case "Z" -> code.iconst_m1().ixor();
+            case "Z" -> code.iconst_1().ixor();
             case "J" -> code.ldc(-1L).lxor();
             default  -> throw new IllegalStateException();
         }
@@ -331,7 +331,7 @@ public interface NumberSupport
      * @param regTarget  the register containing the target of the operation
      */
     default void buildXvmPrimitiveNeg(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
-        switch (regTarget.type().getValueString()) {
+        switch (regTarget.type().removeAccess().getValueString()) {
             case "Int128"  -> buildLongLongNeg(code, (MultipleSlot) regTarget);
             case "UInt128" -> bctx.throwUnsupported(code);
             case "Dec32" ->

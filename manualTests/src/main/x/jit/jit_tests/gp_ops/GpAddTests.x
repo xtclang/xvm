@@ -27,6 +27,7 @@ class GpAddTests {
         testGpAddIntToChar();
         testGpAddCharToChar();
         testGpAddStringToChar();
+        testGpAddNibble();
         console.print("<<<< Finished GpAddTests <<<<<");
     }
 
@@ -206,5 +207,20 @@ class GpAddTests {
     void testGpAddStringToCharConstants() {
         String value = 'a' + "bc";
         assert value == "abc";
+    }
+
+    void testGpAddNibble() {
+        Nibble value1 = 0;
+        Nibble value2 = 0x05;
+        Nibble value3 = 0x03;
+        value1 = value2 + value3;
+        assert value1 == 0x08;
+
+        value1 = 0x0A + 0x05;
+        assert value1 == 0x0F;
+
+        Nibble zero = 0;
+        value1 = zero + 0x01;
+        assert value1 == 0x01;
     }
 }
