@@ -186,7 +186,7 @@ class GpAddTests {
         value1 = value2 + value3;
         console.print("testGpAddCharToChar - value1 should be ab and is: ", True);
         console.print(value1);
-//        assert value1 == "ab"; // assert fails in the JIT even though the value appears correct
+        assert value1 == "ab";
     }
 
     void testGpAddCharToCharConstants() {
@@ -201,7 +201,7 @@ class GpAddTests {
         value1 = value2 + value3;
         console.print("testGpAddStringToChar - value1 should be abc and is: ", True);
         console.print(value1);
-//        assert value1 == "abc";  // assert fails in the JIT even though the value appears correct
+        assert value1 == "abc";
     }
 
     void testGpAddStringToCharConstants() {

@@ -1,6 +1,5 @@
 package org.xtclang.ecstasy.text;
 
-import org.xtclang.ecstasy.Comparable;
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.nConst;
@@ -70,7 +69,7 @@ public class String
             return;
         }
 
-        // scan string for unicode surrogate pairs
+        // scan string for Unicode surrogate pairs
         int utf16len = s.length();
         int pairs    = 0;
         for (int i = 0; i < utf16len; ++i) {
@@ -186,7 +185,7 @@ public class String
     /**
      * The storage for the string contents.
      */
-    private long[] data;
+    private final long[] data;
 
     /**
      * Index of the first character of the string.
@@ -274,18 +273,6 @@ public class String
         }
 
         return (int) (data[(int) (index >>> 3)] >>> (8 * (~index & 0b111))) & 0xFF;
-    }
-
-
-    /**
-     * Native implementation of:
-     *
-     *  static <CompileType extends String> Boolean equals(CompileType value1, CompileType value2)
-     */
-    public static boolean equals$p(Ctx ctx, nType type, String s1, String s2) {
-        // TODO CP: optimize
-        return s1.size$get$p(ctx) == s2.size$get$p(ctx) &&
-            s1.toString().equals(s2.toString());
     }
 
     @Override
@@ -386,13 +373,14 @@ public class String
     }
 
     /**
-     * The primitive implementation of:
+     * Native implementation of:
      *
-     *  static <CompileType extends String> Boolean equals(CompileType value1, CompileType value2);
+     *  static <CompileType extends String> Boolean equals(CompileType value1, CompileType value2)
      */
-    public static Boolean equals(Ctx ctx, nType type, Comparable value1, Comparable value2) {
-        return String.equals$p(ctx, type, (String) value1, (String) value2)
-                ? Boolean.TRUE : Boolean.FALSE;
+    public static boolean equals$p(Ctx ctx, nType type, String value1, String value2) {
+        // TODO CP: optimize
+        return value1.size$get$p(ctx) == value2.size$get$p(ctx) &&
+            value1.toString().equals(value2.toString());
     }
 
     // ----- xObj internal -------------------------------------------------------------------------
