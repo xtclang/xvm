@@ -1,5 +1,7 @@
 package org.xtclang.ecstasy.collections;
 
+import java.util.Arrays;
+
 import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
@@ -44,6 +46,23 @@ public class ArrayᐸUInt8ᐳ
     }
 
     public static ArrayᐸUInt8ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+        if (supply instanceof UInt8 boxed) {
+            ctx.alloc(size); // REVIEW + HEADER_SIZE?
+            ArrayᐸUInt8ᐳ array = new ArrayᐸUInt8ᐳ(ctx, type);
+            array.$mut($FIXED);
+
+            long value = boxed.$value & 0xFF;
+            long fill  = value == 0 ? 0 : value | (value << 8) | (value << 16) | (value << 24);
+            fill |= (fill << 32);
+
+            if (array.$growInPlace(ctx, size)) {
+                Arrays.fill(array.$storage, fill);
+                array.$size((int) size);
+                return array;
+            } else {
+                throw array.$oob(ctx, size);
+            }
+        }
         // TODO
         throw new UnsupportedOperationException();
     }

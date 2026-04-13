@@ -7,6 +7,8 @@ package nibbleArrayTests {
         console.print(">>>> Running Nibble Array Tests >>>>");
 
         shouldCreateWithCapacity();
+        shouldCreateArrayInitializedWithZeroValue();
+        shouldCreateArrayInitializedWithValue();
         shouldCreateConstantArray();
         shouldBeEmpty();
         shouldAddElement();
@@ -19,6 +21,20 @@ package nibbleArrayTests {
     void shouldCreateWithCapacity() {
         Nibble[] array = new Array(10);
         assert array.capacity == 10;
+    }
+
+    void shouldCreateArrayInitializedWithZeroValue() {
+        Nibble[] array = new Nibble[4](0);
+        assert array.mutability == Fixed;
+        assert array.size == 4
+                && array[0] == 0 && array[1] == 0 && array[2] == 0 && array[3] == 0;
+    }
+
+    void shouldCreateArrayInitializedWithValue() {
+        Nibble[] array = new Nibble[4](7);
+        assert array.mutability == Fixed;
+        assert array.size == 4
+                && array[0] == 7 && array[1] == 7 && array[2] == 7 && array[3] == 7;
     }
 
     void shouldCreateConstantArray() {

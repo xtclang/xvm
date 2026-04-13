@@ -7,6 +7,8 @@ package uint32ArrayTests {
         console.print(">>>> Running UInt32 Array Tests >>>>");
 
         shouldCreateWithCapacity();
+        shouldCreateArrayInitializedWithZeroValue();
+        shouldCreateArrayInitializedWithValue();
         shouldCreateConstantArray();
         shouldBeEmpty();
         shouldAddElement();
@@ -34,6 +36,20 @@ package uint32ArrayTests {
     void shouldCreateWithCapacity() {
         UInt32[] array = new Array(10);
         assert array.capacity == 10;
+    }
+
+    void shouldCreateArrayInitializedWithZeroValue() {
+        UInt32[] array = new UInt32[4](0);
+        assert array.mutability == Fixed;
+        assert array.size == 4
+                && array[0] == 0 && array[1] == 0 && array[2] == 0 && array[3] == 0;
+    }
+
+    void shouldCreateArrayInitializedWithValue() {
+        UInt32[] array = new UInt32[4](19);
+        assert array.mutability == Fixed;
+        assert array.size == 4
+                && array[0] == 19 && array[1] == 19 && array[2] == 19 && array[3] == 19;
     }
 
     void shouldCreateConstantArray() {

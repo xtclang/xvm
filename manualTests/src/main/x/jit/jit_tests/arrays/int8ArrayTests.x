@@ -8,6 +8,8 @@ package int8ArrayTests {
 
         shouldCreateWithCapacity();
         shouldCreateFixedSize();
+        shouldCreateArrayInitializedWithZeroValue();
+        shouldCreateArrayInitializedWithValue();
         shouldCreateConstantArray();
         shouldBeEmpty();
         shouldAddElement();
@@ -42,6 +44,20 @@ package int8ArrayTests {
         Int8[] array = new Int8[4];
         assert array.mutability == Fixed;
         assert array.size == 4 && array[3] == 0;
+    }
+
+    void shouldCreateArrayInitializedWithZeroValue() {
+        Int8[] array = new Int8[4](0);
+        assert array.mutability == Fixed;
+        assert array.size == 4
+                && array[0] == 0 && array[1] == 0 && array[2] == 0 && array[3] == 0;
+    }
+
+    void shouldCreateArrayInitializedWithValue() {
+        Int8[] array = new Int8[4](19);
+        assert array.mutability == Fixed;
+        assert array.size == 4
+                && array[0] == 19 && array[1] == 19 && array[2] == 19 && array[3] == 19;
     }
 
     void shouldCreateConstantArray() {

@@ -7,6 +7,8 @@ package float64ArrayTests {
         console.print(">>>> Running Float64 Array Tests >>>>");
 
         shouldCreateWithCapacity();
+        shouldCreateArrayInitializedWithZeroValue();
+        shouldCreateArrayInitializedWithValue();
         shouldCreateConstantArray();
         shouldBeEmpty();
         shouldAddElement();
@@ -24,6 +26,20 @@ package float64ArrayTests {
     void shouldCreateWithCapacity() {
         Float64[] array = new Array(10);
         assert array.capacity == 10;
+    }
+
+    void shouldCreateArrayInitializedWithZeroValue() {
+        Float64[] array = new Float64[4](0.0);
+        assert array.mutability == Fixed;
+        assert array.size == 4
+                && array[0] == 0.0 && array[1] == 0.0 && array[2] == 0.0 && array[3] == 0.0;
+    }
+
+    void shouldCreateArrayInitializedWithValue() {
+        Float64[] array = new Float64[4](3.14);
+        assert array.mutability == Fixed;
+        assert array.size == 4
+                && array[0] == 3.14 && array[1] == 3.14 && array[2] == 3.14 && array[3] == 3.14;
     }
 
     void shouldCreateConstantArray() {

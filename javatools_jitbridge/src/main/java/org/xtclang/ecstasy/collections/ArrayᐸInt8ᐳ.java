@@ -56,6 +56,7 @@ public class ArrayᐸInt8ᐳ
 
             long value = boxed.$value & 0xFF;
             long fill  = value == 0 ? 0 : value | (value << 8) | (value << 16) | (value << 24);
+            fill |= (fill << 32);
 
             if (array.$growInPlace(ctx, size)) {
                 Arrays.fill(array.$storage, fill);

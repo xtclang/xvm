@@ -1,5 +1,7 @@
 package org.xtclang.ecstasy.collections;
 
+import java.util.Arrays;
+
 import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
@@ -44,6 +46,21 @@ public class ArrayᐸBitᐳ
     }
 
     public static ArrayᐸBitᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+        if (supply instanceof Bit boxed) {
+            ctx.alloc(size); // REVIEW + HEADER_SIZE?
+            ArrayᐸBitᐳ array = new ArrayᐸBitᐳ(ctx, type);
+            array.$mut($FIXED);
+
+            long fill = boxed.$value == 0 ? 0 : -1L;
+
+            if (array.$growInPlace(ctx, size)) {
+                Arrays.fill(array.$storage, fill);
+                array.$size((int) size);
+                return array;
+            } else {
+                throw array.$oob(ctx, size);
+            }
+        }
         // TODO
         throw new UnsupportedOperationException();
     }

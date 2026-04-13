@@ -1,5 +1,7 @@
 package org.xtclang.ecstasy.collections;
 
+import java.util.Arrays;
+
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.nObj;
@@ -55,6 +57,28 @@ public class ArrayᐸCharᐳ
     }
 
     public static ArrayᐸCharᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+        if (supply instanceof Char boxed) {
+            int value = boxed.$value;
+            if (value < 0x100) {
+                ctx.alloc(size); // REVIEW + HEADER_SIZE?
+                ArrayᐸCharᐳ array = new ArrayᐸCharᐳ(ctx, type);
+                array.$mut($FIXED);
+                array.$utf21 = false;
+
+                long lval = value & 0xFF;
+                long fill = lval == 0 ? 0 : lval | (lval << 8) | (lval << 16) | (lval << 24);
+                fill |= (fill << 32);
+
+                if (array.$growInPlace(ctx, size)) {
+                    Arrays.fill(array.$storage, fill);
+                    array.$size((int) size);
+                    return array;
+                } else {
+                    throw array.$oob(ctx, size);
+                }
+            }
+            // TODO handle utf21
+        }
         // TODO
         throw new UnsupportedOperationException();
     }

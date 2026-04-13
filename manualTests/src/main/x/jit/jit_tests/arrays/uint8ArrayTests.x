@@ -7,6 +7,8 @@ package uint8ArrayTests {
         console.print(">>>> Running UInt8 Array Tests >>>>");
 
         shouldCreateWithCapacity();
+        shouldCreateArrayInitializedWithZeroValue();
+        shouldCreateArrayInitializedWithValue();
         shouldCreateConstantArray();
         shouldBeEmpty();
         shouldAddElement();
@@ -34,6 +36,20 @@ package uint8ArrayTests {
     void shouldCreateWithCapacity() {
         UInt8[] array = new Array(10);
         assert array.capacity == 10;
+    }
+
+    void shouldCreateArrayInitializedWithZeroValue() {
+        UInt8[] array = new UInt8[4](0);
+        assert array.mutability == Fixed;
+        assert array.size == 4
+                && array[0] == 0 && array[1] == 0 && array[2] == 0 && array[3] == 0;
+    }
+
+    void shouldCreateArrayInitializedWithValue() {
+        UInt8[] array = new UInt8[4](19);
+        assert array.mutability == Fixed;
+        assert array.size == 4
+                && array[0] == 19 && array[1] == 19 && array[2] == 19 && array[3] == 19;
     }
 
     void shouldCreateConstantArray() {

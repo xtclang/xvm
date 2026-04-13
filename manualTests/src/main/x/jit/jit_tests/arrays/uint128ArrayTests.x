@@ -7,6 +7,8 @@ package uint128ArrayTests {
         console.print(">>>> Running UInt128 Array Tests >>>>");
 
         shouldCreateWithCapacity();
+        shouldCreateArrayInitializedWithZeroValue();
+        shouldCreateArrayInitializedWithValue();
         shouldCreateConstantArray();
         shouldBeEmpty();
         shouldAddElement();
@@ -34,6 +36,20 @@ package uint128ArrayTests {
     void shouldCreateWithCapacity() {
         UInt128[] array = new Array(10);
         assert array.capacity == 10;
+    }
+
+    void shouldCreateArrayInitializedWithZeroValue() {
+        UInt128[] array = new UInt128[4](0);
+        assert array.mutability == Fixed;
+        assert array.size == 4
+                && array[0] == 0 && array[1] == 0 && array[2] == 0 && array[3] == 0;
+    }
+
+    void shouldCreateArrayInitializedWithValue() {
+        UInt128[] array = new UInt128[4](19);
+        assert array.mutability == Fixed;
+        assert array.size == 4
+                && array[0] == 19 && array[1] == 19 && array[2] == 19 && array[3] == 19;
     }
 
     void shouldCreateConstantArray() {

@@ -7,6 +7,8 @@ package bitArrayTests {
         console.print(">>>> Running Bit Array Tests >>>>");
 
         shouldCreateWithCapacity();
+        shouldCreateArrayInitializedWithZeroValue();
+        shouldCreateArrayInitializedWithValue();
         shouldCreateConstantArray();
         shouldBeEmpty();
         shouldAddElement();
@@ -19,6 +21,20 @@ package bitArrayTests {
     void shouldCreateWithCapacity() {
         Bit[] array = new Array(10);
         assert array.capacity == 10;
+    }
+
+    void shouldCreateArrayInitializedWithZeroValue() {
+        Bit[] array = new Bit[4](0);
+        assert array.mutability == Fixed;
+        assert array.size == 4
+                && array[0] == 0 && array[1] == 0 && array[2] == 0 && array[3] == 0;
+    }
+
+    void shouldCreateArrayInitializedWithValue() {
+        Bit[] array = new Bit[4](1);
+        assert array.mutability == Fixed;
+        assert array.size == 4
+                && array[0] == 1 && array[1] == 1 && array[2] == 1 && array[3] == 1;
     }
 
     void shouldCreateConstantArray() {

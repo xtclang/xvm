@@ -87,8 +87,17 @@ public class ArrayᐸObjectᐳ
      *      construct(Mutability mutability, Iterable<Element> elements = [])
      */
     public static ArrayᐸObjectᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
-        // TODO
-        throw new UnsupportedOperationException();
+        ctx.alloc(size * 8); // REVIEW + HEADER_SIZE?
+        ArrayᐸObjectᐳ array = new ArrayᐸObjectᐳ(ctx, type);
+        array.$mut($FIXED);
+
+        if (array.$growInPlace(ctx, size)) {
+            Arrays.fill(array.$storage, supply);
+            array.$size((int) size);
+            return array;
+        } else {
+            throw array.$oob(ctx, size);
+        }
     }
 
     /**

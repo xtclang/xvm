@@ -20,6 +20,8 @@ package charArrayTests {
         console.print(">>>> Running Char Array Tests >>>>");
 
         shouldCreateWithCapacity();
+        shouldCreateArrayInitializedWithZeroValue();
+        shouldCreateArrayInitializedWithValue();
         shouldCreateConstantArray();
         shouldBeEmpty();
         shouldAddElement();
@@ -44,6 +46,21 @@ package charArrayTests {
     void shouldCreateWithCapacity() {
         Char[] array = new Array(10);
         assert array.capacity == 10;
+    }
+
+    void shouldCreateArrayInitializedWithZeroValue() {
+        Char[] array = new Char[4](minChar());
+        assert array.mutability == Fixed;
+        assert array.size == 4
+                && array[0] == minChar() && array[1] == minChar()
+                && array[2] == minChar() && array[3] == minChar();
+    }
+
+    void shouldCreateArrayInitializedWithValue() {
+        Char[] array = new Char[4]('z');
+        assert array.mutability == Fixed;
+        assert array.size == 4
+                && array[0] == 'z' && array[1] == 'z' && array[2] == 'z' && array[3] == 'z';
     }
 
     void shouldCreateConstantArray() {
