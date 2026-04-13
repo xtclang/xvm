@@ -587,7 +587,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
      */
     @Override protected boolean $growInPlace(Ctx ctx, long minCap) {
         // the caller is responsible for passing valid args; this will not be checked at runtime
-        minCap = Long.max(minCap, $cap2len((int) minCap));
+        minCap = Long.max(minCap, $cap2len(minCap));
         assert minCap > 0 && minCap <= $SIZE_MASK+1 && ($storage == null || minCap > $storage.length);
 
         if ($storage == null) {
@@ -596,7 +596,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
                 $growHuge(ctx, cap);
                 return false;
             } else {
-                $storage = new long[$cap2len((int) cap)];
+                $storage = new long[(int) $cap2len(cap)];
                 return true;
             }
         }
@@ -608,94 +608,86 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
             return false;
         }
 
-        $storage = Arrays.copyOf($storage, $cap2len((int) cap));
+        $storage = Arrays.copyOf($storage, (int) $cap2len(cap));
         return true;
     }
 
     /**
      * Get the long array length required to store the specified capacity.
      *
-     * @param cap  the desired storage capacity
-     *
+     * @param cap the desired storage capacity
      * @return the number of longs required
      */
-    protected abstract int $cap2len(int cap);
+    protected abstract long $cap2len(long cap);
 
     /**
-     * Return the {@link #$cap2len(int)} value for 1-bit elements.
+     * Return the {@link #$cap2len(long)} value for 1-bit elements.
      *
-     * @param cap  the array capacity
-     *
-     * @return  the storage length required to hold the specified array capacity of 1-bit values
+     * @param cap the array capacity
+     * @return the storage length required to hold the specified array capacity of 1-bit values
      */
-    protected int $cap2len1bit(int cap) {
-        return (cap + 63) / 64;
+    protected long $cap2len1bit(long cap) {
+        return (cap + 63L) / 64L;
     }
 
     /**
-     * Return the {@link #$cap2len(int)} value for 4-bit elements.
+     * Return the {@link #$cap2len(long)} value for 4-bit elements.
      *
-     * @param cap  the array capacity
-     *
-     * @return  the storage length required to hold the specified array capacity of 4-bit values
+     * @param cap the array capacity
+     * @return the storage length required to hold the specified array capacity of 4-bit values
      */
-    protected int $cap2len4bits(int cap) {
-        return (cap + 15) / 16;
+    protected long $cap2len4bits(long cap) {
+        return (cap + 15L) / 16L;
     }
 
     /**
-     * Return the {@link #$cap2len(int)} value for 8-bit elements.
+     * Return the {@link #$cap2len(long)} value for 8-bit elements.
      *
-     * @param cap  the array capacity
-     *
-     * @return  the storage length required to hold the specified array capacity of 8-bit values
+     * @param cap the array capacity
+     * @return the storage length required to hold the specified array capacity of 8-bit values
      */
-    protected int $cap2len8bits(int cap) {
-        return (cap + 7) / 8;
+    protected long $cap2len8bits(long cap) {
+        return (cap + 7L) / 8L;
     }
 
     /**
-     * Return the {@link #$cap2len(int)} value for 16-bit elements.
+     * Return the {@link #$cap2len(long)} value for 16-bit elements.
      *
-     * @param cap  the array capacity
-     *
-     * @return  the storage length required to hold the specified array capacity of 16-bit values
+     * @param cap the array capacity
+     * @return the storage length required to hold the specified array capacity of 16-bit values
      */
-    protected int $cap2len16bits(int cap) {
-        return (cap + 3) / 4;
+    protected long $cap2len16bits(long cap) {
+        return (cap + 3L) / 4L;
     }
 
     /**
-     * Return the {@link #$cap2len(int)} value for 21-bit elements.
+     * Return the {@link #$cap2len(long)} value for 21-bit elements.
      *
-     * @param cap  the array capacity
-     *
-     * @return  the storage length required to hold the specified array capacity of 21-bit values
+     * @param cap the array capacity
+     * @return the storage length required to hold the specified array capacity of 21-bit values
      */
-    protected int $cap2len21bits(int cap) {
-        return (cap + 2) / 3;
+    protected long $cap2len21bits(long cap) {
+        return (cap + 2L) / 3L;
     }
 
     /**
-     * Return the {@link #$cap2len(int)} value for 32-bit elements.
+     * Return the {@link #$cap2len(long)} value for 32-bit elements.
      *
-     * @param cap  the array capacity
-     *
-     * @return  the storage length required to hold the specified array capacity of 32-bit values
+     * @param cap the array capacity
+     * @return the storage length required to hold the specified array capacity of 32-bit values
      */
-    protected int $cap2len32bits(int cap) {
-        return (cap + 1) / 2;
+    protected long $cap2len32bits(long cap) {
+        return (cap + 1L) / 2L;
     }
 
     /**
-     * Return the {@link #$cap2len(int)} value for 128-bit elements.
+     * Return the {@link #$cap2len(long)} value for 128-bit elements.
      *
-     * @param cap  the array capacity
-     *
-     * @return  the storage length required to hold the specified array capacity of 128-bit values
+     * @param cap the array capacity
+     * @return the storage length required to hold the specified array capacity of 128-bit values
      */
-    protected int $cap2len128bits(int cap) {
-        return cap * 2;
+    protected long $cap2len128bits(long cap) {
+        return cap * 2L;
     }
 
     @Override protected void $growHuge(Ctx ctx, long cap) {

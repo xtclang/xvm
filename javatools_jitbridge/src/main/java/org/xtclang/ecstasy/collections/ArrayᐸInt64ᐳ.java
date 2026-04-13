@@ -135,7 +135,7 @@ public class ArrayᐸInt64ᐳ
     }
 
     @Override
-    protected int $cap2len(int cap) {
+    protected long $cap2len(long cap) {
         return cap;
     }
 }

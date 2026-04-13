@@ -161,7 +161,7 @@ public class ArrayᐸCharᐳ
     }
 
     @Override
-    protected int $cap2len(int cap) {
+    protected long $cap2len(long cap) {
         return $utf21 ? $cap2len21bits(cap) : $cap2len8bits(cap);
     }
 }

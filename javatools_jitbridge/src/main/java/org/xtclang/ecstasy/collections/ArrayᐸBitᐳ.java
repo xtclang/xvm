@@ -129,7 +129,7 @@ public class ArrayᐸBitᐳ
     }
 
     @Override
-    protected int $cap2len(int cap) {
+    protected long $cap2len(long cap) {
         return $cap2len1bit(cap);
     }
 }

@@ -1,7 +1,5 @@
 package org.xtclang.ecstasy.collections;
 
-import java.util.Arrays;
-
 import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
@@ -138,7 +136,7 @@ public class ArrayᐸDec128ᐳ
     }
 
     @Override
-    protected int $cap2len(int cap) {
+    protected long $cap2len(long cap) {
         return $cap2len128bits(cap);
     }
 }
