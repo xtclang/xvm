@@ -30,7 +30,6 @@ import static java.lang.constant.ConstantDescs.CD_Double;
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 import static java.lang.constant.ConstantDescs.CD_Throwable;
 import static java.lang.constant.ConstantDescs.CD_boolean;
-import static java.lang.constant.ConstantDescs.CD_char;
 import static java.lang.constant.ConstantDescs.CD_double;
 import static java.lang.constant.ConstantDescs.CD_float;
 import static java.lang.constant.ConstantDescs.CD_int;
@@ -261,7 +260,7 @@ public abstract class Builder {
 
         case CharConstant ch:
             code.loadConstant(ch.getValue());
-            return new SingleSlot(constant.getConstantPool().typeChar(), Primitive, CD_char, "");
+            return new SingleSlot(constant.getConstantPool().typeChar(), Primitive, CD_int, "");
 
         case TypeConstant type:
             assert type.isTypeOfType();
@@ -704,7 +703,7 @@ public abstract class Builder {
     public static void load(CodeBuilder code, ClassDesc cd, int slot) {
         if (cd.isPrimitive()) {
             switch (cd.descriptorString()) {
-            case "I", "S", "B", "C", "Z":
+            case "I", "S", "B", "Z":
                 code.iload(slot);
                 break;
             case "J":
@@ -730,7 +729,7 @@ public abstract class Builder {
     public static void store(CodeBuilder code, ClassDesc cd, int slot) {
         if (cd.isPrimitive()) {
             switch (cd.descriptorString()) {
-            case "I", "S", "B", "C", "Z":
+            case "I", "S", "B", "Z":
                 code.istore(slot);
                 break;
             case "J":
@@ -756,7 +755,7 @@ public abstract class Builder {
     public static void defaultLoad(CodeBuilder code, ClassDesc cd) {
         if (cd.isPrimitive()) {
             switch (cd.descriptorString()) {
-            case "I", "S", "B", "C", "Z":
+            case "I", "S", "B", "Z":
                 code.iconst_0();
                 break;
             case "J":
@@ -842,7 +841,7 @@ public abstract class Builder {
     public static void addReturn(CodeBuilder code, ClassDesc cd) {
         if (cd.isPrimitive()) {
             switch (cd.descriptorString()) {
-            case "I", "S", "B", "C", "Z":
+            case "I", "S", "B", "Z":
                 code.ireturn();
                 break;
             case "J":
@@ -1127,7 +1126,7 @@ public abstract class Builder {
 
             // convert the long to the corresponding Java primitive
             switch (cd.descriptorString()) {
-            case "I", "S", "B", "C", "Z":
+            case "I", "S", "B", "Z":
                 code.l2i();
                 break;
             case "J":
@@ -1176,7 +1175,7 @@ public abstract class Builder {
         if (cd.isPrimitive()) {
             // all primitives are stored into "long" fields; convert
             switch (descriptor) {
-            case "I", "S", "B", "C", "Z":
+            case "I", "S", "B", "Z":
                 code.i2l();
                 break;
             case "J":

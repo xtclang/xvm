@@ -6724,7 +6724,7 @@ public abstract class TypeConstant
             convertIfUnsignedPrimitive(code);
 
             switch (desc) {
-            case "I", "S", "B", "C", "Z":
+            case "I", "S", "B", "Z":
                 switch (nOp) {
                     case Op.OP_CMP -> {
                         code.isub();

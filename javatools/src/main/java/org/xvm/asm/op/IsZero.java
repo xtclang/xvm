@@ -69,7 +69,7 @@ public class IsZero
         Label labelTrue = code.newLabel();
         Label labelEnd = code.newLabel();
         switch (regArg.cd().descriptorString()) {
-            case "I", "S", "B", "C", "Z" -> {}
+            case "I", "S", "B", "Z" -> {}
             case "J" -> code.lconst_0().lcmp();
             case "F" -> code.fconst_0().fcmpl();
             case "D" -> code.dconst_0().dcmpl();

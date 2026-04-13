@@ -330,7 +330,7 @@ public abstract class OpInPlace
 
         int op = getOpCode();
         switch (cd.descriptorString()) {
-        case "I", "S", "B", "C", "Z":
+        case "I", "S", "B", "Z":
             switch (op) {
             case OP_IP_DEC, OP_IP_INC:
                 code.iconst_1();

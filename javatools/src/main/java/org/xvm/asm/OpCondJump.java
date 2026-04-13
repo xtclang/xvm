@@ -562,7 +562,7 @@ public abstract class OpCondJump
 
         String desc = cd.descriptorString();
         switch (desc) {
-        case "I", "S", "B", "C", "Z":
+        case "I", "S", "B", "Z":
             switch (getOpCode()) {
                 case OP_JMP_ZERO  -> code.if_icmpeq(lblJump);
                 case OP_JMP_NZERO -> code.if_icmpne(lblJump);
