@@ -2914,6 +2914,15 @@ public class BuildContext {
                 ? origReg
                 : bctx.narrowRegister(code, origReg, wideType).store(bctx, code, wideType);
         }
+
+        @Override
+        public String toString() {
+            return "regId="    + regId
+                + ", slots="   + Arrays.toString(slots)
+                + ", flavor="  + flavor
+                + ", type="    + type.getValueString()
+                + ", slotCds=" + Arrays.toString(slotCds);
+        }
     }
 
     // ----- Actions -------------------------------------------------------------------------------

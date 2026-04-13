@@ -2145,8 +2145,13 @@ public class CommonBuilder
     protected void generateCode(MethodTypeDesc md, BuildContext bctx, CodeBuilder code) {
 
         String moduleName = thisId.getModuleConstant().getName();
-        if (Arrays.stream(TEST_SET).anyMatch(name ->
-                    bctx.className.contains(name) || moduleName.contains(name))) {
+        if (Arrays.stream(TEST_SET).anyMatch(name -> {
+                if (name.endsWith("*")) {
+                    name = name.substring(0, name.length() - 1);
+                    return bctx.className.contains(name) || moduleName.contains(name);
+                } else {
+                    return bctx.className.endsWith(name) || moduleName.endsWith(name);
+                }})) {
             bctx.assembleCode(code);
         } else {
             if (SKIP_SET.add(bctx.className)) {
@@ -2181,12 +2186,12 @@ public class CommonBuilder
     }
 
     private final static String[] TEST_SET = new String[] {
-        "Test", "test",
+        "Test*", "test*",
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
         "Boolean", "Ordered",
         "Orderable",
         "Stringable",
-        "Float",
+        "Float*",
 //        "String",
 //        "StringBuffer",
 //        "Dec32", "Dec64", // need to change to SingleSlot
