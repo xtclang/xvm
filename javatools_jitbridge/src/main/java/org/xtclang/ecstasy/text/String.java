@@ -383,6 +383,15 @@ public class String
             value1.toString().equals(value2.toString());
     }
 
+    /**
+     * TEMPORARY: Native implementation of
+     *
+     *      Boolean defined.get()
+     */
+    public boolean defined$get$p(Ctx ctx) {
+        return ctx.container.isSpecified(toString());
+    }
+
     // ----- xObj internal -------------------------------------------------------------------------
 
     /**
