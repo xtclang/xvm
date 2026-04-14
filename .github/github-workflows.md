@@ -44,10 +44,10 @@ The XVM CI/CD pipeline follows a clear separation between internal build artifac
         ┌───────────────────┼───────────────────┐
         │                   │                   │
         ▼                   ▼                   ▼
-┌──────────────┐   ┌──────────────┐   ┌──────────────────┐
-│publish-docker│   │homebrew      │   │publish-snapshot  │
-│.yml          │   │-update.yml   │   │.yml              │
-├──────────────┤   ├──────────────┤   ├──────────────────┤
+┌──────────────┐   ┌──────────────┐   ┌──────────────────────────────────────┐
+│publish-docker│   │homebrew      │   │publish-snapshot.yml                  │
+│.yml          │   │-update.yml   │   │(XDK snapshots + optional IntelliJ    │
+├──────────────┤   ├──────────────┤   │ plugin ZIP snapshot)                 │
 │Receive       │   │Receive       │   │Receive           │
 │ci-run-id     │   │ci-run-id     │   │ci-run-id         │
 │              │   │              │   │                  │
@@ -59,10 +59,10 @@ The XVM CI/CD pipeline follows a clear separation between internal build artifac
 │images        │   │formula       │   │snapshots         │
 │              │   │              │   │                  │
 │Push to GHCR  │   │Push to tap   │   │Publish GitHub    │
-│              │   │              │   │Release           │
-└──────────────┘   └──────────────┘   └──────────────────┘
+│              │   │              │   │Release and optional plugin ZIP       │
+└──────────────┘   └──────────────┘   └──────────────────────────────────────┘
      multi-arch         xdk-latest         xdk-snapshots
-     amd64/arm64        .rb formula        .zip release
+     amd64/arm64        .rb formula        .zip release + optional intellij-plugin-snapshots
 ```
 
 ### Flow Summary
@@ -76,13 +76,13 @@ The XVM CI/CD pipeline follows a clear separation between internal build artifac
    - `commit.yml` directly triggers workflows via `gh workflow run --field ci-run-id=...`
    - `publish-docker.yml` - Builds multi-platform Docker images
    - `homebrew-update.yml` - Updates Homebrew tap formula
-   - `publish-snapshot.yml` - Publishes Maven + GitHub snapshot release
+   - `publish-snapshot.yml` - Publishes Maven + GitHub snapshot release, and can optionally publish an installable IntelliJ plugin ZIP snapshot
    - Each workflow receives `ci-run-id` to download artifacts from CI run
 
 3. **Manual Release** (two-phase process):
    - `prepare-release.yml` - Creates release branch, stages artifacts, creates PR
-   - `promote-release.yml` - Promotes staged artifacts to production (auto on PR merge)
-   - See [RELEASE_PROCESS.md](RELEASE_PROCESS.md) for complete documentation
+   - `promote-release.yml` - Promotes staged artifacts to production (manual workflow_dispatch)
+   - See [github-release-process.md](github-release-process.md) for complete documentation
 
 ---
 
@@ -98,12 +98,12 @@ The XVM CI/CD pipeline follows a clear separation between internal build artifac
 - Artifact identifier includes full 40-character commit hash
 - File inside artifact: `xdk-{VERSION}.zip` (from distZip task)
 
-**Download**: Using `actions/download-artifact@v4` with `run-id`
+**Download**: Using `actions/download-artifact@v8` with `run-id`
 
 **Example**:
 ```yaml
 - name: Download XDK build artifact
-  uses: actions/download-artifact@v4
+  uses: actions/download-artifact@v8
   with:
       name: xdk-dist-abc123def456...  # Full commit hash
       path: ./artifacts
@@ -210,9 +210,10 @@ All workflows support `workflow_dispatch` for manual testing from any branch.
 5. Generate summary
 
 **Manual Trigger Inputs**:
-- `publish-snapshots`: Trigger publishing workflows after build (default: false)
-  - Set `true` to test full publishing pipeline on non-master branches
-  - Publishing workflows: snapshot, docker, homebrew
+- `publish-snapshots`: Trigger snapshot, Docker, and Homebrew publishing after build (default: false)
+  - Set `true` to test the existing snapshot publication pipeline on non-master branches
+- `publish-intellij-plugin`: Trigger IntelliJ plugin snapshot publication after build (default: false)
+  - Requires `include-lang=true` on manual runs
 - `platforms`: Run on specific platform(s) or all
   - Options: `ubuntu-latest`, `windows-latest`, `all`
   - Default: `ubuntu-latest`
@@ -421,7 +422,7 @@ brew reinstall xdk-latest               # Alternative: always gets latest
 **⚠️ Note**: GitHub Packages artifacts are **immediately public** when prepare-release runs, before PR approval. Most users consume from Maven Central, which remains staged until promotion.
 
 **For complete release workflow documentation, see:**
-**[📖 RELEASE_PROCESS.md](RELEASE_PROCESS.md)**
+**[📖 github-release-process.md](github-release-process.md)**
 
 **Quick Summary**:
 
@@ -455,7 +456,7 @@ brew reinstall xdk-latest               # Alternative: always gets latest
 - ✅ Single merge = complete release
 - ✅ Selective publishing via PR labels
 
-**See [RELEASE_PROCESS.md](RELEASE_PROCESS.md) for**:
+**See [github-release-process.md](github-release-process.md) for**:
 - Complete step-by-step instructions
 - Selective publishing control
 - Manual re-promotion
@@ -1027,7 +1028,7 @@ curl -sL {URL} | sha256sum
       echo "run-id=$RUN_ID" >> $GITHUB_OUTPUT
 
 - name: Download XDK build artifact
-  uses: actions/download-artifact@v4
+  uses: actions/download-artifact@v8
   with:
       name: xdk-dist-${{ steps.commit.outputs.commit }}
       path: ./artifacts

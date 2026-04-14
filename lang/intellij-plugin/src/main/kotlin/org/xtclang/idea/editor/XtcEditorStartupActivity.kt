@@ -1,7 +1,7 @@
 package org.xtclang.idea.editor
 
 import com.intellij.codeInsight.editorActions.enter.EnterHandlerDelegate
-import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -28,9 +28,14 @@ class XtcEditorStartupActivity : ProjectActivity {
 
         val scheme = EditorColorsManager.getInstance().globalScheme.name
         val fileTypeForExtension = FileTypeManager.getInstance().getFileTypeByExtension("x")
+        val semanticTokensProperty = System.getProperty("xtc.lsp.semanticTokens")
+        val semanticTokensEnv = System.getenv("XTC_LSP_SEMANTIC_TOKENS")
         logger.warn(
             "XTC editor diagnostics for project '${project.name}': " +
-                "globalColorScheme='$scheme', fileTypeByExtension('x')='${fileTypeForExtension.name}' (${fileTypeForExtension.javaClass.name})",
+                "globalColorScheme='$scheme', " +
+                "fileTypeByExtension('x')='${fileTypeForExtension.name}' (${fileTypeForExtension.javaClass.name}), " +
+                "xtc.lsp.semanticTokens='$semanticTokensProperty', " +
+                "XTC_LSP_SEMANTIC_TOKENS='$semanticTokensEnv'",
         )
 
         logOpenXtcFiles(project, "startup")
@@ -66,7 +71,7 @@ class XtcEditorStartupActivity : ProjectActivity {
         val fileEditorManager = FileEditorManager.getInstance(project)
         val virtualFile = fileEditorManager.openFiles.firstOrNull { it.path == filePath } ?: return
         val psiFile =
-            ReadAction.compute<com.intellij.psi.PsiFile?, RuntimeException> {
+            ApplicationManager.getApplication().runReadAction<com.intellij.psi.PsiFile?> {
                 PsiManager.getInstance(project).findFile(virtualFile)
             }
         val fileType = virtualFile.fileType

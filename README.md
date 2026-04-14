@@ -44,7 +44,7 @@ export PATH=$PWD/xdk/build/install/xdk/bin:$PATH
 - [Learn Ecstasy Language Basics](https://github.com/xtclang/xvm/wiki)
 - [XDK Development Kit Guide](#installation-options) (below)
 - [Docker Development Guide](docker/README.md)
-- [GitHub Actions & CI Documentation](.github/GITHUB_WORKFLOWS.md)
+- [GitHub Actions & CI Documentation](.github/github-workflows.md)
 
 ---
 
@@ -65,7 +65,7 @@ This repository contains comprehensive documentation organized hierarchically:
 ### Tools & CLI
 - **[XTC CLI Reference](doc/xtc-cli.md)** - Command-line tools: `xtc init`, `xtc build`, `xtc run`, `xtc test`
 - **[Docker Guide](docker/README.md)** - Container development, build instructions, and CI integration
-- **[GitHub Actions](/.github/GITHUB_WORKFLOWS.md)** - CI/CD pipeline, workflows, and automation documentation
+- **[GitHub Actions](/.github/github-workflows.md)** - CI/CD pipeline, workflows, and automation documentation
 
 ### Language Documentation
 - **[Ecstasy Language Wiki](https://github.com/xtclang/xvm/wiki)** - Language specification, tutorials, and examples
@@ -177,7 +177,7 @@ Our project uses comprehensive GitHub workflows for continuous integration, depe
 
 **For complete documentation of our CI/CD pipeline, GitHub Actions, custom actions, manual workflow controls, Dependabot configuration, and all automation details, see:**
 
-**[.github/GITHUB_WORKFLOWS.md - XVM GitHub Workflows and Actions](.github/GITHUB_WORKFLOWS.md)**
+**[.github/github-workflows.md - XVM GitHub Workflows and Actions](.github/github-workflows.md)**
 
 This includes:
 - **CI/CD Pipeline**: Multi-platform builds, testing, Docker images, and publishing

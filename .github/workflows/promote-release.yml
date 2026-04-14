@@ -1,17 +1,16 @@
 #
 # GitHub workflow for promoting a staged release to production
 #
-# This workflow runs automatically when a release PR (from release/* branch) is merged to master.
-# It promotes all staged artifacts to production:
+# This workflow promotes staged release artifacts to production.
+# It is currently triggered manually via workflow_dispatch.
+# It promotes staged artifacts to production:
 # 1. Maven Central: Closes and releases staging repository
 # 2. GitHub Release: Publishes the draft release
 # 3. Gradle Plugin Portal: Publishes plugin (unless skipped)
 #
-# CONTROL VIA PR LABELS:
-# - Default: Publishes to ALL targets (Maven Central, GitHub Release, Gradle Plugin Portal)
-# - skip-maven-central: Skip Maven Central promotion
-# - skip-github-release: Skip GitHub release publication
-# - skip-gradle-plugin-portal: Skip Gradle Plugin Portal publication (default behavior)
+# CONTROL:
+# - Manual workflow inputs decide which production targets are promoted
+# - Old PR-label-based logic remains only as a dormant compatibility path for the disabled PR trigger
 #
 # MANUAL PROMOTION:
 # Can be triggered manually via workflow_dispatch for re-promotion or selective publishing.
@@ -90,7 +89,7 @@ jobs:
 
                   # Determine targets based on trigger type
                   if [ "${{ steps.version.outputs.trigger }}" = "pr-merge" ]; then
-                      echo "🔄 Automatic promotion via PR merge"
+                      echo "🔄 PR-triggered promotion path"
                       echo "   Using PR labels to control targets"
 
                       # Check PR labels
@@ -291,7 +290,7 @@ jobs:
                   echo "   ⏳ Syncing to Maven Central (takes 10-30 minutes)"
                   echo "   🔗 Check: https://central.sonatype.com/artifact/org.xtclang/xdk/$VERSION"
 
-                  if [ "${{ contains(github.event.pull_request.labels.*.name, 'publish-gradle-plugin') }}" = "true" ]; then
+                  if [ "$PLUGIN" = "true" ]; then
                       echo ""
                       echo "🔌 Gradle Plugin Portal:"
                       echo "   ⏳ Processing (takes a few minutes)"

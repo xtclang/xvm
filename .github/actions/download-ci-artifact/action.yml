@@ -33,12 +33,15 @@ outputs:
     artifact-name:
         description: 'Name of the artifact that was downloaded'
         value: xdk-dist-${{ inputs.commit }}
+    metadata-file:
+        description: 'Full path to the downloaded artifact metadata file'
+        value: ${{ steps.validate.outputs.metadata-file }}
 
 runs:
     using: 'composite'
     steps:
         - name: Download XDK artifact from CI
-          uses: actions/download-artifact@v4
+          uses: actions/download-artifact@v8
           with:
               name: xdk-dist-${{ inputs.commit }}
               path: ${{ inputs.output-path }}
@@ -68,6 +71,49 @@ runs:
                   echo ""
                   echo "Expected directory: $OUTPUT_PATH"
                   echo ""
+                  exit 1
+              fi
+
+              METADATA_FILE=$(find "$OUTPUT_PATH" -name "xdk-dist-artifact.json" | head -1)
+              if [ -z "$METADATA_FILE" ] || [ ! -f "$METADATA_FILE" ]; then
+                  echo "❌ ERROR: XDK artifact metadata file not found"
+                  echo "Expected file: xdk-dist-artifact.json"
+                  echo ""
+                  echo "Artifact contents:"
+                  ls -laR "$OUTPUT_PATH" 2>&1 || echo "  (empty or inaccessible)"
+                  echo ""
+                  exit 1
+              fi
+
+              ARTIFACT_COMMIT=$(jq -r '.commit' "$METADATA_FILE")
+              ARTIFACT_BRANCH=$(jq -r '.branch' "$METADATA_FILE")
+              ARTIFACT_RUN_ID=$(jq -r '.runId' "$METADATA_FILE")
+              ARTIFACT_WORKFLOW=$(jq -r '.workflow' "$METADATA_FILE")
+              ARTIFACT_VERSION=$(jq -r '.xdkVersion' "$METADATA_FILE")
+              ARTIFACT_FILE=$(jq -r '.file' "$METADATA_FILE")
+              ARTIFACT_SHA256=$(jq -r '.sha256' "$METADATA_FILE")
+
+              echo "📦 XDK artifact provenance"
+              echo "  Metadata file : $METADATA_FILE"
+              echo "  Commit        : $ARTIFACT_COMMIT"
+              echo "  Branch        : $ARTIFACT_BRANCH"
+              echo "  Source Run ID : $ARTIFACT_RUN_ID"
+              echo "  Workflow      : $ARTIFACT_WORKFLOW"
+              echo "  XDK Version   : $ARTIFACT_VERSION"
+              echo "  File          : $ARTIFACT_FILE"
+              echo ""
+
+              if [ "$ARTIFACT_COMMIT" != "$GH_COMMIT" ]; then
+                  echo "❌ ERROR: Downloaded artifact commit does not match requested commit"
+                  echo "  Expected: $GH_COMMIT"
+                  echo "  Actual:   $ARTIFACT_COMMIT"
+                  exit 1
+              fi
+
+              if [ "$ARTIFACT_RUN_ID" != "$RUN_ID" ]; then
+                  echo "❌ ERROR: Downloaded artifact run ID does not match requested run ID"
+                  echo "  Expected: $RUN_ID"
+                  echo "  Actual:   $ARTIFACT_RUN_ID"
                   exit 1
               fi
 
@@ -101,15 +147,35 @@ runs:
 
               # Get file size for validation
               FILE_SIZE=$(ls -lh "$XDK_ZIP" | awk '{print $5}')
+              FILE_NAME=$(basename "$XDK_ZIP")
+              FILE_SHA256=$(shasum -a 256 "$XDK_ZIP" | awk '{print $1}')
+
+              if [ "$FILE_NAME" != "$ARTIFACT_FILE" ]; then
+                  echo "❌ ERROR: Downloaded artifact filename does not match metadata"
+                  echo "  Expected: $ARTIFACT_FILE"
+                  echo "  Actual:   $FILE_NAME"
+                  exit 1
+              fi
+
+              if [ "$FILE_SHA256" != "$ARTIFACT_SHA256" ]; then
+                  echo "❌ ERROR: Downloaded artifact checksum does not match metadata"
+                  echo "  Expected: $ARTIFACT_SHA256"
+                  echo "  Actual:   $FILE_SHA256"
+                  exit 1
+              fi
+
+              XDK_ZIP_ABS=$(realpath "$XDK_ZIP")
+              METADATA_FILE_ABS=$(realpath "$METADATA_FILE")
 
               echo "✅ Artifact validation successful"
               echo "  File:     $(basename "$XDK_ZIP")"
               echo "  Size:     $FILE_SIZE"
-              echo "  Location: $XDK_ZIP"
+              echo "  Location: $XDK_ZIP_ABS"
               echo ""
 
-              # Output the full path
-              echo "artifact-path=$XDK_ZIP" >> $GITHUB_OUTPUT
+              # Output absolute paths so downstream steps can safely use different working directories.
+              echo "artifact-path=$XDK_ZIP_ABS" >> $GITHUB_OUTPUT
+              echo "metadata-file=$METADATA_FILE_ABS" >> $GITHUB_OUTPUT
 
 branding:
     icon: 'download-cloud'

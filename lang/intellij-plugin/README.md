@@ -110,6 +110,57 @@ The plugin invokes `xtc init` to scaffold the project, then imports it as a Grad
 | `runIde` | Launches sandbox IDE | Quick testing during development |
 | `verifyPlugin` | Verification report | Check IDE compatibility |
 
+### Release-Grade Build And Publish
+
+Use these commands from the repository root when preparing an installable alpha ZIP or publishing to JetBrains Marketplace:
+
+```bash
+./gradlew \
+  -PincludeBuildLang=true \
+  -PincludeBuildAttachLang=true \
+  -Plsp.buildSearchableOptions=true \
+  :lang:intellij-plugin:buildPlugin \
+  :lang:intellij-plugin:verifyPlugin
+```
+
+To inspect what searchable-options generation actually produced:
+
+```bash
+./gradlew \
+  -PincludeBuildLang=true \
+  -PincludeBuildAttachLang=true \
+  :lang:intellij-plugin:summarizeSearchableOptions
+```
+
+```bash
+./gradlew \
+  -PincludeBuildLang=true \
+  -PincludeBuildAttachLang=true \
+  -PenablePublish=true \
+  -Plsp.buildSearchableOptions=true \
+  :lang:intellij-plugin:publishPlugin
+```
+
+For snapshot Marketplace publishes, the build derives a unique timestamped publish version automatically so JetBrains Marketplace accepts repeated alpha uploads.
+
+### Expected `buildSearchableOptions` Noise
+
+When `-Plsp.buildSearchableOptions=true` is enabled, Gradle launches a headless IntelliJ instance to traverse settings pages and generate searchable options metadata. That IDE process currently emits a lot of warnings that look alarming but are not plugin verification failures.
+
+The most common expected warnings are:
+
+- `InstanceNotOverridableException` from internal IntelliJ services
+- `Daemon rejected discovery request` against the local `.intellijPlatform/ides` directory
+- `Job was cancelled` stack traces from background Marketplace/UI requests during panel disposal
+- bundled JetBrains theme warnings such as `Theme Islands Darcula ... deprecated`
+- headless environment warnings such as `JCEF is manually disabled`
+
+What matters is the Gradle task outcome:
+
+- `BUILD SUCCESSFUL` means searchable options generation completed
+- Plugin compatibility is determined by `:lang:intellij-plugin:verifyPlugin`, not by those headless IDE warnings
+- JetBrains Marketplace upload success/failure is determined by the `publishPlugin` task response, not by searchable-options log noise
+
 ### Installing the Built Plugin
 
 After running `buildPlugin`, you can install the ZIP in any IntelliJ IDEA 2025.1+ instance:

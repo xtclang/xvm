@@ -1,5 +1,16 @@
+import groovy.json.JsonSlurper
+import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.TaskAction
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import java.io.File
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 plugins {
     alias(libs.plugins.xdk.build.properties)
@@ -14,6 +25,30 @@ val releaseChannel: String = xdkProperties.stringValue("xdk.intellij.release.cha
 
 // Publishing is disabled by default. Enable with: ./gradlew publishPlugin -PenablePublish=true
 val enablePublish = providers.gradleProperty("enablePublish").map { it.toBoolean() }.getOrElse(false)
+val enablePublishProvider = providers.gradleProperty("enablePublish").map { it.toBoolean() }.orElse(false)
+val xdkVersionProvider = providers.provider { project.version.toString() }
+val releaseChannelProvider = xdkProperties.string("xdk.intellij.release.channel", "alpha")
+// NOTE: For CI, this token is also stored as the xtclang GitHub organization Actions secret
+// named JETBRAINS_TOKEN. xdkProperties resolves that env var via the local key "jetbrains.token".
+val jetbrainsTokenProvider = xdkProperties.string("jetbrains.token", "")
+val jetbrainsPublishSuffixOverrideProvider = xdkProperties.string("jetbrains.publish.suffix", "")
+val utcPublishTimestamp: String =
+    DateTimeFormatter
+        .ofPattern("yyyyMMddHHmmss")
+        .withZone(ZoneOffset.UTC)
+        .format(Instant.now())
+val jetbrainsPublishVersionProvider =
+    providers.provider {
+        val baseVersion = xdkVersionProvider.get()
+        val publishEnabled = enablePublishProvider.get()
+        if (!publishEnabled || !baseVersion.endsWith("-SNAPSHOT")) {
+            return@provider baseVersion
+        }
+        val suffix = jetbrainsPublishSuffixOverrideProvider.get().ifBlank { utcPublishTimestamp }
+        "$baseVersion.$suffix"
+    }
+val usesGeneratedJetBrainsPublishSuffix: Boolean =
+    enablePublish && xdkVersion.endsWith("-SNAPSHOT") && jetbrainsPublishSuffixOverrideProvider.get().isBlank()
 
 // Log level: -Plog=DEBUG or XTC_LOG_LEVEL=DEBUG (default: INFO)
 // Propagated to the IDE JVM as a system property and environment variable, so the
@@ -29,6 +64,119 @@ val logLevel: String =
 // Run the branch's full editor path by default: LSP semantic tokens on.
 // Override with -Pxtc.intellij.semanticTokens=false when debugging TextMate-only behavior.
 val ideLspSemanticTokens: String = xdkProperties.stringValue("xtc.intellij.semanticTokens", "true")
+
+abstract class PublishCheckTask : DefaultTask() {
+    @get:Input
+    abstract val publishEnabled: Property<Boolean>
+
+    @get:Input
+    abstract val xdkVersion: Property<String>
+
+    @get:Input
+    abstract val releaseChannel: Property<String>
+
+    @get:Input
+    abstract val jetbrainsTokenPresent: Property<Boolean>
+
+    @get:Input
+    abstract val publishVersion: Property<String>
+
+    @TaskAction
+    fun validate() {
+        if (publishEnabled.get()) {
+            if (!jetbrainsTokenPresent.get()) {
+                throw GradleException(
+                    """
+                    |JetBrains Marketplace token missing.
+                    |
+                    |Set one of:
+                    |  jetbrains.token=perm:...
+                    |  JETBRAINS_TOKEN=perm:...
+                    |
+                    |Base version: ${xdkVersion.get()}
+                    |Publish version: ${publishVersion.get()}
+                    |Release channel: ${releaseChannel.get()}
+                    """.trimMargin(),
+                )
+            }
+            return
+        }
+
+        throw GradleException(
+            """
+            |Publishing is disabled by default.
+            |To publish the plugin, run:
+            |  ./gradlew publishPlugin -PenablePublish=true
+            |
+            |Base version: ${xdkVersion.get()}
+            |Publish version: ${publishVersion.get()}
+            |Release channel: ${releaseChannel.get()}
+            |
+            |Required credential sources:
+            |  jetbrains.token=perm:...    (recommended in ~/.gradle/gradle.properties)
+            |  JETBRAINS_TOKEN=perm:...    (CI / environment variable)
+            |
+            |Optional (for signed releases):
+            |  JETBRAINS_CERTIFICATE_CHAIN - Base64-encoded certificate chain
+            |  JETBRAINS_PRIVATE_KEY - Base64-encoded private key
+            |  JETBRAINS_PRIVATE_KEY_PASSWORD - Private key password
+            """.trimMargin(),
+        )
+    }
+}
+
+abstract class SummarizeSearchableOptionsTask : DefaultTask() {
+    @get:InputFile
+    abstract val manifestFile: RegularFileProperty
+
+    @TaskAction
+    fun summarize() {
+        val manifestFile = manifestFile.get().asFile
+        val outputDir = manifestFile.parentFile
+        if (!manifestFile.isFile) {
+            throw GradleException(
+                """
+                |Searchable options output not found at:
+                |  ${manifestFile.absolutePath}
+                |
+                |Run one of:
+                |  ./gradlew -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.buildSearchableOptions=true :lang:intellij-plugin:buildPlugin
+                |  ./gradlew -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.buildSearchableOptions=true :lang:intellij-plugin:buildSearchableOptions
+                """.trimMargin(),
+            )
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        val manifest = JsonSlurper().parse(manifestFile) as Map<String, List<Map<String, Any>>>
+        val bundleNames = manifest.keys.sorted()
+        val xtcBundles =
+            bundleNames.filter { name ->
+                name.contains("xtc", ignoreCase = true) || name.contains("ecstasy", ignoreCase = true)
+            }
+        val bundleFiles =
+            manifest.entries
+                .flatMap { (_, records) -> records }
+                .mapNotNull { record ->
+                    val file = record["file"]?.toString() ?: return@mapNotNull null
+                    val size = (record["size"] as? Number)?.toLong() ?: 0L
+                    file to size
+                }.sortedByDescending { (_, size) -> size }
+
+        logger.lifecycle(
+            """
+            |[searchable-options] Output directory: ${outputDir.absolutePath}
+            |[searchable-options] Bundle manifest: ${manifestFile.absolutePath}
+            |[searchable-options] Bundles indexed: ${bundleNames.size}
+            |[searchable-options] XTC/Ecstasy bundles: ${if (xtcBundles.isEmpty()) "none detected" else xtcBundles.joinToString()}
+            |[searchable-options] Largest bundles:
+            |${bundleFiles.take(10).joinToString("\n") { (file, size) -> "  - $file (${size.humanSize()})" }}
+            |
+            |[searchable-options] Sample bundle names:
+            |${bundleNames.take(20).joinToString("\n") { "  - $it" }}
+            """.trimMargin(),
+        )
+    }
+}
 
 // =============================================================================
 // IntelliJ IDE Resolution
@@ -95,6 +243,10 @@ val syncGradleWrapperResources by tasks.registering(Copy::class) {
 sourceSets.main {
     java.srcDir(syncedJavaSourceDir)
     resources.srcDir(syncedResourcesDir)
+    // TODO: Re-enable org/xtclang/idea/dap/** once DAP is implemented and user-visible.
+    // Exclude it from the published plugin for now so Plugin Verifier does not report
+    // experimental LSP4IJ DAP APIs that users cannot currently access.
+    kotlin.exclude("org/xtclang/idea/dap/**")
 }
 
 val compileJava by tasks.existing {
@@ -256,7 +408,7 @@ intellijPlatform {
     pluginConfiguration {
         id = "org.xtclang.idea"
         name = "XTC Language Support"
-        version = project.version.toString()
+        version = jetbrainsPublishVersionProvider.get()
 
         ideaVersion {
             sinceBuild = intellijSinceBuild
@@ -283,39 +435,32 @@ intellijPlatform {
     }
 
     publishing {
-        token = providers.environmentVariable("JETBRAINS_TOKEN")
+        token = jetbrainsTokenProvider
         channels = listOf(releaseChannel)
     }
 }
 
-val publishCheck by tasks.registering {
-    doFirst {
-        if (!enablePublish) {
-            throw GradleException(
-                """
-                |Publishing is disabled by default.
-                |To publish the plugin, run:
-                |  ./gradlew publishPlugin -PenablePublish=true
-                |
-                |Current version: $xdkVersion
-                |Release channel: $releaseChannel
-                |
-                |Required environment variables:
-                |  JETBRAINS_TOKEN - Your JetBrains Marketplace token
-                |
-                |Optional (for signed releases):
-                |  JETBRAINS_CERTIFICATE_CHAIN - Base64-encoded certificate chain
-                |  JETBRAINS_PRIVATE_KEY - Base64-encoded private key
-                |  JETBRAINS_PRIVATE_KEY_PASSWORD - Private key password
-                """.trimMargin(),
-            )
-        }
-    }
+val publishCheck by tasks.registering(PublishCheckTask::class) {
+    publishEnabled.set(enablePublishProvider)
+    xdkVersion.set(xdkVersionProvider)
+    releaseChannel.set(releaseChannelProvider)
+    jetbrainsTokenPresent.set(jetbrainsTokenProvider.map { it.isNotBlank() })
+    publishVersion.set(jetbrainsPublishVersionProvider)
+}
+
+val summarizeSearchableOptions by tasks.registering(SummarizeSearchableOptionsTask::class) {
+    group = "verification"
+    description = "Summarize the generated searchable options manifest for the IntelliJ plugin build."
+    mustRunAfter(buildSearchableOptions)
+    manifestFile.set(layout.buildDirectory.file("tmp/buildSearchableOptions/content.json"))
 }
 
 val publishPlugin by tasks.existing {
     enabled = enablePublish
     dependsOn(publishCheck)
+    if (usesGeneratedJetBrainsPublishSuffix) {
+        notCompatibleWithConfigurationCache("JetBrains snapshot publish version uses a generated UTC timestamp suffix for uniqueness.")
+    }
 }
 
 // Searchable options allow IntelliJ's Settings search (Cmd+Shift+A / Ctrl+Shift+A) to index
@@ -503,6 +648,33 @@ val configureSandboxLogging by tasks.registering {
     }
 }
 
+val configureSandboxAppearance by tasks.registering {
+    group = "intellij platform"
+    description = "Remove broken user-derived color-scheme overrides from the sandbox IDE config"
+
+    dependsOn(prepareSandbox)
+    mustRunAfter(prepareSandbox)
+
+    val configDir = sandboxConfigDir
+    outputs.dir(configDir)
+
+    doLast {
+        val colorsSchemeFile = configDir.get().resolve("options/colors.scheme.xml")
+        if (!colorsSchemeFile.isFile) {
+            return@doLast
+        }
+
+        val text = colorsSchemeFile.readText()
+        if ("_@user_" !in text) {
+            logger.info("[sandbox] Preserving sandbox color scheme override: ${colorsSchemeFile.absolutePath}")
+            return@doLast
+        }
+
+        colorsSchemeFile.delete()
+        logger.info("[sandbox] Removed user-derived sandbox color scheme override: ${colorsSchemeFile.absolutePath}")
+    }
+}
+
 // Ensure the XTC Gradle plugin and XDK are published to mavenLocal before the sandbox IDE starts.
 // The sandbox IDE resolves the plugin from mavenLocal (not from the composite includeBuild),
 // so publishToMavenLocal must complete first. gradle.parent reaches the root build that has
@@ -529,6 +701,7 @@ val runIdeInfo by tasks.registering(RunIdeEnvironmentReportTask::class) {
         copyLspServerToSandbox,
         configureDisabledPlugins,
         configureSandboxLogging,
+        configureSandboxAppearance,
     )
     ideVersion.set(runIdeCapturedIdeVersion)
     sinceBuild.set(runIdeCapturedSinceBuild)
@@ -572,6 +745,7 @@ val runIde by tasks.existing {
         copyLspServerToSandbox,
         configureDisabledPlugins,
         configureSandboxLogging,
+        configureSandboxAppearance,
         runIdeInfo,
         startLspLogTail,
     )
@@ -599,15 +773,14 @@ val runIde by tasks.existing {
 // =============================================================================
 // Clean sandbox when running 'clean'
 // =============================================================================
-// The IntelliJ Platform Gradle Plugin stores the sandbox under build/idea-sandbox/.
+// The IntelliJ Platform Gradle Plugin stores the sandbox under lang/.intellijPlatform/sandbox/.
 // By default, Gradle's clean task only deletes build/classes, build/libs, etc.
-// We extend clean to also delete the sandbox so that version or dependency changes
-// are picked up on the next run. The downloaded IDE distribution itself is cached
-// in $GRADLE_USER_HOME and is NOT affected by clean (only re-downloaded when the
-// version in libs.versions.toml changes, managed by Gradle's dependency resolution).
+// We extend clean to also delete the actual sandbox used by runIde so that version
+// or dependency changes are picked up on the next run. The downloaded IDE distribution
+// itself is cached separately and is NOT affected by clean.
 
 val clean by tasks.existing(Delete::class) {
-    delete(layout.buildDirectory.dir("idea-sandbox"))
+    delete(layout.projectDirectory.dir("../.intellijPlatform/sandbox/intellij-plugin"))
 }
 
 // The IntelliJ Platform Gradle Plugin sets -Djava.system.class.loader=com.intellij.util.lang.PathClassLoader
@@ -620,6 +793,6 @@ val test by tasks.existing(Test::class) {
     useJUnitPlatform()
     jvmArgs("-Xlog:cds=off")
     testLogging {
-        events("skipped", "failed")
+        events("failed")
     }
 }

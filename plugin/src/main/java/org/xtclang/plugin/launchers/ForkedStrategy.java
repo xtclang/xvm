@@ -148,9 +148,37 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
         command.addAll(Arrays.asList(programArgs));
         final ProcessBuilder pb = new ProcessBuilder(command).directory(projectDir);
         if (task.hasVerboseLogging()) {
-            logger.lifecycle("[plugin] Forked process command: {}", String.join(" ", command));
+            logForkedCommand(task, command);
         }
         return pb;
+    }
+
+    private void logForkedCommand(final XtcLauncherTask<?> task, final List<String> command) {
+        final var message = new StringBuilder();
+        message.append("[plugin] Forked process command:\n");
+        message.append("[plugin]   task      : ").append(task.getPath()).append('\n');
+        message.append("[plugin]   work dir  : ").append(task.getProjectDirectory().get().getAsFile().getAbsolutePath()).append('\n');
+        message.append("[plugin]   command   :\n");
+        appendWrapped(message, String.join(" ", command), 100);
+        logger.lifecycle(message.toString().stripTrailing());
+    }
+
+    private void appendWrapped(final StringBuilder message, final String text, final int maxWidth) {
+        int start = 0;
+        while (start < text.length()) {
+            int end = Math.min(start + maxWidth, text.length());
+            if (end < text.length()) {
+                final int breakAt = text.lastIndexOf(' ', end);
+                if (breakAt > start) {
+                    end = breakAt;
+                }
+            }
+            message.append("[plugin]     ").append(text, start, end).append('\n');
+            start = end;
+            while (start < text.length() && text.charAt(start) == ' ') {
+                start++;
+            }
+        }
     }
 
     /**

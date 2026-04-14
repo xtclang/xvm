@@ -154,7 +154,7 @@ jobs:
                   commit: ${{ steps.commit.outputs.commit }}
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   repository: ${{ github.repository }}
-                  output-path: ./docker
+                  output-path: ./docker/artifacts
 
             - name: Build and push Docker image (${{ matrix.arch }})
               shell: bash
@@ -176,9 +176,9 @@ jobs:
                   echo "$TAGS"
 
                   # Rename artifact to expected name in Docker context
-                  DIST_ZIP_FILE="$(basename "${{ steps.artifact.outputs.artifact-path }}")"
-                  mv "$DIST_ZIP_FILE" xdk-dist.zip
-                  echo "📦 Renamed: $DIST_ZIP_FILE → xdk-dist.zip"
+                  DIST_ZIP_FILE="${{ steps.artifact.outputs.artifact-path }}"
+                  cp "$DIST_ZIP_FILE" xdk-dist.zip
+                  echo "📦 Copied: $DIST_ZIP_FILE → xdk-dist.zip"
 
                   # Build and push
                   docker buildx build \
@@ -213,6 +213,7 @@ jobs:
                   echo "- **Version:** $VERSION" >> $GITHUB_STEP_SUMMARY
                   echo "- **Platform:** ${{ matrix.platform }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Commit:** $COMMIT" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Source CI Run:** ${{ steps.commit.outputs.run-id }}" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "**Published architecture-specific tags:**" >> $GITHUB_STEP_SUMMARY
                   echo '```' >> $GITHUB_STEP_SUMMARY

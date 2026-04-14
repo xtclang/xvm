@@ -75,6 +75,34 @@ val publishLocal by tasks.registering {
     }
 }
 
+val publishSnapshotBundle by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "Publish XDK and plugin snapshot artifacts to an isolated file-backed Maven repository."
+
+    val snapshotBundleRepoProvider = xdkProperties.string("org.xtclang.publish.snapshotBundleRepo")
+    val versionProvider = xdkProperties.string("xdk.version")
+
+    doFirst {
+        val snapshotBundleRepo = snapshotBundleRepoProvider.orNull?.trim().orEmpty()
+        if (snapshotBundleRepo.isEmpty()) {
+            throw GradleException(
+                "❌ Missing required property: -Porg.xtclang.publish.snapshotBundleRepo=/path/to/staged/maven/repo"
+            )
+        }
+        val currentVersion = versionProvider.get()
+        if (!currentVersion.endsWith("-SNAPSHOT")) {
+            throw GradleException(
+                "❌ publishSnapshotBundle only supports SNAPSHOT versions. Current version: $currentVersion"
+            )
+        }
+        logger.lifecycle("📦 Publishing snapshot bundle to local Maven repository: $snapshotBundleRepo")
+    }
+
+    publishedBuilds.forEach { build ->
+        dependsOn(build.task(":publishAllPublicationsToSnapshotBundleRepository"))
+    }
+}
+
 /**
  * Publish XDK and plugin artifacts to both local Maven and remote repositories.
  *
@@ -170,4 +198,3 @@ dockerTaskNames.forEach { taskName ->
         }
     }
 }
-

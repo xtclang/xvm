@@ -67,6 +67,12 @@
         <!-- Probe active editor delegates in the sandbox so we can verify registration -->
         <postStartupActivity implementation="org.xtclang.idea.editor.XtcEditorStartupActivity"/>
 
+        <!-- TODO: Re-enable DAP registration when the feature is implemented and stable enough
+             to ship without Plugin Verifier experimental API findings.
+        <debugAdapterServer id="xtcDebugAdapter"
+                            name="XTC Debug Adapter"
+                            factoryClass="org.xtclang.idea.dap.XtcDebugAdapterFactory"/>
+        -->
     </extensions>
 
     <!-- LSP4IJ Language Server registration -->
@@ -82,10 +88,6 @@
         <fileNamePatternMapping patterns="*.x"
                                  serverId="xtcLanguageServer"/>
 
-        <!-- DAP (Debug Adapter Protocol) server registration -->
-        <debugAdapterServer id="xtcDebugAdapter"
-                            name="XTC Debug Adapter"
-                            factoryClass="org.xtclang.idea.dap.XtcDebugAdapterFactory"/>
     </extensions>
 
     <!-- TextMate grammar for syntax highlighting (via IntelliJ's TextMate plugin) -->

@@ -530,6 +530,18 @@ val runAllTestTasksParallel by tasks.registering {
     dependsOn(runOne, runTwoTestsInSequence, runTestAllExecutionModes, runParallel)
 }
 
+val runCiTestTasks by tasks.registering {
+    group = "application"
+    description = "Run the CI aggregate manual-test tasks without re-running the explicit smoke tasks."
+    dependsOn(runTestAllExecutionModes, runSequential)
+}
+
+val runCiTestTasksParallel by tasks.registering {
+    group = "application"
+    description = "Run the CI aggregate manual-test tasks in parallel mode without re-running the explicit smoke tasks."
+    dependsOn(runTestAllExecutionModes, runParallel)
+}
+
 /**
  * Custom XtcTestTask example.
  *
