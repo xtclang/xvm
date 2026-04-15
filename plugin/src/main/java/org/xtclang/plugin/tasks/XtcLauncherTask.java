@@ -39,7 +39,6 @@ import java.util.stream.Collectors;
 import static java.util.Objects.requireNonNull;
 import org.gradle.work.DisableCachingByDefault;
 
-import static org.xtclang.plugin.XtcJavaToolsRuntime.ensureJavaToolsInClasspath;
 import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_VERBOSE_LOGGING_OVERRIDE;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xtclang.plugin.XtcPluginUtils.argumentArrayToList;
@@ -166,15 +165,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected void executeTask() {
         // Assert that we're in execution phase during task execution
         GradlePhaseAssertions.assertExecutionPhase(this, "XtcLauncherTask execution");
-
-        // Ensure javatools.jar is loaded into the plugin classloader before any task uses LauncherOptions types
-        // This is critical for published plugin users who have XDK as a dependency
-        ensureJavaToolsInClasspath(
-                getProjectVersion(),
-                getJavaToolsConfiguration(),
-                getXdkFileTree(),
-                logger
-        );
     }
 
     /**

@@ -44,18 +44,14 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
         return this.mode;
     }
 
-    protected LauncherOptionsBuilder optionsBuilder() {
-        return new LauncherOptionsBuilder(getMode());
-    }
-
     @Override
     public int execute(final XtcCompileTask task) {
         logger.info("[plugin] execute(XtcCompileTask): {}", getDesc());
 
         try {
             // Use relative paths for forked mode to preserve build caching
-            final var options = optionsBuilder().buildCompilerOptions(task);
-            final ProcessBuilder pb = buildProcess(task, options.toCommandLine());
+            final var programArgs = new ForkedCommandLineBuilder().buildCompilerArgs(task);
+            final ProcessBuilder pb = buildProcess(task, programArgs);
             final StreamPlan streamPlan = configureIO(pb, task);
 
             final Process process = pb.start();
@@ -88,8 +84,8 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
         try {
             final var moduleName = runConfig.getModuleName().get();
             final var moduleArgs = runConfig.getModuleArgs().get();
-            final var options = optionsBuilder().buildRunnerOptions(task, moduleName, moduleArgs);
-            final var pb = buildProcess(task, options.toCommandLine());
+            final var programArgs = new ForkedCommandLineBuilder().buildRunnerArgs(task, moduleName, moduleArgs);
+            final var pb = buildProcess(task, programArgs);
             final StreamPlan streamPlan = configureIO(pb, task);
             final Process process = pb.start();
             // Copy streams if needed (when inheritIO doesn't work due to Gradle redirects)
@@ -116,8 +112,8 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
         try {
             final var moduleName = runConfig.getModuleName().get();
             final var moduleArgs = runConfig.getModuleArgs().get();
-            final var options = optionsBuilder().buildTestRunnerOptions(task, moduleName, moduleArgs);
-            final var pb = buildProcess(task, options.toCommandLine());
+            final var programArgs = new ForkedCommandLineBuilder().buildTestRunnerArgs(task, moduleName, moduleArgs);
+            final var pb = buildProcess(task, programArgs);
             final StreamPlan streamPlan = configureIO(pb, task);
             final Process process = pb.start();
             // Copy streams if needed (when inheritIO doesn't work due to Gradle redirects)

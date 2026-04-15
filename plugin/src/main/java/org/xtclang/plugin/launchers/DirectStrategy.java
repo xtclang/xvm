@@ -1,16 +1,14 @@
 package org.xtclang.plugin.launchers;
 
+import java.util.List;
+
 import org.gradle.api.logging.Logger;
 
-import org.xvm.asm.ErrorList;
-import org.xvm.asm.ErrorListener;
-import org.xvm.tool.Console;
-import org.xvm.tool.Launcher;
-import org.xvm.tool.Runner;
-import org.xvm.tool.TestRunner;
-import org.xvm.util.Severity;
-
 import org.xtclang.plugin.XtcRunModule;
+import org.xtclang.plugin.runtime.DirectCompileRequest;
+import org.xtclang.plugin.runtime.DirectRunRequest;
+import org.xtclang.plugin.runtime.DirectRuntimeInvoker;
+import org.xtclang.plugin.runtime.DirectTestRequest;
 import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
 import org.xtclang.plugin.tasks.XtcTestTask;
@@ -23,31 +21,12 @@ import static org.xtclang.plugin.tasks.XtcLauncherTask.EXIT_CODE_ERROR;
  * Works for both compile and run tasks.
  */
 public class DirectStrategy implements ExecutionStrategy {
+    private static final String DEFAULT_METHOD_NAME = "run";
 
     private final Logger logger;
-    private final Console console;
-    private final ErrorListener err;
 
     public DirectStrategy(final Logger logger) {
         this.logger = logger;
-        this.console = createConsole(logger);
-        this.err = new ErrorList(100);
-    }
-
-    private static Console createConsole(final Logger logger) {
-        return new Console() {
-            @Override
-            public String log(final Severity severity, final String template, final Object... params) {
-                final String message = Console.formatTemplate(template, params);
-                switch (severity) {
-                    case ERROR, FATAL -> logger.error(message);
-                    case WARNING -> logger.warn(message);
-                    case INFO -> logger.lifecycle(message);
-                    default -> logger.info(message);
-                }
-                return message;
-            }
-        };
     }
 
     @Override
@@ -55,18 +34,11 @@ public class DirectStrategy implements ExecutionStrategy {
         return ExecutionMode.DIRECT;
     }
 
-    protected LauncherOptionsBuilder optionsBuilder() {
-        return new LauncherOptionsBuilder(getMode());
-    }
-
     @Override
     public int execute(final XtcCompileTask task) {
         logger.info("[plugin] Invoking compiler directly in current thread (no fork)");
         try {
-            final var options = optionsBuilder().buildCompilerOptions(task);
-            final int exitCode = Launcher.launch(options, console, err);
-            logger.lifecycle("Finished calling xcc; {})", err);
-            return exitCode;
+            return DirectRuntimeInvoker.executeCompile(task.resolveLauncherRuntime(), createCompileRequest(task), logger);
         } catch (final Exception e) {
             logger.error("[plugin] Direct compiler execution failed", e);
             return EXIT_CODE_ERROR;
@@ -77,14 +49,7 @@ public class DirectStrategy implements ExecutionStrategy {
     public int execute(final XtcRunTask task, final XtcRunModule runConfig) {
         logger.info("[plugin] Invoking runner directly in current thread (no fork)");
         try {
-            final String moduleName = runConfig.getModuleName().get();
-            final var moduleArgs = runConfig.getModuleArgs().get();
-            final var options = optionsBuilder().buildRunnerOptions(task, moduleName, moduleArgs);
-            final var launcher = new Runner(options, console, err);
-            return launcher.run();
-        } catch (final Launcher.LauncherException e) {
-            logger.error("[plugin] Direct runner execution failed: {}", e.getMessage());
-            return e.getExitCode();
+            return DirectRuntimeInvoker.executeRun(task.resolveLauncherRuntime(), createRunRequest(task, runConfig), logger);
         } catch (final Exception e) {
             logger.error("[plugin] Direct runner execution failed", e);
             return EXIT_CODE_ERROR;
@@ -95,17 +60,56 @@ public class DirectStrategy implements ExecutionStrategy {
     public int execute(final XtcTestTask task, final XtcRunModule runConfig) {
         logger.info("[plugin] Invoking test runner directly in current thread (no fork)");
         try {
-            final String moduleName = runConfig.getModuleName().get();
-            final var moduleArgs = runConfig.getModuleArgs().get();
-            final var options = optionsBuilder().buildTestRunnerOptions(task, moduleName, moduleArgs);
-            final var launcher = new TestRunner(options, console, err);
-            return launcher.run();
-        } catch (final Launcher.LauncherException e) {
-            logger.error("[plugin] Direct test runner execution failed: {}", e.getMessage());
-            return e.getExitCode();
+            return DirectRuntimeInvoker.executeTest(task.resolveLauncherRuntime(), createTestRequest(task, runConfig), logger);
         } catch (final Exception e) {
             logger.error("[plugin] Direct test runner execution failed", e);
             return EXIT_CODE_ERROR;
         }
+    }
+
+    private static DirectCompileRequest createCompileRequest(final XtcCompileTask task) {
+        final var rawVersion = task.getXtcVersion().getOrNull();
+        final String semanticVersion = rawVersion == null || rawVersion.isBlank()
+            ? null
+            : XtcCompileTask.semanticVersion(rawVersion);
+        return new DirectCompileRequest(
+            task.getProjectDirectory().get().getAsFile(),
+            task.getOutputDirectoryInternal().getAsFile(),
+            task.getResourceDirectoryInternal().getAsFile(),
+            task.resolveFullModulePath(),
+            List.copyOf(task.resolveXtcSourceFiles()),
+            task.getRebuild().get(),
+            task.getShowVersion().get(),
+            task.getVerbose().get(),
+            task.getDisableWarnings().get(),
+            task.getStrict().get(),
+            task.getQualifiedOutputName().get(),
+            semanticVersion
+        );
+    }
+
+    private static DirectRunRequest createRunRequest(final XtcRunTask task, final XtcRunModule runConfig) {
+        return new DirectRunRequest(
+            task.getProjectDirectory().get().getAsFile(),
+            task.resolveFullModulePath(),
+            task.getShowVersion().get(),
+            task.getVerbose().get(),
+            runConfig.getModuleName().get(),
+            task.getMethodName().getOrElse(DEFAULT_METHOD_NAME),
+            runConfig.getModuleArgs().get()
+        );
+    }
+
+    private static DirectTestRequest createTestRequest(final XtcTestTask task, final XtcRunModule runConfig) {
+        return new DirectTestRequest(
+            task.getProjectDirectory().get().getAsFile(),
+            task.getOutputDirectory().get().getAsFile(),
+            task.resolveFullModulePath(),
+            task.getShowVersion().get(),
+            task.getVerbose().get(),
+            runConfig.getModuleName().get(),
+            task.getMethodName().getOrElse(DEFAULT_METHOD_NAME),
+            runConfig.getModuleArgs().get()
+        );
     }
 }

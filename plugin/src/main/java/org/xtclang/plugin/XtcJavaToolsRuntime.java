@@ -12,9 +12,6 @@ import org.xtclang.plugin.XtcPluginUtils.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.Comparator;
 import java.util.List;
 import java.util.zip.ZipFile;
@@ -28,82 +25,33 @@ import static org.xtclang.plugin.XtcPluginUtils.FileUtils.readXdkVersionFromJar;
 import static org.xtclang.plugin.XtcPluginUtils.failure;
 
 /**
- * Runtime utility for accessing javatools classes throughout the plugin.
+ * Runtime utility for resolving launcher runtime artifacts throughout the plugin.
  *
- * <p>This class handles javatools.jar loading in two different scenarios:
+ * <p>This class resolves the launcher runtime in two different scenarios:
  *
  * <p><b>Scenario 1: XDK Development (building XDK itself)</b>
  * <ul>
  *   <li>Plugin has compileOnly + runtimeOnly dependency on javatools</li>
- *   <li>Gradle automatically adds javatools.jar to plugin's classloader via runtimeOnly</li>
- *   <li>ensureJavaToolsInClasspath() does nothing (javatools already on classpath)</li>
- *   <li>withJavaTools() still needed for thread context classloader in forked processes</li>
- *   <li>resolveJavaTools() finds javatools.jar from composite build for forked processes</li>
+ *   <li>Gradle automatically supplies launcher artifacts from the composite build</li>
+ *   <li>resolveRuntime() finds the launcher runtime from the composite build</li>
  * </ul>
  *
  *
  * <ul>
  *   <li>Plugin has compileOnly dependency on javatools (type info only)</li>
  *   <li>User project has XDK distribution as dependency (contains javatools.jar)</li>
- *   <li>ensureJavaToolsInClasspath() CRITICAL - loads javatools from XDK into plugin classloader</li>
- *   <li>withJavaTools() needed for thread context classloader in forked processes</li>
- *   <li>resolveJavaTools() finds javatools.jar from extracted XDK distribution</li>
+ *   <li>resolveRuntime() finds the launcher runtime from extracted XDK contents</li>
  * </ul>
  *
- * <p><b>Why Three Methods:</b>
+ * <p><b>Why Two Methods:</b>
  * <ul>
+ *   <li>resolveRuntime() - Finds the full launcher runtime classpath</li>
  *   <li>resolveJavaTools() - Finds javatools.jar file path (needed for forked processes)</li>
- *   <li>ensureJavaToolsInClasspath() - Loads into plugin classloader (CRITICAL for published plugin)</li>
- *   <li>withJavaTools() - Sets thread context classloader (needed for in-process execution)</li>
  * </ul>
  */
 public final class XtcJavaToolsRuntime {
-    private static volatile ClassLoader javaToolsClassLoader;
-
     private XtcJavaToolsRuntime() {
         // Utility class
-    }
-
-    /**
-     * Ensures javatools.jar is available to the plugin's classloader.
-     * This is essential for published plugin users who have XDK as a dependency.
-     *
-     * <p><b>Why this is needed:</b>
-     * <ul>
-     *   <li>During XDK development: runtimeOnly dependency already provides javatools on classpath</li>
-     *   <li>For published plugin users: This method loads javatools from XDK distribution into plugin classloader</li>
-     * </ul>
-     *
-     * <p>IMPORTANT: This method is thread-safe and only loads javatools once.
-     * After the first call, subsequent calls return immediately without any work.
-     *
-     * @param projectVersion The project version for artifact validation
-     * @param javaToolsConfig The javatools incoming configuration
-     * @param xdkFileTree The XDK file tree (from extracted distribution)
-     * @param logger Logger for diagnostic output
-     */
-    public static synchronized boolean ensureJavaToolsInClasspath(
-            @NotNull final Provider<@NotNull String> projectVersion,
-            @NotNull final Provider<@NotNull FileCollection> javaToolsConfig,
-            @NotNull final Provider<@NotNull FileTree> xdkFileTree,
-            @NotNull final Logger logger) {
-
-        if (javaToolsClassLoader != null) {
-            logger.debug("[plugin] javatools.jar already loaded into classpath");
-            return false;
-        }
-
-        final XtcLauncherRuntime runtime = resolveRuntime(projectVersion, javaToolsConfig, xdkFileTree, logger);
-        final File javaToolsJar = runtime.launcherJar();
-
-        try {
-            // Create a shared classloader with the resolved runtime classpath and set as thread context classloader
-            javaToolsClassLoader = createAndSetJavaToolsClassLoader(runtime, logger);
-            logger.info("[plugin] Loaded launcher runtime '{}' into plugin classpath from: {}", runtime.source(), javaToolsJar.getAbsolutePath());
-            return true;
-        } catch (final Exception e) {
-            throw failure(e, "Failed to load javatools.jar into classpath: {}", javaToolsJar.getAbsolutePath());
-        }
     }
 
     public static XtcLauncherRuntime resolveRuntime(
@@ -165,54 +113,6 @@ public final class XtcJavaToolsRuntime {
             @NotNull final Provider<@NotNull FileTree> xdkFileTree,
             @NotNull final Logger logger) {
         return resolveRuntime(projectVersion, javaToolsConfig, xdkFileTree, logger).launcherJar();
-    }
-
-    /**
-     * Creates a URLClassLoader with javatools.jar and injects it into the plugin's classloader.
-     * This uses reflection to add the javatools JAR to the plugin's classloader via addURL.
-     *
-     * @param javaToolsJar The javatools.jar file
-     * @param logger Logger for diagnostic output
-     * @return The created URLClassLoader
-     * @throws MalformedURLException if URL conversion fails
-     */
-    private static URLClassLoader createAndSetJavaToolsClassLoader(
-            @NotNull final XtcLauncherRuntime runtime,
-            @NotNull final Logger logger) throws MalformedURLException {
-
-        final URL[] javaToolsUrls = runtime.classpath().stream()
-            .map(file -> {
-                try {
-                    return file.toURI().toURL();
-                } catch (final MalformedURLException e) {
-                    throw new IllegalArgumentException("Invalid launcher runtime entry: " + file.getAbsolutePath(), e);
-                }
-            })
-            .toArray(URL[]::new);
-
-        // Get the plugin's classloader (the one that loaded this class)
-        final ClassLoader pluginClassLoader = XtcJavaToolsRuntime.class.getClassLoader();
-
-        // Inject launcher runtime jars into the plugin's classloader using reflection
-        if (pluginClassLoader instanceof java.net.URLClassLoader) {
-            try {
-                final java.lang.reflect.Method addURL = java.net.URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-                addURL.setAccessible(true);
-                for (final var runtimeUrl : javaToolsUrls) {
-                    addURL.invoke(pluginClassLoader, runtimeUrl);
-                }
-                logger.info("[plugin] Injected launcher runtime into plugin classloader: {}", runtime.source());
-            } catch (final Exception e) {
-                logger.warn("[plugin] Failed to inject into plugin classloader, falling back to thread context classloader", e);
-            }
-        }
-
-        // Also set thread context classloader for compatibility
-        final var parentClassLoader = Thread.currentThread().getContextClassLoader();
-        final var javaToolsClassLoader = new URLClassLoader(javaToolsUrls, parentClassLoader);
-        Thread.currentThread().setContextClassLoader(javaToolsClassLoader);
-        logger.debug("[plugin] Created URLClassLoader with {} launcher runtime entries", javaToolsUrls.length);
-        return javaToolsClassLoader;
     }
 
     private static XtcLauncherRuntime resolveRuntimeFromFiles(
