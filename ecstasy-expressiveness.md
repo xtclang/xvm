@@ -826,6 +826,11 @@ The design questions are:
    type-system question.
 3. **Safe-call integration**: `name?.let(...)` must work for the null-scoping use
    case to be ergonomic. This works naturally if `let` is a method on `Object`.
+   Note: Ecstasy's current `?.` operator has restrictions -- short-circuiting
+   expressions like `name?.size ?: 0` cannot be used directly in assignments.
+   The idiomatic pattern is `if (String s ?= name) { ... }` instead. Scope
+   functions would need to work within these constraints, or the `?.`
+   restrictions would need to be relaxed.
 
 ## Analysis: imperative patterns in the XDK and platform code
 
@@ -2163,7 +2168,7 @@ Ecstasy's `switch` supports:
 - Range matching: `case 1..5:`
 - Type dispatch: `switch (x.is(_)) { case Int: ... case String: ... }`
 - Tuple matching: `switch (a, b) { case (1, 2): ... }`
-- Wildcard in tuples: `case (_, Int):`
+- Wildcard in value tuples: `case (1, _):` (matches any second element)
 - Switch as expression (returns a value)
 
 What's missing:
