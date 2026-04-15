@@ -248,11 +248,7 @@ public class IsExpression
         Expression exprTest  = expr2;
         Argument   argType;
 
-        // there is an asymmetry between processing of the static and dynamic exprTest type:
-        // - if the test type is static (e.g. "x.is(String)"), the type of exprTest is a
-        //     TypeConstant that "isTypeOfType" and we need to extract that underlying type;
-        // - in the test type is dynamic (e.g. "Null.is(Serializable))", the argument produced
-        //   by the exprTest would be a TypeHandle and the runtime should take care of the rest
+        // see the comment in "generateAssignments" regarding  static and dynamic types
         if (exprTest.isConstant()) {
             argType = exprTest.getType().getParamType(0).resolveAutoNarrowingBase();
         } else {
