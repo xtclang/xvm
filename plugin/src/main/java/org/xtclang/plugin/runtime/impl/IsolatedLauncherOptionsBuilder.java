@@ -1,9 +1,5 @@
 package org.xtclang.plugin.runtime.impl;
 
-import java.io.File;
-import java.nio.file.Path;
-import java.util.List;
-
 import static java.nio.file.Files.isDirectory;
 
 import org.xvm.tool.LauncherOptions.CompilerOptions;
@@ -17,8 +13,7 @@ import org.xtclang.plugin.runtime.DirectTestRequest;
 final class IsolatedLauncherOptionsBuilder {
 
     CompilerOptions buildCompilerOptions(final DirectCompileRequest request) {
-        final Path projectDir = request.projectDir().toPath();
-        final Path outputDir = request.outputDir().toPath();
+        final var outputDir = request.outputDir().toPath();
 
         final var builder = CompilerOptions.builder()
             .forceRebuild(request.rebuild())
@@ -57,7 +52,7 @@ final class IsolatedLauncherOptionsBuilder {
     }
 
     TestRunnerOptions buildTestRunnerOptions(final DirectTestRequest request) {
-        final TestRunnerOptions.Builder builder = TestRunnerOptions.builder()
+        final var builder = TestRunnerOptions.builder()
             .setXUnitOutputDirectory(request.outputDir().getAbsolutePath());
         builder.enableShowVersion(request.showVersion())
             .enableVerbose(request.verbose())

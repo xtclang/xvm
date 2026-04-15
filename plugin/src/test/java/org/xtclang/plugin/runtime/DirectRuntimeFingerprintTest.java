@@ -4,10 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 
 import org.junit.jupiter.api.Test;
@@ -57,9 +57,9 @@ class DirectRuntimeFingerprintTest {
     }
 
     private static Path createJar(final Path path) throws IOException {
-        try (OutputStream fileStream = Files.newOutputStream(path);
-             JarOutputStream jarStream = new JarOutputStream(fileStream)) {
-            // Empty test jar.
+        try (final var jarStream = new JarOutputStream(Files.newOutputStream(path))) {
+            jarStream.putNextEntry(new JarEntry("META-INF/MANIFEST.MF"));
+            jarStream.closeEntry();
         }
         return path;
     }

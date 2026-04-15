@@ -3,13 +3,14 @@ package org.xtclang.plugin;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 
+import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 import java.util.jar.Attributes;
+import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
@@ -68,10 +69,10 @@ public class XtcLauncherRuntimeTest {
         assertIterableEquals(sortedFiles(xdkDependency, xdkLauncher), runtime.classpath());
     }
 
-    private List<java.io.File> sortedFiles(final Path... files) {
+    private List<File> sortedFiles(final Path... files) {
         return List.of(files).stream()
             .map(Path::toFile)
-            .sorted(Comparator.comparing(java.io.File::getAbsolutePath))
+            .sorted(Comparator.comparing(File::getAbsolutePath))
             .toList();
     }
 
@@ -87,11 +88,11 @@ public class XtcLauncherRuntimeTest {
     }
 
     private static Path createJar(final Path path, final Manifest manifest) throws IOException {
-        try (OutputStream fileStream = Files.newOutputStream(path);
-             JarOutputStream jarStream = manifest == null
-                 ? new JarOutputStream(fileStream)
-                 : new JarOutputStream(fileStream, manifest)) {
-            // Empty test jar.
+        try (final var jarStream = manifest == null
+                 ? new JarOutputStream(Files.newOutputStream(path))
+                 : new JarOutputStream(Files.newOutputStream(path), manifest)) {
+            jarStream.putNextEntry(new JarEntry(manifest == null ? "empty.txt" : "test.txt"));
+            jarStream.closeEntry();
         }
         return path;
     }

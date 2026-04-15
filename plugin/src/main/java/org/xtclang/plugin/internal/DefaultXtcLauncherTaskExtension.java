@@ -39,7 +39,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     protected final Property<@NotNull String> stderrPath;
 
     protected DefaultXtcLauncherTaskExtension(final ObjectFactory objects, final ProviderFactory providers) {
-        final Provider<String> executionModeProperty =
+        final var executionModeProperty =
             providers.gradleProperty(XtcPluginConstants.PROPERTY_DEFAULT_EXECUTION_MODE);
 
         this.objects = objects;
@@ -148,7 +148,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     }
 
     private static ExecutionMode parseExecutionMode(final String rawValue) {
-        final String value = rawValue.trim();
+        final var value = rawValue.trim();
         try {
             return ExecutionMode.valueOf(value.toUpperCase());
         } catch (final IllegalArgumentException e) {
