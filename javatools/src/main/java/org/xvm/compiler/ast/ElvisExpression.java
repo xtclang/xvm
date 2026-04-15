@@ -292,17 +292,15 @@ public class ElvisExpression
 
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs) {
-        if (isConstant() || !LVal.isNormalVariable() || !m_fCond && !pool().typeNull().isA(LVal.getType())) {
+        if (isConstant() || !(LVal.isNormalVariable() || LVal.isProperty()) ||
+                !m_fCond && !pool().typeNull().isA(LVal.getType())) {
             super.generateAssignment(ctx, code, LVal, errs);
             return;
         }
 
         Label labelEnd = getEndLabel();
         if (m_fCond) {
-            Assignable   varCond = createTempVar(code, pool().typeBoolean());
-            Assignable[] LVals   = new Assignable[] {varCond, LVal};
-            expr1.generateAssignments(ctx, code, LVals, errs);
-            code.add(new JumpTrue(varCond.getRegister(), labelEnd));
+            expr1.generateConditionalAssignment(ctx, code, LVal, labelEnd, errs);
         } else {
             expr1.generateAssignment(ctx, code, LVal, errs);
             code.add(new JumpNotNull(LVal.getLocalArgument(), labelEnd));
