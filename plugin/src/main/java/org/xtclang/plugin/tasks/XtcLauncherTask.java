@@ -23,6 +23,7 @@ import org.gradle.api.tasks.options.OptionValues;
 import org.gradle.jvm.toolchain.JavaToolchainService;
 import org.jetbrains.annotations.NotNull;
 import org.xtclang.plugin.XtcJavaToolsRuntime;
+import org.xtclang.plugin.XtcLauncherRuntime;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.internal.GradlePhaseAssertions;
@@ -209,6 +210,14 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return javaToolsConfig.get();
     }
 
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    FileCollection getInputLauncherRuntimeCandidates() {
+        return objects.fileCollection()
+            .from(javaToolsConfig.get())
+            .from(xdkFileTree.get().matching(pattern -> pattern.include("**/*.jar")));
+    }
+
     public boolean hasStdoutRedirect() {
         return stdoutPath.isPresent();
     }
@@ -355,6 +364,15 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
                 getJavaToolsConfiguration(),
                 getXdkFileTree(),
                 logger
+        );
+    }
+
+    public XtcLauncherRuntime resolveLauncherRuntime() {
+        return XtcJavaToolsRuntime.resolveRuntime(
+            getProjectVersion(),
+            getJavaToolsConfiguration(),
+            getXdkFileTree(),
+            logger
         );
     }
 

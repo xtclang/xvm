@@ -139,14 +139,16 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
 
     private ProcessBuilder buildProcess(final XtcLauncherTask<?> task, final String[] programArgs) {
         final var projectDir = task.getProjectDirectory().get().getAsFile();
+        final var runtime = task.resolveLauncherRuntime();
         final List<String> command = new ArrayList<>();
         command.add(javaExecutable);
         command.addAll(task.getJvmArgs().get());
         command.add("-cp");
-        command.add(task.resolveJavaTools().getAbsolutePath());
+        command.add(runtime.asClasspathArgument());
         command.add(task.getJavaLauncherClassName());
         command.addAll(Arrays.asList(programArgs));
         final ProcessBuilder pb = new ProcessBuilder(command).directory(projectDir);
+        logger.info("[plugin] [{}] Using launcher runtime '{}' with {} entries", mode, runtime.source(), runtime.classpath().size());
         if (task.hasVerboseLogging()) {
             logForkedCommand(task, command);
         }

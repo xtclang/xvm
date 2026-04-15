@@ -15,6 +15,8 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.Comparator;
+import java.util.List;
 import java.util.zip.ZipFile;
 
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
@@ -91,16 +93,54 @@ public final class XtcJavaToolsRuntime {
             return false;
         }
 
-        final File javaToolsJar = resolveJavaTools(projectVersion, javaToolsConfig, xdkFileTree, logger);
+        final XtcLauncherRuntime runtime = resolveRuntime(projectVersion, javaToolsConfig, xdkFileTree, logger);
+        final File javaToolsJar = runtime.launcherJar();
 
         try {
-            // Create a shared classloader with javatools.jar and set as thread context classloader
-            javaToolsClassLoader = createAndSetJavaToolsClassLoader(javaToolsJar, logger);
-            logger.info("[plugin] ******* Loaded javatools.jar into plugin classpath: {}", javaToolsJar.getAbsolutePath());
+            // Create a shared classloader with the resolved runtime classpath and set as thread context classloader
+            javaToolsClassLoader = createAndSetJavaToolsClassLoader(runtime, logger);
+            logger.info("[plugin] Loaded launcher runtime '{}' into plugin classpath from: {}", runtime.source(), javaToolsJar.getAbsolutePath());
             return true;
         } catch (final Exception e) {
             throw failure(e, "Failed to load javatools.jar into classpath: {}", javaToolsJar.getAbsolutePath());
         }
+    }
+
+    public static XtcLauncherRuntime resolveRuntime(
+            @NotNull final Provider<@NotNull String> projectVersion,
+            @NotNull final Provider<@NotNull FileCollection> javaToolsConfig,
+            @NotNull final Provider<@NotNull FileTree> xdkFileTree,
+            @NotNull final Logger logger) {
+
+        final var artifactVersion = projectVersion.get();
+        final var configRuntime = resolveRuntimeFromFiles(
+            "xdkJavaTools configuration",
+            javaToolsConfig.get().getFiles().stream().filter(File::isFile).toList(),
+            artifactVersion
+        );
+        final var xdkRuntime = resolveRuntimeFromFiles(
+            "extracted XDK contents",
+            xdkFileTree.get().getFiles().stream().filter(File::isFile).toList(),
+            artifactVersion
+        );
+
+        if (configRuntime == null && xdkRuntime == null) {
+            throw failure("ERROR: Failed to resolve '{}' runtime from any configuration or dependency. Ensure the XDK dependency is configured correctly.", XDK_JAVATOOLS_NAME_JAR);
+        }
+
+        if (configRuntime != null && xdkRuntime != null) {
+            final var sameLauncherVersion = readXdkVersionFromJar(configRuntime.launcherJar()).equals(readXdkVersionFromJar(xdkRuntime.launcherJar()));
+            if (!sameLauncherVersion || !sameClasspath(configRuntime.classpath(), xdkRuntime.classpath())) {
+                logger.warn("[plugin] Resolved different launcher runtimes from '{}' and '{}'; preferring '{}'",
+                    configRuntime.source(), xdkRuntime.source(), configRuntime.source());
+            }
+            logResolvedRuntime(logger, configRuntime);
+            return configRuntime;
+        }
+
+        final var runtime = configRuntime != null ? configRuntime : xdkRuntime;
+        logResolvedRuntime(logger, runtime);
+        return runtime;
     }
 
     /**
@@ -124,45 +164,7 @@ public final class XtcJavaToolsRuntime {
             @NotNull final Provider<@NotNull FileCollection> javaToolsConfig,
             @NotNull final Provider<@NotNull FileTree> xdkFileTree,
             @NotNull final Logger logger) {
-
-        final var artifactVersion = projectVersion.get();
-        final var javaToolsFromConfig = javaToolsConfig.get().filter(file -> isValidJavaToolsArtifact(file, artifactVersion));
-        final var javaToolsFromXdk = xdkFileTree.get().filter(file -> isValidJavaToolsArtifact(file, artifactVersion));
-
-        final File resolvedFromConfig = javaToolsFromConfig.isEmpty() ? null : javaToolsFromConfig.getSingleFile();
-        final File resolvedFromXdk = javaToolsFromXdk.isEmpty() ? null : javaToolsFromXdk.getSingleFile();
-
-        if (resolvedFromConfig == null && resolvedFromXdk == null) {
-            throw failure("ERROR: Failed to resolve '{}' from any configuration or dependency. Ensure the XDK dependency is configured correctly.", XDK_JAVATOOLS_NAME_JAR);
-        }
-        logger.info("""
-                [plugin] Check for '{}' in {} config and XDK (unpacked zip, or module collection) dependency, if present.
-                [plugin]     Resolved to: [xdkJavaTools: {}, xdkContents: {}]
-                """.trim(), XDK_JAVATOOLS_NAME_JAR, XDK_CONFIG_NAME_JAVATOOLS_INCOMING, resolvedFromConfig, resolvedFromXdk);
-
-        // Log detailed javatools.jar information
-        if (resolvedFromConfig != null) {
-            logger.info("[plugin]     javatools.jar: {}", formatJarMetadata(resolvedFromConfig));
-        }
-        if (resolvedFromXdk != null && !resolvedFromXdk.equals(resolvedFromConfig)) {
-            logger.info("[plugin]     XDK javatools.jar: {}", formatJarMetadata(resolvedFromXdk));
-        }
-
-        final var versionConfig = readXdkVersionFromJar(resolvedFromConfig);
-        final var versionXdk = readXdkVersionFromJar(resolvedFromXdk);
-
-        if (resolvedFromConfig != null && resolvedFromXdk != null) {
-            if (!versionConfig.equals(versionXdk) || !areIdenticalFiles(resolvedFromConfig, resolvedFromXdk)) {
-                logger.warn("[plugin] Different '{}' files resolved, preferring the non-XDK version: {}", XDK_JAVATOOLS_NAME_JAR, resolvedFromConfig.getAbsolutePath());
-                return validateAndReturn(resolvedFromConfig);
-            }
-        }
-        if (resolvedFromConfig != null) {
-            logger.info("[plugin] Resolved unique '{}' from config/artifacts/dependencies: {} (version: {})", XDK_JAVATOOLS_NAME_JAR, resolvedFromConfig.getAbsolutePath(), versionConfig);
-            return validateAndReturn(resolvedFromConfig);
-        }
-        logger.info("[plugin] Resolved unique '{}' from XDK: {} (version: {})", XDK_JAVATOOLS_NAME_JAR, resolvedFromXdk.getAbsolutePath(), versionXdk);
-        return validateAndReturn(resolvedFromXdk);
+        return resolveRuntime(projectVersion, javaToolsConfig, xdkFileTree, logger).launcherJar();
     }
 
     /**
@@ -174,19 +176,32 @@ public final class XtcJavaToolsRuntime {
      * @return The created URLClassLoader
      * @throws MalformedURLException if URL conversion fails
      */
-    private static URLClassLoader createAndSetJavaToolsClassLoader(@NotNull final File javaToolsJar, @NotNull final Logger logger) throws MalformedURLException {
-        final URL javaToolsUrl = javaToolsJar.toURI().toURL();
+    private static URLClassLoader createAndSetJavaToolsClassLoader(
+            @NotNull final XtcLauncherRuntime runtime,
+            @NotNull final Logger logger) throws MalformedURLException {
+
+        final URL[] javaToolsUrls = runtime.classpath().stream()
+            .map(file -> {
+                try {
+                    return file.toURI().toURL();
+                } catch (final MalformedURLException e) {
+                    throw new IllegalArgumentException("Invalid launcher runtime entry: " + file.getAbsolutePath(), e);
+                }
+            })
+            .toArray(URL[]::new);
 
         // Get the plugin's classloader (the one that loaded this class)
         final ClassLoader pluginClassLoader = XtcJavaToolsRuntime.class.getClassLoader();
 
-        // Inject javatools into the plugin's classloader using reflection
+        // Inject launcher runtime jars into the plugin's classloader using reflection
         if (pluginClassLoader instanceof java.net.URLClassLoader) {
             try {
                 final java.lang.reflect.Method addURL = java.net.URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
                 addURL.setAccessible(true);
-                addURL.invoke(pluginClassLoader, javaToolsUrl);
-                logger.info("[plugin] Injected javatools.jar into plugin classloader: {}", javaToolsUrl);
+                for (final var runtimeUrl : javaToolsUrls) {
+                    addURL.invoke(pluginClassLoader, runtimeUrl);
+                }
+                logger.info("[plugin] Injected launcher runtime into plugin classloader: {}", runtime.source());
             } catch (final Exception e) {
                 logger.warn("[plugin] Failed to inject into plugin classloader, falling back to thread context classloader", e);
             }
@@ -194,10 +209,62 @@ public final class XtcJavaToolsRuntime {
 
         // Also set thread context classloader for compatibility
         final var parentClassLoader = Thread.currentThread().getContextClassLoader();
-        final var javaToolsClassLoader = new URLClassLoader(new URL[]{javaToolsUrl}, parentClassLoader);
+        final var javaToolsClassLoader = new URLClassLoader(javaToolsUrls, parentClassLoader);
         Thread.currentThread().setContextClassLoader(javaToolsClassLoader);
-        logger.debug("[plugin] Created URLClassLoader with javatools.jar: {}", javaToolsUrl);
+        logger.debug("[plugin] Created URLClassLoader with {} launcher runtime entries", javaToolsUrls.length);
         return javaToolsClassLoader;
+    }
+
+    private static XtcLauncherRuntime resolveRuntimeFromFiles(
+            final String source,
+            final List<File> files,
+            final String artifactVersion) {
+
+        final var classpath = files.stream()
+            .filter(file -> file.getName().endsWith(".jar"))
+            .sorted(Comparator.comparing(File::getAbsolutePath))
+            .toList();
+        if (classpath.isEmpty()) {
+            return null;
+        }
+
+        final var launcherJar = classpath.stream()
+            .filter(file -> isValidJavaToolsArtifact(file, artifactVersion))
+            .findFirst()
+            .orElse(null);
+        if (launcherJar == null) {
+            return null;
+        }
+
+        validateAndReturn(launcherJar);
+        return new XtcLauncherRuntime(source, launcherJar, classpath);
+    }
+
+    private static boolean sameClasspath(final List<File> left, final List<File> right) {
+        if (left.size() != right.size()) {
+            return false;
+        }
+        for (int i = 0; i < left.size(); i++) {
+            if (!sameFile(left.get(i), right.get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean sameFile(final File left, final File right) {
+        if (left.equals(right)) {
+            return true;
+        }
+        if (left.getName().equals(right.getName())) {
+            return areIdenticalFiles(left, right);
+        }
+        return false;
+    }
+
+    private static void logResolvedRuntime(final Logger logger, final XtcLauncherRuntime runtime) {
+        logger.info("[plugin] Resolved launcher runtime from '{}': {} entries", runtime.source(), runtime.classpath().size());
+        runtime.classpath().forEach(file -> logger.info("[plugin]     {}", formatJarMetadata(file)));
     }
 
     private static boolean areIdenticalFiles(final File f1, final File f2) {
