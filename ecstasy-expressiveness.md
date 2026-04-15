@@ -2124,6 +2124,84 @@ conservative mainstream language -- added them in 2021. Their absence from
 Ecstasy stands out, especially given that the compiler already has the
 exhaustiveness machinery for enums.
 
+#### Real codebase examples
+
+The platform project has a textbook sealed type hierarchy hiding in plain sight:
+
+**`AppInfo` / `WebAppInfo` / `DbAppInfo`** (`platform/common/src/main/x/common/model.x`)
+
+This hierarchy is dispatched with `.is()` checks **38+ times** across the platform
+codebase. Nearly every endpoint in `AppEndpoint.x` and `Projects.x` does:
+
+```x
+// Existing -- repeated 38+ times across the platform
+if (appInfo.is(WebAppInfo)) {
+    httpServer.removeRoute(appInfo.hostName);
+    hostManager.removeWebDeployment(
+        accountName, appInfo, accountManager.decrypt(appInfo.password));
+} else {
+    assert appInfo.is(DbAppInfo);
+    hostManager.removeDbDeployment(accountName, appInfo);
+}
+
+// With sealed types -- compiler verifies exhaustiveness, no assert needed
+switch (appInfo) {
+    case WebAppInfo: {
+        httpServer.removeRoute(appInfo.hostName);
+        hostManager.removeWebDeployment(
+            accountName, appInfo, accountManager.decrypt(appInfo.password));
+    }
+    case DbAppInfo:
+        hostManager.removeDbDeployment(accountName, appInfo);
+    // no default needed -- compiler knows AppInfo is sealed
+}
+```
+
+**`AppHost` / `WebHost` / `DbHost`** is the same pattern. In
+`AppEndpoint.x:175-188`, the switch has a `default` that throws an error:
+
+```x
+// Existing
+switch (host.is(_)) {
+    case DbHost:
+        if (host.active) {
+            stats["users"] = host.dependees.toIntLiteral();
+        }
+        break;
+    case WebHost:
+        if (host.active) {
+            stats["requests"] = host.totalRequests.toIntLiteral();
+        }
+        break;
+    default:
+        return new SimpleResponse(NotFound, $"Unknown deployment type for {host}");
+}
+
+// With sealed AppHost -- default disappears, compiler verifies completeness
+switch (host) {
+    case DbHost  if host.active: stats["users"]    = host.dependees.toIntLiteral();
+    case WebHost if host.active: stats["requests"] = host.totalRequests.toIntLiteral();
+}
+```
+
+**`Number.familyFor()`** in `lib_ecstasy` (`Number.x:563-570`) also has an
+`assert` in the default case -- proving the developer knows the hierarchy is
+closed:
+
+```x
+// Existing -- default is unreachable, but compiler doesn't know
+private Family familyFor(Number n) = switch (n.is(_)) {
+    case UIntNumber:      UInteger;
+    case IntNumber:       Integer;
+    case DecimalFPNumber: Decimal;
+    case BinaryFPNumber:  Binary;
+    default: assert;
+};
+```
+
+In all these cases, the `default: assert` or `else { assert appInfo.is(DbAppInfo) }`
+is the developer manually doing what sealed types would automate.
+
 **Effort estimate**: Medium. The compiler already has exhaustiveness checking
 for enums. Extending it to sealed class hierarchies requires tracking which
 types are permitted subtypes and wiring that information into the switch
@@ -2233,6 +2311,96 @@ guards and nesting. For a language that positions itself as modern and
 expressive, this gap is noticeable. The good news is that Ecstasy's existing
 switch-as-expression and type dispatch provide a solid foundation to build on.
 
+#### Real codebase examples
+
+**Guard clause workarounds** -- `HostInjector.x` in the platform has a large
+switch on `(type, name)` tuples where nearly every case body starts with
+`if (platform) { ... } else { ... }`:
+
+```x
+// Existing (platform/common/src/main/x/common/HostInjector.x:120-150)
+switch (sansNull, name) {
+    case (Console, "console"):
+        if (platform) {
+            @Inject Console console;
+            return console;
+        }
+        return &consoleImpl.maskAs(Console);
+
+    case (FileStore, "storage"):
+        if (platform) {
+            @Inject FileStore storage;
+            return storage;
+        }
+        return &store.maskAs(FileStore);
+    // ... 10+ more cases with the same if (platform) guard
+}
+
+// With guard clauses -- intent is in the pattern, not buried in the body
+switch (sansNull, name) {
+    case (Console, "console") if platform:
+        @Inject Console console;
+        return console;
+    case (Console, "console"):
+        return &consoleImpl.maskAs(Console);
+
+    case (FileStore, "storage") if platform:
+        @Inject FileStore storage;
+        return storage;
+    case (FileStore, "storage"):
+        return &store.maskAs(FileStore);
+}
+```
+
+**The `getAppInfo()` + `.is(SimpleResponse)` boilerplate** -- the single most
+repeated pattern in the platform. `AppEndpoint.x` has **18 occurrences** of:
+
+```x
+// Existing -- repeated 18 times in AppEndpoint.x
+AppResponse appInfo = getAppInfo(deployment);
+if (appInfo.is(SimpleResponse)) {
+    return appInfo;
+}
+// ... now use appInfo as AppInfo ...
+```
+
+This is the guard-clause version of what Kotlin does with `?: return`:
+
+```kotlin
+// Kotlin equivalent
+val appInfo = getAppInfo(deployment) ?: return SimpleResponse(NotFound)
+```
+
+Without destructuring or guard-let syntax, Ecstasy forces three lines for
+what should be one. This is not scope functions or expression-`if` -- it's
+specifically the lack of a "match-and-bind-or-early-return" pattern.
+
+**Deep type-check nesting** -- `BasicResourceProvider.x` in the XDK has
+cascading `.is()` checks that would flatten with patterns:
+
+```x
+// Existing (lib_ecstasy, BasicResourceProvider.x:152-170)
+if (type.is(Type<Enum>)) {
+    @Inject(resourceName=name) String? value;
+    if (value.is(String), Class clz := type.fromClass(), clz.is(Enumeration)) {
+        if (Enum en := clz.byName.get(value)) {
+            return True, en;
+        }
+    }
+    if (isNullable) {
+        return True, Null;
+    }
+}
+
+// With destructuring + guards -- flattened
+switch (type, @Inject(resourceName=name) String? value) {
+    case (Type<Enum>, String) if (Class clz := type.fromClass(), clz.is(Enumeration)):
+        if (Enum en := clz.byName.get(value)) return True, en;
+    case (_, _) if isNullable:
+        return True, Null;
+}
+```
+
 **Effort estimate**: Significant. Destructuring in patterns requires the
 compiler to understand which types support positional extraction (const types
 with known field order are natural candidates). Guard clauses are simpler --
@@ -2335,6 +2503,67 @@ Ecstasy's `conditional` returns are a creative solution that covers the
 handling, every systems-oriented language has moved toward Result types. Rust's
 `?` operator in particular has proven that error propagation can be concise
 *and* type-safe -- a lesson worth studying.
+
+#### Real codebase examples
+
+The platform's `AppEndpoint.x` uses `typedef (AppInfo | SimpleResponse) as
+AppResponse` -- a union type that functions as a poor man's Result. The
+pattern repeats in every endpoint:
+
+```x
+// Existing -- AppEndpoint.x uses union type as Result
+typedef (AppInfo | SimpleResponse) as AppResponse;
+
+AppResponse getAppInfo(String deployment) {
+    // returns AppInfo on success, SimpleResponse on error
+    if (!(accountInfo := accountManager.getAccount(accountName))) {
+        return new SimpleResponse(NotFound, $"Account '{accountName}' is missing");
+    }
+    return accountInfo.apps.get(deployment)?;
+    return new SimpleResponse(NotFound, $"Unknown deployment '{deployment}'");
+}
+```
+
+This is *already* a Result type -- just without the language support to make
+it ergonomic. The caller must do `if (appInfo.is(SimpleResponse))` 18 times.
+With a proper Result type + pattern matching:
+
+```x
+// Proposed -- Result type makes success/failure explicit
+Result<AppInfo, SimpleResponse> getAppInfo(String deployment) { ... }
+
+// Caller uses pattern matching (or a ? operator for propagation)
+AppInfo appInfo = switch (getAppInfo(deployment)) {
+    case Success(info):    info;
+    case Failure(response): return response;
+};
+```
+
+The `conditional` return pattern also shows the limitation in real XDK code.
+In `HostManager.createWebHost()` (line 372-452), the method returns
+`conditional WebHost` -- on failure, the caller gets `False` with no error
+information. The `ErrorLog errors` parameter is a workaround: errors are
+accumulated in a side-channel because `conditional` can't carry them:
+
+```x
+// Existing -- errors go through a side-channel parameter
+conditional WebHost createWebHost(String accountName, WebAppInfo webAppInfo,
+                                  CryptoPassword storePwd, Log errors) {
+    // ... on failure:
+    errors.add($"Error: ...");
+    return False;  // caller gets False but must check errors separately
+}
+```
+
+A Result type would unify the return value and the error information:
+
+```x
+// Proposed
+Result<WebHost, String[]> createWebHost(...) {
+    // ... on failure:
+    return Failure([$"Error: ..."]);
+}
+```
 
 **Effort estimate**: Small for the type itself (just a `const` class).
 Depends on sealed types and pattern matching for full ergonomic benefit.
