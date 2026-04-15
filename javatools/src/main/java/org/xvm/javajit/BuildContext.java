@@ -1854,20 +1854,22 @@ public class BuildContext {
      * Note, that unlike the dead code elimination below, the narrowing could "stop" at any point an
      * assignment is made to the register.
      *
-     * @param origReg      the register to narrow
-     * @param fromAddr     the beginning address at which the narrowing should apply
-     * @param narrowedType the narrowed type
+     * @param origReg        the register to narrow
+     * @param fromAddr       the beginning address at which the narrowing should apply
+     * @param narrowingType  the type to narrow to
      *
      * @return the narrowed register (if applied)
      */
     public RegisterInfo narrowRegister(CodeBuilder code, RegisterInfo origReg,
-                                       int fromAddr, TypeConstant narrowedType) {
+                                       int fromAddr, TypeConstant narrowingType) {
         TypeConstant origType = origReg.type();
 
         if (origReg.isJavaStack() || origReg.isProperty() ||
-                narrowedType.getCanonicalJitType().equals(origType)) {
+                narrowingType.getCanonicalJitType().equals(origType)) {
             return origReg;
         }
+
+        TypeConstant narrowedType = adjustAccess(narrowingType);
 
         if (fromAddr > currOpAddr + 1 && !canApplyNarrowing(fromAddr)) {
             // there is nothing to apply the narrowing to
@@ -1992,6 +1994,14 @@ public class BuildContext {
             addAction(fromAddr, action);
         }
         return narrowedReg;
+    }
+
+    /**
+     * If we narrow to or access a type that is "this" type, the access needs to be adjusted.
+     */
+    public TypeConstant adjustAccess(TypeConstant narrowingType) {
+        TypeConstant thisType = typeInfo.getType();
+        return narrowingType.isA(thisType.removeAccess()) ? thisType : narrowingType;
     }
 
     /**
@@ -2690,15 +2700,19 @@ public class BuildContext {
             assert baseType.isA(inferredType) || inferredType.isFormalType();
             return baseType;
         }
+
         if (inferredType.isJavaPrimitive()) {
             assert inferredType.isA(baseType) || baseType.isFormalType();
             return inferredType;
         }
 
+        inferredType = adjustAccess(inferredType);
+
         if (baseType.isFormalType() && inferredType.isA(baseType.resolveConstraints())) {
             // use non-formal type
             return inferredType;
         }
+
         if (inferredType.isFormalType() && baseType.isA(inferredType.resolveConstraints())) {
             return baseType;
         }
