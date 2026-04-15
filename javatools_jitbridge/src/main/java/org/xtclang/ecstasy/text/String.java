@@ -3,6 +3,7 @@ package org.xtclang.ecstasy.text;
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.nConst;
+import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nType;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -222,14 +223,18 @@ public class String
     // ----- String API ----------------------------------------------------------------------------
 
     /**
-     * @return `true` iff the string contains no characters
+     * Native implementation of:
+     *
+     *     Boolean empty.get();
      */
-    public boolean empty(Ctx ctx) {
+    public boolean empty$get$p(Ctx ctx) {
         return start == end;
     }
 
     /**
-     * @return the length of the string in characters
+     * Native implementation of:
+     *
+     *      Int size.get();
      */
     public long size$get$p(Ctx ctx) {
         return end - start + (next == null ? 0 : next.size$get$p(ctx));
@@ -237,7 +242,15 @@ public class String
 
     /**
      * Native implementation of:
-     *
+     *   @Op("+") String! add(Object o) {
+     */
+    public String add(Ctx ctx, nObj obj) {
+        // TODO CP: optimize
+        return of(ctx, this.toString() + obj.toString(ctx).toString());
+    }
+
+    /**
+     * Native implementation of:
      *   @Op("[]") Char getElement(Int index)
      */
     public int getElement$p(Ctx ctx, long index) {

@@ -120,7 +120,7 @@ class IpAddTests {
     void testIpAddString() {
         String value1 = "a";
         value1 += "b";
-//        assert value1 == "ab";
+        assert value1 == "ab";
     }
 
     void testIpAddIntToChar() {
