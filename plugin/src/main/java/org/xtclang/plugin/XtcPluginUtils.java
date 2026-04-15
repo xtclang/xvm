@@ -11,6 +11,7 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 import java.nio.file.Files;
 
@@ -260,44 +261,51 @@ public final class XtcPluginUtils {
         }
 
         /**
-         * Computes the MD5 hash of a file for verification purposes.
+         * Computes the SHA-256 hash of a file for cache, fingerprint, and diagnostic purposes.
          *
-         * @param file The file to compute MD5 hash for
-         * @return The MD5 hash as a hexadecimal string, or "ERROR" if computation fails
+         * @param file The file to compute SHA-256 hash for
+         * @return The SHA-256 hash as a hexadecimal string, or "ERROR" if computation fails
          */
-        public static String computeMd5(final File file) {
-            try (final FileInputStream fis = new FileInputStream(file)) {
-                final MessageDigest md = MessageDigest.getInstance("MD5");
+        public static String computeSha256(final File file) {
+            return computeHash(file, "SHA-256");
+        }
+
+        private static String computeHash(final File file, final String algorithm) {
+            try (InputStream input = new FileInputStream(file)) {
+                final MessageDigest md = MessageDigest.getInstance(algorithm);
                 final byte[] buffer = new byte[8192];
                 int bytesRead;
-                while ((bytesRead = fis.read(buffer)) != -1) {
+                while ((bytesRead = input.read(buffer)) != -1) {
                     md.update(buffer, 0, bytesRead);
                 }
-                final byte[] digest = md.digest();
-                final StringBuilder sb = new StringBuilder();
-                for (final byte b : digest) {
-                    sb.append(String.format("%02x", b));
-                }
-                return sb.toString();
+                return toHex(md.digest());
             } catch (final NoSuchAlgorithmException | IOException e) {
                 return "ERROR";
             }
         }
 
+        private static String toHex(final byte[] digest) {
+            final StringBuilder sb = new StringBuilder(digest.length * 2);
+            for (final byte b : digest) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        }
+
         /**
-         * Creates a one-line log string with jar file metadata: path, last modified timestamp, size, and MD5 hash.
+         * Creates a one-line log string with jar file metadata: path, last modified timestamp, size, and SHA-256 hash.
          * Uses modern Java time types (java.time.Instant) instead of deprecated java.util.Date.
          *
          * @param file The jar file to log metadata for
-         * @return A formatted string containing: path, ISO-8601 timestamp, size in bytes, and MD5 hash
+         * @return A formatted string containing: path, ISO-8601 timestamp, size in bytes, and SHA-256 hash
          */
         public static String formatJarMetadata(final File file) {
             final String path = file.getAbsolutePath();
             final Instant lastModified = Instant.ofEpochMilli(file.lastModified());
             final String timestamp = DateTimeFormatter.ISO_INSTANT.format(lastModified);
             final long size = file.length();
-            final String md5 = computeMd5(file);
-            return String.format("path=%s, modified=%s, size=%d bytes, md5=%s", path, timestamp, size, md5);
+            final String sha256 = computeSha256(file);
+            return String.format("path=%s, modified=%s, size=%d bytes, sha256=%s", path, timestamp, size, sha256);
         }
     }
 }

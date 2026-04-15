@@ -705,8 +705,8 @@ That sequence keeps the desirable javatools API usage model while removing the d
 - [x] Introduce runtime-scoped direct executor classes intended to run inside an isolated classloader.
 - [x] Move direct-mode `LauncherOptions` builder usage into the runtime-scoped executors.
 - [x] Move direct-mode launcher invocation (`Launcher`, `Runner`, `TestRunner`) into the runtime-scoped executors.
-- [ ] Add an isolated runtime owner keyed by runtime fingerprint.
-- [ ] Choose the first isolation mechanism for direct mode:
+- [x] Add an isolated runtime owner keyed by runtime fingerprint.
+- [x] Choose the first isolation mechanism for direct mode:
   build-scoped service with child classloader, or Worker API with classloader isolation.
 - [x] Make `DIRECT` mode execute via the isolated runtime instead of `ensureJavaToolsInClasspath()`.
 - [x] Verify `DIRECT` mode still works for self-hosting/XDK builds and remains a first-class fast path.
@@ -718,19 +718,46 @@ That sequence keeps the desirable javatools API usage model while removing the d
 - [x] Re-run plugin tests and focused Gradle verification for:
   `:plugin:test`, `:manualTests:compileXtc`, representative XDK compile tasks, and external-consumer scenarios.
 - [ ] Check whether the redesign reduces one-time task-classpath churn and related follow-up recompilation symptoms from issue #426.
+- [ ] Decide whether the build-scoped direct runtime owner should remain a shared service or move to
+  a Worker API / explicitly keyed build service registration if future stateful compiler services need
+  stronger isolation semantics.
+- [ ] Add or keep targeted diagnostics for direct-runtime cache behavior so `--info` / `--debug` can show:
+  cache miss, cache hit, runtime fingerprint, and build-end cleanup.
 
 Recent verification notes:
 
 - `:plugin:test` passed after removing `loadJavaTools` and the outer-layer
   `ensureJavaToolsInClasspath()` call.
+- `:plugin:test --tests org.xtclang.plugin.runtime.DirectRuntimeFingerprintTest` passed
+  after switching the direct-runtime cache key to content hashing.
 - `:manualTests:tasks --all` no longer lists `loadJavaTools`.
 - `:manualTests:runTestWithDirect` passed against the extracted-XDK layout under
   `manualTests/build/xtc/xdk/lib`.
+- `:manualTests:runTestWithAttached` passed after a prior direct-mode build in the
+  same daemon, which is the key cross-mode regression case that the old daemon-global
+  loader approach could poison.
 - `:manualTests:runXunitTests` passed through the forked `TestRunner` path against
   that same extracted-XDK runtime.
+- `:manualTests:runTestAllExecutionModes` passed, covering `DIRECT`, `ATTACHED`, and
+  `DETACHED` in one build against the extracted-XDK layout.
 - `:manualTests:runParallel` still exposes a runtime/interpreter failure in
   `TestNesting` (`Circular initialization "ecstasy.xtclang.org"`), but that
   occurs after successful plugin launch and is tracked separately from this refactor.
+
+Additional discoveries:
+
+- A Gradle shared `BuildService` is the right lifecycle boundary for direct-mode
+  runtime reuse: build-scoped rather than daemon-global, and closed automatically
+  when the build completes.
+- Runtime reuse should not be keyed only by file path and timestamps. The current
+  implementation fingerprints runtime entries by content hash to avoid accidental
+  reuse when self-hosting builds rewrite jars in place.
+- The build service is also the right place for cache diagnostics because it is the
+  only component that can see cache hits, misses, and shutdown cleanup in one place.
+- This is a working model for the currently verified scenarios, but not yet a final
+  proof against every future subtle bug. The remaining uncertainty is around longer-term
+  evolution: persistent/stateful compiler services, additional mixed-mode builds not yet
+  covered by tests, and whether issue #426 follow-up churn is fully addressed.
 
 
 ## Bottom Line

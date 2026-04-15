@@ -29,6 +29,7 @@ import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.internal.GradlePhaseAssertions;
 import org.xtclang.plugin.launchers.ExecutionMode;
 import org.xtclang.plugin.launchers.ModulePathResolver;
+import org.xtclang.plugin.runtime.DirectRuntimeBuildService;
 
 import java.io.File;
 import java.util.Collections;
@@ -51,6 +52,7 @@ import static org.xtclang.plugin.internal.GradlePhaseAssertions.validateConfigur
 @DisableCachingByDefault(because = "Abstract base class; concrete subclasses should declare caching intent")
 public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extends XtcDefaultTask implements XtcLauncherTaskExtension {
     public static final int EXIT_CODE_ERROR = 1;
+    private static final String DIRECT_RUNTIME_SERVICE_NAME = "xtcDirectRuntime";
 
     // All inherited from launcher task extension and turned into input
     final ConfigurableFileCollection modulePath;
@@ -78,6 +80,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     // via tasks.configureEach {} to work correctly. Configuration cache compatible.
     protected final Provider<@NotNull String> toolchainExecutable;
     protected final Provider<@NotNull String> projectVersion;
+    protected final Provider<DirectRuntimeBuildService> directRuntimeService;
 
     // Captured at configuration time to support xtcPluginOverrideVerboseLogging property
     private final boolean overrideVerboseLogging;
@@ -151,7 +154,13 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             return null;
         });
         this.projectVersion = project.provider(() -> project.getVersion().toString());
-        
+        // Direct mode needs a build-scoped runtime owner, not daemon-global static state.
+        // Registering the shared service here keeps it available to launcher tasks without
+        // forcing any particular execution mode to use it until execution time.
+        this.directRuntimeService = project.getGradle().getSharedServices()
+            .registerIfAbsent(DIRECT_RUNTIME_SERVICE_NAME, DirectRuntimeBuildService.class, spec -> {
+            });
+
         // Validate configuration-time captures for configuration cache compatibility
         validateConfigurationTimeCapture(this.xdkContentsDir, "XDK contents directory");
         validateConfigurationTimeCapture(this.sourceSetNames, "source set names");
@@ -393,6 +402,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @Internal
     protected Provider<@NotNull String> getProjectVersion() {
         return projectVersion;
+    }
+
+    @Internal
+    protected Provider<DirectRuntimeBuildService> getDirectRuntimeService() {
+        return directRuntimeService;
     }
 
     @Internal

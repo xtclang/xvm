@@ -294,7 +294,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     private ExecutionStrategy createCompileStrategy() {
         final ExecutionMode mode = getExecutionMode().get();
         return switch (mode) {
-            case DIRECT -> new DirectStrategy(logger);
+            case DIRECT -> new DirectStrategy(logger, getDirectRuntimeService());
             case ATTACHED -> new AttachedStrategy<>(logger, resolveJavaExecutable());
             case DETACHED -> throw new UnsupportedOperationException("DETACHED mode not supported for compile tasks");
         };

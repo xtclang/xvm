@@ -15,25 +15,32 @@ import org.xtclang.plugin.runtime.DirectRunRequest;
 import org.xtclang.plugin.runtime.DirectTestRequest;
 
 public final class IsolatedDirectExecutor {
+    private static final int DEFAULT_ERROR_LIMIT = 100;
+
     private IsolatedDirectExecutor() {
     }
 
+    /**
+     * These entry points are loaded inside {@link org.xtclang.plugin.runtime.PluginRuntimeClassLoader}.
+     * That is why this class is allowed to use the real javatools APIs directly while the outer
+     * Gradle task classes are not.
+     */
     public static int executeCompile(final DirectCompileRequest request, final Logger logger) {
-        final var err = new ErrorList(100);
+        final var err = new ErrorList(DEFAULT_ERROR_LIMIT);
         final var console = createConsole(logger);
         final var options = new IsolatedLauncherOptionsBuilder().buildCompilerOptions(request);
         return Launcher.launch(options, console, err);
     }
 
     public static int executeRun(final DirectRunRequest request, final Logger logger) {
-        final var err = new ErrorList(100);
+        final var err = new ErrorList(DEFAULT_ERROR_LIMIT);
         final var console = createConsole(logger);
         final var options = new IsolatedLauncherOptionsBuilder().buildRunnerOptions(request);
         return new Runner(options, console, err).run();
     }
 
     public static int executeTest(final DirectTestRequest request, final Logger logger) {
-        final var err = new ErrorList(100);
+        final var err = new ErrorList(DEFAULT_ERROR_LIMIT);
         final var console = createConsole(logger);
         final var options = new IsolatedLauncherOptionsBuilder().buildTestRunnerOptions(request);
         return new TestRunner(options, console, err).run();
