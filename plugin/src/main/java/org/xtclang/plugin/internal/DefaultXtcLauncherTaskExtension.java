@@ -39,6 +39,9 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     protected final Property<@NotNull String> stderrPath;
 
     protected DefaultXtcLauncherTaskExtension(final ObjectFactory objects, final ProviderFactory providers) {
+        final Provider<String> executionModeProperty =
+            providers.gradleProperty(XtcPluginConstants.PROPERTY_DEFAULT_EXECUTION_MODE);
+
         this.objects = objects;
         this.providers = providers;
         this.modulePath = objects.fileCollection();
@@ -46,10 +49,18 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         this.showVersion = objects.property(Boolean.class).convention(false);
         this.stdoutPath = objects.property(String.class);
         this.stderrPath = objects.property(String.class);
-        this.executionMode = objects.property(ExecutionMode.class).convention(XtcPluginConstants.DEFAULT_EXECUTION_MODE);
+        this.executionMode = objects.property(ExecutionMode.class).convention(
+            executionModeProperty
+                .map(DefaultXtcLauncherTaskExtension::parseExecutionMode)
+                .orElse(XtcPluginConstants.DEFAULT_EXECUTION_MODE)
+        );
         this.defaultJvmArgs = loadDefaultJvmArgs();
         this.jvmArgs = objects.listProperty(String.class).convention(defaultJvmArgs);
         LOGGER.info("[plugin] Loaded default JVM args: {}", defaultJvmArgs);
+        if (executionModeProperty.isPresent()) {
+            LOGGER.info("[plugin] Default execution mode overridden by Gradle property '{}={}'",
+                XtcPluginConstants.PROPERTY_DEFAULT_EXECUTION_MODE, executionModeProperty.get());
+        }
     }
 
     @Override
@@ -133,6 +144,20 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         } catch (final Exception e) {
             // Log warning and use fallback
             return DEFAULT_JVM_ARGS;
+        }
+    }
+
+    private static ExecutionMode parseExecutionMode(final String rawValue) {
+        final String value = rawValue.trim();
+        try {
+            return ExecutionMode.valueOf(value.toUpperCase());
+        } catch (final IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                "Invalid value for Gradle property '" + XtcPluginConstants.PROPERTY_DEFAULT_EXECUTION_MODE
+                    + "': '" + rawValue + "'. Expected one of: "
+                    + List.of(ExecutionMode.values()),
+                e
+            );
         }
     }
 }

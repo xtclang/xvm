@@ -876,7 +876,7 @@ jobs:
 
                   echo "✅ Consumer artifact commit matches current branch build"
 
-            - name: Run xtc-app-template with local XDK
+            - name: Run xtc-app-template with local XDK in attached and direct modes
               working-directory: ../xtc-app-template
               run: |
                   LOCAL_REPO_PATH="$GITHUB_WORKSPACE/artifacts/consumer-maven-repo"
@@ -887,8 +887,10 @@ jobs:
                   fi
                   echo "📦 Using staged local Maven repo at: $LOCAL_REPO_PATH"
                   find "$LOCAL_REPO_PATH/org/xtclang" -maxdepth 3 -type f | sed -n '1,40p'
-                  echo "🧪 Running xtc-app-template with locally published XDK..."
+                  echo "🧪 Running xtc-app-template in default attached mode..."
                   ./gradlew greet -PlocalOnly=true --no-daemon --refresh-dependencies -Dmaven.repo.local="$LOCAL_REPO_PATH"
+                  echo "🧪 Running xtc-app-template in direct mode via build-level override..."
+                  ./gradlew greet -PlocalOnly=true -PxtcDefaultExecutionMode=DIRECT --no-daemon --refresh-dependencies -Dmaven.repo.local="$LOCAL_REPO_PATH"
                   echo "✅ Integration test passed - plugin works with external projects"
 
             - name: Summary
@@ -898,7 +900,7 @@ jobs:
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "- **XDK Version:** ${{ steps.versions.outputs.xdk-version }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Template:** xtc-app-template" >> $GITHUB_STEP_SUMMARY
-                  echo "- **Test:** \`./gradlew greet -PlocalOnly=true\`" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Tests:** \`./gradlew greet -PlocalOnly=true\` and \`./gradlew greet -PlocalOnly=true -PxtcDefaultExecutionMode=DIRECT\`" >> $GITHUB_STEP_SUMMARY
 
     # Trigger publishing workflows for snapshots
     # Runs when:

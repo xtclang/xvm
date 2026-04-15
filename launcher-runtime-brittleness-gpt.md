@@ -743,12 +743,35 @@ Recent verification notes:
 - `:manualTests:runParallel` still exposes a runtime/interpreter failure in
   `TestNesting` (`Circular initialization "ecstasy.xtclang.org"`), but that
   occurs after successful plugin launch and is tracked separately from this refactor.
+- `./gradlew publishLocal` from the repository root completed successfully and
+  published both `org.xtclang:xtc-plugin:0.4.4-SNAPSHOT` and
+  `org.xtclang:xdk:0.4.4-SNAPSHOT` to Maven Local.
+- `../xtc-app-template` succeeded with
+  `./gradlew greet -PlocalOnly=true --refresh-dependencies --console=plain --info`,
+  which proved the third-party consumer path against the newly published artifacts:
+  the build resolved `org.xtclang.xtc-plugin:0.4.4-SNAPSHOT`, loaded the published
+  plugin jar from Gradle's transformed plugin cache, extracted
+  `~/.m2/repository/org/xtclang/xdk/0.4.4-SNAPSHOT/xdk-0.4.4-SNAPSHOT.zip`, then
+  compiled and ran `HelloWorld` successfully via the new plugin/runtime model.
+- `../xtc-app-template` also succeeded with the build-level direct override:
+  `./gradlew greet -PxtcDefaultExecutionMode=DIRECT -PlocalOnly=true --refresh-dependencies --info`.
+  After switching back to the default mode, Gradle invalidated configuration cache on
+  the property change and the launcher tasks reran because `executionMode` changed.
+- `../xtc-app-template` succeeded with direct-mode test execution after republishing:
+  `./gradlew testXtc -PxtcDefaultExecutionMode=DIRECT -PlocalOnly=true --refresh-dependencies --info`.
+  That run exposed and validated a real fix in the direct test-runner options builder:
+  the direct path must not inject runner-only `-M` semantics into `TestRunnerOptions`.
 
 Additional discoveries:
 
 - A Gradle shared `BuildService` is the right lifecycle boundary for direct-mode
   runtime reuse: build-scoped rather than daemon-global, and closed automatically
   when the build completes.
+- A build-level execution-mode override is more useful than task-local `--mode`
+  flags for alias tasks and third-party consumers. The plugin now supports
+  `-PxtcDefaultExecutionMode=DIRECT|ATTACHED|DETACHED`, which changes the default
+  launcher mode convention for plugin-created tasks without requiring the consumer
+  to call `runXtc` or `compileXtc` directly.
 - Runtime reuse should not be keyed only by file path and timestamps. The current
   implementation fingerprints runtime entries by content hash to avoid accidental
   reuse when self-hosting builds rewrite jars in place.
@@ -758,6 +781,151 @@ Additional discoveries:
   proof against every future subtle bug. The remaining uncertainty is around longer-term
   evolution: persistent/stateful compiler services, additional mixed-mode builds not yet
   covered by tests, and whether issue #426 follow-up churn is fully addressed.
+- The third-party template flow now works with that override as well:
+  `../xtc-app-template` succeeded with
+  `./gradlew greet -PxtcDefaultExecutionMode=DIRECT -PlocalOnly=true --refresh-dependencies --info`,
+  and the logs showed direct compile/run execution plus build-scoped isolated runtime
+  reuse from the newly published Maven Local plugin and XDK artifacts.
+- Direct-mode tests needed one additional correction that only showed up in the
+  external-consumer path: `TestRunnerOptions` does not accept the same method flag
+  shape as `RunnerOptions`, so the isolated direct builder must treat test launches
+  as test-runner launches, not generic runner launches.
+
+## Next Architecture: Reused External Runtime
+
+The next performance/stability step should not be "make the root composite build
+default to DIRECT". The current build-scoped direct runtime is a good opt-in path,
+but it still executes inside the Gradle daemon process. That means it cannot protect
+the build from JVM crashes, native failures, abrupt exits, or similar direct-mode
+catastrophes.
+
+The better target architecture is:
+
+- preserve the current explicit launcher runtime descriptor
+- preserve the current `DIRECT` path as an opt-in in-daemon fast path
+- add a reused external worker/daemon process keyed by the resolved launcher runtime
+- make that reused external process the likely long-term default for performance-sensitive
+  aggregate builds such as the XDK self-hosting build
+
+### Why This Is Better Than "DIRECT Everywhere"
+
+- It amortizes JVM startup cost across many compile/test invocations.
+- It keeps launcher/runtime crashes outside the Gradle daemon.
+- It preserves runtime selection by resolved XDK fingerprint.
+- It leaves room for future stateful compiler/typechecker services without reintroducing
+  daemon-global classloader mutation.
+
+### Candidate Designs
+
+#### 1. Gradle Worker API with process isolation
+
+Pros:
+- Uses Gradle-owned process isolation.
+- Cleaner lifecycle management.
+- Better fit if each launcher invocation is still mostly request/response.
+
+Cons:
+- May not provide enough control over true process reuse and runtime pinning.
+- Less obvious fit if we later want a long-lived compiler service with internal state.
+
+#### 2. Plugin-managed external daemon keyed by runtime fingerprint
+
+Pros:
+- Explicit control over process reuse, runtime fingerprint, and protocol.
+- Strong fit for future persistent compiler/typechecker services.
+- Clear separation between Gradle daemon and javatools runtime process.
+
+Cons:
+- More code: protocol, startup, handshake, shutdown, health checks.
+- More verification burden.
+
+Current recommendation:
+
+- prototype the plugin-managed external daemon path first if we want the best long-term
+  architecture for XDK self-hosting and future incremental services
+- otherwise prototype Worker API first if the immediate goal is only to cut per-task JVM
+  startup overhead with minimal surface area
+
+### Incremental Plan
+
+1. Define the execution boundary.
+- Keep the current direct request DTO shape as the initial transport boundary.
+- Do not collapse back to raw argv strings unless needed for bootstrap fallback.
+- Keep launcher-runtime resolution exactly as it is now.
+
+2. Introduce an external runtime owner.
+- Add a new runtime owner keyed by the resolved launcher runtime fingerprint.
+- The owner should manage:
+  - process startup
+  - handshake / liveness
+  - request dispatch
+  - shutdown
+  - stderr/stdout routing
+
+3. Add a narrow protocol.
+- Start simple:
+  - `compile(request)`
+  - `run(request)`
+  - `test(request)`
+- Use plain serializable request/response objects.
+- Include protocol version and runtime fingerprint in the handshake.
+
+4. Implement a bootstrap launcher in plugin/javatools-facing code.
+- This process should start with the resolved runtime classpath.
+- It should load the same isolated executor implementation logic, but in its own JVM.
+- It should never mutate the Gradle daemon.
+
+5. Add health and invalidation rules.
+- Invalidate/restart when:
+  - runtime fingerprint changes
+  - plugin code source changes
+  - protocol version changes
+  - process exits unexpectedly
+- Add explicit idle/build-end shutdown rules.
+
+6. Route selected launcher tasks to the external daemon.
+- Start with compile tasks only.
+- Then test tasks.
+- Then evaluate run tasks separately; they may need different stdout/stderr semantics.
+
+7. Benchmark against real aggregate workflows.
+- Measure from the repo root, not just isolated subprojects.
+- Use representative commands such as:
+  - `./gradlew build`
+  - `./gradlew :xdk:build`
+  - `./gradlew :manualTests:runTestAllExecutionModes`
+- Compare:
+  - current ATTACHED per-task fork
+  - current DIRECT
+  - reused external worker/daemon
+
+8. Decide default mode only after verification.
+- Do not flip the global default based on intuition.
+- Require proof that:
+  - performance improves for real root aggregate builds
+  - crashes do not poison the Gradle daemon
+  - mixed execution modes remain safe
+
+### New Risks To Track
+
+- Protocol drift between plugin-side request DTOs and runtime-side executor logic.
+- External process lifecycle leaks or orphan processes.
+- Incorrect reuse across runtime or plugin version changes.
+- Output handling regressions for test tasks and xunit output.
+- Interaction with Gradle configuration cache and included-build task fan-out.
+
+### Verification Matrix For The Next Step
+
+- Same build, repeated compile requests using the same runtime fingerprint.
+- Same daemon, separate builds with changed plugin commit/build-info.
+- Same daemon, separate builds with changed XDK runtime jars.
+- Mixed `DIRECT`, reused external worker, and `ATTACHED` tasks in the same overall build.
+- Root aggregate `build` from the repo root with optional included builds enabled.
+- Failure injection:
+  - external process crash
+  - protocol mismatch
+  - abrupt exit during compile
+  - bad runtime fingerprint reuse attempt
 
 
 ## Bottom Line

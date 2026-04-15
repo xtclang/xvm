@@ -61,7 +61,6 @@ final class IsolatedLauncherOptionsBuilder {
             .setXUnitOutputDirectory(request.outputDir().getAbsolutePath());
         builder.enableShowVersion(request.showVersion())
             .enableVerbose(request.verbose())
-            .setMethodName(request.methodName())
             .setTarget(request.moduleName(), request.moduleArgs())
             .noRecompile();
 
