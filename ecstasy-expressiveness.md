@@ -26,17 +26,18 @@ the statement/expression divide, and `void` as a non-type.
    - [Why let/run collapse without receiver lambdas](#why-letrun-collapse)
    - [Refined type preservation](#refined-type-preservation)
 6. [Usage examples (Kotlin vs. proposed Ecstasy vs. today)](#usage-examples)
-7. [Implementation options](#implementation-options)
+7. [Related Kotlin constructs: runCatching, takeIf, builders](#related-kotlin-constructs-worth-considering)
+8. [Implementation options](#implementation-options)
    - [Option 1: Methods on Object (recommended)](#option-1-methods-on-object-recommended)
    - [Option 2: Top-level generic functions only](#option-2-top-level-generic-functions-only)
    - [Option 3: Compiler-supported receiver lambdas (aspirational)](#option-3-compiler-supported-receiver-lambdas-aspirational)
    - [Option 4: Hybrid -- methods on Object + compiler narrowing](#option-4-hybrid----methods-on-object--compiler-narrowing-recommended-path)
-8. [Comparison with existing Ecstasy idioms](#comparison-with-existing-ecstasy-idioms)
-9. [Scope functions recommendation](#recommendation)
+9. [Comparison with existing Ecstasy idioms](#comparison-with-existing-ecstasy-idioms)
+10. [Scope functions recommendation](#recommendation)
 
 ### Part II: Codebase analysis
 
-10. [Imperative patterns in the XDK and platform code](#analysis-imperative-patterns-in-the-xdk-and-platform-code)
+11. [Imperative patterns in the XDK and platform code](#analysis-imperative-patterns-in-the-xdk-and-platform-code)
     - [Category 1: "Lazy Ecstasy" -- better code is possible today](#category-1-lazy-ecstasy----the-language-already-allows-better)
     - [Category 2: "Missing construct" -- the language forces imperative code](#category-2-missing-construct----the-language-forces-imperative-code)
     - [Summary of findings](#summary-of-findings)
@@ -44,7 +45,7 @@ the statement/expression divide, and `void` as a non-type.
 
 ### Part III: The expression problem
 
-11. [void, if, and the cost of statements](#the-expression-problem-void-if-and-the-cost-of-statements)
+12. [void, if, and the cost of statements](#the-expression-problem-void-if-and-the-cost-of-statements)
     - [void is not a type](#void-is-not-a-type)
     - [How void breaks fluency](#how-void-breaks-fluency)
     - [The if-as-statement limitation](#the-if-as-statement-limitation)
@@ -687,6 +688,173 @@ Result result = fetchData()
     ?.run(valid -> transform(valid))
     ?: defaultValue;
 ```
+
+### Related Kotlin constructs worth considering
+
+Beyond the five core scope functions, Kotlin's standard library includes
+several closely related functions that address the same "make common patterns
+concise and expression-oriented" goal. These are worth evaluating for Ecstasy.
+
+#### `runCatching` -- exception-to-value conversion
+
+`runCatching` executes a block and wraps the result in a `Result<T>`: success
+produces `Result.success(value)`, any thrown exception produces
+`Result.failure(exception)`. This converts exception-based flow into
+value-based flow, enabling functional error handling.
+
+```kotlin
+// Kotlin
+val config = runCatching { parseConfig(file) }
+    .getOrDefault(defaultConfig)
+
+val content = runCatching { file.readText() }
+    .onFailure { log.warn("Read failed: ${it.message}") }
+    .getOrNull()
+```
+
+Ecstasy has no equivalent. The `try/catch` block is the only way to convert
+exceptions into values, which forces statement-position:
+
+```x
+// Ecstasy today -- must use try/catch block
+String content;
+try {
+    content = file.contents.unpackUtf8();
+} catch (Exception e) {
+    content = "[unreadable]";
+}
+
+// Proposed -- runCatching as a library function
+String content = runCatching(() -> file.contents.unpackUtf8())
+    .getOrDefault("[unreadable]");
+```
+
+`runCatching` is really just `run` wrapped in a `try/catch` that returns a
+`Result`. With scope functions on `Object` and a `Result` type (see Part IV),
+it could be implemented as a library function:
+
+```x
+<T> Result<T, Exception> runCatching(function T() block) {
+    try {
+        return new Success(block());
+    } catch (Exception e) {
+        return new Failure(e);
+    }
+}
+```
+
+This is particularly relevant for the platform code, where `try/catch` is
+used as flow control in many places (e.g., `HostManager.createWebHost`,
+`ModuleEndpoint.buildModuleInfo`, `kernel.x:96-98`).
+
+#### `takeIf` / `takeUnless` -- conditional filtering in expression position
+
+These return the receiver if a predicate is true (`takeIf`) or false
+(`takeUnless`), or `null` otherwise. They convert an if-then-null pattern
+into a chainable expression.
+
+```kotlin
+// Kotlin
+val file = path.takeIf { it.exists() } ?: defaultPath
+val input = readLine()?.takeUnless { it.isBlank() }
+```
+
+```x
+// Ecstasy today -- requires if block or ternary
+String? input = readLine();
+if (input != Null && input.size == 0) {
+    input = Null;
+}
+
+// Proposed -- takeIf as a method on Object
+String? input = readLine()?.takeIf(s -> s.size > 0);
+```
+
+`takeIf` is especially useful with `?.` for filtering nullable values in
+expression position. The signatures would be:
+
+```x
+// On Object
+Object? takeIf(function Boolean(Object) predicate) {
+    return predicate(this) ? this : Null;
+}
+
+Object? takeUnless(function Boolean(Object) predicate) {
+    return predicate(this) ? Null : this;
+}
+```
+
+#### `buildList` / `buildMap` / `buildString` -- scoped builders
+
+These are specialized scope functions that create a mutable builder, pass it
+to a block, and return the immutable result:
+
+```kotlin
+// Kotlin
+val csv = buildString {
+    append("name,age\n")
+    for (user in users) {
+        append("${user.name},${user.age}\n")
+    }
+}
+
+val lookup = buildMap {
+    for (item in items) {
+        put(item.key, item.value)
+    }
+}
+```
+
+Ecstasy can approximate this today with block expressions, but scope
+functions would make it cleaner:
+
+```x
+// Ecstasy today -- block expression with explicit return
+String csv = {
+    StringBuffer buf = new StringBuffer();
+    buf.addAll("name,age\n");
+    for (User user : users) {
+        buf.addAll($"{user.name},{user.age}\n");
+    }
+    return buf.toString();
+};
+
+// With apply (proposed) -- no intermediate variable name
+String csv = new StringBuffer().apply(buf -> {
+    buf.addAll("name,age\n");
+    for (User user : users) {
+        buf.addAll($"{user.name},{user.age}\n");
+    }
+}).toString();
+```
+
+#### `repeat` -- execute a block N times
+
+```kotlin
+repeat(3) { println("hello") }
+```
+
+This is trivial but frequently useful. Ecstasy's equivalent is a `for` loop
+over a range, which is slightly more verbose:
+
+```x
+// Ecstasy today
+for (Int i : 0 ..< 3) {
+    console.print("hello");
+}
+```
+
+This is fine -- the range syntax is concise enough that a dedicated `repeat`
+function adds minimal value. Not recommended for inclusion.
+
+#### Summary
+
+| Function | Category | Value for Ecstasy | Depends on |
+|----------|----------|-------------------|------------|
+| `runCatching` | Error handling | High | Result type |
+| `takeIf` / `takeUnless` | Conditional filtering | Medium | Self-type for correct return type |
+| `buildList` / `buildMap` / `buildString` | Scoped builders | Medium | Scope functions (apply) cover most of this |
+| `repeat` | Iteration | Low | Range syntax already covers this |
 
 ## Implementation options
 
@@ -2708,32 +2876,11 @@ try {
 
 #### Missing: `runCatching` / exception-to-value conversion
 
-Kotlin provides `runCatching { ... }` which executes a block and returns
-`Result<T>` -- converting exceptions into typed values. Ecstasy has no
-equivalent. This means every "try this, fall back on failure" pattern
-requires a full `try/catch` block:
-
-```x
-// Ecstasy today -- verbose try/catch for simple fallback
-String content;
-try {
-    content = file.contents.unpackUtf8();
-} catch (Exception e) {
-    content = "[unreadable]";
-}
-
-// Kotlin -- one expression with runCatching
-val content = runCatching { file.readText() }.getOrDefault("[unreadable]")
-
-// Proposed Ecstasy -- if scope functions + Result existed
-String content = runCatching(() -> file.contents.unpackUtf8())
-    .getOrDefault("[unreadable]");
-```
-
-This is closely related to scope functions -- `runCatching` is essentially
-`run` wrapped in a try/catch that returns a `Result`. With scope functions
-on `Object` and a `Result` type, `runCatching` could be a library function
-rather than a language feature.
+Ecstasy has no equivalent of Kotlin's `runCatching`, which converts
+exception-based flow into value-based flow. With scope functions and a
+`Result` type, `runCatching` could be a library function. See the
+[Related Kotlin constructs](#related-kotlin-constructs-worth-considering)
+section in Part I for detailed analysis and proposed implementation.
 
 **Effort estimate**: Small for the type itself (just a `const` class).
 Depends on sealed types and pattern matching for full ergonomic benefit.
