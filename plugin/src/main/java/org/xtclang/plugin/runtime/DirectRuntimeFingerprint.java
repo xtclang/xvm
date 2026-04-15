@@ -26,6 +26,12 @@ record DirectRuntimeFingerprint(
         String pluginCodeSource,
         List<String> classpathEntries) {
 
+    String describeForLogging() {
+        return "source=" + source
+            + ", pluginCodeSource=" + pluginCodeSource
+            + ", classpathEntries=" + classpathEntries;
+    }
+
     static DirectRuntimeFingerprint from(final XtcLauncherRuntime runtime, final URL pluginCodeSource) {
         return new DirectRuntimeFingerprint(
             runtime.source(),
