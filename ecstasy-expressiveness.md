@@ -743,9 +743,44 @@ it could be implemented as a library function:
 }
 ```
 
-This is particularly relevant for the platform code, where `try/catch` is
-used as flow control in many places (e.g., `HostManager.createWebHost`,
-`ModuleEndpoint.buildModuleInfo`, `kernel.x:96-98`).
+Real codebase examples where `runCatching` would help:
+
+```x
+// Existing (platform/auth/UserEndpoint.x:187-193)
+// try/catch used purely for "return conflict if it exists" fallback
+try {
+    Credential credential = new DigestCredential(realm.name, name, password);
+    Principal  principal  = new Principal(0, name, credentials=[credential]);
+    return redact(realm.createPrincipal(principal));
+} catch (Exception e) {
+    return Conflict; // already exists
+}
+
+// With runCatching -- one expression
+return runCatching(() -> {
+    Credential credential = new DigestCredential(realm.name, name, password);
+    Principal  principal  = new Principal(0, name, credentials=[credential]);
+    return redact(realm.createPrincipal(principal));
+}).getOrDefault(Conflict);
+```
+
+```x
+// Existing (platform/host/HostManager.x:359-365)
+// try/catch with empty catch block -- "try this, ignore failure"
+try {
+    @Inject("keystore", opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
+    httpServer.addRoute(hostName, handler, keystore,
+        tlsKey=hostName, cookieKey=names.CookieEncryptionKey);
+    return;
+} catch (Exception ignore) {}
+
+// With runCatching -- intent is clear: "try to add secured route, fall through if not"
+runCatching(() -> {
+    @Inject("keystore", opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
+    httpServer.addRoute(hostName, handler, keystore,
+        tlsKey=hostName, cookieKey=names.CookieEncryptionKey);
+});
+```
 
 #### `takeIf` / `takeUnless` -- conditional filtering in expression position
 
@@ -769,6 +804,43 @@ if (input != Null && input.size == 0) {
 // Proposed -- takeIf as a method on Object
 String? input = readLine()?.takeIf(s -> s.size > 0);
 ```
+
+Real codebase example:
+
+```x
+// Existing (platform/host/HostManager.x:132-155)
+// Scan for least-active app -- variable starts Null, conditionally set
+String? maxInactiveName   = Null;
+Int     maxInactiveCycles = 0;
+for ((String name, CircularBuffer<Int> stats) : activityHistogram) {
+    if (stats.size <= MinHistogramHeight) {
+        continue;
+    }
+    Int inactiveCycles = 0;
+    for (Int i : 1 ..< stats.size) {
+        if (stats[i] == stats[i-1]) { inactiveCycles++; } else { break; }
+    }
+    if (inactiveCycles > maxInactiveCycles) {
+        maxInactiveName   = name;
+        maxInactiveCycles = inactiveCycles;
+    }
+}
+if (maxInactiveName != Null) {
+    pause(maxInactiveName, Inactivity);
+}
+
+// This is a reduce/maxBy pattern. With takeIf + functional operations:
+// activityHistogram.entries
+//     .filter(e -> e.value.size > MinHistogramHeight)
+//     .maxBy(e -> countInactiveCycles(e.value))
+//     ?.takeIf(e -> countInactiveCycles(e.value) > 0)
+//     ?.also(e -> pause(e.key, Inactivity));
+```
+
+The `takeIf` here is the last step -- "only pause if we actually found an
+inactive app." The bigger win is using functional collection operations
+(`maxBy`, `filter`) instead of the imperative loop, which Ecstasy's iterator
+API already mostly supports.
 
 `takeIf` is especially useful with `?.` for filtering nullable values in
 expression position. The signatures would be:
@@ -806,26 +878,71 @@ val lookup = buildMap {
 ```
 
 Ecstasy can approximate this today with block expressions, but scope
-functions would make it cleaner:
+functions would make it cleaner.
+
+Real codebase examples:
 
 ```x
-// Ecstasy today -- block expression with explicit return
-String csv = {
-    StringBuffer buf = new StringBuffer();
-    buf.addAll("name,age\n");
-    for (User user : users) {
-        buf.addAll($"{user.name},{user.age}\n");
+// Existing (platform/AppEndpoint.x:49-58) -- build map, freeze, return
+Map<String, AppInfo> checkStatus() {
+    if (AccountInfo accountInfo := accountManager.getAccount(accountName)) {
+        HashMap<String, AppInfo> status = new HashMap();
+        for ((String deployment, AppInfo appInfo) : accountInfo.apps) {
+            status.put(deployment, appInfo.with(active=isActive(deployment)).redact());
+        }
+        return status.freeze(inPlace=True);
     }
-    return buf.toString();
-};
+    return [];
+}
 
-// With apply (proposed) -- no intermediate variable name
-String csv = new StringBuffer().apply(buf -> {
-    buf.addAll("name,age\n");
-    for (User user : users) {
-        buf.addAll($"{user.name},{user.age}\n");
+// With buildMap -- one expression, no intermediate variable
+Map<String, AppInfo> checkStatus() {
+    if (AccountInfo accountInfo := accountManager.getAccount(accountName)) {
+        return buildMap(m -> {
+            for ((String deployment, AppInfo appInfo) : accountInfo.apps) {
+                m.put(deployment, appInfo.with(active=isActive(deployment)).redact());
+            }
+        });
     }
-}).toString();
+    return [];
+}
+```
+
+```x
+// Existing (platform/AppEndpoint.x:236-243) -- build JSON array
+JsonArray keys = new JsonArray();
+for (InjectionKey key : appInfo.injections.keys) {
+    keys += Map:["name"=key.name, "type"=key.type];
+}
+String jsonString = json.Printer.DEFAULT.render(keys);
+
+// With buildList
+String jsonString = json.Printer.DEFAULT.render(
+    buildList(keys -> {
+        for (InjectionKey key : appInfo.injections.keys) {
+            keys += Map:["name"=key.name, "type"=key.type];
+        }
+    })
+);
+```
+
+```x
+// Existing (platform/AppEndpoint.x:665-674) -- build injection map
+injections = new ListMap();
+for (InjectionKey key : injectionKeys) {
+    injections.put(key, "");
+}
+injections.makeImmutable();
+return injections;
+
+// Lazy Ecstasy -- already possible today with map literal comprehension?
+// Not quite -- the keys come from a dynamic list, so a builder is needed.
+// With buildMap:
+return buildMap(m -> {
+    for (InjectionKey key : injectionKeys) {
+        m.put(key, "");
+    }
+});
 ```
 
 #### `repeat` -- execute a block N times

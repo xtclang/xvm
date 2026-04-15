@@ -69,6 +69,9 @@ module ExpressivenessTests {
         test_ConditionalReturnMultiValue();
         test_ArraySlice();
         test_Mixin();
+        test_TryCatchFallback();
+        test_BlockExpressionBuilder();
+        test_RepeatViaRange();
 
         console.print("\n=== All tests passed ===");
     }
@@ -788,6 +791,62 @@ module ExpressivenessTests {
         assert msg.indexOf("Hi from");
         assert msg.indexOf("world");
         console.print($"  PASS: mixin = {msg}");
+    }
+
+    // =========================================================================
+    // Related Kotlin constructs: patterns that work today
+    // =========================================================================
+
+    /**
+     * try/catch as fallback (what runCatching would replace).
+     * Document: "try/catch block is the only way to convert exceptions into values"
+     */
+    void test_TryCatchFallback() {
+        console.print("\n** test_TryCatchFallback()");
+        // Pattern: try to parse, fall back on failure
+        Int value;
+        try {
+            value = new Int("not-a-number");
+        } catch (Exception e) {
+            value = -1;
+        }
+        assert value == -1;
+        console.print($"  PASS: try/catch fallback = {value}");
+    }
+
+    /**
+     * Block expression as builder (what buildMap/buildList would replace).
+     * Document: "block expression with explicit return"
+     */
+    void test_BlockExpressionBuilder() {
+        console.print("\n** test_BlockExpressionBuilder()");
+        // Build a map imperatively, return frozen
+        Map<String, Int> counts = {
+            HashMap<String, Int> m = new HashMap();
+            for (String word : ["a", "b", "a", "c", "b", "a"]) {
+                m.put(word, m.getOrDefault(word, 0) + 1);
+            }
+            return m.freeze(inPlace=True);
+        };
+        assert counts["a"] == 3;
+        assert counts["b"] == 2;
+        assert counts["c"] == 1;
+        console.print($"  PASS: block expression builder = {counts}");
+    }
+
+    /**
+     * Repeat via range (what repeat() would replace -- already concise enough).
+     * Document: "range syntax is concise enough that a dedicated repeat function
+     *           adds minimal value"
+     */
+    void test_RepeatViaRange() {
+        console.print("\n** test_RepeatViaRange()");
+        @Volatile Int counter = 0;
+        for (Int i : 0 ..< 5) {
+            counter++;
+        }
+        assert counter == 5;
+        console.print($"  PASS: repeat via range = {counter}");
     }
 
     // =========================================================================
