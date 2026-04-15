@@ -2100,6 +2100,25 @@ Sealed types close this gap. They are the natural generalization of enums to
 types that carry data, and every modern language that has adopted them reports
 that they dramatically reduce "forgot to handle the new case" bugs.
 
+#### Who has sealed types
+
+| Language | Feature | Since | Syntax |
+|----------|---------|-------|--------|
+| **Java** | `sealed class/interface ... permits` | Java 17 (2021) | `sealed interface Shape permits Circle, Rect` |
+| **Kotlin** | `sealed class/interface` | Kotlin 1.0 (2016) | `sealed class Result<T>` |
+| **Scala** | `sealed trait/class` | Scala 2.0 (2006) | `sealed trait Option[+A]` |
+| **Rust** | `enum` (algebraic data type) | Rust 1.0 (2015) | `enum Result<T, E> { Ok(T), Err(E) }` |
+| **Swift** | `enum` with associated values | Swift 1.0 (2014) | `enum Result<T> { case success(T), failure(Error) }` |
+| **C#** | No dedicated keyword | -- | Approximated with `abstract record` + exhaustive switch (C# 11) |
+| **TypeScript** | Discriminated unions | TS 2.0 (2016) | `type Shape = Circle \| Rect` with exhaustiveness checking |
+| **Ecstasy** | Not implemented | -- | `@Sealed` mentioned in docs; enum exhaustiveness exists |
+
+The trend is unmistakable: sealed types are now considered a baseline feature
+for any language with a static type system. Java -- historically the most
+conservative mainstream language -- added them in 2021. Their absence from
+Ecstasy stands out, especially given that the compiler already has the
+exhaustiveness machinery for enums.
+
 **Effort estimate**: Medium. The compiler already has exhaustiveness checking
 for enums. Extending it to sealed class hierarchies requires tracking which
 types are permitted subtypes and wiring that information into the switch
@@ -2191,6 +2210,24 @@ The existing switch infrastructure (expression form, type dispatch, tuples)
 provides a solid foundation. Destructuring in case branches and guard clauses
 would extend it without introducing a new keyword or construct.
 
+#### Who has pattern matching with destructuring
+
+| Language | Destructuring in match | Guard clauses | Nested patterns | Since |
+|----------|----------------------|---------------|-----------------|-------|
+| **Rust** | Yes (`Enum(x, y)`) | Yes (`if cond`) | Yes (deep nesting) | 1.0 (2015) |
+| **Scala** | Yes (`case Class(x, y)`) | Yes (`if cond`) | Yes | 2.0 (2006) |
+| **Kotlin** | Partial (no destructuring in `when`) | No (use nested `if`) | No | -- |
+| **Swift** | Yes (`case .variant(let x)`) | Yes (`where cond`) | Yes | 1.0 (2014) |
+| **Java** | Yes (`case Point(x, y)`) | Yes (`when cond`) | Yes | 21 (2023, preview) |
+| **C#** | Yes (`case Point(x, y)`) | Yes (`when cond`) | Yes | 8.0 (2019) |
+| **Haskell** | Yes (core language feature) | Yes (`\| guard`) | Yes | 1.0 (1990) |
+| **Ecstasy** | No (type dispatch + manual extract) | No | No | -- |
+
+Ecstasy is behind even Java here -- Java 21 added destructuring patterns with
+guards and nesting. For a language that positions itself as modern and
+expressive, this gap is noticeable. The good news is that Ecstasy's existing
+switch-as-expression and type dispatch provide a solid foundation to build on.
+
 **Effort estimate**: Significant. Destructuring in patterns requires the
 compiler to understand which types support positional extraction (const types
 with known field order are natural candidates). Guard clauses are simpler --
@@ -2274,6 +2311,26 @@ Ecstasy's `conditional` returns should remain for the common "found/not found"
 case -- they're more concise than `Result` when the failure case is simple.
 `Result` is for when failure is as informative as success.
 
+#### Who has Result types
+
+| Language | Type | Error propagation | Since |
+|----------|------|-------------------|-------|
+| **Rust** | `Result<T, E>` | `?` operator (early return on error) | 1.0 (2015) |
+| **Swift** | `Result<Success, Failure>` | `try`/`catch` interop + `.get()` throws | 5.0 (2019) |
+| **Kotlin** | `Result<T>` | `.getOrElse()`, `.fold()`, `runCatching {}` | 1.3 (2018) |
+| **Scala** | `Either[L, R]`, `Try[T]` | `.flatMap()`, for-comprehensions | 2.0 (2006) |
+| **Haskell** | `Either a b`, `Maybe a` | `do`-notation, monadic bind | 1.0 (1990) |
+| **Java** | `Optional<T>` (partial) | `.orElse()`, `.map()` | 8 (2014) |
+| **C#** | No standard type | Community libraries (OneOf, ErrorOr) | -- |
+| **TypeScript** | No standard type | Community convention (discriminated unions) | -- |
+| **Ecstasy** | `conditional` returns (partial) | `:=` binding in `if` | Current |
+
+Ecstasy's `conditional` returns are a creative solution that covers the
+"found/not found" case more concisely than most languages. But for typed error
+handling, every systems-oriented language has moved toward Result types. Rust's
+`?` operator in particular has proven that error propagation can be concise
+*and* type-safe -- a lesson worth studying.
+
 **Effort estimate**: Small for the type itself (just a `const` class).
 Depends on sealed types and pattern matching for full ergonomic benefit.
 Without those, it's just a class with `.is()` checks -- no better than what
@@ -2327,6 +2384,22 @@ methods are powerful but can make code harder to navigate. Ecstasy's explicit
 mixin approach is safer but more verbose. Whether to add extension methods
 is a philosophical choice that depends on how much the language wants to
 prioritize discoverability vs. composability.
+
+#### Who has extension methods
+
+| Language | Mechanism | Scoping | Since |
+|----------|-----------|---------|-------|
+| **Kotlin** | `fun Type.method()` | File/import scoped | 1.0 (2016) |
+| **Swift** | `extension Type { }` | Module scoped | 1.0 (2014) |
+| **C#** | `static void Method(this Type t)` | Namespace scoped | 3.0 (2007) |
+| **Rust** | `impl Trait for Type` (traits) | Crate/import scoped | 1.0 (2015) |
+| **Scala** | `implicit class`/`extension` | Import scoped | 2.10 (2013) / 3.0 (2021) |
+| **Java** | Not present | -- | -- |
+| **Ecstasy** | Mixins (`mixin M into T`) | Declaration-site only | Current |
+
+Ecstasy's mixin approach is closer to Rust's trait system than to Kotlin's
+extension functions -- it's more principled but less ad-hoc. Java also lacks
+extension methods and has survived without them, so this is not a critical gap.
 
 If Ecstasy chose to add them, a reasonable design would be module-scoped
 extensions (visible only within the importing module), avoiding the
@@ -2390,18 +2463,18 @@ This is a low-priority gap that scope functions would mostly address.
 
 ### Summary: what's missing vs. what's deliberate
 
-| Feature | Status | Priority | Builds on |
-|---------|--------|----------|-----------|
-| **Sealed types** | Conceptualized but not implemented | High | Existing enum exhaustiveness |
-| **Pattern matching with destructuring** | Partial (type dispatch, tuples) | High | Existing switch expression |
-| **Result type** | Not present | Medium | Sealed types + pattern matching |
-| **Extension methods** | Not present (mixins are alternative) | Low | Deliberate design choice |
-| **Collection factories** | Mostly solved by literals | Low | Scope functions fill the gap |
-| **`if` as expression** | Not present | High | See Part III |
-| **`void` as `Unit` type** | Not present | Medium | See Part III |
-| **Scope functions** | Not present | High | See Part I |
-| **Pipe operator** | Not present | Low | Scope functions are sufficient |
-| **Raw strings** | Not present | Low | Nice to have |
+| Feature | Status | Priority | Who has it | Builds on |
+|---------|--------|----------|------------|-----------|
+| **Sealed types** | Conceptualized, not implemented | High | Java 17, Kotlin, Rust, Swift, Scala | Existing enum exhaustiveness |
+| **Pattern matching** | Partial (type dispatch, tuples) | High | Rust, Java 21, C# 8, Swift, Scala | Existing switch expression |
+| **`if` as expression** | Not present | High | Kotlin, Rust, Scala, Ruby, Swift 5.9 | See Part III |
+| **Scope functions** | Not present | High | Kotlin, Ruby, Scala, Rust (via crate) | See Part I |
+| **Result type** | Not present (`conditional` is partial) | Medium | Rust, Swift, Kotlin, Scala, Haskell | Sealed types + pattern matching |
+| **`void` as `Unit` type** | Not present | Medium | Kotlin, Rust, Scala, Swift, Haskell | See Part III |
+| **Extension methods** | Not present (mixins alternative) | Low | Kotlin, Swift, C#, Rust (traits) | Deliberate design choice |
+| **Collection factories** | Mostly solved by literals | Low | Kotlin, Scala, Java 9+ | Scope functions fill the gap |
+| **Pipe operator** | Not present | Low | F#, Elixir, R, JS (proposed) | Scope functions are sufficient |
+| **Raw strings** | Not present | Low | Kotlin, Rust, C#, Python, Java 15+ | Nice to have |
 
 The three highest-impact additions would be **sealed types**, **pattern matching
 with destructuring**, and **scope functions** (covered in Part I). These three
