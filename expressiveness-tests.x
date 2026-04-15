@@ -9,10 +9,10 @@
  * void-as-type, sealed types, destructuring patterns) are listed at the
  * bottom as commented-out code with the expected compiler error.
  *
- * Compile: xcc scope-function-tests.x
- * Run:     xec scope-function-tests.xtc
+ * Compile: xcc expressiveness-tests.x
+ * Run:     xec expressiveness-tests.xtc
  */
-module ScopeFunctionTests {
+module ExpressivenessTests {
     @Inject ecstasy.io.Console console;
 
     void run() {
@@ -59,6 +59,16 @@ module ScopeFunctionTests {
         test_RangeMatchInSwitch();
         test_WildcardInTupleSwitch();
         test_MultiValueCase();
+
+        console.print("\n=== Additional pattern tests ===");
+
+        test_MultilineStringTemplate();
+        test_Typedef();
+        test_VarConditionalReassignment();
+        test_VolatileClosureCapture();
+        test_ConditionalReturnMultiValue();
+        test_ArraySlice();
+        test_Mixin();
 
         console.print("\n=== All tests passed ===");
     }
@@ -649,6 +659,135 @@ module ScopeFunctionTests {
         };
         assert result == "odd";
         console.print($"  PASS: multi-value case = {result}");
+    }
+
+    // =========================================================================
+    // Part III additional: expression-related patterns
+    // =========================================================================
+
+    /**
+     * Multiline string template with $| syntax.
+     * Document: "Ecstasy has multiline string templates with $|"
+     */
+    void test_MultilineStringTemplate() {
+        console.print("\n** test_MultilineStringTemplate()");
+        String name = "Ecstasy";
+        Int version = 1;
+        String s = $|Hello {name},
+                    |version {version}
+                    ;
+        assert s.indexOf("Hello Ecstasy");
+        assert s.indexOf("version 1");
+        console.print($"  PASS: multiline template = [{s}]");
+    }
+
+    /**
+     * typedef -- type alias.
+     * Document: "typedef Appender<String> as Log"
+     */
+    typedef function Int(Int, Int) as BinaryOp;
+
+    void test_Typedef() {
+        console.print("\n** test_Typedef()");
+        BinaryOp add = (a, b) -> a + b;
+        BinaryOp mul = (a, b) -> a * b;
+        assert add(3, 4) == 7;
+        assert mul(3, 4) == 12;
+        console.print($"  PASS: typedef = add(3,4)={add(3, 4)}, mul(3,4)={mul(3, 4)}");
+    }
+
+    /**
+     * var reassignment for conditional pipeline.
+     * Document: "var result = ... ; if (cond) { result = result.flatMap(...); }"
+     * This is the Header.x pattern from Part III -- verifying that var
+     * reassignment works as described.
+     */
+    void test_VarConditionalReassignment() {
+        console.print("\n** test_VarConditionalReassignment()");
+        String[] items = ["a,b", "c", "d,e,f"];
+        Boolean expand = True;
+        var result = items.iterator();
+        if (expand) {
+            result = result.flatMap((String s) -> s.split(','));
+        }
+        String[] collected = result.toArray();
+        assert collected.size == 6; // a, b, c, d, e, f
+        console.print($"  PASS: var conditional reassign = {collected}");
+    }
+
+    /**
+     * @Volatile for closure mutation.
+     * Document: "@Volatile for variables that need to be modified from within lambdas"
+     */
+    void test_VolatileClosureCapture() {
+        console.print("\n** test_VolatileClosureCapture()");
+        @Volatile Int counter = 0;
+        function void() increment = () -> { counter++; };
+        increment();
+        increment();
+        increment();
+        assert counter == 3;
+        console.print($"  PASS: @Volatile closure capture = {counter}");
+    }
+
+    /**
+     * Conditional return used with := binding.
+     * Document: "conditional Config parse(String input) { ... }
+     *           if (Config config := parse(input)) { ... }"
+     * Tests the pattern that Result types would complement.
+     */
+    conditional (String, Int) parseKeyValue(String input) {
+        if (Int eq := input.indexOf('=')) {
+            return True, input[0 ..< eq], new Int(input.substring(eq + 1));
+        }
+        return False;
+    }
+
+    void test_ConditionalReturnMultiValue() {
+        console.print("\n** test_ConditionalReturnMultiValue()");
+        if ((String key, Int value) := parseKeyValue("answer=42")) {
+            assert key == "answer" && value == 42;
+            console.print($"  PASS: conditional multi-return = {key}={value}");
+        } else {
+            assert False as "expected parse success";
+        }
+        if (parseKeyValue("no-equals")) {
+            assert False as "expected parse failure";
+        } else {
+            console.print($"  PASS: conditional multi-return failure case");
+        }
+    }
+
+    /**
+     * Array slice with range.
+     * Document: array[1..3] slice notation
+     */
+    void test_ArraySlice() {
+        console.print("\n** test_ArraySlice()");
+        Int[] nums = [10, 20, 30, 40, 50];
+        Int[] slice = nums[1..3];
+        assert slice.size == 3;
+        assert slice[0] == 20 && slice[1] == 30 && slice[2] == 40;
+        console.print($"  PASS: array slice = {slice}");
+    }
+
+    /**
+     * Mixin pattern.
+     * Document: "Ecstasy has mixins which can add methods to types"
+     */
+    mixin Greeting into Object {
+        String greetWith(String name) = $"Hi from {this}, {name}!";
+    }
+
+    const Greeter(String title) incorporates Greeting;
+
+    void test_Mixin() {
+        console.print("\n** test_Mixin()");
+        Greeter g = new Greeter("Boss");
+        String msg = g.greetWith("world");
+        assert msg.indexOf("Hi from");
+        assert msg.indexOf("world");
+        console.print($"  PASS: mixin = {msg}");
     }
 
     // =========================================================================
