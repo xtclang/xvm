@@ -2202,6 +2202,65 @@ private Family familyFor(Number n) = switch (n.is(_)) {
 In all these cases, the `default: assert` or `else { assert appInfo.is(DbAppInfo) }`
 is the developer manually doing what sealed types would automate.
 
+#### Lazy Ecstasy: what could already be better
+
+Some of the type-dispatch code uses `if/else` chains where Ecstasy's existing
+`switch (x.is(_))` would already be cleaner:
+
+```x
+// Existing (platform/githubCLI/Repositories.x -- repeated 6 times)
+Doc|HttpStatus result = GithubGateway.sendRequest(GET, "orgs", "/repos");
+if (result.is(Doc[])) {
+    for (Doc repo : result) {
+        assert repo.is(JsonObject);
+        console.print(repo.getOrNull("name"));
+    }
+} else {
+    console.print($"Request failed: {result}");
+}
+
+// Better today -- use switch type dispatch (already supported)
+switch (GithubGateway.sendRequest(GET, "orgs", "/repos").is(_)) {
+    case Doc[]:
+        for (Doc repo : result) {
+            // ...
+        }
+    case HttpStatus:
+        console.print($"Request failed: {result}");
+}
+```
+
+This pattern repeats 6 times in `Repositories.x` alone -- each method has
+the identical `if (result.is(Doc)) { ... } else { ... }` structure. Even
+without sealed types, using `switch` would be a step up.
+
+Similarly, `StringBuffer.append()` and `ConsoleAppender.toStr()` use
+`if/else` type chains where `switch (x.is(_))` already works:
+
+```x
+// Existing (lib_ecstasy, StringBuffer.x:116-129)
+StringBuffer append(Object o) {
+    if (o.is(Iterable<Char>)) {
+        addAll(o);
+    } else if (o.is(Stringable)) {
+        o.appendTo(this);
+    } else {
+        addAll(o.toString());
+    }
+    return this;
+}
+
+// Better today -- switch type dispatch
+StringBuffer append(Object o) {
+    switch (o.is(_)) {
+        case Iterable<Char>: addAll(o);
+        case Stringable:     o.appendTo(this);
+        default:             addAll(o.toString());
+    }
+    return this;
+}
+```
+
 **Effort estimate**: Medium. The compiler already has exhaustiveness checking
 for enums. Extending it to sealed class hierarchies requires tracking which
 types are permitted subtypes and wiring that information into the switch
@@ -2401,6 +2460,42 @@ switch (type, @Inject(resourceName=name) String? value) {
 }
 ```
 
+#### Lazy Ecstasy: `switch` type dispatch is already underused
+
+The platform code has `if/else` chains that could already be `switch` today:
+
+```x
+// Existing (platform/platformUI/api/Projects.x:215-232)
+if (info.is(WebAppInfo)) {
+    project.addAll([
+        "kind"         = "web",
+        "url"          = info.hostName,
+        "sharedDbs"    = info.sharedDBs,
+        "certProvider" = info.provider,
+    ]);
+} else if (info.is(DbAppInfo)) {
+    project.add("kind", "db");
+}
+
+// Better today -- switch type dispatch already works
+switch (info.is(_)) {
+    case WebAppInfo:
+        project.addAll([
+            "kind"         = "web",
+            "url"          = info.hostName,
+            "sharedDbs"    = info.sharedDBs,
+            "certProvider" = info.provider,
+        ]);
+    case DbAppInfo:
+        project.add("kind", "db");
+}
+```
+
+The Lexer also has a massive 100+ line string switch (`Lexer.x:627-720`)
+dispatching on type names like `"Int"`, `"Int8"`, `"UInt16"` etc. This could
+potentially use an enum with properties instead of raw string matching -- though
+this is a grey area since the strings come from source code parsing.
+
 **Effort estimate**: Significant. Destructuring in patterns requires the
 compiler to understand which types support positional extraction (const types
 with known field order are natural candidates). Guard clauses are simpler --
@@ -2564,6 +2659,81 @@ Result<WebHost, String[]> createWebHost(...) {
     return Failure([$"Error: ..."]);
 }
 ```
+
+#### Lazy Ecstasy: `conditional` returns are already underused
+
+Some platform code throws exceptions for "not found" cases where `conditional`
+returns would already be cleaner:
+
+```x
+// Existing (lib_ecstasy, HasherMap.x:1104-1116) -- throws on missing key
+Value get() {
+    if (!bucket.discarded) {
+        return bucket.valueAt(index);
+    }
+    if (Value value := this.HasherMap.get(key)) {
+        return value;
+    }
+    throw new OutOfBounds($"entry does not exist for key=\"{key}\"");
+}
+
+// Better today -- use conditional return (already supported)
+conditional Value get() {
+    if (!bucket.discarded) {
+        return True, bucket.valueAt(index);
+    }
+    return this.HasherMap.get(key);  // already conditional
+}
+```
+
+The platform code also has patterns where `try/catch` is used as a flow
+control mechanism that `conditional` would handle more cleanly:
+
+```x
+// Existing (platform/host/src/main/x/host/HostManager.x:392-402)
+KeyStore keystore;
+try {
+    @Inject("keystore", opts=new KeyStore.Info(store.contents, storePwd)) KeyStore ks;
+    keystore = ks;
+} catch (Exception e) {
+    errors.add($|Error: {store.exists ? "Corrupted" : "Missing"} keystore ...
+              );
+    return False;
+}
+
+// Better today -- though constrained by @Inject injection point syntax
+// A conditional keystore factory would be cleaner:
+// if (KeyStore ks := loadKeyStore(store, storePwd)) { ... }
+```
+
+#### Missing: `runCatching` / exception-to-value conversion
+
+Kotlin provides `runCatching { ... }` which executes a block and returns
+`Result<T>` -- converting exceptions into typed values. Ecstasy has no
+equivalent. This means every "try this, fall back on failure" pattern
+requires a full `try/catch` block:
+
+```x
+// Ecstasy today -- verbose try/catch for simple fallback
+String content;
+try {
+    content = file.contents.unpackUtf8();
+} catch (Exception e) {
+    content = "[unreadable]";
+}
+
+// Kotlin -- one expression with runCatching
+val content = runCatching { file.readText() }.getOrDefault("[unreadable]")
+
+// Proposed Ecstasy -- if scope functions + Result existed
+String content = runCatching(() -> file.contents.unpackUtf8())
+    .getOrDefault("[unreadable]");
+```
+
+This is closely related to scope functions -- `runCatching` is essentially
+`run` wrapped in a try/catch that returns a `Result`. With scope functions
+on `Object` and a `Result` type, `runCatching` could be a library function
+rather than a language feature.
 
 **Effort estimate**: Small for the type itself (just a `const` class).
 Depends on sealed types and pattern matching for full ergonomic benefit.
