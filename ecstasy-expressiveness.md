@@ -55,9 +55,19 @@ the statement/expression divide, and `void` as a non-type.
     - [Expressions vs. statements: the philosophical argument](#the-philosophical-argument-expressions-vs-statements)
     - [Expression problem recommendation](#recommendation-1)
 
+### Part IV: What else would developers expect in 2026?
+
+13. [Sealed types, pattern matching, and other modern features](#what-else-would-developers-expect-in-2026)
+    - [Sealed types: exhaustive hierarchies as a programming tool](#sealed-types-exhaustive-hierarchies-as-a-programming-tool)
+    - [Pattern matching: beyond switch and .is()](#pattern-matching-beyond-switch-and-is)
+    - [Result types: structured error handling without exceptions](#result-types-structured-error-handling-without-exceptions)
+    - [Extension methods: ad-hoc method addition](#extension-methods-ad-hoc-method-addition)
+    - [Collection factory functions](#collection-factory-functions)
+    - [Summary: what's missing vs. what's deliberate](#summary-whats-missing-vs-whats-deliberate)
+
 ### Appendix
 
-12. [Kotlin scope function decision tree](#appendix-kotlin-scope-function-decision-tree)
+14. [Kotlin scope function decision tree](#appendix-kotlin-scope-function-decision-tree)
 
 ---
 
@@ -1994,3 +2004,413 @@ Do you need the result of the block, or the original object?
 
 And between `let`/`run`: signal your intent (`let` = transform, `run` = compute).
 Between `also`/`apply`: signal your intent (`also` = observe, `apply` = configure).
+
+## What else would developers expect in 2026?
+
+Beyond scope functions and expression-oriented control flow, there are several
+areas where Ecstasy diverges from what developers coming from Kotlin, Rust, Swift,
+or modern Java would expect. Some are deliberate design choices worth preserving;
+others are gaps that could be closed.
+
+### Sealed types: exhaustive hierarchies as a programming tool
+
+#### What developers expect
+
+In Kotlin, Rust, Swift, and Java 17+, `sealed` types restrict who can extend a
+class or interface. The compiler then uses this closed set to enforce exhaustive
+pattern matching -- if you handle all subtypes, no `default` branch is needed,
+and adding a new subtype produces compile errors everywhere the type is matched.
+
+```kotlin
+// Kotlin
+sealed class Result<out T> {
+    data class Success<T>(val value: T) : Result<T>()
+    data class Failure(val error: Throwable) : Result<Nothing>()
+}
+
+// Exhaustive -- compiler knows all cases, warns if one is missing
+when (result) {
+    is Result.Success -> handleSuccess(result.value)
+    is Result.Failure -> handleFailure(result.error)
+    // no 'else' needed -- compiler knows this is complete
+}
+```
+
+This is one of the most impactful features in modern language design because it
+turns the type system into a verification tool: the compiler proves your match
+is complete, and when you add a new variant, it tells you every place that needs
+updating.
+
+#### What Ecstasy has today
+
+Ecstasy has **enums** with exhaustive switch checking -- the compiler rejects
+a switch on an enum that doesn't cover all values. This is the same mechanism
+that sealed types generalize.
+
+Ecstasy also has `const` classes (immutable value types) and union types
+(`String | Int`), but neither provides the sealed guarantee. Any class can be
+extended unless it's explicitly `@Final`. There is a `@Sealed` annotation
+mentioned in the `Const.x` documentation as a concept for "Superposed types,"
+but it does not exist as an implemented feature.
+
+Ecstasy's module system is closed-world by design -- after compilation, no new
+types can be added. This is a stronger guarantee than sealed types at the
+deployment level, but it doesn't help at the *programming* level: inside a
+module, the developer still can't tell the compiler "these are the only
+subtypes, please check my matches."
+
+#### How it could look in Ecstasy
+
+```x
+// Proposed: sealed interface restricts implementations to this module/file
+sealed interface Result<Value> {
+    const Success<Value>(Value value) implements Result<Value>;
+    const Failure(Exception error)    implements Result<Nothing>;
+}
+
+// Exhaustive switch -- compiler knows all cases
+String describe(Result<String> result) = switch (result.is(_)) {
+    case Success: result.value;
+    case Failure: $"Error: {result.error.message}";
+    // no default needed -- compiler proves this is complete
+};
+
+// Adding a new case (e.g., Pending) would produce compile errors at every
+// switch that doesn't handle it -- the same safety net that enums provide,
+// extended to class hierarchies.
+```
+
+This fits naturally with Ecstasy's existing features:
+- `const` types already provide immutable value semantics.
+- `switch (x.is(_))` already does type dispatch.
+- Enum exhaustiveness checking already exists in the compiler.
+- The closed-world module system means the compiler has full knowledge at
+  build time.
+
+#### Why it matters
+
+Without sealed types, developers who want exhaustive matching must either:
+- Use enums (which can't carry different data per variant).
+- Use union types (`Success | Failure`) but lose exhaustiveness checking.
+- Use an interface hierarchy and accept that the compiler can't verify
+  completeness -- requiring a `default` branch that may silently swallow
+  new variants.
+
+Sealed types close this gap. They are the natural generalization of enums to
+types that carry data, and every modern language that has adopted them reports
+that they dramatically reduce "forgot to handle the new case" bugs.
+
+**Effort estimate**: Medium. The compiler already has exhaustiveness checking
+for enums. Extending it to sealed class hierarchies requires tracking which
+types are permitted subtypes and wiring that information into the switch
+analysis. The `@Sealed` concept already appears in the Const.x documentation,
+suggesting this has been considered.
+
+---
+
+### Pattern matching: beyond `switch` and `.is()`
+
+#### What developers expect
+
+Kotlin's `when`, Rust's `match`, and Scala's `match` support nested
+destructuring, guard clauses, and binding in a single construct:
+
+```kotlin
+// Kotlin -- nested destructuring + guard
+when (val result = parse(input)) {
+    is Success -> when {
+        result.value.isEmpty() -> "empty"
+        else -> "got: ${result.value}"
+    }
+    is Failure if result.error is TimeoutException -> "timed out"
+    is Failure -> "failed: ${result.error}"
+}
+```
+
+```rust
+// Rust -- deeply nested pattern matching with binding
+match event {
+    Event::Click { x, y } if x > 100 => handle_right(y),
+    Event::Click { x, y }            => handle_left(x, y),
+    Event::Key(Key::Enter)            => submit(),
+    Event::Key(key)                   => buffer(key),
+}
+```
+
+#### What Ecstasy has today
+
+Ecstasy's `switch` supports:
+- Value matching: `case 1:`, `case "hello":`
+- Range matching: `case 1..5:`
+- Type dispatch: `switch (x.is(_)) { case Int: ... case String: ... }`
+- Tuple matching: `switch (a, b) { case (1, 2): ... }`
+- Wildcard in tuples: `case (_, Int):`
+- Switch as expression (returns a value)
+
+What's missing:
+- **No destructuring in case branches**: You can match on a type but not
+  bind its fields in the same step. You must match, then cast and extract.
+- **No guard clauses**: `case X if condition:` is not supported. You must
+  nest an `if` inside the case body.
+- **No nested patterns**: `case Success(value):` is not supported. You
+  must match the outer type, then match the inner value in a nested switch.
+
+#### How it could look
+
+```x
+// Today -- verbose type dispatch with manual extraction
+switch (event.is(_)) {
+    case ClickEvent: {
+        ClickEvent click = event.as(ClickEvent);
+        if (click.x > 100) {
+            handleRight(click.y);
+        } else {
+            handleLeft(click.x, click.y);
+        }
+    }
+    case KeyEvent: {
+        KeyEvent key = event.as(KeyEvent);
+        if (key.code == Enter) {
+            submit();
+        } else {
+            buffer(key.code);
+        }
+    }
+}
+
+// Proposed -- destructuring + guards
+switch (event) {
+    case ClickEvent(x, y) if x > 100: handleRight(y);
+    case ClickEvent(x, y):             handleLeft(x, y);
+    case KeyEvent(Enter):              submit();
+    case KeyEvent(code):               buffer(code);
+}
+```
+
+The existing switch infrastructure (expression form, type dispatch, tuples)
+provides a solid foundation. Destructuring in case branches and guard clauses
+would extend it without introducing a new keyword or construct.
+
+**Effort estimate**: Significant. Destructuring in patterns requires the
+compiler to understand which types support positional extraction (const types
+with known field order are natural candidates). Guard clauses are simpler --
+they're syntactic sugar for a nested `if` that falls through to the next case.
+
+---
+
+### Result types: structured error handling without exceptions
+
+#### What developers expect
+
+Rust's `Result<T, E>`, Swift's `Result<Success, Failure>`, and Kotlin's
+`Result<T>` provide a way to represent fallible operations in the type system
+without throwing exceptions. The caller is forced to handle both success and
+failure at the type level.
+
+```rust
+// Rust -- error handling is in the type, not the control flow
+fn parse(input: &str) -> Result<Config, ParseError> { ... }
+
+// Caller MUST handle both cases -- compiler enforces it
+let config = parse(input)?;  // ? propagates error, returns early
+```
+
+#### What Ecstasy has today
+
+Ecstasy's `conditional` return type is a creative solution to a similar problem:
+
+```x
+conditional Config parse(String input) {
+    if (valid) {
+        return True, config;
+    }
+    return False;
+}
+
+// Caller
+if (Config config := parse(input)) {
+    // success
+} else {
+    // failure -- but no error information available
+}
+```
+
+This is elegant for "found or not found" cases, but it has a key limitation:
+**the failure case carries no information.** You get `False` but no error
+message, no error code, no typed error. For operations where the *kind* of
+failure matters (network timeout vs. parse error vs. permission denied), the
+caller either gets nothing or the function must throw an exception.
+
+#### How a Result type could complement conditional returns
+
+```x
+// Proposed: Result type for when failure carries information
+const Result<Value, Error> {
+    // Success variant
+    const Success<Value>(Value value) implements Result<Value, Nothing>;
+
+    // Failure variant with typed error
+    const Failure<Error>(Error error) implements Result<Nothing, Error>;
+}
+
+// Usage
+Result<Config, ParseError> parse(String input) { ... }
+
+// With sealed types + pattern matching, handling is clean
+Config config = switch (parse(input)) {
+    case Success(value): value;
+    case Failure(error): {
+        log.warn($"Parse failed: {error.message}");
+        return defaultConfig;
+    }
+};
+```
+
+Note how this builds on sealed types and pattern matching -- the three features
+form a cohesive package. Sealed types define the closed hierarchy, pattern
+matching destructures it, and Result types apply the pattern to error handling.
+
+Ecstasy's `conditional` returns should remain for the common "found/not found"
+case -- they're more concise than `Result` when the failure case is simple.
+`Result` is for when failure is as informative as success.
+
+**Effort estimate**: Small for the type itself (just a `const` class).
+Depends on sealed types and pattern matching for full ergonomic benefit.
+Without those, it's just a class with `.is()` checks -- no better than what
+you could write today.
+
+---
+
+### Extension methods: ad-hoc method addition
+
+#### What developers expect
+
+Kotlin, Swift, Rust, and C# allow adding methods to existing types without
+modifying their source or using inheritance:
+
+```kotlin
+// Kotlin -- add a method to String
+fun String.isEmail(): Boolean = this.contains('@') && this.contains('.')
+
+// Now available on all Strings
+if (input.isEmail()) { ... }
+```
+
+This is used pervasively for domain-specific APIs, library interop, and
+keeping core types lean while allowing contextual extensions.
+
+#### What Ecstasy has today
+
+Ecstasy has **mixins** which can add methods to types:
+
+```x
+mixin EmailValidation into String {
+    Boolean isEmail() = this.contains('@') && this.contains('.');
+}
+```
+
+But mixins require declaration at the type level -- they must be incorporated
+by the target type or applied via annotation. You cannot ad-hoc add a method
+to `String` in your own module without modifying `String`'s declaration.
+
+This is a deliberate design choice (explicit is better than implicit), and it
+avoids the "where did this method come from?" confusion that plagues Kotlin
+and C# extension methods. But it means that the common patterns Kotlin uses
+extensions for -- utility methods, domain adapters, DSL construction -- require
+either top-level functions (losing the fluent `obj.method()` syntax) or mixins
+declared on the target type (requiring source access).
+
+#### Trade-off
+
+This is a genuine design tension with no clearly right answer. Extension
+methods are powerful but can make code harder to navigate. Ecstasy's explicit
+mixin approach is safer but more verbose. Whether to add extension methods
+is a philosophical choice that depends on how much the language wants to
+prioritize discoverability vs. composability.
+
+If Ecstasy chose to add them, a reasonable design would be module-scoped
+extensions (visible only within the importing module), avoiding the
+global-pollution problems of Kotlin and C#:
+
+```x
+// Hypothetical: module-scoped extension
+extends String {
+    Boolean isEmail() = this.contains('@') && this.contains('.');
+}
+// Only visible within this module
+```
+
+---
+
+### Collection factory functions
+
+#### What developers expect
+
+Kotlin, Scala, and modern Java (via `List.of()`, `Map.of()`) provide concise
+factory functions for creating collections:
+
+```kotlin
+val list = listOf("a", "b", "c")           // immutable
+val mutableList = mutableListOf("a", "b")   // mutable
+val map = mapOf("key" to "value")           // immutable
+```
+
+#### What Ecstasy has today
+
+Ecstasy has **array literals** (`[1, 2, 3]`) and **map literals** (`["a"=1]`)
+which cover the most common cases well. For specific collection types, you
+must use constructors:
+
+```x
+// Array literal -- works well
+Int[] nums = [1, 2, 3];
+Map<String, Int> m = ["a"=1, "b"=2];
+
+// But for specific types, verbose
+ListMap<String, Int> ordered = new ListMap<String, Int>();
+ordered.put("a", 1);
+ordered.put("b", 2);
+```
+
+Ecstasy's literal syntax is already better than Java's. The gap compared to
+Kotlin is minor -- it's mainly the "specific collection type with initial data"
+case that's verbose, and scope functions (`apply`) would largely solve it:
+
+```x
+// With apply (proposed)
+ListMap<String, Int> ordered = new ListMap<String, Int>().apply(m -> {
+    m.put("a", 1);
+    m.put("b", 2);
+});
+```
+
+This is a low-priority gap that scope functions would mostly address.
+
+---
+
+### Summary: what's missing vs. what's deliberate
+
+| Feature | Status | Priority | Builds on |
+|---------|--------|----------|-----------|
+| **Sealed types** | Conceptualized but not implemented | High | Existing enum exhaustiveness |
+| **Pattern matching with destructuring** | Partial (type dispatch, tuples) | High | Existing switch expression |
+| **Result type** | Not present | Medium | Sealed types + pattern matching |
+| **Extension methods** | Not present (mixins are alternative) | Low | Deliberate design choice |
+| **Collection factories** | Mostly solved by literals | Low | Scope functions fill the gap |
+| **`if` as expression** | Not present | High | See Part III |
+| **`void` as `Unit` type** | Not present | Medium | See Part III |
+| **Scope functions** | Not present | High | See Part I |
+| **Pipe operator** | Not present | Low | Scope functions are sufficient |
+| **Raw strings** | Not present | Low | Nice to have |
+
+The three highest-impact additions would be **sealed types**, **pattern matching
+with destructuring**, and **scope functions** (covered in Part I). These three
+features form a mutually reinforcing package:
+
+- Sealed types define closed hierarchies.
+- Pattern matching destructures them exhaustively.
+- Scope functions chain the results fluently.
+
+Together they would move Ecstasy from "powerful but occasionally verbose" to
+"expressive and concise" -- matching the expectations of developers coming from
+Kotlin, Rust, or modern Java in 2026.
