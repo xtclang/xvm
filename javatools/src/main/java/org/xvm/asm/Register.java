@@ -354,16 +354,17 @@ public class Register
      * Force the register to be treated as effectively final from this point forward.
      */
     public void markEffectivelyFinal() {
+        assert m_fEffectivelyFinal || !m_fRO;
         m_fRO               = true;
         m_fEffectivelyFinal = true;
     }
 
     /**
-     * @return true iff this is a normal (not D_VAR), readable and writable, local variable (and
-     *         not the stack)
+     * @return true iff this is a normal (not D_VAR), readable and writable (but exempt the
+     *         effectively final registers that started as writable), local variable
      */
     public boolean isNormal() {
-        return !isPredefined() && isReadable() && isWritable() && !isVar();
+        return !isPredefined() && isReadable() && (isWritable() | isEffectivelyFinal()) && !isVar();
     }
 
     /**

@@ -237,6 +237,40 @@ public class IsExpression
     }
 
     @Override
+    public void generateConditionalAssignment(Context ctx, Code code, Assignable LVal,
+                                              Label lblEnd, ErrorListener errs) {
+        if (!LVal.isLocalArgument()) {
+            super.generateConditionalAssignment(ctx, code, LVal, lblEnd, errs);
+            return;
+        }
+
+        Argument   argTarget = expr1.generateArgument(ctx, code, true, errs);
+        Expression exprTest  = expr2;
+        Argument   argType;
+
+        // see the comment in "generateAssignments" regarding  static and dynamic types
+        if (exprTest.isConstant()) {
+            argType = exprTest.getType().getParamType(0).resolveAutoNarrowingBase();
+        } else {
+            argType = exprTest.generateArgument(ctx, code, false, errs);
+            if (argType instanceof TypeConstant type) {
+                argType = type.getParamType(0);
+            }
+        }
+
+        Label lblCond  = getConditionFalseLabel();
+        Label lblIsNot = lblCond == null ? new Label("skip_assign") : lblCond;
+
+        code.add(new JumpNType(argTarget, argType, lblIsNot));
+        LVal.assign(argTarget, code, errs);
+        code.add(new Jump(lblEnd));
+
+        if (lblCond == null) {
+            code.add(lblIsNot);
+        }
+    }
+
+    @Override
     public void generateConditionalJump(
             Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs) {
         Argument argTarget = expr1.generateArgument(ctx, code, true, errs);

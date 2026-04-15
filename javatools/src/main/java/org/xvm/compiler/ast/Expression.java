@@ -1556,6 +1556,25 @@ public abstract class Expression
     }
 
     /**
+     * Generate the necessary code that computes a conditional assignment and jumps to the specified
+     * label if this expression evaluates to `true`.
+     *
+     * @param ctx       the compilation context for the statement
+     * @param code      the code block
+     * @param label     the label to conditionally jump to
+     * @param errs      the error list to log any errors to
+     */
+    public void generateConditionalAssignment(Context ctx, Code code,
+                                              Assignable LVal, Label labelEnd, ErrorListener errs) {
+        Assignable   varCond = createTempVar(code, pool().typeBoolean());
+        Assignable[] LVals   = new Assignable[] {varCond, LVal};
+
+        generateAssignments(ctx, code, LVals, errs);
+
+        code.add(new JumpTrue(varCond.getRegister(), labelEnd));
+    }
+
+    /**
      * Generate the necessary code that jumps to the specified label if this expression evaluates
      * to the boolean value indicated in <tt>fWhenTrue</tt>.
      *
