@@ -37,6 +37,11 @@ on:
                 type: boolean
                 required: false
                 default: false
+            force-publish-intellij-plugin:
+                description: 'Force IntelliJ plugin snapshot publishing regardless of publish-intellij-plugin or lang/** changes'
+                type: boolean
+                required: false
+                default: false
             platforms:
                 description: 'Run only single platform (ubuntu-latest, windows-latest, or all platforms)'
                 type: choice
@@ -120,6 +125,7 @@ jobs:
     build-and-test:
         outputs:
             lang-changed: ${{ steps.changes.outputs.lang }}
+            effective-publish-intellij: ${{ steps.publish-flags.outputs.effective }}
         strategy:
             matrix:
                 os: ${{ github.event.inputs.platforms == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.platforms == 'windows-latest' && fromJSON('["windows-latest"]') || github.event.inputs.platforms == 'all' && fromJSON('["ubuntu-latest", "windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
@@ -142,6 +148,48 @@ jobs:
                       lang:
                         - 'lang/**'
                         - 'lib_ecstasy/**/*.x'
+
+            - name: Compute IntelliJ publish flags
+              id: publish-flags
+              shell: bash
+              run: |
+                  FORCE="${{ github.event.inputs.force-publish-intellij-plugin }}"
+                  REQUESTED="${{ github.event.inputs.publish-intellij-plugin }}"
+                  LANG_CHANGED="${{ steps.changes.outputs.lang }}"
+                  EVENT_NAME="${{ github.event_name }}"
+                  EFFECTIVE=false
+                  REASON=""
+                  if [ "$FORCE" = "true" ]; then
+                      EFFECTIVE=true
+                      REASON="forced via force-publish-intellij-plugin=true (overrides publish-intellij-plugin and lang change gating)"
+                  elif [ "$REQUESTED" = "true" ] && [ "$LANG_CHANGED" = "true" ]; then
+                      EFFECTIVE=true
+                      REASON="publish-intellij-plugin=true and changes detected under lang/ or lib_ecstasy/**/*.x"
+                  elif [ "$REQUESTED" = "true" ]; then
+                      REASON="publish-intellij-plugin=true but no changes detected under lang/ or lib_ecstasy/**/*.x (set force-publish-intellij-plugin=true to override)"
+                  elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+                      REASON="neither publish-intellij-plugin nor force-publish-intellij-plugin was enabled for this workflow_dispatch run"
+                  else
+                      REASON="event=$EVENT_NAME does not request IntelliJ plugin publishing (no workflow_dispatch inputs available)"
+                  fi
+                  echo "effective=$EFFECTIVE" >> $GITHUB_OUTPUT
+                  echo "force=$FORCE" >> $GITHUB_OUTPUT
+                  echo "requested=$REQUESTED" >> $GITHUB_OUTPUT
+                  echo "reason=$REASON" >> $GITHUB_OUTPUT
+                  echo ""
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                  if [ "$EFFECTIVE" = "true" ]; then
+                      echo "🔌 IntelliJ plugin: WILL BE BUILT AND PUBLISHED"
+                  else
+                      echo "⏭️ IntelliJ plugin: WILL NOT BE BUILT OR PUBLISHED"
+                  fi
+                  echo "  📋 Reason             : $REASON"
+                  echo "  📋 force-publish-intellij-plugin : ${FORCE:-<unset>}"
+                  echo "  📋 publish-intellij-plugin       : ${REQUESTED:-<unset>}"
+                  echo "  📋 lang/lib_ecstasy changed      : ${LANG_CHANGED:-<unset>}"
+                  echo "  📋 event                         : $EVENT_NAME"
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                  echo ""
 
             - name: 🚀 Publishing Configuration
               shell: bash
@@ -173,24 +221,24 @@ jobs:
 
                   # Check if this is manual trigger with any publishing enabled
                   if [ "${{ github.event_name }}" = "workflow_dispatch" ] && \
-                     { [ "${{ github.event.inputs.publish-snapshots }}" = "true" ] || [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ]; }; then
+                     { [ "${{ github.event.inputs.publish-snapshots }}" = "true" ] || \
+                       [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ] || \
+                       [ "${{ github.event.inputs.force-publish-intellij-plugin }}" = "true" ]; }; then
                       WILL_PUBLISH=true
-                      TRIGGER_REASON="Manual trigger with publish-snapshots=true and/or publish-intellij-plugin=true"
+                      TRIGGER_REASON="Manual trigger with publish-snapshots/publish-intellij-plugin/force-publish-intellij-plugin enabled"
                   fi
 
                   INTELLIJ_REQUESTED=false
-                  if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ]; then
+                  if [ "${{ github.event_name }}" = "workflow_dispatch" ] && \
+                     { [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ] || \
+                       [ "${{ github.event.inputs.force-publish-intellij-plugin }}" = "true" ]; }; then
                       INTELLIJ_REQUESTED=true
                   fi
 
-                  INTELLIJ_EFFECTIVE=false
+                  INTELLIJ_EFFECTIVE="${{ steps.publish-flags.outputs.effective }}"
                   INTELLIJ_SKIP_REASON=""
-                  if [ "$INTELLIJ_REQUESTED" = "true" ]; then
-                      if [ "${{ steps.changes.outputs.lang }}" = "true" ]; then
-                          INTELLIJ_EFFECTIVE=true
-                      else
-                          INTELLIJ_SKIP_REASON="No changes under lang/ or lib_ecstasy/**/*.x"
-                      fi
+                  if [ "$INTELLIJ_REQUESTED" = "true" ] && [ "$INTELLIJ_EFFECTIVE" != "true" ]; then
+                      INTELLIJ_SKIP_REASON="${{ steps.publish-flags.outputs.reason }}"
                   fi
 
                   if [ "$WILL_PUBLISH" = "true" ]; then
@@ -218,6 +266,7 @@ jobs:
                       if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
                           echo "  📋 publish-snapshots: ${{ github.event.inputs.publish-snapshots }}"
                           echo "  📋 publish-intellij-plugin: ${{ github.event.inputs.publish-intellij-plugin }}"
+                          echo "  📋 force-publish-intellij-plugin: ${{ github.event.inputs.force-publish-intellij-plugin }}"
                           echo "  📋 include-lang: ${{ github.event.inputs.include-lang }}"
                           if [ "$INTELLIJ_REQUESTED" = "true" ] && [ "$INTELLIJ_EFFECTIVE" != "true" ]; then
                               echo "  📋 IntelliJ skip reason: $INTELLIJ_SKIP_REASON"
@@ -260,9 +309,7 @@ jobs:
               if: |
                   success() &&
                   matrix.os == 'ubuntu-latest' &&
-                  github.event_name == 'workflow_dispatch' &&
-                  (github.event.inputs.publish-intellij-plugin == true || github.event.inputs.publish-intellij-plugin == 'true') &&
-                  steps.changes.outputs.lang == 'true'
+                  steps.publish-flags.outputs.effective == 'true'
               id: intellij-version
               shell: bash
               run: |
@@ -279,7 +326,7 @@ jobs:
               shell: bash
               env:
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
-                  ENABLE_INTELLIJ_RELEASE_BUILD: ${{ matrix.os == 'ubuntu-latest' && github.event_name == 'workflow_dispatch' && (github.event.inputs.publish-intellij-plugin == true || github.event.inputs.publish-intellij-plugin == 'true') && steps.changes.outputs.lang == 'true' }}
+                  ENABLE_INTELLIJ_RELEASE_BUILD: ${{ matrix.os == 'ubuntu-latest' && steps.publish-flags.outputs.effective == 'true' }}
                   ENABLE_SNAPSHOT_BUNDLE_BUILD: ${{ matrix.os == 'ubuntu-latest' && ((github.ref == 'refs/heads/master' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.publish-snapshots == true || github.event.inputs.publish-snapshots == 'true'))) }}
                   ORG_GRADLE_PROJECT_githubUsername: ${{ github.actor }}
                   ORG_GRADLE_PROJECT_githubPassword: ${{ secrets.GITHUB_TOKEN }}
@@ -322,11 +369,13 @@ jobs:
                 fi
 
                 if [ "${ENABLE_INTELLIJ_RELEASE_BUILD}" = "true" ]; then
-                    echo "🔌 Folding IntelliJ release-grade plugin build into the main CI build..."
+                    echo "🔌 Building IntelliJ release-grade plugin in main CI build"
+                    echo "   Reason: ${{ steps.publish-flags.outputs.reason }}"
                     BUILD_TASKS="$BUILD_TASKS :lang:intellij-plugin:buildSearchableOptions :lang:intellij-plugin:buildPlugin :lang:intellij-plugin:verifyPlugin"
                     BUILD_PROPS="$BUILD_PROPS -PincludeBuildLang=true -PincludeBuildAttachLang=true -PenablePublish=true -Pjetbrains.publish.suffix=${{ steps.intellij-version.outputs.suffix }} -Plsp.buildSearchableOptions=true"
-                elif [ "${{ matrix.os }}" = "ubuntu-latest" ] && [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ]; then
-                    echo "⏭️ Skipping IntelliJ plugin build/publish preparation: no changes under lang/ or lib_ecstasy/**/*.x"
+                elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+                    echo "⏭️ Not building IntelliJ plugin"
+                    echo "   Reason: ${{ steps.publish-flags.outputs.reason }}"
                 fi
 
                 ./gradlew $GRADLE_OPTIONS $BUILD_JVM_ARGS $BUILD_PROPS $BUILD_TASKS
@@ -562,9 +611,7 @@ jobs:
               if: |
                   success() &&
                   matrix.os == 'ubuntu-latest' &&
-                  github.event_name == 'workflow_dispatch' &&
-                  (github.event.inputs.publish-intellij-plugin == true || github.event.inputs.publish-intellij-plugin == 'true') &&
-                  steps.changes.outputs.lang == 'true'
+                  steps.publish-flags.outputs.effective == 'true'
               shell: bash
               env:
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
@@ -617,9 +664,7 @@ jobs:
               if: |
                   success() &&
                   matrix.os == 'ubuntu-latest' &&
-                  github.event_name == 'workflow_dispatch' &&
-                  (github.event.inputs.publish-intellij-plugin == true || github.event.inputs.publish-intellij-plugin == 'true') &&
-                  steps.changes.outputs.lang == 'true'
+                  steps.publish-flags.outputs.effective == 'true'
               uses: actions/upload-artifact@v7
               with:
                   name: intellij-plugin-dist-${{ github.sha }}
@@ -720,15 +765,13 @@ jobs:
                           LANG_VALIDATION_REASON="lang build enabled but path filter found no relevant changes"
                       fi
                   fi
-                  if [ "${{ matrix.os }}" = "ubuntu-latest" ] && \
-                     [ "${{ github.event_name }}" = "workflow_dispatch" ] && \
-                     [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ]; then
-                      if [ "${{ steps.changes.outputs.lang }}" = "true" ]; then
+                  if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+                      if [ "${{ steps.publish-flags.outputs.effective }}" = "true" ]; then
                           INTELLIJ_ARTIFACT_STATUS="✅ Built"
-                          INTELLIJ_ARTIFACT_REASON="artifact staged for downstream publication"
+                          INTELLIJ_ARTIFACT_REASON="${{ steps.publish-flags.outputs.reason }}"
                       else
                           INTELLIJ_ARTIFACT_STATUS="⏭️ Skipped"
-                          INTELLIJ_ARTIFACT_REASON="requested, but no changes under lang/ or lib_ecstasy/**/*.x"
+                          INTELLIJ_ARTIFACT_REASON="${{ steps.publish-flags.outputs.reason }}"
                       fi
                   fi
 
@@ -767,14 +810,10 @@ jobs:
                   else
                       echo "- ⏭️ Manual XDK snapshot publication not requested" >> $GITHUB_STEP_SUMMARY
                   fi
-                  if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ]; then
-                      if [ "${{ steps.changes.outputs.lang }}" = "true" ]; then
-                          echo "- ✅ Manual IntelliJ snapshot publication requested" >> $GITHUB_STEP_SUMMARY
-                      else
-                          echo "- ⏭️ Manual IntelliJ snapshot publication requested, but skipped because no relevant lang changes were detected" >> $GITHUB_STEP_SUMMARY
-                      fi
+                  if [ "${{ steps.publish-flags.outputs.effective }}" = "true" ]; then
+                      echo "- ✅ IntelliJ snapshot publication enabled (${{ steps.publish-flags.outputs.reason }})" >> $GITHUB_STEP_SUMMARY
                   else
-                      echo "- ⏭️ IntelliJ snapshot publication disabled by default; enable via workflow_dispatch" >> $GITHUB_STEP_SUMMARY
+                      echo "- ⏭️ IntelliJ snapshot publication disabled (${{ steps.publish-flags.outputs.reason }})" >> $GITHUB_STEP_SUMMARY
                   fi
 
     # Summary job that always succeeds if build-and-test completes
@@ -924,6 +963,8 @@ jobs:
                      (github.event.inputs.publish-snapshots == true || github.event.inputs.publish-snapshots == 'true')
                      ||
                      (github.event.inputs.publish-intellij-plugin == true || github.event.inputs.publish-intellij-plugin == 'true')
+                     ||
+                     (github.event.inputs.force-publish-intellij-plugin == true || github.event.inputs.force-publish-intellij-plugin == 'true')
                  ))
             )
 
@@ -965,10 +1006,11 @@ jobs:
                      [ "${{ github.event.inputs.publish-snapshots }}" = "true" ]; then
                       PUBLISH_XDK_SNAPSHOTS=true
                   fi
-                  if [ "${{ github.event_name }}" = "workflow_dispatch" ] && \
-                     [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ] && \
-                     [ "${{ needs.build-and-test.outputs.lang-changed }}" = "true" ]; then
+                  if [ "${{ needs.build-and-test.outputs.effective-publish-intellij }}" = "true" ]; then
                       PUBLISH_INTELLIJ_PLUGIN=true
+                      echo "🔌 IntelliJ plugin publish lane: ENABLED (effective-publish-intellij=true from build-and-test)"
+                  else
+                      echo "⏭️ IntelliJ plugin publish lane: DISABLED (effective-publish-intellij=false from build-and-test)"
                   fi
 
                   if [ "$PUBLISH_XDK_SNAPSHOTS" != "true" ] && [ "$PUBLISH_INTELLIJ_PLUGIN" != "true" ]; then
@@ -1028,34 +1070,19 @@ jobs:
                       echo "- ✅ Snapshot publishing" >> $GITHUB_STEP_SUMMARY
                       echo "- ✅ Docker publishing" >> $GITHUB_STEP_SUMMARY
                       echo "- ✅ Homebrew update" >> $GITHUB_STEP_SUMMARY
-                      echo "- ⏭️ IntelliJ plugin snapshot publishing (manual-only)" >> $GITHUB_STEP_SUMMARY
                   elif [ "${{ github.event.inputs.publish-snapshots }}" = "true" ]; then
                       echo "- ✅ Snapshot publishing" >> $GITHUB_STEP_SUMMARY
                       echo "- ✅ Docker publishing" >> $GITHUB_STEP_SUMMARY
                       echo "- ✅ Homebrew update" >> $GITHUB_STEP_SUMMARY
-                      if [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ]; then
-                          if [ "${{ needs.build-and-test.outputs.lang-changed }}" = "true" ]; then
-                              echo "- ✅ IntelliJ plugin snapshot publishing" >> $GITHUB_STEP_SUMMARY
-                          else
-                              echo "- ⏭️ IntelliJ plugin snapshot publishing skipped (no relevant lang changes)" >> $GITHUB_STEP_SUMMARY
-                          fi
-                      else
-                          echo "- ⏭️ IntelliJ plugin snapshot publishing (not enabled for this run)" >> $GITHUB_STEP_SUMMARY
-                      fi
                   else
                       echo "- ⏭️ Snapshot publishing" >> $GITHUB_STEP_SUMMARY
                       echo "- ⏭️ Docker publishing" >> $GITHUB_STEP_SUMMARY
                       echo "- ⏭️ Homebrew update" >> $GITHUB_STEP_SUMMARY
-                      if [ "${{ github.event_name }}" = "workflow_dispatch" ] && \
-                         [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ] && \
-                         [ "${{ needs.build-and-test.outputs.lang-changed }}" = "true" ]; then
-                          echo "- ✅ IntelliJ plugin snapshot publishing" >> $GITHUB_STEP_SUMMARY
-                      elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && \
-                         [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ]; then
-                          echo "- ⏭️ IntelliJ plugin snapshot publishing skipped (no relevant lang changes)" >> $GITHUB_STEP_SUMMARY
-                      else
-                          echo "- ⏭️ IntelliJ plugin snapshot publishing (not enabled for this run)" >> $GITHUB_STEP_SUMMARY
-                      fi
+                  fi
+                  if [ "${{ needs.build-and-test.outputs.effective-publish-intellij }}" = "true" ]; then
+                      echo "- ✅ IntelliJ plugin snapshot publishing" >> $GITHUB_STEP_SUMMARY
+                  else
+                      echo "- ⏭️ IntelliJ plugin snapshot publishing (not enabled for this run)" >> $GITHUB_STEP_SUMMARY
                   fi
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "Check the [Actions tab](https://github.com/${{ github.repository }}/actions) for workflow status." >> $GITHUB_STEP_SUMMARY
