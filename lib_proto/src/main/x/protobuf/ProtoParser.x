@@ -56,6 +56,11 @@ class ProtoParser {
     private Token current;
 
     /**
+     * The syntax of the file being parsed (`"proto2"` or `"proto3"`).
+     */
+    private String fileSyntax = "proto3";
+
+    /**
      * Map from proto type name to FieldType enum value.
      */
     private static Map<String, FieldType> ProtoNameToType = Map:[
@@ -100,6 +105,7 @@ class ProtoParser {
             switch (text) {
             case "syntax":
                 syntax = parseSyntax();
+                fileSyntax = syntax;
                 break;
 
             case "package":
@@ -261,12 +267,12 @@ class ProtoParser {
 
             case "optional", "required", "repeated":
                 advance();
-                fields.add(parseField(text));
+                fields.add(parseField(text, text == "optional"));
                 break;
 
             default:
                 // proto3 implicit optional field
-                fields.add(parseField("optional"));
+                fields.add(parseField("optional", False));
                 break;
             }
         }
@@ -288,7 +294,7 @@ class ProtoParser {
      *
      * The label keyword (`optional`, `required`, `repeated`) has already been consumed.
      */
-    private FieldDescriptorProto parseField(String labelText) {
+    private FieldDescriptorProto parseField(String labelText, Boolean explicitOptional = False) {
         Label label = switch (labelText) {
             case "required": LabelRequired;
             case "repeated": LabelRepeated;
@@ -328,6 +334,9 @@ class ProtoParser {
         }
         if (jsonName.size > 0) {
             field.jsonName = jsonName;
+        }
+        if (fileSyntax == "proto3" && explicitOptional) {
+            field.proto3Optional = True;
         }
         return field;
     }

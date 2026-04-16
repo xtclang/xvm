@@ -56,6 +56,14 @@ class MessageLiteTest {
         }
 
         @Override
+        Test1! mergeFrom(Test1 other) {
+            if (other.a != 0) {
+                a = other.a;
+            }
+            return this;
+        }
+
+        @Override
         immutable Test1 freeze(Boolean inPlace = False) =
             this.is(immutable Test1) ? this : this.makeImmutable();
     }
@@ -130,6 +138,20 @@ class MessageLiteTest {
         }
 
         @Override
+        TestMulti! mergeFrom(TestMulti other) {
+            if (other.id != 0) {
+                id = other.id;
+            }
+            if (other.name.size > 0) {
+                name = other.name;
+            }
+            if (other.flag) {
+                flag = other.flag;
+            }
+            return this;
+        }
+
+        @Override
         immutable TestMulti freeze(Boolean inPlace = False) =
             this.is(immutable TestMulti) ? this : this.makeImmutable();
     }
@@ -196,6 +218,17 @@ class MessageLiteTest {
                 size += CodedOutput.computeMessageSize(2, c);
             }
             return size;
+        }
+
+        @Override
+        TestNested! mergeFrom(TestNested other) {
+            if (other.id != 0) {
+                id = other.id;
+            }
+            if (other.child != Null) {
+                child = other.child;
+            }
+            return this;
         }
 
         @Override

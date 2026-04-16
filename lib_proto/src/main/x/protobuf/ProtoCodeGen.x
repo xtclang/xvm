@@ -48,6 +48,15 @@ class ProtoCodeGen {
     private Map<String, String> commentMap = Map:[];
 
     /**
+     * The set of well-known type names in the `protobuf.wellknown` package. When a type reference
+     * uses the `google.protobuf` package, and the type name matches one of these, the package is
+     * rewritten to `protobuf.wellknown`.
+     */
+    @Lazy Map<String, String> wellKnownTypes.get() {
+        return findWellKnownTypes();
+    }
+
+    /**
      * Information about a map field's key and value types, extracted from the synthetic
      * entry message in the descriptor.
      */
@@ -188,6 +197,59 @@ class ProtoCodeGen {
         }
     }
 
+    /**
+     * Normalize all type name references in the file descriptor:
+     * - Strip leading '.' from fully qualified names (protoc uses `.pkg.Type` format)
+     * - Rewrite `google.protobuf.X` to `protobuf.wellknown.X` when X is a known wellknown type
+     */
+    private void normalizeTypeNames(FileDescriptorProto file) {
+        for (DescriptorProto msg : file.messageType) {
+            normalizeMessageTypeNames(msg);
+        }
+        for (ServiceDescriptorProto svc : file.service_) {
+            for (MethodDescriptorProto method : svc.method) {
+                method.inputType  = normalizeTypeName(method.inputType);
+                method.outputType = normalizeTypeName(method.outputType);
+            }
+        }
+    }
+
+    /**
+     * Recursively normalize type names in a message and its nested types.
+     */
+    private void normalizeMessageTypeNames(DescriptorProto msg) {
+        for (FieldDescriptorProto field : msg.field) {
+            if (field.typeName.size > 0) {
+                field.typeName = normalizeTypeName(field.typeName);
+            }
+        }
+        for (DescriptorProto nested : msg.nestedType) {
+            normalizeMessageTypeNames(nested);
+        }
+    }
+
+    /**
+     * Normalize a single type name: strip leading '.', and rewrite `google.protobuf.X` to
+     * `protobuf.wellknown.X` when X is a known well-known type.
+     */
+    private String normalizeTypeName(String name) {
+        // strip leading dot
+        if (name.size > 0 && name[0] == '.') {
+            name = name[1 ..< name.size];
+        }
+        // rewrite well known type names
+        if (String wellKnownName := wellKnownTypes.get(name)) {
+            name = wellKnownName;
+        }
+        if (name.startsWith("google.protobuf.")) {
+            String simpleName = name["google.protobuf.".size ..< name.size];
+            if (wellKnownTypes.contains(simpleName)) {
+                return $"protobuf.wellknown.{simpleName}";
+            }
+        }
+        return name;
+    }
+
     // ----- public interface -----------------------------------------------------------------------
 
     /**
@@ -198,23 +260,30 @@ class ProtoCodeGen {
      * @return a map from file name (e.g. `"Person.x"`) to source text
      */
     Map<String, String> generate(FileDescriptorProto file) {
+        normalizeTypeNames(file);
         enumNames  = collectEnumNames(file);
         commentMap = buildCommentMap(file);
         ListMap<String, String> result = new ListMap();
 
+        // build the output path prefix from the package name
+        String pathPrefix = "";
+        if (file.package_.size > 0) {
+            pathPrefix = file.package_.replace(".", "/") + "/";
+        }
+
         for (Int i = 0; i < file.enumType.size; i++) {
             EnumDescriptorProto e = file.enumType[i];
-            result.put($"{e.name}.x", generateTopLevelEnum(e, file, i));
+            result.put($"{pathPrefix}{e.name}.x", generateTopLevelEnum(e, file, i));
         }
 
         for (Int i = 0; i < file.messageType.size; i++) {
             DescriptorProto msg = file.messageType[i];
-            result.put($"{msg.name}.x", generateTopLevelMessage(msg, file, i));
+            result.put($"{pathPrefix}{msg.name}.x", generateTopLevelMessage(msg, file, i));
         }
 
         for (Int i = 0; i < file.service_.size; i++) {
             ServiceDescriptorProto svc = file.service_[i];
-            result.put($"{svc.name}.x", generateTopLevelService(svc, file, i));
+            result.put($"{pathPrefix}{svc.name}.x", generateTopLevelService(svc, file, i));
         }
 
         return result.freeze(inPlace=True);
@@ -337,10 +406,10 @@ class ProtoCodeGen {
         Map<String, MapFieldInfo> mapInfo = buildMapFieldInfo(msg);
 
         // collect non-oneof fields and oneof descriptors
-        Array<FieldDescriptorProto> regularFields = new Array();
-        Array<FieldDescriptorProto> oneofFields   = new Array();
+        FieldDescriptorProto[] regularFields = new Array();
+        FieldDescriptorProto[] oneofFields   = new Array();
         for (FieldDescriptorProto field : msg.field) {
-            if (field.hasOneofIndex()) {
+            if (Int32 idx := field.hasOneofIndex(), !field.proto3Optional) {
                 oneofFields.add(field);
             } else {
                 regularFields.add(field);
@@ -348,7 +417,7 @@ class ProtoCodeGen {
         }
 
         // build presence tracking map for scalar fields
-        Map<String, Int> presenceMap = buildPresenceMap(regularFields, mapInfo);
+        Map<String, Int> presenceMap = buildPresenceMap(regularFields, mapInfo, file);
 
         // oneof typedefs
         generateOneofTypedefs(buf, msg.oneofDecl, oneofFields, indent + 1);
@@ -415,8 +484,8 @@ class ProtoCodeGen {
     /**
      * Generate typedefs for oneof groups.
      */
-    private void generateOneofTypedefs(StringBuffer buf, Array<OneofDescriptorProto> oneofs,
-                                       Array<FieldDescriptorProto> oneofFields, Int indent) {
+    private void generateOneofTypedefs(StringBuffer buf, OneofDescriptorProto[] oneofs,
+                                       FieldDescriptorProto[] oneofFields, Int indent) {
         String pad = spaces(indent);
 
         for (Int oi = 0; oi < oneofs.size; oi++) {
@@ -448,12 +517,12 @@ class ProtoCodeGen {
      * Generate field declarations for regular (non-oneof) fields and oneof instances.
      */
     private void generateFieldDeclarations(StringBuffer buf,
-                                           Array<FieldDescriptorProto> regularFields,
-                                           Array<OneofDescriptorProto> oneofs, Int indent,
+                                           FieldDescriptorProto[] regularFields,
+                                           OneofDescriptorProto[] oneofs, Int indent,
                                            Map<String, Int> presenceMap,
                                            Map<String, MapFieldInfo> mapInfo,
                                            Int[] msgPath,
-                                           Array<FieldDescriptorProto> allFields) {
+                                           FieldDescriptorProto[] allFields) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
         String pad2 = spaces(indent + 2);
@@ -542,8 +611,8 @@ class ProtoCodeGen {
     /**
      * Generate the default constructor with field parameters.
      */
-    private void generateConstructor(StringBuffer buf, Array<FieldDescriptorProto> regularFields,
-                                     Array<OneofDescriptorProto> oneofs, Int indent,
+    private void generateConstructor(StringBuffer buf, FieldDescriptorProto[] regularFields,
+                                     OneofDescriptorProto[] oneofs, Int indent,
                                      Map<String, Int> presenceMap,
                                      Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
@@ -634,16 +703,16 @@ class ProtoCodeGen {
      */
     private String scalarDefault(FieldType fieldType) {
         return switch (fieldType) {
-            case TypeInt32, TypeSint32, TypeSfixed32:     "0";
-            case TypeInt64, TypeSint64, TypeSfixed64:     "0";
-            case TypeUint32, TypeFixed32:                  "0";
-            case TypeUint64, TypeFixed64:                  "0";
-            case TypeFloat:                               "0.0";
-            case TypeDouble:                              "0.0";
-            case TypeBool:                                "False";
-            case TypeString:                              "\"\"";
-            case TypeBytes:                               "[]";
-            default:                                      "Null";
+            case TypeInt32, TypeSint32, TypeSfixed32: "0";
+            case TypeInt64, TypeSint64, TypeSfixed64: "0";
+            case TypeUint32, TypeFixed32:             "0";
+            case TypeUint64, TypeFixed64:             "0";
+            case TypeFloat:                           "0.0";
+            case TypeDouble:                          "0.0";
+            case TypeBool:                            "False";
+            case TypeString:                          "\"\"";
+            case TypeBytes:                           "[]";
+            default:                                  "Null";
         };
     }
 
@@ -653,7 +722,7 @@ class ProtoCodeGen {
      * Generate the Duplicable copy constructor.
      */
     private void generateCopyConstructor(StringBuffer buf, DescriptorProto msg,
-                                         Array<FieldDescriptorProto> regularFields, Int indent,
+                                         FieldDescriptorProto[] regularFields, Int indent,
                                          Map<String, Int> presenceMap,
                                          Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
@@ -705,9 +774,9 @@ class ProtoCodeGen {
     /**
      * Generate conditional has*() methods for fields that support presence checking.
      */
-    private void generateHasMethods(StringBuffer buf, Array<FieldDescriptorProto> regularFields,
-                                    Array<OneofDescriptorProto> oneofs,
-                                    Array<FieldDescriptorProto> oneofFields, Int indent,
+    private void generateHasMethods(StringBuffer buf, FieldDescriptorProto[] regularFields,
+                                    OneofDescriptorProto[] oneofs,
+                                    FieldDescriptorProto[] oneofFields, Int indent,
                                     Map<String, Int> presenceMap,
                                     Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
@@ -784,6 +853,7 @@ class ProtoCodeGen {
              |{pad}conditional {typedefName} {hasName}(Type<{typedefName}> type = {typedefName}) \{
              |{pad1}{typedefName}? value = {propName};
              |{pad1}switch (type, value.is(_)) \{
+             |
              .appendTo(buf);
 
             // first case: the typedef itself
@@ -818,8 +888,8 @@ class ProtoCodeGen {
      * Generate the parseField override.
      */
     private void generateParseField(StringBuffer buf, DescriptorProto msg,
-                                    Array<FieldDescriptorProto> regularFields,
-                                    Array<FieldDescriptorProto> oneofFields, Int indent,
+                                    FieldDescriptorProto[] regularFields,
+                                    FieldDescriptorProto[] oneofFields, Int indent,
                                     Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
@@ -1007,8 +1077,8 @@ class ProtoCodeGen {
      * Generate the writeKnownFields override.
      */
     private void generateWriteKnownFields(StringBuffer buf, DescriptorProto msg,
-                                          Array<FieldDescriptorProto> regularFields,
-                                          Array<FieldDescriptorProto> oneofFields, Int indent,
+                                          FieldDescriptorProto[] regularFields,
+                                          FieldDescriptorProto[] oneofFields, Int indent,
                                           Map<String, Int> presenceMap,
                                           Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
@@ -1045,8 +1115,16 @@ class ProtoCodeGen {
                  |{pad2}out.writeMessage({fn}, {fname});
                  |{pad1}}
                  .appendTo(buf);
-            } else {
+            } else if (presenceMap.contains(fname)) {
                 String cond = presenceCondition(presenceMap, fname);
+                $|
+                 |{pad1}if ({cond}) \{
+                 |{pad2}out.{writeMethod(field)}({fn}, {fname});
+                 |{pad1}}
+                 .appendTo(buf);
+            } else {
+                // implicit presence: write if value differs from default
+                String cond = defaultValueCondition(field);
                 $|
                  |{pad1}if ({cond}) \{
                  |{pad2}out.{writeMethod(field)}({fn}, {fname});
@@ -1126,7 +1204,7 @@ class ProtoCodeGen {
      * Generate write logic for a oneof group.
      */
     private void generateWriteOneof(StringBuffer buf, OneofDescriptorProto oneof, Int oi,
-                                    Array<FieldDescriptorProto> oneofFields, Int indent) {
+                                    FieldDescriptorProto[] oneofFields, Int indent) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
         String pad2 = spaces(indent + 2);
@@ -1157,7 +1235,7 @@ class ProtoCodeGen {
                 writeCall = $"out.{writeMethod(field)}({fn}, {propName}.as({ecType}))";
             }
 
-            $|if ({propName}.is({ecType})) \{
+            $|{pad1}if ({propName}.is({ecType})) \{
              |{pad1}{writeCall};
              |{pad}}
              .appendTo(buf);
@@ -1171,8 +1249,8 @@ class ProtoCodeGen {
      * Generate the knownFieldsSize override.
      */
     private void generateKnownFieldsSize(StringBuffer buf, DescriptorProto msg,
-                                         Array<FieldDescriptorProto> regularFields,
-                                         Array<FieldDescriptorProto> oneofFields, Int indent,
+                                         FieldDescriptorProto[] regularFields,
+                                         FieldDescriptorProto[] oneofFields, Int indent,
                                          Map<String, Int> presenceMap,
                                          Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
@@ -1211,8 +1289,16 @@ class ProtoCodeGen {
                  |{pad2}size += protobuf.CodedOutput.computeMessageSize({fn}, {fname});
                  |{pad1}}
                  .appendTo(buf);
-            } else {
+            } else if (presenceMap.contains(fname)) {
                 String cond = presenceCondition(presenceMap, fname);
+                $|
+                 |{pad1}if ({cond}) \{
+                 |{pad2}size += protobuf.CodedOutput.{computeSizeMethod(field)};
+                 |{pad1}}
+                 .appendTo(buf);
+            } else {
+                // implicit presence: include size if value differs from default
+                String cond = defaultValueCondition(field);
                 $|
                  |{pad1}if ({cond}) \{
                  |{pad2}size += protobuf.CodedOutput.{computeSizeMethod(field)};
@@ -1296,7 +1382,7 @@ class ProtoCodeGen {
      * Generate size logic for a oneof group.
      */
     private void generateSizeOneof(StringBuffer buf, OneofDescriptorProto oneof, Int oi,
-                                   Array<FieldDescriptorProto> oneofFields, Int indent) {
+                                   FieldDescriptorProto[] oneofFields, Int indent) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
         String typedefName = $"{toPascalCase(oneof.name)}Type";
@@ -1331,7 +1417,7 @@ class ProtoCodeGen {
      * Generate the mergeFrom(MessageLite) override.
      */
     private void generateMergeFrom(StringBuffer buf, DescriptorProto msg,
-                                   Array<FieldDescriptorProto> regularFields, Int indent,
+                                   FieldDescriptorProto[] regularFields, Int indent,
                                    Map<String, Int> presenceMap,
                                    Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
@@ -1382,6 +1468,14 @@ class ProtoCodeGen {
                  |{pad2}{wordName} |= {mask};
                  |{pad1}}
                  .appendTo(buf);
+            } else {
+                // implicit presence: merge if value differs from default
+                String cond = defaultValueCondition(field);
+                $|
+                 |{pad1}if (other.{cond}) \{
+                 |{pad2}{fname} = other.{fname};
+                 |{pad1}}
+                 .appendTo(buf);
             }
         }
 
@@ -1409,7 +1503,7 @@ class ProtoCodeGen {
      * Generate the freeze override.
      */
     private void generateFreeze(StringBuffer buf, DescriptorProto msg,
-                                Array<FieldDescriptorProto> regularFields, Int indent,
+                                FieldDescriptorProto[] regularFields, Int indent,
                                 Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
@@ -1516,9 +1610,9 @@ class ProtoCodeGen {
         assert FieldType fieldType := field.hasType();
         if (field.label == LabelRepeated) {
             if (fieldType == TypeMessage) {
-                return $"Array<{field.typeName}>";
+                return $"{field.typeName}[]";
             }
-            return $"Array<{ecstasyScalarType(field)}>";
+            return $"{ecstasyScalarType(field)}[]";
         }
         if (fieldType == TypeMessage || isEnumRef(field)) {
             return $"{field.typeName}?";
@@ -1865,25 +1959,61 @@ class ProtoCodeGen {
     // ----- presence tracking helpers ---------------------------------------------------------------
 
     /**
+     * Determine whether a scalar field has explicit presence tracking.
+     *
+     * For editions files, `protoc` resolves the feature hierarchy and sends the resolved
+     * `FeatureSet` on each field's options — so we check `field.options.features.fieldPresence`
+     * first. For proto3, explicit presence requires the `optional` keyword (indicated by
+     * `proto3Optional`). For proto2 and unknown syntax, all singular fields are explicit.
+     */
+    private Boolean hasExplicitPresence(FieldDescriptorProto field, FileDescriptorProto file) {
+        import wellknown.FieldOptions;
+        import wellknown.FeatureSet;
+        import wellknown.FeatureSet.FieldPresence;
+
+        // editions: check resolved features on the field
+        FieldOptions? opts = field.options;
+        if (opts != Null) {
+            FeatureSet? features = opts.features;
+            if (features != Null) {
+                if (FieldPresence fp := features.hasFieldPresence()) {
+                    return fp != Implicit;
+                }
+            }
+        }
+
+        // proto3: explicit only if proto3Optional is set
+        if (file.syntax == "proto3") {
+            return field.proto3Optional;
+        }
+
+        // proto2 and unknown: default to explicit
+        return True;
+    }
+
+    /**
      * @return True if this field needs a presence bit in the bitmask
      */
-    private Boolean needsPresenceBit(FieldDescriptorProto field, Map<String, MapFieldInfo> mapInfo) {
+    private Boolean needsPresenceBit(FieldDescriptorProto field, Map<String, MapFieldInfo> mapInfo,
+                                     FileDescriptorProto file) {
         assert FieldType fieldType := field.hasType();
         return !isMapField(field, mapInfo)
             && field.label != LabelRepeated
             && fieldType != TypeMessage
-            && !isEnumRef(field);
+            && !isEnumRef(field)
+            && hasExplicitPresence(field, file);
     }
 
     /**
      * Build a map from escaped field name to bit index for all fields that need presence tracking.
      */
-    private Map<String, Int> buildPresenceMap(Array<FieldDescriptorProto> regularFields,
-                                              Map<String, MapFieldInfo> mapInfo) {
+    private Map<String, Int> buildPresenceMap(FieldDescriptorProto[] regularFields,
+                                              Map<String, MapFieldInfo> mapInfo,
+                                              FileDescriptorProto file) {
         ListMap<String, Int> map = new ListMap();
         Int bitIndex = 0;
         for (FieldDescriptorProto field : regularFields) {
-            if (needsPresenceBit(field, mapInfo)) {
+            if (needsPresenceBit(field, mapInfo, file)) {
                 map.put(fieldName(field.name), bitIndex++);
             }
         }
@@ -1931,7 +2061,69 @@ class ProtoCodeGen {
         return $"{presenceWordName(bitIndex)} & {presenceMaskLiteral(bitIndex)} != 0";
     }
 
+    /**
+     * @return a condition expression that is true when an implicit-presence field holds a
+     *         non-default value (i.e. should be serialized/merged)
+     */
+    private String defaultValueCondition(FieldDescriptorProto field) {
+        String fname = fieldName(field.name);
+        assert FieldType fieldType := field.hasType();
+        return switch (fieldType) {
+            case TypeString:                                 $"{fname}.size != 0";
+            case TypeBytes:                                  $"{fname}.size != 0";
+            case TypeBool:                                   fname;
+            case TypeFloat, TypeDouble:                      $"{fname} != 0.0";
+            default:                                         $"{fname} != 0";
+        };
+    }
+
     // ----- naming helpers ------------------------------------------------------------------------
+
+    /**
+     * Find the map of names of all the wellknown types.
+     */
+    private static Map<String, String> findWellKnownTypes(Package pkg = protobuf.wellknown) {
+        Map<String, String> wellKnownTypes = new HashMap();
+
+        // TODO: remove this when we have options parsing to allow us to annotate well known classes
+        Set<String> temporary = Set:["DescriptorProto",
+            "Edition",
+            "EnumDescriptorProto",
+            "EnumOptions",
+            "EnumValueDescriptorProto",
+            "EnumValueOptions",
+            "ExtensionRangeOptions",
+            "FeatureSet",
+            "FeatureSetDefaults",
+            "FieldDescriptorProto",
+            "FieldOptions",
+            "FileDescriptorProto",
+            "FileDescriptorSet",
+            "FileOptions",
+            "GeneratedCodeInfo",
+            "MessageOptions",
+            "MethodDescriptorProto",
+            "MethodOptions",
+            "OneofDescriptorProto",
+            "OneofOptions",
+            "ServiceDescriptorProto",
+            "ServiceOptions",
+            "SourceCodeInfo",
+            "SymbolVisibility",
+            "UninterpretedOption",
+            ];
+        for (String name : temporary) {
+            wellKnownTypes.put("google.protobuf." + name, "protobuf.wellknown." + name);
+        }
+
+        for (Map.Entry<String, Class> entry : pkg.classByName.entries) {
+            Class clz = entry.value;
+            if (clz.is(WellKnownLocation)) {
+                wellKnownTypes.put(clz.wellKnownName, clz.path);
+            }
+        }
+        return wellKnownTypes;
+    }
 
     /**
      * Convert a proto field name to a safe Ecstasy camelCase identifier, escaping keywords.

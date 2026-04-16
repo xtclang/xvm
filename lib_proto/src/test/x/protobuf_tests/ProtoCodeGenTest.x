@@ -25,27 +25,25 @@ class ProtoCodeGenTest {
         assert source.indexOf("class Person");
         assert source.indexOf("extends protobuf.AbstractMessage");
 
-        // presence bitmask field
-        assert source.indexOf("private Int presentBits_0 = 0");
+        // proto3 implicit presence: no presence bitmask, no backing fields
+        assert !source.indexOf("presentBits_0");
+        assert !source.indexOf("private String _name");
+        assert !source.indexOf("private Int32 _id");
+        assert !source.indexOf("private Boolean _active");
 
-        // private backing fields with protobuf defaults
-        assert source.indexOf("private String _name = \"\"");
-        assert source.indexOf("private Int32 _id = 0");
-        assert source.indexOf("private Boolean _active = False");
-
-        // virtual property with presence tracking setter
-        assert source.indexOf("String name {");
-        assert source.indexOf("presentBits_0 |= 0x01");
+        // plain field declarations with defaults
+        assert source.indexOf("String name = \"\"");
+        assert source.indexOf("Int32 id = 0");
+        assert source.indexOf("Boolean active = False");
 
         // parseField
         assert source.indexOf("input.readString()");
         assert source.indexOf("input.readInt32()");
         assert source.indexOf("input.readBool()");
 
-        // writeKnownFields with presence bit checks
-        assert source.indexOf("presentBits_0 & 0x01 != 0");
-        assert source.indexOf("presentBits_0 & 0x02 != 0");
-        assert source.indexOf("presentBits_0 & 0x04 != 0");
+        // writeKnownFields with default-value checks (not presence bits)
+        assert source.indexOf("name.size != 0");
+        assert source.indexOf("id != 0");
 
         // knownFieldsSize
         assert source.indexOf("computeStringSize(1, name)");
@@ -69,9 +67,9 @@ class ProtoCodeGenTest {
         assert String source := files.get("List.x");
 
         // repeated string uses Array, not Maybe
-        assert source.indexOf("Array<String> items = []");
+        assert source.indexOf("String[] items = []");
         // repeated int32 uses packed encoding
-        assert source.indexOf("Array<Int32> numbers = []");
+        assert source.indexOf("Int32[] numbers = []");
         assert source.indexOf("writePackedVarints");
         assert source.indexOf("computePackedVarintsSize");
     }
@@ -246,8 +244,8 @@ class ProtoCodeGenTest {
                                              );
         assert String source := files.get("Msg.x");
 
-        // field declaration should use Array<Color>
-        assert source.indexOf("Array<Color> colors");
+        // field declaration should use Color[]
+        assert source.indexOf("Color[] colors");
 
         // parseField should convert packed varints to enum values
         assert source.indexOf("protobuf.ProtoEnum.byProtoValue(Color.values");
@@ -327,11 +325,9 @@ class ProtoCodeGenTest {
                                              );
         assert String source := files.get("Msg.x");
 
-        // field names should have underscore appended, with private backing fields
-        assert source.indexOf("private String _class_ = \"\"");
-        assert source.indexOf("private Int32 _import_ = 0");
-        assert source.indexOf("String class_ {");
-        assert source.indexOf("Int32 import_ {");
+        // field names should have underscore appended (proto3 implicit presence: plain fields)
+        assert source.indexOf("String class_ = \"\"");
+        assert source.indexOf("Int32 import_ = 0");
     }
 
     // ----- empty message --------------------------------------------------------------------
@@ -377,7 +373,7 @@ class ProtoCodeGenTest {
         // Array is implicitly imported in Ecstasy
         assert !source.indexOf("ecstasy.collections.Array");
         // but the field should still use Array type
-        assert source.indexOf("Array<String>");
+        assert source.indexOf("String[]");
     }
 
     // ----- nested message imports ---------------------------------------------------------------
@@ -571,6 +567,128 @@ class ProtoCodeGenTest {
                               |  map<string, string> metadata = 6;
                               |}
                              ));
+    }
+
+    // ----- proto2 explicit presence (regression) ---------------------------------------------------
+
+    @Test
+    void shouldGenerateProto2ExplicitPresence() {
+        Map<String, String> files = generate($|syntax = "proto2";
+                                              |message Person \{
+                                              |  optional string name = 1;
+                                              |  optional int32 id = 2;
+                                              |}
+                                             );
+        assert String source := files.get("Person.x");
+
+        // proto2: all singular fields have explicit presence
+        assert source.indexOf("private Int presentBits_0 = 0");
+        assert source.indexOf("private String _name");
+        assert source.indexOf("private Int32 _id");
+        assert source.indexOf("hasName()");
+        assert source.indexOf("hasId()");
+    }
+
+    @Test
+    void shouldCompileProto2Message() {
+        testCompile(generate($|syntax = "proto2";
+                              |message Person \{
+                              |  optional string name = 1;
+                              |  optional int32 id = 2;
+                              |  optional bool active = 3;
+                              |}
+                             ));
+    }
+
+    // ----- proto3 explicit optional --------------------------------------------------------------
+
+    @Test
+    void shouldGenerateProto3ExplicitOptional() {
+        Map<String, String> files = generate($|syntax = "proto3";
+                                              |message Person \{
+                                              |  optional string name = 1;
+                                              |  int32 id = 2;
+                                              |}
+                                             );
+        assert String source := files.get("Person.x");
+
+        // 'name' has explicit presence (optional keyword)
+        assert source.indexOf("private String _name");
+        assert source.indexOf("hasName()");
+
+        // 'id' has implicit presence (no optional keyword)
+        assert source.indexOf("Int32 id = 0");
+        assert !source.indexOf("private Int32 _id");
+        assert !source.indexOf("hasId()");
+    }
+
+    @Test
+    void shouldCompileProto3ExplicitOptional() {
+        testCompile(generate($|syntax = "proto3";
+                              |message Mixed \{
+                              |  string name = 1;
+                              |  optional string nickname = 2;
+                              |  int32 age = 3;
+                              |  optional int32 score = 4;
+                              |}
+                             ));
+    }
+
+    // ----- editions field presence ---------------------------------------------------------------
+
+    @Test
+    void shouldGenerateEditionsFieldPresence() {
+        import protobuf.wellknown.FieldOptions;
+        import protobuf.wellknown.FeatureSet;
+        import protobuf.wellknown.FeatureSet.FieldPresence;
+        import protobuf.wellknown.FieldDescriptorProto;
+        import protobuf.wellknown.FieldDescriptorProto.Type as FieldType;
+        import protobuf.wellknown.FieldDescriptorProto.Label;
+        import protobuf.wellknown.DescriptorProto;
+        import protobuf.wellknown.FileDescriptorProto;
+        import protobuf.wellknown.Edition;
+        import protobuf.ProtoCodeGen;
+
+        // field with explicit presence
+        FieldDescriptorProto explicitField = new FieldDescriptorProto();
+        explicitField.name   = "name";
+        explicitField.number = 1;
+        explicitField.type   = TypeString;
+        explicitField.label  = LabelOptional;
+        FieldOptions explicitOpts = new FieldOptions();
+        explicitOpts.features = new FeatureSet(fieldPresence=Explicit);
+        explicitField.options = explicitOpts;
+
+        // field with implicit presence
+        FieldDescriptorProto implicitField = new FieldDescriptorProto();
+        implicitField.name   = "tag";
+        implicitField.number = 2;
+        implicitField.type   = TypeString;
+        implicitField.label  = LabelOptional;
+        FieldOptions implicitOpts = new FieldOptions();
+        implicitOpts.features = new FeatureSet(fieldPresence=Implicit);
+        implicitField.options = implicitOpts;
+
+        DescriptorProto msg = new DescriptorProto();
+        msg.name  = "EditionsTest";
+        msg.field = [explicitField, implicitField];
+
+        FileDescriptorProto file = new FileDescriptorProto();
+        file.name        = "test.proto";
+        file.syntax      = "editions";
+        file.edition     = Edition2023;
+        file.messageType = [msg];
+
+        Map<String, String> files = new ProtoCodeGen().generate(file);
+        assert String source := files.get("EditionsTest.x");
+
+        // explicit field has presence tracking
+        assert source.indexOf("private String _name");
+        assert source.indexOf("hasName()");
+
+        // implicit field does not
+        assert source.indexOf("String tag = \"\"");
+        assert !source.indexOf("hasTag()");
     }
 
     // ----- helper --------------------------------------------------------------------------------

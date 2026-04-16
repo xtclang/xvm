@@ -24,4 +24,8 @@ module protobuf.xtclang.org {
         ProtocPlugin plugin = new ProtocPlugin();
         plugin.generate(requestFile, responseFile);
     }
+
+
+    annotation WellKnownLocation(String wellKnownName)
+            into Class<MessageLite>;
 }

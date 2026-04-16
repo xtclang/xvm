@@ -141,6 +141,6 @@ message Timestamp {
   // Negative second values with fractions must still have non-negative nanos
   // values that count forward in time. Must be between 0 and 999,999,999
   // inclusive.
-  optional int32 nanos = 2;
+  int32 nanos = 2;
 }
 

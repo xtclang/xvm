@@ -2,10 +2,12 @@ import ecstasy.io.FileInputStream;
 import ecstasy.io.FileOutputStream;
 
 import wellknown.DescriptorProto;
+import wellknown.Edition;
 import wellknown.FileDescriptorProto;
 
 import wellknown.compiler.CodeGeneratorRequest;
 import wellknown.compiler.CodeGeneratorResponse;
+import wellknown.compiler.CodeGeneratorResponse.Feature;
 import wellknown.compiler.CodeGeneratorResponse.File as SourceFile;
 
 /**
@@ -57,14 +59,20 @@ class ProtocPlugin {
 
             Map<String, String> sourceMap = codeGen.generate(descriptor);
             for (Map.Entry<String, String> entry : sourceMap.entries) {
-                String key = entry.key;
-                String value = entry.value;
                 SourceFile sourceFile = new SourceFile(name=entry.key, content=entry.value);
                 sourceFiles.add(sourceFile);
             }
         }
-        return new  CodeGeneratorResponse(file=sourceFiles);
 
+        UInt64 features = Feature.FeatureProto3Optional.protoValue.toUInt64()
+                        | Feature.FeatureSupportsEditions.protoValue.toUInt64();
+
+        return new CodeGeneratorResponse(
+            supportedFeatures = features,
+            minimumEdition    = Edition.Edition2023.protoValue.toInt32(),
+            maximumEdition    = Edition.Edition2024.protoValue.toInt32(),
+            file              = sourceFiles
+        );
     }
 }
 
