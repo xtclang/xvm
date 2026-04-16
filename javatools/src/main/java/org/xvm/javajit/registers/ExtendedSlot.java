@@ -1,4 +1,4 @@
-package org.xvm.javajit;
+package org.xvm.javajit.registers;
 
 import java.lang.classfile.CodeBuilder;
 
@@ -7,6 +7,11 @@ import java.lang.constant.ClassDesc;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitFlavor;
+import org.xvm.javajit.RegisterInfo;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 

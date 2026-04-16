@@ -43,17 +43,18 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.Ctx;
-import org.xvm.javajit.ExtendedSlot;
 import org.xvm.javajit.JitCtorDesc;
 import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.ModuleLoader;
-import org.xvm.javajit.MultipleSlot;
 import org.xvm.javajit.NativeTypeSystem;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
+
+import org.xvm.javajit.registers.ExtendedSlot;
+import org.xvm.javajit.registers.MultiSlot;
 
 import org.xvm.util.ShallowSizeOf;
 
@@ -442,7 +443,7 @@ public class CommonBuilder
                         pop(code, extSlot.cd());
                         code.putstatic(CD_this, jitName, reg.cd());
                         code.labelBinding(endIf);
-                    } else if (reg instanceof MultipleSlot multiSlot) {
+                    } else if (reg instanceof MultiSlot multiSlot) {
                         ClassDesc[] cds = multiSlot.slotCds();
                         for (int i = cds.length - 1; i >= 0; i--) {
                             code.putstatic(CD_this, jitName + "$" + i, cds[i]);

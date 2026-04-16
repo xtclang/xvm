@@ -29,10 +29,8 @@ public interface TextSupport {
      *
      * @return the type of the result of the operation
      */
-    default TypeConstant buildAddToChar(BuildContext bctx,
-                                        CodeBuilder  code,
-                                        RegisterInfo regTarget,
-                                        int          nArgId) {
+    default TypeConstant buildAddToChar(BuildContext bctx, CodeBuilder code,
+                                        RegisterInfo regTarget, int nArgId) {
         TypeConstant typeArg   = bctx.getArgumentType(nArgId);
         String       typeName  = typeArg.getValueString();
         return switch (typeName) {
@@ -59,10 +57,8 @@ public interface TextSupport {
      *
      * @return the type of the result of the operation
      */
-    default TypeConstant buildAddIntToChar(BuildContext bctx,
-                                           CodeBuilder  code,
-                                           RegisterInfo regTarget,
-                                           int          nArgId) {
+    default TypeConstant buildAddIntToChar(BuildContext bctx, CodeBuilder code,
+                                           RegisterInfo regTarget, int nArgId) {
         bctx.loadCtx(code);
         RegisterInfo regLoaded = regTarget.load(code);
         bctx.loadArgument(code, nArgId);
@@ -82,10 +78,8 @@ public interface TextSupport {
      *
      * @return the type of the result of the operation
      */
-    default TypeConstant buildAddCharToChar(BuildContext bctx,
-                                            CodeBuilder  code,
-                                            RegisterInfo regTarget,
-                                            int          nArgId) {
+    default TypeConstant buildAddCharToChar(BuildContext bctx, CodeBuilder code,
+                                            RegisterInfo regTarget, int nArgId) {
         regTarget.load(code);
         code.i2c();
         bctx.loadArgument(code, nArgId);
@@ -109,10 +103,8 @@ public interface TextSupport {
      *
      * @return the type of the result of the operation
      */
-    default TypeConstant buildAddStringToChar(BuildContext bctx,
-                                              CodeBuilder  code,
-                                              RegisterInfo regTarget,
-                                              int          nArgId) {
+    default TypeConstant buildAddStringToChar(BuildContext bctx, CodeBuilder code,
+                                              RegisterInfo regTarget, int nArgId) {
         regTarget.load(code);
         code.i2c();
         bctx.loadArgument(code, nArgId);
@@ -135,10 +127,8 @@ public interface TextSupport {
      *
      * @return the type of the result of the operation
      */
-    default TypeConstant buildSubFromChar(BuildContext bctx,
-                                          CodeBuilder  code,
-                                          RegisterInfo regTarget,
-                                          int          nArgId) {
+    default TypeConstant buildSubFromChar(BuildContext bctx, CodeBuilder code,
+                                          RegisterInfo regTarget, int nArgId) {
         TypeConstant typeArg   = bctx.getArgumentType(nArgId);
         String       typeName  = typeArg.getValueString();
         return switch (typeName) {
@@ -164,10 +154,8 @@ public interface TextSupport {
      *
      * @return the type of the result of the operation
      */
-    default TypeConstant buildSubIntFromChar(BuildContext bctx,
-                                             CodeBuilder  code,
-                                             RegisterInfo regTarget,
-                                             int          nArgId) {
+    default TypeConstant buildSubIntFromChar(BuildContext bctx, CodeBuilder code,
+                                             RegisterInfo regTarget, int nArgId) {
         bctx.loadCtx(code);
         RegisterInfo regLoaded = regTarget.load(code);
         bctx.loadArgument(code, nArgId);
@@ -190,10 +178,8 @@ public interface TextSupport {
      *
      * @return the type of the result of the operation, which should be UInt32
      */
-    default TypeConstant buildSubCharFromChar(BuildContext bctx,
-                                              CodeBuilder  code,
-                                              RegisterInfo regTarget,
-                                              int          nArgId) {
+    default TypeConstant buildSubCharFromChar(BuildContext bctx, CodeBuilder code,
+                                              RegisterInfo regTarget, int nArgId) {
         regTarget.load(code);
         bctx.loadArgument(code, nArgId);
         code.isub();

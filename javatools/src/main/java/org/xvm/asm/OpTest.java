@@ -12,10 +12,11 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
-import org.xvm.javajit.ExtendedSlot;
 import org.xvm.javajit.JitFlavor;
-import org.xvm.javajit.MultipleSlot;
 import org.xvm.javajit.RegisterInfo;
+
+import org.xvm.javajit.registers.ExtendedSlot;
+import org.xvm.javajit.registers.MultiSlot;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -403,7 +404,7 @@ public abstract class OpTest
             } else {
                 code.ifne(labelTrue);
             }
-        } else if (regArg instanceof MultipleSlot slotMulti
+        } else if (regArg instanceof MultiSlot slotMulti
                 && slotMulti.flavor() == JitFlavor.NullableXvmPrimitive) {
 
             code.iload(slotMulti.extSlot()); // True indicates Null

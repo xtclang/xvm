@@ -7,6 +7,8 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.javajit.registers.SingleSlot;
+
 /**
  * Represents an information about XTC register.
  */

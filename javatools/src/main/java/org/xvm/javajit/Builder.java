@@ -20,6 +20,10 @@ import org.xvm.asm.constants.*;
 
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
+import org.xvm.javajit.registers.ExtendedSlot;
+import org.xvm.javajit.registers.MultiSlot;
+import org.xvm.javajit.registers.SingleSlot;
+
 import org.xvm.type.Decimal128;
 import org.xvm.type.Decimal32;
 import org.xvm.type.Decimal64;
@@ -159,8 +163,8 @@ public abstract class Builder {
                         code.ldc(n < 0 ? -1L : 0L);
                     }
                     yield intConstant.getFormat() == Int128
-                            ? new MultipleSlot(bctx, XvmPrimitive, type, CD_Int128, CDs_LongLong)
-                            : new MultipleSlot(bctx, XvmPrimitive, type, CD_UInt128, CDs_LongLong);
+                            ? new MultiSlot(bctx, XvmPrimitive, type, CD_Int128, CDs_LongLong)
+                            : new MultiSlot(bctx, XvmPrimitive, type, CD_UInt128, CDs_LongLong);
                 }
                 default ->
                     throw new IllegalStateException("Unsupported IntConstant type "
@@ -173,20 +177,20 @@ public abstract class Builder {
                     TypeConstant type = decConstant.getType();
                     Decimal32    dec  = (Decimal32) decConstant.getValue();
                     code.ldc(dec.toIntBits());
-                    yield new MultipleSlot(bctx, XvmPrimitive, type, CD_Dec32, CDs_Int);
+                    yield new MultiSlot(bctx, XvmPrimitive, type, CD_Dec32, CDs_Int);
                 }
                 case Dec64 -> {
                     TypeConstant type = decConstant.getType();
                     Decimal64    dec  = (Decimal64) decConstant.getValue();
                     code.ldc(dec.toLongBits());
-                    yield new MultipleSlot(bctx, XvmPrimitive, type, CD_Dec64, CDs_Long);
+                    yield new MultiSlot(bctx, XvmPrimitive, type, CD_Dec64, CDs_Long);
                 }
                 case Dec128 -> {
                     TypeConstant type = decConstant.getType();
                     Decimal128   dec  = (Decimal128) decConstant.getValue();
                     code.ldc(dec.getLowBits());
                     code.ldc(dec.getHighBits());
-                    yield new MultipleSlot(bctx, XvmPrimitive, type, CD_Dec128, CDs_LongLong);
+                    yield new MultiSlot(bctx, XvmPrimitive, type, CD_Dec128, CDs_LongLong);
                 }
                 default ->
                     throw new IllegalStateException("Unsupported IntConstant type "
@@ -788,7 +792,7 @@ public abstract class Builder {
 
             code.iload(extSlot.extSlot())
                 .ifne(lblNull);
-        } else if (reg instanceof MultipleSlot multiSlot) {
+        } else if (reg instanceof MultiSlot multiSlot) {
             assert reg.type().removeNullable().isXvmPrimitive();
 
             code.iload(multiSlot.extSlot())
@@ -813,7 +817,7 @@ public abstract class Builder {
 
             code.iload(extSlot.extSlot())
                 .ifeq(lblNotNull);
-        } else if (reg instanceof MultipleSlot multiSlot) {
+        } else if (reg instanceof MultiSlot multiSlot) {
             assert reg.flavor() == NullableXvmPrimitive;
 
             code.iload(multiSlot.extSlot())

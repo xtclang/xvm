@@ -12,7 +12,6 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -57,6 +56,11 @@ import org.xvm.asm.op.GuardAll;
 import org.xvm.asm.op.Guarded;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.Nop;
+
+import org.xvm.javajit.registers.ExtendedSlot;
+import org.xvm.javajit.registers.MultiSlot;
+import org.xvm.javajit.registers.Narrowed;
+import org.xvm.javajit.registers.SingleSlot;
 
 import static java.lang.constant.ConstantDescs.CD_CallSite;
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
@@ -730,7 +734,7 @@ public class BuildContext {
 
                 int extSlot;
                 if (flavor == XvmPrimitive) {
-                    extSlot = MultipleSlot.NO_SLOT;
+                    extSlot = MultiSlot.NO_SLOT;
                     if (withDefault) {
                         i++; // skip the next param
                     }
@@ -743,7 +747,7 @@ public class BuildContext {
                         ? JitTypeDesc.getNullableXvmPrimitiveClass(paramDesc.type)
                         : JitTypeDesc.getXvmPrimitiveClass(paramDesc.type);
 
-                registerInfos.put(varIndex, new MultipleSlot(this, varIndex, slots, extSlot,
+                registerInfos.put(varIndex, new MultiSlot(this, varIndex, slots, extSlot,
                         flavor, type, cd, cds, name));
                 break;
             }
@@ -791,7 +795,7 @@ public class BuildContext {
                     it.remove();
                 }
                 if (entry.getValue() instanceof Narrowed narrowedReg &&
-                        narrowedReg.scopeDepth >= scope.depth) {
+                        narrowedReg.scopeDepth() >= scope.depth) {
                     // copy the data and reset the register type
                     // TODO: track the data change to prevent unnecessary copy
                     RegisterInfo origReg = narrowedReg.origReg();
@@ -986,7 +990,7 @@ public class BuildContext {
                 if (reg instanceof Narrowed narrowedReg) {
                     reg     = narrowedReg.origReg();
                     regType = reg.type();
-                    depth   = narrowedReg.scopeDepth;
+                    depth   = narrowedReg.scopeDepth();
                     if (mtxType.isEquivalent(regType)) {
                         return reg;
                     }
@@ -1306,7 +1310,7 @@ public class BuildContext {
                     slots[i] = scope.allocateLocal(regId, cds[i]);
                     code.localVariable(slots[i], name + "$" + i, cds[i], varStart, scope.endLabel);
                 }
-                yield new MultipleSlot(this, regId, slots, XvmPrimitive, type, jtd.cd, cds, name);
+                yield new MultiSlot(this, regId, slots, XvmPrimitive, type, jtd.cd, cds, name);
 
             }
             case NullableXvmPrimitive -> {
@@ -1320,7 +1324,7 @@ public class BuildContext {
                 }
                 int slotExt = scope.allocateLocal(regId, TypeKind.BOOLEAN);
                 code.localVariable(slotExt, name+EXT, CD_boolean, varStart, scope.endLabel);
-                yield new MultipleSlot(this, regId, slots, slotExt, NullableXvmPrimitive,
+                yield new MultiSlot(this, regId, slots, slotExt, NullableXvmPrimitive,
                         type, jtd.cd, cds, name);
             }
 
@@ -1822,7 +1826,7 @@ public class BuildContext {
                     for (int i = 0; i < slots.length; i++) {
                         slots[i] = scope.allocateLocal(regId, cds[i]);
                     }
-                    return new MultipleSlot(this, regId, slots, jitDesc.flavor,
+                    return new MultiSlot(this, regId, slots, jitDesc.flavor,
                             resolvedType, cd, cds, name);
                 }
                 return new SingleSlot(regId, scope.allocateLocal(ix, cd), jitDesc.flavor,
@@ -1905,7 +1909,7 @@ public class BuildContext {
         boolean applyInfo = fromAddr > currOpAddr;
         OpAction action = () -> {
             if (applyInfo) {
-                registerInfos.put(narrowedReg.regId, narrowedReg);
+                registerInfos.put(narrowedReg.regId(), narrowedReg);
             }
 
             if (origReg.slot() != narrowedSlots[0] || !narrowedCD.equals(CD_nObj)) {
@@ -1926,11 +1930,11 @@ public class BuildContext {
                 } else if (narrowedType.isXvmPrimitive()) {
                     // this can only mean that the original was a NullableXvmPrimitive
                     if (origType.removeNullable().isXvmPrimitive()) {
-                        assert origReg instanceof MultipleSlot multiSlot &&
+                        assert origReg instanceof MultiSlot multiSlot &&
                                 multiSlot.flavor() == NullableXvmPrimitive &&
                                 !narrowedType.isNullable();
 
-                        MultipleSlot multiSlot = (MultipleSlot) origReg;
+                        MultiSlot multiSlot = (MultiSlot) origReg;
                         int          slotCount = multiSlot.slotCount();
                         for (int i = 0; i < slotCount; i++) {
                             Builder.load(code, multiSlot.slotCds()[i], multiSlot.slots()[i]);
@@ -1968,7 +1972,7 @@ public class BuildContext {
                         assert origReg.flavor() == NullableXvmPrimitive &&
                                 narrowedType.isOnlyNullable();
 
-                        MultipleSlot multiSlot = (MultipleSlot) origReg;
+                        MultiSlot multiSlot = (MultiSlot) origReg;
                         code.iconst_1()
                             .istore(multiSlot.extSlot()); // `true`
                         for (ClassDesc cd : multiSlot.slotCds()) {
@@ -2008,8 +2012,8 @@ public class BuildContext {
      * Reset the narrowed register info.
      */
     public RegisterInfo resetRegister(Narrowed narrowedReg) {
-        RegisterInfo origReg = narrowedReg.origReg;
-        registerInfos.put(narrowedReg.regId, origReg);
+        RegisterInfo origReg = narrowedReg.origReg();
+        registerInfos.put(narrowedReg.regId(), origReg);
         return origReg;
     }
 
@@ -2796,147 +2800,6 @@ public class BuildContext {
                 return null;
             }
         };
-    }
-
-    // ----- RegisterInfo implementations ----------------------------------------------------------
-
-    /**
-     * A register holding a narrowed value.
-     */
-    public record Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flavor,
-                           ClassDesc cd, ClassDesc[] slotCds, String name, int scopeDepth,
-                           boolean castOnLoad, RegisterInfo origReg)
-            implements RegisterInfo {
-
-        @Override
-        public int slot() {
-            return slots[0];
-        }
-
-        @Override
-        public ClassDesc[] slotCds() {
-            return new ClassDesc[]{cd};
-        }
-
-        @Override
-        public boolean isSingle() {
-            return true;
-        }
-
-        @Override
-        public RegisterInfo original() {
-            return origReg;
-        }
-
-        @Override
-        public RegisterInfo load(CodeBuilder code) {
-            if (flavor == AlwaysNull) {
-                Builder.loadNull(code);
-            } else {
-                for (int i = 0; i < slotCds.length; i++) {
-                    Builder.load(code, slotCds[i], slots[i]);
-                }
-                if (castOnLoad) {
-                    code.checkcast(cd);
-                }
-            }
-            return this;
-        }
-
-        @Override
-        public RegisterInfo store(BuildContext bctx, CodeBuilder code, TypeConstant type) {
-            assert regId() > Op.CONSTANT_OFFSET; // cannot store a property register
-
-            if (type == null) {
-                RegisterInfo origReg = bctx.resetRegister(this);
-
-                if (!this.sharesOriginalSlot()) {
-                    if (cd().isPrimitive()) {
-                        if (origReg.cd().isPrimitive()) {
-                            assert origReg instanceof ExtendedSlot;
-                            code.iconst_0() // false
-                                .istore(((ExtendedSlot) origReg).extSlot());
-                        } else {
-                            Builder.box(code, type());
-                        }
-                    } else if (type().isXvmPrimitive()) {
-                        if (origReg.type().isXvmPrimitive()) {
-                            assert origReg instanceof MultipleSlot;
-                            code.iconst_0() // false
-                                .istore(((MultipleSlot) origReg).extSlot());
-                        } else {
-                            Builder.box(code, type());
-                        }
-                    }
-                }
-
-                int[]       slots = origReg.slots();
-                ClassDesc[] cds   = origReg.slotCds();
-                // store slots in reverse order
-                for (int i = slots.length - 1; i >= 0; i--) {
-                    Builder.store(code, cds[i], slots[i]);
-                }
-                return origReg;
-            }
-
-            if (type.isA(this.type())) {
-                return RegisterInfo.super.store(bctx, code, type);
-            } else {
-                assert type.isA(original().type());
-                return bctx.narrowRegister(code, original(), type).store(bctx, code, type);
-            }
-        }
-
-        /**
-         * @return {@code true} if this register shares the same slot as the original register
-         */
-        boolean sharesOriginalSlot() {
-            return Arrays.equals(slots, origReg.slots());
-        }
-
-        /**
-         * Widen this register to the specified type. This may require data transfer between Java
-         * slots.
-         */
-        public RegisterInfo widen(BuildContext bctx, CodeBuilder code, TypeConstant wideType) {
-            TypeConstant prevType = type();
-            RegisterInfo origReg  = original();
-            TypeConstant origType = origReg.type();
-
-            assert !prevType.equals(wideType) && wideType.isA(origType);
-
-            if (this.slot() != origReg.slot()) {
-                load(code);
-
-                if (cd().isPrimitive()) {
-                    if (origReg.cd().isPrimitive()) {
-                        assert origReg instanceof ExtendedSlot;
-                        code.iconst_0() // false
-                            .istore(((ExtendedSlot) origReg).extSlot());
-                    } else {
-                        Builder.box(code, prevType);
-                    }
-                }
-                int[]       origSlots = origReg.slots();
-                ClassDesc[] origCds   = origReg.slotCds();
-                for (int i = 0; i < origSlots.length; i++) {
-                    Builder.store(code, origCds[i], origSlots[i]);
-                }
-            }
-
-            return wideType.equals(origType)
-                ? origReg
-                : bctx.narrowRegister(code, origReg, wideType).store(bctx, code, wideType);
-        }
-
-        @Override
-        public String toString() {
-            return "regId="    + regId
-                + ", slots="   + Arrays.toString(slots)
-                + ", flavor="  + flavor
-                + ", type="    + type.getValueString()
-                + ", slotCds=" + Arrays.toString(slotCds);
-        }
     }
 
     // ----- Actions -------------------------------------------------------------------------------

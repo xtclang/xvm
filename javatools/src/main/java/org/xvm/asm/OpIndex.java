@@ -25,10 +25,11 @@ import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitParamDesc.JitParams;
 import org.xvm.javajit.JitTypeDesc;
-import org.xvm.javajit.MultipleSlot;
 import org.xvm.javajit.NumberSupport;
 import org.xvm.javajit.RegisterInfo;
-import org.xvm.javajit.SingleSlot;
+
+import org.xvm.javajit.registers.MultiSlot;
+import org.xvm.javajit.registers.SingleSlot;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -468,7 +469,7 @@ public abstract class OpIndex
                     loadFromContext(code, cds[i], i - 1);
                     slots[i] = bctx.storeTempValue(code, cds[i]);
                 }
-                regElement = new MultipleSlot(bctx, 0, slots, JitFlavor.XvmPrimitive, typeEl,
+                regElement = new MultiSlot(bctx, 0, slots, JitFlavor.XvmPrimitive, typeEl,
                         cd, cds, "");
             } else {
                 int slot = bctx.storeTempValue(code, cdEl);

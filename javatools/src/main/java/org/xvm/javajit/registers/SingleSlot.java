@@ -1,9 +1,12 @@
-package org.xvm.javajit;
+package org.xvm.javajit.registers;
 
 import java.lang.constant.ClassDesc;
 
 import org.xvm.asm.Op;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.JitFlavor;
+import org.xvm.javajit.RegisterInfo;
 
 /**
  * A register that stores an XVM value in a single Java slot.
