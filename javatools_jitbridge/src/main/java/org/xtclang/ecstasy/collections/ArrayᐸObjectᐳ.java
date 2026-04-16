@@ -20,11 +20,9 @@ public class ArrayᐸObjectᐳ
     extends Array {
 
     public ArrayᐸObjectᐳ(Ctx ctx, TypeConstant type) {
-        super(ctx);
-        $type = type;
+        super(ctx, type);
     }
 
-    public TypeConstant $type;
     public ArrayᐸObjectᐳ $delegate;
     public nObj[] $storage;
 

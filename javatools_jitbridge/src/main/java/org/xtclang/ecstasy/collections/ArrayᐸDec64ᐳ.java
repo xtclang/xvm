@@ -6,8 +6,9 @@ import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 import org.xtclang.ecstasy.numbers.Dec64;
-import org.xvm.asm.ConstantPool;
+
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.Ctx;
 
 /**
@@ -107,11 +108,6 @@ public class ArrayᐸDec64ᐳ
     protected String $elementToString(Ctx ctx, long index) {
         long n = getElement$pi(ctx, index);
         return Long.toString(n);
-    }
-
-    @Override
-    protected TypeConstant $elementType(ConstantPool pool) {
-        return pool.typeDec64();
     }
 
     @Override

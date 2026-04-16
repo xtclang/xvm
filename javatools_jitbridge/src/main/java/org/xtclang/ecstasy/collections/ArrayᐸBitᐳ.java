@@ -8,8 +8,6 @@ import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.numbers.Bit;
 
-import org.xvm.asm.ConstantPool;
-
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
@@ -102,11 +100,6 @@ public class ArrayᐸBitᐳ
     }
 
     // ----- Array internals -----------------------------------------------------------------------
-
-    @Override
-    protected TypeConstant $elementType(ConstantPool pool) {
-        return pool.typeBit();
-    }
 
     @Override
     protected String $elementToString(Ctx ctx, long index) {

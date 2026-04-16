@@ -6,8 +6,6 @@ import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.numbers.UInt128;
 
-import org.xvm.asm.ConstantPool;
-
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
@@ -117,11 +115,6 @@ public class ArrayᐸUInt128ᐳ
     protected String $elementToString(Ctx ctx, long index) {
         UInt128 n = getElement$p(ctx, index);
         return n.toString();
-    }
-
-    @Override
-    protected TypeConstant $elementType(ConstantPool pool) {
-        return pool.typeUInt128();
     }
 
     @Override

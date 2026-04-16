@@ -9,8 +9,6 @@ import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.text.Char;
 
-import org.xvm.asm.ConstantPool;
-
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
@@ -130,11 +128,6 @@ public class ArrayᐸCharᐳ
     protected java.lang.String $elementToString(Ctx ctx, long index) {
         Char c = getElement$p(ctx, index);
         return c.toString(ctx).toString();
-    }
-
-    @Override
-    protected TypeConstant $elementType(ConstantPool pool) {
-        return pool.typeChar();
     }
 
     @Override

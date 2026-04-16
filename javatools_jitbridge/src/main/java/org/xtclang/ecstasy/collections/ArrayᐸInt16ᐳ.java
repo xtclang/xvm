@@ -8,8 +8,6 @@ import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.numbers.Int16;
 
-import org.xvm.asm.ConstantPool;
-
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
@@ -110,11 +108,6 @@ public class ArrayᐸInt16ᐳ
     protected java.lang.String $elementToString(Ctx ctx, long index) {
         Int16 c = getElement$p(ctx, index);
         return c.toString(ctx).toString();
-    }
-
-    @Override
-    protected TypeConstant $elementType(ConstantPool pool) {
-        return pool.typeInt16();
     }
 
     @Override
