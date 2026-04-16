@@ -222,15 +222,15 @@ public abstract class OpIndex
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        ConstantPool pool      = bctx.pool();
-        RegisterInfo reg       = bctx.loadArgument(code, m_nTarget);
-        TypeConstant type      = reg.type();
-        TypeConstant typeEl    = computeElementType(type);
-        boolean      primitive = typeEl.isJitPrimitive();
+        ConstantPool pool       = bctx.pool();
+        RegisterInfo reg        = bctx.loadArgument(code, m_nTarget);
+        TypeConstant type       = reg.type();
+        TypeConstant typeEl     = computeElementType(type);
+        boolean      fPrimitive = typeEl.isJitPrimitive();
 
         if (type.isArray()) {
             ClassDesc cdArray = bctx.builder.ensureClassDesc(type);
-            if (primitive) {
+            if (fPrimitive) {
                 buildPrimitiveArrayOp(bctx, code, reg, typeEl);
             } else {
                 bctx.loadCtx(code);
@@ -304,13 +304,18 @@ public abstract class OpIndex
 
         if (isAssignOp()) {
             // the Op returns a value which needs to be stored in the return register
-            if (primitive) {
+            if (fPrimitive) {
                 // the generated code will leave the result on the stack, so just store it to the
                 // return register
                 bctx.storeValue(code, m_nRetValue, typeEl);
             } else {
                 // the generated code was a method invocation, so process the return values the
-                // same we would for an Invoke Op
+                // same we would for an Invoke Op; the only difference is that if the container type
+                // is parameterized, we need to generate a cast. For example, if the container
+                // is "List<Person>", the "getElement" signature would be "nObj getElement()".
+                if (type.isParameterizedDeep()) {
+                    bctx.builder.generateCheckCast(code, typeEl);
+                }
                 JitParams     params = JitParamDesc.computeJitParams(bctx.builder, typeEl);
                 JitMethodDesc jmd    = new JitMethodDesc(
                     params.apdStdParam(), JitParamDesc.NONE,
