@@ -23,7 +23,7 @@ import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 
 /**
- * Task that extracts XTC modules and javatools.jar from an XDK distribution zip.
+ * Task that extracts XTC modules and launcher runtime jars from an XDK distribution zip.
  * This task extends DefaultTask directly - it doesn't need XtcDefaultTask functionality.
  */
 @CacheableTask
@@ -70,7 +70,7 @@ public abstract class XtcExtractXdkTask extends DefaultTask {
             config.from(getArchiveOperations().zipTree(archiveFile));
             config.include(
                     "**/*." + XTC_MODULE_FILE_EXTENSION,
-                    "**/" + XDK_JAVATOOLS_ARTIFACT_ID + '*' + XDK_JAVATOOLS_ARTIFACT_SUFFIX);
+                    "**/*." + XDK_JAVATOOLS_ARTIFACT_SUFFIX);
             config.eachFile(fileCopyDetails -> fileCopyDetails.setRelativePath(new RelativePath(true, fileCopyDetails.getName())));
             config.setIncludeEmptyDirs(false);
             config.into(getOutputXtcModules());

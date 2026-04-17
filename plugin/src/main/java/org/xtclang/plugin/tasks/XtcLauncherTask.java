@@ -23,11 +23,13 @@ import org.gradle.api.tasks.options.OptionValues;
 import org.gradle.jvm.toolchain.JavaToolchainService;
 import org.jetbrains.annotations.NotNull;
 import org.xtclang.plugin.XtcJavaToolsRuntime;
+import org.xtclang.plugin.XtcLauncherRuntime;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.internal.GradlePhaseAssertions;
 import org.xtclang.plugin.launchers.ExecutionMode;
 import org.xtclang.plugin.launchers.ModulePathResolver;
+import org.xtclang.plugin.runtime.DirectRuntimeBuildService;
 
 import java.io.File;
 import java.util.Collections;
@@ -38,7 +40,6 @@ import java.util.stream.Collectors;
 import static java.util.Objects.requireNonNull;
 import org.gradle.work.DisableCachingByDefault;
 
-import static org.xtclang.plugin.XtcJavaToolsRuntime.ensureJavaToolsInClasspath;
 import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_VERBOSE_LOGGING_OVERRIDE;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xtclang.plugin.XtcPluginUtils.argumentArrayToList;
@@ -51,6 +52,7 @@ import static org.xtclang.plugin.internal.GradlePhaseAssertions.validateConfigur
 @DisableCachingByDefault(because = "Abstract base class; concrete subclasses should declare caching intent")
 public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extends XtcDefaultTask implements XtcLauncherTaskExtension {
     public static final int EXIT_CODE_ERROR = 1;
+    private static final String DIRECT_RUNTIME_SERVICE_NAME = "xtcDirectRuntime";
 
     // All inherited from launcher task extension and turned into input
     final ConfigurableFileCollection modulePath;
@@ -78,6 +80,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     // via tasks.configureEach {} to work correctly. Configuration cache compatible.
     protected final Provider<@NotNull String> toolchainExecutable;
     protected final Provider<@NotNull String> projectVersion;
+    protected final Provider<DirectRuntimeBuildService> directRuntimeService;
 
     // Captured at configuration time to support xtcPluginOverrideVerboseLogging property
     private final boolean overrideVerboseLogging;
@@ -151,7 +154,13 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             return null;
         });
         this.projectVersion = project.provider(() -> project.getVersion().toString());
-        
+        // Direct mode needs a build-scoped runtime owner, not daemon-global static state.
+        // Registering the shared service here keeps it available to launcher tasks without
+        // forcing any particular execution mode to use it until execution time.
+        this.directRuntimeService = project.getGradle().getSharedServices()
+            .registerIfAbsent(DIRECT_RUNTIME_SERVICE_NAME, DirectRuntimeBuildService.class, spec -> {
+            });
+
         // Validate configuration-time captures for configuration cache compatibility
         validateConfigurationTimeCapture(this.xdkContentsDir, "XDK contents directory");
         validateConfigurationTimeCapture(this.sourceSetNames, "source set names");
@@ -165,15 +174,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected void executeTask() {
         // Assert that we're in execution phase during task execution
         GradlePhaseAssertions.assertExecutionPhase(this, "XtcLauncherTask execution");
-
-        // Ensure javatools.jar is loaded into the plugin classloader before any task uses LauncherOptions types
-        // This is critical for published plugin users who have XDK as a dependency
-        ensureJavaToolsInClasspath(
-                getProjectVersion(),
-                getJavaToolsConfiguration(),
-                getXdkFileTree(),
-                logger
-        );
     }
 
     /**
@@ -207,6 +207,14 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputXtcJavaToolsConfig() {
         return javaToolsConfig.get();
+    }
+
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    FileCollection getInputLauncherRuntimeCandidates() {
+        return objects.fileCollection()
+            .from(javaToolsConfig.get())
+            .from(xdkFileTree.get().matching(pattern -> pattern.include("**/*.jar")));
     }
 
     public boolean hasStdoutRedirect() {
@@ -358,6 +366,15 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         );
     }
 
+    public XtcLauncherRuntime resolveLauncherRuntime() {
+        return XtcJavaToolsRuntime.resolveRuntime(
+            getProjectVersion(),
+            getJavaToolsConfiguration(),
+            getXdkFileTree(),
+            logger
+        );
+    }
+
     public List<File> resolveFullModulePath() {
         return new ModulePathResolver(
                 logger,
@@ -385,6 +402,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @Internal
     protected Provider<@NotNull String> getProjectVersion() {
         return projectVersion;
+    }
+
+    @Internal
+    protected Provider<DirectRuntimeBuildService> getDirectRuntimeService() {
+        return directRuntimeService;
     }
 
     @Internal

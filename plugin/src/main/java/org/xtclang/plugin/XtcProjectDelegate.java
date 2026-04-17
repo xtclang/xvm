@@ -85,7 +85,6 @@ import org.xtclang.plugin.internal.DefaultXtcTestExtension;
 import org.xtclang.plugin.internal.GradlePhaseAssertions;
 import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcExtractXdkTask;
-import org.xtclang.plugin.tasks.XtcLoadJavaToolsTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
 import org.xtclang.plugin.tasks.XtcTestTask;
 import org.xtclang.plugin.tasks.XtcVersionTask;
@@ -321,9 +320,6 @@ public class XtcProjectDelegate {
         checkProjectIsVersioned(project);
         createDefaultSourceSets(project);
         createXtcDependencyConfigs(project);
-
-        // Create task that loads javatools into classpath - all launcher tasks depend on this
-        createLoadJavaToolsTask(project);
 
         createDefaultRunTask(project);
         createDefaultTestTask(project);
@@ -853,34 +849,6 @@ public class XtcProjectDelegate {
         if (UNSPECIFIED.equalsIgnoreCase(project.getVersion().toString())) {
             logger.warn("[plugin] WARNING: Project '{}' has unspecified version.", projectName);
         }
-    }
-
-    /**
-     * Creates a task that loads javatools.jar into the plugin classloader.
-     * All compile and run tasks will depend on this task.
-     */
-    private void createLoadJavaToolsTask(final Project project) {
-        final var loadTask = tasks.register("loadJavaTools", XtcLoadJavaToolsTask.class, task -> {
-            task.setDescription("Loads javatools.jar into the plugin classloader for ServiceLoader access");
-            task.setGroup(null); // Hidden from task list
-
-            // loadJavaTools must wait for XDK to be extracted so javatools.jar is available
-            task.dependsOn(XDK_EXTRACT_TASK_NAME);
-
-            // Configure properties at configuration time to avoid Project access at execution time
-            task.getProjectVersion().set(project.provider(() -> project.getVersion().toString()));
-            task.getJavaToolsConfiguration().set(project.provider(() ->
-                objects.fileCollection().from(configs.getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING))
-            ));
-            task.getXdkFileTree().set(getXdkContentsDir().map(dir -> objects.fileTree().setDir(dir)));
-        });
-
-        // Make all launcher tasks depend on this
-        tasks.withType(XtcCompileTask.class).configureEach(task -> task.dependsOn(loadTask));
-        tasks.withType(XtcRunTask.class).configureEach(task -> task.dependsOn(loadTask));
-        tasks.withType(XtcTestTask.class).configureEach(task -> task.dependsOn(loadTask));
-
-        logger.info("[plugin] Created loadJavaTools task");
     }
 
     /**

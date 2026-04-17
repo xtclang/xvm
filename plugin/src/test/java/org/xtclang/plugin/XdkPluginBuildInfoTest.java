@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.xtclang.plugin.XtcPluginConstants.PLUGIN_BUILD_INFO_RESOURCE_PATH;
+import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_DEFAULT_EXECUTION_MODE;
 
 import java.io.File;
 import java.io.IOException;
@@ -268,5 +269,44 @@ public class XdkPluginBuildInfoTest {
         final var actualJvmArgs = argsLine.substring(argsLine.indexOf(':') + 1).trim();
         // Use shared validation logic to verify the args match what's in plugin-build-info.properties
         validateJvmArgsMatchBuildInfo(actualJvmArgs, "testPluginReadsDefaultJvmArgsFromBuildInfo");
+    }
+
+    @Test
+    public void testExecutionModeCanBeOverriddenByGradleProperty() throws IOException {
+        Files.writeString(settingsFile.toPath(), """
+            rootProject.name = "test-execution-mode-override"
+            """);
+
+        Files.writeString(buildFile.toPath(), """
+            plugins {
+                id("org.xtclang.xtc-plugin")
+            }
+
+            val runModeProvider = tasks.named("runXtc", org.xtclang.plugin.tasks.XtcRunTask::class)
+                .flatMap { it.executionMode }
+            val compileModeProvider = tasks.named("compileXtc", org.xtclang.plugin.tasks.XtcCompileTask::class)
+                .flatMap { it.executionMode }
+
+            tasks.register("printExecutionModes") {
+                inputs.property("runMode", runModeProvider)
+                inputs.property("compileMode", compileModeProvider)
+                doLast {
+                    println("EXECUTION_MODE_TEST_OUTPUT: runXtc=" + inputs.properties["runMode"])
+                    println("EXECUTION_MODE_TEST_OUTPUT: compileXtc=" + inputs.properties["compileMode"])
+                }
+            }
+            """);
+
+        final var result = GradleRunner.create()
+            .withProjectDir(testProjectDir.toFile())
+            .withArguments("printExecutionModes", "-P" + PROPERTY_DEFAULT_EXECUTION_MODE + "=DIRECT", "--configuration-cache")
+            .withPluginClasspath()
+            .build();
+
+        final var output = result.getOutput();
+        assertTrue(output.contains("EXECUTION_MODE_TEST_OUTPUT: runXtc=DIRECT"),
+            "runXtc should inherit DIRECT from the Gradle property override");
+        assertTrue(output.contains("EXECUTION_MODE_TEST_OUTPUT: compileXtc=DIRECT"),
+            "compileXtc should inherit DIRECT from the Gradle property override");
     }
 }
