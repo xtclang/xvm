@@ -1,10 +1,46 @@
 # Dependabot configuration for dependabot inspections for the repo on GitHub.
+#
+# ─── Local validation ────────────────────────────────────────────────────────
+# Schema validation (catches typos, wrong keys, invalid values) can be run
+# locally without pushing. Two options:
+#
+#   1. check-jsonschema (recommended — uses the official SchemaStore schema
+#      bundled with the tool, so it knows about `directories:` + globs):
+#        uvx check-jsonschema --builtin-schema vendor.dependabot .github/dependabot.yml
+#        # or, if you prefer pipx:
+#        pipx install check-jsonschema
+#        check-jsonschema --builtin-schema vendor.dependabot .github/dependabot.yml
+#
+#   2. yamllint (YAML syntax only — no semantic checks):
+#        brew install yamllint   # or: pipx install yamllint
+#        yamllint .github/dependabot.yml
+#
+# Behavior validation (does Dependabot actually find the files under each
+# configured directory?) is not doable offline — GitHub's Dependabot engine
+# runs server-side. To verify:
+#
+#   - Push the change, then visit
+#     https://github.com/xtclang/xvm/network/updates  (Insights → Dependency
+#     graph → Dependabot) and watch the next scheduled run, or click
+#     "Check for updates" on any ecosystem row to force one immediately.
+#   - Or run the repo's `Validate Dependabot Configuration` workflow:
+#        gh workflow run validate-dependabot.yml
+# ─────────────────────────────────────────────────────────────────────────────
 
 version: 2
 updates:
-    # Enable version updates for GitHub Actions
+    # Enable version updates for GitHub Actions.
+    #
+    # `directories:` (plural, glob-capable — added to the Dependabot schema in
+    # 2024) scans both the default workflow location and every composite
+    # action under .github/actions/*. Without the glob entry, `uses:` pins
+    # inside composite action.yml files (e.g. actions/setup-java in
+    # setup-xvm-project/action.yml) would NOT be tracked — only the `uses:`
+    # lines in .github/workflows/*.yml would.
     - package-ecosystem: "github-actions"
-      directory: "/"
+      directories:
+          - "/"
+          - "/.github/actions/**"
       schedule:
           interval: "weekly"
           day: "saturday"
