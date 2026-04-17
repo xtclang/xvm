@@ -816,21 +816,30 @@ jobs:
                       echo "- ⏭️ IntelliJ snapshot publication disabled (${{ steps.publish-flags.outputs.reason }})" >> $GITHUB_STEP_SUMMARY
                   fi
 
-    # Summary job that always succeeds if build-and-test completes
-    # Use this for branch protection instead of individual matrix jobs
+    # Aggregate gating job for branch protection.
+    # Fails unless both build-and-test and integration-test succeed, so a single
+    # required check covers the full PR-blocking surface.
     build-complete:
         name: All builds complete
-        needs: build-and-test
+        needs: [build-and-test, integration-test]
         runs-on: ubuntu-latest
         if: always()
         steps:
             - name: Check build status
               run: |
-                  if [ "${{ needs.build-and-test.result }}" != "success" ]; then
-                    echo "❌ Build failed or was cancelled"
+                  BUILD_RESULT="${{ needs.build-and-test.result }}"
+                  INTEGRATION_RESULT="${{ needs.integration-test.result }}"
+                  echo "build-and-test    : $BUILD_RESULT"
+                  echo "integration-test  : $INTEGRATION_RESULT"
+                  if [ "$BUILD_RESULT" != "success" ]; then
+                    echo "❌ build-and-test failed or was cancelled"
                     exit 1
                   fi
-                  echo "✅ All builds completed successfully"
+                  if [ "$INTEGRATION_RESULT" != "success" ]; then
+                    echo "❌ integration-test failed or was cancelled"
+                    exit 1
+                  fi
+                  echo "✅ All required jobs completed successfully"
 
     # Integration test: verify the XTC plugin works with external projects
     # Clones xtc-app-template, publishes XDK locally, and runs the template app
