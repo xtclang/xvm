@@ -35,7 +35,7 @@ fi
 
 if [[ -e "${DIR}/cfg_macos.sh" ]]; then
   # copy launcher to various command names
-  echo "Creating command line tools: \"xcc\", \"xec\", \"xtc\""
+  echo "Creating command line tools: \"xcc\", \"xec\", \"xtc\" \"protoc-gen-xtc\""
   # Find the architecture-specific launcher
   SYSTEM_ARCH=$(uname -m)
   # Map system architecture to Docker platform naming
@@ -58,6 +58,7 @@ if [[ -e "${DIR}/cfg_macos.sh" ]]; then
   cp "${LAUNCHER}" "${DIR}/xcc"
   cp "${LAUNCHER}" "${DIR}/xec"
   cp "${LAUNCHER}" "${DIR}/xtc"
+  cp "${LAUNCHER}" "${DIR}/protoc-gen-xtc"
 
   if [[ "${EXP}" == "Y" ]]; then
     if [[ -n "${ADD}" ]]; then

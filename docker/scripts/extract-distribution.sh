@@ -87,9 +87,9 @@ rmdir "$XDK_EXTRACTED" || {
 
 # Verify script launchers are present
 echo "🚀 Verifying script launchers"
-if [ -f "xdk/bin/xec" ] && [ -f "xdk/bin/xcc" ] && [ -f "xdk/bin/xtc" ]; then
-    echo "✅ Script launchers found: xec, xcc, xtc"
-    chmod +x "xdk/bin/xec" "xdk/bin/xcc" "xdk/bin/xtc"
+if [ -f "xdk/bin/xec" ] && [ -f "xdk/bin/xcc" ] && [ -f "xdk/bin/xtc" ] && [ -f "xdk/bin/protoc-gen-xtc" ] && [ -f "xdk/bin/protoc-gen-xtc.bat" ]; then
+    echo "✅ Script launchers found: xec, xcc, xtc, protoc-gen-xtc"
+    chmod +x "xdk/bin/xec" "xdk/bin/xcc" "xdk/bin/xtc" "xdk/bin/protoc-gen-xtc"
 else
     echo "❌ Script launchers not found in distribution"
     echo "📋 Contents of xdk/bin/:"

@@ -30,7 +30,7 @@ class XdkDistribution(
             "withNativeLaunchersDistTar",
             "withNativeLaunchersDistZip"
         )
-        val binaryLauncherNames = listOf("xcc", "xec", "xtc")
+        val binaryLauncherNames = listOf("xcc", "xec", "xtc", "protoc-gen-xtc")
 
         /**
          * Helper to create XdkDistribution for distribution tasks.
@@ -233,7 +233,7 @@ class XdkDistribution(
             }
 
             // Step 2: Create xcc and xec by copying xtc and inserting the command
-            mapOf("xcc" to "build", "xec" to "run").forEach { (toolName, command) ->
+            mapOf("xcc" to "build", "xec" to "run", "protoc-gen-xtc" to "proto").forEach { (toolName, command) ->
                 listOf(false, true).forEach { isWindows ->
                     val xtcScript = File(outputDir, if (isWindows) "xtc.bat" else "xtc")
                     if (xtcScript.exists()) {

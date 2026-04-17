@@ -33,6 +33,7 @@ download = "5.7.0"
 gradle-portal-publish = "2.1.1"
 palantir-git-version = "5.0.0"
 vanniktech-maven-publish = "0.36.0"
+google-protobuf-version = "0.9.6"
 
 # =============================================================================
 # Testing (shared across XDK and lang)
@@ -107,6 +108,7 @@ download = { id = "de.undercouch.download", version.ref = "download" }
 gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-portal-publish" }
 palantir-git-version = { id = "com.palantir.git-version", version.ref = "palantir-git-version" }
 vanniktech-maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-maven-publish" }
+google-protobuf = {id = "com.google.protobuf", version.ref = "google-protobuf-version" }
 
 # =============================================================================
 # Lang tooling plugins

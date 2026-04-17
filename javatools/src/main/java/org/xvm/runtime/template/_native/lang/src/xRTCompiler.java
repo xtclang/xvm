@@ -276,7 +276,12 @@ public class xRTCompiler
         if (listErrors.isEmpty()) {
             listErrors = new ArrayList<>();
         }
-        listErrors.add(exception.toString());
+        try {
+            listErrors.add(exception.toString());
+        } catch (UnsupportedOperationException e) {
+            // listErrors is probably immutable
+            return addError(exception, new ArrayList<>(listErrors));
+        }
         return listErrors;
     }
 

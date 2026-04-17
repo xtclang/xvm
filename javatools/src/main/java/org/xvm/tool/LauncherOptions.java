@@ -126,6 +126,11 @@ public abstract class LauncherOptions {
             .desc("Exclude mavenLocal() and maven-snapshots repository from settings.gradle.kts").get());
 
     /**
+     * Apache Commons CLI Options schema for the Protocol Buffers code generator.
+     */
+    private static final Options PROTOGEN_OPTIONS = copyOptions(BASE_RUNNER_OPTIONS);
+
+    /**
      * Parsed command line from Apache Commons CLI.
      * Provides direct access to all parsed options.
      */
@@ -1292,6 +1297,102 @@ public abstract class LauncherOptions {
             @Override
             public TestRunnerOptions build() {
                 return TestRunnerOptions.parse(args.toArray(String[]::new));
+            }
+        }
+    }
+
+
+    // ----- ProtoGenOptions -----------------------------------------------------------------------
+
+    /**
+     * Test runner command-line options.
+     * Extends RunnerOptions since it uses the same option schema but with different
+     * execution behavior (runs xunit engine instead of the module directly).
+     */
+    public static class ProtoGenOptions extends RunnerOptions {
+
+        ProtoGenOptions(final CommandLine commandLine) {
+            super(commandLine, PROTOGEN_OPTIONS);
+        }
+
+        /**
+         * Parse command-line arguments into ProtoGenOptions.
+         */
+        public static ProtoGenOptions parse(final String[] args) {
+            return new ProtoGenOptions(parseCommandLine(TEST_RUNNER_OPTIONS, args));
+        }
+
+        /**
+         * Create a builder for programmatically constructing ProtoGenOptions.
+         */
+        public static ProtoGenOptions.Builder builder() {
+            return new ProtoGenOptions.Builder();
+        }
+
+        @Override
+        public Optional<File> getTarget() {
+            return Optional.of(new File(ProtoGenRunner.PROTO_MODULE));
+        }
+
+        @Override
+        public String getMethodName() {
+            return super.getMethodName();
+        }
+
+        @Override
+        public Map<String, List<String>> getInjections() {
+            final var injections = new LinkedHashMap<>(super.getInjections());
+
+//            final var testClasses = optionValues("c");
+//            if (!testClasses.isEmpty()) {
+//                injections.put(ProtoGen.XUNIT_TEST_CLASSES_ARG, testClasses);
+//            }
+//
+//            final var testGroups = optionValues("g");
+//            if (!testGroups.isEmpty()) {
+//                injections.put(ProtoGen.XUNIT_TEST_GROUPS_ARG, testGroups);
+//            }
+//
+//            final var testPackages = optionValues("p");
+//            if (!testPackages.isEmpty()) {
+//                injections.put(ProtoGen.XUNIT_TEST_PACKAGES_ARG, testPackages);
+//            }
+//
+//            final var testMethods = optionValues("t");
+//            if (!testMethods.isEmpty()) {
+//                injections.put(ProtoGen.XUNIT_TEST_METHODS_ARG, testMethods);
+//            }
+
+            return Map.copyOf(injections);
+        }
+
+
+        @Override
+        protected String buildUsageLine(final String cmdName) {
+            return "xtc proto [options] <proto_file>";
+        }
+
+        /**
+         * Builder for constructing ProtoGenOptions programmatically.
+         */
+        public static class Builder extends RunnerOptions.Builder {
+            /**
+             * Set the XUnit output directory.
+             *
+             * @param dir the directory name
+             */
+            public Builder setXUnitOutputDirectory(final String dir) {
+                removeeArgsAndValues(ARG_XUNIT_OUT);
+                args.addAll(List.of(ARG_XUNIT_OUT, dir));
+                return this;
+            }
+
+            /**
+             * Build the ProtoGenOptions by parsing the accumulated arguments.
+             */
+            @Override
+            public ProtoGenOptions build() {
+                return ProtoGenOptions.parse(args.toArray(String[]::new));
             }
         }
     }

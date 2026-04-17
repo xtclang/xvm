@@ -29,6 +29,7 @@ import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.LauncherOptions.DisassemblerOptions;
 import org.xvm.tool.LauncherOptions.InitializerOptions;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
+import org.xvm.tool.LauncherOptions.ProtoGenOptions;
 import org.xvm.tool.LauncherOptions.TestRunnerOptions;
 import org.xvm.tool.ModuleInfo.Node;
 
@@ -87,6 +88,7 @@ public abstract class Launcher<T extends LauncherOptions>
     public static final String CMD_INIT   = "init";
     public static final String CMD_RUN    = "run";
     public static final String CMD_TEST   = "test";
+    public static final String CMD_PROTO  = "proto";
     public static final String CMD_DISASS = "disass";
 
     /**
@@ -102,6 +104,7 @@ public abstract class Launcher<T extends LauncherOptions>
             CMD_INIT,   (args, console, err) -> launch(InitializerOptions.parse(args), console, err),
             CMD_RUN,    (args, console, err) -> launch(RunnerOptions.parse(args), console, err),
             CMD_TEST,   (args, console, err) -> launch(TestRunnerOptions.parse(args), console, err),
+            CMD_PROTO,  (args, console, err) -> launch(ProtoGenOptions.parse(args), console, err),
             CMD_DISASS, (args, console, err) -> launch(DisassemblerOptions.parse(args), console, err)
     );
 
@@ -260,6 +263,7 @@ public abstract class Launcher<T extends LauncherOptions>
                 run      Execute an Ecstasy module (alias: xec)
                 test     Run tests in an Ecstasy module using xunit
                 disass   Disassemble a compiled Ecstasy module
+                proto    Generate Ecstasy code from Protocol Buffer .proto files
 
             Options:
                 --version   Display the Ecstasy runtime version
@@ -298,6 +302,7 @@ public abstract class Launcher<T extends LauncherOptions>
             case final CompilerOptions opts     -> new Compiler(opts, console, errListener);
             case final InitializerOptions opts  -> new Initializer(opts, console, errListener);
             case final TestRunnerOptions opts   -> new TestRunner(opts, console, errListener);
+            case final ProtoGenOptions opts     -> new ProtoGenRunner(opts, console, errListener);
             case final RunnerOptions opts       -> new Runner(opts, console, errListener);
             case final DisassemblerOptions opts -> new Disassembler(opts, console, errListener);
             default -> {

@@ -192,7 +192,7 @@ val modifyScripts by tasks.registering(ModifyScriptsTask::class) {
     javaToolsFiles.from(configurations.getByName("xdkJavaTools"))
     scriptsDir.set(layout.dir(tasks.startScripts.map { it.outputDir!! }))
     modifiedScripts.from(tasks.startScripts.map { task ->
-        listOf("xcc", "xec", "xtc").flatMap { script ->
+        listOf("xcc", "xec", "xtc", "protoc-gen-xtc").flatMap { script ->
             listOf(File(task.outputDir!!, script), File(task.outputDir!!, "$script.bat"))
         }
     })
@@ -201,7 +201,7 @@ val modifyScripts by tasks.registering(ModifyScriptsTask::class) {
 val prepareDistributionScripts by tasks.registering(Copy::class) {
     dependsOn(modifyScripts)
     from(tasks.startScripts.map { it.outputDir!! }) {
-        include("xtc*", "xcc*", "xec*")
+        include("xtc*", "xcc*", "xec*", "protoc-gen-xtc*")
     }
     into(layout.buildDirectory.dir("distribution-scripts"))
 }
@@ -344,6 +344,8 @@ distributions {
                 include("xec.bat")
                 include("xtc")
                 include("xtc.bat")
+                include("protoc-gen-xtc")
+                include("protoc-gen-xtc.bat")
                 into("bin")
             }
 

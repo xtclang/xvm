@@ -237,8 +237,7 @@ public class Runner extends Launcher<RunnerOptions> {
             if (validationResult != 0) {
                 return checkErrors("method argument validation");
             }
-            connector.invoke0(method, args);
-            return connector.join();
+            return invokeMethod(connector, method, args);
         } catch (InterruptedException e) {
             log(WARNING, e, "Interrupted while waiting for method {}", quoted(sName));
             return 1;
@@ -249,6 +248,26 @@ public class Runner extends Launcher<RunnerOptions> {
             log(FATAL, e, "Unhandled exception");
             return 1;  // Unreachable - log(FATAL) throws
         }
+    }
+
+    /**
+     * Invoke the specified method on the {@link Connector}.
+     * <p>
+     * This method can be subclasses that need to override the default behavior, for example
+     * provide additional method arguments, etc.
+     *
+     * @param connector  the {@link Connector} to the container with the module to run
+     * @param method     the method to execute
+     * @param args       the command line arguments
+     *
+     * @return the exit code from the method invocation
+     *
+     * @throws InterruptedException if the method invocation is interrupted
+     */
+    protected int invokeMethod(Connector connector, MethodStructure method, List<String> args)
+            throws InterruptedException {
+        connector.invoke0(method, args);
+        return connector.join();
     }
 
     /**
