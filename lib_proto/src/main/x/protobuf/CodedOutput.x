@@ -642,10 +642,8 @@ class CodedOutput {
     /**
      * Compute the total bytes needed to encode a `sint32` field (tag + ZigZag varint).
      */
-    static Int computeSInt32Size(Int fieldNumber, Int32 value) {
-        return computeTagSize(fieldNumber)
-                + computeVarintSize(((value << 1) ^ (value >> 31)));
-    }
+    static Int computeSInt32Size(Int fieldNumber, Int32 value) =
+        computeTagSize(fieldNumber) + computeVarintSize(((value << 1) ^ (value >> 31)));
 
     /**
      * Compute the total bytes needed to encode a `sint64` field (tag + ZigZag varint).

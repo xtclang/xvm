@@ -111,7 +111,7 @@ public class ProtoGenRunner extends Runner {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-//            reqFile.delete();
+            reqFile.delete();
             resFile.delete();
         }
         return exitCode;

@@ -65,7 +65,7 @@ class ProtoCodeGen {
     /**
      * Ecstasy keywords that must be escaped when used as field names.
      */
-    static String[] Keywords = [
+    static Set<String> Keywords = Set:[
         "abstract", "annotation", "assert", "break", "case", "class", "conditional",
         "const", "construct", "continue", "default", "do", "else", "enum", "extends",
         "finally", "for", "function", "if", "immutable", "implements", "import",
@@ -1124,17 +1124,62 @@ class ProtoCodeGen {
                                        Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
+        String pad2 = spaces(indent + 2);
+        String pad3 = spaces(indent + 3);
         assert MapFieldInfo info := mapInfo.get(mapEntryName(field.typeName));
+
+        // ensure the map is mutable (may be immutable from default parameter)
+        $|{pad}if ({fname}.is(immutable)) \{
+         |{pad1}{fname} = new ecstasy.maps.ListMap({fname});
+         |{pad}}
+         .appendTo(buf);
+
         String readMapMethod = mapReadMethod(info.keyType, info.valueType);
         if (readMapMethod.size > 0) {
             String kt = ecstasyType(info.keyType);
             String vt = ecstasyType(info.valueType);
-
-            // ensure the map is mutable (may be immutable from default parameter)
-            $|{pad}if ({fname}.is(immutable)) \{
-             |{pad1}{fname} = new ecstasy.maps.ListMap({fname});
+            $|{pad}({kt} k, {vt} v) = input.{readMapMethod};
+             |{pad}{fname}.put(k, v);
+             |
+             .appendTo(buf);
+        } else if (info.valueType == TypeMessage) {
+            // map with message values: inline sub-message parsing
+            String kt = ecstasyType(info.keyType);
+            String vt = info.valueTypeName;
+            String keyReadExpr = switch (info.keyType) {
+                case TypeString: "input.readString()";
+                case TypeInt32:  "input.readInt32()";
+                case TypeInt64:  "input.readInt64()";
+                case TypeUint32: "input.readUInt32()";
+                case TypeUint64: "input.readUInt64()";
+                case TypeBool:   "input.readBool()";
+                default:         "input.readVarint()";
+            };
+            $|{pad}{kt} k = {scalarDefault(info.keyType)};
+             |{pad}{vt} v = new {vt}();
+             |{pad}Int entryLen = input.readVarint().toInt();
+             |{pad}Int entryLimit = input.pushLimit(entryLen);
+             |{pad}while (!input.isAtEnd()) \{
+             |{pad1}Int entryTag = input.readTag();
+             |{pad1}if (entryTag == 0) \{
+             |{pad2}break;
+             |{pad1}}
+             |{pad1}switch (protobuf.WireType.getFieldNumber(entryTag)) \{
+             |{pad2}case 1:
+             |{pad3}k = {keyReadExpr};
+             |{pad3}break;
+             |{pad2}case 2:
+             |{pad3}Int msgLen = input.readVarint().toInt();
+             |{pad3}Int msgLimit = input.pushLimit(msgLen);
+             |{pad3}v.mergeFrom(input);
+             |{pad3}input.popLimit(msgLimit);
+             |{pad3}break;
+             |{pad2}default:
+             |{pad3}input.skipField(protobuf.WireType.getWireType(entryTag));
+             |{pad3}break;
+             |{pad1}}
              |{pad}}
-             |{pad}({kt} k, {vt} v) = input.{readMapMethod};
+             |{pad}input.popLimit(entryLimit);
              |{pad}{fname}.put(k, v);
              |
              .appendTo(buf);
@@ -1262,7 +1307,7 @@ class ProtoCodeGen {
         String writeMapMethod = mapWriteMethod(info.keyType, info.valueType);
         if (writeMapMethod.size > 0) {
             String kt = ecstasyType(info.keyType);
-            String vt = ecstasyType(info.valueType);
+            String vt = mapValueEcstasyType(info);
             Int    fn = field.number;
             $|
              |{pad}for (({kt} k, {vt} v) : {fname}) \{
@@ -1440,7 +1485,7 @@ class ProtoCodeGen {
         String computeMapMethod = mapComputeSizeMethod(info.keyType, info.valueType);
         if (computeMapMethod.size > 0) {
             String kt = ecstasyType(info.keyType);
-            String vt = ecstasyType(info.valueType);
+            String vt = mapValueEcstasyType(info);
             Int    fn = field.number;
             $|
              |{pad}for (({kt} k, {vt} v) : {fname}) \{
@@ -1781,9 +1826,11 @@ class ProtoCodeGen {
         return switch (fieldType) {
             case TypeDouble:                "readPackedDoubles()";
             case TypeFloat:                 "readPackedFloats()";
-            case TypeInt64, TypeSint64:     "readPackedVarints()";
-            case TypeUint64:                "readPackedUInt64s()";
-            case TypeInt32, TypeSint32:     "readPackedInt32s()";
+            case TypeInt64:                 "readPackedVarints()";
+            case TypeSint64:                "readPackedSInt64s()";
+            case TypeUint64:                "readPackedVarints()";
+            case TypeInt32:                 "readPackedInt32s()";
+            case TypeSint32:                "readPackedSInt32s()";
             case TypeFixed64, TypeSfixed64: "readPackedFixed64s()";
             case TypeFixed32, TypeSfixed32: "readPackedFixed32s()";
             case TypeBool:                  "readPackedBools()";
@@ -1827,9 +1874,11 @@ class ProtoCodeGen {
         return switch (fieldType) {
             case TypeDouble:                "writePackedDoubles";
             case TypeFloat:                 "writePackedFloats";
-            case TypeInt64, TypeSint64:     "writePackedVarints";
+            case TypeInt64:                 "writePackedVarints";
+            case TypeSint64:                "writePackedSInt64s";
             case TypeUint64:                "writePackedVarints";
-            case TypeInt32, TypeSint32:     "writePackedVarints";
+            case TypeInt32:                 "writePackedVarints";
+            case TypeSint32:                "writePackedSInt32s";
             case TypeFixed64, TypeSfixed64: "writePackedFixed64s";
             case TypeFixed32, TypeSfixed32: "writePackedFixed32s";
             case TypeBool:                  "writePackedBools";
@@ -1892,9 +1941,11 @@ class ProtoCodeGen {
         return switch (fieldType) {
             case TypeDouble:                $"computePackedDoublesSize({fn}, {fname})";
             case TypeFloat:                 $"computePackedFloatsSize({fn}, {fname})";
-            case TypeInt64, TypeSint64:     $"computePackedVarintsSize({fn}, {fname})";
+            case TypeInt64:                 $"computePackedVarintsSize({fn}, {fname})";
+            case TypeSint64:                $"computePackedSInt64sSize({fn}, {fname})";
             case TypeUint64:                $"computePackedVarintsSize({fn}, {fname})";
-            case TypeInt32, TypeSint32:     $"computePackedVarintsSize({fn}, {fname})";
+            case TypeInt32:                 $"computePackedVarintsSize({fn}, {fname})";
+            case TypeSint32:                $"computePackedSInt32sSize({fn}, {fname})";
             case TypeFixed64, TypeSfixed64: $"computePackedFixed64sSize({fn}, {fname})";
             case TypeFixed32, TypeSfixed32: $"computePackedFixed32sSize({fn}, {fname})";
             case TypeBool:                  $"computePackedBoolsSize({fn}, {fname})";
@@ -1946,7 +1997,7 @@ class ProtoCodeGen {
             case (TypeInt32,  TypeInt32):  "readMapInt32Int32()";
             case (TypeInt64,  TypeString): "readMapInt64String()";
             case (TypeInt64,  TypeInt64):  "readMapInt64Int64()";
-            case (TypeBool,   TypeString): "readMapBoolString()";
+            case (TypeBool,   TypeString):  "readMapBoolString()";
             default: "";
         };
     }
@@ -1956,15 +2007,16 @@ class ProtoCodeGen {
      */
     private String mapWriteMethod(FieldType keyType, FieldType valueType) {
         return switch (keyType, valueType) {
-            case (TypeString, TypeString): "writeMapStringString";
-            case (TypeString, TypeInt32):  "writeMapStringInt32";
-            case (TypeString, TypeInt64):  "writeMapStringInt64";
-            case (TypeString, TypeBytes):  "writeMapStringBytes";
-            case (TypeInt32,  TypeString): "writeMapInt32String";
-            case (TypeInt32,  TypeInt32):  "writeMapInt32Int32";
-            case (TypeInt64,  TypeString): "writeMapInt64String";
-            case (TypeInt64,  TypeInt64):  "writeMapInt64Int64";
-            case (TypeBool,   TypeString): "writeMapBoolString";
+            case (TypeString, TypeString):  "writeMapStringString";
+            case (TypeString, TypeInt32):   "writeMapStringInt32";
+            case (TypeString, TypeInt64):   "writeMapStringInt64";
+            case (TypeString, TypeBytes):   "writeMapStringBytes";
+            case (TypeString, TypeMessage): "writeMapStringMessage";
+            case (TypeInt32,  TypeString):  "writeMapInt32String";
+            case (TypeInt32,  TypeInt32):   "writeMapInt32Int32";
+            case (TypeInt64,  TypeString):  "writeMapInt64String";
+            case (TypeInt64,  TypeInt64):   "writeMapInt64Int64";
+            case (TypeBool,   TypeString):  "writeMapBoolString";
             default: "";
         };
     }
@@ -1974,15 +2026,16 @@ class ProtoCodeGen {
      */
     private String mapComputeSizeMethod(FieldType keyType, FieldType valueType) {
         return switch (keyType, valueType) {
-            case (TypeString, TypeString): "computeMapStringStringSize";
-            case (TypeString, TypeInt32):  "computeMapStringInt32Size";
-            case (TypeString, TypeInt64):  "computeMapStringInt64Size";
-            case (TypeString, TypeBytes):  "computeMapStringBytesSize";
-            case (TypeInt32,  TypeString): "computeMapInt32StringSize";
-            case (TypeInt32,  TypeInt32):  "computeMapInt32Int32Size";
-            case (TypeInt64,  TypeString): "computeMapInt64StringSize";
-            case (TypeInt64,  TypeInt64):  "computeMapInt64Int64Size";
-            case (TypeBool,   TypeString): "computeMapBoolStringSize";
+            case (TypeString, TypeString):  "computeMapStringStringSize";
+            case (TypeString, TypeInt32):   "computeMapStringInt32Size";
+            case (TypeString, TypeInt64):   "computeMapStringInt64Size";
+            case (TypeString, TypeBytes):   "computeMapStringBytesSize";
+            case (TypeString, TypeMessage): "computeMapStringMessageSize";
+            case (TypeInt32,  TypeString):  "computeMapInt32StringSize";
+            case (TypeInt32,  TypeInt32):   "computeMapInt32Int32Size";
+            case (TypeInt64,  TypeString):  "computeMapInt64StringSize";
+            case (TypeInt64,  TypeInt64):   "computeMapInt64Int64Size";
+            case (TypeBool,   TypeString):  "computeMapBoolStringSize";
             default: "";
         };
     }
@@ -2254,14 +2307,8 @@ class ProtoCodeGen {
     /**
      * Escape a field name if it matches an Ecstasy keyword by appending an underscore.
      */
-    private String escapeKeyword(String name) {
-        for (String kw : Keywords) {
-            if (kw == name) {
-                return name + "_";
-            }
-        }
-        return name;
-    }
+    private String escapeKeyword(String name) =
+        Keywords.contains(name) ? name + "_" : name;
 
     // ----- formatting helpers --------------------------------------------------------------------
 
@@ -2281,7 +2328,7 @@ class ProtoCodeGen {
      */
     private String separator(String label, Int indent) {
         StringBuffer buf = new StringBuffer();
-        buf.addAll("// ----- ").addAll(label).addAll(" ");
+        $"// ----- {label} ".appendTo(buf);
         Int padLen = indent * 4;
         Int targetLen = 100 - padLen;
         while (buf.size < targetLen) {

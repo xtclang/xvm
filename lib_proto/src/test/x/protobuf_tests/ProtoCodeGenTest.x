@@ -350,13 +350,13 @@ class ProtoCodeGenTest {
     void shouldGenerateNullableDottedTypeName() {
         Map<String, String> files = generate($|syntax = "proto3";
                                               |message Msg \{
-                                              |  google.protobuf.Timestamp ts = 1;
+                                              |  some.other.MyType ts = 1;
                                               |}
                                              );
         assert String source := files.get("Msg.x");
 
         // dotted message type should be nullable
-        assert source.indexOf("google.protobuf.Timestamp? ts = Null");
+        assert source.indexOf("some.other.MyType? ts = Null");
     }
 
     // ----- no Array import -------------------------------------------------------------------
@@ -370,8 +370,8 @@ class ProtoCodeGenTest {
                                              );
         assert String source := files.get("Msg.x");
 
-        // Array is implicitly imported in Ecstasy
-        assert !source.indexOf("ecstasy.collections.Array");
+        // no explicit import of Array
+        assert !source.indexOf("import ecstasy.collections.Array");
         // but the field should still use Array type
         assert source.indexOf("String[]");
     }
