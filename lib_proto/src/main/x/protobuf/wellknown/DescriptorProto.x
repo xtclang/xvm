@@ -9,16 +9,16 @@ class DescriptorProto
         extends protobuf.AbstractMessage {
     construct(
             String? name = Null,
-            Array<protobuf.wellknown.FieldDescriptorProto> field = [],
-            Array<protobuf.wellknown.FieldDescriptorProto> extension = [],
-            Array<protobuf.wellknown.DescriptorProto> nestedType = [],
-            Array<protobuf.wellknown.EnumDescriptorProto> enumType = [],
-            Array<wellknown.DescriptorProto.ExtensionRange> extensionRange = [],
-            Array<protobuf.wellknown.OneofDescriptorProto> oneofDecl = [],
+            protobuf.wellknown.FieldDescriptorProto[] field = [],
+            protobuf.wellknown.FieldDescriptorProto[] extension = [],
+            protobuf.wellknown.DescriptorProto[] nestedType = [],
+            protobuf.wellknown.EnumDescriptorProto[] enumType = [],
+            wellknown.DescriptorProto.ExtensionRange[] extensionRange = [],
+            protobuf.wellknown.OneofDescriptorProto[] oneofDecl = [],
             protobuf.wellknown.MessageOptions? options = Null,
-            Array<wellknown.DescriptorProto.ReservedRange> reservedRange = [],
-            Array<String> reservedName = [],
-            protobuf.wellknown.SymbolVisibility? visibility = Null) {
+            wellknown.DescriptorProto.ReservedRange[] reservedRange = [],
+            String[] reservedName = [],
+            wellknown.SymbolVisibility? visibility = Null) {
         construct protobuf.AbstractMessage();
         this.field = field;
         this.extension = extension;
@@ -70,23 +70,33 @@ class DescriptorProto
         }
     }
 
-    Array<protobuf.wellknown.FieldDescriptorProto> field = [];
-    Array<protobuf.wellknown.FieldDescriptorProto> extension = [];
-    Array<protobuf.wellknown.DescriptorProto> nestedType = [];
-    Array<protobuf.wellknown.EnumDescriptorProto> enumType = [];
-    Array<wellknown.DescriptorProto.ExtensionRange> extensionRange = [];
-    Array<protobuf.wellknown.OneofDescriptorProto> oneofDecl = [];
+    protobuf.wellknown.FieldDescriptorProto[] field = [];
+
+    protobuf.wellknown.FieldDescriptorProto[] extension = [];
+
+    protobuf.wellknown.DescriptorProto[] nestedType = [];
+
+    protobuf.wellknown.EnumDescriptorProto[] enumType = [];
+
+    wellknown.DescriptorProto.ExtensionRange[] extensionRange = [];
+
+    protobuf.wellknown.OneofDescriptorProto[] oneofDecl = [];
+
     protobuf.wellknown.MessageOptions? options = Null;
-    Array<wellknown.DescriptorProto.ReservedRange> reservedRange = [];
+
+    wellknown.DescriptorProto.ReservedRange[] reservedRange = [];
+
     /**
      * Reserved field names, which may not be used by fields in the same message.
      * A given name may only be reserved once.
      */
-    Array<String> reservedName = [];
+    String[] reservedName = [];
+
     /**
      * Support for `export` and `local` keywords on enums.
      */
-    protobuf.wellknown.SymbolVisibility? visibility = Null;
+    wellknown.SymbolVisibility? visibility = Null;
+
 
     conditional String hasName() {
         if (presentBits_0 & 0x01 != 0) {
@@ -102,9 +112,9 @@ class DescriptorProto
         }
         return False;
     }
-    conditional protobuf.wellknown.SymbolVisibility hasVisibility() {
-        protobuf.wellknown.SymbolVisibility? value = visibility;
-        if (value.is(protobuf.wellknown.SymbolVisibility)) {
+    conditional wellknown.SymbolVisibility hasVisibility() {
+        wellknown.SymbolVisibility? value = visibility;
+        if (value.is(wellknown.SymbolVisibility)) {
             return True, value;
         }
         return False;
@@ -175,6 +185,7 @@ class DescriptorProto
 
         protobuf.wellknown.ExtensionRangeOptions? options = Null;
 
+
         conditional Int32 hasStart() {
             if (presentBits_0 & 0x01 != 0) {
                 return True, start;
@@ -196,6 +207,7 @@ class DescriptorProto
             }
             return False;
         }
+
         // ----- serialization ---------------------------------------------------------------------
 
         @Override
@@ -370,6 +382,7 @@ class DescriptorProto
             return False;
         }
 
+
         // ----- serialization ---------------------------------------------------------------------
 
         @Override
@@ -438,6 +451,7 @@ class DescriptorProto
         }
     }
 
+
     // ----- serialization -------------------------------------------------------------------------
 
     @Override
@@ -449,7 +463,7 @@ class DescriptorProto
 
         case 2:
             if (field.is(immutable)) {
-                field = new Array(Mutable, field);
+                field = new ecstasy.collections.Array(Mutable, field);
             }
             protobuf.wellknown.FieldDescriptorProto elem = new protobuf.wellknown.FieldDescriptorProto();
             Int len = input.readVarint().toInt();
@@ -461,7 +475,7 @@ class DescriptorProto
 
         case 6:
             if (extension.is(immutable)) {
-                extension = new Array(Mutable, extension);
+                extension = new ecstasy.collections.Array(Mutable, extension);
             }
             protobuf.wellknown.FieldDescriptorProto elem = new protobuf.wellknown.FieldDescriptorProto();
             Int len = input.readVarint().toInt();
@@ -473,7 +487,7 @@ class DescriptorProto
 
         case 3:
             if (nestedType.is(immutable)) {
-                nestedType = new Array(Mutable, nestedType);
+                nestedType = new ecstasy.collections.Array(Mutable, nestedType);
             }
             protobuf.wellknown.DescriptorProto elem = new protobuf.wellknown.DescriptorProto();
             Int len = input.readVarint().toInt();
@@ -485,7 +499,7 @@ class DescriptorProto
 
         case 4:
             if (enumType.is(immutable)) {
-                enumType = new Array(Mutable, enumType);
+                enumType = new ecstasy.collections.Array(Mutable, enumType);
             }
             protobuf.wellknown.EnumDescriptorProto elem = new protobuf.wellknown.EnumDescriptorProto();
             Int len = input.readVarint().toInt();
@@ -497,7 +511,7 @@ class DescriptorProto
 
         case 5:
             if (extensionRange.is(immutable)) {
-                extensionRange = new Array(Mutable, extensionRange);
+                extensionRange = new ecstasy.collections.Array(Mutable, extensionRange);
             }
             wellknown.DescriptorProto.ExtensionRange elem = new wellknown.DescriptorProto.ExtensionRange();
             Int len = input.readVarint().toInt();
@@ -509,7 +523,7 @@ class DescriptorProto
 
         case 8:
             if (oneofDecl.is(immutable)) {
-                oneofDecl = new Array(Mutable, oneofDecl);
+                oneofDecl = new ecstasy.collections.Array(Mutable, oneofDecl);
             }
             protobuf.wellknown.OneofDescriptorProto elem = new protobuf.wellknown.OneofDescriptorProto();
             Int len = input.readVarint().toInt();
@@ -530,7 +544,7 @@ class DescriptorProto
 
         case 9:
             if (reservedRange.is(immutable)) {
-                reservedRange = new Array(Mutable, reservedRange);
+                reservedRange = new ecstasy.collections.Array(Mutable, reservedRange);
             }
             wellknown.DescriptorProto.ReservedRange elem = new wellknown.DescriptorProto.ReservedRange();
             Int len = input.readVarint().toInt();
@@ -542,13 +556,13 @@ class DescriptorProto
 
         case 10:
             if (reservedName.is(immutable)) {
-                reservedName = new Array(Mutable, reservedName);
+                reservedName = new ecstasy.collections.Array(Mutable, reservedName);
             }
             reservedName.add(input.readString());
             return True;
 
         case 11:
-            if (protobuf.wellknown.SymbolVisibility v := protobuf.ProtoEnum.byProtoValue(protobuf.wellknown.SymbolVisibility.values, input.readEnum())) {
+            if (wellknown.SymbolVisibility v := protobuf.ProtoEnum.byProtoValue(wellknown.SymbolVisibility.values, input.readEnum())) {
                 visibility = v;
             }
             return True;
@@ -589,7 +603,7 @@ class DescriptorProto
         for (String v : reservedName) {
             out.writeString(10, v);
         }
-        protobuf.wellknown.SymbolVisibility? visibility = this.visibility;
+        wellknown.SymbolVisibility? visibility = this.visibility;
         if (visibility != Null) {
             out.writeEnum(11, visibility);
         }
@@ -629,7 +643,7 @@ class DescriptorProto
         for (String v : reservedName) {
             size += protobuf.CodedOutput.computeStringSize(10, v);
         }
-        protobuf.wellknown.SymbolVisibility? visibility = this.visibility;
+        wellknown.SymbolVisibility? visibility = this.visibility;
         if (visibility != Null) {
             size += protobuf.CodedOutput.computeEnumSize(11, visibility);
         }

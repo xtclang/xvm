@@ -24,6 +24,45 @@ import wellknown.ServiceDescriptorProto;
 class ProtoCodeGen {
 
     /**
+     * Construct a ProtoCodeGen with no options.
+     */
+    construct() {
+        construct ProtoCodeGen(Map:[]);
+    }
+
+    /**
+     * Construct a ProtoCodeGen.
+     *
+     * @param options  the options parsed from the protoc plugin parameter string
+     */
+    construct(Map<String, String[]> options) {
+        this.options = options;
+    }
+
+    /**
+     * The options parsed from the protoc plugin parameter string.
+     */
+    Map<String, String[]> options;
+
+    /**
+     * A map of package relocations parsed from the `packages` option. The key is the original
+     * package name and the value is the new package name.
+     */
+    @Lazy Map<String, String> packageRelocations.calc() {
+        Map<String, String> relocations = new HashMap();
+        if (String[] packages := options.get("packages")) {
+            for (String entry : packages) {
+                if (Int eq := entry.indexOf('=')) {
+                    String original   = entry[0 ..< eq];
+                    String relocation = entry[eq + 1 ..< entry.size];
+                    relocations.put(original, relocation);
+                }
+            }
+        }
+        return relocations;
+    }
+
+    /**
      * Ecstasy keywords that must be escaped when used as field names.
      */
     static String[] Keywords = [
@@ -48,20 +87,17 @@ class ProtoCodeGen {
     private Map<String, String> commentMap = Map:[];
 
     /**
-     * The set of well-known type names in the `protobuf.wellknown` package. When a type reference
-     * uses the `google.protobuf` package, and the type name matches one of these, the package is
-     * rewritten to `protobuf.wellknown`.
+     * The set of well-known type names in the `protobuf.wellknown` package.
      */
-    @Lazy Map<String, String> wellKnownTypes.get() {
-        return findWellKnownTypes();
+    @Lazy Map<String, String> wellKnownTypes.calc() {
+        return findWellKnownTypes(protobuf.wellknown, "protobuf.wellknown.");
     }
 
     /**
      * Information about a map field's key and value types, extracted from the synthetic
      * entry message in the descriptor.
      */
-    private static const MapFieldInfo(FieldType keyType, FieldType valueType,
-                                      String valueTypeName);
+    private static const MapFieldInfo(FieldType keyType, FieldType valueType, String valueTypeName);
 
     /**
      * Build a map from entry message typeName to MapFieldInfo for all map fields in a message.
@@ -84,7 +120,18 @@ class ProtoCodeGen {
      * @return True if the field is a map field (references a synthetic map entry message)
      */
     private Boolean isMapField(FieldDescriptorProto field, Map<String, MapFieldInfo> mapInfo) {
-        return field.label == LabelRepeated && mapInfo.contains(field.typeName);
+        return field.label == LabelRepeated && mapInfo.contains(mapEntryName(field.typeName));
+    }
+
+    /**
+     * Extract the simple entry message name from a possibly qualified type name.
+     * For example, `"pkg.Outer.FieldsEntry"` returns `"FieldsEntry"`.
+     */
+    private String mapEntryName(String typeName) {
+        if (Int dot := typeName.lastIndexOf('.')) {
+            return typeName[dot + 1 ..< typeName.size];
+        }
+        return typeName;
     }
 
     /**
@@ -148,7 +195,7 @@ class ProtoCodeGen {
      * Create a new path by appending a field number and index to an existing path.
      */
     private static Int[] childPath(Int[] parent, Int fieldNum, Int index) {
-        Int[] result = new Array(parent.size + 2);
+        Int[] result = new ecstasy.collections.Array(parent.size + 2);
         result.addAll(parent);
         result.add(fieldNum);
         result.add(index);
@@ -229,8 +276,8 @@ class ProtoCodeGen {
     }
 
     /**
-     * Normalize a single type name: strip leading '.', and rewrite `google.protobuf.X` to
-     * `protobuf.wellknown.X` when X is a known well-known type.
+     * Normalize a single type name: strip leading '.', rewrite `google.protobuf.X` to
+     * `protobuf.wellknown.X` when X is a known well-known type, and apply package relocations.
      */
     private String normalizeTypeName(String name) {
         // strip leading dot
@@ -241,10 +288,16 @@ class ProtoCodeGen {
         if (String wellKnownName := wellKnownTypes.get(name)) {
             name = wellKnownName;
         }
-        if (name.startsWith("google.protobuf.")) {
-            String simpleName = name["google.protobuf.".size ..< name.size];
-            if (wellKnownTypes.contains(simpleName)) {
-                return $"protobuf.wellknown.{simpleName}";
+        // apply package relocations
+        Int    max      = 0;
+        String original = name;
+        for (Map.Entry<String, String> entry : packageRelocations.entries) {
+            String prefix = entry.key + ".";
+            if (prefix.size > max) {
+                if (original.startsWith(prefix)) {
+                    max = prefix.size;
+                    name = entry.value + "." + original[prefix.size ..< original.size];
+                }
             }
         }
         return name;
@@ -265,25 +318,33 @@ class ProtoCodeGen {
         commentMap = buildCommentMap(file);
         ListMap<String, String> result = new ListMap();
 
-        // build the output path prefix from the package name
+        // build the output path prefix from the package name, applying any relocation
+        String  originalPackage = file.package_;
+        String  outputPackage   = originalPackage;
+        String? relocatedFrom   = Null;
+        if (String relocated := packageRelocations.get(originalPackage)) {
+            outputPackage = relocated;
+            relocatedFrom = originalPackage;
+        }
+
         String pathPrefix = "";
-        if (file.package_.size > 0) {
-            pathPrefix = file.package_.replace(".", "/") + "/";
+        if (outputPackage.size > 0) {
+            pathPrefix = outputPackage.replace(".", "/") + "/";
         }
 
         for (Int i = 0; i < file.enumType.size; i++) {
             EnumDescriptorProto e = file.enumType[i];
-            result.put($"{pathPrefix}{e.name}.x", generateTopLevelEnum(e, file, i));
+            result.put($"{pathPrefix}{e.name}.x", generateTopLevelEnum(e, file, i, relocatedFrom));
         }
 
         for (Int i = 0; i < file.messageType.size; i++) {
             DescriptorProto msg = file.messageType[i];
-            result.put($"{pathPrefix}{msg.name}.x", generateTopLevelMessage(msg, file, i));
+            result.put($"{pathPrefix}{msg.name}.x", generateTopLevelMessage(msg, file, i, relocatedFrom));
         }
 
         for (Int i = 0; i < file.service_.size; i++) {
             ServiceDescriptorProto svc = file.service_[i];
-            result.put($"{pathPrefix}{svc.name}.x", generateTopLevelService(svc, file, i));
+            result.put($"{pathPrefix}{svc.name}.x", generateTopLevelService(svc, file, i, relocatedFrom));
         }
 
         return result.freeze(inPlace=True);
@@ -295,9 +356,9 @@ class ProtoCodeGen {
      * Generate a top-level enum file.
      */
     private String generateTopLevelEnum(EnumDescriptorProto e, FileDescriptorProto file,
-                                        Int index) {
+                                        Int index, String? relocatedFrom = Null) {
         StringBuffer buf = new StringBuffer();
-        generateEnum(buf, e, file, 0, [5, index]);
+        generateEnum(buf, e, file, 0, [5, index], relocatedFrom);
         return buf.toString();
     }
 
@@ -305,9 +366,9 @@ class ProtoCodeGen {
      * Generate a top-level message file.
      */
     private String generateTopLevelMessage(DescriptorProto msg, FileDescriptorProto file,
-                                           Int index) {
+                                           Int index, String? relocatedFrom = Null) {
         StringBuffer buf = new StringBuffer();
-        generateMessage(buf, msg, file, 0, False, [4, index]);
+        generateMessage(buf, msg, file, 0, False, [4, index], relocatedFrom);
         return buf.toString();
     }
 
@@ -315,9 +376,9 @@ class ProtoCodeGen {
      * Generate a top-level service interface file.
      */
     private String generateTopLevelService(ServiceDescriptorProto svc, FileDescriptorProto file,
-                                           Int index) {
+                                           Int index, String? relocatedFrom = Null) {
         StringBuffer buf = new StringBuffer();
-        generateService(buf, svc, file, 0, [6, index]);
+        generateService(buf, svc, file, 0, [6, index], relocatedFrom);
         return buf.toString();
     }
 
@@ -327,7 +388,7 @@ class ProtoCodeGen {
      * Generate an enum declaration.
      */
     private void generateEnum(StringBuffer buf, EnumDescriptorProto e, FileDescriptorProto file,
-                              Int indent, Int[] path) {
+                              Int indent, Int[] path, String? relocatedFrom = Null) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
 
@@ -340,7 +401,12 @@ class ProtoCodeGen {
         $|{pad} * This enum has been generated by the Ecstasy protoc plugin from the message type
          |{pad} * {e.name} defined in the proto file {file.name}
          |{pad} */
-         |{pad}enum {e.name}
+         |
+         .appendTo(buf);
+        if (relocatedFrom != Null) {
+            $"{pad}@protobuf.WellKnownLocation(\"{relocatedFrom}.{e.name}\")\n".appendTo(buf);
+        }
+        $|{pad}enum {e.name}
          |{pad}        implements protobuf.ProtoEnum \{
          |
          .appendTo(buf);
@@ -383,7 +449,8 @@ class ProtoCodeGen {
      * @param nested   True if this is a nested (inner static) class
      */
     private void generateMessage(StringBuffer buf, DescriptorProto msg, FileDescriptorProto file,
-                                 Int indent, Boolean nested, Int[] path) {
+                                 Int indent, Boolean nested, Int[] path,
+                                 String? relocatedFrom = Null) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
 
@@ -397,7 +464,12 @@ class ProtoCodeGen {
         $|{pad} * This class has been generated by the Ecstasy protoc plugin from the message type
          |{pad} * {msg.name} defined in the proto file {file.name}
          |{pad} */
-         |{pad}{classKind} {msg.name}
+         |
+         .appendTo(buf);
+        if (relocatedFrom != Null) {
+            $"{pad}@protobuf.WellKnownLocation(\"{relocatedFrom}.{msg.name}\")\n".appendTo(buf);
+        }
+        $|{pad}{classKind} {msg.name}
          |{pad}        extends protobuf.AbstractMessage \{
          |
          .appendTo(buf);
@@ -406,8 +478,8 @@ class ProtoCodeGen {
         Map<String, MapFieldInfo> mapInfo = buildMapFieldInfo(msg);
 
         // collect non-oneof fields and oneof descriptors
-        FieldDescriptorProto[] regularFields = new Array();
-        FieldDescriptorProto[] oneofFields   = new Array();
+        FieldDescriptorProto[] regularFields = new ecstasy.collections.Array();
+        FieldDescriptorProto[] oneofFields   = new ecstasy.collections.Array();
         for (FieldDescriptorProto field : msg.field) {
             if (Int32 idx := field.hasOneofIndex(), !field.proto3Optional) {
                 oneofFields.add(field);
@@ -455,7 +527,7 @@ class ProtoCodeGen {
         }
 
         // serialization section
-        $"{pad1}{separator("serialization", indent + 1)}\n\n".appendTo(buf);
+        $"\n{pad1}{separator("serialization", indent + 1)}\n\n".appendTo(buf);
 
         // parseField (no changes - virtual property setters handle presence bits)
         generateParseField(buf, msg, regularFields, oneofFields, indent + 1, mapInfo);
@@ -595,14 +667,14 @@ class ProtoCodeGen {
                     }
                 }
 
-                $"{pad}{ftype} {fname} = {fdef};\n".appendTo(buf);
+                $"{pad}{ftype} {fname} = {fdef};\n\n".appendTo(buf);
             }
         }
 
         for (OneofDescriptorProto oneof : oneofs) {
             String typedefName = $"{toPascalCase(oneof.name)}Type";
             String propName    = toCamelCase(oneof.name);
-            $"{pad}{typedefName}? {propName} = Null;\n".appendTo(buf);
+            $"{pad}{typedefName}? {propName} = Null;\n\n".appendTo(buf);
         }
     }
 
@@ -850,7 +922,7 @@ class ProtoCodeGen {
             String hasName     = $"has{toPascalCase(oneof.name)}";
 
             $|
-             |{pad}conditional {typedefName} {hasName}(Type<{typedefName}> type = {typedefName}) \{
+             |{pad}conditional {typedefName} {hasName}(ecstasy.reflect.Type<{typedefName}> type = {typedefName}) \{
              |{pad1}{typedefName}? value = {propName};
              |{pad1}switch (type, value.is(_)) \{
              |
@@ -967,7 +1039,7 @@ class ProtoCodeGen {
 
         // ensure the array is mutable (may be immutable from default parameter)
         $|{pad}if ({fname}.is(immutable)) \{
-         |{pad1}{fname} = new Array(Mutable, {fname});
+         |{pad1}{fname} = new ecstasy.collections.Array(Mutable, {fname});
          |{pad}}
          |
          .appendTo(buf);
@@ -1052,7 +1124,7 @@ class ProtoCodeGen {
                                        Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
-        assert MapFieldInfo info := mapInfo.get(field.typeName);
+        assert MapFieldInfo info := mapInfo.get(mapEntryName(field.typeName));
         String readMapMethod = mapReadMethod(info.keyType, info.valueType);
         if (readMapMethod.size > 0) {
             String kt = ecstasyType(info.keyType);
@@ -1186,7 +1258,7 @@ class ProtoCodeGen {
                                        Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
-        assert MapFieldInfo info := mapInfo.get(field.typeName);
+        assert MapFieldInfo info := mapInfo.get(mapEntryName(field.typeName));
         String writeMapMethod = mapWriteMethod(info.keyType, info.valueType);
         if (writeMapMethod.size > 0) {
             String kt = ecstasyType(info.keyType);
@@ -1364,7 +1436,7 @@ class ProtoCodeGen {
                                       Map<String, MapFieldInfo> mapInfo) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
-        assert MapFieldInfo info := mapInfo.get(field.typeName);
+        assert MapFieldInfo info := mapInfo.get(mapEntryName(field.typeName));
         String computeMapMethod = mapComputeSizeMethod(info.keyType, info.valueType);
         if (computeMapMethod.size > 0) {
             String kt = ecstasyType(info.keyType);
@@ -1397,16 +1469,25 @@ class ProtoCodeGen {
             }
             String ecType = ecstasyScalarType(field);
 
-            if (!first) {
+            if (first) {
+                $"{pad}".appendTo(buf);
+            } else {
                 $" else ".appendTo(buf);
             }
             first = False;
 
             String castExpr = $"{propName}.as({ecType})";
-            $|if ({propName}.is({ecType})) \{
-             |{pad1}size += protobuf.CodedOutput.{computeSizeMethodForOneof(field, castExpr)};
-             |{pad}}
-             .appendTo(buf);
+            if (field.type == TypeMessage) {
+                $|if ({propName}.is({ecType})) \{
+                 |{pad1}size += {propName}.knownFieldsSize();
+                 |{pad}}
+                 .appendTo(buf);
+            } else {
+                $|if ({propName}.is({ecType})) \{
+                 |{pad1}size += protobuf.CodedOutput.{computeSizeMethodForOneof(field, castExpr)};
+                 |{pad}}
+                 .appendTo(buf);
+            }
         }
         buf.add('\n');
     }
@@ -1554,7 +1635,8 @@ class ProtoCodeGen {
      * Generate a service interface.
      */
     private void generateService(StringBuffer buf, ServiceDescriptorProto svc,
-                                 FileDescriptorProto file, Int indent, Int[] path) {
+                                 FileDescriptorProto file, Int indent, Int[] path,
+                                 String? relocatedFrom = Null) {
 
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
@@ -1568,7 +1650,11 @@ class ProtoCodeGen {
         $|{pad} * This service has been generated by the Ecstasy protoc plugin from the message type
          |{pad} * {svc.name} defined in the proto file {file.name}
          |{pad} */
-         |{pad}interface {svc.name} \{
+         .appendTo(buf);
+        if (relocatedFrom != Null) {
+            $"{pad}@protobuf.WellKnownLocation(\"{relocatedFrom}.{svc.name}\")\n".appendTo(buf);
+        }
+        $|{pad}interface {svc.name} \{
          |
          .appendTo(buf);
 
@@ -1604,7 +1690,7 @@ class ProtoCodeGen {
      */
     private String fieldTypeName(FieldDescriptorProto field, Map<String, MapFieldInfo> mapInfo) {
         if (isMapField(field, mapInfo)) {
-            assert MapFieldInfo info := mapInfo.get(field.typeName);
+            assert MapFieldInfo info := mapInfo.get(mapEntryName(field.typeName));
             return $"Map<{ecstasyType(info.keyType)}, {mapValueEcstasyType(info)}>";
         }
         assert FieldType fieldType := field.hasType();
@@ -2082,44 +2168,17 @@ class ProtoCodeGen {
     /**
      * Find the map of names of all the wellknown types.
      */
-    private static Map<String, String> findWellKnownTypes(Package pkg = protobuf.wellknown) {
+    private static Map<String, String> findWellKnownTypes(Package pkg, String prefix) {
         Map<String, String> wellKnownTypes = new HashMap();
-
-        // TODO: remove this when we have options parsing to allow us to annotate well known classes
-        Set<String> temporary = Set:["DescriptorProto",
-            "Edition",
-            "EnumDescriptorProto",
-            "EnumOptions",
-            "EnumValueDescriptorProto",
-            "EnumValueOptions",
-            "ExtensionRangeOptions",
-            "FeatureSet",
-            "FeatureSetDefaults",
-            "FieldDescriptorProto",
-            "FieldOptions",
-            "FileDescriptorProto",
-            "FileDescriptorSet",
-            "FileOptions",
-            "GeneratedCodeInfo",
-            "MessageOptions",
-            "MethodDescriptorProto",
-            "MethodOptions",
-            "OneofDescriptorProto",
-            "OneofOptions",
-            "ServiceDescriptorProto",
-            "ServiceOptions",
-            "SourceCodeInfo",
-            "SymbolVisibility",
-            "UninterpretedOption",
-            ];
-        for (String name : temporary) {
-            wellKnownTypes.put("google.protobuf." + name, "protobuf.wellknown." + name);
-        }
-
         for (Map.Entry<String, Class> entry : pkg.classByName.entries) {
-            Class clz = entry.value;
-            if (clz.is(WellKnownLocation)) {
-                wellKnownTypes.put(clz.wellKnownName, clz.path);
+            Class clz  = entry.value;
+            Type  type = clz.toType();
+            if (type.isA(Package)) {
+                if (Object o := clz.isSingleton()) {
+                    wellKnownTypes.putAll(findWellKnownTypes(o.as(Package), $"{prefix}{clz.name}."));
+                }
+            } else if (clz.is(WellKnownLocation)) {
+                wellKnownTypes.put(clz.wellKnownName, $"{prefix}{clz.name}");
             }
         }
         return wellKnownTypes;

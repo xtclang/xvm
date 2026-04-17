@@ -27,5 +27,6 @@ module protobuf.xtclang.org {
 
 
     annotation WellKnownLocation(String wellKnownName)
-            into Class<MessageLite>;
+            into Class | Property | Method | Function {
+    }
 }

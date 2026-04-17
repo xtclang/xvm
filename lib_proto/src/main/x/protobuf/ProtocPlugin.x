@@ -51,8 +51,9 @@ class ProtocPlugin {
             fileMap.put(fd.name, fd);
         }
 
-        ProtoCodeGen codeGen     = new ProtoCodeGen();
-        SourceFile[] sourceFiles = new Array();
+        Map<String, String[]> options     = parseOptions(request.parameter);
+        ProtoCodeGen          codeGen     = new ProtoCodeGen(options);
+        SourceFile[]          sourceFiles = new Array();
 
         for (String fileToGenerate : request.fileToGenerate) {
             assert FileDescriptorProto descriptor := fileMap.get(fileToGenerate);
@@ -73,6 +74,36 @@ class ProtocPlugin {
             maximumEdition    = Edition.Edition2024.protoValue.toInt32(),
             file              = sourceFiles
         );
+    }
+
+    /**
+     * Parses a comma-delimited parameter string of key=value pairs into a Map.
+     *
+     * The same key may appear multiple times, so each key maps to an array of values.
+     * If the parameter string is empty, an empty map is returned.
+     *
+     * @param parameter  the parameter string to parse
+     *
+     * @return a Map of option keys to their values
+     */
+    private Map<String, String[]> parseOptions(String parameter) {
+        Map<String, String[]> options = new HashMap();
+        if (parameter.size == 0) {
+            return options;
+        }
+
+        for (String part : parameter.split(',')) {
+            if (Int eq := part.indexOf('=')) {
+                String key   = part[0 ..< eq];
+                String value = part[eq + 1 ..< part.size];
+                if (String[] values := options.get(key)) {
+                    values.add(value);
+                } else {
+                    options.put(key, new Array<String>().add(value));
+                }
+            }
+        }
+        return options;
     }
 }
 

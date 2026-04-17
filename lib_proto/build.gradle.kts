@@ -26,7 +26,10 @@ protobuf {
                 remove("java")
             }
             task.plugins {
-                id("xtc") {}
+                id("xtc") {
+                    option("packages=google.protobuf=wellknown")
+                    option("packages=google.protobuf.compiler=wellknown.compiler")
+                }
             }
         }
     }
