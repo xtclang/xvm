@@ -1873,36 +1873,34 @@ public class BuildContext {
             return origReg;
         }
 
-        TypeConstant narrowedType = adjustAccess(narrowingType);
-
         if (fromAddr > currOpAddr + 1 && !canApplyNarrowing(fromAddr)) {
             // there is nothing to apply the narrowing to
             return origReg;
         }
 
-        ClassDesc   narrowedCD     = JitTypeDesc.getJitClass(builder, narrowedType);
-        JitFlavor   narrowedFlavor = narrowedType.getJitDesc(builder).flavor;
+        ClassDesc   narrowedCD     = JitTypeDesc.getJitClass(builder, narrowingType);
+        JitFlavor   narrowedFlavor = narrowingType.getJitDesc(builder).flavor;
         ClassDesc[] narrowedSlotCds;
         int[]       narrowedSlots;
 
-        if (narrowedType.isJavaPrimitive()) {
+        if (narrowingType.isJavaPrimitive()) {
             narrowedSlots   = new int[] {scope.allocateJavaSlot(narrowedCD)};
             narrowedSlotCds = new ClassDesc[] {narrowedCD};
-        } else if (narrowedType.isXvmPrimitive()) {
-            narrowedSlotCds = JitTypeDesc.getXvmPrimitiveClasses(narrowedType);
+        } else if (narrowingType.isXvmPrimitive()) {
+            narrowedSlotCds = JitTypeDesc.getXvmPrimitiveClasses(narrowingType);
             narrowedSlots   = new int[narrowedSlotCds.length];
             for (int i = 0; i < narrowedSlotCds.length; i++) {
                 narrowedSlots[i] = scope.allocateJavaSlot(narrowedSlotCds[i]);
             }
         } else {
-            if (narrowedType.isOnlyNullable()) {
+            if (narrowingType.isOnlyNullable()) {
                 narrowedFlavor = AlwaysNull;
             }
             narrowedSlots   = origReg.slots();
             narrowedSlotCds = new ClassDesc[] {narrowedCD};
         }
 
-        Narrowed narrowedReg = new Narrowed(origReg.regId(), narrowedSlots, narrowedType,
+        Narrowed narrowedReg = new Narrowed(origReg.regId(), narrowedSlots, narrowingType,
             narrowedFlavor, narrowedCD, narrowedSlotCds, origReg.name(),
             scope.depth, false, origReg);
 
@@ -1920,19 +1918,19 @@ public class BuildContext {
                         // this can only mean that the original was a NullablePrimitive
                         assert origReg instanceof ExtendedSlot extSlot &&
                                 extSlot.flavor() == NullablePrimitive &&
-                                !narrowedType.isNullable();
+                                !narrowingType.isNullable();
                         Builder.load(code, origReg.cd(), origReg.slot());
                     } else {
                         origReg.load(code);
-                        code.checkcast(builder.ensureClassDesc(narrowedType)); // boxed
+                        code.checkcast(builder.ensureClassDesc(narrowingType)); // boxed
                         Builder.unbox(code, narrowedReg);
                     }
-                } else if (narrowedType.isXvmPrimitive()) {
+                } else if (narrowingType.isXvmPrimitive()) {
                     // this can only mean that the original was a NullableXvmPrimitive
                     if (origType.removeNullable().isXvmPrimitive()) {
                         assert origReg instanceof MultiSlot multiSlot &&
                                 multiSlot.flavor() == NullableXvmPrimitive &&
-                                !narrowedType.isNullable();
+                                !narrowingType.isNullable();
 
                         MultiSlot multiSlot = (MultiSlot) origReg;
                         int          slotCount = multiSlot.slotCount();
@@ -1941,10 +1939,10 @@ public class BuildContext {
                         }
                     } else {
                         origReg.load(code);
-                        code.checkcast(builder.ensureClassDesc(narrowedType)); // boxed
+                        code.checkcast(builder.ensureClassDesc(narrowingType)); // boxed
                         Builder.unbox(code, narrowedReg);
                     }
-                } else if (narrowedType.isOnlyNullable()) {
+                } else if (narrowingType.isOnlyNullable()) {
                     switch (origReg.flavor()) {
                         case NullablePrimitive, NullableXvmPrimitive -> {
                             // reuse the ExtendedSlot
@@ -1960,7 +1958,7 @@ public class BuildContext {
                         // this can only mean that the original was a NullablePrimitive
                         assert origReg instanceof ExtendedSlot extSlot &&
                                 extSlot.flavor() == NullablePrimitive &&
-                                narrowedType.isOnlyNullable();
+                                narrowingType.isOnlyNullable();
 
                         ExtendedSlot extSlot = (ExtendedSlot) origReg;
                         code.iconst_1()
@@ -1970,7 +1968,7 @@ public class BuildContext {
                     } else if (origType.removeNullable().isXvmPrimitive()) {
                         // this can only mean that the original was a NullableXvmPrimitive
                         assert origReg.flavor() == NullableXvmPrimitive &&
-                                narrowedType.isOnlyNullable();
+                                narrowingType.isOnlyNullable();
 
                         MultiSlot multiSlot = (MultiSlot) origReg;
                         code.iconst_1()
@@ -2001,13 +1999,21 @@ public class BuildContext {
     }
 
     /**
-     * If we narrow to or access a type that is "this" type, the access needs to be adjusted.
+     * @return the type info for the specified type while adjusting access for types that are
+     *         "next mates" to this context's type
      */
-    public TypeConstant adjustAccess(TypeConstant narrowingType) {
-        TypeConstant thisType = typeInfo.getType();
-        return narrowingType.isA(thisType.removeAccess()) ? thisType : narrowingType;
+    public TypeInfo getTypeInfo(TypeConstant type) {
+        TypeConstant thisType = typeInfo.getType().removeAccess();
+        if (type instanceof CastTypeConstant castType) {
+            type = castType.getUnderlyingType2();
+        }
+        // TODO: we could use IdentityConstant.isNestMate() for better precision
+        return type.equals(thisType)
+            ? typeInfo // Access.PRIVATE
+            : type.isSingleUnderlyingClass(true) && (type.isA(thisType) || thisType.isA(type))
+                ? type.ensureAccess(Access.PROTECTED).ensureTypeInfo()
+                : type.ensureTypeInfo();
     }
-
     /**
      * Reset the narrowed register info.
      */
@@ -2709,8 +2715,6 @@ public class BuildContext {
             assert inferredType.isA(baseType) || baseType.isFormalType();
             return inferredType;
         }
-
-        inferredType = adjustAccess(inferredType);
 
         if (baseType.isFormalType() && inferredType.isA(baseType.resolveConstraints())) {
             // use non-formal type

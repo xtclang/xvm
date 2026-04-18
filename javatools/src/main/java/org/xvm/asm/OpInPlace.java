@@ -290,10 +290,10 @@ public abstract class OpInPlace
             default         -> throw new IllegalStateException();
             }
 
-        TypeConstant  type     = reg.type();
-        MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, null);
-        String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
-        JitMethodDesc jmd      = method.getJitDesc(bctx.builder, type);
+        TypeConstant  typeTarget = reg.type();
+        MethodInfo    method     = bctx.getTypeInfo(typeTarget).findOpMethod(sName, sOp, null);
+        String        sJitName   = method.ensureJitMethodName(bctx.typeSystem);
+        JitMethodDesc jmd        = method.getJitDesc(bctx.builder, typeTarget);
 
         assert !jmd.isOptimized;
 

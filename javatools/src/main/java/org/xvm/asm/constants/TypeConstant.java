@@ -6878,7 +6878,7 @@ public abstract class TypeConstant
                     }
                 }
             } else {
-                MethodInfo    method = ensureTypeInfo().getMethodBySignature(sig);
+                MethodInfo    method = bctx.getTypeInfo(this).getMethodBySignature(sig);
                 JitMethodDesc jmd    = method.getJitDesc(bctx.builder, this);
                 cd       = bctx.builder.ensureClassDesc(method.getJitIdentity().getNamespace().getType());
                 sJitName = method.ensureJitMethodName(ts);

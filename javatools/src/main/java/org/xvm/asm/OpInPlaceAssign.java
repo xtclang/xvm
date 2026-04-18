@@ -212,15 +212,15 @@ public abstract class OpInPlaceAssign
             default -> throw new UnsupportedOperationException(toName(getOpCode()));
         }
 
-        TypeConstant  typeArg  = bctx.getArgumentType(m_nArgValue);
-        MethodInfo    method   = typeTarget.ensureTypeInfo().findOpMethod(sName, sOp, typeArg);
+        TypeConstant  typeArg = bctx.getArgumentType(m_nArgValue);
+        MethodInfo    method  = bctx.getTypeInfo(typeTarget).findOpMethod(sName, sOp, typeArg);
         return method;
     }
 
     @Override
     public void registerConstants(ConstantRegistry registry) {
         m_argTarget = registerArgument(m_argTarget, registry);
-        m_argValue = registerArgument(m_argValue, registry);
+        m_argValue  = registerArgument(m_argValue, registry);
     }
 
     @Override
