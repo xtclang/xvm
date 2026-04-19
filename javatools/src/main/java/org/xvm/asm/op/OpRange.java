@@ -86,7 +86,7 @@ public abstract class OpRange
                     typeTarget.getValueString() + ">");
             }
 
-            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget));
+            bctx.storeValue(code, bctx.ensureRegister(m_nRetValue, typeTarget));
         } else {
             super.build(bctx, code);
         }

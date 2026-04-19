@@ -34,16 +34,6 @@ public record ExtendedSlot(BuildContext bctx, int regId, int slot, int extSlot,
         implements RegisterInfo {
 
     @Override
-    public int[] slots() {
-        return new int[]{slot};
-    }
-
-    @Override
-    public ClassDesc[] slotCds() {
-        return new ClassDesc[]{cd};
-    }
-
-    @Override
     public boolean isSingle() {
         return false;
     }

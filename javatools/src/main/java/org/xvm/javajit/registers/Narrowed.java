@@ -42,11 +42,6 @@ public record Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flav
     }
 
     @Override
-    public ClassDesc[] slotCds() {
-        return new ClassDesc[]{cd};
-    }
-
-    @Override
     public boolean isSingle() {
         return true;
     }

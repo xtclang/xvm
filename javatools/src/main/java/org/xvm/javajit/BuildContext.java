@@ -457,7 +457,8 @@ public class BuildContext {
     public void process(CodeBuilder code, Op[] ops) {
         for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
             try {
-                int skipTo = ops[currOpAddr = iPC].build(this, code);
+                Op  op     = ops[currOpAddr = iPC];
+                int skipTo = op.build(this, code);
                 if (skipTo != -1) {
                     iPC = skipTo - 1;
                 }
@@ -800,7 +801,7 @@ public class BuildContext {
                     // TODO: track the data change to prevent unnecessary copy
                     RegisterInfo origReg = narrowedReg.origReg();
                     if (narrowedReg.slot() != origReg.slot()) {
-                        moveVar(code, narrowedReg.load(code), origReg, false);
+                        moveRegister(code, narrowedReg.load(code), origReg, false);
                     }
                     entry.setValue(origReg);
                 }
@@ -1212,7 +1213,7 @@ public class BuildContext {
             // the register represents a property that the value(s) on the stack must be stored into
             buildSetPropertyFromStack(code, regId, reg.type(), reg.flavor());
         } else {
-            ensureVarScope(code, reg);
+            ensureRegisterScope(code, reg);
             reg.store(this, code, type);
         }
     }
@@ -1238,14 +1239,14 @@ public class BuildContext {
             // the register represents a property that the value(s) on the stack must be stored into
             buildSetPropertyFromStack(code, regId, resolvedType, jitDesc.flavor);
         } else {
-            RegisterInfo reg = ensureRegInfo(regId, type);
-            ensureVarScope(code, reg);
+            RegisterInfo reg = ensureRegister(regId, type);
+            ensureRegisterScope(code, reg);
             reg.store(this, code, type);
         }
     }
 
     /**
-     * Introduce a new variable for the specified type id, name id style and an optional value.
+     * Introduce a new register for the specified type id, name id style and an optional value.
      *
      * @param regId   the XVM register id
      * @param typeId  a "relative" (negative) number representing the TypeConstant representing
@@ -1253,21 +1254,21 @@ public class BuildContext {
      * @param nameId  a "relative" (negative) number representing the StringConstant for the name
      *                or zero for unnamed vars
      */
-    public RegisterInfo introduceVar(CodeBuilder code, int regId, int typeId, int nameId) {
+    public RegisterInfo introduceRegister(CodeBuilder code, int regId, int typeId, int nameId) {
         TypeConstant type = (TypeConstant) getConstant(typeId);
         String       name = nameId == 0 ? "" : ((StringConstant) getConstant(nameId)).getValue();
 
-        return introduceVar(code, regId, type, name);
+        return introduceRegister(code, regId, type, name);
     }
 
     /**
-     * Introduce a new variable for the specified type and name.
+     * Introduce a new register for the specified type and name.
      *
      * @param regId  the XVM register id
      * @param type   the variable type
      * @param name   the variable name
      */
-    public RegisterInfo introduceVar(CodeBuilder code, int regId, TypeConstant type, String name) {
+    public RegisterInfo introduceRegister(CodeBuilder code, int regId, TypeConstant type, String name) {
         if (regId < 0) {
             throw new IllegalArgumentException("Invalid var index: " + regId);
         }
@@ -1343,11 +1344,11 @@ public class BuildContext {
      *                     corresponding "checkcast" needs to be added, which can happen in some
      *                     scenarios (e.g.: assignment of narrowed properties)
      */
-    public void moveVar(CodeBuilder code, int fromVarId, int toVarId, boolean allowUpcast) {
-        RegisterInfo regFrom  = loadArgument(code, fromVarId);
-        RegisterInfo regTo    = ensureRegInfo(toVarId, regFrom.type());
+    public void moveRegister(CodeBuilder code, int fromVarId, int toVarId, boolean allowUpcast) {
+        RegisterInfo regFrom = loadArgument(code, fromVarId);
+        RegisterInfo regTo   = ensureRegister(toVarId, regFrom.type());
 
-        moveVar(code, regFrom, regTo, allowUpcast);
+        moveRegister(code, regFrom, regTo, allowUpcast);
     }
 
     /**
@@ -1360,8 +1361,8 @@ public class BuildContext {
      *                     corresponding "checkcast" needs to be added, which can happen in some
      *                     scenarios (e.g.: assignment of narrowed properties)
      */
-    public void moveVar(CodeBuilder code, RegisterInfo regFrom, RegisterInfo regTo,
-                        boolean allowUpcast) {
+    public void moveRegister(CodeBuilder code, RegisterInfo regFrom, RegisterInfo regTo,
+                             boolean allowUpcast) {
         TypeConstant typeFrom = regFrom.type();
         TypeConstant typeTo   = regTo.type();
         ClassDesc    cdFrom   = regFrom.cd();
@@ -1376,7 +1377,7 @@ public class BuildContext {
                 assert allowUpcast;
                 if (cdFrom.isPrimitive()) {
                     // this can only be caused by a dead/unreachable code
-                    ensureVarScope(code, regTo);
+                    ensureRegisterScope(code, regTo);
                     Builder.throwTypeMismatch(code, "Unreconcilable types " +
                             typeFrom.getValueString() + " -> " + typeTo.getValueString());
                     // unfortunately, if generated for any reachable code, this will throw
@@ -1531,7 +1532,7 @@ public class BuildContext {
     /**
      * Ensure the scope for the Java slot associated with the specified register.
      */
-    public void ensureVarScope(CodeBuilder code, RegisterInfo reg) {
+    public void ensureRegisterScope(CodeBuilder code, RegisterInfo reg) {
         Label varStart = unassignedRegisters.remove(reg);
         if (varStart != null) {
             code.labelBinding(varStart);
@@ -1801,17 +1802,17 @@ public class BuildContext {
     }
 
     /**
-     * Ensure an unnamed {@link RegisterInfo? for the specified register id and an optimized
+     * Ensure an unnamed {@link RegisterInfo} for the specified register id and an optimized
      * ClassDesc for the specified type.
      */
-    public RegisterInfo ensureRegInfo(int regId, TypeConstant type) {
-        return ensureRegInfo(regId, type, JitTypeDesc.getJitClass(builder, type), "");
+    public RegisterInfo ensureRegister(int regId, TypeConstant type) {
+        return ensureRegister(regId, type, JitTypeDesc.getJitClass(builder, type), "");
     }
 
     /**
      * Ensure a {@link RegisterInfo} for the specified register id.
      */
-    public RegisterInfo ensureRegInfo(int regId, TypeConstant type, ClassDesc cd, String name) {
+    public RegisterInfo ensureRegister(int regId, TypeConstant type, ClassDesc cd, String name) {
         return regId == Op.A_IGNORE
             ? new SingleSlot(regId, -2, Specific, type, cd, name)
             : registerInfos.computeIfAbsent(regId, ix -> {

@@ -158,7 +158,7 @@ public class CatchStart
         org.xvm.javajit.Scope scopeThis = bctx.enterScope(code);
 
         TypeSystem   ts     = bctx.typeSystem;
-        RegisterInfo regEx  = bctx.introduceVar(code, m_nVar, m_nType, m_nNameId);
+        RegisterInfo regEx  = bctx.introduceRegister(code, m_nVar, m_nType, m_nNameId);
         TypeConstant typeEx = regEx.type();
         assert typeEx.isA(ts.pool().typeException());
 

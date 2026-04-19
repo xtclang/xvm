@@ -728,7 +728,7 @@ public abstract class OpCallable extends Op {
         TypeConstant   typeTarget = idCtor.getNamespace().getType();
         ClassDesc      cdTarget   = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
 
-        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget, cdTarget, ""), typeTarget);
+        bctx.storeValue(code, bctx.ensureRegister(m_nRetValue, typeTarget, cdTarget, ""), typeTarget);
         return -1;
     }
 
