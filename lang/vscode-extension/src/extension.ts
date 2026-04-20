@@ -28,8 +28,21 @@ function ensureXtcLanguageAssociation(document: vscode.TextDocument): void {
 export function activate(context: vscode.ExtensionContext): void {
     console.log('XTC Language Support is now active');
 
-    // Ensure .x files are associated with XTC language
+    // Handle unhandled promise rejections from VS Code's git integration trying to stat .x.git files
+    const rejectionHandler = (reason: unknown) => {
+        const msg = reason instanceof Error ? reason.message : String(reason);
+        // Silently ignore git-related ENOENT errors for .x.git files
+        if (msg.includes('ENOENT') && msg.includes('.x.git')) {
+            return;
+        }
+        // Log other unhandled rejections
+        console.error('Unhandled promise rejection:', reason);
+    };
+    process.on('unhandledRejection', rejectionHandler);
+    
+    // Register rejection handler cleanup and language association
     context.subscriptions.push(
+        { dispose: () => process.off('unhandledRejection', rejectionHandler) },
         vscode.workspace.onDidOpenTextDocument(ensureXtcLanguageAssociation)
     );
     vscode.workspace.textDocuments.forEach(ensureXtcLanguageAssociation);
