@@ -2,6 +2,18 @@ import * as vscode from 'vscode';
 
 import { createXtcRunTask, XtcTaskDefinition, XtcTaskProvider } from './task-provider';
 
+const MODULE_NAME_REGEX = /^[a-zA-Z_]\w*$/;
+
+function validateProjectName(value: string): string | null {
+    if (!value || value.trim().length === 0) {
+        return 'Project name cannot be empty';
+    }
+    if (!MODULE_NAME_REGEX.test(value)) {
+        return 'Project name must start with a letter or underscore and contain only letters, digits, and underscores';
+    }
+    return null;
+}
+
 export function registerCommands(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('xtc.runModule', async (_uri: string, moduleName: string) => {
@@ -22,8 +34,7 @@ export function registerCommands(context: vscode.ExtensionContext, outputChannel
                 useGradle: true,
                 quietMode: true,
             };
-            const task = createXtcRunTask(definition);
-            await vscode.tasks.executeTask(task);
+            await vscode.tasks.executeTask(createXtcRunTask(definition));
         }),
 
         vscode.commands.registerCommand('xtc.showServerOutput', () => {
@@ -34,15 +45,7 @@ export function registerCommands(context: vscode.ExtensionContext, outputChannel
             const projectName = await vscode.window.showInputBox({
                 prompt: 'Enter project name',
                 placeHolder: 'myproject',
-                validateInput: (value) => {
-                    if (!value || value.trim().length === 0) {
-                        return 'Project name cannot be empty';
-                    }
-                    if (!/^[a-zA-Z_]\w*$/.test(value)) {
-                        return 'Project name must start with a letter or underscore and contain only letters, digits, and underscores';
-                    }
-                    return null;
-                }
+                validateInput: validateProjectName
             });
 
             if (!projectName) {

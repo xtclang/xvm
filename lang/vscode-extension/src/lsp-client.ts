@@ -3,6 +3,7 @@ import {
     CloseAction,
     ConfigurationParams,
     ErrorAction,
+    Executable,
     LanguageClient,
     LanguageClientOptions,
     ServerOptions,
@@ -15,10 +16,25 @@ import { updateStatusBar } from './status-bar';
 
 let client: LanguageClient | undefined;
 let crashCount = 0;
+let hasEverReachedRunning = false;
 const MAX_CRASH_RESTARTS = 3;
 
 export function getClient(): LanguageClient | undefined {
     return client;
+}
+
+/** Stop the client safely, swallowing any state-related throws. */
+async function safeStop(): Promise<void> {
+    const c = client;
+    client = undefined;
+    if (!c) {
+        return;
+    }
+    try {
+        await c.stop();
+    } catch {
+        // Client may be in starting/startFailed state — ignore.
+    }
 }
 
 export function startLanguageClient(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.OutputChannel): void {
@@ -26,17 +42,23 @@ export function startLanguageClient(context: vscode.ExtensionContext, serverJar:
     const logLevel = process.env.XTC_LOG_LEVEL?.toUpperCase() ?? 'INFO';
     const jvmArgs = buildJvmArgs(serverJar, logLevel);
 
+    outputChannel.appendLine('Starting XTC Language Server...');
+    outputChannel.appendLine(`Java: ${javaExecutable}`);
+    outputChannel.appendLine(`Args: ${jvmArgs.join(' ')}`);
+    outputChannel.appendLine(`JAR: ${serverJar}`);
+
+    const createExecutable = (debugPort?: number): Executable => ({
+        command: javaExecutable,
+        args: debugPort
+            ? [`-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,quiet=y,address=${debugPort}`, ...jvmArgs]
+            : jvmArgs,
+        transport: TransportKind.stdio,
+        options: { cwd: context.extensionPath }
+    });
+
     const serverOptions: ServerOptions = {
-        run: {
-            command: javaExecutable,
-            args: jvmArgs,
-            transport: TransportKind.stdio
-        },
-        debug: {
-            command: javaExecutable,
-            args: ['-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005', ...jvmArgs],
-            transport: TransportKind.stdio
-        }
+        run: createExecutable(),
+        debug: createExecutable(5005)
     };
 
     const clientOptions: LanguageClientOptions = {
@@ -51,7 +73,7 @@ export function startLanguageClient(context: vscode.ExtensionContext, serverJar:
         },
         middleware: {
             workspace: {
-                configuration: (params: ConfigurationParams, token, next) => {
+                configuration: (params: ConfigurationParams) => {
                     return params.items.map(item => {
                         if (item.section === 'xtc.formatting') {
                             const config = vscode.workspace.getConfiguration('xtc.formatting');
@@ -63,7 +85,7 @@ export function startLanguageClient(context: vscode.ExtensionContext, serverJar:
                                 maxLineWidth: config.get<number>('maxLineWidth', 120)
                             };
                         }
-                        return next(params, token);
+                        return {};
                     });
                 }
             }
@@ -76,13 +98,19 @@ export function startLanguageClient(context: vscode.ExtensionContext, serverJar:
                 return { action: ErrorAction.Shutdown };
             },
             closed: () => {
+                if (!hasEverReachedRunning) {
+                    // Server died before reaching Running state (startup crash).
+                    // Do not restart to avoid unhandled rejection issues in vscode-languageclient.
+                    updateStatusBar('error');
+                    return { action: CloseAction.DoNotRestart };
+                }
                 crashCount++;
                 if (crashCount <= MAX_CRASH_RESTARTS) {
                     updateStatusBar('starting');
                     return { action: CloseAction.Restart };
                 }
                 updateStatusBar('stopped');
-                vscode.window.showErrorMessage(
+                void vscode.window.showErrorMessage(
                     `XTC Language Server crashed ${crashCount} times and will not be restarted. Use "XTC: Restart Language Server" to restart manually.`
                 );
                 return { action: CloseAction.DoNotRestart };
@@ -97,34 +125,44 @@ export function startLanguageClient(context: vscode.ExtensionContext, serverJar:
         clientOptions
     );
 
-    client.onDidChangeState(event => {
-        switch (event.newState) {
-            case State.Starting:
-                updateStatusBar('starting');
-                break;
-            case State.Running:
-                crashCount = 0;
-                updateStatusBar('ready');
-                break;
-            case State.Stopped:
-                updateStatusBar('stopped');
-                break;
+    // Patch stop() to suppress internal rejections from vscode-languageclient.
+    // The library calls `void this.stop()` during initialization failures, creating
+    // unhandled rejections. This patch ensures stop() always resolves.
+    const originalStop = client.stop.bind(client);
+    (client as unknown as { stop: (timeout?: number) => Promise<void> }).stop =
+        (timeout?: number) => originalStop(timeout).catch(() => {});
+
+    client.onDidChangeState(({ newState }) => {
+        const stateMap = {
+            [State.Starting]: 'starting' as const,
+            [State.Running]: 'ready' as const,
+            [State.Stopped]: 'stopped' as const
+        };
+        
+        if (newState === State.Running) {
+            crashCount = 0;
+            hasEverReachedRunning = true;
+        }
+        
+        const status = stateMap[newState];
+        if (status) {
+            updateStatusBar(status);
         }
     });
 
     updateStatusBar('starting');
 
-    client.start().catch(err => {
+    void client.start().catch(err => {
         const message = err?.message ?? String(err);
         console.warn('XTC Language Server failed to start:', message);
 
         if (message.includes('UnsupportedClassVersionError') || message.includes('class file version')) {
-            vscode.window.showErrorMessage(
+            void vscode.window.showErrorMessage(
                 'XTC Language Server requires Java 25+. Set the "xtc.java.home" setting to your Java 25 installation path.',
                 'Open Settings'
             ).then(choice => {
                 if (choice === 'Open Settings') {
-                    vscode.commands.executeCommand('workbench.action.openSettings', 'xtc.java.home');
+                    void vscode.commands.executeCommand('workbench.action.openSettings', 'xtc.java.home');
                 }
             });
         }
@@ -136,25 +174,11 @@ export function startLanguageClient(context: vscode.ExtensionContext, serverJar:
 
 export async function restartLanguageClient(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.OutputChannel): Promise<void> {
     crashCount = 0;
-    if (client) {
-        updateStatusBar('starting');
-        try {
-            await client.stop();
-        } catch {
-            // already stopped
-        }
-        client = undefined;
-    }
+    hasEverReachedRunning = false;
+    await safeStop();
     startLanguageClient(context, serverJar, outputChannel);
 }
 
 export async function stopLanguageClient(): Promise<void> {
-    if (client) {
-        try {
-            await client.stop();
-        } catch {
-            // already stopped
-        }
-        client = undefined;
-    }
+    await safeStop();
 }
