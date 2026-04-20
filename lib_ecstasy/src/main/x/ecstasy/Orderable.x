@@ -5,6 +5,9 @@
  * [compare] and [equals] functions, and the [equals] function must return `True` for two values iff
  * the [compare] function returns [Ordered.Equal] for the same two values.
  *
+ * If a class is `Orderable`, it is a compile-time error to implement or override either the
+ * [equals] or [compare] function without implementing or overriding both.
+ *
  * The binary operators `<`, `<=`, `>`, and `>=` all require their left and right arguments to be
  * of the same [Orderable] type, and these operators rely on the [compare] function to determine
  * the operator result.

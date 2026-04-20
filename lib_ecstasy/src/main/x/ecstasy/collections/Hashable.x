@@ -19,6 +19,9 @@
  * horrible and unpredictable manners. To be safe when using potentially-mutable objects in such a
  * scenario, the hashed data structure must no longer be used (either accessed or mutated) in any
  * way after any mutation occurs to any of the objects hashed by that data structure.
+ *
+ * If a class is `Hashable`, it is a compile-time error to implement or override either the [equals]
+ * or [hashCode] function without implementing or overriding both.
  */
 interface Hashable
         extends Comparable {
