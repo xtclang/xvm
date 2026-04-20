@@ -1,155 +1,88 @@
+// XTC Language Support for VS Code
+//
 // Semantic tokens are enabled by default in the LSP server. VS Code automatically
 // layers them on top of the TextMate grammar — types, methods, properties, annotations,
 // and modifiers (static, deprecated, readonly) get richer colors than TextMate alone.
 //
 // TextMate remains as the fast-paint fallback during server startup.
-//
-// TODO: No debug adapter (DAP) integration yet.
 
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import * as vscode from 'vscode';
-import {
-    ConfigurationParams,
-    ConfigurationRequest,
-    LanguageClient,
-    LanguageClientOptions,
-    ServerOptions,
-    TransportKind
-} from 'vscode-languageclient/node';
 
-let client: LanguageClient | undefined;
+import { createStatusBar, updateStatusBar } from './status-bar';
+import { startLanguageClient, restartLanguageClient, stopLanguageClient } from './lsp-client';
+import { XtcTaskProvider } from './task-provider';
+import { XtcDebugAdapterDescriptorFactory, XtcDebugConfigurationProvider } from './debug-adapter';
+import { registerCommands } from './commands';
 
-export function activate(context: vscode.ExtensionContext) {
+export function activate(context: vscode.ExtensionContext): void {
     console.log('XTC Language Support is now active');
+
+    // Create output channel for LSP server
+    const outputChannel = vscode.window.createOutputChannel('XTC Language Server', { log: true });
+    context.subscriptions.push(outputChannel);
+
+    // Create status bar item
+    const statusBar = createStatusBar();
+    context.subscriptions.push(statusBar, 
+        vscode.tasks.registerTaskProvider(XtcTaskProvider.type, new XtcTaskProvider())
+    , 
+        vscode.debug.registerDebugAdapterDescriptorFactory('xtc', new XtcDebugAdapterDescriptorFactory(context)),
+        vscode.debug.registerDebugConfigurationProvider('xtc', new XtcDebugConfigurationProvider())
+    );
+
+    // Register commands
+    registerCommands(context, outputChannel);
 
     // Find the LSP server JAR
     const serverJar = context.asAbsolutePath(path.join('server', 'lsp-server.jar'));
 
-    // Java executable - use JAVA_HOME if set, otherwise assume 'java' is in PATH
-    const javaHome = process.env.JAVA_HOME;
-    const javaExecutable = javaHome ? path.join(javaHome, 'bin', 'java') : 'java';
-
-    // Log level: XTC_LOG_LEVEL env var or INFO default
-    const logLevel = process.env.XTC_LOG_LEVEL?.toUpperCase() ?? 'INFO';
-
-    // Common JVM args for the LSP server process
-    const jvmArgs = [
-        '-Dapple.awt.UIElement=true',   // macOS: no dock icon
-        '-Djava.awt.headless=true',     // no GUI components
-        `-Dxtc.logLevel=${logLevel}`,   // pass log level to LSP server
-        '-jar', serverJar
-    ];
-
-    // Server options - start the LSP server as a Java process
-    const serverOptions: ServerOptions = {
-        run: {
-            command: javaExecutable,
-            args: jvmArgs,
-            transport: TransportKind.stdio
-        },
-        debug: {
-            command: javaExecutable,
-            args: ['-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005', ...jvmArgs],
-            transport: TransportKind.stdio
-        }
-    };
-
-    // Client options with workspace/configuration middleware.
-    // When the LSP server sends workspace/configuration for section "xtc.formatting",
-    // we return the user's VS Code settings (or XTC defaults).
-    const clientOptions: LanguageClientOptions = {
-        documentSelector: [{ scheme: 'file', language: 'xtc' }],
-        synchronize: {
-            fileEvents: vscode.workspace.createFileSystemWatcher('**/*.x')
-        },
-        middleware: {
-            workspace: {
-                configuration: (params: ConfigurationParams, token, next) => {
-                    return params.items.map(item => {
-                        if (item.section === 'xtc.formatting') {
-                            const config = vscode.workspace.getConfiguration('xtc.formatting');
-                            return {
-                                indentSize: config.get<number>('indentSize', 4),
-                                continuationIndentSize: config.get<number>('continuationIndentSize', 8),
-                                tabSize: config.get<number>('tabSize', 4),
-                                insertSpaces: config.get<boolean>('insertSpaces', true),
-                                maxLineWidth: config.get<number>('maxLineWidth', 120)
-                            };
-                        }
-                        return next(params, token);
-                    });
-                }
+    // Register LSP-related commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('xtc.restartServer', async () => {
+            if (fs.existsSync(serverJar)) {
+                await restartLanguageClient(context, serverJar, outputChannel);
+            } else {
+                vscode.window.showWarningMessage('XTC Language Server JAR not found. Build the extension first.');
             }
-        }
-    };
+        }),
 
-    // Create and start the language client
-    client = new LanguageClient(
-        'xtcLanguageServer',
-        'XTC Language Server',
-        serverOptions,
-        clientOptions
+        // Watch for Java path changes
+        vscode.workspace.onDidChangeConfiguration(event => {
+            if (event.affectsConfiguration('xtc.java.home') && fs.existsSync(serverJar)) {
+                vscode.window.showInformationMessage(
+                    'Java path changed. Restart the language server?',
+                    'Restart', 'Later'
+                ).then(choice => {
+                    if (choice === 'Restart') {
+                        restartLanguageClient(context, serverJar, outputChannel);
+                    }
+                });
+            }
+        })
     );
 
-    // Start the client (also starts the server)
-    client.start();
-
-    // Register create project command
-    const createProjectCommand = vscode.commands.registerCommand('xtc.createProject', async () => {
-        const projectName = await vscode.window.showInputBox({
-            prompt: 'Enter project name',
-            placeHolder: 'myproject',
-            validateInput: (value) => {
-                if (!value || value.trim().length === 0) {
-                    return 'Project name cannot be empty';
-                }
-                if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)) {
-                    return 'Project name must start with a letter or underscore and contain only letters, digits, and underscores';
-                }
-                return null;
+    // Start the language client if the server JAR exists
+    if (fs.existsSync(serverJar)) {
+        startLanguageClient(context, serverJar, outputChannel);
+    } else {
+        const buildCmd = './gradlew :lang:vscode-extension:assemble -PincludeBuildLang=true -PincludeBuildAttachLang=true';
+        console.log('XTC Language Server JAR not found at:', serverJar);
+        console.log(`Running without LSP features. Build with: ${buildCmd}`);
+        void vscode.window.showErrorMessage(
+            'XTC Language Server JAR not found. Build lang:vscode-extension to enable LSP features.',
+            'Show Build Command'
+        ).then(choice => {
+            if (choice === 'Show Build Command') {
+                outputChannel.appendLine(`Build command: ${buildCmd}`);
+                outputChannel.show();
             }
         });
-
-        if (!projectName) {
-            return;
-        }
-
-        const projectType = await vscode.window.showQuickPick(
-            ['Application', 'Library', 'Service'],
-            { placeHolder: 'Select project type' }
-        );
-
-        if (!projectType) {
-            return;
-        }
-
-        const folderUri = await vscode.window.showOpenDialog({
-            canSelectFiles: false,
-            canSelectFolders: true,
-            canSelectMany: false,
-            openLabel: 'Select Parent Folder'
-        });
-
-        if (!folderUri || folderUri.length === 0) {
-            return;
-        }
-
-        const parentPath = folderUri[0].fsPath;
-
-        // Use xtc init command if available, otherwise show instructions
-        const terminal = vscode.window.createTerminal('XTC');
-        terminal.show();
-        terminal.sendText(`xtc init "${projectName}" --type ${projectType.toLowerCase()} --dir "${parentPath}"`);
-
-        vscode.window.showInformationMessage(`Creating XTC ${projectType} project: ${projectName}`);
-    });
-
-    context.subscriptions.push(createProjectCommand);
+        updateStatusBar('stopped');
+    }
 }
 
 export function deactivate(): Thenable<void> | undefined {
-    if (!client) {
-        return undefined;
-    }
-    return client.stop();
+    return stopLanguageClient();
 }
