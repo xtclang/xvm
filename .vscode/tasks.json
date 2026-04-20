@@ -1,0 +1,20 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "npm: compile - lang/vscode-extension",
+            "type": "npm",
+            "script": "compile",
+            "path": "lang/vscode-extension/",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            },
+            "problemMatcher": "$tsc"
+        }
+    ]
+}

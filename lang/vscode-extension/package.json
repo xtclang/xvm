@@ -21,7 +21,8 @@
     ],
     "activationEvents": [
         "onStartupFinished",
-        "onLanguage:xtc"
+        "onLanguage:xtc",
+        "workspaceContains:**/*.x"
     ],
     "main": "./out/extension.js",
     "contributes": {
@@ -157,6 +158,9 @@
             }
         },
         "configurationDefaults": {
+            "files.associations": {
+                "*.x": "xtc"
+            },
             "[xtc]": {
                 "editor.tabSize": 4,
                 "editor.insertSpaces": true,

@@ -14,13 +14,7 @@ import { execSync } from 'node:child_process';
  *   5. 'java' in PATH (fallback)
  */
 export function findJavaExecutable(): string {
-    return (
-        fromConfig()        ??
-        fromJavaHome()      ??
-        fromSdkman()        ??
-        fromCommonPaths()   ??
-        'java'
-    );
+    return fromConfig() ?? fromJavaHome() ?? fromSdkman() ?? fromCommonPaths() ?? 'java';
 }
 
 function fromConfig(): string | null {
@@ -29,7 +23,7 @@ function fromConfig(): string | null {
         .get<string>('java.home', '')
         .trim();
 
-    return resolveJavaBin(configuredHome);
+    return configuredHome ? resolveJavaBin(configuredHome) : null;
 }
 
 function fromJavaHome(): string | null {
@@ -73,52 +67,50 @@ function resolveJavaBin(javaHome: string): string | null {
     return fs.existsSync(candidate) ? candidate : null;
 }
 
+function tryReadDir(dir: string): string[] {
+    try {
+        return fs.readdirSync(dir);
+    } catch {
+        return [];
+    }
+}
+
 /**
- * Look for Java 25+ in a SDKMAN-style directory where child dirs have version-style names.
+ * Look for Java 25+ in a SDKMAN-style directory.
  */
 function findJava25InDirectory(javaDir: string): string | null {
-    try {
-        const entries = fs.readdirSync(javaDir)
-            .filter(e => e.startsWith('25'))
-            .sort((a, b) => a.localeCompare(b))
-            .reverse();
+    const entries = tryReadDir(javaDir)
+        .filter(e => e.startsWith('25'))
+        .sort((a, b) => b.localeCompare(a));
 
-        for (const entry of entries) {
-            const candidate = path.join(javaDir, entry, 'bin', 'java');
-            if (fs.existsSync(candidate)) {
-                return candidate;
-            }
+    for (const entry of entries) {
+        const candidate = path.join(javaDir, entry, 'bin', 'java');
+        if (fs.existsSync(candidate)) {
+            return candidate;
         }
-    } catch {
-        // ignore read errors
     }
     return null;
 }
 
 /**
- * Look for Java 25+ in system JDK directories (macOS /Library/Java/JavaVirtualMachines, Linux /usr/lib/jvm).
+ * Look for Java 25+ in system JDK directories.
  */
 function findJava25InSystemDir(dir: string): string | null {
-    try {
-        const entries = fs.readdirSync(dir)
-            .filter(e => /25/.test(e))
-            .sort((a, b) => a.localeCompare(b))
-            .reverse();
+    const entries = tryReadDir(dir)
+        .filter(e => /25/.test(e))
+        .sort((a, b) => b.localeCompare(a));
 
-        for (const entry of entries) {
-            // macOS: /Library/Java/JavaVirtualMachines/jdk-25.jdk/Contents/Home/bin/java
-            const macCandidate = path.join(dir, entry, 'Contents', 'Home', 'bin', 'java');
-            if (fs.existsSync(macCandidate)) {
-                return macCandidate;
-            }
-            // Linux: /usr/lib/jvm/java-25-openjdk/bin/java
-            const linuxCandidate = path.join(dir, entry, 'bin', 'java');
-            if (fs.existsSync(linuxCandidate)) {
-                return linuxCandidate;
-            }
+    for (const entry of entries) {
+        // macOS: /Library/Java/JavaVirtualMachines/jdk-25.jdk/Contents/Home/bin/java
+        const macCandidate = path.join(dir, entry, 'Contents', 'Home', 'bin', 'java');
+        if (fs.existsSync(macCandidate)) {
+            return macCandidate;
         }
-    } catch {
-        // ignore read errors
+        // Linux: /usr/lib/jvm/java-25-openjdk/bin/java
+        const linuxCandidate = path.join(dir, entry, 'bin', 'java');
+        if (fs.existsSync(linuxCandidate)) {
+            return linuxCandidate;
+        }
     }
     return null;
 }
