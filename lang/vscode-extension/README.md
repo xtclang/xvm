@@ -51,6 +51,7 @@ Open any `.x` file - syntax highlighting is automatic.
 ### LSP Features
 
 The language server starts automatically when you open a `.x` file:
+
 - **Hover**: Move cursor over symbols for type information
 - **Completion**: Type to see suggestions (Ctrl+Space to trigger)
 - **Go to Definition**: Ctrl+Click or F12
@@ -61,12 +62,19 @@ The language server starts automatically when you open a `.x` file:
 
 ### Project Structure
 
-```
+```text
 vscode-extension/
 ├── package.json           # Extension manifest
 ├── tsconfig.json          # TypeScript configuration
 ├── src/
-│   └── extension.ts       # Extension entry point (LSP client)
+│   ├── extension.ts       # Extension entry point (activation/deactivation)
+│   ├── commands.ts        # Command registrations
+│   ├── debug-adapter.ts   # DAP adapter + debug config provider
+│   ├── java.ts            # Java 25+ discovery and JVM args
+│   ├── lsp-client.ts      # LSP client lifecycle and wiring
+│   ├── status-bar.ts      # Status bar state management
+│   ├── task-provider.ts   # Task provider (build/test/clean/run)
+│   └── test/              # Unit and integration tests
 ├── syntaxes/
 │   └── xtc.tmLanguage.json  # TextMate grammar (copied from build)
 ├── language-configuration.json  # Language config (copied from build)
@@ -88,7 +96,7 @@ vscode-extension/
 
 ### Testing Locally
 
-**Option 1: Using Gradle (recommended)**
+#### Option 1: Using Gradle (recommended)
 
 ```bash
 # From the repository root
@@ -97,7 +105,7 @@ vscode-extension/
 
 This builds the extension and launches VS Code with it loaded - similar to IntelliJ's `runIde`.
 
-**Option 2: Using VS Code directly**
+#### Option 2: Using VS Code directly
 
 1. Open the `lang/vscode-extension` folder in VS Code
 2. Press F5 to launch Extension Development Host
@@ -107,17 +115,19 @@ This builds the extension and launches VS Code with it loaded - similar to Intel
 
 Once VS Code launches with the extension:
 
-**1. Syntax Highlighting (automatic)**
+#### 1. Syntax Highlighting (automatic)
+
 - Open any `.x` file - highlighting works immediately
 - You should see the XTC icon in the file tab
 
-**2. Create a New Project**
+#### 2. Create a New Project
+
 - Press `Cmd+Shift+P` (or `Ctrl+Shift+P`)
 - Type "XTC: Create New Project"
 - Follow the prompts (name, type, folder)
 - This runs `xtc init` in a terminal
 
-**3. LSP Features**
+#### 3. LSP Features
 
 The LSP server supports multiple adapters. See [LSP Server README](../lsp-server/README.md) for details.
 
@@ -143,6 +153,7 @@ xtc init testapp --type app --dir /tmp
 ```
 
 Then in VS Code:
+
 1. File → Open Folder → select `/tmp/testapp`
 2. Open `src/main/x/testapp.x`
 3. You should see syntax highlighting and LSP features

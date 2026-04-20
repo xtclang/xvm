@@ -41,13 +41,24 @@ val copyIcon by tasks.registering(Copy::class) {
     into(layout.projectDirectory.dir("icons"))
 }
 
-// Copy LSP server JAR
+// Copy LSP server fat JAR (self-contained with all dependencies: LSP4J, tree-sitter, Logback)
 val copyLspServer by tasks.registering(Copy::class) {
-    description = "Copy LSP server JAR"
-    dependsOn(project(":lsp-server").tasks.named("jar"))
-    from(project(":lsp-server").tasks.named("jar"))
+    description = "Copy LSP server fat JAR"
+    dependsOn(project(":lsp-server").tasks.named("fatJar"))
+    from(project(":lsp-server").tasks.named("fatJar"))
     into(layout.projectDirectory.dir("server"))
     rename { "lsp-server.jar" }
+}
+
+// Copy DAP server JAR (bundled for debugging support)
+val copyDapServer by tasks.registering(Copy::class) {
+    description = "Copy DAP server JAR"
+    dependsOn(project(":dap-server").tasks.named("jar"))
+    from(project(":dap-server").tasks.named("jar")) {
+        include("*.jar")
+    }
+    into(layout.projectDirectory.dir("server"))
+    rename { "dap-server.jar" }
 }
 
 // Run npm install
@@ -78,7 +89,7 @@ val npmCompile by tasks.registering(Exec::class) {
 // Package the extension
 val packageExtension by tasks.registering(Exec::class) {
     description = "Package VS Code extension"
-    dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyIcon, copyLspServer)
+    dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyIcon, copyLspServer, copyDapServer)
     workingDir = layout.projectDirectory.asFile
     commandLine("npm", "run", "package")
 
@@ -92,7 +103,7 @@ val build by tasks.existing {
 
 // Assemble prepares all resources without packaging
 val assemble by tasks.existing {
-    dependsOn(copyTextMateGrammar, copyLanguageConfig, copyIcon, copyLspServer, npmCompile)
+    dependsOn(copyTextMateGrammar, copyLanguageConfig, copyIcon, copyLspServer, copyDapServer, npmCompile)
 }
 
 // Launch VS Code with extension loaded for testing
@@ -102,7 +113,8 @@ val runCode by tasks.registering(Exec::class) {
     dependsOn(assemble)
 
     val extensionPath = layout.projectDirectory.asFile.absolutePath
-    commandLine("code", "--extensionDevelopmentPath=$extensionPath")
+    val fixturesPath = layout.projectDirectory.dir("src/test/fixtures").asFile.absolutePath
+    commandLine("code", "--extensionDevelopmentPath=$extensionPath", fixturesPath)
 }
 
 val clean by tasks.existing(Delete::class) {
