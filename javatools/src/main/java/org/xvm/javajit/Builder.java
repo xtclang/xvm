@@ -1131,7 +1131,7 @@ public abstract class Builder {
         if (cd.isPrimitive()) {
             if (returnIndex < 8) {
                 code // r = $ctx.i"returnIndex"
-                    .getfield(CD_Ctx, "i" + (returnIndex), CD_long);
+                    .getfield(CD_Ctx, "i" + returnIndex, CD_long);
             } else {
                 code // r = $ctx.iN[returnIndex-8]
                     .getfield(CD_Ctx, "iN", CD_long.arrayType())
@@ -1158,13 +1158,14 @@ public abstract class Builder {
         } else {
             if (returnIndex < 8) {
                 code // r = $ctx.o"returnIndex"
-                    .getfield(CD_Ctx, "o" + (returnIndex-1), CD_Object);
+                    .getfield(CD_Ctx, "o" + returnIndex, CD_JavaObject);
             } else {
                 code // r = $ctx.oN[returnIndex-8]
-                    .getfield(CD_Ctx, "oN", CD_Object.arrayType())
+                    .getfield(CD_Ctx, "oN", CD_JavaObject.arrayType())
                     .loadConstant(returnIndex-8)
                     .aaload();
             }
+            code.checkcast(cd);
         }
     }
 
@@ -1218,11 +1219,11 @@ public abstract class Builder {
         } else {
             if (returnIndex < 8) {
                 code // $ctx.o"returnIndex" = r
-                    .putfield(CD_Ctx, "o" + (returnIndex), CD_Object);
+                    .putfield(CD_Ctx, "o" + returnIndex, CD_JavaObject);
             } else {
                 // TODO: replace with a helper "Ctx.storeRef(i-8, value)"
                 code // $ctx.oN[returnIndex-8] = r
-                    .getfield(CD_Ctx, "oN", CD_Object.arrayType())
+                    .getfield(CD_Ctx, "oN", CD_JavaObject.arrayType())
                     .loadConstant(returnIndex-8)
                     .aastore();
             }
@@ -1368,6 +1369,7 @@ public abstract class Builder {
     public static final String N_Int32        = "org.xtclang.ecstasy.numbers.Int32";
     public static final String N_Int64        = "org.xtclang.ecstasy.numbers.Int64";
     public static final String N_Int128       = "org.xtclang.ecstasy.numbers.Int128";
+    public static final String N_IteratorChar = "org.xtclang.ecstasy.IteratorᐸCharᐳ";
     public static final String N_Nibble       = "org.xtclang.ecstasy.numbers.Nibble";
     public static final String N_Nullable     = "org.xtclang.ecstasy.Nullable";
     public static final String N_Object       = "org.xtclang.ecstasy.Object";

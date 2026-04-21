@@ -2194,7 +2194,7 @@ public class CommonBuilder
         "Stringable",
         "Float*",
         "String",
-//        "StringBuffer",
+        "StringBuffer",
 //        "Dec32", "Dec64", // need to change to SingleSlot
 //        "UInt",     // depends on GP_DIVREM
 //        "FPNumber", // depends on Bit support

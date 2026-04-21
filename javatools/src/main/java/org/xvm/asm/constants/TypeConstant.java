@@ -6491,15 +6491,13 @@ public abstract class TypeConstant
     }
 
     protected synchronized String buildJitClassName(TypeSystem ts, ModuleLoader loader) {
-        ConstantPool     pool = getConstantPool();
-        IdentityConstant id   = getSingleUnderlyingClass(true);
-        if (id instanceof ClassConstant idClz) {
-            String name = ts.xvm.nativeTypeSystem.nativeByClass.get(idClz);
-            if (name != null) {
-                return name;
-            }
+        String name = ts.xvm.nativeTypeSystem.getReservedName(this);
+        if (name != null) {
+            return name;
         }
 
+        ConstantPool     pool = getConstantPool();
+        IdentityConstant id   = getSingleUnderlyingClass(true);
         if (id.equals(pool.clzArray())) {
             TypeConstant typeEl = getParamType(0);
             if (typeEl.isFormalType() || typeEl.equals(pool.typeObject())) {

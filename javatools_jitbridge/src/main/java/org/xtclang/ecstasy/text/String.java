@@ -1,6 +1,7 @@
 package org.xtclang.ecstasy.text;
 
 import org.xtclang.ecstasy.Exception;
+import org.xtclang.ecstasy.IteratorᐸCharᐳ;
 import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.nConst;
 import org.xtclang.ecstasy.nObj;
@@ -260,6 +261,40 @@ public class String
         return getContinued(ctx, 0, index);
     }
 
+    /**
+     * Native implementation of:
+     *   Iterator<Char> iterator() = chars.iterator();
+     */
+    public IteratorᐸCharᐳ iterator(Ctx ctx) {
+        return new nIterator(ctx);
+    }
+
+    private class nIterator extends nObj implements IteratorᐸCharᐳ {
+        public nIterator(Ctx ctx) {
+            super(ctx);
+        }
+
+        private int index = 0;
+
+        @Override
+        public boolean $isImmut() {
+            return false;
+        }
+
+        @Override
+        public nType Element$get(Ctx ctx) {
+            return nType.$ensureType(ctx, ctx.container.typeSystem.pool().typeChar());
+        }
+
+        @Override
+        public boolean next$p(Ctx ctx) {
+            if (index < size$get$p(ctx)) {
+                ctx.i0 = getElement$p(ctx, index++);
+                return true;
+            }
+            return false;
+        }
+    }
 
     /**
      * (Internal) Get the codepoint located at the specified index within the string.

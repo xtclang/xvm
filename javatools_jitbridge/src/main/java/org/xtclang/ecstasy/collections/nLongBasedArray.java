@@ -30,7 +30,8 @@ import static java.lang.System.arraycopy;
  * Storage - ref
  */
 public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayType>>
-        extends Array {
+        extends Array
+        implements Cloneable {
 
     public nLongBasedArray(Ctx ctx, TypeConstant type) {
         super(ctx, type);
@@ -229,6 +230,26 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
         // return TODO Array$Object$Slice
         throw $oob(ctx, upper);
+    }
+
+    @Override
+    public Array freeze$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
+        if (!inPlace$dflt && inPlace) {
+            makeImmutable(ctx);
+            return this;
+        }
+        try {
+            nLongBasedArray that = (nLongBasedArray) clone();
+            if ($delegate != null) {
+                return that.$delegate.freeze$p(ctx, inPlace, inPlace$dflt);
+            }
+            if ($storage != null) {
+                that.$storage = $storage.clone();
+            }
+            return that;
+        } catch (CloneNotSupportedException e) {
+            throw Exception.$rt(ctx, "Clone failed");
+        }
     }
 
     /**

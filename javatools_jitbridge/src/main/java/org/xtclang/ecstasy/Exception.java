@@ -98,4 +98,11 @@ public class Exception extends nConst {
     public static nException $typeMismatch(Ctx ctx, java.lang.String text) {
         return new TypeMismatch(ctx).$init(ctx, text, null);
     }
+
+    /**
+     * @return generic runtime exception
+     */
+    public static nException $rt(Ctx ctx, java.lang.String text) {
+        return new Exception(ctx).$init(ctx, text, null);
+    }
 }

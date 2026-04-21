@@ -2131,10 +2131,23 @@ public class BuildContext {
         if (type instanceof CastTypeConstant castType) {
             type = castType.getUnderlyingType2();
         }
-        // TODO: we could use IdentityConstant.isNestMate() for better precision
-        return type.equals(thisType)
-            ? typeInfo // Access.PRIVATE
-            : type.isSingleUnderlyingClass(true) && (type.isA(thisType) || thisType.isA(type))
+
+        assert thisType.isSingleUnderlyingClass(true);
+
+        if (type.isSingleUnderlyingClass(true)) {
+            IdentityConstant thisId = thisType.getSingleUnderlyingClass(true);
+            IdentityConstant thatId = type.getSingleUnderlyingClass(true);
+
+            if (thisId.equals(thatId)) {
+                return typeInfo;
+            }
+
+            if (thatId.isNestMateOf(thisId)) {
+                return type.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+            }
+        }
+
+        return type.isEquivalent(thisType)
                 ? type.ensureAccess(Access.PROTECTED).ensureTypeInfo()
                 : type.ensureTypeInfo();
     }
