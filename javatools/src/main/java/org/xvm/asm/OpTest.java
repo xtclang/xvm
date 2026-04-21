@@ -441,9 +441,9 @@ public abstract class OpTest
             if (typeTarget.isJavaPrimitive()) {
                 // we can statically compute the result
                 if (getOpCode() == OP_IS_TYPE) {
-                    if (typeTarget.isA(typeTest)) {code.iconst_1();} else {code.iconst_0();}
+                    Builder.loadBoolean(code, typeTarget.isA(typeTest));
                 } else { // OP_IS_NTYPE
-                    if (typeTarget.isA(typeTest)) {code.iconst_0();} else {code.iconst_1();}
+                    Builder.loadBoolean(code, !typeTarget.isA(typeTest));
                 }
                 return;
             } else {

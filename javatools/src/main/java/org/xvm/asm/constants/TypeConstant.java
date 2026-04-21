@@ -6603,7 +6603,8 @@ public abstract class TypeConstant
      *         cast explicitly to {@code nObj} class to invoke its methods
      */
     public boolean isJitInterface() {
-        return isInterfaceType();
+        // Ref and Var are always represented is by "nRef" class
+        return isInterfaceType() && !this.isA(getConstantPool().typeRef());
     }
 
     /**

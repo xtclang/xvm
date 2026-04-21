@@ -12,6 +12,7 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -26,6 +27,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpMove;
 import org.xvm.asm.OpReturn;
 import org.xvm.asm.Parameter;
 
@@ -55,11 +57,14 @@ import org.xvm.asm.op.FinallyStart;
 import org.xvm.asm.op.GuardAll;
 import org.xvm.asm.op.Guarded;
 import org.xvm.asm.op.Jump;
+import org.xvm.asm.op.MoveRef;
+import org.xvm.asm.op.MoveVar;
 import org.xvm.asm.op.Nop;
 
 import org.xvm.javajit.registers.ExtendedSlot;
 import org.xvm.javajit.registers.MultiSlot;
 import org.xvm.javajit.registers.Narrowed;
+import org.xvm.javajit.registers.Ref;
 import org.xvm.javajit.registers.SingleSlot;
 
 import static java.lang.constant.ConstantDescs.CD_CallSite;
@@ -80,9 +85,11 @@ import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nException;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.CD_nRef;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.OPT;
+
 import static org.xvm.javajit.JitFlavor.AlwaysNull;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
@@ -236,6 +243,11 @@ public class BuildContext {
     private final Deque<RegisterInfo> tempRegStack = new ArrayDeque<>();
 
     /**
+     * The Map of registers that require Ref boxing. Values are "True" for Vars nad "False" for refs.
+     */
+    private Map<Integer, Boolean> refs;
+
+    /**
      * Deferred compilation context.
      */
     private BuildContext deferred;
@@ -338,11 +350,12 @@ public class BuildContext {
         Deque<List<Integer>> jumpAddrStack = null;
         Deque<List<Integer>> jumpDestStack = null;
 
-        int            guardAddr = -1;     // the address of the last GuardAll op
-        int            finAddr   = -1;     // the address of the last FinallyEnd op
-        List<Integer>  jumpsAddr  = null;  // the addresses of Jump ops
-        List<Integer>  jumpsDest  = null;  // the addresses of jump destinations
-        boolean        doReturn   = false; // indicates whether FinallyEnd should generate returns
+        int                   guardAddr  = -1;     // the address of the last GuardAll op
+        int                   finAddr    = -1;     // the address of the last FinallyEnd op
+        List<Integer>         jumpsAddr  = null;  // the addresses of Jump ops
+        List<Integer>         jumpsDest  = null;  // the addresses of jump destinations
+        Map<Integer, Boolean> refs       = null;  // the ids of registers that need to be boxed as Refs
+        boolean               doReturn   = false; // indicates whether FinallyEnd should generate returns
         for (int iPC = 0, opsCount = ops.length; iPC < opsCount; iPC++) {
             Op op = ops[currOpAddr = iPC];
             switch (op) {
@@ -425,6 +438,18 @@ public class BuildContext {
                 }
                 break;
 
+            case OpMove moveOp:
+                if (moveOp instanceof MoveRef || moveOp instanceof MoveVar) {
+                    int regId = moveOp.getRegisterId();
+                    if (regId >= 0) {
+                        if (refs == null) {
+                            refs = new HashMap<>();
+                        }
+                        refs.put(regId, moveOp instanceof MoveVar);
+                    }
+                }
+                break;
+
             case org.xvm.asm.op.Label label:
                 // there is a chance we are compiling the same ops multiple times (for different
                 // formal types)
@@ -446,9 +471,43 @@ public class BuildContext {
             }
         }
 
+        if (refs == null) {
+            refs = Collections.emptyMap();
+        } else {
+            for (Map.Entry<Integer, Boolean> entry : refs.entrySet()) {
+                int regId = entry.getKey();
+                if (regId < 0) {
+                    // predefined registers are read-only; we can create Refs on-the-spot
+                    continue;
+                }
+                RegisterInfo reg = registerInfos.get(regId);
+                if (reg != null) {
+                    // some method code takes a ref of a method argument; we need to box it right
+                    // away, create a Ref object and replace the corresponding register
+                    Parameter param = methodStruct.getParam(regId);
+                    int       slot  = origScope.allocateLocal(regId, TypeKind.REFERENCE);
+                    boolean   isVar = entry.getValue();
+
+                    Runnable referentLoader = () -> {
+                        reg.load(code);
+                        if (reg.flavor().isOptimized) {
+                            Builder.box(code, reg);
+                        }};
+                    buildCreateRef(code, param.getType(), isVar, referentLoader);
+
+                    code.astore(slot);
+
+                    RegisterInfo ref = new Ref(this, regId, slot, param.getName(), isVar,
+                            param.getType(), reg.flavor());
+                    registerInfos.put(regId, ref);
+                }
+            }
+        }
+
         // finish the preprocessing phase
-        lineNumber = 1;
-        scope = origScope;
+        this.refs       = refs;
+        this.lineNumber = 1;
+        this.scope      = origScope;
     }
 
     /**
@@ -979,6 +1038,10 @@ public class BuildContext {
      * @param loaded  if true, the register value has been loaded on the Java stack
      */
     protected RegisterInfo adjustRegister(CodeBuilder code, RegisterInfo reg, boolean loaded) {
+        if (reg.isJavaStack()) {
+            return reg;
+        }
+
         TypeConstant regType  = reg.type();
         TypeConstant baseType = regType.removeNullable();
         if (!baseType.isJitPrimitive()) {
@@ -1020,12 +1083,16 @@ public class BuildContext {
 
     /**
      * Check if the specified argument has been already assigned a Java slot. If the argument points
-     * to a constant, create a temporary Java slot for it. In either case, the corresponding value
-     * is **not** loaded on the Java stack.
+     * to a constant, create a temporary Java slot for it. Otherwise, the register must have already
+     * beed allocated a Java slot for.
+     *
+     * In either case, the corresponding value is **not** loaded on the Java stack.
      */
     public RegisterInfo ensureRegister(CodeBuilder code, int argId) {
         if (argId >= 0) {
-            return adjustRegister(code, getRegisterInfo(code, argId), false);
+            RegisterInfo reg = registerInfos.get(argId);
+            assert reg != null;
+            return adjustRegister(code, reg, false);
         }
 
         if (argId == Op.A_THIS) {
@@ -1037,6 +1104,74 @@ public class BuildContext {
                 : loadPredefineArgument(code, argId);
 
         return reg.storeTempValue(this, code, argId);
+    }
+
+    /**
+     * Get a {@link RegisterInfo} for the specified register id.
+     */
+    public RegisterInfo getRegisterInfo(CodeBuilder code, int regId) {
+        return registerInfos.get(regId);
+    }
+
+    /**
+     * Ensure an unnamed {@link RegisterInfo} for the specified register id and an optimized
+     * ClassDesc for the specified type.
+     */
+    public RegisterInfo ensureRegister(int regId, TypeConstant type) {
+        return ensureRegister(regId, type, JitTypeDesc.getJitClass(builder, type), "");
+    }
+
+    /**
+     * Ensure a {@link RegisterInfo} for the specified register id, type, ClassDesc and name.
+     */
+    public RegisterInfo ensureRegister(int regId, TypeConstant type, ClassDesc cd, String name) {
+        return regId == Op.A_IGNORE
+            ? new SingleSlot(regId, -2, Specific, type, cd, name)
+            : registerInfos.computeIfAbsent(regId, ix -> {
+                TypeConstant resolvedType = type.containsFormalType(true)
+                    ? type.resolveGenerics(pool(), typeInfo.getType())
+                    : type;
+
+                JitTypeDesc jitDesc = resolvedType.getJitDesc(builder);
+                Boolean     isVar   = refs.get(regId);
+                if (isVar == null) {
+                    if (resolvedType.isXvmPrimitive()) {
+                        ClassDesc[] cds   = JitTypeDesc.getXvmPrimitiveClasses(resolvedType);
+                        int[]       slots = new int[cds.length];
+                        for (int i = 0; i < slots.length; i++) {
+                            slots[i] = scope.allocateLocal(regId, cds[i]);
+                        }
+                        return new MultiSlot(this, regId, slots, jitDesc.flavor,
+                                resolvedType, cd, cds, name);
+                    }
+                    return new SingleSlot(regId, scope.allocateLocal(ix, cd), jitDesc.flavor,
+                        resolvedType, cd, name);
+                } else {
+                    throw new UnsupportedOperationException("buildCreateRef");
+                }
+            }
+        );
+    }
+
+    /**
+     * @return true iff this register has been assigned
+     */
+    public boolean isAssigned(RegisterInfo reg) {
+        return !unassignedRegisters.containsKey(reg);
+    }
+
+    /**
+     * Ensure the scope for the Java slot associated with the specified register.
+     *
+     * @return true iff this is the first time the register is assigned
+     */
+    public boolean ensureRegisterScope(CodeBuilder code, RegisterInfo reg) {
+        Label varStart = unassignedRegisters.remove(reg);
+        if (varStart != null) {
+            code.labelBinding(varStart);
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -1213,8 +1348,8 @@ public class BuildContext {
             // the register represents a property that the value(s) on the stack must be stored into
             buildSetPropertyFromStack(code, regId, reg.type(), reg.flavor());
         } else {
-            ensureRegisterScope(code, reg);
             reg.store(this, code, type);
+            ensureRegisterScope(code, reg);
         }
     }
 
@@ -1240,8 +1375,8 @@ public class BuildContext {
             buildSetPropertyFromStack(code, regId, resolvedType, jitDesc.flavor);
         } else {
             RegisterInfo reg = ensureRegister(regId, type);
-            ensureRegisterScope(code, reg);
             reg.store(this, code, type);
+            ensureRegisterScope(code, reg);
         }
     }
 
@@ -1285,52 +1420,59 @@ public class BuildContext {
 
         Label        varStart = code.newLabel();
         JitTypeDesc  jtd      = type.getJitDesc(builder);
-        RegisterInfo reg      = switch (jtd.flavor) {
-            case Specific, Widened, Primitive -> {
-                int slotPrime = scope.allocateLocal(regId, jtd.cd);
-                code.localVariable(slotPrime, name, jtd.cd, varStart, scope.endLabel);
+        RegisterInfo reg;
 
-                yield new SingleSlot(regId, slotPrime, jtd.flavor, type, jtd.cd, name);
-            }
-            case NullablePrimitive -> {
-                int slotPrime = scope.allocateLocal(regId, jtd.cd);
-                int slotExt   = scope.allocateLocal(regId, TypeKind.BOOLEAN);
+        if (isRef(regId)) {
+            int slot = scope.allocateLocal(regId, TypeKind.REFERENCE);
+            reg = new Ref(this, regId, slot, name, refs.get(regId), type, jtd.flavor);
+        } else {
+            reg = switch (jtd.flavor) {
+                case Specific, Widened, Primitive -> {
+                    int slotPrime = scope.allocateLocal(regId, jtd.cd);
+                    code.localVariable(slotPrime, name, jtd.cd, varStart, scope.endLabel);
 
-                code.localVariable(slotPrime, name, jtd.cd, varStart, scope.endLabel);
-                code.localVariable(slotExt,   name+EXT, CD_boolean, varStart, scope.endLabel);
-
-                yield new ExtendedSlot(this, regId, slotPrime, slotExt, NullablePrimitive,
-                    type, jtd.cd, name);
-            }
-            case XvmPrimitive -> {
-                ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
-                assert cds != null && cds.length > 0;
-
-                int[] slots = new int[cds.length];
-                for (int i = 0; i < cds.length; i++) {
-                    slots[i] = scope.allocateLocal(regId, cds[i]);
-                    code.localVariable(slots[i], name + "$" + i, cds[i], varStart, scope.endLabel);
+                    yield new SingleSlot(regId, slotPrime, jtd.flavor, type, jtd.cd, name);
                 }
-                yield new MultiSlot(this, regId, slots, XvmPrimitive, type, jtd.cd, cds, name);
+                case NullablePrimitive -> {
+                    int slotPrime = scope.allocateLocal(regId, jtd.cd);
+                    int slotExt   = scope.allocateLocal(regId, TypeKind.BOOLEAN);
 
-            }
-            case NullableXvmPrimitive -> {
-                ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
-                assert cds != null && cds.length > 0;
+                    code.localVariable(slotPrime, name, jtd.cd, varStart, scope.endLabel);
+                    code.localVariable(slotExt,   name+EXT, CD_boolean, varStart, scope.endLabel);
 
-                int[] slots = new int[cds.length];
-                for (int i = 0; i < cds.length; i++) {
-                    slots[i] = scope.allocateLocal(regId, cds[i]);
-                    code.localVariable(slots[i], name + "$" + i, cds[i], varStart, scope.endLabel);
+                    yield new ExtendedSlot(this, regId, slotPrime, slotExt, NullablePrimitive,
+                        type, jtd.cd, name);
                 }
-                int slotExt = scope.allocateLocal(regId, TypeKind.BOOLEAN);
-                code.localVariable(slotExt, name+EXT, CD_boolean, varStart, scope.endLabel);
-                yield new MultiSlot(this, regId, slots, slotExt, NullableXvmPrimitive,
-                        type, jtd.cd, cds, name);
-            }
+                case XvmPrimitive -> {
+                    ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
+                    assert cds != null && cds.length > 0;
 
-            default -> throw new UnsupportedOperationException("Not implemented: " + jtd.flavor);
-        };
+                    int[] slots = new int[cds.length];
+                    for (int i = 0; i < cds.length; i++) {
+                        slots[i] = scope.allocateLocal(regId, cds[i]);
+                        code.localVariable(slots[i], name + "$" + i, cds[i], varStart, scope.endLabel);
+                    }
+                    yield new MultiSlot(this, regId, slots, XvmPrimitive, type, jtd.cd, cds, name);
+
+                }
+                case NullableXvmPrimitive -> {
+                    ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
+                    assert cds != null && cds.length > 0;
+
+                    int[] slots = new int[cds.length];
+                    for (int i = 0; i < cds.length; i++) {
+                        slots[i] = scope.allocateLocal(regId, cds[i]);
+                        code.localVariable(slots[i], name + "$" + i, cds[i], varStart, scope.endLabel);
+                    }
+                    int slotExt = scope.allocateLocal(regId, TypeKind.BOOLEAN);
+                    code.localVariable(slotExt, name+EXT, CD_boolean, varStart, scope.endLabel);
+                    yield new MultiSlot(this, regId, slots, slotExt, NullableXvmPrimitive,
+                            type, jtd.cd, cds, name);
+                }
+
+                default -> throw new UnsupportedOperationException("Not implemented: " + jtd.flavor);
+            };
+        }
 
         registerInfos.put(regId, reg);
         unassignedRegisters.put(reg, varStart);
@@ -1530,20 +1672,20 @@ public class BuildContext {
     }
 
     /**
-     * Ensure the scope for the Java slot associated with the specified register.
+     * Build the code that allocates a Java slot for a `Ref` object of the specified type and name.
+     *
+     * The "Ref" object has dual properties; it holds (boxes) the underlying referent value, while
+     * allowing the standard ops that operate on this register id use the underlying value, rather
+     * than the Ref itself. The only ops that are allowed to "see" the Ref object itself are
+     * MOV_REF and MOV_VAR.
+     *
+     * There is one notable exception: if the referent type is annotated by "Inject", this method
+     * creates a regular register and loads the corresponding injection value.
+     *
+     * @param type  the referent type
      */
-    public void ensureRegisterScope(CodeBuilder code, RegisterInfo reg) {
-        Label varStart = unassignedRegisters.remove(reg);
-        if (varStart != null) {
-            code.labelBinding(varStart);
-        }
-    }
-
-    /**
-     * Build the code that creates a `Ref` object for the specified type and name and stores it in
-     * the Java slot associated with the specified register id.
-     */
-    public RegisterInfo introduceRef(CodeBuilder code, String name, TypeConstant type, int regId) {
+    public RegisterInfo introduceRef(CodeBuilder code, int regId, TypeConstant type, String name,
+                                    boolean isVar) {
         if (type instanceof AnnotatedTypeConstant annoType) {
             type = type.getUnderlyingType();
 
@@ -1582,7 +1724,14 @@ public class BuildContext {
                 return reg;
             }
         }
-        throw new UnsupportedOperationException("name=" + name + "; type=" + type);
+
+        int          slot = scope.allocateLocal(regId, TypeKind.REFERENCE);
+        JitTypeDesc  jtd  = type.getJitDesc(builder);
+        RegisterInfo ref  = new Ref(this, regId, slot, name, isVar, type, jtd.flavor);
+
+        registerInfos.put(regId, ref);
+        unassignedRegisters.put(ref, scope.startLabel);
+        return ref;
     }
 
     /**
@@ -1795,45 +1944,19 @@ public class BuildContext {
     }
 
     /**
-     * Get a {@link RegisterInfo} for the specified register id.
+     * Create a {@link JitFlavor#Specific} register info for the specified register id and the
+     * specified referent type.
      */
-    public RegisterInfo getRegisterInfo(CodeBuilder code, int regId) {
-        return registerInfos.get(regId);
-    }
-
-    /**
-     * Ensure an unnamed {@link RegisterInfo} for the specified register id and an optimized
-     * ClassDesc for the specified type.
-     */
-    public RegisterInfo ensureRegister(int regId, TypeConstant type) {
-        return ensureRegister(regId, type, JitTypeDesc.getJitClass(builder, type), "");
-    }
-
-    /**
-     * Ensure a {@link RegisterInfo} for the specified register id.
-     */
-    public RegisterInfo ensureRegister(int regId, TypeConstant type, ClassDesc cd, String name) {
-        return regId == Op.A_IGNORE
-            ? new SingleSlot(regId, -2, Specific, type, cd, name)
-            : registerInfos.computeIfAbsent(regId, ix -> {
-                TypeConstant resolvedType = type.containsFormalType(true)
-                    ? type.resolveGenerics(pool(), typeInfo.getType())
-                    : type;
-
-                JitTypeDesc jitDesc = resolvedType.getJitDesc(builder);
-                if (resolvedType.isXvmPrimitive()) {
-                    ClassDesc[] cds   = JitTypeDesc.getXvmPrimitiveClasses(resolvedType);
-                    int[]       slots = new int[cds.length];
-                    for (int i = 0; i < slots.length; i++) {
-                        slots[i] = scope.allocateLocal(regId, cds[i]);
-                    }
-                    return new MultiSlot(this, regId, slots, jitDesc.flavor,
-                            resolvedType, cd, cds, name);
-                }
-                return new SingleSlot(regId, scope.allocateLocal(ix, cd), jitDesc.flavor,
-                    resolvedType, cd, name);
-            }
-        );
+    public RegisterInfo realizeRef(CodeBuilder code, int regId, TypeConstant type, boolean isVar) {
+        RegisterInfo reg = registerInfos.get(regId);
+        if (reg == null) {
+            TypeConstant refType = isVar ? pool().ensureVarType(type) : pool().ensureRefType(type);
+            return introduceRegister(code, regId, refType, "");
+        } else {
+            assert reg.flavor() != JitFlavor.Ref;
+            assert reg.type().isA(pool().typeRef()) && reg.type().getParamType(0).equals(type);
+            return reg;
+        }
     }
 
     /**
@@ -2776,6 +2899,32 @@ public class BuildContext {
             }
         }
         return fromAddr;
+    }
+
+    /**
+     * @return true iff the specified register should be a Ref
+     */
+    protected boolean isRef(int regId) {
+        return refs.containsKey(regId);
+    }
+
+    /**
+     * Generate code that creates a Ref object for the specified compile-time referent type.
+     *
+     * In:  the referent instance on the Java stack
+     * Out: the Ref or Var object on the Java stack
+     */
+    public void buildCreateRef(CodeBuilder code, TypeConstant referentType, boolean isVar,
+                               Runnable referentLoader) {
+        ClassDesc cd = CD_nRef;
+        code.new_(cd)
+            .dup();
+        loadCtx(code);
+        referentLoader.run();
+        loadTypeConstant(code, referentType);
+        Builder.loadBoolean(code, isVar);
+        code.invokespecial(cd, INIT_NAME,
+            MethodTypeDesc.of(CD_void, CD_Ctx, CD_nObj, CD_TypeConstant, CD_boolean));
     }
 
     /**

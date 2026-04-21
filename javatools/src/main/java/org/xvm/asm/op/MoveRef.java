@@ -3,6 +3,8 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -10,6 +12,12 @@ import org.xvm.asm.OpMove;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.JitFlavor;
+import org.xvm.javajit.RegisterInfo;
+
+import org.xvm.javajit.registers.Ref;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -90,5 +98,35 @@ public class MoveRef
         frame.assignValue(m_nToValue, hRef);
 
         return iPC + 1;
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        TypeConstant typeReferent = bctx.getArgumentType(m_nFromValue).removeAccess();
+        bctx.typeMatrix.assign(getAddress(), m_nToValue, bctx.pool().ensureRefType(typeReferent));
+    }
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        RegisterInfo regTo;
+        if (m_nFromValue >= 0) {
+            Ref regFrom = (Ref) bctx.getRegisterInfo(code, m_nFromValue);
+            assert regFrom.flavor() == JitFlavor.Ref;
+
+            regTo = bctx.realizeRef(code, m_nToValue, regFrom.referentType(), false);
+            code.aload(regFrom.slot());
+        } else {
+            // create a ref for a predefined register
+            TypeConstant typeReferent = bctx.getArgumentType(m_nFromValue).removeAccess();
+
+            regTo = bctx.realizeRef(code, m_nToValue, typeReferent, false);
+            bctx.buildCreateRef(code, typeReferent, false,
+                () -> bctx.loadArgument(code, m_nFromValue));
+        }
+
+        code.astore(regTo.slot());
+        return -1;
     }
 }

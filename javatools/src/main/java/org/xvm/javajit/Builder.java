@@ -839,6 +839,17 @@ public abstract class Builder {
     }
 
     /**
+     * Generate a "load" for a boolean value
+     */
+    public static void loadBoolean(CodeBuilder code, boolean value) {
+        if (value) {
+            code.iconst_1();
+        } else {
+            code.iconst_0();
+        }
+    }
+
+    /**
      * Generate a default return for the specified Java class assuming the corresponding value
      * is already on java stack.
      */
@@ -981,15 +992,15 @@ public abstract class Builder {
             case "UInt128" -> {
                 // stack is UInt128
                 code.dup();
-                // stack is UInt128 UInt128
+                // stack is UInt128, UInt128
                 code.getfield(CD_UInt128, "$lowValue", CD_long);
-                // stack is UInt128 long
+                // stack is UInt128, long
                 code.dup2_x1().pop2();
-                // stack is long UInt128
+                // stack is long, UInt128
                 code.getfield(CD_UInt128, "$highValue", CD_long);
-                // stack is long long_2
+                // stack is long, long_2
             }
-            default        -> throw new UnsupportedOperationException("Cannot unbox " + name);
+            default -> throw new UnsupportedOperationException("Cannot unbox " + name);
         }
     }
 
@@ -1379,6 +1390,7 @@ public abstract class Builder {
     public static final String N_nModule      = "org.xtclang.ecstasy.nModule";
     public static final String N_nObj         = "org.xtclang.ecstasy.nObj";
     public static final String N_nPackage     = "org.xtclang.ecstasy.nPackage";
+    public static final String N_nRef         = "org.xtclang.ecstasy.reflect.nRef";
     public static final String N_nRangeInt64  = "org.xtclang.ecstasy.nRangeᐸInt64ᐳ";
     public static final String N_nService     = "org.xtclang.ecstasy.nService";
     public static final String N_nType        = "org.xtclang.ecstasy.nType";
@@ -1429,6 +1441,7 @@ public abstract class Builder {
     public static final ClassDesc CD_nEnum         = ClassDesc.of(N_nEnum);
     public static final ClassDesc CD_nException    = ClassDesc.of(N_nException);
     public static final ClassDesc CD_nObj          = ClassDesc.of(N_nObj);
+    public static final ClassDesc CD_nRef          = ClassDesc.of(N_nRef);
     public static final ClassDesc CD_nType         = ClassDesc.of(N_nType);
 
     public static final ClassDesc CD_Bit           = ClassDesc.of(N_Bit);

@@ -74,6 +74,13 @@ public abstract class OpMove
                 + ", " + Argument.toIdString(m_argTo, m_nToValue);
     }
 
+    /**
+     * @return the register id if the op's "from" argument is a register; -1 otherwise
+     */
+    public int getRegisterId() {
+        return m_nFromValue >= 0 ? m_nFromValue : -1;
+    }
+
     protected int m_nFromValue;
     protected int m_nToValue;
 

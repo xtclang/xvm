@@ -273,8 +273,10 @@ public class NativeTypeSystem
         nativeByClass.put(pool.clzEnumValue(), Builder.N_nEnum);
         nativeByClass.put(pool.clzModule(),    Builder.N_nModule);
         nativeByClass.put(pool.clzObject(),    Builder.N_nObj);
+        nativeByClass.put(pool.clzRef(),       Builder.N_nRef);
         nativeByClass.put(pool.clzService(),   Builder.N_nService);
         nativeByClass.put(pool.clzType(),      Builder.N_nType);
+        nativeByClass.put(pool.clzVar(),       Builder.N_nRef);
 
         nativeBuilders.put(pool.typeInt64(),  org.xvm.javajit.builders.Int64Builder.class);
 
