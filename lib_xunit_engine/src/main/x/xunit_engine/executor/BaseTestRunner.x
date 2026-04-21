@@ -15,7 +15,7 @@ import xunit.extensions.Extension;
         StatusListener            statusListener = new StatusListener();
         ExecutionListener[]       listeners      = new Array();
 
-        listeners.add(new StatusListener());
+        listeners.add(statusListener);
 
         ExecutionListener? runnerListener = createExecutionListener(testModule);
         if (runnerListener.is(ExecutionListener)) {
