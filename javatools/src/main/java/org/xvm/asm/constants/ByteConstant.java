@@ -57,27 +57,27 @@ public class ByteConstant
         switch (format) {
         case Bit:
             if ((bVal & ~0x01) != 0) {
-                throw new IllegalArgumentException("Bit must be in range 0..1");
+                throw new ArithmeticException("Bit must be in range 0..1");
             }
             bVal = bVal == 0 ? 0 : 1;
             break;
 
         case Nibble:
             if ((bVal & ~0x0F) != 0) {
-                throw new IllegalArgumentException("Nibble must be in range 0..15");
+                throw new ArithmeticException("Nibble must be in range 0..15");
             }
             bVal &= 0x0F;
             break;
 
         case Int8:
             if (bVal < -128 || bVal > 127) {
-                throw new IllegalArgumentException("Int8 must be in range -128..127 (n=" + bVal + ")");
+                throw new ArithmeticException("Int8 must be in range -128..127 (n=" + bVal + ")");
             }
             break;
 
         case UInt8:
             if ((bVal & ~0xFF) != 0) {
-                throw new IllegalArgumentException("Byte must be in range 0..255");
+                throw new ArithmeticException("Byte must be in range 0..255");
             }
             bVal &= 0xFF;
             break;

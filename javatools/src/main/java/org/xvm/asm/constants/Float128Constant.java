@@ -47,7 +47,7 @@ public class Float128Constant
     public Float128Constant(ConstantPool pool, byte[] abVal) {
         super(pool);
         if (abVal == null || abVal.length != 16) {
-            throw new IllegalArgumentException("Float128Constant requires an array of 16 bytes");
+            throw new ArithmeticException("Float128Constant requires an array of 16 bytes");
         }
         m_abVal = abVal;
     }

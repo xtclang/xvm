@@ -6597,7 +6597,6 @@ public abstract class TypeConstant
         return isJavaPrimitive() || isXvmPrimitive();
     }
 
-
     /**
      * @return true iff the specified type is represented by the Java interface and needs to be
      *         cast explicitly to {@code nObj} class to invoke its methods

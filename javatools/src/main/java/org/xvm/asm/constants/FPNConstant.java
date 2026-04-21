@@ -34,7 +34,7 @@ public class FPNConstant
     }
 
     /**
-     * Construct a constant whose value is a n-bit binary or decimal floating point.
+     * Construct a constant whose value is an n-bit binary or decimal floating point.
      *
      * @param pool   the ConstantPool that will contain this Constant
      * @param abVal  the floating point value, provided as an array of 16 bytes
@@ -57,7 +57,7 @@ public class FPNConstant
         }
         int cbVal = abVal.length;
         if (cbVal < cbMin || cbVal > 16384 || Integer.bitCount(cbVal) != 1) {
-            throw new IllegalArgumentException("value length (" + cbVal
+            throw new ArithmeticException("value length (" + cbVal
                     + ") must be a power-of-two between " + cbMin + " and 16384");
         }
 
