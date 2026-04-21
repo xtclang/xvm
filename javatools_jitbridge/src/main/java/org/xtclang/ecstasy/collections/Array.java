@@ -207,14 +207,14 @@ public abstract class Array
     /**
      * Array Constructor: construct(Mutability mutability, Iterable<Element> elements = [])
      */
-    public static Array $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
+    public static Array $new$2(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         throw new UnsupportedOperationException(); // must be implemented by subclasses
     }
 
     /**
      * Array Constructor: construct(Array that)
      */
-    public static Array $new$3$p(Ctx ctx, TypeConstant type, Array that) {
+    public static Array $new$3(Ctx ctx, TypeConstant type, Array that) {
         throw new UnsupportedOperationException(); // must be implemented by subclasses
     }
 
@@ -394,7 +394,7 @@ public abstract class Array
      *   Array addAll(Iterable<Element> values)
      *
      */
-    public Array addAll$p(Ctx ctx, long index, Iterable values) {
+    public Array addAll(Ctx ctx, Iterable values) {
         throw new UnsupportedOperationException("TODO");
     }
 

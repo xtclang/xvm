@@ -1369,6 +1369,7 @@ public abstract class Builder {
     public static final String N_Int32        = "org.xtclang.ecstasy.numbers.Int32";
     public static final String N_Int64        = "org.xtclang.ecstasy.numbers.Int64";
     public static final String N_Int128       = "org.xtclang.ecstasy.numbers.Int128";
+    public static final String N_IterableChar = "org.xtclang.ecstasy.IterableᐸCharᐳ";
     public static final String N_IteratorChar = "org.xtclang.ecstasy.IteratorᐸCharᐳ";
     public static final String N_Nibble       = "org.xtclang.ecstasy.numbers.Nibble";
     public static final String N_Nullable     = "org.xtclang.ecstasy.Nullable";

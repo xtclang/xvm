@@ -295,12 +295,18 @@ public class NativeTypeSystem
         nativeByClass.put(pool.clzType(),      Builder.N_nType);
         nativeByClass.put(pool.clzVar(),       Builder.N_nRef);
 
-        nativeByType.put(pool.ensureParameterizedTypeConstant(pool.typeIterator(), pool.typeChar()),
-                                               Builder.N_IteratorChar);
+        // various types used by native classes
+        TypeConstant typeChar       = pool.typeChar();
+        TypeConstant iterableᐸCharᐳ = pool.ensureParameterizedTypeConstant(pool.typeIterable(), typeChar);
+        TypeConstant iteratorᐸCharᐳ = pool.ensureParameterizedTypeConstant(pool.typeIterator(), typeChar);
 
+        nativeByType.put(iterableᐸCharᐳ, Builder.N_IterableChar);
+        nativeByType.put(iteratorᐸCharᐳ,  Builder.N_IteratorChar);
+
+        // specialized builders
         nativeBuilders.put(pool.typeInt64(),  org.xvm.javajit.builders.Int64Builder.class);
 
-        // pre-register functions used by the native classes
+        // pre-register functions used by the native classes:
 
         // prime the function name counter
         xvm.createUniqueSuffix("");

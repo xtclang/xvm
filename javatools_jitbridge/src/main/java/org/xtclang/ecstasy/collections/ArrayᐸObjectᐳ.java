@@ -58,8 +58,7 @@ public class ArrayᐸObjectᐳ
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
-     * Array Constructor:
-     *      construct(Int capacity = 0)
+     * @see {@link Array#$new$p}
      */
     public static ArrayᐸObjectᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
@@ -72,17 +71,7 @@ public class ArrayᐸObjectᐳ
     }
 
     /**
-     * Array Constructor:
-     *      construct(Int size, Element | function Element (Int) supply)
-     */
-    public static ArrayᐸObjectᐳ $new$2(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
-        // TODO
-        throw new UnsupportedOperationException();
-    }
-
-    /**
-     * Array Constructor:
-     *      construct(Mutability mutability, Iterable<Element> elements = [])
+     * @see {@link Array#$new$1$p}
      */
     public static ArrayᐸObjectᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
         ctx.alloc(size * 8); // REVIEW + HEADER_SIZE?
@@ -99,10 +88,17 @@ public class ArrayᐸObjectᐳ
     }
 
     /**
-     * Array Constructor:
-     *      construct(Array that)
+     * @see {@link Array#$new$2}
      */
-    public static ArrayᐸObjectᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸObjectᐳ that) {
+    public static ArrayᐸObjectᐳ $new$2(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
+        // TODO
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * @see {@link Array#$new$3}
+     */
+    public static ArrayᐸObjectᐳ $new$3(Ctx ctx, TypeConstant type, ArrayᐸObjectᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
     }
