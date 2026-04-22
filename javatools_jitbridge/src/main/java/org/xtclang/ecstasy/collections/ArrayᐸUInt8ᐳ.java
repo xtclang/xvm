@@ -31,7 +31,7 @@ public class ArrayᐸUInt8ᐳ
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
-     * Array Constructor: construct(Int capacity = 0)
+     * @see {@link Array#$new$p}
      */
     public static ArrayᐸUInt8ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
@@ -43,6 +43,9 @@ public class ArrayᐸUInt8ᐳ
         return array;
     }
 
+    /**
+     * @see {@link Array#$new$1$p}
+     */
     public static ArrayᐸUInt8ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
         if (supply instanceof UInt8 boxed) {
             ctx.alloc(size); // REVIEW + HEADER_SIZE?
@@ -65,11 +68,17 @@ public class ArrayᐸUInt8ᐳ
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @see {@link Array#$new$2}
+     */
     public static ArrayᐸUInt8ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @see {@link Array#$new$3}
+     */
     public static ArrayᐸUInt8ᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸUInt8ᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
@@ -114,6 +123,7 @@ public class ArrayᐸUInt8ᐳ
         return $storageCapacity8bit();
     }
 
+    @Override
     protected long $getElement(Ctx ctx, long index) {
         return $get8bitUnsignedElement(index);
     }

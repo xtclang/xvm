@@ -112,6 +112,7 @@ public class ArrayᐸBitᐳ
         return $storageCapacity1bit();
     }
 
+    @Override
     protected long $getElement(Ctx ctx, long index) {
         return $get1bitElement(index);
     }

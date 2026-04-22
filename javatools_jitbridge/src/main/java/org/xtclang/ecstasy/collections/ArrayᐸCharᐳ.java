@@ -163,6 +163,7 @@ public class ArrayᐸCharᐳ
         return $utf21 ? $storageCapacity21bit() : $storageCapacity8bit();
     }
 
+    @Override
     protected long $getElement(Ctx ctx, long index) {
         return $utf21 ? $get21bitUnsignedElement(index)
                 : $get8bitUnsignedElement(index);

@@ -116,6 +116,7 @@ public class ArrayᐸFloat32ᐳ
         return $storageCapacity32bit();
     }
 
+    @Override
     protected long $getElement(Ctx ctx, long index) {
         return $get32bitUnsignedElement(index);
     }

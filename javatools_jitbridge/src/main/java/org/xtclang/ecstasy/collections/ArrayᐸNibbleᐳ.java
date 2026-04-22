@@ -115,7 +115,7 @@ public class ArrayᐸNibbleᐳ
         return $storageCapacity4bit();
     }
 
-    protected long $getElement(Ctx ctx, long index) {
+    @Override protected long $getElement(Ctx ctx, long index) {
         return $get4bitUnsignedElement(index);
     }
 

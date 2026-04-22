@@ -31,7 +31,7 @@ public class ArrayᐸInt32ᐳ
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
-     * Array Constructor: construct(Int capacity = 0)
+     * @see {@link Array#$new$p}
      */
     public static ArrayᐸInt32ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
@@ -43,6 +43,9 @@ public class ArrayᐸInt32ᐳ
         return array;
     }
 
+    /**
+     * @see {@link Array#$new$1$p}
+     */
     public static ArrayᐸInt32ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
         if (supply instanceof Int32 boxed) {
             ctx.alloc(size); // REVIEW + HEADER_SIZE?
@@ -64,11 +67,17 @@ public class ArrayᐸInt32ᐳ
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @see {@link Array#$new$2}
+     */
     public static ArrayᐸInt32ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @see {@link Array#$new$3}
+     */
     public static ArrayᐸInt32ᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸInt32ᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
@@ -114,6 +123,7 @@ public class ArrayᐸInt32ᐳ
         return $storageCapacity32bit();
     }
 
+    @Override
     protected long $getElement(Ctx ctx, long index) {
         return $get32bitSignedElement(index);
     }

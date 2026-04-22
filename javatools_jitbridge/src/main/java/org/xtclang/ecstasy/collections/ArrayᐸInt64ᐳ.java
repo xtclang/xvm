@@ -32,7 +32,7 @@ public class ArrayᐸInt64ᐳ
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
-     * Array Constructor: construct(Int capacity = 0)
+     * @see {@link Array#$new$p}
      */
     public static ArrayᐸInt64ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
@@ -44,6 +44,9 @@ public class ArrayᐸInt64ᐳ
         return array;
     }
 
+    /**
+     * @see {@link Array#$new$1$p}
+     */
     public static ArrayᐸInt64ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
         if (supply instanceof org.xtclang.ecstasy.numbers.Int64 boxed) {
             ctx.alloc(size * 8); // REVIEW + HEADER_SIZE?
@@ -64,11 +67,17 @@ public class ArrayᐸInt64ᐳ
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @see {@link Array#$new$2}
+     */
     public static ArrayᐸInt64ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @see {@link Array#$new$3}
+     */
     public static ArrayᐸInt64ᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸInt64ᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
