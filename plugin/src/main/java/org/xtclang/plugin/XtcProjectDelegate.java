@@ -537,7 +537,12 @@ public class XtcProjectDelegate {
         testTask.configure(task -> {
             task.setGroup(LifecycleBasePlugin.VERIFICATION_GROUP);
             task.setDescription("Run XTC xunit tests. Skip with -P" + PROPERTY_SKIP_TESTS + " or -P" + PROPERTY_SKIP_ALL_TESTS + ".");
-            task.getFailOnTestFailure().convention(true);
+            // NOTE: do not set task.getFailOnTestFailure().convention(...) here.
+            // The task's constructor already wires its convention to the
+            // xtcTest extension's failOnTestFailure property; setting another
+            // convention at registration time replaces that wiring, which
+            // breaks the `xtcTest { failOnTestFailure = ... }` DSL. The
+            // default value comes from DefaultXtcTestExtension (true).
             task.dependsOn(compileTaskNames);
             task.onlyIf(t -> !shouldSkip);
             if (shouldSkip) {
