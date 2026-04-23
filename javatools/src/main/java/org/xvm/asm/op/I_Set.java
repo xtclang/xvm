@@ -144,7 +144,7 @@ public class I_Set
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected int getValueIndex() {
+    protected int getValueId() {
         return m_nValue;
     }
 
@@ -181,7 +181,7 @@ public class I_Set
 
         bctx.loadCtx(code);
         bctx.loadArgument(code, m_nIndex);
-        bctx.loadArgument(code, getValueIndex());
+        bctx.loadArgument(code, getValueId());
         code.invokevirtual(regArray.cd(), "setElement$pi", MethodTypeDesc.of(CD_void, cdArgs));
     }
 

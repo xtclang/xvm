@@ -97,7 +97,7 @@ public record MultiSlot(BuildContext bctx, int regId, int[] slots, int extSlot,
         this.regId   = regId;
         this.extSlot = extSlot;
         this.flavor  = Objects.requireNonNull(flavor);
-        this.type    = Objects.requireNonNull(type.getCanonicalJitType());
+        this.type    = Objects.requireNonNull(type);
         this.cd      = Objects.requireNonNull(cd);
         this.slotCds = Objects.requireNonNull(slotCds);
         this.name    = name;

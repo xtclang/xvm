@@ -2007,8 +2007,7 @@ public class BuildContext {
                                        int fromAddr, TypeConstant narrowingType) {
         TypeConstant origType = origReg.type();
 
-        if (origReg.isJavaStack() || origReg.isProperty() ||
-                narrowingType.getCanonicalJitType().equals(origType)) {
+        if (origReg.isJavaStack() || origReg.isProperty() || narrowingType.equals(origType)) {
             return origReg;
         }
 
