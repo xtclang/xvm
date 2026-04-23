@@ -11,6 +11,7 @@ package tryTests {
         console.print(testTry2());
         testAssert1(False);
         testAssert2(False);
+        testUsing();
     }
 
     void testTry1() {
@@ -78,11 +79,32 @@ package tryTests {
     void testAssert2(Boolean flag) {
         try {
             assert Int i := next(flag), Int j := next(flag);
-        } catch (IllegalState e) {
+        } catch (Exception e) {
             console.print("Assert 2) ", True);
             console.print(e.text);
         }
     }
 
     conditional Int next(Boolean flag) = False;
+
+    void testUsing() {
+        val closeable = new TestClose();
+        try {
+            using (closeable) {
+                assert Int i := next(False);
+            }
+        } catch (Exception expected) {
+            assert closeable.value == -1;
+            return;
+        }
+        assert as "Failed to throw";
+    }
+
+    class TestClose(Int value = 0)
+            implements Closeable {
+        @Override
+        void close(Exception? cause = Null) {
+            value = -1;
+        }
+    }
 }

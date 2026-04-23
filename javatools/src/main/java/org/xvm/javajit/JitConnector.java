@@ -130,8 +130,7 @@ public class JitConnector
         } catch (InvocationTargetException e) {
             Throwable cause = e.getCause();
             String    name  = cause.getClass().getSimpleName();
-            if (name.equals("xException") ||
-                    name.startsWith(TypeSystem.ClassfileShape.Exception.prefix)) {
+            if (name.startsWith(TypeSystem.ClassfileShape.Exception.prefix)) {
                 try {
                     // TODO: add the service info; see Utils.log()
                     System.out.println("\nUnhandled exception: " +
