@@ -77,6 +77,7 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
+import static org.xvm.javajit.Builder.CD_Class;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Exception;
 import static org.xvm.javajit.Builder.CD_JavaObject;
@@ -1015,7 +1016,8 @@ public class BuildContext {
                 assert typeSuper.isMethod();
                 yield pool().bindMethodTarget(typeSuper);
             }
-            default -> throw new UnsupportedOperationException("id=" + argId);
+            case Op.A_CLASS -> typeInfo.getIdentity().getValueType(pool(), null);
+            default         -> throw new UnsupportedOperationException("id=" + argId);
         };
     }
 
@@ -1269,6 +1271,12 @@ public class BuildContext {
 
         case Op.A_SUPER: {
             return loadSuper(code);
+        }
+
+        case Op.A_CLASS: {
+            // TODO:
+            Builder.throwException(code, CD_Exception, "Not implemented: this:class");
+            return new SingleSlot(typeInfo.getIdentity().getValueType(pool(), null), Specific, CD_Class, "");
         }
 
         default:
@@ -2150,8 +2158,9 @@ public class BuildContext {
      */
     public TypeInfo getTypeInfo(TypeConstant type) {
         TypeConstant thisType = typeInfo.getType().removeAccess();
-        if (type instanceof CastTypeConstant castType) {
-            type = castType.getUnderlyingType2();
+        if (type instanceof CastTypeConstant castType &&
+                castType.getUnderlyingType2().removeAccess().isEquivalent(thisType)) {
+            return typeInfo;
         }
 
         assert thisType.isSingleUnderlyingClass(true);
@@ -2173,6 +2182,7 @@ public class BuildContext {
                 ? type.ensureAccess(Access.PROTECTED).ensureTypeInfo()
                 : type.ensureTypeInfo();
     }
+
     /**
      * Reset the narrowed register info.
      */

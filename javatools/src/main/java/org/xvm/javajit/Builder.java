@@ -1260,11 +1260,6 @@ public abstract class Builder {
     /**
      * Add the code to throw an Ecstasy exception. The code we produce is equivalent to:
      * {@code throw new Exception(ctx).$init(ctx, text, null);}
-     *
-     * @param code
-     * @param exCD         the ClassDesc for the Ecstasy exception (e.g. TypeMismatch)
-     * @param text         the exception text
-     * @param buildContext
      */
     public static void throwException(CodeBuilder code, ClassDesc exCD, String text) {
         invokeDefaultConstructor(code, exCD);
