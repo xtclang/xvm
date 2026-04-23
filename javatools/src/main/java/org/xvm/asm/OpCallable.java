@@ -42,6 +42,7 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 
+import static org.xvm.javajit.Builder.CD_Exception;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.TypeSystem.ID_NUM;
 
@@ -619,6 +620,23 @@ public abstract class OpCallable extends Op {
     }
 
     /**
+     * ComputeType support for NEW_C ops.
+     */
+    protected void computeChildType(BuildContext bctx, int nParentArg) {
+        TypeConstant   typeParent  = bctx.getArgumentType(nParentArg);
+        MethodConstant idCtor      = bctx.getConstant(m_nFunctionId, MethodConstant.class);
+        assert idCtor.isConstructor();
+
+        ClassStructure  structChild = (ClassStructure) idCtor.getComponent().getParent().getParent();
+        assert structChild.isVirtualChild();
+
+        TypeConstant typeChild = bctx.pool().
+            ensureVirtualChildTypeConstant(typeParent, structChild.getName());
+
+        bctx.typeMatrix.assign(getAddress(), m_nRetValue, typeChild);
+    }
+
+    /**
      * Build support for CALL_ ops.
      */
     protected int buildCall(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
@@ -750,6 +768,14 @@ public abstract class OpCallable extends Op {
         bctx.buildNew(code, typeTarget, idCtor, anArgValue);
 
         bctx.storeValue(code, m_nRetValue, typeTarget);
+        return -1;
+    }
+
+    /**
+     * Support for NEW_C ops.
+     */
+    protected int buildNewC(BuildContext bctx, CodeBuilder code, int nParentArg, int[] anArgValue) {
+        Builder.throwException(code, CD_Exception, "Not implemented: " + toName(getOpCode()));
         return -1;
     }
 
