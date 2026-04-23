@@ -13,7 +13,7 @@ import org.xvm.lsp.model.toLsp
 import java.util.concurrent.CompletableFuture
 
 /**
- * Workspace service for XTC Language Server.
+ * Workspace service for Ecstasy Language Server.
  * Handles workspace-wide features like symbol search and configuration changes.
  */
 class XtcWorkspaceService(

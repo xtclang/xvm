@@ -1,6 +1,6 @@
-# XTC Language Tooling
+# Ecstasy Language Tooling
 
-Language tooling for the Ecstasy/XTC programming language, including LSP server, IDE plugins, 
+Language tooling for the Ecstasy programming language, including LSP server, IDE plugins,
 and editor support.
 
 ## Status: Alpha

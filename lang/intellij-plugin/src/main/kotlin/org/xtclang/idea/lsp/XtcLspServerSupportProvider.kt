@@ -35,7 +35,7 @@ private object LspBuildProperties {
 }
 
 /**
- * Factory for creating XTC Language Server connections.
+ * Factory for creating Ecstasy Language Server connections.
  *
  * The server runs OUT-OF-PROCESS as a separate Java process for classloader isolation
  * (avoids lsp4j version conflicts with LSP4IJ) and crash/memory isolation. It uses
@@ -147,7 +147,7 @@ class XtcLspConnectionProvider(
 
         if (startNotificationShown.compareAndSet(false, true)) {
             showNotification(
-                title = "XTC Language Server Started",
+                title = "Ecstasy Language Server Started",
                 content = "Out-of-process server (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)",
                 type = NotificationType.INFORMATION,
             )

@@ -1,6 +1,6 @@
-# XTC Language Development Container
+# Ecstasy Language Development Container
 
-This devcontainer provides a complete development environment for the XTC (Ecstasy) programming language using the official XVM Docker image.
+This devcontainer provides a complete development environment for the Ecstasy programming language using the official XVM Docker image.
 
 ## Quick Start
 
@@ -12,14 +12,14 @@ This devcontainer provides a complete development environment for the XTC (Ecsta
 ## What's Included
 
 - **XVM Runtime**: Complete XDK with `xtc` (compiler) and `xec` (executor)
-- **Java Runtime**: Optimized JRE for running XTC programs
+- **Java Runtime**: Optimized JRE for running Ecstasy programs
 - **Git**: Version control tools
 - **GitHub CLI**: For interacting with GitHub repositories
 
 ## Available Tools
 
-- `xtc` - XTC/Ecstasy compiler
-- `xec` - XTC/Ecstasy program executor  
+- `xtc` - Ecstasy compiler
+- `xec` - Ecstasy program executor
 - `git` - Version control
 - `gh` - GitHub CLI
 

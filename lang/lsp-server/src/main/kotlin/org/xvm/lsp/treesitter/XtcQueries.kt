@@ -1,7 +1,7 @@
 package org.xvm.lsp.treesitter
 
 /**
- * Tree-sitter query patterns for XTC language constructs.
+ * Tree-sitter query patterns for Ecstasy language constructs.
  *
  * These S-expression queries match specific patterns in the syntax tree,
  * enabling extraction of declarations, references, and other language elements.

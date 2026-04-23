@@ -1,6 +1,6 @@
-# XTC LSP Server
+# Ecstasy LSP Server
 
-Language Server Protocol (LSP) implementation for the Ecstasy/XTC programming language.
+Language Server Protocol (LSP) implementation for the Ecstasy programming language.
 
 ## Overview
 
@@ -95,7 +95,7 @@ The server logs the active backend at startup:
 
 ```
 ========================================
-XTC Language Server v1.0.0
+Ecstasy Language Server v1.0.0
 Backend: TreeSitter
 Built: 2026-02-04T15:30:00Z
 ========================================
@@ -416,13 +416,13 @@ The LSP4IJ error popup's "Show Logs" link points to `idea.log`, which typically 
 contain the actual LSP server error. Instead:
 
 1. Open the **Language Servers** tool window (bottom panel, next to Terminal)
-2. Select **XTC Language Server** -> **Logs** tab
+2. Select **Ecstasy Language Server** -> **Logs** tab
 3. Look for `SEVERE:` or stack traces in the log output
 4. Or tail the server log directly: `tail -f ~/.xtc/logs/lsp-server.log`
 
 **When IntelliJ complains about "slow operations":**
 
-IntelliJ 2025.3 strictly enforces EDT rules. If you see "plugin to blame: XTC Language Support"
+IntelliJ 2025.3 strictly enforces EDT rules. If you see "plugin to blame: Ecstasy Language Support"
 in slow operation reports:
 
 1. Check `idea.log` for the exact stack trace (search for "SlowOperations")

@@ -23,7 +23,7 @@ class SublimeSyntaxGenerator(
             appendLine("%YAML 1.2")
             appendLine("---")
             appendLine("# ${model.name} language syntax for Sublime Text / bat")
-            appendLine("# Generated from XTC language model DSL")
+            appendLine("# Generated from Ecstasy language model DSL")
             appendLine("name: ${model.name}")
             appendLine("file_extensions:")
             model.fileExtensions.forEach { ext ->

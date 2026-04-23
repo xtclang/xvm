@@ -2,7 +2,7 @@
 
 > **Created**: 2026-04-03
 > **Status**: Planning
-> **Scope**: Bringing XTC language support to Eclipse IDE via LSP4E and TM4E
+> **Scope**: Bringing Ecstasy language support to Eclipse IDE via LSP4E and TM4E
 
 ## Context
 
@@ -161,7 +161,7 @@ extension point. Register the XTC server:
     <extension point="org.eclipse.lsp4e.languageServer">
         <server
             id="org.xtclang.lsp.server"
-            label="XTC Language Server"
+            label="Ecstasy Language Server"
             class="org.xtclang.eclipse.XtcLanguageServerStreamProvider">
         </server>
         <contentTypeMapping
@@ -254,7 +254,7 @@ public class XtcLanguageServerStreamProvider extends ProcessStreamConnectionProv
 
     @Override
     public String toString() {
-        return "XTC Language Server: " + super.toString();
+        return "Ecstasy Language Server: " + super.toString();
     }
 }
 ```
@@ -347,7 +347,7 @@ public class XtcPreferencePage extends FieldEditorPreferencePage
     public XtcPreferencePage() {
         super(GRID);
         setPreferenceStore(Activator.getDefault().getPreferenceStore());
-        setDescription("XTC Language Settings");
+        setDescription("Ecstasy Language Settings");
     }
 
     @Override
@@ -788,11 +788,11 @@ lang/eclipse-plugin/
 ```
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
-Bundle-Name: XTC Language Support
+Bundle-Name: Ecstasy Language Support
 Bundle-SymbolicName: org.xtclang.eclipse;singleton:=true
 Bundle-Version: 0.1.0.qualifier
 Bundle-Activator: org.xtclang.eclipse.Activator
-Bundle-Vendor: XTC Language
+Bundle-Vendor: Ecstasy Language
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime,
  org.eclipse.lsp4e;bundle-version="0.15.0",

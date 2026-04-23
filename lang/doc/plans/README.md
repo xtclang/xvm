@@ -1,4 +1,4 @@
-# XTC Language Support Plans
+# Ecstasy Language Support Plans
 
 ## Active Plans
 

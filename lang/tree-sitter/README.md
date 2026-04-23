@@ -1,6 +1,6 @@
-# Tree-sitter Grammar for XTC
+# Tree-sitter Grammar for Ecstasy
 
-This package provides a tree-sitter grammar for the XTC language, enabling fast, incremental parsing
+This package provides a tree-sitter grammar for the Ecstasy language, enabling fast, incremental parsing
 for syntax highlighting, code navigation, and IDE features.
 
 ## Quick Start
@@ -21,7 +21,7 @@ cd lang/tree-sitter/build/generated
 
 ## Grammar Generation
 
-The grammar is generated from the XTC language model in `lang/dsl/`:
+The grammar is generated from the Ecstasy language model in `lang/dsl/`:
 
 | Task                                                    | Description                                 |
 |---------------------------------------------------------|---------------------------------------------|
@@ -269,7 +269,7 @@ The `TreeSitterAdapter` uses `XtcParser` to load the native library and parse XT
 │                      XtcParser                                  │
 │  - Extracts native library from JAR resources                   │
 │  - Loads via Java Foreign Function & Memory API                 │
-│  - Wraps jtreesitter Parser with XTC Language                   │
+│  - Wraps jtreesitter Parser with Ecstasy Language               │
 └────────────────────────────┬────────────────────────────────────┘
                              │ loads
 ┌────────────────────────────▼────────────────────────────────────┐
@@ -286,7 +286,7 @@ The `TreeSitterAdapter` uses `XtcParser` to load the native library and parse XT
 3. Extracts to a temp file (required for `System.load()`)
 4. Creates a `SymbolLookup` via Java's Foreign Function API
 5. Calls `Language.load(symbols, "tree_sitter_xtc")` to get the language
-6. Creates a `Parser` instance configured with the XTC language
+6. Creates a `Parser` instance configured with the Ecstasy language
 
 **Adapter switching:**
 

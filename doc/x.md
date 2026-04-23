@@ -1,4 +1,4 @@
-# Ecstasy: XVM and the XTC Language
+# Ecstasy: The Language and the XVM
 
 Version: DRAFT-20180913
 
