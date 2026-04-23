@@ -3361,6 +3361,8 @@ public class ConstantPool
                     if (typeParams.isTuple()) {
                         return typeParams.getParamTypesArray();
                     }
+                } else if (typeFunction instanceof IntersectionTypeConstant typeInter) {
+                    return typeInter.extractFunctionParams();
                 }
                 return TypeConstant.NO_TYPES;
             }
@@ -3403,6 +3405,8 @@ public class ConstantPool
                     if (typeParams.isTuple()) {
                         return typeParams.getParamTypesArray();
                     }
+                } else if (typeFunction instanceof IntersectionTypeConstant typeInter) {
+                    return typeInter.extractFunctionReturns();
                 }
                 return TypeConstant.NO_TYPES;
             }
