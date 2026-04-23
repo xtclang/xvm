@@ -9,7 +9,7 @@ debugging, versioning, and publishing.
 
 ## Maven Artifacts and IDE Integration
 
-**For Most Developers:** Use the XTC Gradle plugin in your IDE instead of command-line tools:
+**For Most Developers:** Use the Ecstasy Gradle plugin in your IDE instead of command-line tools:
 
 ```kotlin
 // In your build.gradle.kts

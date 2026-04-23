@@ -258,9 +258,9 @@ For detailed build tasks, distribution options, environment configuration, debug
 
 ### XTC Plugin and Build System Testing
 
-For comprehensive examples of using the XTC Gradle plugin and testing XTC applications, see the [**manualTests**](manualTests/build.gradle.kts) inline documentation. This project demonstrates:
+For comprehensive examples of using the Ecstasy Gradle plugin and testing XTC applications, see the [**manualTests**](manualTests/build.gradle.kts) inline documentation. This project demonstrates:
 
-- XTC Gradle plugin configuration and usage
+- Ecstasy Gradle plugin configuration and usage
 - Build lifecycle best practices and caching
 - Configuration cache compatibility
 - Custom task creation and testing scenarios

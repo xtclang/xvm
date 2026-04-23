@@ -26,7 +26,7 @@ simplest possible XTC "HelloWorld" setup, take a look at the examples repository
 
 ## Overview
 
-The XTC Gradle Plugin integrates the Ecstasy language into Gradle's build ecosystem by providing:
+The Ecstasy Gradle Plugin integrates the Ecstasy language into Gradle's build ecosystem by providing:
 
 - **Source Set Integration**: XTC source directories alongside Java/Kotlin code
 - **Dependency Management**: Transitive dependencies between XTC modules
@@ -571,7 +571,7 @@ Gradle will report any violations:
 
 ## Performance Optimization
 
-The XTC Gradle Plugin is fully compatible with Gradle's standard performance features:
+The Ecstasy Gradle Plugin is fully compatible with Gradle's standard performance features:
 
 - **Configuration Cache**: Dramatically speeds up subsequent builds by caching configuration phase
 - **Build Cache**: Reuses outputs from previous builds or shared across machines

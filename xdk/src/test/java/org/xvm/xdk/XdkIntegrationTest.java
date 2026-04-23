@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * <p><b>IMPORTANT:</b> This test runs in the xdk project, which means it executes AFTER:
  * <ol>
  *   <li>javatools has been compiled (Compiler, Runner, etc.)</li>
- *   <li>plugin has been built (XTC Gradle plugin)</li>
+ *   <li>plugin has been built (Ecstasy Gradle plugin)</li>
  *   <li>All lib_* projects have been compiled by the plugin to produce .xtc files</li>
  *   <li>The XDK distribution has been assembled with all XTC libraries</li>
  * </ol>

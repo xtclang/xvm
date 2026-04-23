@@ -21,7 +21,7 @@ This devcontainer provides a complete development environment for the Ecstasy pr
 - `xtc` - Ecstasy compiler
 - `xec` - Ecstasy program executor
 - `git` - Version control
-- `gh` - GitHub CLI
+- `gh`  - GitHub CLI
 
 ## Example Usage
 
