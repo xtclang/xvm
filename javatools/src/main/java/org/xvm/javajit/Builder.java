@@ -488,6 +488,13 @@ public abstract class Builder {
                 mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
+            case "Boolean":
+                // ArrayᐸBooleanᐳ array = ArrayᐸBooleanᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayBoolean;
+                className = N_ArrayBoolean;
+                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_boolean);
+                break;
+
             case "Char":
                 // ArrayᐸCharᐳ array = ArrayᐸCharᐳ.$new$p(ctx, type, capacity, false);
                 cdArray   = CD_ArrayChar;
@@ -1333,6 +1340,7 @@ public abstract class Builder {
 
     public static final String N_Array        = "org.xtclang.ecstasy.collections.Array";
     public static final String N_ArrayBit     = "org.xtclang.ecstasy.collections.ArrayᐸBitᐳ";
+    public static final String N_ArrayBoolean = "org.xtclang.ecstasy.collections.ArrayᐸBooleanᐳ";
     public static final String N_ArrayChar    = "org.xtclang.ecstasy.collections.ArrayᐸCharᐳ";
     public static final String N_ArrayDec32   = "org.xtclang.ecstasy.collections.ArrayᐸDec32ᐳ";
     public static final String N_ArrayDec64   = "org.xtclang.ecstasy.collections.ArrayᐸDec64ᐳ";
@@ -1411,7 +1419,8 @@ public abstract class Builder {
     // ----- well-known class descriptors ----------------------------------------------------------
 
     public static final ClassDesc CD_Array         = ClassDesc.of(N_Array);
-    public static final ClassDesc CD_ArrayBit      = ClassDesc.of(N_ArrayBit  );
+    public static final ClassDesc CD_ArrayBit      = ClassDesc.of(N_ArrayBit);
+    public static final ClassDesc CD_ArrayBoolean  = ClassDesc.of(N_ArrayBoolean);
     public static final ClassDesc CD_ArrayChar     = ClassDesc.of(N_ArrayChar);
     public static final ClassDesc CD_ArrayDec32    = ClassDesc.of(N_ArrayDec32);
     public static final ClassDesc CD_ArrayDec64    = ClassDesc.of(N_ArrayDec64);

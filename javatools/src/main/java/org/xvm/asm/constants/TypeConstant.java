@@ -6507,7 +6507,7 @@ public abstract class TypeConstant
 
                 return switch (idEl.getName()) {
                     case "Bit"     -> Builder.N_ArrayBit;
-                    case "Boolean" -> Builder.N_ArrayObj; // TODO JK
+                    case "Boolean" -> Builder.N_ArrayBoolean;
                     case "Char"    -> Builder.N_ArrayChar;
                     case "Dec32"   -> Builder.N_ArrayDec32;
                     case "Dec64"   -> Builder.N_ArrayDec64;

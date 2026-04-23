@@ -183,6 +183,7 @@ public class NativeTypeSystem
                     String       typeString = path.substring(typeStart + 1, typeEnd);
                     TypeConstant type = switch (typeString) {
                         case "Bit"     -> pool().typeBit();
+                        case "Boolean" -> pool().typeBoolean();
                         case "Char"    -> pool().typeChar();
                         case "Dec32"   -> pool().typeDec32();
                         case "Dec64"   -> pool().typeDec64();
