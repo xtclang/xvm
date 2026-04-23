@@ -657,7 +657,7 @@ public abstract class OpCallable extends Op {
             MethodConstant   idMethod   = bctx.getConstant(m_nFunctionId, MethodConstant.class);
             IdentityConstant idTarget   = idMethod.getClassIdentity();
             TypeConstant     typeTarget = idTarget.getType();
-            MethodInfo       infoMethod = typeTarget.ensureTypeInfo().getMethodById(idMethod);
+            MethodInfo       infoMethod = bctx.getTypeInfo(typeTarget).getMethodById(idMethod);
 
             cdTarget   = bctx.builder.ensureClassDesc(idTarget.getType()); // function; no formal types applicable
             sJitName   = infoMethod.ensureJitMethodName(ts);
@@ -728,7 +728,7 @@ public abstract class OpCallable extends Op {
         TypeConstant   typeTarget = idCtor.getNamespace().getType();
         ClassDesc      cdTarget   = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
 
-        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget, cdTarget, ""), typeTarget);
+        bctx.storeValue(code, bctx.ensureRegister(m_nRetValue, typeTarget, cdTarget, ""), typeTarget);
         return -1;
     }
 
@@ -761,7 +761,7 @@ public abstract class OpCallable extends Op {
         MethodConstant   idCtor     = (MethodConstant) bctx.getConstant(m_nFunctionId);
         IdentityConstant idTarget   = idCtor.getNamespace();
         TypeConstant     typeTarget = idTarget.getType();
-        TypeInfo         infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+        TypeInfo         infoTarget = bctx.getTypeInfo(typeTarget);
         MethodInfo       infoCtor   = infoTarget.getMethodById(idCtor);
 
         if (infoCtor == null) {

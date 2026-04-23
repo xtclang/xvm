@@ -42,7 +42,7 @@ public class BFloat16Constant
     public BFloat16Constant(ConstantPool pool, float flVal) {
         super(pool);
         if (Float.isFinite(flVal) && !Float.isFinite(toFloat(toHalf(flVal)))) {
-            throw new IllegalArgumentException("value out of range: " + flVal);
+            throw new ArithmeticException("value out of range: " + flVal);
         }
         m_flVal = flVal;
     }

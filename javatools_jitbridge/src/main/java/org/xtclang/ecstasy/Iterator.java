@@ -7,5 +7,7 @@ import org.xvm.javajit.Ctx;
  */
 public interface Iterator extends Object {
 
-    boolean next(Ctx ctx);
+    nType Element$get(Ctx ctx);
+
+    boolean next$p(Ctx ctx);
 }

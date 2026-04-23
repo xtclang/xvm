@@ -7,24 +7,13 @@ import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
-import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.ModuleConstant;
-import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
-
-import org.xvm.runtime.MainContainer;
-import org.xvm.runtime.NativeContainer;
-import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.Runtime;
-import org.xvm.runtime.Utils;
-
-import org.xvm.runtime.template.text.xString;
 
 
 /**
@@ -43,51 +32,23 @@ import org.xvm.runtime.template.text.xString;
  *   <li> wait for the natural termination or explicitly shutdown the container at some point
  * </ul>
  */
-public class Connector {
+public abstract class Connector {
     /**
      * Construct the Connector based on the specified ModuleRepository.
      */
     public Connector(ModuleRepository repository) {
-        f_repository      = repository;
-        f_runtime         = new Runtime();
-        f_containerNative = new NativeContainer(f_runtime, repository);
+        f_repository = repository;
     }
 
     /**
      * Create the main container for the specified module.
      */
-    public void loadModule(String sAppName) {
-        if (m_containerMain != null) {
-            throw new IllegalStateException("Connector is already activated");
-        }
-
-        ModuleStructure moduleApp = f_repository.loadModule(sAppName);
-        if (moduleApp == null) {
-            throw new IllegalStateException("Unable to load module \"" + sAppName + "\"");
-        }
-
-        FileStructure  structApp = f_containerNative.createFileStructure(moduleApp);
-        ModuleConstant idMissing = structApp.linkModules(f_repository, true);
-        if (idMissing != null) {
-            throw new IllegalStateException("Unable to load module \"" + idMissing.getName() + "\"");
-        }
-
-        m_containerMain = new MainContainer(f_runtime, f_containerNative, structApp.getModuleId());
-    }
+    public abstract void loadModule(String sAppName);
 
     /**
      * Obtain the ConstantPool for the container associated with this Connector.
      */
-    public ConstantPool getConstantPool() {
-        return m_containerMain.getConstantPool();
-    }
-
-    /**
-     * Obtain the container associated with this Connector.
-     */
-    public MainContainer getContainer() {
-        return m_containerMain;
-    }
+    public abstract ConstantPool getConstantPool();
 
     /**
      * Start the Runtime and the main Container.
@@ -95,21 +56,12 @@ public class Connector {
      * @param mapInjections a map of custom injections where each key maps to a list of values;
      *                      may be null or empty if there are no custom injections
      */
-    public void start(Map<String, List<String>> mapInjections) {
-        if (!m_fStarted) {
-            f_runtime.start();
-            m_fStarted = true;
-        }
-
-        m_containerMain.start(mapInjections == null ? Map.of() : mapInjections);
-    }
+    public abstract void start(Map<String, List<String>> mapInjections);
 
     /**
      * Find any possible entry points for a given name in the main module.
      */
-    public Set<MethodStructure> findMethods(String sMethodName) {
-        return findMethods(m_containerMain.getModule(), sMethodName);
-    }
+    public abstract Set<MethodStructure> findMethods(String sMethodName);
 
     /**
      * Find an entry points for a given name in the specified module.
@@ -141,39 +93,7 @@ public class Connector {
      * @param method  the method structure
      * @param asArg   arguments (must not be null)
      */
-    public void invoke0(MethodStructure method, String... asArg) {
-        assert asArg != null;
-
-        if (!m_fStarted) {
-            throw new IllegalStateException("The container has not been started");
-        }
-
-        ConstantPool   pool        = ConstantPool.getCurrentPool();
-        TypeConstant   typeStrings = pool.ensureArrayType(pool.typeString());
-        ObjectHandle[] ahArg       = Utils.OBJECTS_NONE;
-
-        switch (method.getRequiredParamCount()) {
-        case 0:
-            if (asArg.length > 0) {
-                assert method.getParamCount() > 0;
-                TypeConstant typeArg = method.getParam(0).getType();
-
-                assert typeStrings.isA(typeArg);
-                ahArg = new ObjectHandle[]{xString.makeArrayHandle(asArg)};
-            }
-            break;
-
-        case 1: {
-            TypeConstant typeArg = method.getParam(0).getType();
-            assert typeStrings.isA(typeArg);
-            // the method requires an array that we can supply
-            ahArg = new ObjectHandle[]{xString.makeArrayHandle(asArg)};
-            break;
-        }
-        }
-
-        m_containerMain.invoke0(method.getName(), ahArg);
-    }
+    public abstract void invoke0(MethodStructure method, String... asArg);
 
     /**
      * Wait for the container termination.
@@ -181,19 +101,7 @@ public class Connector {
      * @return zero if the main method was void or the return type not an int-convertible; otherwise
      *              the return value
      */
-    @SuppressWarnings("BusyWait")
-    public int join()
-            throws InterruptedException {
-        // extremely naive; replace
-        do  {
-            Thread.sleep(500);
-        } while (!f_runtime.isIdle() || !m_containerMain.isIdle());
-
-        int nResult = m_containerMain.getResult();
-        m_containerMain = null;
-        return nResult;
-    }
-
+    public abstract int join() throws InterruptedException;
 
     // ----- data fields ---------------------------------------------------------------------------
 
@@ -201,24 +109,4 @@ public class Connector {
      * The module repository.
      */
     protected final ModuleRepository f_repository;
-
-    /**
-     * The runtime associated with this Connector.
-     */
-    private final Runtime f_runtime;
-
-    /**
-     * The native container associated with this Connector.
-     */
-    private final NativeContainer f_containerNative;
-
-    /**
-     * The main container currently associated with this Connector.
-     */
-    private MainContainer m_containerMain;
-
-    /**
-     * Status indicator.
-     */
-    private boolean m_fStarted;
 }

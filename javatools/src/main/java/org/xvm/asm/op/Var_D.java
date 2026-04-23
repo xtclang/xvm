@@ -58,7 +58,7 @@ public class Var_D
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        bctx.introduceRef(code, "", bctx.getTypeConstant(m_nType), m_nVar);
+        bctx.introduceRef(code, m_nVar, bctx.getTypeConstant(m_nType), "", true);
         return -1;
     }
 }

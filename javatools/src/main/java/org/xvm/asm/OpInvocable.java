@@ -319,7 +319,7 @@ public abstract class OpInvocable extends Op {
 
         ConstantPool      pool       = bctx.pool();
         TypeConstant      typeTarget = bctx.getArgumentType(m_nTarget);
-        TypeInfo          infoTarget = typeTarget.ensureTypeInfo();
+        TypeInfo          infoTarget = bctx.getTypeInfo(typeTarget);
         MethodConstant    idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
         MethodInfo        methodInfo = infoTarget.getMethodById(idMethod);
         SignatureConstant sig        = methodInfo.getSignature();
@@ -361,13 +361,7 @@ public abstract class OpInvocable extends Op {
         ClassDesc      cdTarget   = regTarget.cd();
         TypeConstant   typeTarget = regTarget.type();
         MethodConstant idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
-
-        // if the bctx.cd() is the same as cdTarget then we are invoking a method on the same class
-        // as the build context, so we can use the context's type, which has private access
-        ClassDesc      cdThis     = JitTypeDesc.getJitClass(bctx.builder, bctx.typeInfo.getType());
-        TypeInfo       infoTarget = cdThis.equals(cdTarget)
-                                        ? bctx.typeInfo
-                                        : typeTarget.ensureTypeInfo();
+        TypeInfo       infoTarget = bctx.getTypeInfo(typeTarget);
         MethodInfo     infoMethod = infoTarget.getMethodById(idMethod);
 
         if (infoMethod == null) {

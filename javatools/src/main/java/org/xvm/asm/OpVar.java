@@ -249,7 +249,7 @@ public abstract class OpVar
      */
     protected int buildArray(BuildContext bctx, CodeBuilder code, int[] anArgValue, String sName) {
         TypeConstant type = bctx.getTypeConstant(m_nType);
-        RegisterInfo reg  = bctx.introduceVar(code, m_nVar, type, sName);
+        RegisterInfo reg  = bctx.introduceRegister(code, m_nVar, type, sName);
 
         bctx.loadCtx(code);
         bctx.loadTypeConstant(code, type);

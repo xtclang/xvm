@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.xvm.api.Connector;
+import org.xvm.api.InterpreterConnector;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -37,6 +38,7 @@ import static org.xvm.util.Severity.ERROR;
 import static org.xvm.util.Severity.FATAL;
 import static org.xvm.util.Severity.INFO;
 import static org.xvm.util.Severity.WARNING;
+
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -72,8 +74,7 @@ public class Runner extends Launcher<RunnerOptions> {
     @Override
     protected int process() {
         // repository setup
-        final var opts = options();
-
+        var opts = options();
         var repo = configureLibraryRepo(opts.getModulePath());
     	checkErrors("repository setup");
 
@@ -162,7 +163,7 @@ public class Runner extends Launcher<RunnerOptions> {
                 //   options shared by both. This means that we put deduce and verbose in there, but if the
                 //   old compile was done with e.g. strict, we have no way to pass that, even though that would
                 //   be consistent. This feels a bit brittle.
-                final var builder = CompilerOptions.builder()
+                var builder = CompilerOptions.builder()
                         .addInputFile(fileSpec)
                         .addModulePath(opts.getModulePath())
                         .enableDeduction(opts.mayDeduceLocations())
@@ -222,8 +223,8 @@ public class Runner extends Launcher<RunnerOptions> {
 
         ConstantPool pool = connector.getConstantPool();
         try (var _ = ConstantPool.withPool(pool)) {
-            final var sMethod    = opts.getMethodName();
-            final var setMethods = connector.findMethods(sMethod);
+            var sMethod    = opts.getMethodName();
+            var setMethods = connector.findMethods(sMethod);
             if (setMethods.size() != 1) {
                 log(ERROR, "{} method {} in module {}",
                         setMethods.isEmpty() ? "Missing" : "Ambiguous", quoted(sMethod), sName);
@@ -260,8 +261,8 @@ public class Runner extends Launcher<RunnerOptions> {
                                    MethodStructure method,
                                    List<String>    asArg,
                                    TypeConstant    typeStrings) {
-        final var requiredCount = method.getRequiredParamCount();
-        final var totalCount    = method.getParamCount();
+        int requiredCount = method.getRequiredParamCount();
+        int totalCount    = method.getParamCount();
 
         // Only methods with 0 or 1 required parameters are supported
         if (requiredCount > 1) {
@@ -279,7 +280,7 @@ public class Runner extends Launcher<RunnerOptions> {
         // Validate parameter type when args will be passed:
         // - required param exists (requiredCount == 1), or
         // - args provided and method can accept them
-        final boolean willPassArgs = requiredCount > 0 || (!asArg.isEmpty() && totalCount > 0);
+        boolean willPassArgs = requiredCount > 0 || (!asArg.isEmpty() && totalCount > 0);
         if (willPassArgs) {
             var typeArg = method.getParam(0).getType();
             if (!typeStrings.isA(typeArg)) {
@@ -326,8 +327,9 @@ public class Runner extends Launcher<RunnerOptions> {
      * @return the configured Connector ready for method invocation
      */
     protected Connector createConnector(ModuleRepository repo, ModuleStructure module) {
-        final RunnerOptions opts = options();
-        final Connector connector = createBaseConnector(repo, opts.isJit());
+        RunnerOptions opts = options();
+
+        Connector connector = createBaseConnector(repo, opts.isJit());
         connector.loadModule(module.getName());
         connector.start(opts.getInjections());
         return connector;
@@ -341,8 +343,8 @@ public class Runner extends Launcher<RunnerOptions> {
      * @param isJit true to use JIT connector, false for interpreted
      * @return a new Connector (not yet started)
      */
-    protected Connector createBaseConnector(ModuleRepository repo, final boolean isJit) {
-        return isJit ? new JitConnector(repo) : new Connector(repo);
+    protected Connector createBaseConnector(ModuleRepository repo, boolean isJit) {
+        return isJit ? new JitConnector(repo) : new InterpreterConnector(repo);
     }
 
     @Override

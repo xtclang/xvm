@@ -3,6 +3,8 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
@@ -11,6 +13,11 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.RegisterInfo;
+
+import org.xvm.javajit.registers.Ref;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -18,7 +25,6 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 import org.xvm.runtime.template.reflect.xVar;
-
 
 /**
  * MOV_VAR rvalue-src, lvalue-dest ; move Var-to-source to destination
@@ -110,5 +116,26 @@ public class MoveVar
 
         // the destination type must be the same as the source
         return frame.assignValue(nTo, hRef);
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        TypeConstant typeReferent = bctx.getArgumentType(m_nFromValue).removeAccess();
+        bctx.typeMatrix.assign(getAddress(), m_nToValue, bctx.pool().ensureVarType(typeReferent));
+    }
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        assert m_nFromValue >= 0;
+
+        Ref regFrom = (Ref) bctx.getRegisterInfo(code, m_nFromValue);
+        assert regFrom.isVar();
+        code.aload(regFrom.slot());
+
+        RegisterInfo regTo = bctx.realizeRef(code, m_nToValue, regFrom.referentType(), true);
+        code.astore(regTo.slot());
+        return -1;
     }
 }

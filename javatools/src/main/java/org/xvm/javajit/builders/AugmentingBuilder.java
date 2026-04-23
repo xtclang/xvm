@@ -13,7 +13,6 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.util.List;
 
-import org.xvm.asm.Component;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
@@ -50,6 +49,11 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     public boolean assembleImplClass(String className, ClassBuilder classBuilder) {
+        // since nRef is both Ref and Var, ignore "Var" interface; it causes circular initialization
+        if (thisId.equals(pool().clzVar())) {
+            return false;
+        }
+
         // AugmentingBuilder uses the native class attributes except of the "ABSTRACT" flag
         // that is driven by the type
         int flags = model.flags().flagsMask();
@@ -115,7 +119,8 @@ public class AugmentingBuilder extends CommonBuilder {
                                             PropertyInfo prop, String jitName, MethodTypeDesc md,
                                             boolean isOptimized, boolean isGetter) {
         MethodModel mm = findMethod(jitName, md);
-        if (mm != null && (mm.flags().flagsMask() & ClassFile.ACC_ABSTRACT) == 0) {
+        if (mm != null && ((mm.flags().flagsMask() & ClassFile.ACC_ABSTRACT) == 0 ||
+                    prop.isAbstract() || prop.isNative())) {
             // the property is already copied by the NativeTypeSystem
             return;
         }

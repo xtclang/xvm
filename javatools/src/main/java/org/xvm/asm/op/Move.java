@@ -107,7 +107,7 @@ public class Move
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        bctx.moveVar(code, m_nFromValue, m_nToValue, true);
+        bctx.moveRegister(code, m_nFromValue, m_nToValue, true);
         return -1;
     }
 }

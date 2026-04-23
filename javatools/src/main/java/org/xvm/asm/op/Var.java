@@ -56,7 +56,7 @@ public class Var
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        bctx.introduceVar(code, m_nVar, m_nType, 0);
+        bctx.introduceRegister(code, m_nVar, m_nType, 0);
         return -1;
     }
 }

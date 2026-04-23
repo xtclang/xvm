@@ -263,7 +263,7 @@ public abstract class OpGeneral
                     case OP_GP_COMPL -> {sName = "not"; sOp = "~"; }
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));
                 }
-                MethodInfo    method   = typeTarget.ensureTypeInfo().findOpMethod(sName, sOp, null);
+                MethodInfo    method   = bctx.getTypeInfo(typeTarget).findOpMethod(sName, sOp, null);
                 String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
                 JitMethodDesc jmd      = method.getJitDesc(bctx.builder, typeTarget);
 
@@ -311,8 +311,7 @@ public abstract class OpGeneral
             default -> throw new UnsupportedOperationException(toName(getOpCode()));
         }
 
-        return typeTarget.ensureTypeInfo().findOpMethod(sName, sOp,
-                bctx.getArgumentType(m_nArgValue));
+        return bctx.getTypeInfo(typeTarget).findOpMethod(sName, sOp, bctx.getArgumentType(m_nArgValue));
     }
 
     void assertNotMultislot(RegisterInfo reg) {

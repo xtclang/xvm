@@ -67,7 +67,7 @@ public interface InPlaceSupport
         }
 
         switch (reg.cd().descriptorString()) {
-            case "I", "S", "B", "C", "Z":
+            case "I", "S", "B", "Z":
                 switch (opCode) {
                     case OP_IP_DEC, OP_IIP_DEC:
                         code.iinc(reg.slot(), -1);

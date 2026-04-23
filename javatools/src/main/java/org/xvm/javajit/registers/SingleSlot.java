@@ -1,15 +1,19 @@
-package org.xvm.javajit;
+package org.xvm.javajit.registers;
 
 import java.lang.constant.ClassDesc;
 
 import org.xvm.asm.Op;
+
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.JitFlavor;
+import org.xvm.javajit.RegisterInfo;
 
 /**
  * A register that stores an XVM value in a single Java slot.
  *
  * @param regId   the register id
- * @param slot    the Java slot that stores the primitive value
+ * @param slot    the Java slot that stores the underlying value
  * @param flavor  the {@link JitFlavor} of the value this register represents
  * @param type    the {@link TypeConstant} of the value this register represents
  * @param cd      the {@link ClassDesc} of the value this register represents
@@ -24,16 +28,6 @@ public record SingleSlot(int regId, int slot, JitFlavor flavor, TypeConstant typ
      */
     public SingleSlot(TypeConstant type, JitFlavor flavor, ClassDesc cd, String name) {
         this(Op.A_STACK, JAVA_STACK, flavor, type, cd, name);
-    }
-
-    @Override
-    public int[] slots() {
-        return new int[]{slot};
-    }
-
-    @Override
-    public ClassDesc[] slotCds() {
-        return new ClassDesc[]{cd};
     }
 
     @Override

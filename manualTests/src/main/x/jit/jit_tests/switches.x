@@ -1,7 +1,7 @@
 /**
  * Switch JIT tests
  */
-package switch_ {
+package switches {
 
     public const TestRunner {
         Boolean run() {

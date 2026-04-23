@@ -243,6 +243,9 @@ public class PropertyConstant
             typeTarget = getConstantPool().ensureAccessTypeConstant(
                 getClassIdentity().getType(), Access.PRIVATE);
         } else {
+            if (typeTarget.isFormalType()) {
+                typeTarget = typeTarget.resolveConstraints();
+            }
             Access accessProp   = getComponent().getAccess();
             Access accessTarget = typeTarget.getAccess();
             if (accessTarget != Access.STRUCT &&

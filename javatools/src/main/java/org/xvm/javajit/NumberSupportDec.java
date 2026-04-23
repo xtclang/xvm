@@ -1,10 +1,14 @@
 package org.xvm.javajit;
 
 import java.lang.classfile.CodeBuilder;
+
 import java.lang.constant.MethodTypeDesc;
+
+import org.xvm.javajit.registers.MultiSlot;
 
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
+
 import static org.xvm.javajit.Builder.CD_Ctx;
 
 /**
@@ -85,10 +89,8 @@ public interface NumberSupportDec {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildDec32Add(BuildContext bctx,
-                               CodeBuilder  code,
-                               MultipleSlot regTarget,
-                               int          nArgValue) {
+    default void buildDec32Add(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                               int nArgValue) {
         buildDecimalAdd(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec32);
     }
 
@@ -105,10 +107,8 @@ public interface NumberSupportDec {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildDec64Add(BuildContext bctx,
-                               CodeBuilder  code,
-                               MultipleSlot regTarget,
-                               int          nArgValue) {
+    default void buildDec64Add(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                               int nArgValue) {
         buildDecimalAdd(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec64);
     }
 
@@ -125,10 +125,8 @@ public interface NumberSupportDec {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildDec128Add(BuildContext bctx,
-                                CodeBuilder  code,
-                                MultipleSlot regTarget,
-                                int          nArgValue) {
+    default void buildDec128Add(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                                int nArgValue) {
         buildDecimalAdd(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec128);
         Builder.loadFromContext(code, CD_long, 0);
     }
@@ -147,11 +145,8 @@ public interface NumberSupportDec {
      * @param nArgValue  the register containing the operation argument
      * @param method     the method type descriptor for the operation
      */
-    default void buildDecimalAdd(BuildContext   bctx,
-                                 CodeBuilder    code,
-                                 MultipleSlot   regTarget,
-                                 int            nArgValue,
-                                 MethodTypeDesc method) {
+    default void buildDecimalAdd(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                                 int nArgValue, MethodTypeDesc method) {
 
         bctx.loadCtx(code);
         regTarget.load(code);
@@ -172,10 +167,8 @@ public interface NumberSupportDec {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildDec32Div(BuildContext bctx,
-                               CodeBuilder  code,
-                               MultipleSlot regTarget,
-                               int          nArgValue) {
+    default void buildDec32Div(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                               int nArgValue) {
         buildDecimalDiv(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec32);
     }
 
@@ -192,10 +185,8 @@ public interface NumberSupportDec {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildDec64Div(BuildContext bctx,
-                               CodeBuilder  code,
-                               MultipleSlot regTarget,
-                               int          nArgValue) {
+    default void buildDec64Div(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                               int nArgValue) {
         buildDecimalDiv(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec64);
     }
 
@@ -212,10 +203,8 @@ public interface NumberSupportDec {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildDec128Div(BuildContext bctx,
-                                CodeBuilder  code,
-                                MultipleSlot regTarget,
-                                int          nArgValue) {
+    default void buildDec128Div(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                                int nArgValue) {
         buildDecimalDiv(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec128);
         Builder.loadFromContext(code, CD_long, 0);
     }
@@ -234,12 +223,8 @@ public interface NumberSupportDec {
      * @param nArgValue  the register containing the operation argument
      * @param method     the method type descriptor for the operation
      */
-    default void buildDecimalDiv(BuildContext   bctx,
-                                 CodeBuilder    code,
-                                 MultipleSlot   regTarget,
-                                 int            nArgValue,
-                                 MethodTypeDesc method) {
-
+    default void buildDecimalDiv(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                                 int nArgValue, MethodTypeDesc method) {
         bctx.loadCtx(code);
         regTarget.load(code);
         bctx.loadArgument(code, nArgValue);
@@ -259,10 +244,8 @@ public interface NumberSupportDec {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildDec32Mod(BuildContext bctx,
-                               CodeBuilder  code,
-                               MultipleSlot regTarget,
-                               int          nArgValue) {
+    default void buildDec32Mod(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                               int nArgValue) {
         buildDecimalMod(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec32);
     }
 
@@ -279,10 +262,8 @@ public interface NumberSupportDec {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildDec64Mod(BuildContext bctx,
-                               CodeBuilder  code,
-                               MultipleSlot regTarget,
-                               int          nArgValue) {
+    default void buildDec64Mod(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                               int nArgValue) {
         buildDecimalMod(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec64);
     }
 
@@ -299,10 +280,8 @@ public interface NumberSupportDec {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildDec128Mod(BuildContext bctx,
-                                CodeBuilder  code,
-                                MultipleSlot regTarget,
-                                int          nArgValue) {
+    default void buildDec128Mod(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                                int nArgValue) {
         buildDecimalMod(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec128);
         Builder.loadFromContext(code, CD_long, 0);
     }
@@ -321,11 +300,8 @@ public interface NumberSupportDec {
      * @param nArgValue  the register containing the operation argument
      * @param method     the method type descriptor for the operation
      */
-    default void buildDecimalMod(BuildContext   bctx,
-                                 CodeBuilder    code,
-                                 MultipleSlot   regTarget,
-                                 int            nArgValue,
-                                 MethodTypeDesc method) {
+    default void buildDecimalMod(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                                 int nArgValue, MethodTypeDesc method) {
 
         bctx.loadCtx(code);
         regTarget.load(code);
@@ -346,10 +322,8 @@ public interface NumberSupportDec {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildDec32Mul(BuildContext bctx,
-                               CodeBuilder  code,
-                               MultipleSlot regTarget,
-                               int          nArgValue) {
+    default void buildDec32Mul(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                               int nArgValue) {
         buildDecimalMul(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec32);
     }
 
@@ -366,10 +340,8 @@ public interface NumberSupportDec {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildDec64Mul(BuildContext bctx,
-                               CodeBuilder  code,
-                               MultipleSlot regTarget,
-                               int          nArgValue) {
+    default void buildDec64Mul(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                               int nArgValue) {
         buildDecimalMul(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec64);
     }
 
@@ -386,10 +358,8 @@ public interface NumberSupportDec {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildDec128Mul(BuildContext bctx,
-                                CodeBuilder  code,
-                                MultipleSlot regTarget,
-                                int          nArgValue) {
+    default void buildDec128Mul(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                                int nArgValue) {
         buildDecimalMul(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec128);
         Builder.loadFromContext(code, CD_long, 0);
     }
@@ -408,12 +378,8 @@ public interface NumberSupportDec {
      * @param nArgValue  the register containing the operation argument
      * @param method     the method type descriptor for the operation
      */
-    default void buildDecimalMul(BuildContext   bctx,
-                                 CodeBuilder    code,
-                                 MultipleSlot   regTarget,
-                                 int            nArgValue,
-                                 MethodTypeDesc method) {
-
+    default void buildDecimalMul(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                                 int nArgValue, MethodTypeDesc method) {
         bctx.loadCtx(code);
         regTarget.load(code);
         bctx.loadArgument(code, nArgValue);
@@ -430,9 +396,8 @@ public interface NumberSupportDec {
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
      */
-    default void buildDec32Neg(BuildContext bctx, CodeBuilder  code, MultipleSlot regTarget) {
+    default void buildDec32Neg(BuildContext bctx, CodeBuilder code, MultiSlot regTarget) {
         buildDecNeg(bctx, code, regTarget, MD_UnaryOp_Dec32);
-
     }
 
     /**
@@ -445,7 +410,7 @@ public interface NumberSupportDec {
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
      */
-    default void buildDec64Neg(BuildContext bctx, CodeBuilder  code, MultipleSlot regTarget) {
+    default void buildDec64Neg(BuildContext bctx, CodeBuilder code, MultiSlot regTarget) {
         buildDecNeg(bctx, code, regTarget, MD_UnaryOp_Dec64);
     }
 
@@ -459,7 +424,7 @@ public interface NumberSupportDec {
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
      */
-    default void buildDec128Neg(BuildContext bctx, CodeBuilder  code, MultipleSlot regTarget) {
+    default void buildDec128Neg(BuildContext bctx, CodeBuilder code, MultiSlot regTarget) {
         buildDecNeg(bctx, code, regTarget, MD_UnaryOp_Dec128);
         Builder.loadFromContext(code, CD_long, 0);
     }
@@ -475,9 +440,7 @@ public interface NumberSupportDec {
      * @param regTarget  the register containing the target of the operation
      * @param method     the method type descriptor for the operation
      */
-    default void buildDecNeg(BuildContext   bctx,
-                             CodeBuilder    code,
-                             MultipleSlot   regTarget,
+    default void buildDecNeg(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
                              MethodTypeDesc method) {
         bctx.loadCtx(code);
         regTarget.load(code);
@@ -497,10 +460,8 @@ public interface NumberSupportDec {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildDec32Sub(BuildContext bctx,
-                               CodeBuilder  code,
-                               MultipleSlot regTarget,
-                               int          nArgValue) {
+    default void buildDec32Sub(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                               int nArgValue) {
         buildDecimalSub(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec32);
     }
 
@@ -517,10 +478,8 @@ public interface NumberSupportDec {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildDec64Sub(BuildContext bctx,
-                               CodeBuilder  code,
-                               MultipleSlot regTarget,
-                               int          nArgValue) {
+    default void buildDec64Sub(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                               int nArgValue) {
         buildDecimalSub(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec64);
     }
 
@@ -537,10 +496,8 @@ public interface NumberSupportDec {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildDec128Sub(BuildContext bctx,
-                                CodeBuilder  code,
-                                MultipleSlot regTarget,
-                                int          nArgValue) {
+    default void buildDec128Sub(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                                int nArgValue) {
         buildDecimalSub(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec128);
         Builder.loadFromContext(code, CD_long, 0);
     }
@@ -559,12 +516,8 @@ public interface NumberSupportDec {
      * @param nArgValue  the register containing the operation argument
      * @param method     the method type descriptor for the operation
      */
-    default void buildDecimalSub(BuildContext   bctx,
-                                 CodeBuilder    code,
-                                 MultipleSlot   regTarget,
-                                 int            nArgValue,
-                                 MethodTypeDesc method) {
-
+    default void buildDecimalSub(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+                                 int nArgValue, MethodTypeDesc method) {
         bctx.loadCtx(code);
         regTarget.load(code);
         bctx.loadArgument(code, nArgValue);

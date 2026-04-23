@@ -28,7 +28,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.xvm.asm.Annotation;
@@ -4640,7 +4639,7 @@ public abstract class TypeConstant
                 // create a ParamInfo and a type-param PropertyInfo for the Referent type parameter
                 // note: while this is very hard-coded and dense and inelegant, it basically is
                 //       compensating for the fact that we're about to treat the property (id/info)
-                //       as it's own ***class***, just like the type for which we are currently
+                //       as its own ***class***, just like the type for which we are currently
                 //       producing a TypeInfo. however, unlike the top level class & TypeInfo, the
                 //       property doesn't have a chance to go through the collectTypeParameters()
                 //       method, so lacking that, this "jams in" the additional type parameters that
@@ -6492,15 +6491,13 @@ public abstract class TypeConstant
     }
 
     protected synchronized String buildJitClassName(TypeSystem ts, ModuleLoader loader) {
-        ConstantPool     pool = getConstantPool();
-        IdentityConstant id   = getSingleUnderlyingClass(true);
-        if (id instanceof ClassConstant idClz) {
-            String name = ts.xvm.nativeTypeSystem.nativeByClass.get(idClz);
-            if (name != null) {
-                return name;
-            }
+        String name = ts.xvm.nativeTypeSystem.getReservedName(this);
+        if (name != null) {
+            return name;
         }
 
+        ConstantPool     pool = getConstantPool();
+        IdentityConstant id   = getSingleUnderlyingClass(true);
         if (id.equals(pool.clzArray())) {
             TypeConstant typeEl = getParamType(0);
             if (typeEl.isFormalType() || typeEl.equals(pool.typeObject())) {
@@ -6510,7 +6507,7 @@ public abstract class TypeConstant
 
                 return switch (idEl.getName()) {
                     case "Bit"     -> Builder.N_ArrayBit;
-                    case "Boolean" -> Builder.N_ArrayObj; // TODO JK
+                    case "Boolean" -> Builder.N_ArrayBoolean;
                     case "Char"    -> Builder.N_ArrayChar;
                     case "Dec32"   -> Builder.N_ArrayDec32;
                     case "Dec64"   -> Builder.N_ArrayDec64;
@@ -6598,13 +6595,13 @@ public abstract class TypeConstant
         return isJavaPrimitive() || isXvmPrimitive();
     }
 
-
     /**
      * @return true iff the specified type is represented by the Java interface and needs to be
      *         cast explicitly to {@code nObj} class to invoke its methods
      */
     public boolean isJitInterface() {
-        return isInterfaceType();
+        // Ref and Var are always represented is by "nRef" class
+        return isInterfaceType() && !this.isA(getConstantPool().typeRef());
     }
 
     /**
@@ -6658,7 +6655,7 @@ public abstract class TypeConstant
      */
     public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
                              RegisterInfo reg1, RegisterInfo reg2, Label lblTrue) {
-        buildCompare(bctx, code, nOp, reg1, reg2.type(), reg2.cd(), reg2::load, lblTrue);
+        buildCompare(bctx, code, nOp, reg1, reg2.type(), reg2.cd(), () -> reg2.load(code), lblTrue);
     }
 
     /**
@@ -6676,9 +6673,9 @@ public abstract class TypeConstant
      */
     public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
                              RegisterInfo reg1, Constant constant, Label lblTrue) {
-        TypeConstant          argType = constant.getType();
-        ClassDesc             argCd   = JitTypeDesc.getJitClass(bctx.builder, argType);
-        Consumer<CodeBuilder> loader  = c -> bctx.loadConstant(c, constant);
+        TypeConstant argType = constant.getType();
+        ClassDesc    argCd   = JitTypeDesc.getJitClass(bctx.builder, argType);
+        Runnable     loader  = () -> bctx.loadConstant(code, constant);
         buildCompare(bctx, code, nOp, reg1, argType, argCd, loader, lblTrue);
     }
 
@@ -6692,14 +6689,14 @@ public abstract class TypeConstant
      * @param reg1       the first register to compare
      * @param argType    the type of the compare argument
      * @param cdArg      the {@link ClassDesc} of the compare argument
-     * @param argLoader  the {@link Consumer} to load the compare argument onto the stack
+     * @param argLoader  the {@link Runnable} to load the compare argument onto the stack
      * @param lblTrue    (optional) the label to go to in the case the positive result has been
      *                   computed and the jump needs be generated; otherwise the result of the
      *                   comparison should be placed on the Java stack
      */
     public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
                              RegisterInfo reg1, TypeConstant argType, ClassDesc cdArg,
-                             Consumer<CodeBuilder> argLoader, Label lblTrue) {
+                             Runnable argLoader, Label lblTrue) {
         TypeConstant type1 = reg1.type();
         assert type1.isA(this) && argType.isA(this) || this.isFormalType();
 
@@ -6717,14 +6714,14 @@ public abstract class TypeConstant
                 Builder.unbox(code, this);
             }
             convertIfUnsignedPrimitive(code);
-            argLoader.accept(code);
+            argLoader.run();
             if (!cdArg.isPrimitive()) {
                 Builder.unbox(code, this);
             }
             convertIfUnsignedPrimitive(code);
 
             switch (desc) {
-            case "I", "S", "B", "C", "Z":
+            case "I", "S", "B", "Z":
                 switch (nOp) {
                     case Op.OP_CMP -> {
                         code.isub();
@@ -6767,7 +6764,6 @@ public abstract class TypeConstant
             }
         } else if (isXvmPrimitive()) {
             // type is a custom XVM primitive
-            TypeSystem   ts       = bctx.typeSystem;
             ClassDesc[]  cds      = JitTypeDesc.getXvmPrimitiveClasses(this);
             ClassDesc[]  cdParams = new ClassDesc[cds.length * 2 + 1];
 
@@ -6795,7 +6791,7 @@ public abstract class TypeConstant
 
             bctx.loadCtx(code);
             reg1.load(code);
-            argLoader.accept(code);
+            argLoader.run();
 
             switch (nOp) {
                 case Op.OP_IS_EQ, Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
@@ -6847,7 +6843,7 @@ public abstract class TypeConstant
                     }
             }
         } else {
-            // type is an Object
+            // type is a non-primitive
             TypeSystem   ts   = bctx.typeSystem;
             ConstantPool pool = ts.pool();
             SignatureConstant sig = switch (nOp) {
@@ -6878,7 +6874,7 @@ public abstract class TypeConstant
                     }
                 }
             } else {
-                MethodInfo    method = ensureTypeInfo().getMethodBySignature(sig);
+                MethodInfo    method = bctx.getTypeInfo(this).getMethodBySignature(sig);
                 JitMethodDesc jmd    = method.getJitDesc(bctx.builder, this);
                 cd       = bctx.builder.ensureClassDesc(method.getJitIdentity().getNamespace().getType());
                 sJitName = method.ensureJitMethodName(ts);
@@ -6902,7 +6898,7 @@ public abstract class TypeConstant
                 bctx.loadType(code, getType()); // type of this type
             }
             reg1.load(code);
-            argLoader.accept(code);
+            argLoader.run();
 
             switch (nOp) {
             case Op.OP_IS_EQ,  Op.OP_JMP_EQ,

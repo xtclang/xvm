@@ -21,6 +21,7 @@ package basic {
                 passed &= runTest(() -> tryTests.run());
                 passed &= runTest(() -> setPropertyTests.run());
                 passed &= runTest(() -> propertyInitTests.run());
+                passed &= runTest(() -> refTests.run());
             } catch (IllegalState e) {
                 console.print(e);
             }
