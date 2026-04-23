@@ -217,7 +217,7 @@ docker run -it --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest bash
 
 **Multi-platform Support**: The XDK Docker image supports both `linux/amd64` and `linux/arm64` architectures, running natively on macOS (Intel/Apple Silicon), Windows (via WSL2), and Linux systems.
 
-**Development Container Support**: This project includes a devcontainer configuration at `.devcontainer/devcontainer.json` for VSCode development.
+**Development Container Support**: This project includes a devcontainer configuration at `.devcontainer/devcontainer.json` for VSCode development. See [.devcontainer/README.md](.devcontainer/README.md) for setup details.
 
 **For complete Docker documentation, build instructions, CI integration, and advanced usage, see:**
 **[docker/README.md](docker/README.md)**
@@ -258,7 +258,7 @@ For detailed build tasks, distribution options, environment configuration, debug
 
 ### XTC Plugin and Build System Testing
 
-For comprehensive examples of using the Ecstasy Gradle plugin and testing XTC applications, see the [**manualTests**](manualTests/build.gradle.kts) inline documentation. This project demonstrates:
+For comprehensive examples of using the [Ecstasy Gradle plugin](plugin/README.md) and testing XTC applications, see the [**manualTests**](manualTests/build.gradle.kts) inline documentation. This project demonstrates:
 
 - Ecstasy Gradle plugin configuration and usage
 - Build lifecycle best practices and caching
