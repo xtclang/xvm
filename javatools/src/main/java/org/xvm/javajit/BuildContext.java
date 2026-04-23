@@ -474,6 +474,7 @@ public class BuildContext {
         if (refs == null) {
             refs = Collections.emptyMap();
         } else {
+            TypeConstant thisType = typeInfo.getType();
             for (Map.Entry<Integer, Boolean> entry : refs.entrySet()) {
                 int regId = entry.getKey();
                 if (regId < 0) {
@@ -498,7 +499,7 @@ public class BuildContext {
                     code.astore(slot);
 
                     RegisterInfo ref = new Ref(this, regId, slot, param.getName(), isVar,
-                            param.getType(), reg.flavor());
+                            param.getType().resolveGenerics(pool(), thisType), reg.flavor());
                     registerInfos.put(regId, ref);
                 }
             }
@@ -620,7 +621,8 @@ public class BuildContext {
      * Get the type for the specified argument index.
      */
     public TypeConstant getTypeConstant(int argId) {
-        return getConstant(argId, TypeConstant.class);
+        return getConstant(argId, TypeConstant.class).
+                resolveGenerics(pool(), typeInfo.getType());
     }
 
     /**
@@ -1042,6 +1044,15 @@ public class BuildContext {
             return reg;
         }
 
+        if (reg instanceof Ref ref) {
+            TypeConstant regType = ref.referentType();
+            TypeConstant mtxType = typeMatrix.getType(ref.regId(), currOpAddr);
+
+            return mtxType.isEquivalent(regType)
+                    ? ref
+                    : ref.narrow(mtxType);
+        }
+
         TypeConstant regType  = reg.type();
         TypeConstant baseType = regType.removeNullable();
         if (!baseType.isJitPrimitive()) {
@@ -1084,7 +1095,7 @@ public class BuildContext {
     /**
      * Check if the specified argument has been already assigned a Java slot. If the argument points
      * to a constant, create a temporary Java slot for it. Otherwise, the register must have already
-     * beed allocated a Java slot for.
+     * been allocated a Java slot for.
      *
      * In either case, the corresponding value is **not** loaded on the Java stack.
      */
@@ -1686,6 +1697,10 @@ public class BuildContext {
      */
     public RegisterInfo introduceRef(CodeBuilder code, int regId, TypeConstant type, String name,
                                     boolean isVar) {
+        if (type.containsFormalType(true)) {
+            type = type.resolveGenerics(pool(), typeInfo.getType());
+        }
+
         if (type instanceof AnnotatedTypeConstant annoType) {
             type = type.getUnderlyingType();
 
@@ -2002,31 +2017,39 @@ public class BuildContext {
             return origReg;
         }
 
-        ClassDesc   narrowedCD     = JitTypeDesc.getJitClass(builder, narrowingType);
-        JitFlavor   narrowedFlavor = narrowingType.getJitDesc(builder).flavor;
-        ClassDesc[] narrowedSlotCds;
-        int[]       narrowedSlots;
-
-        if (narrowingType.isJavaPrimitive()) {
-            narrowedSlots   = new int[] {scope.allocateJavaSlot(narrowedCD)};
-            narrowedSlotCds = new ClassDesc[] {narrowedCD};
-        } else if (narrowingType.isXvmPrimitive()) {
-            narrowedSlotCds = JitTypeDesc.getXvmPrimitiveClasses(narrowingType);
-            narrowedSlots   = new int[narrowedSlotCds.length];
-            for (int i = 0; i < narrowedSlotCds.length; i++) {
-                narrowedSlots[i] = scope.allocateJavaSlot(narrowedSlotCds[i]);
-            }
-        } else {
-            if (narrowingType.isOnlyNullable()) {
-                narrowedFlavor = AlwaysNull;
-            }
+        ClassDesc    narrowedCD;
+        ClassDesc[]  narrowedSlotCds;
+        int[]        narrowedSlots;
+        RegisterInfo narrowedReg;
+        if (origReg instanceof Ref ref) {
+            narrowedCD      = origReg.cd();
             narrowedSlots   = origReg.slots();
-            narrowedSlotCds = new ClassDesc[] {narrowedCD};
-        }
+            narrowedSlotCds = origReg.slotCds();
+            narrowedReg     = ref.narrow(narrowingType);
+        } else {
+            JitFlavor narrowedFlavor = narrowingType.getJitDesc(builder).flavor;
+                      narrowedCD     = JitTypeDesc.getJitClass(builder, narrowingType);
+            if (narrowingType.isJavaPrimitive()) {
+                narrowedSlots   = new int[] {scope.allocateJavaSlot(narrowedCD)};
+                narrowedSlotCds = new ClassDesc[] {narrowedCD};
+            } else if (narrowingType.isXvmPrimitive()) {
+                narrowedSlotCds = JitTypeDesc.getXvmPrimitiveClasses(narrowingType);
+                narrowedSlots   = new int[narrowedSlotCds.length];
+                for (int i = 0; i < narrowedSlotCds.length; i++) {
+                    narrowedSlots[i] = scope.allocateJavaSlot(narrowedSlotCds[i]);
+                }
+            } else {
+                if (narrowingType.isOnlyNullable()) {
+                    narrowedFlavor = AlwaysNull;
+                }
+                narrowedSlots   = origReg.slots();
+                narrowedSlotCds = new ClassDesc[] {narrowedCD};
+            }
 
-        Narrowed narrowedReg = new Narrowed(origReg.regId(), narrowedSlots, narrowingType,
-            narrowedFlavor, narrowedCD, narrowedSlotCds, origReg.name(),
-            scope.depth, false, origReg);
+            narrowedReg = new Narrowed(origReg.regId(), narrowedSlots, narrowingType,
+                narrowedFlavor, narrowedCD, narrowedSlotCds, origReg.name(),
+                scope.depth, false, origReg);
+        }
 
         boolean applyInfo = fromAddr > currOpAddr;
         OpAction action = () -> {
@@ -2034,7 +2057,7 @@ public class BuildContext {
                 registerInfos.put(narrowedReg.regId(), narrowedReg);
             }
 
-            if (origReg.slot() != narrowedSlots[0] || !narrowedCD.equals(CD_nObj)) {
+            if (origReg.slot() != narrowedSlots[0] || !narrowedCD.equals(origReg.cd())) {
                 // even if the narrowed register uses the same slot, we need to let the Java verifier
                 // know that
                 if (narrowedCD.isPrimitive()) {
@@ -2154,9 +2177,15 @@ public class BuildContext {
     /**
      * Reset the narrowed register info.
      */
-    public RegisterInfo resetRegister(Narrowed narrowedReg) {
-        RegisterInfo origReg = narrowedReg.origReg();
-        registerInfos.put(narrowedReg.regId(), origReg);
+    public RegisterInfo resetRegister(RegisterInfo reg) {
+        RegisterInfo origReg =
+            reg instanceof Narrowed narrowed ? narrowed.origReg() :
+            reg instanceof Ref      ref      ? ref.origRef() :
+                                               null;
+        if (origReg == null) {
+            throw new IllegalStateException();
+        }
+        registerInfos.put(reg.regId(), origReg);
         return origReg;
     }
 

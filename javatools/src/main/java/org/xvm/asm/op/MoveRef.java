@@ -113,7 +113,6 @@ public class MoveRef
         RegisterInfo regTo;
         if (m_nFromValue >= 0) {
             Ref regFrom = (Ref) bctx.getRegisterInfo(code, m_nFromValue);
-            assert regFrom.flavor() == JitFlavor.Ref;
 
             regTo = bctx.realizeRef(code, m_nToValue, regFrom.referentType(), false);
             code.aload(regFrom.slot());

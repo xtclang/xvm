@@ -144,9 +144,7 @@ public abstract class OpInPlaceAssign
      * @param code       the code builder to add the op codes to
      * @param regTarget  the target register
      */
-    protected TypeConstant buildOpInvoke(BuildContext bctx,
-                                         CodeBuilder  code,
-                                         RegisterInfo regTarget) {
+    protected TypeConstant buildOpInvoke(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         TypeConstant  typeTarget = regTarget.type();
         MethodInfo    method     = findOpMethod(bctx, typeTarget);
         String        sJitName   = method.ensureJitMethodName(bctx.typeSystem);
@@ -160,7 +158,7 @@ public abstract class OpInPlaceAssign
             md = jmd.standardMD;
         }
 
-        regTarget.load(code);
+        regTarget = regTarget.load(code);
         bctx.loadCtx(code);
         bctx.loadArgument(code, m_nArgValue);
         code.invokevirtual(regTarget.cd(), sJitName, md);
