@@ -20,6 +20,7 @@ import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
+import org.xvm.javajit.TypeMatrix;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.Frame.AllGuard;
@@ -100,13 +101,18 @@ public class GuardAll
 
     @Override
     public void computeTypes(BuildContext bctx) {
+        TypeMatrix tmx       = bctx.typeMatrix;
+        int        nAddrThis = getAddress();
+        int        nAddrJump = nAddrThis + m_ofJmp;
+
         bctx.enterScope(null);
         bctx.enterScope(null);
 
         // we could be called for dead code to correctly compute the scopes, but should not
         // compute types further
-        if (bctx.typeMatrix.isReached(getAddress())) {
-            super.computeTypes(bctx);
+        if (tmx.isReached(nAddrThis)) {
+            tmx.follow(nAddrThis);
+            tmx.follow(nAddrThis, nAddrJump, -1);
         }
     }
 

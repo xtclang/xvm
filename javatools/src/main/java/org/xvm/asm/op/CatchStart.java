@@ -26,6 +26,7 @@ import org.xvm.javajit.TypeSystem.ClassfileShape;
 import org.xvm.runtime.Frame;
 
 import static org.xvm.javajit.Builder.CD_Exception;
+import static org.xvm.javajit.Builder.CD_nException;
 
 
 /**
@@ -162,8 +163,9 @@ public class CatchStart
         TypeConstant typeEx = regEx.type();
         assert typeEx.isA(ts.pool().typeException());
 
-        ClassDesc cdEx = Builder.getShapeDesc(
-            bctx.builder.ensureJitClassName(typeEx), ClassfileShape.Exception);
+        ClassDesc cdEx = typeEx.equals(ts.pool().typeException())
+            ? CD_nException
+            : Builder.getShapeDesc(bctx.builder.ensureJitClassName(typeEx), ClassfileShape.Exception);
 
         code.getfield(cdEx, "exception", CD_Exception);
         bctx.storeValue(code, regEx);
