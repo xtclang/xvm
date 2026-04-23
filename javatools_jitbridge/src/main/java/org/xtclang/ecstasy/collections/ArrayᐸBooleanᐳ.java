@@ -30,7 +30,7 @@ public class ArrayᐸBooleanᐳ
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
-     * Array Constructor: construct(Int capacity = 0)
+     * @see {@link Array#$new$p}
      */
     public static ArrayᐸBooleanᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
@@ -42,6 +42,9 @@ public class ArrayᐸBooleanᐳ
         return array;
     }
 
+    /**
+     * @see {@link Array#$new$1$p}
+     */
     public static ArrayᐸBooleanᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
         if (supply instanceof Boolean boxed) {
             ctx.alloc(size); // REVIEW + HEADER_SIZE?
@@ -62,11 +65,17 @@ public class ArrayᐸBooleanᐳ
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @see {@link Array#$new$2}
+     */
     public static ArrayᐸBooleanᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @see {@link Array#$new$3}
+     */
     public static ArrayᐸBooleanᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸBooleanᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
