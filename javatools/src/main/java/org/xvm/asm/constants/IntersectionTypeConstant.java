@@ -99,6 +99,33 @@ public class IntersectionTypeConstant
         return null;
     }
 
+    /**
+     * If this type represents a Function, extract its param types.
+     */
+    public TypeConstant[] extractFunctionParams() {
+        ConstantPool pool = getConstantPool();
+        if (m_constType1.isA(pool.typeFunction())) {
+            return pool.extractFunctionParams(m_constType1);
+        }
+        if (m_constType2.isA(pool.typeFunction())) {
+            return pool.extractFunctionParams(m_constType2);
+        }
+        return NO_TYPES;
+    }
+
+    /**
+     * If this type represents a Function, extract its return types.
+     */
+    public TypeConstant[] extractFunctionReturns() {
+        ConstantPool pool = getConstantPool();
+        if (m_constType1.isA(pool.typeFunction())) {
+            return pool.extractFunctionReturns(m_constType1);
+        }
+        if (m_constType2.isA(pool.typeFunction())) {
+            return pool.extractFunctionReturns(m_constType2);
+        }
+        return NO_TYPES;
+    }
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
