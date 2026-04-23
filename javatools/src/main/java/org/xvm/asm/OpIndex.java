@@ -227,7 +227,8 @@ public abstract class OpIndex
         ConstantPool pool       = bctx.pool();
         RegisterInfo reg        = bctx.loadArgument(code, m_nTarget);
         TypeConstant typeTarget = reg.type();
-        TypeConstant typeEl     = computeElementType(bctx.getTypeInfo(typeTarget));
+        TypeInfo     infoTarget = bctx.getTypeInfo(typeTarget);
+        TypeConstant typeEl     = computeElementType(infoTarget);
         boolean      fPrimitive = typeEl.isJitPrimitive();
 
         if (typeTarget.isArray()) {
@@ -247,7 +248,7 @@ public abstract class OpIndex
                     }
 
                     case OP_I_SET -> {
-                        bctx.loadArgument(code, getValueIndex());
+                        bctx.loadArgument(code, getValueId());
                         code.invokevirtual(cdArray, "setElement$p",
                             MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_nObj));
                     }
@@ -281,26 +282,37 @@ public abstract class OpIndex
                 default          -> throw new UnsupportedOperationException(toName(getOpCode()));
             }
 
-            TypeConstant  typeArg  = bctx.getArgumentType(m_nIndex);
-            MethodInfo    method   = bctx.getTypeInfo(typeTarget).findOpMethod(sName, sOp, typeArg);
+            TypeConstant  typeIndex = bctx.getArgumentType(m_nIndex);
+            MethodInfo    method;
+            boolean       fSet = getOpCode() == OP_I_SET;
+            if (fSet) {
+                Set<MethodConstant> set = infoTarget.findOpMethods(sName, sOp, 2);
+                if (set.size() != 1) {
+                    throw new UnsupportedOperationException(
+                        "Cannot resolve the method: " + sName + " on " + typeTarget.getValueString());
+                }
+                method = infoTarget.getMethodById(set.iterator().next());
+
+            } else {
+                method = infoTarget.findOpMethod(sName, sOp, typeIndex);
+            }
+
             JitMethodDesc jmd      = method.getJitDesc(bctx.builder, typeTarget);
             String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
 
-            MethodTypeDesc mdCall;
-            if (jmd.isOptimized) {
-                mdCall  = jmd.optimizedMD;
-                sJitName += Builder.OPT;
-            }
-            else {
-                mdCall = jmd.standardMD;
-            }
-            bctx.loadCtx(code);
-            bctx.loadCallArguments(code, jmd, new int[] {m_nIndex});
+            assert jmd.isOptimized;
+            sJitName += Builder.OPT;
 
-            if (typeTarget.isJitInterface()) {
-                code.invokeinterface(reg.cd(), sJitName, mdCall);
+            bctx.loadCtx(code);
+            if (fSet) {
+                bctx.loadCallArguments(code, jmd, new int[] {m_nIndex, getValueId()});
             } else {
-                code.invokevirtual(reg.cd(), sJitName, mdCall);
+                bctx.loadCallArguments(code, jmd, new int[] {m_nIndex});
+            }
+            if (typeTarget.isJitInterface()) {
+                code.invokeinterface(reg.cd(), sJitName, jmd.optimizedMD);
+            } else {
+                code.invokevirtual(reg.cd(), sJitName, jmd.optimizedMD);
             }
         }
 
@@ -344,9 +356,9 @@ public abstract class OpIndex
 
 
     /**
-     * @return the index of the argument value for corresponding ops
+     * @return the id of the argument value for corresponding ops
      */
-    protected int getValueIndex() {
+    protected int getValueId() {
         throw new UnsupportedOperationException("TODO " + getClass().getName());
     }
 
