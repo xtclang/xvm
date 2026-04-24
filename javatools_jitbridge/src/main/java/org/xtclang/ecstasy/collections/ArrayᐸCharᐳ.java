@@ -3,7 +3,6 @@ package org.xtclang.ecstasy.collections;
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Exception;
-import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.IterableᐸCharᐳ;
 import org.xtclang.ecstasy.IteratorᐸCharᐳ;
 import org.xtclang.ecstasy.nObj;
