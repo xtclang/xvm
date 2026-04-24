@@ -953,7 +953,7 @@ public abstract class TypeConstant
      */
     private static TypeConstant combineOneParameterized(ConstantPool pool,
                                                         TypeConstant t1, TypeConstant t2) {
-        if (t1 instanceof ParameterizedTypeConstant &&
+        if (t1 instanceof ParameterizedTypeConstant && !t2.isFormalType() &&
                 t1.isA(pool.typeClass()) == t2.isA(pool.typeClass()) &&
                 t2.isA(t1.getUnderlyingType()) &&
                 t2.isSingleUnderlyingClass(true) && !t2.isParamsSpecified()) {
