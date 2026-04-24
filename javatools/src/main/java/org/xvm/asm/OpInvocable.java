@@ -22,7 +22,6 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
-import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
 

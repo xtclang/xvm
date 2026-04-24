@@ -3455,15 +3455,13 @@ public class ConstantPool
      * @return a new function type that skips the specified parameter
      */
     public TypeConstant bindFunctionParam(TypeConstant typeFn, int iParam) {
-        assert typeFn.isFunction() && typeFn.getParamsCount() > 0;
+        assert typeFn.isFunction();
 
-        TypeConstant typeP = typeFn.getParamType(0);
-        TypeConstant typeR = typeFn.getParamType(1);
+        TypeConstant[] atypeParams = extractFunctionParams(typeFn);
+        int            cParamsNew  = atypeParams.length - 1;
+        assert 0 <= cParamsNew && iParam <= cParamsNew;
 
-        int cParamsNew = typeP.getParamsCount() - 1;
-        assert typeP.isTuple() && iParam <= cParamsNew;
-
-        TypeConstant[] atypeParams = typeP.getParamTypesArray();
+        TypeConstant typeP;
         if (cParamsNew == 0) {
             // canonical Tuple represents Void
             typeP = typeTuple0();
@@ -3477,6 +3475,10 @@ public class ConstantPool
             }
             typeP = ensureTupleType(atypeNew);
         }
+
+        TypeConstant typeR = typeFn instanceof ParameterizedTypeConstant
+                ? typeFn.getParamType(1)
+                : ensureTupleType(extractFunctionReturns(typeFn));
 
         return ensureParameterizedTypeConstant(typeFunction(), typeP, typeR);
     }
