@@ -113,7 +113,9 @@ public class JitConnector
                 stringArray = makeImmutMethod.invoke(stringArray, ctx);
 
                 // run(stringArray);
-                Method runMethod = mainClass.getMethod("run$p", Ctx.class, arrayClass);
+                Method runMethod = mainClass.getMethod(
+                    methodStructure.getReturnCount() == 0 ? "run" : "run$p",
+                    Ctx.class, arrayClass);
                 result = runMethod.invoke(module, ctx, stringArray);
             }
             switch (result) {
