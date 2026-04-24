@@ -23,6 +23,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
+import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.DataType;
@@ -450,10 +451,13 @@ public abstract class OpTest
                 }
                 return;
             } else {
-                RegisterInfo regTarget = bctx.loadArgument(code, m_nValue1);
+                bctx.loadArgument(code, m_nValue1);
+                if (typeTarget.isJitInterface()) {
+                    code.checkcast(CD_nObj);
+                }
                 bctx.loadCtx(code);
-                code.invokevirtual(regTarget.cd(), "$xvmType", MD_xvmType); // target type
-                bctx.loadTypeConstant(code, typeTest);                      // test type
+                code.invokevirtual(CD_nObj, "$xvmType", MD_xvmType); // target type
+                bctx.loadTypeConstant(code, typeTest);               // test type
             }
         } else {
             RegisterInfo regType = bctx.loadArgument(code, m_nValue2); // nType

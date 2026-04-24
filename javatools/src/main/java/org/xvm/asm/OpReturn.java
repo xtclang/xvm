@@ -250,7 +250,7 @@ public abstract class OpReturn
                         Builder.defaultLoad(code, cd);
                         break;
 
-                    case Specific:
+                    case Specific, Widened:
                         break;
 
                     default:
