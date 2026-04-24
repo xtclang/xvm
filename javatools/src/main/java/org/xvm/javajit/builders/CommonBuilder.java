@@ -2157,21 +2157,29 @@ public class CommonBuilder
     protected void generateCode(MethodTypeDesc md, BuildContext bctx, CodeBuilder code) {
 
         String moduleName = thisId.getModuleConstant().getName();
-        if (Arrays.stream(TEST_SET).anyMatch(name -> {
+        String className  = bctx.className;
+        GenerateStub:
+        if (Arrays.stream(CLASS_WHITE_LIST).anyMatch(name -> {
                 if (name.endsWith("*")) {
                     name = name.substring(0, name.length() - 1);
                     return className.contains(name) || moduleName.contains(name);
                 } else {
                     return className.endsWith(name) || moduleName.endsWith(name);
                 }})) {
+
+                if (Arrays.stream(CLASS_BLACK_LIST).anyMatch(className::endsWith)) {
+                    break GenerateStub;
+                }
+
             bctx.assembleCode(code);
-        } else {
-            if (SKIP_SET.add(bctx.className)) {
-                System.err.println("*** Skipping code gen for " + bctx.className);
-            }
-            defaultLoad(code, md.returnType());
-            addReturn(code, md.returnType());
+            return;
         }
+
+        if (SKIP_SET.add(bctx.className)) {
+            System.err.println("*** Skipping code gen for " + bctx.className);
+        }
+        defaultLoad(code, md.returnType());
+        addReturn(code, md.returnType());
     }
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -2200,18 +2208,18 @@ public class CommonBuilder
     private final static String[] CLASS_WHITE_LIST = new String[] {
         "Test*", "test*",
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
-        "Boolean", "Ordered",
-        "Orderable",
-        "Stringable",
-        "Float*",
+        "Boolean", "Ordered", "Orderable",
         "String",
+        "Stringable",
         "StringBuffer",
+        "Float*",
+        "Array",
+        "List",
+        "TerminalConsole",
 //        "Dec32", "Dec64", // need to change to SingleSlot
 //        "UInt",     // depends on GP_DIVREM
 //        "FPNumber", // depends on Bit support
 //        "Int",      // depends on "switch" implementation
-        "Array",
-        "TerminalConsole",
     };
 
     private final static String[] CLASS_BLACK_LIST = new String[] {

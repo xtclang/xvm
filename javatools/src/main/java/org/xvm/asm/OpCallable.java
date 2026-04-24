@@ -664,12 +664,14 @@ public abstract class OpCallable extends Op {
                 sJitName += ID_NUM + String.valueOf(nDepth);
 
                 bctx.buildSuper(sJitName, nDepth);
+                fInterface = false;
             } else {
-                cdTarget = bctx.builder.ensureClassDesc(idCallee.getType());
+                TypeConstant typeCallee = idCallee.getType();
+                cdTarget   = bctx.builder.ensureClassDesc(typeCallee);
+                fInterface = typeCallee.isJitInterface();
             }
-            jmdCall    = bodySuper.getJitDesc(bctx.builder, bctx.typeInfo.getType());
-            fSpecial   = true;
-            fInterface = false;
+            jmdCall  = bodySuper.getJitDesc(bctx.builder, bctx.typeInfo.getType());
+            fSpecial = true;
             code.aload(0); // super() can only be on "this"
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
             MethodConstant   idMethod   = bctx.getConstant(m_nFunctionId, MethodConstant.class);

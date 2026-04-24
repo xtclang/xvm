@@ -1881,8 +1881,14 @@ public class BuildContext {
             switch (srcFlavor) {
             case Specific:
                 switch (dstFlavor) {
-                case SpecificWithDefault, Widened, WidenedWithDefault:
+                case SpecificWithDefault:
                     // nothing to do
+                    continue;
+
+                case Widened, WidenedWithDefault:
+                    if (srcReg.type().isJitInterface()) {
+                        code.checkcast(CD_nObj);
+                    }
                     continue;
 
                 case NullablePrimitive, NullablePrimitiveWithDefault:
@@ -2993,6 +2999,9 @@ public class BuildContext {
             .dup();
         loadCtx(code);
         referentLoader.run();
+        if (referentType.isJitInterface()) {
+            code.checkcast(CD_nObj);
+        }
         loadTypeConstant(code, referentType);
         Builder.loadBoolean(code, isVar);
         code.invokespecial(cd, INIT_NAME,

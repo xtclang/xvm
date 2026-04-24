@@ -986,6 +986,9 @@ public class UnionTypeConstant
                                 RegisterInfo regTest, TypeConstant typeTest) {
         // o1.$xvmType(ctx).isA(typeCompare)
         regTest.load(code);
+        if (regTest.type().isJitInterface()) {
+            code.checkcast(CD_nObj);
+        }
         bctx.loadCtx(code);
         code.invokevirtual(CD_nObj, "$xvmType", MD_xvmType);
         bctx.loadTypeConstant(code, typeTest);
