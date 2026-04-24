@@ -458,9 +458,11 @@ public abstract class ClassTemplate
             }
 
             try {
+                // upcast is be allowed for interfaces
                 ProxyComposition clzProxy = clzTarget.ensureProxyComposition(typeProxy);
+                boolean          fStrict  = !typeTarget.isInterfaceType();
                 return frame.assignValue(Op.A_STACK,
-                        Proxy.makeHandle(clzProxy, ctxTarget, hTarget, false));
+                        Proxy.makeHandle(clzProxy, ctxTarget, hTarget, fStrict));
             } catch (Throwable e) {
                 return frame.raiseException(
                     "Failed to create a proxy for " + typeTarget.getValueString());
