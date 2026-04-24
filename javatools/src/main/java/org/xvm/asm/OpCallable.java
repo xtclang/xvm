@@ -627,11 +627,11 @@ public abstract class OpCallable extends Op {
         MethodConstant idCtor      = bctx.getConstant(m_nFunctionId, MethodConstant.class);
         assert idCtor.isConstructor();
 
+        ConstantPool    pool        = bctx.pool();;
         ClassStructure  structChild = (ClassStructure) idCtor.getComponent().getParent().getParent();
-        assert structChild.isVirtualChild();
-
-        TypeConstant typeChild = bctx.pool().
-            ensureVirtualChildTypeConstant(typeParent, structChild.getName());
+        TypeConstant    typeChild   = structChild.isVirtualChild()
+                ? pool.ensureVirtualChildTypeConstant(typeParent, structChild.getName())
+                : structChild.getCanonicalType();
 
         bctx.typeMatrix.assign(getAddress(), m_nRetValue, typeChild);
     }
