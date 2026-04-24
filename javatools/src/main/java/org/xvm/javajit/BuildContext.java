@@ -2182,8 +2182,12 @@ public class BuildContext {
      *         "next mates" to this context's type
      */
     public TypeInfo getTypeInfo(TypeConstant type) {
+        if (type.isFormalType()) {
+            return type.ensureTypeInfo();
+        }
+
         TypeConstant thisType = typeInfo.getType().removeAccess();
-        if (type instanceof CastTypeConstant castType &&
+        if (type.equals(thisType) || type instanceof CastTypeConstant castType &&
                 castType.getUnderlyingType2().removeAccess().isEquivalent(thisType)) {
             return typeInfo;
         }
@@ -2193,10 +2197,6 @@ public class BuildContext {
         if (type.isSingleUnderlyingClass(true)) {
             IdentityConstant thisId = thisType.getSingleUnderlyingClass(true);
             IdentityConstant thatId = type.getSingleUnderlyingClass(true);
-
-            if (thisId.equals(thatId)) {
-                return typeInfo;
-            }
 
             if (thatId.isNestMateOf(thisId)) {
                 return type.ensureAccess(Access.PRIVATE).ensureTypeInfo();
@@ -2412,6 +2412,18 @@ public class BuildContext {
                         Builder.unbox(code, pd.type);
                         code.iconst_0();
                     }
+                    break AddTransformation;
+
+                default:
+                    invalid = true;
+                    break AddTransformation;
+                }
+
+            case Widened:
+                switch (dstFlavor) {
+                case Primitive, XvmPrimitive:
+                    builder.generateCheckCast(code, pd.type);
+                    Builder.unbox(code, pd.type);
                     break AddTransformation;
 
                 default:
