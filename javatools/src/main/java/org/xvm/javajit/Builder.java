@@ -1331,6 +1331,15 @@ public abstract class Builder {
             .invokevirtual(Builder.CD_Ctx, "log", MethodTypeDesc.of(CD_void, CD_JavaString));
     }
 
+    /**
+     * TODO: replace with more configurable
+     *
+     * @return true to generate the debug info into the bytecode
+     */
+    public boolean isDebugInfo() {
+        return true;
+    }
+
     // ----- native class names --------------------------------------------------------------------
 
     public static final String N_Array        = "org.xtclang.ecstasy.collections.Array";
