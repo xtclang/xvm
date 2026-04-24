@@ -421,8 +421,10 @@ public class CommonBuilder
             code.labelBinding(startScope);
 
             int ctxSlot = code.allocateLocal(TypeKind.REFERENCE);
-            code.localVariable(ctxSlot, "ctx", CD_Ctx, startScope, endScope)
-                .invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
+            if (isDebugInfo()) {
+                code.localVariable(ctxSlot, "ctx", CD_Ctx, startScope, endScope);
+            }
+            code.invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
                 .astore(0);
 
             // add static field initialization
@@ -542,8 +544,9 @@ public class CommonBuilder
                 Label startScope = code.newLabel();
                 Label endScope   = code.newLabel();
                 code.labelBinding(startScope);
-
-                code.localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, startScope, endScope);
+                if (isDebugInfo()) {
+                    code.localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, startScope, endScope);
+                }
 
                 callSuperInitializer(code, className);
 
@@ -1964,16 +1967,20 @@ public class CommonBuilder
         }
 
         classBuilder.withMethodBody(jitName, md, flags, code -> {
-            Label startScope = code.newLabel();
-            Label endScope   = code.newLabel();
+            Label   startScope = code.newLabel();
+            Label   endScope   = code.newLabel();
+            boolean debugInfo  = isDebugInfo();
 
             code.labelBinding(startScope);
 
             int ctxSlot    = code.parameterSlot(0);
             int extraSlots = 1;
-            code.localVariable(ctxSlot, "$ctx", CD_Ctx, startScope, endScope);
+            int typeSlot   = -1;
 
-            int typeSlot = -1;
+            if (debugInfo) {
+                code.localVariable(ctxSlot, "$ctx", CD_Ctx, startScope, endScope);
+            }
+
             if (hasType) {
                 typeSlot = code.parameterSlot(1);
                 extraSlots++;
@@ -1994,7 +2001,9 @@ public class CommonBuilder
 
                 // step 3: (initializer)
                 thisSlot = code.allocateLocal(TypeKind.REFERENCE);
-                code.localVariable(thisSlot, "thi$", CD_this, startScope, endScope);
+                if (debugInfo) {
+                    code.localVariable(thisSlot, "thi$", CD_this, startScope, endScope);
+                }
                 invokeDefaultConstructor(code, CD_this);
                 code.astore(thisSlot);
 
@@ -2010,7 +2019,9 @@ public class CommonBuilder
             // CtorCtx cctx = ctx.ctorCtx();
 
             int cctxSlot = code.allocateLocal(TypeKind.REFERENCE);
-            code.localVariable(cctxSlot, "cctx", CD_CtorCtx, startScope, endScope);
+            if (debugInfo) {
+                code.localVariable(cctxSlot, "cctx", CD_CtorCtx, startScope, endScope);
+            }
             code.aload(ctxSlot)
                 .invokevirtual(CD_Ctx, "ctorCtx", MethodTypeDesc.of(CD_CtorCtx))
                 .astore(cctxSlot)
@@ -2149,9 +2160,9 @@ public class CommonBuilder
         if (Arrays.stream(TEST_SET).anyMatch(name -> {
                 if (name.endsWith("*")) {
                     name = name.substring(0, name.length() - 1);
-                    return bctx.className.contains(name) || moduleName.contains(name);
+                    return className.contains(name) || moduleName.contains(name);
                 } else {
-                    return bctx.className.endsWith(name) || moduleName.endsWith(name);
+                    return className.endsWith(name) || moduleName.endsWith(name);
                 }})) {
             bctx.assembleCode(code);
         } else {
@@ -2186,7 +2197,7 @@ public class CommonBuilder
         return thisId.getValueString();
     }
 
-    private final static String[] TEST_SET = new String[] {
+    private final static String[] CLASS_WHITE_LIST = new String[] {
         "Test*", "test*",
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
         "Boolean", "Ordered",
@@ -2202,5 +2213,9 @@ public class CommonBuilder
         "Array",
         "TerminalConsole",
     };
+
+    private final static String[] CLASS_BLACK_LIST = new String[] {
+    };
+
     private final static HashSet<String> SKIP_SET = new HashSet<>();
 }

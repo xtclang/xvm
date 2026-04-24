@@ -630,13 +630,17 @@ public class BuildContext {
      * Prepare the compilation.
      */
     public void enterMethod(CodeBuilder code) {
+        boolean debugInfo = builder.isDebugInfo();
+
         lineNumber = 1; // XVM ops are 0 based; Java is 1-based
         scope      = new Scope(this, code);
         code
             .lineNumber(methodStruct.getSourceLineNumber() + 1)
-            .labelBinding(scope.startLabel)
-            .localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, scope.startLabel, scope.endLabel)
-            ;
+            .labelBinding(scope.startLabel);
+
+        if (debugInfo) {
+            code.localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, scope.startLabel, scope.endLabel);
+        }
 
         int          extraArgs = methodDesc.getImplicitParamCount(); // account for $ctx, $cctx, thi$
         TypeConstant thisType  = typeInfo.getType();
@@ -664,7 +668,9 @@ public class BuildContext {
                 type = type.resolveGenerics(pool(), thisType);
             }
 
-            code.localVariable(slot, name, paramDesc.cd, scope.startLabel, scope.endLabel);
+            if (debugInfo) {
+                code.localVariable(slot, name, paramDesc.cd, scope.startLabel, scope.endLabel);
+            }
             scope.topReg = Math.max(scope.topReg, varIndex + 1);
 
             JitFlavor flavor      = paramDesc.flavor;
@@ -1274,8 +1280,8 @@ public class BuildContext {
         }
 
         case Op.A_CLASS: {
-            // TODO:
-            Builder.throwException(code, CD_Exception, "Not implemented: this:class");
+            // TODO: this:class will NPE for now
+            code.aconst_null();
             return new SingleSlot(typeInfo.getIdentity().getValueType(pool(), null), Specific, CD_Class, "");
         }
 
@@ -1437,8 +1443,9 @@ public class BuildContext {
             name = name.replace('#', '$').replace('.', '$');
         }
 
-        Label        varStart = code.newLabel();
-        JitTypeDesc  jtd      = type.getJitDesc(builder);
+        boolean      debugInfo = builder.isDebugInfo();
+        Label        varStart  = code.newLabel();
+        JitTypeDesc  jtd       = type.getJitDesc(builder);
         RegisterInfo reg;
 
         if (isRef(regId)) {
@@ -1448,7 +1455,9 @@ public class BuildContext {
             reg = switch (jtd.flavor) {
                 case Specific, Widened, Primitive -> {
                     int slotPrime = scope.allocateLocal(regId, jtd.cd);
-                    code.localVariable(slotPrime, name, jtd.cd, varStart, scope.endLabel);
+                    if (debugInfo) {
+                        code.localVariable(slotPrime, name, jtd.cd, varStart, scope.endLabel);
+                    }
 
                     yield new SingleSlot(regId, slotPrime, jtd.flavor, type, jtd.cd, name);
                 }
@@ -1456,8 +1465,10 @@ public class BuildContext {
                     int slotPrime = scope.allocateLocal(regId, jtd.cd);
                     int slotExt   = scope.allocateLocal(regId, TypeKind.BOOLEAN);
 
-                    code.localVariable(slotPrime, name, jtd.cd, varStart, scope.endLabel);
-                    code.localVariable(slotExt,   name+EXT, CD_boolean, varStart, scope.endLabel);
+                    if (debugInfo) {
+                        code.localVariable(slotPrime, name, jtd.cd, varStart, scope.endLabel);
+                        code.localVariable(slotExt,   name+EXT, CD_boolean, varStart, scope.endLabel);
+                    }
 
                     yield new ExtendedSlot(this, regId, slotPrime, slotExt, NullablePrimitive,
                         type, jtd.cd, name);
@@ -1469,7 +1480,9 @@ public class BuildContext {
                     int[] slots = new int[cds.length];
                     for (int i = 0; i < cds.length; i++) {
                         slots[i] = scope.allocateLocal(regId, cds[i]);
-                        code.localVariable(slots[i], name + "$" + i, cds[i], varStart, scope.endLabel);
+                        if (debugInfo) {
+                            code.localVariable(slots[i], name + "$" + i, cds[i], varStart, scope.endLabel);
+                        }
                     }
                     yield new MultiSlot(this, regId, slots, XvmPrimitive, type, jtd.cd, cds, name);
 
@@ -1481,10 +1494,14 @@ public class BuildContext {
                     int[] slots = new int[cds.length];
                     for (int i = 0; i < cds.length; i++) {
                         slots[i] = scope.allocateLocal(regId, cds[i]);
-                        code.localVariable(slots[i], name + "$" + i, cds[i], varStart, scope.endLabel);
+                        if (debugInfo) {
+                            code.localVariable(slots[i], name + "$" + i, cds[i], varStart, scope.endLabel);
+                        }
                     }
                     int slotExt = scope.allocateLocal(regId, TypeKind.BOOLEAN);
-                    code.localVariable(slotExt, name+EXT, CD_boolean, varStart, scope.endLabel);
+                    if (debugInfo) {
+                        code.localVariable(slotExt, name+EXT, CD_boolean, varStart, scope.endLabel);
+                    }
                     yield new MultiSlot(this, regId, slots, slotExt, NullableXvmPrimitive,
                             type, jtd.cd, cds, name);
                 }
@@ -1732,8 +1749,10 @@ public class BuildContext {
                 ClassDesc    resourceCD = builder.ensureClassDesc(resourceType);
                 int          slot       = scope.allocateLocal(regId, TypeKind.REFERENCE);
                 RegisterInfo reg        = new SingleSlot(regId, slot, Specific, resourceType,
-                    resourceCD, name);
-                code.localVariable(slot, name, resourceCD, varStart, scope.endLabel);
+                                            resourceCD, name);
+                if (builder.isDebugInfo()) {
+                    code.localVariable(slot, name, resourceCD, varStart, scope.endLabel);
+                }
 
                 registerInfos.put(regId, reg);
 
@@ -2856,7 +2875,9 @@ public class BuildContext {
      */
     public int storeTempValue(CodeBuilder code, ClassDesc cd) {
         int slot = scope.allocateJavaSlot(cd);
-        code.localVariable(slot, "temp$" + slot, cd, scope.startLabel, scope.endLabel);
+        if (builder.isDebugInfo()) {
+            code.localVariable(slot, "temp$" + slot, cd, scope.startLabel, scope.endLabel);
+        }
         Builder.store(code, cd, slot);
         return slot;
     }
