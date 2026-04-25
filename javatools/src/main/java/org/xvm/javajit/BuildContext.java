@@ -108,15 +108,18 @@ public class BuildContext {
     /**
      * Construct {@link BuildContext} for a "top" method in the call chain.
      */
-    public BuildContext(Builder builder, String className, TypeInfo typeInfo, MethodInfo methodInfo) {
+    public BuildContext(Builder builder, String className, TypeInfo typeInfo,
+                        TypeInfo formalInfo, MethodInfo methodInfo) {
         this.builder       = builder;
         this.typeSystem    = builder.typeSystem;
         this.className     = className;
         this.typeInfo      = typeInfo;
+        this.thisType      = typeInfo.getType();
+        this.formalInfo    = formalInfo;
         this.callChain     = methodInfo.getChain();
         this.methodStruct  = callChain[0].getMethodStructure();
         this.callDepth     = 0;
-        this.methodDesc    = methodInfo.getJitDesc(builder, typeInfo.getType());
+        this.methodDesc    = methodInfo.getJitDesc(builder);
         this.methodJitName = methodInfo.ensureJitMethodName(typeSystem);
         this.isFunction    = methodInfo.isFunction();
         this.isConstructor = methodInfo.isCtorOrValidator();
@@ -127,12 +130,14 @@ public class BuildContext {
     /**
      * Construct {@link BuildContext} for a property accessor.
      */
-    public BuildContext(Builder builder, String className, TypeInfo typeInfo, PropertyInfo propInfo,
-                        boolean isGetter) {
+    public BuildContext(Builder builder, String className, TypeInfo typeInfo, TypeInfo formalInfo,
+                        PropertyInfo propInfo, boolean isGetter) {
         this.builder       = builder;
         this.typeSystem    = builder.typeSystem;
         this.className     = className;
         this.typeInfo      = typeInfo;
+        this.thisType      = typeInfo.getType();
+        this.formalInfo    = formalInfo;
         this.callDepth     = 0;
         this.callChain     = isGetter
                 ? propInfo.ensureOptimizedGetChain(typeInfo, null)
@@ -160,10 +165,12 @@ public class BuildContext {
         this.typeSystem    = bctx.builder.typeSystem;
         this.className     = bctx.className;
         this.typeInfo      = bctx.typeInfo;
+        this.thisType      = bctx.thisType;
+        this.formalInfo    = bctx.formalInfo;
         this.callChain     = bctx.callChain;
         this.methodStruct  = body.getMethodStructure();
         this.callDepth     = callDepth;
-        this.methodDesc    = body.getJitDesc(builder, typeInfo.getType());
+        this.methodDesc    = body.getJitDesc(builder, thisType);
         this.methodJitName = jitName;
         this.isFunction    = bctx.isFunction;
         this.isConstructor = bctx.isConstructor;
@@ -179,10 +186,12 @@ public class BuildContext {
         this.typeSystem    = bctx.builder.typeSystem;
         this.className     = bctx.className;
         this.typeInfo      = bctx.typeInfo;
+        this.thisType      = bctx.thisType;
+        this.formalInfo    = bctx.formalInfo;
         this.callChain     = bctx.callChain;
         this.methodStruct  = body.getMethodStructure();
         this.callDepth     = 0;
-        this.methodDesc    = body.getJitDesc(builder, typeInfo.getType());
+        this.methodDesc    = body.getJitDesc(builder, thisType);
         this.methodJitName = jitName;
         this.isFunction    = bctx.isFunction;
         this.isConstructor = bctx.isConstructor;
@@ -193,7 +202,9 @@ public class BuildContext {
     public final Builder         builder;
     public final TypeSystem      typeSystem;
     public final String          className;
-    public final TypeInfo        typeInfo;
+    public final TypeInfo        typeInfo;      // PRIVATE
+    public final TypeConstant    thisType;      // PRIVATE
+    public final TypeInfo        formalInfo;
     public final int             callDepth;
     public final MethodBody[]    callChain;
     public final MethodStructure methodStruct;
@@ -264,7 +275,7 @@ public class BuildContext {
      * @return the {@link ClassDesc} for this context's {@link #typeInfo}
      */
     public ClassDesc cd() {
-        return JitTypeDesc.getJitClass(builder, typeInfo.getType());
+        return JitTypeDesc.getJitClass(builder, thisType);
     }
 
     /**
@@ -468,14 +479,13 @@ public class BuildContext {
             } else {
                 // TODO: remove
                 System.err.println("Dead code: " + Op.toName(op.getOpCode()) + " at " + this +
-                    " for " + typeInfo.getType().removeAccess().getValueString());
+                    " for " + thisType.removeAccess().getValueString());
             }
         }
 
         if (refs == null) {
             refs = Collections.emptyMap();
         } else {
-            TypeConstant thisType = typeInfo.getType();
             for (Map.Entry<Integer, Boolean> entry : refs.entrySet()) {
                 int regId = entry.getKey();
                 if (regId < 0) {
@@ -622,8 +632,7 @@ public class BuildContext {
      * Get the type for the specified argument index.
      */
     public TypeConstant getTypeConstant(int argId) {
-        return getConstant(argId, TypeConstant.class).
-                resolveGenerics(pool(), typeInfo.getType());
+        return getConstant(argId, TypeConstant.class).resolveGenerics(pool(), thisType);
     }
 
     /**
@@ -643,11 +652,10 @@ public class BuildContext {
         }
 
         int          extraArgs = methodDesc.getImplicitParamCount(); // account for $ctx, $cctx, thi$
-        TypeConstant thisType  = typeInfo.getType();
         ClassDesc    CD_this   = builder.ensureClassDesc(thisType);
         if (isConstructor) {
-            thisType = thisType.ensureAccess(Access.STRUCT);
-            registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, extraArgs-1, Specific, thisType,
+            TypeConstant structType = thisType.ensureAccess(Access.STRUCT);
+            registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, extraArgs-1, Specific, structType,
                 CD_this, "thi$"));
         } else if (!isFunction) {
             registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, 0, Specific, thisType,
@@ -997,13 +1005,13 @@ public class BuildContext {
             } else {
                 type = constant.getType();
                 if (type.containsFormalType(true)) {
-                    type = type.resolveGenerics(pool(), typeInfo.getType());
+                    type = type.resolveGenerics(pool(), thisType);
                 }
 
                 if (constant instanceof PropertyConstant propId) {
                     PropertyInfo propInfo = typeInfo.findProperty(propId);
                     if (propInfo != null) {
-                        type = propInfo.inferImmutable(typeInfo.getType());
+                        type = propInfo.inferImmutable(thisType);
                     }
                 }
 
@@ -1148,7 +1156,7 @@ public class BuildContext {
             ? new SingleSlot(regId, -2, Specific, type, cd, name)
             : registerInfos.computeIfAbsent(regId, ix -> {
                 TypeConstant resolvedType = type.containsFormalType(true)
-                    ? type.resolveGenerics(pool(), typeInfo.getType())
+                    ? type.resolveGenerics(pool(), thisType)
                     : type;
 
                 JitTypeDesc jitDesc = resolvedType.getJitDesc(builder);
@@ -1314,7 +1322,7 @@ public class BuildContext {
             containerCD = builder.ensureClassDesc(containerId.getType());
         }
 
-        JitMethodDesc               jmd  = bodySuper.getJitDesc(builder, typeInfo.getType());
+        JitMethodDesc               jmd  = bodySuper.getJitDesc(builder, thisType);
         DirectMethodHandleDesc.Kind kind = DirectMethodHandleDesc.Kind.SPECIAL;
 
         DirectMethodHandleDesc stdMD = MethodHandleDesc.ofMethod(kind,
@@ -1391,7 +1399,7 @@ public class BuildContext {
     public void storeValue(CodeBuilder code, int regId, TypeConstant type) {
         if (regId <= Op.CONSTANT_OFFSET) {
             TypeConstant resolvedType = type.containsFormalType(true)
-                    ? type.resolveGenerics(pool(), typeInfo.getType())
+                    ? type.resolveGenerics(pool(), thisType)
                     : type;
 
             JitTypeDesc jitDesc = resolvedType.getJitDesc(builder);
@@ -1434,7 +1442,7 @@ public class BuildContext {
         }
 
         if (type.containsFormalType(true)) {
-            type = type.resolveGenerics(pool(), typeInfo.getType());
+            type = type.resolveGenerics(pool(), thisType);
         }
 
         if (name.isEmpty()) {
@@ -1723,7 +1731,7 @@ public class BuildContext {
     public RegisterInfo introduceRef(CodeBuilder code, int regId, TypeConstant type, String name,
                                     boolean isVar) {
         if (type.containsFormalType(true)) {
-            type = type.resolveGenerics(pool(), typeInfo.getType());
+            type = type.resolveGenerics(pool(), thisType);
         }
 
         if (type instanceof AnnotatedTypeConstant annoType) {
@@ -2186,16 +2194,16 @@ public class BuildContext {
             return type.ensureTypeInfo();
         }
 
-        TypeConstant thisType = typeInfo.getType().removeAccess();
-        if (type.equals(thisType) || type instanceof CastTypeConstant castType &&
-                castType.getUnderlyingType2().removeAccess().isEquivalent(thisType)) {
+        TypeConstant publicType = thisType.removeAccess();
+        if (type.equals(publicType) || type instanceof CastTypeConstant castType &&
+                castType.getUnderlyingType2().removeAccess().isEquivalent(publicType)) {
             return typeInfo;
         }
 
-        assert thisType.isSingleUnderlyingClass(true);
+        assert publicType.isSingleUnderlyingClass(true);
 
         if (type.isSingleUnderlyingClass(true)) {
-            IdentityConstant thisId = thisType.getSingleUnderlyingClass(true);
+            IdentityConstant thisId = publicType.getSingleUnderlyingClass(true);
             IdentityConstant thatId = type.getSingleUnderlyingClass(true);
 
             if (thatId.isNestMateOf(thisId)) {
@@ -2203,7 +2211,7 @@ public class BuildContext {
             }
         }
 
-        return type.isEquivalent(thisType)
+        return type.isEquivalent(publicType)
                 ? type.ensureAccess(Access.PROTECTED).ensureTypeInfo()
                 : type.ensureTypeInfo();
     }

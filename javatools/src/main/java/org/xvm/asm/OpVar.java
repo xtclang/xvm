@@ -231,7 +231,7 @@ public abstract class OpVar
             };
 
             if (typeVar.containsGenericType(true)) {
-                typeVar = typeVar.resolveGenerics(bctx.pool(), bctx.typeInfo.getType());
+                typeVar = typeVar.resolveGenerics(bctx.pool(), bctx.thisType);
             }
             bctx.typeMatrix.declare(getAddress(), m_nVar, typeVar);
         } else {

@@ -75,20 +75,26 @@ public class CommonBuilder
     public CommonBuilder(TypeSystem typeSystem, TypeConstant type) {
         super(typeSystem);
 
-        assert type.isSingleUnderlyingClass(true);
+        assert type.isSingleUnderlyingClass(true) &&
+              !type.containsFormalType(true) &&
+              !type.isAccessSpecified();
 
-        ConstantPool pool = typeSystem.pool();
-
-        this.typeInfo    = pool.ensureAccessTypeConstant(type, Access.PRIVATE).ensureTypeInfo();
-        this.structInfo  = pool.ensureAccessTypeConstant(type, Access.STRUCT).ensureTypeInfo();
+        this.thisType    = type.ensureAccess(Access.PRIVATE);
+        this.typeInfo    = thisType.ensureTypeInfo();
+        this.structInfo  = thisType.ensureAccess(Access.STRUCT).ensureTypeInfo();
         this.classStruct = typeInfo.getClassStructure();
+        this.formalType  = classStruct.getFormalType().ensureAccess(Access.PRIVATE);
+        this.formalInfo  = formalType.ensureTypeInfo();
         this.thisId      = classStruct.getIdentityConstant();
         this.isInterface = classStruct.getFormat() == Format.INTERFACE;
     }
 
-    protected final TypeInfo         typeInfo;
+    protected final TypeConstant     thisType;      // PRIVATE
+    protected final TypeInfo         typeInfo;      // PRIVATE
     protected final TypeInfo         structInfo;
     protected final ClassStructure   classStruct;
+    protected final TypeConstant     formalType;    // PRIVATE
+    protected final TypeInfo         formalInfo;    // PRIVATE
     protected final IdentityConstant thisId;
     protected final boolean          isInterface;
 
@@ -130,7 +136,7 @@ public class CommonBuilder
 
         // prime the type registry with "this" type
         Map<TypeConstant, Integer> types = new HashMap<>();
-        types.put(typeInfo.getType(), 0);
+        types.put(thisType, 0);
         typeConstants.put(className, types);
 
         if (assembleImplClass(className, classBuilder)) {
@@ -151,8 +157,8 @@ public class CommonBuilder
     }
 
     @Override
-    protected TypeConstant getThisType() {
-        return typeInfo.getType();
+    public TypeConstant getThisType() {
+        return thisType;
     }
 
     @Override
@@ -257,7 +263,7 @@ public class CommonBuilder
 
             default:
                 // TODO: support for mixin, annotations, etc
-                throw new RuntimeException("Not implemented " + typeInfo.getType());
+                throw new RuntimeException("Not implemented " + thisType);
         }
         classBuilder.withFlags(flags);
 
@@ -1139,7 +1145,7 @@ public class CommonBuilder
                 return;
             }
 
-            JitMethodDesc jmDesc = method.getJitDesc(this, typeInfo.getType());
+            JitMethodDesc jmDesc = method.getJitDesc(this);
             assembleMethod(className, classBuilder, method, jitName, jmDesc);
 
             if (method.isCtorOrValidator() && !typeInfo.isAbstract()) {
@@ -1575,8 +1581,8 @@ public class CommonBuilder
      */
     protected void assembleCapRouting(String className, ClassBuilder classBuilder,
                                       MethodInfo srcMethod, MethodInfo dstMethod) {
-        JitMethodDesc jmdSrc = srcMethod.getJitDesc(this, typeInfo.getType());
-        JitMethodDesc jmdDst = dstMethod.getJitDesc(this, typeInfo.getType());
+        JitMethodDesc jmdSrc = srcMethod.getJitDesc(this);
+        JitMethodDesc jmdDst = dstMethod.getJitDesc(this);
 
         String srcName = srcMethod.ensureJitMethodName(typeSystem);
         String dstName = dstMethod.ensureJitMethodName(typeSystem);
@@ -1639,9 +1645,9 @@ public class CommonBuilder
                 return;
             }
 
-            JitParamDesc[] dstReturns = jmdDst.standardReturns;
-            TypeConstant   srcRetType = srcReturns[0].type;
-            TypeConstant   dstRetType = dstReturns[0].type;
+//            JitParamDesc[] dstReturns = jmdDst.standardReturns;
+//            TypeConstant   srcRetType = srcReturns[0].type;
+//            TypeConstant   dstRetType = dstReturns[0].type;
 
             // the natural return is at the top of the stack now;
             // TODO TEMPORARY: assume the same Ctx positions for returns
@@ -1764,14 +1770,13 @@ public class CommonBuilder
     protected void assemblePropertyDelegation(String className, ClassBuilder classBuilder,
                                               MethodInfo srcMethod, PropertyConstant propDelegate) {
         String        srcName   = srcMethod.ensureJitMethodName(typeSystem);
-        JitMethodDesc jmd       = srcMethod.getJitDesc(this, typeInfo.getType());
+        JitMethodDesc jmd       = srcMethod.getJitDesc(this);
         PropertyInfo  propInfo  = typeInfo.findProperty(propDelegate);
         TypeConstant  dstType   = propInfo.getType();
         TypeInfo      dstInfo   = dstType.ensureTypeInfo();
         MethodInfo    dstMethod = dstInfo.getMethodById(srcMethod.getIdentity());
         String        dstName   = dstMethod.ensureJitMethodName(typeSystem);
 
-        assert srcMethod.getJitDesc(this, typeInfo.getType()).equals(jmd);
         assert !srcName.equals(dstName);
 
         int extraCount = jmd.getImplicitParamCount();
@@ -1791,7 +1796,7 @@ public class CommonBuilder
                                     JitParamDesc[] params, JitParamDesc[] returns) {
         classBuilder.withMethodBody(srcName, md, ClassFile.ACC_PUBLIC, code -> {
             code.aload(0); // this
-            loadProperty(code, typeInfo.getType(), propDelegate, /*don't unbox*/ false);
+            loadProperty(code, thisType, propDelegate, /*don't unbox*/ false);
 
             TypeConstant dstType = dstMethod.getJitIdentity().getNamespace().getType();
 
@@ -2030,7 +2035,7 @@ public class CommonBuilder
             // step 6: call the constructor
             // construct$17(ctx, cctx, [type], thi$, x, y, z);
             String        ctorName = constructor.ensureJitMethodName(typeSystem);
-            JitMethodDesc ctorDesc = constructor.getJitDesc(this, typeInfo.getType());
+            JitMethodDesc ctorDesc = constructor.getJitDesc(this);
 
             code.aload(ctxSlot)
                 .aload(cctxSlot)
@@ -2081,7 +2086,8 @@ public class CommonBuilder
         classBuilder.withMethod(jitName, md, flags,
             methodBuilder -> {
                 if (!isAbstract) {
-                    BuildContext bctx = new BuildContext(this, className, typeInfo, prop, isGetter);
+                    BuildContext bctx =
+                        new BuildContext(this, className, typeInfo, formalInfo, prop, isGetter);
                     methodBuilder.withCode(code -> generateCode(md, bctx, code));
                 }
             }
@@ -2121,7 +2127,7 @@ public class CommonBuilder
             flags |= ClassFile.ACC_STATIC;
         }
 
-        BuildContext bctx = new BuildContext(this, className, typeInfo, method);
+        BuildContext bctx = new BuildContext(this, className, typeInfo, formalInfo, method);
 
         classBuilder.withMethod(jitName, md, flags, methodBuilder -> {
             if (!method.isAbstract()) {
@@ -2214,6 +2220,8 @@ public class CommonBuilder
         "StringBuffer",
         "Float*",
         "Array",
+        "Iterable",
+//        "Iterator",
         "List",
         "TerminalConsole",
 //        "Dec32", "Dec64", // need to change to SingleSlot

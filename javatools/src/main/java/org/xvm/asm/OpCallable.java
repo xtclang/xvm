@@ -670,7 +670,7 @@ public abstract class OpCallable extends Op {
                 cdTarget   = bctx.builder.ensureClassDesc(typeCallee);
                 fInterface = typeCallee.isJitInterface();
             }
-            jmdCall  = bodySuper.getJitDesc(bctx.builder, bctx.typeInfo.getType());
+            jmdCall  = bodySuper.getJitDesc(bctx.builder, bctx.thisType);
             fSpecial = true;
             code.aload(0); // super() can only be on "this"
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
@@ -800,7 +800,7 @@ public abstract class OpCallable extends Op {
         String    sJitCtor;
         if (infoTarget.getFormat() == Format.MIXIN) {
             cdTarget   = ClassDesc.of(bctx.className);
-            typeTarget = bctx.typeInfo.getType();
+            typeTarget = bctx.thisType;
             sJitCtor   = idTarget.getName() + "$" + infoCtor.ensureJitMethodName(bctx.typeSystem);
 
             bctx.buildMethod(sJitCtor, infoCtor.getHead());

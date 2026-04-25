@@ -79,7 +79,7 @@ public class EnumBuilder extends CommonBuilder {
         TypeInfo          typeInfo = builder.typeInfo;
         SignatureConstant eqSig    = builder.pool().sigEquals();
         MethodInfo        eqMethod = typeInfo.getMethodBySignature(eqSig);
-        JitMethodDesc     eqJmd    = eqMethod.getJitDesc(builder, typeInfo.getType());
+        JitMethodDesc     eqJmd    = eqMethod.getJitDesc(builder);
 
         assert eqMethod != null;
 
@@ -88,7 +88,7 @@ public class EnumBuilder extends CommonBuilder {
 
         SignatureConstant cmpSig    = builder.pool().sigCompare();
         MethodInfo        cmpMethod = typeInfo.getMethodBySignature(cmpSig);
-        JitMethodDesc     cmpJmd    = cmpMethod.getJitDesc(builder, typeInfo.getType());
+        JitMethodDesc     cmpJmd    = cmpMethod.getJitDesc(builder);
 
         assert cmpMethod != null;
 

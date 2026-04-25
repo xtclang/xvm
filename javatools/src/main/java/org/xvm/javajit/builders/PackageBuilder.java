@@ -42,7 +42,7 @@ public class PackageBuilder
         // super($ctx, type);
         code.aload(0)
             .aload(code.parameterSlot(0));
-        loadTypeConstant(code, className, typeInfo.getType());
+        loadTypeConstant(code, className, thisType);
         code.invokespecial(getSuperCD(), INIT_NAME,
                 MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant));
     }
