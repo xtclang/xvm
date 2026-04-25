@@ -47,7 +47,7 @@ mockito = "5.23.0"
 # Lang tooling - Kotlin & formatting
 # =============================================================================
 # Everything below is only used when includeBuildLang=true.
-lang-kotlin = "2.3.20"
+lang-kotlin = "2.3.21"
 lang-kotlinx-serialization = "1.10.0"
 lang-ktlint = "14.2.0"
 lang-ktlint-engine = "1.8.0"
