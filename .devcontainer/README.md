@@ -11,30 +11,30 @@ This devcontainer provides a complete development environment for the Ecstasy pr
 
 ## What's Included
 
-- **XVM Runtime**: Complete XDK with `xtc` (compiler) and `xec` (executor)
+- **XDK**: Ecstasy distribution with the `xtc` unified CLI (and the lower-level `xcc` compiler / `xec` runner launchers)
 - **Java Runtime**: Optimized JRE for running Ecstasy programs
 - **Git**: Version control tools
 - **GitHub CLI**: For interacting with GitHub repositories
 
 ## Available Tools
 
-- `xtc` - Ecstasy compiler
-- `xec` - Ecstasy program executor
+- `xtc` - Ecstasy unified CLI (`xtc init`, `xtc build`, `xtc run`, `xtc test`, `xtc disass`); see [doc/xtc-cli.md](../doc/xtc-cli.md) for the full reference
+- `xcc` - Ecstasy compiler (equivalent to `xtc build`)
+- `xec` - Ecstasy module runner (equivalent to `xtc run`)
 - `git` - Version control
 - `gh`  - GitHub CLI
 
 ## Example Usage
 
 ```bash
-# Compile an XTC program
-xtc hello.x
+# Compile an Ecstasy module
+xtc build hello.x          # or: xcc hello.x
 
-# Run the compiled program
-xec hello
+# Run the compiled module
+xtc run hello              # or: xec hello
 
 # Check versions
 xtc --version
-xec --version
 ```
 
 ## Container Details
