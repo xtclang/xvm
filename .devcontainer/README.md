@@ -26,16 +26,26 @@ This devcontainer provides a complete development environment for the Ecstasy pr
 
 ## Example Usage
 
+Starting from an empty workspace:
+
 ```bash
+# Scaffold a new project (default type is `application`)
+xtc init hello
+
 # Compile an Ecstasy module
 xtc build hello.x          # or: xcc hello.x
 
 # Run the compiled module
 xtc run hello              # or: xec hello
 
+# Run tests in the module (uses xunit)
+xtc test hello
+
 # Check versions
 xtc --version
 ```
+
+See [doc/xtc-cli.md](../doc/xtc-cli.md) for the full set of `xtc` subcommands and options.
 
 ## Container Details
 
