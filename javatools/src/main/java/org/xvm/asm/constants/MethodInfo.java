@@ -1250,7 +1250,14 @@ public class MethodInfo
     }
 
     /**
-     * @return the JitMethodDesc
+     * @return the JitMethodDesc for this method within the builder's type
+     */
+    public JitMethodDesc getJitDesc(Builder builder) {
+        return getJitDesc(builder, builder.getThisType());
+    }
+
+    /**
+     * @return the JitMethodDesc for this method within the specified container type
      */
     public JitMethodDesc getJitDesc(Builder builder, TypeConstant typeContainer) {
         MethodBody head = getHead();

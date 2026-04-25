@@ -66,9 +66,9 @@ public class AugmentingBuilder extends CommonBuilder {
         assembleImplInterfaces(classBuilder);
 
         // if there is any native Exception, we need to generate the "$createJavaException" method
-        TypeConstant type        = typeInfo.getType();
+        TypeConstant type        = thisType.removeAccess();
         TypeConstant T_EXCEPTION = type.getConstantPool().typeException();
-        if (type.isA(T_EXCEPTION) && !type.removeAccess().equals(T_EXCEPTION)) {
+        if (type.isA(T_EXCEPTION) && !type.equals(T_EXCEPTION)) {
             new ExceptionBuilder(typeSystem, type).assembleCreateException(className, classBuilder);
         }
 
@@ -204,14 +204,14 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     public ClassDesc ensureClassDesc(TypeConstant type) {
-        return type.removeAutoNarrowing().removeAccess().equals(typeInfo.getType().removeAccess())
+        return type.removeAutoNarrowing().removeAccess().equals(thisType.removeAccess())
             ? model.thisClass().asSymbol()
             : super.ensureClassDesc(type);
     }
 
     @Override
     public String ensureJitClassName(TypeConstant type) {
-        return type.removeAutoNarrowing().removeAccess().equals(typeInfo.getType().removeAccess())
+        return type.removeAutoNarrowing().removeAccess().equals(thisType.removeAccess())
             ? model.thisClass().asInternalName().replace('/', '.')
             : super.ensureJitClassName(type);
     }

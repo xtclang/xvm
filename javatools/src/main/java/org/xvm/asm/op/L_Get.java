@@ -111,10 +111,9 @@ public class L_Get
 
     @Override
     public void computeTypes(BuildContext bctx) {
-        TypeConstant     typeTarget = bctx.typeInfo.getType();
-        PropertyConstant idProp     = bctx.getConstant(m_nPropId, PropertyConstant.class);
-        PropertyInfo     propInfo   = idProp.getPropertyInfo(typeTarget);
-        TypeConstant     typeProp   = propInfo.getType();
+        PropertyConstant idProp   = bctx.getConstant(m_nPropId, PropertyConstant.class);
+        PropertyInfo     propInfo = idProp.getPropertyInfo(bctx.thisType);
+        TypeConstant     typeProp = propInfo.getType();
 
         bctx.typeMatrix.assign(getAddress(), m_nRetValue, typeProp);
     }

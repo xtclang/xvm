@@ -76,7 +76,7 @@ public abstract class Builder {
     /**
      * @return TypeConstant for "this" type
      */
-    protected TypeConstant getThisType() {
+    public TypeConstant getThisType() {
         throw new UnsupportedOperationException();
     }
 
@@ -319,7 +319,7 @@ public abstract class Builder {
             }
 
             // 2) create the MethodHandle(s)
-            TypeConstant  containerType = bctx.typeInfo.getType();
+            TypeConstant  containerType = bctx.thisType;
             ClassDesc     containerCD   = ClassDesc.of(bctx.className);
             JitMethodDesc jmd           = body.getJitDesc(this, containerType);
             boolean       isFunction    = body.getMethodStructure().isFunction();

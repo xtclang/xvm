@@ -873,7 +873,9 @@ public class ParameterizedTypeConstant
                 TypeConstant   typeConstraint = entryParam.getValue();
 
                 // drop the actual type down to the constraint
-                if (!typeConstraint.equals(typeOriginal)) {
+                if (typeConstraint.isFormalTypeSequence()) {
+                    aconstCanonical[i] = pool.typeObject();
+                } else if (!typeConstraint.equals(typeOriginal)) {
                     if (!fDiff) {
                         aconstCanonical = aconstCanonical.clone();
                         fDiff    = true;

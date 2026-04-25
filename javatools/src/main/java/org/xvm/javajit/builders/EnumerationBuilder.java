@@ -40,7 +40,7 @@ public class EnumerationBuilder extends CommonBuilder {
         PropertyInfo  prop       = typeInfo.findProperty("names");
         String        getterName = prop.ensureGetterJitMethodName(typeSystem);
         JitMethodDesc jmDesc     = prop.getGetterJitDesc(this);
-        TypeConstant  enumType   = typeInfo.getType().getParamType(0);
+        TypeConstant  enumType   = thisType.getParamType(0);
         ClassDesc     cdEnum     = ensureClassDesc(enumType);
 
         classBuilder.withMethodBody(getterName, jmDesc.standardMD, ClassFile.ACC_PUBLIC, code ->
