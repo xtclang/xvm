@@ -108,7 +108,9 @@ public abstract class LauncherOptions {
     private static final Options DISASSEMBLER_OPTIONS = copyOptions(COMMON_OPTIONS)
         .addOption(builder().longOpt("files").desc("List all files embedded in the module").get())
         .addOption(builder().longOpt("findfile").argName("file").hasArg()
-            .desc("File to search for in the module").get());
+            .desc("File to search for in the module").get())
+        .addOption(builder().longOpt("module-name-only")
+            .desc("Print only the fully qualified name of the module, then exit").get());
 
     /**
      * Apache Commons CLI Options schema for the initializer.
@@ -1524,6 +1526,10 @@ public abstract class LauncherOptions {
             return optionValue("findfile").map(File::new);
         }
 
+        public boolean isModuleNameOnly() {
+            return hasOption("module-name-only");
+        }
+
         @Override
         public String[] toCommandLine() {
             final List<String> args = new ArrayList<>();
@@ -1532,6 +1538,9 @@ public abstract class LauncherOptions {
                 args.add("--files");
             }
             getFindFile().ifPresent(findFile -> args.addAll(List.of("--findfile", findFile.getPath())));
+            if (isModuleNameOnly()) {
+                args.add("--module-name-only");
+            }
             getTarget().ifPresent(target -> args.add(target.getPath()));
             return args.toArray(String[]::new);
         }
@@ -1590,6 +1599,26 @@ public abstract class LauncherOptions {
             @SuppressWarnings("unused")
             public Builder findEmbeddedFile(final String file) {
                 return findEmbeddedFile(new File(file));
+            }
+
+            /**
+             * Print only the fully qualified module name, then exit.
+             */
+            @SuppressWarnings("unused")
+            public Builder moduleNameOnly() {
+                return moduleNameOnly(true);
+            }
+
+            /**
+             * Print only the fully qualified module name, then exit.
+             *
+             * @param only true to print only the module name, false otherwise
+             */
+            public Builder moduleNameOnly(final boolean only) {
+                if (only) {
+                    args.add("--module-name-only");
+                }
+                return this;
             }
 
             /**
