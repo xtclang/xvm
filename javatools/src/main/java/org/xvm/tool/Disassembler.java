@@ -18,6 +18,7 @@ import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.FSNodeConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -79,7 +80,9 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
     protected void validateOptions() {
         options().getTarget().ifPresentOrElse(
             file -> {
-                if (!file.exists()) {
+                // .xtc targets are file paths and must exist on disk; bare module names are
+                // resolved later against the module path by process()
+                if (file.getName().endsWith(".xtc") && !file.exists()) {
                     log(ERROR, "Module file does not exist: {}", file);
                 }
             },
@@ -121,7 +124,9 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
 
         if (component != null) {
             var optFindFile = opts.getFindFile();
-            if (opts.isListFiles()) {
+            if (opts.isModuleNameOnly()) {
+                out(qualifiedModuleName(component));
+            } else if (opts.isListFiles()) {
                 dumpFiles(component);
             } else if (optFindFile.isPresent()) {
                 findFile(component, optFindFile.get());
@@ -131,6 +136,19 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
             component.getConstantPool();
         }
         return hasSeriousErrors() ? 1 : 0;
+    }
+
+    /**
+     * Extract the fully qualified module name from a loaded component, which is either a
+     * {@link FileStructure} (when the user passed an .xtc file) or a {@link ModuleStructure}
+     * (when the user passed a module name resolved against the module path).
+     */
+    private static String qualifiedModuleName(Component component) {
+        return switch (component) {
+            case FileStructure fs -> fs.getModuleId().getName();
+            case ModuleStructure ms -> ms.getIdentityConstant().getName();
+            default -> component.getIdentityConstant().getName();
+        };
     }
 
     public void dump(Component component) {

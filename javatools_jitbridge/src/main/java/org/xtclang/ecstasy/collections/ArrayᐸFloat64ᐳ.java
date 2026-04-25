@@ -6,8 +6,9 @@ import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 import org.xtclang.ecstasy.numbers.Float64;
-import org.xvm.asm.ConstantPool;
+
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.Ctx;
 
 /**
@@ -111,11 +112,6 @@ public class ArrayᐸFloat64ᐳ
     }
 
     @Override
-    protected TypeConstant $elementType(ConstantPool pool) {
-        return pool.typeFloat64();
-    }
-
-    @Override
     protected long $storageCapacity() {
         return $storageCapacity64bit();
     }
@@ -131,7 +127,7 @@ public class ArrayᐸFloat64ᐳ
     }
 
     @Override
-    protected int $cap2len(int cap) {
+    protected long $cap2len(long cap) {
         return cap;
     }
 }

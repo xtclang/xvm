@@ -17,7 +17,7 @@ module jit_tests.examples.org {
         passed &= new arrays.TestRunner().run();
         passed &= new numbers.TestRunner().run();
         passed &= new ranges.TestRunner().run();
-        passed &= new switch_.TestRunner().run();
+        passed &= new switches.TestRunner().run();
 
         console.print("<<<< Finished JIT tests <<<<");
         if (passed) {

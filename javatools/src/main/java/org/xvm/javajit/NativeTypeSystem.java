@@ -30,7 +30,7 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
-import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -126,7 +126,12 @@ public class NativeTypeSystem
     /**
      * A cache of native class names keyed by class id.
      */
-    public final Map<ClassConstant, String> nativeByClass = new ConcurrentHashMap<>();
+    private final Map<IdentityConstant, String> nativeByClass = new ConcurrentHashMap<>();
+
+    /**
+     * A cache of native class names keyed by the type.
+     */
+    private final Map<TypeConstant, String> nativeByType = new ConcurrentHashMap<>();
 
     /**
      * A registry of function JIT class names keyed by the function types.
@@ -138,6 +143,17 @@ public class NativeTypeSystem
      */
     public final Map<TypeConstant, Class> nativeBuilders = new ConcurrentHashMap<>();
 
+    /**
+     * @return a reserved class name for the specified type, or null if it's not reserved
+     */
+    public String getReservedName(TypeConstant type) {
+        String name = nativeByType.get(type);
+        if (name == null) {
+            name = nativeByClass.get(type.getSingleUnderlyingClass(true));
+        }
+        return name;
+    }
+
     @Override
     public byte[] genClass(ModuleLoader moduleLoader, String name) {
         String className = moduleLoader.prefix + name;
@@ -146,6 +162,7 @@ public class NativeTypeSystem
             if (in != null) {
                 byte[] classBytes = in.readAllBytes();
                 String simpleName = name.substring(name.lastIndexOf('.') + 1);
+                       simpleName = simpleName.substring(simpleName.lastIndexOf('$') + 1);
                 if (simpleName.codePointAt(0) == NO_MOD || isEnumerationClass(simpleName)) {
                     // by convention the classes that start with an "n" are "no-modification"
                     // classes that we take "as is" (they must not be augmented)
@@ -166,6 +183,7 @@ public class NativeTypeSystem
                     String       typeString = path.substring(typeStart + 1, typeEnd);
                     TypeConstant type = switch (typeString) {
                         case "Bit"     -> pool().typeBit();
+                        case "Boolean" -> pool().typeBoolean();
                         case "Char"    -> pool().typeChar();
                         case "Dec32"   -> pool().typeDec32();
                         case "Dec64"   -> pool().typeDec64();
@@ -273,12 +291,23 @@ public class NativeTypeSystem
         nativeByClass.put(pool.clzEnumValue(), Builder.N_nEnum);
         nativeByClass.put(pool.clzModule(),    Builder.N_nModule);
         nativeByClass.put(pool.clzObject(),    Builder.N_nObj);
+        nativeByClass.put(pool.clzRef(),       Builder.N_nRef);
         nativeByClass.put(pool.clzService(),   Builder.N_nService);
         nativeByClass.put(pool.clzType(),      Builder.N_nType);
+        nativeByClass.put(pool.clzVar(),       Builder.N_nRef);
 
+        // various types used by native classes
+        TypeConstant typeChar       = pool.typeChar();
+        TypeConstant iterableᐸCharᐳ = pool.ensureParameterizedTypeConstant(pool.typeIterable(), typeChar);
+        TypeConstant iteratorᐸCharᐳ = pool.ensureParameterizedTypeConstant(pool.typeIterator(), typeChar);
+
+        nativeByType.put(iterableᐸCharᐳ, Builder.N_IterableChar);
+        nativeByType.put(iteratorᐸCharᐳ,  Builder.N_IteratorChar);
+
+        // specialized builders
         nativeBuilders.put(pool.typeInt64(),  org.xvm.javajit.builders.Int64Builder.class);
 
-        // pre-register functions used by the native classes
+        // pre-register functions used by the native classes:
 
         // prime the function name counter
         xvm.createUniqueSuffix("");

@@ -258,7 +258,7 @@ public abstract class OpInPlace
             if (typeProp.isJavaPrimitive()) {
                 buildPrimitiveProperty(bctx, code, idProp);
                 if (isAssignOp()) {
-                    bctx.ensureRegInfo(m_nRetValue, idProp.getType());
+                    bctx.ensureRegister(m_nRetValue, idProp.getType());
                 }
             } else {
                 // call the corresponding op method
@@ -290,10 +290,10 @@ public abstract class OpInPlace
             default         -> throw new IllegalStateException();
             }
 
-        TypeConstant  type     = reg.type();
-        MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, null);
-        String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
-        JitMethodDesc jmd      = method.getJitDesc(bctx.builder, type);
+        TypeConstant  typeTarget = reg.type();
+        MethodInfo    method     = bctx.getTypeInfo(typeTarget).findOpMethod(sName, sOp, null);
+        String        sJitName   = method.ensureJitMethodName(bctx.typeSystem);
+        JitMethodDesc jmd        = method.getJitDesc(bctx.builder, typeTarget);
 
         assert !jmd.isOptimized;
 
@@ -330,7 +330,7 @@ public abstract class OpInPlace
 
         int op = getOpCode();
         switch (cd.descriptorString()) {
-        case "I", "S", "B", "C", "Z":
+        case "I", "S", "B", "Z":
             switch (op) {
             case OP_IP_DEC, OP_IP_INC:
                 code.iconst_1();

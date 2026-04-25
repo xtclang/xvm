@@ -97,7 +97,7 @@ public abstract class nObj implements Object {
     /**
      * {@code static <CompileType extends Object> Boolean equals(CompileType o1, CompileType o2)}
      */
-    static boolean equals$p(Ctx ctx, nType CompileType, nObj o1, nObj o2) {
+    public static boolean equals$p(Ctx ctx, nType CompileType, nObj o1, nObj o2) {
         return o1 == o2; // TODO CP: check unwrap
     }
 

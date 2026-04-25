@@ -192,9 +192,9 @@ package int8ArrayTests {
 
     void shouldShiftLeftInPlace() {
         Int8[] array = [10, 21, 30];
-        array[1] <<= 5;
+        array[1] <<= 2;
         assert array[0] == 10;
-        assert array[1] == 21 << 5;
+        assert array[1] == 21 << 2;
         assert array[2] == 30;
     }
 

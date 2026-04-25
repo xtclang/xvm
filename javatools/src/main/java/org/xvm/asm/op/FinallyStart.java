@@ -146,7 +146,7 @@ public class FinallyStart
 
         // initialize "try.exception" synthetic variable
         // (TODO: we only need it if the m_nVar variable is used)
-        RegisterInfo regEx = bctx.introduceVar(code, m_nVar, bctx.pool().typeException१(), "");
+        RegisterInfo regEx = bctx.introduceRegister(code, m_nVar, bctx.pool().typeException१(), "");
 
         java.lang.classfile.Label labelNull = code.newLabel();
         java.lang.classfile.Label labelEnd  = code.newLabel();

@@ -4,12 +4,12 @@ import java.util.Arrays;
 
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Iterable;
+import org.xtclang.ecstasy.IterableᐸCharᐳ;
+import org.xtclang.ecstasy.IteratorᐸCharᐳ;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.text.Char;
-
-import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -44,7 +44,7 @@ public class ArrayᐸCharᐳ
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
-     * Array Constructor: construct(Int capacity = 0)
+     * @see {@link Array#$new$p}
      */
     public static ArrayᐸCharᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
@@ -56,6 +56,9 @@ public class ArrayᐸCharᐳ
         return array;
     }
 
+    /**
+     * @see {@link Array#$new$1$p}
+     */
     public static ArrayᐸCharᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
         if (supply instanceof Char boxed) {
             int value = boxed.$value;
@@ -83,12 +86,22 @@ public class ArrayᐸCharᐳ
         throw new UnsupportedOperationException();
     }
 
-    public static ArrayᐸCharᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
-        // TODO
-        throw new UnsupportedOperationException();
+    /**
+     * @see {@link Array#$new$2}
+     */
+    public static ArrayᐸCharᐳ $new$2(Ctx ctx, TypeConstant type, Mutability mutability, IterableᐸCharᐳ elements) {
+        long size = elements.size$get$p(ctx);
+        ArrayᐸCharᐳ array = $new$p(ctx, type, size, false);
+        for (IteratorᐸCharᐳ it = elements.iterator(ctx); it.next$p(ctx);) {
+            array.add$p(ctx, ctx.i0);
+        }
+        return array;
     }
 
-    public static ArrayᐸCharᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸCharᐳ that) {
+    /**
+     * @see {@link Array#$new$3}
+     */
+    public static ArrayᐸCharᐳ $new$3(Ctx ctx, TypeConstant type, ArrayᐸCharᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
     }
@@ -118,9 +131,22 @@ public class ArrayᐸCharᐳ
         return super.add$p(ctx, (long) ch);
     }
 
+    public ArrayᐸCharᐳ addAll(Ctx ctx, IterableᐸCharᐳ values) {
+        IteratorᐸCharᐳ iter = values.iterator(ctx);
+        while (iter.next$p(ctx)) {
+            add$p(ctx, ctx.i0);
+        }
+        return this;
+    }
+
     @Override
     public ArrayᐸCharᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
         return (ArrayᐸCharᐳ) super.slice(ctx, range);
+    }
+
+    @Override
+    public ArrayᐸCharᐳ freeze$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
+        return (ArrayᐸCharᐳ) super.freeze$p(ctx, inPlace, inPlace$dflt);
     }
 
     // ----- Array internals -----------------------------------------------------------------------
@@ -133,15 +159,11 @@ public class ArrayᐸCharᐳ
     }
 
     @Override
-    protected TypeConstant $elementType(ConstantPool pool) {
-        return pool.typeChar();
-    }
-
-    @Override
     protected long $storageCapacity() {
         return $utf21 ? $storageCapacity21bit() : $storageCapacity8bit();
     }
 
+    @Override
     protected long $getElement(Ctx ctx, long index) {
         return $utf21 ? $get21bitUnsignedElement(index)
                 : $get8bitUnsignedElement(index);
@@ -161,7 +183,7 @@ public class ArrayᐸCharᐳ
     }
 
     @Override
-    protected int $cap2len(int cap) {
+    protected long $cap2len(long cap) {
         return $utf21 ? $cap2len21bits(cap) : $cap2len8bits(cap);
     }
 }

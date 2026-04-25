@@ -217,7 +217,7 @@ public class JumpInt
         RegisterInfo regArg = bctx.loadArgument(code, m_nArg);
 
         switch (regArg.cd().descriptorString()) {
-        case "I", "S", "B", "C", "Z":
+        case "I", "S", "B", "Z":
             break;
 
         case "J":

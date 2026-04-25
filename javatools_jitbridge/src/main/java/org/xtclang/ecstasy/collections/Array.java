@@ -2,6 +2,7 @@ package org.xtclang.ecstasy.collections;
 
 import org.xtclang.ecstasy.nEnum;
 import org.xtclang.ecstasy.Range;
+import org.xtclang.ecstasy.nType;
 import org.xtclang.ecstasy.reflect.Enumeration;
 import org.xtclang.ecstasy.text.String;
 
@@ -35,8 +36,9 @@ import org.xtclang.ecstasy.reflect.Var;
 public abstract class Array
     extends nObj {
 
-    protected Array(Ctx ctx) {
+    protected Array(Ctx ctx, TypeConstant type) {
         super(ctx);
+        $type = type;
     }
 
     // ----- constants --------------------------------------------------------------------------------
@@ -54,6 +56,11 @@ public abstract class Array
     protected static final long $CAP_MASK     = 0x0000FFFFFFFFFFFFL;
 
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * The array type.
+     */
+    public TypeConstant $type;
 
     /**
      * A 32-bit value containing a 30-bit Ecstasy element count (aka array size) and a 2-bit
@@ -177,6 +184,13 @@ public abstract class Array
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
+     * The Element type.
+     */
+    public nType Element$get(Ctx ctx) {
+        return nType.$ensureType(ctx, $type.getParamType(0));
+    }
+
+    /**
      * Array Constructor: construct(Int capacity = 0)
      */
     public static Array $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
@@ -193,14 +207,14 @@ public abstract class Array
     /**
      * Array Constructor: construct(Mutability mutability, Iterable<Element> elements = [])
      */
-    public static Array $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
+    public static Array $new$2(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         throw new UnsupportedOperationException(); // must be implemented by subclasses
     }
 
     /**
      * Array Constructor: construct(Array that)
      */
-    public static Array $new$3$p(Ctx ctx, TypeConstant type, Array that) {
+    public static Array $new$3(Ctx ctx, TypeConstant type, Array that) {
         throw new UnsupportedOperationException(); // must be implemented by subclasses
     }
 
@@ -380,7 +394,7 @@ public abstract class Array
      *   Array addAll(Iterable<Element> values)
      *
      */
-    public Array addAll$p(Ctx ctx, long index, Iterable values) {
+    public Array addAll(Ctx ctx, Iterable values) {
         throw new UnsupportedOperationException("TODO");
     }
 

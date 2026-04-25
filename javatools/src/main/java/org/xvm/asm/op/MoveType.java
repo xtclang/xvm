@@ -84,6 +84,8 @@ public class MoveType
         return frame.assignValue(nTo, type.ensureTypeHandle(frame.f_context.f_container));
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
     @Override
     public void computeTypes(BuildContext bctx) {
         bctx.typeMatrix.assign(getAddress(), m_nToValue,

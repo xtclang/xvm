@@ -6,7 +6,7 @@ import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 import org.xtclang.ecstasy.numbers.Float32;
-import org.xvm.asm.ConstantPool;
+
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.Ctx;
 
@@ -112,15 +112,11 @@ public class ArrayᐸFloat32ᐳ
     }
 
     @Override
-    protected TypeConstant $elementType(ConstantPool pool) {
-        return pool.typeFloat32();
-    }
-
-    @Override
     protected long $storageCapacity() {
         return $storageCapacity32bit();
     }
 
+    @Override
     protected long $getElement(Ctx ctx, long index) {
         return $get32bitUnsignedElement(index);
     }
@@ -131,7 +127,7 @@ public class ArrayᐸFloat32ᐳ
     }
 
     @Override
-    protected int $cap2len(int cap) {
+    protected long $cap2len(long cap) {
         return $cap2len32bits(cap);
     }
 }

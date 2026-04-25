@@ -893,17 +893,15 @@ public class UnionTypeConstant
             throw new UnsupportedOperationException("TODO: formal types");
         }
 
-        // if A and B are CLASS types, and !(A.is(B) || B.is(A)) then we know that o1 and o2
-        // are either both A or both B (or the result is False):
+        // if !(A.is(B) || B.is(A)) then we know that o1 and o2 are either both A or both B (or the
+        // result is False):
         //
         //        if (o1.is(A)) {
         //          return o2.is(A) && A.equals(A, o1, o2);
         //        } else { // o1.is(B)
         //          return o2.is(B) && B.equals(B, o1, 02);
         //        }
-        if (typeA.isClassType() && typeB.isClassType()) {
-            assert !typeA.isA(typeB) && !typeB.isA(typeA);
-
+        if (!typeA.isA(typeB) && !typeB.isA(typeA)) {
             RegisterInfo reg1A, reg2A, reg1B, reg2B;
 
             // first try to apply the compile-time types

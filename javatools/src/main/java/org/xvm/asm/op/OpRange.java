@@ -80,13 +80,13 @@ public abstract class OpRange
                         MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_long, CD_boolean, CD_boolean));
                 break;
 
-            case "I", "S", "B", "C", "Z":
+            case "I", "S", "B", "Z":
             default:
                 throw new IllegalStateException("Not implemented: Range< " +
                     typeTarget.getValueString() + ">");
             }
 
-            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget));
+            bctx.storeValue(code, bctx.ensureRegister(m_nRetValue, typeTarget));
         } else {
             super.build(bctx, code);
         }

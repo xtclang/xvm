@@ -1,4 +1,4 @@
-package org.xvm.javajit;
+package org.xvm.javajit.registers;
 
 import java.lang.classfile.CodeBuilder;
 
@@ -10,6 +10,11 @@ import java.util.Objects;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitFlavor;
+import org.xvm.javajit.RegisterInfo;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 
@@ -29,9 +34,9 @@ import static org.xvm.javajit.JitFlavor.XvmPrimitive;
  * @param slotCds  the {@link ClassDesc} instances for each slot
  * @param name     the name of the value represented by this register
  */
-public record MultipleSlot(BuildContext bctx, int regId, int[] slots, int extSlot,
-                           JitFlavor flavor, TypeConstant type, ClassDesc cd,
-                           ClassDesc[] slotCds, String name)
+public record MultiSlot(BuildContext bctx, int regId, int[] slots, int extSlot,
+                        JitFlavor flavor, TypeConstant type, ClassDesc cd,
+                        ClassDesc[] slotCds, String name)
         implements RegisterInfo {
 
     /**
@@ -40,7 +45,7 @@ public record MultipleSlot(BuildContext bctx, int regId, int[] slots, int extSlo
     public static final int NO_SLOT = Integer.MIN_VALUE;
 
     /**
-     * Create a {@link MultipleSlot} representing a value stored on the Java stack.
+     * Create a {@link MultiSlot} representing a value stored on the Java stack.
      *
      * @param bctx     the {@link BuildContext} associated with this register
      * @param flavor   the {@link JitFlavor} of the value this register represents
@@ -48,13 +53,13 @@ public record MultipleSlot(BuildContext bctx, int regId, int[] slots, int extSlo
      * @param cd       the {@link ClassDesc} of the value this register represents
      * @param cdSlots  the {@link ClassDesc} instances for each slot
      */
-    public MultipleSlot(BuildContext bctx, JitFlavor flavor, TypeConstant type, ClassDesc cd,
-                        ClassDesc[] cdSlots) {
+    public MultiSlot(BuildContext bctx, JitFlavor flavor, TypeConstant type, ClassDesc cd,
+                     ClassDesc[] cdSlots) {
         this(bctx, Op.A_STACK, null, NO_SLOT, flavor, type, cd, cdSlots, "");
     }
 
     /**
-     * Create a {@link MultipleSlot} representing a value stored on the Java stack.
+     * Create a {@link MultiSlot} representing a value stored on the Java stack.
      *
      * @param bctx     the {@link BuildContext} associated with this register
      * @param regId    the identifier of the register
@@ -65,13 +70,13 @@ public record MultipleSlot(BuildContext bctx, int regId, int[] slots, int extSlo
      * @param cdSlots  the {@link ClassDesc} instances for each slot
      * @param name     the name of the value represented by this register
      */
-    public MultipleSlot(BuildContext bctx, int regId, int[] slots, JitFlavor flavor,
-                        TypeConstant type, ClassDesc cd, ClassDesc[] cdSlots, String name) {
+    public MultiSlot(BuildContext bctx, int regId, int[] slots, JitFlavor flavor,
+                     TypeConstant type, ClassDesc cd, ClassDesc[] cdSlots, String name) {
         this(bctx, regId, slots, NO_SLOT, flavor, type, cd, cdSlots, name);
     }
 
     /**
-     * Create a {@link MultipleSlot} representing a value stored on the Java stack.
+     * Create a {@link MultiSlot} representing a value stored on the Java stack.
      *
      * @param bctx     the {@link BuildContext} associated with this register
      * @param regId    the identifier of the register
@@ -83,9 +88,9 @@ public record MultipleSlot(BuildContext bctx, int regId, int[] slots, int extSlo
      * @param slotCds  the {@link ClassDesc} instances for each slot
      * @param name     the name of the value represented by this register
      */
-    public MultipleSlot(BuildContext bctx, int regId, int[] slots, int extSlot,
-                        JitFlavor flavor, TypeConstant type, ClassDesc cd,
-                        ClassDesc[] slotCds, String name) {
+    public MultiSlot(BuildContext bctx, int regId, int[] slots, int extSlot,
+                     JitFlavor flavor, TypeConstant type, ClassDesc cd,
+                     ClassDesc[] slotCds, String name) {
         assert flavor == XvmPrimitive || flavor == NullableXvmPrimitive;
 
         this.bctx    = bctx;
@@ -201,7 +206,7 @@ public record MultipleSlot(BuildContext bctx, int regId, int[] slots, int extSlo
             javaSlots[lastIx] = bctx.scope.allocateJavaSlot(slotCds[lastIx]);
             Builder.store(code, slotCds[lastIx], javaSlots[lastIx]);
         }
-        return new MultipleSlot(bctx, regId, javaSlots, extSlot, flavor, type, cd, slotCds, name);
+        return new MultiSlot(bctx, regId, javaSlots, extSlot, flavor, type, cd, slotCds, name);
     }
 
     @Override

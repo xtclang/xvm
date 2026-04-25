@@ -1524,6 +1524,28 @@ public class ConstantPool
     }
 
     /**
+     * Obtain a TypeConstant for a parameterized Ref.
+     *
+     * @param typeReferent  the referent type of the Ref
+     *
+     * @return the Ref type
+     */
+    public TypeConstant ensureRefType(TypeConstant typeReferent) {
+        return ensureParameterizedTypeConstant(typeRef(), typeReferent);
+    }
+
+    /**
+     * Obtain a TypeConstant for a parameterized Var.
+     *
+     * @param typeReferent  the referent type of the Var
+     *
+     * @return the Var type
+     */
+    public TypeConstant ensureVarType(TypeConstant typeReferent) {
+        return ensureParameterizedTypeConstant(typeVar(), typeReferent);
+    }
+
+    /**
      * Create a TypeConstant for a Map.
      *
      * @param typeKey    the type of the key

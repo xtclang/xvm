@@ -8,8 +8,6 @@ import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.numbers.UInt32;
 
-import org.xvm.asm.ConstantPool;
-
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
@@ -33,7 +31,7 @@ public class ArrayᐸUInt32ᐳ
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
-     * Array Constructor: construct(Int capacity = 0)
+     * @see {@link Array#$new$p}
      */
     public static ArrayᐸUInt32ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
@@ -45,6 +43,9 @@ public class ArrayᐸUInt32ᐳ
         return array;
     }
 
+    /**
+     * @see {@link Array#$new$1$p}
+     */
     public static ArrayᐸUInt32ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
         if (supply instanceof UInt32 boxed) {
             ctx.alloc(size); // REVIEW + HEADER_SIZE?
@@ -66,11 +67,17 @@ public class ArrayᐸUInt32ᐳ
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @see {@link Array#$new$2}
+     */
     public static ArrayᐸUInt32ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @see {@link Array#$new$3}
+     */
     public static ArrayᐸUInt32ᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸUInt32ᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
@@ -112,15 +119,11 @@ public class ArrayᐸUInt32ᐳ
     }
 
     @Override
-    protected TypeConstant $elementType(ConstantPool pool) {
-        return pool.typeUInt32();
-    }
-
-    @Override
     protected long $storageCapacity() {
         return $storageCapacity32bit();
     }
 
+    @Override
     protected long $getElement(Ctx ctx, long index) {
         return $get32bitUnsignedElement(index);
     }
@@ -131,7 +134,7 @@ public class ArrayᐸUInt32ᐳ
     }
 
     @Override
-    protected int $cap2len(int cap) {
+    protected long $cap2len(long cap) {
         return $cap2len32bits(cap);
     }
 }

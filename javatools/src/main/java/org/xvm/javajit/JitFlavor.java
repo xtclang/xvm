@@ -119,6 +119,11 @@ public enum JitFlavor {
     NullableXvmPrimitiveWithDefault(true, NullableXvmPrimitive),
 
     /**
+     * A Ref (box) for an underlying data.
+     */
+    Ref(false, null),
+
+    /**
      * Nullable.Null value.
      */
     AlwaysNull(false, null)

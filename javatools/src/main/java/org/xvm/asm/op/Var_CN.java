@@ -133,7 +133,7 @@ public class Var_CN
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        bctx.introduceVar(code, m_nVar, bctx.getArgumentType(m_nArgValue), bctx.getString(m_nNameId));
+        bctx.introduceRegister(code, m_nVar, bctx.getArgumentType(m_nArgValue), bctx.getString(m_nNameId));
         throw new UnsupportedOperationException("create a dynamic ref");
     }
 

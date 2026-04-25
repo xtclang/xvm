@@ -8,8 +8,6 @@ import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.numbers.Nibble;
 
-import org.xvm.asm.ConstantPool;
-
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
@@ -107,11 +105,6 @@ public class ArrayᐸNibbleᐳ
     // ----- Array internals -----------------------------------------------------------------------
 
     @Override
-    protected TypeConstant $elementType(ConstantPool pool) {
-        return pool.typeNibble();
-    }
-
-    @Override
     protected String $elementToString(Ctx ctx, long index) {
         Nibble c = getElement$p(ctx, index);
         return c.toString(ctx).toString();
@@ -122,7 +115,7 @@ public class ArrayᐸNibbleᐳ
         return $storageCapacity4bit();
     }
 
-    protected long $getElement(Ctx ctx, long index) {
+    @Override protected long $getElement(Ctx ctx, long index) {
         return $get4bitUnsignedElement(index);
     }
 
@@ -132,7 +125,7 @@ public class ArrayᐸNibbleᐳ
     }
 
     @Override
-    protected int $cap2len(int cap) {
+    protected long $cap2len(long cap) {
         return $cap2len4bits(cap);
     }
 }

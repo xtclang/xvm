@@ -34,15 +34,23 @@
  * * * The automatically generated implementation of these functions relies only on the
  *     non-[@Lazy](Lazy) properties of the `const` that have a _field_ in the `const`'s `struct`.
  *
- * * * For any of these functions that is already implemented on this particular `const` class, no
- *     automatically generated implementation is provided; in this way, the developer has full
- *     control of the implementation of these interfaces when that is desirable.
+ * * * If any of these functions is implemented on this particular `const` class, then all such
+ *     functions must be implemented on this class, and no automatically generated implementation
+ *     will be provided; in this way, the developer has full control of the implementation of these
+ *     interfaces when that control is desired.
  *
- * * * If no implementation of a particular function is provided, but the _super-class_ of this
- *     `const` class provides an implementation of that function, then the auto-generated
- *     implementation will first delegate to the function on the super-class, and after that
- *     function returns, the auto-generated implementation will -- if necessary -- handle only the
- *     properties that are declared on this `const` (i.e. not present on the super-class).
+ * * * If none of these functions is implemented on this `const`, but the _super-class_ of this
+ *     `const` contains an implementation of these functions, then the auto-generated implementation
+ *     of each of these functions will first delegate to the function on the super-class, and after
+ *     that function returns, the auto-generated implementation will -- if necessary -- handle only
+ *     the properties that are declared subsequent to the super-class' implementation of these
+ *     functions. (When the super-class is a `const`, that means that only the properties added on
+ *     this `const` will be handled by the implementation of these methods on this `const`.)
+ *
+ * * * When the super-class is **not** a `const`, and the `const` does not contain an implementation
+ *     of these functions, it is a compile time error for the `const` if the super-class contains an
+ *     implementation of any of these functions without containing an implementation of all of them
+ *     at the first encountered super-class that contains any implementation of these functions.
  *
  * * * The auto-generated implementations of these functions operate in the order of the properties
  *     as their fields occur in the `struct`.
@@ -82,7 +90,7 @@
  *
  * * * * The class must not have any [@Lazy](Lazy) or [@Transient](Transient) properties;
  *
- * * * * The class (including each of its superclasses) must not contain any implementation
+ * * * * The class (including each of its super-classes) must not contain any implementation
  *       of the [hashCode()] or [equals()] function, other than that which is defined on the root
  *       [Object] interface;
  *

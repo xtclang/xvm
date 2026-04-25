@@ -161,9 +161,7 @@ class GpAddTests {
         String value2 = "a";
         String value3 = "b";
         value1 = value2 + value3;
-        console.print("testGpAddString - value1 should be ab and is: ", True);
-        console.print(value1);
-//        assert value1 == "ab"; // ToDo Add String concatenation to the JIT ??
+        assert value1 == "ab";
     }
 
     void testGpAddIntToChar() {
@@ -184,9 +182,7 @@ class GpAddTests {
         Char   value2 = 'a';
         Char   value3 = 'b';
         value1 = value2 + value3;
-        console.print("testGpAddCharToChar - value1 should be ab and is: ", True);
-        console.print(value1);
-//        assert value1 == "ab"; // assert fails in the JIT even though the value appears correct
+        assert value1 == "ab";
     }
 
     void testGpAddCharToCharConstants() {
@@ -199,9 +195,7 @@ class GpAddTests {
         Char   value2 = 'a';
         String value3 = "bc";
         value1 = value2 + value3;
-        console.print("testGpAddStringToChar - value1 should be abc and is: ", True);
-        console.print(value1);
-//        assert value1 == "abc";  // assert fails in the JIT even though the value appears correct
+        assert value1 == "abc";
     }
 
     void testGpAddStringToCharConstants() {

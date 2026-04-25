@@ -46,7 +46,7 @@ public class Float16Constant
         float flVal16 = toFloat(toHalf(flVal));
 
         if (Float.isFinite(flVal) && !Float.isFinite(flVal16)) {
-            throw new IllegalArgumentException("value out of range: " + flVal);
+            throw new ArithmeticException("value out of range: " + flVal);
         }
         m_flVal = flVal16;
     }

@@ -7,6 +7,8 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.javajit.registers.SingleSlot;
+
 /**
  * Represents an information about XTC register.
  */
@@ -30,7 +32,9 @@ public interface RegisterInfo {
     /**
      * @return all the corresponding Java slot indexes for this register.
      */
-    int[] slots();
+    default int[] slots()  {
+        return new int[] {slot()};
+    }
 
     /**
      * @return the XTC register type
@@ -57,7 +61,9 @@ public interface RegisterInfo {
     /**
      * @return the ClassDesc for each of the slots in this register
      */
-    ClassDesc[] slotCds();
+    default ClassDesc[] slotCds() {
+        return new ClassDesc[]{cd()};
+    }
 
     /**
      * @return the XTC register name (optional)

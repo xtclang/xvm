@@ -18,11 +18,12 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.Ctx;
-import org.xvm.javajit.ExtendedSlot;
 import org.xvm.javajit.JitFlavor;
-import org.xvm.javajit.MultipleSlot;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
+
+import org.xvm.javajit.registers.ExtendedSlot;
+import org.xvm.javajit.registers.MultiSlot;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -497,7 +498,7 @@ public abstract class OpCondJump
             if (reg instanceof ExtendedSlot extSlot) {
                 code.iload(extSlot.extSlot());
             } else {
-                code.iload(((MultipleSlot) reg).extSlot());
+                code.iload(((MultiSlot) reg).extSlot());
             }
             switch (op) {
             case OP_JMP_NULL:
@@ -562,7 +563,7 @@ public abstract class OpCondJump
 
         String desc = cd.descriptorString();
         switch (desc) {
-        case "I", "S", "B", "C", "Z":
+        case "I", "S", "B", "Z":
             switch (getOpCode()) {
                 case OP_JMP_ZERO  -> code.if_icmpeq(lblJump);
                 case OP_JMP_NZERO -> code.if_icmpne(lblJump);
@@ -639,7 +640,7 @@ public abstract class OpCondJump
                     // the inverted answer is on the Java stack
                     fInvert = true;
                 }
-            } else if (regTarget instanceof MultipleSlot multiSlot) {
+            } else if (regTarget instanceof MultiSlot multiSlot) {
                 assert multiSlot.flavor() == JitFlavor.NullableXvmPrimitive;
                 code.iload(multiSlot.extSlot());
                 if (!typeTest.isOnlyNullable()) {

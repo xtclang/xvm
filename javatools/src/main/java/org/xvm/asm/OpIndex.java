@@ -25,10 +25,11 @@ import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitParamDesc.JitParams;
 import org.xvm.javajit.JitTypeDesc;
-import org.xvm.javajit.MultipleSlot;
 import org.xvm.javajit.NumberSupport;
 import org.xvm.javajit.RegisterInfo;
-import org.xvm.javajit.SingleSlot;
+
+import org.xvm.javajit.registers.MultiSlot;
+import org.xvm.javajit.registers.SingleSlot;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -214,7 +215,8 @@ public abstract class OpIndex
     public void computeTypes(BuildContext bctx) {
         if (isAssignOp()) {
             TypeConstant typeFrom = bctx.getArgumentType(m_nTarget);
-            bctx.typeMatrix.assign(getAddress(), m_nRetValue, computeElementType(typeFrom));
+            bctx.typeMatrix.assign(getAddress(), m_nRetValue,
+                    computeElementType(bctx.getTypeInfo(typeFrom)));
         } else {
             super.computeTypes(bctx);
         }
@@ -222,15 +224,15 @@ public abstract class OpIndex
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        ConstantPool pool      = bctx.pool();
-        RegisterInfo reg       = bctx.loadArgument(code, m_nTarget);
-        TypeConstant type      = reg.type();
-        TypeConstant typeEl    = computeElementType(type);
-        boolean      primitive = typeEl.isJitPrimitive();
+        ConstantPool pool       = bctx.pool();
+        RegisterInfo reg        = bctx.loadArgument(code, m_nTarget);
+        TypeConstant typeTarget = reg.type();
+        TypeConstant typeEl     = computeElementType(bctx.getTypeInfo(typeTarget));
+        boolean      fPrimitive = typeEl.isJitPrimitive();
 
-        if (type.isArray()) {
-            ClassDesc cdArray = bctx.builder.ensureClassDesc(type);
-            if (primitive) {
+        if (typeTarget.isArray()) {
+            ClassDesc cdArray = bctx.builder.ensureClassDesc(typeTarget);
+            if (fPrimitive) {
                 buildPrimitiveArrayOp(bctx, code, reg, typeEl);
             } else {
                 bctx.loadCtx(code);
@@ -280,8 +282,8 @@ public abstract class OpIndex
             }
 
             TypeConstant  typeArg  = bctx.getArgumentType(m_nIndex);
-            MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, typeArg);
-            JitMethodDesc jmd      = method.getJitDesc(bctx.builder, type);
+            MethodInfo    method   = bctx.getTypeInfo(typeTarget).findOpMethod(sName, sOp, typeArg);
+            JitMethodDesc jmd      = method.getJitDesc(bctx.builder, typeTarget);
             String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
 
             MethodTypeDesc mdCall;
@@ -295,7 +297,7 @@ public abstract class OpIndex
             bctx.loadCtx(code);
             bctx.loadCallArguments(code, jmd, new int[] {m_nIndex});
 
-            if (type.isJitInterface()) {
+            if (typeTarget.isJitInterface()) {
                 code.invokeinterface(reg.cd(), sJitName, mdCall);
             } else {
                 code.invokevirtual(reg.cd(), sJitName, mdCall);
@@ -304,13 +306,18 @@ public abstract class OpIndex
 
         if (isAssignOp()) {
             // the Op returns a value which needs to be stored in the return register
-            if (primitive) {
+            if (fPrimitive) {
                 // the generated code will leave the result on the stack, so just store it to the
                 // return register
                 bctx.storeValue(code, m_nRetValue, typeEl);
             } else {
                 // the generated code was a method invocation, so process the return values the
-                // same we would for an Invoke Op
+                // same we would for an Invoke Op; the only difference is that if the container type
+                // is parameterized, we need to generate a cast. For example, if the container
+                // is "List<Person>", the "getElement" signature would be "nObj getElement()".
+                if (typeTarget.isParameterizedDeep()) {
+                    bctx.builder.generateCheckCast(code, typeEl);
+                }
                 JitParams     params = JitParamDesc.computeJitParams(bctx.builder, typeEl);
                 JitMethodDesc jmd    = new JitMethodDesc(
                     params.apdStdParam(), JitParamDesc.NONE,
@@ -325,11 +332,11 @@ public abstract class OpIndex
     /**
      * Compute the return type for the "getElement" op on the specified type.
      */
-    public static TypeConstant computeElementType(TypeConstant typeFrom) {
-        TypeInfo            infoFrom   = typeFrom.ensureTypeInfo();
+    public static TypeConstant computeElementType(TypeInfo infoFrom) {
         Set<MethodConstant> setMethods = infoFrom.findOpMethods("getElement", "[]", 1);
         if (setMethods.size() != 1) {
-            throw new RuntimeException("Cannot find the element type for " + typeFrom);
+            throw new RuntimeException("Cannot find the element type for " +
+                infoFrom.getType().removeAccess());
         }
 
         return setMethods.iterator().next().getSignature().getRawReturns()[0];
@@ -463,7 +470,7 @@ public abstract class OpIndex
                     loadFromContext(code, cds[i], i - 1);
                     slots[i] = bctx.storeTempValue(code, cds[i]);
                 }
-                regElement = new MultipleSlot(bctx, 0, slots, JitFlavor.XvmPrimitive, typeEl,
+                regElement = new MultiSlot(bctx, 0, slots, JitFlavor.XvmPrimitive, typeEl,
                         cd, cds, "");
             } else {
                 int slot = bctx.storeTempValue(code, cdEl);

@@ -10,7 +10,9 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpNotNull;
+import org.xvm.asm.op.JumpNull;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
 
@@ -265,48 +267,39 @@ public class ElvisExpression
             code.add(labelEnd);
             return varVal.getRegister();
         } else {
-            TypeConstant typeTemp = getType().ensureNullable();
-            Assignable var = createTempVar(code, typeTemp);
+            Assignable var = createTempVar(code, getType().ensureNullable());
             generateAssignment(ctx, code, var, errs);
-
-        /*  Alternatively, and particularly if there were a way to ask expr1 if it can provide us an
-            argument at no cost, we could do something like:
-
-            Label labelEnd  = getEndLabel();
-            Label labelElse = new Label("else_?:_" + (++s_nCounter));
-
-            Argument arg1 = expr1.generateArgument(ctx, code, false, false, errs);
-            code.add(new JumpNull(arg1, labelElse));
-            var.assign(arg1, code, errs);
-            code.add(new Jump(labelEnd));
-
-            code.add(labelElse);
-            Argument arg2 = expr2.generateArgument(ctx, code, false, true, errs);
-            var.assign(arg2, code, errs);
-            code.add(labelEnd);
-        */
-
             return var.getRegister();
         }
     }
 
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs) {
-        if (isConstant() || !(LVal.isNormalVariable() || LVal.isProperty()) ||
-                !m_fCond && !pool().typeNull().isA(LVal.getType())) {
-            super.generateAssignment(ctx, code, LVal, errs);
-            return;
-        }
+        if (m_fCond || LVal.isNormalVariable() || LVal.isProperty()) {
+            Label labelEnd = getEndLabel();
+            if (m_fCond) {
+                expr1.generateConditionalAssignment(ctx, code, LVal, labelEnd, errs);
+            } else {
+                if (pool().typeNullable().isA(LVal.getType()) && !LVal.isProperty()) {
+                    // the l-value is assignable from Null (e.g. Object); no need for an extra copy
+                    expr1.generateAssignment(ctx, code, LVal, errs);
+                    code.add(new JumpNotNull(LVal.getLocalArgument(), labelEnd));
+                } else {
+                    Assignable var = createTempVar(code, getType().ensureNullable());
+                    expr1.generateAssignment(ctx, code, var, errs);
 
-        Label labelEnd = getEndLabel();
-        if (m_fCond) {
-            expr1.generateConditionalAssignment(ctx, code, LVal, labelEnd, errs);
+                    Label labelElse = new Label("else_?:_" + (++s_nCounter));
+                    code.add(new JumpNull(var.getRegister(), labelElse));
+                    LVal.assign(var.getRegister(), code, errs);
+                    code.add(new Jump(labelEnd));
+                    code.add(labelElse);
+                }
+            }
+            expr2.generateAssignment(ctx, code, LVal, errs);
+            code.add(labelEnd);
         } else {
-            expr1.generateAssignment(ctx, code, LVal, errs);
-            code.add(new JumpNotNull(LVal.getLocalArgument(), labelEnd));
+            super.generateAssignment(ctx, code, LVal, errs);
         }
-        expr2.generateAssignment(ctx, code, LVal, errs);
-        code.add(labelEnd);
     }
 
     protected Label getEndLabel() {
