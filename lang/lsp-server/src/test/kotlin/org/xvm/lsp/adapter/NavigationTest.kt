@@ -279,43 +279,161 @@ class NavigationTest : TreeSitterTestBase() {
     }
 
     // ========================================================================
-    // getDocumentLinks()
+    // getDocumentLinks() -- URLs in comments and strings (NOT imports)
     // ========================================================================
 
     @Nested
     @DisplayName("getDocumentLinks()")
     inner class DocumentLinkTests {
-        /**
-         * After compiling source with `import` statements, `getDocumentLinks` should
-         * find them via `XtcQueryEngine.findImportLocations`. The exact result depends
-         * on whether the grammar nests imports inside the module body or at root level.
-         */
         @Test
-        @DisplayName("should find import links after compile")
-        fun shouldFindImportLinks() {
+        @DisplayName("should link URL in line comment")
+        fun shouldLinkUrlInLineComment() {
             val uri = freshUri()
             val source =
                 """
                 module myapp {
-                    import foo.Bar;
-                    import baz.Qux;
+                    // see https://example.com for details
+                    class Foo {}
                 }
                 """.trimIndent()
-
             ts.compile(uri, source)
 
-            assertThat(ts.getDocumentLinks(uri, source)).isNotNull
+            val links = ts.getDocumentLinks(uri, source)
+
+            assertThat(links).hasSize(1)
+            assertThat(links[0].target).isEqualTo("https://example.com")
+            // Line 1 (0-based), URL starts after "    // see "
+            assertThat(links[0].range.start.line).isEqualTo(1)
+            assertThat(links[0].range.start.column).isEqualTo("    // see ".length)
         }
 
-        /** A module with no imports should produce an empty link list. */
         @Test
-        @DisplayName("should return empty when no imports")
-        fun shouldReturnEmptyWhenNoImports() {
+        @DisplayName("should link URL in block comment, multi-line position correct")
+        fun shouldLinkUrlInBlockComment() {
             val uri = freshUri()
-            val source = "module myapp {}"
+            val source =
+                """
+                module myapp {
+                    /* block comment
+                       with https://anthropic.com on its own line
+                       and more text */
+                    class Foo {}
+                }
+                """.trimIndent()
+            ts.compile(uri, source)
+
+            val links = ts.getDocumentLinks(uri, source)
+
+            assertThat(links).hasSize(1)
+            assertThat(links[0].target).isEqualTo("https://anthropic.com")
+            // URL is on the third line of the source (0-based line 2)
+            assertThat(links[0].range.start.line).isEqualTo(2)
+            // Column is offset of "https" within that line
+            assertThat(links[0].range.start.column).isEqualTo("       with ".length)
+        }
+
+        @Test
+        @DisplayName("should link URL in doc comment")
+        fun shouldLinkUrlInDocComment() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    /** see http://docs.xtclang.org/guide */
+                    class Foo {}
+                }
+                """.trimIndent()
+            ts.compile(uri, source)
+
+            val links = ts.getDocumentLinks(uri, source)
+
+            assertThat(links).hasSize(1)
+            assertThat(links[0].target).isEqualTo("http://docs.xtclang.org/guide")
+        }
+
+        @Test
+        @DisplayName("should link URL in string literal")
+        fun shouldLinkUrlInStringLiteral() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    String home = "https://xtclang.org";
+                }
+                """.trimIndent()
+            ts.compile(uri, source)
+
+            val links = ts.getDocumentLinks(uri, source)
+
+            assertThat(links).hasSize(1)
+            assertThat(links[0].target).isEqualTo("https://xtclang.org")
+        }
+
+        @Test
+        @DisplayName("should find multiple URLs in one comment")
+        fun shouldFindMultipleUrls() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    // links: https://a.test https://b.test
+                    class Foo {}
+                }
+                """.trimIndent()
+            ts.compile(uri, source)
+
+            val links = ts.getDocumentLinks(uri, source)
+
+            assertThat(links).extracting<String>({ it.target }).containsExactlyInAnyOrder(
+                "https://a.test",
+                "https://b.test",
+            )
+        }
+
+        @Test
+        @DisplayName("should strip trailing sentence punctuation")
+        fun shouldStripTrailingPunctuation() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    // visit https://example.com.
+                    class Foo {}
+                }
+                """.trimIndent()
+            ts.compile(uri, source)
+
+            val links = ts.getDocumentLinks(uri, source)
+
+            assertThat(links).hasSize(1)
+            assertThat(links[0].target).isEqualTo("https://example.com")
+            // The matched range should also exclude the trailing dot
+            assertThat(links[0].range.end.column - links[0].range.start.column)
+                .isEqualTo("https://example.com".length)
+        }
+
+        @Test
+        @DisplayName("should NOT link imports")
+        fun shouldNotLinkImports() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    import crypto.CertificateManager;
+                    import json.xtclang.org;
+                }
+                """.trimIndent()
             ts.compile(uri, source)
 
             assertThat(ts.getDocumentLinks(uri, source)).isEmpty()
+        }
+
+        @Test
+        @DisplayName("should return empty when no URLs and no comments/strings")
+        fun shouldReturnEmpty() {
+            val uri = freshUri()
+            ts.compile(uri, "module myapp {}")
+            assertThat(ts.getDocumentLinks(uri, "module myapp {}")).isEmpty()
         }
     }
 

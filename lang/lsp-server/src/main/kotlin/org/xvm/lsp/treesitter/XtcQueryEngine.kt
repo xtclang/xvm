@@ -25,6 +25,7 @@ class XtcQueryEngine(
     private val methodDeclarationsQuery: Query = Query(language, XtcQueries.methodDeclarations)
     private val identifiersQuery: Query = Query(language, XtcQueries.identifiers)
     private val importsQuery: Query = Query(language, XtcQueries.imports)
+    private val commentsAndStringsQuery: Query = Query(language, XtcQueries.commentsAndStrings)
 
     /**
      * Find all declarations in the tree for document symbols.
@@ -279,6 +280,27 @@ class XtcQueryEngine(
         }
     }
 
+    /**
+     * Find all comment and string-literal nodes, returned as `(text, location)` pairs.
+     *
+     * These are the host nodes that may contain URLs, file paths, or other free-text
+     * content the editor can hyperlink. Caller is responsible for scanning the text
+     * and computing per-match ranges relative to the host node's start position.
+     */
+    fun findCommentAndStringNodes(
+        tree: XtcTree,
+        uri: String,
+    ): List<Pair<String, Location>> {
+        return buildList {
+            executeQuery("commentsAndStrings", commentsAndStringsQuery, tree) { captures ->
+                val node = captures["text"] ?: return@executeQuery
+                add(node.text to node.toLocation(uri))
+            }
+        }.also { nodes ->
+            logger.info("findCommentAndStringNodes -> {} nodes", nodes.size)
+        }
+    }
+
     private fun executeQuery(
         queryName: String,
         query: Query,
@@ -304,5 +326,6 @@ class XtcQueryEngine(
         methodDeclarationsQuery.close()
         identifiersQuery.close()
         importsQuery.close()
+        commentsAndStringsQuery.close()
     }
 }
