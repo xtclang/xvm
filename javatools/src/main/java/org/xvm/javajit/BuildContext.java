@@ -657,11 +657,14 @@ public class BuildContext {
             TypeConstant structType = thisType.ensureAccess(Access.STRUCT);
             registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, extraArgs-1, Specific, structType,
                 CD_this, "thi$"));
-        } else if (!isFunction) {
+            typeMatrix.declare(-1, Op.A_THIS, structType);
+        } else if (isFunction) {
+            typeMatrix.ensureMutableView(0);
+        } else {
             registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, 0, Specific, thisType,
                 CD_this, "this$"));
+            typeMatrix.declare(-1, Op.A_THIS, thisType);
         }
-        typeMatrix.declare(-1, Op.A_THIS, thisType);
 
         JitParamDesc[] params = isOptimized ? methodDesc.optimizedParams : methodDesc.standardParams;
         for (int i = 0, c = params.length; i < c; i++) {

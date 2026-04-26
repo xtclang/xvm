@@ -76,6 +76,11 @@ public class CastTypeConstant
     }
 
     @Override
+    public TypeConstant getCanonicalJitType() {
+        return getUnderlyingType().getCanonicalJitType();
+    }
+
+    @Override
     public Format getFormat() {
         return Format.CastType;
     }

@@ -6634,15 +6634,9 @@ public abstract class TypeConstant
      *         or corresponding formal type constraint types
      */
     public TypeConstant getCanonicalJitType() {
-        if (!isModifyingType()) {
-            return removeAutoNarrowing();
-        }
-
-        TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.getCanonicalJitType();
-        return constResolved == constOriginal
-                ? this
-                : cloneSingle(getConstantPool(), constResolved);
+        return isModifyingType()
+                ? getUnderlyingType().getCanonicalJitType()
+                : removeAutoNarrowing();
     }
 
     /**
