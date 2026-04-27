@@ -2020,7 +2020,7 @@ public class MethodStructure
     public Iterator<? extends XvmStructure> getContained() {
         return getAnnotationCount() == 0
                 ? super.getContained()
-                : Stream.<XvmStructure>concat(
+                : Stream.concat(
                         iteratorStream(super.getContained()),
                         Arrays.stream(m_aAnnotations)).iterator();
     }

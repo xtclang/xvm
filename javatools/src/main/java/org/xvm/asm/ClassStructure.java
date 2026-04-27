@@ -3371,7 +3371,7 @@ public class ClassStructure
 
         return listAnno == null
                 ? super.getContained()
-                : Stream.<XvmStructure>concat(
+                : Stream.concat(
                         iteratorStream(super.getContained()),
                         listAnno.stream()).iterator();
     }
