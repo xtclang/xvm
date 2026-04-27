@@ -22,9 +22,14 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Spliterators;
+
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static java.util.Arrays.sort;
 
@@ -2013,6 +2018,17 @@ public final class Handy {
             throw new IllegalArgumentException((name == null ? "Required value" : name) + " is null");
         }
         return true;
+    }
+
+    /**
+     * Adapt an {@link Iterator} into a sequential {@link Stream}.
+     *
+     * @param iter  the iterator to wrap
+     *
+     * @return a sequential stream over the iterator's remaining elements
+     */
+    public static <T> Stream<T> iteratorStream(final Iterator<T> iter) {
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iter, 0), false);
     }
 
 
