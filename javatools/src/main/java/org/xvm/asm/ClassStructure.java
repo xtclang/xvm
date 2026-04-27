@@ -17,6 +17,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import java.util.stream.Stream;
+
 import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ExprAST;
@@ -42,10 +44,10 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import org.xvm.util.Handy;
-import org.xvm.util.LinkedIterator;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static org.xvm.util.Handy.iteratorStream;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
@@ -3369,9 +3371,9 @@ public class ClassStructure
 
         return listAnno == null
                 ? super.getContained()
-                : new LinkedIterator(
-                        super.getContained(),
-                        listAnno.iterator());
+                : Stream.<XvmStructure>concat(
+                        iteratorStream(super.getContained()),
+                        listAnno.stream()).iterator();
     }
 
     @Override

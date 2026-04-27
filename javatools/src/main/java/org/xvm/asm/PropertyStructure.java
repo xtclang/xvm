@@ -12,6 +12,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import java.util.stream.Stream;
+
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.DeferredValueConstant;
@@ -24,8 +26,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.MethodStructure.ConcurrencySafety;
 
-import org.xvm.util.LinkedIterator;
-
+import static org.xvm.util.Handy.iteratorStream;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -748,9 +749,9 @@ public class PropertyStructure
 
         return listAnno == null
                 ? super.getContained()
-                : new LinkedIterator(
-                        super.getContained(),
-                        listAnno.iterator());
+                : Stream.<XvmStructure>concat(
+                        iteratorStream(super.getContained()),
+                        listAnno.stream()).iterator();
     }
 
     @Override
