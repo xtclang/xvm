@@ -749,7 +749,7 @@ public class PropertyStructure
 
         return listAnno == null
                 ? super.getContained()
-                : Stream.<XvmStructure>concat(
+                : Stream.concat(
                         iteratorStream(super.getContained()),
                         listAnno.stream()).iterator();
     }

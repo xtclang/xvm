@@ -2027,7 +2027,7 @@ public final class Handy {
      *
      * @return a sequential stream over the iterator's remaining elements
      */
-    public static <T> Stream<T> iteratorStream(final Iterator<T> iter) {
+    public static <T> Stream<T> iteratorStream(final Iterator<? extends T> iter) {
         return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iter, 0), false);
     }
 

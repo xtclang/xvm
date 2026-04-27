@@ -849,7 +849,7 @@ public class FileStructure
 
     @Override
     public Iterator<? extends XvmStructure> getContained() {
-        return Stream.<XvmStructure>concat(
+        return Stream.concat(
                 Stream.of(m_pool),
                 children().stream()).iterator();
     }
