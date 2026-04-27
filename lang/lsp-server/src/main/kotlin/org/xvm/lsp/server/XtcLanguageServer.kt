@@ -119,7 +119,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.measureTimedValue
 
 /**
- * XTC Language Server implementation using LSP4J.
+ * Ecstasy Language Server implementation using LSP4J.
  *
  * ## Implementation Status
  *
@@ -217,7 +217,7 @@ class XtcLanguageServer(
         val capabilities = buildServerCapabilities()
 
         initialized = true
-        logger.info("initialize: XTC Language Server initialized")
+        logger.info("initialize: Ecstasy Language Server initialized")
 
         // Health check before workspace indexing
         val healthy = adapter.healthCheck()
@@ -394,7 +394,7 @@ class XtcLanguageServer(
     private fun logServerBanner() {
         val pid = ProcessHandle.current().pid()
         logger.info("initialize: ========================================")
-        logger.info("initialize: XTC Language Server v{} (pid={})", version, pid)
+        logger.info("initialize: Ecstasy Language Server v{} (pid={})", version, pid)
         logger.info("initialize: Backend: {}", adapter.displayName)
         logger.info("initialize: Built: {}", buildTime)
         logger.info("initialize: ========================================")
@@ -603,14 +603,14 @@ class XtcLanguageServer(
         }
 
     override fun shutdown(): CompletableFuture<Any> {
-        logger.info("shutdown: shutting down XTC Language Server")
+        logger.info("shutdown: shutting down Ecstasy Language Server")
         initialized = false
         adapter.close()
         return CompletableFuture.completedFuture(null)
     }
 
     override fun exit() {
-        logger.info("exit: exiting XTC Language Server")
+        logger.info("exit: exiting Ecstasy Language Server")
     }
 
     override fun getTextDocumentService(): TextDocumentService = textDocumentService
@@ -670,7 +670,7 @@ class XtcLanguageServer(
                 "version" to version,
                 "adapter" to adapter.displayName,
                 "buildTime" to buildTime,
-                "message" to if (healthy) "XTC Language Server is healthy" else "Health check failed",
+                "message" to if (healthy) "Ecstasy Language Server is healthy" else "Health check failed",
             )
         }
 

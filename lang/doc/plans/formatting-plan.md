@@ -6,7 +6,7 @@
 
 ## Overview
 
-This plan describes how to implement on-type formatting in the XTC language server. The feature auto-adjusts indentation as the developer types, providing immediate feedback for `\n` (Enter), `}` (closing brace), and `;` (statement end). The implementation uses tree-sitter AST context from the `TreeSitterAdapter` to determine correct indentation levels.
+This plan describes how to implement on-type formatting in the Ecstasy language server. The feature auto-adjusts indentation as the developer types, providing immediate feedback for `\n` (Enter), `}` (closing brace), and `;` (statement end). The implementation uses tree-sitter AST context from the `TreeSitterAdapter` to determine correct indentation levels.
 
 ## Configuration Architecture
 

@@ -1,4 +1,4 @@
-# PLAN: Tree-sitter Integration for XTC Language Support
+# PLAN: Tree-sitter Integration for Ecstasy Language Support
 
 > **Status: COMPLETE with follow-up polish** (updated 2026-04-09)
 > All 5 phases are implemented and the original tree-sitter-only feature set is in
@@ -228,9 +228,9 @@ The abstract base class provides default implementations for all methods that lo
 
 ### Shared Constants
 
-Common XTC language data is centralized in `XtcLanguageConstants.kt`:
+Common Ecstasy language data is centralized in `XtcLanguageConstants.kt`:
 
-- `KEYWORDS` - 50 XTC keywords for completion
+- `KEYWORDS` - 50 Ecstasy keywords for completion
 - `BUILT_IN_TYPES` - 61 built-in types
 - `SYMBOL_TO_COMPLETION_KIND` - Symbol kind mapping
 

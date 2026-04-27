@@ -1,6 +1,6 @@
-# XTC Language Server - Manual Test Plan
+# Ecstasy Language Server - Manual Test Plan
 
-This document describes how to manually test every feature implemented in the XTC Language Server and IntelliJ plugin.
+This document describes how to manually test every feature implemented in the Ecstasy Language Server and IntelliJ plugin.
 
 ## Feature Implementation Status
 
@@ -64,7 +64,7 @@ Requires `JAVA_HOME` or `XTC_JAVA_HOME` pointing to Java 25+.
 
 **VS Code:**
 1. Open Output panel (Ctrl+Shift+U / Cmd+Shift+U)
-2. Select "XTC Language Server" from the dropdown
+2. Select "Ecstasy Language Server" from the dropdown
 3. Look for `"Backend: TreeSitter"` or `"Backend: Mock"`
 
 ### 3. Create Test File
@@ -471,7 +471,7 @@ these settings for on-type formatting when no project-level `xtc-format.toml` is
 | 13c.7 | Auto-close brace honors custom indent | Set indent to 2, type `void foo() {` then Enter in IntelliJ | Blank body line indents to 4 spaces and the auto-inserted `}` aligns to 2 spaces |
 
 **How to restart the LSP server** (to pick up changed Code Style settings):
-- *IntelliJ:* Open the LSP4IJ Language Servers panel → right-click "XTC Language Server" → Restart
+- *IntelliJ:* Open the LSP4IJ Language Servers panel → right-click "Ecstasy Language Server" → Restart
 
 **Note:** The `workspace/didChangeConfiguration` notification is sent when IntelliJ detects
 a configuration change, which should propagate settings without a manual server restart.
@@ -563,7 +563,7 @@ ls lang/tree-sitter/src/main/resources/native/linux-x64/     # Linux
 ### LSP Not Connecting
 
 1. Check LSP4IJ plugin is installed in IntelliJ
-2. Check `.x` files are associated with XTC language
+2. Check `.x` files are associated with the Ecstasy language
 3. Look for errors in: Help → Show Log in Finder/Explorer
 4. Try: File → Invalidate Caches / Restart
 
@@ -583,7 +583,7 @@ ls lang/intellij-plugin/build/idea-sandbox/*/plugins/intellij-plugin/lib/textmat
 
 ### VS Code LSP Not Starting
 
-1. Open Output panel → select "XTC Language Server"
+1. Open Output panel → select "Ecstasy Language Server"
 2. If no output channel exists, the extension failed to activate
 3. Check `JAVA_HOME` or `XTC_JAVA_HOME` points to Java 25+
 4. Verify the fat JAR exists: `ls lang/lsp-server/build/libs/xtc-lsp-server-*-all.jar`
@@ -611,14 +611,14 @@ the process management and health monitoring.
 
 **Expected in console:**
 ```
-[XTC-LSP] XTC Language Server v0.4.4-SNAPSHOT
+[XTC-LSP] Ecstasy Language Server v0.4.4-SNAPSHOT
 [XTC-LSP] Backend: Tree-sitter
 [XTC-LSP] TreeSitterAdapter ready: native library loaded and verified
 [XTC-LSP] XtcParser health check PASSED: parsed test module successfully
 ```
 
 **Expected in IDE:**
-- Notification: "XTC Language Server Started - Out-of-process server (v..., adapter=treesitter)"
+- Notification: "Ecstasy Language Server Started - Out-of-process server (v..., adapter=treesitter)"
 
 ### Test: Health Check
 
@@ -632,7 +632,7 @@ the process management and health monitoring.
 
 1. Find the LSP server process: `ps aux | grep xtc-lsp-server`
 2. Kill it: `kill -9 <pid>`
-3. Verify notification appears: "XTC Language Server Crashed"
+3. Verify notification appears: "Ecstasy Language Server Crashed"
 4. Click "Restart Server"
 5. Verify server restarts (new notification)
 

@@ -1,6 +1,6 @@
 # Tree-sitter Integration Documentation
 
-This directory contains all documentation related to tree-sitter integration for XTC language support.
+This directory contains all documentation related to tree-sitter integration for Ecstasy language support.
 
 ## Quick Orientation
 

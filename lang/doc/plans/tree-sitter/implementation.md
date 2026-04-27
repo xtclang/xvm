@@ -10,7 +10,7 @@ developed while building the XTC tree-sitter grammar.
 
 ## Grammar Feature Support
 
-The following XTC language features are supported by the tree-sitter grammar:
+The following Ecstasy language features are supported by the tree-sitter grammar:
 
 ### Type System
 

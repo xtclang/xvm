@@ -1,4 +1,4 @@
-# XTC Language Tooling - Reflective Kotlin DSL for IDE Support
+# Ecstasy Language Tooling - Reflective Kotlin DSL for IDE Support
 
 ## The Core Concept
 
@@ -12,7 +12,7 @@ and generate IDE-specific files programmatically.
 
 ## Ground Truth: XtcLanguage.kt
 
-**`XtcLanguage.kt` is THE single source of truth for the entire XTC/Ecstasy language.**
+**`XtcLanguage.kt` is THE single source of truth for the entire Ecstasy language.**
 
 Everything about the language is defined here:
 - **All keywords** (reserved and context-sensitive) with semantic categories
@@ -34,7 +34,7 @@ All generators read from this model. To modify the language:
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        XtcLanguage.kt                           │
-│  "I AM the XTC language definition"                             │
+│  "I AM the Ecstasy language definition"                         │
 │                                                                 │
 │  val xtcLanguage = language("Ecstasy", ...) {                   │
 │      keywords(KeywordCategory.CONTROL, "if", "else", ...)       │
@@ -349,7 +349,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Connects Eclipse to the XTC Language Server.
+ * Connects Eclipse to the Ecstasy Language Server.
  *
  * Register in plugin.xml:
  * <extension point="org.eclipse.lsp4e.languageServer">

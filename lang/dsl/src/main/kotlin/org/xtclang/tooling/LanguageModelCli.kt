@@ -1,5 +1,5 @@
 /*
- * CLI for the XTC Language Model.
+ * CLI for the Ecstasy Language Model.
  *
  * Provides commands to:
  * - Dump the language model as JSON
@@ -272,7 +272,7 @@ private fun validateSources(paths: List<String>) {
 private fun showHelp() {
     println(
         """
-        |XTC Language Model CLI
+        |Ecstasy Language Model CLI
         |
         |Usage: java -jar lang.jar <command> [args]
         |

@@ -31,7 +31,7 @@ class VimGenerator(
         buildString {
             appendLine("\" Vim syntax file for ${model.name}")
             appendLine("\" Language: ${model.name}")
-            appendLine("\" Generated from XTC language model")
+            appendLine("\" Generated from Ecstasy language model")
             appendLine()
             appendLine("if exists('b:current_syntax')")
             appendLine("  finish")

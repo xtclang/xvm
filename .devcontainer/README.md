@@ -1,6 +1,6 @@
-# XTC Language Development Container
+# Ecstasy Language Development Container
 
-This devcontainer provides a complete development environment for the XTC (Ecstasy) programming language using the official XVM Docker image.
+This devcontainer provides a complete development environment for the Ecstasy programming language using the official XVM Docker image.
 
 ## Quick Start
 
@@ -11,31 +11,41 @@ This devcontainer provides a complete development environment for the XTC (Ecsta
 
 ## What's Included
 
-- **XVM Runtime**: Complete XDK with `xtc` (compiler) and `xec` (executor)
-- **Java Runtime**: Optimized JRE for running XTC programs
+- **XDK**: Ecstasy distribution with the `xtc` unified CLI (and the lower-level `xcc` compiler / `xec` runner launchers)
+- **Java Runtime**: Optimized JRE for running Ecstasy programs
 - **Git**: Version control tools
 - **GitHub CLI**: For interacting with GitHub repositories
 
 ## Available Tools
 
-- `xtc` - XTC/Ecstasy compiler
-- `xec` - XTC/Ecstasy program executor  
+- `xtc` - Ecstasy unified CLI (`xtc init`, `xtc build`, `xtc run`, `xtc test`, `xtc disass`); see [doc/xtc-cli.md](../doc/xtc-cli.md) for the full reference
+- `xcc` - Ecstasy compiler (equivalent to `xtc build`)
+- `xec` - Ecstasy module runner (equivalent to `xtc run`)
 - `git` - Version control
-- `gh` - GitHub CLI
+- `gh`  - GitHub CLI
 
 ## Example Usage
 
-```bash
-# Compile an XTC program
-xtc hello.x
+Starting from an empty workspace:
 
-# Run the compiled program
-xec hello
+```bash
+# Scaffold a new project (default type is `application`)
+xtc init hello
+
+# Compile an Ecstasy module
+xtc build hello.x          # or: xcc hello.x
+
+# Run the compiled module
+xtc run hello              # or: xec hello
+
+# Run tests in the module (uses xunit)
+xtc test hello
 
 # Check versions
 xtc --version
-xec --version
 ```
+
+See [doc/xtc-cli.md](../doc/xtc-cli.md) for the full set of `xtc` subcommands and options.
 
 ## Container Details
 
