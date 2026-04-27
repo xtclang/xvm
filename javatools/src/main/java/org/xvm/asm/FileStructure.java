@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -848,8 +847,8 @@ public class FileStructure
     }
 
     @Override
-    public Iterator<? extends XvmStructure> getContained() {
-        return Stream.concat(
+    public Iterable<? extends XvmStructure> getContained() {
+        return () -> Stream.concat(
                 Stream.of(m_pool),
                 children().stream()).iterator();
     }

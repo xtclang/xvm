@@ -22,11 +22,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Spliterators;
 
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -2021,14 +2019,14 @@ public final class Handy {
     }
 
     /**
-     * Adapt an {@link Iterator} into a sequential {@link Stream}.
+     * Adapt an {@link Iterable} into a sequential {@link Stream}.
      *
-     * @param iter  the iterator to wrap
+     * @param iterable  the iterable to wrap
      *
-     * @return a sequential stream over the iterator's remaining elements
+     * @return a sequential stream over the iterable's elements
      */
-    public static <T> Stream<T> iteratorStream(final Iterator<? extends T> iter) {
-        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iter, 0), false);
+    public static <T> Stream<T> stream(final Iterable<T> iterable) {
+        return StreamSupport.stream(iterable.spliterator(), false);
     }
 
 

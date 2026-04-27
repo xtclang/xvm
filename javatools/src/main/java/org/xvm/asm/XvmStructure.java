@@ -8,14 +8,15 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 
 import org.xvm.util.Severity;
+
+import static org.xvm.util.Handy.stream;
 
 
 /**
@@ -155,8 +156,8 @@ public abstract class XvmStructure
      *
      * @return an Iterable object representing all nested XVM structures
      */
-    public Iterator<? extends XvmStructure> getContained() {
-        return Collections.emptyIterator();
+    public Iterable<? extends XvmStructure> getContained() {
+        return List.of();
     }
 
     /**
@@ -166,13 +167,7 @@ public abstract class XvmStructure
      *         {@link #resetModified()}
      */
     public boolean isModified() {
-        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); ) {
-            if (iter.next().isModified()) {
-                return true;
-            }
-        }
-
-        return false;
+        return stream(getContained()).anyMatch(XvmStructure::isModified);
     }
 
     /**
@@ -191,9 +186,7 @@ public abstract class XvmStructure
      * must return false.
      */
     protected void resetModified() {
-        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); ) {
-            iter.next().resetModified();
-        }
+        getContained().forEach(XvmStructure::resetModified);
     }
 
     /**
@@ -293,9 +286,7 @@ public abstract class XvmStructure
      *                  NotCondition of any of the above
      */
     protected void purgeCondition(ConditionalConstant condition) {
-        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); ) {
-            iter.next().purgeCondition(condition);
-        }
+        getContained().forEach(child -> child.purgeCondition(condition));
     }
 
     /**
@@ -327,17 +318,8 @@ public abstract class XvmStructure
      * @see ConditionalConstant
      */
     public boolean isResolved() {
-        if (getCondition() != null) {
-            return false;
-        }
-
-        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); ) {
-            if (!iter.next().isResolved()) {
-                return false;
-            }
-        }
-
-        return true;
+        return getCondition() == null
+                && stream(getContained()).allMatch(XvmStructure::isResolved);
     }
 
     /**
@@ -351,9 +333,7 @@ public abstract class XvmStructure
     public void resolve(LinkerContext ctx) {
         // just pass down the resolve to any children; note that this must be overridden if any of
         // the children themselves can be discarded as part of the resolve process
-        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); ) {
-            iter.next().resolve(ctx);
-        }
+        getContained().forEach(child -> child.resolve(ctx));
     }
 
     /**
@@ -377,9 +357,7 @@ public abstract class XvmStructure
      *              structure
      */
     protected void registerConstants(ConstantPool pool) {
-        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); ) {
-            iter.next().registerConstants(pool);
-        }
+        getContained().forEach(child -> child.registerConstants(pool));
     }
 
     /**
@@ -404,13 +382,7 @@ public abstract class XvmStructure
      *         error list reached its size limit
      */
     public boolean validate(ErrorListener errs) {
-        for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); ) {
-            if (iter.next().validate(errs)) {
-                return true;
-            }
-        }
-
-        return false;
+        return stream(getContained()).anyMatch(child -> child.validate(errs));
     }
 
     /**

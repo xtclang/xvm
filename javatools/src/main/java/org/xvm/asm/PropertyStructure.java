@@ -12,8 +12,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import java.util.stream.Stream;
-
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.DeferredValueConstant;
@@ -26,7 +24,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.MethodStructure.ConcurrencySafety;
 
-import static org.xvm.util.Handy.iteratorStream;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -734,24 +731,15 @@ public class PropertyStructure
     }
 
     @Override
-    public Iterator<? extends XvmStructure> getContained() {
+    public Iterable<? extends XvmStructure> getContained() {
         // we cannot use the "getPropertyAnnotation" API at this time, since our module may not yet
         // be linked
-        List<Annotation> listAnno = null;
-        for (Contribution contrib : getContributionsAsList()) {
-            if (contrib.getComposition() == Composition.Annotation) {
-                if (listAnno == null) {
-                    listAnno = new ArrayList<>();
-                }
-                listAnno.add(contrib.getAnnotation());
-            }
-        }
+        var listAnno = getContributionsAsList().stream()
+                .filter(c -> c.getComposition() == Composition.Annotation)
+                .map(Contribution::getAnnotation)
+                .toList();
 
-        return listAnno == null
-                ? super.getContained()
-                : Stream.concat(
-                        iteratorStream(super.getContained()),
-                        listAnno.stream()).iterator();
+        return listAnno.isEmpty() ? super.getContained() : containedWith(listAnno);
     }
 
     @Override

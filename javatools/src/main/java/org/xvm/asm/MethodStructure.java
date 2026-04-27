@@ -20,8 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import java.util.stream.Stream;
-
 import org.xvm.asm.Op.ConstantRegistry;
 import org.xvm.asm.Op.Prefix;
 
@@ -65,7 +63,6 @@ import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
-import static org.xvm.util.Handy.iteratorStream;
 import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -2017,12 +2014,10 @@ public class MethodStructure
     }
 
     @Override
-    public Iterator<? extends XvmStructure> getContained() {
+    public Iterable<? extends XvmStructure> getContained() {
         return getAnnotationCount() == 0
                 ? super.getContained()
-                : Stream.concat(
-                        iteratorStream(super.getContained()),
-                        Arrays.stream(m_aAnnotations)).iterator();
+                : containedWith(Arrays.asList(m_aAnnotations));
     }
 
     @Override

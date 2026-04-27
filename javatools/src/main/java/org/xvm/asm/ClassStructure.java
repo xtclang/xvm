@@ -17,8 +17,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-import java.util.stream.Stream;
-
 import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ExprAST;
@@ -47,7 +45,6 @@ import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
-import static org.xvm.util.Handy.iteratorStream;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
@@ -3356,24 +3353,15 @@ public class ClassStructure
     }
 
     @Override
-    public Iterator<? extends XvmStructure> getContained() {
+    public Iterable<? extends XvmStructure> getContained() {
         // we cannot use the "collectAnnotations" API at this time, since our module may not yet
         // be linked
-        List<Annotation> listAnno = null;
-        for (Contribution contrib : getContributionsAsList()) {
-            if (contrib.getComposition() == Composition.Annotation) {
-                if (listAnno == null) {
-                    listAnno = new ArrayList<>();
-                }
-                listAnno.add(contrib.getAnnotation());
-            }
-        }
+        var listAnno = getContributionsAsList().stream()
+                .filter(c -> c.getComposition() == Composition.Annotation)
+                .map(Contribution::getAnnotation)
+                .toList();
 
-        return listAnno == null
-                ? super.getContained()
-                : Stream.concat(
-                        iteratorStream(super.getContained()),
-                        listAnno.stream()).iterator();
+        return listAnno.isEmpty() ? super.getContained() : containedWith(listAnno);
     }
 
     @Override
