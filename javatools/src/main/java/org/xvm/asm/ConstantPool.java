@@ -2407,10 +2407,26 @@ public class ConstantPool
 
     @Override
     public Iterable<? extends XvmStructure> getContained() {
-        // Index-based iteration over the live list: callers (e.g. validate()) may register
-        // additional constants mid-traversal, and that growth must be visible to the iteration.
-        // A snapshot (List.copyOf) would lose newly-registered constants; an unmodifiableList
-        // wrapper would expose ArrayList's modCount-checking spliterator and throw CME.
+        // NOTE: this returns a live, modCount-blind, index-based iterator rather than a
+        // snapshot or an unmodifiable view, because validate() recurses into children that
+        // may call register(...) on this pool and append to m_listConst mid-traversal — and
+        // the iteration must both remain valid AND visit those newly-appended entries.
+        //
+        // Tried and rejected:
+        //   - List.copyOf(m_listConst): snapshots at call time, so newly-registered
+        //     constants are silently dropped from the traversal. Passes unit tests but is a
+        //     semantic regression — visible only when the resulting artifact is later used.
+        //   - Collections.unmodifiableList(m_listConst): does not snapshot, but its
+        //     spliterator delegates to ArrayList's strict modCount-checking spliterator and
+        //     throws ConcurrentModificationException the moment the recursion appends.
+        //
+        // This is somewhat problematic: getContained()'s javadoc says "the caller should
+        // treat the return value as if it were immutable", but correctness here also depends
+        // on an unstated invariant that an internal callback path may grow the source list
+        // during iteration. A cleaner approach would decouple validate() from register()
+        // (collect-then-apply, or an explicit worklist) so this method could return a
+        // snapshot or unmodifiable view. Until then, the hand-rolled index-based iterator
+        // is the shape that satisfies all existing callers.
         return () -> new Iterator<>() {
             private int iNext = 0;
 
