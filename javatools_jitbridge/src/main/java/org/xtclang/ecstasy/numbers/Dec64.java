@@ -5,7 +5,7 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.math.RoundingMode;
 
-import org.xtclang.ecstasy.Comparable;
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.Orderable;
 import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.OutOfBounds;
@@ -392,7 +392,7 @@ public class Dec64 extends DecimalFPNumber {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(java.lang.Object obj) {
         return obj instanceof Dec64 that && this.$bits == that.$bits;
     }
 
