@@ -86,6 +86,7 @@ public class nType
             return true;
         }
 
+        // TODO: replace the reflection with a virtual call to $class().equals(this, v1, v2)
         if (equalsMethod == null) {
             equalsMethod = ensureMethod("equals$p", Object.class);
         }
