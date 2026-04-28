@@ -1933,6 +1933,14 @@ public class TerminalTypeConstant
         return false;
     }
 
+    @Override
+    public TypeConstant getCanonicalJitType() {
+        return isFormalType()
+                ? resolveConstraints().getCanonicalJitType()
+                : super.getCanonicalJitType();
+    }
+
+
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override

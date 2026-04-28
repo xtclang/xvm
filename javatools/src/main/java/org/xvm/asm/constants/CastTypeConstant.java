@@ -2,7 +2,9 @@ package org.xvm.asm.constants;
 
 import java.io.DataOutput;
 
+import java.lang.constant.ClassDesc;
 import org.xvm.asm.ConstantPool;
+import org.xvm.javajit.TypeSystem;
 
 /**
  * The Ecstasy cast operator ".as()" is used generally for two purposes. First usage pattern is a
@@ -65,19 +67,31 @@ public class CastTypeConstant
         return getUnderlyingType().calculateRelationToRight(typeRight);
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
     @Override
     public boolean isJavaPrimitive() {
-        return getUnderlyingType().isJavaPrimitive();
+        return getUnderlyingType2().isJavaPrimitive();
     }
 
     @Override
     public boolean isXvmPrimitive() {
-        return getUnderlyingType().isXvmPrimitive();
+        return getUnderlyingType2().isXvmPrimitive();
+    }
+
+    @Override
+    public ClassDesc ensureClassDesc(TypeSystem ts) {
+        return getUnderlyingType2().ensureClassDesc(ts);
+    }
+
+    @Override
+    public String ensureJitClassName(TypeSystem ts) {
+        return getUnderlyingType2().ensureJitClassName(ts);
     }
 
     @Override
     public TypeConstant getCanonicalJitType() {
-        return getUnderlyingType().getCanonicalJitType();
+        return getUnderlyingType2().getCanonicalJitType();
     }
 
     @Override
