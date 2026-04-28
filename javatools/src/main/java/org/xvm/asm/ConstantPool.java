@@ -2405,7 +2405,7 @@ public class ConstantPool
 
     @Override
     public Iterable<? extends XvmStructure> getContained() {
-        return List.copyOf(m_listConst);
+        return Collections.unmodifiableList(m_listConst);
     }
 
     @Override
