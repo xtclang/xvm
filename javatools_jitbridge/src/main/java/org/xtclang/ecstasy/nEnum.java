@@ -11,8 +11,8 @@ import org.xvm.javajit.Ctx;
  * All Ecstasy `enum` types must extend this class.
  */
 public abstract class nEnum
-    extends nConst
-    implements Object {
+        extends nConst
+        implements Object {
     public nEnum(Ctx ctx) {
         super(ctx);
     }

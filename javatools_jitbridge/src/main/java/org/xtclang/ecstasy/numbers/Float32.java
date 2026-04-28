@@ -3,7 +3,7 @@ package org.xtclang.ecstasy.numbers;
 import java.math.BigDecimal;
 import java.math.MathContext;
 
-import org.xtclang.ecstasy.Comparable;
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.Orderable;
 import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.nType;
@@ -76,7 +76,7 @@ public class Float32 extends BinaryFPNumber {
      *
      *  static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
      */
-    public static Boolean equals(Ctx ctx, nType type, Comparable value1, Comparable value2) {
+    public static Boolean equals(Ctx ctx, nType type, Object value1, Object value2) {
         float l1 = ((Float32) value1).$value;
         float l2 = ((Float32) value2).$value;
         return l1 == l2 ? Boolean.TRUE : Boolean.FALSE;

@@ -420,13 +420,6 @@ public abstract class OpCondJump
             typeCmp = typeCmp.removeNullable();
         }
 
-        // TODO: can we get rid of typeCmp?
-        TypeConstant typeCommon = selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
-        if (typeCommon != null) {
-            typeCommon = typeCommon.removeNullable();
-            assert typeCmp.isEquivalent(typeCommon) || typeCmp.isFormalType();
-        }
-
         typeCmp.buildCompare(bctx, code, nOp, reg1, reg2, lblTrue);
 
         code.labelBinding(lblFalse);

@@ -74,24 +74,26 @@ public class nType
      * @return nType instance for the specified type
      */
     public static nType $ensureType(Ctx ctx, TypeConstant type) {
+        // TODO: cache type -> nType
         return new nType(ctx, type);
     }
 
     /**
      * "Comparable" interface  support.
      */
-    public boolean equals$p(Ctx ctx, Comparable value1, Comparable value2) {
+    public boolean equals$p(Ctx ctx, Object value1, Object value2) {
         if (value1 == value2) {
             return true;
         }
 
         if (equalsMethod == null) {
-            equalsMethod = ensureMethod("equals", Comparable.class);
+            equalsMethod = ensureMethod("equals$p", Object.class);
         }
 
         try {
-            Boolean result = (Boolean) equalsMethod.invoke(null, ctx, value1, value2);
-            return result.$value;
+            java.lang.Boolean result = (java.lang.Boolean)
+                    equalsMethod.invoke(null, ctx, this, value1, value2);
+            return result.booleanValue();
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw Exception.$unsupported($ctx,
                 "Failed to invoke 'equals()` on class " + $dataType.getValueString());

@@ -88,8 +88,8 @@ import org.xvm.util.TransientThreadLocal;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
 
-import static org.xvm.javajit.Builder.CD_Comparable;
 import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.CD_Orderable;
 import static org.xvm.javajit.Builder.CD_Ordered;
 import static org.xvm.javajit.Builder.CD_nObj;
@@ -6868,7 +6868,7 @@ public abstract class TypeConstant
                 cd = CD_nType;
                 switch (nOp) {
                     case Op.OP_IS_EQ,  Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> {
-                        md       = MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_Comparable, CD_Comparable);
+                        md       = MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_Object, CD_Object);
                         sJitName = "equals$p";
                     }
                     default -> {

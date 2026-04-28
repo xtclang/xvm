@@ -6,8 +6,8 @@ import org.xvm.javajit.Ctx;
  * All Ecstasy `service` types must extend this class.
  */
 public abstract class nService
-    extends nObj
-    implements Service {
+        extends nObj
+        implements Service {
 
     public nService(Ctx ctx) {
         super(ctx);
