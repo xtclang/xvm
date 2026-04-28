@@ -1,6 +1,6 @@
-# XTC Gradle Plugin
+# Ecstasy Gradle Plugin
 
-A comprehensive Gradle plugin that teaches Gradle the XTC programming language, enabling seamless compilation, testing, and execution of XTC projects.
+A comprehensive Gradle plugin that teaches Gradle the Ecstasy programming language, enabling seamless compilation, testing, and execution of XTC projects.
 This documents describes how it works, and goes into some technical detail, but also serves as a usage guide. There are several XTC project examples
 on GitHub that will show you the basics of setting up and XTC build and execution environment with the build DSL. If you are just looking for the
 simplest possible XTC "HelloWorld" setup, take a look at the examples repository.
@@ -26,7 +26,7 @@ simplest possible XTC "HelloWorld" setup, take a look at the examples repository
 
 ## Overview
 
-The XTC Gradle Plugin integrates the XTC language into Gradle's build ecosystem by providing:
+The Ecstasy Gradle Plugin integrates the Ecstasy language into Gradle's build ecosystem by providing:
 
 - **Source Set Integration**: XTC source directories alongside Java/Kotlin code
 - **Dependency Management**: Transitive dependencies between XTC modules
@@ -571,7 +571,7 @@ Gradle will report any violations:
 
 ## Performance Optimization
 
-The XTC Gradle Plugin is fully compatible with Gradle's standard performance features:
+The Ecstasy Gradle Plugin is fully compatible with Gradle's standard performance features:
 
 - **Configuration Cache**: Dramatically speeds up subsequent builds by caching configuration phase
 - **Build Cache**: Reuses outputs from previous builds or shared across machines

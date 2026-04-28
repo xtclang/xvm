@@ -1,6 +1,6 @@
 # LSP Implementation Survey: Real-World Language Support
 
-This document surveys how major programming languages have implemented IDE-independent language support using LSP, DAP, and TextMate grammars. These examples inform the XTC/Ecstasy language support strategy.
+This document surveys how major programming languages have implemented IDE-independent language support using LSP, DAP, and TextMate grammars. These examples inform the Ecstasy language support strategy.
 
 ---
 
@@ -505,9 +505,9 @@ This document surveys how major programming languages have implemented IDE-indep
 
 ---
 
-## Key Takeaways for XTC/Ecstasy
+## Key Takeaways for Ecstasy
 
-Based on this survey, the most relevant patterns for XTC are:
+Based on this survey, the most relevant patterns for Ecstasy are:
 
 1. **Reuse Compiler Infrastructure** - All successful LSP servers leverage their language's compiler
 2. **JVM-based patterns** - Kotlin and Java examples show how to debug JVM bytecode languages

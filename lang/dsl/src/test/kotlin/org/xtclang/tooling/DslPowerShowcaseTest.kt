@@ -1,5 +1,5 @@
 /*
- * DSL Power Showcase - Demonstrating the XTC Language Model DSL
+ * DSL Power Showcase - Demonstrating the Ecstasy Language Model DSL
  *
  * This test suite showcases the expressive power of the Kotlin DSL for defining
  * language models. It demonstrates:
@@ -603,7 +603,7 @@ class DslPowerShowcaseTest {
         val model = xtcLanguage
 
         // Count various elements
-        println("XTC Language Model Statistics:")
+        println("Ecstasy Language Model Statistics:")
         println("  Reserved keywords: ${model.keywords.size}")
         println("  Context keywords: ${model.contextKeywords.size}")
         println("  Built-in types: ${model.builtinTypes.size}")

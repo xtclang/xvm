@@ -1,4 +1,4 @@
-# XTC Language Tooling Documentation
+# Ecstasy Language Tooling Documentation
 
 ## Implementation Plans
 

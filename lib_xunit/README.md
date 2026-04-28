@@ -1,6 +1,6 @@
 # XUnit - The Ecstasy Testing Framework
 
-XUnit is a testing framework that allows developers to write unit tests in their Ecsatsy projects.
+XUnit is a testing framework that allows developers to write unit tests in their Ecstasy projects.
 XUnit is based on the popular Java JUnit test framework.
 
 ## Writing Tests

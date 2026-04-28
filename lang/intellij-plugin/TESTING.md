@@ -1,6 +1,6 @@
 # IntelliJ Plugin Testing Infrastructure
 
-Comprehensive reference for testing the XTC IntelliJ plugin (`lang/intellij-plugin`),
+Comprehensive reference for testing the Ecstasy IntelliJ plugin (`lang/intellij-plugin`),
 covering headless CI testing, the IntelliJ Platform Test Framework, the Starter+Driver
 E2E framework, log harvesting, and how each approach maps to the plugin's extension points.
 
@@ -13,7 +13,7 @@ E2E framework, log harvesting, and how each approach maps to the plugin's extens
 - [3. Starter+Driver Framework (E2E)](#3-starterdriver-framework-e2e)
 - [4. Can runIde Run Headlessly?](#4-can-runide-run-headlessly)
 - [5. Log Harvesting](#5-log-harvesting)
-- [6. What to Test in the XTC Plugin](#6-what-to-test-in-the-xtc-plugin)
+- [6. What to Test in the Ecstasy Plugin](#6-what-to-test-in-the-ecstasy-plugin)
 - [7. Build Configuration Changes Required](#7-build-configuration-changes-required)
 - [8. CI Pipeline Considerations](#8-ci-pipeline-considerations)
 - [9. Development Run Configurations](#9-development-run-configurations)
@@ -234,7 +234,7 @@ class XtcIdeUiTest {
         driver.openFile("src/main.x")
 
         // Wait for LSP server startup notification
-        driver.waitForNotification("XTC Language Server Started", timeout = 30.seconds)
+        driver.waitForNotification("Ecstasy Language Server Started", timeout = 30.seconds)
 
         // Verify hover works
         driver.moveCursorTo(line = 5, column = 10)
@@ -361,7 +361,7 @@ tail -f lang/intellij-plugin/build/idea-sandbox/log/idea.log ~/.xtc/logs/lsp-ser
 
 ---
 
-## 6. What to Test in the XTC Plugin
+## 6. What to Test in the Ecstasy Plugin
 
 The plugin registers these extension points in `plugin.xml`:
 

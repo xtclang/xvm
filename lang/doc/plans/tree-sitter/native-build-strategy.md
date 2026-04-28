@@ -343,7 +343,7 @@ val copyNativeLibToResources by tasks.registering(Copy::class) {
 
 ### Why not separate repo?
 
-- Grammar is tightly coupled to XTC language definition
+- Grammar is tightly coupled to Ecstasy language definition
 - Changes often need to be atomic (grammar + LSP adapter)
 - Overhead of managing two repos not worth it for single consumer
 - Consider only if tree-sitter is reused by other projects (VS Code, etc.)

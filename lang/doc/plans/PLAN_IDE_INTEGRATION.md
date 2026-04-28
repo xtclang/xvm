@@ -1,4 +1,4 @@
-# XTC Language Support Implementation
+# Ecstasy Language Support Implementation
 
 > **Last Updated**: 2026-04-10
 
@@ -8,7 +8,7 @@ This document describes the language tooling implemented in the `lang/` director
 
 ### 1. Language Model DSL (`lang/dsl/`)
 
-A Kotlin DSL that defines the complete XTC language model and generates editor support files:
+A Kotlin DSL that defines the complete Ecstasy language model and generates editor support files:
 
 **Source:** `XtcLanguage.kt` - Complete language definition including:
 - Keywords (reserved and context-sensitive)

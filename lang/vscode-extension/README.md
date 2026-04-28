@@ -1,6 +1,6 @@
-# XTC Language Support for VS Code
+# Ecstasy Language Support for VS Code
 
-Visual Studio Code extension for XTC (Ecstasy) language support.
+Visual Studio Code extension for Ecstasy language support.
 
 ## Features
 
@@ -159,7 +159,7 @@ Then in VS Code:
 3. You should see syntax highlighting and LSP features
 
 **Troubleshooting**: The LSP server needs Java 25+ in your PATH or `JAVA_HOME` set. Check the Output panel (View →
-Output → select "XTC Language Server") if LSP isn't working.
+Output → select "Ecstasy Language Server") if LSP isn't working.
 
 ## License
 

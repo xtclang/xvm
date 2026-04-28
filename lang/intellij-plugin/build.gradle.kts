@@ -675,7 +675,7 @@ val configureSandboxAppearance by tasks.registering {
     }
 }
 
-// Ensure the XTC Gradle plugin and XDK are published to mavenLocal before the sandbox IDE starts.
+// Ensure the Ecstasy Gradle plugin and XDK are published to mavenLocal before the sandbox IDE starts.
 // The sandbox IDE resolves the plugin from mavenLocal (not from the composite includeBuild),
 // so publishToMavenLocal must complete first. gradle.parent reaches the root build that has
 // the "xdk" and "plugin" included builds.

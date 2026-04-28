@@ -455,7 +455,7 @@ tail -20 ~/.xtc/logs/lsp-server.log
 You should see entries like:
 
 ```
-XtcLanguageServerLauncherKt - XTC Language Server v0.4.4-SNAPSHOT
+XtcLanguageServerLauncherKt - Ecstasy Language Server v0.4.4-SNAPSHOT
 XtcLanguageServerLauncherKt - backend: Tree-sitter
 XtcLanguageServer - textDocument/didOpen: .../Boolean.x (2050 bytes)
 TreeSitterAdapter - parsed in 2.3ms, 0 errors, 31 symbols (query: 1.2ms)

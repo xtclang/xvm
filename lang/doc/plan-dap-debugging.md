@@ -1,6 +1,6 @@
-# XTC Debug Adapter Protocol (DAP): Implementation Plan
+# Ecstasy Debug Adapter Protocol (DAP): Implementation Plan
 
-This document details how DAP-based debugging works end-to-end for XTC/Ecstasy, how the existing runtime debugger infrastructure maps to DAP, and the concrete implementation plan for connecting the scaffolded `dap-server` module to the XTC runtime. It covers the full lifecycle from "user clicks a line number in VS Code" through to "breakpoint fires and variables are displayed."
+This document details how DAP-based debugging works end-to-end for Ecstasy, how the existing runtime debugger infrastructure maps to DAP, and the concrete implementation plan for connecting the scaffolded `dap-server` module to the XTC runtime. It covers the full lifecycle from "user clicks a line number in VS Code" through to "breakpoint fires and variables are displayed."
 
 ---
 

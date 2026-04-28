@@ -16,7 +16,7 @@ import java.lang.invoke.MethodHandles
 import java.util.Properties
 
 /**
- * Launcher for the XTC Language Server.
+ * Launcher for the Ecstasy Language Server.
  *
  * Usage:
  * - For stdio communication: `java -jar xtc-lsp.jar`
@@ -118,7 +118,7 @@ fun main(
     // Log startup banner prominently
     val logFile = "${System.getProperty("user.home")}/.xtc/logs/lsp-server.log"
     logger.info("========================================")
-    logger.info("XTC Language Server v$version")
+    logger.info("Ecstasy Language Server v$version")
     logger.info("backend: ${backend.displayName}")
     logger.info("log file: $logFile")
     logger.info("========================================")

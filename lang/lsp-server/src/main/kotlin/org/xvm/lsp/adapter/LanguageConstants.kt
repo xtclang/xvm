@@ -6,9 +6,9 @@ import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
 
 /**
- * Common XTC language constants and utilities shared across adapters.
+ * Common Ecstasy language constants and utilities shared across adapters.
  *
- * These data structures define XTC language elements used for:
+ * These data structures define Ecstasy language elements used for:
  * - Code completion (keywords, built-in types)
  * - Symbol kind mapping (for LSP responses)
  * - Hover text formatting
@@ -27,9 +27,9 @@ object LanguageConstants {
         )
 
     /**
-     * XTC language keywords for code completion.
+     * Ecstasy language keywords for code completion.
      *
-     * Sourced from the XTC language specification.
+     * Sourced from the Ecstasy language specification.
      * See: javatools/src/main/java/org/xvm/compiler/Token.java
      */
     val KEYWORDS: List<String> =

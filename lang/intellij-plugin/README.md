@@ -1,6 +1,6 @@
-# XTC IntelliJ Plugin
+# Ecstasy IntelliJ Plugin
 
-IntelliJ IDEA plugin for XTC (Ecstasy) language support.
+IntelliJ IDEA plugin for Ecstasy language support.
 
 ## Features
 
@@ -20,7 +20,7 @@ IntelliJ IDEA plugin for XTC (Ecstasy) language support.
 
 1. Open IntelliJ IDEA
 2. Go to **Settings/Preferences → Plugins → Marketplace**
-3. Search for "XTC Language Support"
+3. Search for "Ecstasy Language Support"
 4. Click **Install**
 5. Restart IntelliJ IDEA
 
@@ -274,7 +274,7 @@ to the Gradle console in real time:
 
 ```
 [lsp-server] 10:23:45 INFO  XtcLanguageServer - ========================================
-[lsp-server] 10:23:45 INFO  XtcLanguageServer - XTC Language Server v0.4.4
+[lsp-server] 10:23:45 INFO  XtcLanguageServer - Ecstasy Language Server v0.4.4
 [lsp-server] 10:23:45 INFO  XtcLanguageServer - Backend: Tree-sitter
 [lsp-server] 10:23:45 INFO  XtcLanguageServer - ========================================
 [lsp-server] 10:23:46 INFO  XtcLanguageServer - textDocument/didOpen: file:///path/to/Hello.x
@@ -375,7 +375,7 @@ For the **first release**, you must upload manually:
 
 1. Go to https://plugins.jetbrains.com/plugin/add
 2. Fill in the form:
-   - **Plugin name**: XTC Language Support
+   - **Plugin name**: Ecstasy Language Support
    - **Category**: Languages
    - **License**: Apache 2.0
    - **Plugin ZIP**: Upload `build/distributions/xtc-intellij-plugin-<version>.zip`
@@ -414,7 +414,7 @@ Users can install alpha versions:
 1. Open IntelliJ IDEA
 2. **Settings → Plugins → ⚙️ → Manage Plugin Repositories**
 3. Add: `https://plugins.jetbrains.com/plugins/alpha/list`
-4. Search for "XTC Language Support"
+4. Search for "Ecstasy Language Support"
 5. Install
 
 Or install from disk:

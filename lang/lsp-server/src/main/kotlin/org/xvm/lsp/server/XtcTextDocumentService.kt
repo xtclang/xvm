@@ -93,7 +93,7 @@ import org.xvm.lsp.adapter.SelectionRange as AdapterSelectionRange
 import org.xvm.lsp.adapter.TypeHierarchyItem as AdapterTypeHierarchyItem
 
 /**
- * Text document service for XTC Language Server.
+ * Text document service for Ecstasy Language Server.
  * Handles document synchronization and language features.
  */
 class XtcTextDocumentService(

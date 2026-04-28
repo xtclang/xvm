@@ -1,5 +1,5 @@
 /*
- * Test suite for the XTC Language Model.
+ * Test suite for the Ecstasy Language Model.
  *
  * These tests validate:
  * 1. The language model DSL correctly builds the model

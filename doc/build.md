@@ -9,7 +9,7 @@ debugging, versioning, and publishing.
 
 ## Maven Artifacts and IDE Integration
 
-**For Most Developers:** Use the XTC Gradle plugin in your IDE instead of command-line tools:
+**For Most Developers:** Use the Ecstasy Gradle plugin in your IDE instead of command-line tools:
 
 ```kotlin
 // In your build.gradle.kts
@@ -39,7 +39,7 @@ repositories {
 
 **Future Repository Access:** We plan to publish Maven artifacts to Maven Central (Sonatype OSSRH), which will eliminate the need for GitHub user/token configuration. This will make XDK artifacts available through standard Maven Central without authentication.
 
-**Gradle Plugin Portal:** The XTC language plugin is published to the [Gradle Plugin Portal](https://plugins.gradle.org/), and we're moving toward continuous publication of plugin updates. This means you can use the plugin without any special repository configuration:
+**Gradle Plugin Portal:** The Ecstasy Gradle plugin is published to the [Gradle Plugin Portal](https://plugins.gradle.org/), and we're moving toward continuous publication of plugin updates. This means you can use the plugin without any special repository configuration:
 
 ```kotlin
 // No special repositories needed - fetched from Gradle Plugin Portal

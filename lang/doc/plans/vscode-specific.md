@@ -458,7 +458,7 @@ context.subscriptions.push(
 
 ### Problem
 
-No visual indicator that the XTC language server is running or what adapter is
+No visual indicator that the Ecstasy language server is running or what adapter is
 active.
 
 ### Solution
@@ -468,12 +468,12 @@ Add a status bar item in `extension.ts` (~15 lines):
 ```typescript
 const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
 statusBar.text = '$(gear~spin) XTC';
-statusBar.tooltip = 'XTC Language Server starting...';
+statusBar.tooltip = 'Ecstasy Language Server starting...';
 statusBar.show();
 
 client.onReady().then(() => {
     statusBar.text = '$(check) XTC';
-    statusBar.tooltip = 'XTC Language Server running';
+    statusBar.tooltip = 'Ecstasy Language Server running';
 });
 ```
 

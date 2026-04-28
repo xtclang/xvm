@@ -2,12 +2,12 @@
 
 > **Created**: 2026-04-03
 > **Status**: Planning
-> **Scope**: Bringing XTC language support to Apache NetBeans via the existing LSP server
+> **Scope**: Bringing Ecstasy language support to Apache NetBeans via the existing LSP server
 
 ## Context
 
 Apache NetBeans has built-in LSP client support since version 12 (2020). Because
-the XTC language server is a standard LSP implementation communicating over stdio,
+the Ecstasy language server is a standard LSP implementation communicating over stdio,
 much of the integration is straightforward -- NetBeans discovers the server, connects,
 and maps LSP responses to its native UI. This plan identifies what works out of the
 box, what needs a NetBeans module (plugin), and what server-side changes are required.
@@ -199,7 +199,7 @@ public class XtcLanguageServerProvider implements LanguageServerProvider {
 
             return LanguageServerDescription.create(in, out, process);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to start XTC Language Server", e);
+            throw new RuntimeException("Failed to start Ecstasy Language Server", e);
         }
     }
 

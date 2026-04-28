@@ -72,8 +72,8 @@ dependencies {
 
 // Configure project-specific publishing metadata
 xdkPublishing {
-    pomName.set("XTC Gradle Plugin")
-    pomDescription.set("XTC Gradle Plugin")
+    pomName.set("Ecstasy Gradle Plugin")
+    pomDescription.set("Ecstasy Gradle Plugin")
 }
 
 // Configure publication type as Gradle Plugin (vanniktech will handle plugin marker automatically)
@@ -142,7 +142,7 @@ tasks.withType<Jar>().configureEach {
         "Main-Class" to "$pprefix.plugin.Usage",
         "Name" to "/org/xtclang/plugin/",
         "Sealed" to "true",
-        "Specification-Title" to "XTC Gradle and Maven Plugin",
+        "Specification-Title" to "Ecstasy Gradle and Maven Plugin",
         "Specification-Vendor" to "xtclang.org",
         "Specification-Version" to pluginVersionValue,
         "Implementation-Title" to "xtc-plugin",
