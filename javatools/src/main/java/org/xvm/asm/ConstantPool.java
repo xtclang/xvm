@@ -19,8 +19,10 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.Vector;
 
@@ -2405,7 +2407,26 @@ public class ConstantPool
 
     @Override
     public Iterable<? extends XvmStructure> getContained() {
-        return Collections.unmodifiableList(m_listConst);
+        // Index-based iteration over the live list: callers (e.g. validate()) may register
+        // additional constants mid-traversal, and that growth must be visible to the iteration.
+        // A snapshot (List.copyOf) would lose newly-registered constants; an unmodifiableList
+        // wrapper would expose ArrayList's modCount-checking spliterator and throw CME.
+        return () -> new Iterator<>() {
+            private int iNext = 0;
+
+            @Override
+            public boolean hasNext() {
+                return iNext < m_listConst.size();
+            }
+
+            @Override
+            public XvmStructure next() {
+                if (iNext >= m_listConst.size()) {
+                    throw new NoSuchElementException();
+                }
+                return m_listConst.get(iNext++);
+            }
+        };
     }
 
     @Override
