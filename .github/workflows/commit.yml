@@ -147,7 +147,23 @@ jobs:
                   filters: |
                       lang:
                         - 'lang/**'
-                        - 'lib_ecstasy/**/*.x'
+
+            - name: 🌳 Lang validation decision
+              shell: bash
+              run: |
+                  LANG_CHANGED="${{ steps.changes.outputs.lang }}"
+                  echo ""
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                  if [ "$LANG_CHANGED" = "true" ]; then
+                      echo "🌳 lang/ CHANGED -- WILL build lang composite and run LSP/tree-sitter tests"
+                  else
+                      echo "⏭️ no changes under lang/ -- WILL SKIP lang composite build and LSP/tree-sitter tests"
+                      echo "   (the rest of the build runs without -PincludeBuildLang=true to avoid the IntelliJ plugin resolution cost)"
+                  fi
+                  echo "  📋 path-filter result : lang=${LANG_CHANGED:-<unset>}"
+                  echo "  📋 runner             : ${{ matrix.os }} (lang validation only runs on ubuntu-latest)"
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                  echo ""
 
             - name: Compute IntelliJ publish flags
               id: publish-flags
@@ -157,20 +173,31 @@ jobs:
                   REQUESTED="${{ github.event.inputs.publish-intellij-plugin }}"
                   LANG_CHANGED="${{ steps.changes.outputs.lang }}"
                   EVENT_NAME="${{ github.event_name }}"
+                  REF="${{ github.ref }}"
                   EFFECTIVE=false
                   REASON=""
+                  # Gating policy:
+                  #   1. force-publish-intellij-plugin=true (workflow_dispatch only) -> always publish
+                  #   2. push to master with lang changes detected -> auto-publish
+                  #   3. workflow_dispatch with publish-intellij-plugin=true and lang changes detected -> publish
+                  # Anything else -> skip, with a reason.
                   if [ "$FORCE" = "true" ]; then
                       EFFECTIVE=true
-                      REASON="forced via force-publish-intellij-plugin=true (overrides publish-intellij-plugin and lang change gating)"
+                      REASON="forced via force-publish-intellij-plugin=true (overrides all other gating)"
+                  elif [ "$EVENT_NAME" = "push" ] && [ "$REF" = "refs/heads/master" ] && [ "$LANG_CHANGED" = "true" ]; then
+                      EFFECTIVE=true
+                      REASON="auto-publish on master merge with changes detected under lang/"
+                  elif [ "$EVENT_NAME" = "push" ] && [ "$REF" = "refs/heads/master" ]; then
+                      REASON="master push but no changes under lang/ -- nothing to publish (use force-publish-intellij-plugin=true via workflow_dispatch to override)"
                   elif [ "$REQUESTED" = "true" ] && [ "$LANG_CHANGED" = "true" ]; then
                       EFFECTIVE=true
-                      REASON="publish-intellij-plugin=true and changes detected under lang/ or lib_ecstasy/**/*.x"
+                      REASON="manual dispatch with publish-intellij-plugin=true and changes detected under lang/"
                   elif [ "$REQUESTED" = "true" ]; then
-                      REASON="publish-intellij-plugin=true but no changes detected under lang/ or lib_ecstasy/**/*.x (set force-publish-intellij-plugin=true to override)"
+                      REASON="manual dispatch with publish-intellij-plugin=true but no changes detected under lang/ (set force-publish-intellij-plugin=true to override)"
                   elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-                      REASON="neither publish-intellij-plugin nor force-publish-intellij-plugin was enabled for this workflow_dispatch run"
+                      REASON="manual dispatch but neither publish-intellij-plugin nor force-publish-intellij-plugin was enabled"
                   else
-                      REASON="event=$EVENT_NAME does not request IntelliJ plugin publishing (no workflow_dispatch inputs available)"
+                      REASON="event=$EVENT_NAME on $REF -- IntelliJ plugin only publishes on master push or manual dispatch"
                   fi
                   echo "effective=$EFFECTIVE" >> $GITHUB_OUTPUT
                   echo "force=$FORCE" >> $GITHUB_OUTPUT
@@ -186,8 +213,8 @@ jobs:
                   echo "  📋 Reason             : $REASON"
                   echo "  📋 force-publish-intellij-plugin : ${FORCE:-<unset>}"
                   echo "  📋 publish-intellij-plugin       : ${REQUESTED:-<unset>}"
-                  echo "  📋 lang/lib_ecstasy changed      : ${LANG_CHANGED:-<unset>}"
-                  echo "  📋 event                         : $EVENT_NAME"
+                  echo "  📋 lang/ changed                 : ${LANG_CHANGED:-<unset>}"
+                  echo "  📋 event                         : $EVENT_NAME on $REF"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                   echo ""
 
@@ -401,23 +428,25 @@ jobs:
               if: |
                   success() &&
                   matrix.os == 'ubuntu-latest' &&
-                  env.ORG_GRADLE_PROJECT_includeBuildLang == 'true' &&
                   steps.changes.outputs.lang != 'true'
               run: |
-                  echo "⏭️ Skipping Tree-sitter validation - no changes in lang/ or lib_ecstasy/*.x"
+                  echo "⏭️ Skipping Tree-sitter validation - no changes in lang/"
                   echo "Changed paths filter result: lang=${{ steps.changes.outputs.lang }}"
 
             - name: Validate Tree-sitter Grammar and LSP Adapters
               if: |
                   success() &&
                   matrix.os == 'ubuntu-latest' &&
-                  env.ORG_GRADLE_PROJECT_includeBuildLang == 'true' &&
                   steps.changes.outputs.lang == 'true'
               shell: bash
               env:
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
               run: |
                   GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
+                  # Enable the lang composite build only for these lang/LSP-targeted invocations.
+                  # The job-level env keeps lang excluded for the rest of the build to avoid
+                  # paying the IntelliJ-plugin resolution cost on every CI run.
+                  LANG_OPTS="-PincludeBuildLang=true -PincludeBuildAttachLang=true"
 
                   echo ""
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -425,17 +454,17 @@ jobs:
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
                   echo "📋 Validating grammar compiles (tree-sitter generate)..."
-                  ./gradlew $GRADLE_OPTIONS :lang:tree-sitter:validateTreeSitterGrammar
+                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:tree-sitter:validateTreeSitterGrammar
                   echo "✅ Grammar: VALID"
 
                   echo ""
                   echo "📋 Testing parser on XDK corpus (with timing)..."
-                  ./gradlew $GRADLE_OPTIONS :lang:tree-sitter:testTreeSitterParse
+                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:tree-sitter:testTreeSitterParse
                   echo "✅ Corpus parsing: PASSED"
 
                   echo ""
                   echo "📋 Building native libraries for all platforms..."
-                  ./gradlew $GRADLE_OPTIONS :lang:tree-sitter:buildAllNativeLibrariesOnDemand
+                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:tree-sitter:buildAllNativeLibrariesOnDemand
                   echo "✅ Native libraries: BUILT (cached by content hash)"
 
                   echo ""
@@ -443,14 +472,15 @@ jobs:
                   echo "🔌 LSP ADAPTER TESTS"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-                  echo ""
-                  echo "📋 Running LSP tests with MOCK adapter (-Plsp.adapter=mock)..."
-                  ./gradlew $GRADLE_OPTIONS :lang:lsp-server:test -Plsp.adapter=mock
-                  echo "✅ Mock adapter tests: PASSED"
+                  # Mock adapter is being retired; tree-sitter is the default and only supported adapter.
+                  # echo ""
+                  # echo "📋 Running LSP tests with MOCK adapter (-Plsp.adapter=mock)..."
+                  # ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:lsp-server:test -Plsp.adapter=mock
+                  # echo "✅ Mock adapter tests: PASSED"
 
                   echo ""
                   echo "📋 Running LSP tests with TREESITTER adapter (-Plsp.adapter=treesitter)..."
-                  ./gradlew $GRADLE_OPTIONS :lang:lsp-server:test -Plsp.adapter=treesitter
+                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:lsp-server:test -Plsp.adapter=treesitter
                   echo "✅ Tree-sitter adapter tests: PASSED"
 
                   echo ""
@@ -742,7 +772,7 @@ jobs:
                   MANUAL_TEST_STATUS="✅ Passed"
                   MANUAL_TEST_REASON="executed in the main CI build"
                   LANG_VALIDATION_STATUS="⏭️ Skipped"
-                  LANG_VALIDATION_REASON="lang build not enabled for this run"
+                  LANG_VALIDATION_REASON="not run on this runner"
                   if [ "${{ matrix.os }}" = "ubuntu-latest" ] && {
                        [ "${{ github.ref }}" = "refs/heads/master" ] && [ "${{ github.event_name }}" = "push" ];
                      } || {
@@ -756,13 +786,13 @@ jobs:
                       MANUAL_TEST_STATUS="⏭️ Skipped"
                       MANUAL_TEST_REASON="disabled for this run"
                   fi
-                  if [ "${{ matrix.os }}" = "ubuntu-latest" ] && [ "${{ env.ORG_GRADLE_PROJECT_includeBuildLang }}" = "true" ]; then
+                  if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
                       if [ "${{ steps.changes.outputs.lang }}" = "true" ]; then
                           LANG_VALIDATION_STATUS="✅ Ran"
-                          LANG_VALIDATION_REASON="lang build enabled and path filter matched"
+                          LANG_VALIDATION_REASON="path filter detected changes under lang/"
                       else
                           LANG_VALIDATION_STATUS="⏭️ Skipped"
-                          LANG_VALIDATION_REASON="lang build enabled but path filter found no relevant changes"
+                          LANG_VALIDATION_REASON="no changes under lang/"
                       fi
                   fi
                   if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then

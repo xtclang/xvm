@@ -42,6 +42,19 @@ internal object XtcQueries {
         """.trimIndent()
 
     /**
+     * Find comment and string-literal nodes -- the host nodes for free-text content
+     * (URLs, file paths, etc.) that may need document links.
+     */
+    val commentsAndStrings =
+        """
+        (line_comment) @text
+        (block_comment) @text
+        (doc_comment) @text
+        (string_literal) @text
+        (template_string_literal) @text
+        """.trimIndent()
+
+    /**
      * Combined query for all declarations (for document symbols).
      * Uses field-based matching for robust, position-independent queries.
      */

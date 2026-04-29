@@ -141,6 +141,16 @@ class TreeSitterAdapter : AbstractAdapter() {
          */
         const val MIN_JAVA_VERSION = 25
 
+        /**
+         * Conservative `http(s)` URL matcher for document-link extraction.
+         * Stops at the first whitespace, quote, angle bracket, or closing paren/bracket --
+         * common sentence-terminating punctuation is then trimmed in [urlTrailingTrim].
+         */
+        private val urlPattern = Regex("""\bhttps?://[^\s<>"'`)\]]+""")
+
+        /** Trailing punctuation stripped from a URL match (sentence-final commas, periods, etc.). */
+        private val urlTrailingTrim = charArrayOf('.', ',', ';', ':', '!', '?', ')', ']', '}')
+
         /** Symbol kinds that represent types (for type-position completion filtering). */
         private val typeSymbolKinds =
             setOf(
@@ -1281,27 +1291,64 @@ class TreeSitterAdapter : AbstractAdapter() {
         return formatter.onTypeFormatting(tree, line, column, ch, config)
     }
 
+    /**
+     * Emit document links for `http(s)` URLs that appear inside comments and string literals.
+     *
+     * Imports deliberately do NOT participate -- navigation between an `import` and its
+     * declaration is the job of `textDocument/definition` (Cmd/Ctrl-click), which is
+     * position-aware and knows the difference between a package component and a type
+     * component. Document links are reserved for free-text content where there is no
+     * AST-level "declaration" to jump to (URLs in `// see https://...`, etc.).
+     */
     override fun getDocumentLinks(
         uri: String,
         content: String,
     ): List<DocumentLink> {
-        logger.info("getDocumentLinks: uri={}, {} bytes", uri.substringAfterLast('/'), content.length)
-        val tree =
-            parsedTrees[uri] ?: run {
-                logger.info("getDocumentLinks: no parsed tree for uri")
-                return emptyList()
+        val tree = parsedTrees[uri] ?: return emptyList()
+        val hosts = queryEngine.findCommentAndStringNodes(tree, uri)
+        val links =
+            buildList {
+                for ((text, loc) in hosts) {
+                    urlPattern.findAll(text).forEach { match ->
+                        // Strip trailing punctuation that's almost never part of the URL itself
+                        // (sentences in comments end with these, e.g. "see https://example.com.")
+                        val trimmed = match.value.trimEnd(*urlTrailingTrim)
+                        if (trimmed.isEmpty()) return@forEach
+                        val range = rangeWithinText(text, match.range.first, trimmed.length, loc)
+                        add(DocumentLink(range, trimmed, trimmed))
+                    }
+                }
             }
-        val imports = queryEngine.findImportLocations(tree, uri)
-        logger.info("getDocumentLinks -> {} links", imports.size)
-        return imports.map { (importPath, loc) ->
-            val simpleName = importPath.substringAfterLast(".")
-            val targetUri =
-                simpleName
-                    .takeIf { indexReady.get() }
-                    ?.let { workspaceIndex.findByName(it).firstOrNull()?.uri }
-            val range = Range(Position(loc.startLine, loc.startColumn), Position(loc.endLine, loc.endColumn))
-            DocumentLink(range, targetUri, "import $importPath")
+        logger.info("getDocumentLinks: {} URL links across {} comment/string nodes", links.size, hosts.size)
+        return links
+    }
+
+    /**
+     * Convert an offset+length within a host node's text into an absolute LSP [Range].
+     * URLs cannot contain whitespace, so the match is always single-line, but the host
+     * node (e.g., a block comment) may span many lines, so we walk the prefix counting
+     * newlines to find the absolute (line, column) for the start.
+     */
+    private fun rangeWithinText(
+        text: String,
+        matchStart: Int,
+        matchLen: Int,
+        host: Location,
+    ): Range {
+        var line = host.startLine
+        var col = host.startColumn
+        for (i in 0 until matchStart) {
+            if (text[i] == '\n') {
+                line++
+                col = 0
+            } else {
+                col++
+            }
         }
+        val startLine = line
+        val startCol = col
+        // URL has no newlines -- end is on the same line, +matchLen columns
+        return Range(Position(startLine, startCol), Position(startLine, startCol + matchLen))
     }
 
     override fun getSemanticTokens(uri: String): SemanticTokens? {
