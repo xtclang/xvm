@@ -37,57 +37,14 @@ class XtcQueryEngine(
         logger.info("findAllDeclarations: uri={}", uri.substringAfterLast('/'))
         return buildList {
             executeQuery("allDeclarations", allDeclarationsQuery, tree) { captures ->
-                val name = captures["name"]?.text ?: return@executeQuery
-                val declaration =
-                    captures.entries.find { (key, _) ->
-                        key in
-                            listOf(
-                                "module",
-                                "package",
-                                "class",
-                                "interface",
-                                "mixin",
-                                "service",
-                                "const",
-                                "enum",
-                                "method",
-                                "constructor",
-                                "property",
-                            )
-                    } ?: return@executeQuery
-
+                // Use the name-capture's location (the identifier itself) so cmd-click lands
+                // on the declaration's name -- not on the leading /** doc comment */ when one
+                // is present. The outer declaration node spans the whole declaration including
+                // its doc-comment prefix.
+                val nameNode = captures["name"] ?: return@executeQuery
                 val kind =
-                    when (declaration.key) {
-                        "module" -> SymbolKind.MODULE
-                        "package" -> SymbolKind.PACKAGE
-                        "class" -> SymbolKind.CLASS
-                        "interface" -> SymbolKind.INTERFACE
-                        "mixin" -> SymbolKind.MIXIN
-                        "service" -> SymbolKind.SERVICE
-                        "const" -> SymbolKind.CONST
-                        "enum" -> SymbolKind.ENUM
-                        "method" -> SymbolKind.METHOD
-                        "constructor" -> SymbolKind.CONSTRUCTOR
-                        "property" -> SymbolKind.PROPERTY
-                        else -> return@executeQuery
-                    }
-
-                val node = declaration.value
-                add(
-                    SymbolInfo(
-                        name = name,
-                        qualifiedName = name,
-                        kind = kind,
-                        location =
-                            Location(
-                                uri = uri,
-                                startLine = node.startLine,
-                                startColumn = node.startColumn,
-                                endLine = node.endLine,
-                                endColumn = node.endColumn,
-                            ),
-                    ),
-                )
+                    captures.keys.firstNotNullOfOrNull { captureKind[it] } ?: return@executeQuery
+                add(nameNode.toSymbolInfo(nameNode.text, kind, uri))
             }
         }.also { symbols ->
             logger.info("findAllDeclarations -> {} symbols", symbols.size)
@@ -116,9 +73,8 @@ class XtcQueryEngine(
         logger.info("findMethodDeclarations: uri={}", uri.substringAfterLast('/'))
         return buildList {
             executeQuery("methodDeclarations", methodDeclarationsQuery, tree) { captures ->
-                val name = captures["name"]?.text ?: return@executeQuery
-                val declaration = captures["declaration"] ?: return@executeQuery
-                add(declaration.toSymbolInfo(name, SymbolKind.METHOD, uri))
+                val nameNode = captures["name"] ?: return@executeQuery
+                add(nameNode.toSymbolInfo(nameNode.text, SymbolKind.METHOD, uri))
             }
         }.also { methods ->
             logger.info("findMethodDeclarations -> {} methods", methods.size)
@@ -392,6 +348,7 @@ class XtcQueryEngine(
             }.toList()
 
     private companion object {
+        // Used by findScopeMembers to recognise declarations inside a body.
         private val memberNodeKinds =
             mapOf(
                 "property_declaration" to SymbolKind.PROPERTY,
@@ -407,6 +364,38 @@ class XtcQueryEngine(
                 "annotation_declaration" to SymbolKind.CLASS,
                 "package_declaration" to SymbolKind.PACKAGE,
                 "typedef_declaration" to SymbolKind.CLASS,
+            )
+
+        // Used by findAllDeclarations to map the allDeclarations query's capture keys to a kind.
+        private val captureKind: Map<String, SymbolKind> =
+            mapOf(
+                "module" to SymbolKind.MODULE,
+                "package" to SymbolKind.PACKAGE,
+                "class" to SymbolKind.CLASS,
+                "interface" to SymbolKind.INTERFACE,
+                "mixin" to SymbolKind.MIXIN,
+                "service" to SymbolKind.SERVICE,
+                "const" to SymbolKind.CONST,
+                "enum" to SymbolKind.ENUM,
+                "method" to SymbolKind.METHOD,
+                "constructor" to SymbolKind.CONSTRUCTOR,
+                "property" to SymbolKind.PROPERTY,
+            )
+
+        // Used by findDeclarationAt for the upward AST walk from the cursor.
+        private val nodeTypeKind: Map<String, SymbolKind> =
+            mapOf(
+                "module_declaration" to SymbolKind.MODULE,
+                "package_declaration" to SymbolKind.PACKAGE,
+                "class_declaration" to SymbolKind.CLASS,
+                "interface_declaration" to SymbolKind.INTERFACE,
+                "mixin_declaration" to SymbolKind.MIXIN,
+                "service_declaration" to SymbolKind.SERVICE,
+                "const_declaration" to SymbolKind.CONST,
+                "enum_declaration" to SymbolKind.ENUM,
+                "method_declaration" to SymbolKind.METHOD,
+                "property_declaration" to SymbolKind.PROPERTY,
+                "variable_declaration" to SymbolKind.PROPERTY,
             )
     }
 
@@ -434,7 +423,7 @@ class XtcQueryEngine(
                         ?: current.childByType("identifier")
                         ?: current.childByType("type_name")
                         ?: return null
-                return current.toSymbolInfo(nameNode.text, kind, uri).also {
+                return nameNode.toSymbolInfo(nameNode.text, kind, uri).also {
                     logger.info("findDeclarationAt -> '{}' ({})", it.name, kind)
                 }
             }
@@ -444,20 +433,7 @@ class XtcQueryEngine(
         return null
     }
 
-    private fun nodeTypeToSymbolKind(type: String): SymbolKind? =
-        when (type) {
-            "module_declaration" -> SymbolKind.MODULE
-            "package_declaration" -> SymbolKind.PACKAGE
-            "class_declaration" -> SymbolKind.CLASS
-            "interface_declaration" -> SymbolKind.INTERFACE
-            "mixin_declaration" -> SymbolKind.MIXIN
-            "service_declaration" -> SymbolKind.SERVICE
-            "const_declaration" -> SymbolKind.CONST
-            "enum_declaration" -> SymbolKind.ENUM
-            "method_declaration" -> SymbolKind.METHOD
-            "property_declaration", "variable_declaration" -> SymbolKind.PROPERTY
-            else -> null
-        }
+    private fun nodeTypeToSymbolKind(type: String): SymbolKind? = nodeTypeKind[type]
 
     private fun XtcNode.toSymbolInfo(
         name: String,

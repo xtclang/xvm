@@ -192,12 +192,12 @@ module TestModule {
 | 4.7 | Local shadowing class member | Class with `Boolean whitespace;`. Method declaring `function Boolean(Char) whitespace = ...;` and using `whitespace(test)`. Ctrl+Click on the `whitespace` call | Jumps to the local function-typed variable, NOT to the class field |
 | 4.8 | Inner block shadows outer | `void run() { Int x = 1; if (cond) { Int x = 2; x.toString(); } }`. Ctrl+Click on the inner `x` | Jumps to the inner-block declaration, NOT the outer one |
 | 4.9 | Forward reference not resolved | Method body where a usage of `name` precedes a local declaration of `name`. Ctrl+Click on the usage | Resolves to module-level / outer-scope / workspace `name`, NOT the forward-declared local |
+| 4.10 | Doc-commented target | Ctrl+Click on a class/method/property preceded by a `/** ... */` doc comment | Cursor lands on the declaration line (e.g. `class Foo {`), NOT on the `/**` opener |
 
 **Notes:**
 - Resolution order is: enclosing-scope locals/parameters → class/module members → same-file top-levels → cross-file workspace index.
 - Cross-file definition uses workspace index fallback only when scope-aware resolution finds nothing.
 - Import-path-based resolution is not yet implemented.
-- Known issue (not addressed by current PR): for a class/method/property with a `/** doc comment */` prefix, Ctrl+Click currently jumps to the first line of the doc comment instead of the declaration line.
 
 ---
 
