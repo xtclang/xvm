@@ -18,7 +18,7 @@ public class Guarded
      * Construct a Guarded prefix for the specified scope
      */
     public Guarded(Scope scope) {
-        f_scope = scope;
+        m_scope = scope;
     }
 
     // ----- JIT support ---------------------------------------------------------------------------
@@ -31,8 +31,23 @@ public class Guarded
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
         CatchStart op = (CatchStart) getNextOp();
-        op.build(bctx, code, f_scope);
+        op.build(bctx, code, m_scope);
         return -1;
+    }
+
+    /**
+     * Set a scope associated with this Guarded prefix.
+     */
+    public void setScope(Scope scope) {
+        assert scope != null && m_scope == null;
+        m_scope = scope;
+    }
+
+    /**
+     * Clear all JIT related state.
+     */
+    public void clear() {
+        m_scope = null;
     }
 
     // ----- fields --------------------------------------------------------------------------------
@@ -40,5 +55,5 @@ public class Guarded
     /**
      * The JIT scope guarded by the underlying {@link CatchStart}.
      */
-    private final Scope f_scope;
+    private Scope m_scope;
 }

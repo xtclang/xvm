@@ -472,6 +472,11 @@ public class BuildContext {
                 label.clear();
                 break;
 
+            case Guarded guarded:
+                // ditto
+                guarded.clear();
+                break;
+
             default:
                 break;
             }
@@ -919,16 +924,13 @@ public class BuildContext {
     public void ensureGuarded(int opAddress) {
         Op[] ops = methodStruct.getOps();
         Op   op  = ops[opAddress];
-        if (op instanceof Guarded) {
-            throw new IllegalStateException("Already guarded");
-        }
-
-        if (op instanceof CatchStart catchOp) {
+        if (op instanceof Guarded guarded) {
+            guarded.setScope(scope);
+        } else if (op instanceof CatchStart catchOp) {
             Guarded xvmLabel = new Guarded(scope);
             xvmLabel.append(catchOp);
             ops[opAddress] = xvmLabel;
-        }
-        else {
+        } else {
             throw new IllegalStateException("Only CatchStart can be guarded");
         }
     }
