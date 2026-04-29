@@ -529,6 +529,36 @@ class TreeSitterAdapter : AbstractAdapter() {
                         logger.info("getCompletions: body-context workspaceTypes(sample)={}", workspaceTypes.take(10).map { it.label })
                         addAll(workspaceTypes)
                     }
+                    // File-level declarations and imports are visible names inside any body, so
+                    // module-level @Inject properties, top-level methods, and imported types must
+                    // be offered alongside keywords and built-ins. Without this, a cursor inside
+                    // a function body cannot complete `console` even though `@Inject Console console;`
+                    // is declared at module scope.
+                    if (tree != null) {
+                        val declarations = queryEngine.findAllDeclarations(tree, uri)
+                        declarations.forEach { symbol ->
+                            add(
+                                CompletionItem(
+                                    label = symbol.name,
+                                    kind = toCompletionKind(symbol.kind),
+                                    detail = symbol.typeSignature ?: symbol.kind.name.lowercase(),
+                                    insertText = symbol.name,
+                                ),
+                            )
+                        }
+                        val imports = queryEngine.findImports(tree)
+                        imports.forEach { importPath ->
+                            val simpleName = importPath.substringAfterLast(".")
+                            add(
+                                CompletionItem(
+                                    label = simpleName,
+                                    kind = CompletionKind.CLASS,
+                                    detail = "import: $importPath",
+                                    insertText = simpleName,
+                                ),
+                            )
+                        }
+                    }
                 }
 
                 CompletionContext.DEFAULT -> {

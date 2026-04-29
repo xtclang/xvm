@@ -186,6 +186,42 @@ class CompletionTest : TreeSitterTestBase() {
             assertThat(completions).anyMatch { it.label == "tokenize" }
         }
 
+        /**
+         * Gene's reported regression: typing `co` inside a function body did not
+         * suggest `console`, even though `@Inject Console console;` is declared at
+         * the enclosing module's scope and `console.print(...)` was used a line
+         * above. Root cause: the BODY completion context did not include
+         * `findAllDeclarations` results, so module-level properties and methods
+         * were absent from the popup.
+         */
+        @Test
+        @DisplayName("should include module-level @Inject property when completing inside a function body")
+        fun shouldIncludeModuleLevelInjectPropertyInBodyCompletions() {
+            val uri = freshUri()
+            val source =
+                """
+                module test.examples.org {
+                    @Inject Console console;
+
+                    void run() {
+                        String s = "hello";
+                        co
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // Cursor on the `co` line, inside the run() body.
+            val completions =
+                logged(
+                    "shouldIncludeModuleLevelInjectPropertyInBodyCompletions",
+                    ts.getCompletions(uri, 5, 10),
+                )
+
+            assertThat(completions).anyMatch { it.label == "console" }
+            assertThat(completions).anyMatch { it.label == "run" }
+        }
+
         @Test
         @DisplayName("should include visible names and control-flow keywords in method body")
         fun shouldIncludeBodyContextSuggestions() {
