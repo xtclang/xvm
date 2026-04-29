@@ -140,6 +140,55 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * Short-form property getter at module level: `Int val2.get() = 43;`.
+         * The grammar's `module_body` rule must accept `property_getter_declaration`,
+         * not just `property_declaration` and `method_declaration`. Same shape was
+         * already accepted inside class bodies; this guards against regression of
+         * the parity fix.
+         */
+        @Test
+        @DisplayName("should parse module-level property getter")
+        fun shouldParseModuleLevelPropertyGetter() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    Int val2.get() = 43;
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Same shape inside a package body. `package_body` mirrors `module_body`
+         * for top-level declarations; both should now accept the short-form getter.
+         */
+        @Test
+        @DisplayName("should parse package-level property getter")
+        fun shouldParsePackageLevelPropertyGetter() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    package util {
+                        Int val2.get() = 43;
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
          * A missing closing brace should still parse (tree-sitter is error-tolerant),
          * but the resulting tree must contain ERROR or MISSING nodes that get reported
          * as diagnostics with severity ERROR.
