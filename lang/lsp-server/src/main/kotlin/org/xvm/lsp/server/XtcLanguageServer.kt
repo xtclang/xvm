@@ -550,10 +550,8 @@ class XtcLanguageServer(
                 }
             // inlayHintProvider = Either.forLeft(true) // not implemented in TreeSitterAdapter yet
 
-            // Capability advertised so the client routes textDocument/documentLink requests here.
-            // Currently no link providers are wired in -- the adapter returns an empty list -- but
-            // keeping the capability lets us add non-import uses later (URLs in comments,
-            // doc-comment cross-refs, etc.) without renegotiating with running clients.
+            // documentLinkProvider: URLs in comments / string literals.
+            // See TreeSitterAdapter.getDocumentLinks for the matcher.
             documentLinkProvider = DocumentLinkOptions()
 
             signatureHelpProvider = SignatureHelpOptions(listOf("(", ","))

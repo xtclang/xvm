@@ -148,8 +148,11 @@ class TreeSitterAdapter : AbstractAdapter() {
          */
         private val urlPattern = Regex("""\bhttps?://[^\s<>"'`)\]]+""")
 
-        /** Trailing punctuation stripped from a URL match (sentence-final commas, periods, etc.). */
-        private val urlTrailingTrim = charArrayOf('.', ',', ';', ':', '!', '?', ')', ']', '}')
+        /**
+         * Trailing punctuation stripped from a URL match (sentence-final commas, periods, etc.).
+         * Note: `)` and `]` are already excluded by [urlPattern] so no match can end in them.
+         */
+        private val urlTrailingTrim = charArrayOf('.', ',', ';', ':', '!', '?', '}')
 
         /** Symbol kinds that represent types (for type-position completion filtering). */
         private val typeSymbolKinds =
