@@ -92,7 +92,6 @@ import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.CD_Orderable;
 import static org.xvm.javajit.Builder.CD_Ordered;
-import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.N_nRangeInt64;
 import static org.xvm.javajit.Builder.OPT;
@@ -6724,7 +6723,7 @@ public abstract class TypeConstant
                              RegisterInfo reg1, TypeConstant argType, ClassDesc cdArg,
                              Runnable argLoader, Label lblTrue) {
         TypeConstant type1 = reg1.type();
-        assert type1.isA(this) && argType.isA(this) || this.isFormalType();
+        assert type1.isA(this) && argType.isA(this) || this.containsFormalType(false);
 
         boolean fLocalTrue = lblTrue == null;
         if (fLocalTrue) {
@@ -6805,7 +6804,8 @@ public abstract class TypeConstant
                     methodName = XVM_PRIMITIVE_EQUALS;
                     methodDesc = MethodTypeDesc.of(CD_boolean, cdParams);
                 }
-                case Op.OP_IS_GT,  Op.OP_JMP_GT,
+                case Op.OP_CMP,
+                     Op.OP_IS_GT,  Op.OP_JMP_GT,
                      Op.OP_IS_GTE, Op.OP_JMP_GTE,
                      Op.OP_IS_LT,  Op.OP_JMP_LT,
                      Op.OP_IS_LTE, Op.OP_JMP_LTE,
@@ -6830,49 +6830,49 @@ public abstract class TypeConstant
                     // boolean equals(Ctx, primitives1..., primitives2...)
                     code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
 
-                    if (fLocalTrue) {
-                        if (nOp == Op.OP_IS_NEQ) {
-                            code.iconst_1()
-                                    .ixor();
-                        }
+                if (fLocalTrue) {
+                    if (nOp == Op.OP_IS_NEQ) {
+                        code.iconst_1()
+                                .ixor();
+                    }
+                } else {
+                    if (nOp == Op.OP_IS_EQ) {
+                        code.ifne(lblTrue);
                     } else {
-                        if (nOp == Op.OP_IS_EQ) {
-                            code.ifne(lblTrue);
-                        } else {
-                            code.ifeq(lblTrue);
-                        }
+                        code.ifeq(lblTrue);
                     }
-                    return;
+                }
+                return;
 
-                case Op.OP_IS_GT, Op.OP_IS_GTE, Op.OP_IS_LT, Op.OP_IS_LTE:
-                    // int compare(Ctx, primitives1..., primitives2...)
-                    code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
-                    code.iconst_0();
+            case Op.OP_IS_GT, Op.OP_IS_GTE, Op.OP_IS_LT, Op.OP_IS_LTE:
+                // int compare(Ctx, primitives1..., primitives2...)
+                code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
+                code.iconst_0();
 
-                    switch (nOp) {
-                        case Op.OP_IS_GT:
-                            // > 0
-                            code.if_icmpge(lblTrue);
-                            break;
+                switch (nOp) {
+                    case Op.OP_IS_GT:
+                        // > 0
+                        code.if_icmpge(lblTrue);
+                        break;
 
-                        case Op.OP_IS_GTE:
-                            // >= 0
-                            code.if_icmpge(lblTrue);
-                            break;
+                    case Op.OP_IS_GTE:
+                        // >= 0
+                        code.if_icmpge(lblTrue);
+                        break;
 
-                        case Op.OP_IS_LT:
-                            // < 0
-                            code.if_icmplt(lblTrue);
-                            break;
+                    case Op.OP_IS_LT:
+                        // < 0
+                        code.if_icmplt(lblTrue);
+                        break;
 
-                        case Op.OP_IS_LTE:
-                            // <= 0
-                            code.if_icmple(lblTrue);
-                            break;
+                    case Op.OP_IS_LTE:
+                        // <= 0
+                        code.if_icmple(lblTrue);
+                        break;
 
-                        default:
-                            throw new IllegalStateException();
-                    }
+                    default:
+                        throw new IllegalStateException();
+                }
             }
         } else {
             // type is a non-primitive
@@ -6881,7 +6881,8 @@ public abstract class TypeConstant
             SignatureConstant sig = switch (nOp) {
                 case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
                      Op.OP_IS_NEQ, Op.OP_JMP_NEQ  -> pool.sigEquals();
-                case Op.OP_IS_GT,  Op.OP_JMP_GT,
+                case Op.OP_CMP,
+                     Op.OP_IS_GT,  Op.OP_JMP_GT,
                      Op.OP_IS_GTE, Op.OP_JMP_GTE,
                      Op.OP_IS_LT,  Op.OP_JMP_LT,
                      Op.OP_IS_LTE, Op.OP_JMP_LTE,
@@ -7048,6 +7049,9 @@ public abstract class TypeConstant
         }
     }
 
+    /**
+     * Convert the int value on Java stack to an Ordered enum value.
+     */
     private void generateOrdered(BuildContext bctx, CodeBuilder code) {
         ConstantPool pool = bctx.pool();
 

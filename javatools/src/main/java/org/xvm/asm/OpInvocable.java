@@ -320,8 +320,8 @@ public abstract class OpInvocable extends Op {
         TypeConstant      typeTarget = bctx.getArgumentType(m_nTarget);
         TypeInfo          infoTarget = bctx.getTypeInfo(typeTarget);
         MethodConstant    idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
-        MethodInfo        methodInfo = infoTarget.getMethodById(idMethod);
-        SignatureConstant sig        = methodInfo.getSignature();
+        MethodInfo        infoMethod = infoTarget.getMethodById(idMethod, true); // TODO: HACK
+        SignatureConstant sig        = infoMethod.getSignature();
 
         if (sig.containsAutoNarrowing(true)) {
             sig = sig.resolveAutoNarrowing(pool, typeTarget, null);
@@ -331,7 +331,7 @@ public abstract class OpInvocable extends Op {
             if (method == null) {
 
                 // TODO: add support for nested ids (see the interpreter logic above)
-                MethodInfo infoMethod = infoTarget.getMethodBySignature(sig);
+                infoMethod = infoTarget.getMethodBySignature(sig);
                 assert infoMethod != null;
                 method = infoMethod.getHead().getMethodStructure();
             }

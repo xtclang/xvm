@@ -110,7 +110,7 @@ public record Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flav
             return RegisterInfo.super.store(bctx, code, type);
         }
         else {
-            assert type.isA(original().type());
+            assert Builder.isJitAssignable(type, original().type());
             RegisterInfo origReg = bctx.resetRegister(this).store(bctx, code, type);
             return bctx.narrowRegister(code, origReg, type);
         }
