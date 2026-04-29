@@ -348,6 +348,7 @@ class XtcQueryEngine(
             }.toList()
 
     private companion object {
+        // Used by findScopeMembers to recognise declarations inside a body.
         private val memberNodeKinds =
             mapOf(
                 "property_declaration" to SymbolKind.PROPERTY,
@@ -363,6 +364,38 @@ class XtcQueryEngine(
                 "annotation_declaration" to SymbolKind.CLASS,
                 "package_declaration" to SymbolKind.PACKAGE,
                 "typedef_declaration" to SymbolKind.CLASS,
+            )
+
+        // Used by findAllDeclarations to map the allDeclarations query's capture keys to a kind.
+        private val captureKind: Map<String, SymbolKind> =
+            mapOf(
+                "module" to SymbolKind.MODULE,
+                "package" to SymbolKind.PACKAGE,
+                "class" to SymbolKind.CLASS,
+                "interface" to SymbolKind.INTERFACE,
+                "mixin" to SymbolKind.MIXIN,
+                "service" to SymbolKind.SERVICE,
+                "const" to SymbolKind.CONST,
+                "enum" to SymbolKind.ENUM,
+                "method" to SymbolKind.METHOD,
+                "constructor" to SymbolKind.CONSTRUCTOR,
+                "property" to SymbolKind.PROPERTY,
+            )
+
+        // Used by findDeclarationAt for the upward AST walk from the cursor.
+        private val nodeTypeKind: Map<String, SymbolKind> =
+            mapOf(
+                "module_declaration" to SymbolKind.MODULE,
+                "package_declaration" to SymbolKind.PACKAGE,
+                "class_declaration" to SymbolKind.CLASS,
+                "interface_declaration" to SymbolKind.INTERFACE,
+                "mixin_declaration" to SymbolKind.MIXIN,
+                "service_declaration" to SymbolKind.SERVICE,
+                "const_declaration" to SymbolKind.CONST,
+                "enum_declaration" to SymbolKind.ENUM,
+                "method_declaration" to SymbolKind.METHOD,
+                "property_declaration" to SymbolKind.PROPERTY,
+                "variable_declaration" to SymbolKind.PROPERTY,
             )
     }
 
@@ -509,37 +542,5 @@ class XtcQueryEngine(
         identifiersQuery.close()
         importsQuery.close()
         commentsAndStringsQuery.close()
-    }
-
-    companion object {
-        private val captureKind: Map<String, SymbolKind> =
-            mapOf(
-                "module" to SymbolKind.MODULE,
-                "package" to SymbolKind.PACKAGE,
-                "class" to SymbolKind.CLASS,
-                "interface" to SymbolKind.INTERFACE,
-                "mixin" to SymbolKind.MIXIN,
-                "service" to SymbolKind.SERVICE,
-                "const" to SymbolKind.CONST,
-                "enum" to SymbolKind.ENUM,
-                "method" to SymbolKind.METHOD,
-                "constructor" to SymbolKind.CONSTRUCTOR,
-                "property" to SymbolKind.PROPERTY,
-            )
-
-        private val nodeTypeKind: Map<String, SymbolKind> =
-            mapOf(
-                "module_declaration" to SymbolKind.MODULE,
-                "package_declaration" to SymbolKind.PACKAGE,
-                "class_declaration" to SymbolKind.CLASS,
-                "interface_declaration" to SymbolKind.INTERFACE,
-                "mixin_declaration" to SymbolKind.MIXIN,
-                "service_declaration" to SymbolKind.SERVICE,
-                "const_declaration" to SymbolKind.CONST,
-                "enum_declaration" to SymbolKind.ENUM,
-                "method_declaration" to SymbolKind.METHOD,
-                "property_declaration" to SymbolKind.PROPERTY,
-                "variable_declaration" to SymbolKind.PROPERTY,
-            )
     }
 }
