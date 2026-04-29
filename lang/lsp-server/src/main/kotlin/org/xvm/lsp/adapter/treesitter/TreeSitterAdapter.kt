@@ -798,10 +798,13 @@ class TreeSitterAdapter : AbstractAdapter() {
     }
 
     /**
-     * TODO: Same-file text matching only. Cannot distinguish shadowed locals.
-     * Cross-file references require compiler's semantic model (Phase 4+).
-     *
      * Finds all identifier nodes with the same text in the current file's AST.
+     * When [includeDeclaration] is false, drops the location matching the
+     * declaration site -- looked up via [XtcQueryEngine.findAllDeclarations],
+     * whose returned location is the identifier-token range, so it compares
+     * equal to the matching entry from [XtcQueryEngine.findAllIdentifiers].
+     *
+     * TODO: Same-file text matching only -- cannot distinguish shadowed locals.
      * A compiler adapter would provide scope-aware, cross-file reference search.
      */
     override fun findReferences(

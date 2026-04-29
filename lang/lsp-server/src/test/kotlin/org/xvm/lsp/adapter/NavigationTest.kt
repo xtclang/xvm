@@ -63,6 +63,41 @@ class NavigationTest : TreeSitterTestBase() {
         }
 
         /**
+         * Cmd-click on a call to a doc-commented method must land on the
+         * method's identifier line, not on the doc-comment opener -- exercises
+         * the [XtcQueryEngine.findMethodDeclarations] path for call resolution.
+         */
+        @Test
+        @DisplayName("should find doc-commented method definition on the name line")
+        fun shouldFindDocCommentedMethodDefinitionOnNameLine() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Calculator {
+                        /**
+                         * Adds two numbers.
+                         */
+                        Int add(Int a, Int b) {
+                            return a + b;
+                        }
+                        void test() {
+                            add(1, 2);
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on 'add' in the call site at line 9
+            val definition = ts.findDefinition(uri, 9, 12)
+
+            assertThat(definition).isNotNull
+            // Doc-comment occupies lines 2-4; the method name is on line 5 (0-indexed).
+            assertThat(definition!!.startLine).isEqualTo(5)
+        }
+
+        /**
          * When the cursor is on a method name at a call site (`add` in `add(1, 2)`),
          * go-to-definition should navigate to the method's declaration line.
          */

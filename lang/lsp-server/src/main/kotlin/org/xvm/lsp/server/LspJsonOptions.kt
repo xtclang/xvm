@@ -5,33 +5,14 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 
 /**
- * Shared dispatch over the two shapes LSP4J hands us for `initializationOptions` and
- * `workspace/configuration` payloads.
- *
- * LSP4J de-serialises options either as a Java `Map<*, *>` (when gson saw a JSON object
- * literal in the request) or as a Gson `JsonObject` / `JsonElement` (when the client
- * payload is opaque). Each consumer of these options has to defensively dispatch over
- * both shapes to read primitive values. Two callers used to re-implement this dispatch:
- * [SourceRootResolver.parseInitOptions] (an array of strings) and
- * [XtcLanguageServer.parseFormattingConfig] (named ints/booleans). They now both
- * delegate to this helper so the dispatch lives in one place.
- *
- * Returns `null` when the requested key is absent, the value is the wrong shape, or the
- * value cannot be coerced -- callers supply their own defaults.
+ * Reads typed values out of LSP4J `initializationOptions` / `workspace/configuration`
+ * payloads, which arrive as either `Map<*, *>` or Gson `JsonObject` / `JsonElement`
+ * depending on how the client serialises them. Returns `null` when a key is absent,
+ * mistyped, or can't be coerced -- callers supply their own defaults.
  */
 internal object LspJsonOptions {
-    /** Look up [key] on a Map / JsonObject / JsonElement. Returns the raw value or null. */
-    fun lookup(
-        raw: Any?,
-        key: String,
-    ): Any? =
-        when (raw) {
-            null -> null
-            is Map<*, *> -> raw[key]
-            is JsonObject -> raw.get(key)
-            is JsonElement -> if (raw.isJsonObject) raw.asJsonObject.get(key) else null
-            else -> null
-        }
+    /** True iff [raw] is a JSON-object-shaped value (Map, JsonObject, or JsonElement holding an object). */
+    fun isObject(raw: Any?): Boolean = raw is Map<*, *> || raw is JsonObject || (raw is JsonElement && raw.isJsonObject)
 
     /** Read [key] as a list of non-blank strings; returns `emptyList()` if missing or wrong shape. */
     fun stringList(
@@ -103,6 +84,18 @@ internal object LspJsonOptions {
             else -> {
                 null
             }
+        }
+
+    private fun lookup(
+        raw: Any?,
+        key: String,
+    ): Any? =
+        when (raw) {
+            null -> null
+            is Map<*, *> -> raw[key]
+            is JsonObject -> raw.get(key)
+            is JsonElement -> if (raw.isJsonObject) raw.asJsonObject.get(key) else null
+            else -> null
         }
 
     private fun stringOrNull(elem: JsonElement?): String? =

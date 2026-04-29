@@ -1,7 +1,5 @@
 package org.xvm.lsp.server
 
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
 import org.eclipse.lsp4j.CallHierarchyIncomingCall
 import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
 import org.eclipse.lsp4j.CallHierarchyItem
@@ -301,8 +299,7 @@ class XtcLanguageServer(
     }
 
     private fun parseFormattingConfig(raw: Any?): FormattingConfig? {
-        if (raw == null) return null
-        if (raw !is Map<*, *> && raw !is JsonObject && !(raw is JsonElement && raw.isJsonObject)) return null
+        if (!LspJsonOptions.isObject(raw)) return null
 
         val indentSize = LspJsonOptions.int(raw, "indentSize") ?: 4
         val continuationIndentSize = LspJsonOptions.int(raw, "continuationIndentSize") ?: 8
@@ -311,7 +308,7 @@ class XtcLanguageServer(
         val tabSize = LspJsonOptions.int(raw, "tabSize")
         logger.info(
             "workspace/configuration: parsed config type={} indentSize={} continuationIndentSize={} tabSize={} insertSpaces={} maxLineWidth={}",
-            raw.javaClass.name,
+            raw?.javaClass?.name,
             indentSize,
             continuationIndentSize,
             tabSize,

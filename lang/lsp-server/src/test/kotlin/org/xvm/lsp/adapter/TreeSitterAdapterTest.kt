@@ -97,29 +97,25 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
          * declaration itself. The symbol's location must point at the identifier
          * (`Person`) so cmd-click lands on the `class Person {` line, not on the
          * doc-comment prefix that precedes it.
-         *
-         * Using string concatenation rather than a triple-quoted string because ktlint
-         * mis-tokenises a literal doc-comment opener nested inside a raw string.
          */
         @Test
         @DisplayName("symbol location should be the name identifier, not the doc-comment prefix")
         fun symbolLocationShouldBeNameIdentifierNotDocComment() {
             val uri = freshUri()
-            val docOpen = "/" + "**"
-            val docClose = "*" + "/"
             val source =
-                "module myapp {\n" +
-                    "    $docOpen\n" +
-                    "     * A person.\n" +
-                    "     $docClose\n" +
-                    "    class Person {\n" +
-                    "    }\n" +
-                    "}\n"
+                """
+                module myapp {
+                    /**
+                     * A person.
+                     */
+                    class Person {
+                    }
+                }
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
             val person = result.symbols.first { it.name == "Person" }
-            // 0-indexed lines: doc-open=1, doc-body=2, doc-close=3, `class Person {`=4.
             assertThat(person.location.startLine).isEqualTo(4)
         }
 
@@ -322,6 +318,67 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
             val uri = freshUri()
             ts.compile(uri, "module myapp {}")
             assertThat(ts.findSymbolAt(uri, 100, 0)).isNull()
+        }
+
+        /**
+         * Same doc-comment landing fix as [XtcQueryEngine.findAllDeclarations] but
+         * for the [XtcQueryEngine.findDeclarationAt] path (cursor-inside-a-declaration).
+         * The returned symbol's location must point at the identifier line, not at
+         * the leading doc-comment opener.
+         */
+        @Test
+        @DisplayName("doc-commented method symbol location should be the name identifier")
+        fun docCommentedMethodSymbolShouldLandOnNameLine() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Person {
+                        /**
+                         * Returns the name.
+                         */
+                        String getName() {
+                            return "n";
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor inside the method body so findDeclarationAt walks up to method_declaration.
+            val symbol = ts.findSymbolAt(uri, 6, 16)
+
+            assertThat(symbol).isNotNull
+            assertThat(symbol!!.name).isEqualTo("getName")
+            // 0-indexed: doc-open=2, doc-body=3, doc-close=4, `String getName()` line = 5.
+            // The name identifier `getName` is on line 5.
+            assertThat(symbol.location.startLine).isEqualTo(5)
+        }
+
+        /** Same as above but for a property declaration. */
+        @Test
+        @DisplayName("doc-commented property symbol location should be the name identifier")
+        fun docCommentedPropertySymbolShouldLandOnNameLine() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Person {
+                        /**
+                         * The name.
+                         */
+                        String name;
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on `name` in the property declaration line.
+            val symbol = ts.findSymbolAt(uri, 5, 15)
+
+            assertThat(symbol).isNotNull
+            assertThat(symbol!!.name).isEqualTo("name")
+            assertThat(symbol.location.startLine).isEqualTo(5)
         }
     }
 
