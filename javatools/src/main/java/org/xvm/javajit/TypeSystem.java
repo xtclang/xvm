@@ -441,7 +441,7 @@ public class TypeSystem {
         String xvmName = unescapeJitName(name).replace('$', '.');
         if (module.getChildByPath(xvmName) instanceof ClassStructure struct) {
             if (type == null) {
-                type = struct.getCanonicalType();
+                type = struct.getFormalType();
             }
             return new Artifact(type, struct, shape);
         }

@@ -129,7 +129,7 @@ public record Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flav
      */
     public RegisterInfo widen(BuildContext bctx, CodeBuilder code, TypeConstant wideType) {
         TypeConstant prevType = type();
-        RegisterInfo origReg = original();
+        RegisterInfo origReg  = original();
         TypeConstant origType = origReg.type();
 
         assert !prevType.equals(wideType) && wideType.isA(origType);

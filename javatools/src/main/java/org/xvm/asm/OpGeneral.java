@@ -206,8 +206,7 @@ public abstract class OpGeneral
             TypeConstant typeResult = method.getSignature().getRawReturns()[0];
             if (!typeResult.equals(typeTarget)) {
                 tmx.assign(getAddress(), m_nRetValue,
-                    typeResult.resolveGenerics(bctx.pool(), typeTarget)
-                              .resolveAutoNarrowing(bctx.pool(), false, typeTarget, null));
+                    typeResult.resolveAutoNarrowing(bctx.pool(), false, typeTarget, null));
                 return;
             }
         }

@@ -323,9 +323,6 @@ public abstract class OpInvocable extends Op {
         MethodInfo        methodInfo = infoTarget.getMethodById(idMethod);
         SignatureConstant sig        = methodInfo.getSignature();
 
-        if (sig.containsGenericTypes()) {
-            sig = sig.resolveGenericTypes(pool, typeTarget);
-        }
         if (sig.containsAutoNarrowing(true)) {
             sig = sig.resolveAutoNarrowing(pool, typeTarget, null);
         }
