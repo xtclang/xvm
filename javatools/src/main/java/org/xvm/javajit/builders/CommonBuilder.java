@@ -80,26 +80,25 @@ public class CommonBuilder
     public CommonBuilder(TypeSystem typeSystem, TypeConstant type) {
         super(typeSystem);
 
-        assert type.isSingleUnderlyingClass(true) &&
-              !type.containsFormalType(true) &&
-              !type.isAccessSpecified();
+        assert type.isSingleUnderlyingClass(true) && !type.isAccessSpecified();
+
+        this.classStruct = (ClassStructure) type.getSingleUnderlyingClass(true).getComponent();
+
+        // if the class is parameterizable, the type must be either formal or specialized
+        // (some formal parameters resolved to XVM primitive types)
+        assert classStruct.isParameterized() == type.isParamsSpecified();
 
         this.thisType    = type.ensureAccess(Access.PRIVATE);
         this.typeInfo    = thisType.ensureTypeInfo();
         this.structInfo  = thisType.ensureAccess(Access.STRUCT).ensureTypeInfo();
-        this.classStruct = typeInfo.getClassStructure();
-        this.formalType  = classStruct.getFormalType().ensureAccess(Access.PRIVATE);
-        this.formalInfo  = formalType.ensureTypeInfo();
         this.thisId      = classStruct.getIdentityConstant();
         this.isInterface = classStruct.getFormat() == Format.INTERFACE;
     }
 
+    protected final ClassStructure   classStruct;
     protected final TypeConstant     thisType;      // PRIVATE
     protected final TypeInfo         typeInfo;      // PRIVATE
     protected final TypeInfo         structInfo;
-    protected final ClassStructure   classStruct;
-    protected final TypeConstant     formalType;    // PRIVATE
-    protected final TypeInfo         formalInfo;    // PRIVATE
     protected final IdentityConstant thisId;
     protected final boolean          isInterface;
 
@@ -2994,8 +2993,7 @@ public class CommonBuilder
         classBuilder.withMethod(jitName, md, flags,
             methodBuilder -> {
                 if (!isAbstract) {
-                    BuildContext bctx =
-                        new BuildContext(this, className, typeInfo, formalInfo, prop, isGetter);
+                    BuildContext bctx = new BuildContext(this, className, typeInfo, prop, isGetter);
                     methodBuilder.withCode(code -> generateCode(md, bctx, code));
                 }
             }
@@ -3035,7 +3033,7 @@ public class CommonBuilder
             flags |= ClassFile.ACC_STATIC;
         }
 
-        BuildContext bctx = new BuildContext(this, className, typeInfo, formalInfo, method);
+        BuildContext bctx = new BuildContext(this, className, typeInfo, method);
 
         classBuilder.withMethod(jitName, md, flags, methodBuilder -> {
             if (!method.isAbstract()) {

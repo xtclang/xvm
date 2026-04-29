@@ -230,9 +230,6 @@ public abstract class OpVar
                 default -> throw new UnsupportedOperationException(Op.toName(getOpCode()));
             };
 
-            if (typeVar.containsGenericType(true)) {
-                typeVar = typeVar.resolveGenerics(bctx.pool(), bctx.thisType);
-            }
             bctx.typeMatrix.declare(getAddress(), m_nVar, typeVar);
         } else {
             super.computeTypes(bctx);

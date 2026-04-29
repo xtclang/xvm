@@ -278,12 +278,9 @@ public abstract class Builder {
         case PropertyConstant propId: {
             // support for the "local property" mode
             code.aload(0);
-            JitMethodDesc jmd = loadProperty(code, getThisType(), propId);
-
-            TypeConstant type = jmd.isOptimized
-                    ? jmd.optimizedReturns[0].type
-                    : jmd.standardReturns[0].type;
-            JitTypeDesc jtd = type.getJitDesc(this);
+            PropertyInfo info = loadProperty(code, getThisType(), propId);
+            TypeConstant type = info.getType();
+            JitTypeDesc  jtd  = type.getJitDesc(this);
             if (jtd.flavor == NullablePrimitive) {
                 throw new UnsupportedOperationException("TODO multislot property");
             }
@@ -663,9 +660,9 @@ public abstract class Builder {
      *
      * This method assumes the "owner" ref is loaded on Java stack.
      *
-     * @return the JitMethodDesc for the "get" method
+     * @return the PropertyInfo for the property
      */
-    public JitMethodDesc loadProperty(CodeBuilder code, TypeConstant typeContainer,
+    public PropertyInfo loadProperty(CodeBuilder code, TypeConstant typeContainer,
                                       PropertyConstant propId) {
         return loadProperty(code, typeContainer, propId, true);
     }
@@ -677,9 +674,9 @@ public abstract class Builder {
      *
      * @param allowUnboxing  if true, allow property access optimization
      *
-     * @return the JitMethodDesc for the "get" method
+     * @return the PropertyInfo for the property
      */
-    public JitMethodDesc loadProperty(CodeBuilder code, TypeConstant typeContainer,
+    public PropertyInfo loadProperty(CodeBuilder code, TypeConstant typeContainer,
                                       PropertyConstant propId, boolean allowUnboxing) {
         PropertyInfo  xvmInfo    = propId.getPropertyInfo(typeContainer);
         PropertyInfo  jitInfo    = propId.getPropertyInfo(typeContainer.getCanonicalJitType());
@@ -702,10 +699,12 @@ public abstract class Builder {
             code.invokevirtual(ensureClassDesc(typeOwner), getterName, md);
         }
 
-        if (!xvmInfo.getType().equals(jitInfo.getType())) {
-            code.checkcast(ensureClassDesc(xvmInfo.getType()));
+        TypeConstant jitType = jitInfo.getType();
+        TypeConstant xvmType = xvmInfo.getType();
+        if (!isJitAssignable(jitType, xvmType)) {
+            code.checkcast(ensureClassDesc(xvmType));
         }
-        return jmdGet;
+        return xvmInfo;
     }
 
     public void loadOptimizedReturnsToStack(CodeBuilder code, JitMethodDesc md) {
@@ -1364,6 +1363,16 @@ public abstract class Builder {
         return ClassDesc.of(getShapeName(className, shape));
     }
 
+    /**
+     * Check if the assignment of the variable of the `srcType` to the variable of `dstType`
+     * requires a "checkcast".
+     *
+     * @return true iff the assignment is JIT-valid, false if the "checkcast" opcode is necessary
+     */
+    public static boolean isJitAssignable(TypeConstant srcType, TypeConstant dstType) {
+        return srcType.getCanonicalJitType().isA(dstType.getCanonicalJitType());
+    }
+
     // ----- TEMPORARY: debugging support ----------------------------------------------------------
 
     /**
@@ -1415,6 +1424,7 @@ public abstract class Builder {
     public static final String N_Dec32        = "org.xtclang.ecstasy.numbers.Dec32";
     public static final String N_Dec64        = "org.xtclang.ecstasy.numbers.Dec64";
     public static final String N_Dec128       = "org.xtclang.ecstasy.numbers.Dec128";
+    public static final String N_Function     = "org.xtclang.ecstasy.reflect.Function";
     public static final String N_Enumeration  = "org.xtclang.ecstasy.reflect.Enumeration";
     public static final String N_Exception    = "org.xtclang.ecstasy.Exception";
     public static final String N_Float16      = "org.xtclang.ecstasy.numbers.Float16";
