@@ -275,6 +275,94 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * Stacked switch labels: `default: case 0..39: ...` (or any combination
+         * of `case ...:` and `default:` labels for the same arm). The grammar's
+         * `case_clause` and `expression_case_clause` rules previously allowed a
+         * leading `repeat(case <pattern>:)` followed by a final `case <pattern>`
+         * or `default` -- so `default:` could only appear as the final label,
+         * not stacked before another `case:`. The repeat now accepts both
+         * `case <pattern>:` and `default:`. From `manualTests/.../StringBufferTest.x`.
+         */
+        @Test
+        @DisplayName("should parse stacked default+case switch labels")
+        fun shouldParseStackedDefaultAndCaseLabels() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    Int classify(Int n) {
+                        return switch (n) {
+                            default:
+                            case 0..39: 1;
+                            case 40..59: 2;
+                            case 60..100: 3;
+                        };
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Constructor short-form body: `construct(...) = expr;`. The grammar
+         * already supported short-form `= expr;` for methods and getters but
+         * not constructors, so `@Override construct(String s) = TODO();`
+         * (a placeholder constructor signature satisfying a contract) failed
+         * to parse. From `manualTests/.../StringBufferTest.x`.
+         */
+        @Test
+        @DisplayName("should parse short-form constructor body")
+        fun shouldParseShortFormConstructorBody() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Step {
+                        @Override construct(String s) = TODO();
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Single-element tuple expression with explicit trailing comma: `(x,)`.
+         * Disambiguates a 1-tuple from a parenthesized expression `(x)`. The
+         * grammar previously accepted only empty `()` and 2+ element tuples;
+         * `manualTests/.../tuple.x`'s `(1.toInt(), )` therefore failed.
+         */
+        @Test
+        @DisplayName("should parse single-element tuple with trailing comma")
+        fun shouldParseSingleElementTuple() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        Tuple t = (42,);
+                        Tuple u = (1.toInt(),);
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
          * A missing closing brace should still parse (tree-sitter is error-tolerant),
          * but the resulting tree must contain ERROR or MISSING nodes that get reported
          * as diagnostics with severity ERROR.

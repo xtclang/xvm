@@ -74,7 +74,6 @@ module.exports = grammar({
         // Pattern matching conflicts
         [$.pattern_element, $._expression],
         [$.pattern_element, $.parenthesized_expression],
-        [$.pattern_element, $.tuple_expression],
 
         // New expression conflicts
         [$.unary_expression, $.member_expression, $.new_expression],
@@ -88,7 +87,6 @@ module.exports = grammar({
         // Variable/tuple declaration conflicts
         [$.variable_declaration, $._expression],
         [$.tuple_assignment_element, $._expression],
-        [$.tuple_assignment_element, $.tuple_expression],
 
         // Type expression conflicts
         [$.type_expression, $.array_type],
@@ -466,7 +464,10 @@ module.exports = grammar({
 
         // Constructor can have optional finally block: construct(...) { } finally { }
         // prec.right prefers to attach 'finally' to current constructor rather than new declaration
-        // Constructor can also be just a signature (ending with ;) in interfaces
+        // Constructor can also be just a signature (ending with ;) in interfaces.
+        // Short-form body `construct(...) = expr;` is allowed -- mirrors method/getter
+        // short-form, used e.g. for `@Override construct(String s) = TODO();` to satisfy
+        // a required constructor signature with a placeholder.
         constructor_declaration: $ => prec.right(seq(
             optional($.doc_comment),
             repeat($.annotation),
@@ -475,6 +476,7 @@ module.exports = grammar({
             field('parameters', $.parameters),
             choice(
                 seq(field('body', $.block), optional(seq('finally', $.block))),
+                seq('=', $._expression, ';'),
                 ';',
             ),
         )),
@@ -903,11 +905,15 @@ module.exports = grammar({
         // Case clause for switch statements (can contain statements)
         // prec(7) > prec(5) to prefer statement case clauses over expression case clauses
         // when both could match (e.g., case with TODO)
-        // Supports fall-through cases: case 'A': case 'B': statements...
+        // Supports stacked fall-through labels in any combination:
+        //   case 'A': case 'B': statements...
+        //   default: case 'A': statements...
+        //   case 'A': default: statements...
+        // The leading repeat allows any mix of `case <pattern>:` and `default:` labels
+        // (with their own colons). The final label closes with the trailing ':'.
         case_clause: $ => prec(7, seq(
-            choice(
-                seq(repeat(seq('case', $.case_pattern, ':')), choice(seq('case', $.case_pattern), 'default')),
-            ),
+            repeat(choice(seq('case', $.case_pattern, ':'), seq('default', ':'))),
+            choice(seq('case', $.case_pattern), 'default'),
             ':',
             repeat($._statement),
         )),
@@ -926,9 +932,8 @@ module.exports = grammar({
         // - prec(-500, 'TODO') handles bare TODO as LAST RESORT (very low precedence)
         //   This ensures switch_statement is preferred when there's ambiguity
         expression_case_clause: $ => prec(5, seq(
-            choice(
-                seq(repeat(seq('case', $.case_pattern, ':')), choice(seq('case', $.case_pattern), 'default')),
-            ),
+            repeat(choice(seq('case', $.case_pattern, ':'), seq('default', ':'))),
+            choice(seq('case', $.case_pattern), 'default'),
             ':',
             choice(
                 seq($._expression, ';'),
@@ -1245,11 +1250,14 @@ module.exports = grammar({
         // The block must contain statements and typically ends with a return
         statement_expression: $ => $.block,
 
-        // Tuple expression: () or (a, b) or (a, b, c)
-        // Empty tuple () is a valid value (e.g., as default parameter)
-        // prec(1) to prefer empty_tuple over parenthesized_expression or tuple_type
+        // Tuple expression: () or (a,) or (a, b) or (a, b, c)
+        // Empty tuple () is a valid value (e.g., as default parameter).
+        // Single-element tuple uses an explicit trailing comma `(expr,)` to
+        // disambiguate from a parenthesized expression (which would be just `(expr)`).
+        // prec(1) to prefer empty_tuple over parenthesized_expression or tuple_type.
         tuple_expression: $ => choice(
             prec(1, seq('(', ')')),  // Empty tuple
+            prec(1, seq('(', $._expression, ',', ')')),  // Single-element tuple `(x,)`
             seq('(', $._expression, ',', commaSep1($._expression), ')'),  // 2+ elements
         ),
 
