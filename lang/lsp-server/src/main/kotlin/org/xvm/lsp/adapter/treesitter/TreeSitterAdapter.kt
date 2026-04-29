@@ -163,6 +163,37 @@ class TreeSitterAdapter : AbstractAdapter() {
                 SymbolKind.MODULE,
             )
 
+        /** Keywords that make sense inside a function/control-flow body. */
+        private val bodyFlowKeywords =
+            setOf(
+                "if",
+                "else",
+                "switch",
+                "case",
+                "default",
+                "for",
+                "while",
+                "do",
+                "break",
+                "continue",
+                "return",
+                "try",
+                "catch",
+                "finally",
+                "throw",
+                "using",
+                "assert",
+                "new",
+                "this",
+                "super",
+                "outer",
+                "val",
+                "var",
+                "True",
+                "False",
+                "Null",
+            )
+
         /** Common XTC annotations for annotation completion. */
         private val commonAnnotations =
             listOf(
@@ -472,99 +503,7 @@ class TreeSitterAdapter : AbstractAdapter() {
                 }
 
                 CompletionContext.BODY -> {
-                    val flowKeywords =
-                        setOf(
-                            "if",
-                            "else",
-                            "switch",
-                            "case",
-                            "default",
-                            "for",
-                            "while",
-                            "do",
-                            "break",
-                            "continue",
-                            "return",
-                            "try",
-                            "catch",
-                            "finally",
-                            "throw",
-                            "using",
-                            "assert",
-                            "new",
-                            "this",
-                            "super",
-                            "outer",
-                            "val",
-                            "var",
-                            "True",
-                            "False",
-                            "Null",
-                        )
-                    // Order, most-relevant first. distinctBy { it.label } at the end of
-                    // getCompletions preserves the first occurrence of each label, so this
-                    // ordering controls which "kind" wins when a name is offered through
-                    // multiple sources (e.g. a class member is both walked from scope and
-                    // returned by findAllDeclarations).
-                    //
-                    //   1. In-scope locals, parameters, and enclosing-scope members (most
-                    //      contextual -- the user almost certainly meant one of these).
-                    //   2. Other file-level declarations (sibling top-levels not on the
-                    //      cursor's scope chain -- e.g. another top-level class).
-                    //   3. Imports (file-local types brought into scope explicitly).
-                    //   4. Workspace types (cross-file, lower relevance than file-level).
-                    //   5. Built-in types (Int, String, ...).
-                    //   6. Body keywords (if, return, ...).
-                    val bodyKeywords = keywordCompletions().filter { it.label in flowKeywords }
-                    val builtIns = builtInTypeCompletions()
-                    if (tree != null) {
-                        val inScope = queryEngine.enumerateInScope(tree, line, column, uri)
-                        inScope.forEach { symbol ->
-                            add(
-                                CompletionItem(
-                                    label = symbol.name,
-                                    kind = toCompletionKind(symbol.kind),
-                                    detail = symbol.kind.name.lowercase(),
-                                    insertText = symbol.name,
-                                ),
-                            )
-                        }
-                        val declarations = queryEngine.findAllDeclarations(tree, uri)
-                        declarations.forEach { symbol ->
-                            add(
-                                CompletionItem(
-                                    label = symbol.name,
-                                    kind = toCompletionKind(symbol.kind),
-                                    detail = symbol.typeSignature ?: symbol.kind.name.lowercase(),
-                                    insertText = symbol.name,
-                                ),
-                            )
-                        }
-                        val imports = queryEngine.findImports(tree)
-                        imports.forEach { importPath ->
-                            val simpleName = importPath.substringAfterLast(".")
-                            add(
-                                CompletionItem(
-                                    label = simpleName,
-                                    kind = CompletionKind.CLASS,
-                                    detail = "import: $importPath",
-                                    insertText = simpleName,
-                                ),
-                            )
-                        }
-                    }
-                    if (indexReady.get()) {
-                        val workspaceTypes = workspaceIndexTypeCompletions()
-                        logger.info("getCompletions: body-context workspaceTypes(sample)={}", workspaceTypes.take(10).map { it.label })
-                        addAll(workspaceTypes)
-                    }
-                    addAll(builtIns)
-                    addAll(bodyKeywords)
-                    logger.info(
-                        "getCompletions: body-context keywords={} builtIns(sample)={}",
-                        bodyKeywords.map { it.label },
-                        builtIns.take(10).map { it.label },
-                    )
+                    addAll(bodyContextCompletions(tree, line, column, uri))
                 }
 
                 CompletionContext.DEFAULT -> {
@@ -732,6 +671,55 @@ class TreeSitterAdapter : AbstractAdapter() {
                     insertText = symbol.name,
                 )
             }
+
+    /**
+     * Completions for a cursor inside a function/control-flow body.
+     *
+     * Order, most-relevant first; `distinctBy { it.label }` at the end of `getCompletions`
+     * preserves the first occurrence so this controls which "kind" wins when a name is offered
+     * by multiple sources.
+     *
+     * 1. In-scope locals, parameters, enclosing-scope members.
+     * 2. File-level declarations not on the cursor's scope chain.
+     * 3. Imports.
+     * 4. Workspace types.
+     * 5. Built-in types.
+     * 6. Body keywords.
+     */
+    private fun bodyContextCompletions(
+        tree: XtcTree?,
+        line: Int,
+        column: Int,
+        uri: String,
+    ): List<CompletionItem> =
+        buildList {
+            if (tree != null) {
+                queryEngine.enumerateInScope(tree, line, column, uri).mapTo(this) { it.toCompletionItem() }
+                queryEngine.findAllDeclarations(tree, uri).mapTo(this) { it.toCompletionItem() }
+                queryEngine.findImports(tree).mapTo(this) { it.toImportCompletionItem() }
+            }
+            if (indexReady.get()) addAll(workspaceIndexTypeCompletions())
+            addAll(builtInTypeCompletions())
+            addAll(keywordCompletions().filter { it.label in bodyFlowKeywords })
+        }
+
+    private fun SymbolInfo.toCompletionItem(): CompletionItem =
+        CompletionItem(
+            label = name,
+            kind = toCompletionKind(kind),
+            detail = typeSignature ?: kind.name.lowercase(),
+            insertText = name,
+        )
+
+    private fun String.toImportCompletionItem(): CompletionItem {
+        val simpleName = substringAfterLast('.')
+        return CompletionItem(
+            label = simpleName,
+            kind = CompletionKind.CLASS,
+            detail = "import: $this",
+            insertText = simpleName,
+        )
+    }
 
     private fun collectAnnotationNames(node: XtcNode): Set<String> {
         val names = mutableSetOf<String>()
