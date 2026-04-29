@@ -1,6 +1,6 @@
 " Vim syntax file for Ecstasy
 " Language: Ecstasy
-" Generated from XTC language model
+" Generated from Ecstasy language model
 
 if exists('b:current_syntax')
   finish
