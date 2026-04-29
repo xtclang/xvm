@@ -155,12 +155,8 @@ public class JitMethodDesc {
      * container
      */
     public static JitMethodDesc of(Builder builder,
-                                   TypeConstant[] paramTypes,
-                                   TypeConstant[] returnTypes,
-                                   boolean        isConstructor,
-                                   ClassDesc      cdContainer,
-                                   int            reqParamCount) {
-
+                                   TypeConstant[] paramTypes, TypeConstant[] returnTypes,
+                                   boolean isConstructor, ClassDesc cdContainer, int reqParamCount) {
         ConstantPool       pool         = builder.typeSystem.pool();
         List<JitParamDesc> stdParamList = new ArrayList<>();
         List<JitParamDesc> optParamList = new ArrayList<>();
@@ -242,7 +238,7 @@ public class JitMethodDesc {
                     optParamList.add(
                             new JitParamDesc(type, NullableXvmPrimitive, CD_boolean, iOrig, iOpt++, true));
                 }
-            } else if ((cd = JitTypeDesc.getWidenedClass(type)) != null) {
+            } else if ((cd = JitTypeDesc.getWidenedClass(builder, type)) != null) {
                 JitFlavor flavor = fDflt ? WidenedWithDefault : Widened;
                 stdParamList.add(new JitParamDesc(type, flavor, cd, iOrig, iStd++, false));
                 optParamList.add(new JitParamDesc(type, flavor, cd, iOrig, iOpt++, false));
@@ -305,7 +301,7 @@ public class JitMethodDesc {
                 }
                 optParamList.add(new JitParamDesc(pool.typeBoolean(),
                         NullableXvmPrimitive, CD_boolean, iOrig, ixLong++, true));
-            } else if ((cd = JitTypeDesc.getWidenedClass(type)) != null) {
+            } else if ((cd = JitTypeDesc.getWidenedClass(builder, type)) != null) {
                 stdParamList.add(new JitParamDesc(type, Widened, cd, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(type, Widened, cd, iOrig, ixOptObj++, false));
             } else {
