@@ -7,6 +7,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 import java.io.File
 import java.time.Instant
 import java.time.ZoneOffset
@@ -181,28 +182,21 @@ abstract class SummarizeSearchableOptionsTask : DefaultTask() {
 // =============================================================================
 // IntelliJ IDE Resolution
 // =============================================================================
-// IntelliJ Community is downloaded and cached in $GRADLE_USER_HOME by the
-// IntelliJ Platform Gradle Plugin. The cached IDE is keyed by version, so
-// changing the version in libs.versions.toml automatically downloads the
+// IntelliJ Community is downloaded and cached under lang/.intellijPlatform/ides/
+// by the IntelliJ Platform Gradle Plugin. The cached IDE is keyed by version,
+// so changing the version in libs.versions.toml automatically downloads the
 // new version on the next build.
 //
-// To use a local IDE (e.g. in Docker): -PintellijLocalPath=/opt/idea-IC
-//
-// To force a fresh re-download, delete the localPlatformArtifacts directory:
-//   rm -rf lang/.intellijPlatform/localPlatformArtifacts
+// To force a fresh re-download, delete the cache directory:
+//   rm -rf lang/.intellijPlatform/ides
 // Then run any task that requires the IDE (e.g. ./gradlew :lang:intellij-plugin:runIde).
 
 val ideVersion =
     libs.versions.lang.intellij.ide
         .get()
-val localIdePath: String? = providers.gradleProperty("intellijLocalPath").orNull
 
-if (localIdePath != null) {
-    logger.info("[ide] Using local IntelliJ IDE: $localIdePath")
-} else {
-    logger.info("[ide] IntelliJ IDEA $ideVersion (managed by IntelliJ Platform Gradle Plugin)")
-    logger.info("[ide]   First-time download may take several minutes if not already cached.")
-}
+logger.info("[ide] IntelliJ IDEA $ideVersion (managed by IntelliJ Platform Gradle Plugin)")
+logger.info("[ide]   First-time download may take several minutes if not already cached.")
 
 repositories {
     mavenCentral()
@@ -344,14 +338,10 @@ dependencies {
     compileOnly(project(":lsp-server"))
 
     intellijPlatform {
-        if (localIdePath != null) {
-            local(localIdePath)
-        } else {
-            intellijIdea(
-                libs.versions.lang.intellij.ide
-                    .get(),
-            )
-        }
+        intellijIdea(
+            libs.versions.lang.intellij.ide
+                .get(),
+        )
         bundledPlugin("com.intellij.java")
         bundledPlugin("com.intellij.gradle")
         bundledPlugin("org.jetbrains.plugins.textmate")
@@ -360,7 +350,7 @@ dependencies {
             libs.versions.lang.intellij.lsp4ij
                 .get(),
         )
-        // pluginVerifier() - only enable when publishing to verify compatibility
+        pluginVerifier()
     }
 
     textMateGrammar(project(path = ":dsl", configuration = "textMateElements"))
@@ -438,6 +428,26 @@ intellijPlatform {
         token = jetbrainsTokenProvider
         channels = listOf(releaseChannel)
     }
+
+    // Plugin Verifier statically analyses the built plugin against real IDE
+    // distributions to catch binary-incompat regressions (removed APIs, missing
+    // classes, signature changes) before users hit them. `recommended()` verifies
+    // against every IDE build in the plugin's declared compatibility range
+    // (since-build "261" through any future until-build), so newly-released
+    // 2026.1.x patches and 2026.2 EAPs are checked as soon as JetBrains
+    // publishes them. failureLevel is explicit so the build fails on real
+    // breaks but not on every deprecated/experimental API touch.
+    pluginVerification {
+        ides {
+            recommended()
+        }
+        failureLevel =
+            listOf(
+                VerifyPluginTask.FailureLevel.COMPATIBILITY_PROBLEMS,
+                VerifyPluginTask.FailureLevel.INVALID_PLUGIN,
+                VerifyPluginTask.FailureLevel.MISSING_DEPENDENCIES,
+            )
+    }
 }
 
 val publishCheck by tasks.registering(PublishCheckTask::class) {
@@ -455,9 +465,15 @@ val summarizeSearchableOptions by tasks.registering(SummarizeSearchableOptionsTa
     manifestFile.set(layout.buildDirectory.file("tmp/buildSearchableOptions/content.json"))
 }
 
+val verifyPlugin by tasks.existing
+
 val publishPlugin by tasks.existing {
     enabled = enablePublish
     dependsOn(publishCheck)
+    // Enforce binary-compat verification before publishing, regardless of who
+    // invokes publishPlugin (CI, local, snapshot pipeline). Catches removed/
+    // changed APIs and missing dependencies that would otherwise reach users.
+    dependsOn(verifyPlugin)
     if (usesGeneratedJetBrainsPublishSuffix) {
         notCompatibleWithConfigurationCache("JetBrains snapshot publish version uses a generated UTC timestamp suffix for uniqueness.")
     }
