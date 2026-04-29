@@ -208,7 +208,18 @@ module.exports = grammar({
             ';',
         ),
 
-        import_spec: $ => seq('import', $.qualified_name),
+        // Package-import spec, optionally with a resource-provider clause:
+        //   package foo import bar.Baz;
+        //   package foo import bar.Baz inject(Int n, String _) using ProviderType;
+        // The `inject(parameters)` clause declares the formal parameters the
+        // resource provider must supply; `using <ProviderType>` names the provider
+        // class. Both clauses are optional; either may appear without the other.
+        import_spec: $ => seq(
+            'import',
+            $.qualified_name,
+            optional(seq('inject', $.parameters)),
+            optional(seq('using', $.qualified_name)),
+        ),
 
         // Class declaration
         // Note: XTC allows multiple implements clauses, e.g.:

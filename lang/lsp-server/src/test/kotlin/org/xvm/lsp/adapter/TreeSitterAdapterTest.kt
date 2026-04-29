@@ -393,6 +393,35 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * Package-import resource-provider clause:
+         * `package foo import bar.Baz inject(Int n, String _) using ProviderType;`.
+         * The `inject(parameters)` clause declares the formal parameters the
+         * resource provider must supply; `using <ProviderType>` names the
+         * provider class. Both clauses are optional. From
+         * `manualTests/.../container.x`'s
+         * `package contained import TestContained inject(Int value, String _) using SimpleResourceProvider;`.
+         */
+        @Test
+        @DisplayName("should parse package-import resource-provider clause")
+        fun shouldParsePackageImportWithResourceProvider() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    package contained import TestContained inject(Int value, String _) using SimpleResourceProvider;
+                    package other import OtherModule using OtherProvider;
+                    package plain import PlainModule;
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
          * A missing closing brace should still parse (tree-sitter is error-tolerant),
          * but the resulting tree must contain ERROR or MISSING nodes that get reported
          * as diagnostics with severity ERROR.
