@@ -148,7 +148,7 @@ module TestModule {
 ### 3. Code Completion
 
 **LSP Method:** `textDocument/completion`
-**Status:** ⚠️ Partial (Mock not context-aware)
+**Status:** ⚠️ Partial (Mock not context-aware; tree-sitter scope-aware in BODY context)
 **Works with:** Both adapters (tree-sitter better)
 
 **How to trigger:**
@@ -163,13 +163,18 @@ module TestModule {
 | 3.4 | Built-in types | Type `Int` + Ctrl+Space | ✅ | ✅ |
 | 3.5 | After dot (member) | Type `person.` + Ctrl+Space | ❌ | ✅ |
 | 3.6 | Context filtering | Inside method vs class level | ❌ | ⚠️ |
+| 3.7 | Module-level `@Inject` in body | Module: `@Inject Console console;`. Inside `void run() { co<Ctrl+Space> }` | ❌ | ✅ |
+| 3.8 | Function-local variable | Inside method: `String greeting = "hi"; gr<Ctrl+Space>` | ❌ | ✅ |
+| 3.9 | Method parameter | Inside `Int square(Int amount) { am<Ctrl+Space> }` | ❌ | ✅ |
+| 3.10 | Class member from method body | Inside class with `Int total;` and a method, type `to<Ctrl+Space>` in the method body | ❌ | ✅ |
+| 3.11 | Scope ordering | Type `<Ctrl+Space>` inside a method that mixes local var, parameters, class members, module-level decls | ❌ | ✅ locals/params first, then class members, module-level decls, built-in types, keywords |
 
 ---
 
 ### 4. Go to Definition
 
 **LSP Method:** `textDocument/definition`
-**Status:** ✅ Done (same-file + cross-file via workspace index)
+**Status:** ✅ Done (scope-aware same-file + cross-file via workspace index)
 **Works with:** Both adapters (cross-file: tree-sitter only)
 
 **How to trigger:**
@@ -182,8 +187,17 @@ module TestModule {
 | 4.2 | Method reference | Ctrl+Click `getName` call | Jumps to method |
 | 4.3 | Property reference | Ctrl+Click `name` in `return name;` | Jumps to property |
 | 4.4 | Cross-file type | Ctrl+Click on a type defined in another file | Jumps to definition in other file |
+| 4.5 | Method parameter | Ctrl+Click on a parameter usage inside its method body | Jumps to the parameter declaration in the signature, NOT to any same-named workspace symbol |
+| 4.6 | Function-local variable | Method declaring `String s = "hello";` and using `s` later. Ctrl+Click on `s` | Jumps to the local declaration, NOT to any same-named class field or workspace symbol |
+| 4.7 | Local shadowing class member | Class with `Boolean whitespace;`. Method declaring `function Boolean(Char) whitespace = ...;` and using `whitespace(test)`. Ctrl+Click on the `whitespace` call | Jumps to the local function-typed variable, NOT to the class field |
+| 4.8 | Inner block shadows outer | `void run() { Int x = 1; if (cond) { Int x = 2; x.toString(); } }`. Ctrl+Click on the inner `x` | Jumps to the inner-block declaration, NOT the outer one |
+| 4.9 | Forward reference not resolved | Method body where a usage of `name` precedes a local declaration of `name`. Ctrl+Click on the usage | Resolves to module-level / outer-scope / workspace `name`, NOT the forward-declared local |
 
-**Note:** Cross-file definition uses workspace index fallback (prefers type declarations). Import-path-based resolution is not yet implemented.
+**Notes:**
+- Resolution order is: enclosing-scope locals/parameters → class/module members → same-file top-levels → cross-file workspace index.
+- Cross-file definition uses workspace index fallback only when scope-aware resolution finds nothing.
+- Import-path-based resolution is not yet implemented.
+- Known issue (not addressed by current PR): for a class/method/property with a `/** doc comment */` prefix, Ctrl+Click currently jumps to the first line of the doc comment instead of the declaration line.
 
 ---
 
@@ -242,6 +256,8 @@ module TestModule {
 | 7.3 | ERROR comment marker | Add `// ERROR: message` | ✅ | N/A |
 | 7.4 | WARN comment marker | Add `// WARN: message` | ✅ | N/A |
 | 7.5 | Semantic error (undefined var) | Use undefined variable | ❌ | ❌ |
+| 7.6 | Module-level property getter parses cleanly | At module scope (outside any class) write `Int val2.get() = 43;`. Same form inside a class body should also parse | N/A | ✅ no diagnostic |
+| 7.7 | Package-level property getter parses cleanly | Inside `package util { Int answer.get() = 42; }` | N/A | ✅ no diagnostic |
 
 **Notes:**
 - Mock: Detects `// ERROR:` and `// WARN:` comment markers (testing convenience)
