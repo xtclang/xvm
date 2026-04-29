@@ -631,13 +631,17 @@ abstract class TreeSitterParseTestTask @Inject constructor(
         val failed = results.size - passed
         val failures = results.filter { !it.success }.map { it.relativePath }
 
-        logger.info("Tree-sitter parse results: $passed passed, $failed failed")
+        // Log at lifecycle level so the summary appears in CI output without --info,
+        // and so a developer running this task locally sees the result without
+        // having to know about Gradle's logger levels.
+        logger.lifecycle("Tree-sitter parse results: $passed passed, $failed failed")
 
         if (failures.isNotEmpty()) {
-            logger.info("Failed files (first 20):")
-            failures.take(20).forEach { logger.info("  - $it") }
-            if (failures.size > 20) {
-                logger.info("  ... and ${failures.size - 20} more")
+            val maxFailuresLogged = 20
+            logger.lifecycle("Failed files (first $maxFailuresLogged):")
+            failures.take(maxFailuresLogged).forEach { logger.lifecycle("  - $it") }
+            if (failures.size > maxFailuresLogged) {
+                logger.lifecycle("  ... and ${failures.size - maxFailuresLogged} more")
             }
         }
 
@@ -656,6 +660,17 @@ abstract class TreeSitterParseTestTask @Inject constructor(
                 if (sortedTimes.size % 2 == 0) (sortedTimes[mid - 1] + sortedTimes[mid]) / 2 else sortedTimes[mid]
             } else 0
             logger.info("Total: ${totalMs}ms, Average: ${avgMs}ms, Median: ${medianMs}ms per file (${results.size} files)")
+        }
+
+        // Fail the task once the full corpus has been processed and reported, so
+        // the build surfaces every parse failure in one pass. Throwing earlier
+        // would cut the failure list off mid-run; logging without throwing (the
+        // previous behaviour) let regressions accumulate silently for months.
+        if (failures.isNotEmpty()) {
+            throw GradleException(
+                "tree-sitter parse failed for ${failures.size} file(s) out of ${results.size}. " +
+                    "See the lifecycle log above for the full list.",
+            )
         }
     }
 }
@@ -678,11 +693,19 @@ val testTreeSitterParse by tasks.registering(TreeSitterParseTestTask::class) {
     buildDirPath.set(layout.buildDirectory.map { it.asFile.absolutePath })
     rootDir.set(compositeRoot)
 
-    // Find all lib_* directories (the XDK standard library)
+    // Sweep the XDK standard library (lib_*/) AND manualTests/src/main/x/ as
+    // a unified parse-correctness corpus. The lib_* sources are the canonical
+    // grammar surface; manualTests/ holds end-to-end test files that exercise
+    // language features the standard library does not -- service async-call
+    // shapes, multi-return destructuring, package-import resource providers,
+    // etc. Both must parse cleanly for the grammar to be considered correct,
+    // and including manualTests/ here means CI catches regressions on those
+    // shapes without needing per-file unit tests for everything.
     val xdkLibDirs = compositeRoot.listFiles { f ->
         f.isDirectory && f.name.startsWith("lib_")
     }?.toList() ?: emptyList()
-    libDirs.set(xdkLibDirs)
+    val manualTestsDir = File(compositeRoot, "manualTests/src/main/x").takeIf { it.isDirectory }
+    libDirs.set(xdkLibDirs + listOfNotNull(manualTestsDir))
 
     // Support filtering via -PtestFiles=pattern (comma-separated patterns)
     fileFilter.set(providers.gradleProperty("testFiles"))
