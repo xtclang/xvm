@@ -93,6 +93,37 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * Gene's email preamble: navigation jumped to the doc-comment line, not the
+         * declaration itself. The symbol's location must point at the identifier
+         * (`Person`) so cmd-click lands on the `class Person {` line, not on the
+         * doc-comment prefix that precedes it.
+         *
+         * Using string concatenation rather than a triple-quoted string because ktlint
+         * mis-tokenises a literal doc-comment opener nested inside a raw string.
+         */
+        @Test
+        @DisplayName("symbol location should be the name identifier, not the doc-comment prefix")
+        fun symbolLocationShouldBeNameIdentifierNotDocComment() {
+            val uri = freshUri()
+            val docOpen = "/" + "**"
+            val docClose = "*" + "/"
+            val source =
+                "module myapp {\n" +
+                    "    $docOpen\n" +
+                    "     * A person.\n" +
+                    "     $docClose\n" +
+                    "    class Person {\n" +
+                    "    }\n" +
+                    "}\n"
+
+            val result = ts.compile(uri, source)
+
+            val person = result.symbols.first { it.name == "Person" }
+            // 0-indexed lines: doc-open=1, doc-body=2, doc-close=3, `class Person {`=4.
+            assertThat(person.location.startLine).isEqualTo(4)
+        }
+
+        /**
          * Verifies tree-sitter recognizes the `interface` keyword and maps it
          * to [SymbolInfo.SymbolKind.INTERFACE] via `interface_declaration`.
          */

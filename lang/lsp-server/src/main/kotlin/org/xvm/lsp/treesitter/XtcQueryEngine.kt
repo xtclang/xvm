@@ -37,7 +37,11 @@ class XtcQueryEngine(
         logger.info("findAllDeclarations: uri={}", uri.substringAfterLast('/'))
         return buildList {
             executeQuery("allDeclarations", allDeclarationsQuery, tree) { captures ->
-                val name = captures["name"]?.text ?: return@executeQuery
+                // Use the name-capture's location (the identifier itself) so cmd-click lands
+                // on the declaration's name -- not on the leading /** doc comment */ when one
+                // is present. The outer declaration node spans the whole declaration including
+                // its doc-comment prefix, which is what the previous code returned.
+                val nameNode = captures["name"] ?: return@executeQuery
                 val declaration =
                     captures.entries.find { (key, _) ->
                         key in
@@ -72,19 +76,18 @@ class XtcQueryEngine(
                         else -> return@executeQuery
                     }
 
-                val node = declaration.value
                 add(
                     SymbolInfo(
-                        name = name,
-                        qualifiedName = name,
+                        name = nameNode.text,
+                        qualifiedName = nameNode.text,
                         kind = kind,
                         location =
                             Location(
                                 uri = uri,
-                                startLine = node.startLine,
-                                startColumn = node.startColumn,
-                                endLine = node.endLine,
-                                endColumn = node.endColumn,
+                                startLine = nameNode.startLine,
+                                startColumn = nameNode.startColumn,
+                                endLine = nameNode.endLine,
+                                endColumn = nameNode.endColumn,
                             ),
                     ),
                 )

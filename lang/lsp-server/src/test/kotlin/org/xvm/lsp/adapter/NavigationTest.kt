@@ -283,13 +283,14 @@ class NavigationTest : TreeSitterTestBase() {
     @DisplayName("findReferences()")
     inner class FindReferencesTests {
         /**
-         * Unlike [MockAdapter], [TreeSitterAdapter.findReferences] ignores the
-         * `includeDeclaration` flag -- it always returns every identifier node with the
-         * same text. We verify this by checking that both flag values yield the same count.
+         * `includeDeclaration = false` should drop exactly one location: the declaration
+         * itself. With both flag values exercised on the same source, the `false` result
+         * must contain every identifier-token from the `true` result minus the
+         * declaration site.
          */
         @Test
-        @DisplayName("should find all occurrences regardless of includeDeclaration flag")
-        fun shouldFindAllOccurrences() {
+        @DisplayName("should exclude declaration when includeDeclaration is false")
+        fun shouldExcludeDeclarationWhenIncludeDeclarationIsFalse() {
             val uri = freshUri()
             val source =
                 """
@@ -308,7 +309,10 @@ class NavigationTest : TreeSitterTestBase() {
             val withoutDecl = ts.findReferences(uri, 1, 10, includeDeclaration = false)
 
             assertThat(withDecl).hasSizeGreaterThanOrEqualTo(2)
-            assertThat(withDecl).hasSameSizeAs(withoutDecl)
+            assertThat(withoutDecl).hasSize(withDecl.size - 1)
+            // The dropped location is the class declaration's identifier (line 1, col 10).
+            assertThat(withDecl).anyMatch { it.startLine == 1 && it.startColumn == 10 }
+            assertThat(withoutDecl).noneMatch { it.startLine == 1 && it.startColumn == 10 }
         }
 
         /** Past-EOF has no identifier to match, so the result must be empty. */
