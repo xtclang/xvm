@@ -1,0 +1,39 @@
+/**
+ * Corresponds to `org.slf4j.LoggerFactory` (the static accessor) and
+ * `org.slf4j.ILoggerFactory` (the interface that bindings implement). The escape-hatch
+ * accessor for code that cannot use `@Inject`.
+ *
+ * Static accessor for `Logger` instances, for code that cannot use `@Inject`.
+ *
+ * Mirrors `org.slf4j.LoggerFactory`. The first call into `getLogger` resolves the active
+ * `LogSink` (via injection) and caches it; subsequent calls return name-keyed `Logger`
+ * instances backed by that sink.
+ *
+ * Library code that wants `@Inject`-free acquisition should typically use:
+ *
+ *      static Logger logger = LoggerFactory.getLogger("com.example.foo");
+ *
+ * or, when a class object is in scope:
+ *
+ *      static Logger logger = LoggerFactory.getLogger(MyClass);
+ */
+service LoggerFactory {
+
+    @Inject LogSink defaultSink;
+
+    private Map<String, Logger> cache = new HashMap();
+
+    /**
+     * Get the logger for `name`, creating it on first access.
+     */
+    Logger getLogger(String name) {
+        return cache.computeIfAbsent(name, () -> new BasicLogger(name, defaultSink));
+    }
+
+    /**
+     * Convenience: `getLogger(clz.path)`.
+     */
+    Logger getLogger(Class clz) {
+        return getLogger(clz.path);
+    }
+}
