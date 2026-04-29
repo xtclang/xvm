@@ -89,6 +89,69 @@ class NavigationTest : TreeSitterTestBase() {
         }
 
         /**
+         * Gene's reported regression: cmd-click on a local variable named `whitespace`
+         * resolved to a workspace symbol (`Boolean whitespace;` in `Lexer.x`) instead of
+         * the local declaration. Root cause: the definition handler had no scope-aware
+         * lookup -- it consulted `findAllDeclarations` (which only returns top-level
+         * declarations, missing locals) and then fell straight through to the workspace
+         * index, where any same-named symbol won.
+         *
+         * The scope-aware lookup must prefer the local variable when one is in scope at
+         * the cursor.
+         */
+        @Test
+        @DisplayName("should resolve to local variable instead of same-named class member")
+        fun shouldResolveLocalBeforeClassMember() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Lexer {
+                        private Boolean whitespace;
+                    }
+                    Boolean testChar(Char test) {
+                        function Boolean(Char) whitespace = (Char c) -> c == ' ';
+                        return whitespace(test);
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on `whitespace` in `whitespace(test)` -- line 6, column 15
+            val definition = logged("shouldResolveLocalBeforeClassMember", ts.findDefinition(uri, 6, 15))
+
+            assertThat(definition).isNotNull
+            // The local on line 5 (the function-typed declaration), not the field on line 2
+            assertThat(definition!!.startLine).isEqualTo(5)
+        }
+
+        /**
+         * Method parameters must resolve to themselves, not to any same-named workspace
+         * symbol. This is the simpler half of the scope-walk fix.
+         */
+        @Test
+        @DisplayName("should resolve to method parameter")
+        fun shouldResolveParameter() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    Int square(Int x) {
+                        return x * x;
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on the first `x` in `x * x` -- line 2, column 15
+            val definition = logged("shouldResolveParameter", ts.findDefinition(uri, 2, 15))
+
+            assertThat(definition).isNotNull
+            // The parameter `x` on line 1
+            assertThat(definition!!.startLine).isEqualTo(1)
+        }
+
+        /**
          * When the cursor is on a class name used as a return type in a different
          * class, go-to-definition should navigate to the class declaration.
          */

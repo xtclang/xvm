@@ -172,6 +172,142 @@ class XtcQueryEngine(
         )
 
     /**
+     * Resolve a name reference at the given cursor position to the nearest in-scope declaration.
+     *
+     * Walks the AST upward from the cursor and, for each enclosing scope, asks whether that
+     * scope declares anything matching the requested name:
+     *  - A `block` (function body, control-flow body) contributes local variables declared
+     *    *before* the cursor position. Forward references are not allowed for locals.
+     *  - A `method_declaration` / `function_declaration` contributes its parameters.
+     *  - A `class_body` / `module_body` / `package_body` / `interface_body` / `enum_body` /
+     *    `mixin_body` / `service_body` / `const_body` contributes its declared members
+     *    (properties, methods, getters, nested types). Class/module members are visible
+     *    throughout the body, so no before-cursor restriction applies.
+     *
+     * The first matching declaration in the enclosing chain wins, modelling shadowing. The
+     * returned [Location] points at the declaration's `name` field (the identifier), so
+     * cmd-click lands on the name itself rather than the head of the statement.
+     *
+     * Returns `null` if no enclosing scope declares the name. Callers should then consult
+     * the workspace symbol index for a cross-file fallback.
+     */
+    fun resolveByNameInScope(
+        tree: XtcTree,
+        line: Int,
+        column: Int,
+        name: String,
+        uri: String,
+    ): Location? {
+        val cursor = tree.nodeAt(line, column) ?: return null
+        var current: XtcNode? = cursor
+        while (current != null) {
+            val match =
+                when (current.type) {
+                    "block" -> {
+                        findLocalVariableInBlock(current, name, line, column)
+                    }
+
+                    "method_declaration", "function_declaration", "constructor_declaration" -> {
+                        findParameterInMethod(current, name)
+                    }
+
+                    "class_body", "module_body", "package_body", "interface_body",
+                    "enum_body", "mixin_body", "service_body", "const_body",
+                    -> {
+                        findMemberInBody(current, name)
+                    }
+
+                    else -> {
+                        null
+                    }
+                }
+            if (match != null) {
+                logger.info(
+                    "resolveByNameInScope '{}' -> {}:{}:{} (scope={})",
+                    name,
+                    uri.substringAfterLast('/'),
+                    match.startLine + 1,
+                    match.startColumn + 1,
+                    current.type,
+                )
+                return match.toLocation(uri)
+            }
+            current = current.parent
+        }
+        return null
+    }
+
+    /**
+     * Search a function/control-flow `block` for a `variable_declaration` whose name field
+     * matches and whose declaration position precedes the cursor. Forward references aren't
+     * legal Ecstasy, so a declaration at or after the cursor is ignored.
+     */
+    private fun findLocalVariableInBlock(
+        block: XtcNode,
+        name: String,
+        cursorLine: Int,
+        cursorColumn: Int,
+    ): XtcNode? =
+        block.children
+            .asSequence()
+            .filter { it.type == "variable_declaration" }
+            .filter {
+                it.endLine < cursorLine ||
+                    (it.endLine == cursorLine && it.endColumn <= cursorColumn)
+            }.mapNotNull { it.childByFieldName("name") }
+            .firstOrNull { it.text == name }
+
+    /**
+     * Find a `parameter` node whose name field matches in the `parameters` child of a
+     * method/function/constructor declaration.
+     */
+    private fun findParameterInMethod(
+        method: XtcNode,
+        name: String,
+    ): XtcNode? {
+        val params = method.childByFieldName("parameters") ?: return null
+        return params.children
+            .asSequence()
+            .filter { it.type == "parameter" }
+            .mapNotNull { it.childByFieldName("name") }
+            .firstOrNull { it.text == name }
+    }
+
+    /**
+     * Search a class/module/package/interface/enum/mixin/service/const body for a declared
+     * member (property, method, getter, nested type) whose name matches. Members are visible
+     * throughout the body, so position is not constrained.
+     */
+    private fun findMemberInBody(
+        body: XtcNode,
+        name: String,
+    ): XtcNode? =
+        body.children
+            .asSequence()
+            .filter { it.type in memberNodeTypes }
+            .mapNotNull { it.childByFieldName("name") }
+            .firstOrNull { it.text == name }
+
+    private companion object {
+        private val memberNodeTypes =
+            setOf(
+                "property_declaration",
+                "property_getter_declaration",
+                "method_declaration",
+                "constructor_declaration",
+                "class_declaration",
+                "interface_declaration",
+                "mixin_declaration",
+                "service_declaration",
+                "const_declaration",
+                "enum_declaration",
+                "annotation_declaration",
+                "package_declaration",
+                "typedef_declaration",
+            )
+    }
+
+    /**
      * Find the declaration containing a given position.
      */
     fun findDeclarationAt(

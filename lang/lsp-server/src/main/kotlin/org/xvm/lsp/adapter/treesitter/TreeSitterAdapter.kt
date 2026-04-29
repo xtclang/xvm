@@ -753,7 +753,21 @@ class TreeSitterAdapter : AbstractAdapter() {
     ): Location? {
         val (tree, name) = getIdentifierAt(uri, line, column, "definition") ?: return null
 
-        // Same-file lookup first
+        // Scope-aware resolution: walk the AST upward from the cursor and prefer
+        // the nearest enclosing local variable, parameter, or class/module member
+        // before consulting the workspace index. Without this, a local variable
+        // shadowing a workspace symbol of the same name resolves cross-file --
+        // e.g. cmd-click on a local `whitespace` would jump to Lexer.x's
+        // `Boolean whitespace;` instead of the local declaration.
+        val scoped = queryEngine.resolveByNameInScope(tree, line, column, name, uri)
+        if (scoped != null) {
+            logger.info("definition '{}' -> scope-local {}:{}", name, scoped.startLine, scoped.startColumn)
+            return scoped
+        }
+
+        // Same-file top-level lookup (covers anything findAllDeclarations indexes
+        // that resolveByNameInScope didn't reach -- mostly redundant with the
+        // class/module body scope walk, kept as a defensive fallback).
         val symbols = queryEngine.findAllDeclarations(tree, uri)
         val decl = symbols.find { it.name == name }
 
