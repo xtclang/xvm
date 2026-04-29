@@ -91,9 +91,9 @@ class XtcQueryEngine(
             }
         }.also { symbols ->
             logger.info("findAllDeclarations -> {} symbols", symbols.size)
-            if (symbols.isNotEmpty()) {
+            if (logger.isDebugEnabled && symbols.isNotEmpty()) {
                 symbols.forEach { s ->
-                    logger.info(
+                    logger.debug(
                         "  {} '{}' at {}:{}:{}",
                         s.kind,
                         s.name,
@@ -301,8 +301,8 @@ class XtcQueryEngine(
     ): XtcNode? =
         block.children
             .asSequence()
+            .takeWhile { it.endsBefore(cursorLine, cursorColumn) }
             .filter { it.type == "variable_declaration" }
-            .filter { it.endsBefore(cursorLine, cursorColumn) }
             .mapNotNull { it.childByFieldName("name") }
             .firstOrNull { it.text == name }
 
@@ -318,28 +318,16 @@ class XtcQueryEngine(
     ): List<SymbolInfo> =
         block.children
             .asSequence()
+            .takeWhile { it.endsBefore(cursorLine, cursorColumn) }
             .filter { it.type == "variable_declaration" }
-            .filter { it.endsBefore(cursorLine, cursorColumn) }
             .mapNotNull { it.childByFieldName("name") }
-            .map { name -> name.toSymbolInfoAt(name.text, SymbolKind.PROPERTY, uri) }
+            .map { name -> name.toSymbolInfo(name.text, SymbolKind.PROPERTY, uri) }
             .toList()
 
     private fun XtcNode.endsBefore(
         cursorLine: Int,
         cursorColumn: Int,
     ): Boolean = endLine < cursorLine || (endLine == cursorLine && endColumn <= cursorColumn)
-
-    private fun XtcNode.toSymbolInfoAt(
-        name: String,
-        kind: SymbolKind,
-        uri: String,
-    ): SymbolInfo =
-        SymbolInfo(
-            name = name,
-            qualifiedName = name,
-            kind = kind,
-            location = toLocation(uri),
-        )
 
     /**
      * Find a `parameter` node whose name field matches in the `parameters` child of a
@@ -369,7 +357,7 @@ class XtcQueryEngine(
             .asSequence()
             .filter { it.type == "parameter" }
             .mapNotNull { it.childByFieldName("name") }
-            .map { name -> name.toSymbolInfoAt(name.text, SymbolKind.PARAMETER, uri) }
+            .map { name -> name.toSymbolInfo(name.text, SymbolKind.PARAMETER, uri) }
             .toList()
     }
 
@@ -384,7 +372,7 @@ class XtcQueryEngine(
     ): XtcNode? =
         body.children
             .asSequence()
-            .filter { it.type in memberNodeTypes }
+            .filter { it.type in memberNodeKinds }
             .mapNotNull { it.childByFieldName("name") }
             .firstOrNull { it.text == name }
 
@@ -397,11 +385,10 @@ class XtcQueryEngine(
     ): List<SymbolInfo> =
         body.children
             .asSequence()
-            .filter { it.type in memberNodeTypes }
             .mapNotNull { decl ->
+                val kind = memberNodeKinds[decl.type] ?: return@mapNotNull null
                 val nameNode = decl.childByFieldName("name") ?: return@mapNotNull null
-                val kind = memberNodeKinds[decl.type] ?: SymbolKind.PROPERTY
-                nameNode.toSymbolInfoAt(nameNode.text, kind, uri)
+                nameNode.toSymbolInfo(nameNode.text, kind, uri)
             }.toList()
 
     private companion object {
@@ -421,8 +408,6 @@ class XtcQueryEngine(
                 "package_declaration" to SymbolKind.PACKAGE,
                 "typedef_declaration" to SymbolKind.CLASS,
             )
-
-        private val memberNodeTypes = memberNodeKinds.keys
     }
 
     /**

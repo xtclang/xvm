@@ -520,29 +520,10 @@ class TreeSitterAdapter : AbstractAdapter() {
                     if (tree != null) {
                         val declarations = queryEngine.findAllDeclarations(tree, uri)
                         logger.info("getCompletions: default-context declarations={}", declarations.map { "${it.kind}:${it.name}" })
-                        declarations.forEach { symbol ->
-                            add(
-                                CompletionItem(
-                                    label = symbol.name,
-                                    kind = toCompletionKind(symbol.kind),
-                                    detail = symbol.typeSignature ?: symbol.kind.name.lowercase(),
-                                    insertText = symbol.name,
-                                ),
-                            )
-                        }
+                        declarations.mapTo(this) { it.toCompletionItem() }
                         val imports = queryEngine.findImports(tree)
                         logger.info("getCompletions: default-context imports={}", imports)
-                        imports.forEach { importPath ->
-                            val simpleName = importPath.substringAfterLast(".")
-                            add(
-                                CompletionItem(
-                                    label = simpleName,
-                                    kind = CompletionKind.CLASS,
-                                    detail = "import: $importPath",
-                                    insertText = simpleName,
-                                ),
-                            )
-                        }
+                        imports.mapTo(this) { it.toImportCompletionItem() }
                     }
                 }
             }
@@ -587,7 +568,9 @@ class TreeSitterAdapter : AbstractAdapter() {
                     return CompletionContext.IMPORT
                 }
 
-                "module_body", "class_body", "package_body", "enum_body", "block" -> {
+                "module_body", "class_body", "package_body", "interface_body",
+                "enum_body", "mixin_body", "service_body", "const_body", "block",
+                -> {
                     return CompletionContext.BODY
                 }
 

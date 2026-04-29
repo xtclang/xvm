@@ -88,17 +88,6 @@ class NavigationTest : TreeSitterTestBase() {
             assertThat(definition!!.startLine).isEqualTo(2)
         }
 
-        /**
-         * Gene's reported regression: cmd-click on a local variable named `whitespace`
-         * resolved to a workspace symbol (`Boolean whitespace;` in `Lexer.x`) instead of
-         * the local declaration. Root cause: the definition handler had no scope-aware
-         * lookup -- it consulted `findAllDeclarations` (which only returns top-level
-         * declarations, missing locals) and then fell straight through to the workspace
-         * index, where any same-named symbol won.
-         *
-         * The scope-aware lookup must prefer the local variable when one is in scope at
-         * the cursor.
-         */
         @Test
         @DisplayName("should resolve to local variable instead of same-named class member")
         fun shouldResolveLocalBeforeClassMember() {

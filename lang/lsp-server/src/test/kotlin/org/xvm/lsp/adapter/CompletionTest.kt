@@ -186,14 +186,6 @@ class CompletionTest : TreeSitterTestBase() {
             assertThat(completions).anyMatch { it.label == "tokenize" }
         }
 
-        /**
-         * Gene's reported regression: typing `co` inside a function body did not
-         * suggest `console`, even though `@Inject Console console;` is declared at
-         * the enclosing module's scope and `console.print(...)` was used a line
-         * above. Root cause: the BODY completion context did not include
-         * `findAllDeclarations` results, so module-level properties and methods
-         * were absent from the popup.
-         */
         @Test
         @DisplayName("should include module-level @Inject property when completing inside a function body")
         fun shouldIncludeModuleLevelInjectPropertyInBodyCompletions() {
@@ -280,13 +272,6 @@ class CompletionTest : TreeSitterTestBase() {
             assertThat(completions).anyMatch { it.label == "label" }
         }
 
-        /**
-         * Order check (Gene's screenshot shows `Collection`, `const`, `construct`, ... but no
-         * `console` -- after the fix, `console` is present and must rank ahead of the built-in
-         * type `Collection` in the response order, since locally-visible properties are more
-         * relevant than built-in types when the user types `co` after using `console` on the
-         * line above).
-         */
         @Test
         @DisplayName("should rank in-scope @Inject property ahead of built-in types")
         fun shouldRankInjectPropertyAheadOfBuiltIns() {
