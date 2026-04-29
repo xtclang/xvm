@@ -238,6 +238,57 @@ class XtcQueryEngine(
     }
 
     /**
+     * Enumerate all in-scope declarations visible at the given cursor position.
+     *
+     * Same scope walk as [resolveByNameInScope], but returns the full set of visible
+     * declarations rather than the first matching one. Used by the completion provider
+     * to surface locals, parameters, and enclosing-scope members in the BODY context.
+     *
+     * Entries from inner scopes are listed first; if an outer scope declares a name
+     * already declared in an inner scope, the outer one is omitted (shadowing).
+     */
+    fun enumerateInScope(
+        tree: XtcTree,
+        line: Int,
+        column: Int,
+        uri: String,
+    ): List<SymbolInfo> {
+        val cursor = tree.nodeAt(line, column) ?: return emptyList()
+        val results = mutableListOf<SymbolInfo>()
+        val seen = mutableSetOf<String>()
+        var current: XtcNode? = cursor
+        while (current != null) {
+            val scopeSymbols =
+                when (current.type) {
+                    "block" -> {
+                        enumerateLocalsInBlock(current, line, column, uri)
+                    }
+
+                    "method_declaration", "function_declaration", "constructor_declaration" -> {
+                        enumerateParameters(current, uri)
+                    }
+
+                    "class_body", "module_body", "package_body", "interface_body",
+                    "enum_body", "mixin_body", "service_body", "const_body",
+                    -> {
+                        enumerateMembers(current, uri)
+                    }
+
+                    else -> {
+                        emptyList()
+                    }
+                }
+            for (s in scopeSymbols) {
+                if (seen.add(s.name)) {
+                    results += s
+                }
+            }
+            current = current.parent
+        }
+        return results
+    }
+
+    /**
      * Search a function/control-flow `block` for a `variable_declaration` whose name field
      * matches and whose declaration position precedes the cursor. Forward references aren't
      * legal Ecstasy, so a declaration at or after the cursor is ignored.
@@ -251,11 +302,44 @@ class XtcQueryEngine(
         block.children
             .asSequence()
             .filter { it.type == "variable_declaration" }
-            .filter {
-                it.endLine < cursorLine ||
-                    (it.endLine == cursorLine && it.endColumn <= cursorColumn)
-            }.mapNotNull { it.childByFieldName("name") }
+            .filter { it.endsBefore(cursorLine, cursorColumn) }
+            .mapNotNull { it.childByFieldName("name") }
             .firstOrNull { it.text == name }
+
+    /**
+     * Enumerate every local variable declared in the given block before the cursor position.
+     * The returned [SymbolInfo.location] points at the name identifier.
+     */
+    private fun enumerateLocalsInBlock(
+        block: XtcNode,
+        cursorLine: Int,
+        cursorColumn: Int,
+        uri: String,
+    ): List<SymbolInfo> =
+        block.children
+            .asSequence()
+            .filter { it.type == "variable_declaration" }
+            .filter { it.endsBefore(cursorLine, cursorColumn) }
+            .mapNotNull { it.childByFieldName("name") }
+            .map { name -> name.toSymbolInfoAt(name.text, SymbolKind.PROPERTY, uri) }
+            .toList()
+
+    private fun XtcNode.endsBefore(
+        cursorLine: Int,
+        cursorColumn: Int,
+    ): Boolean = endLine < cursorLine || (endLine == cursorLine && endColumn <= cursorColumn)
+
+    private fun XtcNode.toSymbolInfoAt(
+        name: String,
+        kind: SymbolKind,
+        uri: String,
+    ): SymbolInfo =
+        SymbolInfo(
+            name = name,
+            qualifiedName = name,
+            kind = kind,
+            location = toLocation(uri),
+        )
 
     /**
      * Find a `parameter` node whose name field matches in the `parameters` child of a
@@ -274,6 +358,22 @@ class XtcQueryEngine(
     }
 
     /**
+     * Enumerate every named parameter of a method/function/constructor declaration.
+     */
+    private fun enumerateParameters(
+        method: XtcNode,
+        uri: String,
+    ): List<SymbolInfo> {
+        val params = method.childByFieldName("parameters") ?: return emptyList()
+        return params.children
+            .asSequence()
+            .filter { it.type == "parameter" }
+            .mapNotNull { it.childByFieldName("name") }
+            .map { name -> name.toSymbolInfoAt(name.text, SymbolKind.PARAMETER, uri) }
+            .toList()
+    }
+
+    /**
      * Search a class/module/package/interface/enum/mixin/service/const body for a declared
      * member (property, method, getter, nested type) whose name matches. Members are visible
      * throughout the body, so position is not constrained.
@@ -288,23 +388,41 @@ class XtcQueryEngine(
             .mapNotNull { it.childByFieldName("name") }
             .firstOrNull { it.text == name }
 
+    /**
+     * Enumerate every declared member (property, method, getter, nested type) in a body.
+     */
+    private fun enumerateMembers(
+        body: XtcNode,
+        uri: String,
+    ): List<SymbolInfo> =
+        body.children
+            .asSequence()
+            .filter { it.type in memberNodeTypes }
+            .mapNotNull { decl ->
+                val nameNode = decl.childByFieldName("name") ?: return@mapNotNull null
+                val kind = memberNodeKinds[decl.type] ?: SymbolKind.PROPERTY
+                nameNode.toSymbolInfoAt(nameNode.text, kind, uri)
+            }.toList()
+
     private companion object {
-        private val memberNodeTypes =
-            setOf(
-                "property_declaration",
-                "property_getter_declaration",
-                "method_declaration",
-                "constructor_declaration",
-                "class_declaration",
-                "interface_declaration",
-                "mixin_declaration",
-                "service_declaration",
-                "const_declaration",
-                "enum_declaration",
-                "annotation_declaration",
-                "package_declaration",
-                "typedef_declaration",
+        private val memberNodeKinds =
+            mapOf(
+                "property_declaration" to SymbolKind.PROPERTY,
+                "property_getter_declaration" to SymbolKind.PROPERTY,
+                "method_declaration" to SymbolKind.METHOD,
+                "constructor_declaration" to SymbolKind.CONSTRUCTOR,
+                "class_declaration" to SymbolKind.CLASS,
+                "interface_declaration" to SymbolKind.INTERFACE,
+                "mixin_declaration" to SymbolKind.MIXIN,
+                "service_declaration" to SymbolKind.SERVICE,
+                "const_declaration" to SymbolKind.CONST,
+                "enum_declaration" to SymbolKind.ENUM,
+                "annotation_declaration" to SymbolKind.CLASS,
+                "package_declaration" to SymbolKind.PACKAGE,
+                "typedef_declaration" to SymbolKind.CLASS,
             )
+
+        private val memberNodeTypes = memberNodeKinds.keys
     }
 
     /**

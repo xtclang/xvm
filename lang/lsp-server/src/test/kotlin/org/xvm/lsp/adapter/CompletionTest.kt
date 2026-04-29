@@ -222,6 +222,211 @@ class CompletionTest : TreeSitterTestBase() {
             assertThat(completions).anyMatch { it.label == "run" }
         }
 
+        /**
+         * Function-local variables declared above the cursor must appear in BODY-context
+         * completions. This complements the @Inject test above and exercises the AST
+         * scope-walk path (variable_declaration found in the enclosing block).
+         */
+        @Test
+        @DisplayName("should include function-local variable in body completions")
+        fun shouldIncludeFunctionLocalVariableInBodyCompletions() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        String greeting = "hello";
+                        gr
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // Cursor right after the `gr` partial -- line 3, column 10
+            val completions =
+                logged(
+                    "shouldIncludeFunctionLocalVariableInBodyCompletions",
+                    ts.getCompletions(uri, 3, 10),
+                )
+
+            assertThat(completions).anyMatch { it.label == "greeting" }
+        }
+
+        /**
+         * Method parameters must appear in BODY-context completions inside the method body.
+         */
+        @Test
+        @DisplayName("should include method parameters in body completions")
+        fun shouldIncludeMethodParametersInBodyCompletions() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    Int process(Int amount, String label) {
+                        return amount;
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // Cursor inside the body, line 2, column 8 (start of `return`)
+            val completions =
+                logged(
+                    "shouldIncludeMethodParametersInBodyCompletions",
+                    ts.getCompletions(uri, 2, 8),
+                )
+
+            assertThat(completions).anyMatch { it.label == "amount" }
+            assertThat(completions).anyMatch { it.label == "label" }
+        }
+
+        /**
+         * Order check (Gene's screenshot shows `Collection`, `const`, `construct`, ... but no
+         * `console` -- after the fix, `console` is present and must rank ahead of the built-in
+         * type `Collection` in the response order, since locally-visible properties are more
+         * relevant than built-in types when the user types `co` after using `console` on the
+         * line above).
+         */
+        @Test
+        @DisplayName("should rank in-scope @Inject property ahead of built-in types")
+        fun shouldRankInjectPropertyAheadOfBuiltIns() {
+            val uri = freshUri()
+            val source =
+                """
+                module test.examples.org {
+                    @Inject Console console;
+
+                    void run() {
+                        String s = "hello";
+                        co
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            val completions =
+                logged(
+                    "shouldRankInjectPropertyAheadOfBuiltIns",
+                    ts.getCompletions(uri, 5, 10),
+                )
+
+            val labels = completions.map { it.label }
+            val consoleIndex = labels.indexOf("console")
+            val collectionIndex = labels.indexOf("Collection")
+
+            assertThat(consoleIndex).isGreaterThanOrEqualTo(0)
+            assertThat(collectionIndex).isGreaterThanOrEqualTo(0)
+            assertThat(consoleIndex).isLessThan(collectionIndex)
+        }
+
+        /**
+         * Function-local variables and parameters should rank ahead of generic keywords like
+         * `return` in the response. The user typed an identifier prefix; the closest-scope
+         * names are the most likely target.
+         */
+        @Test
+        @DisplayName("should rank function-local variable ahead of body keywords")
+        fun shouldRankFunctionLocalAheadOfKeywords() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void greet() {
+                        String greeting = "hello";
+                        gr
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            val completions = ts.getCompletions(uri, 3, 10)
+            val labels = completions.map { it.label }
+            val greetingIndex = labels.indexOf("greeting")
+            val returnIndex = labels.indexOf("return")
+
+            assertThat(greetingIndex).isGreaterThanOrEqualTo(0)
+            assertThat(returnIndex).isGreaterThanOrEqualTo(0)
+            assertThat(greetingIndex).isLessThan(returnIndex)
+        }
+
+        /**
+         * Slightly complex example: a method that mixes
+         *   - a function-local variable (`localVar`)
+         *   - method parameters (`a`, `b`)
+         *   - sibling class members (`classProperty`, `helper`)
+         *   - module-level declarations (`moduleProperty`, `Calculator`)
+         *   - built-in types (`Int`, `String`)
+         *   - body keywords (`return`)
+         *
+         * The response order should reflect relevance: anything reachable through the AST
+         * scope walk (local, parameters, class members, module-level) is more relevant than
+         * built-in types or keywords. Within the scope-walked items, inner scopes outrank
+         * outer scopes.
+         */
+        @Test
+        @DisplayName("should order completions by scope distance with mixed kinds")
+        fun shouldOrderCompletionsByScopeDistance() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    String moduleProperty;
+
+                    class Calculator {
+                        Int classProperty;
+
+                        void helper() {
+                        }
+
+                        Int compute(Int a, Int b) {
+                            String localVar = "tmp";
+                            return a;
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // Cursor on the `return a;` line, after the local declaration. Line 11, column 19.
+            val completions =
+                logged(
+                    "shouldOrderCompletionsByScopeDistance",
+                    ts.getCompletions(uri, 11, 19),
+                )
+            val labels = completions.map { it.label }
+
+            // Every name is reachable.
+            assertThat(labels).contains(
+                "localVar",
+                "a",
+                "b",
+                "classProperty",
+                "helper",
+                "moduleProperty",
+                "Calculator",
+                "Int",
+                "String",
+                "return",
+            )
+
+            // Scope-walked items rank ahead of built-in types and keywords.
+            assertThat(labels.indexOf("localVar")).isLessThan(labels.indexOf("Int"))
+            assertThat(labels.indexOf("a")).isLessThan(labels.indexOf("Int"))
+            assertThat(labels.indexOf("classProperty")).isLessThan(labels.indexOf("Int"))
+            assertThat(labels.indexOf("moduleProperty")).isLessThan(labels.indexOf("Int"))
+            assertThat(labels.indexOf("Calculator")).isLessThan(labels.indexOf("Int"))
+
+            // Built-in types rank ahead of body keywords.
+            assertThat(labels.indexOf("Int")).isLessThan(labels.indexOf("return"))
+
+            // Within the scope-walked items: inner scopes outrank outer scopes.
+            // localVar (block) before a/b (parameters) before classProperty (class_body)
+            // before moduleProperty (module_body).
+            assertThat(labels.indexOf("localVar")).isLessThan(labels.indexOf("a"))
+            assertThat(labels.indexOf("a")).isLessThan(labels.indexOf("classProperty"))
+            assertThat(labels.indexOf("classProperty")).isLessThan(labels.indexOf("moduleProperty"))
+        }
+
         @Test
         @DisplayName("should include visible names and control-flow keywords in method body")
         fun shouldIncludeBodyContextSuggestions() {
