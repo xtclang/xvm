@@ -6,6 +6,10 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import java.util.stream.Stream
 
 /**
  * Navigation tests for [TreeSitterAdapter].
@@ -444,89 +448,100 @@ class NavigationTest : TreeSitterTestBase() {
 
     @Nested
     @DisplayName("getDocumentLinks()")
+    @TestInstance(TestInstance.Lifecycle.PER_CLASS)
     inner class DocumentLinkTests {
-        @Test
-        @DisplayName("should link URL in line comment")
-        fun shouldLinkUrlInLineComment() {
+        /**
+         * One row per syntactic position the URL detector must recognise (line/block/doc
+         * comment, string literal, trailing-punctuation strip). Assertions are uniform; a
+         * new comment- or string-node type costs one extra row instead of a new method.
+         */
+        @Suppress("unused")
+        fun singleUrlCases(): Stream<Arguments> =
+            Stream.of(
+                Arguments.of(
+                    "line comment",
+                    """
+                    module myapp {
+                        // see https://example.com for details
+                        class Foo {}
+                    }
+                    """.trimIndent(),
+                    "https://example.com",
+                    1,
+                    "    // see ".length,
+                ),
+                Arguments.of(
+                    "block comment, multi-line",
+                    """
+                    module myapp {
+                        /* block comment
+                           with https://anthropic.com on its own line
+                           and more text */
+                        class Foo {}
+                    }
+                    """.trimIndent(),
+                    "https://anthropic.com",
+                    2,
+                    "       with ".length,
+                ),
+                Arguments.of(
+                    "doc comment",
+                    """
+                    module myapp {
+                        /** see http://docs.xtclang.org/guide */
+                        class Foo {}
+                    }
+                    """.trimIndent(),
+                    "http://docs.xtclang.org/guide",
+                    1,
+                    "    /** see ".length,
+                ),
+                Arguments.of(
+                    "string literal",
+                    """
+                    module myapp {
+                        String home = "https://xtclang.org";
+                    }
+                    """.trimIndent(),
+                    "https://xtclang.org",
+                    1,
+                    "    String home = \"".length,
+                ),
+                Arguments.of(
+                    "trailing punctuation stripped",
+                    """
+                    module myapp {
+                        // visit https://example.com.
+                        class Foo {}
+                    }
+                    """.trimIndent(),
+                    "https://example.com",
+                    1,
+                    "    // visit ".length,
+                ),
+            )
+
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("singleUrlCases")
+        fun shouldLinkSingleUrl(
+            @Suppress("UNUSED_PARAMETER") name: String,
+            source: String,
+            expectedTarget: String,
+            expectedLine: Int,
+            expectedColumn: Int,
+        ) {
             val uri = freshUri()
-            val source =
-                """
-                module myapp {
-                    // see https://example.com for details
-                    class Foo {}
-                }
-                """.trimIndent()
             ts.compile(uri, source)
 
             val links = ts.getDocumentLinks(uri, source)
 
             assertThat(links).hasSize(1)
-            assertThat(links[0].target).isEqualTo("https://example.com")
-            // Line 1 (0-based), URL starts after "    // see "
-            assertThat(links[0].range.start.line).isEqualTo(1)
-            assertThat(links[0].range.start.column).isEqualTo("    // see ".length)
-        }
-
-        @Test
-        @DisplayName("should link URL in block comment, multi-line position correct")
-        fun shouldLinkUrlInBlockComment() {
-            val uri = freshUri()
-            val source =
-                """
-                module myapp {
-                    /* block comment
-                       with https://anthropic.com on its own line
-                       and more text */
-                    class Foo {}
-                }
-                """.trimIndent()
-            ts.compile(uri, source)
-
-            val links = ts.getDocumentLinks(uri, source)
-
-            assertThat(links).hasSize(1)
-            assertThat(links[0].target).isEqualTo("https://anthropic.com")
-            // URL is on the third line of the source (0-based line 2)
-            assertThat(links[0].range.start.line).isEqualTo(2)
-            // Column is offset of "https" within that line
-            assertThat(links[0].range.start.column).isEqualTo("       with ".length)
-        }
-
-        @Test
-        @DisplayName("should link URL in doc comment")
-        fun shouldLinkUrlInDocComment() {
-            val uri = freshUri()
-            val source =
-                """
-                module myapp {
-                    /** see http://docs.xtclang.org/guide */
-                    class Foo {}
-                }
-                """.trimIndent()
-            ts.compile(uri, source)
-
-            val links = ts.getDocumentLinks(uri, source)
-
-            assertThat(links).hasSize(1)
-            assertThat(links[0].target).isEqualTo("http://docs.xtclang.org/guide")
-        }
-
-        @Test
-        @DisplayName("should link URL in string literal")
-        fun shouldLinkUrlInStringLiteral() {
-            val uri = freshUri()
-            val source =
-                """
-                module myapp {
-                    String home = "https://xtclang.org";
-                }
-                """.trimIndent()
-            ts.compile(uri, source)
-
-            val links = ts.getDocumentLinks(uri, source)
-
-            assertThat(links).hasSize(1)
-            assertThat(links[0].target).isEqualTo("https://xtclang.org")
+            assertThat(links[0].target).isEqualTo(expectedTarget)
+            assertThat(links[0].range.start.line).isEqualTo(expectedLine)
+            assertThat(links[0].range.start.column).isEqualTo(expectedColumn)
+            // The detected range must cover exactly the (post-strip) URL -- catches mistakes
+            // like the trailing-punctuation case where the dot must NOT be in the range.
+            assertThat(links[0].range.end.column - links[0].range.start.column).isEqualTo(expectedTarget.length)
         }
 
         @Test
@@ -548,28 +563,6 @@ class NavigationTest : TreeSitterTestBase() {
                 "https://a.test",
                 "https://b.test",
             )
-        }
-
-        @Test
-        @DisplayName("should strip trailing sentence punctuation")
-        fun shouldStripTrailingPunctuation() {
-            val uri = freshUri()
-            val source =
-                """
-                module myapp {
-                    // visit https://example.com.
-                    class Foo {}
-                }
-                """.trimIndent()
-            ts.compile(uri, source)
-
-            val links = ts.getDocumentLinks(uri, source)
-
-            assertThat(links).hasSize(1)
-            assertThat(links[0].target).isEqualTo("https://example.com")
-            // The matched range should also exclude the trailing dot
-            assertThat(links[0].range.end.column - links[0].range.start.column)
-                .isEqualTo("https://example.com".length)
         }
 
         @Test

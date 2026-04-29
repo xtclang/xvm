@@ -301,37 +301,17 @@ class XtcLanguageServer(
     }
 
     private fun parseFormattingConfig(raw: Any?): FormattingConfig? {
-        val map =
-            when (raw) {
-                is Map<*, *> -> {
-                    raw
-                }
+        if (raw == null) return null
+        if (raw !is Map<*, *> && raw !is JsonObject && !(raw is JsonElement && raw.isJsonObject)) return null
 
-                is JsonObject -> {
-                    raw.entrySet().associate { it.key to it.value }
-                }
-
-                is JsonElement -> {
-                    raw
-                        .takeIf { it.isJsonObject }
-                        ?.asJsonObject
-                        ?.entrySet()
-                        ?.associate { it.key to it.value }
-                }
-
-                else -> {
-                    null
-                }
-            } ?: return null
-
-        val indentSize = map.intValue("indentSize") ?: 4
-        val continuationIndentSize = map.intValue("continuationIndentSize") ?: 8
-        val insertSpaces = map.booleanValue("insertSpaces") ?: true
-        val maxLineWidth = map.intValue("maxLineWidth") ?: 120
-        val tabSize = map.intValue("tabSize")
+        val indentSize = LspJsonOptions.int(raw, "indentSize") ?: 4
+        val continuationIndentSize = LspJsonOptions.int(raw, "continuationIndentSize") ?: 8
+        val insertSpaces = LspJsonOptions.boolean(raw, "insertSpaces") ?: true
+        val maxLineWidth = LspJsonOptions.int(raw, "maxLineWidth") ?: 120
+        val tabSize = LspJsonOptions.int(raw, "tabSize")
         logger.info(
             "workspace/configuration: parsed config type={} indentSize={} continuationIndentSize={} tabSize={} insertSpaces={} maxLineWidth={}",
-            raw?.javaClass?.name ?: "null",
+            raw.javaClass.name,
             indentSize,
             continuationIndentSize,
             tabSize,
@@ -345,56 +325,6 @@ class XtcLanguageServer(
             maxLineWidth = maxLineWidth,
         )
     }
-
-    private fun Map<*, *>.intValue(key: String): Int? =
-        when (val value = this[key]) {
-            is Number -> {
-                value.toInt()
-            }
-
-            is String -> {
-                value.toIntOrNull()
-            }
-
-            is JsonElement -> {
-                value.takeUnless { it.isJsonNull }?.let {
-                    when {
-                        it.isJsonPrimitive && it.asJsonPrimitive.isNumber -> it.asInt
-                        it.isJsonPrimitive && it.asJsonPrimitive.isString -> it.asString.toIntOrNull()
-                        else -> null
-                    }
-                }
-            }
-
-            else -> {
-                null
-            }
-        }
-
-    private fun Map<*, *>.booleanValue(key: String): Boolean? =
-        when (val value = this[key]) {
-            is Boolean -> {
-                value
-            }
-
-            is String -> {
-                value.toBooleanStrictOrNull()
-            }
-
-            is JsonElement -> {
-                value.takeUnless { it.isJsonNull }?.let {
-                    when {
-                        it.isJsonPrimitive && it.asJsonPrimitive.isBoolean -> it.asBoolean
-                        it.isJsonPrimitive && it.asJsonPrimitive.isString -> it.asString.toBooleanStrictOrNull()
-                        else -> null
-                    }
-                }
-            }
-
-            else -> {
-                null
-            }
-        }
 
     private fun logServerBanner() {
         val pid = ProcessHandle.current().pid()

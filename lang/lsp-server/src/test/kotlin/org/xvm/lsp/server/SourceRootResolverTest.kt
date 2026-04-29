@@ -128,15 +128,15 @@ class SourceRootResolverTest {
         }
 
         @Test
-        @DisplayName("should drop non-existent paths")
-        fun shouldDropMissingPaths() {
+        @DisplayName("should pass non-existent paths through (indexer is the single warning point)")
+        fun shouldPassMissingPathsThrough() {
             val real = realDir("real")
             val fake = tmp.resolve("does-not-exist").toString()
             val opts = mapOf("xtcSourceRoots" to listOf(real, fake))
 
             val roots = SourceRootResolver.resolve(opts, systemProperty = null, envVar = null)
 
-            assertThat(roots).containsExactly(real)
+            assertThat(roots).containsExactly(real, fake)
         }
 
         @Test
