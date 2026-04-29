@@ -3144,7 +3144,7 @@ public class CommonBuilder
         "Float*",
         "Array",
         "Iterable",
-//        "Iterator",
+        "Iterator",
         "List",
         "TerminalConsole",
 //        "Dec32", "Dec64", // need to change to SingleSlot
