@@ -216,6 +216,65 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * Fractional duration literal: `Duration:0.5S` (half a second). The
+         * `duration_literal` regex previously accepted only integer values per
+         * unit, so `manualTests/.../services.x`'s `Timeout(Duration:0.5S, True)`
+         * call failed to parse. ISO-8601 allows fractional values; the grammar
+         * regex now matches `[0-9]+(\.[0-9]+)?` per unit.
+         */
+        @Test
+        @DisplayName("should parse fractional duration literal")
+        fun shouldParseFractionalDurationLiteral() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        Duration d1 = Duration:0.5S;
+                        Duration d2 = Duration:0.001S;
+                        Duration d3 = Duration:30S;
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Multi-return destructuring assignment with annotations on each element:
+         * `(@Future Int v1, @Future Int v2) = svc.multiReturn(...)`. This is how
+         * services declare async future variables via tuple destructuring. The
+         * `tuple_assignment_element` rule previously accepted typed forms but
+         * not leading annotations, so `manualTests/.../services.x`'s multi-return
+         * call site failed to parse. The rule now allows `repeat($.annotation)`
+         * before both the val/var-prefixed form and the type-prefixed form, with
+         * a 2-way conflict declared between `parameter` and `tuple_assignment_element`.
+         */
+        @Test
+        @DisplayName("should parse annotated multi-return destructuring assignment")
+        fun shouldParseAnnotatedMultiReturnAssignment() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        (@Future Int v1, @Future Int v2) = svc.multiReturn(1, 2);
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
          * A missing closing brace should still parse (tree-sitter is error-tolerant),
          * but the resulting tree must contain ERROR or MISSING nodes that get reported
          * as diagnostics with severity ERROR.

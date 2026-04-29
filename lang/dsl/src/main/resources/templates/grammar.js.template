@@ -97,6 +97,11 @@ module.exports = grammar({
         [$.tuple_type_element, $.parameter, $.tuple_assignment_element],
         [$.tuple_type_element, $.parameter, $.tuple_assignment_element, $.for_tuple_destructure],
         [$.tuple_type_element, $.parameter, $.conditional_tuple_element],
+        // 2-way conflict needed when annotations precede the type (e.g.
+        // `(@Future Int v1, @Future Int v2) = ...` — multi-return assignment).
+        // The 3-way variant above is not sufficient because some LR states
+        // see only `parameter` and `tuple_assignment_element` as candidates.
+        [$.parameter, $.tuple_assignment_element],
 
         // Conditional tuple conflicts
         [$.conditional_tuple_element, $._expression],
@@ -701,11 +706,15 @@ module.exports = grammar({
             ';',
         ),
 
-        // Element in tuple assignment: can be typed (Type x), untyped (x, this.y), or val/var
-        // Examples: (Type x, Int y), (x, this.y), (val x, Int y), (var Type x, val y)
+        // Element in tuple assignment: can be typed (Type x), untyped (x, this.y), or val/var.
+        // Annotations are allowed on typed forms; this is how multi-return assignments
+        // like `(@Future Int v1, @Future Int v2) = svc.multiReturn(...)` declare async
+        // futures via tuple destructuring.
+        // Examples: (Type x, Int y), (x, this.y), (val x, Int y), (var Type x, val y),
+        //           (@Future Int v1, @Future Int v2)
         tuple_assignment_element: $ => choice(
-            seq(choice('val', 'var'), optional($.type_expression), $.identifier),
-            seq($.type_expression, $.identifier),
+            seq(repeat($.annotation), choice('val', 'var'), optional($.type_expression), $.identifier),
+            seq(repeat($.annotation), $.type_expression, $.identifier),
             $._expression,
         ),
 
@@ -1375,8 +1384,9 @@ module.exports = grammar({
         path_literal: $ => /\/[a-zA-Z0-9_\-\.\/]*/,
 
         // Duration literal: ISO-8601 format (P prefix optional in XTC shorthand)
-        // Examples: PT1H30M (1 hour 30 min), P1D (1 day), 30S (30 seconds), PT0S (0 seconds)
-        duration_literal: $ => /P?T?[0-9]+[YMDHS]([0-9]+[YMDHS])*/i,
+        // Examples: PT1H30M (1 hour 30 min), P1D (1 day), 30S (30 seconds), PT0S (0 seconds),
+        // 0.5S (half a second), PT0.001S (1 millisecond)
+        duration_literal: $ => /P?T?[0-9]+(\.[0-9]+)?[YMDHS]([0-9]+(\.[0-9]+)?[YMDHS])*/i,
 
         // Identifiers and names
         // type_name can be a simple identifier or a qualified name (e.g., ecstasy.io.Channel)
