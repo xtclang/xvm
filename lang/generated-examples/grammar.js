@@ -847,10 +847,11 @@ module.exports = grammar({
             '=',
             $._expression,
         ),
-        // Multiple variable declarations in for initializer
+        // Multiple variable declarations in for initializer.
+        // Annotations are allowed before the type, e.g. `for (@Watch(x) Int i = 3; ...)`.
         for_var_declarations: $ => seq(
-            $.type_expression, $.identifier, '=', $._expression,
-            repeat(seq(',', $.type_expression, $.identifier, '=', $._expression)),
+            repeat($.annotation), $.type_expression, $.identifier, '=', $._expression,
+            repeat(seq(',', repeat($.annotation), $.type_expression, $.identifier, '=', $._expression)),
         ),
 
         // Tuple destructuring pattern for for-each: ((Type1 name1, Type2 name2))

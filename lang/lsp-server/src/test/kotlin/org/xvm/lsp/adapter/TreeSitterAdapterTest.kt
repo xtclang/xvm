@@ -363,6 +363,36 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * Annotation on a for-loop's variable initializer:
+         * `for (@Watch(x) Int i = 3; i > 0; --i) {}`. The `for_var_declarations`
+         * rule previously accepted only `Type identifier = expr` without
+         * leading annotations. Local-variable annotations like `@Watch(...)`
+         * (used in `manualTests/.../annos.x` for property-watch tracing) needed
+         * the same `repeat($.annotation)` prefix that other variable-declaration
+         * forms already had. Without this, the for-loop init failed to parse
+         * and cascade errors propagated through the rest of the method body.
+         */
+        @Test
+        @DisplayName("should parse annotation on for-loop variable initializer")
+        fun shouldParseAnnotationOnForLoopInit() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        for (@Watch(logger) Int i = 3; i > 0; --i) {}
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
          * A missing closing brace should still parse (tree-sitter is error-tolerant),
          * but the resulting tree must contain ERROR or MISSING nodes that get reported
          * as diagnostics with severity ERROR.
