@@ -516,22 +516,58 @@ If settings don't update immediately, restart the server as a workaround.
 ### 15. Document Links
 
 **LSP Method:** `textDocument/documentLink`
-**Status:** ✅ Done
-**Works with:** Both adapters
+**Status:** ✅ Done (URLs in comments and string literals)
+**Works with:** Tree-sitter adapter
 
 **How to trigger:**
-- *IntelliJ:* Import paths appear as clickable links (Ctrl+Click)
-- *VS Code:* Import paths appear as clickable underlined text (Ctrl+Click)
+- *IntelliJ:* URLs appear as clickable links inside comments and string literals (Ctrl+Click)
+- *VS Code:* URLs appear as clickable underlined text inside comments and string literals (Ctrl+Click)
 
 | # | Test | Steps | Expected Result |
 |---|------|-------|-----------------|
-| 15.1 | Import link | Add `import ecstasy.text.String;` | Path is clickable/underlined |
-| 15.2 | Tooltip | Hover over import path | Shows `import ecstasy.text.String` tooltip |
-| 15.3 | Multiple imports | Add 3 import statements | All paths are links |
-| 15.4 | Import navigation | Ctrl+Click on an import path whose type exists in the workspace | Navigates to the source file of the imported type |
-| 15.5 | Unresolved import | Ctrl+Click on an import path not in the workspace | Shows tooltip but does not navigate |
+| 15.1 | URL in line comment | Add `// see https://example.com for more` | URL is underlined; Ctrl+Click opens browser |
+| 15.2 | URL in block comment | Add `/* docs at https://docs.xtclang.org */` | URL is underlined and clickable |
+| 15.3 | URL in doc comment | Add `/** Reference: https://example.com */` above a class | URL is underlined and clickable |
+| 15.4 | URL in string literal | Add `String url = "https://api.example.com/v1";` | URL inside the string is clickable |
+| 15.5 | URL in template string | Add `String s = $"see https://x.test/{name}";` | URL is clickable; the interpolation continues to work |
+| 15.6 | Trailing punctuation trimmed | Add `// see https://example.com.` (period at end) | The link target is `https://example.com` without the trailing `.` |
+| 15.7 | URL in parens | Add `// (see https://example.com)` | Match excludes the closing `)`; target is the URL only |
+| 15.8 | Multiple URLs in one comment | Add `// links: https://a.test and https://b.test` | Both URLs are independently clickable |
+| 15.9 | No link on `import` | Add `import ecstasy.text.String;` | Import path is **not** underlined as a document link (Ctrl+Click on the type name still navigates via go-to-definition) |
 
-**Note:** Import navigation (target resolution) is implemented via the workspace index. When the index is populated, Ctrl+Click on an import navigates to the imported type's source file. If the type is not indexed, the link shows a tooltip only.
+**Notes:**
+- Import-path document links were intentionally removed in PR #446. Cmd/Ctrl-click navigation on imports still works via `textDocument/definition` (it knows the difference between a package component and a type component, and degrades gracefully when nothing resolves).
+- The URL matcher trims sentence-final punctuation (`.,;:!?}`) but stops at whitespace, quotes, angle brackets, or `)` / `]` — so an in-prose URL like `(https://example.com)` keeps the URL clean.
+- The `documentLinkProvider` capability is still advertised, so the IntelliJ plugin doesn't need to renegotiate when additional non-URL providers are added (e.g. file-path links in resource strings, doc-comment cross-references) later.
+
+---
+
+### 15a. Extra source roots (`xtcSourceRoots`)
+
+**LSP Method:** `initialize` — `initializationOptions.xtcSourceRoots`
+**Status:** ✅ Done (added in PR #446)
+**Works with:** Any client that sends initialization options
+
+Lets users index `.x` source roots that live outside the open workspace folders. Three input channels (in priority order, all merged then deduplicated):
+1. LSP `initializationOptions.xtcSourceRoots` — a JSON array of path strings.
+2. System property `xtc.sourceRoots` — path-separator-delimited (`:` on Unix, `;` on Windows).
+3. Environment variable `XTC_SOURCE_ROOTS` — same delimiter rules.
+
+Workspace folders take precedence; extra roots are merged in. Non-existent paths are dropped with a warning at LSP startup.
+
+| # | Test | Steps | Expected Result |
+|---|------|-------|-----------------|
+| 15a.1 | env var resolves cross-tree imports | Open a project that imports a module whose sources live in another checkout. Launch LSP with `XTC_SOURCE_ROOTS=/path/to/xtclang2/lib_json/src/main/x` set | Cmd-click on the imported type navigates into the external source tree |
+| 15a.2 | system property resolves cross-tree imports | Same as 15a.1 but pass `-Dxtc.sourceRoots=/path/to/lib_json/src/main/x` to the LSP JVM (via plugin advanced settings or VS Code launch config) | Same — imported type resolves |
+| 15a.3 | initializationOptions resolves cross-tree imports | Configure the IntelliJ plugin (or VS Code extension) to send `initializationOptions: { xtcSourceRoots: ["/path/to/lib_json/src/main/x"] }` | Same — imported type resolves |
+| 15a.4 | nonexistent path drops + warns | Set `XTC_SOURCE_ROOTS=/this/does/not/exist:/valid/path/lib_x/src/main/x` | LSP startup log warns about the missing path; the valid path still indexes |
+| 15a.5 | path-separator handling | On macOS/Linux: `XTC_SOURCE_ROOTS=/a/path:/another/path`. On Windows: `XTC_SOURCE_ROOTS=C:\a;C:\b` | Both paths are added to the indexer |
+| 15a.6 | dedup with workspace folders | Set the env var to a folder that's already in the workspace | Folder appears once in the index, not twice |
+
+**Notes:**
+- Without this feature, an `import json.xtclang.org;` from a project that doesn't have the `lib_json` source files in its workspace would fail to resolve via Cmd-click.
+- This does **not** index `.xtc` binaries. A module that exists only in compiled form is still invisible to navigation. Resolving that would require either an XTC binary reader plus a virtual decompiled view, or shipping `.x` sources alongside the install distribution. Out of scope.
+- The IntelliJ plugin doesn't yet expose `xtcSourceRoots` as a settings panel; for now the env var or system property is the practical path. Plugin-side work is a follow-up.
 
 ---
 
