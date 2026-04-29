@@ -26,6 +26,7 @@ listOf(
     "lib_net",
     "lib_json",
     "lib_jsondb",
+    "lib_logging",
     "lib_oodb",
     "lib_sec",
     "lib_web",
