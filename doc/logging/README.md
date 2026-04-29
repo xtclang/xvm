@@ -86,6 +86,9 @@ The docs are organised by question. Pick the one that matches what you want to k
 
 ### "What's still uncertain?"
 
+- **[`RUNTIME_IMPLEMENTATION_PLAN.md`](RUNTIME_IMPLEMENTATION_PLAN.md)** — the
+  actionable plan for turning the v0 stub into a demo-worthy end-to-end round
+  trip. Stages, ordering, time estimates, definition of "demo worthy".
 - **[`OPEN_QUESTIONS.md`](OPEN_QUESTIONS.md)** — running list of unresolved design
   and implementation questions, with the trade-offs and a tentative recommendation
   for each. None block the v0 stub; they block "v0 working end-to-end".
