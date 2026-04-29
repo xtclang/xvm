@@ -148,8 +148,11 @@ class TreeSitterAdapter : AbstractAdapter() {
          */
         private val urlPattern = Regex("""\bhttps?://[^\s<>"'`)\]]+""")
 
-        /** Trailing punctuation stripped from a URL match (sentence-final commas, periods, etc.). */
-        private val urlTrailingTrim = charArrayOf('.', ',', ';', ':', '!', '?', ')', ']', '}')
+        /**
+         * Trailing punctuation stripped from a URL match (sentence-final commas, periods, etc.).
+         * Note: `)` and `]` are already excluded by [urlPattern] so no match can end in them.
+         */
+        private val urlTrailingTrim = charArrayOf('.', ',', ';', ':', '!', '?', '}')
 
         /** Symbol kinds that represent types (for type-position completion filtering). */
         private val typeSymbolKinds =
@@ -161,6 +164,37 @@ class TreeSitterAdapter : AbstractAdapter() {
                 SymbolKind.CONST,
                 SymbolKind.ENUM,
                 SymbolKind.MODULE,
+            )
+
+        /** Keywords that make sense inside a function/control-flow body. */
+        private val bodyFlowKeywords =
+            setOf(
+                "if",
+                "else",
+                "switch",
+                "case",
+                "default",
+                "for",
+                "while",
+                "do",
+                "break",
+                "continue",
+                "return",
+                "try",
+                "catch",
+                "finally",
+                "throw",
+                "using",
+                "assert",
+                "new",
+                "this",
+                "super",
+                "outer",
+                "val",
+                "var",
+                "True",
+                "False",
+                "Null",
             )
 
         /** Common XTC annotations for annotation completion. */
@@ -472,63 +506,7 @@ class TreeSitterAdapter : AbstractAdapter() {
                 }
 
                 CompletionContext.BODY -> {
-                    if (tree != null) {
-                        val declarations = queryEngine.findAllDeclarations(tree, uri)
-                        logger.info("getCompletions: body-context declarations={}", declarations.map { "${it.kind}:${it.name}" })
-                        declarations.forEach { symbol ->
-                            add(
-                                CompletionItem(
-                                    label = symbol.name,
-                                    kind = toCompletionKind(symbol.kind),
-                                    detail = symbol.typeSignature ?: symbol.kind.name.lowercase(),
-                                    insertText = symbol.name,
-                                ),
-                            )
-                        }
-                    }
-                    val flowKeywords =
-                        setOf(
-                            "if",
-                            "else",
-                            "switch",
-                            "case",
-                            "default",
-                            "for",
-                            "while",
-                            "do",
-                            "break",
-                            "continue",
-                            "return",
-                            "try",
-                            "catch",
-                            "finally",
-                            "throw",
-                            "using",
-                            "assert",
-                            "new",
-                            "this",
-                            "super",
-                            "outer",
-                            "val",
-                            "var",
-                            "True",
-                            "False",
-                            "Null",
-                        )
-                    val bodyKeywords = keywordCompletions().filter { it.label in flowKeywords }
-                    val builtIns = builtInTypeCompletions()
-                    logger.info(
-                        "getCompletions: body-context keywords={} builtIns(sample)={}",
-                        bodyKeywords.map { it.label },
-                        builtIns.take(10).map { it.label },
-                    )
-                    addAll(bodyKeywords)
-                    addAll(builtIns)
-                    if (indexReady.get()) {
-                        val workspaceTypes = workspaceIndexTypeCompletions()
-                        logger.info("getCompletions: body-context workspaceTypes(sample)={}", workspaceTypes.take(10).map { it.label })
-                        addAll(workspaceTypes)
-                    }
+                    addAll(bodyContextCompletions(tree, line, column, uri))
                 }
 
                 CompletionContext.DEFAULT -> {
@@ -545,29 +523,10 @@ class TreeSitterAdapter : AbstractAdapter() {
                     if (tree != null) {
                         val declarations = queryEngine.findAllDeclarations(tree, uri)
                         logger.info("getCompletions: default-context declarations={}", declarations.map { "${it.kind}:${it.name}" })
-                        declarations.forEach { symbol ->
-                            add(
-                                CompletionItem(
-                                    label = symbol.name,
-                                    kind = toCompletionKind(symbol.kind),
-                                    detail = symbol.typeSignature ?: symbol.kind.name.lowercase(),
-                                    insertText = symbol.name,
-                                ),
-                            )
-                        }
+                        declarations.mapTo(this) { it.toCompletionItem() }
                         val imports = queryEngine.findImports(tree)
                         logger.info("getCompletions: default-context imports={}", imports)
-                        imports.forEach { importPath ->
-                            val simpleName = importPath.substringAfterLast(".")
-                            add(
-                                CompletionItem(
-                                    label = simpleName,
-                                    kind = CompletionKind.CLASS,
-                                    detail = "import: $importPath",
-                                    insertText = simpleName,
-                                ),
-                            )
-                        }
+                        imports.mapTo(this) { it.toImportCompletionItem() }
                     }
                 }
             }
@@ -612,7 +571,9 @@ class TreeSitterAdapter : AbstractAdapter() {
                     return CompletionContext.IMPORT
                 }
 
-                "module_body", "class_body", "package_body", "enum_body", "block" -> {
+                "module_body", "class_body", "package_body", "interface_body",
+                "enum_body", "mixin_body", "service_body", "const_body", "block",
+                -> {
                     return CompletionContext.BODY
                 }
 
@@ -697,6 +658,55 @@ class TreeSitterAdapter : AbstractAdapter() {
                 )
             }
 
+    /**
+     * Completions for a cursor inside a function/control-flow body.
+     *
+     * Order, most-relevant first; `distinctBy { it.label }` at the end of `getCompletions`
+     * preserves the first occurrence so this controls which "kind" wins when a name is offered
+     * by multiple sources.
+     *
+     * 1. In-scope locals, parameters, enclosing-scope members.
+     * 2. File-level declarations not on the cursor's scope chain.
+     * 3. Imports.
+     * 4. Workspace types.
+     * 5. Built-in types.
+     * 6. Body keywords.
+     */
+    private fun bodyContextCompletions(
+        tree: XtcTree?,
+        line: Int,
+        column: Int,
+        uri: String,
+    ): List<CompletionItem> =
+        buildList {
+            if (tree != null) {
+                queryEngine.enumerateInScope(tree, line, column, uri).mapTo(this) { it.toCompletionItem() }
+                queryEngine.findAllDeclarations(tree, uri).mapTo(this) { it.toCompletionItem() }
+                queryEngine.findImports(tree).mapTo(this) { it.toImportCompletionItem() }
+            }
+            if (indexReady.get()) addAll(workspaceIndexTypeCompletions())
+            addAll(builtInTypeCompletions())
+            addAll(keywordCompletions().filter { it.label in bodyFlowKeywords })
+        }
+
+    private fun SymbolInfo.toCompletionItem(): CompletionItem =
+        CompletionItem(
+            label = name,
+            kind = toCompletionKind(kind),
+            detail = typeSignature ?: kind.name.lowercase(),
+            insertText = name,
+        )
+
+    private fun String.toImportCompletionItem(): CompletionItem {
+        val simpleName = substringAfterLast('.')
+        return CompletionItem(
+            label = simpleName,
+            kind = CompletionKind.CLASS,
+            detail = "import: $this",
+            insertText = simpleName,
+        )
+    }
+
     private fun collectAnnotationNames(node: XtcNode): Set<String> {
         val names = mutableSetOf<String>()
         if (node.type == "annotation") {
@@ -723,7 +733,21 @@ class TreeSitterAdapter : AbstractAdapter() {
     ): Location? {
         val (tree, name) = getIdentifierAt(uri, line, column, "definition") ?: return null
 
-        // Same-file lookup first
+        // Scope-aware resolution: walk the AST upward from the cursor and prefer
+        // the nearest enclosing local variable, parameter, or class/module member
+        // before consulting the workspace index. Without this, a local variable
+        // shadowing a workspace symbol of the same name resolves cross-file --
+        // e.g. cmd-click on a local `whitespace` would jump to Lexer.x's
+        // `Boolean whitespace;` instead of the local declaration.
+        val scoped = queryEngine.resolveByNameInScope(tree, line, column, name, uri)
+        if (scoped != null) {
+            logger.info("definition '{}' -> scope-local {}:{}", name, scoped.startLine, scoped.startColumn)
+            return scoped
+        }
+
+        // Same-file top-level lookup (covers anything findAllDeclarations indexes
+        // that resolveByNameInScope didn't reach -- mostly redundant with the
+        // class/module body scope walk, kept as a defensive fallback).
         val symbols = queryEngine.findAllDeclarations(tree, uri)
         val decl = symbols.find { it.name == name }
 

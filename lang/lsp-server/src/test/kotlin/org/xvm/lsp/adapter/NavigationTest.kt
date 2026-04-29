@@ -88,6 +88,162 @@ class NavigationTest : TreeSitterTestBase() {
             assertThat(definition!!.startLine).isEqualTo(2)
         }
 
+        @Test
+        @DisplayName("should resolve to local variable instead of same-named class member")
+        fun shouldResolveLocalBeforeClassMember() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Lexer {
+                        private Boolean whitespace;
+                    }
+                    Boolean testChar(Char test) {
+                        function Boolean(Char) whitespace = (Char c) -> c == ' ';
+                        return whitespace(test);
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on `whitespace` in `whitespace(test)` -- line 6, column 15
+            val definition = logged("shouldResolveLocalBeforeClassMember", ts.findDefinition(uri, 6, 15))
+
+            assertThat(definition).isNotNull
+            // The local on line 5 (the function-typed declaration), not the field on line 2
+            assertThat(definition!!.startLine).isEqualTo(5)
+        }
+
+        /**
+         * Forward references are not legal Ecstasy: a local declared on a later line
+         * must NOT be returned as the resolution of an identifier above the
+         * declaration. The scope walk filters `variable_declaration`s by their end
+         * position relative to the cursor; this test guards that filter.
+         */
+        @Test
+        @DisplayName("should not resolve to local declared after the cursor")
+        fun shouldNotResolveForwardReferenceLocal() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    Int globalThing;
+                    void run() {
+                        globalThing.toString();
+                        Int globalThing = 42;
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on `globalThing` in `globalThing.toString()` (line 3) -- before the
+            // shadowing local on line 4. Resolution must skip the forward-declared local
+            // and walk up to the module-level property on line 1.
+            val definition =
+                logged(
+                    "shouldNotResolveForwardReferenceLocal",
+                    ts.findDefinition(uri, 3, 8),
+                )
+
+            assertThat(definition).isNotNull
+            // The module-level globalThing is on line 1, NOT the local on line 4.
+            assertThat(definition!!.startLine).isEqualTo(1)
+        }
+
+        /**
+         * A local in an inner block must shadow a same-named local in an outer block.
+         * Cmd-click on the inner reference must return the inner declaration.
+         */
+        @Test
+        @DisplayName("should prefer inner-block local over outer-block local")
+        fun shouldPreferInnerBlockLocal() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        Int x = 1;
+                        if (True) {
+                            Int x = 2;
+                            x.toString();
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on `x` in `x.toString();` -- line 5, column 12
+            val definition = logged("shouldPreferInnerBlockLocal", ts.findDefinition(uri, 5, 12))
+
+            assertThat(definition).isNotNull
+            // The inner-block declaration (line 4), not the outer-block declaration (line 2).
+            assertThat(definition!!.startLine).isEqualTo(4)
+        }
+
+        /**
+         * The scope walk short-circuits when it finds a match in an enclosing scope. If the
+         * referenced name does NOT exist in any enclosing scope, resolution must fall through
+         * to the same-file declarations and (if not found there) the workspace index.
+         *
+         * This is the same-file half of that fall-through. (The cross-file workspace path
+         * requires an indexed multi-file workspace, which the unit-test harness does not
+         * easily set up.)
+         */
+        @Test
+        @DisplayName("should fall through to same-file declarations when name is not in scope")
+        fun shouldFallThroughToSameFileDeclarationsWhenOutOfScope() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Helper {
+                    }
+                    void run() {
+                        Helper h = new Helper();
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on `Helper` in `Helper h = new Helper();` -- line 4, column 8.
+            // `Helper` is not declared in the enclosing function scope; resolution must
+            // fall through to the same-file class declaration on line 1.
+            val definition =
+                logged(
+                    "shouldFallThroughToSameFileDeclarationsWhenOutOfScope",
+                    ts.findDefinition(uri, 4, 8),
+                )
+
+            assertThat(definition).isNotNull
+            assertThat(definition!!.startLine).isEqualTo(1)
+        }
+
+        /**
+         * Method parameters must resolve to themselves, not to any same-named workspace
+         * symbol. This is the simpler half of the scope-walk fix.
+         */
+        @Test
+        @DisplayName("should resolve to method parameter")
+        fun shouldResolveParameter() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    Int square(Int x) {
+                        return x * x;
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on the first `x` in `x * x` -- line 2, column 15
+            val definition = logged("shouldResolveParameter", ts.findDefinition(uri, 2, 15))
+
+            assertThat(definition).isNotNull
+            // The parameter `x` on line 1
+            assertThat(definition!!.startLine).isEqualTo(1)
+        }
+
         /**
          * When the cursor is on a class name used as a return type in a different
          * class, go-to-definition should navigate to the class declaration.

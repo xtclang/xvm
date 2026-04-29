@@ -167,7 +167,9 @@ module.exports = grammar({
 
         // Module body can contain definitions and also properties/methods at module level
         // Example: @Inject Console console; at module level
-        module_body: $ => seq('{', repeat(choice($._definition, $.property_declaration, $.method_declaration)), '}'),
+        // Also accepts property_getter_declaration so short-form getters parse outside class bodies:
+        //   Int val2.get() = 43;
+        module_body: $ => seq('{', repeat(choice($._definition, $.property_declaration, $.method_declaration, $.property_getter_declaration)), '}'),
 
         // Package declaration
         // Note: Package must end with either a body { } or semicolon ;
@@ -184,7 +186,8 @@ module.exports = grammar({
 
         // Package body can contain definitions and also top-level properties/methods
         // Example: package http { static Boolean validExtension(String s) { ... } }
-        package_body: $ => seq('{', repeat(choice($._definition, $.property_declaration, $.method_declaration)), '}'),
+        // Mirrors module_body: short-form property getters are valid here too.
+        package_body: $ => seq('{', repeat(choice($._definition, $.property_declaration, $.method_declaration, $.property_getter_declaration)), '}'),
 
         // Import
         // Supports: import foo.bar.Baz; or import foo.bar.Baz as Alias; or import foo.bar.*;
