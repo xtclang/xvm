@@ -6474,13 +6474,15 @@ public abstract class TypeConstant
     public ClassDesc ensureClassDesc(TypeSystem ts) {
         return isSingleUnderlyingClass(true)
             ? ClassDesc.of(ensureJitClassName(ts))
-            : CD_nObj;
+            : getCanonicalJitType().ensureClassDesc(ts);
     }
 
     /**
      * Ensure a unique Java class name for this type for the specified TypeSystem.
      */
     public String ensureJitClassName(TypeSystem ts) {
+        assert isSingleUnderlyingClass(true);
+
         String sJitName = m_sJitName;
         if (sJitName == null) {
             // get the master instance of the type constant
@@ -6623,7 +6625,7 @@ public abstract class TypeConstant
         if ((cd = JitTypeDesc.getNullableXvmPrimitiveClass(this)) != null) {
             return new JitTypeDesc(getCanonicalJitType(), NullableXvmPrimitive, cd);
         }
-        if ((cd = JitTypeDesc.getWidenedClass(this)) != null) {
+        if ((cd = JitTypeDesc.getWidenedClass(builder, this)) != null) {
             return new JitTypeDesc(getCanonicalJitType(), Widened, cd);
         }
         assert isSingleUnderlyingClass(true);
@@ -6632,13 +6634,41 @@ public abstract class TypeConstant
     }
 
     /**
+     * Canonical JIT type for an arbitrary Ecstasy type represents a type that JIT compiler uses for
+     * variables and properties that hold non-primitive instances of the corresponding type. The
+     * cannonical type is **always** either {@link TerminalTypeConstant} with a
+     * {@link #isSingleUnderlyingClass} or a {@link ParameterizedTypeConstant} with
+     * non-parameterized canonical types as parameters.
+     * <p/>
+     * The following should hold :
+     *  <ul>
+     *    <li>for any type T, T is-a C(T)</li>
+     *    <li>if T2 is-a T1, then C(T2) is-a C(T1)</li>
+     *    <li>for any type T, the JitClassName(T) == JitClassName(C(T))</li>
+     *  </ul>
+     * <p/>
+     * For every non-parameterized type of {@link #isSingleUnderlyingClass single underlyin class}
+     * (regardless of access and immutability modifications) the canonical type is the corrsponding
+     * {@link TerminalTypeConstant}.
+     * <br/>
+     * For a parameterized type with parameters of non-primitive types with trivial constraints,
+     * the canonical type is also the corrsponding {@link TerminalTypeConstant}; otherwise it s
+     * the parameterized type with parameters of primitive or constraint types.
+     * <br/>
+     * For union or difference types, the canonical type is {@link ConstantPool#typeObject()}.
+     * <br/>
+     * For intersection types, it's the most specific canonical type across the contributing types.
+     *
      * @return a canonical Jit type where all the type parameters are either primitive types
      *         or corresponding formal type constraint types
      */
     public TypeConstant getCanonicalJitType() {
-        return isModifyingType()
-                ? getUnderlyingType().getCanonicalJitType()
-                : removeAutoNarrowing();
+        if (isModifyingType()) {
+            return getUnderlyingType().getCanonicalJitType();
+        }
+
+        assert isSingleUnderlyingClass(true);
+        return removeAutoNarrowing();
     }
 
     /**

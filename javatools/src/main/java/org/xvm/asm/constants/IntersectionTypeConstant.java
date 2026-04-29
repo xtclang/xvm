@@ -698,6 +698,51 @@ public class IntersectionTypeConstant
             || getUnderlyingType2().containsSubstitutableMethod(signature, access, fFunction, listParams);
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public boolean isJavaPrimitive() {
+        return m_constType1.isJavaPrimitive() || m_constType2.isJavaPrimitive();
+    }
+
+    @Override
+    public boolean isXvmPrimitive() {
+        return m_constType1.isXvmPrimitive() || m_constType2.isXvmPrimitive();
+    }
+
+    @Override
+    public TypeConstant getCanonicalJitType() {
+        return combineJitType(m_constType1, m_constType2);
+    }
+
+    private static TypeConstant combineJitType(TypeConstant type1, TypeConstant type2) {
+        if (type1.isFormalType()) {
+            return combineJitType(type1.resolveConstraints(), type2);
+        }
+
+        if (type2.isFormalType()) {
+            return combineJitType(type1, type2.resolveConstraints());
+        }
+
+        if (type1.isJitPrimitive()) {
+            return type1.getCanonicalJitType();
+        }
+
+        if (type2.isJitPrimitive()) {
+            return type2.getCanonicalJitType();
+        }
+
+        // while the original intersection contributions are not assignable to each other, the
+        // canonical types might be
+        type1 = type1.getCanonicalJitType();
+        type2 = type2.getCanonicalJitType();
+
+        return type2.isA(type1)
+                ? type1
+                : type1.isA(type2)
+                    ? type2
+                    : type2.getConstantPool().typeObject();
+    }
 
     // ----- run-time support ----------------------------------------------------------------------
 

@@ -604,6 +604,14 @@ public abstract class RelationalTypeConstant
     }
 
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public TypeConstant getCanonicalJitType() {
+        return getConstantPool().typeObject();
+    }
+
+
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
