@@ -218,6 +218,17 @@ Plain-English summary:
 - **Manual trigger**: `publish-intellij-plugin=true` does the same thing on demand from any branch, still gated on lang changes.
 - **Override**: `force-publish-intellij-plugin=true` is the one escape hatch that ignores the lang-changed gate (useful for emergency re-publish without a code change).
 
+### Why two `workflow_dispatch` inputs (`publish-intellij-plugin` vs. `force-publish-intellij-plugin`)?
+
+These two booleans look similar but mean different things; they are not redundant.
+
+| Input | Effect | Respects lang-changed gate? | When to use |
+|-------|--------|------------------------------|-------------|
+| `publish-intellij-plugin=true` | "Publish the plugin **if** there's something new to publish." Treats this manual run the same way a master push does — runs only when `lang/` actually changed. | ✅ Yes — no-op if `lang/` is untouched. | Testing the publication pipeline from a branch when you've made lang changes. |
+| `force-publish-intellij-plugin=true` | "Publish the plugin no matter what." Skips the lang-changed check entirely. | ❌ No — always publishes. | Emergency re-publish without a code change (corrupted artifact, broken JetBrains release, manual version bump, etc.). Intended as an escape hatch, not the default knob. |
+
+In short: `publish-intellij-plugin` mirrors the natural master-push policy and is **safe to leave on** — it self-suppresses when there's nothing to publish. `force-publish-intellij-plugin` is the **override** that ignores all gating and should be used sparingly.
+
 ### LSP / tree-sitter tests (independent of publishing)
 
 The LSP unit tests and tree-sitter grammar/corpus validation run on every event where lang/ was touched, regardless of publish flags. This is the cheap signal for catching regressions on the way in — every PR that edits `lang/` runs the suite, even though no plugin is built.
