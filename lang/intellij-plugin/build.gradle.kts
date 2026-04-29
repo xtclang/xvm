@@ -397,7 +397,11 @@ intellijPlatform {
 
     pluginConfiguration {
         id = "org.xtclang.idea"
-        name = "XTC Language Support"
+        // The language is officially "Ecstasy"; "XTC" is the file extension
+        // and informal/legacy short-form. Both names appear in the published
+        // name and description so JetBrains Marketplace search returns the
+        // plugin for either query.
+        name = "Ecstasy Language Support"
         version = jetbrainsPublishVersionProvider.get()
 
         ideaVersion {
@@ -410,8 +414,8 @@ intellijPlatform {
             <h2>$xdkVersion</h2>
             <ul>
                 <li>Initial alpha release</li>
-                <li>New Project wizard for XTC projects</li>
-                <li>Run configurations for XTC applications</li>
+                <li>New Project wizard for Ecstasy (XTC) projects</li>
+                <li>Run configurations for Ecstasy (XTC) applications</li>
                 <li>File type support for .x files</li>
                 <li>LSP-based language features</li>
             </ul>

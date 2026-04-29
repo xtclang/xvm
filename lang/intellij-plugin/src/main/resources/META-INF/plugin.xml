@@ -1,15 +1,17 @@
 <idea-plugin>
     <id>org.xtclang.idea</id>
-    <name>XTC Language Support</name>
-    <vendor email="info@xtclang.org" url="https://xtclang.org">XTC Language</vendor>
+    <name>Ecstasy Language Support</name>
+    <vendor email="info@xtclang.org" url="https://xtclang.org">Ecstasy Language</vendor>
 
     <description><![CDATA[
-        XTC (Ecstasy) language support for IntelliJ IDEA.
+        IntelliJ IDEA support for the Ecstasy programming language (also known
+        by its file extension and informal short-form, XTC). Source files use
+        the <code>.x</code> extension.
 
         Features:
         <ul>
-            <li>New Project wizard for XTC projects</li>
-            <li>Run configurations for XTC applications</li>
+            <li>New Project wizard for Ecstasy (XTC) projects</li>
+            <li>Run configurations for Ecstasy (XTC) applications</li>
             <li>Syntax highlighting for .x files</li>
             <li>Language features via LSP (hover, completion, go-to-definition)</li>
         </ul>
