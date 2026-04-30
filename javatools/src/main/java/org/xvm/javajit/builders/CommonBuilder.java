@@ -41,8 +41,8 @@ import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
-
 import org.xvm.asm.constants.UnionTypeConstant;
+
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.Ctx;
@@ -1588,8 +1588,8 @@ public class CommonBuilder
     /**
      * Assemble the necessary methods for a constant type in the provided class builder.
      *
-     * @param className      The name of the class being built.
-     * @param classBuilder   The class builder to which methods will be added.
+     * @param className     the name of the class being built
+     * @param classBuilder  the class builder to which methods will be added
      */
     protected void assembleConstMethods(String className, ClassBuilder classBuilder) {
         if (!typeInfo.getType().isJitPrimitive()) {
@@ -1602,12 +1602,10 @@ public class CommonBuilder
     }
 
     /**
-     * Determine whether the specified method exists in a template class for the current
-     * {@link #typeInfo} in this builder.
-     * <p>
-     * This method is typically overridden in subclasses, such as the {@link AugmentingBuilder}.
+     * If this builder is an {@link AugmentingBuilder}, determine whether the specified method
+     * exists in a native class.
      *
-     * @return {@code true} if the specified method exists for the current type's template class
+     * @return {@code true} if the specified method exists for the native (augmented) class
      */
     protected boolean isMethodOnTemplateClass(String jitName, MethodTypeDesc md) {
         return false;
@@ -1618,7 +1616,7 @@ public class CommonBuilder
      * <pre>
      *     static <CompileType extends T> Boolean equals(T value1, T value2)
      * </pre>
-     * Generate the "equals", "equals$p" and possibly $equals methods for a const type if the
+     * Generate the "equals", "equals$p" and possibly "$equals" methods for a const type if the
      * methods do not already exist.
      */
     protected void assembleEqualsMethod(String className, ClassBuilder classBuilder) {
@@ -1659,8 +1657,7 @@ public class CommonBuilder
                 if (!isMethodOnTemplateClass(eqOptName, mdPrimitive)) {
                     classBuilder.withMethodBody(eqOptName, mdPrimitive,
                             ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
-                            (code) ->
-                                    assembleEqualsMethod(className, code, type, cd, eqSig));
+                            code -> assembleEqualsMethod(className, code, type, eqSig));
                 }
             }
         }
@@ -1678,7 +1675,7 @@ public class CommonBuilder
      * Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value1, Slot 3 = value2
      */
     private void assembleEqualsMethod(String className, CodeBuilder code, TypeConstant type,
-                                      ClassDesc cd, SignatureConstant eqSig) {
+                                      SignatureConstant eqSig) {
         // all primitives must have a manually coded native implementation
         assert !type.isJitPrimitive();
 
@@ -2153,8 +2150,7 @@ public class CommonBuilder
                 if (!isMethodOnTemplateClass(hashOptName, mdPrimitive)) {
                     classBuilder.withMethodBody(hashOptName, mdPrimitive,
                             ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
-                            (code) ->
-                                    assembleConstHashCodeMethod(className, code, type, hashSig));
+                            code -> assembleConstHashCodeMethod(className, code, type, hashSig));
                 }
             }
         }

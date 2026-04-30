@@ -110,7 +110,7 @@ public class Dec32 extends DecimalFPNumber {
      *         values are equal, or a positive integer if the first Dec32 is greater than the
      *         second.
      */
-    public static int compare$p(Ctx ctx, int bits1, int bits2) {
+    public static int compare$p(Ctx ctx, int bits1, int bits2) { // why do we need this?
         return new Dec32(bits1).$compareForObjectOrder(new Dec32(bits2));
     }
 

@@ -117,9 +117,9 @@ public class Exception extends nConst {
      */
     public static Ordered compare(Ctx ctx, nType type, Exception value1, Exception value2) {
         int i = Long.compare(hashCode$p(ctx, type, value1), hashCode$p(ctx, type, value2));
-        return i < 0    ? Ordered.Lesser.$INSTANCE
-               : i == 0 ? Ordered.Equal.$INSTANCE
-                        : Ordered.Greater.$INSTANCE;
+        return i < 0  ? Ordered.Lesser.$INSTANCE
+             : i == 0 ? Ordered.Equal.$INSTANCE
+                      : Ordered.Greater.$INSTANCE;
     }
 
     /**
