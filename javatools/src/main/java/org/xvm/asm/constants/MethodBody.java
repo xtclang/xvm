@@ -561,11 +561,11 @@ public class MethodBody {
         if (jmd == null ||
                 isCtorOrValidator() && !typeContainer.removeAccess().equals(m_typeJmdContainer)) {
             MethodStructure   method        = getMethodStructure();
-            TypeConstant      typeCanonical = typeContainer.getCanonicalJitType().normalizeParameters();
-            SignatureConstant sigActual     = getIdentity().getSignature().
-                                                    resolveGenericTypes(builder.typeSystem.pool(), typeCanonical);
+            TypeConstant      typeCanonical = typeContainer.getCanonicalJitType();
+            SignatureConstant sigCanonical  = getIdentity().getSignature().
+                                                    resolveGenericTypes(builder.pool(), typeCanonical);
 
-            m_jmd = jmd = JitMethodDesc.of(builder, sigActual.getRawParams(), sigActual.getRawReturns(),
+            m_jmd = jmd = JitMethodDesc.of(builder, sigCanonical.getRawParams(), sigCanonical.getRawReturns(),
                                 isCtorOrValidator(), builder.ensureClassDesc(typeContainer),
                                 method.getTypeParamCount() + method.getRequiredParamCount());
             m_typeJmdContainer = typeContainer;
