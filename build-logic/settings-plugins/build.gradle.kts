@@ -18,7 +18,7 @@ val versionProps = Properties().apply {
 }
 
 // Keep Kotlin build logic on the same JDK/toolchain level as the rest of the build.
-// Gradle 9.4.x embeds Kotlin 2.3.0, which supports JVM target 25.
+// Gradle 9.5.x embeds Kotlin 2.3.20, which supports JVM target 25.
 val jdkVersion = versionProps.getProperty("org.xtclang.java.jdk")?.toInt() ?: error("org.xtclang.java.jdk not found in version.properties")
 val kotlinJdkVersion = versionProps.getProperty("org.xtclang.kotlin.jdk")?.toInt() ?: error("org.xtclang.kotlin.jdk not found in version.properties")
 
@@ -42,5 +42,6 @@ repositories {
 }
 
 dependencies {
-    implementation("org.gradle.toolchains.foojay-resolver-convention:org.gradle.toolchains.foojay-resolver-convention.gradle.plugin:1.0.0")
+    val foojay = libs.plugins.foojay.resolver.get()
+    implementation("${foojay.pluginId}:${foojay.pluginId}.gradle.plugin:${foojay.version}")
 }
