@@ -1,4 +1,3 @@
-import org.gradle.jvm.toolchain.JavaLanguageVersion
 import java.time.Instant
 
 plugins {
@@ -40,9 +39,6 @@ plugins {
 //
 // See doc/plans/PLAN_IDE_INTEGRATION.md for architecture details.
 // =============================================================================
-
-// Use the same JDK version as the rest of the XDK (from version.properties)
-val jdkVersion = xdkProperties.int("org.xtclang.java.jdk")
 
 // =============================================================================
 // LSP Adapter Selection
@@ -107,12 +103,8 @@ sourceSets.main {
     resources.srcDir(generateBuildInfo.map { layout.buildDirectory.dir("generated/resources/buildinfo") })
 }
 
-// Kotlin auto-inherits this toolchain (no explicit kotlin.jvmToolchain needed).
-java {
-    toolchain {
-        languageVersion.set(jdkVersion.map { JavaLanguageVersion.of(it) })
-    }
-}
+// JDK toolchain (and Kotlin's auto-inherited toolchain) is configured by the
+// org.xtclang.build.xdk.properties convention plugin applied above.
 
 repositories {
     mavenCentral()

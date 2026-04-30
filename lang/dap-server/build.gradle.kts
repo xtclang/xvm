@@ -1,5 +1,3 @@
-import org.gradle.jvm.toolchain.JavaLanguageVersion
-
 plugins {
     alias(libs.plugins.xdk.build.properties)
     alias(libs.plugins.lang.kotlin.jvm)
@@ -7,15 +5,8 @@ plugins {
     `java-library`
 }
 
-// Use the same JDK version as the rest of the XDK (from version.properties)
-val jdkVersion = xdkProperties.int("org.xtclang.java.jdk")
-
-// Kotlin auto-inherits this toolchain (no explicit kotlin.jvmToolchain needed).
-java {
-    toolchain {
-        languageVersion.set(jdkVersion.map { JavaLanguageVersion.of(it) })
-    }
-}
+// JDK toolchain (and Kotlin's auto-inherited toolchain) is configured by the
+// org.xtclang.build.xdk.properties convention plugin applied above.
 
 repositories {
     mavenCentral()

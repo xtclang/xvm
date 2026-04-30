@@ -6,7 +6,6 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 import java.io.File
 import java.time.Instant
@@ -356,10 +355,10 @@ dependencies {
     textMateGrammar(project(path = ":dsl", configuration = "textMateElements"))
 }
 
-// Use the same JDK version as the rest of the XDK (from version.properties).
-// IntelliJ 2026.1+ ships JBR 25, which matches the project's minimum JDK floor;
-// the binary verifier (verifyPlugin) catches any future since-build/JBR mismatch.
-val jdkVersion = xdkProperties.int("org.xtclang.java.jdk")
+// JDK toolchain (and Kotlin's auto-inherited toolchain) is configured by the
+// org.xtclang.build.xdk.properties convention plugin applied above. IntelliJ
+// 2026.1+ ships JBR 25, which matches the project's minimum JDK floor; the
+// binary verifier (verifyPlugin) catches any future since-build/JBR mismatch.
 
 // Derive sinceBuild from IDE version: "2026.1" -> "261" (last 2 digits of year + major version)
 val intellijIdeVersion: String =
@@ -372,13 +371,6 @@ val intellijSinceBuild: String =
         val major = parts.getOrElse(1) { "0" }
         "$year$major"
     }
-
-// Kotlin auto-inherits this toolchain (no explicit kotlin.jvmToolchain needed).
-java {
-    toolchain {
-        languageVersion.set(jdkVersion.map { JavaLanguageVersion.of(it) })
-    }
-}
 
 intellijPlatform {
     caching {

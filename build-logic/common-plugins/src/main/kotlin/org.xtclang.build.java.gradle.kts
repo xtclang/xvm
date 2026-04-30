@@ -120,10 +120,10 @@ val defaultJvmArgs: Provider<List<String>> =
 project.extensions.add(typeOf<Provider<List<String>>>(), "defaultJvmArgs", defaultJvmArgs)
 
 /* ── Java toolchain ───────────────────────────────────────────────────────── */
-
-java {
-    toolchain.languageVersion.set(jdkVersion.map { JavaLanguageVersion.of(it) })
-}
+// Toolchain is configured by the org.xtclang.build.xdk.properties plugin
+// (applied transitively above) so every project that touches Java OR Kotlin
+// gets the same JDK 25 toolchain from a single source of truth. Nothing to do
+// here.
 
 /* ── Testing with the consumer’s version catalog (no hard-coded versions) ─── */
 
