@@ -319,33 +319,33 @@ public class Dec64 extends DecimalFPNumber {
         return $bits;
     }
 
-    // ----- Orderable interface -------------------------------------------------------------------
+    // ----- internal JIT support ------------------------------------------------------------------
 
     /**
-     * The primitive implementation of:
-     * <pre>
-     * static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
-     * </pre>
+     * The internal compare method for two Dec64 values called by the compare methods generated
+     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleCompareMethod}
+     * and also in {@link TypeConstant#buildCompare}
+     *
+     * @param bits1  the bits of the first value
+     * @param bits2  the bits of the second value
+     *
+     * @return a negative integer if the first Dec64 is lower than the second, zero if both Dec64
+     *         values are equal, or a positive integer if the first Dec64 is greater than the
+     *         second.
      */
-    public static Ordered compare(Ctx ctx, nType type, Orderable value1, Orderable value2) {
-        Dec64 decThis = (Dec64) value1;
-        Dec64 decThat = (Dec64) value2;
-        int   order   = decThis.$compareForObjectOrder(decThat);
-        return order < 0  ? Ordered.Lesser.$INSTANCE
-                : order == 0 ? Ordered.Equal.$INSTANCE
-                : Ordered.Greater.$INSTANCE;
+    public static int $compare(long bits1, long bits2) {
+        return new Dec64(bits1).$compareForObjectOrder(new Dec64(bits2));
     }
 
     /**
-     * The primitive implementation of:
-     * <pre>
-     *  static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
-     * </pre>
+     * The internal equals method for two Dec32 values called by the equals methods generated
+     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleEqualsMethod} Method}
+     * and also in {@link TypeConstant#buildCompare}
+     *
+     * @return {@code true} if the two Dec32 values are equal, {@code false} otherwise.
      */
-    public static Boolean equals(Ctx ctx, nType type, Comparable value1, Comparable value2) {
-        long l1 = ((Dec64) value1).$bits;
-        long l2 = ((Dec64) value2).$bits;
-        return l1 == l2 ? Boolean.TRUE : Boolean.FALSE;
+    public static boolean $equals(long value1, long value2) {
+        return value1 == value2;
     }
 
     // ----- accessors -----------------------------------------------------------------------------

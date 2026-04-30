@@ -1,5 +1,7 @@
 package org.xtclang.ecstasy;
 
+import java.util.Objects;
+
 import org.xvm.javajit.Ctx;
 import org.xvm.javajit.Ctx.CtorCtx;
 
@@ -104,5 +106,45 @@ public class Exception extends nConst {
      */
     public static nException $rt(Ctx ctx, java.lang.String text) {
         return new Exception(ctx).$init(ctx, text, null);
+    }
+
+    // ----- Orderable interface -------------------------------------------------------------------
+
+    /**
+     * The native implementation of:
+     *
+     * static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
+     */
+    public static Ordered compare(Ctx ctx, nType type, Exception value1, Exception value2) {
+        int i = Long.compare(hashCode$p(ctx, type, value1), hashCode$p(ctx, type, value2));
+        return i < 0    ? Ordered.Lesser.$INSTANCE
+               : i == 0 ? Ordered.Equal.$INSTANCE
+                        : Ordered.Greater.$INSTANCE;
+    }
+
+    /**
+     * The native implementation of:
+     *
+     *  static <CompileType extends Exception> Boolean equals(CompileType value1, CompileType value2)
+     */
+    public static boolean equals$p(Ctx ctx, nType type, Exception value1, Exception value2) {
+        if (!nObj.equals$p(ctx, value1.text.$type(ctx), value1.text, value2.text)) {
+            return false;
+        }
+        if (!nObj.equals$p(ctx, value1.cause.$type(ctx), value1.cause, value2.cause)) {
+            return false;
+        }
+        return value1.$exception.equals(value2.$exception);
+    }
+
+    // ----- Hashable interface --------------------------------------------------------------------
+
+    /**
+     * The native implementation of:
+     *
+     * static <CompileType extends Hashable> Int hashCode(CompileType value);;
+     */
+    public static long hashCode$p(Ctx ctx, nType type, Exception ex) {
+        return Objects.hash(ex.text, ex.cause, ex.$exception);
     }
 }

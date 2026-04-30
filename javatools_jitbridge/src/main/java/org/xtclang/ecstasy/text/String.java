@@ -406,10 +406,21 @@ public class String
         return next == null ? buf : next.toStringContinued(buf);
     }
 
+    // ----- Hashable interface --------------------------------------------------------------------
+
+    /**
+     * The native implementation of String.x
+     *
+     *    private Int64 hash.get()
+     */
+    public long hash$get$p(Ctx ctx) {
+        return toString().hashCode();
+    }
+
     // ----- Orderable interface -------------------------------------------------------------------
 
     /**
-     * The primitive implementation of:
+     * The native implementation of:
      *
      * static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
      */

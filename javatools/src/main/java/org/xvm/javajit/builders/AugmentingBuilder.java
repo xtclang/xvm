@@ -241,4 +241,9 @@ public class AugmentingBuilder extends CommonBuilder {
         }
         return null;
     }
+
+    @Override
+    protected boolean isMethodOnTemplateClass(String jitName, MethodTypeDesc md) {
+        return findMethod(jitName, md) != null;
+    }
 }

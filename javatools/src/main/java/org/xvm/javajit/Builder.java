@@ -199,7 +199,7 @@ public abstract class Builder {
 
         case FloatConstant floatConstant:
             return switch (floatConstant.getFormat()) {
-                case Float32 -> {
+                case Float16, Float32 -> {
                     code.loadConstant(floatConstant.getValue().floatValue());
                     yield new SingleSlot(constant.getType(), Primitive, CD_float, "");
                 }
@@ -708,6 +708,16 @@ public abstract class Builder {
         return jmdGet;
     }
 
+    public void loadOptimizedReturnsToStack(CodeBuilder code, JitMethodDesc md) {
+        JitParamDesc[] params = md.optimizedReturns;
+        int            count  = md.standardReturns[0].type.isNullable()
+                                        ? params.length - 1 : params.length;
+        // the first return should be on the stack, so we need to load the remainder
+        for (int i = 1; i < count; i++) {
+            loadFromContext(code, params[i].cd, params[i].altIndex);
+        }
+    }
+
     /**
      * Generate a value "load" for the specified Java class.
      */
@@ -783,6 +793,33 @@ public abstract class Builder {
             }
         } else {
             code.aconst_null();
+        }
+    }
+
+    /**
+     * Build the byte codes to convert a primitive value on the stack into a Java {@code long}
+     * value on the stack.
+     *
+     * @param cd    the type of the primitive to convert
+     * @param code  the code builder to which the byte codes should be appended
+     */
+    public static void buildPrimitiveToLong(ClassDesc cd, CodeBuilder code) {
+        switch (cd.descriptorString()) {
+            case "Z", "B", "S", "I":
+                code.i2l();
+                break;
+            case "J":
+                // already long
+                break;
+            case "F":
+                code.invokestatic(CD_JavaFloat, "floatToRawIntBits",
+                        MethodTypeDesc.of(CD_int, CD_float));
+                code.i2l();
+                break;
+            case "D":
+                code.invokestatic(CD_JavaDouble, "doubleToRawLongBits",
+                        MethodTypeDesc.of(CD_long, CD_double));
+                break;
         }
     }
 
@@ -1286,6 +1323,13 @@ public abstract class Builder {
     }
 
     /**
+     * Add the code to throw an "IllegalState" exception.
+     */
+    public static void throwIllegalState(CodeBuilder code, String text) {
+        throwException(code, ClassDesc.of(N_IllegalState), text);
+    }
+
+    /**
      * Convert the "void construct$17(...)" to "This new$17(...)"
      */
     public static JitMethodDesc convertConstructToNew(TypeInfo typeInfo, ClassDesc cd,
@@ -1380,6 +1424,7 @@ public abstract class Builder {
     public static final String N_Int16        = "org.xtclang.ecstasy.numbers.Int16";
     public static final String N_Int32        = "org.xtclang.ecstasy.numbers.Int32";
     public static final String N_Int64        = "org.xtclang.ecstasy.numbers.Int64";
+    public static final String N_IllegalState = "org.xtclang.ecstasy.IllegalState";
     public static final String N_Int128       = "org.xtclang.ecstasy.numbers.Int128";
     public static final String N_IterableChar = "org.xtclang.ecstasy.IterableᐸCharᐳ";
     public static final String N_IteratorChar = "org.xtclang.ecstasy.IteratorᐸCharᐳ";
@@ -1409,6 +1454,56 @@ public abstract class Builder {
     public static final String N_nRangeInt64  = "org.xtclang.ecstasy.nRangeᐸInt64ᐳ";
     public static final String N_nService     = "org.xtclang.ecstasy.nService";
     public static final String N_nType        = "org.xtclang.ecstasy.nType";
+
+    // ----- well-known method names ---------------------------------------------------------------
+
+    /**
+     * The name of the internal equals method expected to be present on XVM primitive types.
+     * The signature should be:
+     * <pre>
+     *     public boolean $equals(primitive p1, primitive p2 ...)
+     * </pre>
+     * Where the method returns a boolean and takes as parameters two sets of the primitive
+     * types that make up the XVM primitive type.
+     * For example, an Int128 type is made up of two Java long values, so its equals signature
+     * would be:
+     * <pre>
+     *     public boolean $equals(long low1, long high1, long low2, long high2)
+     * </pre>
+     */
+    public static final String XVM_PRIMITIVE_EQUALS = "$equals";
+
+    /**
+     * The name of the internal compare method expected to be present on XVM primitive types.
+     * The signature should be:
+     * <pre>
+     *     public int $compare(primitive p1, primitive p2 ...)
+     * </pre>
+     * Where the method returns an int and takes as parameters two sets of the primitive
+     * types that make up the XVM primitive type.
+     * For example, an Int128 type is made up of two Java long values, so its compare signature
+     * would be:
+     * <pre>
+     *     public int $compare(long low1, long high1, long low2, long high2)
+     * </pre>
+     */
+    public static final String XVM_PRIMITIVE_COMPARE = "$compare";
+
+    /**
+     * The name of the internal hashCode method expected to be present on XVM primitive types.
+     * The signature should be:
+     * <pre>
+     *     public long $hashCode(primitive p1, primitive p2 ...)
+     * </pre>
+     * Where the method returns a long and takes as parameters the primitive slots
+     * that make up the XVM primitive type.
+     * For example, an Int128 type is made up of two Java long values, so its hashCode signature
+     * would be:
+     * <pre>
+     *     public long $hashCode(long low1, long high1)
+     * </pre>
+     */
+    public static final String XVM_PRIMITIVE_HASHCODE = "$hashCode";
 
     // ----- well-known suffixes -------------------------------------------------------------------
 
@@ -1492,6 +1587,7 @@ public abstract class Builder {
     public static final ClassDesc CD_TypeConstant  = ClassDesc.of(TypeConstant.class.getName());
     public static final ClassDesc CD_TypeSystem    = ClassDesc.of(TypeSystem.class.getName());
 
+    public static final ClassDesc CD_JavaSystem    = ClassDesc.of(java.lang.System.class.getName());
     public static final ClassDesc CD_JavaBoolean   = ClassDesc.of(java.lang.Boolean.class.getName());
     public static final ClassDesc CD_JavaDouble    = ClassDesc.of(java.lang.Double.class.getName());
     public static final ClassDesc CD_JavaFloat    = ClassDesc.of(java.lang.Float.class.getName());

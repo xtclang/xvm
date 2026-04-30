@@ -414,35 +414,40 @@ public class Dec128 extends DecimalFPNumber {
         return $lowBits;
     }
 
-    // ----- Orderable interface -------------------------------------------------------------------
+    // ----- internal JIT support ------------------------------------------------------------------
 
     /**
-     * The primitive implementation of:
-     * <pre>
-     * static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
-     * </pre>
+     * The internal compare method for two Dec128 values called by the compare methods generated
+     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleCompareMethod}
+     * and also in {@link TypeConstant#buildCompare}
+     *
+     * @param low1   the low 64 bits of the first value
+     * @param high1  the high 64 bits of the first value
+     * @param low2   the low bits of the second value
+     * @param high2  the high 64 bits of the second value
+     *
+     * @return a negative integer if the first Dec128 is lower than the second, zero if both Dec128
+     *         values are equal, or a positive integer if the first Dec128 is greater than the
+     *         second.
      */
-    public static Ordered compare(Ctx ctx, nType type, Orderable value1, Orderable value2) {
-        Dec128 decThis = (Dec128) value1;
-        Dec128 decThat = (Dec128) value2;
-        int   order   = decThis.$compareForObjectOrder(decThat);
-        return order < 0  ? Ordered.Lesser.$INSTANCE
-                : order == 0 ? Ordered.Equal.$INSTANCE
-                : Ordered.Greater.$INSTANCE;
+    public static int $compare(long low1, long high1, long low2, long high2) {
+        return new Dec128(low1, high1).$compareForObjectOrder(new Dec128(low2, high2));
     }
 
     /**
-     * The primitive implementation of:
-     * <pre>
-     *  static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
-     * </pre>
+     * The internal equals method for two Int128 values called by the equals methods generated
+     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleEqualsMethod} Method}
+     * and also in {@link TypeConstant#buildCompare}
+     *
+     * @param low1   the low 64 bits of the first Int128
+     * @param high1  the high 64 bits of the first Int128
+     * @param low2   the low 64 bits of the second Int128
+     * @param high2  the high 64 bits of the second Int128
+     *
+     * @return {@code true} if the two Int128 values are equal, {@code false} otherwise.
      */
-    public static Boolean equals(Ctx ctx, nType type, Comparable value1, Comparable value2) {
-        long l1 = ((Dec128) value1).$lowBits;
-        long l2 = ((Dec128) value2).$lowBits;
-        long h1 = ((Dec128) value1).$highBits;
-        long h2 = ((Dec128) value2).$highBits;
-        return l1 == l2 && h1 == h2 ? Boolean.TRUE : Boolean.FALSE;
+    public static boolean $equals(long low1, long high1, long low2, long high2) {
+        return high1 == high2 && low1 == low2;
     }
 
     // ----- accessors -----------------------------------------------------------------------------
