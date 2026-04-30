@@ -96,6 +96,8 @@ import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.N_nRangeInt64;
 import static org.xvm.javajit.Builder.OPT;
+import static org.xvm.javajit.Builder.XVM_PRIMITIVE_COMPARE;
+import static org.xvm.javajit.Builder.XVM_PRIMITIVE_EQUALS;
 
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
@@ -6577,7 +6579,7 @@ public abstract class TypeConstant
      * @return true iff objects of this type can be represented by a single primitive Java value
      */
     public boolean isJavaPrimitive() {
-        return isModifyingType() && getUnderlyingType().isJitPrimitive();
+        return isModifyingType() && getUnderlyingType().isJavaPrimitive();
     }
 
     /**
@@ -6758,36 +6760,41 @@ public abstract class TypeConstant
             }
         } else if (isXvmPrimitive()) {
             // type is a custom XVM primitive
-            ClassDesc[]  cds      = JitTypeDesc.getXvmPrimitiveClasses(this);
-            ClassDesc[]  cdParams = new ClassDesc[cds.length * 2 + 1];
-
-            cdParams[0] = CD_Ctx;
-            System.arraycopy(cds, 0, cdParams, 1, cds.length);
-            System.arraycopy(cds, 0, cdParams, cds.length + 1, cds.length);
+            ClassDesc[] cds      = JitTypeDesc.getXvmPrimitiveClasses(this);
+            ClassDesc[] cdParams = new ClassDesc[cds.length * 2];
+            System.arraycopy(cds, 0, cdParams, 0, cds.length);
+            System.arraycopy(cds, 0, cdParams, cds.length, cds.length);
 
             String         methodName;
             MethodTypeDesc methodDesc;
             switch (nOp) {
                 case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
                      Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> {
-                    methodName = "equals" + OPT;
+                    // by convention, all XVM primitives have this method
+                    methodName = XVM_PRIMITIVE_EQUALS;
                     methodDesc = MethodTypeDesc.of(CD_boolean, cdParams);
                 }
                 case Op.OP_IS_GT,  Op.OP_JMP_GT,
                      Op.OP_IS_GTE, Op.OP_JMP_GTE,
                      Op.OP_IS_LT,  Op.OP_JMP_LT,
-                     Op.OP_IS_LTE, Op.OP_JMP_LTE -> {
-                    methodName = "compare" + OPT;
+                     Op.OP_IS_LTE, Op.OP_JMP_LTE,
+                     Op.OP_CMP -> {
+                    // by convention, all XVM primitives have this method
+                    methodName = XVM_PRIMITIVE_COMPARE;
                     methodDesc = MethodTypeDesc.of(CD_int, cdParams);
                 }
                 default -> throw new IllegalStateException();
             }
 
-            bctx.loadCtx(code);
             reg1.load(code);
             argLoader.run();
 
             switch (nOp) {
+                case Op.OP_CMP:
+                    code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
+                    generateOrdered(bctx, code);
+                    return;
+
                 case Op.OP_IS_EQ, Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
                     // boolean equals(Ctx, primitives1..., primitives2...)
                     code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
@@ -6846,7 +6853,8 @@ public abstract class TypeConstant
                 case Op.OP_IS_GT,  Op.OP_JMP_GT,
                      Op.OP_IS_GTE, Op.OP_JMP_GTE,
                      Op.OP_IS_LT,  Op.OP_JMP_LT,
-                     Op.OP_IS_LTE, Op.OP_JMP_LTE  -> pool.sigCompare();
+                     Op.OP_IS_LTE, Op.OP_JMP_LTE,
+                     Op.OP_CMP                    -> pool.sigCompare();
                 default -> throw new IllegalStateException();
             };
 
