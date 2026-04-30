@@ -356,11 +356,10 @@ dependencies {
     textMateGrammar(project(path = ":dsl", configuration = "textMateElements"))
 }
 
-// IntelliJ 2026.1 runs on JBR 25, matching the project's JDK 25
-val intellijJdkVersion: Int =
-    libs.versions.lang.intellij.jdk
-        .get()
-        .toInt()
+// Use the same JDK version as the rest of the XDK (from version.properties).
+// IntelliJ 2026.1+ ships JBR 25, which matches the project's minimum JDK floor;
+// the binary verifier (verifyPlugin) catches any future since-build/JBR mismatch.
+val jdkVersion = xdkProperties.int("org.xtclang.java.jdk")
 
 // Derive sinceBuild from IDE version: "2026.1" -> "261" (last 2 digits of year + major version)
 val intellijIdeVersion: String =
@@ -376,13 +375,13 @@ val intellijSinceBuild: String =
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(intellijJdkVersion))
+        languageVersion.set(jdkVersion.map { JavaLanguageVersion.of(it) })
     }
 }
 
 kotlin {
     jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of(intellijJdkVersion))
+        languageVersion.set(jdkVersion.map { JavaLanguageVersion.of(it) })
     }
 }
 

@@ -64,7 +64,6 @@ lang-slf4j = "2.0.17"
 # Lang tooling - IntelliJ plugin
 # =============================================================================
 lang-intellij-ide = "2026.1"
-lang-intellij-jdk = "25"
 lang-intellij-platform-gradle-plugin = "2.14.0"
 # JUnit 4.x is required at RUNTIME by the IntelliJ Platform test harness
 # (com.intellij.testFramework). IntelliJ's test infrastructure internally depends on JUnit 4

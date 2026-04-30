@@ -8,10 +8,6 @@ val jdkVersion = providers.provider {
     xdkPropertiesService.get("org.xtclang.java.jdk")?.toInt()
         ?: error("org.xtclang.java.jdk not found")
 }
-val kotlinJdkVersion = providers.provider {
-    xdkPropertiesService.get("org.xtclang.kotlin.jdk")?.toInt()
-        ?: error("org.xtclang.kotlin.jdk not found")
-}
 
 java {
     toolchain {
@@ -21,7 +17,7 @@ java {
 
 kotlin {
     jvmToolchain {
-        languageVersion.set(kotlinJdkVersion.map { JavaLanguageVersion.of(it) })
+        languageVersion.set(jdkVersion.map { JavaLanguageVersion.of(it) })
     }
 }
 

@@ -20,19 +20,18 @@ val versionProps = Properties().apply {
 // Keep Kotlin build logic on the same JDK/toolchain level as the rest of the build.
 // Gradle 9.5.x embeds Kotlin 2.3.20, which supports JVM target 25.
 val jdkVersion = versionProps.getProperty("org.xtclang.java.jdk")?.toInt() ?: error("org.xtclang.java.jdk not found in version.properties")
-val kotlinJdkVersion = versionProps.getProperty("org.xtclang.kotlin.jdk")?.toInt() ?: error("org.xtclang.kotlin.jdk not found in version.properties")
 
-logger.info("[settings] Boostrap properties: ${versionProps.size} direct properties (jdk=$jdkVersion, kotlin=$kotlinJdkVersion)")
+logger.info("[settings] Bootstrap properties: ${versionProps.size} direct properties (jdk=$jdkVersion)")
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(kotlinJdkVersion))
+        languageVersion.set(JavaLanguageVersion.of(jdkVersion))
     }
 }
 
 kotlin {
     jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of(kotlinJdkVersion))
+        languageVersion.set(JavaLanguageVersion.of(jdkVersion))
     }
 }
 

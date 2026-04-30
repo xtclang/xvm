@@ -7,18 +7,18 @@ plugins {
     `java-library`
 }
 
-// Use the same Kotlin JDK version as the rest of the XDK (from version.properties)
-val kotlinJdkVersion = xdkProperties.int("org.xtclang.kotlin.jdk")
+// Use the same JDK version as the rest of the XDK (from version.properties)
+val jdkVersion = xdkProperties.int("org.xtclang.java.jdk")
 
 java {
     toolchain {
-        languageVersion.set(kotlinJdkVersion.map { JavaLanguageVersion.of(it) })
+        languageVersion.set(jdkVersion.map { JavaLanguageVersion.of(it) })
     }
 }
 
 kotlin {
     jvmToolchain {
-        languageVersion.set(kotlinJdkVersion.map { JavaLanguageVersion.of(it) })
+        languageVersion.set(jdkVersion.map { JavaLanguageVersion.of(it) })
     }
 }
 

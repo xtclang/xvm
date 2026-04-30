@@ -5,17 +5,17 @@ plugins {
     alias(libs.plugins.lang.ktlint)
 }
 
-val kotlinJdkVersion = xdkProperties.int("org.xtclang.kotlin.jdk")
+val jdkVersion = xdkProperties.int("org.xtclang.java.jdk")
 
 java {
     toolchain {
-        languageVersion.set(kotlinJdkVersion.map { JavaLanguageVersion.of(it) })
+        languageVersion.set(jdkVersion.map { JavaLanguageVersion.of(it) })
     }
 }
 
 kotlin {
     jvmToolchain {
-        languageVersion.set(kotlinJdkVersion.map { JavaLanguageVersion.of(it) })
+        languageVersion.set(jdkVersion.map { JavaLanguageVersion.of(it) })
     }
 }
 
