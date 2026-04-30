@@ -422,6 +422,38 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * Wildcard `_` is allowed as the name in a `val`/`var` declaration to
+         * discard a value: `val _ = r.eof;`. The grammar's
+         * `variable_declaration` `name:` field must accept the wildcard token
+         * in addition to identifiers. Without this, the standard library's
+         * "evaluate-and-discard" idiom fails to parse.
+         */
+        @Test
+        @DisplayName("should parse wildcard variable name in val/var declaration")
+        fun shouldParseWildcardVariableNameInValDeclaration() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class C {
+                        Int eof = 0;
+                        Int size = 0;
+                    }
+                    void run(C r) {
+                        val _ = r.eof;
+                        var _ = r.size;
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
          * A missing closing brace should still parse (tree-sitter is error-tolerant),
          * but the resulting tree must contain ERROR or MISSING nodes that get reported
          * as diagnostics with severity ERROR.

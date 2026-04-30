@@ -741,12 +741,14 @@ module.exports = grammar({
         // - function ReturnType varName(ParamTypes) = expr;  (function variable)
         variable_declaration: $ => choice(
             // val/var form: val x = expr or var Type x = expr
+            // Wildcard `_` is allowed as the name to discard the value:
+            // `val _ = computeAndIgnore();`
             seq(
                 repeat($.annotation),
                 optional($.visibility_modifier),
                 choice('val', 'var'),
                 optional(field('type', $.type_expression)),
-                field('name', $.identifier),
+                field('name', choice($.identifier, $.wildcard)),
                 optional(seq(choice('=', ':='), field('value', $._expression))),
                 ';',
             ),
