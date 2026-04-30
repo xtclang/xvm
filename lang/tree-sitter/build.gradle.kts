@@ -534,6 +534,10 @@ abstract class TreeSitterParseTestTask @Inject constructor(
     @get:Optional
     abstract val showTiming: Property<Boolean>
 
+    @get:InputFile
+    @get:Optional
+    abstract val skipListFile: RegularFileProperty
+
     data class ParseResult(val relativePath: String, val success: Boolean, val timeMs: Long)
 
     @get:Input
@@ -581,6 +585,34 @@ abstract class TreeSitterParseTestTask @Inject constructor(
             libDir.walkTopDown()
                 .filter { it.isFile && it.extension == "x" }
                 .toList()
+        }
+
+        // Apply skip list (paths relative to compositeRoot, with `#` comments).
+        // Skipped files fall into two categories tracked in the file: (1)
+        // INTENTIONAL-INVALID — excluded from the XTC reference compile, so
+        // tree-sitter rejecting them is correct; and (2) PARKED — known
+        // grammar gaps deferred to follow-up work.
+        val skipFile = skipListFile.orNull?.asFile
+        val skipPaths: Set<String> = skipFile?.takeIf { it.isFile }?.useLines { lines ->
+            lines.map { it.substringBefore('#').trim() }
+                .filter { it.isNotEmpty() }
+                .toSet()
+        } ?: emptySet()
+        if (skipPaths.isNotEmpty()) {
+            val rootPath = rootDir.get()
+            val (toCheck, skipped) = xtcFiles.partition { file ->
+                file.relativeTo(rootPath).invariantSeparatorsPath !in skipPaths
+            }
+            val skippedPaths = skipped.map { it.relativeTo(rootPath).invariantSeparatorsPath }.toSet()
+            val staleEntries = skipPaths - skippedPaths
+            if (staleEntries.isNotEmpty()) {
+                logger.warn(
+                    "Skip-list contains ${staleEntries.size} stale entries (no matching .x file): " +
+                        staleEntries.sorted().joinToString(", ")
+                )
+            }
+            logger.lifecycle("Tree-sitter parse skip list: ${skipped.size} file(s) excluded (see ${skipFile?.name})")
+            xtcFiles = toCheck
         }
 
         // Apply filter if specified
@@ -706,6 +738,10 @@ val testTreeSitterParse by tasks.registering(TreeSitterParseTestTask::class) {
     }?.toList() ?: emptyList()
     val manualTestsDir = File(compositeRoot, "manualTests/src/main/x").takeIf { it.isDirectory }
     libDirs.set(xdkLibDirs + listOfNotNull(manualTestsDir))
+
+    // Skip list of .x files deliberately excluded from the parse sweep -- see
+    // the file's header for the categories (intentional-invalid vs parked).
+    skipListFile.set(layout.projectDirectory.file("treeSitterParseSkipList.txt"))
 
     // Support filtering via -PtestFiles=pattern (comma-separated patterns)
     fileFilter.set(providers.gradleProperty("testFiles"))
