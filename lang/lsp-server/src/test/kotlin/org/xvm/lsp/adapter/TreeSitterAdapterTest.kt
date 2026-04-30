@@ -574,6 +574,44 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * Version literal: `v:` followed by a version string. Covers the
+         * full range of forms Ecstasy supports -- simple integer
+         * (`v:1`), dotted (`v:1.2`, `v:5.6.7.8`), pre-release identifier
+         * alone (`v:beta2`), pre-release suffix on a dotted version
+         * (`v:5.6.7.8-alpha`, `v:1.2-beta5`), concatenated pre-release
+         * (`v:1.2beta5`), and build-metadata suffix (`v:1.2beta5+123-456.abc`).
+         * Without this, `typed_literal` would try to parse `v` as a type
+         * expression, `:` as the typed-literal separator, and the rest as
+         * a regular literal -- which works only for trivial cases and
+         * fails on multi-segment dotted versions and pre-release suffixes.
+         */
+        @Test
+        @DisplayName("should parse version literals across all supported forms")
+        fun shouldParseVersionLiterals() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        Version v1 = v:1;
+                        Version v2 = v:1.0;
+                        Version v3 = v:beta2;
+                        Version v4 = v:5.6.7.8-alpha;
+                        Version v5 = v:1.2-beta5;
+                        Version v6 = v:1.2beta5;
+                        Version v7 = v:1.2beta5+123-456.abc;
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
          * A missing closing brace should still parse (tree-sitter is error-tolerant),
          * but the resulting tree must contain ERROR or MISSING nodes that get reported
          * as diagnostics with severity ERROR.

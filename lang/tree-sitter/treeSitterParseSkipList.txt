@@ -64,3 +64,25 @@ manualTests/src/main/x/errors.x
 
 manualTests/src/main/x/reflect.x
 manualTests/src/main/x/generics.x
+
+# === (2b) PARKED — literals.x: multi-gap literal-form coverage ===
+#
+# `literals.x` is a stress-test of every literal form Ecstasy supports.
+# The C-series fix H (`v:5.6.7.8-alpha` version literal) closed one of
+# its gaps but the file has at least four others, all orthogonal to the
+# C-series fixes:
+#
+#   - `Path:./` — typed-literal whose value is a bare relative path
+#     (also seen with `Directory:./more/`)
+#   - `./` (alone) — bare current-directory path literal
+#   - long bare paths containing reserved keywords, e.g.
+#     `./allow.as.assert.avoid.public.private.if.for.while.var.val.void.txt`
+#     (parses fine in isolation but fails inside `literals.x` -- a
+#     parser-state interaction worth investigating with the playground)
+#   - `#123_4567_89aB_cDeF` — bare hex byte literal (the `file_literal`
+#     regex looks like it should handle this but does not)
+#
+# Each is a distinct grammar-template change. Park as a single follow-up
+# rather than splatter the C-series with literal-form one-offs.
+
+manualTests/src/main/x/literals.x

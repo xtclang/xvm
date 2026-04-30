@@ -1310,6 +1310,7 @@ module.exports = grammar({
             $.file_literal,
             $.string_file_literal,
             $.relative_path_literal,
+            $.version_literal,
         ),
 
         // Integer literals support magnitude suffixes: K, M, G, T, P, E, Z, Y (case insensitive)
@@ -1332,6 +1333,14 @@ module.exports = grammar({
         // Examples: $./templates/file.txt, $/implicit.x, $../shared/data.txt
         // This is different from template strings ($"...") - it's a compile-time file include
         string_file_literal: $ => /\$\.{0,2}\/[\w._/-]+/,
+
+        // Version literal: `v:` prefix followed by a version string. Examples:
+        //   v:1, v:1.0, v:1.2.3, v:5.6.7.8-alpha, v:1.2-beta5,
+        //   v:1.2beta5, v:1.2beta5+123-456.abc
+        // Single-token form so the lexer commits to it before `typed_literal`
+        // (which would otherwise try `v` (type) + `:` + literal); the token's
+        // length (>= 3 for `v:N`) reliably beats the bare `v` identifier.
+        version_literal: $ => /v:[a-zA-Z0-9._+-]+/,
 
         // Relative file/directory path literal as a primary expression:
         // `File f = ./IO.x;` or `Directory d = ../shared;`. The leading `./`
