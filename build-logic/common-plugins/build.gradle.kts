@@ -14,14 +14,11 @@ val jdkVersion = providers.provider {
         ?: error("org.xtclang.java.jdk not found")
 }
 
+// Kotlin auto-inherits this toolchain (Kotlin Gradle plugin reads java.toolchain
+// when no explicit kotlin.jvmToolchain is set), so a separate kotlin block would
+// be redundant.
 java {
     toolchain {
-        languageVersion.set(jdkVersion.map { JavaLanguageVersion.of(it) })
-    }
-}
-
-kotlin {
-    jvmToolchain {
         languageVersion.set(jdkVersion.map { JavaLanguageVersion.of(it) })
     }
 }

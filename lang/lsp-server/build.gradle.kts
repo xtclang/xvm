@@ -107,14 +107,9 @@ sourceSets.main {
     resources.srcDir(generateBuildInfo.map { layout.buildDirectory.dir("generated/resources/buildinfo") })
 }
 
+// Kotlin auto-inherits this toolchain (no explicit kotlin.jvmToolchain needed).
 java {
     toolchain {
-        languageVersion.set(jdkVersion.map { JavaLanguageVersion.of(it) })
-    }
-}
-
-kotlin {
-    jvmToolchain {
         languageVersion.set(jdkVersion.map { JavaLanguageVersion.of(it) })
     }
 }

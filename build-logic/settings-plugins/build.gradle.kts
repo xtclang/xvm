@@ -23,14 +23,9 @@ val jdkVersion = versionProps.getProperty("org.xtclang.java.jdk")?.toInt() ?: er
 
 logger.info("[settings] Bootstrap properties: ${versionProps.size} direct properties (jdk=$jdkVersion)")
 
+// Kotlin auto-inherits this toolchain (no explicit kotlin.jvmToolchain needed).
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(jdkVersion))
-    }
-}
-
-kotlin {
-    jvmToolchain {
         languageVersion.set(JavaLanguageVersion.of(jdkVersion))
     }
 }

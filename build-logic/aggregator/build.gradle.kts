@@ -9,14 +9,9 @@ val jdkVersion = providers.provider {
         ?: error("org.xtclang.java.jdk not found")
 }
 
+// Kotlin auto-inherits this toolchain (no explicit kotlin.jvmToolchain needed).
 java {
     toolchain {
-        languageVersion.set(jdkVersion.map { JavaLanguageVersion.of(it) })
-    }
-}
-
-kotlin {
-    jvmToolchain {
         languageVersion.set(jdkVersion.map { JavaLanguageVersion.of(it) })
     }
 }
