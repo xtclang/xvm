@@ -544,6 +544,36 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * `assert !(Type x := expr)` -- negated typed conditional binding.
+         * Used to assert that a `:=` conditional form *fails* to bind
+         * (e.g. asserting that `next()` does not yield a value of the
+         * named type). The negation cannot be expressed by simply wrapping
+         * a `_expression` because the parenthesized form contains a
+         * `conditional_declaration`, which is not an expression.
+         */
+        @Test
+        @DisplayName("should parse negated typed conditional in assert")
+        fun shouldParseNegatedTypedConditionalInAssert() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    enum Color {Red, Green, Blue}
+                    void run() {
+                        Color c1 = Red;
+                        assert !(Color c2 := c1.next());
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
          * A missing closing brace should still parse (tree-sitter is error-tolerant),
          * but the resulting tree must contain ERROR or MISSING nodes that get reported
          * as diagnostics with severity ERROR.

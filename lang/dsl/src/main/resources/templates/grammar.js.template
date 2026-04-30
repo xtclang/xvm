@@ -1043,7 +1043,17 @@ module.exports = grammar({
             optional(seq('as', $._expression)),
             ';',
         )),
-        assert_condition: $ => choice($._expression, $.conditional_declaration),
+        // Assert conditions accept expressions and conditional declarations,
+        // and additionally `!(cond_decl)` -- a negated typed conditional
+        // binding used to assert that a `:=` form *fails*: e.g.
+        // `assert !(Color c := next());` asserts that next() does not yield
+        // a Color. The negation cannot be folded into `_expression` because
+        // `parenthesized_expression` only wraps expressions, not declarations.
+        assert_condition: $ => choice(
+            $._expression,
+            $.conditional_declaration,
+            seq('!', '(', $.conditional_declaration, ')'),
+        ),
         // Assert variants. `assert:rnd` accepts an optional sample-rate
         // argument: `assert:rnd(100) cond` fires roughly once per 100
         // invocations. The other variants do not -- and `assert:arg`
