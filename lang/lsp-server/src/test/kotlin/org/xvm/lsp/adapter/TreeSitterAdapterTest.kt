@@ -483,6 +483,67 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * `assert:rnd(N) cond` is the sample-rate form of assert -- the
+         * assertion fires roughly once per N invocations. The argument list
+         * is specific to `assert:rnd`; the other variants (`assert:arg`,
+         * `assert:bounds`, ...) do not take args, and in particular
+         * `assert:arg (Type x, ...) := expr` uses the parens for a tuple
+         * destructuring conditional declaration, not a variant arg list.
+         * The grammar must distinguish these.
+         */
+        @Test
+        @DisplayName("should parse assert:rnd with sample-rate argument")
+        fun shouldParseAssertRndWithSampleRate() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run(Int size) {
+                        for (Int i : 1..1000) {
+                            assert:rnd(100) i < size;
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Companion to `shouldParseAssertRndWithSampleRate`: confirms that
+         * `assert:arg` followed by a tuple destructuring conditional
+         * declaration still parses (regression guard -- an earlier attempt
+         * at the assert:rnd fix accidentally swallowed `(Type x, ...)` as
+         * a variant arg list, breaking `lib_net/.../UriTemplate.x`).
+         */
+        @Test
+        @DisplayName("should parse assert:arg with tuple destructuring conditional")
+        fun shouldParseAssertArgWithTupleDestructuring() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    conditional (Int, String) parse(String s) {
+                        return False;
+                    }
+                    void run() {
+                        assert:arg (Int n, String t) := parse("x");
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
          * A missing closing brace should still parse (tree-sitter is error-tolerant),
          * but the resulting tree must contain ERROR or MISSING nodes that get reported
          * as diagnostics with severity ERROR.

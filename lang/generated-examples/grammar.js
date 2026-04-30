@@ -1044,7 +1044,22 @@ module.exports = grammar({
             ';',
         )),
         assert_condition: $ => choice($._expression, $.conditional_declaration),
-        assert_variant: $ => choice('assert:rnd', 'assert:arg', 'assert:bounds', 'assert:TODO', 'assert:once', 'assert:test', 'assert:debug'),
+        // Assert variants. `assert:rnd` accepts an optional sample-rate
+        // argument: `assert:rnd(100) cond` fires roughly once per 100
+        // invocations. The other variants do not -- and `assert:arg`
+        // specifically is followed by a parenthesized conditional
+        // declaration (`assert:arg (Type x, Type y) := expr`), so we
+        // intentionally do *not* offer them an arg-list slot here, to
+        // avoid swallowing the tuple pattern.
+        assert_variant: $ => choice(
+            prec.right(seq('assert:rnd', optional(seq('(', commaSep1($._expression), ')')))),
+            'assert:arg',
+            'assert:bounds',
+            'assert:TODO',
+            'assert:once',
+            'assert:test',
+            'assert:debug',
+        ),
 
         // TODO statement: standalone TODO without semicolon (XTC compiler injects semicolon)
         // Allows: TODO, TODO(msg), TODO freeform text - all without trailing semicolon
