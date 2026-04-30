@@ -6804,8 +6804,7 @@ public abstract class TypeConstant
                     methodName = XVM_PRIMITIVE_EQUALS;
                     methodDesc = MethodTypeDesc.of(CD_boolean, cdParams);
                 }
-                case Op.OP_CMP,
-                     Op.OP_IS_GT,  Op.OP_JMP_GT,
+                case Op.OP_IS_GT,  Op.OP_JMP_GT,
                      Op.OP_IS_GTE, Op.OP_JMP_GTE,
                      Op.OP_IS_LT,  Op.OP_JMP_LT,
                      Op.OP_IS_LTE, Op.OP_JMP_LTE,
@@ -6881,8 +6880,7 @@ public abstract class TypeConstant
             SignatureConstant sig = switch (nOp) {
                 case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
                      Op.OP_IS_NEQ, Op.OP_JMP_NEQ  -> pool.sigEquals();
-                case Op.OP_CMP,
-                     Op.OP_IS_GT,  Op.OP_JMP_GT,
+                case Op.OP_IS_GT,  Op.OP_JMP_GT,
                      Op.OP_IS_GTE, Op.OP_JMP_GTE,
                      Op.OP_IS_LT,  Op.OP_JMP_LT,
                      Op.OP_IS_LTE, Op.OP_JMP_LTE,

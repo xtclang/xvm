@@ -1591,7 +1591,7 @@ public class CommonBuilder
      * @param classBuilder  the class builder to which methods will be added
      */
     protected void assembleConstMethods(String className, ClassBuilder classBuilder) {
-        if (!typeInfo.getType().isJitPrimitive()) {
+        if (!thisType.isA(pool().typeNumber()) && !thisType.isJitPrimitive()) {
             // we only generate equals and compare for non-primitive types
             assembleEqualsMethod(className, classBuilder);
             assembleCompareMethod(className, classBuilder);
@@ -1619,24 +1619,19 @@ public class CommonBuilder
      * methods do not already exist.
      */
     protected void assembleEqualsMethod(String className, ClassBuilder classBuilder) {
-        SignatureConstant eqSig      = pool().sigEquals();
-        MethodInfo        eqMethod   = typeInfo.getMethodBySignature(eqSig);
-        TypeConstant      type       = typeInfo.getType();
-        Implementation    impl       = eqMethod.getHead().getImplementation();
-        Constant          thisConst  = type.getDefiningConstant();
-        IdentityConstant  declaredOn = eqMethod.getIdentity()
-                                               .getParentConstant()
-                                               .getParentConstant();
+        SignatureConstant eqSig    = pool().sigEquals();
+        MethodInfo        eqMethod = typeInfo.getMethodBySignature(eqSig);
+        Implementation    impl     = eqMethod.getHead().getImplementation();
+        IdentityConstant  targetId = eqMethod.getIdentity().getNamespace();
 
         // If the method is not explicitly implemented or the declaring type does not match the
-        // current type (i.e. the method is declared on a supe class), then we can build the method
-        if (impl != Implementation.Explicit || !thisConst.equals(declaredOn)) {
-            TypeConstant   resolvedType = type.resolveConstraints();
-            ClassDesc      cd           = ensureClassDesc(resolvedType);
-            String         eqName       = eqSig.getName();
-            String         eqOptName    = eqName + OPT;
-            MethodTypeDesc mdWrapper    = MethodTypeDesc.of(CD_Boolean, CD_Ctx, CD_nType, cd, cd);
-            MethodTypeDesc mdPrimitive  = MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_nType, cd, cd);
+        // current type (i.e. the method is declared on a super class), then we can build the method
+        if (impl != Implementation.Explicit || !thisId.equals(targetId)) {
+            ClassDesc      cdThis      = ClassDesc.of(className);
+            String         eqName      = eqSig.getName();
+            String         eqOptName   = eqName + OPT;
+            MethodTypeDesc mdWrapper   = MethodTypeDesc.of(CD_Boolean, CD_Ctx, CD_nType, cdThis, cdThis);
+            MethodTypeDesc mdPrimitive = MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_nType, cdThis, cdThis);
 
             if (!isMethodOnTemplateClass(eqName, mdWrapper)) {
                 // generate the standard "equals" wrapper that delegates to the optimized "equals$p"
@@ -1647,7 +1642,7 @@ public class CommonBuilder
                             code.aload(1)
                                 .aload(2)
                                 .aload(3)
-                                .invokestatic(cd, eqOptName, mdPrimitive);
+                                .invokestatic(cdThis, eqOptName, mdPrimitive);
                             Builder.box(code, pool().typeBoolean());
                             code.areturn();
                         });
@@ -1655,8 +1650,8 @@ public class CommonBuilder
                 // generate the optimized "equals$p" with the actual implementation
                 if (!isMethodOnTemplateClass(eqOptName, mdPrimitive)) {
                     classBuilder.withMethodBody(eqOptName, mdPrimitive,
-                            ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
-                            code -> assembleEqualsMethod(className, code, type, eqSig));
+                        ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
+                        code -> assembleEqualsMethod(className, code, thisType, eqSig));
                 }
             }
         }
@@ -1684,14 +1679,14 @@ public class CommonBuilder
         TypeConstant baseType = getImplementationBase(eqSig);
         if (baseType != null) {
             // found super class with equals method, so call it first
-            ClassDesc      cdExt   = ensureClassDesc(baseType);
-            MethodTypeDesc mdSuper = MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_nType, cdExt, cdExt);
+            ClassDesc      cdBase  = ensureClassDesc(baseType);
+            MethodTypeDesc mdSuper = MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_nType, cdBase, cdBase);
 
             loadCtx(code);
             code.aload(1)
                 .aload(2)
                 .aload(3)
-                .invokestatic(cdExt, eqOptName, mdSuper)
+                .invokestatic(cdBase, eqOptName, mdSuper)
                 .ifeq(returnFalse);
         }
 
@@ -1800,10 +1795,11 @@ public class CommonBuilder
 
                 // load both property values as unboxed primitives onto the stack
                 code.aload(value1Slot);
-                JitMethodDesc jmd = loadProperty(code, type, propId, true);
+                PropertyInfo  info = loadProperty(code, type, propId, true);
+                JitMethodDesc jmd  = info.getGetterJitDesc(this);
                 loadOptimizedReturnsToStack(code, jmd);
                 code.aload(value2Slot);
-                jmd = loadProperty(code, type, propId, true);
+                loadProperty(code, type, propId, true);
                 loadOptimizedReturnsToStack(code, jmd);
 
                 code.invokestatic(ensureClassDesc(propType), XVM_PRIMITIVE_EQUALS, md)
@@ -1815,8 +1811,8 @@ public class CommonBuilder
                     .ifne(returnFalse);
             } else {
                 // Object type: call static equals$p(Ctx, nType, T, T) -> boolean
-                MethodInfo    propEqMethod = propType.ensureTypeInfo().getMethodBySignature(eqSig);
-                JitMethodDesc propEqJmd    = propEqMethod.getJitDesc(this, propType);
+                MethodInfo    eqMethod = propType.ensureTypeInfo().getMethodBySignature(eqSig);
+                JitMethodDesc eqJmd    = eqMethod.getJitDesc(this, propType);
 
                 loadCtx(code);
 
@@ -1830,18 +1826,19 @@ public class CommonBuilder
                 code.aload(value1Slot);
                 loadProperty(code, type, propId, false);
                 if (propType.isInterfaceType()) {
-                    code.checkcast(propEqJmd.optimizedParams[1].cd);
+                    code.checkcast(eqJmd.optimizedParams[1].cd);
                 }
 
                 // load value2 to the stack
                 code.aload(value2Slot);
                 loadProperty(code, type, propId, false);
                 if (propType.isInterfaceType()) {
-                    code.checkcast(propEqJmd.optimizedParams[2].cd);
+                    code.checkcast(eqJmd.optimizedParams[2].cd);
                 }
 
-                ClassDesc cd = ensureClassDesc(propEqMethod.getIdentity().getNamespace().getType());
-                code.invokestatic(cd, eqOptName, propEqJmd.optimizedMD)
+                IdentityConstant idTarget = eqMethod.getIdentity().getClassIdentity();
+                ClassDesc        cdTarget = ensureClassDesc(idTarget.getType());
+                code.invokestatic(cdTarget, eqOptName, eqJmd.optimizedMD)
                     .ifeq(returnFalse);
             }
             // we jump here if the prop is nullable and the null check determined both were null
@@ -1865,29 +1862,24 @@ public class CommonBuilder
      * </pre>
      */
     protected void assembleCompareMethod(String className, ClassBuilder classBuilder) {
-        SignatureConstant cmpSig     = pool().sigCompare();
-        MethodInfo        cmpMethod  = typeInfo.getMethodBySignature(cmpSig);
-        TypeConstant      type       = typeInfo.getType();
-        Implementation    impl       = cmpMethod.getHead().getImplementation();
-        Constant          thisConst  = type.getDefiningConstant();
-        IdentityConstant  declaredOn = cmpMethod.getIdentity()
-                                                .getParentConstant()
-                                                .getParentConstant();
+        SignatureConstant cmpSig    = pool().sigCompare();
+        MethodInfo        cmpMethod = typeInfo.getMethodBySignature(cmpSig);
+        Implementation    impl      = cmpMethod.getHead().getImplementation();
+        IdentityConstant  targetId  = cmpMethod.getIdentity().getNamespace();
 
         // If the method is not explicitly implemented or the declaring type does not match the
         // current type (i.e., the method is declared on a supe class), then we can build the method
-        if (impl != Implementation.Explicit || !thisConst.equals(declaredOn)) {
-            TypeConstant   resolvedType = type.resolveConstraints();
-            ClassDesc      cd           = ensureClassDesc(resolvedType);
-            String         cmpName      = cmpSig.getName();
-            MethodTypeDesc md           = MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_nType, cd, cd);
+        if (impl != Implementation.Explicit || !thisId.equals(targetId)) {
+            ClassDesc      cdThis  = ClassDesc.of(className);
+            String         cmpName = cmpSig.getName();
+            MethodTypeDesc md      = MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_nType, cdThis, cdThis);
 
             if (!isMethodOnTemplateClass(cmpName, md)) {
                 // generate the standard "compare" method
                 classBuilder.withMethodBody(cmpName, md,
                         ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
                         (code) ->
-                                assembleCompareMethod(className, code, type, cmpSig));
+                                assembleCompareMethod(className, code, thisType, cmpSig));
             }
         }
     }
@@ -1929,7 +1921,7 @@ public class CommonBuilder
 
         if (baseType != null) {
             // found super class with compare method, so call it first
-            ClassDesc      cdExt   = ensureClassDesc(baseType.resolveConstraints());
+            ClassDesc      cdExt   = ensureClassDesc(baseType);
             MethodTypeDesc mdSuper = MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_nType, cdExt, cdExt);
 
             loadCtx(code);
@@ -2034,10 +2026,11 @@ public class CommonBuilder
                 MethodTypeDesc md       = MethodTypeDesc.of(CD_int, cdParams);
 
                 code.aload(value1Slot);
-                JitMethodDesc jmd = loadProperty(code, type, propId, true);
+                PropertyInfo  info = loadProperty(code, type, propId, true);
+                JitMethodDesc jmd  = info.getGetterJitDesc(this);
                 loadOptimizedReturnsToStack(code, jmd);
                 code.aload(value2Slot);
-                jmd = loadProperty(code, type, propId, true);
+                loadProperty(code, type, propId, true);
                 loadOptimizedReturnsToStack(code, jmd);
 
                 code.invokestatic(ensureClassDesc(propType), XVM_PRIMITIVE_COMPARE, md);
@@ -2064,8 +2057,8 @@ public class CommonBuilder
                 convertIntToOrdered(code, false);
             } else {
                 // Object type: call static compare(Ctx, nType, T, T) -> Ordered
-                MethodInfo    propCmpMethod = propType.ensureTypeInfo().getMethodBySignature(cmpSig);
-                JitMethodDesc propCmpJmd    = propCmpMethod.getJitDesc(this, propType);
+                MethodInfo    cmpMethod = propType.ensureTypeInfo().getMethodBySignature(cmpSig);
+                JitMethodDesc cmpJmd    = cmpMethod.getJitDesc(this, propType);
 
                 // load the context to the stack (compare param 0)
                 loadCtx(code);
@@ -2085,14 +2078,15 @@ public class CommonBuilder
                 loadProperty(code, type, propId, false);
 
                 // invoke the static compare method
-                ClassDesc cd = ensureClassDesc(propCmpMethod.getIdentity().getNamespace().getType());
-                code.invokestatic(cd, cmpSig.getName(), propCmpJmd.standardMD)
+                IdentityConstant idTarget = cmpMethod.getIdentity().getClassIdentity();
+                ClassDesc        cdTarget = ensureClassDesc(idTarget.getType());
+                code.invokestatic(cdTarget, cmpSig.getName(), cmpJmd.standardMD)
                     .dup();
                 loadConstant(code, pool.valEqual());
-                Label propEqual = code.newLabel();
-                code.if_acmpeq(propEqual)
+                Label isEqual = code.newLabel();
+                code.if_acmpeq(isEqual)
                     .areturn();
-                code.labelBinding(propEqual)
+                code.labelBinding(isEqual)
                     .pop();
             }
             // we jump here if the prop is nullable and the null check determined both were null
@@ -2113,25 +2107,20 @@ public class CommonBuilder
     protected void assembleConstHashCodeMethod(String className, ClassBuilder classBuilder) {
         SignatureConstant hashSig    = pool().sigHashCode();
         MethodInfo        hashMethod = typeInfo.getMethodBySignature(hashSig);
-        TypeConstant      type       = typeInfo.getType();
         Implementation    impl       = hashMethod.getHead().getImplementation();
-        Constant          thisConst  = type.getDefiningConstant();
-        IdentityConstant  declaredOn = hashMethod.getIdentity()
-                                                 .getParentConstant()
-                                                 .getParentConstant();
+        IdentityConstant  targetId   = hashMethod.getIdentity().getNamespace();
 
         // If the method is not explicitly implemented or the declaring type does not match the
         // current type (i.e. the method is declared on a supe class), then we can build the method
-        if (impl != Implementation.Explicit || !thisConst.equals(declaredOn)) {
+        if (impl != Implementation.Explicit || !thisId.equals(targetId)) {
             // create a {@link Long} field in the class to act as a hashCode cache
             classBuilder.withField("$savedHashCode", CD_Long, ClassFile.ACC_PRIVATE);
 
-            TypeConstant   resolvedType = type.resolveConstraints();
-            ClassDesc      cd           = ensureClassDesc(resolvedType);
-            String         hashName     = hashSig.getName();
-            String         hashOptName  = hashName + OPT;
-            MethodTypeDesc mdWrapper    = MethodTypeDesc.of(CD_Int64, CD_Ctx, CD_nType, cd);
-            MethodTypeDesc mdPrimitive  = MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cd);
+            ClassDesc      cdThis      = ClassDesc.of(className);
+            String         hashName    = hashSig.getName();
+            String         hashOptName = hashName + OPT;
+            MethodTypeDesc mdWrapper   = MethodTypeDesc.of(CD_Int64, CD_Ctx, CD_nType, cdThis);
+            MethodTypeDesc mdPrimitive = MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cdThis);
 
             if (!isMethodOnTemplateClass(hashName, mdWrapper)) {
                 // generate the standard "hashCode" wrapper that delegates to the optimized
@@ -2142,7 +2131,7 @@ public class CommonBuilder
                             loadCtx(code);
                             code.aload(1)
                                 .aload(2)
-                                .invokestatic(cd, hashOptName, mdPrimitive);
+                                .invokestatic(cdThis, hashOptName, mdPrimitive);
                             Builder.box(code, pool().typeInt64());
                             code.areturn();
                         });
@@ -2151,7 +2140,7 @@ public class CommonBuilder
                 if (!isMethodOnTemplateClass(hashOptName, mdPrimitive)) {
                     classBuilder.withMethodBody(hashOptName, mdPrimitive,
                             ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
-                            code -> assembleConstHashCodeMethod(className, code, type, hashSig));
+                            code -> assembleConstHashCodeMethod(className, code, thisType, hashSig));
                 }
             }
         }
@@ -2233,13 +2222,13 @@ public class CommonBuilder
 
         if (baseType != null) {
             // found super class with hashCode method, so call it first
-            ClassDesc      cdExt   = ensureClassDesc(baseType.resolveConstraints());
-            MethodTypeDesc mdSuper = MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cdExt);
+            ClassDesc      cdBase  = ensureClassDesc(baseType);
+            MethodTypeDesc mdSuper = MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cdBase);
 
             loadCtx(code);
             code.aload(1)
                 .aload(valueSlot)
-                .invokestatic(cdExt, hashOptName, mdSuper)
+                .invokestatic(cdBase, hashOptName, mdSuper)
                 // long hashCode from super class is on the stack, store into the result slot
                 .lstore(resultSlot);
         } else {

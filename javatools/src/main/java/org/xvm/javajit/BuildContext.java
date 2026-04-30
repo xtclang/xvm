@@ -2044,7 +2044,8 @@ public class BuildContext {
                                        int fromAddr, TypeConstant narrowingType) {
         TypeConstant origType = origReg.type();
 
-        if (origReg.isJavaStack() || origReg.isProperty() || narrowingType.equals(origType)) {
+        if (origReg.isJavaStack() || origReg.isProperty() ||
+                narrowingType.removeImmutable().equals(origType)) {
             return origReg;
         }
 
