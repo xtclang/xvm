@@ -1384,11 +1384,11 @@ public class TypeInfo {
             return methodTest;
         }
 
-        if (methodBest.containsBody(methodTest.getIdentity())) {
+        if (methodBest.isNative() || methodBest.containsBody(methodTest.getIdentity())) {
             return methodBest;
         }
 
-        if (methodTest.containsBody(methodBest.getIdentity())) {
+        if (methodTest.isNative() || methodTest.containsBody(methodBest.getIdentity())) {
 //            TODO GG: those methods should've been consolidated by the TypeInfo calculation logic
 //            System.err.println("replacing " + methodBest.getSignature() + " with " +
 //                methodTest.getSignature());
