@@ -6762,6 +6762,7 @@ public abstract class TypeConstant
             // type is a custom XVM primitive
             ClassDesc[] cds      = JitTypeDesc.getXvmPrimitiveClasses(this);
             ClassDesc[] cdParams = new ClassDesc[cds.length * 2];
+            // both "equals" and "compare" take two arguments of the same extended Java type
             System.arraycopy(cds, 0, cdParams, 0, cds.length);
             System.arraycopy(cds, 0, cdParams, cds.length, cds.length);
 
