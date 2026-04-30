@@ -454,6 +454,35 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * Bare relative-path literal as a primary expression:
+         * `File f = ./IO.x;` or `Directory d = ../shared;`. Distinct from
+         * `#path` (binary file embed) and `$./path` (string file embed) --
+         * this form is a runtime File/Directory reference. Without this
+         * rule, `manualTests/.../IO.x` failed at the assignment.
+         */
+        @Test
+        @DisplayName("should parse relative path literal as expression")
+        fun shouldParseRelativePathLiteralAsExpression() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        File      f1 = ./IO.x;
+                        File      f2 = ../shared/data.txt;
+                        Directory d  = ./subdir;
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
          * A missing closing brace should still parse (tree-sitter is error-tolerant),
          * but the resulting tree must contain ERROR or MISSING nodes that get reported
          * as diagnostics with severity ERROR.

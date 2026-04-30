@@ -1284,6 +1284,7 @@ module.exports = grammar({
             $.typed_literal,
             $.file_literal,
             $.string_file_literal,
+            $.relative_path_literal,
         ),
 
         // Integer literals support magnitude suffixes: K, M, G, T, P, E, Z, Y (case insensitive)
@@ -1306,6 +1307,14 @@ module.exports = grammar({
         // Examples: $./templates/file.txt, $/implicit.x, $../shared/data.txt
         // This is different from template strings ($"...") - it's a compile-time file include
         string_file_literal: $ => /\$\.{0,2}\/[\w._/-]+/,
+
+        // Relative file/directory path literal as a primary expression:
+        // `File f = ./IO.x;` or `Directory d = ../shared;`. The leading `./`
+        // or `../` is what makes the token unambiguous against normal
+        // expressions (regular identifiers cannot start with `./`).
+        // Distinct from `file_literal` (`#path`, embeds binary at compile
+        // time) and `string_file_literal` (`$./path`, embeds string contents).
+        relative_path_literal: $ => /\.\.?\/[\w./-]+/,
 
         // String literals with Unicode escapes: \\uXXXX and \\UXXXXXXXX
         string_literal: $ => /"([^"\\]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|\\.)*"/,
