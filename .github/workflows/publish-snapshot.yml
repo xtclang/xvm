@@ -416,12 +416,38 @@ jobs:
                   unzip -q "$ZIP_FILE" -d "$TMP_EXTRACT"
                   INNER_JAR=$(find "$TMP_EXTRACT" -path '*/lib/intellij-plugin-*.jar' \
                       -not -name '*searchableOptions*' | head -1)
+                  if [ -z "$INNER_JAR" ] || [ ! -f "$INNER_JAR" ]; then
+                      echo "❌ Could not locate inner plugin JAR in $ZIP_FILE — refusing to publish."
+                      echo "   Expected: */lib/intellij-plugin-*.jar (excluding *searchableOptions*)"
+                      echo ""
+                      echo "ZIP top-level layout:"
+                      ( cd "$TMP_EXTRACT" && find . -maxdepth 4 -type f | sort | head -40 )
+                      echo ""
+                      echo "This usually means the ZIP layout produced by the IntelliJ"
+                      echo "Platform Gradle Plugin changed (filename pattern, lib/ path,"
+                      echo "or sandbox structure). Update the find expression above to"
+                      echo "match the new layout before re-running."
+                      exit 1
+                  fi
                   ZIP_PLUGIN_VERSION=$(unzip -p "$INNER_JAR" META-INF/plugin.xml 2>/dev/null \
                       | sed -n 's|.*<version>\([^<]*\)</version>.*|\1|p' | head -1)
+                  if [ -z "$ZIP_PLUGIN_VERSION" ]; then
+                      echo "❌ Could not extract <version> from plugin.xml — refusing to publish."
+                      echo "   inner JAR: $INNER_JAR"
+                      echo ""
+                      echo "JAR contents (top 40 entries):"
+                      unzip -l "$INNER_JAR" 2>/dev/null | head -40
+                      echo ""
+                      echo "META-INF/plugin.xml contents (first 80 lines):"
+                      unzip -p "$INNER_JAR" META-INF/plugin.xml 2>/dev/null | head -80 \
+                          || echo "  (META-INF/plugin.xml not present in this JAR)"
+                      exit 1
+                  fi
                   if [ "$ZIP_PLUGIN_VERSION" != "$PUBLISH_VERSION" ]; then
                       echo "❌ Plugin ZIP version mismatch — refusing to publish."
                       echo "   metadata publishVersion : $PUBLISH_VERSION"
-                      echo "   plugin.xml <version>    : ${ZIP_PLUGIN_VERSION:-<empty>}"
+                      echo "   plugin.xml <version>    : $ZIP_PLUGIN_VERSION"
+                      echo "   inner JAR               : $INNER_JAR"
                       echo ""
                       echo "The CI build that produced this artifact did not bake the"
                       echo "timestamped publish version into plugin.xml. Inspect the"

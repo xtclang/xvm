@@ -384,6 +384,14 @@ jobs:
                   echo "release-channel=$RELEASE_CHANNEL" >> $GITHUB_OUTPUT
                   echo "🔖 IntelliJ Marketplace publish version: $PUBLISH_VERSION"
 
+            # NOTE: We deliberately do NOT cache lang/.intellijPlatform/ides via
+            # actions/cache. ~1 GB per IDE distribution would eat a meaningful chunk
+            # of the 10 GB per-repo cache budget that's far more valuable for PR
+            # builds and Gradle/dep caches. The verifier only needs the IDE on the
+            # rare lang/-changed run (PR validation or master publish), and the
+            # IntelliJ Platform Gradle Plugin will redownload it on demand. Slower
+            # by ~1-2 minutes on those runs, but it doesn't displace the caches we
+            # actually rely on for everything else.
             - name: Build the XDK and create a distribution
               shell: bash
               env:
@@ -540,23 +548,6 @@ jobs:
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                   echo "🎉 ALL LANG VALIDATION COMPLETE"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-            # Cache the IntelliJ IDE distributions used by the IntelliJ Platform
-            # Gradle Plugin. Keyed on libs.versions.toml so an IDE version bump
-            # forces a fresh download. ~1 GB per cached IDE; reused across runs
-            # by buildPlugin/runIde and verifyPlugin (all of which run in the main
-            # CI build above, never in a separate Gradle invocation).
-            - name: Cache IntelliJ IDE distributions
-              if: |
-                  success() &&
-                  matrix.os == 'ubuntu-latest' &&
-                  steps.publish-flags.outputs.validate-lang == 'true'
-              uses: actions/cache@v4
-              with:
-                  path: lang/.intellijPlatform/ides
-                  key: intellij-ides-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
-                  restore-keys: |
-                      intellij-ides-${{ runner.os }}-
 
             - name: Upload Plugin Verifier reports
               if: |
