@@ -1378,6 +1378,7 @@ module.exports = grammar({
             $.file_literal,
             $.string_file_literal,
             $.relative_path_literal,
+            $.path_literal,
             $.version_literal,
         ),
 
@@ -1528,8 +1529,19 @@ module.exports = grammar({
         ))),
 
         // Path literal: /path/to/something or /path/to/file.ext
-        // Used with typed literals like Path:/sys/info
-        path_literal: $ => /\/[a-zA-Z0-9_\-\.\/]*/,
+        // Used with typed literals like Path:/sys/info AND as a primary
+        // expression (`Path p = /path/to/file.txt`).
+        //
+        // The first char after `/` must be alphanumeric or `_`, NOT `/`
+        // or `*`. This is what disambiguates the path token from
+        // `//` (line_comment start) and `/*` (block_comment start) when
+        // path_literal is reachable from `_literal`. The regex used to
+        // accept `[a-zA-Z0-9_\-\.\/]*` for the entire tail; that produced
+        // a longer match than `//` for line-comment starts and the
+        // lexer (tree-sitter prefers longest match) silently consumed
+        // line-comment prefixes as path_literals in expression-statement
+        // start states. Constraining the first body char fixes that.
+        path_literal: $ => /\/[a-zA-Z0-9_][a-zA-Z0-9_\-\.\/]*/,
 
         // Duration literal: ISO-8601 format (P prefix optional in XTC shorthand)
         // Examples: PT1H30M (1 hour 30 min), P1D (1 day), 30S (30 seconds), PT0S (0 seconds),
