@@ -47,6 +47,13 @@ module.exports = grammar({
         // Used in switch expressions where the ';' is required as terminator.
         // If no ';' before EOL, this token fails (forcing switch_statement interpretation).
         $._todo_freeform_until_semi,
+
+        // Single `>` used as type-argument / type-parameter / angle-bracket-type-list
+        // closer. The point of routing this through the external scanner is to
+        // break tree-sitter's greedy `>>` tokenization in nested type contexts
+        // like `Function<<Int, String>, <Int>>`. Outside type position this token
+        // is not requested, so `>>`/`>=`/`>>=`/etc. keep their normal tokenization.
+        $._type_gt,
     ],
 
     // Conflicts that require GLR parsing for disambiguation.
@@ -526,7 +533,7 @@ module.exports = grammar({
         into_clause: $ => seq('into', $.type_expression),
 
         // Type parameters
-        type_parameters: $ => seq('<', commaSep1($.type_parameter), '>'),
+        type_parameters: $ => seq('<', commaSep1($.type_parameter), $._type_gt),
         type_parameter: $ => seq(field('name', $.identifier), optional(seq('extends', field('constraint', $.type_expression)))),
 
         // Parameters (with optional trailing comma)
@@ -609,13 +616,13 @@ module.exports = grammar({
         // Type arguments can include constraints: <Key, Value extends Shareable>
         // Can also include angle-bracket type lists for method signatures: Method<Target, <Params>, <Return>>
         // Can be empty: Class<> for wildcard/inferred type arguments
-        type_arguments: $ => seq('<', commaSep($.type_argument), '>'),
+        type_arguments: $ => seq('<', commaSep($.type_argument), $._type_gt),
         type_argument: $ => choice(
             $.angle_bracket_type_list,
             seq($.type_expression, optional(seq('extends', $.type_expression))),
         ),
         // Angle bracket type list: <> or <Type> or <Type1, Type2> - used in method type signatures
-        angle_bracket_type_list: $ => seq('<', commaSep($.type_expression), '>'),
+        angle_bracket_type_list: $ => seq('<', commaSep($.type_expression), $._type_gt),
         array_type: $ => prec.left(seq($._non_bi_type, '[', ']')),
         nullable_type: $ => prec.left(seq($._non_bi_type, '?')),
         // Non-null type modifier (no auto-narrowing): Type!

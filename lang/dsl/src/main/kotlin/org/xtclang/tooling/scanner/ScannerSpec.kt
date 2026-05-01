@@ -49,6 +49,20 @@ enum class TokenType {
     // Used when the ';' is needed as explicit terminator after the TODO text.
     // If no ';' before EOL, this token fails (forcing switch_statement interpretation).
     TODO_FREEFORM_UNTIL_SEMI,
+
+    // Single `>` used as the closer of type arguments / type parameters /
+    // angle-bracket type lists. The point of routing this through the external
+    // scanner is to break tree-sitter's greedy `>>` tokenization in nested
+    // type-argument contexts -- e.g. `Function<<Int, String>, <Int>>` where
+    // the inner `>` closes the inner list and the next `>` closes the outer.
+    // The internal lexer would otherwise consume `>>` as a single right-shift
+    // operator before the parser could disambiguate.
+    //
+    // This token only fires when the parser actively asks for it (i.e. it is
+    // in `valid_symbols`), which happens only inside type-position rules.
+    // In expression context the internal lexer keeps tokenizing `>>` / `>>>` /
+    // `>=` / `>>=` / `>>>=` as single tokens unchanged.
+    TYPE_GT,
 }
 
 /**

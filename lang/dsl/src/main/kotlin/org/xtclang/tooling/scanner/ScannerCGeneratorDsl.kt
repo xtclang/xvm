@@ -515,10 +515,43 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                 emptyLine()
 
                 debugBlock {
-                    line("""fprintf(stderr, "[SCANNER] char='%c'(0x%02x) single=%d multi=%d expr=%d todo_text=%d todo_until_semi=%d\n",""")
+                    line(
+                        """fprintf(stderr, "[SCANNER] char='%c'(0x%02x) single=%d multi=%d expr=%d todo_text=%d todo_until_semi=%d type_gt=%d\n",""",
+                    )
                     line("""    (peek(lexer) >= 32 && peek(lexer) < 127) ? (char)peek(lexer) : '?',""")
                     line("""    peek(lexer), in_singleline, in_multiline, in_expr,""")
-                    line("""    valid_symbols[TODO_FREEFORM_TEXT], valid_symbols[TODO_FREEFORM_UNTIL_SEMI]);""")
+                    line("""    valid_symbols[TODO_FREEFORM_TEXT], valid_symbols[TODO_FREEFORM_UNTIL_SEMI], valid_symbols[TYPE_GT]);""")
+                }
+                emptyLine()
+
+                sectionComment("TYPE_GT: single `>` as type-argument-list closer")
+                comment("Emit TYPE_GT when the parser asks for it AND lookahead is `>`.")
+                comment("This breaks tree-sitter's greedy `>>` tokenization in nested")
+                comment("type-argument contexts like `Function<<Int, String>, <Int>>`.")
+                comment("In expression context TYPE_GT is not in valid_symbols, so the")
+                comment("internal lexer keeps tokenizing `>>` / `>=` / `>>=` etc. unchanged.")
+                comment("Tree-sitter does NOT auto-skip extras before invoking an")
+                comment("external scanner, so we have to skip whitespace ourselves to")
+                comment("handle forms like `Map< Int >`. We skip ONLY in non-template")
+                comment("contexts -- inside a template interpolation the whitespace is")
+                comment("part of the structure that the template scanner depends on.")
+                ifBlock("valid_symbols[TYPE_GT]") {
+                    ifBlock("peek(lexer) == '>'") {
+                        advance()
+                        emitToken("TYPE_GT")
+                    }
+                    comment("Outside template interpolation, allow whitespace before `>`.")
+                    ifBlock("!valid_symbols[TEMPLATE_EXPR_END] && !in_singleline && !in_multiline") {
+                        whileBlock(
+                            "!at_eof(lexer) && (peek(lexer) == ' ' || peek(lexer) == '\\t' || peek(lexer) == '\\n' || peek(lexer) == '\\r')",
+                        ) {
+                            line("lexer->advance(lexer, true);")
+                        }
+                        ifBlock("peek(lexer) == '>'") {
+                            advance()
+                            emitToken("TYPE_GT")
+                        }
+                    }
                 }
                 emptyLine()
 
