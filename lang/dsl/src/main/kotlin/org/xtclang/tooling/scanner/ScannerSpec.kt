@@ -63,6 +63,15 @@ enum class TokenType {
     // In expression context the internal lexer keeps tokenizing `>>` / `>>>` /
     // `>=` / `>>=` / `>>>=` as single tokens unchanged.
     TYPE_GT,
+
+    // Newline / multiline-template continuation. Declared in `extras` so the
+    // parser silently skips it. The scanner emits this whenever peek is
+    // `\n`; if we're inside an interpolation expression of a multiline
+    // template, the scanner additionally consumes the trailing `   |`
+    // continuation marker so the `|` is not lexed as a bitwise-OR operator.
+    // Listed FIRST in extras so it is consulted before the internal `/\s/`
+    // regex; the longer match wins.
+    MULTILINE_CONTINUATION,
 }
 
 /**

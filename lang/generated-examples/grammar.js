@@ -10,6 +10,12 @@ module.exports = grammar({
     // This prevents tree-sitter's GLR parser from misidentifying keywords after doc comments.
     // Only whitespace and non-doc comments are extras (can appear anywhere).
     extras: $ => [
+        // Listed FIRST so the external scanner is consulted before `/\s/`
+        // for newlines. The scanner consumes `\n` (always) plus any
+        // following `   |` continuation marker when inside an interpolation
+        // expression -- preventing the `|` from being lexed as a bitwise-OR
+        // operator inside multi-line interpolation expressions.
+        $._multiline_continuation,
         /\s/,
         $.line_comment,
         $.block_comment,
@@ -54,6 +60,11 @@ module.exports = grammar({
         // like `Function<<Int, String>, <Int>>`. Outside type position this token
         // is not requested, so `>>`/`>=`/`>>=`/etc. keep their normal tokenization.
         $._type_gt,
+
+        // Newline + optional `   |` multiline-template continuation marker
+        // consumed by the external scanner; declared in extras above so the
+        // parser silently skips it.
+        $._multiline_continuation,
     ],
 
     // Conflicts that require GLR parsing for disambiguation.

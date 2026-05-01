@@ -37,6 +37,7 @@ object ScannerCGeneratorDsl {
 
 #include "tree_sitter/parser.h"
 #include <stdbool.h>
+#include <stdlib.h>
 ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
 #ifdef SCANNER_DEBUG
 #include <stdio.h>
@@ -53,52 +54,65 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
 
     private fun generateLifecycleFunctions(): String =
         buildString {
-            // Create scanner (stateless - no state needed)
+            // Persistent scanner state: depth counter for multiline-template
+            // interpolations. Incremented when we emit MULTILINE_EXPR_START
+            // (entering a `{...}` inside a `$|...|`), decremented when we
+            // emit TEMPLATE_EXPR_END (exiting that interpolation). Used by
+            // the MULTILINE_CONTINUATION emit path so we only consume the
+            // `|` continuation marker when we're certain we're inside a
+            // multiline template's interpolation expression -- preventing
+            // valid bitwise-OR `|` operators in normal code from being
+            // silently swallowed.
+            appendLine(
+                """
+                |typedef struct {
+                |    unsigned char ml_interp_depth;
+                |} ScannerState;
+                """.trimMargin(),
+            )
+            appendLine()
+
             appendLine(
                 cFunction("void *", "tree_sitter_xtc_external_scanner_create") {
                     param("void", "")
                     body {
-                        returnStmt("NULL")
+                        returnStmt("calloc(1, sizeof(ScannerState))")
                     }
                 },
             )
             appendLine()
 
-            // Destroy scanner
             appendLine(
                 cFunction("void", "tree_sitter_xtc_external_scanner_destroy") {
                     param("void *", "payload")
                     body {
-                        voidCast("payload")
+                        line("free(payload);")
                     }
                 },
             )
             appendLine()
 
-            // Serialize (nothing to serialize)
             appendLine(
                 cFunction("unsigned", "tree_sitter_xtc_external_scanner_serialize") {
                     param("void *", "payload")
                     param("char *", "buffer")
                     body {
-                        voidCast("payload")
-                        voidCast("buffer")
-                        returnStmt("0")
+                        line("ScannerState * state = (ScannerState *)payload;")
+                        line("buffer[0] = (char)state->ml_interp_depth;")
+                        returnStmt("1")
                     }
                 },
             )
             appendLine()
 
-            // Deserialize (nothing to deserialize)
             append(
                 cFunction("void", "tree_sitter_xtc_external_scanner_deserialize") {
                     param("void *", "payload")
                     param("const char *", "buffer")
                     param("unsigned", "length")
                     body {
-                        voidCast("payload")
-                        voidCast("buffer")
-                        voidCast("length")
+                        line("ScannerState * state = (ScannerState *)payload;")
+                        line("state->ml_interp_depth = (length >= 1) ? (unsigned char)buffer[0] : 0;")
                     }
                 },
             )
@@ -370,6 +384,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
         prefix: String,
         multiline: Boolean,
     ) {
+        val depthBump = if (multiline) "state->ml_interp_depth++; " else ""
         comment("Expression or statement block start: { or {{")
         ifBlock("c == '$exprStart'") {
             ifBlock("has_content && valid_symbols[${prefix}_CONTENT]") {
@@ -385,13 +400,13 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                 }
                 comment("Not a statement block, but we already consumed {")
                 ifBlock("valid_symbols[${prefix}_EXPR_START]") {
-                    emitToken("${prefix}_EXPR_START")
+                    line("${depthBump}lexer->mark_end(lexer); lexer->result_symbol = ${prefix}_EXPR_START; return true;")
                 }
                 breakStmt()
             }
             ifBlock("valid_symbols[${prefix}_EXPR_START]") {
                 advance()
-                emitToken("${prefix}_EXPR_START")
+                line("${depthBump}lexer->mark_end(lexer); lexer->result_symbol = ${prefix}_EXPR_START; return true;")
             }
             breakStmt()
         }
@@ -477,7 +492,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
             param("TSLexer *", "lexer")
             param("const bool *", "valid_symbols")
             body {
-                voidCast("payload")
+                line("ScannerState * state = (ScannerState *)payload;")
                 emptyLine()
 
                 ifBlock("at_eof(lexer)") {
@@ -624,10 +639,58 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                 }
                 emptyLine()
 
-                sectionComment("Inside expression: only look for closing brace")
-                ifBlock("in_expr && peek(lexer) == '$exprEnd'") {
+                sectionComment("Inside expression: skip whitespace + `|` continuations, then look for closing brace")
+                comment("Tree-sitter does NOT auto-skip extras before invoking an external")
+                comment("scanner, so we have to skip whitespace ourselves to handle forms")
+                comment("like `\${ y }` or `\$\"{y } abc\"` where the closing `}` is preceded")
+                comment("by whitespace inside the interpolation expression.")
+                comment("")
+                comment("Additionally: when the parent template is multiline (\$|...|), an")
+                comment("interpolation expression may itself span multiple lines via the")
+                comment("same `\\n   |` continuation marker as the surrounding content.")
+                comment("Tree-sitter's internal lexer would lex the `|` as the bitwise-OR")
+                comment("operator and confuse the parser, so we skip past `\\n + hspace + |`")
+                comment("here as part of the inter-token whitespace.")
+                ifBlock("in_expr") {
+                    comment("Skip horizontal whitespace and check for `}`.")
+                    whileBlock(
+                        "!at_eof(lexer) && (peek(lexer) == ' ' || peek(lexer) == '\\t' || peek(lexer) == '\\r')",
+                    ) {
+                        line("lexer->advance(lexer, true);")
+                    }
+                    ifBlock("peek(lexer) == '$exprEnd'") {
+                        advance()
+                        comment("Pop a level off the multiline-interpolation depth counter")
+                        comment("so MULTILINE_CONTINUATION stops accepting `|` as a")
+                        comment("continuation marker once we've returned to the enclosing")
+                        comment("template content / outer expression.")
+                        ifBlock("state->ml_interp_depth > 0") {
+                            line("state->ml_interp_depth--;")
+                        }
+                        emitToken("TEMPLATE_EXPR_END")
+                    }
+                }
+                emptyLine()
+
+                sectionComment("MULTILINE_CONTINUATION: `\\n` + optional `   |` inside a multiline interpolation")
+                comment("Gated on the persistent `ml_interp_depth` counter so the `|` is")
+                comment("only consumed when we're certain we're inside an interpolation")
+                comment("expression that belongs to a `\$|...|` multiline template. The")
+                comment("counter is bumped when MULTILINE_EXPR_START is emitted and popped")
+                comment("when the matching TEMPLATE_EXPR_END fires (above).")
+                ifBlock(
+                    "valid_symbols[MULTILINE_CONTINUATION] && peek(lexer) == '\\n' && state->ml_interp_depth > 0 && !in_singleline && !in_multiline",
+                ) {
                     advance()
-                    emitToken("TEMPLATE_EXPR_END")
+                    whileBlock(
+                        "!at_eof(lexer) && (peek(lexer) == ' ' || peek(lexer) == '\\t')",
+                    ) {
+                        advance()
+                    }
+                    ifBlock("peek(lexer) == '|'") {
+                        advance()
+                    }
+                    emitToken("MULTILINE_CONTINUATION")
                 }
                 emptyLine()
 
