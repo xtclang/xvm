@@ -14,43 +14,44 @@
 # directory that contains lib_*/ and manualTests/). Blank lines and
 # `#` comments are ignored.
 
-# === C5 — nested angle-bracket function types (half-fixed) ===
+# === C5 — nested angle-bracket function types (LHS fixed) ===
 #
-# Failing shapes: `Function<<Int, String>, <Int>>` (reflect.x line 32),
-# `TestTurtle<<Int, String>>` (generics.x line 100). Both appear in
-# variable_declaration position (`Type<<...>> name = expr;`).
+# Both sides now parse. Closing-side via TYPE_GT external scanner
+# (commit d384f2394). Opening-side via splitting the binary shift
+# operators `<<` / `>>` / `>>>` into `seq('<', token.immediate('<'))`
+# (etc.) so the lexer never produces a multi-char shift token. With
+# `<<` no longer a terminal, the lexer naturally emits `<` `<` for
+# `Function<<Int, String>, <Int>>`, and the type_arguments /
+# angle_bracket_type_list rules consume the chars normally. Cost: a
+# 1-element self-conflict on `binary_expression` -- at state
+# `_expression • >` the parser cannot tell from a single lookahead
+# whether `>` opens a precedence-9 comparison, a precedence-10 range,
+# or a precedence-11 shift, so GLR forks and unmatched alternatives
+# die on the second char. Sweep stays at 872/872.
 #
-# Closing-side fix shipped: external scanner token TYPE_GT splits `>>`
-# (and friends) when the parser is inside a type_arguments /
-# type_parameters / angle_bracket_type_list and asks for a closing
-# `>`. This unblocks the RHS shapes -- e.g. `new TestTurtle<<Int, String>>()`
-# (generics.x line 100, right-hand side) and
-# `bar.as(Function<<Int, String>, <Int>>)` (reflect.x line 33,
-# right-hand side) now parse cleanly. See commit d384f2394.
+# Note: assignment shifts (`<<=` / `>>=` / `>>>=`) are deliberately
+# NOT split. The lexer's longest-match rule still produces them as
+# single 3-char tokens (since `<<` is no longer a terminal, the
+# `<<=` DFA path is the only multi-char match starting with two
+# `<`s). Splitting them would create an LALR(1) ambiguity at
+# `_expression • <` between the assignment and binary-shift paths
+# (verified on a discarded attempt -- the validator reported a 5-way
+# conflict spanning assignment_expression, binary_expression,
+# unary_expression, call_expression, async_call_expression).
 #
-# Opening-side fix attempted but reverted: a symmetric TYPE_LT
-# external token broke 160 files. The reason is asymmetric ambiguity.
-# The CLOSING `>` is unambiguous at parse time -- the parser only
-# requests TYPE_GT inside type-position rules, where `>>` cannot mean
-# right-shift. The OPENING `<` is ambiguous at parse time -- whenever
-# the parser has both a variable_declaration alternative and an
-# expression_statement alternative alive (which is essentially every
-# statement starting with an identifier), TYPE_LT becomes a "valid"
-# symbol because the variable_declaration path could enter
-# type_arguments. The scanner then eagerly consumes `<`, killing the
-# comparison interpretation. Result: `a < b` everywhere broke.
+# generics.x parses cleanly and is removed from this list.
 #
-# The most promising next attack: restructure BINARY_EXPRESSION_RULES
-# so `<<` / `>>` / `<<=` / `>>=` / `>>>` / `>>>=` / `<=>` / `<=` /
-# `>=` / `..<` / `>..` / `>..<` are emitted as `seq('<', token.immediate('<'))`
-# (and similar) rather than single tokens. The lexer would then never
-# produce a multi-char `<<` or `>>` token, so `Function<<Int>>` would
-# naturally parse as four separate `<`/`>` tokens with no ambiguity
-# against shift operators. Touches XtcLanguage.kt operator definitions
-# and TreeSitterGenerator.kt's binary-expression emission.
+# reflect.x stays parked: the C5 LHS errors at lines 31-32 are gone,
+# but a previously-masked, unrelated bug surfaces at lines 193+. The
+# parser inside a template interpolation `{f2 } -> {f2 ()}` greedily
+# commits to a lambda `f2 -> {f2 ()}` whose body block consumes the
+# `}` that should have closed the first interpolation. Minimal
+# repro: `console.print($"x = {y } -> {y ()}");`. Fix likely needs
+# either a higher precedence on the `_template_expr_end` reduction,
+# or a conflict declaration that keeps the
+# interpolation-end-vs-block-start interpretation alive.
 
 manualTests/src/main/x/reflect.x
-manualTests/src/main/x/generics.x
 
 # === callTests.x — bare-ident + typed-decl in tuple_assignment ===
 #
