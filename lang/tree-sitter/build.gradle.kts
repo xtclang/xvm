@@ -397,14 +397,25 @@ val copyGrammarFiles by tasks.registering(Copy::class) {
  */
 val generateTreeSitterConfig by tasks.registering {
     group = "tree-sitter"
-    description = "Generate tree-sitter.json config for ABI 15"
+    description = "Generate tree-sitter.json (grammar manifest) and tree-sitter-user-config.json (CLI parser-directories)"
     dependsOn(copyGrammarFiles)
 
     val outputFile = generatedDir.map { it.file("tree-sitter.json") }
+    // The CLI loads a user-level config from `~/.config/tree-sitter/config.json`
+    // (or wherever XDG points) listing `parser-directories` that hold grammars.
+    // Without it, every `tree-sitter parse` / `tree-sitter generate` invocation
+    // prints a multi-line "Warning: You have not configured any parser
+    // directories!" -- a million times in CI when we parse 880 files. Generate
+    // a minimal local config and pass it via `--config-path` everywhere; that
+    // both silences the warning and is hermetic (no $HOME dependency).
+    val userConfigFile = generatedDir.map { it.file("tree-sitter-user-config.json") }
     val xdkVersion = project.version.toString()
 
     inputs.property("version", xdkVersion)
     outputs.file(outputFile)
+    outputs.file(userConfigFile)
+
+    val workDirPathProvider = generatedDir.map { it.asFile.absolutePath }
 
     doLast {
         val configJson = """
@@ -429,6 +440,14 @@ val generateTreeSitterConfig by tasks.registering {
             }
         """.trimIndent()
         outputFile.get().asFile.writeText(configJson + "\n")
+
+        val workDirPath = workDirPathProvider.get()
+        val userConfigJson = """
+            {
+              "parser-directories": ["$workDirPath"]
+            }
+        """.trimIndent()
+        userConfigFile.get().asFile.writeText(userConfigJson + "\n")
     }
 }
 
@@ -459,7 +478,9 @@ val validateTreeSitterGrammar by tasks.registering(Exec::class) {
 
     workingDir(generatedDir)
     executable(treeSitterCliExe.get())
-    // Use native QuickJS runtime instead of requiring system Node.js
+    // Use native QuickJS runtime instead of requiring system Node.js.
+    // (`tree-sitter generate` doesn't accept --config-path; only `parse`
+    // does. generate doesn't emit the parser-directories warning anyway.)
     args("generate", "--js-runtime", "native")
 
     // Capture paths at configuration time for logging in doFirst
@@ -639,11 +660,15 @@ abstract class TreeSitterParseTestTask @Inject constructor(
         // Warmup: parse the first file once to factor out tree-sitter CLI startup time.
         // The CLI loads the grammar shared library and initializes internal state on first run,
         // which adds ~1 second overhead that would skew timing for the first file.
+        // --config-path silences the "no parser directories" warning that would
+        // otherwise spam the log with 4 lines per parse invocation (~3500 lines
+        // for the full corpus on CI).
+        val userConfigPath = workDir.get().resolve("tree-sitter-user-config.json").absolutePath
         val warmupFile = xtcFiles.first()
         execOps.exec {
             workingDir(workDir.get())
             executable(cliPath.get())
-            args("parse", "--quiet", warmupFile.absolutePath)
+            args("parse", "--quiet", "--config-path", userConfigPath, warmupFile.absolutePath)
             isIgnoreExitValue = true
         }
 
@@ -654,7 +679,7 @@ abstract class TreeSitterParseTestTask @Inject constructor(
             val result = execOps.exec {
                 workingDir(workDir.get())
                 executable(cliPath.get())
-                args("parse", "--quiet", file.absolutePath)
+                args("parse", "--quiet", "--config-path", userConfigPath, file.absolutePath)
                 isIgnoreExitValue = true
             }
             val elapsedMs = (System.nanoTime() - startNanos) / 1_000_000
