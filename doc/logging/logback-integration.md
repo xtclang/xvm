@@ -58,7 +58,7 @@ This isn't novel — it's exactly Logback's mental model. The advantage of writi
 an Ecstasy module rather than a wrapper around the JVM Logback library is that it gets
 to use Ecstasy's own primitives (services for thread-safety, fibers for async, the file
 abstraction from `lib_ecstasy`) instead of needing the bridge story discussed in
-`NATIVE_BRIDGE.md`.
+`native-bridge.md`.
 
 ## Sketch — the public API of `lib_logging_logback`
 
@@ -201,7 +201,7 @@ behaviour on the next call.
 
 ## Per-logger lookup
 
-The longest-prefix-match lookup illustrated in `CUSTOM_SINKS.md` is the engine:
+The longest-prefix-match lookup illustrated in `custom-sinks.md` is the engine:
 
 ```ecstasy
 private Level effectiveLevel(String loggerName) {

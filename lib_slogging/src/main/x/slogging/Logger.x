@@ -37,7 +37,7 @@
  * construction, forward to handler). Source-location capture is not. There is no
  * `LogAttrs(ctx, level, msg, attrs...)` form yet — the per-level methods cover the same
  * ground in v0; `ctx`-style propagation is the open Q-D6.b discussion in
- * `OPEN_QUESTIONS.md`.
+ * `open-questions.md`.
  */
 const Logger(Handler handler, Attr[] attrs)
         implements Orderable {

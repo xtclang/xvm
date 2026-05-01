@@ -88,7 +88,7 @@ suppliers.put(new Resource(logSinkType,  "default"), RTLogbackSink::$create);
 ```
 
 The wildcard `"*"` for `Logger` is the workaround for the current exact-name resolution
-(see `OPEN_QUESTIONS.md` — this is a small change to `nMainInjector.supplierOf`).
+(see `open-questions.md` — this is a small change to `nMainInjector.supplierOf`).
 
 The suppliers map is per-Injector instance, so each container can choose its own
 sink. There is no JVM-global state; this matches Ecstasy's container isolation
@@ -183,7 +183,7 @@ Three options, ordered by recommendation:
 ### Option A (recommended): pure-Ecstasy `LogSink` is the primary path
 
 Ship `ConsoleLogSink` as the default. Ship `lib_logging_logback` (the future module
-described in `LOGBACK_INTEGRATION.md`) as a pure-Ecstasy implementation.
+described in `logback-integration.md`) as a pure-Ecstasy implementation.
 
 A native sink, if we ever ship one, is *one* of multiple `LogSink` choices, not the
 default. Users who want the Java Logback experience opt in explicitly.

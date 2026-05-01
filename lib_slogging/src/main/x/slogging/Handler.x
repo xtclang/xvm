@@ -32,7 +32,7 @@
  *
  * `Logger` is a `const` and references its `handler` through this interface, so every
  * concrete `Handler` must be `Passable` (`immutable` or a `service`). The full rule and
- * the citations to `lib_xunit_engine` / `platform/common` are in `DESIGN.md` ("Sink
+ * the citations to `lib_xunit_engine` / `platform/common` are in `design.md` ("Sink
  * type: `const` vs `service`") — same rule, both libraries.
  */
 interface Handler {

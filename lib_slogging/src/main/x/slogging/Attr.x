@@ -19,7 +19,7 @@
  * In Ecstasy we accept any `Object` here and let the handler do the case split via
  * `value.is(...)`. This is closer to how the SLF4J library carries `Map<String, Object>`
  * and avoids inventing a parallel kind-tag enum. The trade-off — slightly more work in
- * each handler — is documented in `LIB_LOGGING_VS_LIB_SLOGGING.md` § 3.5.
+ * each handler — is documented in `lib-logging-vs-lib-slogging.md` § 3.5.
  *
  * Values must be `Passable` (`immutable` or a service) because `Attr` is a `const` and
  * its fields are auto-frozen on construction. Trying to put a mutable class instance in

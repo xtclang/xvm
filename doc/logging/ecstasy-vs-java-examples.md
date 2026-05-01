@@ -210,7 +210,7 @@ import org.slf4j.LoggerFactory;
 sink.setRootLevel(log.Debug);
 ```
 
-For a richer per-logger configuration tree see `LOGBACK_INTEGRATION.md` — the future
+For a richer per-logger configuration tree see `logback-integration.md` — the future
 `lib_logging_logback` module would expose a programmatic and/or file-based config API
 analogous to Logback's `JoranConfigurator`.
 
@@ -256,7 +256,7 @@ service CountingSink
 }
 ```
 
-Wire it by replacing the injected default sink — see `CUSTOM_SINKS.md` for the runtime
+Wire it by replacing the injected default sink — see `custom-sinks.md` for the runtime
 side of the story.
 
 ## 10. NOP / silent logger (for libraries that opt out)

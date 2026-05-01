@@ -9,7 +9,7 @@
  * # Why this handler is a `const`
  *
  * Identical reasoning to `lib_logging`'s `NoopLogSink`: no state, no shared mutation,
- * pure forwarder. See `doc/logging/DESIGN.md` ("Sink type: `const` vs `service`").
+ * pure forwarder. See `doc/logging/design.md` ("Sink type: `const` vs `service`").
  */
 const NopHandler
         implements Handler {

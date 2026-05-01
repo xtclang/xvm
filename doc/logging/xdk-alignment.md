@@ -199,7 +199,7 @@ we do things."
 
 The only thing missing for full first-class status is the runtime-side resource
 registration (`@Inject Logger` actually resolving), which is the next chunk of work
-described in `OPEN_QUESTIONS.md` items 1, 2, and 9.
+described in `open-questions.md` items 1, 2, and 9.
 
 
 ---

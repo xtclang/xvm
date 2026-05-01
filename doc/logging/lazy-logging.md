@@ -207,7 +207,7 @@ saying it matters.
 
 ## Concrete next step
 
-Add the lambda overloads to `Logger.x` and `BasicLogger.x`. Update `ECSTASY_VS_JAVA_EXAMPLES.md`
+Add the lambda overloads to `Logger.x` and `BasicLogger.x`. Update `ecstasy-vs-java-examples.md`
 with a side-by-side showing:
 
 ```kotlin

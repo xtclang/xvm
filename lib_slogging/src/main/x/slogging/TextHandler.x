@@ -14,14 +14,14 @@
  * shape end to end (`Logger.with(...)`, attribute folding into namespaced keys, level
  * threshold filtering) but not yet a production formatter. Specifically, no escaping
  * of `=` / `"` in attribute values, no group nesting collapse beyond one level, no
- * timestamp formatting options. Tracked in `OPEN_QUESTIONS.md` § "lib_slogging work
+ * timestamp formatting options. Tracked in `open-questions.md` § "lib_slogging work
  * not yet implemented" once the parity table is added.
  *
  * # Why this handler is a `const`, not a `service`
  *
  * Same rule as `lib_logging`'s `ConsoleLogSink`: stateless forwarder over `@Inject
  * Console`. Threshold fixed at construction. No accumulation, no shared mutable state.
- * See `doc/logging/DESIGN.md` ("Sink type: `const` vs `service`") for the full rule.
+ * See `doc/logging/design.md` ("Sink type: `const` vs `service`") for the full rule.
  */
 const TextHandler(Level rootLevel, String groupPrefix)
         implements Handler {

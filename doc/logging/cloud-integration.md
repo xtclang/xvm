@@ -1,7 +1,7 @@
 # Cloud-native logging — why API familiarity matters
 
 This doc explains *why* the choice between SLF4J-shaped and slog-shaped logging
-APIs (`lib_logging` vs `lib_slogging`, see `LIB_LOGGING_VS_LIB_SLOGGING.md`) is
+APIs (`lib_logging` vs `lib_slogging`, see `lib-logging-vs-lib-slogging.md`) is
 not just an aesthetic call. It is the entry point to the major cloud
 observability ecosystems — and the wrong API choice silently rules Ecstasy out
 of common deployment patterns even when the code itself is fine.
@@ -214,7 +214,7 @@ the API doesn't expose them:
 5. **An async / batched sink.** When a service emits 10k log events per
    second, blocking the request thread on disk I/O is unacceptable. Both
    libraries' `AsyncLogSink` / `AsyncHandler` wrappers (W-5 in
-   `OPEN_QUESTIONS.md`) cover this; we have not implemented either yet.
+   `open-questions.md`) cover this; we have not implemented either yet.
 
 Note that *all five* of these features exist for the cloud-deployment story,
 not for the local-tail-the-log-file story. They are exactly the features that

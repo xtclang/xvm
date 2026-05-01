@@ -40,7 +40,7 @@
  *      - [MemoryLogSink]         — captures events in memory; useful in tests
  *
  * A future `lib_logging_logback` module is expected to ship a configuration-driven sink with
- * appenders, layouts, filters, and per-logger thresholds — see `docs/LOGBACK_INTEGRATION.md`.
+ * appenders, layouts, filters, and per-logger thresholds — see `docs/logback-integration.md`.
  */
 module logging.xtclang.org {
 }
