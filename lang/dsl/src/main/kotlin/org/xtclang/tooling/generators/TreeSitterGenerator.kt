@@ -298,18 +298,40 @@ class TreeSitterGenerator(
                         else -> "prec.left"
                     }
 
-                val symbols = ops.map { escapeJsString(it.symbol) }
+                val parts = ops.map { emitOperatorLiteral(it.symbol) }
                 val choiceExpr =
-                    if (symbols.size == 1) {
-                        "'${symbols.first()}'"
+                    if (parts.size == 1) {
+                        parts.first()
                     } else {
-                        "choice(${symbols.joinToString(", ") { "'$it'" }})"
+                        "choice(${parts.joinToString(", ")})"
                     }
 
                 val comma = if (index < byPrecedence.size - 1) "," else ""
                 appendLine("$i3$precFn($precedence, seq($d._expression, $choiceExpr, $d._expression))$comma")
             }
         }.trimEnd()
+
+    // The binary shift operators `<<`, `>>`, `>>>` are emitted as
+    // character-level sequences using `token.immediate(...)` so the
+    // tree-sitter lexer never produces a multi-char `<<` / `>>` token. This
+    // unblocks nested type-argument lists like `Function<<Int, String>, <Int>>`
+    // on the LHS of variable declarations -- the outer `<` chars are then
+    // free to open type_arguments / angle_bracket_type_list, and the closing
+    // `>` chars are consumed via the TYPE_GT external scanner.
+    //
+    // Assignment shifts (`<<=`, `>>=`, `>>>=`) are deliberately left as single
+    // multi-char tokens. The lexer's longest-match rule still produces them
+    // as single tokens (since `<<` is no longer a terminal, the `<<=` DFA
+    // path is the only multi-char match starting with two `<`s). Keeping
+    // them un-split avoids an LALR(1) ambiguity at the `_expression • <`
+    // state between the assignment and binary-shift paths.
+    private fun emitOperatorLiteral(symbol: String): String =
+        when (symbol) {
+            "<<" -> "seq('<', token.immediate('<'))"
+            ">>" -> "seq('>', token.immediate('>'))"
+            ">>>" -> "seq('>', token.immediate('>'), token.immediate('>'))"
+            else -> "'${escapeJsString(symbol)}'"
+        }
 
     private fun escapeTreeSitterSymbol(s: String) = s.replace("\\", "\\\\").replace("\"", "\\\"")
 }

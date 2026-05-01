@@ -64,6 +64,17 @@ module.exports = grammar({
         // Expression vs type ambiguities
         [$.binary_expression, $.unary_expression, $.call_expression, $.async_call_expression],
         [$.binary_expression, $.call_expression, $.async_call_expression],
+        // Self-conflict in binary_expression: the `<<` / `>>` / `>>>` shift
+        // operators are emitted as `seq('<', token.immediate('<'))` etc. so
+        // the lexer never produces a multi-char shift token (this unblocks
+        // nested type-argument lists like `Function<<Int, String>, <Int>>`
+        // on the LHS of declarations). The cost is that, at state
+        // `_expression • >`, the parser cannot tell from a single lookahead
+        // whether the `>` opens a precedence-9 comparison, a precedence-10
+        // range continuation (`..`), or a precedence-11 shift -- they all
+        // start with the same `>` terminal. GLR forks at this state and the
+        // unmatched alternatives die naturally on the second char.
+        [$.binary_expression],
         [$.list_literal, $.map_literal],
         [$.array_type, $.conditional_type],
         [$.nullable_type, $.conditional_type],
@@ -1214,7 +1225,7 @@ module.exports = grammar({
             prec.left(8, seq($._expression, choice('==', '!='), $._expression)),
             prec.left(9, seq($._expression, choice('<', '<=', '>', '>=', '<=>'), $._expression)),
             prec.left(10, seq($._expression, choice('..', '>..', '..<', '>..<'), $._expression)),
-            prec.left(11, seq($._expression, choice('<<', '>>', '>>>'), $._expression)),
+            prec.left(11, seq($._expression, choice(seq('<', token.immediate('<')), seq('>', token.immediate('>')), seq('>', token.immediate('>'), token.immediate('>'))), $._expression)),
             prec.left(12, seq($._expression, choice('+', '-'), $._expression)),
             prec.left(13, seq($._expression, choice('*', '/', '%', '/%'), $._expression)),
             prec.right(15, seq($._expression, choice('->', '<-'), $._expression))
