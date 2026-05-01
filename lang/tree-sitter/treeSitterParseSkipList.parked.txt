@@ -73,4 +73,37 @@
 #    whitespace the TODO scanner needs for `is_hspace(peek)` and
 #    breaks ~16 files with `TODO foo bar` text. Sweep 876/876.
 #
-# Sweep is at 876/876 with no parked entries.
+# Sweep is at 880/880 with 13 parked entries (newly uncovered, see below).
+
+# === Newly-uncovered grammar gaps (formerly hidden in intentional.txt) ===
+#
+# The `intentional.txt` skip list previously held 19 files under the
+# rationale "intentionally not parseable by tree-sitter". Re-checking
+# revealed the categorization was wrong:
+#   - 4 files parse cleanly with both tree-sitter and the Java
+#     reference compiler -- moved into the active sweep.
+#   - 2 files (sock-shop/socks-catalog.x, sock-shop/socks-user.x) have
+#     genuine PARSER-NN errors from the Java compiler too; remain in
+#     intentional.txt with a corrected header.
+#   - The 13 below are real tree-sitter grammar gaps -- the Java
+#     compiler parses them cleanly (only emits semantic / verify
+#     errors), but tree-sitter produces ERROR nodes. These should be
+#     triaged in a follow-up PR; the goal is to get them all into
+#     the active sweep just like the originally-parked entries above.
+#
+# Each entry is annotated with the tree-sitter ERROR-node count from
+# the time of un-parking, as a rough proxy for triage size.
+
+manualTests/src/main/x/archive/AddressBookDB.x                              # 2 errors
+manualTests/src/main/x/archive/addressDB_imdb/module.x                      # 3 errors
+manualTests/src/main/x/archive/addressDB_json/module.x                      # 3 errors
+manualTests/src/main/x/archive/sock-shop/socks-cart.x                       # 2 errors
+manualTests/src/main/x/dbTests/PeopleTest.x                                 # 3 errors
+manualTests/src/main/x/jsondb/jsondb_test.x                                 # 2 errors
+manualTests/src/main/x/jsondb/jsondb_test/storage/JsonMapStoreConfigTest.x  # 12 errors
+manualTests/src/main/x/jsondb/jsondb_test/storage/JsonMapStoreTest.x        # 16 errors
+manualTests/src/main/x/jsondb/jsondb_test/test_db/TestClient.x              # 19 errors
+manualTests/src/main/x/jsondb/jsondb_test/tx_manager/TxManagerConfigTest.x  # 3 errors
+manualTests/src/main/x/jsondb/jsondb_test/tx_manager/TxManagerLogTest.x     # 7 errors
+manualTests/src/main/x/webTests/oauth.x                                     # 2 errors
+manualTests/src/main/x/errors.x                                             # 4 errors
