@@ -10,6 +10,12 @@ module.exports = grammar({
     // This prevents tree-sitter's GLR parser from misidentifying keywords after doc comments.
     // Only whitespace and non-doc comments are extras (can appear anywhere).
     extras: $ => [
+        // Listed FIRST so the external scanner is consulted before `/\s/`
+        // for newlines. The scanner consumes `\n` (always) plus any
+        // following `   |` continuation marker when inside an interpolation
+        // expression -- preventing the `|` from being lexed as a bitwise-OR
+        // operator inside multi-line interpolation expressions.
+        $._multiline_continuation,
         /\s/,
         $.line_comment,
         $.block_comment,
@@ -47,6 +53,31 @@ module.exports = grammar({
         // Used in switch expressions where the ';' is required as terminator.
         // If no ';' before EOL, this token fails (forcing switch_statement interpretation).
         $._todo_freeform_until_semi,
+
+        // Single `>` used as type-argument / type-parameter / angle-bracket-type-list
+        // closer. The point of routing this through the external scanner is to
+        // break tree-sitter's greedy `>>` tokenization in nested type contexts
+        // like `Function<<Int, String>, <Int>>`. Outside type position this token
+        // is not requested, so `>>`/`>=`/`>>=`/etc. keep their normal tokenization.
+        $._type_gt,
+
+        // Newline + optional `   |` multiline-template continuation marker
+        // consumed by the external scanner; declared in extras above so the
+        // parser silently skips it.
+        $._multiline_continuation,
+
+        // Opening `(` of a tuple_assignment statement, peeked-and-confirmed
+        // by the external scanner. The scanner looks past the matching `)`
+        // for `=` (and not `==`/`=>`) before any `;` / `{` / `}` / EOF,
+        // requires at least one `,` at depth 1, and only fires at statement
+        // start (where this token is in valid_symbols). This forces the LR
+        // parser to commit to tuple_assignment at the `(` shift, even when
+        // the tuple's content shape would otherwise admit a `tuple_type` /
+        // variable_declaration interpretation -- e.g.
+        // `(i1, Int i2) = testMultiReturns(0);` (callTests.x line 20).
+        // If the lookahead doesn't match, the scanner returns false and the
+        // internal lexer produces a normal `(` token unchanged.
+        $._tuple_assign_lparen,
     ],
 
     // Conflicts that require GLR parsing for disambiguation.
@@ -57,6 +88,17 @@ module.exports = grammar({
         // Expression vs type ambiguities
         [$.binary_expression, $.unary_expression, $.call_expression, $.async_call_expression],
         [$.binary_expression, $.call_expression, $.async_call_expression],
+        // Self-conflict in binary_expression: the `<<` / `>>` / `>>>` shift
+        // operators are emitted as `seq('<', token.immediate('<'))` etc. so
+        // the lexer never produces a multi-char shift token (this unblocks
+        // nested type-argument lists like `Function<<Int, String>, <Int>>`
+        // on the LHS of declarations). The cost is that, at state
+        // `_expression • >`, the parser cannot tell from a single lookahead
+        // whether the `>` opens a precedence-9 comparison, a precedence-10
+        // range continuation (`..`), or a precedence-11 shift -- they all
+        // start with the same `>` terminal. GLR forks at this state and the
+        // unmatched alternatives die naturally on the second char.
+        [$.binary_expression],
         [$.list_literal, $.map_literal],
         [$.array_type, $.conditional_type],
         [$.nullable_type, $.conditional_type],
@@ -74,7 +116,6 @@ module.exports = grammar({
         // Pattern matching conflicts
         [$.pattern_element, $._expression],
         [$.pattern_element, $.parenthesized_expression],
-        [$.pattern_element, $.tuple_expression],
 
         // New expression conflicts
         [$.unary_expression, $.member_expression, $.new_expression],
@@ -88,15 +129,38 @@ module.exports = grammar({
         // Variable/tuple declaration conflicts
         [$.variable_declaration, $._expression],
         [$.tuple_assignment_element, $._expression],
-        [$.tuple_assignment_element, $.tuple_expression],
 
         // Type expression conflicts
         [$.type_expression, $.array_type],
         [$.tuple_type_element, $.parameter],
         [$.tuple_type_element, $.parenthesized_type],
-        [$.tuple_type_element, $.parameter, $.tuple_assignment_element],
-        [$.tuple_type_element, $.parameter, $.tuple_assignment_element, $.for_tuple_destructure],
         [$.tuple_type_element, $.parameter, $.conditional_tuple_element],
+        // `_` in tuple positions can be parsed as wildcard in any of three
+        // contexts (tuple_assignment_element, for-tuple destructure element,
+        // or even an _expression — wildcard happens to be a primary
+        // expression in pattern-matching contexts). Tree-sitter needs the
+        // explicit GLR conflict to keep all interpretations alive until the
+        // surrounding `=` / `:` / `;` tells it which container is in play.
+        [$.tuple_assignment_element, $._for_tuple_destructure_element, $._expression],
+        // Same shape with the typed binding form: `(Type x, ...)` in a
+        // for-loop position is ambiguous against tuple_type_element /
+        // parameter / tuple_assignment_element until the closing `)` and
+        // following `:`/`=` disambiguate.
+        [$.tuple_type_element, $.parameter, $.tuple_assignment_element, $._for_tuple_destructure_element],
+        // 2-way conflict needed when annotations precede the type (e.g.
+        // `(@Future Int v1, @Future Int v2) = ...` — multi-return assignment).
+        // The 3-way variant above is not sufficient because some LR states
+        // see only `parameter` and `tuple_assignment_element` as candidates.
+        [$.parameter, $.tuple_assignment_element],
+        // After narrowing the bare-ident alt of `tuple_assignment_element`
+        // to `choice($.identifier, $.member_expression)` (no longer a full
+        // `_expression`), an LR state inside `for ((identifier ,...))`
+        // can interpret the leading identifier as any of: bare
+        // tuple_assignment_element, start-of-_expression, type_name, or
+        // qualified_type_name. GLR needs all four alive until the trailing
+        // `:` / `=` distinguishes for-iteration vs for-tuple-assignment vs
+        // bare expression.
+        [$.tuple_assignment_element, $._expression, $.type_name, $.qualified_type_name],
 
         // Conditional tuple conflicts
         [$.conditional_tuple_element, $._expression],
@@ -205,7 +269,18 @@ module.exports = grammar({
             ';',
         ),
 
-        import_spec: $ => seq('import', $.qualified_name),
+        // Package-import spec, optionally with a resource-provider clause:
+        //   package foo import bar.Baz;
+        //   package foo import bar.Baz inject(Int n, String _) using ProviderType;
+        // The `inject(parameters)` clause declares the formal parameters the
+        // resource provider must supply; `using <ProviderType>` names the provider
+        // class. Both clauses are optional; either may appear without the other.
+        import_spec: $ => seq(
+            'import',
+            $.qualified_name,
+            optional(seq('inject', $.parameters)),
+            optional(seq('using', $.qualified_name)),
+        ),
 
         // Class declaration
         // Note: XTC allows multiple implements clauses, e.g.:
@@ -461,7 +536,10 @@ module.exports = grammar({
 
         // Constructor can have optional finally block: construct(...) { } finally { }
         // prec.right prefers to attach 'finally' to current constructor rather than new declaration
-        // Constructor can also be just a signature (ending with ;) in interfaces
+        // Constructor can also be just a signature (ending with ;) in interfaces.
+        // Short-form body `construct(...) = expr;` is allowed -- mirrors method/getter
+        // short-form, used e.g. for `@Override construct(String s) = TODO();` to satisfy
+        // a required constructor signature with a placeholder.
         constructor_declaration: $ => prec.right(seq(
             optional($.doc_comment),
             repeat($.annotation),
@@ -470,6 +548,7 @@ module.exports = grammar({
             field('parameters', $.parameters),
             choice(
                 seq(field('body', $.block), optional(seq('finally', $.block))),
+                seq('=', $._expression, ';'),
                 ';',
             ),
         )),
@@ -497,7 +576,7 @@ module.exports = grammar({
         into_clause: $ => seq('into', $.type_expression),
 
         // Type parameters
-        type_parameters: $ => seq('<', commaSep1($.type_parameter), '>'),
+        type_parameters: $ => seq('<', commaSep1($.type_parameter), $._type_gt),
         type_parameter: $ => seq(field('name', $.identifier), optional(seq('extends', field('constraint', $.type_expression)))),
 
         // Parameters (with optional trailing comma)
@@ -555,7 +634,10 @@ module.exports = grammar({
         qualified_keyword_type: $ => prec(3, seq(choice('struct', 'service', 'class', 'const', 'enum'), $.type_name)),
         // immutable can be standalone or with a type. prec.right makes it greedy.
         immutable_type: $ => prec.right(seq('immutable', optional($._non_bi_type))),
-        parenthesized_type: $ => seq('(', $.type_expression, ')'),
+        // Parenthesized type may carry annotations on the inner type, e.g.
+        // `(@AutoFreezable Freezable)? o = Null` -- the annotation applies
+        // to `Freezable`, the parens scope it under the `?` nullable wrap.
+        parenthesized_type: $ => seq('(', repeat($.annotation), $.type_expression, ')'),
 
         // Generic type: Map<Key> or Map!<Key> (non-null generic)
         // The ! must come before type arguments: Name!<Args>, not Name<Args>!
@@ -577,13 +659,13 @@ module.exports = grammar({
         // Type arguments can include constraints: <Key, Value extends Shareable>
         // Can also include angle-bracket type lists for method signatures: Method<Target, <Params>, <Return>>
         // Can be empty: Class<> for wildcard/inferred type arguments
-        type_arguments: $ => seq('<', commaSep($.type_argument), '>'),
+        type_arguments: $ => seq('<', commaSep($.type_argument), $._type_gt),
         type_argument: $ => choice(
             $.angle_bracket_type_list,
             seq($.type_expression, optional(seq('extends', $.type_expression))),
         ),
         // Angle bracket type list: <> or <Type> or <Type1, Type2> - used in method type signatures
-        angle_bracket_type_list: $ => seq('<', commaSep($.type_expression), '>'),
+        angle_bracket_type_list: $ => seq('<', commaSep($.type_expression), $._type_gt),
         array_type: $ => prec.left(seq($._non_bi_type, '[', ']')),
         nullable_type: $ => prec.left(seq($._non_bi_type, '?')),
         // Non-null type modifier (no auto-narrowing): Type!
@@ -691,22 +773,57 @@ module.exports = grammar({
         ),
 
         // Tuple assignment: (Type1 x, Type2 y) = expr; or (x, this.y) = expr;
-        tuple_assignment: $ => seq(
-            '(',
+        // The opening `(` is the external `$._tuple_assign_lparen` token --
+        // the scanner peeks past the matching `)` for `=` and only fires
+        // when the shape is unambiguously a tuple_assignment, so this rule
+        // is selected deterministically at the `(` shift -- even for shapes
+        // like `(i1, Int i2) = testMultiReturns(0);` where `(i1, Int i2)`
+        // would otherwise read as a `tuple_type` (committing the LR parser
+        // to `variable_declaration` before precedence / prec.dynamic biases
+        // on the element-level rules can apply). See
+        // ScannerSpec.kt::TUPLE_ASSIGN_LPAREN for the peek-ahead logic.
+        //
+        // prec(2) is retained as a defense-in-depth bias against
+        // `variable_declaration`'s typed-form prec(1) for any state where
+        // the LALR generator still sees both as candidates.
+        tuple_assignment: $ => prec(2, seq(
+            $._tuple_assign_lparen,
             $.tuple_assignment_element,
             repeat1(seq(',', $.tuple_assignment_element)),
             ')',
             '=',
             $._expression,
             ';',
-        ),
+        )),
 
-        // Element in tuple assignment: can be typed (Type x), untyped (x, this.y), or val/var
-        // Examples: (Type x, Int y), (x, this.y), (val x, Int y), (var Type x, val y)
+        // Element in tuple assignment: can be typed (Type x), untyped (x, this.y),
+        // val/var, or wildcard (_). The wildcard discards the corresponding
+        // tuple slot, used pervasively in lib_ecstasy/.../maps where
+        // `(_, Int index) = contents.binarySearch(...)` ignores the boolean
+        // returned alongside the typed slot of interest.
+        // Annotations are allowed on typed forms; this is how multi-return
+        // assignments like `(@Future Int v1, @Future Int v2) = svc.multiReturn(...)`
+        // declare async futures via tuple destructuring.
+        // Examples: (Type x, Int y), (x, this.y), (_, Int x), (val x, Int y),
+        //           (@Future Int v1, @Future Int v2)
+        //
+        // The bare-existing-variable alt is intentionally narrowed to
+        // `identifier | member_expression | index_expression` (NOT a full
+        // `_expression`). With the external `$._tuple_assign_lparen`
+        // forcing LR commit at `(`, a full `_expression` alt was a trap:
+        // typed elements like `UInt8 left` could LOSE to a failing
+        // `_expression` parse of `UInt8 left` (which can't backtrack once
+        // committed). The narrow alt accepts the shapes that actually
+        // appear in real code as bare-LHS slots -- a single identifier
+        // (e.g. `i1`, `offset`, `error`), a member-access chain (e.g.
+        // `this.growAt`), or an array/map subscript (e.g.
+        // `quotients[i]`) -- and fails fast on anything else, so the
+        // typed alt wins cleanly when present.
         tuple_assignment_element: $ => choice(
-            seq(choice('val', 'var'), optional($.type_expression), $.identifier),
-            seq($.type_expression, $.identifier),
-            $._expression,
+            seq(repeat($.annotation), choice('val', 'var'), optional($.type_expression), $.identifier),
+            seq(repeat($.annotation), $.type_expression, $.identifier),
+            $.wildcard,
+            choice($.identifier, $.member_expression, $.index_expression),
         ),
 
         // Statement implementations
@@ -719,12 +836,14 @@ module.exports = grammar({
         // - function ReturnType varName(ParamTypes) = expr;  (function variable)
         variable_declaration: $ => choice(
             // val/var form: val x = expr or var Type x = expr
+            // Wildcard `_` is allowed as the name to discard the value:
+            // `val _ = computeAndIgnore();`
             seq(
                 repeat($.annotation),
                 optional($.visibility_modifier),
                 choice('val', 'var'),
                 optional(field('type', $.type_expression)),
-                field('name', $.identifier),
+                field('name', choice($.identifier, $.wildcard)),
                 optional(seq(choice('=', ':='), field('value', $._expression))),
                 ';',
             ),
@@ -836,18 +955,27 @@ module.exports = grammar({
             '=',
             $._expression,
         ),
-        // Multiple variable declarations in for initializer
+        // Multiple variable declarations in for initializer.
+        // Annotations are allowed before the type, e.g. `for (@Watch(x) Int i = 3; ...)`.
         for_var_declarations: $ => seq(
-            $.type_expression, $.identifier, '=', $._expression,
-            repeat(seq(',', $.type_expression, $.identifier, '=', $._expression)),
+            repeat($.annotation), $.type_expression, $.identifier, '=', $._expression,
+            repeat(seq(',', repeat($.annotation), $.type_expression, $.identifier, '=', $._expression)),
         ),
 
-        // Tuple destructuring pattern for for-each: ((Type1 name1, Type2 name2))
+        // Tuple destructuring pattern for for-each:
+        //   for ((Type1 name1, Type2 name2) : iter)        -- typed bindings
+        //   for ((_, _) : map)                              -- both wildcards (discard)
+        //   for ((_, Int index) : pairs)                    -- mixed
+        // Each element is either a wildcard `_` or `Type identifier`.
         for_tuple_destructure: $ => seq(
             '(',
-            $.type_expression, $.identifier,
-            repeat1(seq(',', $.type_expression, $.identifier)),
+            $._for_tuple_destructure_element,
+            repeat1(seq(',', $._for_tuple_destructure_element)),
             ')',
+        ),
+        _for_tuple_destructure_element: $ => choice(
+            $.wildcard,
+            seq($.type_expression, $.identifier),
         ),
 
         // Supports conditional declaration: while (Element x := expr)
@@ -894,11 +1022,15 @@ module.exports = grammar({
         // Case clause for switch statements (can contain statements)
         // prec(7) > prec(5) to prefer statement case clauses over expression case clauses
         // when both could match (e.g., case with TODO)
-        // Supports fall-through cases: case 'A': case 'B': statements...
+        // Supports stacked fall-through labels in any combination:
+        //   case 'A': case 'B': statements...
+        //   default: case 'A': statements...
+        //   case 'A': default: statements...
+        // The leading repeat allows any mix of `case <pattern>:` and `default:` labels
+        // (with their own colons). The final label closes with the trailing ':'.
         case_clause: $ => prec(7, seq(
-            choice(
-                seq(repeat(seq('case', $.case_pattern, ':')), choice(seq('case', $.case_pattern), 'default')),
-            ),
+            repeat(choice(seq('case', $.case_pattern, ':'), seq('default', ':'))),
+            choice(seq('case', $.case_pattern), 'default'),
             ':',
             repeat($._statement),
         )),
@@ -917,9 +1049,8 @@ module.exports = grammar({
         // - prec(-500, 'TODO') handles bare TODO as LAST RESORT (very low precedence)
         //   This ensures switch_statement is preferred when there's ambiguity
         expression_case_clause: $ => prec(5, seq(
-            choice(
-                seq(repeat(seq('case', $.case_pattern, ':')), choice(seq('case', $.case_pattern), 'default')),
-            ),
+            repeat(choice(seq('case', $.case_pattern, ':'), seq('default', ':'))),
+            choice(seq('case', $.case_pattern), 'default'),
             ':',
             choice(
                 seq($._expression, ';'),
@@ -1015,8 +1146,33 @@ module.exports = grammar({
             optional(seq('as', $._expression)),
             ';',
         )),
-        assert_condition: $ => choice($._expression, $.conditional_declaration),
-        assert_variant: $ => choice('assert:rnd', 'assert:arg', 'assert:bounds', 'assert:TODO', 'assert:once', 'assert:test', 'assert:debug'),
+        // Assert conditions accept expressions and conditional declarations,
+        // and additionally `!(cond_decl)` -- a negated typed conditional
+        // binding used to assert that a `:=` form *fails*: e.g.
+        // `assert !(Color c := next());` asserts that next() does not yield
+        // a Color. The negation cannot be folded into `_expression` because
+        // `parenthesized_expression` only wraps expressions, not declarations.
+        assert_condition: $ => choice(
+            $._expression,
+            $.conditional_declaration,
+            seq('!', '(', $.conditional_declaration, ')'),
+        ),
+        // Assert variants. `assert:rnd` accepts an optional sample-rate
+        // argument: `assert:rnd(100) cond` fires roughly once per 100
+        // invocations. The other variants do not -- and `assert:arg`
+        // specifically is followed by a parenthesized conditional
+        // declaration (`assert:arg (Type x, Type y) := expr`), so we
+        // intentionally do *not* offer them an arg-list slot here, to
+        // avoid swallowing the tuple pattern.
+        assert_variant: $ => choice(
+            prec.right(seq('assert:rnd', optional(seq('(', commaSep1($._expression), ')')))),
+            'assert:arg',
+            'assert:bounds',
+            'assert:TODO',
+            'assert:once',
+            'assert:test',
+            'assert:debug',
+        ),
 
         // TODO statement: standalone TODO without semicolon (XTC compiler injects semicolon)
         // Allows: TODO, TODO(msg), TODO freeform text - all without trailing semicolon
@@ -1116,7 +1272,7 @@ module.exports = grammar({
             prec.left(8, seq($._expression, choice('==', '!='), $._expression)),
             prec.left(9, seq($._expression, choice('<', '<=', '>', '>=', '<=>'), $._expression)),
             prec.left(10, seq($._expression, choice('..', '>..', '..<', '>..<'), $._expression)),
-            prec.left(11, seq($._expression, choice('<<', '>>', '>>>'), $._expression)),
+            prec.left(11, seq($._expression, choice(seq('<', token.immediate('<')), seq('>', token.immediate('>')), seq('>', token.immediate('>'), token.immediate('>'))), $._expression)),
             prec.left(12, seq($._expression, choice('+', '-'), $._expression)),
             prec.left(13, seq($._expression, choice('*', '/', '%', '/%'), $._expression)),
             prec.right(15, seq($._expression, choice('->', '<-'), $._expression))
@@ -1166,7 +1322,7 @@ module.exports = grammar({
             seq('new', repeat($.annotation), field('type', $.type_expression), field('arguments', $.arguments), optional(field('body', $.anonymous_inner_class_body))),
             prec.left(seq('new', repeat($.annotation), field('type', $.type_expression), '[', field('size', $._expression), ']', optional(field('arguments', $.arguments)))),
             seq('new', repeat($.annotation), field('type', $.type_expression), '[', ']'),  // empty array: new Type[]
-            seq(field('object', $._expression), '.', 'new', field('type', $.type_expression), field('arguments', $.arguments)),  // outer new: expr.new Type(args)
+            seq(field('object', $._expression), '.', 'new', repeat($.annotation), field('type', $.type_expression), field('arguments', $.arguments)),  // outer new: expr.new [@Anno(...)]* Type(args)
             seq(field('object', $._expression), '.', 'new', field('arguments', $.arguments)),  // expr.new(args) - outer copy
             seq('new', field('arguments', $.arguments)),  // new(args) - copy constructor (virtual new)
         ),
@@ -1236,11 +1392,14 @@ module.exports = grammar({
         // The block must contain statements and typically ends with a return
         statement_expression: $ => $.block,
 
-        // Tuple expression: () or (a, b) or (a, b, c)
-        // Empty tuple () is a valid value (e.g., as default parameter)
-        // prec(1) to prefer empty_tuple over parenthesized_expression or tuple_type
+        // Tuple expression: () or (a,) or (a, b) or (a, b, c)
+        // Empty tuple () is a valid value (e.g., as default parameter).
+        // Single-element tuple uses an explicit trailing comma `(expr,)` to
+        // disambiguate from a parenthesized expression (which would be just `(expr)`).
+        // prec(1) to prefer empty_tuple over parenthesized_expression or tuple_type.
         tuple_expression: $ => choice(
             prec(1, seq('(', ')')),  // Empty tuple
+            prec(1, seq('(', $._expression, ',', ')')),  // Single-element tuple `(x,)`
             seq('(', $._expression, ',', commaSep1($._expression), ')'),  // 2+ elements
         ),
 
@@ -1258,6 +1417,7 @@ module.exports = grammar({
             $.template_string_literal,
             $.multiline_template_literal,
             $.multiline_literal,
+            $.multiline_hex_byte_literal,
             $.char_literal,
             $.boolean_literal,
             $.null_literal,
@@ -1266,6 +1426,9 @@ module.exports = grammar({
             $.typed_literal,
             $.file_literal,
             $.string_file_literal,
+            $.relative_path_literal,
+            $.path_literal,
+            $.version_literal,
         ),
 
         // Integer literals support magnitude suffixes: K, M, G, T, P, E, Z, Y (case insensitive)
@@ -1288,6 +1451,25 @@ module.exports = grammar({
         // Examples: $./templates/file.txt, $/implicit.x, $../shared/data.txt
         // This is different from template strings ($"...") - it's a compile-time file include
         string_file_literal: $ => /\$\.{0,2}\/[\w._/-]+/,
+
+        // Version literal: `v:` prefix followed by a version string. Examples:
+        //   v:1, v:1.0, v:1.2.3, v:5.6.7.8-alpha, v:1.2-beta5,
+        //   v:1.2beta5, v:1.2beta5+123-456.abc
+        // Single-token form so the lexer commits to it before `typed_literal`
+        // (which would otherwise try `v` (type) + `:` + literal); the token's
+        // length (>= 3 for `v:N`) reliably beats the bare `v` identifier.
+        version_literal: $ => /v:[a-zA-Z0-9._+-]+/,
+
+        // Relative file/directory path literal as a primary expression:
+        // `File f = ./IO.x;` or `Directory d = ../shared;`. The leading `./`
+        // or `../` is what makes the token unambiguous against normal
+        // expressions (regular identifiers cannot start with `./`).
+        // The trailing portion is `*` (not `+`) so a bare `./` (current dir)
+        // and bare `../` (parent dir) parse as a Directory literal too --
+        // see `Directory dir = ./;` in `manualTests/.../literals.x`.
+        // Distinct from `file_literal` (`#path`, embeds binary at compile
+        // time) and `string_file_literal` (`$./path`, embeds string contents).
+        relative_path_literal: $ => /\.\.?\/[\w./-]*/,
 
         // String literals with Unicode escapes: \\uXXXX and \\UXXXXXXXX
         string_literal: $ => /"([^"\\]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|\\.)*"/,
@@ -1356,6 +1538,13 @@ module.exports = grammar({
         // Multiline plain literal (no interpolation): \|content
         //                                              | continuation
         multiline_literal: $ => token(/\\\|[^\n]*(\\?\n[ \t]*\|[^\n]*)*/),
+        // Multiline hex byte literal: #|content
+        //                              | continuation
+        // Embeds the concatenated hex digits (with whitespace and `_`
+        // separators ignored) as a Byte[] constant. Same line-continuation
+        // shape as `multiline_literal` (each continuation line begins with
+        // `|`), only the prefix differs (`#|` instead of `\|`).
+        multiline_hex_byte_literal: $ => token(/#\|[^\n]*(\\?\n[ \t]*\|[^\n]*)*/),
         // Character literal: 'c', '\\n', '\\u0000', '\\U00010000'
         // Supports Unicode escapes: \\uXXXX (4 hex digits) and \\UXXXXXXXX (8 hex digits)
         char_literal: $ => /'([^'\\]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|\\.)'/,
@@ -1369,12 +1558,17 @@ module.exports = grammar({
         map_entry: $ => seq($._expression, '=', $._expression),
 
         // Typed literal: Type:value where value is a literal
-        // Examples: Duration:0S, Int:42, Map:[], List:[1,2,3], Date:2024-01-26, Path:/sys/info
+        // Examples: Duration:0S, Int:42, Map:[], List:[1,2,3], Date:2024-01-26,
+        //           Time:1999-12-25T12:01:23.456Z, Path:/sys/info, Path:./,
+        //           Directory:./more/
         // Use higher precedence to prefer typed_literal interpretation
         typed_literal: $ => prec(2, seq($.type_expression, ':', choice(
             $.list_literal,
             $.map_literal,
             $.path_literal,
+            $.relative_path_literal,
+            $.time_literal,
+            $.date_literal,
             $.duration_literal,
             $.integer_literal,
             $.float_literal,
@@ -1384,12 +1578,38 @@ module.exports = grammar({
         ))),
 
         // Path literal: /path/to/something or /path/to/file.ext
-        // Used with typed literals like Path:/sys/info
-        path_literal: $ => /\/[a-zA-Z0-9_\-\.\/]*/,
+        // Used with typed literals like Path:/sys/info AND as a primary
+        // expression (`Path p = /path/to/file.txt`).
+        //
+        // The first char after `/` must be alphanumeric or `_`, NOT `/`
+        // or `*`. This is what disambiguates the path token from
+        // `//` (line_comment start) and `/*` (block_comment start) when
+        // path_literal is reachable from `_literal`. The regex used to
+        // accept `[a-zA-Z0-9_\-\.\/]*` for the entire tail; that produced
+        // a longer match than `//` for line-comment starts and the
+        // lexer (tree-sitter prefers longest match) silently consumed
+        // line-comment prefixes as path_literals in expression-statement
+        // start states. Constraining the first body char fixes that.
+        path_literal: $ => /\/[a-zA-Z0-9_][a-zA-Z0-9_\-\.\/]*/,
 
         // Duration literal: ISO-8601 format (P prefix optional in XTC shorthand)
-        // Examples: PT1H30M (1 hour 30 min), P1D (1 day), 30S (30 seconds), PT0S (0 seconds)
-        duration_literal: $ => /P?T?[0-9]+[YMDHS]([0-9]+[YMDHS])*/i,
+        // Examples: PT1H30M (1 hour 30 min), P1D (1 day), 30S (30 seconds), PT0S (0 seconds),
+        //           0.5S (half a second), PT0.001S (1 millisecond),
+        //           P3DT4H5M6S, P1DT1H1M1.23456S (with internal T separating date/time parts)
+        // The inner `T?` lets the ISO date/time separator appear before any time-side
+        // unit-digit pair, not just at the start.
+        duration_literal: $ => /P?(T?[0-9]+(\.[0-9]+)?[YMDHS])+/i,
+
+        // Date literal: YYYY-MM-DD or YYYYMMDD (compact ISO 8601 form).
+        // Used in typed literals like Date:2024-01-26 or Date:20240126.
+        date_literal: $ => /[0-9]{4}-?[0-9]{2}-?[0-9]{2}/,
+
+        // Time/datetime literal: ISO 8601 datetime forms.
+        //   Standard: YYYY-MM-DDTHH:MM:SS[.fff][TZ]
+        //   Compact:  YYYYMMDDTHHMMSS[.fff][TZ]
+        //   Timezone: Z (UTC) or +HH:MM / -HH:MM (colon optional, hours 1-2 digits)
+        // Used in typed literals like Time:1999-12-25T12:01:23.456Z.
+        time_literal: $ => /[0-9]{4}-?[0-9]{2}-?[0-9]{2}T[0-9]{2}:?[0-9]{2}:?[0-9]{2}(\.[0-9]+)?(Z|[+-][0-9]{1,2}:?[0-9]{2})?/,
 
         // Identifiers and names
         // type_name can be a simple identifier or a qualified name (e.g., ecstasy.io.Channel)

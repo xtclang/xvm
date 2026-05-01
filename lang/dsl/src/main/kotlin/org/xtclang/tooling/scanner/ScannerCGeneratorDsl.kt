@@ -37,6 +37,7 @@ object ScannerCGeneratorDsl {
 
 #include "tree_sitter/parser.h"
 #include <stdbool.h>
+#include <stdlib.h>
 ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
 #ifdef SCANNER_DEBUG
 #include <stdio.h>
@@ -53,52 +54,65 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
 
     private fun generateLifecycleFunctions(): String =
         buildString {
-            // Create scanner (stateless - no state needed)
+            // Persistent scanner state: depth counter for multiline-template
+            // interpolations. Incremented when we emit MULTILINE_EXPR_START
+            // (entering a `{...}` inside a `$|...|`), decremented when we
+            // emit TEMPLATE_EXPR_END (exiting that interpolation). Used by
+            // the MULTILINE_CONTINUATION emit path so we only consume the
+            // `|` continuation marker when we're certain we're inside a
+            // multiline template's interpolation expression -- preventing
+            // valid bitwise-OR `|` operators in normal code from being
+            // silently swallowed.
+            appendLine(
+                """
+                |typedef struct {
+                |    unsigned char ml_interp_depth;
+                |} ScannerState;
+                """.trimMargin(),
+            )
+            appendLine()
+
             appendLine(
                 cFunction("void *", "tree_sitter_xtc_external_scanner_create") {
                     param("void", "")
                     body {
-                        returnStmt("NULL")
+                        returnStmt("calloc(1, sizeof(ScannerState))")
                     }
                 },
             )
             appendLine()
 
-            // Destroy scanner
             appendLine(
                 cFunction("void", "tree_sitter_xtc_external_scanner_destroy") {
                     param("void *", "payload")
                     body {
-                        voidCast("payload")
+                        line("free(payload);")
                     }
                 },
             )
             appendLine()
 
-            // Serialize (nothing to serialize)
             appendLine(
                 cFunction("unsigned", "tree_sitter_xtc_external_scanner_serialize") {
                     param("void *", "payload")
                     param("char *", "buffer")
                     body {
-                        voidCast("payload")
-                        voidCast("buffer")
-                        returnStmt("0")
+                        line("ScannerState * state = (ScannerState *)payload;")
+                        line("buffer[0] = (char)state->ml_interp_depth;")
+                        returnStmt("1")
                     }
                 },
             )
             appendLine()
 
-            // Deserialize (nothing to deserialize)
             append(
                 cFunction("void", "tree_sitter_xtc_external_scanner_deserialize") {
                     param("void *", "payload")
                     param("const char *", "buffer")
                     param("unsigned", "length")
                     body {
-                        voidCast("payload")
-                        voidCast("buffer")
-                        voidCast("length")
+                        line("ScannerState * state = (ScannerState *)payload;")
+                        line("state->ml_interp_depth = (length >= 1) ? (unsigned char)buffer[0] : 0;")
                     }
                 },
             )
@@ -370,6 +384,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
         prefix: String,
         multiline: Boolean,
     ) {
+        val depthBump = if (multiline) "state->ml_interp_depth++; " else ""
         comment("Expression or statement block start: { or {{")
         ifBlock("c == '$exprStart'") {
             ifBlock("has_content && valid_symbols[${prefix}_CONTENT]") {
@@ -385,13 +400,13 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                 }
                 comment("Not a statement block, but we already consumed {")
                 ifBlock("valid_symbols[${prefix}_EXPR_START]") {
-                    emitToken("${prefix}_EXPR_START")
+                    line("${depthBump}lexer->mark_end(lexer); lexer->result_symbol = ${prefix}_EXPR_START; return true;")
                 }
                 breakStmt()
             }
             ifBlock("valid_symbols[${prefix}_EXPR_START]") {
                 advance()
-                emitToken("${prefix}_EXPR_START")
+                line("${depthBump}lexer->mark_end(lexer); lexer->result_symbol = ${prefix}_EXPR_START; return true;")
             }
             breakStmt()
         }
@@ -477,7 +492,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
             param("TSLexer *", "lexer")
             param("const bool *", "valid_symbols")
             body {
-                voidCast("payload")
+                line("ScannerState * state = (ScannerState *)payload;")
                 emptyLine()
 
                 ifBlock("at_eof(lexer)") {
@@ -515,10 +530,251 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                 emptyLine()
 
                 debugBlock {
-                    line("""fprintf(stderr, "[SCANNER] char='%c'(0x%02x) single=%d multi=%d expr=%d todo_text=%d todo_until_semi=%d\n",""")
+                    line(
+                        """fprintf(stderr, "[SCANNER] char='%c'(0x%02x) single=%d multi=%d expr=%d todo_text=%d todo_until_semi=%d type_gt=%d\n",""",
+                    )
                     line("""    (peek(lexer) >= 32 && peek(lexer) < 127) ? (char)peek(lexer) : '?',""")
                     line("""    peek(lexer), in_singleline, in_multiline, in_expr,""")
-                    line("""    valid_symbols[TODO_FREEFORM_TEXT], valid_symbols[TODO_FREEFORM_UNTIL_SEMI]);""")
+                    line("""    valid_symbols[TODO_FREEFORM_TEXT], valid_symbols[TODO_FREEFORM_UNTIL_SEMI], valid_symbols[TYPE_GT]);""")
+                }
+                emptyLine()
+
+                sectionComment("TYPE_GT: single `>` as type-argument-list closer")
+                comment("Emit TYPE_GT when the parser asks for it AND lookahead is `>`.")
+                comment("This breaks tree-sitter's greedy `>>` tokenization in nested")
+                comment("type-argument contexts like `Function<<Int, String>, <Int>>`.")
+                comment("In expression context TYPE_GT is not in valid_symbols, so the")
+                comment("internal lexer keeps tokenizing `>>` / `>=` / `>>=` etc. unchanged.")
+                comment("Tree-sitter does NOT auto-skip extras before invoking an")
+                comment("external scanner, so we have to skip whitespace ourselves to")
+                comment("handle forms like `Map< Int >`. We skip ONLY in non-template")
+                comment("contexts -- inside a template interpolation the whitespace is")
+                comment("part of the structure that the template scanner depends on.")
+                ifBlock("valid_symbols[TYPE_GT]") {
+                    ifBlock("peek(lexer) == '>'") {
+                        advance()
+                        emitToken("TYPE_GT")
+                    }
+                    comment("Outside template interpolation, allow whitespace before `>`.")
+                    ifBlock("!valid_symbols[TEMPLATE_EXPR_END] && !in_singleline && !in_multiline") {
+                        whileBlock(
+                            "!at_eof(lexer) && (peek(lexer) == ' ' || peek(lexer) == '\\t' || peek(lexer) == '\\n' || peek(lexer) == '\\r')",
+                        ) {
+                            line("lexer->advance(lexer, true);")
+                        }
+                        ifBlock("peek(lexer) == '>'") {
+                            advance()
+                            emitToken("TYPE_GT")
+                        }
+                    }
+                }
+                emptyLine()
+
+                sectionComment("TUPLE_ASSIGN_LPAREN: opening `(` of a tuple_assignment")
+                comment("Peek past balanced `(...)` (handling string/char/comment hazards)")
+                comment("looking for `=` (and not `==`/`=>`) before any `;` / `{` / `}` / EOF,")
+                comment("while requiring at least one `,` at depth 1 to confirm the tuple")
+                comment("shape. If the shape matches, consume the `(` and emit; otherwise")
+                comment("return false so the internal lexer produces a normal `(` token.")
+                comment("")
+                comment("This forces the LR parser to commit to tuple_assignment at the")
+                comment("`(` shift, even when the content would otherwise admit a")
+                comment("`tuple_type`/variable_declaration interpretation -- e.g.")
+                comment("`(i1, Int i2) = testMultiReturns(0);` where the first element is")
+                comment("a previously-declared bare identifier and the second is a fresh")
+                comment("typed declaration. Without the external token, GLR commits to")
+                comment("variable_declaration deterministically at `(` and the line errors")
+                comment("on `=`; conflict declarations and prec.dynamic biases never get a")
+                comment("chance to apply because the container-level decision is already")
+                comment("made by the time the element shapes are visible.")
+                comment("")
+                comment("The token is only requested at statement start (where")
+                comment("tuple_assignment lives in the `_statement` choice list); at")
+                comment("expression positions / inside templates / etc. it stays out of")
+                comment("valid_symbols and this whole block is skipped.")
+                comment("The `!valid_symbols[TODO_FREEFORM_*]` guards prevent us from")
+                comment("eating the hspace following a `TODO` keyword. At a state right")
+                comment("after `TODO`, the parser has BOTH `_tuple_assign_lparen` and")
+                comment("the TODO freeform tokens in valid_symbols (statement-start")
+                comment("alternatives). If we entered our block first and skipped the")
+                comment("hspace via `advance(skip=true)`, the TODO scanner -- which")
+                comment("requires `is_hspace(peek)` to confirm it's a freeform context --")
+                comment("would see the post-whitespace char and bail. Defer to TODO when")
+                comment("both are valid; tuple_assignment is not a meaningful")
+                comment("interpretation right after the `TODO` keyword anyway.")
+                ifBlock(
+                    "valid_symbols[TUPLE_ASSIGN_LPAREN] && !in_singleline && !in_multiline && !valid_symbols[TEMPLATE_EXPR_END] && !valid_symbols[TODO_FREEFORM_TEXT] && !valid_symbols[TODO_FREEFORM_UNTIL_SEMI]",
+                ) {
+                    comment("Tree-sitter does NOT auto-skip extras (whitespace) before")
+                    comment("invoking an external scanner -- so we have to do it ourselves,")
+                    comment("the same way the TYPE_GT scanner does. `advance(lexer, true)`")
+                    comment("(with skip=true) advances without including the whitespace in")
+                    comment("the emitted token. Without this, the parser asks for the next")
+                    comment("token immediately after the previous statement's `;` / `}` and")
+                    comment("we see whitespace under peek, so peek(lexer) == '(' is false")
+                    comment("and we incorrectly return false.")
+                    whileBlock(
+                        "!at_eof(lexer) && (peek(lexer) == ' ' || peek(lexer) == '\\t' || peek(lexer) == '\\r' || peek(lexer) == '\\n')",
+                    ) {
+                        line("lexer->advance(lexer, true);")
+                    }
+                    ifBlock("peek(lexer) != '('") {
+                        returnFalse()
+                    }
+                    comment("Tentatively consume the `(` and mark the token end here, so")
+                    comment("the emitted token is just `(` regardless of how far we peek")
+                    comment("ahead. If we return false later, mark_end is irrelevant --")
+                    comment("tree-sitter discards all consumed input on a false return.")
+                    advance()
+                    markEnd()
+                    variable("int", "tuple_depth", "1")
+                    variable("bool", "tuple_saw_comma", "false")
+                    emptyLine()
+
+                    whileBlock("!at_eof(lexer) && tuple_depth > 0") {
+                        variable("int32_t", "tc", "peek(lexer)")
+                        emptyLine()
+
+                        ifBlock("tc == '('") {
+                            line("tuple_depth++;")
+                            advance()
+                            continueStmt()
+                        }
+                        emptyLine()
+
+                        ifBlock("tc == ')'") {
+                            line("tuple_depth--;")
+                            advance()
+                            continueStmt()
+                        }
+                        emptyLine()
+
+                        ifBlock("tc == ',' && tuple_depth == 1") {
+                            assign("tuple_saw_comma", "true")
+                            advance()
+                            continueStmt()
+                        }
+                        emptyLine()
+
+                        comment("Structural terminators -- definitely not a tuple_assignment")
+                        ifBlock("tc == ';' || tc == '{' || tc == '}'") {
+                            returnFalse()
+                        }
+                        emptyLine()
+
+                        comment("String literal: skip past matching `\"`, honoring escapes.")
+                        ifBlock("tc == '\"'") {
+                            advance()
+                            whileBlock("!at_eof(lexer) && peek(lexer) != '\"' && peek(lexer) != '\\n'") {
+                                ifBlock("peek(lexer) == '\\\\'") {
+                                    advance()
+                                    ifBlock("!at_eof(lexer)") {
+                                        advance()
+                                    }
+                                }
+                                elseBlock {
+                                    advance()
+                                }
+                            }
+                            ifBlock("peek(lexer) == '\"'") {
+                                advance()
+                            }
+                            continueStmt()
+                        }
+                        emptyLine()
+
+                        comment("Character literal: skip past matching `'`, honoring escapes.")
+                        ifBlock("tc == '\\''") {
+                            advance()
+                            whileBlock("!at_eof(lexer) && peek(lexer) != '\\'' && peek(lexer) != '\\n'") {
+                                ifBlock("peek(lexer) == '\\\\'") {
+                                    advance()
+                                    ifBlock("!at_eof(lexer)") {
+                                        advance()
+                                    }
+                                }
+                                elseBlock {
+                                    advance()
+                                }
+                            }
+                            ifBlock("peek(lexer) == '\\''") {
+                                advance()
+                            }
+                            continueStmt()
+                        }
+                        emptyLine()
+
+                        comment("Comment: `//` line comment or `/* */` block comment.")
+                        ifBlock("tc == '/'") {
+                            advance()
+                            ifBlock("peek(lexer) == '/'") {
+                                advance()
+                                whileBlock("!at_eof(lexer) && peek(lexer) != '\\n'") {
+                                    advance()
+                                }
+                                continueStmt()
+                            }
+                            ifBlock("peek(lexer) == '*'") {
+                                advance()
+                                whileBlock("!at_eof(lexer)") {
+                                    ifBlock("peek(lexer) == '*'") {
+                                        advance()
+                                        ifBlock("peek(lexer) == '/'") {
+                                            advance()
+                                            breakStmt()
+                                        }
+                                    }
+                                    elseBlock {
+                                        advance()
+                                    }
+                                }
+                                continueStmt()
+                            }
+                            comment("Plain `/` (division) -- already advanced past it.")
+                            continueStmt()
+                        }
+                        emptyLine()
+
+                        advance()
+                    }
+                    emptyLine()
+
+                    comment("Unbalanced `(` (hit EOF before matching `)`): not a tuple.")
+                    ifBlock("tuple_depth != 0") {
+                        returnFalse()
+                    }
+                    emptyLine()
+
+                    comment("Tuple shape requires at least one comma at depth 1.")
+                    comment("Without it, `(x) = ...` is a parenthesized-expression assignment,")
+                    comment("not a tuple_assignment -- let the normal grammar handle it.")
+                    ifBlock("!tuple_saw_comma") {
+                        returnFalse()
+                    }
+                    emptyLine()
+
+                    comment("Skip whitespace between `)` and the operator.")
+                    whileBlock(
+                        "!at_eof(lexer) && (peek(lexer) == ' ' || peek(lexer) == '\\t' || peek(lexer) == '\\r' || peek(lexer) == '\\n')",
+                    ) {
+                        advance()
+                    }
+                    emptyLine()
+
+                    comment("Need a single `=` (not `==` comparison, not `=>` lambda).")
+                    ifBlock("peek(lexer) != '='") {
+                        returnFalse()
+                    }
+                    advance()
+                    ifBlock("peek(lexer) == '=' || peek(lexer) == '>'") {
+                        returnFalse()
+                    }
+                    emptyLine()
+
+                    comment("Shape confirmed -- emit TUPLE_ASSIGN_LPAREN. The token is just")
+                    comment("the `(` (mark_end was called right after the initial advance).")
+                    line("lexer->result_symbol = TUPLE_ASSIGN_LPAREN;")
+                    returnTrue()
                 }
                 emptyLine()
 
@@ -591,10 +847,58 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                 }
                 emptyLine()
 
-                sectionComment("Inside expression: only look for closing brace")
-                ifBlock("in_expr && peek(lexer) == '$exprEnd'") {
+                sectionComment("Inside expression: skip whitespace + `|` continuations, then look for closing brace")
+                comment("Tree-sitter does NOT auto-skip extras before invoking an external")
+                comment("scanner, so we have to skip whitespace ourselves to handle forms")
+                comment("like `\${ y }` or `\$\"{y } abc\"` where the closing `}` is preceded")
+                comment("by whitespace inside the interpolation expression.")
+                comment("")
+                comment("Additionally: when the parent template is multiline (\$|...|), an")
+                comment("interpolation expression may itself span multiple lines via the")
+                comment("same `\\n   |` continuation marker as the surrounding content.")
+                comment("Tree-sitter's internal lexer would lex the `|` as the bitwise-OR")
+                comment("operator and confuse the parser, so we skip past `\\n + hspace + |`")
+                comment("here as part of the inter-token whitespace.")
+                ifBlock("in_expr") {
+                    comment("Skip horizontal whitespace and check for `}`.")
+                    whileBlock(
+                        "!at_eof(lexer) && (peek(lexer) == ' ' || peek(lexer) == '\\t' || peek(lexer) == '\\r')",
+                    ) {
+                        line("lexer->advance(lexer, true);")
+                    }
+                    ifBlock("peek(lexer) == '$exprEnd'") {
+                        advance()
+                        comment("Pop a level off the multiline-interpolation depth counter")
+                        comment("so MULTILINE_CONTINUATION stops accepting `|` as a")
+                        comment("continuation marker once we've returned to the enclosing")
+                        comment("template content / outer expression.")
+                        ifBlock("state->ml_interp_depth > 0") {
+                            line("state->ml_interp_depth--;")
+                        }
+                        emitToken("TEMPLATE_EXPR_END")
+                    }
+                }
+                emptyLine()
+
+                sectionComment("MULTILINE_CONTINUATION: `\\n` + optional `   |` inside a multiline interpolation")
+                comment("Gated on the persistent `ml_interp_depth` counter so the `|` is")
+                comment("only consumed when we're certain we're inside an interpolation")
+                comment("expression that belongs to a `\$|...|` multiline template. The")
+                comment("counter is bumped when MULTILINE_EXPR_START is emitted and popped")
+                comment("when the matching TEMPLATE_EXPR_END fires (above).")
+                ifBlock(
+                    "valid_symbols[MULTILINE_CONTINUATION] && peek(lexer) == '\\n' && state->ml_interp_depth > 0 && !in_singleline && !in_multiline",
+                ) {
                     advance()
-                    emitToken("TEMPLATE_EXPR_END")
+                    whileBlock(
+                        "!at_eof(lexer) && (peek(lexer) == ' ' || peek(lexer) == '\\t')",
+                    ) {
+                        advance()
+                    }
+                    ifBlock("peek(lexer) == '|'") {
+                        advance()
+                    }
+                    emitToken("MULTILINE_CONTINUATION")
                 }
                 emptyLine()
 

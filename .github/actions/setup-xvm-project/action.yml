@@ -58,7 +58,17 @@ runs:
               fi
 
               JAVA_VERSION=$(grep "^org.xtclang.java.jdk=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
-              KOTLIN_JAVA_VERSION=$(grep "^org.xtclang.kotlin.jdk=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
+              # org.xtclang.kotlin.jdk was consolidated into org.xtclang.java.jdk
+              # (commit 87aa43426 "consolidate JDK toolchain to a single
+              # org.xtclang.java.jdk property"). The action keeps a separate
+              # output so the secondary setup-java step (line ~176) still works
+              # for any future re-divergence; default to JAVA_VERSION when the
+              # property is absent. The `|| true` fallback inside the brace
+              # group is required: bash 5 with `set -e -o pipefail` exits
+              # the script when `var=$(failing-pipeline)` runs, which would
+              # happen before the `[ -z "$KOTLIN_JAVA_VERSION" ]` check below
+              # could ever apply.
+              KOTLIN_JAVA_VERSION=$( { grep "^org.xtclang.kotlin.jdk=" version.properties || true; } | cut -d'=' -f2 | tr -d '\n\r ')
               XDK_VERSION=$(grep "^xdk.version=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
               GRADLE_VERSION=$(grep "^distributionUrl=" gradle/wrapper/gradle-wrapper.properties | sed 's/.*gradle-\(.*\)-bin.zip/\1/')
 
@@ -67,8 +77,7 @@ runs:
                   exit 1
               fi
               if [ -z "$KOTLIN_JAVA_VERSION" ]; then
-                  echo "❌ org.xtclang.kotlin.jdk not found in version.properties"
-                  exit 1
+                  KOTLIN_JAVA_VERSION="$JAVA_VERSION"
               fi
               if [ -z "$XDK_VERSION" ]; then
                   echo "❌ xdk.version not found in version.properties"

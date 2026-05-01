@@ -126,7 +126,40 @@ platforms from any development machine.
 For detailed documentation on native library builds, Zig cross-compilation, and LSP adapter integration,
 see **[tree-sitter/README.md → Native Library Build](./tree-sitter/README.md#native-library-build)**.
 
-## IntelliJ Plugin Development
+## IntelliJ Plugin
+
+### Installing from JetBrains Marketplace (alpha channel)
+
+The plugin is published only to the JetBrains Marketplace **alpha channel**
+right now — there is no stable-channel build yet. The default marketplace
+search and the public plugin page filter to the stable channel only, so
+you cannot find or install the plugin through the normal "Install from
+Marketplace" flow. To install or auto-update from the alpha channel you
+need to add it as a **custom plugin repository** in IntelliJ:
+
+1. Open IntelliJ IDEA (2026.1 or later)
+2. **Settings → Plugins → ⚙ (gear icon) → Manage Plugin Repositories…**
+3. Click **+** and add:
+
+   ```
+   https://plugins.jetbrains.com/plugins/alpha/list
+   ```
+4. Click **OK** to close the dialog
+5. Back on the Plugins screen, switch to the **Marketplace** tab and search
+   for **Ecstasy Language Support** — the alpha builds will now appear
+6. Click **Install**, then restart the IDE when prompted
+
+After this is configured once, IntelliJ will automatically pick up new
+alpha-channel updates and prompt you to update through the normal Plugins
+UI. The "Not compatible with the version of your running IDE" warning that
+appears on the public marketplace web page (https://plugins.jetbrains.com/plugin/31202-xtc-language-support)
+is a **stable-channel-filter quirk** and does not reflect actual compatibility —
+the alpha builds are verified by JetBrains' Plugin Verifier against current
+2026.1.x releases. The in-IDE install flow above bypasses that warning.
+
+If you prefer not to add a custom repo, the same builds can be installed
+manually from a downloaded ZIP — see [Installing the ZIP Manually](#installing-the-zip-manually)
+below.
 
 ### Running the Plugin in a Sandbox IDE
 

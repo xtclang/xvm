@@ -397,14 +397,25 @@ val copyGrammarFiles by tasks.registering(Copy::class) {
  */
 val generateTreeSitterConfig by tasks.registering {
     group = "tree-sitter"
-    description = "Generate tree-sitter.json config for ABI 15"
+    description = "Generate tree-sitter.json (grammar manifest) and tree-sitter-user-config.json (CLI parser-directories)"
     dependsOn(copyGrammarFiles)
 
     val outputFile = generatedDir.map { it.file("tree-sitter.json") }
+    // The CLI loads a user-level config from `~/.config/tree-sitter/config.json`
+    // (or wherever XDG points) listing `parser-directories` that hold grammars.
+    // Without it, every `tree-sitter parse` / `tree-sitter generate` invocation
+    // prints a multi-line "Warning: You have not configured any parser
+    // directories!" -- a million times in CI when we parse 880 files. Generate
+    // a minimal local config and pass it via `--config-path` everywhere; that
+    // both silences the warning and is hermetic (no $HOME dependency).
+    val userConfigFile = generatedDir.map { it.file("tree-sitter-user-config.json") }
     val xdkVersion = project.version.toString()
 
     inputs.property("version", xdkVersion)
     outputs.file(outputFile)
+    outputs.file(userConfigFile)
+
+    val workDirPathProvider = generatedDir.map { it.asFile.absolutePath }
 
     doLast {
         val configJson = """
@@ -429,6 +440,14 @@ val generateTreeSitterConfig by tasks.registering {
             }
         """.trimIndent()
         outputFile.get().asFile.writeText(configJson + "\n")
+
+        val workDirPath = workDirPathProvider.get()
+        val userConfigJson = """
+            {
+              "parser-directories": ["$workDirPath"]
+            }
+        """.trimIndent()
+        userConfigFile.get().asFile.writeText(userConfigJson + "\n")
     }
 }
 
@@ -459,7 +478,9 @@ val validateTreeSitterGrammar by tasks.registering(Exec::class) {
 
     workingDir(generatedDir)
     executable(treeSitterCliExe.get())
-    // Use native QuickJS runtime instead of requiring system Node.js
+    // Use native QuickJS runtime instead of requiring system Node.js.
+    // (`tree-sitter generate` doesn't accept --config-path; only `parse`
+    // does. generate doesn't emit the parser-directories warning anyway.)
     args("generate", "--js-runtime", "native")
 
     // Capture paths at configuration time for logging in doFirst
@@ -534,6 +555,9 @@ abstract class TreeSitterParseTestTask @Inject constructor(
     @get:Optional
     abstract val showTiming: Property<Boolean>
 
+    @get:InputFiles
+    abstract val skipListFiles: ConfigurableFileCollection
+
     data class ParseResult(val relativePath: String, val success: Boolean, val timeMs: Long)
 
     @get:Input
@@ -583,6 +607,38 @@ abstract class TreeSitterParseTestTask @Inject constructor(
                 .toList()
         }
 
+        // Apply skip list (paths relative to compositeRoot, with `#` comments).
+        // The skip list is split across two companion files so the real
+        // grammar debt (parked.txt) isn't drowned out by files that are
+        // permanently excluded from the XTC compile (intentional.txt):
+        //   - treeSitterParseSkipList.intentional.txt
+        //   - treeSitterParseSkipList.parked.txt
+        val skipFiles = skipListFiles.files.filter { it.isFile }
+        val skipPaths: Set<String> = skipFiles.flatMap { f ->
+            f.useLines { lines ->
+                lines.map { it.substringBefore('#').trim() }
+                    .filter { it.isNotEmpty() }
+                    .toList()
+            }
+        }.toSet()
+        if (skipPaths.isNotEmpty()) {
+            val rootPath = rootDir.get()
+            val (toCheck, skipped) = xtcFiles.partition { file ->
+                file.relativeTo(rootPath).invariantSeparatorsPath !in skipPaths
+            }
+            val skippedPaths = skipped.map { it.relativeTo(rootPath).invariantSeparatorsPath }.toSet()
+            val staleEntries = skipPaths - skippedPaths
+            if (staleEntries.isNotEmpty()) {
+                logger.warn(
+                    "Skip-list contains ${staleEntries.size} stale entries (no matching .x file): " +
+                        staleEntries.sorted().joinToString(", ")
+                )
+            }
+            val sources = skipFiles.joinToString(", ") { it.name }
+            logger.lifecycle("Tree-sitter parse skip list: ${skipped.size} file(s) excluded (see $sources)")
+            xtcFiles = toCheck
+        }
+
         // Apply filter if specified
         if (!filter.isNullOrBlank()) {
             val patterns = filter.split(",").map { it.trim() }
@@ -604,11 +660,15 @@ abstract class TreeSitterParseTestTask @Inject constructor(
         // Warmup: parse the first file once to factor out tree-sitter CLI startup time.
         // The CLI loads the grammar shared library and initializes internal state on first run,
         // which adds ~1 second overhead that would skew timing for the first file.
+        // --config-path silences the "no parser directories" warning that would
+        // otherwise spam the log with 4 lines per parse invocation (~3500 lines
+        // for the full corpus on CI).
+        val userConfigPath = workDir.get().resolve("tree-sitter-user-config.json").absolutePath
         val warmupFile = xtcFiles.first()
         execOps.exec {
             workingDir(workDir.get())
             executable(cliPath.get())
-            args("parse", "--quiet", warmupFile.absolutePath)
+            args("parse", "--quiet", "--config-path", userConfigPath, warmupFile.absolutePath)
             isIgnoreExitValue = true
         }
 
@@ -619,7 +679,7 @@ abstract class TreeSitterParseTestTask @Inject constructor(
             val result = execOps.exec {
                 workingDir(workDir.get())
                 executable(cliPath.get())
-                args("parse", "--quiet", file.absolutePath)
+                args("parse", "--quiet", "--config-path", userConfigPath, file.absolutePath)
                 isIgnoreExitValue = true
             }
             val elapsedMs = (System.nanoTime() - startNanos) / 1_000_000
@@ -631,13 +691,17 @@ abstract class TreeSitterParseTestTask @Inject constructor(
         val failed = results.size - passed
         val failures = results.filter { !it.success }.map { it.relativePath }
 
-        logger.info("Tree-sitter parse results: $passed passed, $failed failed")
+        // Log at lifecycle level so the summary appears in CI output without --info,
+        // and so a developer running this task locally sees the result without
+        // having to know about Gradle's logger levels.
+        logger.lifecycle("Tree-sitter parse results: $passed passed, $failed failed")
 
         if (failures.isNotEmpty()) {
-            logger.info("Failed files (first 20):")
-            failures.take(20).forEach { logger.info("  - $it") }
-            if (failures.size > 20) {
-                logger.info("  ... and ${failures.size - 20} more")
+            val maxFailuresLogged = 20
+            logger.lifecycle("Failed files (first $maxFailuresLogged):")
+            failures.take(maxFailuresLogged).forEach { logger.lifecycle("  - $it") }
+            if (failures.size > maxFailuresLogged) {
+                logger.lifecycle("  ... and ${failures.size - maxFailuresLogged} more")
             }
         }
 
@@ -656,6 +720,17 @@ abstract class TreeSitterParseTestTask @Inject constructor(
                 if (sortedTimes.size % 2 == 0) (sortedTimes[mid - 1] + sortedTimes[mid]) / 2 else sortedTimes[mid]
             } else 0
             logger.info("Total: ${totalMs}ms, Average: ${avgMs}ms, Median: ${medianMs}ms per file (${results.size} files)")
+        }
+
+        // Fail the task once the full corpus has been processed and reported, so
+        // the build surfaces every parse failure in one pass. Throwing earlier
+        // would cut the failure list off mid-run; logging without throwing (the
+        // previous behaviour) let regressions accumulate silently for months.
+        if (failures.isNotEmpty()) {
+            throw GradleException(
+                "tree-sitter parse failed for ${failures.size} file(s) out of ${results.size}. " +
+                    "See the lifecycle log above for the full list.",
+            )
         }
     }
 }
@@ -678,11 +753,29 @@ val testTreeSitterParse by tasks.registering(TreeSitterParseTestTask::class) {
     buildDirPath.set(layout.buildDirectory.map { it.asFile.absolutePath })
     rootDir.set(compositeRoot)
 
-    // Find all lib_* directories (the XDK standard library)
+    // Sweep the XDK standard library (lib_*/) AND manualTests/src/main/x/ as
+    // a unified parse-correctness corpus. The lib_* sources are the canonical
+    // grammar surface; manualTests/ holds end-to-end test files that exercise
+    // language features the standard library does not -- service async-call
+    // shapes, multi-return destructuring, package-import resource providers,
+    // etc. Both must parse cleanly for the grammar to be considered correct,
+    // and including manualTests/ here means CI catches regressions on those
+    // shapes without needing per-file unit tests for everything.
     val xdkLibDirs = compositeRoot.listFiles { f ->
         f.isDirectory && f.name.startsWith("lib_")
     }?.toList() ?: emptyList()
-    libDirs.set(xdkLibDirs)
+    val manualTestsDir = File(compositeRoot, "manualTests/src/main/x").takeIf { it.isDirectory }
+    libDirs.set(xdkLibDirs + listOfNotNull(manualTestsDir))
+
+    // Skip list of .x files deliberately excluded from the parse sweep.
+    // Two companion files: `intentional.txt` for files permanently excluded
+    // from the XTC compile (archive/, dbTests/, errors.x, etc.) and
+    // `parked.txt` for genuine grammar gaps that we want to fix. Either may
+    // be absent; both are loaded when present.
+    skipListFiles.from(
+        layout.projectDirectory.file("treeSitterParseSkipList.intentional.txt"),
+        layout.projectDirectory.file("treeSitterParseSkipList.parked.txt"),
+    )
 
     // Support filtering via -PtestFiles=pattern (comma-separated patterns)
     fileFilter.set(providers.gradleProperty("testFiles"))

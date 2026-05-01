@@ -37,6 +37,55 @@ project.group = xdkProperties.stringValue("xdk.group")
 project.version = xdkProperties.stringValue("version", xdkProperties.stringValue("xdk.version"))
 logger.info("[properties] Versioned '${project.name}': group=${project.group}, version=${project.version}")
 
+// =============================================================================
+// JDK toolchain (single source of truth for the entire composite build)
+// =============================================================================
+// Every project that applies this plugin gets the toolchain wired up here, so
+// downstream Java/Kotlin projects don't need their own java { toolchain { ... } }
+// blocks. Foojay (configured at the settings level) auto-acquires the JDK if it
+// isn't already installed; gradle.properties enables auto-download so this works
+// out-of-the-box on any developer machine or CI runner.
+//
+// Kotlin compilation auto-inherits this toolchain (Kotlin Gradle plugin reads
+// java.toolchain when no explicit kotlin.jvmToolchain is set). Build-logic
+// projects (common-plugins, aggregator, settings-plugins) bootstrap their own
+// toolchain config since they cannot apply this convention plugin to themselves.
+val jdkVersionProvider = xdkProperties.int("org.xtclang.java.jdk")
+
+plugins.withType<JavaBasePlugin> {
+    extensions.configure<JavaPluginExtension> {
+        toolchain.languageVersion.set(jdkVersionProvider.map { JavaLanguageVersion.of(it) })
+    }
+}
+
+// =============================================================================
+// Toolchain divergence guard
+// =============================================================================
+// Verifies that the resolved java.toolchain.languageVersion matches the
+// canonical org.xtclang.java.jdk after project evaluation. This catches:
+//   - direct overrides:        `java { toolchain { languageVersion = ... } }`
+//   - kotlin shorthand drift:  `kotlin { jvmToolchain(N) }` propagates N to
+//                              java.toolchain.languageVersion as well, so a
+//                              divergent N surfaces here too.
+// Cheaper and more robust than reflecting into the Kotlin extension's typed
+// API (which moves between Kotlin Gradle plugin versions).
+plugins.withType<JavaBasePlugin> {
+    afterEvaluate {
+        val expected = jdkVersionProvider.orNull
+        val actual = the<JavaPluginExtension>().toolchain.languageVersion.orNull?.asInt()
+        if (expected != null && actual != null && actual != expected) {
+            throw GradleException(
+                "JDK toolchain divergence in project '${project.path}': " +
+                    "resolved toolchain languageVersion=$actual but org.xtclang.java.jdk=$expected. " +
+                    "Either some build script overrides java.toolchain directly, or a " +
+                    "kotlin { jvmToolchain(N) } block sets a different N (which propagates " +
+                    "to java.toolchain). Single source of truth is org.xtclang.java.jdk in " +
+                    "version.properties.",
+            )
+        }
+    }
+}
+
 /**
  * Task to print version information for this project and all subprojects.
  * Only create if it doesn't already exist (aggregator may have created it in root build).

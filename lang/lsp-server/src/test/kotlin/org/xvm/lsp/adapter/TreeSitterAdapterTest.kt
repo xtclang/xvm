@@ -216,6 +216,533 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * Fractional duration literal: `Duration:0.5S` (half a second). The
+         * `duration_literal` regex previously accepted only integer values per
+         * unit, so `manualTests/.../services.x`'s `Timeout(Duration:0.5S, True)`
+         * call failed to parse. ISO-8601 allows fractional values; the grammar
+         * regex now matches `[0-9]+(\.[0-9]+)?` per unit.
+         */
+        @Test
+        @DisplayName("should parse fractional duration literal")
+        fun shouldParseFractionalDurationLiteral() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        Duration d1 = Duration:0.5S;
+                        Duration d2 = Duration:0.001S;
+                        Duration d3 = Duration:30S;
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Multi-return destructuring assignment with annotations on each element:
+         * `(@Future Int v1, @Future Int v2) = svc.multiReturn(...)`. This is how
+         * services declare async future variables via tuple destructuring. The
+         * `tuple_assignment_element` rule previously accepted typed forms but
+         * not leading annotations, so `manualTests/.../services.x`'s multi-return
+         * call site failed to parse. The rule now allows `repeat($.annotation)`
+         * before both the val/var-prefixed form and the type-prefixed form, with
+         * a 2-way conflict declared between `parameter` and `tuple_assignment_element`.
+         */
+        @Test
+        @DisplayName("should parse annotated multi-return destructuring assignment")
+        fun shouldParseAnnotatedMultiReturnAssignment() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        (@Future Int v1, @Future Int v2) = svc.multiReturn(1, 2);
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Stacked switch labels: `default: case 0..39: ...` (or any combination
+         * of `case ...:` and `default:` labels for the same arm). The grammar's
+         * `case_clause` and `expression_case_clause` rules previously allowed a
+         * leading `repeat(case <pattern>:)` followed by a final `case <pattern>`
+         * or `default` -- so `default:` could only appear as the final label,
+         * not stacked before another `case:`. The repeat now accepts both
+         * `case <pattern>:` and `default:`. From `manualTests/.../StringBufferTest.x`.
+         */
+        @Test
+        @DisplayName("should parse stacked default+case switch labels")
+        fun shouldParseStackedDefaultAndCaseLabels() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    Int classify(Int n) {
+                        return switch (n) {
+                            default:
+                            case 0..39: 1;
+                            case 40..59: 2;
+                            case 60..100: 3;
+                        };
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Constructor short-form body: `construct(...) = expr;`. The grammar
+         * already supported short-form `= expr;` for methods and getters but
+         * not constructors, so `@Override construct(String s) = TODO();`
+         * (a placeholder constructor signature satisfying a contract) failed
+         * to parse. From `manualTests/.../StringBufferTest.x`.
+         */
+        @Test
+        @DisplayName("should parse short-form constructor body")
+        fun shouldParseShortFormConstructorBody() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Step {
+                        @Override construct(String s) = TODO();
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Single-element tuple expression with explicit trailing comma: `(x,)`.
+         * Disambiguates a 1-tuple from a parenthesized expression `(x)`. The
+         * grammar previously accepted only empty `()` and 2+ element tuples;
+         * `manualTests/.../tuple.x`'s `(1.toInt(), )` therefore failed.
+         */
+        @Test
+        @DisplayName("should parse single-element tuple with trailing comma")
+        fun shouldParseSingleElementTuple() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        Tuple t = (42,);
+                        Tuple u = (1.toInt(),);
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Annotation on a for-loop's variable initializer:
+         * `for (@Watch(x) Int i = 3; i > 0; --i) {}`. The `for_var_declarations`
+         * rule previously accepted only `Type identifier = expr` without
+         * leading annotations. Local-variable annotations like `@Watch(...)`
+         * (used in `manualTests/.../annos.x` for property-watch tracing) needed
+         * the same `repeat($.annotation)` prefix that other variable-declaration
+         * forms already had. Without this, the for-loop init failed to parse
+         * and cascade errors propagated through the rest of the method body.
+         */
+        @Test
+        @DisplayName("should parse annotation on for-loop variable initializer")
+        fun shouldParseAnnotationOnForLoopInit() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        for (@Watch(logger) Int i = 3; i > 0; --i) {}
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Package-import resource-provider clause:
+         * `package foo import bar.Baz inject(Int n, String _) using ProviderType;`.
+         * The `inject(parameters)` clause declares the formal parameters the
+         * resource provider must supply; `using <ProviderType>` names the
+         * provider class. Both clauses are optional. From
+         * `manualTests/.../container.x`'s
+         * `package contained import TestContained inject(Int value, String _) using SimpleResourceProvider;`.
+         */
+        @Test
+        @DisplayName("should parse package-import resource-provider clause")
+        fun shouldParsePackageImportWithResourceProvider() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    package contained import TestContained inject(Int value, String _) using SimpleResourceProvider;
+                    package other import OtherModule using OtherProvider;
+                    package plain import PlainModule;
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Wildcard `_` is allowed as the name in a `val`/`var` declaration to
+         * discard a value: `val _ = r.eof;`. The grammar's
+         * `variable_declaration` `name:` field must accept the wildcard token
+         * in addition to identifiers. Without this, the standard library's
+         * "evaluate-and-discard" idiom fails to parse.
+         */
+        @Test
+        @DisplayName("should parse wildcard variable name in val/var declaration")
+        fun shouldParseWildcardVariableNameInValDeclaration() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class C {
+                        Int eof = 0;
+                        Int size = 0;
+                    }
+                    void run(C r) {
+                        val _ = r.eof;
+                        var _ = r.size;
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Bare relative-path literal as a primary expression:
+         * `File f = ./IO.x;` or `Directory d = ../shared;`. Distinct from
+         * `#path` (binary file embed) and `$./path` (string file embed) --
+         * this form is a runtime File/Directory reference. Without this
+         * rule, `manualTests/.../IO.x` failed at the assignment.
+         */
+        @Test
+        @DisplayName("should parse relative path literal as expression")
+        fun shouldParseRelativePathLiteralAsExpression() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        File      f1 = ./IO.x;
+                        File      f2 = ../shared/data.txt;
+                        Directory d  = ./subdir;
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * `assert:rnd(N) cond` is the sample-rate form of assert -- the
+         * assertion fires roughly once per N invocations. The argument list
+         * is specific to `assert:rnd`; the other variants (`assert:arg`,
+         * `assert:bounds`, ...) do not take args, and in particular
+         * `assert:arg (Type x, ...) := expr` uses the parens for a tuple
+         * destructuring conditional declaration, not a variant arg list.
+         * The grammar must distinguish these.
+         */
+        @Test
+        @DisplayName("should parse assert:rnd with sample-rate argument")
+        fun shouldParseAssertRndWithSampleRate() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run(Int size) {
+                        for (Int i : 1..1000) {
+                            assert:rnd(100) i < size;
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Companion to `shouldParseAssertRndWithSampleRate`: confirms that
+         * `assert:arg` followed by a tuple destructuring conditional
+         * declaration still parses (regression guard -- an earlier attempt
+         * at the assert:rnd fix accidentally swallowed `(Type x, ...)` as
+         * a variant arg list, breaking `lib_net/.../UriTemplate.x`).
+         */
+        @Test
+        @DisplayName("should parse assert:arg with tuple destructuring conditional")
+        fun shouldParseAssertArgWithTupleDestructuring() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    conditional (Int, String) parse(String s) {
+                        return False;
+                    }
+                    void run() {
+                        assert:arg (Int n, String t) := parse("x");
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * `assert !(Type x := expr)` -- negated typed conditional binding.
+         * Used to assert that a `:=` conditional form *fails* to bind
+         * (e.g. asserting that `next()` does not yield a value of the
+         * named type). The negation cannot be expressed by simply wrapping
+         * a `_expression` because the parenthesized form contains a
+         * `conditional_declaration`, which is not an expression.
+         */
+        @Test
+        @DisplayName("should parse negated typed conditional in assert")
+        fun shouldParseNegatedTypedConditionalInAssert() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    enum Color {Red, Green, Blue}
+                    void run() {
+                        Color c1 = Red;
+                        assert !(Color c2 := c1.next());
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Version literal: `v:` followed by a version string. Covers the
+         * full range of forms Ecstasy supports -- simple integer
+         * (`v:1`), dotted (`v:1.2`, `v:5.6.7.8`), pre-release identifier
+         * alone (`v:beta2`), pre-release suffix on a dotted version
+         * (`v:5.6.7.8-alpha`, `v:1.2-beta5`), concatenated pre-release
+         * (`v:1.2beta5`), and build-metadata suffix (`v:1.2beta5+123-456.abc`).
+         * Without this, `typed_literal` would try to parse `v` as a type
+         * expression, `:` as the typed-literal separator, and the rest as
+         * a regular literal -- which works only for trivial cases and
+         * fails on multi-segment dotted versions and pre-release suffixes.
+         */
+        @Test
+        @DisplayName("should parse version literals across all supported forms")
+        fun shouldParseVersionLiterals() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        Version v1 = v:1;
+                        Version v2 = v:1.0;
+                        Version v3 = v:beta2;
+                        Version v4 = v:5.6.7.8-alpha;
+                        Version v5 = v:1.2-beta5;
+                        Version v6 = v:1.2beta5;
+                        Version v7 = v:1.2beta5+123-456.abc;
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Qualified-new with annotations between `new` and the type:
+         * `outer.new @Anno(args) Type()`. The unqualified `new` form
+         * already accepted `repeat($.annotation)` between the keyword and
+         * the type; the qualified form did not, so
+         * `manualTests/.../annos.x`'s `new Parent().new @Parent.Anno(descr) Parent.Child()`
+         * failed to parse.
+         */
+        @Test
+        @DisplayName("should parse qualified-new with annotation")
+        fun shouldParseQualifiedNewWithAnnotation() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Parent {
+                        annotation Anno(String descr) into Child {}
+                        class Child {
+                            void test() {}
+                        }
+                    }
+                    void run() {
+                        String descr = "from outside";
+                        new Parent().new @Parent.Anno(descr) Parent.Child().test();
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Annotation on a type inside a parenthesized type expression:
+         * `(@AutoFreezable Freezable)? o = Null`. The parens scope the
+         * annotation + type so the `?` nullable wrap applies to the
+         * whole annotated form. `parenthesized_type` previously took
+         * only `type_expression`; it now accepts leading annotations.
+         */
+        @Test
+        @DisplayName("should parse annotated type inside parenthesized type")
+        fun shouldParseAnnotationInsideParenthesizedType() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    annotation AutoFreezable into Object {}
+                    interface Freezable {}
+                    void testMethodAnno((@AutoFreezable Freezable)? o = Null) {
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Tuple-assignment with `_` wildcard discarding a slot:
+         * `(_, Int index) = collection.binarySearch(...);`. Used
+         * pervasively in `lib_ecstasy/.../maps/*.x` to ignore the
+         * boolean returned alongside the typed slot of interest.
+         * Without the wildcard alternative on `tuple_assignment_element`,
+         * 14 lib_*/ files plus `manualTests/.../maps.x` failed to parse.
+         */
+        @Test
+        @DisplayName("should parse tuple-assignment with wildcard slot")
+        fun shouldParseTupleAssignmentWithWildcard() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        (_, Int index) = binarySearch(0);
+                        (_, Int idx, _) = split();
+                    }
+                    conditional Int binarySearch(Int target) {
+                        return False;
+                    }
+                    (Boolean, Int, Int) split() {
+                        return False, 0, 0;
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Companion to wildcard tuple-assignment: a for-loop iterating
+         * a Map with both keys and values discarded -- `for ((_, _) : map)`.
+         * The `for_tuple_destructure` rule previously required typed
+         * bindings on every element; it now accepts wildcards too.
+         */
+        @Test
+        @DisplayName("should parse for-loop with wildcard tuple destructure")
+        fun shouldParseForLoopWithWildcardTupleDestructure() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        Map<String, Int> map = new ListMap();
+                        Int count = 0;
+                        for ((_, _) : map) {
+                            ++count;
+                        }
+                        for ((_, Int v) : map) {
+                            count += v;
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
          * A missing closing brace should still parse (tree-sitter is error-tolerant),
          * but the resulting tree must contain ERROR or MISSING nodes that get reported
          * as diagnostics with severity ERROR.
