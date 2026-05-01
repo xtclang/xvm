@@ -1,7 +1,16 @@
-# Ecstasy `lib_logging` — start here
+# Ecstasy logging — start here
 
-This directory holds the design and discussion docs for `lib_logging`, the experimental
-SLF4J-shaped logging library being added to the XDK on the `lagergren/logging` branch.
+This directory holds the design and discussion docs for the two experimental Ecstasy
+logging libraries on the `lagergren/logging` branch:
+
+- **`lib_logging`** — modelled on **SLF4J 2.x + Logback** (the dominant JVM ecosystem).
+- **`lib_slogging`** — modelled on **Go's `log/slog`** (the modern cloud-native idiom).
+
+Both libraries cover the same end-to-end logging functionality with different API
+shapes, so reviewers can compare them side-by-side. **Start with
+[`LIB_LOGGING_VS_LIB_SLOGGING.md`](LIB_LOGGING_VS_LIB_SLOGGING.md)** for the
+comparison and the explicit list of what we want reviewer feedback on.
+
 If you are looking at the project for the first time, **this README is the right place
 to land first**: it explains what the project is, who it is for, and where to go next
 depending on what you want to do.
@@ -77,12 +86,27 @@ The docs are organised by question. Pick the one that matches what you want to k
   Logback* in via the JIT bridge? Investigation, evidence, trade-offs, and a
   recommendation. Short answer: feasible but not the primary path.
 
+### "Two libraries — what's the comparison?"
+
+- **[`LIB_LOGGING_VS_LIB_SLOGGING.md`](LIB_LOGGING_VS_LIB_SLOGGING.md)** — the design
+  comparison between `lib_logging` (SLF4J-shaped) and `lib_slogging` (slog-shaped).
+  Per-axis table, deep dives on markers and on `MDC` vs `With`, side-by-side code
+  for the common patterns, Ecstasy-idiom fit notes, the **eleven explicit reviewer
+  questions** we want feedback on, and a tentative recommendation. **Read this
+  first** if you are reviewing the project.
+- **[`CLOUD_INTEGRATION.md`](CLOUD_INTEGRATION.md)** — explains why API choice is
+  the entry point to GCP / AWS / Azure observability ecosystems (drop-in adapters,
+  schema conventions, dashboards-that-already-work). Written for readers whose
+  deployment intuition is "ship a CLI installer" and need a tour of cloud-native
+  logging conventions.
+
 ### "Could the design have looked different?"
 
 - **[`ALTERNATIVE_DESIGN_SLOG_STYLE.md`](ALTERNATIVE_DESIGN_SLOG_STYLE.md)** —
-  exploratory: what `lib_logging` would look like if modeled on Go's `log/slog`
-  instead of SLF4J. Code examples only, no actual implementation. Documents what
-  we'd be giving up and gaining if we ever revisit the choice.
+  exploratory predecessor to `lib_slogging`: what an SLF4J-shaped library would look
+  like if modeled on Go's `log/slog` instead. Now superseded by the actual
+  `lib_slogging` module + `LIB_LOGGING_VS_LIB_SLOGGING.md` comparison; kept for
+  history.
 
 ### "What's still uncertain?"
 
