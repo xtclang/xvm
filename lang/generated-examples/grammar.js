@@ -1352,6 +1352,7 @@ module.exports = grammar({
             $.template_string_literal,
             $.multiline_template_literal,
             $.multiline_literal,
+            $.multiline_hex_byte_literal,
             $.char_literal,
             $.boolean_literal,
             $.null_literal,
@@ -1471,6 +1472,13 @@ module.exports = grammar({
         // Multiline plain literal (no interpolation): \|content
         //                                              | continuation
         multiline_literal: $ => token(/\\\|[^\n]*(\\?\n[ \t]*\|[^\n]*)*/),
+        // Multiline hex byte literal: #|content
+        //                              | continuation
+        // Embeds the concatenated hex digits (with whitespace and `_`
+        // separators ignored) as a Byte[] constant. Same line-continuation
+        // shape as `multiline_literal` (each continuation line begins with
+        // `|`), only the prefix differs (`#|` instead of `\|`).
+        multiline_hex_byte_literal: $ => token(/#\|[^\n]*(\\?\n[ \t]*\|[^\n]*)*/),
         // Character literal: 'c', '\\n', '\\u0000', '\\U00010000'
         // Supports Unicode escapes: \\uXXXX (4 hex digits) and \\UXXXXXXXX (8 hex digits)
         char_literal: $ => /'([^'\\]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|\\.)'/,
