@@ -1384,9 +1384,12 @@ module.exports = grammar({
         // `File f = ./IO.x;` or `Directory d = ../shared;`. The leading `./`
         // or `../` is what makes the token unambiguous against normal
         // expressions (regular identifiers cannot start with `./`).
+        // The trailing portion is `*` (not `+`) so a bare `./` (current dir)
+        // and bare `../` (parent dir) parse as a Directory literal too --
+        // see `Directory dir = ./;` in `manualTests/.../literals.x`.
         // Distinct from `file_literal` (`#path`, embeds binary at compile
         // time) and `string_file_literal` (`$./path`, embeds string contents).
-        relative_path_literal: $ => /\.\.?\/[\w./-]+/,
+        relative_path_literal: $ => /\.\.?\/[\w./-]*/,
 
         // String literals with Unicode escapes: \\uXXXX and \\UXXXXXXXX
         string_literal: $ => /"([^"\\]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|\\.)*"/,
@@ -1468,12 +1471,14 @@ module.exports = grammar({
         map_entry: $ => seq($._expression, '=', $._expression),
 
         // Typed literal: Type:value where value is a literal
-        // Examples: Duration:0S, Int:42, Map:[], List:[1,2,3], Date:2024-01-26, Path:/sys/info
+        // Examples: Duration:0S, Int:42, Map:[], List:[1,2,3], Date:2024-01-26,
+        //           Path:/sys/info, Path:./, Directory:./more/
         // Use higher precedence to prefer typed_literal interpretation
         typed_literal: $ => prec(2, seq($.type_expression, ':', choice(
             $.list_literal,
             $.map_literal,
             $.path_literal,
+            $.relative_path_literal,
             $.duration_literal,
             $.integer_literal,
             $.float_literal,
