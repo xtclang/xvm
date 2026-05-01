@@ -84,11 +84,36 @@ manualTests/src/main/x/generics.x
 #   - `prec(2)` on `tuple_assignment` itself
 #   - `prec.dynamic(1)` on the `$._expression` alt of `tuple_assignment_element`
 #   - 4-way conflict adding `_for_tuple_destructure_element`
+#   - `prec.dynamic(10)` on the entire `tuple_assignment_element` rule
+#   - `prec.dynamic(10, prec(2, ...))` on the entire `tuple_assignment` rule
+#     (parse time tripled, confirming GLR explored more paths, but
+#     the result was unchanged -- prec.dynamic is not consulted at
+#     the deterministic-choice point)
+#   - explicit `[$.tuple_assignment, $.variable_declaration]` conflict
+#     -> tree-sitter reports "unnecessary conflict"
+#   - explicit `[$.tuple_assignment, $.tuple_type]` and
+#     `[$.tuple_assignment, $.parenthesized_type]` conflicts
+#     -> both reported as "unnecessary conflicts"
 #
-# The fix is likely either a `prec.dynamic` on `tuple_type_element`
-# biased *down* (rather than `tuple_assignment_element` biased *up*),
-# or a structural change so that "bare identifier as first element of
-# `(...)` followed by `=`" forces tuple_assignment.
+# Diagnostic insight from the "unnecessary conflict" warnings:
+# tree-sitter's LALR(1) generator never sees a generation-time
+# conflict between these container-level rules. It commits to
+# `variable_declaration` (with `(...)` as a tuple_type type_expression)
+# deterministically when seeing `(` at statement start. The
+# element-level conflict declarations and prec.dynamic biases never
+# get a chance to apply because the container-level decision was
+# already made.
+#
+# The fix likely requires either:
+#   (a) a structural rewrite that disambiguates earlier (e.g. lift the
+#       `(bare_ident, Type ident, ...) = ...` shape into its own
+#       container that the LALR generator can statically distinguish);
+#   (b) restructuring `_expression` and `type_expression` so the bare
+#       `identifier` reduction in tuple-assignment context goes through
+#       a hidden non-type rule (alias/hidden);
+#   (c) a workaround in `tuple_assignment_element` that uses an alias
+#       with high-prec.dynamic so the bare-ident path doesn't even
+#       reduce as identifier-via-type-name.
 #
 # Parked because it's a single-file edge case and the rest of the
 # destructuring fix unblocks 15 of 16 files. Revisit when the next
