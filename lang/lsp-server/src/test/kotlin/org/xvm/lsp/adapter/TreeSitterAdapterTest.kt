@@ -612,6 +612,69 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * Qualified-new with annotations between `new` and the type:
+         * `outer.new @Anno(args) Type()`. The unqualified `new` form
+         * already accepted `repeat($.annotation)` between the keyword and
+         * the type; the qualified form did not, so
+         * `manualTests/.../annos.x`'s `new Parent().new @Parent.Anno(descr) Parent.Child()`
+         * failed to parse.
+         */
+        @Test
+        @DisplayName("should parse qualified-new with annotation")
+        fun shouldParseQualifiedNewWithAnnotation() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Parent {
+                        annotation Anno(String descr) into Child {}
+                        class Child {
+                            void test() {}
+                        }
+                    }
+                    void run() {
+                        String descr = "from outside";
+                        new Parent().new @Parent.Anno(descr) Parent.Child().test();
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Annotation on a type inside a parenthesized type expression:
+         * `(@AutoFreezable Freezable)? o = Null`. The parens scope the
+         * annotation + type so the `?` nullable wrap applies to the
+         * whole annotated form. `parenthesized_type` previously took
+         * only `type_expression`; it now accepts leading annotations.
+         */
+        @Test
+        @DisplayName("should parse annotated type inside parenthesized type")
+        fun shouldParseAnnotationInsideParenthesizedType() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    annotation AutoFreezable into Object {}
+                    interface Freezable {}
+                    void testMethodAnno((@AutoFreezable Freezable)? o = Null) {
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
          * A missing closing brace should still parse (tree-sitter is error-tolerant),
          * but the resulting tree must contain ERROR or MISSING nodes that get reported
          * as diagnostics with severity ERROR.

@@ -573,7 +573,10 @@ module.exports = grammar({
         qualified_keyword_type: $ => prec(3, seq(choice('struct', 'service', 'class', 'const', 'enum'), $.type_name)),
         // immutable can be standalone or with a type. prec.right makes it greedy.
         immutable_type: $ => prec.right(seq('immutable', optional($._non_bi_type))),
-        parenthesized_type: $ => seq('(', $.type_expression, ')'),
+        // Parenthesized type may carry annotations on the inner type, e.g.
+        // `(@AutoFreezable Freezable)? o = Null` -- the annotation applies
+        // to `Freezable`, the parens scope it under the `?` nullable wrap.
+        parenthesized_type: $ => seq('(', repeat($.annotation), $.type_expression, ')'),
 
         // Generic type: Map<Key> or Map!<Key> (non-null generic)
         // The ! must come before type arguments: Name!<Args>, not Name<Args>!
@@ -1219,7 +1222,7 @@ module.exports = grammar({
             seq('new', repeat($.annotation), field('type', $.type_expression), field('arguments', $.arguments), optional(field('body', $.anonymous_inner_class_body))),
             prec.left(seq('new', repeat($.annotation), field('type', $.type_expression), '[', field('size', $._expression), ']', optional(field('arguments', $.arguments)))),
             seq('new', repeat($.annotation), field('type', $.type_expression), '[', ']'),  // empty array: new Type[]
-            seq(field('object', $._expression), '.', 'new', field('type', $.type_expression), field('arguments', $.arguments)),  // outer new: expr.new Type(args)
+            seq(field('object', $._expression), '.', 'new', repeat($.annotation), field('type', $.type_expression), field('arguments', $.arguments)),  // outer new: expr.new [@Anno(...)]* Type(args)
             seq(field('object', $._expression), '.', 'new', field('arguments', $.arguments)),  // expr.new(args) - outer copy
             seq('new', field('arguments', $.arguments)),  // new(args) - copy constructor (virtual new)
         ),
