@@ -65,6 +65,19 @@ module.exports = grammar({
         // consumed by the external scanner; declared in extras above so the
         // parser silently skips it.
         $._multiline_continuation,
+
+        // Opening `(` of a tuple_assignment statement, peeked-and-confirmed
+        // by the external scanner. The scanner looks past the matching `)`
+        // for `=` (and not `==`/`=>`) before any `;` / `{` / `}` / EOF,
+        // requires at least one `,` at depth 1, and only fires at statement
+        // start (where this token is in valid_symbols). This forces the LR
+        // parser to commit to tuple_assignment at the `(` shift, even when
+        // the tuple's content shape would otherwise admit a `tuple_type` /
+        // variable_declaration interpretation -- e.g.
+        // `(i1, Int i2) = testMultiReturns(0);` (callTests.x line 20).
+        // If the lookahead doesn't match, the scanner returns false and the
+        // internal lexer produces a normal `(` token unchanged.
+        $._tuple_assign_lparen,
     ],
 
     // Conflicts that require GLR parsing for disambiguation.
@@ -121,7 +134,6 @@ module.exports = grammar({
         [$.type_expression, $.array_type],
         [$.tuple_type_element, $.parameter],
         [$.tuple_type_element, $.parenthesized_type],
-        [$.tuple_type_element, $.parameter, $.tuple_assignment_element],
         [$.tuple_type_element, $.parameter, $.conditional_tuple_element],
         // `_` in tuple positions can be parsed as wildcard in any of three
         // contexts (tuple_assignment_element, for-tuple destructure element,
@@ -140,6 +152,15 @@ module.exports = grammar({
         // The 3-way variant above is not sufficient because some LR states
         // see only `parameter` and `tuple_assignment_element` as candidates.
         [$.parameter, $.tuple_assignment_element],
+        // After narrowing the bare-ident alt of `tuple_assignment_element`
+        // to `choice($.identifier, $.member_expression)` (no longer a full
+        // `_expression`), an LR state inside `for ((identifier ,...))`
+        // can interpret the leading identifier as any of: bare
+        // tuple_assignment_element, start-of-_expression, type_name, or
+        // qualified_type_name. GLR needs all four alive until the trailing
+        // `:` / `=` distinguishes for-iteration vs for-tuple-assignment vs
+        // bare expression.
+        [$.tuple_assignment_element, $._expression, $.type_name, $.qualified_type_name],
 
         // Conditional tuple conflicts
         [$.conditional_tuple_element, $._expression],
@@ -752,12 +773,21 @@ module.exports = grammar({
         ),
 
         // Tuple assignment: (Type1 x, Type2 y) = expr; or (x, this.y) = expr;
-        // prec(2) to outweigh `variable_declaration`'s typed-form prec(1) when
-        // both could match -- e.g. `(i1, Int i2) = testMultiReturns(0);` reads
-        // as tuple-type variable-decl `(...) name = ...` *or* tuple-assignment;
-        // the latter is what the user wrote.
+        // The opening `(` is the external `$._tuple_assign_lparen` token --
+        // the scanner peeks past the matching `)` for `=` and only fires
+        // when the shape is unambiguously a tuple_assignment, so this rule
+        // is selected deterministically at the `(` shift -- even for shapes
+        // like `(i1, Int i2) = testMultiReturns(0);` where `(i1, Int i2)`
+        // would otherwise read as a `tuple_type` (committing the LR parser
+        // to `variable_declaration` before precedence / prec.dynamic biases
+        // on the element-level rules can apply). See
+        // ScannerSpec.kt::TUPLE_ASSIGN_LPAREN for the peek-ahead logic.
+        //
+        // prec(2) is retained as a defense-in-depth bias against
+        // `variable_declaration`'s typed-form prec(1) for any state where
+        // the LALR generator still sees both as candidates.
         tuple_assignment: $ => prec(2, seq(
-            '(',
+            $._tuple_assign_lparen,
             $.tuple_assignment_element,
             repeat1(seq(',', $.tuple_assignment_element)),
             ')',
@@ -776,18 +806,24 @@ module.exports = grammar({
         // declare async futures via tuple destructuring.
         // Examples: (Type x, Int y), (x, this.y), (_, Int x), (val x, Int y),
         //           (@Future Int v1, @Future Int v2)
+        //
+        // The bare-existing-variable alt is intentionally narrowed to
+        // `identifier | member_expression | index_expression` (NOT a full
+        // `_expression`). With the external `$._tuple_assign_lparen`
+        // forcing LR commit at `(`, a full `_expression` alt was a trap:
+        // typed elements like `UInt8 left` could LOSE to a failing
+        // `_expression` parse of `UInt8 left` (which can't backtrack once
+        // committed). The narrow alt accepts the shapes that actually
+        // appear in real code as bare-LHS slots -- a single identifier
+        // (e.g. `i1`, `offset`, `error`), a member-access chain (e.g.
+        // `this.growAt`), or an array/map subscript (e.g.
+        // `quotients[i]`) -- and fails fast on anything else, so the
+        // typed alt wins cleanly when present.
         tuple_assignment_element: $ => choice(
             seq(repeat($.annotation), choice('val', 'var'), optional($.type_expression), $.identifier),
             seq(repeat($.annotation), $.type_expression, $.identifier),
             $.wildcard,
-            // prec.dynamic biases the GLR toward this `_expression` reading
-            // when both `tuple_assignment_element` and `tuple_type_element`
-            // are alive: a bare identifier like `i1` in `(i1, Int i2) = ...`
-            // could parse either way (tuple_type with `i1` as a type_name,
-            // or tuple_assignment with `i1` as an existing-variable expr),
-            // and the latter is what the user wrote in `manualTests/.../callTests.x`.
-            // tuple_type_element has no dynamic precedence, so this wins.
-            prec.dynamic(1, $._expression),
+            choice($.identifier, $.member_expression, $.index_expression),
         ),
 
         // Statement implementations

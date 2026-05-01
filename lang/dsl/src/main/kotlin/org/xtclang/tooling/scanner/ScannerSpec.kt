@@ -72,6 +72,21 @@ enum class TokenType {
     // Listed FIRST in extras so it is consulted before the internal `/\s/`
     // regex; the longer match wins.
     MULTILINE_CONTINUATION,
+
+    // Opening `(` of a tuple_assignment, e.g. `(i1, Int i2) = expr;`. The
+    // scanner peeks past the matching `)` looking for `=` (and not `==`/`=>`)
+    // before any `;` / `{` / `}` / EOF; if found, it consumes the `(` and
+    // emits this token. The grammar's `tuple_assignment` rule starts with
+    // this token instead of a literal `(`, so the LR parser commits to
+    // tuple_assignment deterministically at the `(` shift, even when the
+    // tuple's content shape would otherwise admit a `tuple_type`
+    // (variable_declaration) or `parenthesized_expression` interpretation.
+    //
+    // This token is only requested at statement start (where
+    // tuple_assignment lives in the `_statement` choice list). At every
+    // other position it stays out of valid_symbols, so the scanner is a
+    // no-op and the internal lexer keeps tokenizing `(` normally.
+    TUPLE_ASSIGN_LPAREN,
 }
 
 /**
