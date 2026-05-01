@@ -26,7 +26,7 @@ Logger payments = logger.named("payments");   // per-name child via the API
 There is **no** `@Inject("payments") Logger logger;` form. Per-name loggers are
 *derived* from the injected one, the same way SLF4J users write
 `LoggerFactory.getLogger(MyClass.class)` once at the top of a class. See
-`RUNTIME_IMPLEMENTATION_PLAN.md` Stage 1.4 for why we ruled out wildcard injection.
+`runtime-implementation-plan.md` Stage 1.4 for why we ruled out wildcard injection.
 
 The examples below `import` the public lib_logging types unqualified by adding
 type-level imports next to the `package log import …` alias:

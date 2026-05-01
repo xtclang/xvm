@@ -18,7 +18,7 @@
  * the assertion code that reads back the events). That is structurally identical to
  * `service ConsoleExecutionListener` in `lib_xunit_engine` and `service ErrorLog` in
  * `platform/common` — both are stateful event collectors. See
- * `doc/logging/DESIGN.md` ("Sink type: `const` vs `service`") for the full rule.
+ * `doc/logging/design.md` ("Sink type: `const` vs `service`") for the full rule.
  */
 service MemoryLogSink
         implements LogSink {

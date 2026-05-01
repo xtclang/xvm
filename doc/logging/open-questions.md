@@ -6,7 +6,7 @@ deliberately short so it stays readable as the project moves.
 It is split into two sections:
 
 - **Addressed by the runtime plan** — questions that *had* been open, but
-  [`RUNTIME_IMPLEMENTATION_PLAN.md`](RUNTIME_IMPLEMENTATION_PLAN.md) now prescribes a
+  [`runtime-implementation-plan.md`](runtime-implementation-plan.md) now prescribes a
   concrete fix. Those are summarized in one line each, with a link.
 - **Still genuinely open** — questions whose answer the plan does not commit to. These
   retain their full trade-off discussion, because someone will have to decide.
@@ -19,12 +19,12 @@ When an "addressed by the plan" item lands in code, delete its row.
 
 | # | Question | Resolution |
 |---|---|---|
-| 1 | **Wildcard-name injection in `nMainInjector`** — `@Inject("any.name") Logger` doesn't resolve because the existing resource map is exact-match. | **Rejected.** Single fixed-name `("logger", loggerType)` supplier; per-name loggers come from `Logger.named(String)` instead. No special-case in the injector. See [Stage 1.4](RUNTIME_IMPLEMENTATION_PLAN.md#14--single-fixed-name-supplier-no-wildcard-injection). |
-| 2 | **Default logger name when no `resourceName` supplied** — should `@Inject Logger logger;` (no name) get `"default"`, the enclosing module's name, or the class name? | The XTC compiler substitutes the enclosing module's qualified name. Optional for the demo. See [Stage 4](RUNTIME_IMPLEMENTATION_PLAN.md#stage-4--compiler-side-default-name-optional-but-high-impact). |
-| 3 | **MDC scope: per-fiber, per-service, or per-call?** | Recommend per-fiber if the runtime gives us fiber-locals; per-service-instance otherwise as a known-incorrect-for-concurrency v0 fallback. Decision required *before* `RTMDC.java` is written. See [Stage 3.1](RUNTIME_IMPLEMENTATION_PLAN.md#31--decide-the-scope). |
-| 5 | **Throwable promotion: where does it happen, and who wins when both are supplied?** | `MessageFormatter.format` does the promotion; explicit `cause=` always wins over a promoted-from-args throwable. See [Stage 2.1](RUNTIME_IMPLEMENTATION_PLAN.md#21--real-messageformatterformat). |
-| 9 | **Where does the runtime live?** | `javatools_jitbridge/src/main/java/org/xtclang/_native/logging/`, registered from `nMainInjector.addNativeResources()`. See [Stage 1.1–1.5](RUNTIME_IMPLEMENTATION_PLAN.md#stage-1--native-side-make-inject-logger-resolve). |
-| 10 | **Bootstrap: do we need a tiny native fallback for early-runtime logging before `Console` is registered?** | Yes — `RTConsoleLogSink.java` falls back to `System.err.println` if `Console` is not yet available. See [Stage 1.2](RUNTIME_IMPLEMENTATION_PLAN.md#12--rtconsolelogsinkjava). |
+| 1 | **Wildcard-name injection in `nMainInjector`** — `@Inject("any.name") Logger` doesn't resolve because the existing resource map is exact-match. | **Rejected.** Single fixed-name `("logger", loggerType)` supplier; per-name loggers come from `Logger.named(String)` instead. No special-case in the injector. See [Stage 1.4](runtime-implementation-plan.md#14--single-fixed-name-supplier-no-wildcard-injection). |
+| 2 | **Default logger name when no `resourceName` supplied** — should `@Inject Logger logger;` (no name) get `"default"`, the enclosing module's name, or the class name? | The XTC compiler substitutes the enclosing module's qualified name. Optional for the demo. See [Stage 4](runtime-implementation-plan.md#stage-4--compiler-side-default-name-optional-but-high-impact). |
+| 3 | **MDC scope: per-fiber, per-service, or per-call?** | Recommend per-fiber if the runtime gives us fiber-locals; per-service-instance otherwise as a known-incorrect-for-concurrency v0 fallback. Decision required *before* `RTMDC.java` is written. See [Stage 3.1](runtime-implementation-plan.md#31--decide-the-scope). |
+| 5 | **Throwable promotion: where does it happen, and who wins when both are supplied?** | `MessageFormatter.format` does the promotion; explicit `cause=` always wins over a promoted-from-args throwable. See [Stage 2.1](runtime-implementation-plan.md#21--real-messageformatterformat). |
+| 9 | **Where does the runtime live?** | `javatools_jitbridge/src/main/java/org/xtclang/_native/logging/`, registered from `nMainInjector.addNativeResources()`. See [Stage 1.1–1.5](runtime-implementation-plan.md#stage-1--native-side-make-inject-logger-resolve). |
+| 10 | **Bootstrap: do we need a tiny native fallback for early-runtime logging before `Console` is registered?** | Yes — `RTConsoleLogSink.java` falls back to `System.err.println` if `Console` is not yet available. See [Stage 1.2](runtime-implementation-plan.md#12--rtconsolelogsinkjava). |
 
 ---
 
@@ -49,7 +49,7 @@ and wrap it; multi-marker is reachable through the fluent builder. SPI-level
 ### 6. `const` vs `service` for sinks — *resolved*
 
 **Resolution.** `LogSink` is an interface; implementations choose between `const` and
-`service` according to the rule documented in `DESIGN.md` ("Sink type: `const` vs
+`service` according to the rule documented in `design.md` ("Sink type: `const` vs
 `service`"):
 
 - stateless forwarders / pure adapters → `const`
@@ -62,7 +62,7 @@ signature was rejected because it would prohibit the legitimate stateless cases
 `class ConsoleLog` pattern already used in `lib_ecstasy/src/main/x/ecstasy/io/`.
 
 This rule is checked for parity against patterns in `platform/common`,
-`platform/host`, and `lib_xunit_engine` — see DESIGN.md for the citations.
+`platform/host`, and `lib_xunit_engine` — see design.md for the citations.
 
 ### 7. Async / batched sinks
 
@@ -82,7 +82,7 @@ ship in v0 unchanged.
 **Resolution.** Adopted option A — document the pattern, add no API. A host that
 wants a nested container to use a different sink configures the child container's
 injector explicitly to resolve the `("logger", Logger)` key against the alternate
-sink. Pattern documented in `DESIGN.md` § "Per-container sink override". No
+sink. Pattern documented in `design.md` § "Per-container sink override". No
 `lib_logging`-side helper, deliberately: per-container resource overrides are the
 host runtime / injector library's job, not the logging library's.
 
@@ -115,7 +115,7 @@ who own the language semantics, before locking the API.
 
 ### Q-D1. Is "`const` if stateless / `service` if stateful with shared mutable state" the right pattern for an Ecstasy SPI boundary?
 
-We landed on a rule (see DESIGN.md, "Sink type") that lets `LogSink` accept both shapes,
+We landed on a rule (see design.md, "Sink type") that lets `LogSink` accept both shapes,
 mirroring the way `lib_ecstasy/src/main/x/ecstasy/io/ConsoleAppender.x` is a `class`
 while `service ErrorLog` and `service ConsoleExecutionListener` exist elsewhere. The
 alternative is forcing every implementation to be one shape (e.g. `LogSink extends
@@ -180,7 +180,7 @@ visibility to survive injection? If so, should `nMainInjector` grow a
 
 We're maintaining two parallel libraries (`lib_logging` modeled after SLF4J 2.x and
 `lib_slogging` modeled after Go's `slog`) so the design tradeoffs can be evaluated
-side-by-side. See `LIB_LOGGING_VS_LIB_SLOGGING.md` for the comparison and the explicit
+side-by-side. See `lib-logging-vs-lib-slogging.md` for the comparison and the explicit
 list of things we want reviewer feedback on.
 
 **Question:** which API style is a better long-term fit for Ecstasy idioms (services,
@@ -225,15 +225,15 @@ feature scope. Each item is a concrete deliverable with a one-line summary.
 | W-3 | Real `MessageFormatter` | **Done.** Full SLF4J ParameterFormatter parity: `{}` substitution, `\{}` literal escape, `\\{}` double-escape, trailing-throwable promotion (with explicit-cause precedence enforced in `BasicLogger.emit`), defensive `safeToString`. 12 tests in `MessageFormatterTest`. The "stub" claim in earlier docs was stale. |
 | W-4 | Compiler-side default name from module | `@Inject Logger logger;` (no resourceName) should fall back to the enclosing module's qualified name; see plan Stage 4. |
 | W-5 | Async / batched sink (`AsyncLogSink`) | Bounded queue + worker fiber; lives in `lib_logging_logback` not in the base lib. Open question 7. |
-| W-6 | Logback-shaped backend (`lib_logging_logback`) | Configuration-driven sink with per-logger thresholds, multiple appenders, layouts, filters. Sketched in `LOGBACK_INTEGRATION.md`. |
-| W-7 | Native bridge (`RTLogbackSink.java`) | Optional escape hatch wrapping real Logback via `javatools_jitbridge`. Sketched in `NATIVE_BRIDGE.md`. |
+| W-6 | Logback-shaped backend (`lib_logging_logback`) | Configuration-driven sink with per-logger thresholds, multiple appenders, layouts, filters. Sketched in `logback-integration.md`. |
+| W-7 | Native bridge (`RTLogbackSink.java`) | Optional escape hatch wrapping real Logback via `javatools_jitbridge`. Sketched in `native-bridge.md`. |
 | W-8 | Per-container override convenience | Helper for child containers wanting a different sink. Open question 8. |
 | W-9 | Defensive copy of caller-supplied `Object[] arguments` | Open question 11. Decision: B (document, no copy) for v0. Listed here so it's not forgotten if v0 changes. |
 | W-10 | Compiler/tooling lints for log statements | Out of scope for the library; would be an XTC linter feature. Open question 12. |
-| W-11 | Doc cleanup | `DESIGN.md` "What isn't here yet" still lists items that have since landed (RTLogger removed, MessageFormatter partial, tests now exist); `RUNTIME_IMPLEMENTATION_PLAN.md` and `INJECTED_LOGGER_EXAMPLE.md` may reference the now-removed `xRTLogger`/`RTLogger.x`. |
+| W-11 | Doc cleanup | `design.md` "What isn't here yet" still lists items that have since landed (RTLogger removed, MessageFormatter partial, tests now exist); `runtime-implementation-plan.md` and `injected-logger-example.md` may reference the now-removed `xRTLogger`/`RTLogger.x`. |
 
 The same tracking shape will live for `lib_slogging` in
-`LIB_LOGGING_VS_LIB_SLOGGING.md` so reviewers can see the two libraries reach feature
+`lib-logging-vs-lib-slogging.md` so reviewers can see the two libraries reach feature
 parity at the same waterline before we ask "which API do you prefer?"
 
 ### Implementation tiers

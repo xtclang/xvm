@@ -29,7 +29,7 @@ This document:
 
 > Status note: `lib_slogging` is currently a skeleton (interfaces + a TextHandler stub).
 > The SLF4J-shaped library is roughly feature-complete (47 unit tests passing). See
-> `OPEN_QUESTIONS.md` for the explicit tracking list of items still missing on each
+> `open-questions.md` for the explicit tracking list of items still missing on each
 > side; we do not ask reviewers to compare designs until both libraries reach the same
 > waterline.
 
@@ -334,7 +334,7 @@ logger.info("login attempt", [
 ]);
 ```
 
-Multi-marker is what motivated W-1 in `OPEN_QUESTIONS.md`. In slog the
+Multi-marker is what motivated W-1 in `open-questions.md`. In slog the
 question doesn't arise — repeated attrs are the only shape.
 
 ##### Pattern 3 — hierarchical relationships ("BREACH is a kind of SECURITY")
@@ -622,7 +622,7 @@ attribute model needs less surface area.
 
 SLF4J expects `LoggerFactory.getLogger(MyClass.class)` to resolve to a class- or
 module-named logger. `lib_logging` currently delegates that to a future compiler
-change (Stage 4 in `RUNTIME_IMPLEMENTATION_PLAN.md`). Without it, `@Inject Logger`
+change (Stage 4 in `runtime-implementation-plan.md`). Without it, `@Inject Logger`
 gets a fixed-name root logger and you call `.named("...")` to derive children.
 
 slog has no such machinery — there is one process-wide default Logger and you derive
@@ -710,6 +710,18 @@ optional / never the only path. The reasoning, ranked:
    `withAttrs(...)` semantics, *opt in*, gives you the SLF4J win without the
    "everything is implicit" cost.
 
+A third option — **hybrid SLF4J-facade with slog-shaped event model** — is
+worth flagging once but not pushing for v0. Concretely: keep `Logger`,
+`Marker`, `MDC`, the fluent builder; replace the free-form `Object[] arguments`
+on `LogEvent` with a typed `Attr[]`; have `MessageFormatter` resolve `{}`
+placeholders against `attrs` by index, but also have a `JsonLineLogSink`
+render `attrs` directly as a JSON object. SLF4J users get their familiar
+shape; cloud-side JSON pipelines get a clean wire format. The cost is
+strictly more complexity than either pure design — two parallel mental
+models in one library — so we don't recommend it for v0. The right time to
+revisit is after one of the two pure designs is shipping and we know which
+axis we wish we had more of.
+
 Counter-arguments worth taking seriously:
 
 - **Familiarity.** A great deal of Ecstasy's audience comes from JVM, where SLF4J is
@@ -724,7 +736,7 @@ Counter-arguments worth taking seriously:
 
 The recommendation is therefore tentative. We expect to revisit it once the
 reviewers — particularly the XTC language team — weigh in on questions Q-D1 through
-Q-D6 in `OPEN_QUESTIONS.md`.
+Q-D6 in `open-questions.md`.
 
 ---
 
@@ -733,15 +745,15 @@ Q-D6 in `OPEN_QUESTIONS.md`.
 This branch (`lagergren/logging`) contains:
 
 - `lib_logging/` — the SLF4J-shaped library, near-feature-complete (47 unit tests
-  passing). Tracking list of remaining items: `OPEN_QUESTIONS.md` § "SLF4J-style
+  passing). Tracking list of remaining items: `open-questions.md` § "SLF4J-style
   library work not yet implemented".
 - `lib_slogging/` — the slog-shaped library, currently a **skeleton** (interfaces +
   one stub `TextHandler`). Full implementation gated on reviewer feedback on this
   document.
 - This document — the design comparison and the explicit list of reviewer questions.
-- `OPEN_QUESTIONS.md` — the unified question list (all "Q-D*" items added in this PR
+- `open-questions.md` — the unified question list (all "Q-D*" items added in this PR
   call out language-design questions specifically).
-- `DESIGN.md` — the SLF4J-side design, now with the resolved sink-type rule.
+- `design.md` — the SLF4J-side design, now with the resolved sink-type rule.
 
 We do not propose merging until reviewers have weighed in on at least Q-D6 (which
 API shape) and Q-D1 (sink interface convention).

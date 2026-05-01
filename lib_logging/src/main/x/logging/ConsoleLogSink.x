@@ -25,11 +25,11 @@
  * Sinks that *do* hold mutable shared state (e.g. `MemoryLogSink` collecting events,
  * a future `FileLogSink` owning a `Writer`, a future `AsyncLogSink` owning a worker
  * queue) must remain `service`. The rule of thumb is documented in
- * `doc/logging/DESIGN.md` ("Sink type: `const` vs `service`").
+ * `doc/logging/design.md` ("Sink type: `const` vs `service`").
  *
  * Configuration is intentionally minimal: a single `rootLevel` threshold applied to every
  * logger. Per-logger / per-marker filtering is the job of richer sinks (see
- * `doc/logging/LOGBACK_INTEGRATION.md`).
+ * `doc/logging/logback-integration.md`).
  */
 const ConsoleLogSink(Level rootLevel)
         implements LogSink {

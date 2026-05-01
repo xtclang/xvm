@@ -32,7 +32,7 @@
  * **This module is currently a skeleton** — interfaces, the `Logger` const, and stub
  * handlers (`TextHandler`, `NopHandler`, `MemoryHandler`, `JSONHandler`). Full
  * implementation is gated on reviewer feedback in
- * `doc/logging/LIB_LOGGING_VS_LIB_SLOGGING.md` so we don't sink effort into both shapes
+ * `doc/logging/lib-logging-vs-lib-slogging.md` so we don't sink effort into both shapes
  * before deciding which one Ecstasy should adopt.
  *
  * # API / Implementation boundary
@@ -52,8 +52,8 @@
  *
  * # See also
  *
- *      doc/logging/LIB_LOGGING_VS_LIB_SLOGGING.md  — the design comparison document
- *      doc/logging/OPEN_QUESTIONS.md               — list of reviewer questions (Q-D6)
+ *      doc/logging/lib-logging-vs-lib-slogging.md  — the design comparison document
+ *      doc/logging/open-questions.md               — list of reviewer questions (Q-D6)
  *      lib_logging/src/main/x/logging.x            — the SLF4J-shaped sibling library
  */
 module slogging.xtclang.org {

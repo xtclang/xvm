@@ -8,7 +8,7 @@
 > directly in `javatools/.../NativeContainer.java` (`ensureLogger` /
 > `ensureConst`). The reason — collapsing the service-wrapper indirection so
 > per-fiber `MDC` (`SharedContext`) survives injection — is documented as
-> question Q-D5 in `OPEN_QUESTIONS.md`. The stage descriptions below describe
+> question Q-D5 in `open-questions.md`. The stage descriptions below describe
 > the *original* approach for historical context; treat them as background, not
 > as instructions for current work. Stage 4 (compiler-side default name)
 > remains open.
@@ -25,7 +25,7 @@ producing real output on the platform `Console` via the runtime injector. Every 
 here either is on the critical path to that demo, or is needed to call the round trip
 "complete" (parameterized messages actually substitute, MDC actually propagates, etc.).
 
-The doc supersedes `OPEN_QUESTIONS.md` items 1, 2, 3, 5, 9, 10 by prescribing concrete
+The doc supersedes `open-questions.md` items 1, 2, 3, 5, 9, 10 by prescribing concrete
 fixes; the others remain genuinely open.
 
 ## Definition of "demo worthy"
@@ -274,12 +274,12 @@ location in the compiler; the dispatch on type `Logger` is the only special case
 
 #### 4.2 — Document
 
-Update `INJECTED_LOGGER_EXAMPLE.md` and `SLF4J_PARITY.md` to reflect the implicit-
+Update `injected-logger-example.md` and `slf4j-parity.md` to reflect the implicit-
 naming behaviour.
 
 **Done state of Stage 4:** `@Inject Logger logger;` inside `module PaymentService`
 emits lines tagged `PaymentService:`. The cheat sheet in
-`INJECTED_LOGGER_EXAMPLE.md` becomes accurate without `@Inject("PaymentService")`.
+`injected-logger-example.md` becomes accurate without `@Inject("PaymentService")`.
 
 This stage is **optional for the demo**. Without it, callers write
 `@Inject Logger logger; Logger paymentLogger = logger.named("PaymentService");`. With
@@ -292,7 +292,7 @@ The end-to-end test of "demo worthy" is migrating real code.
 #### 5.1 — Pick three files in `~/src/platform`
 
 `kernel/kernel.x`, `auth/OAuthProvider.x`, `host/HostManager.x` are the highest-
-density `console.print($"... Info :")` files. See `PLATFORM_AND_EXAMPLES_ADAPTATION.md`.
+density `console.print($"... Info :")` files. See `platform-and-examples-adaptation.md`.
 
 #### 5.2 — Migrate each
 
@@ -314,24 +314,24 @@ call. The before/after diff is the demo.
 The plan above closes runtime-side gaps. These items remain genuinely unresolved and
 need a decision separately:
 
-- **Multiple markers per event** (`OPEN_QUESTIONS.md` #4). API-level: should we change
+- **Multiple markers per event** (`open-questions.md` #4). API-level: should we change
   `LogEvent.marker: Marker?` to `LogEvent.markers: Marker[]` and update the fluent
   builder to accumulate? Cheap to do now, breaks callers later.
-- **Service vs class for sinks** (`OPEN_QUESTIONS.md` #6). Currently the recommendation
+- **Service vs class for sinks** (`open-questions.md` #6). Currently the recommendation
   is "don't require service"; the question is whether to formalize that in the
   interface signature.
-- **Async / batched sinks** (`OPEN_QUESTIONS.md` #7). Defer to `lib_logging_logback`?
+- **Async / batched sinks** (`open-questions.md` #7). Defer to `lib_logging_logback`?
   Or ship a simple `AsyncLogSink` wrapper here?
-- **Per-container override convenience** (`OPEN_QUESTIONS.md` #8). Probably "no
+- **Per-container override convenience** (`open-questions.md` #8). Probably "no
   helper, document the pattern" — but worth deciding before there are users.
-- **Defensive copy of caller `Object[]`** (`OPEN_QUESTIONS.md` #11). Now that args are
+- **Defensive copy of caller `Object[]`** (`open-questions.md` #11). Now that args are
   frozen-on-the-way-into-the-event for builder calls, the per-level methods (which
   accept caller-supplied arrays) might still see mutation. Decide: copy in
   `BasicLogger.emit` always, or document caller-must-not-mutate.
-- **Lazy logging lambdas** (`LAZY_LOGGING.md`). When do we add the
+- **Lazy logging lambdas** (`lazy-logging.md`). When do we add the
   `info(function String () messageFn, ...)` overloads? Easy to add; question is
   timing.
-- **Structured `keyValues` field on `LogEvent`** (`STRUCTURED_LOGGING.md`). Add now or
+- **Structured `keyValues` field on `LogEvent`** (`structured-logging.md`). Add now or
   with the first sink that consumes them?
 
 ## Recommended sequencing
@@ -362,9 +362,9 @@ platform migration are independent and can land later.
 
 ## What this plan does *not* cover
 
-- The future `lib_logging_logback` module (`LOGBACK_INTEGRATION.md`). That's a
+- The future `lib_logging_logback` module (`logback-integration.md`). That's a
   separate, larger project for a configurable hierarchical backend.
-- The native-Logback bridge approach (`NATIVE_BRIDGE.md`). Documented as feasible but
+- The native-Logback bridge approach (`native-bridge.md`). Documented as feasible but
   not the primary path.
 - Slog-style alternative API (`ALTERNATIVE_DESIGN_SLOG_STYLE.md`). Documented as a
   thinkable alternative but not pursued.

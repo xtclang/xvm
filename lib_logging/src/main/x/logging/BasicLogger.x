@@ -154,7 +154,7 @@ const BasicLogger(String name, LogSink sink, LoggerRegistry? registry)
      */
     void emitWith(Level level, String message, Object[] arguments, Exception? cause,
                   Marker[] markers, Map<String, Object> keyValues) {
-        // v0 policy on `arguments`: no defensive copy. Per `OPEN_QUESTIONS.md` Q11 the
+        // v0 policy on `arguments`: no defensive copy. Per `open-questions.md` Q11 the
         // caller is contractually required not to mutate the array between the return of
         // `info(...)` and any (possibly async) sink consuming the resulting `LogEvent`.
         // Matches SLF4J's posture; `BasicEventBuilder` already freezes its accumulating
