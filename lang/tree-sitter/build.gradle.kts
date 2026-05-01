@@ -534,9 +534,8 @@ abstract class TreeSitterParseTestTask @Inject constructor(
     @get:Optional
     abstract val showTiming: Property<Boolean>
 
-    @get:InputFile
-    @get:Optional
-    abstract val skipListFile: RegularFileProperty
+    @get:InputFiles
+    abstract val skipListFiles: ConfigurableFileCollection
 
     data class ParseResult(val relativePath: String, val success: Boolean, val timeMs: Long)
 
@@ -588,16 +587,19 @@ abstract class TreeSitterParseTestTask @Inject constructor(
         }
 
         // Apply skip list (paths relative to compositeRoot, with `#` comments).
-        // Skipped files fall into two categories tracked in the file: (1)
-        // INTENTIONAL-INVALID — excluded from the XTC reference compile, so
-        // tree-sitter rejecting them is correct; and (2) PARKED — known
-        // grammar gaps deferred to follow-up work.
-        val skipFile = skipListFile.orNull?.asFile
-        val skipPaths: Set<String> = skipFile?.takeIf { it.isFile }?.useLines { lines ->
-            lines.map { it.substringBefore('#').trim() }
-                .filter { it.isNotEmpty() }
-                .toSet()
-        } ?: emptySet()
+        // The skip list is split across two companion files so the real
+        // grammar debt (parked.txt) isn't drowned out by files that are
+        // permanently excluded from the XTC compile (intentional.txt):
+        //   - treeSitterParseSkipList.intentional.txt
+        //   - treeSitterParseSkipList.parked.txt
+        val skipFiles = skipListFiles.files.filter { it.isFile }
+        val skipPaths: Set<String> = skipFiles.flatMap { f ->
+            f.useLines { lines ->
+                lines.map { it.substringBefore('#').trim() }
+                    .filter { it.isNotEmpty() }
+                    .toList()
+            }
+        }.toSet()
         if (skipPaths.isNotEmpty()) {
             val rootPath = rootDir.get()
             val (toCheck, skipped) = xtcFiles.partition { file ->
@@ -611,7 +613,8 @@ abstract class TreeSitterParseTestTask @Inject constructor(
                         staleEntries.sorted().joinToString(", ")
                 )
             }
-            logger.lifecycle("Tree-sitter parse skip list: ${skipped.size} file(s) excluded (see ${skipFile?.name})")
+            val sources = skipFiles.joinToString(", ") { it.name }
+            logger.lifecycle("Tree-sitter parse skip list: ${skipped.size} file(s) excluded (see $sources)")
             xtcFiles = toCheck
         }
 
@@ -739,9 +742,15 @@ val testTreeSitterParse by tasks.registering(TreeSitterParseTestTask::class) {
     val manualTestsDir = File(compositeRoot, "manualTests/src/main/x").takeIf { it.isDirectory }
     libDirs.set(xdkLibDirs + listOfNotNull(manualTestsDir))
 
-    // Skip list of .x files deliberately excluded from the parse sweep -- see
-    // the file's header for the categories (intentional-invalid vs parked).
-    skipListFile.set(layout.projectDirectory.file("treeSitterParseSkipList.txt"))
+    // Skip list of .x files deliberately excluded from the parse sweep.
+    // Two companion files: `intentional.txt` for files permanently excluded
+    // from the XTC compile (archive/, dbTests/, errors.x, etc.) and
+    // `parked.txt` for genuine grammar gaps that we want to fix. Either may
+    // be absent; both are loaded when present.
+    skipListFiles.from(
+        layout.projectDirectory.file("treeSitterParseSkipList.intentional.txt"),
+        layout.projectDirectory.file("treeSitterParseSkipList.parked.txt"),
+    )
 
     // Support filtering via -PtestFiles=pattern (comma-separated patterns)
     fileFilter.set(providers.gradleProperty("testFiles"))
