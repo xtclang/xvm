@@ -14,44 +14,28 @@
 # directory that contains lib_*/ and manualTests/). Blank lines and
 # `#` comments are ignored.
 
-# === C5 — nested angle-bracket function types (LHS fixed) ===
+# reflect.x and generics.x both parse cleanly now -- both removed from
+# this list. The two fixes that closed them out:
 #
-# Both sides now parse. Closing-side via TYPE_GT external scanner
-# (commit d384f2394). Opening-side via splitting the binary shift
-# operators `<<` / `>>` / `>>>` into `seq('<', token.immediate('<'))`
-# (etc.) so the lexer never produces a multi-char shift token. With
-# `<<` no longer a terminal, the lexer naturally emits `<` `<` for
-# `Function<<Int, String>, <Int>>`, and the type_arguments /
-# angle_bracket_type_list rules consume the chars normally. Cost: a
-# 1-element self-conflict on `binary_expression` -- at state
-# `_expression • >` the parser cannot tell from a single lookahead
-# whether `>` opens a precedence-9 comparison, a precedence-10 range,
-# or a precedence-11 shift, so GLR forks and unmatched alternatives
-# die on the second char. Sweep stays at 872/872.
+# 1. C5 LHS via split shift operators: `<<` / `>>` / `>>>` are emitted
+#    as `seq('<', token.immediate('<'))` etc. so the lexer never
+#    produces a multi-char shift token. This unblocks the LHS of
+#    `Function<<Int, String>, <Int>> f = ...`. Closing side already
+#    handled by the TYPE_GT external scanner (commit d384f2394). Cost:
+#    a 1-element self-conflict on `binary_expression`.
 #
-# Note: assignment shifts (`<<=` / `>>=` / `>>>=`) are deliberately
-# NOT split. The lexer's longest-match rule still produces them as
-# single 3-char tokens (since `<<` is no longer a terminal, the
-# `<<=` DFA path is the only multi-char match starting with two
-# `<`s). Splitting them would create an LALR(1) ambiguity at
-# `_expression • <` between the assignment and binary-shift paths
-# (verified on a discarded attempt -- the validator reported a 5-way
-# conflict spanning assignment_expression, binary_expression,
-# unary_expression, call_expression, async_call_expression).
+# 2. Template interpolation expressions can span multiple physical
+#    lines via the parent multiline template's `|` continuation. The
+#    scanner now also handles trailing whitespace before the closing
+#    `}` of an interpolation -- forms like `$"{y } abc"` work -- and
+#    emits a MULTILINE_CONTINUATION extras token covering `\n + hspace
+#    + |` when persistent state shows we're inside a multiline-template
+#    interpolation expression (depth counter bumped on
+#    MULTILINE_EXPR_START, popped on TEMPLATE_EXPR_END). Without this
+#    the `|` got lexed as bitwise-OR, breaking method chains like
+#    `{method.as(Type).\n   |   invoke()}`.
 #
-# generics.x parses cleanly and is removed from this list.
-#
-# reflect.x stays parked: the C5 LHS errors at lines 31-32 are gone,
-# but a previously-masked, unrelated bug surfaces at lines 193+. The
-# parser inside a template interpolation `{f2 } -> {f2 ()}` greedily
-# commits to a lambda `f2 -> {f2 ()}` whose body block consumes the
-# `}` that should have closed the first interpolation. Minimal
-# repro: `console.print($"x = {y } -> {y ()}");`. Fix likely needs
-# either a higher precedence on the `_template_expr_end` reduction,
-# or a conflict declaration that keeps the
-# interpolation-end-vs-block-start interpretation alive.
-
-manualTests/src/main/x/reflect.x
+# Sweep is at 873/873.
 
 # === callTests.x — bare-ident + typed-decl in tuple_assignment ===
 #
