@@ -402,9 +402,68 @@ jobs:
                   ZIP_FILE="${{ steps.artifact.outputs.zip-file }}"
                   XML_ID="${{ steps.artifact.outputs.xml-id }}"
                   CHANNEL="${{ steps.artifact.outputs.release-channel }}"
+                  PUBLISH_VERSION="${{ steps.artifact.outputs.publish-version }}"
                   RESPONSE_FILE="$RUNNER_TEMP/jetbrains-upload-response.json"
 
+                  # Sanity-check what the build actually baked into plugin.xml. Marketplace
+                  # derives the upload version from the ZIP's META-INF/plugin.xml, NOT from
+                  # any form field, so a mismatch here means the build produced a stale or
+                  # bare-versioned ZIP and any "already contains version" response from
+                  # Marketplace is a real failure (silent regression) rather than an
+                  # idempotent re-publish. Fail fast before touching the API.
+                  TMP_EXTRACT=$(mktemp -d)
+                  trap 'rm -rf "$TMP_EXTRACT"' EXIT
+                  unzip -q "$ZIP_FILE" -d "$TMP_EXTRACT"
+                  INNER_JAR=$(find "$TMP_EXTRACT" -path '*/lib/intellij-plugin-*.jar' \
+                      -not -name '*searchableOptions*' | head -1)
+                  if [ -z "$INNER_JAR" ] || [ ! -f "$INNER_JAR" ]; then
+                      echo "❌ Could not locate inner plugin JAR in $ZIP_FILE — refusing to publish."
+                      echo "   Expected: */lib/intellij-plugin-*.jar (excluding *searchableOptions*)"
+                      echo ""
+                      echo "ZIP top-level layout:"
+                      ( cd "$TMP_EXTRACT" && find . -maxdepth 4 -type f | sort | head -40 )
+                      echo ""
+                      echo "This usually means the ZIP layout produced by the IntelliJ"
+                      echo "Platform Gradle Plugin changed (filename pattern, lib/ path,"
+                      echo "or sandbox structure). Update the find expression above to"
+                      echo "match the new layout before re-running."
+                      exit 1
+                  fi
+                  ZIP_PLUGIN_VERSION=$(unzip -p "$INNER_JAR" META-INF/plugin.xml 2>/dev/null \
+                      | sed -n 's|.*<version>\([^<]*\)</version>.*|\1|p' | head -1)
+                  if [ -z "$ZIP_PLUGIN_VERSION" ]; then
+                      echo "❌ Could not extract <version> from plugin.xml — refusing to publish."
+                      echo "   inner JAR: $INNER_JAR"
+                      echo ""
+                      echo "JAR contents (top 40 entries):"
+                      unzip -l "$INNER_JAR" 2>/dev/null | head -40
+                      echo ""
+                      echo "META-INF/plugin.xml contents (first 80 lines):"
+                      unzip -p "$INNER_JAR" META-INF/plugin.xml 2>/dev/null | head -80 \
+                          || echo "  (META-INF/plugin.xml not present in this JAR)"
+                      exit 1
+                  fi
+                  if [ "$ZIP_PLUGIN_VERSION" != "$PUBLISH_VERSION" ]; then
+                      echo "❌ Plugin ZIP version mismatch — refusing to publish."
+                      echo "   metadata publishVersion : $PUBLISH_VERSION"
+                      echo "   plugin.xml <version>    : $ZIP_PLUGIN_VERSION"
+                      echo "   inner JAR               : $INNER_JAR"
+                      echo ""
+                      echo "The CI build that produced this artifact did not bake the"
+                      echo "timestamped publish version into plugin.xml. Inspect the"
+                      echo "main build's :lang:intellij-plugin:patchPluginXml step and"
+                      echo "ensure -PenablePublish=true plus -Pjetbrains.publish.suffix"
+                      echo "are passed for every Gradle invocation that re-runs"
+                      echo "buildPlugin. Aborting before Marketplace upload — uploading"
+                      echo "the bare base version would collide with the existing"
+                      echo "0.4.4-SNAPSHOT entry on Marketplace."
+                      exit 1
+                  fi
+
                   echo "🚀 Publishing IntelliJ plugin to JetBrains Marketplace alpha..."
+                  echo "   xmlId   : $XML_ID"
+                  echo "   channel : $CHANNEL"
+                  echo "   version : $PUBLISH_VERSION"
                   if curl --fail-with-body --silent --show-error \
                     -H "Authorization: Bearer $JETBRAINS_TOKEN" \
                     -F "xmlId=$XML_ID" \
@@ -416,9 +475,19 @@ jobs:
                   else
                       STATUS=$?
                       RESPONSE=$(cat "$RESPONSE_FILE" 2>/dev/null || true)
-                      if [[ "$RESPONSE" == *"already contains version"* ]]; then
-                          echo "ℹ️ JetBrains Marketplace already has this exact plugin version in channel '$CHANNEL'."
+                      # Treat the response as idempotent ONLY if Marketplace explicitly
+                      # references the version we just tried to upload. The looser
+                      # substring match used previously (any "already contains version"
+                      # message) silently masked a real regression where buildPlugin
+                      # re-patched plugin.xml with the bare base version after the main
+                      # build had staged the timestamped ZIP — Marketplace then said the
+                      # bare version already existed, the script declared success, and
+                      # no new alpha version landed for several days.
+                      if [[ "$RESPONSE" == *"already contains version"*"$PUBLISH_VERSION"* ]]; then
+                          echo "ℹ️ JetBrains Marketplace already has version '$PUBLISH_VERSION' in channel '$CHANNEL'."
                           echo "ℹ️ Continuing so GitHub release assets can still be updated for this CI artifact."
+                          echo "Marketplace response:"
+                          echo "$RESPONSE"
                       else
                           echo "❌ JetBrains Marketplace upload failed"
                           [ -n "$RESPONSE" ] && echo "$RESPONSE"

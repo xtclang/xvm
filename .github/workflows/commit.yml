@@ -384,11 +384,20 @@ jobs:
                   echo "release-channel=$RELEASE_CHANNEL" >> $GITHUB_OUTPUT
                   echo "🔖 IntelliJ Marketplace publish version: $PUBLISH_VERSION"
 
+            # NOTE: We deliberately do NOT cache lang/.intellijPlatform/ides via
+            # actions/cache. ~1 GB per IDE distribution would eat a meaningful chunk
+            # of the 10 GB per-repo cache budget that's far more valuable for PR
+            # builds and Gradle/dep caches. The verifier only needs the IDE on the
+            # rare lang/-changed run (PR validation or master publish), and the
+            # IntelliJ Platform Gradle Plugin will redownload it on demand. Slower
+            # by ~1-2 minutes on those runs, but it doesn't displace the caches we
+            # actually rely on for everything else.
             - name: Build the XDK and create a distribution
               shell: bash
               env:
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
                   ENABLE_INTELLIJ_RELEASE_BUILD: ${{ matrix.os == 'ubuntu-latest' && steps.publish-flags.outputs.effective == 'true' }}
+                  ENABLE_INTELLIJ_VERIFY: ${{ matrix.os == 'ubuntu-latest' && steps.publish-flags.outputs.validate-lang == 'true' }}
                   ENABLE_SNAPSHOT_BUNDLE_BUILD: ${{ matrix.os == 'ubuntu-latest' && ((github.ref == 'refs/heads/master' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.publish-snapshots == true || github.event.inputs.publish-snapshots == 'true'))) }}
                   ORG_GRADLE_PROJECT_githubUsername: ${{ github.actor }}
                   ORG_GRADLE_PROJECT_githubPassword: ${{ secrets.GITHUB_TOKEN }}
@@ -430,13 +439,30 @@ jobs:
                     BUILD_PROPS="$BUILD_PROPS -Porg.xtclang.publish.snapshotBundleRepo=$SNAPSHOT_REPO_DIR"
                 fi
 
+                # IntelliJ plugin handling. There is exactly one place in CI that
+                # runs :lang:intellij-plugin:verifyPlugin: this main Gradle invocation.
+                # verifyPlugin depends on buildPlugin (which depends on patchPluginXml),
+                # so re-running verifyPlugin in a separate Gradle invocation rewrites
+                # lang/intellij-plugin/build/distributions/intellij-plugin-*.zip with
+                # whatever properties that second invocation sees -- which is exactly
+                # how a prior CI shape (a standalone "Verify IntelliJ plugin
+                # compatibility" step that did not pass -PenablePublish) silently
+                # clobbered the timestamped Marketplace ZIP with the bare base
+                # version. Keeping verification colocated with the build means the
+                # staged distribution and the verified distribution are always the
+                # same artifact, by construction.
                 if [ "${ENABLE_INTELLIJ_RELEASE_BUILD}" = "true" ]; then
-                    echo "🔌 Building IntelliJ release-grade plugin in main CI build"
+                    echo "🔌 Building release-grade IntelliJ plugin and running verifyPlugin in main CI build"
                     echo "   Reason: ${{ steps.publish-flags.outputs.reason }}"
                     BUILD_TASKS="$BUILD_TASKS :lang:intellij-plugin:buildSearchableOptions :lang:intellij-plugin:buildPlugin :lang:intellij-plugin:verifyPlugin"
                     BUILD_PROPS="$BUILD_PROPS -PincludeBuildLang=true -PincludeBuildAttachLang=true -PenablePublish=true -Pjetbrains.publish.suffix=${{ steps.intellij-version.outputs.suffix }} -Plsp.buildSearchableOptions=true"
+                elif [ "${ENABLE_INTELLIJ_VERIFY}" = "true" ]; then
+                    echo "🔌 Running IntelliJ plugin verifier in main CI build (no Marketplace publication for this run)"
+                    echo "   Reason: ${{ steps.publish-flags.outputs.validate-lang-reason }}"
+                    BUILD_TASKS="$BUILD_TASKS :lang:intellij-plugin:verifyPlugin"
+                    BUILD_PROPS="$BUILD_PROPS -PincludeBuildLang=true -PincludeBuildAttachLang=true"
                 elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-                    echo "⏭️ Not building IntelliJ plugin"
+                    echo "⏭️ Not building or verifying IntelliJ plugin"
                     echo "   Reason: ${{ steps.publish-flags.outputs.reason }}"
                 fi
 
@@ -522,58 +548,6 @@ jobs:
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                   echo "🎉 ALL LANG VALIDATION COMPLETE"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-            # Cache the IntelliJ IDE distributions used by the IntelliJ Platform
-            # Gradle Plugin. Keyed on libs.versions.toml so an IDE version bump
-            # forces a fresh download. ~1 GB per cached IDE; reused across runs
-            # by both buildPlugin/runIde and the verifyPlugin step below.
-            - name: Cache IntelliJ IDE distributions
-              if: |
-                  success() &&
-                  matrix.os == 'ubuntu-latest' &&
-                  steps.publish-flags.outputs.validate-lang == 'true'
-              uses: actions/cache@v4
-              with:
-                  path: lang/.intellijPlatform/ides
-                  key: intellij-ides-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
-                  restore-keys: |
-                      intellij-ides-${{ runner.os }}-
-
-            - name: Skip IntelliJ plugin verifier (no lang validation triggered)
-              if: |
-                  success() &&
-                  matrix.os == 'ubuntu-latest' &&
-                  steps.publish-flags.outputs.validate-lang != 'true'
-              run: |
-                  echo "⏭️ Skipping IntelliJ Plugin Verifier"
-                  echo "Reason: ${{ steps.publish-flags.outputs.validate-lang-reason }}"
-
-            # Run JetBrains Plugin Verifier against every IDE build matching
-            # the plugin's declared compatibility range (since-build "261"+).
-            # Catches binary-incompat regressions (removed APIs, missing classes,
-            # signature changes) BEFORE publication, not after users hit them.
-            # The verifier failure level in lang/intellij-plugin/build.gradle.kts
-            # is set so this fails on COMPATIBILITY_PROBLEMS / INVALID_PLUGIN /
-            # MISSING_DEPENDENCIES; deprecated/experimental API touches stay warnings.
-            - name: Verify IntelliJ plugin compatibility
-              if: |
-                  success() &&
-                  matrix.os == 'ubuntu-latest' &&
-                  steps.publish-flags.outputs.validate-lang == 'true'
-              shell: bash
-              env:
-                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
-              run: |
-                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
-                  LANG_OPTS="-PincludeBuildLang=true -PincludeBuildAttachLang=true"
-
-                  echo ""
-                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                  echo "🔌 INTELLIJ PLUGIN VERIFIER"
-                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:intellij-plugin:verifyPlugin
-                  echo "✅ Plugin Verifier: PASSED"
 
             - name: Upload Plugin Verifier reports
               if: |
