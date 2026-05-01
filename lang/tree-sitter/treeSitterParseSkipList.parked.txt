@@ -48,99 +48,29 @@
 #    (block_comment) start tokens, which the stricter first-char
 #    class disambiguates. Cost: zero new conflicts, no scanner work.
 #
-# Sweep is at 875/875 with callTests.x still parked.
-
-# === callTests.x — bare-ident + typed-decl in tuple_assignment ===
+# 4. callTests.x: `(i1, Int i2) = testMultiReturns(0);` -- mixed
+#    bare-ident + typed-decl in tuple_assignment. Closed by
+#    combining (a) an external-scanner TUPLE_ASSIGN_LPAREN token
+#    that peeks past balanced `(...)` for `=` and forces LR commit
+#    to tuple_assignment at the `(` shift, with (b) narrowing the
+#    bare-element alt of `tuple_assignment_element` from the full
+#    `prec.dynamic(1, $._expression)` to the explicit shape
+#    `choice($.identifier, $.member_expression, $.index_expression)`.
+#    The narrow alt is the key that makes the prior parked attempt
+#    (TUPLE_ASSIGN_LPAREN alone) finally work -- with full
+#    `_expression` available, typed elements like `UInt8 left` were
+#    losing to a failing _expression parse (no backtrack once GLR's
+#    container-level fork is suppressed by the scanner). Restricting
+#    the bare alt to the three node shapes that actually appear as
+#    bare LHS slots in real code (single ident, `this.foo` chain,
+#    `xs[i]` subscript) lets the typed alt win cleanly when present
+#    while still accepting all observed bare-ident cases. Scanner
+#    additionally has to skip leading whitespace via
+#    `lexer->advance(skip=true)` (tree-sitter doesn't auto-skip
+#    extras before invoking external scanners) AND must guard against
+#    eating the hspace after a `TODO` keyword by checking
+#    `!valid_symbols[TODO_FREEFORM_*]` -- otherwise it consumes the
+#    whitespace the TODO scanner needs for `is_hspace(peek)` and
+#    breaks ~16 files with `TODO foo bar` text. Sweep 876/876.
 #
-# Failing shape: `(i1, Int i2) = testMultiReturns(0);` -- a tuple
-# assignment whose first element is a bare existing-variable
-# identifier (`i1` was declared earlier) and whose second is a fresh
-# typed declaration (`Int i2`). The grammar's
-# `tuple_assignment_element` alternation accepts both the typed form
-# (`Type identifier`) and bare expressions (`$._expression`), so both
-# elements *should* match.
-#
-# However, GLR consistently commits to the alternative interpretation:
-# `(i1, Int i2)` parses as a `tuple_type` (with `i1` read as a
-# type_name and `Int i2` as a typed tuple_type_element), making the
-# whole line a `variable_declaration` with `(i1, Int i2)` as the type
-# and `testMultiReturns` as the variable name -- which then ERRORs
-# on `=`.
-#
-# Tried (none worked):
-#   - `prec(2)` on `tuple_assignment` itself
-#   - `prec.dynamic(1)` on the `$._expression` alt of `tuple_assignment_element`
-#   - 4-way conflict adding `_for_tuple_destructure_element`
-#   - `prec.dynamic(10)` on the entire `tuple_assignment_element` rule
-#   - `prec.dynamic(10, prec(2, ...))` on the entire `tuple_assignment` rule
-#     (parse time tripled, confirming GLR explored more paths, but
-#     the result was unchanged -- prec.dynamic is not consulted at
-#     the deterministic-choice point)
-#   - `prec.dynamic(-1)` on `tuple_type_element` to disprefer it
-#     when GLR has tuple_assignment_element alive in parallel:
-#     parse time went up (more paths explored) but the deterministic
-#     LALR commit to `variable_declaration` was unchanged.
-#   - explicit `[$.tuple_assignment, $.variable_declaration]` conflict
-#     -> tree-sitter reports "unnecessary conflict"
-#   - explicit `[$.tuple_assignment, $.tuple_type]` and
-#     `[$.tuple_assignment, $.parenthesized_type]` conflicts
-#     -> both reported as "unnecessary conflicts"
-#   - external-scanner-emitted TUPLE_ASSIGN_LPAREN token: scanner
-#     peeks past balanced `(...)` for `=` (not `==`/`=>`) before
-#     `;`/`{`/EOF and requires at least one `,` at depth 1 before
-#     emitting; grammar starts `tuple_assignment` with the external
-#     token. The scanner DID emit correctly for the target shape, but
-#     forcing the LR parser to commit to `tuple_assignment` at the `(`
-#     shift broke 4+ files in the existing sweep AND the lsp-server
-#     test-cases for typed/wildcard/annotated tuple_assignment elements
-#     -- e.g. `(UInt8 left, UInt8 digit) = this /% 10;` and
-#     `(_, Int idx, _) = split();`. The interaction is with the
-#     `prec.dynamic(1, $._expression)` bias on the `_expression` alt
-#     of `tuple_assignment_element`, which was added precisely to make
-#     bare-ident-first cases like `(i1, Int i2) = ...` win. With the
-#     external token suppressing GLR's container-level fork, the
-#     `_expression` bias starts winning even for typed elements
-#     (`UInt8 left` -> tries to parse as `_expression`, fails on the
-#     two-token shape, can't backtrack to the typed alt). Reverting
-#     the prec.dynamic(1) regresses the wildcard cases too. The
-#     external-token approach is incompatible with the current
-#     `tuple_assignment_element` precedence structure; closing this
-#     gap probably requires a structural rewrite of the element
-#     alternation alongside the scanner.
-#
-# Diagnostic insight from the "unnecessary conflict" warnings:
-# tree-sitter's LALR(1) generator never sees a generation-time
-# conflict between these container-level rules. It commits to
-# `variable_declaration` (with `(...)` as a tuple_type type_expression)
-# deterministically when seeing `(` at statement start. The
-# element-level conflict declarations and prec.dynamic biases never
-# get a chance to apply because the container-level decision was
-# already made.
-#
-# Working cases (for reference -- show what *does* parse correctly):
-#   - `(String s, Int i) = expr;` -- both elements explicitly typed,
-#     so first-element shape commits the parser to tuple_assignment
-#     before any GLR ambiguity.
-#   - `(Int? i1N, Int i2N) = expr;` -- first element typed with `?`
-#     suffix, same reason.
-#   - `(n, c) = name();` -- bare-ident-only, parses as
-#     `assignment_expression` (left = `tuple_expression`).
-#   - `(Int bucketCount, this.growAt) = ...;` -- typed first, member-
-#     access second; first-element shape disambiguates.
-#   - `(_, Int idx) = ...;` -- wildcard-first, typed-second; the
-#     `wildcard` alt commits early enough for typed alts to win on
-#     subsequent elements.
-#   - `(@Future Int v1, @Future Int v2) = ...;` -- annotated typed
-#     elements; first-element typed-form commits the parser.
-#
-# The fix likely requires either:
-#   (a) a structural rewrite that disambiguates earlier (e.g. lift the
-#       `(bare_ident, Type ident, ...) = ...` shape into its own
-#       container that the LALR generator can statically distinguish);
-#   (b) external-scanner TUPLE_ASSIGN_LPAREN combined with a rewrite
-#       of `tuple_assignment_element` that drops the `prec.dynamic(1,
-#       $._expression)` bias -- the latter is incompatible with the
-#       former because it makes typed elements lose to the failing
-#       expression alt once GLR's container-level fork is suppressed.
-
-manualTests/src/main/x/jit/jit_tests/basic/callTests.x
+# Sweep is at 876/876 with no parked entries.
