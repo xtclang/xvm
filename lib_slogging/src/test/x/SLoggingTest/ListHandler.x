@@ -12,7 +12,7 @@ import slogging.Record;
  *
  * Modelled as a `service` because it carries mutable state (the records list) shared
  * across the fiber-under-test and the assertion code. See
- * `doc/logging/design.md` ("Sink type: `const` vs `service`").
+ * `doc/logging/design/design.md` ("Sink type: `const` vs `service`").
  */
 service ListHandler
         implements Handler {

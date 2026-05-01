@@ -199,9 +199,9 @@ we do things."
 
 The only thing missing for full first-class status is the runtime-side resource
 registration (`@Inject Logger` actually resolving), which is the next chunk of work
-described in `open-questions.md` items 1, 2, and 9.
+described in `../open-questions.md` items 1, 2, and 9.
 
 
 ---
 
-_See also [README.md](README.md) for the full doc index and reading paths._
+_See also [../README.md](../README.md) for the full doc index and reading paths._

@@ -7,7 +7,7 @@
  * `LogSink` is more like the Logback `Appender`: a single emission target with its own
  * level filter. Mapping multiple `LogSink`s onto one logger (Logback's "appender attached
  * to logger" model) is the job of a future composite sink — see
- * `doc/logging/logback-integration.md`.
+ * `doc/logging/future/logback-integration.md`.
  *
  * The Service-Provider Interface for logging backends. A `LogSink` is the only thing a
  * `Logger` ever talks to; everything else (level checks, message formatting, marker
@@ -48,7 +48,7 @@
  *
  * The full rule, with reference examples from the platform/xunit codebases (e.g.
  * `service ConsoleExecutionListener`, `service ErrorLog`), is in
- * `doc/logging/design.md` under "Sink type: `const` vs `service`".
+ * `doc/logging/design/design.md` under "Sink type: `const` vs `service`".
  */
 interface LogSink {
 

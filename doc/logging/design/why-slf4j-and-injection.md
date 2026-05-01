@@ -325,4 +325,4 @@ This is what "instantly familiar to all SLF4J users *and* better" looks like.
 
 ---
 
-_See also [README.md](README.md) for the full doc index and reading paths._
+_See also [../README.md](../README.md) for the full doc index and reading paths._

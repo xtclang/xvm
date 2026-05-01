@@ -5,7 +5,7 @@ import logging.Marker;
 
 /**
  * Test-only sink: counts events by level. Useful as a reference example for users
- * writing their own custom sinks — see `doc/logging/custom-sinks.md`.
+ * writing their own custom sinks — see `doc/logging/usage/custom-sinks.md`.
  */
 service CountingSink
         implements LogSink {

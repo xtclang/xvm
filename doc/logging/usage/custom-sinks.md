@@ -42,7 +42,7 @@ that field to be `Passable`, so every implementation must be either `immutable` 
 If you find yourself reaching for `synchronized` blocks, you want a `service`. If your
 sink is "given a `Console`/`Writer`/`Function`, format and forward" — you want a
 `const`. The full rule, with reference examples from the wider XDK / platform
-ecosystem, is in `design.md` ("Sink type: `const` vs `service`").
+ecosystem, is in `../design/design.md` ("Sink type: `const` vs `service`").
 
 ## A worked example: a counting sink
 
@@ -69,7 +69,7 @@ service CountingLogSink
 }
 ```
 
-Wiring it up — see `open-questions.md` for the runtime side; for now, you can construct
+Wiring it up — see `../open-questions.md` for the runtime side; for now, you can construct
 a `BasicLogger` directly:
 
 ```ecstasy
@@ -253,7 +253,7 @@ service JsonLineLogSink
 
     @Override
     void log(LogEvent event) {
-        // See structured-logging.md for the full sketch — emits one JSON object per line.
+        // See ../usage/structured-logging.md for the full sketch — emits one JSON object per line.
     }
 }
 ```
@@ -292,4 +292,4 @@ service JsonLineLogSink
 
 ---
 
-_See also [README.md](README.md) for the full doc index and reading paths._
+_See also [../README.md](../README.md) for the full doc index and reading paths._

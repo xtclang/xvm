@@ -207,7 +207,7 @@ saying it matters.
 
 ## Concrete next step
 
-Add the lambda overloads to `Logger.x` and `BasicLogger.x`. Update `ecstasy-vs-java-examples.md`
+Add the lambda overloads to `Logger.x` and `BasicLogger.x`. Update `../usage/ecstasy-vs-java-examples.md`
 with a side-by-side showing:
 
 ```kotlin
@@ -245,4 +245,4 @@ This is consistent with picking Option 1 and only revisiting if data demands it.
 
 ---
 
-_See also [README.md](README.md) for the full doc index and reading paths._
+_See also [../README.md](../README.md) for the full doc index and reading paths._

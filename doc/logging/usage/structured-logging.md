@@ -99,7 +99,7 @@ break when richer sinks arrive.
 
 The `LogEvent` const should grow a `keyValues` field analogous to SLF4J's
 `getKeyValuePairs()`. The current stub does not have it; this is one of the v0.1 follow-ups
-tracked in `open-questions.md`. The intended shape:
+tracked in `../open-questions.md`. The intended shape:
 
 ```ecstasy
 const LogEvent(
@@ -201,7 +201,7 @@ changes, and the LogSink choice on the deployment side.
 
 The bigger story — encoder/appender wiring, log aggregator integration — is handled by
 the structured sink (`JsonLineLogSink` in the simple case, a future Logback-bridge sink
-in the complex case). See `logback-integration.md`.
+in the complex case). See `../future/logback-integration.md`.
 
 ## What to build first vs. later
 
@@ -219,4 +219,4 @@ is already shaped to support it without changes.
 
 ---
 
-_See also [README.md](README.md) for the full doc index and reading paths._
+_See also [../README.md](../README.md) for the full doc index and reading paths._

@@ -622,7 +622,7 @@ attribute model needs less surface area.
 
 SLF4J expects `LoggerFactory.getLogger(MyClass.class)` to resolve to a class- or
 module-named logger. `lib_logging` currently delegates that to a future compiler
-change (Stage 4 in `runtime-implementation-plan.md`). Without it, `@Inject Logger`
+change (Stage 4 in `future/runtime-implementation-plan.md`). Without it, `@Inject Logger`
 gets a fixed-name root logger and you call `.named("...")` to derive children.
 
 slog has no such machinery — there is one process-wide default Logger and you derive
@@ -753,7 +753,7 @@ This branch (`lagergren/logging`) contains:
 - This document — the design comparison and the explicit list of reviewer questions.
 - `open-questions.md` — the unified question list (all "Q-D*" items added in this PR
   call out language-design questions specifically).
-- `design.md` — the SLF4J-side design, now with the resolved sink-type rule.
+- `design/design.md` — the SLF4J-side design, now with the resolved sink-type rule.
 
 We do not propose merging until reviewers have weighed in on at least Q-D6 (which
 API shape) and Q-D1 (sink interface convention).

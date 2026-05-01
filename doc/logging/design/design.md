@@ -51,7 +51,7 @@ static Logger PaymentLogger = logger.named("payments");
 This mirrors SLF4J's `LoggerFactory.getLogger(MyClass.class)` idiom one-to-one, and
 keeps the injector's resource table as the single registry of allowed injections —
 no type-only wildcard fallback, no special-case for `Logger`. See
-`runtime-implementation-plan.md` Stage 1.4 for the full rationale.
+`../future/runtime-implementation-plan.md` Stage 1.4 for the full rationale.
 
 ## API surface
 
@@ -171,7 +171,7 @@ service/const distinction makes the intent explicit at the type level — and is
 by the compiler whenever a sink is held by a `const` such as `BasicLogger`.
 
 Open question: is one-interface-with-two-allowed-impl-shapes the right call, or should
-`LogSink` split into two interfaces? See `open-questions.md` (item 6).
+`LogSink` split into two interfaces? See `../open-questions.md` (item 6).
 
 ## Future: `lib_logging_logback`
 
@@ -185,7 +185,7 @@ A separate module providing a configuration-driven sink. Reads a config tree
 - async wrappers.
 
 The whole thing is just a different `LogSink` implementation. User code that already
-worked against `lib_logging` keeps working. Detailed sketch in `logback-integration.md`.
+worked against `lib_logging` keeps working. Detailed sketch in `../future/logback-integration.md`.
 
 ## Native bridge — could we wrap real Logback?
 
@@ -196,7 +196,7 @@ A `RTLogbackSink.java` extending `nService` and registered in
 Logback are already in the version catalog (`lang-slf4j`, `lang-logback`), used by the
 lang tooling.
 
-We don't recommend this as the primary path — see `native-bridge.md` for the full
+We don't recommend this as the primary path — see `../future/native-bridge.md` for the full
 analysis — but it's a feasible escape hatch and worth documenting because it constrains
 the design.
 
@@ -205,7 +205,7 @@ the design.
 Each Ecstasy container has its own injector. Host code that wants a nested
 container to use a *different* sink than the host's default does so by
 configuring the child container's injector explicitly — there is no
-`lib_logging`-side helper for this, by design (see `open-questions.md` item 8).
+`lib_logging`-side helper for this, by design (see `../open-questions.md` item 8).
 
 The pattern matches how every other injectable resource in the XDK is
 overridden per child container:
@@ -247,7 +247,7 @@ helper lives in the host runtime's injector library, not here.
 ## Non-goals (v0)
 
 Items deliberately *not* in scope for the v0 stub of `lib_logging`. Each is
-either tracked as Tier 3 in `open-questions.md` or punted on principle.
+either tracked as Tier 3 in `../open-questions.md` or punted on principle.
 
 - **Distributed tracing context propagation.** `MDC` carries strings; that's
   it. A future tracing library can write its trace ID into MDC and let the
@@ -256,15 +256,15 @@ either tracked as Tier 3 in `open-questions.md` or punted on principle.
 - **Async / batched / buffered sinks.** The `LogSink` contract allows them;
   the default sinks shipped here don't do them. The async wrapper sink lives
   in the future `lib_logging_logback` (or its own follower module), not the
-  base library — `open-questions.md` item 7.
+  base library — `../open-questions.md` item 7.
 - **Configuration file format.** The default sink has one knob (`rootLevel`)
   set at construction. A real config story (XML / programmatic / hot reload)
-  belongs to the future Logback-style backend; `logback-integration.md`
+  belongs to the future Logback-style backend; `../future/logback-integration.md`
   sketches it.
 - **Compile-time logger-name defaulting from the enclosing module.**
   `@Inject Logger logger;` currently gets the fixed-name root logger; users
   derive per-module loggers via `logger.named("...")`. Auto-substitution from
-  the enclosing module's qualified name is W-4 in `open-questions.md` and
+  the enclosing module's qualified name is W-4 in `../open-questions.md` and
   needs an XTC compiler change.
 
 ## What isn't here yet
@@ -272,11 +272,11 @@ either tracked as Tier 3 in `open-questions.md` or punted on principle.
 - **Compiler-side default name from module** — `@Inject Logger logger;` (no
   `resourceName`) currently gets the fixed-name root logger; users derive per-class
   loggers via `logger.named("...")`. The XTC-compiler change to substitute the
-  enclosing module's qualified name is `runtime-implementation-plan.md` Stage 4 and
+  enclosing module's qualified name is `../future/runtime-implementation-plan.md` Stage 4 and
   remains open.
 - **`AsyncLogSink` / `lib_logging_logback` / native bridge** — see
-  `open-questions.md` items 7 (async) and the `logback-integration.md` /
-  `native-bridge.md` follower-module sketches.
+  `../open-questions.md` items 7 (async) and the `../future/logback-integration.md` /
+  `../future/native-bridge.md` follower-module sketches.
 - **Per-container override convenience** — open question 8.
 
 The runtime-side injection wiring lives in
@@ -284,11 +284,11 @@ The runtime-side injection wiring lives in
 `ensureConst`); `BasicLogger` is the `const` returned for `@Inject Logger`. The
 earlier interpose service `xRTLogger.java` was removed in favour of constructing
 `BasicLogger` directly so MDC fiber-locals survive injection (see Q-D5 in
-`open-questions.md`). The real `MessageFormatter` is implemented (12 tests in
+`../open-questions.md`). The real `MessageFormatter` is implemented (12 tests in
 `MessageFormatterTest`). Tests live in `lib_logging/src/test/x/LoggingTest/` (51
 passing as of this commit).
 
 
 ---
 
-_See also [README.md](README.md) for the full doc index and reading paths._
+_See also [../README.md](../README.md) for the full doc index and reading paths._

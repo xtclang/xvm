@@ -14,7 +14,7 @@
  * It accumulates records. The backing array is mutated on every `handle()` call and
  * the same instance is shared across the logger-under-test fiber and the assertion
  * fiber. Same reasoning as `lib_logging`'s `MemoryLogSink`. See
- * `doc/logging/design.md` ("Sink type: `const` vs `service`").
+ * `doc/logging/design/design.md` ("Sink type: `const` vs `service`").
  */
 service MemoryHandler
         implements Handler {
