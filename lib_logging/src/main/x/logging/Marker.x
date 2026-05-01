@@ -29,7 +29,7 @@
  * The default implementation in this module ([BasicMarker]) is intentionally minimal — the
  * in-memory marker shipped here exists primarily so that user code that *uses* markers
  * compiles and runs against the default sink (which mostly ignores them). Real filtering is
- * the job of richer sinks (see `doc/logging/logback-integration.md`).
+ * the job of richer sinks (see `doc/logging/future/logback-integration.md`).
  */
 interface Marker
         extends Freezable

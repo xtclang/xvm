@@ -11,7 +11,7 @@ import logging.Marker;
  * `rootLevel` defaults to `Trace` so by default every emitted event is captured.
  *
  * Modelled as a `service` because it carries mutable state (`events[]`) shared across
- * the fiber-under-test and the assertion code. See `doc/logging/design.md`
+ * the fiber-under-test and the assertion code. See `doc/logging/design/design.md`
  * ("Sink type: `const` vs `service`").
  */
 service ListLogSink

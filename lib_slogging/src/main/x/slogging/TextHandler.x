@@ -21,7 +21,7 @@
  *
  * Same rule as `lib_logging`'s `ConsoleLogSink`: stateless forwarder over `@Inject
  * Console`. Threshold fixed at construction. No accumulation, no shared mutable state.
- * See `doc/logging/design.md` ("Sink type: `const` vs `service`") for the full rule.
+ * See `doc/logging/design/design.md` ("Sink type: `const` vs `service`") for the full rule.
  */
 const TextHandler(Level rootLevel, String groupPrefix)
         implements Handler {

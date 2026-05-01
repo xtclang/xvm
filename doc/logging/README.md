@@ -46,11 +46,11 @@ support material.
 
 ### I'm an SLF4J / Logback Java engineer — show me what changes
 
-1. **[`ecstasy-vs-java-examples.md`](ecstasy-vs-java-examples.md)** — every
+1. **[`usage/ecstasy-vs-java-examples.md`](usage/ecstasy-vs-java-examples.md)** — every
    SLF4J idiom with the equivalent Ecstasy code beside it.
-2. **[`slf4j-parity.md`](slf4j-parity.md)** — exhaustive type-by-type and
+2. **[`usage/slf4j-parity.md`](usage/slf4j-parity.md)** — exhaustive type-by-type and
    method-by-method mapping. Reference, not narrative.
-3. **[`injected-logger-example.md`](injected-logger-example.md)** — a complete
+3. **[`usage/injected-logger-example.md`](usage/injected-logger-example.md)** — a complete
    end-to-end example of `@Inject Logger logger;` with a runnable companion at
    `manualTests/src/main/x/TestLogger.x`.
 
@@ -68,15 +68,15 @@ support material.
 1. **[`open-questions.md`](open-questions.md)** §§ "Questions for the XTC
    language / runtime designers" (Q-D1..Q-D7). Each question is tied to a
    concrete piece of code we wrote and includes the workaround we adopted.
-2. **[`design.md`](design.md)** — `lib_logging` architecture, including the
+2. **[`design/design.md`](design/design.md)** — `lib_logging` architecture, including the
    `const` vs `service` rule for sinks and the per-fiber `MDC` mechanism.
 
 ### I want to write my own sink / handler
 
-1. **[`custom-sinks.md`](custom-sinks.md)** — guide to writing a custom
+1. **[`usage/custom-sinks.md`](usage/custom-sinks.md)** — guide to writing a custom
    `LogSink`, with worked examples (counting, file, hierarchical, tee,
    marker-filtering, JSON-line). Includes the `const` vs `service` decision.
-2. **[`structured-logging.md`](structured-logging.md)** — how SLF4J 2.x
+2. **[`usage/structured-logging.md`](usage/structured-logging.md)** — how SLF4J 2.x
    structured logging maps onto `lib_logging`, with a sketch of a JSON sink.
 
 ### I want to deploy this to GCP / AWS / Azure
@@ -84,14 +84,14 @@ support material.
 1. **[`cloud-integration.md`](cloud-integration.md)** — adapter graphs for the
    three major clouds, with concrete examples and the table-stakes API
    features each cloud product depends on.
-2. **[`logback-integration.md`](logback-integration.md)** — sketch of a future
+2. **[`future/logback-integration.md`](future/logback-integration.md)** — sketch of a future
    configuration-driven binding (Tier 3 work, not in this PR).
-3. **[`native-bridge.md`](native-bridge.md)** — could we instead plug *real
+3. **[`future/native-bridge.md`](future/native-bridge.md)** — could we instead plug *real
    Java Logback* in via the JIT bridge? Investigation, evidence, recommendation.
 
 ### I want to migrate existing Ecstasy code that already does ad-hoc logging
 
-1. **[`platform-and-examples-adaptation.md`](platform-and-examples-adaptation.md)**
+1. **[`usage/platform-and-examples-adaptation.md`](usage/platform-and-examples-adaptation.md)**
    — surveys `~/src/platform` and `~/src/examples` and shows how their
    `console.print($"... Info :")` patterns would migrate.
 
@@ -105,22 +105,22 @@ support material.
 | [`cloud-integration.md`](cloud-integration.md) | Why the API choice is the entry point to cloud observability ecosystems. |
 | [`open-questions.md`](open-questions.md) | Live tracking: open questions, designer questions (Q-D1..Q-D7), W-item parity list, implementation tiers. |
 | **Design (`lib_logging` side)** | |
-| [`design.md`](design.md) | `lib_logging` architecture: types, API↔impl boundary, sink-type rule, MDC mechanism, per-container override. |
-| [`why-slf4j-and-injection.md`](why-slf4j-and-injection.md) | The original rationale for the SLF4J shape and injection-first acquisition. |
-| [`xdk-alignment.md`](xdk-alignment.md) | Alignment with the conventions of other XDK libraries (`lib_ecstasy`, `lib_cli`, etc.). |
+| [`design/design.md`](design/design.md) | `lib_logging` architecture: types, API↔impl boundary, sink-type rule, MDC mechanism, per-container override. |
+| [`design/why-slf4j-and-injection.md`](design/why-slf4j-and-injection.md) | The original rationale for the SLF4J shape and injection-first acquisition. |
+| [`design/xdk-alignment.md`](design/xdk-alignment.md) | Alignment with the conventions of other XDK libraries (`lib_ecstasy`, `lib_cli`, etc.). |
 | **Usage / examples** | |
-| [`injected-logger-example.md`](injected-logger-example.md) | End-to-end working example of `@Inject Logger`. |
-| [`ecstasy-vs-java-examples.md`](ecstasy-vs-java-examples.md) | Per-feature SLF4J Java vs `lib_logging` Ecstasy. |
-| [`slf4j-parity.md`](slf4j-parity.md) | Exhaustive type/method mapping reference. |
-| [`platform-and-examples-adaptation.md`](platform-and-examples-adaptation.md) | Migration survey for existing Ecstasy code bases. |
+| [`usage/injected-logger-example.md`](usage/injected-logger-example.md) | End-to-end working example of `@Inject Logger`. |
+| [`usage/ecstasy-vs-java-examples.md`](usage/ecstasy-vs-java-examples.md) | Per-feature SLF4J Java vs `lib_logging` Ecstasy. |
+| [`usage/slf4j-parity.md`](usage/slf4j-parity.md) | Exhaustive type/method mapping reference. |
+| [`usage/platform-and-examples-adaptation.md`](usage/platform-and-examples-adaptation.md) | Migration survey for existing Ecstasy code bases. |
 | **Extension** | |
-| [`custom-sinks.md`](custom-sinks.md) | How to write a custom `LogSink`, with worked examples. |
-| [`structured-logging.md`](structured-logging.md) | Structured logging dive: key/value pairs, JSON output, fluent builder. |
+| [`usage/custom-sinks.md`](usage/custom-sinks.md) | How to write a custom `LogSink`, with worked examples. |
+| [`usage/structured-logging.md`](usage/structured-logging.md) | Structured logging dive: key/value pairs, JSON output, fluent builder. |
 | **Tier 3 / future work** | |
-| [`logback-integration.md`](logback-integration.md) | Sketch of a configuration-driven Logback-style binding. |
-| [`native-bridge.md`](native-bridge.md) | Wrapping real Java Logback through the JIT bridge — feasibility analysis. |
-| [`lazy-logging.md`](lazy-logging.md) | Kotlin-style lambda emission (`logger.info { "..." }`) — exploration. |
-| [`runtime-implementation-plan.md`](runtime-implementation-plan.md) | Mostly historical: the original runtime-wiring plan. Stages 1–3 have landed; the JIT-side equivalent (Stage 1) is open. |
+| [`future/logback-integration.md`](future/logback-integration.md) | Sketch of a configuration-driven Logback-style binding. |
+| [`future/native-bridge.md`](future/native-bridge.md) | Wrapping real Java Logback through the JIT bridge — feasibility analysis. |
+| [`future/lazy-logging.md`](future/lazy-logging.md) | Kotlin-style lambda emission (`logger.info { "..." }`) — exploration. |
+| [`future/runtime-implementation-plan.md`](future/runtime-implementation-plan.md) | Mostly historical: the original runtime-wiring plan. Stages 1–3 have landed; the JIT-side equivalent (Stage 1) is open. |
 
 ## Where the actual code lives
 

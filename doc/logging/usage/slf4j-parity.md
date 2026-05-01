@@ -13,7 +13,7 @@ scan this once and know everything they need.
 | (no equivalent) | `@Inject Logger logger;` *(injects a single root logger)* |
 
 `@Inject("com.example.foo") Logger logger;` was considered and rejected — see
-`runtime-implementation-plan.md` Stage 1.4 for why. SLF4J doesn't have a
+`../future/runtime-implementation-plan.md` Stage 1.4 for why. SLF4J doesn't have a
 parameterized injection annotation either; `LoggerFactory.getLogger(MyClass.class)`
 is its idiom and `Logger.named(String)` is the direct Ecstasy equivalent.
 
@@ -116,11 +116,11 @@ SLF4J's `{}` placeholder semantics are reproduced verbatim by `MessageFormatter.
 
 - Native injection (`@Inject Logger logger;`). SLF4J has nothing like this; it relies on
   the static factory. Injection makes per-container sink override trivial — see
-  `open-questions.md` for the open piece around per-container overrides.
+  `../open-questions.md` for the open piece around per-container overrides.
 - `Off` level, useful for sink configuration. SLF4J expresses this through level checks
   in `Logger.isEnabledFor(...)`.
 
 
 ---
 
-_See also [README.md](README.md) for the full doc index and reading paths._
+_See also [../README.md](../README.md) for the full doc index and reading paths._

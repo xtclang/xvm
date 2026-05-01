@@ -210,7 +210,7 @@ import org.slf4j.LoggerFactory;
 sink.setRootLevel(log.Debug);
 ```
 
-For a richer per-logger configuration tree see `logback-integration.md` — the future
+For a richer per-logger configuration tree see `../future/logback-integration.md` — the future
 `lib_logging_logback` module would expose a programmatic and/or file-based config API
 analogous to Logback's `JoranConfigurator`.
 
@@ -256,7 +256,7 @@ service CountingSink
 }
 ```
 
-Wire it by replacing the injected default sink — see `custom-sinks.md` for the runtime
+Wire it by replacing the injected default sink — see `../usage/custom-sinks.md` for the runtime
 side of the story.
 
 ## 10. NOP / silent logger (for libraries that opt out)
@@ -348,4 +348,4 @@ The semantics are the same — `MessageFormatter` is a port of SLF4J's reference
 
 ---
 
-_See also [README.md](README.md) for the full doc index and reading paths._
+_See also [../README.md](../README.md) for the full doc index and reading paths._
