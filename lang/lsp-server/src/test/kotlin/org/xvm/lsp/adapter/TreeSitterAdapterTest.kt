@@ -675,6 +675,74 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * Tuple-assignment with `_` wildcard discarding a slot:
+         * `(_, Int index) = collection.binarySearch(...);`. Used
+         * pervasively in `lib_ecstasy/.../maps/*.x` to ignore the
+         * boolean returned alongside the typed slot of interest.
+         * Without the wildcard alternative on `tuple_assignment_element`,
+         * 14 lib_*/ files plus `manualTests/.../maps.x` failed to parse.
+         */
+        @Test
+        @DisplayName("should parse tuple-assignment with wildcard slot")
+        fun shouldParseTupleAssignmentWithWildcard() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        (_, Int index) = binarySearch(0);
+                        (_, Int idx, _) = split();
+                    }
+                    conditional Int binarySearch(Int target) {
+                        return False;
+                    }
+                    (Boolean, Int, Int) split() {
+                        return False, 0, 0;
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Companion to wildcard tuple-assignment: a for-loop iterating
+         * a Map with both keys and values discarded -- `for ((_, _) : map)`.
+         * The `for_tuple_destructure` rule previously required typed
+         * bindings on every element; it now accepts wildcards too.
+         */
+        @Test
+        @DisplayName("should parse for-loop with wildcard tuple destructure")
+        fun shouldParseForLoopWithWildcardTupleDestructure() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        Map<String, Int> map = new ListMap();
+                        Int count = 0;
+                        for ((_, _) : map) {
+                            ++count;
+                        }
+                        for ((_, Int v) : map) {
+                            count += v;
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
          * A missing closing brace should still parse (tree-sitter is error-tolerant),
          * but the resulting tree must contain ERROR or MISSING nodes that get reported
          * as diagnostics with severity ERROR.

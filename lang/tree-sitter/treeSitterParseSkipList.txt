@@ -65,6 +65,37 @@ manualTests/src/main/x/errors.x
 manualTests/src/main/x/reflect.x
 manualTests/src/main/x/generics.x
 
+# === (2c) PARKED — callTests.x: bare-ident + typed-decl in tuple_assignment ===
+#
+# Failing shape: `(i1, Int i2) = testMultiReturns(0);` -- a tuple
+# assignment whose first element is a bare existing-variable identifier
+# (`i1` was declared earlier) and whose second is a fresh typed
+# declaration (`Int i2`). The grammar's `tuple_assignment_element`
+# alternation accepts both the typed form (`Type identifier`) and bare
+# expressions (`$._expression`), so both elements *should* match.
+#
+# However, GLR consistently commits to the alternative interpretation:
+# `(i1, Int i2)` parses as a `tuple_type` (with `i1` read as a type_name
+# and `Int i2` as a typed tuple_type_element), making the whole line a
+# `variable_declaration` with `(i1, Int i2)` as the type and
+# `testMultiReturns` as the variable name -- which then ERRORs on `=`.
+#
+# Tried (none worked):
+#   - `prec(2)` on `tuple_assignment` itself
+#   - `prec.dynamic(1)` on the `$._expression` alt of `tuple_assignment_element`
+#   - 4-way conflict adding `_for_tuple_destructure_element`
+#
+# The fix is likely either a `prec.dynamic` on `tuple_type_element`
+# biased *down* (rather than `tuple_assignment_element` biased *up*),
+# or a structural change so that "bare identifier as first element of
+# `(...)` followed by `=`" forces tuple_assignment.
+#
+# Parked because it's a single-file edge case and the rest of the
+# destructuring fix unblocks 15 of 16 files. Revisit when the next
+# parser-state debugging session has cycles.
+
+manualTests/src/main/x/jit/jit_tests/basic/callTests.x
+
 # === (2b) PARKED — literals.x: multi-gap literal-form coverage ===
 #
 # `literals.x` is a stress-test of every literal form Ecstasy supports.

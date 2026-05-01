@@ -95,6 +95,18 @@ module.exports = grammar({
         [$.tuple_type_element, $.parameter, $.tuple_assignment_element],
         [$.tuple_type_element, $.parameter, $.tuple_assignment_element, $.for_tuple_destructure],
         [$.tuple_type_element, $.parameter, $.conditional_tuple_element],
+        // `_` in tuple positions can be parsed as wildcard in any of three
+        // contexts (tuple_assignment_element, for-tuple destructure element,
+        // or even an _expression — wildcard happens to be a primary
+        // expression in pattern-matching contexts). Tree-sitter needs the
+        // explicit GLR conflict to keep all interpretations alive until the
+        // surrounding `=` / `:` / `;` tells it which container is in play.
+        [$.tuple_assignment_element, $._for_tuple_destructure_element, $._expression],
+        // Same shape with the typed binding form: `(Type x, ...)` in a
+        // for-loop position is ambiguous against tuple_type_element /
+        // parameter / tuple_assignment_element until the closing `)` and
+        // following `:`/`=` disambiguate.
+        [$.tuple_type_element, $.parameter, $.tuple_assignment_element, $._for_tuple_destructure_element],
         // 2-way conflict needed when annotations precede the type (e.g.
         // `(@Future Int v1, @Future Int v2) = ...` — multi-return assignment).
         // The 3-way variant above is not sufficient because some LR states
@@ -712,7 +724,11 @@ module.exports = grammar({
         ),
 
         // Tuple assignment: (Type1 x, Type2 y) = expr; or (x, this.y) = expr;
-        tuple_assignment: $ => seq(
+        // prec(2) to outweigh `variable_declaration`'s typed-form prec(1) when
+        // both could match -- e.g. `(i1, Int i2) = testMultiReturns(0);` reads
+        // as tuple-type variable-decl `(...) name = ...` *or* tuple-assignment;
+        // the latter is what the user wrote.
+        tuple_assignment: $ => prec(2, seq(
             '(',
             $.tuple_assignment_element,
             repeat1(seq(',', $.tuple_assignment_element)),
@@ -720,18 +736,30 @@ module.exports = grammar({
             '=',
             $._expression,
             ';',
-        ),
+        )),
 
-        // Element in tuple assignment: can be typed (Type x), untyped (x, this.y), or val/var.
-        // Annotations are allowed on typed forms; this is how multi-return assignments
-        // like `(@Future Int v1, @Future Int v2) = svc.multiReturn(...)` declare async
-        // futures via tuple destructuring.
-        // Examples: (Type x, Int y), (x, this.y), (val x, Int y), (var Type x, val y),
+        // Element in tuple assignment: can be typed (Type x), untyped (x, this.y),
+        // val/var, or wildcard (_). The wildcard discards the corresponding
+        // tuple slot, used pervasively in lib_ecstasy/.../maps where
+        // `(_, Int index) = contents.binarySearch(...)` ignores the boolean
+        // returned alongside the typed slot of interest.
+        // Annotations are allowed on typed forms; this is how multi-return
+        // assignments like `(@Future Int v1, @Future Int v2) = svc.multiReturn(...)`
+        // declare async futures via tuple destructuring.
+        // Examples: (Type x, Int y), (x, this.y), (_, Int x), (val x, Int y),
         //           (@Future Int v1, @Future Int v2)
         tuple_assignment_element: $ => choice(
             seq(repeat($.annotation), choice('val', 'var'), optional($.type_expression), $.identifier),
             seq(repeat($.annotation), $.type_expression, $.identifier),
-            $._expression,
+            $.wildcard,
+            // prec.dynamic biases the GLR toward this `_expression` reading
+            // when both `tuple_assignment_element` and `tuple_type_element`
+            // are alive: a bare identifier like `i1` in `(i1, Int i2) = ...`
+            // could parse either way (tuple_type with `i1` as a type_name,
+            // or tuple_assignment with `i1` as an existing-variable expr),
+            // and the latter is what the user wrote in `manualTests/.../callTests.x`.
+            // tuple_type_element has no dynamic precedence, so this wins.
+            prec.dynamic(1, $._expression),
         ),
 
         // Statement implementations
@@ -870,12 +898,20 @@ module.exports = grammar({
             repeat(seq(',', repeat($.annotation), $.type_expression, $.identifier, '=', $._expression)),
         ),
 
-        // Tuple destructuring pattern for for-each: ((Type1 name1, Type2 name2))
+        // Tuple destructuring pattern for for-each:
+        //   for ((Type1 name1, Type2 name2) : iter)        -- typed bindings
+        //   for ((_, _) : map)                              -- both wildcards (discard)
+        //   for ((_, Int index) : pairs)                    -- mixed
+        // Each element is either a wildcard `_` or `Type identifier`.
         for_tuple_destructure: $ => seq(
             '(',
-            $.type_expression, $.identifier,
-            repeat1(seq(',', $.type_expression, $.identifier)),
+            $._for_tuple_destructure_element,
+            repeat1(seq(',', $._for_tuple_destructure_element)),
             ')',
+        ),
+        _for_tuple_destructure_element: $ => choice(
+            $.wildcard,
+            seq($.type_expression, $.identifier),
         ),
 
         // Supports conditional declaration: while (Element x := expr)
