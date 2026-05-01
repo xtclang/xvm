@@ -1,5 +1,18 @@
 # Runtime implementation plan — getting to a demo-worthy round trip
 
+> **Status (2026-05): Stages 1–3 are landed.** The runtime now resolves
+> `@Inject Logger logger;` end-to-end; the demo described in §"Definition of
+> 'demo worthy'" works as written. **The plan diverged from this document in one
+> way worth flagging up front:** there is no separate `RTLogger.java` /
+> `xRTLogger`. `BasicLogger` is a `const`, and the runtime constructs it
+> directly in `javatools/.../NativeContainer.java` (`ensureLogger` /
+> `ensureConst`). The reason — collapsing the service-wrapper indirection so
+> per-fiber `MDC` (`SharedContext`) survives injection — is documented as
+> question Q-D5 in `OPEN_QUESTIONS.md`. The stage descriptions below describe
+> the *original* approach for historical context; treat them as background, not
+> as instructions for current work. Stage 4 (compiler-side default name)
+> remains open.
+
 This document is the actionable plan that turns the v0 stub (`@Inject Logger logger;`
 parses but does not resolve) into a **working end-to-end demo**: the Ecstasy line
 
@@ -32,8 +45,10 @@ The round trip is demo-worthy when **all** of these are true:
    compiles, runs, and prints a single timestamped line containing `hello world`
    without any explicit `BasicLogger` / `LogSink` wiring.
 
-2. The same demo with `@Inject("com.example") log.Logger logger;` resolves to a
-   logger named `com.example` (output line carries the name).
+2. The same demo with `Logger demo = logger.named("com.example"); demo.info(...);`
+   produces a logger named `com.example` (output line carries the name). Per-name
+   loggers are derived from the injected one, not injected directly — see Stage 1.4
+   for why `@Inject("…") Logger` is *not* the chosen API shape.
 
 3. `logger.error("failed: {}", [id], cause=new Exception("boom"));` emits both the
    message line and the exception text.
@@ -68,9 +83,10 @@ Three native files in `javatools_jitbridge/`, plus a registration line in
 
 `javatools_jitbridge/src/main/java/org/xtclang/_native/logging/RTLogger.java`.
 
-A native service that wraps an Ecstasy `BasicLogger` instance. The `$create(Object
-opts)` factory receives the resource name (the string passed in `@Inject("foo")
-Logger`) and bakes it into the constructed logger:
+A native service that wraps an Ecstasy `BasicLogger` instance. There is exactly one
+registration: `(loggerType, "logger")`. The `$create(Object opts)` factory always
+constructs the root logger named `"logger"`; per-name children are obtained from it
+via `Logger.named(String)` (see Stage 1.4 for why we don't accept `@Inject("…")`).
 
 - Constructor takes `(String name, LogSink sink)`. The `sink` argument resolves via
   the same injector — this is the second native registration below.
@@ -94,36 +110,90 @@ Same pattern, smaller. Both wrap their Ecstasy counterparts. `RTMDC` needs a per
 storage decision — see Stage 2 below; until that's resolved, it holds a per-instance
 `HashMap<String, String>` and we accept that MDC is per-container, not per-fiber.
 
-#### 1.4 — Wildcard-name resolution in `nMainInjector`
+#### 1.4 — Single fixed-name supplier; no wildcard injection
 
-`javatools_jitbridge/.../mgmt/nMainInjector.java`. Today `supplierOf(Resource)` does
-exact `(TypeConstant, String)` lookup. Modify to:
+**Resolved against wildcard.** The earlier draft of this plan called for a wildcard
+`(loggerType, "*")` fallback so that `@Inject("com.example") Logger logger;` would
+resolve to a per-name logger. That shape was prototyped in `NativeContainer` (interpreter
+side) and then deliberately removed. The chosen design instead:
 
-- First try the exact key.
-- If miss and the type is `Logger`, fall back to a wildcard entry registered as
-  `(loggerType, "*")`. The factory receives the requested resource name as `opts` and
-  produces a logger of that name.
+- Register exactly one supplier in `NativeContainer.initResources` /
+  `nMainInjector.addNativeResources`: `("logger", loggerType)` → root `Logger`.
+- Expose `Logger.named(String)` on the public API. Per-name loggers are *derived*, not
+  injected: `@Inject Logger logger; Logger payments = logger.named("payments");`.
+- `getInjectable` stays untouched. There is no type-only special-case in the runtime;
+  the supplier table remains the single registry of allowed injections.
 
-Eight or ten lines of new Java. Opts to make it generic over types if the same need
-arises elsewhere, but for v0 a `Logger`-specific fallback is fine.
+This is the same call-site shape SLF4J users already write in Java
+(`LoggerFactory.getLogger(MyClass.class)`), so it does not cost ergonomics relative to
+the SLF4J baseline. It does cost the spelling `@Inject("name") Logger logger;`, which
+has no actual SLF4J equivalent and was a `lib_logging` invention.
+
+##### Why we rejected wildcard injection
+
+1. **Special-case at the deepest layer of the runtime.** A type-only fallback inside
+   `NativeContainer.getInjectable` (or `nMainInjector.supplierOf`) means the supplier
+   table no longer answers "what can be injected here?" without consulting a hidden
+   per-type bypass.
+2. **One customer.** The whole wildcard mechanism was being built for `Logger`. A
+   feature that special-cases the runtime for a single library type is hard to justify.
+3. **Imagined SLF4J parity.** SLF4J in Java does not use parameterized injection at all
+   — its idiom is `LoggerFactory.getLogger(MyClass.class)`. The `@Inject("name")` form
+   was a `lib_logging` invention pitched as "SLF4J ergonomics" but is in fact a *more*
+   concise spelling than SLF4J actually offers. The cost-vs-benefit didn't pencil out.
+4. **The "future generalisation" argument has no second customer.** Promoting wildcard
+   to a first-class `Injector` API only pays off if a second library wants type-only
+   injection. None is in sight.
+
+##### Cost of the chosen design
+
+One extra line per class that wants a per-name logger:
+
+```ecstasy
+@Inject Logger logger;                          // injected once
+static Logger PaymentLogger = logger.named("payments"); // derived
+```
+
+That line is what every Java SLF4J user writes today. We accept it.
+
+##### Alternatives that were considered and rejected
+
+- **`@Inject(opts="com.example") Logger logger;`** — spelling is awkward and still
+  routes a single-supplier lookup with the real identity hidden in `opts`.
+- **Compiler-substituted module name** (Stage 4) — useful *complement* (auto-defaults
+  the per-module logger name), but doesn't address per-class loggers within a module.
+  Track separately if it lands.
+- **Pure `LoggerFactory.getLogger(...)` with no `@Inject Logger` at all** — gives up
+  the injection ergonomic without buying anything; the per-name problem just moves
+  one level out.
 
 #### 1.5 — Registration in `addNativeResources()`
 
-The single-line additions:
+The interpreter-side equivalent is already in place:
 
 ```java
-suppliers.put(new Resource(loggerType,        "*"),       RTLogger::$create);
+xRTLogger    templateLogger = xRTLogger.INSTANCE;
+TypeConstant typeLogger     = templateLogger.getCanonicalType();
+addResourceSupplier(new InjectionKey("logger", typeLogger),
+        (frame, hOpts) -> templateLogger.ensureLogger(frame, "logger", hOpts));
+```
+
+For the JIT injector, the analogous addition:
+
+```java
+suppliers.put(new Resource(loggerType,        "logger"),  RTLogger::$create);
 suppliers.put(new Resource(logSinkType,       "default"), RTConsoleLogSink::$create);
 suppliers.put(new Resource(markerFactoryType, "markers"), RTMarkerFactory::$create);
 suppliers.put(new Resource(mdcType,           "mdc"),     RTMDC::$create);
 ```
 
 `loggerType` etc. are resolved via the existing TypeConstant lookup machinery the same
-way `consoleType` is.
+way `consoleType` is. Note the `(loggerType, "logger")` exact-name entry — no wildcard.
 
-**Done state of Stage 1:** `@Inject Logger logger;` returns a working `Logger`
-instance. Tests still pass. The `runInjected()` path of `manualTests/.../TestLogger.x`
-runs without throwing.
+**Done state of Stage 1:** `@Inject Logger logger;` returns a working root `Logger`
+instance. `Logger.named(String)` derives per-name children. Tests pass. The
+`runInjected()` and `runInjectedByName()` paths of `manualTests/.../TestLogger.x` both
+print to the console.
 
 ### Stage 2 — Make the message actually format
 
@@ -191,9 +261,10 @@ non-empty.
 
 ### Stage 4 — Compiler-side default name (optional but high-impact)
 
-Today `@Inject Logger logger;` (no `resourceName`) resolves to a logger named
-`"default"`. Every SLF4J user instinctively expects the logger to be named after the
-enclosing module/class. The fix is a small XTC compiler change.
+Today `@Inject Logger logger;` (no `resourceName`) resolves to the root logger
+literally named `"logger"` — the field-name fallback. Many SLF4J users find the
+enclosing module/class name more useful as the default. The fix is a small XTC
+compiler change.
 
 #### 4.1 — Substitute the enclosing module name
 
@@ -210,9 +281,9 @@ naming behaviour.
 emits lines tagged `PaymentService:`. The cheat sheet in
 `INJECTED_LOGGER_EXAMPLE.md` becomes accurate without `@Inject("PaymentService")`.
 
-This stage is **optional for the demo**. Without it, the demo writes
-`@Inject("PaymentService") Logger logger;` explicitly. With it, the demo is one line
-shorter and matches SLF4J muscle memory.
+This stage is **optional for the demo**. Without it, callers write
+`@Inject Logger logger; Logger paymentLogger = logger.named("PaymentService");`. With
+it, `@Inject Logger logger;` alone is already named after the enclosing module.
 
 ### Stage 5 — Validation: platform repo migration
 

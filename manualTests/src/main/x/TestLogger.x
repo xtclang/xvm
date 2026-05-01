@@ -1,33 +1,44 @@
 /**
  * Manual test that exercises lib_logging end-to-end.
  *
- * The unit tests under `lib_logging/src/test/x/LoggingTest/` pin down the API surface
- * by constructing `BasicLogger` directly against an in-memory sink. That works fine for
+ * The unit tests under `lib_logging/src/test/x/LoggingTest/` pin down the API surface by
+ * constructing `BasicLogger` directly against an in-memory sink. That works fine for
  * verifying the API, but it does not exercise the **runtime injection** path
- * (`@Inject Logger logger;`) — and there are limits to what xunit can express about
- * injectability. This module is the place to drive that path explicitly.
+ * (`@Inject Logger logger;`) or the per-name derivation pattern
+ * (`logger.named("MyService")`) — both of which depend on runtime wiring. This module
+ * drives those paths explicitly.
  *
- * Today, until `RTLogger.java` lands in `javatools_jitbridge` and registers a
- * `Logger` factory in `nMainInjector`, `@Inject Logger logger` won't actually resolve.
- * The fallback in the meantime — and the reference shape user code will write — is to
- * construct a `BasicLogger` directly, which is what the `runDirect` method does. Once
- * the runtime side lands, `runInjected` will start working with no source change here.
+ * The three sections of `run()` line up one-for-one with the three patterns user code
+ * is allowed to use:
+ *   - `runDirect`      — explicit `new BasicLogger(...)`. Works without the runtime.
+ *   - `runInjected`    — `@Inject Logger logger;`. Resolves to the default logger.
+ *   - `runInjectedByName` — `@Inject Logger logger; Logger named = logger.named(...)`.
+ *                          Per-name derivation, the SLF4J `getLogger(class)` analogue.
  */
 module TestLogger {
     package log import logging.xtclang.org;
+    import log.BasicLogger;
+    import log.BasicMarker;
+    import log.ConsoleLogSink;
+    import log.Logger;
+    import log.LogSink;
+    import log.Marker;
+    import log.MDC;
 
     @Inject Console console;
 
     void run() {
-        console.print("--- runDirect ---");
+        console.print("--- runDirect (no injection) ---");
         runDirect();
 
-        console.print("--- runInjected (will be a no-op until runtime-side is wired) ---");
-        try {
-            runInjected();
-        } catch (Exception e) {
-            console.print($"runInjected not yet supported: {e.text}");
-        }
+        console.print("--- runInjected (default logger via @Inject) ---");
+        runInjected();
+
+        console.print("--- runInjectedByName (per-name via Logger.named) ---");
+        runInjectedByName();
+
+        console.print("--- runMDC (per-fiber context) ---");
+        runMDC();
     }
 
     /**
@@ -35,8 +46,8 @@ module TestLogger {
      * explicitly. Works today.
      */
     void runDirect() {
-        log.LogSink sink   = new log.ConsoleLogSink();
-        log.Logger  logger = new log.BasicLogger("TestLogger.direct", sink);
+        LogSink sink   = new ConsoleLogSink();
+        Logger  logger = new BasicLogger("TestLogger.direct", sink);
 
         logger.info ("hello, {}", ["world"]);
         logger.warn ("disk space low: {} MB", [42]);
@@ -52,7 +63,7 @@ module TestLogger {
         }
 
         // Marker.
-        log.Marker audit = new log.BasicMarker("AUDIT");
+        Marker audit = new BasicMarker("AUDIT");
         logger.info("user signed in", marker=audit);
 
         // Fluent builder.
@@ -63,15 +74,59 @@ module TestLogger {
     }
 
     /**
-     * Drives the library through `@Inject Logger logger;`. This is what user code is
-     * meant to write; it depends on runtime work that hasn't happened yet.
+     * Default-logger injection. The runtime registers exactly one supplier under the
+     * resource name `"logger"` (see `NativeContainer.initResources`), so this is the only
+     * spelling that resolves: the field name `logger` matches the registered resource
+     * name. Any other field name — `@Inject Logger payments;` — would fail with an
+     * unresolved-injection error, by design.
      */
     void runInjected() {
-        @Inject log.Logger logger;
+        @Inject Logger logger;
         logger.info("hello from the injected logger");
+    }
+
+    /**
+     * Per-name logger via `Logger.named(String)`. Mirrors SLF4J's
+     * `LoggerFactory.getLogger(MyClass.class)` idiom: inject the default logger once,
+     * derive named children at the call site (or store them as fields on the enclosing
+     * class). The derived logger shares this logger's sink, so all configuration applied
+     * to the default logger flows through to its descendants.
+     *
+     * Bare-essentials demo target (`doc/logging/RUNTIME_IMPLEMENTATION_PLAN.md`): the
+     * message must print as `hello world` (formatted by `MessageFormatter`), not
+     * `hello {}` (raw). The logger-name column on the resulting line should read `Demo`.
+     */
+    void runInjectedByName() {
+        @Inject Logger logger;
+        Logger demo = logger.named("Demo");
+        demo.info("hello {}", ["world"]);
     }
 
     void failingOperation() {
         throw new Exception("boom");
+    }
+
+    /**
+     * MDC end-to-end via runtime injection. Demonstrates that:
+     *   - `@Inject MDC` resolves through the native supplier;
+     *   - `mdc.put` bindings appear on subsequent log lines via `[mdc=…]`;
+     *   - `mdc.remove` and `mdc.clear` take effect from the next emission onward.
+     */
+    void runMDC() {
+        @Inject Logger logger;
+        @Inject MDC    mdc;
+
+        mdc.put("requestId", "r_42");
+        mdc.put("user",      "u_7");
+        console.print($"  [diagnostic] mdc.copyOfContextMap = {mdc.copyOfContextMap}");
+
+        // (A) Through the runtime-injected RTLogger (service wrapper).
+        logger.info("via @Inject Logger (RTLogger service)");
+
+        // (B) Through a directly-constructed BasicLogger (no service wrapper).
+        Logger direct = new BasicLogger("MDC.direct", new ConsoleLogSink());
+        direct.info("via direct BasicLogger");
+
+        mdc.clear();
     }
 }

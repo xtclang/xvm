@@ -21,13 +21,17 @@ service LoggerFactory {
 
     @Inject LogSink defaultSink;
 
-    private Map<String, Logger> cache = new HashMap();
+    private @Lazy LoggerRegistry registry.calc() {
+        return new LoggerRegistry(defaultSink);
+    }
 
     /**
-     * Get the logger for `name`, creating it on first access.
+     * Get the logger for `name`, creating it on first access. Repeated calls with the
+     * same name return the identical `Logger`; `getLogger("a.b")` and
+     * `getLogger("a").named("b")` return the same instance.
      */
     Logger getLogger(String name) {
-        return cache.computeIfAbsent(name, () -> new BasicLogger(name, defaultSink));
+        return registry.ensure(name);
     }
 
     /**

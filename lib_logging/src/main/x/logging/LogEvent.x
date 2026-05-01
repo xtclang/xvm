@@ -14,9 +14,30 @@ const LogEvent(
         Level               level,
         String              message,
         Time                timestamp,
-        Marker?             marker      = Null,
+        // The markers attached to this event. Empty when no markers were supplied. The
+        // per-level `Logger.info(..., marker=X)` API supplies at most one; the fluent
+        // `LoggingEventBuilder.addMarker(...)` accumulates many. Mirrors SLF4J 2.x's
+        // `LoggingEvent.getMarkers(): List<Marker>`.
+        Marker[]            markers     = [],
         Exception?          exception   = Null,
         Object[]            arguments   = [],
         Map<String, String> mdcSnapshot = [],
         String              threadName  = "",
-        );
+        // Structured key/value pairs accumulated through `LoggingEventBuilder.addKeyValue`.
+        // Mirrors SLF4J 2.x's `KeyValuePair` list on `LoggingEvent`. Sinks that don't care
+        // about structured payloads can ignore this field; sinks that do (JSON layouts,
+        // logback's structured-arguments encoder, future `lib_logging_logback`) read it
+        // alongside `message`.
+        Map<String, Object> keyValues   = [],
+        ) {
+
+    /**
+     * Convenience accessor for the first marker, or `Null` when none. Sinks that only
+     * surface a single category line (`[marker=NAME]`) can read this without
+     * iterating; richer sinks should iterate [markers] directly. Mirrors SLF4J 1.x's
+     * `LoggingEvent.getMarker()` for one-marker callers.
+     */
+    @RO Marker? marker.get() {
+        return markers.empty ? Null : markers[0];
+    }
+}

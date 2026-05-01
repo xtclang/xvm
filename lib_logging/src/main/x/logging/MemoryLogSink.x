@@ -10,8 +10,17 @@
  *      logger.info("processed {}", 42);
  *      assert sink.events.size == 1;
  *      assert sink.events[0].level == Info;
+ *
+ * # Why this sink is a `service`, not a `const`
+ *
+ * It accumulates events. The `events[]` array is mutated on every `log()` call, and
+ * the same instance is typically shared across many fibers (the logger under test plus
+ * the assertion code that reads back the events). That is structurally identical to
+ * `service ConsoleExecutionListener` in `lib_xunit_engine` and `service ErrorLog` in
+ * `platform/common` — both are stateful event collectors. See
+ * `doc/logging/DESIGN.md` ("Sink type: `const` vs `service`") for the full rule.
  */
-class MemoryLogSink
+service MemoryLogSink
         implements LogSink {
 
     /**
@@ -20,9 +29,20 @@ class MemoryLogSink
     public/private Level rootLevel = Trace;
 
     /**
-     * The captured events, in emission order.
+     * Mutable backing storage for captured events. Internal — must not escape the service
+     * boundary, because Ecstasy forbids returning a mutable array from a service call.
+     * External callers read [events] instead, which returns an immutable snapshot.
      */
-    public/private LogEvent[] events = new LogEvent[];
+    private LogEvent[] eventList = new LogEvent[];
+
+    /**
+     * The captured events, in emission order. Each access returns a fresh immutable
+     * snapshot of the current state — the backing array is internal so it can stay
+     * mutable for `add` / `clear`, while crossing the service boundary safely.
+     */
+    @RO LogEvent[] events.get() {
+        return eventList.toArray(Constant);
+    }
 
     @Override
     Boolean isEnabled(String loggerName, Level level, Marker? marker = Null) {
@@ -31,13 +51,13 @@ class MemoryLogSink
 
     @Override
     void log(LogEvent event) {
-        events.add(event);
+        eventList.add(event);
     }
 
     /**
      * Discard all captured events.
      */
     void reset() {
-        events.clear();
+        eventList.clear();
     }
 }

@@ -31,6 +31,24 @@
  *     substituted; the `mdcSnapshot` has already been captured.
  *
  * See `docs/CUSTOM_SINKS.md` for a worked example.
+ *
+ * # Choosing between `const` and `service` for an implementation
+ *
+ * `BasicLogger` is a `const` and references its sink through a `LogSink` field. That
+ * means every concrete implementation must be `Passable` — i.e. either `immutable`
+ * (`const`) or a `service`. Pick one of the two:
+ *
+ *   - `const`  — for stateless forwarders / pure adapters whose configuration is fixed
+ *                at construction. Examples in this library: [NoopLogSink],
+ *                [ConsoleLogSink]. Cheap to construct; methods run on the caller's fiber.
+ *   - `service` — for sinks that carry mutable state shared across fibers: event
+ *                buffers, hit counters, file/socket writers, async worker queues.
+ *                Examples: [MemoryLogSink], a future `FileLogSink`, a future
+ *                `AsyncLogSink`.
+ *
+ * The full rule, with reference examples from the platform/xunit codebases (e.g.
+ * `service ConsoleExecutionListener`, `service ErrorLog`), is in
+ * `doc/logging/DESIGN.md` under "Sink type: `const` vs `service`".
  */
 interface LogSink {
 
