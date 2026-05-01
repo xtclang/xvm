@@ -35,7 +35,20 @@
 #    the `|` got lexed as bitwise-OR, breaking method chains like
 #    `{method.as(Type).\n   |   invoke()}`.
 #
-# Sweep is at 873/873.
+# 3. literals.x: bare absolute-path primary expression
+#    (`Path p = /allow.txt;`) closed by adding the existing
+#    `path_literal` rule to `_literal`'s choice and tightening the
+#    regex from `/\/[\w\-./]*/` to `/\/[a-zA-Z0-9_][a-zA-Z0-9_\-\.\/]*/`
+#    -- the first body char must NOT be `/` or `*`. The earlier
+#    parking note assumed the internal regex would conflict with
+#    spaceless division (`bytesLen/2`); empirically it does not,
+#    because tree-sitter's lex states are state-restricted and a
+#    primary-expression starter is not active mid-binary-expression.
+#    The real conflict was with `//` (line_comment) and `/*`
+#    (block_comment) start tokens, which the stricter first-char
+#    class disambiguates. Cost: zero new conflicts, no scanner work.
+#
+# Sweep is at 875/875 with callTests.x still parked.
 
 # === callTests.x — bare-ident + typed-decl in tuple_assignment ===
 #
@@ -72,6 +85,28 @@
 #   - explicit `[$.tuple_assignment, $.tuple_type]` and
 #     `[$.tuple_assignment, $.parenthesized_type]` conflicts
 #     -> both reported as "unnecessary conflicts"
+#   - external-scanner-emitted TUPLE_ASSIGN_LPAREN token: scanner
+#     peeks past balanced `(...)` for `=` (not `==`/`=>`) before
+#     `;`/`{`/EOF and requires at least one `,` at depth 1 before
+#     emitting; grammar starts `tuple_assignment` with the external
+#     token. The scanner DID emit correctly for the target shape, but
+#     forcing the LR parser to commit to `tuple_assignment` at the `(`
+#     shift broke 4+ files in the existing sweep AND the lsp-server
+#     test-cases for typed/wildcard/annotated tuple_assignment elements
+#     -- e.g. `(UInt8 left, UInt8 digit) = this /% 10;` and
+#     `(_, Int idx, _) = split();`. The interaction is with the
+#     `prec.dynamic(1, $._expression)` bias on the `_expression` alt
+#     of `tuple_assignment_element`, which was added precisely to make
+#     bare-ident-first cases like `(i1, Int i2) = ...` win. With the
+#     external token suppressing GLR's container-level fork, the
+#     `_expression` bias starts winning even for typed elements
+#     (`UInt8 left` -> tries to parse as `_expression`, fails on the
+#     two-token shape, can't backtrack to the typed alt). Reverting
+#     the prec.dynamic(1) regresses the wildcard cases too. The
+#     external-token approach is incompatible with the current
+#     `tuple_assignment_element` precedence structure; closing this
+#     gap probably requires a structural rewrite of the element
+#     alternation alongside the scanner.
 #
 # Diagnostic insight from the "unnecessary conflict" warnings:
 # tree-sitter's LALR(1) generator never sees a generation-time
@@ -92,88 +127,20 @@
 #     `assignment_expression` (left = `tuple_expression`).
 #   - `(Int bucketCount, this.growAt) = ...;` -- typed first, member-
 #     access second; first-element shape disambiguates.
+#   - `(_, Int idx) = ...;` -- wildcard-first, typed-second; the
+#     `wildcard` alt commits early enough for typed alts to win on
+#     subsequent elements.
+#   - `(@Future Int v1, @Future Int v2) = ...;` -- annotated typed
+#     elements; first-element typed-form commits the parser.
 #
 # The fix likely requires either:
 #   (a) a structural rewrite that disambiguates earlier (e.g. lift the
 #       `(bare_ident, Type ident, ...) = ...` shape into its own
 #       container that the LALR generator can statically distinguish);
-#   (b) an external scanner that peeks past matching `)` for `=` and
-#       emits a TUPLE_ASSIGN_LPAREN token that uniquely starts
-#       tuple_assignment, forcing LR commitment;
-#   (c) a workaround in `tuple_assignment_element` that uses an alias
-#       with high-prec.dynamic so the bare-ident path doesn't even
-#       reduce as identifier-via-type-name.
+#   (b) external-scanner TUPLE_ASSIGN_LPAREN combined with a rewrite
+#       of `tuple_assignment_element` that drops the `prec.dynamic(1,
+#       $._expression)` bias -- the latter is incompatible with the
+#       former because it makes typed elements lose to the failing
+#       expression alt once GLR's container-level fork is suppressed.
 
 manualTests/src/main/x/jit/jit_tests/basic/callTests.x
-
-# === literals.x — one remaining error: bare absolute-path primary expression ===
-#
-# Most of literals.x's gaps were closed across this session's
-# commits (relative_path_literal in typed_literal, bare `./` and
-# `../` accepted, multiline hex byte literal `#|...|`, date_literal,
-# time_literal, richer duration_literal regex). The single remaining
-# error is line 150:
-#
-#     Path path6 = /allow.as.assert.avoid.public.private.if.for.while.var.val.void.txt;
-#
-# This is a bare ABSOLUTE path (`/`-prefixed) used as a primary
-# expression. There is no rule for it. Adding
-# `absolute_path_literal: $ => /\/[\w][\w./-]*/` would conflict with
-# spaceless division -- `bytesLen/2` is real production code in
-# `lib_ecstasy/.../Source.x` and tree-sitter's longest-match
-# tokenization would prefer the path interpretation, breaking the
-# division.
-#
-# The natural fix shape -- an external-scanner-emitted
-# ABSOLUTE_PATH_LITERAL gated on `valid_symbols[ABSOLUTE_PATH_LITERAL]`
-# (analogous to the TYPE_GT and MULTILINE_CONTINUATION work earlier
-# in this branch) -- was implemented and tested end-to-end. The
-# scanner correctly emits the token in `typed_literal` context (after
-# `Type:`, e.g. line 259 `FileStore fs = FileStore:/archive/moduleTest;`)
-# but is *never invoked* at the line-150 position
-# `Path path6 = ` ... `/allow.txt`. Instrumenting the scanner with an
-# unconditional `fprintf` showed exactly two `peek=='/'` calls in the
-# entire file -- both at the typed_literal `:`/path boundary on
-# line 259 -- and zero calls at line 150 col 21 where the bare
-# `/allow.txt` begins. Tree-sitter's external scanner is invoked
-# only when an external token is in `valid_symbols`, so the
-# observable conclusion is that `_absolute_path_literal` is *not*
-# in valid_symbols at the LR state reached after `Path path6 = `,
-# even though the rule is wired into `_literal` (which is in
-# `_expression`).
-#
-# Tried (none worked end-to-end):
-#   - `absolute_path_literal: $ => $._absolute_path_literal` wrapper
-#     in `_literal` -- scanner not called at line 150.
-#   - `alias($._absolute_path_literal, $.absolute_path_literal)`
-#     directly in `_literal` -- same result.
-#   - `prec.dynamic(2, $._absolute_path_literal)` on the wrapper to
-#     force GLR resolution -- same result.
-#   - Adding `absolute_path_literal` as an alternative in
-#     `typed_literal`'s value choice (alongside `path_literal`):
-#     introduces a regression -- `Type:/path` parses as
-#     `else_expression(Type, absolute_path_literal)` instead of
-#     `typed_literal(Type, path_literal)`. typed_literal's `prec(2)`
-#     does not outweigh else_expression's `prec.right(0)` here, even
-#     though it should -- another instance of LALR committing to a
-#     non-reduction-conflict path before precedence can apply.
-#   - Removing the internal `path_literal` regex entirely and
-#     relying on the external scanner: same regression as above.
-#
-# The line-150 diagnostic suggests the missing piece is in how
-# tree-sitter's grammar generator computes which states have the
-# external token in valid_symbols. The expected path
-# `_expression -> _literal -> absolute_path_literal -> _absolute_path_literal`
-# should propagate the external into the LR state at `Path path6 = `,
-# but observably does not. A future attempt should:
-#   (1) inspect parser.c's lex_state tables to confirm exactly which
-#       states list `sym__absolute_path_literal` in their actions, and
-#   (2) compare those state IDs against the parser-state trace at the
-#       line-150 position (e.g. via `tree-sitter parse --debug`) to
-#       see which state the parser actually reaches there.
-# It is possible that the issue is a TOKEN PRIORITY interaction with
-# the internal lexer: when an internal token at the same position has
-# higher implicit priority, tree-sitter may skip the external scanner.
-# Half-day-plus of work; park for now.
-
-manualTests/src/main/x/literals.x
