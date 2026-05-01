@@ -24,6 +24,26 @@ just decide:
    read `event.marker`, `event.exception`, `event.mdcSnapshot`, and (once added)
    `event.keyValues`.
 
+## `const` or `service`?
+
+`BasicLogger` is a `const` and holds its sink in a `LogSink` field. Ecstasy requires
+that field to be `Passable`, so every implementation must be either `immutable` (a
+`const`) or a `service`. Pick one of the two:
+
+- **`const`** — for stateless forwarders / pure adapters. Configuration is fixed at
+  construction (e.g. a `rootLevel` value passed in once). The sink owns no mutable state
+  shared across fibers. Examples in `lib_logging`: `NoopLogSink`, `ConsoleLogSink`.
+  Cheap to construct, cheap to pass; methods run on the caller's fiber.
+- **`service`** — for sinks that genuinely have shared mutable state: an event buffer,
+  a counter map, an open file handle, a worker queue. The service mailbox handles
+  concurrent ingress for free. Examples: `MemoryLogSink`, `ListLogSink` (test sinks),
+  the `FileLogSink`/`HierarchicalLogSink`/`TeeLogSink` examples below.
+
+If you find yourself reaching for `synchronized` blocks, you want a `service`. If your
+sink is "given a `Console`/`Writer`/`Function`, format and forward" — you want a
+`const`. The full rule, with reference examples from the wider XDK / platform
+ecosystem, is in `DESIGN.md` ("Sink type: `const` vs `service`").
+
 ## A worked example: a counting sink
 
 The simplest non-trivial sink — counts events per level. Useful for metrics export.

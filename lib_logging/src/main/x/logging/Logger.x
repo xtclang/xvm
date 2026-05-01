@@ -26,6 +26,19 @@ interface Logger {
      */
     @RO String name;
 
+    /**
+     * Return a logger with the supplied `name` that shares this logger's sink. Mirrors the
+     * SLF4J idiom `LoggerFactory.getLogger(MyClass.class)` declared once at the top of a
+     * class:
+     *
+     *      @Inject Logger logger;                                 // root logger, fixed name
+     *      static Logger PaymentLogger = logger.named("payments"); // per-class derivative
+     *
+     * Implementations are free to intern by name (and `BasicLogger` may grow that later);
+     * for v0 each call returns a fresh `Logger`.
+     */
+    Logger named(String name);
+
     @RO Boolean traceEnabled;
     @RO Boolean debugEnabled;
     @RO Boolean infoEnabled;

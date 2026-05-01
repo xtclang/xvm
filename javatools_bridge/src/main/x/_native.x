@@ -6,8 +6,9 @@
  * It is an error for any type or class from this module to be visible to user code.
  */
 module _native.xtclang.org {
-    package libcolls  import collections.xtclang.org;
-    package libcrypto import crypto.xtclang.org;
-    package libnet    import net.xtclang.org;
-    package libweb    import web.xtclang.org;
+    package libcolls   import collections.xtclang.org;
+    package libcrypto  import crypto.xtclang.org;
+    package liblogging import logging.xtclang.org;
+    package libnet     import net.xtclang.org;
+    package libweb     import web.xtclang.org;
 }

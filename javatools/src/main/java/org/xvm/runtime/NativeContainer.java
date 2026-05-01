@@ -366,6 +366,89 @@ public class NativeContainer
         // +++ xvmProperties
         TypeConstant typeProps = pool.ensureMapType(pool.typeString(), pool.typeString());
         addResourceSupplier(new InjectionKey("properties", typeProps), this::ensureProperties);
+
+        // +++ logging.Logger and logging.MDC
+        // Both back `@Inject Logger logger;` and `@Inject MDC mdc;` on the user side. They
+        // are both `const` types in `lib_logging`, deliberately NOT services: a service
+        // wrapper around `Logger` would create a new fiber per call, and the [MDC] tokens
+        // (registered via `SharedContext.withValue` on the caller's fiber) would not be
+        // visible to `BasicLogger.emit` running on the wrapper's fiber. Constructing the
+        // `const` directly hands the user a Passable handle whose methods execute on their
+        // own fiber, preserving fiber-local MDC propagation end-to-end.
+        //
+        // The supplier shape is the same as for any other native-injected resource: one
+        // `(typeName, resourceName)` registration, no wildcard branch in `getInjectable`.
+        ModuleConstant modLogging   = pool.ensureModuleConstant("logging.xtclang.org");
+        // The injection key uses the user-facing interface type (`Logger`) — that's what
+        // `@Inject Logger logger;` resolves against. The supplier internally constructs a
+        // `BasicLogger` (the canonical implementation, a `const`) using that as the
+        // typeLogger argument to `findConstructor`.
+        TypeConstant   typeLoggerIf = pool.ensureTerminalTypeConstant(
+                pool.ensureClassConstant(modLogging, "Logger"));
+        TypeConstant   typeLogger   = pool.ensureTerminalTypeConstant(
+                pool.ensureClassConstant(modLogging, "BasicLogger"));
+        addResourceSupplier(new InjectionKey("logger", typeLoggerIf),
+                (frame, hOpts) -> ensureLogger(frame, typeLogger, "logger"));
+
+        TypeConstant typeMDC = pool.ensureTerminalTypeConstant(
+                pool.ensureClassConstant(modLogging, "MDC"));
+        addResourceSupplier(new InjectionKey("mdc", typeMDC),
+                (frame, hOpts) -> ensureConst(frame, typeMDC));
+    }
+
+    /**
+     * Construct an instance of `logging.xtclang.org.BasicLogger` named `name`. The
+     * `BasicLogger(String)` convenience constructor wires a fresh `ConsoleLogSink`, so the
+     * native side does not have to thread a sink handle through.
+     */
+    private ObjectHandle ensureLogger(Frame frame, TypeConstant typeLogger, String name) {
+        ClassTemplate    template = getTemplate(typeLogger.getSingleUnderlyingClass(true));
+        ConstantPool     pool     = getConstantPool();
+        MethodStructure  ctor     = template.getStructure().findConstructor(pool.typeString());
+        ClassComposition clz      = template.getCanonicalClass();
+
+        ObjectHandle[] ahArgs = new ObjectHandle[ctor.getMaxVars()];
+        ahArgs[0] = xString.makeHandle(name);
+
+        switch (template.construct(frame, ctor, clz, null, ahArgs, Op.A_STACK)) {
+        case Op.R_NEXT:
+            return frame.popStack();
+
+        case Op.R_CALL:
+            return new DeferredCallHandle(frame.m_frameNext);
+
+        case Op.R_EXCEPTION:
+            return new DeferredCallHandle(frame.clearException());
+
+        default:
+            throw new IllegalStateException();
+        }
+    }
+
+    /**
+     * Construct an instance of a parameter-less `const` from the lib_logging module via its
+     * default constructor. Used by the [MDC] supplier; suitable for any other future
+     * lib_logging const that wants the same default-construction pattern.
+     */
+    private ObjectHandle ensureConst(Frame frame, TypeConstant typeConst) {
+        ClassTemplate    template = getTemplate(typeConst.getSingleUnderlyingClass(true));
+        MethodStructure  ctor     = template.getStructure().findConstructor();
+        ClassComposition clz      = template.getCanonicalClass();
+
+        switch (template.construct(frame, ctor, clz, null,
+                    new ObjectHandle[ctor.getMaxVars()], Op.A_STACK)) {
+        case Op.R_NEXT:
+            return frame.popStack();
+
+        case Op.R_CALL:
+            return new DeferredCallHandle(frame.m_frameNext);
+
+        case Op.R_EXCEPTION:
+            return new DeferredCallHandle(frame.clearException());
+
+        default:
+            throw new IllegalStateException();
+        }
     }
 
     /**
@@ -721,6 +804,7 @@ public class NativeContainer
         // TODO CP/GG: that needs to be reworked (for now the order is critical)
         fileApp.merge(m_moduleTurtle, false, false);
         fileApp.merge(f_repository.loadModule("crypto.xtclang.org"), true, false);
+        fileApp.merge(f_repository.loadModule("logging.xtclang.org"), true, false);
         fileApp.merge(f_repository.loadModule("net.xtclang.org"), true, false);
         fileApp.merge(f_repository.loadModule("web.xtclang.org"), true, false);
         fileApp.merge(m_moduleNative, false, false);

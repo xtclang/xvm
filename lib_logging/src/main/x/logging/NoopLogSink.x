@@ -9,8 +9,16 @@
  *
  * `isEnabled` always returns False so callers that respect the level check can skip
  * building arguments and snapshotting MDC entirely.
+ *
+ * # Why this sink is a `const`
+ *
+ * `NoopLogSink` is purely stateless — `isEnabled` always returns `False` and `log` is
+ * intentionally empty. There is nothing to mutate, nothing to share, nothing to fan in
+ * from many fibers. That is the canonical case for `const`: cheap to construct, cheap
+ * to pass across service boundaries, no scheduler overhead. See `doc/logging/DESIGN.md`
+ * ("Sink type: `const` vs `service`") for the full rule.
  */
-service NoopLogSink
+const NoopLogSink
         implements LogSink {
 
     @Override

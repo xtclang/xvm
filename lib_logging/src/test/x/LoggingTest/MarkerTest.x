@@ -47,6 +47,41 @@ class MarkerTest {
         logger.info("authenticated", marker=audit);
 
         assert sink.events.size == 1;
+        assert sink.events[0].markers.size == 1;
+        assert sink.events[0].markers[0].name == "AUDIT";
+        // Backwards-compat single-marker accessor.
         assert sink.events[0].marker?.name == "AUDIT" : assert;
+    }
+
+    @Test
+    void shouldPropagateMultipleMarkersThroughFluentBuilder() {
+        ListLogSink sink     = new ListLogSink();
+        Logger      logger   = new BasicLogger("multi.marker", sink);
+        Marker      audit    = new BasicMarker("AUDIT");
+        Marker      security = new BasicMarker("SECURITY");
+
+        logger.atInfo()
+              .addMarker(audit)
+              .addMarker(security)
+              .log("login attempt");
+
+        assert sink.events.size == 1;
+        assert sink.events[0].markers.size == 2;
+        assert sink.events[0].markers[0].name == "AUDIT";
+        assert sink.events[0].markers[1].name == "SECURITY";
+        // The single-marker compat accessor returns the first one.
+        assert sink.events[0].marker?.name == "AUDIT" : assert;
+    }
+
+    @Test
+    void shouldEmitNoMarkersWhenNoneAttached() {
+        ListLogSink sink   = new ListLogSink();
+        Logger      logger = new BasicLogger("no.marker", sink);
+
+        logger.info("plain message");
+
+        assert sink.events.size == 1;
+        assert sink.events[0].markers.empty;
+        assert sink.events[0].marker == Null;
     }
 }

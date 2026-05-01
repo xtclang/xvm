@@ -8,10 +8,14 @@ scan this once and know everything they need.
 
 | SLF4J 2.x (Java) | lib_logging (Ecstasy) |
 |---|---|
-| `LoggerFactory.getLogger(MyClass.class)` | `LoggerFactory.getLogger(MyClass)` |
-| `LoggerFactory.getLogger("com.example.foo")` | `LoggerFactory.getLogger("com.example.foo")` |
-| (no equivalent) | `@Inject Logger logger;` |
-| (no equivalent) | `@Inject("com.example.foo") Logger logger;` |
+| `LoggerFactory.getLogger(MyClass.class)` | `@Inject Logger logger;` `static Logger LOG = logger.named(MyClass.qualifiedName);` |
+| `LoggerFactory.getLogger("com.example.foo")` | `LoggerFactory.getLogger("com.example.foo")` *(also)* `logger.named("com.example.foo")` |
+| (no equivalent) | `@Inject Logger logger;` *(injects a single root logger)* |
+
+`@Inject("com.example.foo") Logger logger;` was considered and rejected — see
+`RUNTIME_IMPLEMENTATION_PLAN.md` Stage 1.4 for why. SLF4J doesn't have a
+parameterized injection annotation either; `LoggerFactory.getLogger(MyClass.class)`
+is its idiom and `Logger.named(String)` is the direct Ecstasy equivalent.
 
 ## `Logger` core methods
 

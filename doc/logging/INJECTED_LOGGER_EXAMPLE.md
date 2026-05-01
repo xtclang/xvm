@@ -7,32 +7,62 @@ look like in real code?"
 The accompanying executable sample lives at
 [`manualTests/src/main/x/TestLogger.x`](../../manualTests/src/main/x/TestLogger.x).
 
-> **Status reminder.** The runtime injection plumbing (the native side that resolves
-> `@Inject Logger logger;` to a real `BasicLogger` instance) is not yet wired up — see
-> `OPEN_QUESTIONS.md`. The example below is the shape user code is *meant* to take.
-> Until the runtime is wired, equivalent behaviour can be obtained by constructing
-> `BasicLogger` directly against any `LogSink`, exactly as the unit tests under
-> `lib_logging/src/test/x/LoggingTest/` do.
+> **Status (2026-05).** Runtime injection of `@Inject Logger logger;` is wired in
+> the interpreter — `NativeContainer.ensureLogger` constructs a `BasicLogger`
+> directly. There is no longer a separate `xRTLogger` / `_native.logging.RTLogger`
+> service wrapper; collapsing it was needed so per-fiber `MDC` survives injection.
+> The JIT injector still needs the equivalent wiring; until it does, `--jit` runs
+> won't resolve the injection.
+
+## API at a glance
+
+There are exactly two acquisition shapes:
+
+```ecstasy
+@Inject Logger logger;                        // root logger via injection
+Logger payments = logger.named("payments");   // per-name child via the API
+```
+
+There is **no** `@Inject("payments") Logger logger;` form. Per-name loggers are
+*derived* from the injected one, the same way SLF4J users write
+`LoggerFactory.getLogger(MyClass.class)` once at the top of a class. See
+`RUNTIME_IMPLEMENTATION_PLAN.md` Stage 1.4 for why we ruled out wildcard injection.
+
+The examples below `import` the public lib_logging types unqualified by adding
+type-level imports next to the `package log import …` alias:
+
+```ecstasy
+package log import logging.xtclang.org;
+import log.Logger;
+import log.MarkerFactory;
+import log.MDC;
+import log.Marker;
+```
+
+You can also keep the `log.` prefix everywhere — both forms compile — but unqualified
+reads better in real code, and that's the form below.
 
 ## The smallest possible app
 
 ```ecstasy
 module HelloLogging {
     package log import logging.xtclang.org;
+    import log.Logger;
 
     void run() {
-        @Inject log.Logger logger;
+        @Inject Logger logger;
         logger.info("hello, {}", ["world"]);
     }
 }
 ```
 
 That's it. There is no factory call, no static initializer, no configuration file. The
-runtime container hands the application a `Logger`; the default sink (`ConsoleLogSink`)
-emits the line to the platform `Console`. Output:
+runtime container hands the application a `Logger` (named `"logger"` for now — see
+Stage 4 of the runtime plan for the optional compiler-side default-name change); the
+default sink (`ConsoleLogSink`) emits the line to the platform `Console`. Output:
 
 ```
-2026-04-29T11:23:45.012Z [main] INFO  HelloLogging: hello, world
+2026-04-29T11:23:45.012Z [] INFO  logger: hello, world
 ```
 
 ## A more realistic app
@@ -48,12 +78,16 @@ The example below is closer to what real code looks like. It demonstrates:
 ```ecstasy
 module PaymentService {
     package log import logging.xtclang.org;
+    import log.Logger;
+    import log.MarkerFactory;
+    import log.MDC;
+    import log.Marker;
 
-    @Inject("PaymentService") log.Logger    logger;
-    @Inject                   log.MarkerFactory markers;
-    @Inject                   log.MDC           mdc;
+    @Inject Logger        logger;
+    @Inject MarkerFactory markers;
+    @Inject MDC           mdc;
 
-    log.Marker AUDIT = markers.getMarker("AUDIT");
+    Marker audit = markers.getMarker("AUDIT");
 
     void run() {
         processPayment("p_123", 4200, "EUR", "user_42");
@@ -72,7 +106,7 @@ module PaymentService {
 
             // Structured + categorical: tag with AUDIT, attach typed KV pairs.
             logger.atInfo()
-                  .addMarker(AUDIT)
+                  .addMarker(audit)
                   .addKeyValue("amount",   amount)
                   .addKeyValue("currency", currency)
                   .log("payment completed");
@@ -114,15 +148,20 @@ constructed at all.
 
 ## Scaling up — multiple loggers, one per module/class
 
-The SLF4J convention is one logger per class, named by the class. In Ecstasy the
-equivalent is one named injection per logical scope:
+In a typical app each scope just has its own `logger` — inject once, use directly.
+You only reach for `Logger.named(String)` when you need the *same* enclosing scope to
+emit under multiple names. The most common case is one logger per class within a
+module:
 
 ```ecstasy
 module BillingService {
     package log import logging.xtclang.org;
+    import log.Logger;
+
+    @Inject Logger logger;  // injected once for the whole module
 
     service Invoicer {
-        @Inject("billing.Invoicer") log.Logger logger;
+        Logger logger = BillingService.logger.named("billing.Invoicer");
 
         void issue(Invoice inv) {
             logger.info("issuing invoice {}", [inv.id]);
@@ -131,7 +170,7 @@ module BillingService {
     }
 
     service Charger {
-        @Inject("billing.Charger") log.Logger logger;
+        Logger logger = BillingService.logger.named("billing.Charger");
 
         void charge(Invoice inv) {
             logger.info("charging {} for {}", [inv.customer, inv.total]);
@@ -141,8 +180,11 @@ module BillingService {
 }
 ```
 
-Two loggers, two names. A configuration-driven sink (`lib_logging_logback`, future) can
-set `billing.Charger` to `Debug` while keeping `billing.Invoicer` at `Info`.
+Each service holds its own `logger` field — call sites still read `logger.info(...)`,
+no rename. Both share the injected one's sink, so a configuration-driven sink
+(`lib_logging_logback`, future) can set `billing.Charger` to `Debug` while keeping
+`billing.Invoicer` at `Info`. This matches SLF4J's `LoggerFactory.getLogger(MyClass)`
+idiom one-to-one.
 
 ## Without injection — `LoggerFactory`
 
@@ -163,42 +205,43 @@ module Util {
 `LoggerFactory.getLogger` is itself a service that consults an injected default
 `LogSink`, so the per-container override property still holds.
 
-## Without the runtime wiring (today's reality)
+## Without injection — explicit construction
 
-Until the runtime side resolves `@Inject Logger`, you can do the same thing by hand:
+Anywhere injection isn't in scope (static initialisers, unit-test fixtures), construct
+the logger by hand exactly like the unit tests do:
 
 ```ecstasy
 module Today {
     package log import logging.xtclang.org;
+    import log.BasicLogger;
+    import log.ConsoleLogSink;
+    import log.Logger;
+    import log.LogSink;
 
     void run() {
-        @Inject Console console;
-        log.LogSink sink   = new log.ConsoleLogSink();
-        log.Logger  logger = new log.BasicLogger("Today", sink);
+        LogSink sink   = new ConsoleLogSink();
+        Logger  logger = new BasicLogger("Today", sink);
 
         logger.info("hello, {}", ["world"]);
     }
 }
 ```
 
-This is exactly what the unit tests in `lib_logging/src/test/x/LoggingTest/` do, and
-exactly what the manualTest does today. Once `RTLogger.java` lands in
-`javatools_jitbridge` and is registered in `nMainInjector`, the explicit construction
-becomes unnecessary and the code in the earlier sections is what callers will actually
-write.
+`LoggerFactory.getLogger(...)` is also available for the static-init case.
 
 ## Cheat sheet
 
 | You want to… | Write |
 |---|---|
+| Inject the root logger | `@Inject Logger logger;` |
+| Get a per-name logger | `Logger payments = logger.named("payments");` |
 | Log info | `logger.info("msg")` |
 | Log info with args | `logger.info("msg {}", [arg])` |
 | Log info with exception | `logger.info("msg", cause=e)` |
 | Log info with marker | `logger.info("msg", marker=AUDIT)` |
 | Cheap level check | `if (logger.infoEnabled) { ... }` |
 | Fluent builder | `logger.atInfo().addMarker(AUDIT).log("msg")` |
-| Get a logger by name | `@Inject("foo") Logger logger;` |
-| Get a logger by class | `LoggerFactory.getLogger(MyClass)` |
+| Get a logger by name (no injection) | `LoggerFactory.getLogger("foo")` |
 | Attach context for this request | `mdc.put("requestId", id);` |
 
 That covers ~95% of real-world logging use.
