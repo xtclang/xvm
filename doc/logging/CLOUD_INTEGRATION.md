@@ -233,3 +233,8 @@ shipping into an empty ecosystem and writing the integrations yourself.
 
 This document exists so that decision is made with that context, not without
 it.
+
+
+---
+
+_See also [README.md](README.md) for the full doc index and reading paths._

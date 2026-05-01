@@ -264,3 +264,8 @@ earlier interpose service `xRTLogger.java` was removed in favour of constructing
 `OPEN_QUESTIONS.md`). The real `MessageFormatter` is implemented (12 tests in
 `MessageFormatterTest`). Tests live in `lib_logging/src/test/x/LoggingTest/` (51
 passing as of this commit).
+
+
+---
+
+_See also [README.md](README.md) for the full doc index and reading paths._

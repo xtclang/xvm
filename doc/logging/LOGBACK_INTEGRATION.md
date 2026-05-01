@@ -286,3 +286,8 @@ These are explicitly later:
 
 These exist in Java Logback. They are infrequently used and can be added incrementally
 without API changes.
+
+
+---
+
+_See also [README.md](README.md) for the full doc index and reading paths._

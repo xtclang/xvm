@@ -1,193 +1,189 @@
 # Ecstasy logging — start here
 
-This directory holds the design and discussion docs for the two experimental Ecstasy
-logging libraries on the `lagergren/logging` branch:
+This branch (`lagergren/logging`) adds **two parallel logging libraries** to the
+XDK. They are an experiment, not a final shipping decision: we built both so
+reviewers can compare them side-by-side and tell us which API shape Ecstasy
+should adopt long-term.
 
-- **`lib_logging`** — modelled on **SLF4J 2.x + Logback** (the dominant JVM ecosystem).
-- **`lib_slogging`** — modelled on **Go's `log/slog`** (the modern cloud-native idiom).
+- **[`lib_logging`](../../lib_logging/)** — modelled on **SLF4J 2.x + Logback**.
+  Familiar to anyone with JVM background. 51 unit tests, end-to-end demo.
+- **[`lib_slogging`](../../lib_slogging/)** — modelled on **Go's `log/slog`**
+  (the modern cloud-native idiom). 22 unit tests, parallel design.
 
-Both libraries cover the same end-to-end logging functionality with different API
-shapes, so reviewers can compare them side-by-side. **Start with
-[`LIB_LOGGING_VS_LIB_SLOGGING.md`](LIB_LOGGING_VS_LIB_SLOGGING.md)** for the
-comparison and the explicit list of what we want reviewer feedback on.
+If you only have time to read one document, read
+**[`LIB_LOGGING_VS_LIB_SLOGGING.md`](LIB_LOGGING_VS_LIB_SLOGGING.md)** — it is
+the comparison, the reviewer-question list, and the recommendation in one
+place.
 
-If you are looking at the project for the first time, **this README is the right place
-to land first**: it explains what the project is, who it is for, and where to go next
-depending on what you want to do.
+## What we want from you
 
-## What `lib_logging` is in one paragraph
+There are **eleven explicit reviewer questions** in
+[`LIB_LOGGING_VS_LIB_SLOGGING.md` § 5](LIB_LOGGING_VS_LIB_SLOGGING.md#5-what-we-want-reviewer-feedback-on)
+and **seven language-design questions** (Q-D1..Q-D7) in
+[`OPEN_QUESTIONS.md`](OPEN_QUESTIONS.md). Both are calibrated for someone who
+has skimmed the headline comparison; you do not need to read the entire doc
+tree to weigh in.
 
-A logging library for Ecstasy that is *instantly familiar* to anyone who has used SLF4J
-2.x in Java — same level set, same `{}`-substituted parameterized messages, markers,
-MDC, the SLF4J 2.x fluent event builder — but acquired the Ecstasy way: by
-`@Inject Logger logger;`. The default sink writes to the platform `Console`; a clean
-SPI (`LogSink`) is the API/impl boundary so richer backends (file, network, JSON,
-configuration-driven Logback-style) can be dropped in without touching caller code.
+## Reading paths
 
-The corresponding code is in [`lib_logging/`](../../lib_logging) at the repo root.
+Pick the one that matches what you are.
 
-## What you'll find in this directory
+### Reviewing the proposal — what should I read?
 
-The docs are organised by question. Pick the one that matches what you want to know:
+1. **[`LIB_LOGGING_VS_LIB_SLOGGING.md`](LIB_LOGGING_VS_LIB_SLOGGING.md)** — the
+   side-by-side comparison, deep dive on markers, eleven reviewer questions,
+   tentative recommendation.
+2. **[`CLOUD_INTEGRATION.md`](CLOUD_INTEGRATION.md)** — why the API choice is
+   the entry point to GCP / AWS / Azure observability ecosystems. Explains the
+   modern deployment world for readers whose intuition is "ship a CLI
+   installer."
+3. **[`OPEN_QUESTIONS.md`](OPEN_QUESTIONS.md)** — questions for the XTC
+   language designers (Q-D1..Q-D7), tracking list of work not yet implemented,
+   implementation tiers.
 
-### "Does this look like the rest of the XDK?"
+That is enough to weigh in on the design choice. The rest of the tree is
+support material.
 
-- **[`XDK_ALIGNMENT.md`](XDK_ALIGNMENT.md)** — surveys other XDK libs (`lib_ecstasy`,
-  `lib_cli`, `lib_crypto`, `lib_json`, etc.) and their conventions for injection, the
-  shareable-value mixins (`Freezable`/`Stringable`/`Hashable`/`Orderable`), and the
-  `const`/`service`/`class` split — and shows how `lib_logging` was aligned.
+### I'm an SLF4J / Logback Java engineer — show me what changes
 
-### "What is this and why are we doing it?"
+1. **[`ECSTASY_VS_JAVA_EXAMPLES.md`](ECSTASY_VS_JAVA_EXAMPLES.md)** — every
+   SLF4J idiom with the equivalent Ecstasy code beside it.
+2. **[`SLF4J_PARITY.md`](SLF4J_PARITY.md)** — exhaustive type-by-type and
+   method-by-method mapping. Reference, not narrative.
+3. **[`INJECTED_LOGGER_EXAMPLE.md`](INJECTED_LOGGER_EXAMPLE.md)** — a complete
+   end-to-end example of `@Inject Logger logger;` with a runnable companion at
+   `manualTests/src/main/x/TestLogger.x`.
 
-- **[`PLAN.md`](PLAN.md)** — the master plan: scope, non-goals, ordering of work,
-  validation checklist. Read this first if you want the executive summary.
-- **[`WHY_SLF4J_AND_INJECTION.md`](WHY_SLF4J_AND_INJECTION.md)** — the rationale
-  doc. Argues at length why modeling on SLF4J *and* on Ecstasy injection is the right
-  combination, and why the alternatives (JUL, log4j, slog, "roll our own") all fall
-  short in specific, predictable ways.
-- **[`DESIGN.md`](DESIGN.md)** — the architecture. Module layout, the API↔impl
-  boundary, what each type does, how the runtime injection flows.
+### I'm a Go / slog engineer — show me what changes
 
-### "How does this look in practice?"
+1. **[`LIB_LOGGING_VS_LIB_SLOGGING.md`](LIB_LOGGING_VS_LIB_SLOGGING.md)** — has
+   side-by-side slog → Ecstasy code throughout.
+2. **The `lib_slogging` source** at
+   [`lib_slogging/src/main/x/slogging/`](../../lib_slogging/src/main/x/slogging/)
+   — the API surface is small (Logger, Handler, Record, Attr, Level) and each
+   file has a doc-comment naming its slog counterpart.
 
-- **[`INJECTED_LOGGER_EXAMPLE.md`](INJECTED_LOGGER_EXAMPLE.md)** — a complete working
-  example of `@Inject Logger` end to end, with a runnable companion at
-  `manualTests/src/main/x/TestLogger.x`. Read this before everything else if you
-  just want to see what it looks like.
-- **[`ECSTASY_VS_JAVA_EXAMPLES.md`](ECSTASY_VS_JAVA_EXAMPLES.md)** — for every
-  feature, a working SLF4J Java example followed immediately by the equivalent
-  Ecstasy code. Use this to onboard SLF4J users.
-- **[`SLF4J_PARITY.md`](SLF4J_PARITY.md)** — exhaustive type-by-type and method-by-
-  method mapping from SLF4J 2.x to `lib_logging`. Reference document, not narrative.
-- **[`PLATFORM_AND_EXAMPLES_ADAPTATION.md`](PLATFORM_AND_EXAMPLES_ADAPTATION.md)** —
-  surveys the existing `~/src/platform` and `~/src/examples` repos and shows
-  concretely how their current ad-hoc `console.print($"... Info :")` patterns would
-  migrate to `lib_logging`.
+### I'm an XTC language designer — what's open?
 
-### "How would I extend it?"
+1. **[`OPEN_QUESTIONS.md`](OPEN_QUESTIONS.md)** §§ "Questions for the XTC
+   language / runtime designers" (Q-D1..Q-D7). Each question is tied to a
+   concrete piece of code we wrote and includes the workaround we adopted.
+2. **[`DESIGN.md`](DESIGN.md)** — `lib_logging` architecture, including the
+   `const` vs `service` rule for sinks and the per-fiber `MDC` mechanism.
 
-- **[`CUSTOM_SINKS.md`](CUSTOM_SINKS.md)** — guide to writing your own `LogSink`,
-  with worked examples (counting sink, file sink, hierarchical sink, tee, marker
-  filter, JSON-line sink). Read this if you're adding a backend.
-- **[`STRUCTURED_LOGGING.md`](STRUCTURED_LOGGING.md)** — how SLF4J 2.x structured
-  logging (key/value pairs, fluent builder) maps onto `lib_logging`, including a
-  sketch of the future structured-event data model and a `JsonLineLogSink`.
-- **[`LAZY_LOGGING.md`](LAZY_LOGGING.md)** — exploration of Kotlin `kotlin-logging`
-  style lambda emission (`logger.info { "expensive ${x}" }`), what other languages
-  do, and three options for adding it to `lib_logging`. Includes an industry survey.
+### I want to write my own sink / handler
 
-### "What about a real production backend?"
+1. **[`CUSTOM_SINKS.md`](CUSTOM_SINKS.md)** — guide to writing a custom
+   `LogSink`, with worked examples (counting, file, hierarchical, tee,
+   marker-filtering, JSON-line). Includes the `const` vs `service` decision.
+2. **[`STRUCTURED_LOGGING.md`](STRUCTURED_LOGGING.md)** — how SLF4J 2.x
+   structured logging maps onto `lib_logging`, with a sketch of a JSON sink.
 
-- **[`LOGBACK_INTEGRATION.md`](LOGBACK_INTEGRATION.md)** — sketch of the future
-  `lib_logging_logback` module: appenders, layouts, filters, per-logger thresholds,
-  programmatic and file-based configuration, hot reload, async appenders, and a
-  migration table for SLF4J + Logback users.
-- **[`NATIVE_BRIDGE.md`](NATIVE_BRIDGE.md)** — could we instead plug *real Java
-  Logback* in via the JIT bridge? Investigation, evidence, trade-offs, and a
-  recommendation. Short answer: feasible but not the primary path.
+### I want to deploy this to GCP / AWS / Azure
 
-### "Two libraries — what's the comparison?"
+1. **[`CLOUD_INTEGRATION.md`](CLOUD_INTEGRATION.md)** — adapter graphs for the
+   three major clouds, with concrete examples and the table-stakes API
+   features each cloud product depends on.
+2. **[`LOGBACK_INTEGRATION.md`](LOGBACK_INTEGRATION.md)** — sketch of a future
+   configuration-driven binding (Tier 3 work, not in this PR).
+3. **[`NATIVE_BRIDGE.md`](NATIVE_BRIDGE.md)** — could we instead plug *real
+   Java Logback* in via the JIT bridge? Investigation, evidence, recommendation.
 
-- **[`LIB_LOGGING_VS_LIB_SLOGGING.md`](LIB_LOGGING_VS_LIB_SLOGGING.md)** — the design
-  comparison between `lib_logging` (SLF4J-shaped) and `lib_slogging` (slog-shaped).
-  Per-axis table, deep dives on markers and on `MDC` vs `With`, side-by-side code
-  for the common patterns, Ecstasy-idiom fit notes, the **eleven explicit reviewer
-  questions** we want feedback on, and a tentative recommendation. **Read this
-  first** if you are reviewing the project.
-- **[`CLOUD_INTEGRATION.md`](CLOUD_INTEGRATION.md)** — explains why API choice is
-  the entry point to GCP / AWS / Azure observability ecosystems (drop-in adapters,
-  schema conventions, dashboards-that-already-work). Written for readers whose
-  deployment intuition is "ship a CLI installer" and need a tour of cloud-native
-  logging conventions.
+### I want to migrate existing Ecstasy code that already does ad-hoc logging
 
-### "Could the design have looked different?"
+1. **[`PLATFORM_AND_EXAMPLES_ADAPTATION.md`](PLATFORM_AND_EXAMPLES_ADAPTATION.md)**
+   — surveys `~/src/platform` and `~/src/examples` and shows how their
+   `console.print($"... Info :")` patterns would migrate.
 
-- **[`ALTERNATIVE_DESIGN_SLOG_STYLE.md`](ALTERNATIVE_DESIGN_SLOG_STYLE.md)** —
-  exploratory predecessor to `lib_slogging`: what an SLF4J-shaped library would look
-  like if modeled on Go's `log/slog` instead. Now superseded by the actual
-  `lib_slogging` module + `LIB_LOGGING_VS_LIB_SLOGGING.md` comparison; kept for
-  history.
+## Full doc index
 
-### "What's still uncertain?"
-
-- **[`RUNTIME_IMPLEMENTATION_PLAN.md`](RUNTIME_IMPLEMENTATION_PLAN.md)** — the
-  actionable plan for turning the v0 stub into a demo-worthy end-to-end round
-  trip. Stages, ordering, time estimates, definition of "demo worthy".
-- **[`OPEN_QUESTIONS.md`](OPEN_QUESTIONS.md)** — running list of unresolved design
-  and implementation questions, with the trade-offs and a tentative recommendation
-  for each. None block the v0 stub; they block "v0 working end-to-end".
+| Doc | One-line description |
+|---|---|
+| **Top-level** | |
+| [`README.md`](README.md) | This file. The "start here" entry point. |
+| [`LIB_LOGGING_VS_LIB_SLOGGING.md`](LIB_LOGGING_VS_LIB_SLOGGING.md) | Headline comparison + reviewer questions. **Read first.** |
+| [`CLOUD_INTEGRATION.md`](CLOUD_INTEGRATION.md) | Why the API choice is the entry point to cloud observability ecosystems. |
+| [`OPEN_QUESTIONS.md`](OPEN_QUESTIONS.md) | Live tracking: open questions, designer questions (Q-D1..Q-D7), W-item parity list, implementation tiers. |
+| **Design (`lib_logging` side)** | |
+| [`DESIGN.md`](DESIGN.md) | `lib_logging` architecture: types, API↔impl boundary, sink-type rule, MDC mechanism, per-container override. |
+| [`WHY_SLF4J_AND_INJECTION.md`](WHY_SLF4J_AND_INJECTION.md) | The original rationale for the SLF4J shape and injection-first acquisition. |
+| [`XDK_ALIGNMENT.md`](XDK_ALIGNMENT.md) | Alignment with the conventions of other XDK libraries (`lib_ecstasy`, `lib_cli`, etc.). |
+| **Usage / examples** | |
+| [`INJECTED_LOGGER_EXAMPLE.md`](INJECTED_LOGGER_EXAMPLE.md) | End-to-end working example of `@Inject Logger`. |
+| [`ECSTASY_VS_JAVA_EXAMPLES.md`](ECSTASY_VS_JAVA_EXAMPLES.md) | Per-feature SLF4J Java vs `lib_logging` Ecstasy. |
+| [`SLF4J_PARITY.md`](SLF4J_PARITY.md) | Exhaustive type/method mapping reference. |
+| [`PLATFORM_AND_EXAMPLES_ADAPTATION.md`](PLATFORM_AND_EXAMPLES_ADAPTATION.md) | Migration survey for existing Ecstasy code bases. |
+| **Extension** | |
+| [`CUSTOM_SINKS.md`](CUSTOM_SINKS.md) | How to write a custom `LogSink`, with worked examples. |
+| [`STRUCTURED_LOGGING.md`](STRUCTURED_LOGGING.md) | Structured logging dive: key/value pairs, JSON output, fluent builder. |
+| **Tier 3 / future work** | |
+| [`LOGBACK_INTEGRATION.md`](LOGBACK_INTEGRATION.md) | Sketch of a configuration-driven Logback-style binding. |
+| [`NATIVE_BRIDGE.md`](NATIVE_BRIDGE.md) | Wrapping real Java Logback through the JIT bridge — feasibility analysis. |
+| [`LAZY_LOGGING.md`](LAZY_LOGGING.md) | Kotlin-style lambda emission (`logger.info { "..." }`) — exploration. |
+| [`RUNTIME_IMPLEMENTATION_PLAN.md`](RUNTIME_IMPLEMENTATION_PLAN.md) | Mostly historical: the original runtime-wiring plan. Stages 1–3 have landed; the JIT-side equivalent (Stage 1) is open. |
+| **Archive** | |
+| [`archive/ALTERNATIVE_DESIGN_SLOG_STYLE.md`](archive/ALTERNATIVE_DESIGN_SLOG_STYLE.md) | Predecessor to `lib_slogging`. Superseded by the actual module + the comparison doc. |
+| [`archive/PLAN.md`](archive/PLAN.md) | Original master plan. Steps 1–8 landed; superseded by this README + `OPEN_QUESTIONS.md`. |
 
 ## Where the actual code lives
 
-In the [`lib_logging/`](../../lib_logging) directory at the repo root.
-
 ```
-lib_logging/
-├── README.md                       short module-level intro, links back here
-├── build.gradle.kts                standard XTC plugin + xunit-engine for tests
+lib_logging/                            SLF4J-shaped library
+├── build.gradle.kts
+├── README.md                           module-level intro
 └── src/
     ├── main/x/
-    │   ├── logging.x               module declaration
+    │   ├── logging.x                   module declaration
     │   └── logging/
-    │       ├── Level.x             severity enum
-    │       ├── Marker.x            marker interface (org.slf4j.Marker)
-    │       ├── BasicMarker.x       default marker impl
-    │       ├── MarkerFactory.x     factory service (org.slf4j.MarkerFactory)
-    │       ├── MDC.x               mapped diagnostic context
-    │       ├── LogEvent.x          immutable event const
-    │       ├── LogSink.x           SPI — the API/impl boundary
-    │       ├── Logger.x            user-facing facade (org.slf4j.Logger)
+    │       ├── Level.x                 severity enum
+    │       ├── Marker.x                marker interface (org.slf4j.Marker)
+    │       ├── BasicMarker.x           default marker impl
+    │       ├── MarkerFactory.x         factory service
+    │       ├── MDC.x                   per-fiber mapped diagnostic context (const)
+    │       ├── LogEvent.x              immutable event const (Marker[] markers)
+    │       ├── LogSink.x               SPI — the API/impl boundary
+    │       ├── Logger.x                user-facing facade interface
     │       ├── LoggingEventBuilder.x   SLF4J 2.x fluent builder
-    │       ├── LoggerFactory.x     non-injection acquisition path
-    │       ├── MessageFormatter.x  {}-substitution + throwable promotion
-    │       ├── BasicLogger.x       canonical Logger implementation
-    │       ├── BasicEventBuilder.x canonical builder implementation
-    │       ├── ConsoleLogSink.x    default sink — writes through @Inject Console
-    │       ├── NoopLogSink.x       drops every event
-    │       └── MemoryLogSink.x     captures events in memory (test helper)
-    └── test/x/
-        └── LoggingTest/
-            ├── ListLogSink.x       linked-list-backed test sink
-            ├── LevelTest.x
-            ├── EmissionTest.x      end-to-end per-level routing
-            ├── LevelCheckTest.x    threshold / *Enabled property semantics
-            ├── MarkerTest.x        marker containment + propagation
-            ├── FluentBuilderTest.x atInfo()/atError() builder tests
-            └── CountingSinkTest.x  shows how to plug in a custom sink
+    │       ├── LoggerFactory.x         non-injection acquisition path
+    │       ├── LoggerRegistry.x        identity-stable interning of named children
+    │       ├── MessageFormatter.x      {}-substitution + throwable promotion
+    │       ├── BasicLogger.x           canonical Logger impl (const)
+    │       ├── BasicEventBuilder.x     canonical builder impl
+    │       ├── ConsoleLogSink.x        default sink (const), forwards to @Inject Console
+    │       ├── NoopLogSink.x           drops every event (const)
+    │       └── MemoryLogSink.x         test-helper, captures events (service)
+    └── test/x/LoggingTest/             51 unit tests
+
+lib_slogging/                           slog-shaped sibling library
+├── build.gradle.kts
+└── src/
+    ├── main/x/
+    │   ├── slogging.x                  module declaration
+    │   └── slogging/
+    │       ├── Level.x                 open Int severity (Level(severity, label))
+    │       ├── Attr.x                  the single structured-data carrier
+    │       ├── Record.x                immutable event const (the LogEvent equivalent)
+    │       ├── Handler.x               SPI (the LogSink equivalent)
+    │       ├── Logger.x                concrete user-facing const
+    │       ├── TextHandler.x           default human-readable handler (const)
+    │       ├── JSONHandler.x           JSON-Lines structured handler (const, skeleton)
+    │       ├── NopHandler.x            drops every record (const)
+    │       └── MemoryHandler.x         test-helper (service)
+    └── test/x/SLoggingTest/            22 unit tests
 ```
-
-Every `.x` source file has a header comment naming what it corresponds to in SLF4J,
-Logback, Log4j 2, or JUL — so an SLF4J reader knows exactly which Java type each
-Ecstasy type plays the role of.
-
-## How to read this doc tree depending on who you are
-
-| You are... | Start with | Then read |
-|---|---|---|
-| New to the project, want the gist | `PLAN.md` | `WHY_SLF4J_AND_INJECTION.md`, `DESIGN.md` |
-| An SLF4J/Logback Java engineer | `ECSTASY_VS_JAVA_EXAMPLES.md` | `SLF4J_PARITY.md`, `LOGBACK_INTEGRATION.md` |
-| A Go/slog engineer | `ALTERNATIVE_DESIGN_SLOG_STYLE.md` | `WHY_SLF4J_AND_INJECTION.md`, `STRUCTURED_LOGGING.md` |
-| Adding a backend / sink | `CUSTOM_SINKS.md` | `STRUCTURED_LOGGING.md`, `LOGBACK_INTEGRATION.md` |
-| Investigating performance / hot paths | `LAZY_LOGGING.md` | `OPEN_QUESTIONS.md` (entries on async/copy) |
-| Reviewing the proposal | `WHY_SLF4J_AND_INJECTION.md` | `OPEN_QUESTIONS.md`, `DESIGN.md` |
-| Implementing the next chunk | `OPEN_QUESTIONS.md` | `PLAN.md` (ordering of work), `NATIVE_BRIDGE.md` |
 
 ## Status
 
-`lib_logging` is wired into the XDK build and ships its module in the distribution. The
-public API surface and default impls compile (modulo Ecstasy syntax review — see
-`OPEN_QUESTIONS.md`). The runtime side that resolves `@Inject Logger` to a real
-`BasicLogger` instance is **not yet wired up**; that is the next step (entry 9 in
-`OPEN_QUESTIONS.md`).
-
-The unit tests under `lib_logging/src/test/x/LoggingTest/` exercise the API by
-constructing `BasicLogger` instances directly against an in-memory `ListLogSink`. They
-do not depend on the runtime injection plumbing.
+**Both libraries compile and pass tests.** End-to-end demo runs in
+`manualTests/TestLogger.x` (interpreter side; JIT-side wiring is Tier 3).
+Tier 1+2 work landed in this branch; Tier 3 (compiler default-name,
+`AsyncLogSink`, `lib_logging_logback`, native bridge) is explicitly out of
+scope for this PR — see `OPEN_QUESTIONS.md` for the tier breakdown. The
+branch is ready for reviewer feedback on the design choice.
 
 ## Reference
 
-The original SLF4J provider/architecture writeup that shaped much of this design is in
-[`slf4j_full_guide.md`](../../slf4j_full_guide.md) at the repo root. It is a Java-side
-guide to building a custom SLF4J binding and is the source of the architectural
-template (`MyLangLogger` → `RuntimeLogSink` → backend) we adapted into
-`Logger` → `LogSink` → backend.
+The original SLF4J architecture writeup that shaped much of `lib_logging` is in
+[`slf4j_full_guide.md`](../../slf4j_full_guide.md) at the repo root. It is the
+source of the architectural template (`MyLangLogger` → `RuntimeLogSink` →
+backend) we adapted into `Logger` → `LogSink` → backend.

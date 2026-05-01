@@ -1,5 +1,10 @@
 # Alternative design — what `lib_logging` would look like as an `slog`-style library
 
+> **Archived (2026-05).** This was the predecessor to the actual `lib_slogging`
+> module that now lives at the repo root. The headline comparison is in
+> `../LIB_LOGGING_VS_LIB_SLOGGING.md`. Kept for history; no current decisions
+> hang on the contents below.
+
 This is an **exploratory** document. It exists so we have a clear-eyed picture of what
 we'd be giving up (and what we'd be gaining) if we modeled the Ecstasy logging library
 on Go's `log/slog` instead of SLF4J. No skeleton code is being added to the repo for

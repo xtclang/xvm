@@ -225,3 +225,8 @@ Ecstasy, optionally ship a native bridge for legacy interop.
 
 The most important property is that none of these decisions break caller code. The
 `Logger` interface and the `LogSink` boundary make all of this swappable.
+
+
+---
+
+_See also [README.md](README.md) for the full doc index and reading paths._

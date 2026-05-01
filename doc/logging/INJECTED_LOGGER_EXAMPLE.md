@@ -245,3 +245,8 @@ module Today {
 | Attach context for this request | `mdc.put("requestId", id);` |
 
 That covers ~95% of real-world logging use.
+
+
+---
+
+_See also [README.md](README.md) for the full doc index and reading paths._

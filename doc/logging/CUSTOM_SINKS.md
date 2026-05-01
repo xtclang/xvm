@@ -288,3 +288,8 @@ service JsonLineLogSink
 - [ ] Output is line-oriented or otherwise framed so `tail -f` is meaningful.
 - [ ] The exception is rendered fully — message, stack frames, causes.
 - [ ] If asynchronous, a flush mechanism exists for clean shutdown.
+
+
+---
+
+_See also [README.md](README.md) for the full doc index and reading paths._

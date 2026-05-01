@@ -270,3 +270,8 @@ PR against the platform repo migrating `kernel.x`, `auth/OAuthProvider.x`, and
 in one chunk and validates the API end-to-end on real code. The examples repo can
 follow opportunistically, file by file — there is no urgency, and the gains there are
 educational rather than operational.
+
+
+---
+
+_See also [README.md](README.md) for the full doc index and reading paths._
