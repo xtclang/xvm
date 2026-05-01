@@ -52,14 +52,39 @@ manualTests/src/main/x/webTests/oauth.x
 # errors.x — intentionally broken Ecstasy code (per file exclude)
 manualTests/src/main/x/errors.x
 
-# === (2) PARKED — nested angle-bracket function types (C5) ===
+# === (2) PARKED — nested angle-bracket function types (C5, half-fixed) ===
 #
-# Failing shape: `Function<<Int, String>, <Int>>` (and `TestTurtle<<Int, String>>`).
-# The grammar already lists `angle_bracket_type_list` as a `type_argument`
-# alternative, but the tokenizer commits to `>>` as a single right-shift
-# operator before the parser can disambiguate. Fixing this requires either an
-# external scanner that tracks angle-bracket-type-list depth, or rewriting
-# `>>`/`>>>`/`<<`/`>>=`/`<<=` operator emission as `seq('>', token.immediate('>'), ...)`.
+# Failing shapes: `Function<<Int, String>, <Int>>` (reflect.x line 32),
+# `TestTurtle<<Int, String>>` (generics.x line 100). Both appear in
+# variable_declaration position (`Type<<...>> name = expr;`).
+#
+# Closing-side fix shipped: external scanner token TYPE_GT splits `>>` (and
+# friends) when the parser is inside a type_arguments / type_parameters /
+# angle_bracket_type_list and asks for a closing `>`. This unblocks the RHS
+# shapes -- e.g. `new TestTurtle<<Int, String>>()` (generics.x line 100,
+# right-hand side) and `bar.as(Function<<Int, String>, <Int>>)` (reflect.x
+# line 33, right-hand side) now parse cleanly. See commit d384f2394.
+#
+# Opening-side fix attempted but reverted: a symmetric TYPE_LT external
+# token broke 160 files. The reason is asymmetric ambiguity. The CLOSING
+# `>` is unambiguous at parse time -- the parser only requests TYPE_GT
+# inside type-position rules, where `>>` cannot mean right-shift. The
+# OPENING `<` is ambiguous at parse time -- whenever the parser has both
+# a variable_declaration alternative and an expression_statement
+# alternative alive (which is essentially every statement starting with
+# an identifier), TYPE_LT becomes a "valid" symbol because the
+# variable_declaration path could enter type_arguments. The scanner then
+# eagerly consumes `<`, killing the comparison interpretation. Result:
+# `a < b` everywhere broke.
+#
+# A smarter TYPE_LT that only fires when the parser is UNAMBIGUOUSLY in
+# type-arguments context (e.g. after `new`, after `.as(`, in a parameter
+# type position) might work, but tree-sitter's external scanner only
+# sees `valid_symbols`, not parser-state context. The cleanest path is
+# probably a structural grammar rewrite that disambiguates the
+# variable_declaration / expression_statement choice earlier (similar
+# shape to the callTests.x puzzle below).
+#
 # See lsp-bugfixes-gene-plan.md "C5 — reflect.x ... (parked)".
 
 manualTests/src/main/x/reflect.x
