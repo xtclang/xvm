@@ -93,7 +93,6 @@ module.exports = grammar({
         [$.tuple_type_element, $.parameter],
         [$.tuple_type_element, $.parenthesized_type],
         [$.tuple_type_element, $.parameter, $.tuple_assignment_element],
-        [$.tuple_type_element, $.parameter, $.tuple_assignment_element, $.for_tuple_destructure],
         [$.tuple_type_element, $.parameter, $.conditional_tuple_element],
         // `_` in tuple positions can be parsed as wildcard in any of three
         // contexts (tuple_assignment_element, for-tuple destructure element,
