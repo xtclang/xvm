@@ -63,8 +63,12 @@ runs:
               # org.xtclang.java.jdk property"). The action keeps a separate
               # output so the secondary setup-java step (line ~176) still works
               # for any future re-divergence; default to JAVA_VERSION when the
-              # property is absent.
-              KOTLIN_JAVA_VERSION=$(grep "^org.xtclang.kotlin.jdk=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
+              # property is absent. The `|| true` fallback inside the brace
+              # group is required: bash 5 with `set -e -o pipefail` exits
+              # the script when `var=$(failing-pipeline)` runs, which would
+              # happen before the `[ -z "$KOTLIN_JAVA_VERSION" ]` check below
+              # could ever apply.
+              KOTLIN_JAVA_VERSION=$( { grep "^org.xtclang.kotlin.jdk=" version.properties || true; } | cut -d'=' -f2 | tr -d '\n\r ')
               XDK_VERSION=$(grep "^xdk.version=" version.properties | cut -d'=' -f2 | tr -d '\n\r ')
               GRADLE_VERSION=$(grep "^distributionUrl=" gradle/wrapper/gradle-wrapper.properties | sed 's/.*gradle-\(.*\)-bin.zip/\1/')
 
