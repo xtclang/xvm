@@ -1480,13 +1480,16 @@ module.exports = grammar({
 
         // Typed literal: Type:value where value is a literal
         // Examples: Duration:0S, Int:42, Map:[], List:[1,2,3], Date:2024-01-26,
-        //           Path:/sys/info, Path:./, Directory:./more/
+        //           Time:1999-12-25T12:01:23.456Z, Path:/sys/info, Path:./,
+        //           Directory:./more/
         // Use higher precedence to prefer typed_literal interpretation
         typed_literal: $ => prec(2, seq($.type_expression, ':', choice(
             $.list_literal,
             $.map_literal,
             $.path_literal,
             $.relative_path_literal,
+            $.time_literal,
+            $.date_literal,
             $.duration_literal,
             $.integer_literal,
             $.float_literal,
@@ -1501,8 +1504,22 @@ module.exports = grammar({
 
         // Duration literal: ISO-8601 format (P prefix optional in XTC shorthand)
         // Examples: PT1H30M (1 hour 30 min), P1D (1 day), 30S (30 seconds), PT0S (0 seconds),
-        // 0.5S (half a second), PT0.001S (1 millisecond)
-        duration_literal: $ => /P?T?[0-9]+(\.[0-9]+)?[YMDHS]([0-9]+(\.[0-9]+)?[YMDHS])*/i,
+        //           0.5S (half a second), PT0.001S (1 millisecond),
+        //           P3DT4H5M6S, P1DT1H1M1.23456S (with internal T separating date/time parts)
+        // The inner `T?` lets the ISO date/time separator appear before any time-side
+        // unit-digit pair, not just at the start.
+        duration_literal: $ => /P?(T?[0-9]+(\.[0-9]+)?[YMDHS])+/i,
+
+        // Date literal: YYYY-MM-DD or YYYYMMDD (compact ISO 8601 form).
+        // Used in typed literals like Date:2024-01-26 or Date:20240126.
+        date_literal: $ => /[0-9]{4}-?[0-9]{2}-?[0-9]{2}/,
+
+        // Time/datetime literal: ISO 8601 datetime forms.
+        //   Standard: YYYY-MM-DDTHH:MM:SS[.fff][TZ]
+        //   Compact:  YYYYMMDDTHHMMSS[.fff][TZ]
+        //   Timezone: Z (UTC) or +HH:MM / -HH:MM (colon optional, hours 1-2 digits)
+        // Used in typed literals like Time:1999-12-25T12:01:23.456Z.
+        time_literal: $ => /[0-9]{4}-?[0-9]{2}-?[0-9]{2}T[0-9]{2}:?[0-9]{2}:?[0-9]{2}(\.[0-9]+)?(Z|[+-][0-9]{1,2}:?[0-9]{2})?/,
 
         // Identifiers and names
         // type_name can be a simple identifier or a qualified name (e.g., ecstasy.io.Channel)
