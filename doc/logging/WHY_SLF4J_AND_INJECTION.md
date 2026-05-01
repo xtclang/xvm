@@ -321,3 +321,8 @@ it because:
    per-container injection at the language level. Ecstasy does. We should use it.
 
 This is what "instantly familiar to all SLF4J users *and* better" looks like.
+
+
+---
+
+_See also [README.md](README.md) for the full doc index and reading paths._

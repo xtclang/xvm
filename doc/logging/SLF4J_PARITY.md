@@ -119,3 +119,8 @@ SLF4J's `{}` placeholder semantics are reproduced verbatim by `MessageFormatter.
   `OPEN_QUESTIONS.md` for the open piece around per-container overrides.
 - `Off` level, useful for sink configuration. SLF4J expresses this through level checks
   in `Logger.isEnabledFor(...)`.
+
+
+---
+
+_See also [README.md](README.md) for the full doc index and reading paths._

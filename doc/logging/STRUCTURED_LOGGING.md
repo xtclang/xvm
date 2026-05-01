@@ -215,3 +215,8 @@ For v0.1, the right order is:
 Everything beyond that — typed value formatting, schema validation, OpenTelemetry
 integration, log-correlation IDs propagated across services — is sink-side. The API
 is already shaped to support it without changes.
+
+
+---
+
+_See also [README.md](README.md) for the full doc index and reading paths._

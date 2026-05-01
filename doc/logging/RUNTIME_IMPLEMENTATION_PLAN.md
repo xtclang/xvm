@@ -383,3 +383,8 @@ If you want this in three lines:
   `"default"`.
 
 After that, the platform-repo migration PR is the demo.
+
+
+---
+
+_See also [README.md](README.md) for the full doc index and reading paths._

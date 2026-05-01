@@ -274,3 +274,8 @@ The `lib_slogging` parity translation:
    needs to know whether to copy or not.
 
 The remaining still-open items (#6, #7, #8, #12) can wait until there are real users.
+
+
+---
+
+_See also [README.md](README.md) for the full doc index and reading paths._

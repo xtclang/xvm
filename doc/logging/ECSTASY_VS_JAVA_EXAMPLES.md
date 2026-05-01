@@ -344,3 +344,8 @@ logger.info("escaped \\{}", ["x"]);
 ```
 
 The semantics are the same — `MessageFormatter` is a port of SLF4J's reference behaviour.
+
+
+---
+
+_See also [README.md](README.md) for the full doc index and reading paths._

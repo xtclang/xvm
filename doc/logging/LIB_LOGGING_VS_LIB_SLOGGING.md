@@ -745,3 +745,8 @@ This branch (`lagergren/logging`) contains:
 
 We do not propose merging until reviewers have weighed in on at least Q-D6 (which
 API shape) and Q-D1 (sink interface convention).
+
+
+---
+
+_See also [README.md](README.md) for the full doc index and reading paths._

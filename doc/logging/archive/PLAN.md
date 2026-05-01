@@ -1,5 +1,12 @@
 # lib_logging — Plan
 
+> **Archived (2026-05).** This was the original master plan written when the
+> branch was still a stub. Steps 1–8 have all landed; step 9 (compiler default
+> name) and step 10 (`lib_logging_logback`) are tracked as Tier 3 in
+> `../OPEN_QUESTIONS.md`. The current state is best understood from
+> `../README.md` (entry point) and `../OPEN_QUESTIONS.md` (live tracking).
+> Kept for history; no live decisions hang on the contents below.
+
 This is the master plan for the experimental `lib_logging` module on the
 `lagergren/logging` branch. It captures scope, non-goals, ordering of work, and the
 explicit decisions the design is built on.

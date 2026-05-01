@@ -241,3 +241,8 @@ decisions:
    standing in the languages that have first-class lambdas.
 
 This is consistent with picking Option 1 and only revisiting if data demands it.
+
+
+---
+
+_See also [README.md](README.md) for the full doc index and reading paths._
