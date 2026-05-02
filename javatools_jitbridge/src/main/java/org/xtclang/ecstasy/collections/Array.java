@@ -1,12 +1,16 @@
 package org.xtclang.ecstasy.collections;
 
 import org.xtclang.ecstasy.nEnum;
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.Range;
 import org.xtclang.ecstasy.nType;
+
 import org.xtclang.ecstasy.reflect.Enumeration;
+
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.asm.ConstantPool;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
@@ -200,7 +204,7 @@ public abstract class Array
     /**
      * Array Constructor: construct(Int size, Element | function Element (Int) supply)
      */
-    public static Array $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    public static Array $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         throw new UnsupportedOperationException(); // must be implemented by subclasses
     }
 
@@ -239,7 +243,7 @@ public abstract class Array
             return delegate.capacity$get$p(ctx);
         }
 
-        Object storage = $storage();
+        java.lang.Object storage = $storage();
         return storage == null
                 ? $capCfg(ctx)
                 : $elementCapacity(java.lang.reflect.Array.getLength(storage));
@@ -266,7 +270,7 @@ public abstract class Array
         }
 
         // before allocating storage, the desired capacity is only a plan
-        Object storage = $storage();
+        java.lang.Object storage = $storage();
         if (storage == null) {
             $capCfg(ctx, cap);
             return;
@@ -314,17 +318,16 @@ public abstract class Array
 
     /**
      * Native implementation of:
-     *
-     *   Element getElement(Int index)
-     *
-     *
+     * <p>
+     * Element getElement(Int index)
+     * <p>
+     * <p>
      * Obtain the element at the specified index.
      *
      * @param index the element index
-     *
      * @return the element value
      */
-    public nObj getElement$p(Ctx ctx, long index) {
+    public Object getElement$p(Ctx ctx, long index) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -340,7 +343,7 @@ public abstract class Array
      * @param index  the element index
      * @param value  the element value
      */
-    public void setElement$p(Ctx ctx, long index, nObj value) {
+    public void setElement$p(Ctx ctx, long index, Object value) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -384,7 +387,7 @@ public abstract class Array
      *
      *   Array add(Element element)
      */
-    public Array add(Ctx ctx, nObj element) {
+    public Array add(Ctx ctx, Object element) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -413,7 +416,7 @@ public abstract class Array
      *
      *   Array replace(Int index, Element value)
      */
-    public Array replaceꖛ0$p(Ctx ctx, long index, nObj value) {
+    public Array replaceꖛ0$p(Ctx ctx, long index, Object value) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -422,7 +425,7 @@ public abstract class Array
      *
      *   Array insert(Int index, Element value)
      */
-    public Array insert$p(Ctx ctx, long index, nObj element) {
+    public Array insert$p(Ctx ctx, long index, Object element) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -473,7 +476,7 @@ public abstract class Array
      *
      * @return a reified array
      */
-    public Array reify(Ctx ctx, nObj mutability) {
+    public Array reify(Ctx ctx, Object mutability) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -553,7 +556,7 @@ public abstract class Array
      * The storage for the contents of this array. It should never be the case that an array has
      * both a non-null "$delegate()" and a non-null "$storage()".
      */
-    protected Object $storage() {
+    protected java.lang.Object $storage() {
         throw new UnsupportedOperationException("TODO");
     }
 

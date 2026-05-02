@@ -3,6 +3,7 @@ package org.xtclang.ecstasy.collections;
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Iterable;
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 import org.xtclang.ecstasy.numbers.Float32;
@@ -41,7 +42,7 @@ public class ArrayᐸFloat32ᐳ
         return array;
     }
 
-    public static ArrayᐸFloat32ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    public static ArrayᐸFloat32ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof org.xtclang.ecstasy.numbers.Float32 boxed) {
             ctx.alloc(size); // REVIEW + HEADER_SIZE?
             ArrayᐸFloat32ᐳ array = new ArrayᐸFloat32ᐳ(ctx, type);
@@ -80,7 +81,7 @@ public class ArrayᐸFloat32ᐳ
         return Float.intBitsToFloat((int) $getElement$pi(ctx, index));
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, nObj value) {
+    @Override public void setElement$p(Ctx ctx, long index, Object value) {
         setElement$pi(ctx, index, Float.floatToRawIntBits(((Float32) value).$value));
     }
 
@@ -89,7 +90,7 @@ public class ArrayᐸFloat32ᐳ
     }
 
     @Override
-    public ArrayᐸFloat32ᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸFloat32ᐳ add(Ctx ctx, Object element) {
         return add$p(ctx, Float.floatToRawIntBits(((Float32) element).$value));
     }
 

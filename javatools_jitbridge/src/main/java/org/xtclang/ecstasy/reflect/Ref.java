@@ -12,5 +12,5 @@ public interface Ref extends Object {
     /**
      * @return the referent of this reference
      */
-    nObj get(Ctx ctx);
+    Object get(Ctx ctx);
 }

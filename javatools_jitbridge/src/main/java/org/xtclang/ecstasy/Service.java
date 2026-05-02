@@ -35,5 +35,5 @@ public interface Service extends Object {
     /**
      * {@code void registerTimeout(Timeout? timeout)}
      */
-    void registerTimeout(Ctx ctx, nObj timeout);
+    void registerTimeout(Ctx ctx, Object timeout);
 }

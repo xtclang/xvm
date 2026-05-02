@@ -1822,22 +1822,13 @@ public class CommonBuilder
                 code.invokestatic(CD_nType, "$ensureType",
                         MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
 
-                // load value1 to the stack
+                // load the values
                 code.aload(value1Slot);
                 loadProperty(code, type, propId, false);
-                if (propType.isInterfaceType()) {
-                    code.checkcast(eqJmd.optimizedParams[1].cd);
-                }
-
-                // load value2 to the stack
                 code.aload(value2Slot);
                 loadProperty(code, type, propId, false);
-                if (propType.isInterfaceType()) {
-                    code.checkcast(eqJmd.optimizedParams[2].cd);
-                }
 
-                IdentityConstant idTarget = eqMethod.getIdentity().getClassIdentity();
-                ClassDesc        cdTarget = ensureClassDesc(idTarget.getType());
+                ClassDesc cdTarget = ensureClassDesc(propType);
                 code.invokestatic(cdTarget, eqOptName, eqJmd.optimizedMD)
                     .ifeq(returnFalse);
             }

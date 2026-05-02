@@ -5,6 +5,7 @@ import java.util.Arrays;
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.IterableᐸCharᐳ;
 import org.xtclang.ecstasy.IteratorᐸCharᐳ;
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
@@ -58,7 +59,7 @@ public class ArrayᐸCharᐳ
     /**
      * @see {@link Array#$new$1$p}
      */
-    public static ArrayᐸCharᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    public static ArrayᐸCharᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof Char boxed) {
             int value = boxed.$value;
             if (value < 0x100) {
@@ -117,12 +118,12 @@ public class ArrayᐸCharᐳ
         return (int) $getElement$pi(ctx, index);
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, nObj value) {
+    @Override public void setElement$p(Ctx ctx, long index, Object value) {
         setElement$pi(ctx, index, ((Char) value).$value);
     }
 
     @Override
-    public ArrayᐸCharᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸCharᐳ add(Ctx ctx, Object element) {
         return add$p(ctx, ((Char) element).$value);
     }
 

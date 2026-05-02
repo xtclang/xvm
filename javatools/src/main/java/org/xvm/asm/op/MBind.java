@@ -33,6 +33,7 @@ import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_JavaObject;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nMethod;
+import static org.xvm.javajit.Builder.CD_nObj;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -152,6 +153,9 @@ public class MBind
         int slotOpt = bctx.storeTempValue(code, CD_MethodHandle);
 
         regTarget = regTarget.load(code);
+        if (regTarget.type().isJitInterface()) {
+            code.checkcast(CD_nObj);
+        }
         code.invokevirtual(regTarget.cd(), "$isImmut", MethodTypeDesc.of(CD_boolean));
         int slotImm = bctx.storeTempValue(code, CD_boolean);
 

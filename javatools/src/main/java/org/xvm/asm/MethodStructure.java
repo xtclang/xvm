@@ -1096,6 +1096,9 @@ public class MethodStructure
         setAbstract(false);
         resetRuntimeInfo();
 
+        if (getName().equals("compare") && getIdentityConstant().getNamespace().getName().equals("Const")) {
+            int q= 0;
+        }
         m_fNative    = true;
         m_fTransient = true;
     }

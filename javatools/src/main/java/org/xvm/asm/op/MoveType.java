@@ -98,10 +98,9 @@ public class MoveType
 
         bctx.loadCtx(code);
         if (regFrom.type().isJitInterface()) {
-            code.invokeinterface(CD_Object, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx));
-        } else {
-            code.invokevirtual(CD_nObj, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx));
+            code.checkcast(CD_nObj);
         }
+        code.invokevirtual(CD_nObj, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx));
 
         bctx.storeValue(code, m_nToValue, regFrom.type().getType());
         return -1;

@@ -619,7 +619,7 @@ public abstract class Builder {
             cdArray   = CD_ArrayObj;
             className = N_ArrayObj;
             addMethod = "add";
-            mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_nObj);
+            mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_Object);
         }
 
         // Note: we remove the immutability here; it will be added back upon "$makeImmut"

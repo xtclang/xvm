@@ -6604,7 +6604,9 @@ public abstract class TypeConstant
      */
     public boolean isJitInterface() {
         // Ref and Var are always represented is by "nRef" class
-        return isInterfaceType() && !this.isA(getConstantPool().typeRef());
+        ConstantPool pool = getConstantPool();
+        return isInterfaceType() && !this.isA(pool.typeRef()) ||
+            getCanonicalJitType().equals(pool.typeObject());
     }
 
     /**
@@ -6936,10 +6938,10 @@ public abstract class TypeConstant
             case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
                  Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
                 if (isFormal) {
-                    // boolean equals$p(Ctx,xObj,xObj)
+                    // boolean equals$p(Ctx,Object,Object)
                     code.invokevirtual(cd, sJitName, md);
                 } else {
-                    // static boolean equals$p(Ctx,nType,nObj,nObj)
+                    // static boolean equals$p(Ctx,nType,Object,Object)
                     code.invokestatic(cd, sJitName, md);
                 }
 
@@ -6964,10 +6966,10 @@ public abstract class TypeConstant
                  Op.OP_IS_LTE, Op.OP_JMP_LTE :
 
                 if (isFormal) {
-                    // Ordered compare(Ctx,nObj,nObj)
+                    // Ordered compare(Ctx,Object,Object)
                     code.invokevirtual(cd, sJitName, md);
                 } else {
-                    // static Ordered compare(Ctx,nType,nObj,nObj)
+                    // static Ordered compare(Ctx,nType,Object,Object)
                     code.invokestatic(cd, sJitName, md);
                 }
 

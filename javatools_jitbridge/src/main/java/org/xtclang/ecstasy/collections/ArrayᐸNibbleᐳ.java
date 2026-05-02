@@ -3,6 +3,7 @@ package org.xtclang.ecstasy.collections;
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Iterable;
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
@@ -43,7 +44,7 @@ public class ArrayᐸNibbleᐳ
         return array;
     }
 
-    public static ArrayᐸNibbleᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    public static ArrayᐸNibbleᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof Nibble boxed) {
             ctx.alloc(size); // REVIEW + HEADER_SIZE?
             ArrayᐸNibbleᐳ array = new ArrayᐸNibbleᐳ(ctx, type);
@@ -84,12 +85,12 @@ public class ArrayᐸNibbleᐳ
         return (int) $getElement$pi(ctx, index);
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, nObj value) {
+    @Override public void setElement$p(Ctx ctx, long index, Object value) {
         setElement$pi(ctx, index, ((Nibble) value).$value);
     }
 
     @Override
-    public ArrayᐸNibbleᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸNibbleᐳ add(Ctx ctx, Object element) {
         return add$p(ctx, ((Nibble) element).$value);
     }
 

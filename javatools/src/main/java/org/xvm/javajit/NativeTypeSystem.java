@@ -287,14 +287,14 @@ public class NativeTypeSystem
         nativeByClass.put(pool.clzEnum(),      Builder.N_nEnum);
         nativeByClass.put(pool.clzEnumValue(), Builder.N_nEnum);
         nativeByClass.put(pool.clzModule(),    Builder.N_nModule);
-        nativeByClass.put(pool.clzObject(),    Builder.N_nObj);
+        nativeByClass.put(pool.clzObject(),    Builder.N_Object);
         nativeByClass.put(pool.clzRef(),       Builder.N_nRef);
         nativeByClass.put(pool.clzService(),   Builder.N_nService);
         nativeByClass.put(pool.clzType(),      Builder.N_nType);
         nativeByClass.put(pool.clzVar(),       Builder.N_nRef);
 
         // various types used by native classes
-        TypeConstant typeChar       = pool.typeChar();
+        TypeConstant typeChar        = pool.typeChar();
         TypeConstant iterableᐸCharᐳ = pool.ensureParameterizedTypeConstant(pool.typeIterable(), typeChar);
         TypeConstant iteratorᐸCharᐳ = pool.ensureParameterizedTypeConstant(pool.typeIterator(), typeChar);
 

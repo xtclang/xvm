@@ -16,9 +16,9 @@ public class Exception extends nConst {
     }
 
     // natural property type: String?
-    public nObj text;
+    public Object text;
     // natural property type: Exception?
-    public nObj cause;
+    public Object cause;
     // the associated native Java exception
     public nException $exception;
 
@@ -30,7 +30,7 @@ public class Exception extends nConst {
      *
      * @see {@link org.xvm.asm.constants.MethodConstant#ensureJitMethodName}
      */
-    public static void construct(Ctx ctx, CtorCtx cctx, Exception thi$, nObj message, nObj cause) {
+    public static void construct(Ctx ctx, CtorCtx cctx, Exception thi$, Object message, Object cause) {
         thi$.text       = message instanceof String text ? text : Nullable.Null;
         thi$.cause      = cause instanceof Exception e ? e : Nullable.Null;
         thi$.$exception = thi$.$createJavaException(cause instanceof Exception e ? e.$exception : null);
@@ -128,10 +128,10 @@ public class Exception extends nConst {
      *  static <CompileType extends Exception> Boolean equals(CompileType value1, CompileType value2)
      */
     public static boolean equals$p(Ctx ctx, nType type, Exception value1, Exception value2) {
-        if (!nObj.equals$p(ctx, value1.text.$type(ctx), value1.text, value2.text)) {
+        if (!nObj.equals$p(ctx, ((nObj) value1.text).$type(ctx), value1.text, value2.text)) {
             return false;
         }
-        if (!nObj.equals$p(ctx, value1.cause.$type(ctx), value1.cause, value2.cause)) {
+        if (!nObj.equals$p(ctx, ((nObj) value1.cause).$type(ctx), value1.cause, value2.cause)) {
             return false;
         }
         return value1.$exception.equals(value2.$exception);

@@ -423,7 +423,7 @@ interface List<Element>
      * @return the index at which the specified value was found, or the insertion point if the
      *         value was not found
      */
-    (Boolean found, Int index) binarySearch(Element value, Orderer? compare=Null) {
+    (Boolean found, Int index) binarySearch(Element value, Orderer? compare = Null) {
         if (compare == Null) {
             assert compare := Element.ordered();
         }

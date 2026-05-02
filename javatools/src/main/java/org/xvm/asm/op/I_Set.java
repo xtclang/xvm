@@ -35,7 +35,6 @@ import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_nObj;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -169,15 +168,12 @@ public class I_Set
         if (javaPrimitive) {
             cdEl   = JitTypeDesc.getPrimitiveClass(typeEl);
             cdArgs = new ClassDesc[]{CD_Ctx, CD_long, cdEl};
-        } else if (xvmPrimitive) {
+        } else {
+            assert xvmPrimitive;
             ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(typeEl);
             cdEl   = cds[0];
             cdArgs = prependArgs(cds, CD_Ctx, CD_long);
-        } else {
-            cdEl = CD_nObj;
-            cdArgs = new ClassDesc[]{CD_Ctx, CD_long, cdEl};
         }
-        assert cdEl != null;
 
         bctx.loadCtx(code);
         bctx.loadArgument(code, m_nIndex);

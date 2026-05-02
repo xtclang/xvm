@@ -61,7 +61,7 @@ public class nType
     }
 
     @Override
-    public Boolean structConstructor(Ctx ctx, Type OuterType, nObj outer) {
+    public Boolean structConstructor(Ctx ctx, Type OuterType, Object outer) {
         throw Exception.$unsupported(ctx, "Type " + $dataType);
     }
 

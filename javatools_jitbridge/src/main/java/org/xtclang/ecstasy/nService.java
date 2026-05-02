@@ -59,7 +59,7 @@ public abstract class nService
     }
 
     @Override
-    public void registerTimeout(Ctx ctx, nObj timeout) {
+    public void registerTimeout(Ctx ctx, Object timeout) {
         throw new UnsupportedOperationException();
     }
 }
