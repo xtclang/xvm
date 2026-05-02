@@ -24,7 +24,7 @@ jakarta-activation = "2.1.4"
 jakarta-xml-bind-api = "4.0.5"
 jaxb-runtime = "4.0.7"
 jetbrains-annotations = "26.1.0"
-jline = "4.0.12"
+jline = "4.0.14"
 
 # =============================================================================
 # Build tooling & publishing
