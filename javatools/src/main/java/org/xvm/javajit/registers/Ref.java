@@ -18,7 +18,7 @@ import org.xvm.javajit.RegisterInfo;
 import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.CD_nRef;
 
 /**
@@ -96,7 +96,7 @@ public record Ref(BuildContext bctx, int regId, int slot, String name, boolean i
 
         RegisterInfo.super.load(code);
         bctx.loadCtx(code);
-        code.invokevirtual(CD_nRef, "get", MethodTypeDesc.of(CD_nObj, CD_Ctx));
+        code.invokevirtual(CD_nRef, "get", MethodTypeDesc.of(CD_Object, CD_Ctx));
         code.checkcast(referentCd);
         return switch (referentFlavor) {
             case Specific, Widened ->
@@ -129,8 +129,8 @@ public record Ref(BuildContext bctx, int regId, int slot, String name, boolean i
         if (bctx.isAssigned(this)) {
             RegisterInfo.super.load(code); // nRef
             bctx.loadCtx(code)
-                .aload(tempSlot);
-            code.invokevirtual(CD_nRef, "set", MethodTypeDesc.of(CD_void, CD_Ctx, CD_nObj));
+                .aload(tempSlot)
+                .invokevirtual(CD_nRef, "set", MethodTypeDesc.of(CD_void, CD_Ctx, CD_Object));
 
             if (!type.isA(referentType)) {
                 return bctx.narrowRegister(code, origRef, type);

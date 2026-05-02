@@ -2,6 +2,7 @@ package org.xtclang.ecstasy.text;
 
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.IteratorᐸCharᐳ;
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.nConst;
 import org.xtclang.ecstasy.nObj;
@@ -245,7 +246,7 @@ public class String
      * Native implementation of:
      *   @Op("+") String! add(Object o) {
      */
-    public String add(Ctx ctx, nObj obj) {
+    public String add(Ctx ctx, Object obj) {
         // TODO CP: optimize
         return of(ctx, this.toString() + obj.toString(ctx).toString());
     }

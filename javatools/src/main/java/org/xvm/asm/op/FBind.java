@@ -403,6 +403,9 @@ public class FBind
         code.iload(slotImm)
             .ifeq(labelEnd);
         regArg.load(code);
+        if (regArg.type().isJitInterface()) {
+            code.checkcast(CD_nObj);
+        }
         code.invokevirtual(CD_nObj, "$isImmut", MethodTypeDesc.of(CD_boolean))
             .istore(slotImm)
             .labelBinding(labelEnd);

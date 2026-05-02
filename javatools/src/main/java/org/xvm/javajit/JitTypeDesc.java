@@ -14,8 +14,8 @@ import static org.xvm.javajit.Builder.CD_Dec128;
 import static org.xvm.javajit.Builder.CD_Dec32;
 import static org.xvm.javajit.Builder.CD_Dec64;
 import static org.xvm.javajit.Builder.CD_Int128;
+import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.CD_UInt128;
-import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.CDs_Int;
 import static org.xvm.javajit.Builder.CDs_Long;
 import static org.xvm.javajit.Builder.CDs_LongLong;
@@ -44,7 +44,7 @@ public class JitTypeDesc {
             ? JitParamDesc.getPrimitiveClass(type)
             : type.isSingleUnderlyingClass(true)
                 ? builder.ensureClassDesc(type)
-                : CD_nObj;
+                : CD_Object;
     }
 
     /**

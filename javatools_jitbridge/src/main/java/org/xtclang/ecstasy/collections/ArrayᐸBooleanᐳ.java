@@ -4,7 +4,7 @@ import java.util.Arrays;
 
 import org.xtclang.ecstasy.Boolean;
 import org.xtclang.ecstasy.Iterable;
-import org.xtclang.ecstasy.nObj;
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -45,7 +45,7 @@ public class ArrayᐸBooleanᐳ
     /**
      * @see {@link Array#$new$1$p}
      */
-    public static ArrayᐸBooleanᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    public static ArrayᐸBooleanᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof Boolean boxed) {
             ctx.alloc(size); // REVIEW + HEADER_SIZE?
             ArrayᐸBooleanᐳ array = new ArrayᐸBooleanᐳ(ctx, type);
@@ -89,7 +89,7 @@ public class ArrayᐸBooleanᐳ
         return $getElement$pi(ctx, index) != 0;
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, nObj value) {
+    @Override public void setElement$p(Ctx ctx, long index, Object value) {
         setElement$pb(ctx, index, ((Boolean) value).$value);
     }
 
@@ -98,7 +98,7 @@ public class ArrayᐸBooleanᐳ
     }
 
     @Override
-    public ArrayᐸBooleanᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸBooleanᐳ add(Ctx ctx, Object element) {
         return add$p(ctx, ((Boolean) element).$value);
     }
 

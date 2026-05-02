@@ -3,6 +3,7 @@ package org.xtclang.ecstasy.collections;
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Iterable;
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
@@ -46,7 +47,7 @@ public class ArrayᐸUInt64ᐳ
     /**
      * @see {@link Array#$new$1$p}
      */
-    public static ArrayᐸUInt64ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    public static ArrayᐸUInt64ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof UInt64 boxed) {
             ctx.alloc(size * 8); // REVIEW + HEADER_SIZE?
             ArrayᐸUInt64ᐳ array = new ArrayᐸUInt64ᐳ(ctx, type);
@@ -90,12 +91,12 @@ public class ArrayᐸUInt64ᐳ
         return $getElement$pi(ctx, index);
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, nObj value) {
+    @Override public void setElement$p(Ctx ctx, long index, Object value) {
         setElement$pi(ctx, index, ((UInt64) value).$value);
     }
 
     @Override
-    public ArrayᐸUInt64ᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸUInt64ᐳ add(Ctx ctx, Object element) {
         return add$p(ctx, ((UInt64) element).$value);
     }
 

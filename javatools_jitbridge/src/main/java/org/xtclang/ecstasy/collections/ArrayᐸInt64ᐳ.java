@@ -1,5 +1,6 @@
 package org.xtclang.ecstasy.collections;
 
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nObj;
 
 import java.util.Arrays;
@@ -47,7 +48,7 @@ public class ArrayᐸInt64ᐳ
     /**
      * @see {@link Array#$new$1$p}
      */
-    public static ArrayᐸInt64ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    public static ArrayᐸInt64ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof org.xtclang.ecstasy.numbers.Int64 boxed) {
             ctx.alloc(size * 8); // REVIEW + HEADER_SIZE?
             ArrayᐸInt64ᐳ array = new ArrayᐸInt64ᐳ(ctx, type);
@@ -91,12 +92,12 @@ public class ArrayᐸInt64ᐳ
         return $getElement$pi(ctx, index);
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, nObj value) {
+    @Override public void setElement$p(Ctx ctx, long index, Object value) {
         setElement$pi(ctx, index, ((Int64) value).$value);
     }
 
     @Override
-    public ArrayᐸInt64ᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸInt64ᐳ add(Ctx ctx, Object element) {
         return add$p(ctx, ((Int64) element).$value);
     }
 

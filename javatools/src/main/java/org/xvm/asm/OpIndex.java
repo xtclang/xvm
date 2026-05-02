@@ -42,7 +42,7 @@ import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.loadFromContext;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -241,7 +241,7 @@ public abstract class OpIndex
                 switch (getOpCode()) {
                     case OP_I_GET -> {
                         code.invokevirtual(cdArray, "getElement$p",
-                            MethodTypeDesc.of(CD_nObj, CD_Ctx, CD_long));
+                            MethodTypeDesc.of(CD_Object, CD_Ctx, CD_long));
                         if (!typeEl.equals(pool.typeObject())) {
                             code.checkcast(bctx.builder.ensureClassDesc(typeEl));
                         }
@@ -250,7 +250,7 @@ public abstract class OpIndex
                     case OP_I_SET -> {
                         bctx.loadArgument(code, getValueId());
                         code.invokevirtual(cdArray, "setElement$p",
-                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_nObj));
+                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_Object));
                     }
 
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));
@@ -436,7 +436,7 @@ public abstract class OpIndex
      *         {@link RegisterInfo} representing the array element
      */
     private RegisterInfo loadArrayElement(BuildContext bctx, CodeBuilder code,
-            RegisterInfo regArray, boolean onStack) {
+                                          RegisterInfo regArray, boolean onStack) {
 
         TypeConstant type    = regArray.type();
         TypeConstant typeEl  = type.resolveGenericType("Element");
@@ -450,14 +450,11 @@ public abstract class OpIndex
         if (javaPrimitive) {
             cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
             cds  = new ClassDesc[]{cdEl};
-        } else if (xvmPrimitive) {
+        } else {
+            assert xvmPrimitive;
             cds  = JitTypeDesc.getXvmPrimitiveClasses(typeEl);
             cdEl = cds[0];
-        } else {
-            cdEl = CD_nObj;
-            cds  = new ClassDesc[]{cdEl};
         }
-        assert cdEl != null;
 
         // get the element from the array
         bctx.loadCtx(code);

@@ -3,7 +3,7 @@ package org.xtclang.ecstasy.collections;
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Iterable;
-import org.xtclang.ecstasy.nObj;
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.numbers.Bit;
@@ -46,7 +46,7 @@ public class ArrayᐸBitᐳ
     /**
      * @see {@link Array#$new$1$p}
      */
-    public static ArrayᐸBitᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    public static ArrayᐸBitᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof Bit boxed) {
             ctx.alloc(size); // REVIEW + HEADER_SIZE?
             ArrayᐸBitᐳ array = new ArrayᐸBitᐳ(ctx, type);
@@ -90,12 +90,12 @@ public class ArrayᐸBitᐳ
         return (int) $getElement$pi(ctx, index);
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, nObj value) {
+    @Override public void setElement$p(Ctx ctx, long index, Object value) {
         setElement$pi(ctx, index, ((Bit) value).$value);
     }
 
     @Override
-    public ArrayᐸBitᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸBitᐳ add(Ctx ctx, Object element) {
         return add$p(ctx, ((Bit) element).$value);
     }
 

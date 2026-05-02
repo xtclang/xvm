@@ -1,7 +1,7 @@
 package org.xtclang.ecstasy.collections;
 
 import org.xtclang.ecstasy.Iterable;
-import org.xtclang.ecstasy.nObj;
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.numbers.Int128;
@@ -44,7 +44,7 @@ public class ArrayᐸInt128ᐳ
     /**
      * @see {@link Array#$new$1$p}
      */
-    public static ArrayᐸInt128ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    public static ArrayᐸInt128ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof Int128 boxed) {
             ctx.alloc(size * 16); // REVIEW + HEADER_SIZE?
             ArrayᐸInt128ᐳ array = new ArrayᐸInt128ᐳ(ctx, type);
@@ -93,7 +93,7 @@ public class ArrayᐸInt128ᐳ
         return $getElement$pi(ctx, index);
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, nObj value) {
+    @Override public void setElement$p(Ctx ctx, long index, Object value) {
         setElement$pi(ctx, index, ((Int128) value).$lowValue, ((Int128) value).$highValue);
     }
 
@@ -103,7 +103,7 @@ public class ArrayᐸInt128ᐳ
     }
 
     @Override
-    public ArrayᐸInt128ᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸInt128ᐳ add(Ctx ctx, Object element) {
         return add$p(ctx, ((Int128) element).$lowValue, ((Int128) element).$highValue);
     }
 
