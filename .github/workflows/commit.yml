@@ -554,7 +554,7 @@ jobs:
                   always() &&
                   matrix.os == 'ubuntu-latest' &&
                   steps.publish-flags.outputs.validate-lang == 'true'
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: plugin-verifier-reports-${{ github.sha }}
                   path: lang/intellij-plugin/build/reports/pluginVerifier/
