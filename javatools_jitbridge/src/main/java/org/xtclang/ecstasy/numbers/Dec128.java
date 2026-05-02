@@ -5,11 +5,7 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.math.RoundingMode;
 
-import org.xtclang.ecstasy.Object;
-import org.xtclang.ecstasy.Orderable;
-import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.OutOfBounds;
-import org.xtclang.ecstasy.nType;
 
 import org.xvm.javajit.Ctx;
 
@@ -386,7 +382,7 @@ public class Dec128 extends DecimalFPNumber {
 
     /**
      * The internal compare method for two Dec128 values called by the compare methods generated
-     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleCompareMethod}
+     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleConstCompare}
      * and also in {@link TypeConstant#buildCompare}
      *
      * @param low1   the low 64 bits of the first value
@@ -404,7 +400,7 @@ public class Dec128 extends DecimalFPNumber {
 
     /**
      * The internal equals method for two Int128 values called by the equals methods generated
-     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleEqualsMethod} Method}
+     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleConstEquals} Method}
      * and also in {@link TypeConstant#buildCompare}
      *
      * @param low1   the low 64 bits of the first Int128

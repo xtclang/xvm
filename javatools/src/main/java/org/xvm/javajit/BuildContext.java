@@ -1854,7 +1854,7 @@ public class BuildContext {
                             typeTarget.getParamType(0).getDefaultValue() instanceof Constant dfltValue) {
                         RegisterInfo regValue = loadConstant(code, dfltValue);
                         if (regValue.flavor().isOptimized) {
-                            // the corresponding array constructor always takes an "nObj"
+                            // the corresponding array constructor always takes an "Object"
                             Builder.box(code, regValue);
                         }
                         break;

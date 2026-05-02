@@ -243,7 +243,7 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     @Override
-    protected boolean isMethodOnTemplateClass(String jitName, MethodTypeDesc md) {
+    protected boolean isNativeMethod(String jitName, MethodTypeDesc md) {
         return findMethod(jitName, md) != null;
     }
 }

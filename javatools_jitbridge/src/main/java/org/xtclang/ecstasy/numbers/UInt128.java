@@ -3,7 +3,6 @@ package org.xtclang.ecstasy.numbers;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
-import org.xtclang.ecstasy.Comparable;
 import org.xtclang.ecstasy.Orderable;
 import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.OutOfBounds;
@@ -368,7 +367,7 @@ public class UInt128 extends IntNumber {
 
     /**
      * The internal compare method for two UInt128 values called by the compare methods generated
-     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleCompareMethod}
+     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleConstCompare}
      * and also in {@link TypeConstant#buildCompare}
      *
      * @param low1   the low 64 bits of the first UInt128
@@ -387,7 +386,7 @@ public class UInt128 extends IntNumber {
 
     /**
      * The internal equals method for two Int128 values called by the equals methods generated
-     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleEqualsMethod} Method}
+     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleConstEquals} Method}
      * and also in {@link TypeConstant#buildCompare}
      *
      * @param low1   the low 64 bits of the first UInt128

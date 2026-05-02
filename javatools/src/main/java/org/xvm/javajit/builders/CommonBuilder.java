@@ -1593,11 +1593,15 @@ public class CommonBuilder
     protected void assembleConstMethods(String className, ClassBuilder classBuilder) {
         if (!thisType.isA(pool().typeNumber()) && !thisType.isJitPrimitive()) {
             // we only generate equals and compare for non-primitive types
-            assembleEqualsMethod(className, classBuilder);
-            assembleCompareMethod(className, classBuilder);
+            assembleConstEquals(className, classBuilder);
+            assembleConstCompare(className, classBuilder);
         }
-        assembleConstHashCodeMethod(className, classBuilder);
-        // TODO Stringable appendTo estimateStringLength
+        // the reason we need to generate "hashCode" for primitive types is to produce
+        // non-predictable implementations
+        // TODO JK: consider implementing them natively via a Ctx-based facility, in which
+        //  case we can simplify the code production
+        assembleConstHashCode(className, classBuilder);
+        // TODO JK: Stringable appendTo estimateStringLength
     }
 
     /**
@@ -1606,7 +1610,7 @@ public class CommonBuilder
      *
      * @return {@code true} if the specified method exists for the native (augmented) class
      */
-    protected boolean isMethodOnTemplateClass(String jitName, MethodTypeDesc md) {
+    protected boolean isNativeMethod(String jitName, MethodTypeDesc md) {
         return false;
     }
 
@@ -1618,7 +1622,7 @@ public class CommonBuilder
      * Generate the "equals", "equals$p" and possibly "$equals" methods for a const type if the
      * methods do not already exist.
      */
-    protected void assembleEqualsMethod(String className, ClassBuilder classBuilder) {
+    protected void assembleConstEquals(String className, ClassBuilder classBuilder) {
         SignatureConstant eqSig    = pool().sigEquals();
         MethodInfo        eqMethod = typeInfo.getMethodBySignature(eqSig);
         Implementation    impl     = eqMethod.getHead().getImplementation();
@@ -1633,7 +1637,7 @@ public class CommonBuilder
             MethodTypeDesc mdWrapper   = MethodTypeDesc.of(CD_Boolean, CD_Ctx, CD_nType, cdThis, cdThis);
             MethodTypeDesc mdPrimitive = MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_nType, cdThis, cdThis);
 
-            if (!isMethodOnTemplateClass(eqName, mdWrapper)) {
+            if (!isNativeMethod(eqName, mdWrapper)) {
                 // generate the standard "equals" wrapper that delegates to the optimized "equals$p"
                 classBuilder.withMethodBody(eqName, mdWrapper,
                         ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
@@ -1648,10 +1652,10 @@ public class CommonBuilder
                         });
 
                 // generate the optimized "equals$p" with the actual implementation
-                if (!isMethodOnTemplateClass(eqOptName, mdPrimitive)) {
+                if (!isNativeMethod(eqOptName, mdPrimitive)) {
                     classBuilder.withMethodBody(eqOptName, mdPrimitive,
                         ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
-                        code -> assembleEqualsMethod(className, code, thisType, eqSig));
+                        code -> assembleConstEquals(className, code, thisType, eqSig));
                 }
             }
         }
@@ -1668,8 +1672,8 @@ public class CommonBuilder
      * <p>
      * Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value1, Slot 3 = value2
      */
-    private void assembleEqualsMethod(String className, CodeBuilder code, TypeConstant type,
-                                      SignatureConstant eqSig) {
+    private void assembleConstEquals(String className, CodeBuilder code, TypeConstant type,
+                                     SignatureConstant eqSig) {
         // all primitives must have a manually coded native implementation
         assert !type.isJitPrimitive();
 
@@ -1852,7 +1856,7 @@ public class CommonBuilder
      *     static <CompileType extends T> Ordered compare(T value1, T value2)
      * </pre>
      */
-    protected void assembleCompareMethod(String className, ClassBuilder classBuilder) {
+    protected void assembleConstCompare(String className, ClassBuilder classBuilder) {
         SignatureConstant cmpSig    = pool().sigCompare();
         MethodInfo        cmpMethod = typeInfo.getMethodBySignature(cmpSig);
         Implementation    impl      = cmpMethod.getHead().getImplementation();
@@ -1865,12 +1869,11 @@ public class CommonBuilder
             String         cmpName = cmpSig.getName();
             MethodTypeDesc md      = MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_nType, cdThis, cdThis);
 
-            if (!isMethodOnTemplateClass(cmpName, md)) {
+            if (!isNativeMethod(cmpName, md)) {
                 // generate the standard "compare" method
                 classBuilder.withMethodBody(cmpName, md,
                         ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
-                        (code) ->
-                                assembleCompareMethod(className, code, thisType, cmpSig));
+                        code -> assembleConstCompare(className, code, thisType, cmpSig));
             }
         }
     }
@@ -1886,8 +1889,8 @@ public class CommonBuilder
      * <p>
      * Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value1, Slot 3 = value2
      */
-    private void assembleCompareMethod(String className, CodeBuilder code, TypeConstant type,
-                                       SignatureConstant cmpSig) {
+    private void assembleConstCompare(String className, CodeBuilder code, TypeConstant type,
+                                      SignatureConstant cmpSig) {
         // all primitives must have a manually coded native implementation
         assert !type.isJitPrimitive();
 
@@ -2095,7 +2098,7 @@ public class CommonBuilder
      *     static <CompileType extends T> Int hashCode(T value)
      * </pre>
      */
-    protected void assembleConstHashCodeMethod(String className, ClassBuilder classBuilder) {
+    protected void assembleConstHashCode(String className, ClassBuilder classBuilder) {
         SignatureConstant hashSig    = pool().sigHashCode();
         MethodInfo        hashMethod = typeInfo.getMethodBySignature(hashSig);
         Implementation    impl       = hashMethod.getHead().getImplementation();
@@ -2113,7 +2116,7 @@ public class CommonBuilder
             MethodTypeDesc mdWrapper   = MethodTypeDesc.of(CD_Int64, CD_Ctx, CD_nType, cdThis);
             MethodTypeDesc mdPrimitive = MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cdThis);
 
-            if (!isMethodOnTemplateClass(hashName, mdWrapper)) {
+            if (!isNativeMethod(hashName, mdWrapper)) {
                 // generate the standard "hashCode" wrapper that delegates to the optimized
                 // "hashCode$p"
                 classBuilder.withMethodBody(hashName, mdWrapper,
@@ -2128,10 +2131,10 @@ public class CommonBuilder
                         });
 
                 // generate the optimized "hashCode$p" with the actual implementation
-                if (!isMethodOnTemplateClass(hashOptName, mdPrimitive)) {
+                if (!isNativeMethod(hashOptName, mdPrimitive)) {
                     classBuilder.withMethodBody(hashOptName, mdPrimitive,
                             ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
-                            code -> assembleConstHashCodeMethod(className, code, thisType, hashSig));
+                            code -> assembleConstHashCode(className, code, thisType, hashSig));
                 }
             }
         }
@@ -2146,9 +2149,8 @@ public class CommonBuilder
      * </pre>
      * Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value
      */
-    private void assembleConstHashCodeMethod(String className, CodeBuilder code, TypeConstant type,
-                                             SignatureConstant hashSig) {
-
+    private void assembleConstHashCode(String className, CodeBuilder code, TypeConstant type,
+                                       SignatureConstant hashSig) {
         TypeConstant typeHashable = pool().typeHashable();
         ClassDesc    cdThis       = ensureClassDesc(type);
         int          valueSlot    = 2;
@@ -2267,6 +2269,8 @@ public class CommonBuilder
             if (propType.isJavaPrimitive()) {
                 // load the primitive value and convert to long in-line — all Java primitives
                 // fit into a 64-bit long
+                // TODO JK: this is not quite correct; it needs to go to **the same** algorithm
+                //          as the "hashCode" production
                 code.aload(valueSlot);
                 loadProperty(code, type, propId, true);
                 ClassDesc cd = JitTypeDesc.getPrimitiveClass(propType);
@@ -2290,11 +2294,18 @@ public class CommonBuilder
                 code.aload(valueSlot);
                 loadProperty(code, type, propId, false);
 
-                MethodInfo     method = propType.ensureTypeInfo().getMethodBySignature(hashSig);
-                ClassDesc      cd     = ensureClassDesc(method.getIdentity().getNamespace()
-                                                              .getType());
-                MethodTypeDesc md     = MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cd);
-                code.invokestatic(cd, hashOptName, md);
+                if (propType.isJitPrimitive()) {
+                    ClassDesc      cdTarget = ensureClassDesc(propType);
+                    MethodTypeDesc mdHash   = MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cdTarget);
+                    code.invokestatic(ensureClassDesc(propType), hashOptName, mdHash);
+                } else {
+                    MethodInfo    hashMethod = propType.ensureTypeInfo().getMethodBySignature(hashSig);
+                    JitMethodDesc hashJmd    = hashMethod.getJitDesc(this, propType);
+
+                    IdentityConstant idTarget = hashMethod.getIdentity().getClassIdentity();
+                    ClassDesc        cdTarget = ensureClassDesc(idTarget.getType());
+                    code.invokestatic(cdTarget, hashOptName, hashJmd.optimizedMD);
+                }
                 // long hashCode on the stack
             }
             // add the result and store
