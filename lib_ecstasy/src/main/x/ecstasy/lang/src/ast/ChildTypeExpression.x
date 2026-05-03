@@ -80,34 +80,14 @@ const ChildTypeExpression(TypeExpression          parent,
 
     @Override
     String toString() {
-        StringBuffer buf = new StringBuffer();
-
+        val buf = new StringBuffer();
         parent.appendTo(buf);
         buf.add('.');
-
-        for (AnnotationExpression anno : annotations?) {
-            anno.appendTo(buf);
-            buf.add(' ');
+        if (annotations != Null && !annotations.empty) {
+            annotations.appendTo(buf, sep=" ", pre="", post=" ");
         }
-
-        Loop: for (Token token : names) {
-            if (!Loop.first) {
-                buf.add('.');
-            }
-            token.appendTo(buf);
-        }
-
-        if (params != Null) {
-            buf.add('<');
-            Loop: for (TypeExpression param : params) {
-                if (!Loop.first) {
-                    buf.add(',').add(' ');
-                }
-                param.appendTo(buf);
-            }
-            buf.add('>');
-        }
-
+        names.appendTo(buf, sep=".", pre="", post="");
+        params?.appendTo(buf, sep=", ", pre="<", post=">");
         return buf.toString();
     }
 }

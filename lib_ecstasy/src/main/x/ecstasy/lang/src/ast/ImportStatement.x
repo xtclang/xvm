@@ -38,25 +38,10 @@ const ImportStatement(Token   keyword,
 
     @Override
     String toString() {
-        StringBuffer buf = new StringBuffer();
-
-        "import ".appendTo(buf);
-
-        Loop: for (Token token : names) {
-            if (!Loop.first) {
-                buf.add('.');
-            }
-            token.valueText.appendTo(buf);
+        val alias = this.alias;
+        if (alias?.valueText != names[names.size - 1].valueText) {
+            return $"import {qualifiedName} as {alias.valueText};";
         }
-
-        Token? alias = this.alias;
-        if (alias?.valueText != names[names.size-1].valueText) {
-            " as ".appendTo(buf);
-            alias.valueText.appendTo(buf);
-        }
-
-        buf.add(';');
-
-        return buf.toString();
+        return $"import {qualifiedName};";
     }
 }

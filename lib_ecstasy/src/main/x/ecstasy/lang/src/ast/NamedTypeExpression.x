@@ -106,44 +106,15 @@ const NamedTypeExpression(Token[]?          moduleNames,
 
     @Override
     String toString() {
-        StringBuffer buf = new StringBuffer();
-
-        if (moduleNames != Null) {
-            Loop: for (Token token : moduleNames) {
-                if (!Loop.first) {
-                    buf.add('.');
-                }
-                token.appendTo(buf);
-            }
-
-            buf.add(':');
-        }
-
-        Loop: for (Token token : names) {
-            if (!Loop.first) {
-                buf.add('.');
-            }
-            token.appendTo(buf);
-        }
-
+        val buf = new StringBuffer();
+        moduleNames?.appendTo(buf, sep=".", pre="", post=":");
+        names.appendTo(buf, sep=".", pre="", post="");
         if (access != Null) {
             buf.add(':');
             access.id.text.appendTo(buf);
         }
-
-        if (noNarrow != Null) {
-            noNarrow.id.text.appendTo(buf);
-        }
-
-        if (params != Null) {
-            buf.add('<');
-            for (TypeExpression param : params) {
-                param.appendTo(buf);
-                buf.add(',').add(' ');
-            }
-            buf.truncate(-2).add('>');
-        }
-
+        noNarrow?.id.text.appendTo(buf);
+        params?.appendTo(buf, sep=", ", pre="<", post=">");
         return buf.toString();
     }
 }

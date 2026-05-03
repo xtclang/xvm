@@ -11,17 +11,6 @@ const TupleTypeExpression(TypeExpression[]       types,
 
     @Override
     String toString() {
-        StringBuffer buf = new StringBuffer();
-
-        buf.add('<');
-        Loop: for (TypeExpression type : types) {
-            if (!Loop.first) {
-                buf.add(',').add(' ');
-            }
-            type.appendTo(buf);
-        }
-        buf.add('>');
-
-        return buf.toString();
+        return types.toString(sep=", ", pre="<", post=">");
     }
 }

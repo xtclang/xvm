@@ -459,6 +459,7 @@ val runOne by tasks.registering(XtcRunTask::class) {
 val testModuleNames = listOf(
     "TestAnnotations",
     "TestArray",
+    "TestAstToString",
     "TestCollections",
     "TestDefAsn",
     "TestTry",

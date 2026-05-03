@@ -58,22 +58,11 @@ const AnnotationExpression(TypeExpression name,
 
     @Override
     String toString() {
-        Expression[]? args = this.args;
-        return switch (args?.size) {
-            case  0: $"@{name}()";
-            case  1: $"@{name}({args[0]})";
-            default: {
-                StringBuffer buf = new StringBuffer();
-                buf.add('@');
-                name.appendTo(buf);
-                buf.add('(');
-                for (Expression arg : args) {
-                    buf.append(arg.toString())
-                       .add(',').add(' ');
-                }
-                return buf.truncate(-2).add(')').toString();
-            };
-        };
-        return $"@{name}";
+        val args = this.args;
+        if (args == Null) {
+            return $"@{name}";
+        }
+        val argList = args.toString(sep=", ", pre="(", post=")");
+        return $"@{name}{argList}";
     }
 }
