@@ -106,7 +106,7 @@ void info(function String () messageFn,
 
 **Pros**
 
-- Zero language work — implementable today against the existing `lib_logging` stub.
+- Zero language work — implementable today against the existing `lib_logging` POC.
 - One-line change at every call site that wants laziness.
 - Plays nicely with markers, MDC, and the fluent builder.
 - Works the same way `slf4j-api`'s newer fluent `log(Supplier<String>)` works, so the

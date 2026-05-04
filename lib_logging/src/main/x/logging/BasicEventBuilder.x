@@ -15,36 +15,57 @@ class BasicEventBuilder(BasicLogger logger, Level level)
     private Exception?          cause     = Null;
     private Map<String, Object> keyValues = new ListMap();
 
+    /**
+     * Replace the pending message pattern. Mirrors SLF4J
+     * `LoggingEventBuilder.setMessage`.
+     */
     @Override
     LoggingEventBuilder setMessage(String message) {
         this.message = message;
         return this;
     }
 
+    /**
+     * Append one positional `{}` argument.
+     */
     @Override
     LoggingEventBuilder addArgument(Object value) {
         args.add(value);
         return this;
     }
 
+    /**
+     * Attach one marker. Repeated calls produce a multi-marker event.
+     */
     @Override
     LoggingEventBuilder addMarker(Marker marker) {
         markers.add(marker);
         return this;
     }
 
+    /**
+     * Attach an explicit cause. This wins over SLF4J throwable promotion from
+     * `arguments`.
+     */
     @Override
     LoggingEventBuilder setCause(Exception cause) {
         this.cause = cause;
         return this;
     }
 
+    /**
+     * Attach one structured key/value pair for structured sinks. Duplicate keys use
+     * last-value-wins semantics in the current `Map` representation.
+     */
     @Override
     LoggingEventBuilder addKeyValue(String key, Object value) {
         keyValues.put(key, value);
         return this;
     }
 
+    /**
+     * Emit using the message set by `setMessage`, if one was supplied.
+     */
     @Override
     void log() {
         if (String m ?= message) {
@@ -52,17 +73,26 @@ class BasicEventBuilder(BasicLogger logger, Level level)
         }
     }
 
+    /**
+     * Emit using `message` as the final message pattern.
+     */
     @Override
     void log(String message) {
         logger.emitWith(level, message, frozen(args), cause, frozenMarkers(), frozenKVs());
     }
 
+    /**
+     * Convenience: append one argument and emit.
+     */
     @Override
     void log(String format, Object arg) {
         args.add(arg);
         logger.emitWith(level, format, frozen(args), cause, frozenMarkers(), frozenKVs());
     }
 
+    /**
+     * Convenience: append two arguments and emit.
+     */
     @Override
     void log(String format, Object arg1, Object arg2) {
         args.add(arg1);
@@ -70,6 +100,9 @@ class BasicEventBuilder(BasicLogger logger, Level level)
         logger.emitWith(level, format, frozen(args), cause, frozenMarkers(), frozenKVs());
     }
 
+    /**
+     * Convenience: append all supplied arguments and emit.
+     */
     @Override
     void log(String format, Object[] args) {
         for (Object arg : args) {

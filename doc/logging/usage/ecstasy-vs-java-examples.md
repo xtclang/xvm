@@ -34,11 +34,12 @@ module Demo {
 }
 ```
 
-The SLF4J static-factory pattern still works in Ecstasy:
+The equivalent of the SLF4J static-factory line is to inject once and derive the full
+logger name you want:
 
 ```ecstasy
-@Inject log.LoggerFactory factory;
-log.Logger logger = factory.getLogger(Demo);
+@Inject log.Logger root;
+log.Logger logger = root.named("Demo");
 ```
 
 ## 2. Level checks (avoid expensive arg construction)
@@ -173,13 +174,15 @@ Logger byClass = LoggerFactory.getLogger(MyClass.class);
 **Ecstasy:**
 
 ```ecstasy
-@Inject log.LoggerFactory factory;
-log.Logger byName  = factory.getLogger("com.example.foo");
-log.Logger byClass = factory.getLogger(MyClass);
-
-// Or, by injection:
-@Inject("com.example.foo") log.Logger logger;
+@Inject log.Logger root;
+log.Logger byName  = root.named("com.example.foo");
+log.Logger byClass = root.named(MyClass.path);
 ```
+
+`@Inject("com.example.foo") log.Logger logger;` was intentionally rejected. The runtime
+registers one root logger under the normal `@Inject Logger logger;` key; per-name
+loggers are derived by API, which keeps the injector simple and mirrors SLF4J's
+`LoggerFactory.getLogger(...)` idiom.
 
 ## 8. Configuration: changing the root level
 
@@ -203,11 +206,11 @@ import org.slf4j.LoggerFactory;
 ((Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)).setLevel(Level.DEBUG);
 ```
 
-**Ecstasy (default `ConsoleLogSink`):**
+**Ecstasy (explicit construction with the default `ConsoleLogSink`):**
 
 ```ecstasy
-@Inject log.ConsoleLogSink sink;
-sink.setRootLevel(log.Debug);
+log.LogSink sink   = new log.ConsoleLogSink(log.Level.Debug);
+log.Logger  logger = new log.BasicLogger("com.example", sink);
 ```
 
 For a richer per-logger configuration tree see `../future/logback-integration.md` — the future

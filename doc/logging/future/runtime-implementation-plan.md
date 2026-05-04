@@ -13,8 +13,8 @@
 > as instructions for current work. Stage 4 (compiler-side default name)
 > remains open.
 
-This document is the actionable plan that turns the v0 stub (`@Inject Logger logger;`
-parses but does not resolve) into a **working end-to-end demo**: the Ecstasy line
+This historical plan described how to turn the original v0 stub (`@Inject Logger logger;`
+parsed but did not resolve) into a **working end-to-end demo**: the Ecstasy line
 
 ```ecstasy
 @Inject Logger logger;
@@ -60,9 +60,9 @@ The round trip is demo-worthy when **all** of these are true:
    by a sink that cares; default `ConsoleLogSink` would gain a small change to render
    MDC entries).
 
-6. The 18 unit tests still pass; one new manualTest invokes `runInjected()` and
-   succeeds (today the `runInjected()` path catches the unresolved-injection
-   exception).
+6. The focused `lib_logging` suite (54 XTC test methods) still compiles cleanly;
+   `manualTests/src/main/x/TestLogger.x` invokes both `runInjected()` and the
+   slog-shaped `runInjectedSlog()` path successfully.
 
 7. `~/src/platform/kernel/kernel.x` compiles unchanged (it does not use
    `@Inject Logger` yet) AND a small follow-up PR converting one of its

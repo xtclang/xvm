@@ -8,14 +8,19 @@ scan this once and know everything they need.
 
 | SLF4J 2.x (Java) | lib_logging (Ecstasy) |
 |---|---|
-| `LoggerFactory.getLogger(MyClass.class)` | `@Inject Logger logger;` `static Logger LOG = logger.named(MyClass.qualifiedName);` |
-| `LoggerFactory.getLogger("com.example.foo")` | `LoggerFactory.getLogger("com.example.foo")` *(also)* `logger.named("com.example.foo")` |
+| `LoggerFactory.getLogger(MyClass.class)` | `@Inject Logger logger;` then `Logger LOG = logger.named(MyClass.path);` |
+| `LoggerFactory.getLogger("com.example.foo")` | `logger.named("com.example.foo")` *(or `LoggerFactory.getLogger("com.example.foo")` when the non-injection factory is wired to a default sink)* |
 | (no equivalent) | `@Inject Logger logger;` *(injects a single root logger)* |
 
 `@Inject("com.example.foo") Logger logger;` was considered and rejected — see
 `../future/runtime-implementation-plan.md` Stage 1.4 for why. SLF4J doesn't have a
 parameterized injection annotation either; `LoggerFactory.getLogger(MyClass.class)`
 is its idiom and `Logger.named(String)` is the direct Ecstasy equivalent.
+
+`Logger.named(String)` takes the full logger name. It does not append a suffix to the
+current logger name; write `logger.named("billing.Charger")`, not
+`logger.named("billing").named("Charger")`, unless the second call also supplies the
+full name.
 
 ## `Logger` core methods
 
@@ -116,7 +121,7 @@ SLF4J's `{}` placeholder semantics are reproduced verbatim by `MessageFormatter.
 
 - Native injection (`@Inject Logger logger;`). SLF4J has nothing like this; it relies on
   the static factory. Injection makes per-container sink override trivial — see
-  `../open-questions.md` for the open piece around per-container overrides.
+  `../design/design.md` for the documented override pattern.
 - `Off` level, useful for sink configuration. SLF4J expresses this through level checks
   in `Logger.isEnabledFor(...)`.
 

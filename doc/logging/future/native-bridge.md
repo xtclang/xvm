@@ -83,12 +83,13 @@ suppliers.put(new Resource(consoleType, "console"), TerminalConsole::$create);
 For `lib_logging`, we'd add:
 
 ```java
-suppliers.put(new Resource(loggerType,   "*"),       RTLogger::$create);
+suppliers.put(new Resource(loggerType,   "logger"),  RTLogger::$create);
 suppliers.put(new Resource(logSinkType,  "default"), RTLogbackSink::$create);
 ```
 
-The wildcard `"*"` for `Logger` is the workaround for the current exact-name resolution
-(see `../open-questions.md` — this is a small change to `nMainInjector.supplierOf`).
+The interpreter-side `NativeContainer` now resolves by `(resource name, requested type)`;
+the JIT bridge should follow the same rule if this experiment grows into a JIT-backed
+logging bridge.
 
 The suppliers map is per-Injector instance, so each container can choose its own
 sink. There is no JVM-global state; this matches Ecstasy's container isolation

@@ -3,9 +3,9 @@
  * for structured data attached to a log record.
  *
  * Every piece of structured data — what SLF4J would split across `arguments`, `marker`,
- * and `keyValues` — is expressed as one of these. A `Logger` carries an `Attr[]` of
- * "always include these" attributes; the per-call `info(message, extra)` adds more for
- * that call only.
+ * and `keyValues` — is expressed as one of these. `Logger.with(...)` asks the handler
+ * to derive a new handler with "always include these" attributes; the per-call
+ * `info(message, extra)` adds more for that call only.
  *
  *      Attr.of("user", "alice")
  *      Attr.of("count", 42)

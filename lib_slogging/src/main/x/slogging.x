@@ -7,10 +7,9 @@
  * Ecstasy structured-logging library, slog-shaped.
  *
  * The module is intentionally shaped to be _instantly familiar_ to anyone who has used
- * `log/slog` in Go: a top-level `Logger` carrying a `Handler` and a list of attached
- * `Attr`s, derived loggers via `Logger.with(attrs)`, no thread-local context (you carry
- * a logger), no "marker" concept (categorisation is just attributes), open-ended
- * integer-based `Level` values.
+ * `log/slog` in Go: a top-level `Logger` carrying a `Handler`, derived loggers via
+ * `Logger.with(attrs)`, optional context propagation via `LoggerContext`, no "marker"
+ * concept (categorisation is just attributes), open-ended integer-based `Level` values.
  *
  * The primary entry point is injection:
  *
@@ -29,11 +28,9 @@
  *
  * # Status
  *
- * **This module is currently a skeleton** — interfaces, the `Logger` const, and stub
- * handlers (`TextHandler`, `NopHandler`, `MemoryHandler`, `JSONHandler`). Full
- * implementation is gated on reviewer feedback in
- * `doc/logging/lib-logging-vs-lib-slogging.md` so we don't sink effort into both shapes
- * before deciding which one Ecstasy should adopt.
+ * **This module is a working comparison POC.** The core API, level checks, derived
+ * loggers, groups, custom levels, runtime injection, source metadata, context binding,
+ * and memory/text/JSON/no-op handlers are implemented and covered by unit tests.
  *
  * # API / Implementation boundary
  *
@@ -43,18 +40,22 @@
  *      - [Attr]       — single key/value pair carried as structured data
  *      - [Record]     — immutable record of a single log call (LogEvent equivalent)
  *      - [Handler]    — the SPI that backends implement (LogSink equivalent)
+ *      - [LoggerContext] — optional SharedContext helper for request-scoped loggers
  *
  * The implementation side of that boundary contains:
  *      - [TextHandler]   — default human-readable text handler, writes via `@Inject Console`
- *      - [JSONHandler]   — JSON-Lines structured handler (skeleton)
+ *      - [JSONHandler]   — JSON-Lines structured handler, rendered by `lib_json`
+ *      - [BoundHandler]  — derivation wrapper used by handlers that do not cache prefixes
  *      - [NopHandler]    — drops every record
  *      - [MemoryHandler] — captures records in memory; useful in tests
  *
  * # See also
  *
  *      doc/logging/lib-logging-vs-lib-slogging.md  — the design comparison document
+ *      doc/logging/api-cross-reference.md           — official Go slog links mapped to these types
  *      doc/logging/open-questions.md               — list of reviewer questions (Q-D6)
  *      lib_logging/src/main/x/logging.x            — the SLF4J-shaped sibling library
  */
 module slogging.xtclang.org {
+    package json import json.xtclang.org;
 }

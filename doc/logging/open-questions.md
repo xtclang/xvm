@@ -220,7 +220,7 @@ feature scope. Each item is a concrete deliverable with a one-line summary.
 
 | # | Item | Notes |
 |---|---|---|
-| W-1 | Multiple markers per event | `LogEvent.marker: Marker?` → `LogEvent.markers: Marker[]`; accumulate in `BasicEventBuilder`; render `[markers=A,B]` in `ConsoleLogSink`. Tracked as task #2; see open question 4 above. |
+| W-1 | Multiple markers per event | **Done.** `LogEvent.markers: Marker[]`, `marker` convenience accessor, `BasicEventBuilder.addMarker(...)` accumulation, and `ConsoleLogSink` multi-marker rendering are implemented and tested. |
 | W-2 | Logger interning in `Logger.named` | **Done.** Implemented `service LoggerRegistry(LogSink sink)` keyed by logger name; `BasicLogger.registry: LoggerRegistry?` (optional, defaulted `Null` so unattached loggers stay allocation-light); `LoggerFactory` lazily constructs a registry over its `defaultSink` and routes both `getLogger(...)` and `named(...)` through it. Tests: `NamedLoggerTest.shouldInternChildrenWhenRegistryAttached`, `NamedLoggerTest.shouldNotInternWhenRegistryAbsent`. |
 | W-3 | Real `MessageFormatter` | **Done.** Full SLF4J ParameterFormatter parity: `{}` substitution, `\{}` literal escape, `\\{}` double-escape, trailing-throwable promotion (with explicit-cause precedence enforced in `BasicLogger.emit`), defensive `safeToString`. 12 tests in `MessageFormatterTest`. The "stub" claim in earlier docs was stale. |
 | W-4 | Compiler-side default name from module | `@Inject Logger logger;` (no resourceName) should fall back to the enclosing module's qualified name; see plan Stage 4. |
@@ -230,11 +230,11 @@ feature scope. Each item is a concrete deliverable with a one-line summary.
 | W-8 | Per-container override convenience | Helper for child containers wanting a different sink. Open question 8. |
 | W-9 | Defensive copy of caller-supplied `Object[] arguments` | Open question 11. Decision: B (document, no copy) for v0. Listed here so it's not forgotten if v0 changes. |
 | W-10 | Compiler/tooling lints for log statements | Out of scope for the library; would be an XTC linter feature. Open question 12. |
-| W-11 | Doc cleanup | `design/design.md` "What isn't here yet" still lists items that have since landed (RTLogger removed, MessageFormatter partial, tests now exist); `future/runtime-implementation-plan.md` and `usage/injected-logger-example.md` may reference the now-removed `xRTLogger`/`RTLogger.x`. |
+| W-11 | Doc cleanup | **Done for active docs.** Start-here docs, parity docs, examples, runtime-injection notes, and source comments now describe the current `BasicLogger`/`MDC`/multi-marker/formatter shape. Historical future-plan docs remain as historical context. |
 
-The same tracking shape will live for `lib_slogging` in
-`lib-logging-vs-lib-slogging.md` so reviewers can see the two libraries reach feature
-parity at the same waterline before we ask "which API do you prefer?"
+The same tracking shape is mirrored for `lib_slogging` below so reviewers can see the
+two libraries reach feature parity at the same waterline before we ask "which API do
+you prefer?"
 
 ### Implementation tiers
 
@@ -263,6 +263,21 @@ The `lib_slogging` parity translation:
 | W-11 doc cleanup | mirrored: keep `lib_slogging` doc references in sync |
 | (test suite parity) | mirror `LoggingTest` → `SLoggingTest`: per-level routing, fluent-equivalent (`logger.with`), level thresholds, exception carriage, structured attrs, group nesting |
 
+## slog-style library (`lib_slogging`) — parity work addressed
+
+`lib_slogging` is now a working comparison POC at the same proof level as the
+SLF4J-shaped library for the base API. The concrete parity gaps called out during
+review have been closed as follows:
+
+| # | Item | Notes |
+|---|---|---|
+| S-1 | Runtime injection for `@Inject slogging.Logger logger;` | **Done.** `NativeContainer` now resolves resources by `(name, requested type)`, so `logging.Logger logger` and `slogging.Logger logger` can both use the default name. `manualTests/TestLogger.x` exercises both. |
+| S-2 | Production JSON handler | **Done for the base POC.** `JSONHandler` renders through `lib_json`, escapes strings through `Printer`, preserves nested groups, emits source metadata, and renders exceptions structurally. Handler output destinations/options remain future backend work. |
+| S-3 | Source-location capture | **Done via explicit API.** `Logger.logAt(level, message, sourceFile, sourceLine, attrs, cause)` populates `Record.sourceFile` / `sourceLine`. Automatic compiler/runtime call-site capture remains a future enhancement. |
+| S-4 | Context story | **Done.** `LoggerContext` wraps `SharedContext<Logger>` for framework/request propagation. Explicit logger passing remains the recommended default. |
+| S-5 | Handler pre-resolution example | **Done.** `BoundHandler` implements the default `withAttrs` / `withGroup` semantics and shipped handlers use it; production backends can replace it with cached prefix implementations. |
+| S-6 | Handler test kit | **Done.** `SLoggingTest.HandlerContract` provides a small `testing/slogtest`-style helper for third-party handler conformance. |
+
 ## Decisions required to land in this order
 
 1. **MDC scope (#3)** — must be made before Stage 1.3 of the plan. Without an answer
@@ -270,8 +285,8 @@ The `lib_slogging` parity translation:
 2. **Multiple markers per event (#4)** — should be made *before or with* Stage 1, so
    `LogEvent` and `BasicEventBuilder` shapes are stable when the runtime starts
    resolving them.
-3. **Defensive copy (#11)** — make alongside Stage 1.1; the `RTLogger` Java side
-   needs to know whether to copy or not.
+3. **Defensive copy (#11)** — decision is currently "document, no copy" for v0; revisit
+   before any async/default sink path captures caller-supplied mutable argument arrays.
 
 The remaining still-open items (#6, #7, #8, #12) can wait until there are real users.
 

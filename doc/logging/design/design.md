@@ -246,7 +246,7 @@ helper lives in the host runtime's injector library, not here.
 
 ## Non-goals (v0)
 
-Items deliberately *not* in scope for the v0 stub of `lib_logging`. Each is
+Items deliberately *not* in scope for the base POC of `lib_logging`. Each is
 either tracked as Tier 3 in `../open-questions.md` or punted on principle.
 
 - **Distributed tracing context propagation.** `MDC` carries strings; that's
@@ -285,7 +285,7 @@ The runtime-side injection wiring lives in
 earlier interpose service `xRTLogger.java` was removed in favour of constructing
 `BasicLogger` directly so MDC fiber-locals survive injection (see Q-D5 in
 `../open-questions.md`). The real `MessageFormatter` is implemented (12 tests in
-`MessageFormatterTest`). Tests live in `lib_logging/src/test/x/LoggingTest/` (51
+`MessageFormatterTest`). Tests live in `lib_logging/src/test/x/LoggingTest/` (54
 passing as of this commit).
 
 

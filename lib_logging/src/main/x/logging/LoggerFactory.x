@@ -19,8 +19,17 @@
  */
 service LoggerFactory {
 
+    /**
+     * The active default backend. This is intended to be supplied by the host
+     * container; if no richer sink is registered, the runtime can fall back to the
+     * console sink.
+     */
     @Inject LogSink defaultSink;
 
+    /**
+     * Lazily-created name cache scoped to the injected sink. Mirrors SLF4J's
+     * `ILoggerFactory` identity-stability rule without creating JVM-global state.
+     */
     private @Lazy LoggerRegistry registry.calc() {
         return new LoggerRegistry(defaultSink);
     }

@@ -21,8 +21,7 @@ just decide:
    on the hot path. Must be cheap.
 2. **`log`** — the event has been built; emit it. The `LogEvent.message` is already
    substituted; `mdcSnapshot` is captured. Sinks that want to render structured data
-   read `event.marker`, `event.exception`, `event.mdcSnapshot`, and (once added)
-   `event.keyValues`.
+   read `event.markers`, `event.exception`, `event.mdcSnapshot`, and `event.keyValues`.
 
 ## `const` or `service`?
 
@@ -69,17 +68,20 @@ service CountingLogSink
 }
 ```
 
-Wiring it up — see `../open-questions.md` for the runtime side; for now, you can construct
-a `BasicLogger` directly:
+Wiring it up directly in tests or examples is just constructor injection:
 
 ```ecstasy
-LogSink sink   = new CountingLogSink();
-Logger  logger = new BasicLogger("my.module", sink);
+CountingLogSink sink   = new CountingLogSink();
+Logger          logger = new BasicLogger("my.module", sink);
 logger.info("hello");
 logger.warn("uh oh");
 assert sink.counts[Info] == 1;
 assert sink.counts[Warn] == 1;
 ```
+
+In a hosted application, the same sink becomes the active backend by registering it as
+the `Logger` resource supplier for that container. The application code still receives
+`@Inject Logger logger;`; only the host's resource map changes.
 
 ## A more realistic example: writing to a file
 
@@ -227,8 +229,11 @@ service MarkerFilteringLogSink(LogSink delegate, Marker required)
 
     @Override
     void log(LogEvent event) {
-        if (Marker m ?= event.marker, m.contains(required)) {
-            delegate.log(event);
+        for (Marker m : event.markers) {
+            if (m.contains(required)) {
+                delegate.log(event);
+                return;
+            }
         }
     }
 }
