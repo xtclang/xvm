@@ -101,34 +101,6 @@ public class Dec64 extends DecimalFPNumber {
         return new Dec64(value);
     }
 
-    /**
-     * Determine whether two Dec64 primitives are equal.
-     *
-     * @param ctx    the context
-     * @param bits1  the bits of the first value
-     * @param bits2  the bits of the second value
-     *
-     * @return {@code true} iff the two Dec64 primitives are equal
-     */
-    public static boolean equals$p(Ctx ctx, long bits1, long bits2) {
-        return bits1 == bits2;
-    }
-
-    /**
-     * Compare two Dec64 primitives.
-     *
-     * @param ctx    the context
-     * @param bits1  the bits of the first value
-     * @param bits2  the bits of the second value
-     *
-     * @return a negative integer if the first Dec64 is lower than the second, zero if both Dec64
-     *         values are equal, or a positive integer if the first Dec64 is greater than the
-     *         second.
-     */
-    public static int compare$p(Ctx ctx, long bits1, long bits2) {
-        return new Dec64(bits1).$compareForObjectOrder(new Dec64(bits2));
-    }
-
     // ----- Op methods ----------------------------------------------------------------------------
 
     /**
