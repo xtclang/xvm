@@ -99,21 +99,6 @@ public class Dec32 extends DecimalFPNumber {
         return new Dec32(value);
     }
 
-    /**
-     * Compare two Dec32 primitives.
-     *
-     * @param ctx    the current {@link Ctx}
-     * @param bits1  the bits of the first value
-     * @param bits2  the bits of the second value
-     *
-     * @return a negative integer if the first Dec32 is lower than the second, zero if both Dec32
-     *         values are equal, or a positive integer if the first Dec32 is greater than the
-     *         second.
-     */
-    public static int compare$p(Ctx ctx, int bits1, int bits2) { // why do we need this?
-        return new Dec32(bits1).$compareForObjectOrder(new Dec32(bits2));
-    }
-
     // ----- Op methods ----------------------------------------------------------------------------
 
     /**

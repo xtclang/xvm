@@ -401,21 +401,6 @@ public class UInt128 extends IntNumber {
         return high1 == high2 && low1 == low2;
     }
 
-    /**
-     * Determine whether two Int128 primitives are equal.
-     *
-     * @param ctx    the context
-     * @param low1   the low 64 bits of the first Int128
-     * @param high1  the high 64 bits of the first Int128
-     * @param low2   the low 64 bits of the second Int128
-     * @param high2  the high 64 bits of the second Int128
-     *
-     * @return {@code true} iff the two Int128 primitives are equal
-     */
-    public static boolean equals$p(Ctx ctx, long low1, long high1, long low2, long high2) {
-        return low1 == low2 && high1 == high2;
-    }
-
     // ----- debugging support ---------------------------------------------------------------------
 
     @Override

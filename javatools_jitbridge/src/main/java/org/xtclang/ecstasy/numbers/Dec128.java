@@ -136,38 +136,6 @@ public class Dec128 extends DecimalFPNumber {
         return new Dec128(lowBits, highBits);
     }
 
-    /**
-     * Determine whether two Dec128 primitives are equal.
-     *
-     * @param ctx    the context
-     * @param low1   the low 64 bits of the first value
-     * @param high1  the high 64 bits of the first value
-     * @param low2   the low bits of the second value
-     * @param high2  the high 64 bits of the second value
-     *
-     * @return {@code true} iff the two Dec128 primitives are equal
-     */
-    public static boolean equals$p(Ctx ctx, long low1, long high1, long low2, long high2) {
-        return low1 == low2 && high1 == high2;
-    }
-
-    /**
-     * Compare two Dec128 primitives.
-     *
-     * @param ctx    the context
-     * @param low1   the low 64 bits of the first value
-     * @param high1  the high 64 bits of the first value
-     * @param low2   the low bits of the second value
-     * @param high2  the high 64 bits of the second value
-     *
-     * @return a negative integer if the first Dec128 is lower than the second, zero if both Dec128
-     *         values are equal, or a positive integer if the first Dec128 is greater than the
-     *         second.
-     */
-    public static int compare$p(Ctx ctx, long low1, long high1, long low2, long high2) {
-        return new Dec128(low1, high1).$compareForObjectOrder(new Dec128(low2, high2));
-    }
-
     // ----- Op methods ----------------------------------------------------------------------------
 
     /**
