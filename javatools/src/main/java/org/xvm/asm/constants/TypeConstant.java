@@ -6471,9 +6471,7 @@ public abstract class TypeConstant
      * Ensure a unique ClassDesc for this type for the specified TypeSystem.
      */
     public ClassDesc ensureClassDesc(TypeSystem ts) {
-        return isSingleUnderlyingClass(true)
-            ? ClassDesc.of(ensureJitClassName(ts))
-            : getCanonicalJitType().ensureClassDesc(ts);
+        return ClassDesc.of(getCanonicalJitType().ensureJitClassName(ts));
     }
 
     /**
