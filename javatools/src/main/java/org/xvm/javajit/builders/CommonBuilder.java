@@ -180,7 +180,7 @@ public class CommonBuilder
     /**
      * Compute the ClassDesc for the super class.
      */
-    protected ClassDesc getSuperCD() {
+    public ClassDesc getSuperCD() {
         TypeConstant superType = typeInfo.getExtends();
         return superType == null
             ? CD_nObj
@@ -1808,7 +1808,7 @@ public class CommonBuilder
 
                 code.invokestatic(ensureClassDesc(propType), XVM_PRIMITIVE_EQUALS, md)
                     .ifeq(returnFalse);
-            } else if (propType.isA(pool().typeService())){
+            } else if (propType.isA(pool().typeService())) {
                 buildGetIdentityHashCode(code, prop, value1Slot);
                 buildGetIdentityHashCode(code, prop, value2Slot);
                 code.lcmp()

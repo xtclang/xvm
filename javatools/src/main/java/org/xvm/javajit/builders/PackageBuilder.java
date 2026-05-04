@@ -25,7 +25,7 @@ public class PackageBuilder
     }
 
     @Override
-    protected ClassDesc getSuperCD() {
+    public ClassDesc getSuperCD() {
         return CD_nPackage;
     }
 
