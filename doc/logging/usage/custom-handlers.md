@@ -35,10 +35,10 @@ pre-render attrs/group prefixes into a handler-specific derived instance so each
 
 Same rule as `LogSink`:
 
-- **`const`** for stateless forwarders and fixed-configuration renderers:
-  `TextHandler`, `JSONHandler`, `NopHandler`.
-- **`service`** for handlers with shared mutable state or resources:
-  `MemoryHandler`, a file writer, a network writer, an async queue.
+| Shape | Use it for | Examples |
+|---|---|---|
+| `const` | Stateless forwarders and fixed-configuration renderers. | `TextHandler`, `JSONHandler`, `NopHandler`. |
+| `service` | Shared mutable state or external resources. | `MemoryHandler`, file writers, network writers, async queues. |
 
 ## Counting records by level
 
@@ -150,25 +150,22 @@ logger.info("user signed in", [
 The SLF4J-shaped equivalent would use a marker. The slog-shaped equivalent keeps the
 category in the same `Attr` channel as every other structured field.
 
-## Things handlers should not do
+## Operational rules
 
-- **Do not throw under normal failure modes.** If a remote endpoint is down, drop,
-  buffer, or fall back to console.
-- **Do not do slow work in `enabled`.** It runs on every call before a record is built.
-- **Do not parse the message to recover fields.** Fields belong in `Attr` values.
-- **Do not add SLF4J-style placeholder formatting to the core handler path.** If a
-  migration adapter wants `"processed {}"` support, keep it outside `lib_slogging`.
+| Rule | Reason |
+|---|---|
+| Keep `enabled` cheap. | It runs before record allocation on every logging call. |
+| Keep normal backend failures inside the handler. | A failed remote endpoint should lead to drop, buffer, or fallback behavior, not an application failure. |
+| Do not parse `record.message` to recover fields. | Structured data belongs in `Attr` values. |
+| Do not add SLF4J-style placeholder formatting to the core handler path. | Migration sugar can live in an adapter; the slog core stays message-plus-attrs. |
 
 ## What a production JSON handler still needs
 
 The shipped `JSONHandler` renders through `lib_json`, preserves nested groups, and
 represents exceptions structurally. A production cloud sink built on the same handler
-contract should still add:
-
-- output destination configuration (`Console`, file, stream, socket, HTTP exporter);
-- support attr replacement/redaction rules;
-- timestamp and level formatting options;
-- expose an async wrapper for network or disk output.
+contract would add destination configuration (`Console`, file, stream, socket, HTTP
+exporter), attr replacement/redaction, timestamp and level formatting options, and an
+async wrapper for network or disk output.
 
 
 ---

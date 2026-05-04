@@ -1,8 +1,8 @@
-# Runtime implementation plan — getting to a demo-worthy round trip
+# Runtime implementation plan — historical runtime wiring plan
 
 > **Status (2026-05): Stages 1–3 are landed.** The runtime now resolves
-> `@Inject Logger logger;` end-to-end; the demo described in §"Definition of
-> 'demo worthy'" works as written. **The plan diverged from this document in one
+> `@Inject Logger logger;` end-to-end; the demo described in §"Demo target"
+> works as written. **The plan diverged from this document in one
 > way worth flagging up front:** there is no separate `RTLogger.java` /
 > `xRTLogger`. `BasicLogger` is a `const`, and the runtime constructs it
 > directly in `javatools/.../NativeContainer.java` (`ensureLogger` /
@@ -28,9 +28,9 @@ here either is on the critical path to that demo, or is needed to call the round
 The doc supersedes `../open-questions.md` items 1, 2, 3, 5, 9, 10 by prescribing concrete
 fixes; the others remain genuinely open.
 
-## Definition of "demo worthy"
+## Demo target
 
-The round trip is demo-worthy when **all** of these are true:
+The runtime demo was considered complete when all of these were true:
 
 1. A standalone Ecstasy program containing only
    ```ecstasy
@@ -287,7 +287,7 @@ it, `@Inject Logger logger;` alone is already named after the enclosing module.
 
 ### Stage 5 — Validation: platform repo migration
 
-The end-to-end test of "demo worthy" is migrating real code.
+The end-to-end test is migrating real code.
 
 #### 5.1 — Pick three files in `~/src/platform`
 
@@ -356,7 +356,7 @@ Stage 4 compiler-side default name      ── ~half a day, separate PR
 Stage 5 platform migration              ── ~1-2 days, follow-up PR
 ```
 
-Total to demo-worthy: **2-3 working days**, split across one runtime PR and one
+Original estimate: **2-3 working days**, split across one runtime PR and one
 follow-up that polishes message formatting and MDC. The compiler change and the
 platform migration are independent and can land later.
 
@@ -371,18 +371,14 @@ platform migration are independent and can land later.
 - Performance tuning (allocation, async). Premature; revisit when the platform repo
   has been on `lib_logging` for long enough that we have data.
 
-## Owner-readable bullet summary
+## Historical estimate
 
-If you want this in three lines:
-
-- **Two days of Java work** in `javatools_jitbridge` makes `@Inject Logger` work.
-- **Half a day of Ecstasy work** ports the SLF4J `{}` substitution and turns
-  `hello {}` into `hello world`.
-- **Optional half day of compiler work** turns `@Inject Logger` into the
-  module-scoped logger SLF4J users expect, instead of always falling back to
-  `"default"`.
-
-After that, the platform-repo migration PR is the demo.
+The original plan expected a small runtime slice for `@Inject Logger`, a smaller
+Ecstasy slice for SLF4J `{}` substitution, and an optional compiler slice for
+module-scoped default logger names. The first two concerns have since landed in a
+different shape: `NativeContainer` constructs the injectable `BasicLogger` directly,
+and `MessageFormatter` now handles `{}` substitution. Compiler-side default naming
+remains separate from the manual demo and can land later.
 
 
 ---

@@ -1,126 +1,47 @@
 # Ecstasy logging — start here
 
-This branch (`lagergren/logging`) adds **two parallel logging libraries** to the
-XDK. They are an experiment, not a final shipping decision: we built both so
-reviewers can compare them side-by-side and tell us which API shape Ecstasy
-should adopt long-term.
+This branch (`lagergren/logging`) adds two parallel logging libraries to the XDK
+so reviewers can compare the two familiar industry shapes in real Ecstasy code
+before choosing one canonical API.
 
-The "why" is simple: Ecstasy should not invent an unfamiliar logging style when
-the rest of the industry has already converged on two recognizable ones. The
-branch proves both shapes in real XDK code:
+Both libraries use the same XDK-facing architecture: application code receives an
+injected `Logger`, the container owns the backend, and production behavior is
+provided by replacing a `LogSink` or `Handler`. Both can carry structured fields
+to JSON/cloud sinks without parsing message text.
 
-- **API/implementation split.** User code depends on `Logger`; routing lives behind
-  `LogSink` or `Handler`.
-- **Injection-first acquisition.** The host container controls logging, the same way
-  it already controls `Console`.
-- **Small default, open extension point.** The base library gives a console/no-op/
-  memory implementation; production behavior is just another sink or handler.
-- **Structured data.** Both designs can carry machine-readable fields to JSON/cloud
-  sinks without regexing messages.
-
-- **[`lib_logging`](../../lib_logging/)** — modelled on **SLF4J 2.x + Logback**.
-  Familiar to anyone with JVM background. 54 unit tests, end-to-end demo.
-- **[`lib_slogging`](../../lib_slogging/)** — modelled on **Go's `log/slog`**
-  (the modern cloud-native idiom). 34 unit tests, parallel design.
+| Library | Prior art | Current proof |
+|---|---|---|
+| [`lib_logging`](../../lib_logging/) | SLF4J 2.x + Logback | 54 focused XTC test methods and an injected manual demo. |
+| [`lib_slogging`](../../lib_slogging/) | Go `log/slog` | 34 focused XTC test methods and matching injected/manual coverage. |
 
 If you only have time to read one document, read
 **[`lib-logging-vs-lib-slogging.md`](lib-logging-vs-lib-slogging.md)** — it is
 the comparison, the reviewer-question list, and the recommendation in one
 place.
 
-## What we want from you
+## Review Focus
 
-There are **eleven explicit reviewer questions** in
-[`lib-logging-vs-lib-slogging.md` § 5](lib-logging-vs-lib-slogging.md#5-what-we-want-reviewer-feedback-on)
-and **seven language-design questions** (Q-D1..Q-D7) in
-[`open-questions.md`](open-questions.md). Both are calibrated for someone who
-has skimmed the headline comparison; you do not need to read the entire doc
-tree to weigh in.
+The main design question is which single API Ecstasy should make canonical.
+Keeping both indefinitely would recreate the logging fragmentation these APIs were
+designed to avoid. The concrete reviewer prompts live in
+[`lib-logging-vs-lib-slogging.md` § 5](lib-logging-vs-lib-slogging.md#5-what-we-want-reviewer-feedback-on);
+language/runtime questions are tracked as Q-D1..Q-D7 in
+[`open-questions.md`](open-questions.md).
 
-The highest-value review question is: **which single API should Ecstasy make
-canonical?** Keeping both forever would recreate the logging-fragmentation problem
-these APIs were designed to avoid.
+## Reading Paths
 
-## Reading paths
+Start with [`lib-logging-vs-lib-slogging.md`](lib-logging-vs-lib-slogging.md) if
+you only read one file. The rest of the tree is organized by reader:
 
-Pick the one that matches what you are.
-
-### Reviewing the proposal — what should I read?
-
-1. **[`lib-logging-vs-lib-slogging.md`](lib-logging-vs-lib-slogging.md)** — the
-   side-by-side comparison, deep dive on markers, eleven reviewer questions,
-   tentative recommendation.
-2. **[`api-cross-reference.md`](api-cross-reference.md)** — maps every POC type to the
-   official SLF4J or Go `log/slog` API it mirrors, with the Ecstasy-specific differences.
-3. **[`cloud-integration.md`](cloud-integration.md)** — why the API choice is
-   the entry point to GCP / AWS / Azure observability ecosystems. Explains the
-   modern deployment world for readers whose intuition is "ship a CLI
-   installer."
-4. **[`open-questions.md`](open-questions.md)** — questions for the XTC
-   language designers (Q-D1..Q-D7), tracking list of work not yet implemented,
-   implementation tiers.
-
-That is enough to weigh in on the design choice. The rest of the tree is
-support material.
-
-### I'm an SLF4J / Logback Java engineer — show me what changes
-
-1. **[`usage/ecstasy-vs-java-examples.md`](usage/ecstasy-vs-java-examples.md)** — every
-   SLF4J idiom with the equivalent Ecstasy code beside it.
-2. **[`api-cross-reference.md`](api-cross-reference.md)** — official SLF4J links beside the
-   local Ecstasy source files and difference notes.
-3. **[`usage/slf4j-parity.md`](usage/slf4j-parity.md)** — exhaustive type-by-type and
-   method-by-method mapping. Reference, not narrative.
-4. **[`usage/injected-logger-example.md`](usage/injected-logger-example.md)** — a complete
-   end-to-end example of `@Inject Logger logger;` with a runnable companion at
-   `manualTests/src/main/x/TestLogger.x`.
-
-### I'm a Go / slog engineer — show me what changes
-
-1. **[`api-cross-reference.md`](api-cross-reference.md)** — official Go `log/slog` links beside
-   the local Ecstasy source files and difference notes.
-2. **[`usage/slog-parity.md`](usage/slog-parity.md)** — method-by-method mapping,
-   including `LoggerContext`, `logAt`, and handler derivation.
-3. **[`lib-logging-vs-lib-slogging.md`](lib-logging-vs-lib-slogging.md)** — has
-   side-by-side slog → Ecstasy code throughout.
-4. **The `lib_slogging` source** at
-   [`lib_slogging/src/main/x/slogging/`](../../lib_slogging/src/main/x/slogging/)
-   — the API surface is small (Logger, Handler, Record, Attr, Level) and each
-   file has a doc-comment naming its slog counterpart.
-
-### I'm an XTC language designer — what's open?
-
-1. **[`open-questions.md`](open-questions.md)** §§ "Questions for the XTC
-   language / runtime designers" (Q-D1..Q-D7). Each question is tied to a
-   concrete piece of code we wrote and includes the workaround we adopted.
-2. **[`design/design.md`](design/design.md)** — `lib_logging` architecture, including the
-   `const` vs `service` rule for sinks and the per-fiber `MDC` mechanism.
-
-### I want to write my own sink / handler
-
-1. **[`usage/custom-sinks.md`](usage/custom-sinks.md)** — guide to writing a custom
-   `LogSink`, with worked examples (counting, file, hierarchical, tee,
-   marker-filtering, JSON-line). Includes the `const` vs `service` decision.
-2. **[`usage/custom-handlers.md`](usage/custom-handlers.md)** — guide to writing a custom
-   slog `Handler`, including derivation hooks and attr-based filtering.
-3. **[`usage/structured-logging.md`](usage/structured-logging.md)** — how SLF4J 2.x
-   structured logging maps onto `lib_logging`, with a sketch of a JSON sink.
-
-### I want to deploy this to GCP / AWS / Azure
-
-1. **[`cloud-integration.md`](cloud-integration.md)** — adapter graphs for the
-   three major clouds, with concrete examples and the table-stakes API
-   features each cloud product depends on.
-2. **[`future/logback-integration.md`](future/logback-integration.md)** — sketch of a future
-   configuration-driven binding (Tier 3 work, not in this PR).
-3. **[`future/native-bridge.md`](future/native-bridge.md)** — could we instead plug *real
-   Java Logback* in via the JIT bridge? Investigation, evidence, recommendation.
-
-### I want to migrate existing Ecstasy code that already does ad-hoc logging
-
-1. **[`usage/platform-and-examples-adaptation.md`](usage/platform-and-examples-adaptation.md)**
-   — surveys `~/src/platform` and `~/src/examples` and shows how their
-   `console.print($"... Info :")` patterns would migrate.
+| Reader | Start with | Then read |
+|---|---|---|
+| Proposal reviewer | [`lib-logging-vs-lib-slogging.md`](lib-logging-vs-lib-slogging.md) | [`api-cross-reference.md`](api-cross-reference.md), [`cloud-integration.md`](cloud-integration.md), [`open-questions.md`](open-questions.md) |
+| SLF4J / Logback engineer | [`usage/ecstasy-vs-java-examples.md`](usage/ecstasy-vs-java-examples.md) | [`usage/slf4j-parity.md`](usage/slf4j-parity.md), [`usage/injected-logger-example.md`](usage/injected-logger-example.md) |
+| Go `log/slog` engineer | [`usage/slog-parity.md`](usage/slog-parity.md) | [`api-cross-reference.md`](api-cross-reference.md), [`lib_slogging` source](../../lib_slogging/src/main/x/slogging/) |
+| XTC language designer | [`open-questions.md`](open-questions.md) | [`design/design.md`](design/design.md), [`design/xdk-alignment.md`](design/xdk-alignment.md) |
+| Sink / handler author | [`usage/custom-sinks.md`](usage/custom-sinks.md), [`usage/custom-handlers.md`](usage/custom-handlers.md) | [`usage/structured-logging.md`](usage/structured-logging.md) |
+| Cloud/backend reviewer | [`cloud-integration.md`](cloud-integration.md) | [`future/logback-integration.md`](future/logback-integration.md), [`future/native-bridge.md`](future/native-bridge.md) |
+| Migration reviewer | [`usage/platform-and-examples-adaptation.md`](usage/platform-and-examples-adaptation.md) | [`usage/injected-logger-example.md`](usage/injected-logger-example.md) |
 
 ## Full doc index
 
@@ -179,7 +100,7 @@ lib_logging/                            SLF4J-shaped library
     │       ├── ConsoleLogSink.x        default sink (const), forwards to @Inject Console
     │       ├── NoopLogSink.x           drops every event (const)
     │       └── MemoryLogSink.x         test-helper, captures events (service)
-    └── test/x/LoggingTest/             54 unit tests
+    └── test/x/LoggingTest/             54 focused XTC test methods
 
 lib_slogging/                           slog-shaped sibling library
 ├── build.gradle.kts
@@ -198,7 +119,7 @@ lib_slogging/                           slog-shaped sibling library
     │       ├── JSONHandler.x           JSON-Lines handler (const, lib_json renderer)
     │       ├── NopHandler.x            drops every record (const)
     │       └── MemoryHandler.x         test-helper (service)
-    └── test/x/SLoggingTest/            34 unit tests
+    └── test/x/SLoggingTest/            34 focused XTC test methods
 ```
 
 ## Status
