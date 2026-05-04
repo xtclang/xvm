@@ -15,6 +15,7 @@ import org.xvm.asm.OpMove;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.Builder;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
@@ -130,6 +131,9 @@ public class MoveCast
         RegisterInfo regFrom = bctx.loadArgument(code, m_nFromValue);
         TypeConstant typeTo  = regFrom.type().combine(bctx.pool(), bctx.getTypeConstant(m_nToType));
         bctx.builder.generateCheckCast(code, typeTo);
+        if (typeTo.isJitPrimitive() && !regFrom.flavor().isOptimized) {
+            Builder.unbox(code, typeTo);
+        }
         bctx.storeValue(code, m_nToValue, typeTo);
         return -1;
     }
