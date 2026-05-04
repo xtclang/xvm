@@ -20,7 +20,7 @@ public class ModuleBuilder
     }
 
     @Override
-    protected ClassDesc getSuperCD() {
+    public ClassDesc getSuperCD() {
         return CD_nModule;
     }
 
