@@ -14,8 +14,28 @@
 const NopHandler
         implements Handler {
 
-    @Override Boolean enabled(Level level)        = False;
-    @Override void    handle(Record record)       {}
-    @Override Handler withAttrs(Attr[] attrs)     = this;
-    @Override Handler withGroup(String name)      = this;
+    /**
+     * Always disabled so caller-side fast paths skip record construction.
+     */
+    @Override
+    Boolean enabled(Level level) = False;
+
+    /**
+     * Deliberately drops the record. In normal use this should not be reached because
+     * `enabled` returns `False`, but it remains a no-op for defensive simplicity.
+     */
+    @Override
+    void handle(Record record) {}
+
+    /**
+     * Deriving a no-op handler is still no-op.
+     */
+    @Override
+    Handler withAttrs(Attr[] attrs) = this;
+
+    /**
+     * Grouping a no-op handler is still no-op.
+     */
+    @Override
+    Handler withGroup(String name) = this;
 }

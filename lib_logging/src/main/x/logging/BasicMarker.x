@@ -11,6 +11,9 @@ class BasicMarker(String name)
 
     private Marker[] children = new Marker[];
 
+    /**
+     * Add a direct child reference unless it is already present.
+     */
     @Override
     void add(Marker reference) {
         if (!children.contains(reference)) {
@@ -18,21 +21,33 @@ class BasicMarker(String name)
         }
     }
 
+    /**
+     * Remove a direct child reference by marker equality.
+     */
     @Override
     Boolean remove(Marker reference) {
         return children.removeIfPresent(reference);
     }
 
+    /**
+     * True when this marker has direct children.
+     */
     @Override
     @RO Boolean hasReferences.get() {
         return !children.empty;
     }
 
+    /**
+     * Iterator over direct child markers.
+     */
     @Override
     @RO Iterator<Marker> references.get() {
         return children.iterator();
     }
 
+    /**
+     * Transitive marker containment check by marker.
+     */
     @Override
     Boolean contains(Marker other) {
         if (this.name == other.name) {
@@ -46,6 +61,9 @@ class BasicMarker(String name)
         return False;
     }
 
+    /**
+     * Transitive marker containment check by name.
+     */
     @Override
     Boolean containsName(String name) {
         if (this.name == name) {

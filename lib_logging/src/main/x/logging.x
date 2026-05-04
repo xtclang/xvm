@@ -14,9 +14,9 @@
  *
  *      @Inject Logger logger;
  *
- * or, naming the logger explicitly:
+ * Per-name loggers are derived from the injected logger:
  *
- *      @Inject("com.example.thing") Logger logger;
+ *      Logger payments = logger.named("com.example.payments");
  *
  * Acquiring a logger without injection is also supported via `LoggerFactory`:
  *
@@ -40,7 +40,11 @@
  *      - [MemoryLogSink]         — captures events in memory; useful in tests
  *
  * A future `lib_logging_logback` module is expected to ship a configuration-driven sink with
- * appenders, layouts, filters, and per-logger thresholds — see `docs/logback-integration.md`.
+ * appenders, layouts, filters, and per-logger thresholds — see
+ * `doc/logging/future/logback-integration.md`.
+ *
+ * For official SLF4J API links mapped back to these Ecstasy types, see
+ * `doc/logging/api-cross-reference.md`.
  */
 module logging.xtclang.org {
 }

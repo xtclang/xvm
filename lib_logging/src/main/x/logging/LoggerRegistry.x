@@ -1,12 +1,12 @@
 /**
  * Corresponds to the role played by `org.slf4j.ILoggerFactory` impls (Logback's
  * `LoggerContext`, Log4j 2's `LoggerContext`): the central name-keyed cache that
- * makes repeated `getLogger("a.b")` / `parent.named("b")` calls return the same
+ * makes repeated `getLogger("a.b")` / `logger.named("a.b")` calls return the same
  * `Logger` instance.
  *
- * A name-keyed intern cache for `Logger` instances. `BasicLogger.named(child)` consults
- * an attached registry — when present — and returns the cached logger for the resulting
- * `"<parent>.<child>"` name; without a registry, each call allocates a fresh logger.
+ * A name-keyed intern cache for `Logger` instances. `BasicLogger.named(name)` consults
+ * an attached registry — when present — and returns the cached logger for that exact
+ * full name; without a registry, each call allocates a fresh logger.
  *
  * # Why interning belongs in a separate service
  *
@@ -27,7 +27,7 @@
  *      LoggerRegistry      registry = new LoggerRegistry(testSink);
  *      Logger              root     = registry.ensure("root");
  *      assert &root == &registry.ensure("root");      // same instance
- *      assert &root.named("a.b") == &registry.ensure("root.a.b");
+ *      assert &root.named("a.b") == &registry.ensure("a.b");
  */
 service LoggerRegistry(LogSink sink) {
 

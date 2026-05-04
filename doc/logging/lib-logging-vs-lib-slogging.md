@@ -27,11 +27,14 @@ This document:
 4. lists the reviewer questions that motivate the experiment;
 5. records a tentative recommendation, knowing it may shift after review.
 
-> Status note: `lib_slogging` is currently a skeleton (interfaces + a TextHandler stub).
-> The SLF4J-shaped library is roughly feature-complete (47 unit tests passing). See
-> `open-questions.md` for the explicit tracking list of items still missing on each
-> side; we do not ask reviewers to compare designs until both libraries reach the same
-> waterline.
+For direct links from each Ecstasy type to its official SLF4J or Go `log/slog`
+counterpart, see [`api-cross-reference.md`](api-cross-reference.md).
+
+> Status note: both libraries are working comparison POCs. `lib_logging` has the
+> fuller SLF4J surface (54 unit tests plus the injected manual demo); `lib_slogging`
+> has the smaller slog surface (34 unit tests plus injected/manual coverage), with
+> runtime injection, `lib_json` JSON rendering, source metadata, context binding, and
+> handler derivation semantics implemented.
 
 ---
 
@@ -109,12 +112,12 @@ Both produce equivalent structured output. The shapes diverge in how
 | Axis | `lib_logging` (SLF4J 2.x) | `lib_slogging` (Go slog) |
 |---|---|---|
 | **Levels** | Five named: `Trace`, `Debug`, `Info`, `Warn`, `Error` (+ `Off`). Closed enum. | Integer `Level(severity)` with named constants `Debug=-4`, `Info=0`, `Warn=4`, `Error=8`. Open: callers can define `Level(2, "NOTICE")`. |
-| **Context propagation** | Per-fiber `MDC` (`SharedContext`-backed map). Implicit — every emission snapshots it. | Explicit derived loggers via `Logger.with(attrs)`; no thread-local. Optionally a fiber-scoped logger via `SharedContext<Logger>`. |
+| **Context propagation** | Per-fiber `MDC` (`SharedContext`-backed map). Implicit — every emission snapshots it. | Explicit derived loggers via `Logger.with(attrs)` by default. Optional `LoggerContext` uses `SharedContext<Logger>` when framework/request code wants implicit propagation. |
 | **Structured data** | `Marker` for category, `addKeyValue("k", v)` for KV pairs, `arguments` for `{}` substitution slots. Three concepts. | One concept: `Attr(key, value)`. Attributes are the first-class carrier. |
 | **Message** | Templated: `info("user {} did {}", [name, action])`. SLF4J-style `{}` placeholders. | Free-form string + attrs separately. No interpolation. |
 | **Sinks / handlers** | `LogSink.isEnabled(name, level, marker)`, `LogSink.log(event)`. Two methods. | `Handler.enabled(level)`, `Handler.handle(record)`, `Handler.withAttrs(attrs)`, `Handler.withGroup(name)`. Four methods — handler can pre-resolve attrs at derivation time. |
-| **Logger naming** | Hierarchical names: `logger.named("payments")`, `payments.named("stripe")` → `"payments.stripe"`. SLF4J idiom. | Loggers are uniform; categorisation lives in attrs (`"component" -> "payments.stripe"`). |
-| **Source location** | Not captured by default. | `Record.pc`/`Record.source` capture is opt-in but a first-class concern. |
+| **Logger naming** | Hierarchical names: `logger.named("payments.stripe")`. The caller supplies the full category name, like `LoggerFactory.getLogger("...")`. | Loggers are uniform; categorisation lives in attrs (`"component" -> "payments.stripe"`). |
+| **Source location** | Not captured by default. | `Logger.logAt(...)` explicitly populates `Record.sourceFile` / `sourceLine`; automatic call-site capture is future runtime/compiler work. |
 | **Async / batching** | Wrapper sink (`AsyncLogSink`, future) drains a bounded queue. | Wrapper handler — same shape. |
 | **Familiarity bench** | Java/Kotlin/Scala. Anyone who has done structured logging on the JVM. | Go (1.21+). Increasingly the modern go-to in cloud-native code. |
 
@@ -155,22 +158,20 @@ In `lib_logging` the implementation is `SharedContext`-backed for per-fiber scop
 unlike Java MDC it doesn't leak into sibling fibers. That removes the worst class of
 real-world MDC bugs. But the *implicitness* remains.
 
-**`With(attrs)`.** Explicit. Code reads "this logger carries these attributes." When a
-function wants to log with a request id, it must accept the request-aware logger —
-either as a parameter or as a field set up at construction. There is no global state.
-The cost is verbosity: every layer that wants the request id either accepts a
-`Logger` parameter or accepts a context object that can produce one.
+**`With(attrs)`.** Explicit. Code reads "derive a handler that always includes these
+attributes." When a function wants to log with a request id, it normally accepts the
+request-aware logger — either as a parameter or as a field set up at construction.
+`LoggerContext` exists for framework/request code that needs implicit propagation.
 
 In Go, slog reaches for `context.Context` to pass loggers through the call graph
-without adding parameters everywhere. The Ecstasy equivalent is `SharedContext<Logger>`
-or service-local `Logger` fields — feasible but not idiomatic yet.
+without adding parameters everywhere. The Ecstasy equivalent in this POC is
+`LoggerContext`, a small `SharedContext<Logger>` wrapper.
 
 **Ecstasy fit.** The MDC story is *already implemented and works*: `const MDC` over an
-immutable-map `SharedContext` is small (~50 lines) and per-fiber. The slog story is
-*mechanically simple* (just derive a new const Logger with extra attrs) but loses the
-"library code that doesn't know about the request id still gets the request id" trick
-unless the Logger parameter threads everywhere. We want reviewer thoughts on which
-side of this tradeoff Ecstasy programs should be on.
+immutable-map `SharedContext` is small and per-fiber. The slog story is similarly
+small: explicit `Logger.with(...)` for normal code, optional `LoggerContext` for
+framework code that wants the "library code still sees the request logger" trick. We
+want reviewer thoughts on which side of this tradeoff Ecstasy programs should be on.
 
 ### 3.3 Structured data — three concepts vs one
 
@@ -508,6 +509,12 @@ name=alice action=login` for the text handler.
 output; slog's structure-first is easier for machine consumption. The Ecstasy default
 arguments and varargs make either ergonomic.
 
+**Formatter boundary.** `lib_logging.MessageFormatter` belongs only to the SLF4J-shaped
+side. Go `log/slog` has no equivalent formatter: callers pass a finished message and
+separate attrs. Reusing the SLF4J formatter in `lib_slogging` would erase the cleanest
+part of slog's design by adding positional arguments next to attrs. If we want a
+migration helper later, it should be an adapter outside the core slog API.
+
 ### 3.5 Sink/handler shape — minimal vs richer
 
 `LogSink` has two methods. Everything (level filter, attr resolution, MDC capture,
@@ -522,8 +529,10 @@ high-volume structured logging.
 
 **Ecstasy fit.** The slog handler shape is more work to implement but removes
 allocation on the hot path for derived loggers. Whether that matters in Ecstasy
-depends on workload. The lib_slogging skeleton currently exposes both methods so
-the cost is a couple more lines per handler.
+depends on workload. `lib_slogging` now ships
+[`BoundHandler`](../../lib_slogging/src/main/x/slogging/BoundHandler.x) as the default
+derivation wrapper; a production backend can still override those hooks to cache a
+serialized prefix or backend-native context object.
 
 ### 3.6 Logger naming — hierarchical vs attribute-based
 
@@ -576,17 +585,17 @@ In `lib_logging`:
 
 In `lib_slogging`:
 
-- `Logger` is a `const` carrying `Handler handler` and `Attr[] attrs`. Derivation
-  via `with(...)` returns a new `const Logger` — naturally immutable.
-- There is no MDC, so no `SharedContext`-flavoured cross-cutting state.
+- `Logger` is a `const` carrying `Handler handler`. Derivation via `with(...)`
+  returns a new `const Logger` with a derived handler — naturally immutable.
+- `LoggerContext` is the optional `SharedContext<Logger>` helper for framework/request
+  propagation; it is not required for normal logging calls.
 - Handlers split the same way: stateless adapters (`TextHandler`, `JSONHandler`,
   `NopHandler`) are `const`; stateful collectors (`MemoryHandler`) are `service`.
 
-The slog model is *substantially* simpler on the const side because the absence of
-MDC removes one of the two interactions with `SharedContext`. The other interaction
-— "I want a logger that propagates through fibers without threading a parameter" —
-is achievable with `SharedContext<Logger>` if/when needed, but isn't required for the
-core API.
+The slog model is *substantially* simpler on the const side because the core API does
+not snapshot an MDC map on every event. The optional interaction — "I want a logger
+that propagates through fibers without threading a parameter" — lives in
+`LoggerContext`, not in the hot path.
 
 ### 4.2 Fluent builder vs varargs
 
@@ -694,7 +703,7 @@ lands.
 
 We lean — softly, fully expecting reviewer pushback — toward **`lib_slogging` as the
 canonical Ecstasy logging library, with one borrowed feature from `lib_logging`**:
-the per-fiber `SharedContext`-backed MDC, recast as `slogging.Context` and *also*
+the per-fiber `SharedContext` idea, recast as `LoggerContext` and *also*
 optional / never the only path. The reasoning, ranked:
 
 1. **Conceptual economy.** One concept (`Attr`) covering markers, structured KVs,
@@ -706,8 +715,8 @@ optional / never the only path. The reasoning, ranked:
 3. **Less compiler ask.** No hierarchical naming, no fluent builder, no marker DAG.
    Smaller surface to support.
 4. **MDC is genuinely useful.** Threading a request-aware logger through a
-   call graph is real work that real codebases get wrong. A `slogging.Context` with
-   `withAttrs(...)` semantics, *opt in*, gives you the SLF4J win without the
+   call graph is real work that real codebases get wrong. `LoggerContext` with
+   `Logger.with(...)` semantics, *opt in*, gives you the SLF4J win without the
    "everything is implicit" cost.
 
 A third option — **hybrid SLF4J-facade with slog-shaped event model** — is
@@ -744,12 +753,16 @@ Q-D6 in `open-questions.md`.
 
 This branch (`lagergren/logging`) contains:
 
-- `lib_logging/` — the SLF4J-shaped library, near-feature-complete (47 unit tests
-  passing). Tracking list of remaining items: `open-questions.md` § "SLF4J-style
-  library work not yet implemented".
-- `lib_slogging/` — the slog-shaped library, currently a **skeleton** (interfaces +
-  one stub `TextHandler`). Full implementation gated on reviewer feedback on this
-  document.
+- `lib_logging/` — the SLF4J-shaped library, near-feature-complete for the base API
+  (54 focused XTC test methods). Tracking list of remaining
+  items: `open-questions.md` § "SLF4J-style library work not yet implemented".
+- `lib_slogging/` — the slog-shaped library, implemented to the same comparison
+  waterline with 34 focused XTC test methods. Runtime injection, `lib_json` JSON
+  rendering, explicit source
+  metadata, `LoggerContext`, handler derivation semantics, and a small handler
+  contract test kit are in scope for this branch.
+- `api-cross-reference.md` — official SLF4J / Go slog API links mapped to local
+  Ecstasy source files and difference notes.
 - This document — the design comparison and the explicit list of reviewer questions.
 - `open-questions.md` — the unified question list (all "Q-D*" items added in this PR
   call out language-design questions specifically).

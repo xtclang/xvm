@@ -44,10 +44,14 @@ service ListHandler
     }
 
     @Override
-    Handler withAttrs(Attr[] attrs) = this;
+    Handler withAttrs(Attr[] attrs) {
+        return attrs.empty ? this : new slogging.BoundHandler(this, attrs);
+    }
 
     @Override
-    Handler withGroup(String name) = this;
+    Handler withGroup(String name) {
+        return name == "" ? this : new slogging.BoundHandler(this, name);
+    }
 
     void setLevel(Level level) {
         rootLevel = level;

@@ -35,25 +35,40 @@ service MemoryHandler
         return recordList.toArray(Constant);
     }
 
+    /**
+     * Cheap threshold check. Defaults to `Debug`, matching Go slog's lowest canonical
+     * level and making tests capture everything unless they opt into a stricter level.
+     */
     @Override
     Boolean enabled(Level level) {
         return level.severity >= rootLevel.severity;
     }
 
+    /**
+     * Capture the record in memory. This is the slog-shaped analogue of Logback's
+     * `ListAppender` and `lib_logging.MemoryLogSink`.
+     */
     @Override
     void handle(Record record) {
         recordList.add(record);
     }
 
+    /**
+     * Derived loggers share this capture buffer, but [BoundHandler] applies the
+     * pre-bound attrs before the record reaches [handle].
+     */
     @Override
     Handler withAttrs(Attr[] attrs) {
-        // Share the same underlying recordList so derived loggers' records show up in
-        // the same place — matches slogtest behaviour and what tests intuitively want.
-        return this;
+        return attrs.empty ? this : new BoundHandler(this, attrs);
     }
 
+    /**
+     * Group derived records while keeping the same capture buffer.
+     */
     @Override
-    Handler withGroup(String name) = this;
+    Handler withGroup(String name) {
+        return name == "" ? this : new BoundHandler(this, name);
+    }
 
     /**
      * Discard all captured records.

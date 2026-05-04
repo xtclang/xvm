@@ -102,7 +102,8 @@ void start() {
 **After**:
 
 ```ecstasy
-@Inject("kernel") log.Logger logger;
+@Inject log.Logger rootLogger;
+log.Logger logger = rootLogger.named("platform.kernel");
 
 void start() {
     logger.info("Starting the AccountManager...");
@@ -175,7 +176,8 @@ This is the worst-offending file in the platform repo by call-site count. Twelve
 
 ```ecstasy
 service OAuthProvider {
-    @Inject("auth.oauth") log.Logger logger;
+    @Inject log.Logger rootLogger;
+    log.Logger logger = rootLogger.named("platform.auth.oauth");
 
     void timeout(String provider) {
         logger.error("Authentication request to {} has timed out", [provider]);
@@ -210,11 +212,13 @@ package gains a small canonical `Logger` per subsystem:
 package common {
     package log import logging.xtclang.org;
 
-    @Inject("platform.kernel")  log.Logger kernelLogger;
-    @Inject("platform.auth")    log.Logger authLogger;
-    @Inject("platform.host")    log.Logger hostLogger;
-    @Inject("platform.proxy")   log.Logger proxyLogger;
-    @Inject("platform.cli")     log.Logger cliLogger;
+    @Inject log.Logger rootLogger;
+
+    log.Logger kernelLogger = rootLogger.named("platform.kernel");
+    log.Logger authLogger   = rootLogger.named("platform.auth");
+    log.Logger hostLogger   = rootLogger.named("platform.host");
+    log.Logger proxyLogger  = rootLogger.named("platform.proxy");
+    log.Logger cliLogger    = rootLogger.named("platform.cli");
 }
 ```
 

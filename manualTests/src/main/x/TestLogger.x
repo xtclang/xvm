@@ -17,6 +17,7 @@
  */
 module TestLogger {
     package log import logging.xtclang.org;
+    package slog import slogging.xtclang.org;
     import log.BasicLogger;
     import log.BasicMarker;
     import log.ConsoleLogSink;
@@ -24,6 +25,8 @@ module TestLogger {
     import log.LogSink;
     import log.Marker;
     import log.MDC;
+    import slog.Attr   as SAttr;
+    import slog.Logger as SLogger;
 
     @Inject Console console;
 
@@ -39,6 +42,9 @@ module TestLogger {
 
         console.print("--- runMDC (per-fiber context) ---");
         runMDC();
+
+        console.print("--- runInjectedSlog (slog-shaped logger via @Inject) ---");
+        runInjectedSlog();
     }
 
     /**
@@ -77,8 +83,8 @@ module TestLogger {
      * Default-logger injection. The runtime registers exactly one supplier under the
      * resource name `"logger"` (see `NativeContainer.initResources`), so this is the only
      * spelling that resolves: the field name `logger` matches the registered resource
-     * name. Any other field name — `@Inject Logger payments;` — would fail with an
-     * unresolved-injection error, by design.
+     * name. Any other field name — `@Inject Logger payments;` — would not resolve,
+     * by design.
      */
     void runInjected() {
         @Inject Logger logger;
@@ -120,13 +126,28 @@ module TestLogger {
         mdc.put("user",      "u_7");
         console.print($"  [diagnostic] mdc.copyOfContextMap = {mdc.copyOfContextMap}");
 
-        // (A) Through the runtime-injected RTLogger (service wrapper).
-        logger.info("via @Inject Logger (RTLogger service)");
+        // (A) Through the runtime-injected BasicLogger const. This is intentionally
+        // not a service wrapper; keeping the call on this fiber is what makes MDC
+        // visible to BasicLogger.emit().
+        logger.info("via @Inject Logger (BasicLogger const)");
 
         // (B) Through a directly-constructed BasicLogger (no service wrapper).
         Logger direct = new BasicLogger("MDC.direct", new ConsoleLogSink());
         direct.info("via direct BasicLogger");
 
         mdc.clear();
+    }
+
+    /**
+     * Runtime injection for the slog-shaped library. This proves that the native
+     * injector can resolve the same resource name (`logger`) by requested type:
+     * `logging.Logger` and `slogging.Logger` are both injectable.
+     */
+    void runInjectedSlog() {
+        @Inject SLogger logger;
+
+        SLogger payments = logger.with([SAttr.of("requestId", "r_slog")])
+                                 .withGroup("payments");
+        payments.info("charged", [SAttr.of("amount", 1099)]);
     }
 }

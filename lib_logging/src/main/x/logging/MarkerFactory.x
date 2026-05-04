@@ -11,13 +11,14 @@
  */
 service MarkerFactory {
 
+    private Map<String, Marker> markers = new HashMap();
+
     /**
      * Get (creating if necessary) the canonical marker with the supplied name. Subsequent calls
      * with the same `name` return the same marker.
      */
     Marker getMarker(String name) {
-        // TODO(impl): thread-safe interning map.
-        return new BasicMarker(name);
+        return markers.computeIfAbsent(name, () -> new BasicMarker(name));
     }
 
     /**
@@ -31,7 +32,6 @@ service MarkerFactory {
      * True iff a marker with the supplied name has previously been interned.
      */
     Boolean exists(String name) {
-        // TODO(impl): consult the interning map.
-        return False;
+        return markers.contains(name);
     }
 }

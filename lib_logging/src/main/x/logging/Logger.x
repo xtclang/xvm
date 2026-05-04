@@ -11,8 +11,8 @@
  *
  * Acquisition is by injection:
  *
- *      @Inject Logger logger;                        // anonymous logger
- *      @Inject("com.example.foo") Logger logger;     // named logger
+ *      @Inject Logger logger;                        // root logger
+ *      Logger log = logger.named("com.example.foo"); // named logger
  *
  * or via the `LoggerFactory` static accessor.
  *
@@ -34,15 +34,33 @@ interface Logger {
      *      @Inject Logger logger;                                 // root logger, fixed name
      *      static Logger PaymentLogger = logger.named("payments"); // per-class derivative
      *
-     * Implementations are free to intern by name (and `BasicLogger` may grow that later);
-     * for v0 each call returns a fresh `Logger`.
+     * `name` is the full logger name, not a suffix appended to this logger's name.
+     * Implementations may intern by name; `BasicLogger` does so when it was created by a
+     * `LoggerRegistry` and otherwise returns a fresh logger.
      */
     Logger named(String name);
 
+    /**
+     * Cheap `Trace` level check.
+     */
     @RO Boolean traceEnabled;
+    /**
+     * Cheap `Debug` level check. Use this before constructing expensive debug
+     * arguments; `{}` formatting is lazy, but argument expressions are still evaluated
+     * by the caller before the method call.
+     */
     @RO Boolean debugEnabled;
+    /**
+     * Cheap `Info` level check.
+     */
     @RO Boolean infoEnabled;
+    /**
+     * Cheap `Warn` level check.
+     */
     @RO Boolean warnEnabled;
+    /**
+     * Cheap `Error` level check.
+     */
     @RO Boolean errorEnabled;
 
     /**
@@ -53,26 +71,41 @@ interface Logger {
 
     // ---- Per-level emission -------------------------------------------------------------------
 
+    /**
+     * Emit a `Trace` event using SLF4J `{}` placeholder formatting.
+     */
     void trace(String message,
                Object[]   arguments = [],
                Exception? cause     = Null,
                Marker?    marker    = Null);
 
+    /**
+     * Emit a `Debug` event using SLF4J `{}` placeholder formatting.
+     */
     void debug(String message,
                Object[]   arguments = [],
                Exception? cause     = Null,
                Marker?    marker    = Null);
 
+    /**
+     * Emit an `Info` event using SLF4J `{}` placeholder formatting.
+     */
     void info (String message,
                Object[]   arguments = [],
                Exception? cause     = Null,
                Marker?    marker    = Null);
 
+    /**
+     * Emit a `Warn` event using SLF4J `{}` placeholder formatting.
+     */
     void warn (String message,
                Object[]   arguments = [],
                Exception? cause     = Null,
                Marker?    marker    = Null);
 
+    /**
+     * Emit an `Error` event using SLF4J `{}` placeholder formatting.
+     */
     void error(String message,
                Object[]   arguments = [],
                Exception? cause     = Null,
@@ -99,9 +132,24 @@ interface Logger {
      *            .log("processing failed for {}", input);
      */
     LoggingEventBuilder atTrace();
+    /**
+     * Begin a fluent log event at `Debug` level.
+     */
     LoggingEventBuilder atDebug();
+    /**
+     * Begin a fluent log event at `Info` level.
+     */
     LoggingEventBuilder atInfo();
+    /**
+     * Begin a fluent log event at `Warn` level.
+     */
     LoggingEventBuilder atWarn();
+    /**
+     * Begin a fluent log event at `Error` level.
+     */
     LoggingEventBuilder atError();
+    /**
+     * Begin a fluent log event at a runtime-selected level.
+     */
     LoggingEventBuilder atLevel(Level level);
 }

@@ -2,9 +2,10 @@
 
 Experimental SLF4J-shaped logging library for Ecstasy.
 
-> **Status:** Stub / research branch. The API is intended to be the long-lived shape;
-> implementations and the runtime injection plumbing are not wired up yet. See the design
-> docs under [`doc/logging/`](../doc/logging) at the repo root.
+> **Status:** Working POC. The core API, default sinks, MDC, markers, structured
+> key/value events, logger interning, runtime `@Inject Logger logger;` wiring, and
+> unit tests are in this branch. JIT-side injection, async sinks, and the
+> Logback-style backend remain future work; see [`doc/logging/`](../doc/logging).
 
 ## What this is
 
@@ -14,7 +15,7 @@ markers, MDC, the SLF4J 2.x fluent event builder. Acquired by injection:
 
 ```ecstasy
 @Inject Logger logger;
-logger.info("processed {} records in {}ms", count, elapsed);
+logger.info("processed {} records in {}ms", [count, elapsed]);
 ```
 
 The default sink writes to the platform `Console`. The `LogSink` SPI is the API↔impl
@@ -25,7 +26,11 @@ without touching caller code.
 
 All design docs live at the repo root under [`doc/logging/`](../doc/logging):
 
-- [`PLAN.md`](../doc/logging/PLAN.md) — master plan, scope, ordering of work
+- [`README.md`](../doc/logging/README.md) — start-here guide and reading paths
+- [`api-cross-reference.md`](../doc/logging/api-cross-reference.md) — official SLF4J links mapped
+  to each Ecstasy type and the local differences
+- [`lib-logging-vs-lib-slogging.md`](../doc/logging/lib-logging-vs-lib-slogging.md) —
+  side-by-side comparison with the slog-shaped sibling library
 - [`design.md`](../doc/logging/design/design.md) — architecture, module layout, API↔impl boundary
 - [`slf4j-parity.md`](../doc/logging/usage/slf4j-parity.md) — every SLF4J 2.x type and method, mapped
 - [`ecstasy-vs-java-examples.md`](../doc/logging/usage/ecstasy-vs-java-examples.md) — Java SLF4J

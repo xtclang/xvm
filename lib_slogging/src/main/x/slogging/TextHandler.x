@@ -8,14 +8,12 @@
  *
  * If the record carries an exception, it is rendered on the following line.
  *
- * # Skeleton status
+ * # POC status
  *
  * The implementation here is intentionally minimal — enough to demonstrate the slog
  * shape end to end (`Logger.with(...)`, attribute folding into namespaced keys, level
- * threshold filtering) but not yet a production formatter. Specifically, no escaping
- * of `=` / `"` in attribute values, no group nesting collapse beyond one level, no
- * timestamp formatting options. Tracked in `open-questions.md` § "lib_slogging work
- * not yet implemented" once the parity table is added.
+ * threshold filtering) but not yet a fully configurable formatter. Specifically, it has
+ * fixed timestamp/message formatting and no handler options object yet.
  *
  * # Why this handler is a `const`, not a `service`
  *
@@ -44,11 +42,20 @@ const TextHandler(Level rootLevel, String groupPrefix)
 
     @Inject Console console;
 
+    /**
+     * Cheap threshold check. This is intentionally only arithmetic on the level's
+     * severity; no formatting or attribute walking belongs on the fast path.
+     */
     @Override
     Boolean enabled(Level level) {
         return level.severity >= rootLevel.severity;
     }
 
+    /**
+     * Render a record as one line of text. This is the POC equivalent of Go
+     * `slog.TextHandler.Handle`: the message is quoted and attrs are appended as
+     * `key=value` pairs.
+     */
     @Override
     void handle(Record record) {
         StringBuffer buf = new StringBuffer();
@@ -74,16 +81,12 @@ const TextHandler(Level rootLevel, String groupPrefix)
 
     @Override
     Handler withAttrs(Attr[] attrs) {
-        // Stateless variant: the Logger already carries the attrs list and merges them
-        // into every record before calling handle(). A richer handler would pre-resolve
-        // here.
-        return this;
+        return attrs.empty ? this : new BoundHandler(this, attrs);
     }
 
     @Override
     Handler withGroup(String name) {
-        String combined = groupPrefix == "" ? name : $"{groupPrefix}.{name}";
-        return new TextHandler(rootLevel, combined);
+        return name == "" ? this : new BoundHandler(this, name);
     }
 
     /**
@@ -107,5 +110,9 @@ const TextHandler(Level rootLevel, String groupPrefix)
         }
     }
 
+    /**
+     * POC string quoting. Production text output should escape quotes, newlines, and
+     * separators; that belongs with the production handler, not the API sketch.
+     */
     private String quote(String s) = $"\"{s}\"";
 }

@@ -39,11 +39,17 @@ const Level(Int severity, String label)
         return severity >= threshold.severity;
     }
 
+    /**
+     * Natural ordering is severity ordering, matching Go slog's integer-level model.
+     */
     @Override
     static <CompileType extends Level> Ordered compare(CompileType a, CompileType b) {
         return a.severity <=> b.severity;
     }
 
+    /**
+     * Human-readable level label used by text/JSON handlers.
+     */
     @Override
     String toString() = label;
 }

@@ -1,0 +1,155 @@
+# Go `log/slog` → `lib_slogging` mapping
+
+This document is the slog-shaped companion to
+[`slf4j-parity.md`](slf4j-parity.md). It maps the Go `log/slog` API to the Ecstasy
+POC and calls out the differences that are intentional.
+
+Official reference: Go [`log/slog`](https://pkg.go.dev/log/slog).
+
+## Acquiring a logger
+
+| Go `log/slog` | `lib_slogging` |
+|---|---|
+| `slog.Default()` / top-level `slog.Info(...)` | Not modelled in v0. Ecstasy should prefer injected resources over process-global defaults. |
+| `slog.New(handler)` | `new Logger(handler)` |
+| `logger.With("requestId", id)` | `logger.with([Attr.of("requestId", id)])` |
+| `logger.WithGroup("payments")` | `logger.withGroup("payments")` |
+| `slog.NewTextHandler(w, opts)` | `new TextHandler(level)`; output currently goes through `@Inject Console`. |
+| `slog.NewJSONHandler(w, opts)` | `new JSONHandler(level)`; renders through `lib_json` and writes through `@Inject Console`. |
+| framework/request context | `LoggerContext.bind(logger)` / `LoggerContext.currentOr(root)` |
+
+Runtime `@Inject slogging.Logger logger;` is wired in this branch. The native injector
+resolves resources by `(name, requested type)`, so both `logging.Logger logger` and
+`slogging.Logger logger` can use the familiar default resource name `logger`.
+
+## `Logger` methods
+
+| Go `log/slog` | `lib_slogging` |
+|---|---|
+| `logger.Debug(msg, args...)` | `logger.debug(message, [Attr.of("k", v)])` |
+| `logger.Info(msg, args...)` | `logger.info(message, attrs)` |
+| `logger.Warn(msg, args...)` | `logger.warn(message, attrs)` |
+| `logger.Error(msg, args...)` | `logger.error(message, attrs, cause=e)` |
+| `logger.Log(ctx, level, msg, args...)` | `logger.log(level, message, attrs)` |
+| `logger.LogAttrs(ctx, level, msg, attrs...)` | Same `logger.log(level, message, attrs)` path; attrs are already typed. |
+| `logger.Enabled(ctx, level)` | `logger.enabled(level)` |
+| `AddSource` output | `logger.logAt(level, message, sourceFile, sourceLine, attrs)` |
+
+Differences:
+
+- Go accepts alternating `"key", value` pairs and converts them into attrs. Ecstasy
+  uses explicit `Attr.of("key", value)` values, which avoids the bad-key case entirely.
+- Go carries `context.Context`; the Ecstasy API keeps the common logging calls
+  context-free and offers `LoggerContext` as an Ecstasy `SharedContext<Logger>` helper
+  for framework/request propagation.
+- Go's `Error` convention is an attr such as `slog.Any("err", err)`. The Ecstasy POC
+  also has a dedicated `cause` parameter because `Exception` is a first-class type and
+  handlers/tests often want direct access.
+
+## `Attr`
+
+| Go `log/slog` | `lib_slogging` |
+|---|---|
+| `slog.String("user", user)` | `Attr.of("user", user)` |
+| `slog.Int("count", count)` | `Attr.of("count", count)` |
+| `slog.Bool("audit", true)` | `Attr.of("audit", True)` |
+| `slog.Any("err", err)` | `Attr.of("err", e)` or `cause=e` |
+| `slog.Group("user", ...)` | `Attr.group("user", [...])` |
+
+Go has many typed helper functions because it has no common `Object` parent. Ecstasy
+does, so a single `Attr.of` is enough for the POC. A production handler can still
+render strings, numbers, booleans, times, durations, exceptions, and groups differently.
+
+## `Handler`
+
+| Go `log/slog.Handler` | `lib_slogging.Handler` |
+|---|---|
+| `Enabled(context.Context, Level) bool` | `enabled(Level)` |
+| `Handle(context.Context, Record) error` | `handle(Record)` |
+| `WithAttrs([]Attr) Handler` | `withAttrs(Attr[])` |
+| `WithGroup(string) Handler` | `withGroup(String)` |
+
+The extra derivation methods are the key architectural difference from
+`lib_logging.LogSink`. They let a handler pre-bind attrs or a group once when a
+logger is derived, instead of doing that work on every record. The shipped handlers use
+`BoundHandler` for the default semantics, and tests include a small
+`HandlerContract` helper modelled on Go's `testing/slogtest`.
+
+## Context and source metadata
+
+The default Ecstasy style is explicit:
+
+```ecstasy
+Logger reqLog = logger.with([Attr.of("requestId", req.id)]);
+reqLog.info("processing", [Attr.of("path", req.path)]);
+```
+
+When framework code needs a request logger to flow through code that does not accept a
+logger parameter, bind it with `LoggerContext`:
+
+```ecstasy
+LoggerContext context = new LoggerContext();
+
+using (context.bind(reqLog)) {
+    worker.process^();
+}
+
+Logger log = context.currentOr(logger);
+log.info("inside worker");
+```
+
+Source metadata is explicit for now:
+
+```ecstasy
+logger.logAt(Level.Info, "processing", "PaymentService.x", 42,
+        [Attr.of("requestId", req.id)]);
+```
+
+That fills `Record.sourceFile` and `Record.sourceLine`, and `JSONHandler` renders it
+under the `"source"` object. Automatic call-site capture can target this method later.
+
+## Levels
+
+| Go `log/slog` | `lib_slogging` |
+|---|---|
+| `slog.LevelDebug` (`-4`) | `Level.Debug` |
+| `slog.LevelInfo` (`0`) | `Level.Info` |
+| `slog.LevelWarn` (`4`) | `Level.Warn` |
+| `slog.LevelError` (`8`) | `Level.Error` |
+| custom `slog.Level(2)` | `new Level(2, "NOTICE")` |
+
+This is one place where the slog model is materially different from SLF4J:
+levels are open. That is more extensible, but less canonical.
+
+## Message formatting
+
+There is no slog equivalent to SLF4J's `MessageFormatter`. This is intentional:
+
+```ecstasy
+// SLF4J-shaped
+logger.info("processed {} records", [count]);
+
+// slog-shaped
+logger.info("processed records", [Attr.of("count", count)]);
+```
+
+The slog design keeps the human message stable and puts variable data in attrs. Reusing
+`lib_logging.MessageFormatter` in `lib_slogging` would add positional arguments next
+to attrs and remove the model's main simplification. If migration sugar is useful
+later, it should live in an adapter module, not in the core slog API.
+
+## What remains intentionally smaller than Go `log/slog`
+
+- Top-level process-global functions such as `slog.Info(...)` are not modelled;
+  Ecstasy should prefer injected resources.
+- Output destinations/options are not yet modelled as a `HandlerOptions` object;
+  `TextHandler` and `JSONHandler` write to injected `Console`.
+- Automatic compiler/runtime source-location capture is not implemented; `logAt(...)`
+  is the explicit API that future sugar can target.
+- `BoundHandler` provides correct derivation semantics. A high-performance production
+  backend can still override `withAttrs` / `withGroup` to cache serialized prefixes.
+
+
+---
+
+_See also [../README.md](../README.md) for the full doc index and reading paths._

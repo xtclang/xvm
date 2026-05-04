@@ -42,8 +42,10 @@ Where there is more than one of something, the resource name disambiguates:
 @Inject("homeDir") Directory home;            // from BasicResourceProvider
 ```
 
-`lib_logging` does the same: `@Inject Logger logger;` for the default, optional
-`@Inject("com.example.foo") Logger logger;` for a named one.
+`lib_logging` deliberately does **not** use named injection for logger names. It uses
+`@Inject Logger logger;` for the root logger, then derives full-name loggers by API:
+`Logger payments = logger.named("com.example.payments");`. This keeps the injector's
+resource table exact-match and avoids a one-off wildcard injection rule for logging.
 
 ### 3. Defaults via the `Inject` annotation's `resourceName`
 
@@ -51,8 +53,10 @@ Where there is more than one of something, the resource name disambiguates:
 `Inject<Referent>(String? resourceName = Null, Options opts = Null)`. The `resourceName`
 is the dispatch key; null means "default for this type". Every XDK lib follows this.
 
-`lib_logging` follows it too: `@Inject Logger` resolves the default, `@Inject("foo")
-Logger` names the logger. Same shape as `Directory`.
+`lib_logging` follows the default-resource part (`@Inject Logger logger;`) but not
+the named-resource part for logger names. Directory names identify distinct host
+resources; logger names are application categories. Those categories belong in the
+logging API (`logger.named(...)`), not in the runtime injector.
 
 ### 4. The four canonical interfaces for shareable values
 
@@ -132,11 +136,16 @@ the right way; they just lack a `Logger` to round out the injection surface.
 
 | Convention | `lib_logging` |
 |---|---|
-| Injectable interface type | `Logger`, `LogSink`, `MarkerFactory`, `MDC`, `LoggerFactory` — all interfaces or services with `@Inject`-able shape. |
-| Named injection for named instances | `@Inject("com.example") Logger logger;` |
+| Injectable interface type | `Logger` and `MDC` are wired by the runtime in this branch. `LogSink`, `MarkerFactory`, and `LoggerFactory` are designed as injectable extension points but not yet registered by the interpreter's native container. |
+| Named logger acquisition | `@Inject Logger logger; Logger named = logger.named("com.example");` |
 | `Const` for immutable records | `LogEvent` |
-| `service` for stateful actors | `ConsoleLogSink`, `MarkerFactory`, `MDC`, `LoggerFactory` |
-| `class` for value-but-mutable | `BasicLogger`, `BasicEventBuilder`, `BasicMarker`, `MemoryLogSink`, `NoopLogSink` |
+| `const` for stateless/passable values | `BasicLogger`, `ConsoleLogSink`, `NoopLogSink`, `MDC`, `LogEvent` |
+| `service` for stateful actors | `MarkerFactory`, `LoggerFactory`, `LoggerRegistry`, `MemoryLogSink` |
+| `class` for mutable helpers/builders | `BasicEventBuilder`, `BasicMarker` |
+
+The slog-shaped sibling follows the same injection convention: `slogging.Logger` is
+also registered under the resource name `logger`, and the native injector disambiguates
+by requested type.
 | Module file layout | `lib_logging/src/main/x/logging.x` declaring `module logging.xtclang.org` |
 | Subordinate types under same dir | `lib_logging/src/main/x/logging/<Type>.x` |
 | Build script shape | matches `lib_cli` / `lib_json` exactly |

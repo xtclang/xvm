@@ -97,34 +97,34 @@ break when richer sinks arrive.
 
 ### Layer 2 — event data model
 
-The `LogEvent` const should grow a `keyValues` field analogous to SLF4J's
-`getKeyValuePairs()`. The current stub does not have it; this is one of the v0.1 follow-ups
-tracked in `../open-questions.md`. The intended shape:
+The `LogEvent` const carries a `keyValues` field analogous to SLF4J's
+`getKeyValuePairs()`:
 
 ```ecstasy
 const LogEvent(
         String                        loggerName,
         Level                         level,
         String                        message,
-        Marker?                       marker      = Null,
+        Marker[]                      markers     = [],
         Exception?                    exception   = Null,
         Object[]                      arguments   = [],
-        immutable Map<String, Object> keyValues   = Map:[],   // ← add
-        immutable Map<String, String> mdcSnapshot = Map:[],
+        Map<String, Object>           keyValues   = [],
+        Map<String, String>           mdcSnapshot = [],
         String                        threadName  = "",
         Time                          timestamp,
         );
 ```
 
-The `BasicEventBuilder` accumulates KV pairs in a local map (currently a TODO) and passes
-them through when `log()` materializes the event.
+`BasicEventBuilder` accumulates KV pairs in a local `ListMap`, freezes a snapshot, and
+passes them through when `log()` materializes the event. Duplicate keys currently use
+"last value wins" semantics; the tests pin that behavior down.
 
 ### Layer 3 — sink
 
 `LogSink` already gets the whole `LogEvent`, so a sink that wants to render KV pairs
-just reads `event.keyValues`. The default `ConsoleLogSink` is dumb on purpose: it would
-append KV pairs as `key=value key=value` after the message, in the same shape Logback's
-default `PatternLayout` uses for MDC.
+just reads `event.keyValues`. The default `ConsoleLogSink` is intentionally simple: it
+appends KV pairs as `{key=value, key=value}` after the message, in the same spirit as
+Logback's simple text layouts. Structured sinks can render the same fields as real JSON.
 
 A KV-aware structured sink — say `JsonLineLogSink` — would render every event as a
 single JSON object per line:
@@ -158,8 +158,8 @@ service JsonLineLogSink
         appendField(json, "level",     event.level.name);
         appendField(json, "logger",    event.loggerName);
         appendField(json, "message",   event.message);
-        if (Marker m ?= event.marker) {
-            appendField(json, "marker", m.name);
+        if (!event.markers.empty) {
+            appendArray(json, "markers", event.markers.map(m -> m.name));
         }
         for ((String k, Object v) : event.keyValues) {
             appendField(json, k, v);
@@ -205,12 +205,13 @@ in the complex case). See `../future/logback-integration.md`.
 
 ## What to build first vs. later
 
-For v0.1, the right order is:
+For the next production-oriented cut, the right order is:
 
-1. Add `keyValues: Map<String, Object>` to `LogEvent` and wire it through
-   `BasicEventBuilder.addKeyValue`.
-2. Make `ConsoleLogSink` append KV pairs in `key=value` form after the message.
-3. Add a `JsonLineLogSink` that renders one JSON object per event (uses `lib_json`).
+1. Add a `JsonLineLogSink` that renders one JSON object per event using `lib_json`.
+2. Decide whether duplicate structured keys should remain "last value wins" (`Map`) or
+   preserve duplicates (`KeyValuePair[]`, closer to SLF4J 2.x).
+3. Add cloud-oriented layouts that map MDC, markers, and key/value pairs to the field
+   names expected by GCP / AWS / Azure shippers.
 
 Everything beyond that — typed value formatting, schema validation, OpenTelemetry
 integration, log-correlation IDs propagated across services — is sink-side. The API

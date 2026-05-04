@@ -4,10 +4,15 @@
  *
  * Fluent log-event builder, mirroring `org.slf4j.spi.LoggingEventBuilder` from SLF4J 2.x.
  *
- * The builder accumulates state then materializes a single `LogEvent` on `log(...)`. When the
- * underlying logger is _not_ enabled at the chosen level, the builder is a no-op and all
- * accumulated state is discarded — this is the whole point of the design: callers don't pay
- * for arguments and cause-chains that are never going to be emitted.
+ * The builder accumulates state then materializes a single `LogEvent` on `log(...)`. The
+ * level check happens at `log(...)`, after markers have been attached, so marker-aware
+ * sinks still get a chance to enable or suppress the event. If the sink rejects the event,
+ * no formatting, MDC snapshot, or `LogEvent` allocation happens.
+ *
+ * This is deliberately a v0 trade-off: the builder stores values passed to
+ * `addArgument` / `addKeyValue`, so caller expressions have already been evaluated by
+ * the time those methods run. Future lazy overloads can add supplier-valued arguments;
+ * see `doc/logging/future/lazy-logging.md`.
  *
  * Example:
  *

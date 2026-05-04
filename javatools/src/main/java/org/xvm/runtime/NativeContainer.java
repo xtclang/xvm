@@ -109,14 +109,19 @@ public class NativeContainer
         ModuleStructure moduleRoot   = f_repository.loadModule(ECSTASY_MODULE);
         ModuleStructure moduleTurtle = f_repository.loadModule(TURTLE_MODULE);
         ModuleStructure moduleNative = f_repository.loadModule(NATIVE_MODULE);
+        ModuleStructure moduleLogging = f_repository.loadModule("logging.xtclang.org");
+        ModuleStructure moduleSLogging = f_repository.loadModule("slogging.xtclang.org");
 
-        if (moduleRoot == null || moduleTurtle == null || moduleNative == null) {
+        if (moduleRoot == null || moduleTurtle == null || moduleNative == null
+                || moduleLogging == null || moduleSLogging == null) {
             throw new IllegalStateException("Native libraries are missing");
         }
 
         // "root" is a merge of "native" module into the "system"
         FileStructure fileRoot = new FileStructure(moduleRoot, true);
         fileRoot.merge(moduleTurtle, true, false);
+        fileRoot.merge(moduleLogging, true, false);
+        fileRoot.merge(moduleSLogging, true, false);
         fileRoot.merge(moduleNative, true, false);
 
         fileRoot.linkModules(f_repository, true);
@@ -367,14 +372,16 @@ public class NativeContainer
         TypeConstant typeProps = pool.ensureMapType(pool.typeString(), pool.typeString());
         addResourceSupplier(new InjectionKey("properties", typeProps), this::ensureProperties);
 
-        // +++ logging.Logger and logging.MDC
-        // Both back `@Inject Logger logger;` and `@Inject MDC mdc;` on the user side. They
-        // are both `const` types in `lib_logging`, deliberately NOT services: a service
-        // wrapper around `Logger` would create a new fiber per call, and the [MDC] tokens
-        // (registered via `SharedContext.withValue` on the caller's fiber) would not be
-        // visible to `BasicLogger.emit` running on the wrapper's fiber. Constructing the
-        // `const` directly hands the user a Passable handle whose methods execute on their
-        // own fiber, preserving fiber-local MDC propagation end-to-end.
+        // +++ logging.Logger, logging.MDC, and slogging.Logger
+        // These back `@Inject Logger logger;`, `@Inject MDC mdc;`, and
+        // `@Inject slogging.Logger logger;` on the user side. The two logger resources use
+        // the same resource name, so getInjectable() must resolve by both name and type.
+        //
+        // The logger implementations are `const` types, deliberately NOT services: a service
+        // wrapper around a logger would create a new fiber per call. That would break
+        // fiber-local context such as logging.MDC and slogging.LoggerContext, because the
+        // SharedContext tokens registered on the caller's fiber would not be visible from
+        // inside the wrapper service.
         //
         // The supplier shape is the same as for any other native-injected resource: one
         // `(typeName, resourceName)` registration, no wildcard branch in `getInjectable`.
@@ -394,6 +401,19 @@ public class NativeContainer
                 pool.ensureClassConstant(modLogging, "MDC"));
         addResourceSupplier(new InjectionKey("mdc", typeMDC),
                 (frame, hOpts) -> ensureConst(frame, typeMDC));
+
+        ModuleConstant modSLogging = pool.ensureModuleConstant("slogging.xtclang.org");
+        TypeConstant typeSLogger = pool.ensureTerminalTypeConstant(
+                pool.ensureClassConstant(modSLogging, "Logger"));
+        addResourceSupplier(new InjectionKey("logger", typeSLogger),
+                (frame, hOpts) -> {
+                    ConstantPool poolFrame = frame.poolContext();
+                    TypeConstant typeFrameSLogger = poolFrame.ensureTerminalTypeConstant(
+                            poolFrame.ensureClassConstant(
+                                    poolFrame.ensureModuleConstant("slogging.xtclang.org"),
+                                    "Logger"));
+                    return ensureConst(frame, typeFrameSLogger);
+                });
     }
 
     /**
@@ -461,7 +481,6 @@ public class NativeContainer
         assert !f_mapResources.containsKey(key);
 
         f_mapResources.put(key, supplier);
-        f_mapResourceNames.put(key.f_sName, key);
     }
 
     public ObjectHandle ensureOSStorage(Frame frame, ObjectHandle hOpts) {
@@ -749,21 +768,27 @@ public class NativeContainer
 
     @Override
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts) {
-        InjectionKey key = f_mapResourceNames.get(sName);
-        if (key == null) {
-            // for "Nullable" types the NativeContainer can only supply a trivial result;
-            // anything better than that must be done naturally by a container that hosts the
-            // calling container
-            return type.isNullable() ? xNullable.NULL : null;
+        for (Map.Entry<InjectionKey, InjectionSupplier> entry : f_mapResources.entrySet()) {
+            InjectionKey key = entry.getKey();
+            if (!key.f_sName.equals(sName)) {
+                continue;
+            }
+
+            // Check for equality first, but allow "congruency", "duck type" equality as well
+            // as sans-Nullable equivalency. This deliberately resolves by (name, type), not just
+            // name, so `logging.Logger logger` and `slogging.Logger logger` can both use the
+            // familiar resource name "logger".
+            TypeConstant typeResource = key.f_type;
+            if (typeResource.equals(type) || typeResource.isEquivalent(type)
+                    || typeResource.isEquivalent(type.removeNullable())) {
+                return entry.getValue().supply(frame, hOpts);
+            }
         }
 
-        // check for equality first, but allow "congruency", "duck type" equality as well or
-        // sans-Nullable equivalency
-        TypeConstant typeResource = key.f_type;
-        return typeResource.equals(type) || typeResource.isEquivalent(type)
-                    || typeResource.isEquivalent(type.removeNullable())
-                ? f_mapResources.get(key).supply(frame, hOpts)
-                : null;
+        // for "Nullable" types the NativeContainer can only supply a trivial result;
+        // anything better than that must be done naturally by a container that hosts the
+        // calling container
+        return type.isNullable() ? xNullable.NULL : null;
     }
 
     @Override
@@ -805,6 +830,7 @@ public class NativeContainer
         fileApp.merge(m_moduleTurtle, false, false);
         fileApp.merge(f_repository.loadModule("crypto.xtclang.org"), true, false);
         fileApp.merge(f_repository.loadModule("logging.xtclang.org"), true, false);
+        fileApp.merge(f_repository.loadModule("slogging.xtclang.org"), true, false);
         fileApp.merge(f_repository.loadModule("net.xtclang.org"), true, false);
         fileApp.merge(f_repository.loadModule("web.xtclang.org"), true, false);
         fileApp.merge(m_moduleNative, false, false);
@@ -956,8 +982,6 @@ public class NativeContainer
     /**
      * Map of resource names for a name based lookup.
      */
-    private final Map<String, InjectionKey> f_mapResourceNames = new HashMap<>();
-
     /**
      * Map of resources that are injectable from this container, keyed by their InjectionKey.
      */

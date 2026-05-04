@@ -6,7 +6,7 @@
  *   - the level check fast-path elides emission of disabled events;
  *   - the per-level methods (`trace`, `debug`, `info`, `warn`, `error`) route correctly;
  *   - markers and exceptions arrive at the sink intact;
- *   - the fluent event builder accumulates state and short-circuits on disabled levels;
+ *   - the fluent event builder accumulates state and drops disabled events at emission;
  *   - `MessageFormatter` substitutes `{}` placeholders.
  *
  * Each test class targets one cohesive area; submodules are picked up automatically by

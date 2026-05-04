@@ -16,9 +16,10 @@
  * "merge attrs into the namespace" work *once* at derivation time rather than on every
  * `handle` call.
  *
- * Stateless / forwarder handlers — `TextHandler`, `NopHandler` — return `this` from
- * both derivation methods. Only handlers that actually pre-resolve attrs need a richer
- * implementation.
+ * Handlers that do not maintain their own derived representation can return
+ * [BoundHandler] from both derivation methods. Handlers with a native prefix/cache can
+ * return their own implementation instead. A true discard handler such as [NopHandler]
+ * can still return `this`.
  *
  * # Choosing between `const` and `service` for an implementation
  *
@@ -52,15 +53,15 @@ interface Handler {
     void handle(Record record);
 
     /**
-     * Return a handler that carries the supplied attributes pre-bound. Stateless
-     * handlers can return `this`; structured handlers may pre-render the attrs into a
-     * cached prefix.
+     * Return a handler that carries the supplied attributes pre-bound. Use
+     * [BoundHandler] for the default semantics, or return a handler-specific derived
+     * instance that caches a rendered prefix.
      */
     Handler withAttrs(Attr[] attrs);
 
     /**
      * Return a handler that namespaces subsequent attributes under the supplied group
-     * name. Stateless handlers can return `this`.
+     * name. Use [BoundHandler] for the default semantics.
      */
     Handler withGroup(String name);
 }

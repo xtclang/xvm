@@ -47,11 +47,19 @@ const ConsoleLogSink(Level rootLevel)
 
     @Inject Console console;
 
+    /**
+     * Cheap root-threshold check. The default sink intentionally has no per-logger or
+     * marker-specific configuration; those belong in richer sinks.
+     */
     @Override
     Boolean isEnabled(String loggerName, Level level, Marker? marker = Null) {
         return level.severity >= rootLevel.severity;
     }
 
+    /**
+     * Render a `LogEvent` as one human-readable line. This default output is stable
+     * enough for demos/tests, not a replacement for a Logback-style layout system.
+     */
     @Override
     void log(LogEvent event) {
         StringBuffer buf = new StringBuffer();
