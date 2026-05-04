@@ -1,16 +1,12 @@
 # `lib_logging` vs `lib_slogging` — design comparison
 
-Two parallel XDK logging libraries, both modelling the same end-to-end functionality
-but each shaped after a different prior-art tradition:
+Two parallel XDK logging libraries model the same end-to-end capability but follow
+different prior-art traditions.
 
-- **`lib_logging`** — modelled on SLF4J 2.x + Logback. Familiar to anyone with
-  Java/Kotlin/Scala experience. Mature ecosystem semantics: `Logger.info("hello {}",
-  arg)`, `MDC.put`, `MarkerFactory.getMarker`, fluent `.atInfo()` builder, sink/appender
-  split, severity-named levels.
-- **`lib_slogging`** — modelled on Go 1.21's `log/slog`. The most modern "well-known"
-  structured logger. Attribute-first API: `logger.Info("hello", "key", value)` or
-  `logger.LogAttrs(...)`, derived loggers via `With(...)`, no MDC, no markers,
-  extensible integer levels, group nesting.
+| Library | Prior art | Core shape |
+|---|---|---|
+| `lib_logging` | SLF4J 2.x + Logback | Named loggers, `{}` message formatting, MDC, markers, fluent event builders, and a `LogSink` backend boundary. |
+| `lib_slogging` | Go 1.21 `log/slog` | Attribute-first events, derived loggers via `with(...)`, open integer levels, grouped attrs, and a `Handler` backend boundary. |
 
 Both libraries target the same set of features end-to-end so a reviewer can pick
 either, drop it into an Ecstasy program, and get the equivalent operational
@@ -18,23 +14,16 @@ capability. The point of carrying two implementations is not to ship both foreve
 it's to let the XTC language designers and prospective users see the two designs
 side-by-side, in real Ecstasy, and tell us which one fits the language better.
 
-This document:
-
-1. shows the same example written in both APIs;
-2. compares the two designs across nine concrete axes;
-3. analyses fit with Ecstasy idioms (`const` / `service` / `SharedContext` / fluent
-   builders);
-4. lists the reviewer questions that motivate the experiment;
-5. records a tentative recommendation, knowing it may shift after review.
-
-For direct links from each Ecstasy type to its official SLF4J or Go `log/slog`
-counterpart, see [`api-cross-reference.md`](api-cross-reference.md).
+The sections below show the same scenario in both APIs, compare the designs across
+the axes that matter for XDK code, and end with the reviewer questions that should
+decide which shape survives. Direct links from each Ecstasy type to its SLF4J or
+Go `log/slog` counterpart are in [`api-cross-reference.md`](api-cross-reference.md).
 
 > Status note: both libraries are working comparison POCs. `lib_logging` has the
-> fuller SLF4J surface (54 unit tests plus the injected manual demo); `lib_slogging`
-> has the smaller slog surface (34 unit tests plus injected/manual coverage), with
-> runtime injection, `lib_json` JSON rendering, source metadata, context binding, and
-> handler derivation semantics implemented.
+> fuller SLF4J surface (54 focused XTC test methods plus the injected manual demo);
+> `lib_slogging` has the more compact slog surface (34 focused XTC test methods plus
+> injected/manual coverage), with runtime injection, `lib_json` JSON rendering, source
+> metadata, context binding, and handler derivation semantics implemented.
 
 ---
 
@@ -257,12 +246,11 @@ veterans: yes; everyone else: no).
 
 #### My opinion: keep markers in `lib_logging`, drop them in `lib_slogging`
 
-For an **SLF4J-shaped library**, removing markers would be a betrayal of the
-concept "instantly familiar to anyone who has used SLF4J 2.x." Production
+For an **SLF4J-shaped library**, markers are part of the contract. Production
 Logback configs filter on markers; existing code uses `MarkerFactory`; the
 fluent builder's `.addMarker(...)` is the standard idiom. Dropping it forces
-JVM-veteran users to rewrite their mental model, which is the explicit thing
-this library is trying not to do. **`lib_logging` keeps multi-marker support.**
+JVM users to rewrite their mental model, which is exactly what the SLF4J-shaped
+library is trying to avoid. **`lib_logging` keeps multi-marker support.**
 
 For a **slog-shaped library**, importing markers would be the wrong move. slog's
 single-concept attribute model is the half of its design that *is* worth
@@ -751,22 +739,14 @@ Q-D6 in `open-questions.md`.
 
 ## 7. What lives in this PR
 
-This branch (`lagergren/logging`) contains:
+This branch (`lagergren/logging`) contains two comparable implementations and the
+review material needed to choose between them.
 
-- `lib_logging/` — the SLF4J-shaped library, near-feature-complete for the base API
-  (54 focused XTC test methods). Tracking list of remaining
-  items: `open-questions.md` § "SLF4J-style library work not yet implemented".
-- `lib_slogging/` — the slog-shaped library, implemented to the same comparison
-  waterline with 34 focused XTC test methods. Runtime injection, `lib_json` JSON
-  rendering, explicit source
-  metadata, `LoggerContext`, handler derivation semantics, and a small handler
-  contract test kit are in scope for this branch.
-- `api-cross-reference.md` — official SLF4J / Go slog API links mapped to local
-  Ecstasy source files and difference notes.
-- This document — the design comparison and the explicit list of reviewer questions.
-- `open-questions.md` — the unified question list (all "Q-D*" items added in this PR
-  call out language-design questions specifically).
-- `design/design.md` — the SLF4J-side design, now with the resolved sink-type rule.
+| Area | Contents |
+|---|---|
+| `lib_logging/` | SLF4J-shaped library, near-feature-complete for the base API, with 54 focused XTC test methods. |
+| `lib_slogging/` | slog-shaped sibling library at the same comparison waterline, with 34 focused XTC test methods, runtime injection, `lib_json` JSON rendering, explicit source metadata, `LoggerContext`, handler derivation, and handler contract tests. |
+| `doc/logging/` | Design comparison, API cross-reference, language/runtime questions, usage guides, and Tier 3 follow-up sketches. |
 
 We do not propose merging until reviewers have weighed in on at least Q-D6 (which
 API shape) and Q-D1 (sink interface convention).

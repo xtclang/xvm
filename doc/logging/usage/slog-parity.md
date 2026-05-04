@@ -35,16 +35,13 @@ resolves resources by `(name, requested type)`, so both `logging.Logger logger` 
 | `logger.Enabled(ctx, level)` | `logger.enabled(level)` |
 | `AddSource` output | `logger.logAt(level, message, sourceFile, sourceLine, attrs)` |
 
-Differences:
+The intentional call-shape differences are small:
 
-- Go accepts alternating `"key", value` pairs and converts them into attrs. Ecstasy
-  uses explicit `Attr.of("key", value)` values, which avoids the bad-key case entirely.
-- Go carries `context.Context`; the Ecstasy API keeps the common logging calls
-  context-free and offers `LoggerContext` as an Ecstasy `SharedContext<Logger>` helper
-  for framework/request propagation.
-- Go's `Error` convention is an attr such as `slog.Any("err", err)`. The Ecstasy POC
-  also has a dedicated `cause` parameter because `Exception` is a first-class type and
-  handlers/tests often want direct access.
+| Difference | Rationale |
+|---|---|
+| Ecstasy uses explicit `Attr.of("key", value)` values instead of alternating `"key", value` pairs. | This removes Go's bad-key case and keeps attrs typed before they reach the handler. |
+| Common logging calls do not carry a context parameter. | Ecstasy can use `LoggerContext` (`SharedContext<Logger>`) for framework/request propagation without adding a context argument to every log call. |
+| `error(...)` accepts `cause=` as well as attrs. | `Exception` is first-class in Ecstasy, and handlers/tests often need direct access to the cause. |
 
 ## `Attr`
 
@@ -138,16 +135,14 @@ The slog design keeps the human message stable and puts variable data in attrs. 
 to attrs and remove the model's main simplification. If migration sugar is useful
 later, it should live in an adapter module, not in the core slog API.
 
-## What remains intentionally smaller than Go `log/slog`
+## Deferred or intentionally omitted
 
-- Top-level process-global functions such as `slog.Info(...)` are not modelled;
-  Ecstasy should prefer injected resources.
-- Output destinations/options are not yet modelled as a `HandlerOptions` object;
-  `TextHandler` and `JSONHandler` write to injected `Console`.
-- Automatic compiler/runtime source-location capture is not implemented; `logAt(...)`
-  is the explicit API that future sugar can target.
-- `BoundHandler` provides correct derivation semantics. A high-performance production
-  backend can still override `withAttrs` / `withGroup` to cache serialized prefixes.
+| Area | Current branch behavior |
+|---|---|
+| Process-global functions | Not modelled. Ecstasy should prefer injected resources over `slog.Info(...)`-style globals. |
+| Handler options and destinations | `TextHandler` and `JSONHandler` write to injected `Console`; a production backend can add stream/file/socket/HTTP options. |
+| Automatic source capture | `logAt(...)` is explicit today and is the method future compiler/runtime sugar can target. |
+| Handler prefix caching | `BoundHandler` provides correct derivation semantics. High-performance handlers can override `withAttrs` / `withGroup` to cache serialized prefixes. |
 
 
 ---

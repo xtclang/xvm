@@ -13,15 +13,13 @@ interface LogSink {
 }
 ```
 
-That's it. Two methods. Everything else — message substitution, MDC capture, marker
-filtering, level check fast paths — happens in the `BasicLogger` *above* the sink. Sinks
-just decide:
+That's it. Everything else — message substitution, MDC capture, marker filtering,
+and disabled-level fast paths — happens in `BasicLogger` above the sink.
 
-1. **`isEnabled`** — should this event even be considered? Called once per log statement
-   on the hot path. Must be cheap.
-2. **`log`** — the event has been built; emit it. The `LogEvent.message` is already
-   substituted; `mdcSnapshot` is captured. Sinks that want to render structured data
-   read `event.markers`, `event.exception`, `event.mdcSnapshot`, and `event.keyValues`.
+| Method | Responsibility |
+|---|---|
+| `isEnabled` | Hot-path threshold/category check. It runs once per log statement and must stay cheap. |
+| `log` | Emit the already-built event. `LogEvent.message` is substituted, `mdcSnapshot` is captured, and structured data is available in `markers`, `exception`, `keyValues`, and `mdcSnapshot`. |
 
 ## `const` or `service`?
 
@@ -263,36 +261,20 @@ service JsonLineLogSink
 }
 ```
 
-## Things sinks should not do
+## Operational rules
 
-- **Don't throw.** A sink that throws breaks the program. If your network endpoint is
-  down, drop the event or fall back to stderr. Exceptions in `log()` are not the
-  caller's problem.
-- **Don't block on the hot path.** If the sink is doing something slow (network,
-  encryption, disk), wrap it in an `AsyncLogSink` queue (future) rather than serializing
-  every log call's caller behind it.
-- **Don't snapshot MDC yourself.** The `BasicLogger` already does it before the event
-  reaches you. `event.mdcSnapshot` is the immutable map you should render.
-- **Don't re-format the message.** It has already been through `MessageFormatter` once
-  by the time it reaches the sink. Render `event.message` verbatim.
+| Rule | Reason |
+|---|---|
+| Keep `isEnabled` close to `O(1)`. | It runs before every enabled or disabled log event; no I/O belongs there. |
+| Do not let normal backend failures escape from `log`. | Logging should not break the caller. Drop, buffer, or fall back to stderr when a remote endpoint or file is unavailable. |
+| Do not block callers on slow output. | Network, encryption, and disk-heavy paths should sit behind an async wrapper once that Tier 3 sink exists. |
+| Render `event.message` as-is. | `MessageFormatter` has already performed `{}` substitution and trailing-exception promotion. |
+| Render `event.mdcSnapshot`; do not read `MDC` again. | `BasicLogger` captured the immutable per-fiber context before the event crossed the sink boundary. |
+| Frame production output. | Line-oriented or otherwise framed output keeps `tail -f`, log shippers, and cloud collectors predictable. |
 
-## Things the runtime is expected to do for you
-
-- **Level check fast path.** `BasicLogger.emit` calls `sink.isEnabled` *before*
-  formatting the message, so a disabled-level call costs you exactly one method call
-  with cheap arithmetic.
-- **MDC snapshot.** Captured in `BasicLogger`, stored in `event.mdcSnapshot`.
-- **Throwable promotion.** `MessageFormatter.format` enforces SLF4J's "trailing
-  Throwable becomes the cause" rule before the event reaches you.
-
-## Quick checklist for a production-quality sink
-
-- [ ] `isEnabled` is `O(1)` or close to it — no I/O.
-- [ ] `log` does not throw under any internal-failure mode.
-- [ ] The threshold is configurable at runtime.
-- [ ] Output is line-oriented or otherwise framed so `tail -f` is meaningful.
-- [ ] The exception is rendered fully — message, stack frames, causes.
-- [ ] If asynchronous, a flush mechanism exists for clean shutdown.
+The sink can also rely on three upstream guarantees: disabled events are filtered
+before formatting, MDC is captured in the event, and SLF4J-style trailing exceptions
+have already been promoted to `event.exception`.
 
 
 ---

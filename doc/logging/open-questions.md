@@ -232,9 +232,8 @@ feature scope. Each item is a concrete deliverable with a one-line summary.
 | W-10 | Compiler/tooling lints for log statements | Out of scope for the library; would be an XTC linter feature. Open question 12. |
 | W-11 | Doc cleanup | **Done for active docs.** Start-here docs, parity docs, examples, runtime-injection notes, and source comments now describe the current `BasicLogger`/`MDC`/multi-marker/formatter shape. Historical future-plan docs remain as historical context. |
 
-The same tracking shape is mirrored for `lib_slogging` below so reviewers can see the
-two libraries reach feature parity at the same waterline before we ask "which API do
-you prefer?"
+The `lib_slogging` section mirrors the same tracking shape so the API decision is
+made between two implementations at the same proof level.
 
 ### Implementation tiers
 
@@ -249,9 +248,8 @@ The W-items above are grouped into three tiers so we can decide how far to push
 
 **Decision (revised):** Tier 1 *and* Tier 2 land in this PR for both libraries.
 Reviewers asked for two **comparable** libraries — i.e. parity in implementation
-maturity, not just in design intent — so they can give a feedback judgment without
-discounting one side as "skeleton vs production." Tier 3 items remain out of scope
-(separate PRs).
+maturity, not just in design intent — so the API choice is not biased by one side
+having more implemented surface. Tier 3 items remain out of scope (separate PRs).
 
 The `lib_slogging` parity translation:
 
@@ -278,17 +276,15 @@ review have been closed as follows:
 | S-5 | Handler pre-resolution example | **Done.** `BoundHandler` implements the default `withAttrs` / `withGroup` semantics and shipped handlers use it; production backends can replace it with cached prefix implementations. |
 | S-6 | Handler test kit | **Done.** `SLoggingTest.HandlerContract` provides a small `testing/slogtest`-style helper for third-party handler conformance. |
 
-## Decisions required to land in this order
+## Decision ordering
 
-1. **MDC scope (#3)** — must be made before Stage 1.3 of the plan. Without an answer
-   the `RTMDC.java` impl can't be written.
-2. **Multiple markers per event (#4)** — should be made *before or with* Stage 1, so
-   `LogEvent` and `BasicEventBuilder` shapes are stable when the runtime starts
-   resolving them.
-3. **Defensive copy (#11)** — decision is currently "document, no copy" for v0; revisit
-   before any async/default sink path captures caller-supplied mutable argument arrays.
+| Decision | Why it comes first |
+|---|---|
+| MDC scope (#3) | Runtime wiring needs a settled per-fiber propagation model. |
+| Multiple markers per event (#4) | `LogEvent` and `BasicEventBuilder` should be stable before more sinks depend on them. |
+| Defensive copy (#11) | The current decision is "document, no copy"; revisit before async/default sinks capture caller-supplied mutable arrays. |
 
-The remaining still-open items (#6, #7, #8, #12) can wait until there are real users.
+The remaining open items (#6, #7, #8, #12) can wait for real usage data.
 
 
 ---

@@ -35,17 +35,14 @@ implicit propagation. Backends implement the small `Handler` interface.
 
 Start with the repo-level docs:
 
-- [`doc/logging/README.md`](../doc/logging/README.md) — start-here guide and reading paths
-- [`doc/logging/api-cross-reference.md`](../doc/logging/api-cross-reference.md) — official Go
-  `log/slog` links mapped to each Ecstasy type and the local differences
-- [`doc/logging/lib-logging-vs-lib-slogging.md`](../doc/logging/lib-logging-vs-lib-slogging.md) —
-  side-by-side design comparison and reviewer questions
-- [`doc/logging/usage/slog-parity.md`](../doc/logging/usage/slog-parity.md) — Go `log/slog`
-  method/type mapping and intentional Ecstasy differences
-- [`doc/logging/usage/custom-handlers.md`](../doc/logging/usage/custom-handlers.md) — guide to
-  writing custom handlers
-- [`doc/logging/cloud-integration.md`](../doc/logging/cloud-integration.md) — why both
-  shapes map cleanly to cloud logging systems
+| Doc | Purpose |
+|---|---|
+| [`doc/logging/README.md`](../doc/logging/README.md) | Start-here guide and reading paths. |
+| [`doc/logging/lib-logging-vs-lib-slogging.md`](../doc/logging/lib-logging-vs-lib-slogging.md) | Side-by-side design comparison and reviewer questions. |
+| [`doc/logging/api-cross-reference.md`](../doc/logging/api-cross-reference.md) | Official Go `log/slog` links mapped to each Ecstasy type and the local differences. |
+| [`doc/logging/usage/slog-parity.md`](../doc/logging/usage/slog-parity.md) | Go `log/slog` method/type mapping and intentional Ecstasy differences. |
+| [`doc/logging/usage/custom-handlers.md`](../doc/logging/usage/custom-handlers.md) | Guide to writing custom handlers. |
+| [`doc/logging/cloud-integration.md`](../doc/logging/cloud-integration.md) | How the API shape maps to cloud logging systems. |
 
 The source files under [`src/main/x/slogging/`](src/main/x/slogging/) are intentionally
 small and each names its Go `log/slog` counterpart in the doc comment.

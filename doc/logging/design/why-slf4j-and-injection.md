@@ -320,7 +320,9 @@ it because:
    library that no Java framework can quite ship, because Java doesn't have
    per-container injection at the language level. Ecstasy does. We should use it.
 
-This is what "instantly familiar to all SLF4J users *and* better" looks like.
+The result is still recognizable to SLF4J users, but acquisition and backend
+selection follow Ecstasy's container model instead of Java's process-global binding
+model.
 
 
 ---
