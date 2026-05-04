@@ -641,7 +641,7 @@ public class BuildContext {
      * Get the type for the specified argument index.
      */
     public TypeConstant getTypeConstant(int argId) {
-        return getConstant(argId, TypeConstant.class);
+        return resolveSpecialized(getConstant(argId, TypeConstant.class));
     }
 
     /**
@@ -681,7 +681,7 @@ public class BuildContext {
             int          varIndex  = paramDesc.index;
             Parameter    param     = methodStruct.getParam(varIndex);
             String       name      = param.getName();
-            TypeConstant type      = param.getType();
+            TypeConstant type      = resolveSpecialized(param.getType());
             int          slot      = code.parameterSlot(extraArgs + i); // compensate for implicits
 
             if (debugInfo) {
@@ -1427,9 +1427,6 @@ public class BuildContext {
         TypeConstant type = (TypeConstant) getConstant(typeId);
         String       name = nameId == 0 ? "" : ((StringConstant) getConstant(nameId)).getValue();
 
-        if (type.isGenericType()) {
-            type = type.resolveGenerics(pool(), thisType);
-        }
         return introduceRegister(code, regId, type, name);
     }
 
@@ -1450,6 +1447,8 @@ public class BuildContext {
         } else {
             name = name.replace('#', '$').replace('.', '$');
         }
+
+        type = resolveSpecialized(type);
 
         boolean      debugInfo = builder.isDebugInfo();
         Label        varStart  = code.newLabel();
@@ -3061,6 +3060,93 @@ public class BuildContext {
                 return null;
             }
         };
+    }
+
+    /**
+     * If this builder is {@link #isSpecialized}, resolve the specified type against the
+     * {@link #jitType}.
+     */
+    protected TypeConstant resolveSpecialized(TypeConstant type) {
+        if (isSpecialized) {
+            if (type.isAutoNarrowing()) {
+                type = type.resolveAutoNarrowing(pool(), false, jitType, null);
+            }
+
+            if (type.containsFormalType(true)) {
+                type = type.resolveGenerics(pool(), new GenericTypeResolver() {
+                    @Override
+                    public TypeConstant resolveGenericType(String formalName) {
+                        return jitType.resolveGenericType(formalName);
+                    }
+
+                    @Override
+                    public TypeConstant resolveFormalType(FormalConstant formalConst) {
+                        return BuildContext.this.resolveFormalType(formalConst);
+                    }
+                });
+            }
+        }
+        return type;
+    }
+
+    protected TypeConstant resolveGenericType(String sFormalName) {
+        return jitType.resolveGenericType(sFormalName);
+    }
+
+    protected TypeConstant resolveFormalType(FormalConstant formalConst) {
+        int regId;
+
+        FindRegister:
+        switch (formalConst.getFormat()) {
+        case Property: {
+            MethodStructure method     = methodStruct;
+            String          formalName = formalConst.getName();
+            if (method.isLambda() && method.isStatic()) {
+                // generic types are passed to "static" lambdas as type parameters
+                for (int i = 0, c = method.getTypeParamCount(); i < c; i++) {
+                    Parameter param = method.getParam(i);
+
+                    if (formalName.equals(param.getName())) {
+                        regId = i;
+                        break FindRegister;
+                    }
+                }
+                return null;
+            }
+            return resolveGenericType(formalName);
+        }
+
+        case TypeParameter: {
+            // look for a match only amongst the method's formal type parameters
+            TypeParameterConstant typeParam = (TypeParameterConstant) formalConst;
+            MethodConstant        methodId = typeParam.getMethod();
+
+            if (methodId.equals(methodStruct.getIdentityConstant())) {
+                regId = typeParam.getRegister();
+                break;
+            }
+            return null;
+        }
+
+        case FormalTypeChild:
+            FormalTypeChildConstant childConst = (FormalTypeChildConstant) formalConst;
+            TypeConstant            parentType = resolveFormalType(childConst.getParentConstant());
+            return parentType == null
+                    ? null
+                    : parentType.resolveGenericType(childConst.getName());
+
+        default:
+            throw new IllegalStateException();
+        }
+
+        TypeConstant typeType = methodStruct.getParam(regId).getType();
+
+        // type parameter's type must be of Type<DataType, OuterType>
+        assert typeType.isTypeOfType() && typeType.getParamsCount() >= 1;
+        TypeConstant typeParam = typeType.getParamType(0);
+        return typeParam.isAutoNarrowing()
+                ? typeParam.resolveAutoNarrowing(pool(), false, jitType, null)
+                : typeParam;
     }
 
     // ----- Actions -------------------------------------------------------------------------------
