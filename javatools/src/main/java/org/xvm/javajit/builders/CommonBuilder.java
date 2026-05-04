@@ -1841,7 +1841,8 @@ public class CommonBuilder
                     code.checkcast(propEqJmd.optimizedParams[2].cd);
                 }
 
-                code.invokestatic(ensureClassDesc(propType), eqOptName, propEqJmd.optimizedMD)
+                ClassDesc cd = ensureClassDesc(propEqMethod.getIdentity().getNamespace().getType());
+                code.invokestatic(cd, eqOptName, propEqJmd.optimizedMD)
                     .ifeq(returnFalse);
             }
             // we jump here if the prop is nullable and the null check determined both were null
@@ -2085,7 +2086,8 @@ public class CommonBuilder
                 loadProperty(code, type, propId, false);
 
                 // invoke the static compare method
-                code.invokestatic(ensureClassDesc(propType), cmpSig.getName(), propCmpJmd.standardMD)
+                ClassDesc cd = ensureClassDesc(propCmpMethod.getIdentity().getNamespace().getType());
+                code.invokestatic(cd, cmpSig.getName(), propCmpJmd.standardMD)
                     .dup();
                 loadConstant(code, pool.valEqual());
                 Label propEqual = code.newLabel();
@@ -2306,12 +2308,14 @@ public class CommonBuilder
                 loadTypeConstant(code, className, propType);
                 code.invokestatic(CD_nType, "$ensureType",
                         MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
-
                 code.aload(valueSlot);
                 loadProperty(code, type, propId, false);
-                ClassDesc      cd = ensureClassDesc(propType);
-                MethodTypeDesc md = MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cd);
-                code.invokestatic(ensureClassDesc(propType), hashOptName, md);
+
+                MethodInfo     method = propType.ensureTypeInfo().getMethodBySignature(hashSig);
+                ClassDesc      cd     = ensureClassDesc(method.getIdentity().getNamespace()
+                                                              .getType());
+                MethodTypeDesc md     = MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cd);
+                code.invokestatic(cd, hashOptName, md);
                 // long hashCode on the stack
             }
             // add the result and store
