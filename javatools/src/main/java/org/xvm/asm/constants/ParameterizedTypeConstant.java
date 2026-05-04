@@ -823,6 +823,11 @@ public class ParameterizedTypeConstant
     public TypeConstant getCanonicalJitType() {
         assert isSingleUnderlyingClass(true);
 
+        TypeConstant typeCanonical = m_typeCanonical;
+        if (typeCanonical != null) {
+            return typeCanonical;
+        }
+
         ConstantPool    pool           = getConstantPool();
         ClassStructure  clz            = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
         var             listTypeParams = clz.getTypeParamsAsList();
@@ -869,6 +874,14 @@ public class ParameterizedTypeConstant
         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
             TypeConstant typeParamOriginal = aconstOriginal[i];
             if (typeParamOriginal.isJitPrimitive()) {
+                TypeConstant typeParamResolved = typeParamOriginal.getCanonicalJitType();
+                if (!typeParamResolved.equals(typeParamOriginal)) {
+                    if (!fDiff) {
+                        aconstCanonical = aconstCanonical.clone();
+                        fDiff    = true;
+                    }
+                    aconstCanonical[i] = typeParamResolved;
+                }
                 fTrivial = false;
             } else {
                 var            entryParam     = listTypeParams.get(i);
@@ -916,7 +929,7 @@ public class ParameterizedTypeConstant
             }
         }
 
-        return fTrivial
+        return m_typeCanonical = fTrivial
                 ? typeResolved // TerminalTypeConstant
                 : fDiff
                     ? pool.ensureParameterizedTypeConstant(typeResolved, aconstCanonical)
@@ -1161,4 +1174,10 @@ public class ParameterizedTypeConstant
      * Cached conversion result.
      */
     private transient TypeConstant m_typeResolvedPrev;
+
+    /**
+     * Cached Jit canonical type.
+     */
+    private transient TypeConstant m_typeCanonical;
+
 }
