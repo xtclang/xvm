@@ -7,10 +7,10 @@ import { buildJvmArgs, findJavaExecutable } from './java';
 export class XtcDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescriptorFactory {
     constructor(private readonly context: vscode.ExtensionContext) {}
 
-    createDebugAdapterDescriptor(
+    async createDebugAdapterDescriptor(
         _session: vscode.DebugSession,
         _executable: vscode.DebugAdapterExecutable | undefined
-    ): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
+    ): Promise<vscode.DebugAdapterDescriptor | undefined> {
         const serverJar = this.context.asAbsolutePath(path.join('server', 'dap-server.jar'));
         if (!fs.existsSync(serverJar)) {
             void vscode.window.showErrorMessage(
@@ -24,7 +24,7 @@ export class XtcDebugAdapterDescriptorFactory implements vscode.DebugAdapterDesc
             return undefined;
         }
 
-        const javaExecutable = findJavaExecutable();
+        const javaExecutable = await findJavaExecutable(this.context);
         const logLevel = process.env.XTC_LOG_LEVEL?.toUpperCase() ?? 'INFO';
         const jvmArgs = buildJvmArgs(serverJar, logLevel);
 

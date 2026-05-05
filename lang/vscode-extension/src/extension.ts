@@ -100,6 +100,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
     // Start language server or show build instructions
     if (serverExists) {
+        updateStatusBar('starting');
         startLanguageClient(context, serverJar, outputChannel);
     } else {
         const buildCmd = './gradlew :lang:vscode-extension:assemble -PincludeBuildLang=true -PincludeBuildAttachLang=true';
