@@ -46,11 +46,12 @@ const BoundHandler(Handler delegate, Attr[] attrs, String? groupName)
     Boolean enabled(Level level) = delegate.enabled(level);
 
     /**
-     * Apply the bound attrs/group to the record, then forward to the delegate.
+     * Apply the bound attrs/group to the record, resolve any [Attr.lazy] values now
+     * that the logger has already passed the level check, then forward to the delegate.
      */
     @Override
     void handle(Record record) {
-        Attr[] merged = merge(attrs, record.attrs);
+        Attr[] merged = merge(Attr.resolveAll(attrs), Attr.resolveAll(record.attrs));
         if (String group ?= groupName) {
             merged = merged.empty
                     ? []

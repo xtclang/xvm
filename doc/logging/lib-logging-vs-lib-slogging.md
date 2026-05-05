@@ -32,9 +32,9 @@ decide which shape survives. Direct links from each Ecstasy type to its SLF4J or
 Go `log/slog` counterpart are in [`api-cross-reference.md`](api-cross-reference.md).
 
 > Status note: both libraries are working comparison POCs. `lib_logging` is the
-> recommended canonical facade and has the fuller SLF4J surface (66 focused XTC test
+> recommended canonical facade and has the fuller SLF4J surface (70 focused XTC test
 > methods plus the injected manual demo), including async/composite/hierarchical/JSON
-> backend building blocks. `lib_slogging` has the more compact slog surface (37 focused
+> backend building blocks. `lib_slogging` has the more compact slog surface (41 focused
 > XTC test methods plus injected/manual coverage), with runtime injection, async
 > handler support, `lib_json` JSON rendering, redaction options, source metadata,
 > context binding, and handler derivation semantics implemented.
@@ -868,14 +868,16 @@ audience while still leaving room for structured output and backend innovation.
 
 - JVM users recognize the call surface immediately: `Logger`, named loggers, `{}` message
   formatting, `Exception` cause handling, markers, MDC, and SLF4J 2.x fluent builders.
+- Kotlin/SLF4J 2.x users get lazy message/value construction for hot paths:
+  suppliers are invoked only after the level/marker check accepts the event.
 - Backend authors get one narrow extension point, `LogSink`, with working examples for
   console, memory capture, JSON-Lines, async forwarding, multi-destination fanout, and
   hierarchical per-logger level routing.
 - Cloud and JSON users are not forced to parse message text. Structured key/value pairs
   travel on `LogEvent.keyValues`; `JsonLogSink` renders them directly and applies
   redaction policy before output.
-- Runtime injection already works for the interpreter, and the native container now has
-  a default-name fallback for canonical `logging.Logger` injections.
+- Runtime injection already works for the interpreter, including a default-name fallback
+  for canonical `logging.Logger` injections.
 
 `lib_slogging` remains valuable. It is smaller, cleaner, and closer to modern
 attribute-first logging. It also documents a real alternative for teams that prefer
@@ -902,8 +904,8 @@ review material needed to choose between them.
 
 | Area | Contents |
 |---|---|
-| `lib_logging/` | Recommended canonical SLF4J-shaped library with 66 focused XTC test methods, runtime injection, source metadata API, JSON/redaction sink, async wrapper, composite fanout, and hierarchical per-logger thresholds. |
-| `lib_slogging/` | slog-shaped sibling library with 37 focused XTC test methods, runtime injection, `lib_json` JSON rendering, handler options/redaction, async wrapper, explicit source metadata, `LoggerContext`, handler derivation, and handler contract tests. |
+| `lib_logging/` | Recommended canonical SLF4J-shaped library with 70 focused XTC test methods, runtime injection, lazy suppliers, source metadata API, JSON/redaction sink, async wrapper, composite fanout, and hierarchical per-logger thresholds. |
+| `lib_slogging/` | slog-shaped sibling library with 41 focused XTC test methods, runtime injection, lazy message/attr suppliers, `lib_json` JSON rendering, handler options/redaction, async wrapper, explicit source metadata, `LoggerContext`, handler derivation, and handler contract tests. |
 | `doc/logging/` | Design comparison, API cross-reference, language/runtime questions, usage guides, and backend follow-up sketches. |
 
 The branch is now opinionated: Q-D6 is answered as `lib_logging`. Review can still

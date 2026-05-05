@@ -81,8 +81,18 @@ const BasicLogger(String name, LogSink sink, LoggerRegistry? registry)
     }
 
     @Override
+    void trace(MessageSupplier message, Exception? cause = Null, Marker? marker = Null) {
+        emitLazy(Trace, message, cause, marker);
+    }
+
+    @Override
     void debug(String message, Object[] arguments = [], Exception? cause = Null, Marker? marker = Null) {
         emit(Debug, message, arguments, cause, marker);
+    }
+
+    @Override
+    void debug(MessageSupplier message, Exception? cause = Null, Marker? marker = Null) {
+        emitLazy(Debug, message, cause, marker);
     }
 
     @Override
@@ -91,8 +101,18 @@ const BasicLogger(String name, LogSink sink, LoggerRegistry? registry)
     }
 
     @Override
+    void info(MessageSupplier message, Exception? cause = Null, Marker? marker = Null) {
+        emitLazy(Info, message, cause, marker);
+    }
+
+    @Override
     void warn(String message, Object[] arguments = [], Exception? cause = Null, Marker? marker = Null) {
         emit(Warn, message, arguments, cause, marker);
+    }
+
+    @Override
+    void warn(MessageSupplier message, Exception? cause = Null, Marker? marker = Null) {
+        emitLazy(Warn, message, cause, marker);
     }
 
     @Override
@@ -101,19 +121,32 @@ const BasicLogger(String name, LogSink sink, LoggerRegistry? registry)
     }
 
     @Override
+    void error(MessageSupplier message, Exception? cause = Null, Marker? marker = Null) {
+        emitLazy(Error, message, cause, marker);
+    }
+
+    @Override
     void log(Level level, String message, Object[] arguments = [], Exception? cause = Null, Marker? marker = Null) {
         emit(level, message, arguments, cause, marker);
     }
 
     @Override
+    void log(Level level, MessageSupplier message, Exception? cause = Null, Marker? marker = Null) {
+        emitLazy(level, message, cause, marker);
+    }
+
+    @Override
     void logAt(Level level, String message, String sourceFile, Int sourceLine,
                Object[] arguments = [], Exception? cause = Null, Marker? marker = Null) {
-        Marker[] markers = [];
-        if (Marker m ?= marker) {
-            markers = [m.freeze()];
-        }
+        Marker[] markers = frozen(marker);
         emitWith(level, message, arguments, cause, markers, [],
                 sourceFile=sourceFile, sourceLine=sourceLine);
+    }
+
+    @Override
+    void logAt(Level level, MessageSupplier message, String sourceFile, Int sourceLine,
+               Exception? cause = Null, Marker? marker = Null) {
+        emitLazy(level, message, cause, marker, sourceFile=sourceFile, sourceLine=sourceLine);
     }
 
     @Override
@@ -139,12 +172,35 @@ const BasicLogger(String name, LogSink sink, LoggerRegistry? registry)
      * directly with an already-frozen `Marker[]`.
      */
     private void emit(Level level, String message, Object[] arguments, Exception? cause, Marker? marker) {
-        Marker[] markers = [];
-        if (Marker m ?= marker) {
-            // See the freeze rationale on [emitWith].
-            markers = [m.freeze()];
-        }
+        Marker[] markers = frozen(marker);
         emitWith(level, message, arguments, cause, markers, []);
+    }
+
+    /**
+     * Lazy-message equivalent of [emit]. The supplier runs only after the sink accepts the
+     * level/primary-marker check; when disabled, the caller's expensive message construction
+     * never executes. This is the Ecstasy analogue of Java/Kotlin supplier/block logging.
+     */
+    private void emitLazy(Level level, MessageSupplier message, Exception? cause, Marker? marker,
+                          String? sourceFile = Null, Int sourceLine = -1) {
+        Marker[] markers = frozen(marker);
+        Marker?  primary = markers.empty ? Null : markers[0];
+        if (!sink.isEnabled(name, level, primary)) {
+            return;
+        }
+
+        emitWith(level, message(), [], cause, markers, [],
+                sourceFile=sourceFile, sourceLine=sourceLine);
+    }
+
+    /**
+     * Freeze an optional single marker so it can safely cross a service sink boundary.
+     */
+    private static Marker[] frozen(Marker? marker) {
+        if (Marker m ?= marker) {
+            return [m.freeze()];
+        }
+        return [];
     }
 
     /**

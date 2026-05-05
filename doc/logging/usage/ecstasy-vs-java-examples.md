@@ -60,6 +60,32 @@ if (logger.debugEnabled) {
 }
 ```
 
+For one-line expensive values, prefer lazy suppliers instead of a guard:
+
+**Kotlin (`kotlin-logging`):**
+
+```kotlin
+logger.debug { "computed result: ${expensiveSerialize(thing)}" }
+```
+
+**Java (SLF4J 2.x fluent supplier):**
+
+```java
+log.atDebug()
+   .addArgument(() -> expensiveSerialize(thing))
+   .log("computed result: {}");
+```
+
+**Ecstasy (`lib_logging`):**
+
+```ecstasy
+logger.debug(() -> $"computed result: {expensiveSerialize(thing)}");
+
+logger.atDebug()
+      .addLazyArgument(() -> expensiveSerialize(thing))
+      .log("computed result: {}");
+```
+
 ## 3. Logging an exception
 
 **Java:**
@@ -159,8 +185,10 @@ logger.atInfo()
       .log("payment {} failed for {}", paymentId, customer);
 ```
 
-When the level is disabled, both implementations short-circuit to a no-op builder so the
-`addArgument` / `addKeyValue` calls are free.
+When the level is disabled, the final `log(...)` call short-circuits before formatting,
+MDC capture, `LogEvent` allocation, or lazy supplier evaluation. Eager `addArgument` and
+`addKeyValue` expressions still run before the method call, as in Java; use
+`addLazyArgument` / `addLazyKeyValue` for expensive values.
 
 ## 7. Acquiring a logger by name vs by class
 

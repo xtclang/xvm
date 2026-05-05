@@ -55,4 +55,24 @@
  */
 module logging.xtclang.org {
     package json import json.xtclang.org;
+
+    /**
+     * Lazy message supplier used by [Logger] and [LoggingEventBuilder].
+     *
+     * The logging implementation invokes this function only after the active [LogSink]
+     * accepts the event's level (and primary marker). This mirrors Java `Supplier<String>`
+     * logging APIs and Kotlin logging blocks, where expensive message construction stays
+     * behind the level check.
+     */
+    typedef function String() as MessageSupplier;
+
+    /**
+     * Lazy structured value supplier used by the fluent builder for positional `{}` arguments
+     * and structured key/value pairs.
+     *
+     * The supplier is resolved immediately before [LogEvent] construction, never for a disabled
+     * event. The returned value must obey the same service-boundary rules as any other log
+     * argument or structured value.
+     */
+    typedef function Object() as ObjectSupplier;
 }

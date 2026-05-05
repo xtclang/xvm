@@ -58,6 +58,9 @@ The accepted XDK logging API **MUST** satisfy these requirements:
   backend policy; library code MUST NOT choose global process logging.
 - **Structured events:** events MUST carry first-class key/value fields, context fields, exceptions,
   markers/categories where applicable, and JSON/cloud output without parsing messages.
+- **Lazy disabled calls:** expensive message, argument, and structured-value construction
+  MUST be deferrable behind the level/marker check without requiring verbose caller-side
+  `if (logger.debugEnabled)` guards for every one-line log statement.
 - **Dynamically pluggable backends:** sinks/handlers MUST be swappable, composable, wrappable
   with async queues, and replaced by a host-controlled reload service.
 - **Logback-equivalent operations:** the backend MUST support root level, per-logger/category overrides,
@@ -77,8 +80,8 @@ to JSON/cloud sinks without parsing message text.
 
 | Library | Prior art | Current proof |
 |---|---|---|
-| [`lib_logging`](../../lib_logging/) | SLF4J 2.x + Logback | 66 focused XTC test methods, injected manual demo, async/composite/hierarchical/JSON backend building blocks. |
-| [`lib_slogging`](../../lib_slogging/) | Go `log/slog` | 37 focused XTC test methods, injected/manual coverage, async handler, handler options, and JSON/redaction support. |
+| [`lib_logging`](../../lib_logging/) | SLF4J 2.x + Logback | 70 focused XTC test methods, injected manual demo, async/composite/hierarchical/JSON backend building blocks. |
+| [`lib_slogging`](../../lib_slogging/) | Go `log/slog` | 41 focused XTC test methods, injected/manual coverage, async handler, lazy attrs, handler options, and JSON/redaction support. |
 
 ## Recommendation
 
@@ -99,8 +102,9 @@ Start here, then follow only the path that matches your review:
 1. **First-pass design:** this README.
 2. **API choice:** [`lib-logging-vs-lib-slogging.md`](lib-logging-vs-lib-slogging.md).
 3. **Structured logging requirement:** [`usage/structured-logging.md`](usage/structured-logging.md).
-4. **Configuration/backend story:** [`usage/configuration.md`](usage/configuration.md).
-5. **Exact API mapping:** [`api-cross-reference.md`](api-cross-reference.md).
+4. **Lazy logging requirement:** [`usage/lazy-logging.md`](usage/lazy-logging.md).
+5. **Configuration/backend story:** [`usage/configuration.md`](usage/configuration.md).
+6. **Exact API mapping:** [`api-cross-reference.md`](api-cross-reference.md).
 
 The rest of the tree is organized by reader:
 
@@ -138,10 +142,10 @@ The rest of the tree is organized by reader:
 | [`usage/custom-sinks.md`](usage/custom-sinks.md) | How to write a custom `LogSink`, with worked examples. |
 | [`usage/custom-handlers.md`](usage/custom-handlers.md) | How to write a custom slog `Handler`, with worked examples. |
 | [`usage/structured-logging.md`](usage/structured-logging.md) | Structured logging dive: key/value pairs, JSON output, fluent builder. |
+| [`usage/lazy-logging.md`](usage/lazy-logging.md) | Lazy message/value construction: Kotlin blocks, Java suppliers, and the Ecstasy API. |
 | [`usage/configuration.md`](usage/configuration.md) | Logback XML vs proposed Ecstasy JSON configuration, dynamic sink/handler reload, and equivalence mapping. |
 | **Follow-up backend/compiler work** | |
 | [`future/logback-integration.md`](future/logback-integration.md) | Configuration-driven Logback-style backend on top of the shipped primitives. |
-| [`future/lazy-logging.md`](future/lazy-logging.md) | Kotlin-style lambda emission (`logger.info { "..." }`) — exploration. |
 
 ## Where the actual code lives
 
@@ -175,7 +179,7 @@ lib_logging/                            SLF4J-shaped library
     │       ├── AsyncLogSink.x          bounded async wrapper (service)
     │       ├── NoopLogSink.x           drops every event (const)
     │       └── MemoryLogSink.x         test-helper, captures events (service)
-    └── test/x/LoggingTest/             66 focused XTC test methods
+    └── test/x/LoggingTest/             70 focused XTC test methods
 
 lib_slogging/                           slog-shaped sibling library
 ├── build.gradle.kts
@@ -196,7 +200,7 @@ lib_slogging/                           slog-shaped sibling library
     │       ├── AsyncHandler.x          bounded async wrapper (service)
     │       ├── NopHandler.x            drops every record (const)
     │       └── MemoryHandler.x         test-helper (service)
-    └── test/x/SLoggingTest/            37 focused XTC test methods
+    └── test/x/SLoggingTest/            41 focused XTC test methods
 ```
 
 ## Status
@@ -209,9 +213,9 @@ from the caller namespace when the compiler only supplies the default field name
 automatic compiler call-site capture remains the next compiler/runtime polish step.
 
 Tier 3 backend primitives have landed in the base libraries. A full
-configuration-file loader, rolling-file/network destinations, and an optional Java
-Logback bridge are deliberately not shipped in this branch; the docs explain where
-those belong if the canonical `lib_logging` API is accepted.
+configuration-file loader and rolling-file/network destinations are deliberately not
+shipped in this branch; the docs explain where those pure-XTC backend modules belong if
+the canonical `lib_logging` API is accepted.
 
 ## Backend boundary
 

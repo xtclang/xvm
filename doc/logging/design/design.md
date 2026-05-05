@@ -100,9 +100,11 @@ boundary; everything below is replaceable.
 ### `LoggingEventBuilder`
 
 SLF4J 2.x fluent builder: `setMessage / addArgument / addMarker / setCause /
-addKeyValue / log`. The `at*()` methods on `Logger` short-circuit to a no-op builder
-when the level is disabled, so callers don't pay for argument construction that won't
-be used.
+addKeyValue / log`, plus lazy `setMessage`, `log`, `addLazyArgument`, and
+`addLazyKeyValue` forms. The builder checks the sink at final `log(...)` time after
+markers are attached. If disabled, it does not format, snapshot MDC, allocate a
+`LogEvent`, or invoke lazy suppliers. Eager argument expressions still run before the
+method call, exactly as in Java; use the explicit lazy methods for expensive values.
 
 ## Default implementations
 

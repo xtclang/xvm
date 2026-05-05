@@ -9,10 +9,11 @@
  * sinks still get a chance to enable or suppress the event. If the sink rejects the event,
  * no formatting, MDC snapshot, or `LogEvent` allocation happens.
  *
- * This is deliberately a v0 trade-off: the builder stores values passed to
- * `addArgument` / `addKeyValue`, so caller expressions have already been evaluated by
- * the time those methods run. Future lazy overloads can add supplier-valued arguments;
- * see `doc/logging/future/lazy-logging.md`.
+ * The builder supports eager values and supplier-valued lazy values. Lazy suppliers are
+ * resolved only after the sink accepts the level/primary-marker check. Java SLF4J can model
+ * this as `addArgument(Supplier<?>)`; Ecstasy's `function Object()` is itself an `Object`, so
+ * the POC uses explicit `addLazyArgument` / `addLazyKeyValue` names to keep overload resolution
+ * unambiguous. See `doc/logging/usage/lazy-logging.md`.
  *
  * Example:
  *
@@ -30,9 +31,19 @@ interface LoggingEventBuilder {
     LoggingEventBuilder setMessage(String message);
 
     /**
+     * Set (or replace) a lazily computed message. The supplier runs only if the event is enabled.
+     */
+    LoggingEventBuilder setMessage(MessageSupplier message);
+
+    /**
      * Append an argument used to substitute the next `{}` placeholder in the message.
      */
     LoggingEventBuilder addArgument(Object value);
+
+    /**
+     * Append a lazily computed `{}` argument. The supplier runs only if the event is enabled.
+     */
+    LoggingEventBuilder addLazyArgument(ObjectSupplier value);
 
     /**
      * Attach a marker. Repeated calls add multiple markers.
@@ -52,6 +63,11 @@ interface LoggingEventBuilder {
     LoggingEventBuilder addKeyValue(String key, Object value);
 
     /**
+     * Attach a lazily computed key/value pair. The supplier runs only if the event is enabled.
+     */
+    LoggingEventBuilder addLazyKeyValue(String key, ObjectSupplier value);
+
+    /**
      * Materialize and emit. After `log` is called the builder must not be reused.
      */
     void log();
@@ -60,6 +76,11 @@ interface LoggingEventBuilder {
      * Convenience: same as `setMessage(message).log()`.
      */
     void log(String message);
+
+    /**
+     * Convenience: same as `setMessage(message).log()`, with lazy message construction.
+     */
+    void log(MessageSupplier message);
 
     /**
      * Convenience: same as `setMessage(format).addArgument(arg).log()`.

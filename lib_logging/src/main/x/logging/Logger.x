@@ -45,9 +45,12 @@ interface Logger {
      */
     @RO Boolean traceEnabled;
     /**
-     * Cheap `Debug` level check. Use this before constructing expensive debug
-     * arguments; `{}` formatting is lazy, but argument expressions are still evaluated
-     * by the caller before the method call.
+     * Cheap `Debug` level check.
+     *
+     * Use this for multi-statement guarded work. For single expensive messages or values,
+     * prefer the lazy supplier overloads (`logger.debug(() -> "...")` or
+     * `logger.atDebug().addArgument(() -> value).log("...")`), which perform this same
+     * enabled check before invoking the supplied function.
      */
     @RO Boolean debugEnabled;
     /**
@@ -80,12 +83,29 @@ interface Logger {
                Marker?    marker    = Null);
 
     /**
+     * Emit a `Trace` event whose complete message is built lazily after the level check.
+     *
+     * This is the Ecstasy equivalent of Java `Logger.log(Level, Supplier<String>)` and
+     * Kotlin logging blocks such as `logger.trace { "..." }`.
+     */
+    void trace(MessageSupplier message,
+               Exception?      cause  = Null,
+               Marker?         marker = Null);
+
+    /**
      * Emit a `Debug` event using SLF4J `{}` placeholder formatting.
      */
     void debug(String message,
                Object[]   arguments = [],
                Exception? cause     = Null,
                Marker?    marker    = Null);
+
+    /**
+     * Emit a `Debug` event whose complete message is built lazily after the level check.
+     */
+    void debug(MessageSupplier message,
+               Exception?      cause  = Null,
+               Marker?         marker = Null);
 
     /**
      * Emit an `Info` event using SLF4J `{}` placeholder formatting.
@@ -96,12 +116,26 @@ interface Logger {
                Marker?    marker    = Null);
 
     /**
+     * Emit an `Info` event whose complete message is built lazily after the level check.
+     */
+    void info (MessageSupplier message,
+               Exception?      cause  = Null,
+               Marker?         marker = Null);
+
+    /**
      * Emit a `Warn` event using SLF4J `{}` placeholder formatting.
      */
     void warn (String message,
                Object[]   arguments = [],
                Exception? cause     = Null,
                Marker?    marker    = Null);
+
+    /**
+     * Emit a `Warn` event whose complete message is built lazily after the level check.
+     */
+    void warn (MessageSupplier message,
+               Exception?      cause  = Null,
+               Marker?         marker = Null);
 
     /**
      * Emit an `Error` event using SLF4J `{}` placeholder formatting.
@@ -112,6 +146,13 @@ interface Logger {
                Marker?    marker    = Null);
 
     /**
+     * Emit an `Error` event whose complete message is built lazily after the level check.
+     */
+    void error(MessageSupplier message,
+               Exception?      cause  = Null,
+               Marker?         marker = Null);
+
+    /**
      * Emit at a runtime-chosen level. Equivalent to `if (level == Info) info(...) else if ...`.
      */
     void log(Level      level,
@@ -119,6 +160,14 @@ interface Logger {
              Object[]   arguments = [],
              Exception? cause     = Null,
              Marker?    marker    = Null);
+
+    /**
+     * Emit at a runtime-chosen level with lazy message construction.
+     */
+    void log(Level           level,
+             MessageSupplier message,
+             Exception?      cause  = Null,
+             Marker?         marker = Null);
 
     /**
      * Emit at a runtime-chosen level with explicit source metadata.
@@ -134,6 +183,19 @@ interface Logger {
                Object[]   arguments = [],
                Exception? cause     = Null,
                Marker?    marker    = Null);
+
+    /**
+     * Emit at a runtime-chosen level with explicit source metadata and lazy message construction.
+     *
+     * This is the lowering target for future compiler-provided source capture when the caller
+     * also wants Kotlin-style lazy message construction.
+     */
+    void logAt(Level           level,
+               MessageSupplier message,
+               String          sourceFile,
+               Int             sourceLine,
+               Exception?      cause  = Null,
+               Marker?         marker = Null);
 
     // ---- Fluent (SLF4J 2.x style) builder ------------------------------------------------------
 
