@@ -16,6 +16,10 @@ class BasicMarker(String name)
      */
     @Override
     void add(Marker reference) {
+        if (reference.contains(this)) {
+            throw new IllegalArgument(
+                    $"Adding marker reference {reference.name} would create a cycle with {name}");
+        }
         if (!children.contains(reference)) {
             children.add(reference);
         }

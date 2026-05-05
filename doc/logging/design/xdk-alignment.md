@@ -140,8 +140,8 @@ the right way; they just lack a `Logger` to round out the injection surface.
 | Named logger acquisition | `@Inject Logger logger; Logger named = logger.named("com.example");` |
 | `Const` for immutable records | `LogEvent` |
 | `const` for stateless/passable values | `BasicLogger`, `ConsoleLogSink`, `NoopLogSink`, `MDC`, `LogEvent` |
-| `service` for stateful actors | `MarkerFactory`, `LoggerFactory`, `LoggerRegistry`, `MemoryLogSink` |
-| `class` for mutable helpers/builders | `BasicEventBuilder`, `BasicMarker` |
+| `service` for stateful actors | `LoggerFactory`, `LoggerRegistry`, `MemoryLogSink` |
+| `class` for mutable helpers/builders | `BasicEventBuilder`, `BasicMarker`, `MarkerFactory` |
 
 The slog-shaped sibling follows the same injection convention: `slogging.Logger` is
 also registered under the resource name `logger`, and the native injector disambiguates

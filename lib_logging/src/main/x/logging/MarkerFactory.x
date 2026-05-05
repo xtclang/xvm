@@ -1,15 +1,19 @@
 /**
  * Corresponds to `org.slf4j.MarkerFactory` (the static-method facade in SLF4J) plus
- * `org.slf4j.IMarkerFactory` (the interface SLF4J's facade delegates to). Logback ships
- * `ch.qos.logback.classic.util.LogbackMDCAdapter`'s sibling marker factory; same idea.
+ * `org.slf4j.IMarkerFactory` (the interface SLF4J's facade delegates to). Logback's
+ * marker-aware filters consume the same marker objects.
  *
  * Factory for `Marker` instances. Mirrors `org.slf4j.MarkerFactory`.
  *
  * `getMarker(name)` is _interning_: two calls with the same name return the same instance.
  * `getDetachedMarker(name)` always returns a fresh instance, useful when a caller wants a
  * marker that is not visible to other callers.
+ *
+ * This is intentionally a stateful `class`, not a `service`: markers are mutable while a
+ * caller builds a marker DAG, and service-boundary passing would freeze/copy them before
+ * the caller could rely on SLF4J-style identity.
  */
-service MarkerFactory {
+class MarkerFactory {
 
     private Map<String, Marker> markers = new HashMap();
 

@@ -8,6 +8,13 @@ shape, not mix both as permanent XDK APIs. After review, the chosen injectable l
 shape should graduate as `lib_logging`; `lib_slogging` is a POC name for the Go
 `log/slog`-shaped candidate, not a proposal to keep a second default logging facade.
 
+The branch does not introduce a clean XDK build switch between "logging" and
+"slogging". During the POC, the meaningful validation is to compile both libraries and
+run the manual injection test that uses both injected logger types. Runners that only
+carry one POC module should still start; the native injector should simply expose the
+resources for whichever logging module is present. That tolerance is a temporary
+comparison aid, not a statement that both APIs should remain in the XDK.
+
 | Library | Prior art | Core shape |
 |---|---|---|
 | `lib_logging` | SLF4J 2.x + Logback | Named loggers, `{}` message formatting, MDC, markers, fluent event builders, and a `LogSink` backend boundary. |

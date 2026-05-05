@@ -42,7 +42,7 @@ service AsyncLogSink(LogSink delegate, Int capacity) implements LogSink {
 
     @Override
     Boolean isEnabled(String loggerName, Level level, Marker? marker = Null) {
-        return !closed && delegate.isEnabled(loggerName, level, marker);
+        return delegate.isEnabled(loggerName, level, marker);
     }
 
     @Override

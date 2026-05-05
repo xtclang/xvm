@@ -10,6 +10,16 @@ one logging shape or the other, not both in the same design. Once the XDK settle
 injectable logging model, the winning API should be the XDK's `lib_logging`; the losing
 POC should either disappear or become an explicitly named adapter/comparison module.
 
+There is no intended long-term build mode where the XDK is compiled "with logging" or
+"with slogging" as alternate mutually exclusive standard libraries. For this POC, the
+practical verification path is to build both `lib_logging` and `lib_slogging`, then run
+the manual injection demo that exercises both `@Inject logging.Logger logger;` and
+`@Inject slogging.Logger logger;`. The runtime wiring is deliberately tolerant while
+the comparison exists: if only one of the POC modules is on a runner's module path, the
+native container should register only that module's injected resources instead of
+aborting startup. After review, the chosen API should be the only first-class
+`lib_logging` facade.
+
 ## First-pass summary
 
 Read this file first. It gives the whole design without requiring any deep dive:
@@ -149,7 +159,7 @@ lib_logging/                            SLF4J-shaped library
     │       ├── Level.x                 severity enum
     │       ├── Marker.x                marker interface (org.slf4j.Marker)
     │       ├── BasicMarker.x           default marker impl
-    │       ├── MarkerFactory.x         factory service
+    │       ├── MarkerFactory.x         stateful marker factory
     │       ├── MDC.x                   per-fiber mapped diagnostic context (const)
     │       ├── LogEvent.x              immutable event const (Marker[] markers)
     │       ├── LogSink.x               SPI — the API/impl boundary
