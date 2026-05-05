@@ -327,7 +327,7 @@ public class xRTConnector
             } else {
                 int cApprox = Integer.highestOneBit((int) cTimeoutMillis/1000);
 
-                timeout = Duration.ofSeconds(cApprox);
+                timeout = Duration.ofSeconds(Math.max(cApprox, 1));
                 nSlot   = Math.min(f_clientPool.length - 1,
                                    1 + Integer.numberOfTrailingZeros(cApprox));
             }
