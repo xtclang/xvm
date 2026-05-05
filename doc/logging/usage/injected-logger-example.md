@@ -4,8 +4,17 @@ This document shows the canonical way an Ecstasy application uses `lib_logging`.
 goal is to be the file someone reads when they ask "okay, but what does it actually
 look like in real code?"
 
-The accompanying executable sample lives at
-[`manualTests/src/main/x/TestLogger.x`](../../../manualTests/src/main/x/TestLogger.x).
+The accompanying executable SLF4J-shaped sample lives at
+[`manualTests/src/main/x/TestLogging.x`](../../../manualTests/src/main/x/TestLogging.x).
+The slog-shaped comparison sample is
+[`manualTests/src/main/x/TestSLogging.x`](../../../manualTests/src/main/x/TestSLogging.x).
+
+Run them side by side with:
+
+```shell
+./gradlew :manualTests:runOne -PtestName=TestLogging --console=plain
+./gradlew :manualTests:runOne -PtestName=TestSLogging --console=plain
+```
 
 > **Status (2026-05).** Runtime injection of `@Inject Logger logger;` is wired for
 > the manual interpreter demo. The injected value is a `BasicLogger`, so per-fiber
@@ -54,9 +63,8 @@ module HelloLogging {
 ```
 
 That's it. There is no factory call, no static initializer, no configuration file. The
-runtime container hands the application a `Logger` (named `"logger"` for now — see
-Stage 4 of the runtime plan for the optional compiler-side default-name change); the
-default sink (`ConsoleLogSink`) emits the line to the platform `Console`. Output:
+runtime container hands the application a `Logger`; the default sink (`ConsoleLogSink`)
+emits the line to the platform `Console`. Output:
 
 ```
 2026-04-29T11:23:45.012Z [] INFO  logger: hello, world

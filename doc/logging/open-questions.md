@@ -165,7 +165,7 @@ permanent default facade.
 
 ### Q-D7. Cross-module default-argument resolution on `const` constructors
 
-Calling `new ConsoleLogSink()` from the `TestLogger` module fails with
+Calling `new ConsoleLogSink()` from the `TestLogging` module fails with
 `Unresolvable function "void construct()"` even though `ConsoleLogSink` was
 declared as `const ConsoleLogSink(Level rootLevel = Info)`. Same shape failed
 for `new BasicLogger(name, sink)` against
@@ -246,7 +246,7 @@ review have been closed as follows:
 
 | # | Item | Notes |
 |---|---|---|
-| S-1 | Runtime injection for `@Inject slogging.Logger logger;` | **Done.** `NativeContainer` now resolves resources by `(name, requested type)`, so `logging.Logger logger` and `slogging.Logger logger` can both use the default name. `manualTests/TestLogger.x` exercises both. |
+| S-1 | Runtime injection for `@Inject slogging.Logger logger;` | **Done.** `NativeContainer` now resolves resources by `(name, requested type)`, so `logging.Logger logger` and `slogging.Logger logger` can both use the default name. `manualTests/TestLogging.x` and `manualTests/TestSLogging.x` exercise the two injected APIs separately. |
 | S-2 | Production JSON handler | **Done for the base POC.** `JSONHandler` renders through `lib_json`, escapes strings through `Printer`, preserves nested groups, emits source metadata, renders exceptions structurally, and honors `HandlerOptions` redaction/field-name/source knobs. Output destinations beyond `Console` remain a future handler family. |
 | S-3 | Source-location capture | **Done via explicit API.** `Logger.logAt(level, message, sourceFile, sourceLine, attrs, cause)` populates `Record.sourceFile` / `sourceLine`. Automatic compiler/runtime call-site capture remains a future enhancement. |
 | S-4 | Context story | **Done.** `LoggerContext` wraps `SharedContext<Logger>` for framework/request propagation. Explicit logger passing remains the recommended default. |
