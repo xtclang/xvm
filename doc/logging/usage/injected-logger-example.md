@@ -72,6 +72,46 @@ emits the line to the platform `Console`. Output:
 2026-04-29T11:23:45.012Z [] INFO  logger: hello, world
 ```
 
+## What MDC is, before we use it
+
+Mapped Diagnostic Context — `MDC` for short — is a small per-fiber string→string
+scratchpad that travels with the calling fiber but does not appear in any
+function signature. The pattern is: at a request boundary, the framework writes
+a few keys (`requestId`, `user`, `tenant`); every subsequent log call inside
+that request automatically carries them; at the end of the request the
+framework clears them. Without MDC you would either thread `requestId` through
+every method as an argument, or lose it.
+
+It is the same idea as Logback's `MDC` and Log4j 2's `ThreadContext`.
+
+```ecstasy
+@Inject MDC mdc;
+
+mdc.put("requestId", "r_42");
+logger.info("processing");        // sink sees requestId=r_42 in the event
+logger.info("validated");         // same
+mdc.clear();                      // request boundary
+```
+
+Three things to know:
+
+1. **Scope is the calling fiber.** Bindings flow into child fibers spawned
+   from this one, but mutations from a child do not leak back to the parent.
+   This is the right propagation for request handlers — child workers see the
+   parent's context but cannot corrupt it.
+2. **Sinks read it, callers write it.** A sink decides whether to render MDC
+   at all (the JSON sink emits it as `{"mdc": {...}}`; the console sink
+   appends `[mdc=k=v,…]`); the calling code never has to remember which
+   sinks care.
+3. **Clear at the boundary.** Long-lived fibers should `mdc.remove(key)` or
+   `mdc.clear()` at the end of the unit of work, otherwise context bleeds
+   into unrelated events.
+
+When MDC is *not* the right tool: if the value is data the call needs, pass it
+as an argument or a structured key/value pair. MDC is for cross-cutting
+identifiers that every event in a request should carry without the calling
+code having to know.
+
 ## A more realistic app
 
 The example below is closer to what real code looks like. It demonstrates:
@@ -79,7 +119,7 @@ The example below is closer to what real code looks like. It demonstrates:
 - per-level emission with parameterized messages;
 - attaching an exception via the `cause` parameter;
 - using a marker for categorical routing;
-- using MDC for request-scoped context;
+- using MDC for request-scoped context (per the section above);
 - the SLF4J 2.x fluent event builder.
 
 ```ecstasy
