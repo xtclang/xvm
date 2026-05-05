@@ -31,7 +31,7 @@ service AsyncHandler(Handler delegate, Int capacity)
 
     @Override
     Boolean enabled(Level level) {
-        return !closed && delegate.enabled(level);
+        return delegate.enabled(level);
     }
 
     @Override

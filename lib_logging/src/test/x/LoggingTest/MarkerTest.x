@@ -3,6 +3,8 @@ import logging.BasicMarker;
 import logging.Logger;
 import logging.Marker;
 
+import xunit.assertions.assertThrows;
+
 /**
  * Tests for `Marker` semantics: equality by name, transitive containment, and end-to-
  * end propagation through a `Logger` to a sink.
@@ -36,6 +38,25 @@ class MarkerTest {
         Marker b = new BasicMarker("B");
         assert !a.contains(b);
         assert !a.containsName("B");
+    }
+
+    @Test
+    void shouldRejectSelfReference() {
+        Marker a = new BasicMarker("A");
+
+        IllegalArgument e = assertThrows(() -> a.add(a));
+        assert e.message.indexOf("cycle");
+    }
+
+    @Test
+    void shouldRejectReciprocalReference() {
+        Marker a = new BasicMarker("A");
+        Marker b = new BasicMarker("B");
+
+        a.add(b);
+
+        IllegalArgument e = assertThrows(() -> b.add(a));
+        assert e.message.indexOf("cycle");
     }
 
     @Test

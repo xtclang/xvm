@@ -109,19 +109,25 @@ public class NativeContainer
         ModuleStructure moduleRoot   = f_repository.loadModule(ECSTASY_MODULE);
         ModuleStructure moduleTurtle = f_repository.loadModule(TURTLE_MODULE);
         ModuleStructure moduleNative = f_repository.loadModule(NATIVE_MODULE);
-        ModuleStructure moduleLogging = f_repository.loadModule("logging.xtclang.org");
-        ModuleStructure moduleSLogging = f_repository.loadModule("slogging.xtclang.org");
+        ModuleStructure moduleLogging = f_repository.loadModule(LOGGING_MODULE);
+        ModuleStructure moduleSLogging = f_repository.loadModule(SLOGGING_MODULE);
 
-        if (moduleRoot == null || moduleTurtle == null || moduleNative == null
-                || moduleLogging == null || moduleSLogging == null) {
+        if (moduleRoot == null || moduleTurtle == null || moduleNative == null) {
             throw new IllegalStateException("Native libraries are missing");
         }
+
+        m_fLoggingModuleLoaded  = moduleLogging  != null;
+        m_fSLoggingModuleLoaded = moduleSLogging != null;
 
         // "root" is a merge of "native" module into the "system"
         FileStructure fileRoot = new FileStructure(moduleRoot, true);
         fileRoot.merge(moduleTurtle, true, false);
-        fileRoot.merge(moduleLogging, true, false);
-        fileRoot.merge(moduleSLogging, true, false);
+        if (moduleLogging != null) {
+            fileRoot.merge(moduleLogging, true, false);
+        }
+        if (moduleSLogging != null) {
+            fileRoot.merge(moduleSLogging, true, false);
+        }
         fileRoot.merge(moduleNative, true, false);
 
         fileRoot.linkModules(f_repository, true);
@@ -376,9 +382,11 @@ public class NativeContainer
         // TODO: This is not intended as permanent code. It is a hack for the POC of
         // injected SLF4J and slog logging and will likely be implemented differently
         // and in a more robust manner for the real logging implementation in the XDK.
-        // These back `@Inject Logger logger;`, `@Inject MDC mdc;`, and
-        // `@Inject slogging.Logger logger;` on the user side. The two logger resources use
-        // the same resource name, so getInjectable() must resolve by both name and type.
+        // When the corresponding POC modules are present, these back
+        // `@Inject Logger logger;`, `@Inject MDC mdc;`, and
+        // `@Inject slogging.Logger logger;` on the user side. The two logger resources
+        // use the same resource name, so getInjectable() must resolve by both name and
+        // type.
         //
         // The logger implementations are `const` types, deliberately NOT services: a service
         // wrapper around a logger would create a new fiber per call. That would break
@@ -388,38 +396,42 @@ public class NativeContainer
         //
         // The supplier shape is the same as for any other native-injected resource: one
         // `(typeName, resourceName)` registration, no wildcard branch in `getInjectable`.
-        ModuleConstant modLogging   = pool.ensureModuleConstant("logging.xtclang.org");
-        // The injection key uses the user-facing interface type (`Logger`) — that's what
-        // `@Inject Logger logger;` resolves against. The supplier internally constructs a
-        // `BasicLogger` (the canonical implementation, a `const`) using that as the
-        // typeLogger argument to `findConstructor`.
-        TypeConstant   typeLoggerIf = pool.ensureTerminalTypeConstant(
-                pool.ensureClassConstant(modLogging, "Logger"));
-        TypeConstant   typeLogger   = pool.ensureTerminalTypeConstant(
-                pool.ensureClassConstant(modLogging, "BasicLogger"));
-        m_typeLoggingLogger = typeLoggerIf;
-        m_typeBasicLogger   = typeLogger;
-        addResourceSupplier(new InjectionKey("logger", typeLoggerIf),
-                (frame, hOpts) -> ensureLogger(frame, typeLogger,
-                        inferLoggerName(frame, "logger")));
+        if (m_fLoggingModuleLoaded) {
+            ModuleConstant modLogging = pool.ensureModuleConstant(LOGGING_MODULE);
+            // The injection key uses the user-facing interface type (`Logger`) — that's what
+            // `@Inject Logger logger;` resolves against. The supplier internally constructs a
+            // `BasicLogger` (the canonical implementation, a `const`) using that as the
+            // typeLogger argument to `findConstructor`.
+            TypeConstant   typeLoggerIf = pool.ensureTerminalTypeConstant(
+                    pool.ensureClassConstant(modLogging, "Logger"));
+            TypeConstant   typeLogger   = pool.ensureTerminalTypeConstant(
+                    pool.ensureClassConstant(modLogging, "BasicLogger"));
+            m_typeLoggingLogger = typeLoggerIf;
+            m_typeBasicLogger   = typeLogger;
+            addResourceSupplier(new InjectionKey("logger", typeLoggerIf),
+                    (frame, hOpts) -> ensureLogger(frame, typeLogger,
+                            inferLoggerName(frame, "logger")));
 
-        TypeConstant typeMDC = pool.ensureTerminalTypeConstant(
-                pool.ensureClassConstant(modLogging, "MDC"));
-        addResourceSupplier(new InjectionKey("mdc", typeMDC),
-                (frame, hOpts) -> ensureConst(frame, typeMDC));
+            TypeConstant typeMDC = pool.ensureTerminalTypeConstant(
+                    pool.ensureClassConstant(modLogging, "MDC"));
+            addResourceSupplier(new InjectionKey("mdc", typeMDC),
+                    (frame, hOpts) -> ensureConst(frame, typeMDC));
+        }
 
-        ModuleConstant modSLogging = pool.ensureModuleConstant("slogging.xtclang.org");
-        TypeConstant typeSLogger = pool.ensureTerminalTypeConstant(
-                pool.ensureClassConstant(modSLogging, "Logger"));
-        addResourceSupplier(new InjectionKey("logger", typeSLogger),
-                (frame, hOpts) -> {
-                    ConstantPool poolFrame = frame.poolContext();
-                    TypeConstant typeFrameSLogger = poolFrame.ensureTerminalTypeConstant(
-                            poolFrame.ensureClassConstant(
-                                    poolFrame.ensureModuleConstant("slogging.xtclang.org"),
-                                    "Logger"));
-                    return ensureConst(frame, typeFrameSLogger);
-                });
+        if (m_fSLoggingModuleLoaded) {
+            ModuleConstant modSLogging = pool.ensureModuleConstant(SLOGGING_MODULE);
+            TypeConstant typeSLogger = pool.ensureTerminalTypeConstant(
+                    pool.ensureClassConstant(modSLogging, "Logger"));
+            addResourceSupplier(new InjectionKey("logger", typeSLogger),
+                    (frame, hOpts) -> {
+                        ConstantPool poolFrame = frame.poolContext();
+                        TypeConstant typeFrameSLogger = poolFrame.ensureTerminalTypeConstant(
+                                poolFrame.ensureClassConstant(
+                                        poolFrame.ensureModuleConstant(SLOGGING_MODULE),
+                                        "Logger"));
+                        return ensureConst(frame, typeFrameSLogger);
+                    });
+        }
     }
 
     /**
@@ -876,8 +888,8 @@ public class NativeContainer
         // TODO CP/GG: that needs to be reworked (for now the order is critical)
         fileApp.merge(m_moduleTurtle, false, false);
         fileApp.merge(f_repository.loadModule("crypto.xtclang.org"), true, false);
-        fileApp.merge(f_repository.loadModule("logging.xtclang.org"), true, false);
-        fileApp.merge(f_repository.loadModule("slogging.xtclang.org"), true, false);
+        mergeOptionalModule(fileApp, LOGGING_MODULE);
+        mergeOptionalModule(fileApp, SLOGGING_MODULE);
         fileApp.merge(f_repository.loadModule("net.xtclang.org"), true, false);
         fileApp.merge(f_repository.loadModule("web.xtclang.org"), true, false);
         fileApp.merge(m_moduleNative, false, false);
@@ -886,6 +898,13 @@ public class NativeContainer
 
         assert fileApp.validateConstants();
         return fileApp;
+    }
+
+    private void mergeOptionalModule(FileStructure file, String sModule) {
+        ModuleStructure module = f_repository.loadModule(sModule);
+        if (module != null) {
+            file.merge(module, true, false);
+        }
     }
 
 
@@ -1000,6 +1019,8 @@ public class NativeContainer
     private static final String ECSTASY_MODULE = Constants.ECSTASY_MODULE;
     private static final String TURTLE_MODULE  = Constants.TURTLE_MODULE;
     private static final String NATIVE_MODULE  = Constants.NATIVE_MODULE;
+    private static final String LOGGING_MODULE = "logging.xtclang.org";
+    private static final String SLOGGING_MODULE = "slogging.xtclang.org";
     private static final String TURTLE_PREFIX  = "mack.";
     private static final int    TURTLE_LENGTH  = TURTLE_PREFIX.length();
     private static final String NATIVE_PREFIX  = "_native.";
@@ -1020,6 +1041,8 @@ public class NativeContainer
     private       ModuleStructure  m_moduleSystem;
     private       ModuleStructure  m_moduleTurtle;
     private       ModuleStructure  m_moduleNative;
+    private       boolean          m_fLoggingModuleLoaded;
+    private       boolean          m_fSLoggingModuleLoaded;
 
     /**
      * Cached canonical logging types. Used to resolve module/class-named injections for
