@@ -10,10 +10,11 @@ shape should graduate as `lib_logging`; `lib_slogging` is a POC name for the Go
 
 The branch does not introduce a clean XDK build switch between "logging" and
 "slogging". During the POC, the meaningful validation is to compile both libraries and
-run the manual injection test that uses both injected logger types. Runners that only
-carry one POC module should still start; the native injector should simply expose the
-resources for whichever logging module is present. That tolerance is a temporary
-comparison aid, not a statement that both APIs should remain in the XDK.
+run the two manual injection tests: `TestLogging` for the SLF4J-shaped API and
+`TestSLogging` for the slog-shaped API. Runners that only carry one POC module should
+still start; the native injector should simply expose the resources for whichever
+logging module is present. That tolerance is a temporary comparison aid, not a
+statement that both APIs should remain in the XDK.
 
 | Library | Prior art | Core shape |
 |---|---|---|
@@ -33,9 +34,9 @@ Go `log/slog` counterpart are in [`api-cross-reference.md`](api-cross-reference.
 
 > Status note: both libraries are working comparison POCs. `lib_logging` is the
 > recommended canonical facade and has the fuller SLF4J surface (70 focused XTC test
-> methods plus the injected manual demo), including async/composite/hierarchical/JSON
+> methods plus the dedicated injected manual demo), including async/composite/hierarchical/JSON
 > backend building blocks. `lib_slogging` has the more compact slog surface (41 focused
-> XTC test methods plus injected/manual coverage), with runtime injection, async
+> XTC test methods plus the dedicated injected manual demo), with runtime injection, async
 > handler support, `lib_json` JSON rendering, redaction options, source metadata,
 > context binding, and handler derivation semantics implemented.
 

@@ -7,7 +7,7 @@ import logging.MDC;
  * and the snapshot-on-emit path that lands MDC contents on `LogEvent.mdcSnapshot`.
  *
  * Per-fiber isolation across spawned services is exercised end-to-end by the manualTests
- * `TestLogger.x` demo; that path needs runtime injection and a spawned service, which is
+ * `TestLogging.x` demo; that path needs runtime injection and a spawned service, which is
  * outside the scope of these in-process unit tests.
  *
  * Each test calls `mdc.clear()` at the start because the test harness does not reset MDC

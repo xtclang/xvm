@@ -13,9 +13,10 @@ POC should either disappear or become an explicitly named adapter/comparison mod
 There is no intended long-term build mode where the XDK is compiled "with logging" or
 "with slogging" as alternate mutually exclusive standard libraries. For this POC, the
 practical verification path is to build both `lib_logging` and `lib_slogging`, then run
-the manual injection demo that exercises both `@Inject logging.Logger logger;` and
-`@Inject slogging.Logger logger;`. The runtime wiring is deliberately tolerant while
-the comparison exists: if only one of the POC modules is on a runner's module path, the
+the side-by-side manual demos: `manualTests/TestLogging.x` exercises
+`@Inject logging.Logger logger;`, while `manualTests/TestSLogging.x` exercises
+`@Inject slogging.Logger logger;`. The runtime wiring is deliberately tolerant while the
+comparison exists: if only one of the POC modules is on a runner's module path, the
 native container should register only that module's injected resources instead of
 aborting startup. After review, the chosen API should be the only first-class
 `lib_logging` facade.
@@ -80,8 +81,8 @@ to JSON/cloud sinks without parsing message text.
 
 | Library | Prior art | Current proof |
 |---|---|---|
-| [`lib_logging`](../../lib_logging/) | SLF4J 2.x + Logback | 70 focused XTC test methods, injected manual demo, async/composite/hierarchical/JSON backend building blocks. |
-| [`lib_slogging`](../../lib_slogging/) | Go `log/slog` | 41 focused XTC test methods, injected/manual coverage, async handler, lazy attrs, handler options, and JSON/redaction support. |
+| [`lib_logging`](../../lib_logging/) | SLF4J 2.x + Logback | 70 focused XTC test methods, dedicated injected manual demo, async/composite/hierarchical/JSON backend building blocks. |
+| [`lib_slogging`](../../lib_slogging/) | Go `log/slog` | 41 focused XTC test methods, dedicated injected manual demo, async handler, lazy attrs, handler options, and JSON/redaction support. |
 
 ## Recommendation
 
@@ -205,12 +206,14 @@ lib_slogging/                           slog-shaped sibling library
 
 ## Status
 
-**Both libraries are intended to compile and pass tests.** End-to-end demo runs in
-`manualTests/TestLogger.x` and exercises both injected logger types on the
-interpreter side. Runtime fallback naming for injected `logging.Logger` now derives
-from the caller namespace when the compiler only supplies the default field name
-`"logger"`. Explicit source metadata is available through `Logger.logAt(...)`;
-automatic compiler call-site capture remains the next compiler/runtime polish step.
+**Both libraries are intended to compile and pass tests.** End-to-end demos run in
+`manualTests/TestLogging.x` and `manualTests/TestSLogging.x`, so reviewers can compare
+the SLF4J-shaped and slog-shaped APIs side by side while still exercising real
+`@Inject Logger logger;` acquisition. Runtime fallback naming for injected
+`logging.Logger` now derives from the caller namespace when the compiler only supplies
+the default field name `"logger"`. Explicit source metadata is available through
+`Logger.logAt(...)`; automatic compiler call-site capture remains the next
+compiler/runtime polish step.
 
 Tier 3 backend primitives have landed in the base libraries. A full
 configuration-file loader and rolling-file/network destinations are deliberately not
