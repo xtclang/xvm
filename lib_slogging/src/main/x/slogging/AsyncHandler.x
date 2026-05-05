@@ -81,13 +81,35 @@ service AsyncHandler(Handler delegate, Int capacity)
 
     /**
      * Drain the queue on this service's fiber.
+     *
+     * The same two safety properties as `lib_logging.AsyncLogSink.drain` apply here —
+     * see that file's `drain` doc-comment for the full rationale. Briefly:
+     *
+     * 1. `draining` must be cleared on every exit path (`try/finally`) so a delegate
+     *    exception cannot strand the wrapper in the "drain already scheduled" state,
+     *    after which `handle()` would silently drop everything via `droppedCount`.
+     * 2. Per-record failure is contained so one bad record does not prevent the rest
+     *    of the batch from draining.
+     *
+     * The swap-out batch (`batch = queue; queue = new Record[]`) replaces the original
+     * O(n) `queue.delete(0)` per record. Service-fiber serialisation guarantees the
+     * swap is atomic with respect to other `handle()` calls.
      */
     private void drain() {
-        while (!queue.empty) {
-            Record record = queue[0];
-            queue.delete(0);
-            delegate.handle(record);
+        try {
+            while (!queue.empty) {
+                Record[] batch = queue;
+                queue = new Record[];
+                for (Record record : batch) {
+                    try {
+                        delegate.handle(record);
+                    } catch (Exception e) {
+                        ++droppedCount;
+                    }
+                }
+            }
+        } finally {
+            draining = False;
         }
-        draining = False;
     }
 }

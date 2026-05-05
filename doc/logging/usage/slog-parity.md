@@ -1,5 +1,7 @@
 # Go `log/slog` → `lib_slogging` mapping
 
+> **Audience:** Go engineers familiar with `log/slog`. Reference doc — scan once, return on demand.
+
 This document is the slog-shaped companion to
 [`slf4j-parity.md`](slf4j-parity.md). It maps the Go `log/slog` API to the Ecstasy
 POC and calls out the differences that are intentional.
@@ -175,7 +177,6 @@ later, it should live in an adapter module, not in the core slog API.
 | Automatic source capture | `logAt(...)` is explicit today and is the method future compiler/runtime sugar can target. |
 | Handler prefix caching | `BoundHandler` provides correct derivation semantics. High-performance handlers can override `withAttrs` / `withGroup` to cache serialized prefixes. |
 
-
 ---
 
-_See also [../README.md](../README.md) for the full doc index and reading paths._
+Reference doc for Go slog migrators. Related: [`../api-cross-reference.md`](../api-cross-reference.md). Up: [`../README.md`](../README.md)

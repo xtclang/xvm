@@ -1,5 +1,7 @@
 # Writing a custom `LogSink`
 
+> **Audience:** engineers writing a new `LogSink` for `lib_logging` (file, network, cloud, test capture).
+
 `LogSink` is the API/impl boundary for `lib_logging`. Anything below it is replaceable
 without touching caller code. This document walks through writing a custom sink end to
 end.
@@ -263,7 +265,6 @@ The sink can also rely on three upstream guarantees: disabled events are filtere
 before formatting, MDC is captured in the event, and SLF4J-style trailing exceptions
 have already been promoted to `event.exception`.
 
-
 ---
 
-_See also [../README.md](../README.md) for the full doc index and reading paths._
+Previous: [`configuration.md`](configuration.md) | Next: [`custom-handlers.md`](custom-handlers.md) → | Up: [`../README.md`](../README.md)

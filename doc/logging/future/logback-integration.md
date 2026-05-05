@@ -1,5 +1,7 @@
 # Logback-style integration
 
+> **Audience:** future-work readers — what a configuration-driven backend module would look like.
+
 `lib_logging` now ships the base Logback-style primitives directly:
 `CompositeLogSink`, `HierarchicalLogSink`, `AsyncLogSink`, `JsonLogSink`, and
 `JsonLogSinkOptions`.
@@ -293,7 +295,6 @@ These are explicitly later:
 These exist in Java Logback. They are infrequently used and can be added incrementally
 without API changes.
 
-
 ---
 
-_See also [../README.md](../README.md) for the full doc index and reading paths._
+Future-work sketch. Up: [`../roadmap.md`](../roadmap.md), [`../README.md`](../README.md)

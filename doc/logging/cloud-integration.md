@@ -233,7 +233,6 @@ shipping into an empty ecosystem and writing the integrations yourself.
 This document exists so that decision is made with that context, not without
 it.
 
-
 ---
 
-_See also [README.md](README.md) for the full doc index and reading paths._
+Previous: [`concepts/markers.md`](concepts/markers.md) | Next: [`design/design.md`](design/design.md) → | Up: [`README.md`](README.md)

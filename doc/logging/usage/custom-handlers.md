@@ -1,5 +1,7 @@
 # Writing a custom `Handler`
 
+> **Audience:** engineers writing a new `Handler` for `lib_slogging`.
+
 `Handler` is the backend extension point for `lib_slogging`, the same way `LogSink`
 is the backend extension point for `lib_logging`.
 
@@ -184,7 +186,6 @@ structurally. A production cloud/file/network handler built on the same contract
 add destination configuration (`Console`, file, stream, socket, HTTP exporter),
 retry/drop policy, batching, and backend-specific timestamp or severity formatting.
 
-
 ---
 
-_See also [../README.md](../README.md) for the full doc index and reading paths._
+Previous: [`custom-sinks.md`](custom-sinks.md) | Next: [`../lib-logging-vs-lib-slogging.md`](../lib-logging-vs-lib-slogging.md) → | Up: [`../README.md`](../README.md)

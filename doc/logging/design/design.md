@@ -1,5 +1,7 @@
 # lib_logging — Design
 
+> **Audience:** anyone reading `lib_logging` source. Architecture and the API↔impl boundary.
+
 ## High-level architecture
 
 ```
@@ -275,7 +277,6 @@ fiber-locals survive injection. The real `MessageFormatter` is implemented (12 t
 `MessageFormatterTest`). Tests live in `lib_logging/src/test/x/LoggingTest/` (66
 passing as of this commit).
 
-
 ---
 
-_See also [../README.md](../README.md) for the full doc index and reading paths._
+Previous: [`../cloud-integration.md`](../cloud-integration.md) | Next: [`why-slf4j-and-injection.md`](why-slf4j-and-injection.md) → | Up: [`../README.md`](../README.md)

@@ -1,5 +1,7 @@
 # Ecstasy `lib_logging` vs Java SLF4J — side by side
 
+> **Audience:** SLF4J users porting code to Ecstasy. Per-feature side-by-side.
+
 For every API in `lib_logging` this document shows a working SLF4J 2.x example in Java
 first, then the equivalent in Ecstasy. The point is to make adoption frictionless: anyone
 who has used SLF4J should be able to skim once and be productive.
@@ -376,7 +378,6 @@ logger.info("escaped \\{}", ["x"]);
 
 The semantics are the same — `MessageFormatter` is a port of SLF4J's reference behaviour.
 
-
 ---
 
-_See also [../README.md](../README.md) for the full doc index and reading paths._
+Related: [`slf4j-parity.md`](slf4j-parity.md), [`injected-logger-example.md`](injected-logger-example.md). Up: [`../README.md`](../README.md)

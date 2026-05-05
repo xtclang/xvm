@@ -1,5 +1,7 @@
 # Why model `lib_logging` on SLF4J and on Ecstasy injection
 
+> **Audience:** reviewers asking "why SLF4J? why injection?" — the rationale doc.
+
 This is the rationale doc. It exists to make the case that the two big shape-defining
 choices in `lib_logging` — _model the API on SLF4J_, _acquire loggers via `@Inject`_ —
 are not arbitrary preferences but the only choices that combine into a logging library
@@ -326,7 +328,6 @@ The result is still recognizable to SLF4J users, but acquisition and backend
 selection follow Ecstasy's container model instead of Java's process-global binding
 model.
 
-
 ---
 
-_See also [../README.md](../README.md) for the full doc index and reading paths._
+Previous: [`design.md`](design.md) | Next: [`xdk-alignment.md`](xdk-alignment.md) → | Up: [`../README.md`](../README.md)

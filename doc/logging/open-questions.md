@@ -1,5 +1,7 @@
 # Logging decision tracker and open questions
 
+> **Audience:** XTC language/runtime designers and reviewers tracking what is decided vs still open.
+
 This is the running list of design decisions and remaining implementation questions,
 kept deliberately short so it stays readable as the project moves.
 
@@ -264,7 +266,6 @@ review have been closed as follows:
 The remaining genuinely open items are compiler/tooling work, destination-specific
 production backends, and any optional Java bridge.
 
-
 ---
 
-_See also [README.md](README.md) for the full doc index and reading paths._
+Previous: [`roadmap.md`](roadmap.md) | Next: [`README.md`](README.md) → | Up: [`README.md`](README.md)

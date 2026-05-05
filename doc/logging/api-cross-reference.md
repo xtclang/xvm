@@ -1,5 +1,7 @@
 # Logging API cross-reference
 
+> **Audience:** reviewers and porters who want a single page mapping every Ecstasy type to its SLF4J or Go slog counterpart.
+
 This page maps the Ecstasy POC types to the well-known APIs they intentionally
 mirror. Use it when reading the source: the point is not "we copied Java" or "we
 copied Go", but "we reused the smallest familiar shape, then adapted acquisition,
@@ -115,7 +117,6 @@ makes the compromise explicit, for example `lib_slogging_slf4j_adapter`.
 - The biggest Ecstasy-specific change in both designs is acquisition: the long-term
   shape should be container-controlled injection, not global static configuration.
 
-
 ---
 
-_See also [README.md](README.md) for the full doc index and reading paths._
+Reference doc — dipped into rather than read straight through. Up: [`README.md`](README.md)

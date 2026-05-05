@@ -1,5 +1,7 @@
 # Lazy logging
 
+> **Audience:** anyone whose log calls have non-trivial argument cost. Mandatory reading if you use `debug` heavily.
+
 Lazy logging is a core requirement for the XDK logging API, not a future nice-to-have.
 Disabled log calls must not build expensive messages, serialize payloads, or compute
 structured values just to be dropped by the level check.
@@ -170,4 +172,4 @@ surface. The API does not depend on that work.
 
 ---
 
-_See also [../README.md](../README.md) for the requirements list and reading paths._
+Previous: [`structured-logging.md`](structured-logging.md) | Next: [`configuration.md`](configuration.md) → | Up: [`../README.md`](../README.md)
