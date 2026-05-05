@@ -80,11 +80,9 @@ module TestLogger {
     }
 
     /**
-     * Default-logger injection. The runtime registers exactly one supplier under the
-     * resource name `"logger"` (see `NativeContainer.initResources`), so this is the only
-     * spelling that resolves: the field name `logger` matches the registered resource
-     * name. Any other field name — `@Inject Logger payments;` — would not resolve,
-     * by design.
+     * Default-logger injection. The runtime registers the familiar `"logger"` resource
+     * name and, for canonical `logging.Logger`, falls back to a BasicLogger named from
+     * the caller namespace when the compiler supplied only that default field name.
      */
     void runInjected() {
         @Inject Logger logger;

@@ -213,8 +213,7 @@ the API doesn't expose them:
    different ways — see the comparison doc § 3.2.**
 5. **An async / batched sink.** When a service emits 10k log events per
    second, blocking the request thread on disk I/O is unacceptable. Both
-   libraries' `AsyncLogSink` / `AsyncHandler` wrappers (W-5 in
-   `open-questions.md`) cover this; we have not implemented either yet.
+   libraries' `AsyncLogSink` / `AsyncHandler` wrappers cover this.
 
 Note that *all five* of these features exist for the cloud-deployment story,
 not for the local-tail-the-log-file story. They are exactly the features that

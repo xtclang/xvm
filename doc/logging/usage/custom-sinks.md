@@ -33,8 +33,8 @@ that field to be `Passable`, so every implementation must be either `immutable` 
   Cheap to construct, cheap to pass; methods run on the caller's fiber.
 - **`service`** — for sinks that genuinely have shared mutable state: an event buffer,
   a counter map, an open file handle, a worker queue. The service mailbox handles
-  concurrent ingress for free. Examples: `MemoryLogSink`, `ListLogSink` (test sinks),
-  the `FileLogSink`/`HierarchicalLogSink`/`TeeLogSink` examples below.
+  concurrent ingress for free. Examples: `MemoryLogSink`, `AsyncLogSink`,
+  `HierarchicalLogSink`, and the `FileLogSink` example below.
 
 If you find yourself reaching for `synchronized` blocks, you want a `service`. If your
 sink is "given a `Console`/`Writer`/`Function`, format and forward" — you want a
@@ -136,6 +136,10 @@ Notes:
 Many sinks want different thresholds for different logger names — the classic
 `com.example.foo at DEBUG, root at INFO` pattern.
 
+The shipped [`HierarchicalLogSink`](../../../lib_logging/src/main/x/logging/HierarchicalLogSink.x)
+implements this longest-prefix policy. The sketch below shows the same mechanics in
+one place for readers who want to write a custom variant.
+
 ```ecstasy
 service HierarchicalLogSink
         implements LogSink {
@@ -182,35 +186,20 @@ service HierarchicalLogSink
 This is roughly what Logback's `LoggerContext` does internally. Wrapping it as a sink
 keeps the rest of the library unaware.
 
-## A composite (tee) sink
+## A composite sink
+
+[`CompositeLogSink`](../../../lib_logging/src/main/x/logging/CompositeLogSink.x) is
+the built-in equivalent of attaching multiple Logback appenders to one logger:
 
 ```ecstasy
-service TeeLogSink(LogSink[] sinks)
-        implements LogSink {
-
-    @Override
-    Boolean isEnabled(String loggerName, Level level, Marker? marker = Null) {
-        for (LogSink sink : sinks) {
-            if (sink.isEnabled(loggerName, level, marker)) {
-                return True;
-            }
-        }
-        return False;
-    }
-
-    @Override
-    void log(LogEvent event) {
-        for (LogSink sink : sinks) {
-            if (sink.isEnabled(event.loggerName, event.level, event.marker)) {
-                sink.log(event);
-            }
-        }
-    }
-}
+LogSink sink = new CompositeLogSink([
+        new ConsoleLogSink(),
+        new FileLogSink(/var/log/app.log),
+]);
 ```
 
-`TeeLogSink([new ConsoleLogSink(), new FileLogSink(/var/log/app.log)])` is the moral
-equivalent of attaching multiple Logback appenders to one logger.
+Each delegate still gets its own `isEnabled(...)` decision, so a JSON audit sink and a
+human-readable console sink can sit behind the same logger without sharing policy.
 
 ## Filtering by marker
 
@@ -242,24 +231,22 @@ Pair this with a `TeeLogSink` to e.g. send everything to the console but only
 
 ## Structured / JSON output
 
+The base library ships [`JsonLogSink`](../../../lib_logging/src/main/x/logging/JsonLogSink.x),
+rendered through `lib_json`, with options for field names, redaction, inclusion of MDC
+/ markers / key-values / source, and root threshold:
+
 ```ecstasy
-service JsonLineLogSink
-        implements LogSink {
-
-    @Inject Console console;
-    public/private Level rootLevel = Info;
-
-    @Override
-    Boolean isEnabled(String loggerName, Level level, Marker? marker = Null) {
-        return level.severity >= rootLevel.severity;
-    }
-
-    @Override
-    void log(LogEvent event) {
-        // See ../usage/structured-logging.md for the full sketch — emits one JSON object per line.
-    }
-}
+LogSink sink = new JsonLogSink(new JsonLogSinkOptions(
+        Info,
+        ["authorization", "password"],
+        "***",
+        True, True, True, True,
+        "time", "level", "logger", "message",
+        "mdc", "markers", "exception", "source"));
 ```
+
+Caller code stays unchanged: `logger.atInfo().addKeyValue("password", "...").log(...)`
+emits a structured value, and the sink decides whether to redact it.
 
 ## Operational rules
 
@@ -267,7 +254,7 @@ service JsonLineLogSink
 |---|---|
 | Keep `isEnabled` close to `O(1)`. | It runs before every enabled or disabled log event; no I/O belongs there. |
 | Do not let normal backend failures escape from `log`. | Logging should not break the caller. Drop, buffer, or fall back to stderr when a remote endpoint or file is unavailable. |
-| Do not block callers on slow output. | Network, encryption, and disk-heavy paths should sit behind an async wrapper once that Tier 3 sink exists. |
+| Do not block callers on slow output. | Network, encryption, and disk-heavy paths should sit behind `AsyncLogSink` or a destination-specific async sink. |
 | Render `event.message` as-is. | `MessageFormatter` has already performed `{}` substitution and trailing-exception promotion. |
 | Render `event.mdcSnapshot`; do not read `MDC` again. | `BasicLogger` captured the immutable per-fiber context before the event crossed the sink boundary. |
 | Frame production output. | Line-oriented or otherwise framed output keeps `tail -f`, log shippers, and cloud collectors predictable. |

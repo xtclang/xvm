@@ -14,8 +14,8 @@ Official reference: Go [`log/slog`](https://pkg.go.dev/log/slog).
 | `slog.New(handler)` | `new Logger(handler)` |
 | `logger.With("requestId", id)` | `logger.with([Attr.of("requestId", id)])` |
 | `logger.WithGroup("payments")` | `logger.withGroup("payments")` |
-| `slog.NewTextHandler(w, opts)` | `new TextHandler(level)`; output currently goes through `@Inject Console`. |
-| `slog.NewJSONHandler(w, opts)` | `new JSONHandler(level)`; renders through `lib_json` and writes through `@Inject Console`. |
+| `slog.NewTextHandler(w, opts)` | `new TextHandler(level)` or `new TextHandler(new HandlerOptions(...))`; output goes through `@Inject Console`. |
+| `slog.NewJSONHandler(w, opts)` | `new JSONHandler(level)` or `new JSONHandler(new HandlerOptions(...))`; renders through `lib_json` and writes through `@Inject Console`. |
 | framework/request context | `LoggerContext.bind(logger)` / `LoggerContext.currentOr(root)` |
 
 Runtime `@Inject slogging.Logger logger;` is wired in this branch. The native injector
@@ -71,6 +71,12 @@ The extra derivation methods are the key architectural difference from
 logger is derived, instead of doing that work on every record. The shipped handlers use
 `BoundHandler` for the default semantics, and tests include a small
 `HandlerContract` helper modelled on Go's `testing/slogtest`.
+
+`AsyncHandler` can wrap any handler when output is slow:
+
+```ecstasy
+Logger logger = new Logger(new AsyncHandler(new JSONHandler()));
+```
 
 ## Context and source metadata
 
@@ -140,7 +146,7 @@ later, it should live in an adapter module, not in the core slog API.
 | Area | Current branch behavior |
 |---|---|
 | Process-global functions | Not modelled. Ecstasy should prefer injected resources over `slog.Info(...)`-style globals. |
-| Handler options and destinations | `TextHandler` and `JSONHandler` write to injected `Console`; a production backend can add stream/file/socket/HTTP options. |
+| Output destinations | `TextHandler` and `JSONHandler` write to injected `Console`; a production backend can add stream/file/socket/HTTP handlers. |
 | Automatic source capture | `logAt(...)` is explicit today and is the method future compiler/runtime sugar can target. |
 | Handler prefix caching | `BoundHandler` provides correct derivation semantics. High-performance handlers can override `withAttrs` / `withGroup` to cache serialized prefixes. |
 

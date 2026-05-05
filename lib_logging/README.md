@@ -4,8 +4,9 @@ Experimental SLF4J-shaped logging library for Ecstasy.
 
 > **Status:** Working POC. The core API, default sinks, MDC, markers, structured
 > key/value events, logger interning, runtime `@Inject Logger logger;` wiring, and
-> unit tests are in this branch. JIT-side injection, async sinks, and the
-> Logback-style backend remain future work; see [`doc/logging/`](../doc/logging).
+> unit tests are in this branch. The base backend layer now includes async,
+> composite, hierarchical-level, and JSON/redaction sinks. JIT-side injection and
+> full configuration-file loading remain future work; see [`doc/logging/`](../doc/logging).
 
 ## What this is
 

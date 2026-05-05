@@ -4,8 +4,9 @@ Experimental Go `log/slog`-shaped structured logging library for Ecstasy.
 
 > **Status:** Working comparison POC. The core `Logger` / `Handler` / `Record` /
 > `Attr` / `Level` shape, text/JSON/no-op/memory handlers, derived loggers, groups,
-> custom levels, source metadata, `LoggerContext`, runtime injection, and unit tests
-> are in this branch. `JSONHandler` renders through `lib_json`.
+> custom levels, source metadata, `LoggerContext`, runtime injection, async handler
+> wrapping, handler options/redaction, and unit tests are in this branch.
+> `JSONHandler` renders through `lib_json`.
 
 ## What this is
 

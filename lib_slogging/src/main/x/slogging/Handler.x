@@ -28,8 +28,8 @@
  *   - `const`   — for stateless forwarders / pure adapters. Examples: `TextHandler`,
  *                 `NopHandler`, `JSONHandler`. Construction-time configuration only.
  *   - `service` — for handlers that carry mutable state shared across fibers. Examples:
- *                 `MemoryHandler` (collects records), a future `FileHandler` (owns a
- *                 writer), a future `AsyncHandler` (owns a worker queue).
+ *                 `MemoryHandler` (collects records), `AsyncHandler` (owns a worker
+ *                 queue), and a future `FileHandler` (owns a writer).
  *
  * `Logger` is a `const` and references its `handler` through this interface, so every
  * concrete `Handler` must be `Passable` (`immutable` or a `service`). The full rule and

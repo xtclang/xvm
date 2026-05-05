@@ -56,11 +56,10 @@ The runtime demo was considered complete when all of these were true:
 4. `logger.atInfo().addMarker(AUDIT).addKeyValue("k", v).log("msg")` works through the
    fluent builder.
 
-5. MDC `mdc.put("requestId", id)` shows up alongside any subsequent emission (rendered
-   by a sink that cares; default `ConsoleLogSink` would gain a small change to render
-   MDC entries).
+5. MDC `mdc.put("requestId", id)` shows up alongside any subsequent emission; both
+   `ConsoleLogSink` and `JsonLogSink` render the captured MDC snapshot.
 
-6. The focused `lib_logging` suite (54 XTC test methods) still compiles cleanly;
+6. The focused `lib_logging` suite (64 XTC test methods) still compiles cleanly;
    `manualTests/src/main/x/TestLogger.x` invokes both `runInjected()` and the
    slog-shaped `runInjectedSlog()` path successfully.
 
@@ -362,13 +361,14 @@ platform migration are independent and can land later.
 
 ## What this plan does *not* cover
 
-- The future `lib_logging_logback` module (`../future/logback-integration.md`). That's a
-  separate, larger project for a configurable hierarchical backend.
+- The future `lib_logging_logback` module (`../future/logback-integration.md`). The
+  base programmatic primitives now exist; a configurable backend remains a separate
+  larger project.
 - The native-Logback bridge approach (`../future/native-bridge.md`). Documented as feasible but
   not the primary path.
 - Slog-style alternative API (`ALTERNATIVE_DESIGN_SLOG_STYLE.md`). Documented as a
   thinkable alternative but not pursued.
-- Performance tuning (allocation, async). Premature; revisit when the platform repo
+- Performance tuning beyond the shipped async wrappers. Revisit when the platform repo
   has been on `lib_logging` for long enough that we have data.
 
 ## Historical estimate
