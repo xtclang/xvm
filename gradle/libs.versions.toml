@@ -137,6 +137,8 @@ xdk-crypto = { group = "org.xtclang", name = "lib-crypto" }
 xdk-ecstasy = { group = "org.xtclang", name = "lib-ecstasy" }
 xdk-json = { group = "org.xtclang", name = "lib-json" }
 xdk-jsondb = { group = "org.xtclang", name = "lib-jsondb" }
+xdk-logging = { group = "org.xtclang", name = "lib-logging" }
+xdk-slogging = { group = "org.xtclang", name = "lib-slogging" }
 xdk-net = { group = "org.xtclang", name = "lib-net" }
 xdk-oodb = { group = "org.xtclang", name = "lib-oodb" }
 xdk-sec = { group = "org.xtclang", name = "lib-sec" }

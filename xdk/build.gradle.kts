@@ -111,6 +111,8 @@ dependencies {
     xtcModule(libs.xdk.crypto)
     xtcModule(libs.xdk.json)
     xtcModule(libs.xdk.jsondb)
+    xtcModule(libs.xdk.logging)
+    xtcModule(libs.xdk.slogging)
     xtcModule(libs.xdk.net)
     xtcModule(libs.xdk.oodb)
     xtcModule(libs.xdk.sec)

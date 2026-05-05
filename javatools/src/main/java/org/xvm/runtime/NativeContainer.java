@@ -106,17 +106,19 @@ public class NativeContainer
     // ----- initialization ------------------------------------------------------------------------
 
     private ConstantPool loadNativeTemplates() {
-        ModuleStructure moduleRoot   = f_repository.loadModule(ECSTASY_MODULE);
-        ModuleStructure moduleTurtle = f_repository.loadModule(TURTLE_MODULE);
-        ModuleStructure moduleNative = f_repository.loadModule(NATIVE_MODULE);
+        var moduleRoot   = f_repository.loadModule(ECSTASY_MODULE);
+        var moduleTurtle = f_repository.loadModule(TURTLE_MODULE);
+        var moduleNative = f_repository.loadModule(NATIVE_MODULE);
 
         if (moduleRoot == null || moduleTurtle == null || moduleNative == null) {
             throw new IllegalStateException("Native libraries are missing");
         }
 
         // "root" is a merge of "native" module into the "system"
-        FileStructure fileRoot = new FileStructure(moduleRoot, true);
+        var fileRoot = new FileStructure(moduleRoot, true);
         fileRoot.merge(moduleTurtle, true, false);
+        mergeOptionalModule(fileRoot, LOGGING_MODULE);
+        mergeOptionalModule(fileRoot, SLOGGING_MODULE);
         fileRoot.merge(moduleNative, true, false);
 
         fileRoot.linkModules(f_repository, true);
@@ -366,10 +368,137 @@ public class NativeContainer
         // +++ xvmProperties
         TypeConstant typeProps = pool.ensureMapType(pool.typeString(), pool.typeString());
         addResourceSupplier(new InjectionKey("properties", typeProps), this::ensureProperties);
+
+        // +++ logging.Logger, logging.MDC, and slogging.Logger
+        // TODO: This is not intended as permanent code. It is a hack for the POC of
+        // injected SLF4J and slog logging and will likely be implemented differently
+        // and in a more robust manner for the real logging implementation in the XDK.
+        registerLoggingResources(pool);
+        registerSLoggingResources(pool);
+    }
+
+    private void registerLoggingResources(ConstantPool pool) {
+        if (!moduleAvailable(LOGGING_MODULE)) {
+            return;
+        }
+
+        var typeLogger = typeFor(pool, LOGGING_MODULE, "Logger");
+        var typeBasic  = typeFor(pool, LOGGING_MODULE, "BasicLogger");
+        var typeMDC    = typeFor(pool, LOGGING_MODULE, "MDC");
+
+        // Both POC logger types ("logger" + lib_logging.Logger and "logger" + slogging.Logger)
+        // share the resource name "logger". `addResourceSupplier` permits this because each
+        // entry's InjectionKey is keyed on (name, type), and `getInjectable` disambiguates
+        // by type when more than one supplier is registered under one name.
+        addResourceSupplier(new InjectionKey("logger", typeLogger),
+                (frame, hOpts) -> ensureLogger(frame, typeBasic, inferLoggerName(frame, "logger")));
+        addResourceSupplier(new InjectionKey("mdc", typeMDC),
+                (frame, hOpts) -> ensureConst(frame, typeMDC));
+    }
+
+    private void registerSLoggingResources(ConstantPool pool) {
+        if (!moduleAvailable(SLOGGING_MODULE)) {
+            return;
+        }
+
+        var typeLogger = typeFor(pool, SLOGGING_MODULE, "Logger");
+        addResourceSupplier(new InjectionKey("logger", typeLogger),
+                (frame, hOpts) -> ensureConst(frame, typeFor(frame.poolContext(),
+                        SLOGGING_MODULE, "Logger")));
+    }
+
+    private boolean moduleAvailable(String moduleName) {
+        return f_repository.loadModule(moduleName) != null;
+    }
+
+    private TypeConstant typeFor(ConstantPool pool, String moduleName, String className) {
+        var module = pool.ensureModuleConstant(moduleName);
+        return pool.ensureTerminalTypeConstant(pool.ensureClassConstant(module, className));
+    }
+
+    /**
+     * Construct an instance of `logging.xtclang.org.BasicLogger` named `name`. The
+     * `BasicLogger(String)` convenience constructor wires a fresh `ConsoleLogSink`, so the
+     * native side does not have to thread a sink handle through.
+     */
+    private ObjectHandle ensureLogger(Frame frame, TypeConstant typeLogger, String name) {
+        var template = getTemplate(typeLogger.getSingleUnderlyingClass(true));
+        var ctor     = template.getStructure().findConstructor(getConstantPool().typeString());
+        var ahArgs   = new ObjectHandle[ctor.getMaxVars()];
+        ahArgs[0] = xString.makeHandle(name);
+
+        return construct(frame, template, ctor, ahArgs);
+    }
+
+    /**
+     * Derive the default logger name for a canonical `logging.Logger` injection. When
+     * the compiler only supplies the field-name fallback (`logger`), use the enclosing
+     * method namespace as the logger name. If a future compiler supplies a resource name
+     * such as the module/class directly, the runtime keeps that explicit name.
+     */
+    private String inferLoggerName(Frame frame, String sName) {
+        if ("logger".equals(sName) && frame.f_function != null) {
+            var idMethod    = frame.f_function.getIdentityConstant();
+            var idNamespace = idMethod.getNamespace();
+            if (idNamespace != null) {
+                var sPath = idNamespace.getPathString();
+                if (sPath != null && !sPath.isEmpty()) {
+                    return sPath;
+                }
+
+                var idModule = idMethod.getModuleConstant();
+                if (idModule != null) {
+                    var sModule = idModule.getName();
+                    if (sModule != null && !sModule.isEmpty()) {
+                        return sModule;
+                    }
+                }
+            }
+        }
+        return sName;
+    }
+
+    /**
+     * Construct an instance of a parameter-less `const` from the lib_logging module via its
+     * default constructor. Used by the [MDC] supplier; suitable for any other future
+     * lib_logging const that wants the same default-construction pattern.
+     */
+    private ObjectHandle ensureConst(Frame frame, TypeConstant typeConst) {
+        var template = getTemplate(typeConst.getSingleUnderlyingClass(true));
+        var ctor     = template.getStructure().findConstructor();
+        var ahArgs   = new ObjectHandle[ctor.getMaxVars()];
+
+        return construct(frame, template, ctor, ahArgs);
+    }
+
+    private ObjectHandle construct(Frame frame, ClassTemplate template,
+                                   MethodStructure ctor, ObjectHandle[] ahArgs) {
+        var clz = template.getCanonicalClass();
+
+        switch (template.construct(frame, ctor, clz, null, ahArgs, Op.A_STACK)) {
+        case Op.R_NEXT:
+            return frame.popStack();
+
+        case Op.R_CALL:
+            return new DeferredCallHandle(frame.m_frameNext);
+
+        case Op.R_EXCEPTION:
+            return new DeferredCallHandle(frame.clearException());
+
+        default:
+            throw new IllegalStateException();
+        }
     }
 
     /**
      * Add a native resource supplier for an injection.
+     *
+     * Maintains two indexes in lockstep: `f_mapResources` keyed by the full
+     * `(name, type)` `InjectionKey` (the canonical store), and `f_mapResourceNames`
+     * keyed by name only (the lookup fast path used by `getInjectable`). Most names
+     * map to a single key; the list-valued shape exists to support cases like the
+     * two POC logger libraries, which deliberately register distinct types under the
+     * same resource name "logger".
      *
      * @param key       the injection key
      * @param supplier  the resource supplier
@@ -378,7 +507,7 @@ public class NativeContainer
         assert !f_mapResources.containsKey(key);
 
         f_mapResources.put(key, supplier);
-        f_mapResourceNames.put(key.f_sName, key);
+        f_mapResourceNames.computeIfAbsent(key.f_sName, k -> new ArrayList<>()).add(key);
     }
 
     public ObjectHandle ensureOSStorage(Frame frame, ObjectHandle hOpts) {
@@ -666,21 +795,31 @@ public class NativeContainer
 
     @Override
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts) {
-        InjectionKey key = f_mapResourceNames.get(sName);
-        if (key == null) {
-            // for "Nullable" types the NativeContainer can only supply a trivial result;
-            // anything better than that must be done naturally by a container that hosts the
-            // calling container
-            return type.isNullable() ? xNullable.NULL : null;
+        // Look up by name first via `f_mapResourceNames` — O(1) average — then disambiguate
+        // by type. The list-per-name shape exists so that two suppliers can share a resource
+        // name when their types differ; this is what lets `lib_logging.Logger` and
+        // `slogging.Logger` both register under the name "logger" (see registerLoggingResources
+        // / registerSLoggingResources). For most names the list has exactly one entry, so the
+        // inner loop is constant work.
+        List<InjectionKey> candidates = f_mapResourceNames.get(sName);
+        if (candidates != null) {
+            for (var key : candidates) {
+                if (matchesType(key.f_type, type)) {
+                    return f_mapResources.get(key).supply(frame, hOpts);
+                }
+            }
         }
 
-        // check for equality first, but allow "congruency", "duck type" equality as well or
-        // sans-Nullable equivalency
-        TypeConstant typeResource = key.f_type;
-        return typeResource.equals(type) || typeResource.isEquivalent(type)
-                    || typeResource.isEquivalent(type.removeNullable())
-                ? f_mapResources.get(key).supply(frame, hOpts)
-                : null;
+        // for "Nullable" types the NativeContainer can only supply a trivial result;
+        // anything better than that must be done naturally by a container that hosts the
+        // calling container
+        return type.isNullable() ? xNullable.NULL : null;
+    }
+
+    private boolean matchesType(TypeConstant typeResource, TypeConstant typeRequest) {
+        return typeResource.equals(typeRequest)
+                || typeResource.isEquivalent(typeRequest)
+                || typeResource.isEquivalent(typeRequest.removeNullable());
     }
 
     @Override
@@ -721,6 +860,8 @@ public class NativeContainer
         // TODO CP/GG: that needs to be reworked (for now the order is critical)
         fileApp.merge(m_moduleTurtle, false, false);
         fileApp.merge(f_repository.loadModule("crypto.xtclang.org"), true, false);
+        mergeOptionalModule(fileApp, LOGGING_MODULE);
+        mergeOptionalModule(fileApp, SLOGGING_MODULE);
         fileApp.merge(f_repository.loadModule("net.xtclang.org"), true, false);
         fileApp.merge(f_repository.loadModule("web.xtclang.org"), true, false);
         fileApp.merge(m_moduleNative, false, false);
@@ -729,6 +870,13 @@ public class NativeContainer
 
         assert fileApp.validateConstants();
         return fileApp;
+    }
+
+    private void mergeOptionalModule(FileStructure file, String sModule) {
+        ModuleStructure module = f_repository.loadModule(sModule);
+        if (module != null) {
+            file.merge(module, true, false);
+        }
     }
 
 
@@ -843,6 +991,8 @@ public class NativeContainer
     private static final String ECSTASY_MODULE = Constants.ECSTASY_MODULE;
     private static final String TURTLE_MODULE  = Constants.TURTLE_MODULE;
     private static final String NATIVE_MODULE  = Constants.NATIVE_MODULE;
+    private static final String LOGGING_MODULE = "logging.xtclang.org";
+    private static final String SLOGGING_MODULE = "slogging.xtclang.org";
     private static final String TURTLE_PREFIX  = "mack.";
     private static final int    TURTLE_LENGTH  = TURTLE_PREFIX.length();
     private static final String NATIVE_PREFIX  = "_native.";
@@ -870,12 +1020,16 @@ public class NativeContainer
     private final Map<String, IdentityConstant> f_mapIdByName = new ConcurrentHashMap<>();
 
     /**
-     * Map of resource names for a name based lookup.
-     */
-    private final Map<String, InjectionKey> f_mapResourceNames = new HashMap<>();
-
-    /**
      * Map of resources that are injectable from this container, keyed by their InjectionKey.
      */
     private final Map<InjectionKey, InjectionSupplier> f_mapResources = new HashMap<>();
+
+    /**
+     * Name-only index over `f_mapResources`. Lets `getInjectable` do an O(1) average
+     * lookup by `sName` and then disambiguate by type, instead of scanning every
+     * supplier on every injection. The list-valued shape supports more than one
+     * supplier sharing a name (e.g. the two POC logger libraries both registering
+     * under "logger" with different types).
+     */
+    private final Map<String, List<InjectionKey>> f_mapResourceNames = new HashMap<>();
 }
