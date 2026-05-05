@@ -9,11 +9,14 @@
 class BasicEventBuilder(BasicLogger logger, Level level)
         implements LoggingEventBuilder {
 
-    private String?             message   = Null;
-    private Object[]            args      = new Object[];
-    private Marker[]            markers   = new Marker[];
-    private Exception?          cause     = Null;
-    private Map<String, Object> keyValues = new ListMap();
+    private String?              message       = Null;
+    private MessageSupplier?     lazyMessage   = Null;
+    private Object[]             args          = new Object[];
+    private Boolean[]            lazyArgs      = new Boolean[];
+    private Marker[]             markers       = new Marker[];
+    private Exception?           cause         = Null;
+    private Map<String, Object>  keyValues     = new ListMap();
+    private Map<String, Boolean> lazyKeyValues = new ListMap();
 
     /**
      * Replace the pending message pattern. Mirrors SLF4J
@@ -22,6 +25,17 @@ class BasicEventBuilder(BasicLogger logger, Level level)
     @Override
     LoggingEventBuilder setMessage(String message) {
         this.message = message;
+        this.lazyMessage = Null;
+        return this;
+    }
+
+    /**
+     * Replace the pending message with a lazily computed message.
+     */
+    @Override
+    LoggingEventBuilder setMessage(MessageSupplier message) {
+        this.message = Null;
+        this.lazyMessage = message;
         return this;
     }
 
@@ -31,6 +45,17 @@ class BasicEventBuilder(BasicLogger logger, Level level)
     @Override
     LoggingEventBuilder addArgument(Object value) {
         args.add(value);
+        lazyArgs.add(False);
+        return this;
+    }
+
+    /**
+     * Append one lazily computed positional `{}` argument.
+     */
+    @Override
+    LoggingEventBuilder addLazyArgument(ObjectSupplier value) {
+        args.add(value);
+        lazyArgs.add(True);
         return this;
     }
 
@@ -60,6 +85,17 @@ class BasicEventBuilder(BasicLogger logger, Level level)
     @Override
     LoggingEventBuilder addKeyValue(String key, Object value) {
         keyValues.put(key, value);
+        lazyKeyValues.put(key, False);
+        return this;
+    }
+
+    /**
+     * Attach one lazily computed structured key/value pair.
+     */
+    @Override
+    LoggingEventBuilder addLazyKeyValue(String key, ObjectSupplier value) {
+        keyValues.put(key, value);
+        lazyKeyValues.put(key, True);
         return this;
     }
 
@@ -69,7 +105,9 @@ class BasicEventBuilder(BasicLogger logger, Level level)
     @Override
     void log() {
         if (String m ?= message) {
-            logger.emitWith(level, m, frozen(args), cause, frozenMarkers(), frozenKVs());
+            emit(m);
+        } else if (MessageSupplier supplier ?= lazyMessage) {
+            emit(supplier);
         }
     }
 
@@ -78,7 +116,15 @@ class BasicEventBuilder(BasicLogger logger, Level level)
      */
     @Override
     void log(String message) {
-        logger.emitWith(level, message, frozen(args), cause, frozenMarkers(), frozenKVs());
+        emit(message);
+    }
+
+    /**
+     * Emit using a lazily computed final message pattern.
+     */
+    @Override
+    void log(MessageSupplier message) {
+        emit(message);
     }
 
     /**
@@ -86,8 +132,8 @@ class BasicEventBuilder(BasicLogger logger, Level level)
      */
     @Override
     void log(String format, Object arg) {
-        args.add(arg);
-        logger.emitWith(level, format, frozen(args), cause, frozenMarkers(), frozenKVs());
+        addArgument(arg);
+        emit(format);
     }
 
     /**
@@ -95,9 +141,9 @@ class BasicEventBuilder(BasicLogger logger, Level level)
      */
     @Override
     void log(String format, Object arg1, Object arg2) {
-        args.add(arg1);
-        args.add(arg2);
-        logger.emitWith(level, format, frozen(args), cause, frozenMarkers(), frozenKVs());
+        addArgument(arg1);
+        addArgument(arg2);
+        emit(format);
     }
 
     /**
@@ -106,9 +152,39 @@ class BasicEventBuilder(BasicLogger logger, Level level)
     @Override
     void log(String format, Object[] args) {
         for (Object arg : args) {
-            this.args.add(arg);
+            addArgument(arg);
         }
-        logger.emitWith(level, format, frozen(this.args), cause, frozenMarkers(), frozenKVs());
+        emit(format);
+    }
+
+    /**
+     * Emit an eager message after the level/marker check. Lazy args and key/value suppliers are
+     * intentionally resolved only after this check succeeds.
+     */
+    private void emit(String message) {
+        Marker[] frozenMarkers = frozenMarkers();
+        if (enabled(frozenMarkers)) {
+            logger.emitWith(level, message, frozenArgs(), cause, frozenMarkers, frozenKVs());
+        }
+    }
+
+    /**
+     * Emit a lazy message after the level/marker check. This is the builder equivalent of
+     * SLF4J 2.x `log(Supplier<String>)` and Kotlin logging's lambda block.
+     */
+    private void emit(MessageSupplier message) {
+        Marker[] frozenMarkers = frozenMarkers();
+        if (enabled(frozenMarkers)) {
+            logger.emitWith(level, message(), frozenArgs(), cause, frozenMarkers, frozenKVs());
+        }
+    }
+
+    /**
+     * Check the sink using the first marker as the primary marker, matching [BasicLogger.emitWith].
+     */
+    private Boolean enabled(Marker[] markers) {
+        Marker? primary = markers.empty ? Null : markers[0];
+        return logger.isEnabled(level, primary);
     }
 
     /**
@@ -138,7 +214,9 @@ class BasicEventBuilder(BasicLogger logger, Level level)
         }
         ListMap<String, Object> snapshot = new ListMap();
         for ((String k, Object v) : keyValues) {
-            snapshot.put(k, v);
+            snapshot.put(k, lazyKeyValues.getOrDefault(k, False)
+                    ? v.as(ObjectSupplier)()
+                    : v);
         }
         return snapshot.makeImmutable();
     }
@@ -148,7 +226,18 @@ class BasicEventBuilder(BasicLogger logger, Level level)
      * it can cross service boundaries on its way to the sink. Equivalent to SLF4J's
      * `EventArgArray` materialisation step.
      */
-    private static Object[] frozen(Object[] mutable) {
-        return mutable.toArray(Constant);
+    private Object[] frozenArgs() {
+        if (args.empty) {
+            return [];
+        }
+
+        Object[] snapshot = new Array<Object>(args.size);
+        for (Int i : 0 ..< args.size) {
+            Object value = args[i];
+            snapshot.add(lazyArgs[i]
+                    ? value.as(ObjectSupplier)()
+                    : value);
+        }
+        return snapshot.toArray(Constant);
     }
 }

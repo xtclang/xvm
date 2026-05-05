@@ -39,6 +39,7 @@ as `com.acme.payments.stripe` with a Logback longest-prefix level rule.
 | `logger.LogAttrs(ctx, level, msg, attrs...)` | Same `logger.log(level, message, attrs)` path; attrs are already typed. |
 | `logger.Enabled(ctx, level)` | `logger.enabled(level)` |
 | `AddSource` output | `logger.logAt(level, message, sourceFile, sourceLine, attrs)` |
+| lazy message helpers used by wrappers | `logger.debug(() -> expensiveMessage(), attrs)` and the same shape for `info` / `warn` / `error` / `log` / `logAt` |
 
 The intentional call-shape differences are small:
 
@@ -57,10 +58,16 @@ The intentional call-shape differences are small:
 | `slog.Bool("audit", true)` | `Attr.of("audit", True)` |
 | `slog.Any("err", err)` | `Attr.of("err", e)` or `cause=e` |
 | `slog.Group("user", ...)` | `Attr.group("user", [...])` |
+| values implementing `slog.LogValuer` | `Attr.lazy("key", () -> expensiveValue)` |
 
 Go has many typed helper functions because it has no common `Object` parent. Ecstasy
 does, so a single `Attr.of` is enough for the POC. A production handler can still
 render strings, numbers, booleans, times, durations, exceptions, and groups differently.
+
+`Attr.lazy` is the POC's `LogValuer` equivalent. `Logger` calls `Handler.enabled(level)`
+first, then resolves lazy attrs before constructing the `Record`. Because `Attr` is a
+`const`, the supplier must capture passable state: immutable values and service
+references are fine; mutating an ordinary local variable from inside the supplier is not.
 
 ## `Handler`
 

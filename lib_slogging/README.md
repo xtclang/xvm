@@ -4,8 +4,9 @@ Experimental Go `log/slog`-shaped structured logging library for Ecstasy.
 
 > **Status:** Working comparison POC. The core `Logger` / `Handler` / `Record` /
 > `Attr` / `Level` shape, text/JSON/no-op/memory handlers, derived loggers, groups,
-> custom levels, source metadata, `LoggerContext`, runtime injection, async handler
-> wrapping, handler options/redaction, and unit tests are in this branch.
+> custom levels, lazy message/attr suppliers, source metadata, `LoggerContext`,
+> runtime injection, async handler wrapping, handler options/redaction, and unit tests
+> are in this branch.
 > `JSONHandler` renders through `lib_json`.
 
 > **POC naming note:** this module exists beside `lib_logging` only so the branch can
@@ -30,6 +31,10 @@ requestLog.info("payment processed", [
         Attr.of("amount",   amount),
         Attr.of("currency", currency),
 ]);
+
+requestLog.debug("payload", [
+        Attr.lazy("json", () -> serializer.dump(payload)),
+]);
 ```
 
 There are no markers and no MDC in the base shape. Categorisation, errors, and
@@ -47,6 +52,7 @@ Start with the repo-level docs:
 | [`doc/logging/lib-logging-vs-lib-slogging.md`](../doc/logging/lib-logging-vs-lib-slogging.md) | Side-by-side design comparison and reviewer questions. |
 | [`doc/logging/api-cross-reference.md`](../doc/logging/api-cross-reference.md) | Official Go `log/slog` links mapped to each Ecstasy type and the local differences. |
 | [`doc/logging/usage/slog-parity.md`](../doc/logging/usage/slog-parity.md) | Go `log/slog` method/type mapping and intentional Ecstasy differences. |
+| [`doc/logging/usage/lazy-logging.md`](../doc/logging/usage/lazy-logging.md) | Lazy message and attribute construction in both POC APIs. |
 | [`doc/logging/usage/custom-handlers.md`](../doc/logging/usage/custom-handlers.md) | Guide to writing custom handlers. |
 | [`doc/logging/cloud-integration.md`](../doc/logging/cloud-integration.md) | How the API shape maps to cloud logging systems. |
 

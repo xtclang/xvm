@@ -16,6 +16,7 @@
  * # The user-facing API
  *
  *      logger.debug("computed", [Attr.of("ms", 12)]);
+ *      logger.debug(() -> expensiveMessage(), [Attr.lazy("payload", () -> payloadJson)]);
  *      logger.info("processing", [Attr.of("path", req.path)]);
  *      logger.warn("retrying", [Attr.of("attempt", 3)]);
  *      logger.error("failed", [Attr.of("err", e)]);
@@ -33,11 +34,12 @@
  *
  * # POC status
  *
- * The `log` method is implemented (level-check fast path, record construction, forward
- * to handler), and [logAt] provides explicit source metadata for callers or future
- * compiler/runtime sugar. Runtime injection for `@Inject slogging.Logger logger;` is
- * registered by `NativeContainer`. There is no `LogAttrs(ctx, level, msg, attrs...)`
- * form; [LoggerContext] is the Ecstasy-shaped optional context helper.
+ * The `log` method is implemented (level-check fast path, lazy supplier resolution,
+ * record construction, forward to handler), and [logAt] provides explicit source metadata
+ * for callers or future compiler/runtime sugar. Runtime injection for
+ * `@Inject slogging.Logger logger;` is registered by `NativeContainer`. There is no
+ * `LogAttrs(ctx, level, msg, attrs...)` form; [LoggerContext] is the Ecstasy-shaped
+ * optional context helper.
  */
 const Logger(Handler handler)
         implements Orderable {
@@ -75,7 +77,8 @@ const Logger(Handler handler)
     @RO Boolean debugEnabled.get() = handler.enabled(Level.Debug);
 
     /**
-     * Cheap `Info` enabled check. Use before constructing expensive attributes.
+     * Cheap `Info` enabled check. Use for multi-statement guarded work; for one-line
+     * expensive values, prefer `logger.info(() -> "...", [Attr.lazy("k", () -> v)])`.
      */
     @RO Boolean infoEnabled.get()  = handler.enabled(Level.Info);
 
@@ -104,15 +107,33 @@ const Logger(Handler handler)
             log(Level.Debug, message, extra, cause);
 
     /**
+     * Emit a `Debug` record whose message is computed after the handler's enabled check.
+     */
+    void debug(MessageSupplier message, Attr[] extra = [], Exception? cause = Null) =
+            log(Level.Debug, message, extra, cause);
+
+    /**
      * Emit an `Info` record.
      */
     void info(String message, Attr[] extra = [], Exception? cause = Null) =
             log(Level.Info, message, extra, cause);
 
     /**
+     * Emit an `Info` record whose message is computed after the handler's enabled check.
+     */
+    void info(MessageSupplier message, Attr[] extra = [], Exception? cause = Null) =
+            log(Level.Info, message, extra, cause);
+
+    /**
      * Emit a `Warn` record.
      */
     void warn(String message, Attr[] extra = [], Exception? cause = Null) =
+            log(Level.Warn, message, extra, cause);
+
+    /**
+     * Emit a `Warn` record whose message is computed after the handler's enabled check.
+     */
+    void warn(MessageSupplier message, Attr[] extra = [], Exception? cause = Null) =
             log(Level.Warn, message, extra, cause);
 
     /**
@@ -123,6 +144,12 @@ const Logger(Handler handler)
             log(Level.Error, message, extra, cause);
 
     /**
+     * Emit an `Error` record whose message is computed after the handler's enabled check.
+     */
+    void error(MessageSupplier message, Attr[] extra = [], Exception? cause = Null) =
+            log(Level.Error, message, extra, cause);
+
+    /**
      * Open-level emission. Use for custom levels.
      *
      * The enabled check is first. If the handler rejects `level`, no record is
@@ -130,6 +157,13 @@ const Logger(Handler handler)
      * `Handler.Enabled` fast path.
      */
     void log(Level level, String message, Attr[] extra = [], Exception? cause = Null) {
+        emit(level, message, extra, cause, Null, -1);
+    }
+
+    /**
+     * Open-level emission with lazy message construction.
+     */
+    void log(Level level, MessageSupplier message, Attr[] extra = [], Exception? cause = Null) {
         emit(level, message, extra, cause, Null, -1);
     }
 
@@ -147,6 +181,14 @@ const Logger(Handler handler)
     }
 
     /**
+     * Open-level emission with explicit source metadata and lazy message construction.
+     */
+    void logAt(Level level, MessageSupplier message, String sourceFile, Int sourceLine,
+               Attr[] extra = [], Exception? cause = Null) {
+        emit(level, message, extra, cause, sourceFile, sourceLine);
+    }
+
+    /**
      * Common emission path used by [log] and [logAt]. The handler owns any attributes
      * attached by derived loggers; the record receives only call-time extras.
      */
@@ -159,7 +201,28 @@ const Logger(Handler handler)
                 time       = clock.now,
                 message    = message,
                 level      = level,
-                attrs      = extra.toArray(Constant),
+                attrs      = Attr.resolveAll(extra),
+                exception  = cause,
+                sourceFile = sourceFile,
+                sourceLine = sourceLine,
+        ));
+    }
+
+    /**
+     * Lazy-message equivalent of [emit]. Both message and lazy attrs resolve only after
+     * the handler accepts the level, matching Go slog's `Enabled` fast path and
+     * `LogValuer`-style value resolution.
+     */
+    private void emit(Level level, MessageSupplier message, Attr[] extra, Exception? cause,
+                      String? sourceFile, Int sourceLine) {
+        if (!handler.enabled(level)) {
+            return;
+        }
+        handler.handle(new Record(
+                time       = clock.now,
+                message    = message(),
+                level      = level,
+                attrs      = Attr.resolveAll(extra),
                 exception  = cause,
                 sourceFile = sourceFile,
                 sourceLine = sourceLine,

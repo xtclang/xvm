@@ -25,6 +25,15 @@
  * its fields are auto-frozen on construction. Trying to put a mutable class instance in
  * here will fail with the standard "not freezable" diagnostic.
  *
+ * # Lazy values
+ *
+ * Use [lazy] for expensive per-record values:
+ *
+ *      logger.debug("payload", [Attr.lazy("json", () -> serialize(payload))]);
+ *
+ * The logger resolves lazy values only after [Handler.enabled] accepts the record. This
+ * is the Ecstasy POC's equivalent of Go slog values that implement `LogValuer`.
+ *
  * # Groups
  *
  * Setting `value` to an `Attr[]` represents a nested group, equivalent to slog's
@@ -45,4 +54,43 @@ const Attr(String key, Object value) {
      * `slog.Group(name, attrs...)`.
      */
     static Attr group(String name, Attr[] attrs) = new Attr(name, attrs);
+
+    /**
+     * Construct an attribute whose value is computed lazily after the level check.
+     *
+     * Prefer this for expensive per-call data. Context attrs passed to `Logger.with(...)`
+     * should normally be stable eager values; if they are lazy, [BoundHandler] resolves
+     * them when an enabled record is handled.
+     */
+    static Attr lazy(String key, ObjectSupplier value) = new Attr(key, new LazyValue(value));
+
+    /**
+     * Return this attr with any lazy value resolved. Nested groups are resolved
+     * recursively so handlers see ordinary values.
+     */
+    Attr resolved() {
+        if (LazyValue lazy := value.is(LazyValue)) {
+            return new Attr(key, lazy.resolve());
+        }
+        if (Attr[] attrs := value.is(Attr[])) {
+            return Attr.group(key, resolveAll(attrs));
+        }
+        return this;
+    }
+
+    /**
+     * Resolve lazy values in an attr array, returning an immutable array suitable for
+     * a [Record] or handler boundary.
+     */
+    static Attr[] resolveAll(Attr[] attrs) {
+        if (attrs.empty) {
+            return [];
+        }
+
+        Attr[] resolved = new Array<Attr>(attrs.size);
+        for (Attr attr : attrs) {
+            resolved.add(attr.resolved());
+        }
+        return resolved.toArray(Constant);
+    }
 }

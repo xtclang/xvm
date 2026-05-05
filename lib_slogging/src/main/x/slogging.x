@@ -29,8 +29,9 @@
  * # Status
  *
  * **This module is a working comparison POC.** The core API, level checks, derived
- * loggers, groups, custom levels, runtime injection, source metadata, context binding,
- * and memory/text/JSON/no-op handlers are implemented and covered by unit tests.
+ * loggers, groups, custom levels, lazy message/attr suppliers, runtime injection, source
+ * metadata, context binding, and memory/text/JSON/no-op handlers are implemented and
+ * covered by unit tests.
  *
  * # API / Implementation boundary
  *
@@ -60,4 +61,21 @@
  */
 module slogging.xtclang.org {
     package json import json.xtclang.org;
+
+    /**
+     * Lazy message supplier used by [Logger].
+     *
+     * The logger invokes this function only after [Handler.enabled] accepts the record's
+     * level. This is the slog-shaped equivalent of Kotlin logging blocks and Java
+     * supplier-based logging APIs.
+     */
+    typedef function String() as MessageSupplier;
+
+    /**
+     * Lazy attribute value supplier used by [Attr.lazy].
+     *
+     * This mirrors Go slog's `LogValuer` idea: expensive structured values can be
+     * represented at the call site without constructing them for disabled records.
+     */
+    typedef function Object() as ObjectSupplier;
 }

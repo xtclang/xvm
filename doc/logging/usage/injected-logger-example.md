@@ -7,10 +7,10 @@ look like in real code?"
 The accompanying executable sample lives at
 [`manualTests/src/main/x/TestLogger.x`](../../../manualTests/src/main/x/TestLogger.x).
 
-> **Status (2026-05).** Runtime injection of `@Inject Logger logger;` is wired in
-> the interpreter — `NativeContainer.ensureLogger` constructs a `BasicLogger`
-> directly so per-fiber `MDC` survives injection. The JIT injector still needs the
-> equivalent wiring; until it does, `--jit` runs won't resolve the injection.
+> **Status (2026-05).** Runtime injection of `@Inject Logger logger;` is wired for
+> the manual interpreter demo. The injected value is a `BasicLogger`, so per-fiber
+> `MDC` survives injection. This POC keeps the public API independent of the temporary
+> runtime wiring.
 
 ## API at a glance
 
