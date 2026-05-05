@@ -169,4 +169,3 @@ After findings, include:
 
 Do not produce a long rewrite unless asked. Focus on review signal.
 ```
-
