@@ -22,6 +22,11 @@ Runtime `@Inject slogging.Logger logger;` is wired in this branch. The native in
 resolves resources by `(name, requested type)`, so both `logging.Logger logger` and
 `slogging.Logger logger` can use the familiar default resource name `logger`.
 
+Important distinction: Go `slog` has `Logger.With(...)` and `Logger.WithGroup(...)`,
+but it does **not** have SLF4J/Logback-style hierarchical logger names. `WithGroup`
+qualifies attribute keys for output; it is not the same thing as a logger category such
+as `com.acme.payments.stripe` with a Logback longest-prefix level rule.
+
 ## `Logger` methods
 
 | Go `log/slog` | `lib_slogging` |
@@ -77,6 +82,19 @@ logger is derived, instead of doing that work on every record. The shipped handl
 ```ecstasy
 Logger logger = new Logger(new AsyncHandler(new JSONHandler()));
 ```
+
+## No markers or hierarchical names
+
+Two SLF4J/Logback concepts are intentionally not part of the slog API:
+
+| SLF4J / Logback concept | Go slog way | `lib_slogging` way | What you lose |
+|---|---|---|---|
+| `LoggerFactory.getLogger("com.acme.payments")` plus Logback prefix config | `slog.New(handler).With("component", "com.acme.payments")` | `logger.with([Attr.of("component", "com.acme.payments")])` | No built-in logger name field and no standard longest-prefix level tree. A handler can filter attrs, but that is custom policy. |
+| `MarkerFactory.getMarker("AUDIT")` and marker filters | `logger.Info("...", "audit", true)` | `logger.info("...", [Attr.of("audit", True)])` | No marker identity, marker containment DAG, or marker-specific enabled check. |
+
+That trade-off is deliberate. The slog model keeps one structured channel (`Attr`) and
+lets handlers decide how to render or filter it. The cost is that Java/Logback teams do
+not get direct equivalents for marker filters or category-prefix configuration.
 
 ## Context and source metadata
 

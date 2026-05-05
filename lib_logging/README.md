@@ -8,6 +8,9 @@ Experimental SLF4J-shaped logging library for Ecstasy.
 > composite, hierarchical-level, and JSON/redaction sinks. JIT-side injection and
 > full configuration-file loading remain future work; see [`doc/logging/`](../doc/logging).
 
+> **POC naming note:** `lib_slogging` exists beside this module only for comparison.
+> The XDK should settle on one injectable logging design and ship it as `lib_logging`.
+
 ## What this is
 
 A logging library for Ecstasy with the SLF4J 2.x shape: named loggers, levels,

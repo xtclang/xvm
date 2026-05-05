@@ -5,6 +5,34 @@ so reviewers can compare two familiar industry shapes in real Ecstasy code. The
 branch now recommends `lib_logging` as the canonical API shape and keeps
 `lib_slogging` as the comparison/reference POC.
 
+The two libraries coexist **only for this POC**. Application and XDK code should use
+one logging shape or the other, not both in the same design. Once the XDK settles on an
+injectable logging model, the winning API should be the XDK's `lib_logging`; the losing
+POC should either disappear or become an explicitly named adapter/comparison module.
+
+## Requirements
+
+The accepted XDK logging API should satisfy these requirements:
+
+- **One canonical facade:** one injectable logging API, published as `lib_logging`.
+- **Familiar call shape:** instantly recognizable to either SLF4J/Logback or slog users,
+  with migration examples for Java/Go teams.
+- **Injection-first acquisition:** `@Inject Logger logger;` lets the host/container own
+  backend policy; library code must not choose global process logging.
+- **Structured events:** first-class key/value fields, context fields, exceptions,
+  markers/categories where applicable, and JSON/cloud output without parsing messages.
+- **Dynamically pluggable backends:** sinks/handlers can be swapped, composed, wrapped
+  with async queues, and replaced by a host-controlled reload service.
+- **Logback-equivalent operations:** root level, per-logger/category overrides,
+  multi-destination fanout, async output, JSON/text formatting, redaction, and
+  configuration-file reload.
+- **Production safety:** backend failures should not break callers; redaction,
+  output destinations, formatting knobs, and shutdown/flush behavior must be explicit.
+- **Testability:** in-memory capture sinks/handlers and contract tests for custom
+  backends.
+- **Runtime/compiler path:** default logger naming and source-location capture should
+  have a clear lowering target even if full compiler sugar lands later.
+
 Both libraries use the same XDK-facing architecture: application code receives an
 injected `Logger`, the container owns the backend, and production behavior is
 provided by replacing a `LogSink` or `Handler`. Both can carry structured fields
@@ -22,7 +50,10 @@ place.
 
 ## Recommendation
 
-Choose **`lib_logging`** as the canonical XDK logging facade. It gives Ecstasy the
+Choose **`lib_logging`** as the canonical XDK logging facade. If reviewers choose the
+slog shape instead, it should still graduate under the canonical `lib_logging` name;
+`lib_slogging` is a POC name, not a proposed permanent sibling. The current
+recommendation is the SLF4J-shaped implementation because it gives Ecstasy the
 SLF4J/Logback-shaped surface that JVM users recognize immediately: named loggers,
 `{}` formatting, markers, MDC, fluent event builders, and a `LogSink` backend
 boundary. The slog-shaped library remains useful review material and an adapter
@@ -68,6 +99,7 @@ you only read one file. The rest of the tree is organized by reader:
 | [`usage/custom-sinks.md`](usage/custom-sinks.md) | How to write a custom `LogSink`, with worked examples. |
 | [`usage/custom-handlers.md`](usage/custom-handlers.md) | How to write a custom slog `Handler`, with worked examples. |
 | [`usage/structured-logging.md`](usage/structured-logging.md) | Structured logging dive: key/value pairs, JSON output, fluent builder. |
+| [`usage/configuration.md`](usage/configuration.md) | Logback XML vs proposed Ecstasy JSON configuration, dynamic sink/handler reload, and equivalence mapping. |
 | **Follow-up backend/compiler work** | |
 | [`future/logback-integration.md`](future/logback-integration.md) | Configuration-driven Logback-style backend on top of the shipped primitives. |
 | [`future/native-bridge.md`](future/native-bridge.md) | Optional Java Logback bridge — feasibility analysis and why it is not the default path. |

@@ -1,9 +1,130 @@
-# Structured logging in `lib_logging`
+# Structured logging in the logging POC
 
-This document explains how structured logging works in SLF4J 2.x, and how the same idea
-maps onto `lib_logging`. "Structured" here means: events that carry typed key/value pairs
-in addition to (or instead of) a free-form message, so that downstream consumers (log
-aggregators, dashboards, alerting) can query on those fields without regexing the text.
+This document explains structured logging as a requirement, then shows how the same
+event looks in Java SLF4J/Logback, Go `log/slog`, Ecstasy `lib_logging`, and Ecstasy
+`lib_slogging`.
+
+"Structured" means a log event carries typed key/value fields in addition to a
+human-readable message. Downstream systems can query fields directly instead of
+regexing text.
+
+## Why structured logging is mandatory now
+
+A modern logging framework is not just a better `print`. It feeds systems such as
+Cloud Logging, CloudWatch, Azure Monitor, OpenSearch, Splunk, Grafana Loki,
+OpenTelemetry collectors, alert rules, audit pipelines, and incident dashboards. Those
+systems need stable fields.
+
+Unstructured text is still useful for a human reading a terminal:
+
+```text
+payment processed p_123 amount=4200 currency=EUR merchant=m_42
+```
+
+It is weak as production telemetry. Every consumer has to rediscover the schema by
+parsing the message. A harmless wording change breaks dashboards and alerts.
+
+A structured event keeps the human message stable and carries machine-readable fields:
+
+```json
+{
+  "time": "2026-04-29T11:23:45.012Z",
+  "level": "INFO",
+  "logger": "com.example.PaymentService",
+  "message": "payment processed",
+  "paymentId": "p_123",
+  "amount": 4200,
+  "currency": "EUR",
+  "merchantId": "m_42",
+  "mdc": {"requestId": "r_abc"}
+}
+```
+
+That is queryable: `paymentId="p_123"`, `amount > 1000`, `merchantId="m_42"`,
+`requestId="r_abc"`, `level >= ERROR`. Any XDK logging design that cannot carry this
+without parsing message text is not production-ready.
+
+## Same event in the four APIs
+
+### Java + SLF4J 2.x
+
+```java
+log.atInfo()
+   .setMessage("payment processed")
+   .addKeyValue("paymentId", payment.id())
+   .addKeyValue("amount", payment.amount())
+   .addKeyValue("currency", payment.currency())
+   .addKeyValue("merchantId", merchant.id())
+   .log();
+```
+
+This requires a Logback encoder/appender that reads SLF4J 2.x key/value pairs, for
+example a JSON/logstash/cloud encoder. A plain PatternLayout usually renders only the
+message unless configured to include key/value data.
+
+### Go + `log/slog`
+
+```go
+logger.Info("payment processed",
+    "paymentId", payment.ID,
+    "amount", payment.Amount,
+    "currency", payment.Currency,
+    "merchantId", merchant.ID)
+```
+
+Go's built-in `JSONHandler` renders attrs as JSON fields. `With(...)` carries
+request-wide fields:
+
+```go
+requestLog := logger.With("requestId", req.ID)
+requestLog.Info("payment processed", "paymentId", payment.ID)
+```
+
+### Ecstasy + `lib_logging`
+
+```ecstasy
+logger.atInfo()
+      .setMessage("payment processed")
+      .addKeyValue("paymentId",  payment.id)
+      .addKeyValue("amount",     payment.amount)
+      .addKeyValue("currency",   payment.currency)
+      .addKeyValue("merchantId", merchant.id)
+      .log();
+```
+
+Context that applies to many events lives in MDC:
+
+```ecstasy
+@Inject MDC mdc;
+mdc.put("requestId", request.id);
+
+logger.atInfo()
+      .addKeyValue("paymentId", payment.id)
+      .log("payment processed");
+```
+
+`JsonLogSink` renders MDC and key/value pairs as structured fields.
+
+### Ecstasy + `lib_slogging`
+
+```ecstasy
+logger.info("payment processed", [
+        Attr.of("paymentId",  payment.id),
+        Attr.of("amount",     payment.amount),
+        Attr.of("currency",   payment.currency),
+        Attr.of("merchantId", merchant.id),
+]);
+```
+
+Request-wide fields are attached by deriving a logger:
+
+```ecstasy
+Logger requestLog = logger.with([Attr.of("requestId", request.id)]);
+requestLog.info("payment processed", [Attr.of("paymentId", payment.id)]);
+```
+
+`JSONHandler` renders attrs as JSON fields and preserves nested `Attr.group(...)`
+values.
 
 ## How SLF4J 2.x does structured logging
 
@@ -102,16 +223,18 @@ The `LogEvent` const carries a `keyValues` field analogous to SLF4J's
 
 ```ecstasy
 const LogEvent(
-        String                        loggerName,
-        Level                         level,
-        String                        message,
-        Marker[]                      markers     = [],
-        Exception?                    exception   = Null,
-        Object[]                      arguments   = [],
-        Map<String, Object>           keyValues   = [],
-        Map<String, String>           mdcSnapshot = [],
-        String                        threadName  = "",
-        Time                          timestamp,
+        String              loggerName,
+        Level               level,
+        String              message,
+        Time                timestamp,
+        Marker[]            markers     = [],
+        Exception?          exception   = Null,
+        Object[]            arguments   = [],
+        Map<String, String> mdcSnapshot = [],
+        String              threadName  = "",
+        String?             sourceFile  = Null,
+        Int                 sourceLine  = -1,
+        Map<String, Object> keyValues   = [],
         );
 ```
 
@@ -150,6 +273,78 @@ LogSink sink = new JsonLogSink(new JsonLogSinkOptions(
 `JsonLogSink` renders through `lib_json`, preserves MDC/markers/key-values/source, and
 redacts configured keys before output.
 
+## How `lib_slogging` maps onto this
+
+The slog-shaped library collapses message arguments, markers, and per-event key/value
+pairs into one concept: `Attr`.
+
+### Layer 1 — call site
+
+```ecstasy
+logger.info("payment processed", [
+        Attr.of("paymentId",  payment.id),
+        Attr.of("amount",     payment.amount),
+        Attr.of("currency",   payment.currency),
+        Attr.of("merchantId", merchant.id),
+]);
+```
+
+For request-scoped fields, derive a logger once:
+
+```ecstasy
+Logger requestLog = logger.with([
+        Attr.of("requestId", request.id),
+        Attr.of("tenant",    request.tenant),
+]);
+```
+
+Groups are explicit nested attrs:
+
+```ecstasy
+requestLog.info("payment processed", [
+        Attr.group("payment", [
+                Attr.of("id",       payment.id),
+                Attr.of("amount",   payment.amount),
+                Attr.of("currency", payment.currency),
+        ]),
+]);
+```
+
+### Layer 2 — event data model
+
+`Record` carries the completed message and `Attr[]`:
+
+```ecstasy
+const Record(
+        Time       time,
+        Level      level,
+        String     message,
+        Attr[]     attrs      = [],
+        Exception? exception  = Null,
+        String?    sourceFile = Null,
+        Int        sourceLine = -1,
+        String     threadName = "",
+        );
+```
+
+There is no separate marker channel and no separate message-argument channel. That is
+the point of the slog design.
+
+### Layer 3 — handler
+
+`JSONHandler` renders attrs directly as JSON fields, preserving groups as nested JSON
+objects and applying `HandlerOptions` redaction:
+
+```ecstasy
+Handler handler = new JSONHandler(new HandlerOptions(
+        Level.Info,
+        ["authorization", "password"]));
+Logger logger = new Logger(handler);
+```
+
+This is conceptually closer to Go's built-in `slog.NewJSONHandler` than to SLF4J's
+facade-plus-encoder split.
+
 ## What about `MDC` vs key/value pairs?
 
 SLF4J has _two_ structured-data channels:
@@ -160,8 +355,13 @@ SLF4J has _two_ structured-data channels:
   *this* specific log entry: payment ID, amount, target.
 
 `lib_logging` keeps the same split. `MDC` is its own service; `LoggingEventBuilder.addKeyValue`
-is per-event. A structured sink should render both — typically MDC under an `"mdc"` sub-object
-and KV pairs at the top level, matching what `LogstashEncoder` does.
+is per-event. A structured sink should render both — typically MDC under an `"mdc"`
+sub-object and KV pairs at the top level, matching what `LogstashEncoder` does.
+
+`lib_slogging` keeps the slog shape: request-scoped data is normally attached by
+deriving a logger with `with(attrs)`, and per-event data is passed as attrs on the
+specific log call. `LoggerContext` is available only when framework code needs
+implicit propagation.
 
 ## Migration story for SLF4J users adopting `lib_logging`
 
@@ -172,6 +372,22 @@ changes, and the LogSink choice on the deployment side.
 The bigger story — encoder/appender wiring, log aggregator integration — is handled by
 the structured sink (`JsonLogSink` in the simple case, a future configured backend in
 the complex case). See `../future/logback-integration.md`.
+
+## Migration story for Go slog users adopting `lib_slogging`
+
+The conceptual migration is also direct:
+
+| Go slog | Ecstasy `lib_slogging` |
+|---|---|
+| `logger.Info("payment processed", "paymentId", id)` | `logger.info("payment processed", [Attr.of("paymentId", id)])` |
+| `logger.With("requestId", id)` | `logger.with([Attr.of("requestId", id)])` |
+| `logger.WithGroup("payment")` | `logger.withGroup("payment")` |
+| `slog.Group("payment", "id", id)` | `Attr.group("payment", [Attr.of("id", id)])` |
+| `slog.NewJSONHandler(w, opts)` | `new JSONHandler(new HandlerOptions(...))` |
+
+The main Ecstasy difference is that attrs are explicit `Attr` values, not alternating
+`key, value` arguments. That avoids Go's malformed-argument case and keeps the record
+typed before it reaches the handler.
 
 ## What to build first vs. later
 

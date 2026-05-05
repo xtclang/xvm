@@ -17,6 +17,10 @@ Primary references:
   [`Level`](https://www.slf4j.org/api/org/slf4j/event/Level.html),
   [`LoggingEvent`](https://www.slf4j.org/api/org/slf4j/event/LoggingEvent.html).
 - Go `log/slog` package docs: [`log/slog`](https://pkg.go.dev/log/slog).
+- Related Java structured/fluent APIs:
+  [`Log4j 2 fluent API`](https://logging.apache.org/log4j/2.x/manual/logbuilder.html),
+  [`Google Flogger`](https://google.github.io/flogger/), and
+  [`logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder).
 
 ## SLF4J-shaped `lib_logging`
 
@@ -53,6 +57,18 @@ Primary references:
 | [`JSONHandler`](../../lib_slogging/src/main/x/slogging/JSONHandler.x) | Go [`JSONHandler`](https://pkg.go.dev/log/slog#JSONHandler) | One line-delimited JSON object per record, nested groups, structured exceptions. | Renders through XDK `lib_json`, writes through injected `Console`, and honors `HandlerOptions` field names, source inclusion, and redaction. |
 | [`AsyncHandler`](../../lib_slogging/src/main/x/slogging/AsyncHandler.x) | Go async handler wrappers are usually third-party; same role as Logback `AsyncAppender` | Bounded queue wrapper around any handler, preserving already-constructed records. | Implemented as an Ecstasy `service` and keeps `withAttrs` / `withGroup` derivation by wrapping derived delegates. |
 | [`MemoryHandler`](../../lib_slogging/src/main/x/slogging/MemoryHandler.x), [`NopHandler`](../../lib_slogging/src/main/x/slogging/NopHandler.x) | Go test/discard handler patterns | Capture records for assertions or drop records entirely. | Small Ecstasy convenience handlers; not direct Go stdlib types. |
+
+## No slog counterpart for logger categories or markers
+
+Go `slog.Logger.WithGroup` is grouped attribute namespacing, not a named logger
+hierarchy. It lets a handler qualify output keys (for example `payments.amount` in text
+or `"payments": {"amount": ...}` in JSON), but it does not create a logger named
+`com.acme.payments` that a backend can route with Logback's longest-prefix rule.
+
+Go `slog` also has no `Marker` / `MarkerFactory` equivalent. The slog equivalent is an
+attribute such as `slog.Bool("audit", true)`. That is simpler and often preferable for
+JSON output, but it does not carry SLF4J marker identity, marker containment, or
+marker-aware enabled checks.
 
 ## No slog counterpart for `MessageFormatter`
 
