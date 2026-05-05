@@ -12,25 +12,25 @@ POC should either disappear or become an explicitly named adapter/comparison mod
 
 ## Requirements
 
-The accepted XDK logging API should satisfy these requirements:
+The accepted XDK logging API **MUST** satisfy these requirements:
 
-- **One canonical facade:** one injectable logging API, published as `lib_logging`.
-- **Familiar call shape:** instantly recognizable to either SLF4J/Logback or slog users,
+- **One canonical facade:** there MUST be one injectable logging API, published as `lib_logging`.
+- **Familiar call shape:** the call shape MUST be instantly recognizable to either SLF4J/Logback or slog users,
   with migration examples for Java/Go teams.
-- **Injection-first acquisition:** `@Inject Logger logger;` lets the host/container own
+- **Injection-first acquisition:** `@Inject Logger logger;` MUST let the host/container own
   backend policy; library code must not choose global process logging.
-- **Structured events:** first-class key/value fields, context fields, exceptions,
+- **Structured events:** events MUST carry first-class key/value fields, context fields, exceptions,
   markers/categories where applicable, and JSON/cloud output without parsing messages.
-- **Dynamically pluggable backends:** sinks/handlers can be swapped, composed, wrapped
+- **Dynamically pluggable backends:** sinks/handlers MUST be swappable, composable, wrappable
   with async queues, and replaced by a host-controlled reload service.
-- **Logback-equivalent operations:** root level, per-logger/category overrides,
+- **Logback-equivalent operations:** the backend MUST support root level, per-logger/category overrides,
   multi-destination fanout, async output, JSON/text formatting, redaction, and
   configuration-file reload.
-- **Production safety:** backend failures should not break callers; redaction,
+- **Production safety:** backend failures MUST NOT break callers; redaction,
   output destinations, formatting knobs, and shutdown/flush behavior must be explicit.
-- **Testability:** in-memory capture sinks/handlers and contract tests for custom
+- **Testability:** the API MUST provide in-memory capture sinks/handlers and contract tests for custom
   backends.
-- **Runtime/compiler path:** default logger naming and source-location capture should
+- **Runtime/compiler path:** default logger naming and source-location capture MUST
   have a clear lowering target even if full compiler sugar lands later.
 
 Both libraries use the same XDK-facing architecture: application code receives an
