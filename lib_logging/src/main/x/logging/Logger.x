@@ -120,6 +120,21 @@ interface Logger {
              Exception? cause     = Null,
              Marker?    marker    = Null);
 
+    /**
+     * Emit at a runtime-chosen level with explicit source metadata.
+     *
+     * This mirrors the source-aware entry point on the slog-shaped library and gives a
+     * future compiler/runtime call-site capture feature a stable lowering target. Normal
+     * application code should keep using [log] / [info] / [atInfo] until such sugar exists.
+     */
+    void logAt(Level      level,
+               String     message,
+               String     sourceFile,
+               Int        sourceLine,
+               Object[]   arguments = [],
+               Exception? cause     = Null,
+               Marker?    marker    = Null);
+
     // ---- Fluent (SLF4J 2.x style) builder ------------------------------------------------------
 
     /**

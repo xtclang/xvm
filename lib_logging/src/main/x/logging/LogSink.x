@@ -6,8 +6,7 @@
  *
  * `LogSink` is more like the Logback `Appender`: a single emission target with its own
  * level filter. Mapping multiple `LogSink`s onto one logger (Logback's "appender attached
- * to logger" model) is the job of a future composite sink — see
- * `doc/logging/future/logback-integration.md`.
+ * to logger" model) is the job of [CompositeLogSink].
  *
  * The Service-Provider Interface for logging backends. A `LogSink` is the only thing a
  * `Logger` ever talks to; everything else (level checks, message formatting, marker
@@ -17,9 +16,11 @@
  *
  * Anything _above_ this interface is the public, stable API that user code depends on.
  * Anything _below_ this interface is replaceable: `ConsoleLogSink` for the default
- * platform-controlled console output, `MemoryLogSink` in tests, a future `LogbackLogSink`
- * for configuration-driven file/network appenders, a native sink wrapping `slf4j`+`logback`
- * via the JIT bridge — all of those are interchangeable behind this interface.
+ * platform-controlled console output, `MemoryLogSink` in tests, [JsonLogSink] for
+ * structured JSON-Lines output, [CompositeLogSink] and [HierarchicalLogSink] for
+ * Logback-style backend policy, a future file/network sink, or an optional native sink
+ * wrapping `slf4j`+`logback` via the JIT bridge — all of those are interchangeable
+ * behind this interface.
  *
  * # Implementing a custom sink
  *
@@ -30,7 +31,7 @@
  *   - `log` receives a fully-formed `LogEvent`. The message has already had `{}` placeholders
  *     substituted; the `mdcSnapshot` has already been captured.
  *
- * See `docs/custom-sinks.md` for a worked example.
+ * See `doc/logging/usage/custom-sinks.md` for worked examples.
  *
  * # Choosing between `const` and `service` for an implementation
  *
@@ -43,8 +44,8 @@
  *                [ConsoleLogSink]. Cheap to construct; methods run on the caller's fiber.
  *   - `service` — for sinks that carry mutable state shared across fibers: event
  *                buffers, hit counters, file/socket writers, async worker queues.
- *                Examples: [MemoryLogSink], a future `FileLogSink`, a future
- *                `AsyncLogSink`.
+ *                Examples: [MemoryLogSink], [HierarchicalLogSink], [AsyncLogSink],
+ *                and a future `FileLogSink`.
  *
  * The full rule, with reference examples from the platform/xunit codebases (e.g.
  * `service ConsoleExecutionListener`, `service ErrorLog`), is in

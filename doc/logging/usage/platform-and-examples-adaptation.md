@@ -234,10 +234,10 @@ is no string-prefix convention to maintain.
   `console.print($"... Error:")` exists.
 - **Net code change:** roughly -50 lines (no more timestamp prefix, no more level
   string, often no more `console` injection in files that only used it for logging).
-- **Configuration model:** until `lib_logging_logback` ships, the default
-  `ConsoleLogSink` keeps existing operator dashboards working (it produces line-
-  oriented output). When it ships, the platform gets per-subsystem level control,
-  rolling files, JSON output for log shippers — none of which it has today.
+- **Configuration model:** the base `ConsoleLogSink`, `JsonLogSink`,
+  `HierarchicalLogSink`, `CompositeLogSink`, and `AsyncLogSink` cover the common
+  programmatic cases now. A future configured backend adds file/network destinations,
+  rolling files, filters, and hot reload.
 - **Migration risk:** very low. Each call-site is independent; migrate file by file.
 - **Side benefit:** `MemoryLogSink` replaces every ad-hoc `errors.add(...)` /
   `errors.reportAll(...)` pattern with one library helper.

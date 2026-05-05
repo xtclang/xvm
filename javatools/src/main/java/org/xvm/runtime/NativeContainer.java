@@ -394,8 +394,11 @@ public class NativeContainer
                 pool.ensureClassConstant(modLogging, "Logger"));
         TypeConstant   typeLogger   = pool.ensureTerminalTypeConstant(
                 pool.ensureClassConstant(modLogging, "BasicLogger"));
+        m_typeLoggingLogger = typeLoggerIf;
+        m_typeBasicLogger   = typeLogger;
         addResourceSupplier(new InjectionKey("logger", typeLoggerIf),
-                (frame, hOpts) -> ensureLogger(frame, typeLogger, "logger"));
+                (frame, hOpts) -> ensureLogger(frame, typeLogger,
+                        inferLoggerName(frame, "logger")));
 
         TypeConstant typeMDC = pool.ensureTerminalTypeConstant(
                 pool.ensureClassConstant(modLogging, "MDC"));
@@ -443,6 +446,34 @@ public class NativeContainer
         default:
             throw new IllegalStateException();
         }
+    }
+
+    /**
+     * Derive the default logger name for a canonical `logging.Logger` injection. When
+     * the compiler only supplies the field-name fallback (`logger`), use the enclosing
+     * method namespace as the logger name. If a future compiler supplies a resource name
+     * such as the module/class directly, the runtime keeps that explicit name.
+     */
+    private String inferLoggerName(Frame frame, String sName) {
+        if ("logger".equals(sName) && frame.f_function != null) {
+            IdentityConstant idMethod    = frame.f_function.getIdentityConstant();
+            IdentityConstant idNamespace = idMethod.getNamespace();
+            if (idNamespace != null) {
+                String sPath = idNamespace.getPathString();
+                if (sPath != null && !sPath.isEmpty()) {
+                    return sPath;
+                }
+
+                ModuleConstant idModule = idMethod.getModuleConstant();
+                if (idModule != null) {
+                    String sModule = idModule.getName();
+                    if (sModule != null && !sModule.isEmpty()) {
+                        return sModule;
+                    }
+                }
+            }
+        }
+        return sName;
     }
 
     /**
@@ -785,10 +816,21 @@ public class NativeContainer
             }
         }
 
+        if (isCanonicalLoggingLogger(type)) {
+            return ensureLogger(frame, m_typeBasicLogger, inferLoggerName(frame, sName));
+        }
+
         // for "Nullable" types the NativeContainer can only supply a trivial result;
         // anything better than that must be done naturally by a container that hosts the
         // calling container
         return type.isNullable() ? xNullable.NULL : null;
+    }
+
+    private boolean isCanonicalLoggingLogger(TypeConstant type) {
+        TypeConstant typeLogger = m_typeLoggingLogger;
+        return typeLogger != null &&
+                (typeLogger.equals(type) || typeLogger.isEquivalent(type)
+                        || typeLogger.isEquivalent(type.removeNullable()));
     }
 
     @Override
@@ -975,13 +1017,17 @@ public class NativeContainer
     private       ModuleStructure  m_moduleNative;
 
     /**
+     * Cached canonical logging types. Used to resolve module/class-named injections for
+     * `logging.Logger` after the fixed `"logger"` resource registration.
+     */
+    private TypeConstant m_typeLoggingLogger;
+    private TypeConstant m_typeBasicLogger;
+
+    /**
      * Map of IdentityConstants by name.
      */
     private final Map<String, IdentityConstant> f_mapIdByName = new ConcurrentHashMap<>();
 
-    /**
-     * Map of resource names for a name based lookup.
-     */
     /**
      * Map of resources that are injectable from this container, keyed by their InjectionKey.
      */

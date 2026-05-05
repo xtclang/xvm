@@ -1,8 +1,9 @@
 # Ecstasy logging — start here
 
 This branch (`lagergren/logging`) adds two parallel logging libraries to the XDK
-so reviewers can compare the two familiar industry shapes in real Ecstasy code
-before choosing one canonical API.
+so reviewers can compare two familiar industry shapes in real Ecstasy code. The
+branch now recommends `lib_logging` as the canonical API shape and keeps
+`lib_slogging` as the comparison/reference POC.
 
 Both libraries use the same XDK-facing architecture: application code receives an
 injected `Logger`, the container owns the backend, and production behavior is
@@ -11,22 +12,22 @@ to JSON/cloud sinks without parsing message text.
 
 | Library | Prior art | Current proof |
 |---|---|---|
-| [`lib_logging`](../../lib_logging/) | SLF4J 2.x + Logback | 54 focused XTC test methods and an injected manual demo. |
-| [`lib_slogging`](../../lib_slogging/) | Go `log/slog` | 34 focused XTC test methods and matching injected/manual coverage. |
+| [`lib_logging`](../../lib_logging/) | SLF4J 2.x + Logback | 64 focused XTC test methods, injected manual demo, async/composite/hierarchical/JSON backend building blocks. |
+| [`lib_slogging`](../../lib_slogging/) | Go `log/slog` | 37 focused XTC test methods, injected/manual coverage, async handler, handler options, and JSON/redaction support. |
 
 If you only have time to read one document, read
 **[`lib-logging-vs-lib-slogging.md`](lib-logging-vs-lib-slogging.md)** — it is
 the comparison, the reviewer-question list, and the recommendation in one
 place.
 
-## Review Focus
+## Recommendation
 
-The main design question is which single API Ecstasy should make canonical.
-Keeping both indefinitely would recreate the logging fragmentation these APIs were
-designed to avoid. The concrete reviewer prompts live in
-[`lib-logging-vs-lib-slogging.md` § 5](lib-logging-vs-lib-slogging.md#5-what-we-want-reviewer-feedback-on);
-language/runtime questions are tracked as Q-D1..Q-D7 in
-[`open-questions.md`](open-questions.md).
+Choose **`lib_logging`** as the canonical XDK logging facade. It gives Ecstasy the
+SLF4J/Logback-shaped surface that JVM users recognize immediately: named loggers,
+`{}` formatting, markers, MDC, fluent event builders, and a `LogSink` backend
+boundary. The slog-shaped library remains useful review material and an adapter
+candidate, but keeping both indefinitely would recreate the logging fragmentation
+these APIs were designed to avoid.
 
 ## Reading Paths
 
@@ -67,9 +68,9 @@ you only read one file. The rest of the tree is organized by reader:
 | [`usage/custom-sinks.md`](usage/custom-sinks.md) | How to write a custom `LogSink`, with worked examples. |
 | [`usage/custom-handlers.md`](usage/custom-handlers.md) | How to write a custom slog `Handler`, with worked examples. |
 | [`usage/structured-logging.md`](usage/structured-logging.md) | Structured logging dive: key/value pairs, JSON output, fluent builder. |
-| **Tier 3 / future work** | |
-| [`future/logback-integration.md`](future/logback-integration.md) | Sketch of a configuration-driven Logback-style binding. |
-| [`future/native-bridge.md`](future/native-bridge.md) | Wrapping real Java Logback through the JIT bridge — feasibility analysis. |
+| **Follow-up backend/compiler work** | |
+| [`future/logback-integration.md`](future/logback-integration.md) | Configuration-driven Logback-style backend on top of the shipped primitives. |
+| [`future/native-bridge.md`](future/native-bridge.md) | Optional Java Logback bridge — feasibility analysis and why it is not the default path. |
 | [`future/lazy-logging.md`](future/lazy-logging.md) | Kotlin-style lambda emission (`logger.info { "..." }`) — exploration. |
 | [`future/runtime-implementation-plan.md`](future/runtime-implementation-plan.md) | Mostly historical: the original runtime-wiring plan. Stages 1–3 have landed; the JIT-side equivalent (Stage 1) is open. |
 
@@ -98,9 +99,14 @@ lib_logging/                            SLF4J-shaped library
     │       ├── BasicLogger.x           canonical Logger impl (const)
     │       ├── BasicEventBuilder.x     canonical builder impl
     │       ├── ConsoleLogSink.x        default sink (const), forwards to @Inject Console
+    │       ├── JsonLogSink.x           JSON-Lines sink (const), rendered by lib_json
+    │       ├── JsonLogSinkOptions.x    root level, redaction, inclusion, field names
+    │       ├── CompositeLogSink.x      multi-destination fanout (const)
+    │       ├── HierarchicalLogSink.x   longest-prefix per-logger thresholds (service)
+    │       ├── AsyncLogSink.x          bounded async wrapper (service)
     │       ├── NoopLogSink.x           drops every event (const)
     │       └── MemoryLogSink.x         test-helper, captures events (service)
-    └── test/x/LoggingTest/             54 focused XTC test methods
+    └── test/x/LoggingTest/             64 focused XTC test methods
 
 lib_slogging/                           slog-shaped sibling library
 ├── build.gradle.kts
@@ -117,20 +123,26 @@ lib_slogging/                           slog-shaped sibling library
     │       ├── LoggerContext.x         optional SharedContext<Logger> helper
     │       ├── TextHandler.x           default human-readable handler (const)
     │       ├── JSONHandler.x           JSON-Lines handler (const, lib_json renderer)
+    │       ├── HandlerOptions.x        threshold, redaction, source, field-name knobs
+    │       ├── AsyncHandler.x          bounded async wrapper (service)
     │       ├── NopHandler.x            drops every record (const)
     │       └── MemoryHandler.x         test-helper (service)
-    └── test/x/SLoggingTest/            34 focused XTC test methods
+    └── test/x/SLoggingTest/            37 focused XTC test methods
 ```
 
 ## Status
 
 **Both libraries are intended to compile and pass tests.** End-to-end demo runs in
-`manualTests/TestLogger.x` and exercises both injected logger types (interpreter side;
-JIT-side wiring is Tier 3).
-Tier 1+2 work landed in this branch; Tier 3 (compiler default-name,
-`AsyncLogSink`, `lib_logging_logback`, native bridge) is explicitly out of
-scope for this PR — see `open-questions.md` for the tier breakdown. The
-branch is ready for reviewer feedback on the design choice.
+`manualTests/TestLogger.x` and exercises both injected logger types on the
+interpreter side. Runtime fallback naming for injected `logging.Logger` now derives
+from the caller namespace when the compiler only supplies the default field name
+`"logger"`. Explicit source metadata is available through `Logger.logAt(...)`;
+automatic compiler call-site capture remains the next compiler/runtime polish step.
+
+Tier 3 backend primitives have landed in the base libraries. A full
+configuration-file loader, rolling-file/network destinations, and an optional Java
+Logback bridge are deliberately not shipped in this branch; the docs explain where
+those belong if the canonical `lib_logging` API is accepted.
 
 ## Reference
 

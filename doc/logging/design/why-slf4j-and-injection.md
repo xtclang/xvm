@@ -113,9 +113,10 @@ shape gets us:
   They do not pick a backend, they do not have a config file, they cannot break
   downstream consumers by their choice. A library that does logging is a library that
   does logging *politely*.
-- **An application author can swap `ConsoleLogSink` for `LogbackLogSink` (future) for
-  `NativeSlf4jLogSink` (future) without recompiling any library.** Behind a stable
-  injection point.
+- **An application author can swap `ConsoleLogSink` for `JsonLogSink`,
+  `CompositeLogSink`, `HierarchicalLogSink`, a future configured backend, or an
+  optional native bridge without recompiling any library.** Behind a stable injection
+  point.
 - **Test authors get `MemoryLogSink` for free.** They wire it up once and assert on
   `events`. No global state, no `LogManager.getLogManager().reset()`, no flaky tests.
 - **Future structured-logging consumers (log aggregators, dashboards) get a stable event
@@ -227,17 +228,19 @@ This is what every facade has aspired to, and almost-but-not-quite achieved.
 
 ### 3.2 The host application's experience
 
-Wants production-grade logging? Provide a `LogbackLogSink` (future module). Provide it
-*to the container* and every library inside the container picks it up. No
-"add slf4j-logback to the classpath" ceremony, no version-skew warnings, no shading
-games. The host owns the injector; the host owns the routing.
+Wants production-grade logging? Provide a composed `LogSink` such as
+`new AsyncLogSink(new CompositeLogSink([...]))`, with `JsonLogSink` or a future
+destination-specific backend inside it. Provide it *to the container* and every
+library inside the container picks it up. No "add slf4j-logback to the classpath"
+ceremony, no version-skew warnings, no shading games. The host owns the injector; the
+host owns the routing.
 
 Wants logs disabled for some embedded module? Override the injection for that module's
 sub-container. There is no Java equivalent that doesn't involve `MarkerFilter` hacks.
 
-Wants a custom JSON wire format? Write a `JsonLineLogSink`, register it. Forty-plus
-embedded libraries in the application start emitting JSON without one of them having
-done anything.
+Wants a custom JSON wire format? Configure `JsonLogSink` or write another `LogSink`,
+register it. Forty-plus embedded libraries in the application start emitting JSON
+without one of them having done anything.
 
 ### 3.3 The ops engineer's experience
 

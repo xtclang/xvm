@@ -13,6 +13,7 @@
  * the xunit engine.
  */
 module LoggingTest {
+    package json      import json.xtclang.org;
     package logging   import logging.xtclang.org;
     package xunit import xunit.xtclang.org;
 }

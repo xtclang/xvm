@@ -9,14 +9,13 @@ The short answer:
 
 - **Feasibility: high.** The bridge already does this for `jline`. Adding SLF4J + Logback
   is a small engineering task.
-- **Recommendation: don't make it the primary path.** The pure-Ecstasy `LogSink`
-  design wins on portability, debuggability, and surface-area minimisation. A native
-  bridge is interesting as an *escape hatch* for users who want to use existing Java
-  Logback configuration assets unchanged. Document it; design for it; don't ship it as
-  the default.
+- **Branch decision: don't ship it in this POC.** The pure-Ecstasy `LogSink` design is
+  the canonical path because it wins on portability, debuggability, and surface-area
+  minimisation. A native bridge remains an escape hatch for users who want to keep
+  existing Java Logback configuration assets unchanged.
 
 The rest of this doc walks through the evidence, the trade-offs, and what a native
-bridge would look like if we built one.
+bridge would look like if we built one later.
 
 ## Evidence the bridge can carry external Java dependencies
 
@@ -183,8 +182,8 @@ Three options, ordered by recommendation:
 
 ### Option A (recommended): pure-Ecstasy `LogSink` is the primary path
 
-Ship `ConsoleLogSink` as the default. Ship `lib_logging_logback` (the future module
-described in `../future/logback-integration.md`) as a pure-Ecstasy implementation.
+Ship `ConsoleLogSink` plus the base pure-Ecstasy backend primitives as the default.
+Build any `lib_logging_logback` configuration module on top of those primitives.
 
 A native sink, if we ever ship one, is *one* of multiple `LogSink` choices, not the
 default. Users who want the Java Logback experience opt in explicitly.
@@ -221,8 +220,8 @@ The native bridge angle is worth knowing about because:
    We've designed for that.
 
 But: the long-term answer is a pure-Ecstasy implementation. We get there incrementally:
-ship the API, ship a small default sink, ship a logback-equivalent module written in
-Ecstasy, optionally ship a native bridge for legacy interop.
+ship the API, ship the base backend primitives, add destination/configuration modules
+written in Ecstasy, and optionally ship a native bridge for legacy interop.
 
 The most important property is that none of these decisions break caller code. The
 `Logger` interface and the `LogSink` boundary make all of this swappable.

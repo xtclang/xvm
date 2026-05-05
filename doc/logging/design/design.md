@@ -15,10 +15,15 @@
               │  LogSink         (interface)     │  ← API ↔ impl boundary
               ├──────────────────────────────────┤
               │  ConsoleLogSink                  │  ← shipped impls
+              │  JsonLogSink                      │
+              │  CompositeLogSink                 │
+              │  HierarchicalLogSink              │
+              │  AsyncLogSink                     │
               │  NoopLogSink                     │
               │  MemoryLogSink                   │
-              │  (future) LogbackLogSink         │
-              │  (future) NativeSlf4jLogSink     │
+              │  (future) configured/destination │
+              │           sinks                   │
+              │  (optional future) native bridge │
               └──────────────────────────────────┘
 ```
 
@@ -150,8 +155,9 @@ Concretely, in this library:
   construction). Structurally identical to
   `lib_ecstasy/src/main/x/ecstasy/io/ConsoleAppender.x` and `ConsoleLog.x`, both `class`.
 - `MemoryLogSink`, `ListLogSink` — `service` (collect `events[]`).
+- `AsyncLogSink` — `service` (owns a bounded queue and drain state).
+- `HierarchicalLogSink` — `service` (owns mutable per-prefix level configuration).
 - A future `FileLogSink` owning a `Writer` — `service`.
-- A future `AsyncLogSink` owning a worker queue — `service`.
 
 This matches the pattern used elsewhere in the XDK / platform ecosystem:
 
@@ -246,37 +252,33 @@ helper lives in the host runtime's injector library, not here.
 
 ## Non-goals (v0)
 
-Items deliberately *not* in scope for the base POC of `lib_logging`. Each is
-either tracked as Tier 3 in `../open-questions.md` or punted on principle.
+Items deliberately *not* in scope for the base POC of `lib_logging`.
 
 - **Distributed tracing context propagation.** `MDC` carries strings; that's
   it. A future tracing library can write its trace ID into MDC and let the
   logging library carry it, but `lib_logging` itself does not implement
   trace/span propagation.
-- **Async / batched / buffered sinks.** The `LogSink` contract allows them;
-  the default sinks shipped here don't do them. The async wrapper sink lives
-  in the future `lib_logging_logback` (or its own follower module), not the
-  base library — `../open-questions.md` item 7.
 - **Configuration file format.** The default sink has one knob (`rootLevel`)
-  set at construction. A real config story (XML / programmatic / hot reload)
-  belongs to the future Logback-style backend; `../future/logback-integration.md`
-  sketches it.
-- **Compile-time logger-name defaulting from the enclosing module.**
-  `@Inject Logger logger;` currently gets the fixed-name root logger; users
-  derive per-module loggers via `logger.named("...")`. Auto-substitution from
-  the enclosing module's qualified name is W-4 in `../open-questions.md` and
-  needs an XTC compiler change.
+  set at construction, and `JsonLogSinkOptions` covers JSON field names,
+  inclusion, threshold, and redaction. A real config story (XML / programmatic /
+  hot reload) belongs to the future Logback-style backend;
+  `../future/logback-integration.md` sketches it.
+- **Automatic call-site source capture.** `Logger.logAt(...)` gives the runtime/compiler
+  a stable lowering target and sinks can render `sourceFile` / `sourceLine`, but the
+  compiler does not yet synthesize those arguments for ordinary `logger.info(...)`
+  calls.
 
 ## What isn't here yet
 
-- **Compiler-side default name from module** — `@Inject Logger logger;` (no
-  `resourceName`) currently gets the fixed-name root logger; users derive per-class
-  loggers via `logger.named("...")`. The XTC-compiler change to substitute the
-  enclosing module's qualified name is `../future/runtime-implementation-plan.md` Stage 4 and
-  remains open.
-- **`AsyncLogSink` / `lib_logging_logback` / native bridge** — see
-  `../open-questions.md` items 7 (async) and the `../future/logback-integration.md` /
-  `../future/native-bridge.md` follower-module sketches.
+- **Compiler-side exact default names** — the interpreter runtime now falls back from
+  the field name `"logger"` to the caller namespace for canonical `logging.Logger`
+  injections. A compiler pass can still improve this by emitting the exact
+  module/class logger name as the resource name.
+- **External Logback-style configuration loader / native bridge** — the base backend
+  primitives (`AsyncLogSink`, `CompositeLogSink`, `HierarchicalLogSink`, `JsonLogSink`)
+  are in this module. XML/JSON config loading, rolling files, network destinations, and
+  any Java Logback bridge remain explicit follow-up modules; see
+  `../future/logback-integration.md` and `../future/native-bridge.md`.
 - **Per-container override convenience** — open question 8.
 
 The runtime-side injection wiring lives in
@@ -285,7 +287,7 @@ The runtime-side injection wiring lives in
 earlier interpose service `xRTLogger.java` was removed in favour of constructing
 `BasicLogger` directly so MDC fiber-locals survive injection (see Q-D5 in
 `../open-questions.md`). The real `MessageFormatter` is implemented (12 tests in
-`MessageFormatterTest`). Tests live in `lib_logging/src/test/x/LoggingTest/` (54
+`MessageFormatterTest`). Tests live in `lib_logging/src/test/x/LoggingTest/` (64
 passing as of this commit).
 
 

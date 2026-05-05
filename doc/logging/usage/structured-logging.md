@@ -126,59 +126,29 @@ just reads `event.keyValues`. The default `ConsoleLogSink` is intentionally simp
 appends KV pairs as `{key=value, key=value}` after the message, in the same spirit as
 Logback's simple text layouts. Structured sinks can render the same fields as real JSON.
 
-A KV-aware structured sink — say `JsonLineLogSink` — would render every event as a
-single JSON object per line:
+The shipped `JsonLogSink` renders every event as a single JSON object per line:
 
 ```json
 {"timestamp":"2026-04-29T11:23:45.012Z","level":"INFO","logger":"com.example.PaymentService","message":"payment processed","paymentId":"p_123","amount":4200,"currency":"EUR","merchantId":"m_42","mdc":{"requestId":"r_abc"}}
 ```
 
-That's a separate file (`JsonLineLogSink.x`) implementing `LogSink`, and the runtime
-chooses whether it's the active sink. Caller code is unchanged.
+That's a separate `LogSink`, and the runtime chooses whether it's the active sink.
+Caller code is unchanged.
 
-### Sketch: a `JsonLineLogSink`
+### Configuring `JsonLogSink`
 
 ```ecstasy
-service JsonLineLogSink
-        implements LogSink {
-
-    @Inject Console console;
-    public/private Level rootLevel = Info;
-
-    @Override
-    Boolean isEnabled(String loggerName, Level level, Marker? marker = Null) {
-        return level.severity >= rootLevel.severity;
-    }
-
-    @Override
-    void log(LogEvent event) {
-        StringBuffer json = new StringBuffer();
-        json.append('{');
-        appendField(json, "timestamp", event.timestamp.toString());
-        appendField(json, "level",     event.level.name);
-        appendField(json, "logger",    event.loggerName);
-        appendField(json, "message",   event.message);
-        if (!event.markers.empty) {
-            appendArray(json, "markers", event.markers.map(m -> m.name));
-        }
-        for ((String k, Object v) : event.keyValues) {
-            appendField(json, k, v);
-        }
-        if (!event.mdcSnapshot.empty) {
-            appendObject(json, "mdc", event.mdcSnapshot);
-        }
-        if (Exception e ?= event.exception) {
-            appendField(json, "exception", e.toString());
-        }
-        json.append('}');
-        console.print(json.toString());
-    }
-
-    // ... helper methods elide JSON-escape detail; in production, defer to lib_json.
-}
+LogSink sink = new JsonLogSink(new JsonLogSinkOptions(
+        Info,
+        ["authorization", "password"],
+        "***",
+        True, True, True, True,
+        "time", "level", "logger", "message",
+        "mdc", "markers", "exception", "source"));
 ```
 
-Callers don't change. The sink is the only thing that knows the wire format is JSON.
+`JsonLogSink` renders through `lib_json`, preserves MDC/markers/key-values/source, and
+redacts configured keys before output.
 
 ## What about `MDC` vs key/value pairs?
 
@@ -200,17 +170,16 @@ The smallest possible change to a structured-logging-heavy codebase moving from 
 changes, and the LogSink choice on the deployment side.
 
 The bigger story — encoder/appender wiring, log aggregator integration — is handled by
-the structured sink (`JsonLineLogSink` in the simple case, a future Logback-bridge sink
-in the complex case). See `../future/logback-integration.md`.
+the structured sink (`JsonLogSink` in the simple case, a future configured backend in
+the complex case). See `../future/logback-integration.md`.
 
 ## What to build first vs. later
 
 For the next production-oriented cut, the right order is:
 
-1. Add a `JsonLineLogSink` that renders one JSON object per event using `lib_json`.
-2. Decide whether duplicate structured keys should remain "last value wins" (`Map`) or
+1. Decide whether duplicate structured keys should remain "last value wins" (`Map`) or
    preserve duplicates (`KeyValuePair[]`, closer to SLF4J 2.x).
-3. Add cloud-oriented layouts that map MDC, markers, and key/value pairs to the field
+2. Add cloud-oriented layouts that map MDC, markers, and key/value pairs to the field
    names expected by GCP / AWS / Azure shippers.
 
 Everything beyond that — typed value formatting, schema validation, OpenTelemetry

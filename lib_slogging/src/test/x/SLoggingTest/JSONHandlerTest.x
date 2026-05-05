@@ -3,6 +3,7 @@ import json.JsonObject;
 import json.Parser;
 
 import slogging.Attr;
+import slogging.HandlerOptions;
 import slogging.JSONHandler;
 import slogging.Level;
 import slogging.Record;
@@ -65,6 +66,23 @@ class JSONHandlerTest {
         assert obj["payments"].is(JsonObject);
         JsonObject payments = obj["payments"].as(JsonObject);
         assert payments["amount"] == 1099;
+    }
+
+    @Test
+    void shouldApplyHandlerOptionsRedaction() {
+        JSONHandler handler = new JSONHandler(
+                new HandlerOptions(Level.Info, ["token"]));
+        Record record = new Record(
+                time    = new Time("2019-05-22T120123.456Z"),
+                message = "auth",
+                level   = Level.Info,
+                attrs   = [Attr.of("token", "secret"), Attr.of("user", "u_1")],
+        );
+
+        JsonObject obj = parseObject(handler.render(record));
+
+        assert obj["token"] == "***";
+        assert obj["user"]  == "u_1";
     }
 
     private JsonObject parseObject(String rendered) {

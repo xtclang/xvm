@@ -11,21 +11,28 @@ import json.Printer;
  * source metadata is emitted under `"source"`, and exceptions are represented
  * structurally.
  */
-const JSONHandler(Level rootLevel, String groupPrefix)
+const JSONHandler(HandlerOptions options, String groupPrefix)
         implements Handler {
 
     /**
      * No-arg convenience. See parallel comment on `lib_slogging.TextHandler`.
      */
     construct() {
-        construct JSONHandler(Level.Info, "");
+        construct JSONHandler(new HandlerOptions(), "");
     }
 
     /**
      * Single-arg convenience: configurable threshold, no group prefix.
      */
     construct(Level rootLevel) {
-        construct JSONHandler(rootLevel, "");
+        construct JSONHandler(new HandlerOptions(rootLevel), "");
+    }
+
+    /**
+     * Production-options convenience.
+     */
+    construct(HandlerOptions options) {
+        construct JSONHandler(options, "");
     }
 
     @Inject Console console;
@@ -35,7 +42,7 @@ const JSONHandler(Level rootLevel, String groupPrefix)
      */
     @Override
     Boolean enabled(Level level) {
-        return level.severity >= rootLevel.severity;
+        return level.severity >= options.rootLevel.severity;
     }
 
     /**
@@ -60,24 +67,26 @@ const JSONHandler(Level rootLevel, String groupPrefix)
      */
     JsonObject toJson(Record record) {
         JsonObject obj = json.newObject();
-        obj.put("time",  record.time.toString());
-        obj.put("level", record.level.label);
-        obj.put("msg",   record.message);
+        obj.put(options.timeKey,    record.time.toString());
+        obj.put(options.levelKey,   record.level.label);
+        obj.put(options.messageKey, record.message);
 
         JsonObject attrTarget = groupPrefix == "" ? obj : ensureObject(obj, groupPrefix);
         addAttrs(attrTarget, record.attrs);
 
         if (Exception e ?= record.exception) {
-            obj.put("exception", exceptionJson(e));
+            obj.put(options.exceptionKey, exceptionJson(e));
         }
 
-        if (String file ?= record.sourceFile) {
-            JsonObject source = json.newObject();
-            source.put("file", file);
-            if (record.sourceLine >= 0) {
-                source.put("line", record.sourceLine.toIntLiteral());
+        if (options.includeSource) {
+            if (String file ?= record.sourceFile) {
+                JsonObject source = json.newObject();
+                source.put("file", file);
+                if (record.sourceLine >= 0) {
+                    source.put("line", record.sourceLine.toIntLiteral());
+                }
+                obj.put(options.sourceKey, source.makeImmutable());
             }
-            obj.put("source", source.makeImmutable());
         }
 
         if (record.threadName != "") {
@@ -110,7 +119,7 @@ const JSONHandler(Level rootLevel, String groupPrefix)
      */
     private void addAttrs(JsonObject obj, Attr[] attrs) {
         for (Attr a : attrs) {
-            obj.put(a.key, attrValue(a.value));
+            obj.put(a.key, options.redacts(a.key) ? options.redaction : attrValue(a.value));
         }
     }
 

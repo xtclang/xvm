@@ -38,7 +38,7 @@ Same rule as `LogSink`:
 | Shape | Use it for | Examples |
 |---|---|---|
 | `const` | Stateless forwarders and fixed-configuration renderers. | `TextHandler`, `JSONHandler`, `NopHandler`. |
-| `service` | Shared mutable state or external resources. | `MemoryHandler`, file writers, network writers, async queues. |
+| `service` | Shared mutable state or external resources. | `MemoryHandler`, `AsyncHandler`, file writers, network writers. |
 
 ## Counting records by level
 
@@ -103,6 +103,23 @@ Your own handler test can pass the handler instance plus a snapshot function tha
 returns the records it emitted. The contract checks that derived attrs are prepended
 and groups are nested before the final handler observes the record.
 
+## Handler options and async wrapping
+
+The shipped text and JSON handlers accept `HandlerOptions`, which covers the
+production knobs this POC needs without inventing a config-file format:
+
+```ecstasy
+Handler handler = new JSONHandler(new HandlerOptions(
+        Level.Info,
+        ["authorization", "password"]));
+
+Logger logger = new Logger(new AsyncHandler(handler));
+```
+
+`HandlerOptions` controls the root threshold, source inclusion, field names, and
+key-based redaction. `AsyncHandler` owns the bounded queue and preserves `withAttrs`
+/ `withGroup` semantics by wrapping the derived delegate handler.
+
 ## Filtering audit events
 
 In the slog model, categories are attrs, not markers:
@@ -159,13 +176,13 @@ category in the same `Attr` channel as every other structured field.
 | Do not parse `record.message` to recover fields. | Structured data belongs in `Attr` values. |
 | Do not add SLF4J-style placeholder formatting to the core handler path. | Migration sugar can live in an adapter; the slog core stays message-plus-attrs. |
 
-## What a production JSON handler still needs
+## What a production destination handler still needs
 
-The shipped `JSONHandler` renders through `lib_json`, preserves nested groups, and
-represents exceptions structurally. A production cloud sink built on the same handler
-contract would add destination configuration (`Console`, file, stream, socket, HTTP
-exporter), attr replacement/redaction, timestamp and level formatting options, and an
-async wrapper for network or disk output.
+The shipped `JSONHandler` renders through `lib_json`, preserves nested groups, honors
+redaction options, includes source metadata when configured, and represents exceptions
+structurally. A production cloud/file/network handler built on the same contract would
+add destination configuration (`Console`, file, stream, socket, HTTP exporter),
+retry/drop policy, batching, and backend-specific timestamp or severity formatting.
 
 
 ---

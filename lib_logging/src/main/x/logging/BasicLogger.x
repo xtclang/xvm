@@ -106,6 +106,17 @@ const BasicLogger(String name, LogSink sink, LoggerRegistry? registry)
     }
 
     @Override
+    void logAt(Level level, String message, String sourceFile, Int sourceLine,
+               Object[] arguments = [], Exception? cause = Null, Marker? marker = Null) {
+        Marker[] markers = [];
+        if (Marker m ?= marker) {
+            markers = [m.freeze()];
+        }
+        emitWith(level, message, arguments, cause, markers, [],
+                sourceFile=sourceFile, sourceLine=sourceLine);
+    }
+
+    @Override
     LoggingEventBuilder atTrace() = builderFor(Trace);
     @Override
     LoggingEventBuilder atDebug() = builderFor(Debug);
@@ -153,7 +164,8 @@ const BasicLogger(String name, LogSink sink, LoggerRegistry? registry)
      * sink-side `isEnabled` fast path therefore sees frozen markers too.
      */
     void emitWith(Level level, String message, Object[] arguments, Exception? cause,
-                  Marker[] markers, Map<String, Object> keyValues) {
+                  Marker[] markers, Map<String, Object> keyValues,
+                  String? sourceFile = Null, Int sourceLine = -1) {
         // v0 policy on `arguments`: no defensive copy. Per `open-questions.md` Q11 the
         // caller is contractually required not to mutate the array between the return of
         // `info(...)` and any (possibly async) sink consuming the resulting `LogEvent`.
@@ -180,6 +192,8 @@ const BasicLogger(String name, LogSink sink, LoggerRegistry? registry)
                 arguments   = arguments,
                 mdcSnapshot = mdc.copyOfContextMap,
                 threadName  = "",            // TODO(runtime): expose current-fiber identity
+                sourceFile  = sourceFile,
+                sourceLine  = sourceLine,
                 keyValues   = keyValues,
         ));
     }

@@ -8,20 +8,13 @@
  *
  * If the record carries an exception, it is rendered on the following line.
  *
- * # POC status
- *
- * The implementation here is intentionally minimal — enough to demonstrate the slog
- * shape end to end (`Logger.with(...)`, attribute folding into namespaced keys, level
- * threshold filtering) but not yet a fully configurable formatter. Specifically, it has
- * fixed timestamp/message formatting and no handler options object yet.
- *
  * # Why this handler is a `const`, not a `service`
  *
  * Same rule as `lib_logging`'s `ConsoleLogSink`: stateless forwarder over `@Inject
  * Console`. Threshold fixed at construction. No accumulation, no shared mutable state.
  * See `doc/logging/design/design.md` ("Sink type: `const` vs `service`") for the full rule.
  */
-const TextHandler(Level rootLevel, String groupPrefix)
+const TextHandler(HandlerOptions options, String groupPrefix)
         implements Handler {
 
     /**
@@ -30,14 +23,21 @@ const TextHandler(Level rootLevel, String groupPrefix)
      * instead of default-arg synthesis.
      */
     construct() {
-        construct TextHandler(Level.Info, "");
+        construct TextHandler(new HandlerOptions(), "");
     }
 
     /**
      * Single-arg convenience: configurable threshold, no group prefix.
      */
     construct(Level rootLevel) {
-        construct TextHandler(rootLevel, "");
+        construct TextHandler(new HandlerOptions(rootLevel), "");
+    }
+
+    /**
+     * Production-options convenience.
+     */
+    construct(HandlerOptions options) {
+        construct TextHandler(options, "");
     }
 
     @Inject Console console;
@@ -48,7 +48,7 @@ const TextHandler(Level rootLevel, String groupPrefix)
      */
     @Override
     Boolean enabled(Level level) {
-        return level.severity >= rootLevel.severity;
+        return level.severity >= options.rootLevel.severity;
     }
 
     /**
@@ -69,6 +69,16 @@ const TextHandler(Level rootLevel, String groupPrefix)
         for (Attr a : record.attrs) {
             buf.append(' ');
             renderAttr(buf, groupPrefix, a);
+        }
+
+        if (options.includeSource) {
+            if (String file ?= record.sourceFile) {
+                buf.append(" source=")
+                   .append(file);
+                if (record.sourceLine >= 0) {
+                    buf.append(':').append(record.sourceLine);
+                }
+            }
         }
 
         console.print(buf.toString());
@@ -106,7 +116,8 @@ const TextHandler(Level rootLevel, String groupPrefix)
                 renderAttr(buf, key, child);
             }
         } else {
-            buf.append(key).append('=').append(a.value.toString());
+            buf.append(key).append('=')
+               .append(options.redacts(a.key) ? options.redaction : a.value.toString());
         }
     }
 

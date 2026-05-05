@@ -213,9 +213,9 @@ log.LogSink sink   = new log.ConsoleLogSink(log.Level.Debug);
 log.Logger  logger = new log.BasicLogger("com.example", sink);
 ```
 
-For a richer per-logger configuration tree see `../future/logback-integration.md` — the future
-`lib_logging_logback` module would expose a programmatic and/or file-based config API
-analogous to Logback's `JoranConfigurator`.
+For richer per-logger routing use `HierarchicalLogSink` programmatically today. A
+future configured backend can add file-based config analogous to Logback's
+`JoranConfigurator`; see `../future/logback-integration.md`.
 
 ## 9. Custom appender / sink
 

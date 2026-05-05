@@ -1,12 +1,13 @@
 # Logback-style integration
 
-`lib_logging` v0 ships a single, intentionally minimal default sink: `ConsoleLogSink`.
-For real-world deployment we expect a Logback-equivalent backend — configuration-driven,
-multi-appender, hierarchical — to live in a separate module. This document sketches how
-that would be shaped.
+`lib_logging` now ships the base Logback-style primitives directly:
+`CompositeLogSink`, `HierarchicalLogSink`, `AsyncLogSink`, `JsonLogSink`, and
+`JsonLogSinkOptions`.
 
-It is intentionally *forward-looking*. Nothing here is implemented yet; the point is to
-make sure today's API choices don't preclude tomorrow's backend.
+This document is still forward-looking, but its scope is narrower now: it sketches the
+optional configuration-driven backend layer that could sit on top of those primitives
+and add config files, richer appenders, filters, hot reload, rolling files, and
+destination-specific policies.
 
 ## What "Logback-style" means
 
@@ -23,7 +24,9 @@ For SLF4J users, "Logback" means a specific bundle of features beyond the SLF4J 
 | **Context-aware MDC rendering** | MDC values appear in formatted output without the message having to mention them. |
 | **Rolling file appenders** | Time-based, size-based, or composite rotation. |
 
-The goal: a future `lib_logging_logback` module ships every one of those.
+The base library covers the first three in programmatic form and includes async/JSON
+building blocks. The goal of a future `lib_logging_logback` module is to provide the
+configuration and destination ecosystem around them.
 
 ## The architectural fit
 
@@ -251,8 +254,9 @@ service AsyncAppender(String name, Appender delegate, Int queueSize)
 }
 ```
 
-This is the Ecstasy-native equivalent of Logback's `AsyncAppender`. Fibers replace
-threads; otherwise the design is identical.
+This is the Ecstasy-native equivalent of Logback's `AsyncAppender`. The base library
+already ships `AsyncLogSink`; a full backend can replace or compose it when it needs
+drop/block policies, batching, or shutdown hooks.
 
 ## Migration story for SLF4J + Logback users
 

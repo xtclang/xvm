@@ -1,8 +1,11 @@
 /**
  * Corresponds, as a whole module, to the `slf4j-api` jar in the Java ecosystem — plus a
  * minimum viable binding (analogous to `slf4j-simple`) so the library is usable out of
- * the box. A future `lib_logging_logback` module would correspond to `logback-classic`
- * (configuration-driven, multi-appender, hierarchical logger config).
+ * the box. The base module also includes the production building blocks that normally
+ * sit behind an SLF4J facade: async forwarding, multi-sink fanout, hierarchical logger
+ * thresholds, and JSON-Lines rendering with redaction knobs. A future
+ * `lib_logging_logback` module can add external configuration-file loading on top of
+ * those primitives.
  *
  * Ecstasy logging library.
  *
@@ -38,13 +41,18 @@
  *      - [ConsoleLogSink]        — default sink, writes through `@Inject Console`
  *      - [NoopLogSink]           — drops every event
  *      - [MemoryLogSink]         — captures events in memory; useful in tests
+ *      - [JsonLogSink]           — JSON-Lines sink rendered by `lib_json`
+ *      - [CompositeLogSink]      — Logback-style multi-appender fanout
+ *      - [HierarchicalLogSink]   — Logback-style longest-prefix level routing
+ *      - [AsyncLogSink]          — bounded async wrapper for slow sinks
  *
- * A future `lib_logging_logback` module is expected to ship a configuration-driven sink with
- * appenders, layouts, filters, and per-logger thresholds — see
+ * A future `lib_logging_logback` module is expected to ship configuration-file loading,
+ * richer appenders, layouts, filters, and hot reload — see
  * `doc/logging/future/logback-integration.md`.
  *
  * For official SLF4J API links mapped back to these Ecstasy types, see
  * `doc/logging/api-cross-reference.md`.
  */
 module logging.xtclang.org {
+    package json import json.xtclang.org;
 }

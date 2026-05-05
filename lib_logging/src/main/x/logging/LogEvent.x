@@ -23,6 +23,11 @@ const LogEvent(
         Object[]            arguments   = [],
         Map<String, String> mdcSnapshot = [],
         String              threadName  = "",
+        // Optional source metadata. The default `(Null, -1)` means "not captured".
+        // `Logger.logAt(...)` populates these fields explicitly; future compiler/runtime
+        // call-site capture should lower into that same API instead of changing sinks.
+        String?             sourceFile  = Null,
+        Int                 sourceLine  = -1,
         // Structured key/value pairs accumulated through `LoggingEventBuilder.addKeyValue`.
         // Mirrors SLF4J 2.x's `KeyValuePair` list on `LoggingEvent`. Sinks that don't care
         // about structured payloads can ignore this field; sinks that do (JSON layouts,

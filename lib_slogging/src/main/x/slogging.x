@@ -45,6 +45,8 @@
  * The implementation side of that boundary contains:
  *      - [TextHandler]   — default human-readable text handler, writes via `@Inject Console`
  *      - [JSONHandler]   — JSON-Lines structured handler, rendered by `lib_json`
+ *      - [HandlerOptions] — threshold, redaction, source, and field-name options
+ *      - [AsyncHandler]  — bounded async wrapper for slow handlers
  *      - [BoundHandler]  — derivation wrapper used by handlers that do not cache prefixes
  *      - [NopHandler]    — drops every record
  *      - [MemoryHandler] — captures records in memory; useful in tests

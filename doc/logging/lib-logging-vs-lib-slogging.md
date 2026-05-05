@@ -19,11 +19,13 @@ the axes that matter for XDK code, and end with the reviewer questions that shou
 decide which shape survives. Direct links from each Ecstasy type to its SLF4J or
 Go `log/slog` counterpart are in [`api-cross-reference.md`](api-cross-reference.md).
 
-> Status note: both libraries are working comparison POCs. `lib_logging` has the
-> fuller SLF4J surface (54 focused XTC test methods plus the injected manual demo);
-> `lib_slogging` has the more compact slog surface (34 focused XTC test methods plus
-> injected/manual coverage), with runtime injection, `lib_json` JSON rendering, source
-> metadata, context binding, and handler derivation semantics implemented.
+> Status note: both libraries are working comparison POCs. `lib_logging` is the
+> recommended canonical facade and has the fuller SLF4J surface (64 focused XTC test
+> methods plus the injected manual demo), including async/composite/hierarchical/JSON
+> backend building blocks. `lib_slogging` has the more compact slog surface (37 focused
+> XTC test methods plus injected/manual coverage), with runtime injection, async
+> handler support, `lib_json` JSON rendering, redaction options, source metadata,
+> context binding, and handler derivation semantics implemented.
 
 ---
 
@@ -106,8 +108,8 @@ Both produce equivalent structured output. The shapes diverge in how
 | **Message** | Templated: `info("user {} did {}", [name, action])`. SLF4J-style `{}` placeholders. | Free-form string + attrs separately. No interpolation. |
 | **Sinks / handlers** | `LogSink.isEnabled(name, level, marker)`, `LogSink.log(event)`. Two methods. | `Handler.enabled(level)`, `Handler.handle(record)`, `Handler.withAttrs(attrs)`, `Handler.withGroup(name)`. Four methods — handler can pre-resolve attrs at derivation time. |
 | **Logger naming** | Hierarchical names: `logger.named("payments.stripe")`. The caller supplies the full category name, like `LoggerFactory.getLogger("...")`. | Loggers are uniform; categorisation lives in attrs (`"component" -> "payments.stripe"`). |
-| **Source location** | Not captured by default. | `Logger.logAt(...)` explicitly populates `Record.sourceFile` / `sourceLine`; automatic call-site capture is future runtime/compiler work. |
-| **Async / batching** | Wrapper sink (`AsyncLogSink`, future) drains a bounded queue. | Wrapper handler — same shape. |
+| **Source location** | `Logger.logAt(...)` explicitly populates `LogEvent.sourceFile` / `sourceLine`; automatic call-site capture is future runtime/compiler work. | `Logger.logAt(...)` explicitly populates `Record.sourceFile` / `sourceLine`; automatic call-site capture is future runtime/compiler work. |
+| **Async / batching** | `AsyncLogSink` wraps any sink with a bounded queue. | `AsyncHandler` wraps any handler with the same bounded-queue shape. |
 | **Familiarity bench** | Java/Kotlin/Scala. Anyone who has done structured logging on the JVM. | Go (1.21+). Increasingly the modern go-to in cloud-native code. |
 
 ---
@@ -539,16 +541,21 @@ how SLF4J users intuitively expect it to work. slog forfeits this for uniformity
 
 ### 3.7 Source location
 
-Out of scope for both libraries' v0, but worth noting: slog explicitly carries a
-`pc`/`source` field on `Record` and the API contract says handlers may render it.
-SLF4J leaves it to the sink. This isn't an architectural difference; it's a contract
-difference.
+Both libraries now expose an explicit source-aware call as the lowering target for
+future compiler/runtime help: `logging.Logger.logAt(...)` populates
+`LogEvent.sourceFile` / `sourceLine`; `slogging.Logger.logAt(...)` populates
+`Record.sourceFile` / `sourceLine`.
+
+Automatic call-site capture remains compiler/runtime polish. The library-level
+decision is made: source metadata belongs on the immutable event/record, not in a
+backend-specific side channel.
 
 ### 3.8 Async / batching
 
 Same shape in both: a wrapper handler/sink owns a bounded queue and drains on a
-worker fiber. Lives in a follower module (`lib_logging_logback` /
-`lib_slogging_async`), not the base library.
+worker fiber. The base libraries now ship these as `AsyncLogSink` and
+`AsyncHandler` so slow output can be isolated without waiting for a full
+configuration backend.
 
 ### 3.9 Familiarity
 
@@ -687,53 +694,41 @@ lands.
 
 ---
 
-## 6. Tentative recommendation
+## 6. Recommendation
 
-We lean — softly, fully expecting reviewer pushback — toward **`lib_slogging` as the
-canonical Ecstasy logging library, with one borrowed feature from `lib_logging`**:
-the per-fiber `SharedContext` idea, recast as `LoggerContext` and *also*
-optional / never the only path. The reasoning, ranked:
+Choose **`lib_logging` as the canonical Ecstasy logging library**.
 
-1. **Conceptual economy.** One concept (`Attr`) covering markers, structured KVs,
-   message slots, and exception causes is meaningfully simpler than three. Less for
-   newcomers to learn, less for sink authors to handle.
-2. **Modern fit.** slog is the design that emerged after a decade of structured-
-   logging wins in Java/Go. SLF4J is the design that those wins were retrofitted
-   onto. The 2026-era language probably wants the post-retrofit shape.
-3. **Less compiler ask.** No hierarchical naming, no fluent builder, no marker DAG.
-   Smaller surface to support.
-4. **MDC is genuinely useful.** Threading a request-aware logger through a
-   call graph is real work that real codebases get wrong. `LoggerContext` with
-   `Logger.with(...)` semantics, *opt in*, gives you the SLF4J win without the
-   "everything is implicit" cost.
+The decisive reason is not that the SLF4J shape is prettier. It is that the XDK
+needs one logging facade that looks industrially boring to the largest likely
+audience while still leaving room for structured output and backend innovation.
+`lib_logging` now does that:
 
-A third option — **hybrid SLF4J-facade with slog-shaped event model** — is
-worth flagging once but not pushing for v0. Concretely: keep `Logger`,
-`Marker`, `MDC`, the fluent builder; replace the free-form `Object[] arguments`
-on `LogEvent` with a typed `Attr[]`; have `MessageFormatter` resolve `{}`
-placeholders against `attrs` by index, but also have a `JsonLineLogSink`
-render `attrs` directly as a JSON object. SLF4J users get their familiar
-shape; cloud-side JSON pipelines get a clean wire format. The cost is
-strictly more complexity than either pure design — two parallel mental
-models in one library — so we don't recommend it for v0. The right time to
-revisit is after one of the two pure designs is shipping and we know which
-axis we wish we had more of.
+- JVM users recognize the call surface immediately: `Logger`, named loggers, `{}` message
+  formatting, `Exception` cause handling, markers, MDC, and SLF4J 2.x fluent builders.
+- Backend authors get one narrow extension point, `LogSink`, with working examples for
+  console, memory capture, JSON-Lines, async forwarding, multi-destination fanout, and
+  hierarchical per-logger level routing.
+- Cloud and JSON users are not forced to parse message text. Structured key/value pairs
+  travel on `LogEvent.keyValues`; `JsonLogSink` renders them directly and applies
+  redaction policy before output.
+- Runtime injection already works for the interpreter, and the native container now has
+  a default-name fallback for canonical `logging.Logger` injections.
 
-Counter-arguments worth taking seriously:
+`lib_slogging` remains valuable. It is smaller, cleaner, and closer to modern
+attribute-first logging. It also documents a real alternative for teams that prefer
+Go's `slog` mental model. The right long-term shape, however, is not to ship two
+competing XDK facades. Keep `lib_slogging` as review material and possible adapter
+surface; make `lib_logging` the default API users learn first.
 
-- **Familiarity.** A great deal of Ecstasy's audience comes from JVM, where SLF4J is
-  reflexive. Forcing them to relearn a logging API for no reason other than design
-  preference is friction.
-- **Markers and named loggers are not just "structured data dressed up funny" — they
-  enable per-category configuration that's awkward to express as attribute filters
-  in a config file.**
-- **Fluent builders genuinely shine when the keys aren't statically known** — e.g.
-  building a log line from a request whose fields vary. Varargs handle this less
-  cleanly.
+A hybrid SLF4J-facade with slog-shaped event internals is worth revisiting after v0,
+but it should not be the starting point. Mixing `Marker`, `MDC`, `Object[] arguments`,
+and `Attr[]` in one public contract would make the facade harder to teach than either
+pure design.
 
-The recommendation is therefore tentative. We expect to revisit it once the
-reviewers — particularly the XTC language team — weigh in on questions Q-D1 through
-Q-D6 in `open-questions.md`.
+The remaining compiler/runtime work is polish around the chosen facade, not a reason
+to reopen the API choice: automatic source-location capture, better generated logger
+names, and optional backend configuration loaders can all target the existing
+`Logger` -> `LogSink` boundary.
 
 ---
 
@@ -744,12 +739,13 @@ review material needed to choose between them.
 
 | Area | Contents |
 |---|---|
-| `lib_logging/` | SLF4J-shaped library, near-feature-complete for the base API, with 54 focused XTC test methods. |
-| `lib_slogging/` | slog-shaped sibling library at the same comparison waterline, with 34 focused XTC test methods, runtime injection, `lib_json` JSON rendering, explicit source metadata, `LoggerContext`, handler derivation, and handler contract tests. |
-| `doc/logging/` | Design comparison, API cross-reference, language/runtime questions, usage guides, and Tier 3 follow-up sketches. |
+| `lib_logging/` | Recommended canonical SLF4J-shaped library with 64 focused XTC test methods, runtime injection, source metadata API, JSON/redaction sink, async wrapper, composite fanout, and hierarchical per-logger thresholds. |
+| `lib_slogging/` | slog-shaped sibling library with 37 focused XTC test methods, runtime injection, `lib_json` JSON rendering, handler options/redaction, async wrapper, explicit source metadata, `LoggerContext`, handler derivation, and handler contract tests. |
+| `doc/logging/` | Design comparison, API cross-reference, language/runtime questions, usage guides, and backend follow-up sketches. |
 
-We do not propose merging until reviewers have weighed in on at least Q-D6 (which
-API shape) and Q-D1 (sink interface convention).
+The branch is now opinionated: Q-D6 is answered as `lib_logging`. Review can still
+challenge that decision, but the implementation and docs no longer leave the reader
+with two equally recommended facades.
 
 
 ---
