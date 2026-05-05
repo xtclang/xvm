@@ -23,7 +23,6 @@
               │  MemoryLogSink                   │
               │  (future) configured/destination │
               │           sinks                   │
-              │  (optional future) native bridge │
               └──────────────────────────────────┘
 ```
 
@@ -31,17 +30,17 @@ User code holds a `Logger`. The `Logger` is a `BasicLogger` that holds a `LogSin
 sink is whatever the runtime injected. Everything above the `LogSink` line is sink-agnostic
 and stable; everything below is swappable.
 
-This is the same architecture the SLF4J full guide describes (`slf4j_full_guide.md` at
-the repo root, section "Architecture") — it is a deliberate decision to mirror it because
-SLF4J got the layering right, and copying it gets us instant familiarity for free.
+This mirrors the layering that makes SLF4J/Logback durable in Java: the public facade
+is small, the backend boundary is narrow, and concrete output policy lives behind that
+boundary. The Ecstasy version keeps that shape but makes injection the acquisition
+mechanism and keeps `LogSink` as the XDK-native extension point.
 
 ## Why injection (and why per-name loggers come from `Logger.named(String)`)
 
-Ecstasy already routes `Console` through `@Inject Console console;` — see
-`lib_ecstasy/src/main/x/ecstasy/io/Console.x` and `javatools_jitbridge/.../TerminalConsole.java`.
-The runtime controls which `Console` impl gets wired up. Loggers fit the same shape:
-the runtime decides where output goes (in v0, always `ConsoleLogSink`; later, possibly a
-configurable `LogbackLogSink`), and user code is sink-agnostic.
+Ecstasy already routes `Console` through `@Inject Console console;`; the runtime
+controls which `Console` implementation gets wired up. Loggers fit the same shape: the
+runtime decides where output goes (in v0, `ConsoleLogSink`; later, possibly a
+configured sink graph), and user code is sink-agnostic.
 
 `@Inject Logger logger;` resolves to a single fixed-name root logger — exactly one
 supplier (`("logger", loggerType)`) is registered with the injector. Per-name loggers
@@ -54,9 +53,9 @@ static Logger PaymentLogger = logger.named("payments");
 ```
 
 This mirrors SLF4J's `LoggerFactory.getLogger(MyClass.class)` idiom one-to-one, and
-keeps the injector's resource table as the single registry of allowed injections —
-no type-only wildcard fallback, no special-case for `Logger`. See
-`../future/runtime-implementation-plan.md` Stage 1.4 for the full rationale.
+keeps the injector's resource table as the single registry of allowed injections:
+there is one fixed `"logger"` resource, and per-name loggers are derived in XTC rather
+than acquired through wildcard injection.
 
 ## API surface
 
@@ -193,19 +192,6 @@ A separate module providing a configuration-driven sink. Reads a config tree
 The whole thing is just a different `LogSink` implementation. User code that already
 worked against `lib_logging` keeps working. Detailed sketch in `../future/logback-integration.md`.
 
-## Native bridge — could we wrap real Logback?
-
-Yes, technically. `javatools_jitbridge` already imports `jline` (a third-party Java
-library) for the terminal console, proving the bridge can carry external dependencies.
-A `RTLogbackSink.java` extending `nService` and registered in
-`nMainInjector.addNativeResources()` could wrap `org.slf4j.Logger` directly. SLF4J and
-Logback are already in the version catalog (`lang-slf4j`, `lang-logback`), used by the
-lang tooling.
-
-We don't recommend this as the primary path — see `../future/native-bridge.md` for the full
-analysis — but it's a feasible escape hatch and worth documenting because it constrains
-the design.
-
 ## Per-container sink override
 
 Each Ecstasy container has its own injector. Host code that wants a nested
@@ -274,20 +260,17 @@ Items deliberately *not* in scope for the base POC of `lib_logging`.
   the field name `"logger"` to the caller namespace for canonical `logging.Logger`
   injections. A compiler pass can still improve this by emitting the exact
   module/class logger name as the resource name.
-- **External Logback-style configuration loader / native bridge** — the base backend
+- **External Logback-style configuration loader** — the base backend
   primitives (`AsyncLogSink`, `CompositeLogSink`, `HierarchicalLogSink`, `JsonLogSink`)
   are in this module. XML/JSON config loading, rolling files, network destinations, and
-  any Java Logback bridge remain explicit follow-up modules; see
-  `../future/logback-integration.md` and `../future/native-bridge.md`.
+  filters remain explicit follow-up modules; see `../future/logback-integration.md`.
 - **Per-container override convenience** — open question 8.
 
-The runtime-side injection wiring lives in
+The temporary interpreter-side injection wiring lives in
 `javatools/src/main/java/org/xvm/runtime/NativeContainer.java` (`ensureLogger`,
-`ensureConst`); `BasicLogger` is the `const` returned for `@Inject Logger`. The
-earlier interpose service `xRTLogger.java` was removed in favour of constructing
-`BasicLogger` directly so MDC fiber-locals survive injection (see Q-D5 in
-`../open-questions.md`). The real `MessageFormatter` is implemented (12 tests in
-`MessageFormatterTest`). Tests live in `lib_logging/src/test/x/LoggingTest/` (64
+`ensureConst`); `BasicLogger` is the `const` returned for `@Inject Logger` so MDC
+fiber-locals survive injection. The real `MessageFormatter` is implemented (12 tests in
+`MessageFormatterTest`). Tests live in `lib_logging/src/test/x/LoggingTest/` (66
 passing as of this commit).
 
 

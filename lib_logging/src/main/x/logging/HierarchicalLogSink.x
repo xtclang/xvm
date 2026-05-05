@@ -4,6 +4,17 @@
  * The sink keeps a mutable map of logger-name prefixes to levels. The longest matching
  * prefix wins; when no prefix matches, [rootLevel] applies. Events that pass the
  * threshold are forwarded to [delegate].
+ *
+ * This is backend behavior, not pure SLF4J facade behavior. It corresponds to Logback's
+ * configured logger tree:
+ *
+ *      <root level="INFO"/>
+ *      <logger name="com.acme.payments" level="DEBUG"/>
+ *
+ * Ecstasy equivalent:
+ *
+ *      HierarchicalLogSink sink = new HierarchicalLogSink(new ConsoleLogSink(), Info);
+ *      sink.setLevel("com.acme.payments", Debug);
  */
 service HierarchicalLogSink(LogSink delegate, Level rootLevel)
         implements LogSink {

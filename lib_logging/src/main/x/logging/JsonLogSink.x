@@ -9,6 +9,16 @@ import json.Printer;
  * It renders through `lib_json`, preserves MDC, markers, structured key/value pairs,
  * exceptions, and explicit source metadata, and supports key-based redaction through
  * [JsonLogSinkOptions].
+ *
+ * This is backend/encoder behavior, not part of SLF4J itself. The Java comparison point
+ * is Logback with a JSON encoder such as `logstash-logback-encoder`:
+ *
+ *      <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+ *
+ * Ecstasy equivalent:
+ *
+ *      LogSink sink = new JsonLogSink(new JsonLogSinkOptions(Info,
+ *          ["authorization", "password"]));
  */
 const JsonLogSink(JsonLogSinkOptions options)
         implements LogSink {

@@ -66,20 +66,8 @@ const TextHandler(HandlerOptions options, String groupPrefix)
            .append("msg=")
            .append(quote(record.message));
 
-        for (Attr a : record.attrs) {
-            buf.append(' ');
-            renderAttr(buf, groupPrefix, a);
-        }
-
-        if (options.includeSource) {
-            if (String file ?= record.sourceFile) {
-                buf.append(" source=")
-                   .append(file);
-                if (record.sourceLine >= 0) {
-                    buf.append(':').append(record.sourceLine);
-                }
-            }
-        }
+        appendAttrs(buf, groupPrefix, record.attrs);
+        appendSource(buf, record);
 
         console.print(buf.toString());
 
@@ -107,17 +95,53 @@ const TextHandler(HandlerOptions options, String groupPrefix)
     private void renderAttr(StringBuffer buf, String prefix, Attr a) {
         String key = prefix == "" ? a.key : $"{prefix}.{a.key}";
         if (a.value.is(Attr[])) {
-            Boolean first = True;
-            for (Attr child : a.value.as(Attr[])) {
-                if (!first) {
-                    buf.append(' ');
-                }
-                first = False;
-                renderAttr(buf, key, child);
-            }
+            appendNestedAttrs(buf, key, a.value.as(Attr[]));
         } else {
             buf.append(key).append('=')
                .append(options.redacts(a.key) ? options.redaction : a.value.toString());
+        }
+    }
+
+    /**
+     * Append top-level attrs. Each attr starts with a leading space because the base
+     * record fields have already been rendered.
+     */
+    private void appendAttrs(StringBuffer buf, String prefix, Attr[] attrs) {
+        for (Attr attr : attrs) {
+            buf.append(' ');
+            renderAttr(buf, prefix, attr);
+        }
+    }
+
+    /**
+     * Append children of an attr group. The first child continues in the current
+     * position; later children are separated with spaces.
+     */
+    private void appendNestedAttrs(StringBuffer buf, String prefix, Attr[] attrs) {
+        Boolean first = True;
+        for (Attr attr : attrs) {
+            if (!first) {
+                buf.append(' ');
+            }
+            first = False;
+            renderAttr(buf, prefix, attr);
+        }
+    }
+
+    /**
+     * Append source metadata when caller-supplied source capture is enabled.
+     */
+    private void appendSource(StringBuffer buf, Record record) {
+        if (!options.includeSource) {
+            return;
+        }
+
+        if (String file ?= record.sourceFile) {
+            buf.append(" source=")
+               .append(file);
+            if (record.sourceLine >= 0) {
+                buf.append(':').append(record.sourceLine);
+            }
         }
     }
 

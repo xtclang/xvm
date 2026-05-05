@@ -34,6 +34,59 @@ and
 The rest of this document is the detailed prior-art mapping for Logback, Log4j 2,
 Spring Boot, and Go `slog`.
 
+## Logback-style pieces already implemented in XTC
+
+Do not read every Logback-style term in this guide as future work. The base
+`lib_logging` POC already implements several backend primitives that Java teams
+normally associate with Logback rather than SLF4J itself:
+
+| Logback concept | Implemented XTC type | Status |
+|---|---|---|
+| Console appender with a fixed human-readable layout | `ConsoleLogSink` | Implemented; default injected sink. |
+| Multiple appender refs on one logger | `CompositeLogSink` | Implemented; fans out to multiple delegate sinks. |
+| Logger-name hierarchy and longest-prefix level lookup | `HierarchicalLogSink` | Implemented; mutable per-prefix thresholds. |
+| Async appender wrapper | `AsyncLogSink` | Implemented; bounded queue, flush/close, drop counter. |
+| JSON encoder / logstash-style structured output | `JsonLogSink`, `JsonLogSinkOptions` | Implemented with `lib_json`, source/MDC/marker/exception fields, and redaction. |
+| Test capture appender | `MemoryLogSink` | Implemented; equivalent to Logback's `ListAppender`. |
+
+What is **not** implemented in the base library is the full Logback ecosystem:
+configuration-file parsing, filters, pattern layouts, file and rolling-file outputs,
+network/cloud destinations, and hot reload. Those belong in follow-up modules layered
+on top of the implemented `LogSink` primitives.
+
+Java Logback:
+
+```xml
+<root level="INFO">
+  <appender-ref ref="STDOUT"/>
+  <appender-ref ref="JSON"/>
+</root>
+
+<logger name="com.acme.payments" level="DEBUG"/>
+
+<appender name="ASYNC_JSON" class="ch.qos.logback.classic.AsyncAppender">
+  <queueSize>8192</queueSize>
+  <appender-ref ref="JSON"/>
+</appender>
+```
+
+Same implemented idea in Ecstasy code today:
+
+```ecstasy
+LogSink json  = new JsonLogSink(new JsonLogSinkOptions(Info,
+        ["authorization", "password", "token"]));
+LogSink fanout = new CompositeLogSink([
+        new ConsoleLogSink(),
+        new AsyncLogSink(json, capacity=8192)
+        ]);
+
+HierarchicalLogSink configured = new HierarchicalLogSink(fanout, Info);
+configured.setLevel("com.acme.payments", Debug);
+
+Logger logger = new BasicLogger("com.acme.payments.Checkout", configured);
+logger.debug("charged {}", [amount]);
+```
+
 ## Configuration prior art to account for
 
 Logback is the best-known SLF4J backend, but it is not the only operational model that

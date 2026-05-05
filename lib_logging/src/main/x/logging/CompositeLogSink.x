@@ -4,6 +4,20 @@
  * `CompositeLogSink` fans out each enabled event to every delegate sink that accepts
  * the event's logger/level/primary-marker tuple. This is the Ecstasy equivalent of
  * attaching multiple Logback appenders to one logger.
+ *
+ * Java/Logback equivalent:
+ *
+ *      <logger name="com.acme.payments">
+ *        <appender-ref ref="STDOUT"/>
+ *        <appender-ref ref="JSON"/>
+ *      </logger>
+ *
+ * Ecstasy equivalent:
+ *
+ *      LogSink sink = new CompositeLogSink([
+ *          new ConsoleLogSink(),
+ *          new JsonLogSink()
+ *      ]);
  */
 const CompositeLogSink(LogSink[] sinks)
         implements LogSink {

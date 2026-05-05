@@ -72,45 +72,9 @@ const ConsoleLogSink(Level rootLevel)
            .append(": ")
            .append(event.message);
 
-        if (!event.markers.empty) {
-            buf.append(" [marker");
-            buf.append(event.markers.size == 1 ? "=" : "s=");
-            Boolean firstMarker = True;
-            for (Marker m : event.markers) {
-                if (!firstMarker) {
-                    buf.append(',');
-                }
-                firstMarker = False;
-                buf.append(m.name);
-            }
-            buf.append(']');
-        }
-
-        if (!event.mdcSnapshot.empty) {
-            buf.append(" [mdc=");
-            Boolean firstMdc = True;
-            for ((String k, String v) : event.mdcSnapshot) {
-                if (!firstMdc) {
-                    buf.append(',');
-                }
-                firstMdc = False;
-                buf.append(k).append('=').append(v);
-            }
-            buf.append(']');
-        }
-
-        if (!event.keyValues.empty) {
-            buf.append(" {");
-            Boolean first = True;
-            for ((String k, Object v) : event.keyValues) {
-                if (!first) {
-                    buf.append(", ");
-                }
-                first = False;
-                buf.append(k).append('=').append(v.toString());
-            }
-            buf.append('}');
-        }
+        appendMarkers(buf, event.markers);
+        appendMdc(buf, event.mdcSnapshot);
+        appendKeyValues(buf, event.keyValues);
 
         console.print(buf.toString());
 
@@ -118,5 +82,68 @@ const ConsoleLogSink(Level rootLevel)
             // TODO(impl): pretty-print stack frames; for now rely on Exception.toString().
             console.print(e.toString());
         }
+    }
+
+    /**
+     * Append Logback-style marker text, e.g. `[marker=AUDIT]` or `[markers=AUDIT,SECURITY]`.
+     */
+    private void appendMarkers(StringBuffer buf, Marker[] markers) {
+        if (markers.empty) {
+            return;
+        }
+
+        buf.append(markers.size == 1 ? " [marker=" : " [markers=");
+        Boolean first = True;
+        for (Marker marker : markers) {
+            first = appendSeparator(buf, first, ",");
+            buf.append(marker.name);
+        }
+        buf.append(']');
+    }
+
+    /**
+     * Append the MDC snapshot captured before the event reached the sink.
+     */
+    private void appendMdc(StringBuffer buf, Map<String, String> mdc) {
+        if (mdc.empty) {
+            return;
+        }
+
+        buf.append(" [mdc=");
+        Boolean first = True;
+        for ((String key, String value) : mdc) {
+            first = appendSeparator(buf, first, ",");
+            buf.append(key).append('=').append(value);
+        }
+        buf.append(']');
+    }
+
+    /**
+     * Append structured key/value pairs in the compact text layout.
+     */
+    private void appendKeyValues(StringBuffer buf, Map<String, Object> values) {
+        if (values.empty) {
+            return;
+        }
+
+        buf.append(" {");
+        Boolean first = True;
+        for ((String key, Object value) : values) {
+            first = appendSeparator(buf, first, ", ");
+            buf.append(key).append('=').append(value.toString());
+        }
+        buf.append('}');
+    }
+
+    /**
+     * Append `separator` after the first item in a small rendered list.
+     *
+     * @return False, so callers can write `first = appendSeparator(...)`.
+     */
+    private Boolean appendSeparator(StringBuffer buf, Boolean first, String separator) {
+        if (!first) {
+            buf.append(separator);
+        }
+        return False;
     }
 }

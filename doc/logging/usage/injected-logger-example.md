@@ -9,10 +9,8 @@ The accompanying executable sample lives at
 
 > **Status (2026-05).** Runtime injection of `@Inject Logger logger;` is wired in
 > the interpreter — `NativeContainer.ensureLogger` constructs a `BasicLogger`
-> directly. There is no longer a separate `xRTLogger` / `_native.logging.RTLogger`
-> service wrapper; collapsing it was needed so per-fiber `MDC` survives injection.
-> The JIT injector still needs the equivalent wiring; until it does, `--jit` runs
-> won't resolve the injection.
+> directly so per-fiber `MDC` survives injection. The JIT injector still needs the
+> equivalent wiring; until it does, `--jit` runs won't resolve the injection.
 
 ## API at a glance
 
@@ -25,8 +23,7 @@ Logger payments = logger.named("payments");   // per-name child via the API
 
 There is **no** `@Inject("payments") Logger logger;` form. Per-name loggers are
 *derived* from the injected one, the same way SLF4J users write
-`LoggerFactory.getLogger(MyClass.class)` once at the top of a class. See
-`../future/runtime-implementation-plan.md` Stage 1.4 for why we ruled out wildcard injection.
+`LoggerFactory.getLogger(MyClass.class)` once at the top of a class.
 
 The examples below `import` the public lib_logging types unqualified by adding
 type-level imports next to the `package log import …` alias:
