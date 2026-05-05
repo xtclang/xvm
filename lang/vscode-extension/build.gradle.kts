@@ -1,5 +1,13 @@
+import com.github.gradle.node.npm.task.NpmTask
+
 plugins {
     base
+    alias(libs.plugins.langNodeGradle)
+}
+
+node {
+    version.set(libs.versions.langNode)
+    download.set(true)
 }
 
 // Configuration to consume TextMate grammar from root project
@@ -61,25 +69,16 @@ val copyDapServer by tasks.registering(Copy::class) {
     rename { "dap-server.jar" }
 }
 
-// Run npm install
-val npmInstall by tasks.registering(Exec::class) {
-    description = "Install npm dependencies"
-    workingDir = layout.projectDirectory.asFile
-    commandLine("npm", "install")
-
-    // Must run after copy tasks that write to the project directory
+// Configure the plugin-provided npmInstall task (runs `npm install` using the pinned Node)
+val npmInstall by tasks.existing {
     mustRunAfter(copyLanguageConfig, copyTextMateGrammar, copyIcon)
-
-    inputs.file(layout.projectDirectory.file("package.json"))
-    outputs.dir(layout.projectDirectory.dir("node_modules"))
 }
 
 // Compile TypeScript
-val npmCompile by tasks.registering(Exec::class) {
+val npmCompile by tasks.registering(NpmTask::class) {
     description = "Compile TypeScript"
     dependsOn(npmInstall)
-    workingDir = layout.projectDirectory.asFile
-    commandLine("npm", "run", "compile")
+    args.set(listOf("run", "compile"))
 
     inputs.dir(layout.projectDirectory.dir("src"))
     inputs.file(layout.projectDirectory.file("tsconfig.json"))
@@ -87,11 +86,10 @@ val npmCompile by tasks.registering(Exec::class) {
 }
 
 // Package the extension
-val packageExtension by tasks.registering(Exec::class) {
+val packageExtension by tasks.registering(NpmTask::class) {
     description = "Package VS Code extension"
     dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyIcon, copyLspServer, copyDapServer)
-    workingDir = layout.projectDirectory.asFile
-    commandLine("npm", "run", "package")
+    args.set(listOf("run", "package"))
 
     outputs.file(layout.projectDirectory.file("xtc-language-${project.version}.vsix"))
 }

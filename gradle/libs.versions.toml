@@ -61,6 +61,12 @@ lang-lsp4j = "1.0.0"
 lang-slf4j = "2.0.17"
 
 # =============================================================================
+# Lang tooling - VS Code extension
+# =============================================================================
+lang-node = "22.12.0"
+lang-node-gradle-plugin = "7.1.0"
+
+# =============================================================================
 # Lang tooling - IntelliJ plugin
 # =============================================================================
 lang-intellij-ide = "2026.1"
@@ -112,6 +118,7 @@ vanniktech-maven-publish = { id = "com.vanniktech.maven.publish", version.ref = 
 # =============================================================================
 # Lang tooling plugins
 # =============================================================================
+lang-node-gradle = { id = "com.github.node-gradle.node", version.ref = "lang-node-gradle-plugin" }
 lang-intellij-platform = { id = "org.jetbrains.intellij.platform", version.ref = "lang-intellij-platform-gradle-plugin" }
 lang-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "lang-kotlin" }
 lang-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "lang-kotlin" }
