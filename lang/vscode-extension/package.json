@@ -154,6 +154,15 @@
                     "type": "integer",
                     "default": 120,
                     "description": "Maximum line width (right margin)"
+                },
+                "xtc.sourceRoots": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [],
+                    "description": "Extra source root directories the XTC Language Server indexes (e.g. XDK standard-library sources). Accepts absolute paths to directories that contain .x source files outside the open workspace.",
+                    "scope": "machine-overridable"
                 }
             }
         },
