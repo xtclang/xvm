@@ -8,6 +8,11 @@ Experimental Go `log/slog`-shaped structured logging library for Ecstasy.
 > wrapping, handler options/redaction, and unit tests are in this branch.
 > `JSONHandler` renders through `lib_json`.
 
+> **POC naming note:** this module exists beside `lib_logging` only so the branch can
+> compare two API shapes. The XDK should eventually ship one canonical injectable
+> logging library named `lib_logging`; `lib_slogging` is not intended as a permanent
+> second default facade.
+
 ## What this is
 
 `lib_slogging` is the attribute-first alternative to the SLF4J-shaped

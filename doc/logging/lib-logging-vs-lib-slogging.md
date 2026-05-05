@@ -3,6 +3,11 @@
 Two parallel XDK logging libraries model the same end-to-end capability but follow
 different prior-art traditions.
 
+They coexist only so this branch can compare the designs. User code should choose one
+shape, not mix both as permanent XDK APIs. After review, the chosen injectable logging
+shape should graduate as `lib_logging`; `lib_slogging` is a POC name for the Go
+`log/slog`-shaped candidate, not a proposal to keep a second default logging facade.
+
 | Library | Prior art | Core shape |
 |---|---|---|
 | `lib_logging` | SLF4J 2.x + Logback | Named loggers, `{}` message formatting, MDC, markers, fluent event builders, and a `LogSink` backend boundary. |
@@ -114,7 +119,132 @@ Both produce equivalent structured output. The shapes diverge in how
 
 ---
 
-## 3. Per-axis analysis
+## 3. Exists / Missing Matrix
+
+This is the blunt version of the comparison. "Missing" does not mean impossible; it
+means the concept is not first-class in that API and must be modeled with a more general
+mechanism such as attributes or a custom backend.
+
+| Capability | SLF4J / Logback | Go `log/slog` | `lib_logging` | `lib_slogging` | Why it matters |
+|---|---|---|---|---|---|
+| Hierarchical logger names | **Exists.** `LoggerFactory.getLogger(PaymentService.class)`, Logback `<logger name="com.acme.payments" level="DEBUG"/>`. | **No first-class logger name hierarchy.** `Logger.With` and `WithGroup` attach attrs / qualify attr keys; they do not define a logger category string with longest-prefix routing. | **Exists.** `logger.named("com.acme.payments")` plus `HierarchicalLogSink.setLevel(...)`. | **Modeled as attrs/groups.** Use `logger.with([Attr.of("component", "...")])` or `withGroup("payments")`; custom handlers can filter attrs, but there is no built-in prefix tree. | Per-package/per-module level control is an operational staple in Logback configs. |
+| Markers | **Exists.** `Marker`, `MarkerFactory`, marker-aware level checks, Logback marker filters. | **No Marker type.** Use attrs such as `"audit"=true` or `"category"="audit"`. | **Exists.** `Marker`, marker DAG, multi-marker fluent events, marker-aware sinks. | **Modeled as attrs.** `Attr.of("audit", True)` is simpler but has no marker containment semantics. | Markers are useful for audit/security routing that should not depend on message text. |
+| Message templates | **Exists.** `"processed {}"` with argument arrays and trailing throwable promotion. | **Not the model.** Message is a stable string; variable data is attrs. | **Exists.** `MessageFormatter` implements SLF4J-style `{}` formatting. | **Intentionally absent.** Use `logger.info("processed", [Attr.of("count", count)])`. | SLF4J favors migration familiarity; slog favors structured data over interpolation. |
+| Mapped context | **Exists.** `MDC.put(...)`; Logback layouts can render it. | **Different shape.** Context-aware methods accept `context.Context`; persistent fields usually come from `Logger.With(...)`. | **Exists.** `@Inject MDC` backed by `SharedContext`. | **Different shape.** `Logger.with(...)` is explicit; `LoggerContext` is an optional `SharedContext<Logger>` helper. | Request IDs and tenant/user IDs should not be threaded through every logging call by hand. |
+| Open custom levels | **No.** SLF4J has the standard fixed ladder. | **Exists.** `slog.Level` is an integer; `Level(2)` is valid. | **No.** Closed enum plus `Off`. | **Exists.** `new Level(2, "NOTICE")`. | Useful for environments with `NOTICE`, `CRITICAL`, or domain-specific levels; less canonical for generic tooling. |
+| Handler derivation hooks | **No direct facade equivalent.** Backends configure appenders/loggers; event builders carry per-event data. | **Exists.** `Handler.WithAttrs` and `WithGroup` let handlers pre-resolve context. | **No direct equivalent.** `LogSink` stays two-method and relies on logger names/MDC/builders. | **Exists.** `Handler.withAttrs` / `withGroup`, with `BoundHandler` default semantics. | Helps high-volume structured handlers avoid recomputing prefixes per record. |
+| Source location | **Backend-dependent.** Logback can calculate caller data, but SLF4J does not make source a normal facade argument. | **Exists in the record model.** `Record.PC`, `Record.Source()`, `HandlerOptions.AddSource`. | **Explicit API.** `Logger.logAt(...)` populates `LogEvent.sourceFile` / `sourceLine`; compiler capture is future work. | **Explicit API.** `Logger.logAt(...)` populates `Record.sourceFile` / `sourceLine`; compiler capture is future work. | Useful for debugging, but automatic capture has runtime/compiler cost. |
+| Attribute replacement / redaction | **Backend concern.** Logback filters/encoders decide. | **Exists in `HandlerOptions.ReplaceAttr`.** | **Exists in shipped JSON sink options.** `JsonLogSinkOptions.redactedKeys`. | **Exists in POC options.** `HandlerOptions.redactedKeys`. | Production JSON output needs redaction without caller code remembering every sink policy. |
+
+### Examples for the two contentious claims
+
+**Hierarchical category routing exists in SLF4J / Logback and `lib_logging`:**
+
+```java
+// Java + SLF4J
+private static final Logger LOG =
+        LoggerFactory.getLogger("com.acme.payments.stripe");
+LOG.debug("charged {}", paymentId);
+```
+
+```xml
+<!-- Logback -->
+<logger name="com.acme.payments" level="DEBUG"/>
+<root level="INFO"/>
+```
+
+```ecstasy
+// Ecstasy + lib_logging
+HierarchicalLogSink sink = new HierarchicalLogSink(new ConsoleLogSink(), Info);
+sink.setLevel("com.acme.payments", Debug);
+
+Logger log = new BasicLogger("root", sink)
+        .named("com.acme.payments.stripe");
+log.debug("charged {}", [paymentId]);
+```
+
+Go `slog` can carry a category, but it is data, not a built-in logger hierarchy:
+
+```go
+// Go + slog
+log := slog.New(handler).With("component", "com.acme.payments.stripe")
+log.Debug("charged", "paymentId", paymentID)
+```
+
+```ecstasy
+// Ecstasy + lib_slogging
+SLogger log = logger.with([
+        Attr.of("component", "com.acme.payments.stripe"),
+]);
+log.debug("charged", [Attr.of("paymentId", paymentId)]);
+```
+
+That is perfectly workable for structured output. What it does not give by itself is
+Logback's standard longest-prefix rule: "turn on DEBUG for `com.acme.payments` and all
+children." A slog handler can implement attr-based filtering, but it is not the same
+standard category mechanism.
+
+**Markers exist in SLF4J / Logback and `lib_logging`; slog uses attrs instead:**
+
+```java
+// Java + SLF4J
+Marker audit = MarkerFactory.getMarker("AUDIT");
+LOG.info(audit, "user signed in");
+```
+
+```xml
+<!-- Logback marker filter -->
+<filter class="ch.qos.logback.classic.filter.MarkerFilter">
+  <marker>AUDIT</marker>
+  <onMatch>ACCEPT</onMatch>
+  <onMismatch>DENY</onMismatch>
+</filter>
+```
+
+```ecstasy
+// Ecstasy + lib_logging
+Marker audit = MarkerFactory.getMarker("AUDIT");
+logger.info("user signed in", marker=audit);
+```
+
+```go
+// Go + slog: model the same signal as an attribute
+logger.Info("user signed in", "audit", true)
+```
+
+```ecstasy
+// Ecstasy + lib_slogging
+logger.info("user signed in", [Attr.of("audit", True)]);
+```
+
+The attr version is simpler and often enough. The marker version has marker identity,
+marker containment (`SECURITY` can contain `AUDIT`), marker-aware enabled checks, and
+direct compatibility with existing Logback marker filters.
+
+### Are Java APIs moving toward slog?
+
+They are moving toward the same structured/fluent direction, but they are not the same
+API shape.
+
+| Java API / framework | Looks slog-like because | Still differs from Go slog |
+|---|---|---|
+| **SLF4J 2.x fluent API** | `logger.atInfo().addKeyValue("k", v).log("msg")` gives a message plus structured fields, close to slog's `Info("msg", "k", v)`. | Keeps SLF4J concepts: named loggers, `{}` message templates, markers, MDC, and backend binding through Logback/other providers. |
+| **Log4j 2 API** | Has `LOGGER.atInfo().withMarker(...).withThrowable(...).withLocation().log(...)`, custom levels, Thread Context, JSON layouts, and rich message types. | It is a broader Java logging API, not an attr-only slog model. Markers, logger names, message factories, and config/plugins remain first-class. |
+| **Google Flogger** | Uses a fluent API: `logger.atInfo().withCause(e).log("value: %s", value)` and supports lazy/rate-limited logging. | It is optimized for self-documenting Java call sites and performance, not Go's `Handler` / `Attr` / `Record` architecture. |
+| **Logback + logstash-logback-encoder / structured arguments** | Many teams keep SLF4J and add structured fields at the call site plus a JSON encoder at the backend. | The facade remains SLF4J/Logback-shaped; structured data is added to that ecosystem rather than replacing it with slog semantics. |
+
+So the designs are not completely different things. They are two answers to the same
+industry pressure: log events need structured fields. Go made attrs the central model.
+Modern Java mostly retrofitted structured/fluent APIs onto the existing logger-name,
+marker, MDC, appender, and configuration ecosystem.
+
+That is why `lib_logging` can be both SLF4J-shaped and modern: it keeps the Java
+operational model but includes SLF4J 2-style `addKeyValue`, JSON sinks, redaction, and
+async/composite/hierarchical backend primitives.
+
+---
+
+## 4. Per-axis analysis
 
 ### 3.1 Levels — closed enum vs open integer
 
@@ -566,7 +696,7 @@ audience that will overlap heavily with both.
 
 ---
 
-## 4. Ecstasy idiom fit — where the languages bite
+## 5. Ecstasy idiom fit — where the languages bite
 
 ### 4.1 `const` vs `service` for the building blocks
 
@@ -638,7 +768,7 @@ lands.
 
 ---
 
-## 5. What we want reviewer feedback on
+## 6. What we want reviewer feedback on
 
 1. **`MDC` worth keeping?** SLF4J's per-fiber MDC is the most opinionated piece of
    this comparison. It costs ~50 lines of `SharedContext` machinery + a small
@@ -674,17 +804,18 @@ lands.
    libraries demonstrate a non-injection idiom (a top-level `Logger.default` const,
    say) for comparison?
 
-8. **Source location.** slog captures it; SLF4J doesn't. Is this a v0 concern in
-   Ecstasy or can we defer to a follower release?
+8. **Source location.** Both POCs expose explicit `logAt(...)` APIs. Do reviewers want
+   compiler/runtime sugar that automatically populates those fields on ordinary
+   `logger.info(...)` calls?
 
 9. **Performance baseline.** Neither library has been profiled. If reviewers want
    benchmarks before deciding, name the workload (sustained 100k events/sec to a
    no-op sink? burst with disabled levels? 95th-percentile latency at the call
    site?) and we'll add it to the comparison.
 
-10. **Async / batching home.** Both libraries punt async to a follower module. Is
-    that the right call, or should one of the two ship a default async wrapper to
-    make "log to network" easier out of the box?
+10. **Configuration home.** Both libraries now have async wrappers. Should the XDK
+    also ship a standard JSON config loader/reload service, or leave config-file
+    loading to applications/backends?
 
 11. **Should Ecstasy ship two logging libraries permanently?** The Java ecosystem has
     two large facades (SLF4J, Log4j 2 API) and is by no means ergonomic for it.
@@ -694,7 +825,7 @@ lands.
 
 ---
 
-## 6. Recommendation
+## 7. Recommendation
 
 Choose **`lib_logging` as the canonical Ecstasy logging library**.
 
@@ -732,7 +863,7 @@ names, and optional backend configuration loaders can all target the existing
 
 ---
 
-## 7. What lives in this PR
+## 8. What lives in this PR
 
 This branch (`lagergren/logging`) contains two comparable implementations and the
 review material needed to choose between them.
