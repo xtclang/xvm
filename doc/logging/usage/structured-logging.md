@@ -8,6 +8,22 @@ event looks in Java SLF4J/Logback, Go `log/slog`, Ecstasy `lib_logging`, and Ecs
 human-readable message. Downstream systems can query fields directly instead of
 regexing text.
 
+## Fast path
+
+The logging proposal treats structured fields as a hard requirement, not an optional
+formatter trick:
+
+- `lib_logging` carries structured fields as `LogEvent.keyValues`, request context as
+  `MDC`, and categories as `Marker`; `JsonLogSink` renders those fields directly.
+- `lib_slogging` carries the same information as `Attr` values; `JSONHandler` renders
+  attrs and nested groups directly.
+- Both designs keep the human message stable and put machine-readable fields beside it,
+  so cloud logging, search, alerting, and audit pipelines do not need to parse text.
+
+The examples immediately below show the same payment event in Java SLF4J, Go `slog`,
+Ecstasy `lib_logging`, and Ecstasy `lib_slogging`. The later sections explain the
+implementation layers and migration rationale.
+
 ## Why structured logging is mandatory now
 
 A modern logging framework is not just a better `print`. It feeds systems such as

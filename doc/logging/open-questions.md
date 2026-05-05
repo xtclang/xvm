@@ -1,4 +1,4 @@
-# Open questions for `lib_logging`
+# Logging decision tracker and open questions
 
 This is the running list of design decisions and remaining implementation questions,
 kept deliberately short so it stays readable as the project moves.

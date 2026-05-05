@@ -5,7 +5,7 @@ goal is to be the file someone reads when they ask "okay, but what does it actua
 look like in real code?"
 
 The accompanying executable sample lives at
-[`manualTests/src/main/x/TestLogger.x`](../../manualTests/src/main/x/TestLogger.x).
+[`manualTests/src/main/x/TestLogger.x`](../../../manualTests/src/main/x/TestLogger.x).
 
 > **Status (2026-05).** Runtime injection of `@Inject Logger logger;` is wired in
 > the interpreter — `NativeContainer.ensureLogger` constructs a `BasicLogger`

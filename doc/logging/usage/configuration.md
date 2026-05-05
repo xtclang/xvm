@@ -8,6 +8,32 @@ debug-enabled.
 This is exactly the SLF4J/Logback split: SLF4J is the facade, Logback is the configured
 backend. The Ecstasy shape should preserve that split.
 
+## Fast path
+
+The proposed XDK configuration model is:
+
+1. **JSON for the full backend graph.** XML is familiar from Logback, but JSON maps more
+   directly to typed Ecstasy config objects and existing XDK JSON tooling.
+2. **Small overrides for operations.** Properties, environment variables, and command-line
+   args should patch common values such as root level, per-component level, file path,
+   cloud provider, and redacted keys.
+3. **Stable injected loggers.** Runtime injection hands application code a logger whose
+   sink/handler is stable; a host-owned config service rebuilds the backend graph and
+   swaps the delegate on reload.
+4. **Core vs follow-up modules.** The POC already implements the facade, SPI, JSON
+   console output, async wrappers, fanout, hierarchical routing, and test capture. File
+   destinations, rolling files, provider-specific cloud clients, JSON config parsing, and
+   hot reload belong in first-class follow-up XDK modules such as `lib_logging_config`,
+   `lib_logging_file`, and `lib_logging_cloud`.
+
+If you only need the shape, jump to
+[`What is implemented vs proposed`](#what-is-implemented-vs-proposed),
+[`Self-contained lib_logging dynamic backend sketch`](#self-contained-lib_logging-dynamic-backend-sketch),
+and
+[`Self-contained lib_slogging dynamic handler sketch`](#self-contained-lib_slogging-dynamic-handler-sketch).
+The rest of this document is the detailed prior-art mapping for Logback, Log4j 2,
+Spring Boot, and Go `slog`.
+
 ## Configuration prior art to account for
 
 Logback is the best-known SLF4J backend, but it is not the only operational model that

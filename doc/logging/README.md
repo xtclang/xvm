@@ -10,6 +10,33 @@ one logging shape or the other, not both in the same design. Once the XDK settle
 injectable logging model, the winning API should be the XDK's `lib_logging`; the losing
 POC should either disappear or become an explicitly named adapter/comparison module.
 
+## First-pass summary
+
+Read this file first. It gives the whole design without requiring any deep dive:
+
+1. Application code asks for a logger with `@Inject Logger logger;`.
+2. The injected logger is a small facade. Caller code logs messages, exceptions,
+   structured fields, markers/categories, and request context.
+3. The host/container owns the backend. It can replace the active `LogSink` or `Handler`
+   with console, JSON, async, fanout, hierarchical-level, file, cloud, or test capture
+   implementations without changing application code.
+4. `lib_logging` is the recommended canonical shape because it gives Ecstasy the
+   SLF4J/Logback model most JVM users expect: named loggers, `{}` formatting, markers,
+   MDC, fluent event builders, and a narrow `LogSink` backend SPI.
+5. `lib_slogging` exists to compare the Go `log/slog` model: one structured carrier
+   (`Attr`), derived loggers via `with(...)`, open integer levels, grouped attrs, and a
+   `Handler` backend SPI.
+6. The POC already implements both facades, injection, JSON output, redaction knobs,
+   async wrappers, memory test capture, and backend extension points. Production config
+   loading, rolling files, provider-specific cloud clients, automatic source capture, and
+   compiler-generated logger names are follow-up modules/runtime work.
+
+For a first review pass, read this README and then the top summaries of
+[`lib-logging-vs-lib-slogging.md`](lib-logging-vs-lib-slogging.md),
+[`usage/structured-logging.md`](usage/structured-logging.md), and
+[`usage/configuration.md`](usage/configuration.md). Those documents keep their long
+rationale and implementation details below the fast path.
+
 ## Requirements
 
 The accepted XDK logging API **MUST** satisfy these requirements:
@@ -18,7 +45,7 @@ The accepted XDK logging API **MUST** satisfy these requirements:
 - **Familiar call shape:** the call shape MUST be instantly recognizable to either SLF4J/Logback or slog users,
   with migration examples for Java/Go teams.
 - **Injection-first acquisition:** `@Inject Logger logger;` MUST let the host/container own
-  backend policy; library code must not choose global process logging.
+  backend policy; library code MUST NOT choose global process logging.
 - **Structured events:** events MUST carry first-class key/value fields, context fields, exceptions,
   markers/categories where applicable, and JSON/cloud output without parsing messages.
 - **Dynamically pluggable backends:** sinks/handlers MUST be swappable, composable, wrappable
@@ -27,7 +54,7 @@ The accepted XDK logging API **MUST** satisfy these requirements:
   multi-destination fanout, async output, JSON/text formatting, redaction, and
   configuration-file reload.
 - **Production safety:** backend failures MUST NOT break callers; redaction,
-  output destinations, formatting knobs, and shutdown/flush behavior must be explicit.
+  output destinations, formatting knobs, and shutdown/flush behavior MUST be explicit.
 - **Testability:** the API MUST provide in-memory capture sinks/handlers and contract tests for custom
   backends.
 - **Runtime/compiler path:** default logger naming and source-location capture MUST
@@ -43,11 +70,6 @@ to JSON/cloud sinks without parsing message text.
 | [`lib_logging`](../../lib_logging/) | SLF4J 2.x + Logback | 64 focused XTC test methods, injected manual demo, async/composite/hierarchical/JSON backend building blocks. |
 | [`lib_slogging`](../../lib_slogging/) | Go `log/slog` | 37 focused XTC test methods, injected/manual coverage, async handler, handler options, and JSON/redaction support. |
 
-If you only have time to read one document, read
-**[`lib-logging-vs-lib-slogging.md`](lib-logging-vs-lib-slogging.md)** — it is
-the comparison, the reviewer-question list, and the recommendation in one
-place.
-
 ## Recommendation
 
 Choose **`lib_logging`** as the canonical XDK logging facade. If reviewers choose the
@@ -62,8 +84,15 @@ these APIs were designed to avoid.
 
 ## Reading Paths
 
-Start with [`lib-logging-vs-lib-slogging.md`](lib-logging-vs-lib-slogging.md) if
-you only read one file. The rest of the tree is organized by reader:
+Start here, then follow only the path that matches your review:
+
+1. **First-pass design:** this README.
+2. **API choice:** [`lib-logging-vs-lib-slogging.md`](lib-logging-vs-lib-slogging.md).
+3. **Structured logging requirement:** [`usage/structured-logging.md`](usage/structured-logging.md).
+4. **Configuration/backend story:** [`usage/configuration.md`](usage/configuration.md).
+5. **Exact API mapping:** [`api-cross-reference.md`](api-cross-reference.md).
+
+The rest of the tree is organized by reader:
 
 | Reader | Start with | Then read |
 |---|---|---|
@@ -81,10 +110,10 @@ you only read one file. The rest of the tree is organized by reader:
 |---|---|
 | **Top-level** | |
 | [`README.md`](README.md) | This file. The "start here" entry point. |
-| [`lib-logging-vs-lib-slogging.md`](lib-logging-vs-lib-slogging.md) | Headline comparison + reviewer questions. **Read first.** |
+| [`lib-logging-vs-lib-slogging.md`](lib-logging-vs-lib-slogging.md) | API-choice summary first, then depth-first rationale on levels, context, markers, formatting, and backend shape. |
 | [`api-cross-reference.md`](api-cross-reference.md) | Official SLF4J / Go slog API links mapped to local Ecstasy types and difference notes. |
 | [`cloud-integration.md`](cloud-integration.md) | Why the API choice is the entry point to cloud observability ecosystems. |
-| [`open-questions.md`](open-questions.md) | Live tracking: open questions, designer questions (Q-D1..Q-D7), W-item parity list, implementation tiers. |
+| [`open-questions.md`](open-questions.md) | Decision tracker: resolved calls, designer questions (Q-D1..Q-D7), W-item parity list, and remaining follow-up. |
 | **Design (`lib_logging` side)** | |
 | [`design/design.md`](design/design.md) | `lib_logging` architecture: types, API↔impl boundary, sink-type rule, MDC mechanism, per-container override. |
 | [`design/why-slf4j-and-injection.md`](design/why-slf4j-and-injection.md) | The original rationale for the SLF4J shape and injection-first acquisition. |
