@@ -373,6 +373,9 @@ public class NativeContainer
         addResourceSupplier(new InjectionKey("properties", typeProps), this::ensureProperties);
 
         // +++ logging.Logger, logging.MDC, and slogging.Logger
+        // TODO: This is not intended as permanent code. It is a hack for the POC of
+        // injected SLF4J and slog logging and will likely be implemented differently
+        // and in a more robust manner for the real logging implementation in the XDK.
         // These back `@Inject Logger logger;`, `@Inject MDC mdc;`, and
         // `@Inject slogging.Logger logger;` on the user side. The two logger resources use
         // the same resource name, so getInjectable() must resolve by both name and type.
@@ -816,6 +819,8 @@ public class NativeContainer
             }
         }
 
+        // TODO: Part of the injected logging POC hack above; the final XDK logging
+        // injector should resolve default logger names through a more robust mechanism.
         if (isCanonicalLoggingLogger(type)) {
             return ensureLogger(frame, m_typeBasicLogger, inferLoggerName(frame, sName));
         }
