@@ -1,5 +1,7 @@
 # XDK lib alignment — making `lib_logging` a first-class citizen
 
+> **Audience:** XDK maintainers checking `lib_logging` against the conventions of other shipped libs.
+
 This document audits `lib_logging` against the conventions used by the other shipped XDK
 libs (`lib_ecstasy`, `lib_cli`, `lib_crypto`, `lib_json`, `lib_jsondb`, `lib_net`,
 `lib_oodb`, `lib_sec`, `lib_web`, `lib_webauth`, `lib_xenia`, `lib_xunit`) and against
@@ -210,7 +212,6 @@ The only thing missing for full first-class status is the runtime-side resource
 registration (`@Inject Logger` actually resolving), which is the next chunk of work
 described in `../open-questions.md` items 1, 2, and 9.
 
-
 ---
 
-_See also [../README.md](../README.md) for the full doc index and reading paths._
+Previous: [`why-slf4j-and-injection.md`](why-slf4j-and-injection.md) | Next: [`../roadmap.md`](../roadmap.md) → | Up: [`../README.md`](../README.md)

@@ -1,5 +1,7 @@
 # `@Inject Logger` end-to-end — a working example
 
+> **Audience:** new users. Start here if you've never touched `lib_logging` before.
+
 This document shows the canonical way an Ecstasy application uses `lib_logging`. The
 goal is to be the file someone reads when they ask "okay, but what does it actually
 look like in real code?"
@@ -254,4 +256,4 @@ That covers ~95% of real-world logging use.
 
 ---
 
-_See also [../README.md](../README.md) for the full doc index and reading paths._
+Previous: [`../README.md`](../README.md) | Next: [`structured-logging.md`](structured-logging.md) → | Up: [`../README.md`](../README.md)

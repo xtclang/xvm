@@ -1,5 +1,7 @@
 # Logging configuration and dynamic backends
 
+> **Audience:** ops/host engineers who own backend wiring. Library authors should not need to read this.
+
 Logging configuration belongs below the facade. Application/library code should keep
 using `@Inject Logger logger;`; the host/container decides which sinks or handlers are
 active, where output goes, which fields are redacted, and which logger categories are
@@ -948,8 +950,6 @@ logger categories unless the handler explicitly implements attr-based routing.
 The user-facing rule stays the same in both designs: caller code depends on `Logger`;
 configuration code owns sinks/handlers.
 
-
 ---
 
-_See also [structured-logging.md](structured-logging.md), [custom-sinks.md](custom-sinks.md),
-and [custom-handlers.md](custom-handlers.md)._
+Previous: [`lazy-logging.md`](lazy-logging.md) | Next: [`custom-sinks.md`](custom-sinks.md) → | Up: [`../README.md`](../README.md)

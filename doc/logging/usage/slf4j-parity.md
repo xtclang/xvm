@@ -1,5 +1,7 @@
 # SLF4J 2.x → lib_logging mapping
 
+> **Audience:** Java/Kotlin/Scala engineers familiar with SLF4J 2.x. Reference doc — scan once, return on demand.
+
 This document inventories every SLF4J 2.x type and major method that user code is likely
 to touch, and shows the equivalent in `lib_logging`. The intent is that an SLF4J user can
 scan this once and know everything they need.
@@ -124,7 +126,6 @@ SLF4J's `{}` placeholder semantics are reproduced verbatim by `MessageFormatter.
 - `Off` level, useful for sink configuration. SLF4J expresses this through level checks
   in `Logger.isEnabledFor(...)`.
 
-
 ---
 
-_See also [../README.md](../README.md) for the full doc index and reading paths._
+Reference doc. Related: [`ecstasy-vs-java-examples.md`](ecstasy-vs-java-examples.md). Up: [`../README.md`](../README.md)

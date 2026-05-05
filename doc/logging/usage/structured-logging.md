@@ -1,5 +1,7 @@
 # Structured logging in the logging POC
 
+> **Audience:** anyone shipping Ecstasy code that needs to emit JSON or talk to a structured log aggregator.
+
 This document explains structured logging as a requirement, then shows how the same
 event looks in Java SLF4J/Logback, Go `log/slog`, Ecstasy `lib_logging`, and Ecstasy
 `lib_slogging`.
@@ -418,7 +420,6 @@ Everything beyond that — typed value formatting, schema validation, OpenTeleme
 integration, log-correlation IDs propagated across services — is sink-side. The API
 is already shaped to support it without changes.
 
-
 ---
 
-_See also [../README.md](../README.md) for the full doc index and reading paths._
+Previous: [`injected-logger-example.md`](injected-logger-example.md) | Next: [`lazy-logging.md`](lazy-logging.md) → | Up: [`../README.md`](../README.md)

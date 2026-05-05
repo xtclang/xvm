@@ -1,5 +1,7 @@
 # How `lib_logging` would change `~/src/platform` and `~/src/examples`
 
+> **Audience:** anyone deciding what migrating real Ecstasy code (the `~/src/platform` repo) costs.
+
 This is a forward-looking doc surveying two real Ecstasy code bases that already exist
 side by side with the XDK in this dev environment, and showing how each would adopt
 `lib_logging` if it shipped as part of the XDK today. The point is to validate the API
@@ -275,7 +277,6 @@ in one chunk and validates the API end-to-end on real code. The examples repo ca
 follow opportunistically, file by file — there is no urgency, and the gains there are
 educational rather than operational.
 
-
 ---
 
-_See also [../README.md](../README.md) for the full doc index and reading paths._
+Migration survey. Up: [`../README.md`](../README.md)

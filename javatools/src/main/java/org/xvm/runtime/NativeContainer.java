@@ -386,9 +386,10 @@ public class NativeContainer
         var typeBasic  = typeFor(pool, LOGGING_MODULE, "BasicLogger");
         var typeMDC    = typeFor(pool, LOGGING_MODULE, "MDC");
 
-        m_typeLoggingLogger = typeLogger;
-        m_typeBasicLogger   = typeBasic;
-
+        // Both POC logger types ("logger" + lib_logging.Logger and "logger" + slogging.Logger)
+        // share the resource name "logger". `addResourceSupplier` permits this because each
+        // entry's InjectionKey is keyed on (name, type), and `getInjectable` disambiguates
+        // by type when more than one supplier is registered under one name.
         addResourceSupplier(new InjectionKey("logger", typeLogger),
                 (frame, hOpts) -> ensureLogger(frame, typeBasic, inferLoggerName(frame, "logger")));
         addResourceSupplier(new InjectionKey("mdc", typeMDC),
@@ -492,6 +493,13 @@ public class NativeContainer
     /**
      * Add a native resource supplier for an injection.
      *
+     * Maintains two indexes in lockstep: `f_mapResources` keyed by the full
+     * `(name, type)` `InjectionKey` (the canonical store), and `f_mapResourceNames`
+     * keyed by name only (the lookup fast path used by `getInjectable`). Most names
+     * map to a single key; the list-valued shape exists to support cases like the
+     * two POC logger libraries, which deliberately register distinct types under the
+     * same resource name "logger".
+     *
      * @param key       the injection key
      * @param supplier  the resource supplier
      */
@@ -499,6 +507,7 @@ public class NativeContainer
         assert !f_mapResources.containsKey(key);
 
         f_mapResources.put(key, supplier);
+        f_mapResourceNames.computeIfAbsent(key.f_sName, k -> new ArrayList<>()).add(key);
     }
 
     public ObjectHandle ensureOSStorage(Frame frame, ObjectHandle hOpts) {
@@ -786,32 +795,25 @@ public class NativeContainer
 
     @Override
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts) {
-        for (var entry : f_mapResources.entrySet()) {
-            var key = entry.getKey();
-            if (!key.f_sName.equals(sName)) {
-                continue;
+        // Look up by name first via `f_mapResourceNames` — O(1) average — then disambiguate
+        // by type. The list-per-name shape exists so that two suppliers can share a resource
+        // name when their types differ; this is what lets `lib_logging.Logger` and
+        // `slogging.Logger` both register under the name "logger" (see registerLoggingResources
+        // / registerSLoggingResources). For most names the list has exactly one entry, so the
+        // inner loop is constant work.
+        List<InjectionKey> candidates = f_mapResourceNames.get(sName);
+        if (candidates != null) {
+            for (var key : candidates) {
+                if (matchesType(key.f_type, type)) {
+                    return f_mapResources.get(key).supply(frame, hOpts);
+                }
             }
-
-            // Resolve by (name, type), not just name, while both POC logger APIs use "logger".
-            if (matchesType(key.f_type, type)) {
-                return entry.getValue().supply(frame, hOpts);
-            }
-        }
-
-        // TODO: Part of the injected logging POC hack above; the final XDK logging
-        // injector should resolve default logger names through a more robust mechanism.
-        if (isCanonicalLoggingLogger(type)) {
-            return ensureLogger(frame, m_typeBasicLogger, inferLoggerName(frame, sName));
         }
 
         // for "Nullable" types the NativeContainer can only supply a trivial result;
         // anything better than that must be done naturally by a container that hosts the
         // calling container
         return type.isNullable() ? xNullable.NULL : null;
-    }
-
-    private boolean isCanonicalLoggingLogger(TypeConstant type) {
-        return m_typeLoggingLogger != null && matchesType(m_typeLoggingLogger, type);
     }
 
     private boolean matchesType(TypeConstant typeResource, TypeConstant typeRequest) {
@@ -1013,13 +1015,6 @@ public class NativeContainer
     private       ModuleStructure  m_moduleNative;
 
     /**
-     * Cached canonical logging types. Used to resolve module/class-named injections for
-     * `logging.Logger` after the fixed `"logger"` resource registration.
-     */
-    private TypeConstant m_typeLoggingLogger;
-    private TypeConstant m_typeBasicLogger;
-
-    /**
      * Map of IdentityConstants by name.
      */
     private final Map<String, IdentityConstant> f_mapIdByName = new ConcurrentHashMap<>();
@@ -1028,4 +1023,13 @@ public class NativeContainer
      * Map of resources that are injectable from this container, keyed by their InjectionKey.
      */
     private final Map<InjectionKey, InjectionSupplier> f_mapResources = new HashMap<>();
+
+    /**
+     * Name-only index over `f_mapResources`. Lets `getInjectable` do an O(1) average
+     * lookup by `sName` and then disambiguate by type, instead of scanning every
+     * supplier on every injection. The list-valued shape supports more than one
+     * supplier sharing a name (e.g. the two POC logger libraries both registering
+     * under "logger" with different types).
+     */
+    private final Map<String, List<InjectionKey>> f_mapResourceNames = new HashMap<>();
 }

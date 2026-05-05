@@ -78,13 +78,23 @@ const MDC {
 
     /**
      * Store a value under `key`. Setting `Null` removes the key.
+     *
+     * Skips the copy-on-write derivation when the existing entry already matches the
+     * incoming value. Each MDC mutation otherwise costs one fresh `HashMap`-build +
+     * `makeImmutable` + `SharedContext.withValue` token; the no-op fast path matters in
+     * code paths that reassert request context on every call (a common pattern in
+     * cross-cutting middleware that re-`put`s `requestId` defensively). Symmetrical to
+     * the existing fast path in [remove].
      */
     void put(String key, String? value) {
         if (value == Null) {
             remove(key);
-        } else {
-            mapContext.withValue(derive(key, key, value));
+            return;
         }
+        if (String existing := currentMap().get(key), existing == value) {
+            return;
+        }
+        mapContext.withValue(derive(key, key, value));
     }
 
     /**

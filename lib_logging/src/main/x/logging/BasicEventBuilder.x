@@ -5,18 +5,29 @@
  *
  * Default `LoggingEventBuilder` implementation. Accumulates state then forwards to the
  * underlying `Logger`'s `log(...)` method.
+ *
+ * # Lazy values
+ *
+ * Both positional `{}` arguments and structured key/value pairs can be supplied either
+ * eagerly (the value is already computed) or lazily (a function that runs only after the
+ * level/marker check accepts the event). Lazy entries are stored as a [LazyValue]
+ * wrapper inside the same `args` / `keyValues` collections — there are no parallel
+ * boolean flag arrays to keep in sync. The resolver at `frozenArgs()` / `frozenKVs()`
+ * does `value.is(LazyValue) ? lv.resolve() : value`. This is also why
+ * `addLazyArgument` / `addLazyKeyValue` are explicit method names rather than overloads
+ * of `addArgument` / `addKeyValue`: in Ecstasy a `function Object()` is itself an
+ * `Object`, so an overload that accepted a supplier could not be reliably distinguished
+ * from one that accepted the supplier as a literal value.
  */
 class BasicEventBuilder(BasicLogger logger, Level level)
         implements LoggingEventBuilder {
 
-    private String?              message       = Null;
-    private MessageSupplier?     lazyMessage   = Null;
-    private Object[]             args          = new Object[];
-    private Boolean[]            lazyArgs      = new Boolean[];
-    private Marker[]             markers       = new Marker[];
-    private Exception?           cause         = Null;
-    private Map<String, Object>  keyValues     = new ListMap();
-    private Map<String, Boolean> lazyKeyValues = new ListMap();
+    private String?             message     = Null;
+    private MessageSupplier?    lazyMessage = Null;
+    private Object[]            args        = new Object[];
+    private Marker[]            markers     = new Marker[];
+    private Exception?          cause       = Null;
+    private Map<String, Object> keyValues   = new ListMap();
 
     /**
      * Replace the pending message pattern. Mirrors SLF4J
@@ -45,17 +56,17 @@ class BasicEventBuilder(BasicLogger logger, Level level)
     @Override
     LoggingEventBuilder addArgument(Object value) {
         args.add(value);
-        lazyArgs.add(False);
         return this;
     }
 
     /**
-     * Append one lazily computed positional `{}` argument.
+     * Append one lazily computed positional `{}` argument. The supplier runs only after
+     * the sink accepts the event; see the class doc comment for why this is a separate
+     * method rather than an overload of `addArgument`.
      */
     @Override
     LoggingEventBuilder addLazyArgument(ObjectSupplier value) {
-        args.add(value);
-        lazyArgs.add(True);
+        args.add(new LazyValue(value));
         return this;
     }
 
@@ -85,17 +96,17 @@ class BasicEventBuilder(BasicLogger logger, Level level)
     @Override
     LoggingEventBuilder addKeyValue(String key, Object value) {
         keyValues.put(key, value);
-        lazyKeyValues.put(key, False);
         return this;
     }
 
     /**
-     * Attach one lazily computed structured key/value pair.
+     * Attach one lazily computed structured key/value pair. Stored as a [LazyValue]
+     * inside the same `keyValues` map; resolved at `frozenKVs()` once the event is
+     * confirmed enabled.
      */
     @Override
     LoggingEventBuilder addLazyKeyValue(String key, ObjectSupplier value) {
-        keyValues.put(key, value);
-        lazyKeyValues.put(key, True);
+        keyValues.put(key, new LazyValue(value));
         return this;
     }
 
@@ -204,9 +215,10 @@ class BasicEventBuilder(BasicLogger logger, Level level)
 
     /**
      * Materialise the accumulated structured key/value map as a const-mode (immutable) map
-     * so the resulting `LogEvent` can cross the sink boundary. SLF4J's reference impl
-     * realises a `KeyValuePair` list at the same point; here it's a `Map<String, Object>` on
-     * `LogEvent.keyValues`.
+     * so the resulting `LogEvent` can cross the sink boundary. Lazy entries (stored as
+     * [LazyValue] wrappers) are resolved here, after the level/marker check has confirmed
+     * the event will actually be emitted. SLF4J's reference impl realises a `KeyValuePair`
+     * list at the same point; here it's a `Map<String, Object>` on `LogEvent.keyValues`.
      */
     private Map<String, Object> frozenKVs() {
         if (keyValues.empty) {
@@ -214,17 +226,16 @@ class BasicEventBuilder(BasicLogger logger, Level level)
         }
         ListMap<String, Object> snapshot = new ListMap();
         for ((String k, Object v) : keyValues) {
-            snapshot.put(k, lazyKeyValues.getOrDefault(k, False)
-                    ? v.as(ObjectSupplier)()
-                    : v);
+            snapshot.put(k, resolve(v));
         }
         return snapshot.makeImmutable();
     }
 
     /**
      * Convert the mutable accumulating buffer to a constant-mode (immutable) array so
-     * it can cross service boundaries on its way to the sink. Equivalent to SLF4J's
-     * `EventArgArray` materialisation step.
+     * it can cross service boundaries on its way to the sink. Lazy entries are resolved
+     * here for the same reason as in [frozenKVs]. Equivalent to SLF4J's `EventArgArray`
+     * materialisation step.
      */
     private Object[] frozenArgs() {
         if (args.empty) {
@@ -232,12 +243,20 @@ class BasicEventBuilder(BasicLogger logger, Level level)
         }
 
         Object[] snapshot = new Array<Object>(args.size);
-        for (Int i : 0 ..< args.size) {
-            Object value = args[i];
-            snapshot.add(lazyArgs[i]
-                    ? value.as(ObjectSupplier)()
-                    : value);
+        for (Object value : args) {
+            snapshot.add(resolve(value));
         }
         return snapshot.toArray(Constant);
+    }
+
+    /**
+     * Unwrap a [LazyValue] if present; pass plain values through unchanged. Centralises
+     * the discrimination so both `frozenArgs` and `frozenKVs` share one rule.
+     */
+    private static Object resolve(Object value) {
+        if (LazyValue lazy := value.is(LazyValue)) {
+            return lazy.resolve();
+        }
+        return value;
     }
 }

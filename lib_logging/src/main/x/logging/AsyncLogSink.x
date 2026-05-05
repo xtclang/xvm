@@ -93,13 +93,47 @@ service AsyncLogSink(LogSink delegate, Int capacity) implements LogSink {
 
     /**
      * Drain the queue on this service's fiber.
+     *
+     * Two safety properties live here, both worth understanding before changing this code.
+     *
+     * 1. **`draining` must be reset on every exit, including exceptions.**
+     *    The whole point of this wrapper is to insulate callers from a misbehaving
+     *    delegate. If a delegate `log(event)` throws, we still need `draining = False`
+     *    afterwards — otherwise `log()` will keep enqueueing events but never schedule
+     *    another drain (because it sees `draining == True`), the queue grows to
+     *    `capacity`, and from then on every event is silently dropped via
+     *    `droppedCount`. The `try/finally` guarantees the flag is cleared.
+     *
+     * 2. **Per-event failure is contained.**
+     *    `LogSink.log` is contractually non-throwing (see `LogSink.x`), but a buggy
+     *    custom sink can still throw. We catch per event so that one bad event
+     *    increments `droppedCount` and the rest of the batch still drains. The
+     *    alternative — letting the exception escape and rely on (1) to recover — would
+     *    drop every queued event behind the throwing one. That's a bigger surprise to
+     *    operators than a single counter tick.
+     *
+     * The loop uses a swap-out batch instead of `queue.delete(0)` per event. `delete(0)`
+     * is O(n) on `Array`, so the original loop was O(n²) per drain. The swap takes the
+     * mutable buffer in one step, then iterates it; new events arriving during the inner
+     * loop land in a fresh `queue` and are picked up by the outer `while`. Service-fiber
+     * serialisation means no other `log()` call can run between our read of `queue` and
+     * our reassignment, so no event is lost.
      */
     private void drain() {
-        while (!queue.empty) {
-            LogEvent event = queue[0];
-            queue.delete(0);
-            delegate.log(event);
+        try {
+            while (!queue.empty) {
+                LogEvent[] batch = queue;
+                queue = new LogEvent[];
+                for (LogEvent event : batch) {
+                    try {
+                        delegate.log(event);
+                    } catch (Exception e) {
+                        ++droppedCount;
+                    }
+                }
+            }
+        } finally {
+            draining = False;
         }
-        draining = False;
     }
 }
