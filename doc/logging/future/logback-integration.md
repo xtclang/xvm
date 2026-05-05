@@ -9,6 +9,10 @@ optional configuration-driven backend layer that could sit on top of those primi
 and add config files, richer appenders, filters, hot reload, rolling files, and
 destination-specific policies.
 
+In other words: the branch already has programmatic Logback-style building blocks in
+XTC. This document is about the missing production configuration layer around them,
+not about whether Ecstasy can express Logback-like backend behavior at all.
+
 ## What "Logback-style" means
 
 For SLF4J users, "Logback" means a specific bundle of features beyond the SLF4J facade:
@@ -57,11 +61,9 @@ ConfiguredLogSink         (the LogSink the runtime injects)
         └── Output        (Console, File, RollingFile, Network, ...)
 ```
 
-This isn't novel — it's exactly Logback's mental model. The advantage of writing it as
-an Ecstasy module rather than a wrapper around the JVM Logback library is that it gets
-to use Ecstasy's own primitives (services for thread-safety, fibers for async, the file
-abstraction from `lib_ecstasy`) instead of needing the bridge story discussed in
-`../future/native-bridge.md`.
+This isn't novel; it's Logback's mental model expressed as XTC code. The advantage of
+writing it as an Ecstasy module is that it uses Ecstasy's own primitives: services for
+thread-safety, fibers for async work, and the file abstraction from `lib_ecstasy`.
 
 ## Sketch — the public API of `lib_logging_logback`
 

@@ -12,9 +12,8 @@ scan this once and know everything they need.
 | `LoggerFactory.getLogger("com.example.foo")` | `logger.named("com.example.foo")` *(or `LoggerFactory.getLogger("com.example.foo")` when the non-injection factory is wired to a default sink)* |
 | (no equivalent) | `@Inject Logger logger;` *(injects a single root logger)* |
 
-`@Inject("com.example.foo") Logger logger;` was considered and rejected — see
-`../future/runtime-implementation-plan.md` Stage 1.4 for why. SLF4J doesn't have a
-parameterized injection annotation either; `LoggerFactory.getLogger(MyClass.class)`
+`@Inject("com.example.foo") Logger logger;` was considered and rejected. SLF4J
+doesn't have a parameterized injection annotation either; `LoggerFactory.getLogger`
 is its idiom and `Logger.named(String)` is the direct Ecstasy equivalent.
 
 `Logger.named(String)` takes the full logger name. It does not append a suffix to the

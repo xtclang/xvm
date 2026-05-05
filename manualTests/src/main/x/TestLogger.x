@@ -96,9 +96,9 @@ module TestLogger {
      * class). The derived logger shares this logger's sink, so all configuration applied
      * to the default logger flows through to its descendants.
      *
-     * Bare-essentials demo target (`doc/logging/future/runtime-implementation-plan.md`): the
-     * message must print as `hello world` (formatted by `MessageFormatter`), not
-     * `hello {}` (raw). The logger-name column on the resulting line should read `Demo`.
+     * Bare-essentials demo target: the message must print as `hello world` (formatted by
+     * `MessageFormatter`), not `hello {}` (raw). The logger-name column on the resulting
+     * line should read `Demo`.
      */
     void runInjectedByName() {
         @Inject Logger logger;

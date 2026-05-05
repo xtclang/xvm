@@ -32,7 +32,7 @@ decide which shape survives. Direct links from each Ecstasy type to its SLF4J or
 Go `log/slog` counterpart are in [`api-cross-reference.md`](api-cross-reference.md).
 
 > Status note: both libraries are working comparison POCs. `lib_logging` is the
-> recommended canonical facade and has the fuller SLF4J surface (64 focused XTC test
+> recommended canonical facade and has the fuller SLF4J surface (66 focused XTC test
 > methods plus the injected manual demo), including async/composite/hierarchical/JSON
 > backend building blocks. `lib_slogging` has the more compact slog surface (37 focused
 > XTC test methods plus injected/manual coverage), with runtime injection, async
@@ -786,9 +786,10 @@ attribute model needs less surface area.
 ### 5.4 Compiler-side default-name injection
 
 SLF4J expects `LoggerFactory.getLogger(MyClass.class)` to resolve to a class- or
-module-named logger. `lib_logging` currently delegates that to a future compiler
-change (Stage 4 in `future/runtime-implementation-plan.md`). Without it, `@Inject Logger`
-gets a fixed-name root logger and you call `.named("...")` to derive children.
+module-named logger. `lib_logging` currently handles the simple interpreter case with
+a runtime fallback from the injected field name to the caller namespace. Exact
+compiler-synthesized names remain future polish. Without them, `@Inject Logger` gets a
+fixed-name root logger and you call `.named("...")` to derive children.
 
 slog has no such machinery — there is one process-wide default Logger and you derive
 from it. No naming hierarchy, no compiler change.
@@ -901,7 +902,7 @@ review material needed to choose between them.
 
 | Area | Contents |
 |---|---|
-| `lib_logging/` | Recommended canonical SLF4J-shaped library with 64 focused XTC test methods, runtime injection, source metadata API, JSON/redaction sink, async wrapper, composite fanout, and hierarchical per-logger thresholds. |
+| `lib_logging/` | Recommended canonical SLF4J-shaped library with 66 focused XTC test methods, runtime injection, source metadata API, JSON/redaction sink, async wrapper, composite fanout, and hierarchical per-logger thresholds. |
 | `lib_slogging/` | slog-shaped sibling library with 37 focused XTC test methods, runtime injection, `lib_json` JSON rendering, handler options/redaction, async wrapper, explicit source metadata, `LoggerContext`, handler derivation, and handler contract tests. |
 | `doc/logging/` | Design comparison, API cross-reference, language/runtime questions, usage guides, and backend follow-up sketches. |
 

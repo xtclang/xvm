@@ -106,28 +106,19 @@ public class NativeContainer
     // ----- initialization ------------------------------------------------------------------------
 
     private ConstantPool loadNativeTemplates() {
-        ModuleStructure moduleRoot   = f_repository.loadModule(ECSTASY_MODULE);
-        ModuleStructure moduleTurtle = f_repository.loadModule(TURTLE_MODULE);
-        ModuleStructure moduleNative = f_repository.loadModule(NATIVE_MODULE);
-        ModuleStructure moduleLogging = f_repository.loadModule(LOGGING_MODULE);
-        ModuleStructure moduleSLogging = f_repository.loadModule(SLOGGING_MODULE);
+        var moduleRoot   = f_repository.loadModule(ECSTASY_MODULE);
+        var moduleTurtle = f_repository.loadModule(TURTLE_MODULE);
+        var moduleNative = f_repository.loadModule(NATIVE_MODULE);
 
         if (moduleRoot == null || moduleTurtle == null || moduleNative == null) {
             throw new IllegalStateException("Native libraries are missing");
         }
 
-        m_fLoggingModuleLoaded  = moduleLogging  != null;
-        m_fSLoggingModuleLoaded = moduleSLogging != null;
-
         // "root" is a merge of "native" module into the "system"
-        FileStructure fileRoot = new FileStructure(moduleRoot, true);
+        var fileRoot = new FileStructure(moduleRoot, true);
         fileRoot.merge(moduleTurtle, true, false);
-        if (moduleLogging != null) {
-            fileRoot.merge(moduleLogging, true, false);
-        }
-        if (moduleSLogging != null) {
-            fileRoot.merge(moduleSLogging, true, false);
-        }
+        mergeOptionalModule(fileRoot, LOGGING_MODULE);
+        mergeOptionalModule(fileRoot, SLOGGING_MODULE);
         fileRoot.merge(moduleNative, true, false);
 
         fileRoot.linkModules(f_repository, true);
@@ -382,56 +373,46 @@ public class NativeContainer
         // TODO: This is not intended as permanent code. It is a hack for the POC of
         // injected SLF4J and slog logging and will likely be implemented differently
         // and in a more robust manner for the real logging implementation in the XDK.
-        // When the corresponding POC modules are present, these back
-        // `@Inject Logger logger;`, `@Inject MDC mdc;`, and
-        // `@Inject slogging.Logger logger;` on the user side. The two logger resources
-        // use the same resource name, so getInjectable() must resolve by both name and
-        // type.
-        //
-        // The logger implementations are `const` types, deliberately NOT services: a service
-        // wrapper around a logger would create a new fiber per call. That would break
-        // fiber-local context such as logging.MDC and slogging.LoggerContext, because the
-        // SharedContext tokens registered on the caller's fiber would not be visible from
-        // inside the wrapper service.
-        //
-        // The supplier shape is the same as for any other native-injected resource: one
-        // `(typeName, resourceName)` registration, no wildcard branch in `getInjectable`.
-        if (m_fLoggingModuleLoaded) {
-            ModuleConstant modLogging = pool.ensureModuleConstant(LOGGING_MODULE);
-            // The injection key uses the user-facing interface type (`Logger`) — that's what
-            // `@Inject Logger logger;` resolves against. The supplier internally constructs a
-            // `BasicLogger` (the canonical implementation, a `const`) using that as the
-            // typeLogger argument to `findConstructor`.
-            TypeConstant   typeLoggerIf = pool.ensureTerminalTypeConstant(
-                    pool.ensureClassConstant(modLogging, "Logger"));
-            TypeConstant   typeLogger   = pool.ensureTerminalTypeConstant(
-                    pool.ensureClassConstant(modLogging, "BasicLogger"));
-            m_typeLoggingLogger = typeLoggerIf;
-            m_typeBasicLogger   = typeLogger;
-            addResourceSupplier(new InjectionKey("logger", typeLoggerIf),
-                    (frame, hOpts) -> ensureLogger(frame, typeLogger,
-                            inferLoggerName(frame, "logger")));
+        registerLoggingResources(pool);
+        registerSLoggingResources(pool);
+    }
 
-            TypeConstant typeMDC = pool.ensureTerminalTypeConstant(
-                    pool.ensureClassConstant(modLogging, "MDC"));
-            addResourceSupplier(new InjectionKey("mdc", typeMDC),
-                    (frame, hOpts) -> ensureConst(frame, typeMDC));
+    private void registerLoggingResources(ConstantPool pool) {
+        if (!moduleAvailable(LOGGING_MODULE)) {
+            return;
         }
 
-        if (m_fSLoggingModuleLoaded) {
-            ModuleConstant modSLogging = pool.ensureModuleConstant(SLOGGING_MODULE);
-            TypeConstant typeSLogger = pool.ensureTerminalTypeConstant(
-                    pool.ensureClassConstant(modSLogging, "Logger"));
-            addResourceSupplier(new InjectionKey("logger", typeSLogger),
-                    (frame, hOpts) -> {
-                        ConstantPool poolFrame = frame.poolContext();
-                        TypeConstant typeFrameSLogger = poolFrame.ensureTerminalTypeConstant(
-                                poolFrame.ensureClassConstant(
-                                        poolFrame.ensureModuleConstant(SLOGGING_MODULE),
-                                        "Logger"));
-                        return ensureConst(frame, typeFrameSLogger);
-                    });
+        var typeLogger = typeFor(pool, LOGGING_MODULE, "Logger");
+        var typeBasic  = typeFor(pool, LOGGING_MODULE, "BasicLogger");
+        var typeMDC    = typeFor(pool, LOGGING_MODULE, "MDC");
+
+        m_typeLoggingLogger = typeLogger;
+        m_typeBasicLogger   = typeBasic;
+
+        addResourceSupplier(new InjectionKey("logger", typeLogger),
+                (frame, hOpts) -> ensureLogger(frame, typeBasic, inferLoggerName(frame, "logger")));
+        addResourceSupplier(new InjectionKey("mdc", typeMDC),
+                (frame, hOpts) -> ensureConst(frame, typeMDC));
+    }
+
+    private void registerSLoggingResources(ConstantPool pool) {
+        if (!moduleAvailable(SLOGGING_MODULE)) {
+            return;
         }
+
+        var typeLogger = typeFor(pool, SLOGGING_MODULE, "Logger");
+        addResourceSupplier(new InjectionKey("logger", typeLogger),
+                (frame, hOpts) -> ensureConst(frame, typeFor(frame.poolContext(),
+                        SLOGGING_MODULE, "Logger")));
+    }
+
+    private boolean moduleAvailable(String moduleName) {
+        return f_repository.loadModule(moduleName) != null;
+    }
+
+    private TypeConstant typeFor(ConstantPool pool, String moduleName, String className) {
+        var module = pool.ensureModuleConstant(moduleName);
+        return pool.ensureTerminalTypeConstant(pool.ensureClassConstant(module, className));
     }
 
     /**
@@ -440,27 +421,12 @@ public class NativeContainer
      * native side does not have to thread a sink handle through.
      */
     private ObjectHandle ensureLogger(Frame frame, TypeConstant typeLogger, String name) {
-        ClassTemplate    template = getTemplate(typeLogger.getSingleUnderlyingClass(true));
-        ConstantPool     pool     = getConstantPool();
-        MethodStructure  ctor     = template.getStructure().findConstructor(pool.typeString());
-        ClassComposition clz      = template.getCanonicalClass();
-
-        ObjectHandle[] ahArgs = new ObjectHandle[ctor.getMaxVars()];
+        var template = getTemplate(typeLogger.getSingleUnderlyingClass(true));
+        var ctor     = template.getStructure().findConstructor(getConstantPool().typeString());
+        var ahArgs   = new ObjectHandle[ctor.getMaxVars()];
         ahArgs[0] = xString.makeHandle(name);
 
-        switch (template.construct(frame, ctor, clz, null, ahArgs, Op.A_STACK)) {
-        case Op.R_NEXT:
-            return frame.popStack();
-
-        case Op.R_CALL:
-            return new DeferredCallHandle(frame.m_frameNext);
-
-        case Op.R_EXCEPTION:
-            return new DeferredCallHandle(frame.clearException());
-
-        default:
-            throw new IllegalStateException();
-        }
+        return construct(frame, template, ctor, ahArgs);
     }
 
     /**
@@ -471,17 +437,17 @@ public class NativeContainer
      */
     private String inferLoggerName(Frame frame, String sName) {
         if ("logger".equals(sName) && frame.f_function != null) {
-            IdentityConstant idMethod    = frame.f_function.getIdentityConstant();
-            IdentityConstant idNamespace = idMethod.getNamespace();
+            var idMethod    = frame.f_function.getIdentityConstant();
+            var idNamespace = idMethod.getNamespace();
             if (idNamespace != null) {
-                String sPath = idNamespace.getPathString();
+                var sPath = idNamespace.getPathString();
                 if (sPath != null && !sPath.isEmpty()) {
                     return sPath;
                 }
 
-                ModuleConstant idModule = idMethod.getModuleConstant();
+                var idModule = idMethod.getModuleConstant();
                 if (idModule != null) {
-                    String sModule = idModule.getName();
+                    var sModule = idModule.getName();
                     if (sModule != null && !sModule.isEmpty()) {
                         return sModule;
                     }
@@ -497,12 +463,18 @@ public class NativeContainer
      * lib_logging const that wants the same default-construction pattern.
      */
     private ObjectHandle ensureConst(Frame frame, TypeConstant typeConst) {
-        ClassTemplate    template = getTemplate(typeConst.getSingleUnderlyingClass(true));
-        MethodStructure  ctor     = template.getStructure().findConstructor();
-        ClassComposition clz      = template.getCanonicalClass();
+        var template = getTemplate(typeConst.getSingleUnderlyingClass(true));
+        var ctor     = template.getStructure().findConstructor();
+        var ahArgs   = new ObjectHandle[ctor.getMaxVars()];
 
-        switch (template.construct(frame, ctor, clz, null,
-                    new ObjectHandle[ctor.getMaxVars()], Op.A_STACK)) {
+        return construct(frame, template, ctor, ahArgs);
+    }
+
+    private ObjectHandle construct(Frame frame, ClassTemplate template,
+                                   MethodStructure ctor, ObjectHandle[] ahArgs) {
+        var clz = template.getCanonicalClass();
+
+        switch (template.construct(frame, ctor, clz, null, ahArgs, Op.A_STACK)) {
         case Op.R_NEXT:
             return frame.popStack();
 
@@ -814,19 +786,14 @@ public class NativeContainer
 
     @Override
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts) {
-        for (Map.Entry<InjectionKey, InjectionSupplier> entry : f_mapResources.entrySet()) {
-            InjectionKey key = entry.getKey();
+        for (var entry : f_mapResources.entrySet()) {
+            var key = entry.getKey();
             if (!key.f_sName.equals(sName)) {
                 continue;
             }
 
-            // Check for equality first, but allow "congruency", "duck type" equality as well
-            // as sans-Nullable equivalency. This deliberately resolves by (name, type), not just
-            // name, so `logging.Logger logger` and `slogging.Logger logger` can both use the
-            // familiar resource name "logger".
-            TypeConstant typeResource = key.f_type;
-            if (typeResource.equals(type) || typeResource.isEquivalent(type)
-                    || typeResource.isEquivalent(type.removeNullable())) {
+            // Resolve by (name, type), not just name, while both POC logger APIs use "logger".
+            if (matchesType(key.f_type, type)) {
                 return entry.getValue().supply(frame, hOpts);
             }
         }
@@ -844,10 +811,13 @@ public class NativeContainer
     }
 
     private boolean isCanonicalLoggingLogger(TypeConstant type) {
-        TypeConstant typeLogger = m_typeLoggingLogger;
-        return typeLogger != null &&
-                (typeLogger.equals(type) || typeLogger.isEquivalent(type)
-                        || typeLogger.isEquivalent(type.removeNullable()));
+        return m_typeLoggingLogger != null && matchesType(m_typeLoggingLogger, type);
+    }
+
+    private boolean matchesType(TypeConstant typeResource, TypeConstant typeRequest) {
+        return typeResource.equals(typeRequest)
+                || typeResource.isEquivalent(typeRequest)
+                || typeResource.isEquivalent(typeRequest.removeNullable());
     }
 
     @Override
@@ -1041,8 +1011,6 @@ public class NativeContainer
     private       ModuleStructure  m_moduleSystem;
     private       ModuleStructure  m_moduleTurtle;
     private       ModuleStructure  m_moduleNative;
-    private       boolean          m_fLoggingModuleLoaded;
-    private       boolean          m_fSLoggingModuleLoaded;
 
     /**
      * Cached canonical logging types. Used to resolve module/class-named injections for

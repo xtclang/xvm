@@ -114,9 +114,8 @@ shape gets us:
   downstream consumers by their choice. A library that does logging is a library that
   does logging *politely*.
 - **An application author can swap `ConsoleLogSink` for `JsonLogSink`,
-  `CompositeLogSink`, `HierarchicalLogSink`, a future configured backend, or an
-  optional native bridge without recompiling any library.** Behind a stable injection
-  point.
+  `CompositeLogSink`, `HierarchicalLogSink`, or a future configured backend without
+  recompiling any library.** Behind a stable injection point.
 - **Test authors get `MemoryLogSink` for free.** They wire it up once and assert on
   `events`. No global state, no `LogManager.getLogManager().reset()`, no flaky tests.
 - **Future structured-logging consumers (log aggregators, dashboards) get a stable event

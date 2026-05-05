@@ -1,12 +1,11 @@
 /**
- * Corresponds, conceptually, to two things in the SLF4J/Logback world:
- *   - `org.slf4j.spi.SLF4JServiceProvider` — the binding/provider boundary you implement
- *     to plug a backend into SLF4J.
- *   - `ch.qos.logback.core.Appender` — the per-destination output sink in Logback.
+ * Corresponds conceptually to a Logback `Appender`: a per-destination backend with its
+ * own level/filter decision. This is not part of pure SLF4J; it is the backend boundary
+ * that a real SLF4J deployment would normally get from Logback, Log4j 2, or another
+ * implementation.
  *
- * `LogSink` is more like the Logback `Appender`: a single emission target with its own
- * level filter. Mapping multiple `LogSink`s onto one logger (Logback's "appender attached
- * to logger" model) is the job of [CompositeLogSink].
+ * Mapping multiple `LogSink`s onto one logger (Logback's "appender attached to logger"
+ * model) is the job of [CompositeLogSink].
  *
  * The Service-Provider Interface for logging backends. A `LogSink` is the only thing a
  * `Logger` ever talks to; everything else (level checks, message formatting, marker
@@ -18,9 +17,8 @@
  * Anything _below_ this interface is replaceable: `ConsoleLogSink` for the default
  * platform-controlled console output, `MemoryLogSink` in tests, [JsonLogSink] for
  * structured JSON-Lines output, [CompositeLogSink] and [HierarchicalLogSink] for
- * Logback-style backend policy, a future file/network sink, or an optional native sink
- * wrapping `slf4j`+`logback` via the JIT bridge — all of those are interchangeable
- * behind this interface.
+ * Logback-style backend policy, or a future file/network/cloud sink. All of those are
+ * interchangeable behind this interface.
  *
  * # Implementing a custom sink
  *

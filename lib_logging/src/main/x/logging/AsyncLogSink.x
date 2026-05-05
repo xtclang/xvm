@@ -5,6 +5,17 @@
  * background fiber drains the queue and invokes the delegate sink. The [LogEvent] has
  * already captured MDC and source metadata before it reaches this sink, so delayed
  * emission preserves the caller's context.
+ *
+ * This is the POC equivalent of Logback's `AsyncAppender`:
+ *
+ *      <appender name="ASYNC_JSON" class="ch.qos.logback.classic.AsyncAppender">
+ *        <queueSize>8192</queueSize>
+ *        <appender-ref ref="JSON"/>
+ *      </appender>
+ *
+ * Ecstasy equivalent:
+ *
+ *      LogSink sink = new AsyncLogSink(new JsonLogSink(), capacity=8192);
  */
 service AsyncLogSink(LogSink delegate, Int capacity) implements LogSink {
 

@@ -77,7 +77,7 @@ to JSON/cloud sinks without parsing message text.
 
 | Library | Prior art | Current proof |
 |---|---|---|
-| [`lib_logging`](../../lib_logging/) | SLF4J 2.x + Logback | 64 focused XTC test methods, injected manual demo, async/composite/hierarchical/JSON backend building blocks. |
+| [`lib_logging`](../../lib_logging/) | SLF4J 2.x + Logback | 66 focused XTC test methods, injected manual demo, async/composite/hierarchical/JSON backend building blocks. |
 | [`lib_slogging`](../../lib_slogging/) | Go `log/slog` | 37 focused XTC test methods, injected/manual coverage, async handler, handler options, and JSON/redaction support. |
 
 ## Recommendation
@@ -111,7 +111,7 @@ The rest of the tree is organized by reader:
 | Go `log/slog` engineer | [`usage/slog-parity.md`](usage/slog-parity.md) | [`api-cross-reference.md`](api-cross-reference.md), [`lib_slogging` source](../../lib_slogging/src/main/x/slogging/) |
 | XTC language designer | [`open-questions.md`](open-questions.md) | [`design/design.md`](design/design.md), [`design/xdk-alignment.md`](design/xdk-alignment.md) |
 | Sink / handler author | [`usage/custom-sinks.md`](usage/custom-sinks.md), [`usage/custom-handlers.md`](usage/custom-handlers.md) | [`usage/structured-logging.md`](usage/structured-logging.md) |
-| Cloud/backend reviewer | [`cloud-integration.md`](cloud-integration.md) | [`future/logback-integration.md`](future/logback-integration.md), [`future/native-bridge.md`](future/native-bridge.md) |
+| Cloud/backend reviewer | [`cloud-integration.md`](cloud-integration.md) | [`future/logback-integration.md`](future/logback-integration.md), [`usage/configuration.md`](usage/configuration.md) |
 | Migration reviewer | [`usage/platform-and-examples-adaptation.md`](usage/platform-and-examples-adaptation.md) | [`usage/injected-logger-example.md`](usage/injected-logger-example.md) |
 
 ## Full doc index
@@ -124,7 +124,6 @@ The rest of the tree is organized by reader:
 | [`api-cross-reference.md`](api-cross-reference.md) | Official SLF4J / Go slog API links mapped to local Ecstasy types and difference notes. |
 | [`cloud-integration.md`](cloud-integration.md) | Why the API choice is the entry point to cloud observability ecosystems. |
 | [`open-questions.md`](open-questions.md) | Decision tracker: resolved calls, designer questions (Q-D1..Q-D7), W-item parity list, and remaining follow-up. |
-| [`review-prompt.md`](review-prompt.md) | Self-contained prompt for another AI agent to review the branch and documentation. |
 | **Design (`lib_logging` side)** | |
 | [`design/design.md`](design/design.md) | `lib_logging` architecture: types, API↔impl boundary, sink-type rule, MDC mechanism, per-container override. |
 | [`design/why-slf4j-and-injection.md`](design/why-slf4j-and-injection.md) | The original rationale for the SLF4J shape and injection-first acquisition. |
@@ -142,9 +141,7 @@ The rest of the tree is organized by reader:
 | [`usage/configuration.md`](usage/configuration.md) | Logback XML vs proposed Ecstasy JSON configuration, dynamic sink/handler reload, and equivalence mapping. |
 | **Follow-up backend/compiler work** | |
 | [`future/logback-integration.md`](future/logback-integration.md) | Configuration-driven Logback-style backend on top of the shipped primitives. |
-| [`future/native-bridge.md`](future/native-bridge.md) | Optional Java Logback bridge — feasibility analysis and why it is not the default path. |
 | [`future/lazy-logging.md`](future/lazy-logging.md) | Kotlin-style lambda emission (`logger.info { "..." }`) — exploration. |
-| [`future/runtime-implementation-plan.md`](future/runtime-implementation-plan.md) | Mostly historical: the original runtime-wiring plan. Stages 1–3 have landed; the JIT-side equivalent (Stage 1) is open. |
 
 ## Where the actual code lives
 
@@ -178,7 +175,7 @@ lib_logging/                            SLF4J-shaped library
     │       ├── AsyncLogSink.x          bounded async wrapper (service)
     │       ├── NoopLogSink.x           drops every event (const)
     │       └── MemoryLogSink.x         test-helper, captures events (service)
-    └── test/x/LoggingTest/             64 focused XTC test methods
+    └── test/x/LoggingTest/             66 focused XTC test methods
 
 lib_slogging/                           slog-shaped sibling library
 ├── build.gradle.kts
@@ -216,9 +213,8 @@ configuration-file loader, rolling-file/network destinations, and an optional Ja
 Logback bridge are deliberately not shipped in this branch; the docs explain where
 those belong if the canonical `lib_logging` API is accepted.
 
-## Reference
+## Backend boundary
 
-The original SLF4J architecture writeup that shaped much of `lib_logging` is in
-[`slf4j_full_guide.md`](../../slf4j_full_guide.md) at the repo root. It is the
-source of the architectural template (`MyLangLogger` → `RuntimeLogSink` →
-backend) we adapted into `Logger` → `LogSink` → backend.
+This branch deliberately keeps the backend boundary pure XTC: `Logger` talks to
+`LogSink`, and the implemented `LogSink` classes cover console, JSON, fanout,
+hierarchical levels, async buffering, and test capture.

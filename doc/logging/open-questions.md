@@ -4,8 +4,7 @@ This is the running list of design decisions and remaining implementation questi
 kept deliberately short so it stays readable as the project moves.
 
 It is split into resolved design notes, implementation trackers, and the few items
-that still need compiler/tooling/backend follow-up. Historical plan links are kept
-where they explain why the branch made a decision.
+that still need compiler/tooling/backend follow-up.
 
 ---
 
@@ -13,10 +12,10 @@ where they explain why the branch made a decision.
 
 | # | Question | Resolution |
 |---|---|---|
-| 1 | **Wildcard-name injection in `nMainInjector`** — `@Inject("any.name") Logger` doesn't resolve because the existing resource map is exact-match. | **Rejected.** Single fixed-name `("logger", loggerType)` supplier; per-name loggers come from `Logger.named(String)` instead. No special-case in the injector. See [Stage 1.4](future/runtime-implementation-plan.md#14--single-fixed-name-supplier-no-wildcard-injection). |
-| 2 | **Default logger name when no `resourceName` supplied** — should `@Inject Logger logger;` (no name) get `"default"`, the enclosing module's name, or the class name? | Runtime fallback implemented for canonical `logging.Logger`: if the injected field name is `"logger"`, `NativeContainer` derives the caller namespace. Exact compiler-synthesized module/class names remain future polish. See [Stage 4](future/runtime-implementation-plan.md#stage-4--compiler-side-default-name-optional-but-high-impact). |
+| 1 | **Wildcard-name injection** — should `@Inject("any.name") Logger` acquire arbitrary named loggers directly? | **Rejected.** There is one fixed-name `("logger", loggerType)` supplier; per-name loggers come from `Logger.named(String)` instead. |
+| 2 | **Default logger name when no `resourceName` supplied** — should `@Inject Logger logger;` (no name) get `"default"`, the enclosing module's name, or the class name? | Runtime fallback implemented for canonical `logging.Logger`: if the injected field name is `"logger"`, `NativeContainer` derives the caller namespace. Exact compiler-synthesized module/class names remain future polish. |
 | 3 | **MDC scope: per-fiber, per-service, or per-call?** | Per-fiber semantics implemented in Ecstasy with `SharedContext<immutable Map>`. The logger is injected as a `BasicLogger` const so calls stay on the caller fiber and can see the current MDC. |
-| 5 | **Throwable promotion: where does it happen, and who wins when both are supplied?** | `MessageFormatter.format` does the promotion; explicit `cause=` always wins over a promoted-from-args throwable. See [Stage 2.1](future/runtime-implementation-plan.md#21--real-messageformatterformat). |
+| 5 | **Throwable promotion: where does it happen, and who wins when both are supplied?** | `MessageFormatter.format` does the promotion; explicit `cause=` always wins over a promoted-from-args throwable. |
 | 9 | **Where does the runtime live?** | Interpreter-side wiring lives in `javatools/src/main/java/org/xvm/runtime/NativeContainer.java`. The earlier native-resource class plan is superseded for this branch. |
 | 10 | **Bootstrap: do we need a tiny native fallback for early-runtime logging before `Console` is registered?** | Not for this branch. The default `ConsoleLogSink` writes through `@Inject Console`; a bootstrap-native fallback can be added later only if runtime startup logging needs it. |
 
@@ -151,19 +150,6 @@ context propagation, or should we be using a different primitive (a built-in
 `MDC`-equivalent, a service-injected ledger, fiber-local slots) for SLF4J-grade MDC
 semantics?
 
-### Q-D5. Removing the `RTLogger.java` wrapper — is there a class of "injection-only"
-runtime resources where the right answer is "construct the const directly, don't wrap"?
-
-The original POC went through `xRTLogger.INSTANCE` (a service template wrapping a
-`Logger`). That wrapper crossed a fiber boundary and severed the caller's MDC tokens.
-Removing the wrapper and registering `BasicLogger` directly as the resource (see
-`NativeContainer.ensureLogger`) fixed the problem and simplified the runtime side.
-
-**Question:** is this generally the right pattern when (a) the injected type is a
-`const`, (b) it has no per-call native state, and (c) we want fiber-local context
-visibility to survive injection? If so, should `nMainInjector` grow a
-`registerConstResource(...)` helper to make this the documented happy path?
-
 ### Q-D6. SLF4J vs slog as the API shape — *resolved for this branch*
 
 We're maintaining two parallel libraries (`lib_logging` modeled after SLF4J 2.x and
@@ -216,7 +202,6 @@ feature scope. Each item is a concrete deliverable with a one-line summary.
 | W-4 | Default injected logger naming | **Partially done.** `NativeContainer` now falls back from the field name `"logger"` to the caller namespace for canonical `logging.Logger` injections. Exact module/class names still need compiler lowering if we want deterministic names outside the runtime fallback. |
 | W-5 | Async / batched sink (`AsyncLogSink`) | **Done.** Bounded queue + worker-fiber drain wrapper ships in the base library and is tested. |
 | W-6 | Logback-shaped backend primitives | **Done at the base-programmatic level.** `CompositeLogSink`, `HierarchicalLogSink`, `JsonLogSink`, and `JsonLogSinkOptions` cover multi-appender fanout, per-logger threshold routing, JSON rendering, and redaction/field-name knobs. External config-file loading, rolling files, hot reload, network sinks, and filters remain follow-up backend modules. |
-| W-7 | Native bridge (`RTLogbackSink.java`) | **Decision documented; not shipped.** The bridge remains an optional escape hatch in `future/native-bridge.md`. The canonical XDK path should stay pure Ecstasy first so users do not inherit Java Logback configuration/bootstrap behavior by default. |
 | W-8 | Per-container override convenience | **Resolved: no library helper.** Child containers should override the injectable resource through the host injector API. |
 | W-9 | Defensive copy of caller-supplied `Object[] arguments` | **Resolved: document, no copy.** Listed here so it can be revisited if async sinks become default-on. |
 | W-10 | Compiler/tooling lints for log statements | Out of scope for the library; would be an XTC linter feature. Open question 12. |
@@ -234,12 +219,12 @@ and what remains deliberate follow-up work.
 |---|---|---|---|
 | **1** | Close visible loose ends. No new design choices. | W-1 (multi-marker), W-11 (doc cleanup) | ~1 hour |
 | **2** | Make `lib_logging` fully comparable as a shippable library. | Tier 1 + W-2 (logger interning, needs a `LoggerRegistry` service since `BasicLogger` is `const`) + W-3 (real `MessageFormatter` with `{}` substitution + trailing-throwable promotion) | ~half a day |
-| **3** | Backend/runtime polish. | W-4 runtime fallback naming, W-5 async wrapper, W-6 base Logback-style primitives, W-7 native-bridge decision, W-8 per-container override decision, W-9 defensive-copy decision, W-10 linter deferral | mostly landed; W-4 compiler lowering and W-10 linting remain separate work |
+| **3** | Backend/runtime polish. | W-4 runtime fallback naming, W-5 async wrapper, W-6 base Logback-style primitives, W-8 per-container override decision, W-9 defensive-copy decision, W-10 linter deferral | mostly landed; W-4 compiler lowering and W-10 linting remain separate work |
 
 **Decision (revised):** Tier 1, Tier 2, and the backend-primitives part of Tier 3
 land in this PR for both libraries. The only remaining Tier 3 implementation work is
 outside the base libraries: compiler-synthesized call-site metadata, linter support,
-full config-file loading/destinations, and any optional Java bridge.
+and full config-file loading/destinations.
 
 The `lib_slogging` parity translation:
 
