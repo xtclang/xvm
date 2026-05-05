@@ -11,7 +11,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 
 import { createStatusBar, updateStatusBar } from './status-bar';
-import { startLanguageClient, restartLanguageClient, stopLanguageClient } from './lsp-client';
+import { startLanguageClient, restartLanguageClient, stopLanguageClient, applyTraceConfig } from './lsp-client';
 import { XtcTaskProvider } from './task-provider';
 import { XtcDebugAdapterDescriptorFactory, XtcDebugConfigurationProvider } from './debug-adapter';
 import { registerCommands } from './commands';
@@ -77,9 +77,17 @@ export function activate(context: vscode.ExtensionContext): void {
         }),
 
         vscode.workspace.onDidChangeConfiguration(event => {
-            if (event.affectsConfiguration('xtc.java.home') && serverExists) {
+            if (event.affectsConfiguration('xtc.trace.server')) {
+                void applyTraceConfig();
+            }
+            const needsRestart = serverExists && (
+                event.affectsConfiguration('xtc.java.home') ||
+                event.affectsConfiguration('xtc.sourceRoots')
+            );
+            if (needsRestart) {
+                const changed = event.affectsConfiguration('xtc.java.home') ? 'Java path' : 'Source roots';
                 vscode.window.showInformationMessage(
-                    'Java path changed. Restart the language server?',
+                    `${changed} changed. Restart the language server?`,
                     'Restart', 'Later'
                 ).then(choice => {
                     if (choice === 'Restart') {

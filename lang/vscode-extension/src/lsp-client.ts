@@ -8,6 +8,7 @@ import {
     LanguageClientOptions,
     ServerOptions,
     State,
+    Trace,
     TransportKind
 } from 'vscode-languageclient/node';
 
@@ -69,7 +70,8 @@ export function startLanguageClient(context: vscode.ExtensionContext, serverJar:
             fileEvents: vscode.workspace.createFileSystemWatcher('**/*.x')
         },
         initializationOptions: {
-            inlayHintsEnabled: vscode.workspace.getConfiguration('xtc').get<boolean>('inlayHints.enabled', true)
+            inlayHintsEnabled: vscode.workspace.getConfiguration('xtc').get<boolean>('inlayHints.enabled', true),
+            xtcSourceRoots: vscode.workspace.getConfiguration('xtc').get<string[]>('sourceRoots', [])
         },
         middleware: {
             workspace: {
@@ -181,4 +183,17 @@ export async function restartLanguageClient(context: vscode.ExtensionContext, se
 
 export async function stopLanguageClient(): Promise<void> {
     await safeStop();
+}
+
+function traceFromConfig(): Trace {
+    const level = vscode.workspace.getConfiguration('xtc').get<string>('trace.server', 'off');
+    if (level === 'verbose') { return Trace.Verbose; }
+    if (level === 'messages') { return Trace.Messages; }
+    return Trace.Off;
+}
+
+export async function applyTraceConfig(): Promise<void> {
+    if (client) {
+        await client.setTrace(traceFromConfig());
+    }
 }
