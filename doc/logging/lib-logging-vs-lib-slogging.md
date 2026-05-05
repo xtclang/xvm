@@ -34,6 +34,30 @@ Go `log/slog` counterpart are in [`api-cross-reference.md`](api-cross-reference.
 
 ---
 
+## Fast conclusion
+
+Use this section for the first pass; the later sections are the depth-first rationale.
+
+Choose **`lib_logging`** as the canonical XDK facade unless review explicitly decides
+Ecstasy should prefer the Go `slog` mental model. The deciding point is operational
+familiarity: `lib_logging` gives users named loggers, `{}` formatting, markers, MDC,
+fluent event builders, and a Logback-style `LogSink` boundary, while still supporting
+modern structured JSON/cloud output through `LogEvent.keyValues`.
+
+`lib_slogging` proves the alternative is viable and clean. It is smaller because all
+structured data is `Attr`, and backend extension is through `Handler`. The cost is that
+hierarchical logger names, markers, and message templates are not first-class; they must
+be modeled as attrs or helper adapters.
+
+The comparison can be read in two passes:
+
+- **Sections 1-3:** enough to understand the API choice and what exists or does not
+  exist in each model.
+- **Sections 4-8:** deeper rationale, marker examples, Ecstasy `const`/`service`
+  implications, reviewer questions, and exact branch contents.
+
+---
+
 ## 1. Same scenario in both APIs
 
 A nontrivial example: an HTTP request handler logs request entry, attaches a
@@ -246,7 +270,7 @@ async/composite/hierarchical backend primitives.
 
 ## 4. Per-axis analysis
 
-### 3.1 Levels — closed enum vs open integer
+### 4.1 Levels — closed enum vs open integer
 
 SLF4J's five levels are an industry consensus, easy to pattern-match on, and remove a
 class of "what's the right level for this?" questions because the choice is small.
@@ -264,7 +288,7 @@ Ecstasy already treats severity in many places (raw `Int`-shaped severity in
 `Comparable`/`Orderable` machinery. The SLF4J model is a `const` enum with explicit
 methods — also clean, but rigidly closed.
 
-### 3.2 Context propagation — `MDC` vs `With(attrs)`
+### 4.2 Context propagation — `MDC` vs `With(attrs)`
 
 This is the single biggest design fork.
 
@@ -294,7 +318,7 @@ small: explicit `Logger.with(...)` for normal code, optional `LoggerContext` for
 framework code that wants the "library code still sees the request logger" trick. We
 want reviewer thoughts on which side of this tradeoff Ecstasy programs should be on.
 
-### 3.3 Structured data — three concepts vs one
+### 4.3 Structured data — three concepts vs one
 
 #### Aside: what is a log marker?
 
@@ -616,7 +640,7 @@ Ecstasy program will probably want both — which the SLF4J model gives explicit
 the slog model gives via "the Text handler renders the message verbatim and appends
 attrs."
 
-### 3.4 Message — `{}` template vs no interpolation
+### 4.4 Message — `{}` template vs no interpolation
 
 SLF4J: `info("user {} did {}", [name, action])`. Lazy substitution: if the level is
 disabled the `format` step is skipped. Familiar and concise.
@@ -635,7 +659,7 @@ separate attrs. Reusing the SLF4J formatter in `lib_slogging` would erase the cl
 part of slog's design by adding positional arguments next to attrs. If we want a
 migration helper later, it should be an adapter outside the core slog API.
 
-### 3.5 Sink/handler shape — minimal vs richer
+### 4.5 Sink/handler shape — minimal vs richer
 
 `LogSink` has two methods. Everything (level filter, attr resolution, MDC capture,
 formatting) happens above the sink. A new sink author writes `isEnabled` and `log`
@@ -654,7 +678,7 @@ depends on workload. `lib_slogging` now ships
 derivation wrapper; a production backend can still override those hooks to cache a
 serialized prefix or backend-native context object.
 
-### 3.6 Logger naming — hierarchical vs attribute-based
+### 4.6 Logger naming — hierarchical vs attribute-based
 
 SLF4J's `logger.named("payments")` gives you a `Logger` whose name is `"<parent>.
 payments"`. Hierarchical names are how Logback configuration ("set
@@ -669,7 +693,7 @@ name-prefix matching.
 a feature: a `@Inject Logger` resolved with the enclosing module's qualified name is
 how SLF4J users intuitively expect it to work. slog forfeits this for uniformity.
 
-### 3.7 Source location
+### 4.7 Source location
 
 Both libraries now expose an explicit source-aware call as the lowering target for
 future compiler/runtime help: `logging.Logger.logAt(...)` populates
@@ -680,14 +704,14 @@ Automatic call-site capture remains compiler/runtime polish. The library-level
 decision is made: source metadata belongs on the immutable event/record, not in a
 backend-specific side channel.
 
-### 3.8 Async / batching
+### 4.8 Async / batching
 
 Same shape in both: a wrapper handler/sink owns a bounded queue and drains on a
 worker fiber. The base libraries now ship these as `AsyncLogSink` and
 `AsyncHandler` so slow output can be isolated without waiting for a full
 configuration backend.
 
-### 3.9 Familiarity
+### 4.9 Familiarity
 
 A subjective dimension that nonetheless matters for adoption. SLF4J is the dominant
 JVM logging API; Java/Kotlin engineers reach for it without thinking. slog is the
@@ -698,7 +722,7 @@ audience that will overlap heavily with both.
 
 ## 5. Ecstasy idiom fit — where the languages bite
 
-### 4.1 `const` vs `service` for the building blocks
+### 5.1 `const` vs `service` for the building blocks
 
 In `lib_logging`:
 
@@ -722,7 +746,7 @@ not snapshot an MDC map on every event. The optional interaction — "I want a l
 that propagates through fibers without threading a parameter" — lives in
 `LoggerContext`, not in the hot path.
 
-### 4.2 Fluent builder vs varargs
+### 5.2 Fluent builder vs varargs
 
 SLF4J's fluent `.atInfo().setMessage(...).addKeyValue(...).log()` requires a
 `LoggingEventBuilder` interface and a `BasicEventBuilder` implementation, plus a
@@ -739,7 +763,7 @@ how Ecstasy method signatures already work. But Ecstasy's default-argument suppo
 already collapses many of SLF4J's fluent-builder use cases into one method call, so
 the fluent surface is smaller in `lib_logging` than the SLF4J Java original.
 
-### 4.3 Marker subgraph vs attribute uniformity
+### 5.3 Marker subgraph vs attribute uniformity
 
 `Marker` in SLF4J/`lib_logging` is its own type with `add` (parent/child references)
 and `contains` (transitive query). It also has identity (`MarkerFactory.getMarker`
@@ -752,7 +776,7 @@ handled by `Attr.of("audit", True)` and a handler that filters on that attr.
 slightly more efficient (one interned reference vs a string equality check), but the
 attribute model needs less surface area.
 
-### 4.4 Compiler-side default-name injection
+### 5.4 Compiler-side default-name injection
 
 SLF4J expects `LoggerFactory.getLogger(MyClass.class)` to resolve to a class- or
 module-named logger. `lib_logging` currently delegates that to a future compiler

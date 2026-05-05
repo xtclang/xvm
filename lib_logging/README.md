@@ -39,4 +39,4 @@ All design docs live at the repo root under [`doc/logging/`](../doc/logging):
 | [`slf4j-parity.md`](../doc/logging/usage/slf4j-parity.md) | SLF4J 2.x type and method mapping. |
 | [`ecstasy-vs-java-examples.md`](../doc/logging/usage/ecstasy-vs-java-examples.md) | Java SLF4J examples next to equivalent Ecstasy code. |
 | [`custom-sinks.md`](../doc/logging/usage/custom-sinks.md) | Guide to writing a custom sink. |
-| [`open-questions.md`](../doc/logging/open-questions.md) | Remaining design and runtime decisions. |
+| [`open-questions.md`](../doc/logging/open-questions.md) | Decision tracker and remaining runtime/compiler/backend follow-up. |
