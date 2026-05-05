@@ -7,12 +7,13 @@ This document describes the XVM project's CI/CD pipeline, workflow architecture,
 1. [Pipeline Overview](#pipeline-overview)
 2. [Architecture: Build Artifacts vs Releases](#architecture-build-artifacts-vs-releases)
 3. [Master Push Flow](#master-push-flow)
-4. [Workflows Reference](#workflows-reference)
-5. [Actions Reference](#actions-reference)
-6. [Testing Publishing on Non-Master Branches](#testing-publishing-on-non-master-branches)
-7. [Manual Testing](#manual-testing)
-8. [Version Gating](#version-gating)
-9. [Troubleshooting](#troubleshooting)
+4. [IntelliJ Plugin & Lang Validation Gating](#intellij-plugin--lang-validation-gating)
+5. [Workflows Reference](#workflows-reference)
+6. [Actions Reference](#actions-reference)
+7. [Testing Publishing on Non-Master Branches](#testing-publishing-on-non-master-branches)
+8. [Manual Testing](#manual-testing)
+9. [Version Gating](#version-gating)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -189,6 +190,67 @@ xdk.version=0.4.4-SNAPSHOT
 ### Manual Execution (any branch)
 
 All workflows support `workflow_dispatch` for manual testing from any branch.
+
+---
+
+## IntelliJ Plugin & Lang Validation Gating
+
+The lang composite build (`lang/`) and the IntelliJ plugin lane are gated separately from the rest of the XDK build, because resolving the IntelliJ plugin dependencies makes Gradle noticeably slower. The gating is driven by the `dorny/paths-filter` step in `commit.yml`, which sets `lang=true` whenever any file under `lang/**` changed.
+
+### Plugin: build, verify, publish
+
+Build, verify, and publish always travel together — they're all gated by the same `effective-publish-intellij` flag computed in `commit.yml`'s `Compute IntelliJ publish flags` step.
+
+| # | Event | Branch | `lang/` changed | Workflow inputs | Plugin built & verified | Plugin published (GitHub release ZIP) |
+|---|-------|--------|-----------------|------------------|--------------------------|----------------------------------------|
+| 1 | `push` | `master` | ✓ | — | ✅ yes | ✅ yes (auto on merge) |
+| 2 | `push` | `master` | ✗ | — | ⏭️ no | ⏭️ no |
+| 3 | `pull_request` | any | ✓ or ✗ | n/a | ⏭️ no | ⏭️ no |
+| 4 | `push` | non-master | ✓ or ✗ | n/a | ⏭️ no | ⏭️ no |
+| 5 | `workflow_dispatch` | any | ✓ | `publish-intellij-plugin=true` | ✅ yes | ✅ yes |
+| 6 | `workflow_dispatch` | any | ✗ | `publish-intellij-plugin=true` | ⏭️ no (reason logged) | ⏭️ no |
+| 7 | `workflow_dispatch` | any | ✓ or ✗ | `force-publish-intellij-plugin=true` | ✅ yes (override) | ✅ yes (override) |
+| 8 | `workflow_dispatch` | any | ✓ or ✗ | neither flag set | ⏭️ no | ⏭️ no |
+
+Plain-English summary:
+
+- **Default policy**: the plugin only ships when there's a real reason — `lang/` was touched and the change merged to master.
+- **Manual trigger**: `publish-intellij-plugin=true` does the same thing on demand from any branch, still gated on lang changes.
+- **Override**: `force-publish-intellij-plugin=true` is the one escape hatch that ignores the lang-changed gate (useful for emergency re-publish without a code change).
+
+### Why two `workflow_dispatch` inputs (`publish-intellij-plugin` vs. `force-publish-intellij-plugin`)?
+
+These two booleans look similar but mean different things; they are not redundant.
+
+| Input | Effect | Respects lang-changed gate? | When to use |
+|-------|--------|------------------------------|-------------|
+| `publish-intellij-plugin=true` | "Publish the plugin **if** there's something new to publish." Treats this manual run the same way a master push does — runs only when `lang/` actually changed. | ✅ Yes — no-op if `lang/` is untouched. | Testing the publication pipeline from a branch when you've made lang changes. |
+| `force-publish-intellij-plugin=true` | "Publish the plugin no matter what." Skips the lang-changed check entirely. | ❌ No — always publishes. | Emergency re-publish without a code change (corrupted artifact, broken JetBrains release, manual version bump, etc.). Intended as an escape hatch, not the default knob. |
+
+In short: `publish-intellij-plugin` mirrors the natural master-push policy and is **safe to leave on** — it self-suppresses when there's nothing to publish. `force-publish-intellij-plugin` is the **override** that ignores all gating and should be used sparingly.
+
+### LSP / tree-sitter tests (independent of publishing)
+
+The LSP unit tests and tree-sitter grammar/corpus validation run on every event where lang/ was touched, regardless of publish flags. This is the cheap signal for catching regressions on the way in — every PR that edits `lang/` runs the suite, even though no plugin is built.
+
+| # | Event | `lang/` changed | Runner | LSP & tree-sitter tests |
+|---|-------|------------------|--------|--------------------------|
+| 1 | any | ✓ | `ubuntu-latest` | ✅ run (path filter triggers) |
+| 2 | any | ✗ | `ubuntu-latest` | ⏭️ skip (logged as "no changes under lang/") |
+| 3 | any | any | `windows-latest` | ⏭️ skip (Ubuntu-only step) |
+
+The validation step passes `-PincludeBuildLang=true -PincludeBuildAttachLang=true` directly to its `./gradlew` invocations rather than relying on the job-level env, so the lang composite build is included only for those specific commands. The rest of the job continues to run with lang excluded.
+
+### What's published where
+
+| Artifact | Trigger | Destination |
+|----------|---------|-------------|
+| XDK Maven snapshots | always on `push` to `master` | Maven Central Snapshots, GitHub Packages |
+| XDK GitHub release (snapshot) | always on `push` to `master` | GitHub Releases |
+| **IntelliJ plugin snapshot ZIP** | per the table above (`effective-publish-intellij=true`) | GitHub Releases (attached to the snapshot release) |
+| IntelliJ Marketplace | **not** by this workflow — release-only via `promote-release.yml` | JetBrains Marketplace |
+
+Note on Marketplace: snapshot CI never pushes to JetBrains Marketplace. That's intentional — Marketplace is for tagged releases, handled by the separate `promote-release.yml` flow.
 
 ---
 

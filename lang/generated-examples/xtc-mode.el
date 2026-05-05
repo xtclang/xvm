@@ -1,12 +1,12 @@
 ;;; xtc-mode.el --- Major mode for editing Ecstasy files -*- lexical-binding: t; -*-
 
-;; Generated from XTC language model
+;; Generated from Ecstasy language model
 ;; Language: Ecstasy
 ;; File extensions: .x, .xtc
 
 ;;; Commentary:
 ;; This major mode provides syntax highlighting for Ecstasy (XTC) source files.
-;; It is automatically generated from the XTC language model.
+;; It is automatically generated from the Ecstasy language model.
 
 ;;; Code:
 

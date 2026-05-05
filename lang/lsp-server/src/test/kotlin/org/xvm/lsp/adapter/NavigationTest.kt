@@ -6,6 +6,10 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import java.util.stream.Stream
 
 /**
  * Navigation tests for [TreeSitterAdapter].
@@ -59,6 +63,41 @@ class NavigationTest : TreeSitterTestBase() {
         }
 
         /**
+         * Cmd-click on a call to a doc-commented method must land on the
+         * method's identifier line, not on the doc-comment opener -- exercises
+         * the [XtcQueryEngine.findMethodDeclarations] path for call resolution.
+         */
+        @Test
+        @DisplayName("should find doc-commented method definition on the name line")
+        fun shouldFindDocCommentedMethodDefinitionOnNameLine() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Calculator {
+                        /**
+                         * Adds two numbers.
+                         */
+                        Int add(Int a, Int b) {
+                            return a + b;
+                        }
+                        void test() {
+                            add(1, 2);
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on 'add' in the call site at line 9
+            val definition = ts.findDefinition(uri, 9, 12)
+
+            assertThat(definition).isNotNull
+            // Doc-comment occupies lines 2-4; the method name is on line 5 (0-indexed).
+            assertThat(definition!!.startLine).isEqualTo(5)
+        }
+
+        /**
          * When the cursor is on a method name at a call site (`add` in `add(1, 2)`),
          * go-to-definition should navigate to the method's declaration line.
          */
@@ -86,6 +125,162 @@ class NavigationTest : TreeSitterTestBase() {
 
             assertThat(definition).isNotNull
             assertThat(definition!!.startLine).isEqualTo(2)
+        }
+
+        @Test
+        @DisplayName("should resolve to local variable instead of same-named class member")
+        fun shouldResolveLocalBeforeClassMember() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Lexer {
+                        private Boolean whitespace;
+                    }
+                    Boolean testChar(Char test) {
+                        function Boolean(Char) whitespace = (Char c) -> c == ' ';
+                        return whitespace(test);
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on `whitespace` in `whitespace(test)` -- line 6, column 15
+            val definition = logged("shouldResolveLocalBeforeClassMember", ts.findDefinition(uri, 6, 15))
+
+            assertThat(definition).isNotNull
+            // The local on line 5 (the function-typed declaration), not the field on line 2
+            assertThat(definition!!.startLine).isEqualTo(5)
+        }
+
+        /**
+         * Forward references are not legal Ecstasy: a local declared on a later line
+         * must NOT be returned as the resolution of an identifier above the
+         * declaration. The scope walk filters `variable_declaration`s by their end
+         * position relative to the cursor; this test guards that filter.
+         */
+        @Test
+        @DisplayName("should not resolve to local declared after the cursor")
+        fun shouldNotResolveForwardReferenceLocal() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    Int globalThing;
+                    void run() {
+                        globalThing.toString();
+                        Int globalThing = 42;
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on `globalThing` in `globalThing.toString()` (line 3) -- before the
+            // shadowing local on line 4. Resolution must skip the forward-declared local
+            // and walk up to the module-level property on line 1.
+            val definition =
+                logged(
+                    "shouldNotResolveForwardReferenceLocal",
+                    ts.findDefinition(uri, 3, 8),
+                )
+
+            assertThat(definition).isNotNull
+            // The module-level globalThing is on line 1, NOT the local on line 4.
+            assertThat(definition!!.startLine).isEqualTo(1)
+        }
+
+        /**
+         * A local in an inner block must shadow a same-named local in an outer block.
+         * Cmd-click on the inner reference must return the inner declaration.
+         */
+        @Test
+        @DisplayName("should prefer inner-block local over outer-block local")
+        fun shouldPreferInnerBlockLocal() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        Int x = 1;
+                        if (True) {
+                            Int x = 2;
+                            x.toString();
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on `x` in `x.toString();` -- line 5, column 12
+            val definition = logged("shouldPreferInnerBlockLocal", ts.findDefinition(uri, 5, 12))
+
+            assertThat(definition).isNotNull
+            // The inner-block declaration (line 4), not the outer-block declaration (line 2).
+            assertThat(definition!!.startLine).isEqualTo(4)
+        }
+
+        /**
+         * The scope walk short-circuits when it finds a match in an enclosing scope. If the
+         * referenced name does NOT exist in any enclosing scope, resolution must fall through
+         * to the same-file declarations and (if not found there) the workspace index.
+         *
+         * This is the same-file half of that fall-through. (The cross-file workspace path
+         * requires an indexed multi-file workspace, which the unit-test harness does not
+         * easily set up.)
+         */
+        @Test
+        @DisplayName("should fall through to same-file declarations when name is not in scope")
+        fun shouldFallThroughToSameFileDeclarationsWhenOutOfScope() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Helper {
+                    }
+                    void run() {
+                        Helper h = new Helper();
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on `Helper` in `Helper h = new Helper();` -- line 4, column 8.
+            // `Helper` is not declared in the enclosing function scope; resolution must
+            // fall through to the same-file class declaration on line 1.
+            val definition =
+                logged(
+                    "shouldFallThroughToSameFileDeclarationsWhenOutOfScope",
+                    ts.findDefinition(uri, 4, 8),
+                )
+
+            assertThat(definition).isNotNull
+            assertThat(definition!!.startLine).isEqualTo(1)
+        }
+
+        /**
+         * Method parameters must resolve to themselves, not to any same-named workspace
+         * symbol. This is the simpler half of the scope-walk fix.
+         */
+        @Test
+        @DisplayName("should resolve to method parameter")
+        fun shouldResolveParameter() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    Int square(Int x) {
+                        return x * x;
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on the first `x` in `x * x` -- line 2, column 15
+            val definition = logged("shouldResolveParameter", ts.findDefinition(uri, 2, 15))
+
+            assertThat(definition).isNotNull
+            // The parameter `x` on line 1
+            assertThat(definition!!.startLine).isEqualTo(1)
         }
 
         /**
@@ -127,13 +322,14 @@ class NavigationTest : TreeSitterTestBase() {
     @DisplayName("findReferences()")
     inner class FindReferencesTests {
         /**
-         * Unlike [MockAdapter], [TreeSitterAdapter.findReferences] ignores the
-         * `includeDeclaration` flag -- it always returns every identifier node with the
-         * same text. We verify this by checking that both flag values yield the same count.
+         * `includeDeclaration = false` should drop exactly one location: the declaration
+         * itself. With both flag values exercised on the same source, the `false` result
+         * must contain every identifier-token from the `true` result minus the
+         * declaration site.
          */
         @Test
-        @DisplayName("should find all occurrences regardless of includeDeclaration flag")
-        fun shouldFindAllOccurrences() {
+        @DisplayName("should exclude declaration when includeDeclaration is false")
+        fun shouldExcludeDeclarationWhenIncludeDeclarationIsFalse() {
             val uri = freshUri()
             val source =
                 """
@@ -152,7 +348,10 @@ class NavigationTest : TreeSitterTestBase() {
             val withoutDecl = ts.findReferences(uri, 1, 10, includeDeclaration = false)
 
             assertThat(withDecl).hasSizeGreaterThanOrEqualTo(2)
-            assertThat(withDecl).hasSameSizeAs(withoutDecl)
+            assertThat(withoutDecl).hasSize(withDecl.size - 1)
+            // The dropped location is the class declaration's identifier (line 1, col 10).
+            assertThat(withDecl).anyMatch { it.startLine == 1 && it.startColumn == 10 }
+            assertThat(withoutDecl).noneMatch { it.startLine == 1 && it.startColumn == 10 }
         }
 
         /** Past-EOF has no identifier to match, so the result must be empty. */
@@ -279,43 +478,150 @@ class NavigationTest : TreeSitterTestBase() {
     }
 
     // ========================================================================
-    // getDocumentLinks()
+    // getDocumentLinks() -- URLs in comments and strings (NOT imports)
     // ========================================================================
 
     @Nested
     @DisplayName("getDocumentLinks()")
+    @TestInstance(TestInstance.Lifecycle.PER_CLASS)
     inner class DocumentLinkTests {
         /**
-         * After compiling source with `import` statements, `getDocumentLinks` should
-         * find them via `XtcQueryEngine.findImportLocations`. The exact result depends
-         * on whether the grammar nests imports inside the module body or at root level.
+         * One row per syntactic position the URL detector must recognise (line/block/doc
+         * comment, string literal, trailing-punctuation strip). Assertions are uniform; a
+         * new comment- or string-node type costs one extra row instead of a new method.
          */
+        @Suppress("unused")
+        fun singleUrlCases(): Stream<Arguments> =
+            Stream.of(
+                Arguments.of(
+                    "line comment",
+                    """
+                    module myapp {
+                        // see https://example.com for details
+                        class Foo {}
+                    }
+                    """.trimIndent(),
+                    "https://example.com",
+                    1,
+                    "    // see ".length,
+                ),
+                Arguments.of(
+                    "block comment, multi-line",
+                    """
+                    module myapp {
+                        /* block comment
+                           with https://anthropic.com on its own line
+                           and more text */
+                        class Foo {}
+                    }
+                    """.trimIndent(),
+                    "https://anthropic.com",
+                    2,
+                    "       with ".length,
+                ),
+                Arguments.of(
+                    "doc comment",
+                    """
+                    module myapp {
+                        /** see http://docs.xtclang.org/guide */
+                        class Foo {}
+                    }
+                    """.trimIndent(),
+                    "http://docs.xtclang.org/guide",
+                    1,
+                    "    /** see ".length,
+                ),
+                Arguments.of(
+                    "string literal",
+                    """
+                    module myapp {
+                        String home = "https://xtclang.org";
+                    }
+                    """.trimIndent(),
+                    "https://xtclang.org",
+                    1,
+                    "    String home = \"".length,
+                ),
+                Arguments.of(
+                    "trailing punctuation stripped",
+                    """
+                    module myapp {
+                        // visit https://example.com.
+                        class Foo {}
+                    }
+                    """.trimIndent(),
+                    "https://example.com",
+                    1,
+                    "    // visit ".length,
+                ),
+            )
+
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("singleUrlCases")
+        fun shouldLinkSingleUrl(
+            @Suppress("UNUSED_PARAMETER") name: String,
+            source: String,
+            expectedTarget: String,
+            expectedLine: Int,
+            expectedColumn: Int,
+        ) {
+            val uri = freshUri()
+            ts.compile(uri, source)
+
+            val links = ts.getDocumentLinks(uri, source)
+
+            assertThat(links).hasSize(1)
+            assertThat(links[0].target).isEqualTo(expectedTarget)
+            assertThat(links[0].range.start.line).isEqualTo(expectedLine)
+            assertThat(links[0].range.start.column).isEqualTo(expectedColumn)
+            // The detected range must cover exactly the (post-strip) URL -- catches mistakes
+            // like the trailing-punctuation case where the dot must NOT be in the range.
+            assertThat(links[0].range.end.column - links[0].range.start.column).isEqualTo(expectedTarget.length)
+        }
+
         @Test
-        @DisplayName("should find import links after compile")
-        fun shouldFindImportLinks() {
+        @DisplayName("should find multiple URLs in one comment")
+        fun shouldFindMultipleUrls() {
             val uri = freshUri()
             val source =
                 """
                 module myapp {
-                    import foo.Bar;
-                    import baz.Qux;
+                    // links: https://a.test https://b.test
+                    class Foo {}
                 }
                 """.trimIndent()
-
             ts.compile(uri, source)
 
-            assertThat(ts.getDocumentLinks(uri, source)).isNotNull
+            val links = ts.getDocumentLinks(uri, source)
+
+            assertThat(links).extracting<String>({ it.target }).containsExactlyInAnyOrder(
+                "https://a.test",
+                "https://b.test",
+            )
         }
 
-        /** A module with no imports should produce an empty link list. */
         @Test
-        @DisplayName("should return empty when no imports")
-        fun shouldReturnEmptyWhenNoImports() {
+        @DisplayName("should NOT link imports")
+        fun shouldNotLinkImports() {
             val uri = freshUri()
-            val source = "module myapp {}"
+            val source =
+                """
+                module myapp {
+                    import crypto.CertificateManager;
+                    import json.xtclang.org;
+                }
+                """.trimIndent()
             ts.compile(uri, source)
 
             assertThat(ts.getDocumentLinks(uri, source)).isEmpty()
+        }
+
+        @Test
+        @DisplayName("should return empty when no URLs and no comments/strings")
+        fun shouldReturnEmpty() {
+            val uri = freshUri()
+            ts.compile(uri, "module myapp {}")
+            assertThat(ts.getDocumentLinks(uri, "module myapp {}")).isEmpty()
         }
     }
 

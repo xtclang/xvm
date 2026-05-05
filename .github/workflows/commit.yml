@@ -147,7 +147,23 @@ jobs:
                   filters: |
                       lang:
                         - 'lang/**'
-                        - 'lib_ecstasy/**/*.x'
+
+            - name: 🌳 Lang validation decision
+              shell: bash
+              run: |
+                  LANG_CHANGED="${{ steps.changes.outputs.lang }}"
+                  echo ""
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                  if [ "$LANG_CHANGED" = "true" ]; then
+                      echo "🌳 lang/ CHANGED -- WILL build lang composite and run LSP/tree-sitter tests"
+                  else
+                      echo "⏭️ no changes under lang/ -- WILL SKIP lang composite build and LSP/tree-sitter tests"
+                      echo "   (the rest of the build runs without -PincludeBuildLang=true to avoid the IntelliJ plugin resolution cost)"
+                  fi
+                  echo "  📋 path-filter result : lang=${LANG_CHANGED:-<unset>}"
+                  echo "  📋 runner             : ${{ matrix.os }} (lang validation only runs on ubuntu-latest)"
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                  echo ""
 
             - name: Compute IntelliJ publish flags
               id: publish-flags
@@ -155,27 +171,66 @@ jobs:
               run: |
                   FORCE="${{ github.event.inputs.force-publish-intellij-plugin }}"
                   REQUESTED="${{ github.event.inputs.publish-intellij-plugin }}"
+                  INCLUDE_LANG="${{ github.event.inputs.include-lang }}"
                   LANG_CHANGED="${{ steps.changes.outputs.lang }}"
                   EVENT_NAME="${{ github.event_name }}"
+                  REF="${{ github.ref }}"
                   EFFECTIVE=false
                   REASON=""
+                  # Gating policy:
+                  #   1. force-publish-intellij-plugin=true (workflow_dispatch only) -> always publish
+                  #   2. push to master with lang changes detected -> auto-publish
+                  #   3. workflow_dispatch with publish-intellij-plugin=true and lang changes detected -> publish
+                  # Anything else -> skip, with a reason.
                   if [ "$FORCE" = "true" ]; then
                       EFFECTIVE=true
-                      REASON="forced via force-publish-intellij-plugin=true (overrides publish-intellij-plugin and lang change gating)"
+                      REASON="forced via force-publish-intellij-plugin=true (overrides all other gating)"
+                  elif [ "$EVENT_NAME" = "push" ] && [ "$REF" = "refs/heads/master" ] && [ "$LANG_CHANGED" = "true" ]; then
+                      EFFECTIVE=true
+                      REASON="auto-publish on master merge with changes detected under lang/"
+                  elif [ "$EVENT_NAME" = "push" ] && [ "$REF" = "refs/heads/master" ]; then
+                      REASON="master push but no changes under lang/ -- nothing to publish (use force-publish-intellij-plugin=true via workflow_dispatch to override)"
                   elif [ "$REQUESTED" = "true" ] && [ "$LANG_CHANGED" = "true" ]; then
                       EFFECTIVE=true
-                      REASON="publish-intellij-plugin=true and changes detected under lang/ or lib_ecstasy/**/*.x"
+                      REASON="manual dispatch with publish-intellij-plugin=true and changes detected under lang/"
                   elif [ "$REQUESTED" = "true" ]; then
-                      REASON="publish-intellij-plugin=true but no changes detected under lang/ or lib_ecstasy/**/*.x (set force-publish-intellij-plugin=true to override)"
+                      REASON="manual dispatch with publish-intellij-plugin=true but no changes detected under lang/ (set force-publish-intellij-plugin=true to override)"
                   elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-                      REASON="neither publish-intellij-plugin nor force-publish-intellij-plugin was enabled for this workflow_dispatch run"
+                      REASON="manual dispatch but neither publish-intellij-plugin nor force-publish-intellij-plugin was enabled"
                   else
-                      REASON="event=$EVENT_NAME does not request IntelliJ plugin publishing (no workflow_dispatch inputs available)"
+                      REASON="event=$EVENT_NAME on $REF -- IntelliJ plugin only publishes on master push or manual dispatch"
                   fi
+                  # Lang validation (tree-sitter + LSP tests + IntelliJ Plugin Verifier)
+                  # runs whenever ANY of these are true:
+                  #   - lang/ paths changed (auto)
+                  #   - workflow_dispatch with include-lang=true (user opted into lang)
+                  #   - workflow_dispatch with publish-intellij-plugin=true (publish path)
+                  #   - workflow_dispatch with force-publish-intellij-plugin=true (forced publish)
+                  # That last group ensures we never publish without first verifying.
+                  VALIDATE_LANG=false
+                  VALIDATE_REASON=""
+                  if [ "$LANG_CHANGED" = "true" ]; then
+                      VALIDATE_LANG=true
+                      VALIDATE_REASON="lang/ paths changed"
+                  elif [ "$FORCE" = "true" ]; then
+                      VALIDATE_LANG=true
+                      VALIDATE_REASON="force-publish-intellij-plugin=true (manual override)"
+                  elif [ "$REQUESTED" = "true" ]; then
+                      VALIDATE_LANG=true
+                      VALIDATE_REASON="publish-intellij-plugin=true (manual dispatch)"
+                  elif [ "$INCLUDE_LANG" = "true" ]; then
+                      VALIDATE_LANG=true
+                      VALIDATE_REASON="include-lang=true (manual dispatch)"
+                  else
+                      VALIDATE_REASON="no lang/ changes and no manual override"
+                  fi
+
                   echo "effective=$EFFECTIVE" >> $GITHUB_OUTPUT
                   echo "force=$FORCE" >> $GITHUB_OUTPUT
                   echo "requested=$REQUESTED" >> $GITHUB_OUTPUT
                   echo "reason=$REASON" >> $GITHUB_OUTPUT
+                  echo "validate-lang=$VALIDATE_LANG" >> $GITHUB_OUTPUT
+                  echo "validate-lang-reason=$VALIDATE_REASON" >> $GITHUB_OUTPUT
                   echo ""
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                   if [ "$EFFECTIVE" = "true" ]; then
@@ -186,8 +241,15 @@ jobs:
                   echo "  📋 Reason             : $REASON"
                   echo "  📋 force-publish-intellij-plugin : ${FORCE:-<unset>}"
                   echo "  📋 publish-intellij-plugin       : ${REQUESTED:-<unset>}"
-                  echo "  📋 lang/lib_ecstasy changed      : ${LANG_CHANGED:-<unset>}"
-                  echo "  📋 event                         : $EVENT_NAME"
+                  echo "  📋 include-lang                  : ${INCLUDE_LANG:-<unset>}"
+                  echo "  📋 lang/ changed                 : ${LANG_CHANGED:-<unset>}"
+                  echo "  📋 event                         : $EVENT_NAME on $REF"
+                  if [ "$VALIDATE_LANG" = "true" ]; then
+                      echo "🌳 Lang validation (tree-sitter + LSP + verifyPlugin): WILL RUN"
+                  else
+                      echo "⏭️ Lang validation (tree-sitter + LSP + verifyPlugin): WILL SKIP"
+                  fi
+                  echo "  📋 Validation reason  : $VALIDATE_REASON"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                   echo ""
 
@@ -322,11 +384,20 @@ jobs:
                   echo "release-channel=$RELEASE_CHANNEL" >> $GITHUB_OUTPUT
                   echo "🔖 IntelliJ Marketplace publish version: $PUBLISH_VERSION"
 
+            # NOTE: We deliberately do NOT cache lang/.intellijPlatform/ides via
+            # actions/cache. ~1 GB per IDE distribution would eat a meaningful chunk
+            # of the 10 GB per-repo cache budget that's far more valuable for PR
+            # builds and Gradle/dep caches. The verifier only needs the IDE on the
+            # rare lang/-changed run (PR validation or master publish), and the
+            # IntelliJ Platform Gradle Plugin will redownload it on demand. Slower
+            # by ~1-2 minutes on those runs, but it doesn't displace the caches we
+            # actually rely on for everything else.
             - name: Build the XDK and create a distribution
               shell: bash
               env:
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
                   ENABLE_INTELLIJ_RELEASE_BUILD: ${{ matrix.os == 'ubuntu-latest' && steps.publish-flags.outputs.effective == 'true' }}
+                  ENABLE_INTELLIJ_VERIFY: ${{ matrix.os == 'ubuntu-latest' && steps.publish-flags.outputs.validate-lang == 'true' }}
                   ENABLE_SNAPSHOT_BUNDLE_BUILD: ${{ matrix.os == 'ubuntu-latest' && ((github.ref == 'refs/heads/master' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.publish-snapshots == true || github.event.inputs.publish-snapshots == 'true'))) }}
                   ORG_GRADLE_PROJECT_githubUsername: ${{ github.actor }}
                   ORG_GRADLE_PROJECT_githubPassword: ${{ secrets.GITHUB_TOKEN }}
@@ -368,13 +439,30 @@ jobs:
                     BUILD_PROPS="$BUILD_PROPS -Porg.xtclang.publish.snapshotBundleRepo=$SNAPSHOT_REPO_DIR"
                 fi
 
+                # IntelliJ plugin handling. There is exactly one place in CI that
+                # runs :lang:intellij-plugin:verifyPlugin: this main Gradle invocation.
+                # verifyPlugin depends on buildPlugin (which depends on patchPluginXml),
+                # so re-running verifyPlugin in a separate Gradle invocation rewrites
+                # lang/intellij-plugin/build/distributions/intellij-plugin-*.zip with
+                # whatever properties that second invocation sees -- which is exactly
+                # how a prior CI shape (a standalone "Verify IntelliJ plugin
+                # compatibility" step that did not pass -PenablePublish) silently
+                # clobbered the timestamped Marketplace ZIP with the bare base
+                # version. Keeping verification colocated with the build means the
+                # staged distribution and the verified distribution are always the
+                # same artifact, by construction.
                 if [ "${ENABLE_INTELLIJ_RELEASE_BUILD}" = "true" ]; then
-                    echo "🔌 Building IntelliJ release-grade plugin in main CI build"
+                    echo "🔌 Building release-grade IntelliJ plugin and running verifyPlugin in main CI build"
                     echo "   Reason: ${{ steps.publish-flags.outputs.reason }}"
                     BUILD_TASKS="$BUILD_TASKS :lang:intellij-plugin:buildSearchableOptions :lang:intellij-plugin:buildPlugin :lang:intellij-plugin:verifyPlugin"
                     BUILD_PROPS="$BUILD_PROPS -PincludeBuildLang=true -PincludeBuildAttachLang=true -PenablePublish=true -Pjetbrains.publish.suffix=${{ steps.intellij-version.outputs.suffix }} -Plsp.buildSearchableOptions=true"
+                elif [ "${ENABLE_INTELLIJ_VERIFY}" = "true" ]; then
+                    echo "🔌 Running IntelliJ plugin verifier in main CI build (no Marketplace publication for this run)"
+                    echo "   Reason: ${{ steps.publish-flags.outputs.validate-lang-reason }}"
+                    BUILD_TASKS="$BUILD_TASKS :lang:intellij-plugin:verifyPlugin"
+                    BUILD_PROPS="$BUILD_PROPS -PincludeBuildLang=true -PincludeBuildAttachLang=true"
                 elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-                    echo "⏭️ Not building IntelliJ plugin"
+                    echo "⏭️ Not building or verifying IntelliJ plugin"
                     echo "   Reason: ${{ steps.publish-flags.outputs.reason }}"
                 fi
 
@@ -397,27 +485,29 @@ jobs:
                 inspect_gradle_cache "after manual tests"
                 echo "✅ Manual tests completed"
 
-            - name: Skip Tree-sitter (no lang changes)
+            - name: Skip Tree-sitter (no lang validation triggered)
               if: |
                   success() &&
                   matrix.os == 'ubuntu-latest' &&
-                  env.ORG_GRADLE_PROJECT_includeBuildLang == 'true' &&
-                  steps.changes.outputs.lang != 'true'
+                  steps.publish-flags.outputs.validate-lang != 'true'
               run: |
-                  echo "⏭️ Skipping Tree-sitter validation - no changes in lang/ or lib_ecstasy/*.x"
-                  echo "Changed paths filter result: lang=${{ steps.changes.outputs.lang }}"
+                  echo "⏭️ Skipping Tree-sitter validation"
+                  echo "Reason: ${{ steps.publish-flags.outputs.validate-lang-reason }}"
 
             - name: Validate Tree-sitter Grammar and LSP Adapters
               if: |
                   success() &&
                   matrix.os == 'ubuntu-latest' &&
-                  env.ORG_GRADLE_PROJECT_includeBuildLang == 'true' &&
-                  steps.changes.outputs.lang == 'true'
+                  steps.publish-flags.outputs.validate-lang == 'true'
               shell: bash
               env:
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
               run: |
                   GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
+                  # Enable the lang composite build only for these lang/LSP-targeted invocations.
+                  # The job-level env keeps lang excluded for the rest of the build to avoid
+                  # paying the IntelliJ-plugin resolution cost on every CI run.
+                  LANG_OPTS="-PincludeBuildLang=true -PincludeBuildAttachLang=true"
 
                   echo ""
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -425,17 +515,17 @@ jobs:
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
                   echo "📋 Validating grammar compiles (tree-sitter generate)..."
-                  ./gradlew $GRADLE_OPTIONS :lang:tree-sitter:validateTreeSitterGrammar
+                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:tree-sitter:validateTreeSitterGrammar
                   echo "✅ Grammar: VALID"
 
                   echo ""
                   echo "📋 Testing parser on XDK corpus (with timing)..."
-                  ./gradlew $GRADLE_OPTIONS :lang:tree-sitter:testTreeSitterParse
+                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:tree-sitter:testTreeSitterParse
                   echo "✅ Corpus parsing: PASSED"
 
                   echo ""
                   echo "📋 Building native libraries for all platforms..."
-                  ./gradlew $GRADLE_OPTIONS :lang:tree-sitter:buildAllNativeLibrariesOnDemand
+                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:tree-sitter:buildAllNativeLibrariesOnDemand
                   echo "✅ Native libraries: BUILT (cached by content hash)"
 
                   echo ""
@@ -443,20 +533,33 @@ jobs:
                   echo "🔌 LSP ADAPTER TESTS"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-                  echo ""
-                  echo "📋 Running LSP tests with MOCK adapter (-Plsp.adapter=mock)..."
-                  ./gradlew $GRADLE_OPTIONS :lang:lsp-server:test -Plsp.adapter=mock
-                  echo "✅ Mock adapter tests: PASSED"
+                  # Mock adapter is being retired; tree-sitter is the default and only supported adapter.
+                  # echo ""
+                  # echo "📋 Running LSP tests with MOCK adapter (-Plsp.adapter=mock)..."
+                  # ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:lsp-server:test -Plsp.adapter=mock
+                  # echo "✅ Mock adapter tests: PASSED"
 
                   echo ""
                   echo "📋 Running LSP tests with TREESITTER adapter (-Plsp.adapter=treesitter)..."
-                  ./gradlew $GRADLE_OPTIONS :lang:lsp-server:test -Plsp.adapter=treesitter
+                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:lsp-server:test -Plsp.adapter=treesitter
                   echo "✅ Tree-sitter adapter tests: PASSED"
 
                   echo ""
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                   echo "🎉 ALL LANG VALIDATION COMPLETE"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            - name: Upload Plugin Verifier reports
+              if: |
+                  always() &&
+                  matrix.os == 'ubuntu-latest' &&
+                  steps.publish-flags.outputs.validate-lang == 'true'
+              uses: actions/upload-artifact@v7
+              with:
+                  name: plugin-verifier-reports-${{ github.sha }}
+                  path: lang/intellij-plugin/build/reports/pluginVerifier/
+                  if-no-files-found: ignore
+                  retention-days: 14
 
             # TODO:
             # name: XTC App Template Integration Test
@@ -742,7 +845,7 @@ jobs:
                   MANUAL_TEST_STATUS="✅ Passed"
                   MANUAL_TEST_REASON="executed in the main CI build"
                   LANG_VALIDATION_STATUS="⏭️ Skipped"
-                  LANG_VALIDATION_REASON="lang build not enabled for this run"
+                  LANG_VALIDATION_REASON="not run on this runner"
                   if [ "${{ matrix.os }}" = "ubuntu-latest" ] && {
                        [ "${{ github.ref }}" = "refs/heads/master" ] && [ "${{ github.event_name }}" = "push" ];
                      } || {
@@ -756,13 +859,13 @@ jobs:
                       MANUAL_TEST_STATUS="⏭️ Skipped"
                       MANUAL_TEST_REASON="disabled for this run"
                   fi
-                  if [ "${{ matrix.os }}" = "ubuntu-latest" ] && [ "${{ env.ORG_GRADLE_PROJECT_includeBuildLang }}" = "true" ]; then
-                      if [ "${{ steps.changes.outputs.lang }}" = "true" ]; then
+                  if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+                      if [ "${{ steps.publish-flags.outputs.validate-lang }}" = "true" ]; then
                           LANG_VALIDATION_STATUS="✅ Ran"
-                          LANG_VALIDATION_REASON="lang build enabled and path filter matched"
+                          LANG_VALIDATION_REASON="${{ steps.publish-flags.outputs.validate-lang-reason }}"
                       else
                           LANG_VALIDATION_STATUS="⏭️ Skipped"
-                          LANG_VALIDATION_REASON="lang build enabled but path filter found no relevant changes"
+                          LANG_VALIDATION_REASON="${{ steps.publish-flags.outputs.validate-lang-reason }}"
                       fi
                   fi
                   if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then

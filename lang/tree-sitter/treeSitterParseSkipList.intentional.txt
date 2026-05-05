@@ -1,0 +1,29 @@
+# Tree-sitter parse-test skip list — INTENTIONALLY-INVALID files.
+#
+# Companion to `treeSitterParseSkipList.parked.txt`. Both are loaded by
+# `:lang:tree-sitter:testTreeSitterParse`. The split exists so the
+# real "grammar debt" (parked.txt) isn't drowned out by files that are
+# permanently excluded.
+#
+# Files listed here have genuine syntax errors that the XTC reference
+# (Java) compiler also rejects with PARSER-NN messages. Tree-sitter
+# happens to accept them only because it is intentionally
+# error-tolerant; treating them as expected-pass would just hide the
+# fact that the underlying source is broken. If a file here ever gets
+# fixed (or removed) and the Java compiler stops emitting PARSER-NN
+# for it, drop the entry from this list.
+#
+# Adding to this list should be paired with a check that `xcc <file>`
+# emits at least one `PARSER-NN` message. If the file produces only
+# COMPILER-NN / VERIFY-NN / etc. messages, it parses fine -- those are
+# below the tree-sitter level and the file belongs in the active sweep.
+#
+# One path per line, relative to the composite-build root (the
+# directory that contains lib_*/ and manualTests/). Blank lines and
+# `#` comments are ignored.
+
+# === sock-shop archive — genuine syntax errors ===
+# socks-catalog.x:100 -- PARSER-03: Expected token "]"; found ")".
+# socks-user.x:219    -- PARSER-03: Expected token "as"; found IDENTIFIER.
+manualTests/src/main/x/archive/sock-shop/socks-catalog.x
+manualTests/src/main/x/archive/sock-shop/socks-user.x

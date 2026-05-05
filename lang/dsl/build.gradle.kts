@@ -5,19 +5,8 @@ plugins {
     alias(libs.plugins.lang.ktlint)
 }
 
-val kotlinJdkVersion = xdkProperties.int("org.xtclang.kotlin.jdk")
-
-java {
-    toolchain {
-        languageVersion.set(kotlinJdkVersion.map { JavaLanguageVersion.of(it) })
-    }
-}
-
-kotlin {
-    jvmToolchain {
-        languageVersion.set(kotlinJdkVersion.map { JavaLanguageVersion.of(it) })
-    }
-}
+// JDK toolchain (and Kotlin's auto-inherited toolchain) is configured by the
+// org.xtclang.build.xdk.properties convention plugin applied above.
 
 repositories {
     mavenCentral()

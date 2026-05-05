@@ -1,7 +1,7 @@
 %YAML 1.2
 ---
 # Ecstasy language syntax for Sublime Text / bat
-# Generated from XTC language model DSL
+# Generated from Ecstasy language model DSL
 name: Ecstasy
 file_extensions:
   - x

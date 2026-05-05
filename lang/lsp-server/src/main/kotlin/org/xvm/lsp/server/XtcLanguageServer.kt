@@ -1,7 +1,5 @@
 package org.xvm.lsp.server
 
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
 import org.eclipse.lsp4j.CallHierarchyIncomingCall
 import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
 import org.eclipse.lsp4j.CallHierarchyItem
@@ -225,7 +223,7 @@ class XtcLanguageServer(
             logger.warn("initialize: adapter health check failed, skipping workspace indexing")
         } else {
             // Extract workspace folder paths and initialize workspace index
-            val folders =
+            val workspaceFolders =
                 params.workspaceFolders
                     ?.mapNotNull { folder ->
                         runCatching { Path.of(URI(folder.uri)).toString() }
@@ -233,6 +231,11 @@ class XtcLanguageServer(
                             .getOrNull()
                     }
                     ?: emptyList()
+
+            // Extra source roots (XDK source trees, etc.) from init options, sysprop, or env.
+            // Lets the indexer find modules whose sources live outside the user's open project.
+            val extraRoots = SourceRootResolver.resolve(params.initializationOptions)
+            val folders = (workspaceFolders + extraRoots).distinct()
 
             if (folders.isNotEmpty()) {
                 adapter.initializeWorkspace(folders) { message, percent ->
@@ -296,37 +299,16 @@ class XtcLanguageServer(
     }
 
     private fun parseFormattingConfig(raw: Any?): FormattingConfig? {
-        val map =
-            when (raw) {
-                is Map<*, *> -> {
-                    raw
-                }
+        if (!LspJsonOptions.isObject(raw)) return null
 
-                is JsonObject -> {
-                    raw.entrySet().associate { it.key to it.value }
-                }
-
-                is JsonElement -> {
-                    raw
-                        .takeIf { it.isJsonObject }
-                        ?.asJsonObject
-                        ?.entrySet()
-                        ?.associate { it.key to it.value }
-                }
-
-                else -> {
-                    null
-                }
-            } ?: return null
-
-        val indentSize = map.intValue("indentSize") ?: 4
-        val continuationIndentSize = map.intValue("continuationIndentSize") ?: 8
-        val insertSpaces = map.booleanValue("insertSpaces") ?: true
-        val maxLineWidth = map.intValue("maxLineWidth") ?: 120
-        val tabSize = map.intValue("tabSize")
+        val indentSize = LspJsonOptions.int(raw, "indentSize") ?: 4
+        val continuationIndentSize = LspJsonOptions.int(raw, "continuationIndentSize") ?: 8
+        val insertSpaces = LspJsonOptions.boolean(raw, "insertSpaces") ?: true
+        val maxLineWidth = LspJsonOptions.int(raw, "maxLineWidth") ?: 120
+        val tabSize = LspJsonOptions.int(raw, "tabSize")
         logger.info(
             "workspace/configuration: parsed config type={} indentSize={} continuationIndentSize={} tabSize={} insertSpaces={} maxLineWidth={}",
-            raw?.javaClass?.name ?: "null",
+            raw?.javaClass?.name,
             indentSize,
             continuationIndentSize,
             tabSize,
@@ -340,56 +322,6 @@ class XtcLanguageServer(
             maxLineWidth = maxLineWidth,
         )
     }
-
-    private fun Map<*, *>.intValue(key: String): Int? =
-        when (val value = this[key]) {
-            is Number -> {
-                value.toInt()
-            }
-
-            is String -> {
-                value.toIntOrNull()
-            }
-
-            is JsonElement -> {
-                value.takeUnless { it.isJsonNull }?.let {
-                    when {
-                        it.isJsonPrimitive && it.asJsonPrimitive.isNumber -> it.asInt
-                        it.isJsonPrimitive && it.asJsonPrimitive.isString -> it.asString.toIntOrNull()
-                        else -> null
-                    }
-                }
-            }
-
-            else -> {
-                null
-            }
-        }
-
-    private fun Map<*, *>.booleanValue(key: String): Boolean? =
-        when (val value = this[key]) {
-            is Boolean -> {
-                value
-            }
-
-            is String -> {
-                value.toBooleanStrictOrNull()
-            }
-
-            is JsonElement -> {
-                value.takeUnless { it.isJsonNull }?.let {
-                    when {
-                        it.isJsonPrimitive && it.asJsonPrimitive.isBoolean -> it.asBoolean
-                        it.isJsonPrimitive && it.asJsonPrimitive.isString -> it.asString.toBooleanStrictOrNull()
-                        else -> null
-                    }
-                }
-            }
-
-            else -> {
-                null
-            }
-        }
 
     private fun logServerBanner() {
         val pid = ProcessHandle.current().pid()
@@ -545,6 +477,8 @@ class XtcLanguageServer(
                 }
             // inlayHintProvider = Either.forLeft(true) // not implemented in TreeSitterAdapter yet
 
+            // documentLinkProvider: URLs in comments / string literals.
+            // See TreeSitterAdapter.getDocumentLinks for the matcher.
             documentLinkProvider = DocumentLinkOptions()
 
             signatureHelpProvider = SignatureHelpOptions(listOf("(", ","))

@@ -106,7 +106,7 @@
   function: (identifier) @function.call)
 (call_expression
   function: (member_expression
-    property: (identifier) @function.call))
+    member: (identifier) @function.call))
 
 ; Variables
 (identifier) @variable
@@ -125,4 +125,4 @@
 
 ; Annotations
 (annotation "@" @punctuation.special)
-(annotation name: (identifier) @attribute)
+(annotation name: (qualified_name) @attribute)

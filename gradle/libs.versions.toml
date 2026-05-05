@@ -24,12 +24,13 @@ jakarta-activation = "2.1.4"
 jakarta-xml-bind-api = "4.0.5"
 jaxb-runtime = "4.0.7"
 jetbrains-annotations = "26.1.0"
-jline = "4.0.12"
+jline = "4.0.14"
 
 # =============================================================================
 # Build tooling & publishing
 # =============================================================================
 download = "5.7.0"
+foojay-resolver = "1.0.0"
 gradle-portal-publish = "2.1.1"
 palantir-git-version = "5.0.0"
 vanniktech-maven-publish = "0.36.0"
@@ -63,7 +64,6 @@ lang-slf4j = "2.0.17"
 # Lang tooling - IntelliJ plugin
 # =============================================================================
 lang-intellij-ide = "2026.1"
-lang-intellij-jdk = "25"
 lang-intellij-platform-gradle-plugin = "2.14.0"
 # JUnit 4.x is required at RUNTIME by the IntelliJ Platform test harness
 # (com.intellij.testFramework). IntelliJ's test infrastructure internally depends on JUnit 4
@@ -71,7 +71,7 @@ lang-intellij-platform-gradle-plugin = "2.14.0"
 # on the testRuntimeOnly classpath, IntelliJ platform tests fail with ClassNotFoundException
 # for org.junit.Test or org.junit.runners.BlockJUnit4ClassRunner.
 lang-intellij-junit4-compat = "4.13.2"
-lang-intellij-lsp4ij = "0.19.2"
+lang-intellij-lsp4ij = "0.19.3"
 
 # =============================================================================
 # Lang tooling - Tree-sitter native library
@@ -104,6 +104,7 @@ xtc = { id = "org.xtclang.xtc-plugin" }
 # Third-party published plugins (Core build)
 # =============================================================================
 download = { id = "de.undercouch.download", version.ref = "download" }
+foojay-resolver = { id = "org.gradle.toolchains.foojay-resolver", version.ref = "foojay-resolver" }
 gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-portal-publish" }
 palantir-git-version = { id = "com.palantir.git-version", version.ref = "palantir-git-version" }
 vanniktech-maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-maven-publish" }

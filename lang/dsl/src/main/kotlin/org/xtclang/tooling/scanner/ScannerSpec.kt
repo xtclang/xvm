@@ -49,6 +49,44 @@ enum class TokenType {
     // Used when the ';' is needed as explicit terminator after the TODO text.
     // If no ';' before EOL, this token fails (forcing switch_statement interpretation).
     TODO_FREEFORM_UNTIL_SEMI,
+
+    // Single `>` used as the closer of type arguments / type parameters /
+    // angle-bracket type lists. The point of routing this through the external
+    // scanner is to break tree-sitter's greedy `>>` tokenization in nested
+    // type-argument contexts -- e.g. `Function<<Int, String>, <Int>>` where
+    // the inner `>` closes the inner list and the next `>` closes the outer.
+    // The internal lexer would otherwise consume `>>` as a single right-shift
+    // operator before the parser could disambiguate.
+    //
+    // This token only fires when the parser actively asks for it (i.e. it is
+    // in `valid_symbols`), which happens only inside type-position rules.
+    // In expression context the internal lexer keeps tokenizing `>>` / `>>>` /
+    // `>=` / `>>=` / `>>>=` as single tokens unchanged.
+    TYPE_GT,
+
+    // Newline / multiline-template continuation. Declared in `extras` so the
+    // parser silently skips it. The scanner emits this whenever peek is
+    // `\n`; if we're inside an interpolation expression of a multiline
+    // template, the scanner additionally consumes the trailing `   |`
+    // continuation marker so the `|` is not lexed as a bitwise-OR operator.
+    // Listed FIRST in extras so it is consulted before the internal `/\s/`
+    // regex; the longer match wins.
+    MULTILINE_CONTINUATION,
+
+    // Opening `(` of a tuple_assignment, e.g. `(i1, Int i2) = expr;`. The
+    // scanner peeks past the matching `)` looking for `=` (and not `==`/`=>`)
+    // before any `;` / `{` / `}` / EOF; if found, it consumes the `(` and
+    // emits this token. The grammar's `tuple_assignment` rule starts with
+    // this token instead of a literal `(`, so the LR parser commits to
+    // tuple_assignment deterministically at the `(` shift, even when the
+    // tuple's content shape would otherwise admit a `tuple_type`
+    // (variable_declaration) or `parenthesized_expression` interpretation.
+    //
+    // This token is only requested at statement start (where
+    // tuple_assignment lives in the `_statement` choice list). At every
+    // other position it stays out of valid_symbols, so the scanner is a
+    // no-op and the internal lexer keeps tokenizing `(` normally.
+    TUPLE_ASSIGN_LPAREN,
 }
 
 /**

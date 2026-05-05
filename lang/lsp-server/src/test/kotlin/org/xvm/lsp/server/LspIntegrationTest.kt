@@ -8,7 +8,6 @@ import org.eclipse.lsp4j.DefinitionParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.DocumentHighlightParams
-import org.eclipse.lsp4j.DocumentLinkParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.FoldingRangeRequestParams
@@ -618,32 +617,6 @@ class LspIntegrationTest {
 
             // May return actions or empty, should not crash
             assertThat(actions).isNotNull()
-        }
-    }
-
-    // ========================================================================
-    // Tests: textDocument/documentLink
-    // ========================================================================
-
-    @Nested
-    @DisplayName("textDocument/documentLink")
-    inner class DocumentLinkTests {
-        @Test
-        @DisplayName("should return document links for imports")
-        fun shouldReturnDocumentLinksForImports() {
-            val tf = openFile("TestSimple.x")
-
-            val links =
-                server.textDocumentService
-                    .documentLink(DocumentLinkParams(TextDocumentIdentifier(tf.uri)))
-                    .get()
-
-            // TestSimple.x has imports, so we should get links
-            assertThat(links).isNotNull()
-            // Both adapters should return links if the file has imports
-            if (tf.content.contains("import ")) {
-                assertThat(links).isNotEmpty()
-            }
         }
     }
 
