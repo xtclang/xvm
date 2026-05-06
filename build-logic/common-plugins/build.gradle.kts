@@ -37,4 +37,9 @@ dependencies {
     // Archive handling for native library builds (XZ/tar support)
     implementation("org.apache.commons:commons-compress:${libs.versions.apache.commons.compress.get()}")
     implementation("org.tukaani:xz:${libs.versions.tukaani.xz.get()}")
+
+    // git-version: compileOnly so the convention plugin can reference the
+    // public VersionDetails interface directly (no reflection). The plugin
+    // itself is applied by consumers (e.g. docker/build.gradle.kts).
+    compileOnly("com.palantir.gradle.gitversion:gradle-git-version:${libs.versions.palantir.git.version.get()}")
 }
