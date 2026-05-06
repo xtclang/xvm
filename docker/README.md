@@ -140,6 +140,44 @@ docker buildx build --build-arg DIST_ZIP_URL=/path/to/xdk-dist.zip -t xvm:latest
 - `DIST_ZIP_URL` (required) - Path to XDK distribution ZIP file or download URL
 - `JAVA_VERSION` (default: 25) - Java version to use for runtime
 
+### Local Build Overrides (Gradle properties)
+
+The gradle docker tasks (`docker:buildAmd64` / `docker:buildArm64` / `docker:buildAll`, etc.) read several `-P` properties from the command line or `xdk.properties`. These apply to **local builds only** — CI ignores them and uses its own hardcoded values.
+
+| Property | Default | Purpose |
+|---|---|---|
+| `org.xtclang.docker.command` | `docker` | The container CLI to invoke. Set to `podman` if you have podman installed instead of docker. |
+| `org.xtclang.docker.image` | `ghcr.io/xtclang/xvm` | Base image name (registry + repository) used in the resulting tags. Override to publish to a different registry or repo namespace, e.g. `mlocal/xvm`. |
+| `org.xtclang.docker.allowEmulation` | `false` | If `false`, the per-arch tasks (`buildAmd64` / `buildArm64`) refuse to build a non-host architecture. Set to `true` to allow QEMU emulation for cross-arch builds. |
+
+Tag suffix `-local` is appended automatically to all locally-built tags (`<branch>-local`, `<commit>-local`) so they can never collide with anything CI publishes.
+
+#### Examples
+
+```bash
+# Build with podman instead of docker
+./gradlew docker:buildAmd64 -Porg.xtclang.docker.command=podman
+
+# Build under a different image name (useful for testing without touching ghcr.io/xtclang/xvm)
+./gradlew docker:buildAmd64 -Porg.xtclang.docker.image=mlocal/xvm
+# -> produces mlocal/xvm:<branch>-local and mlocal/xvm:<commit>-local
+
+# Allow cross-arch emulation
+./gradlew docker:buildArm64 -Porg.xtclang.docker.allowEmulation=true
+```
+
+You can also set these persistently in your personal `~/.gradle/gradle.properties` rather than passing `-P` every time.
+
+#### Seeing the exact `docker buildx` command
+
+The task logs the full container command at `info` level just before exec. To see (and copy-paste) it:
+
+```bash
+./gradlew docker:buildAmd64 --info --rerun 2>&1 | grep "Executing Docker command:"
+```
+
+`--rerun` is needed because the task is `@CacheableTask` and will be UP-TO-DATE on a second invocation. The args are space-joined without shell quoting; none of the assembled args contain spaces, so the line is paste-ready into a shell.
+
 ## Direct Docker Commands (Alternative to Gradle)
 
 If you prefer using Docker commands directly instead of Gradle tasks, you must first build the XDK distribution:

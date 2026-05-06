@@ -76,6 +76,9 @@ abstract class DockerTask : DefaultTask() {
     @get:Input
     abstract val dockerCommand: Property<String>
 
+    @get:Input
+    abstract val baseImage: Property<String>
+
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val dockerDir: DirectoryProperty
@@ -117,7 +120,7 @@ abstract class DockerTask : DefaultTask() {
         try {
             // Docker command construction with proper tag computation
             val platformArg = platforms.get().joinToString(",")
-            val baseImage = "ghcr.io/xtclang/xvm"
+            val image = baseImage.get()
 
             // Git info provided via Palantir plugin (local) or CI env vars (GH_COMMIT/GH_BRANCH)
             val commit = gitCommit.get()
@@ -155,7 +158,7 @@ abstract class DockerTask : DefaultTask() {
                       listOf("--progress=${dockerProgress.get()}") +
                       listOf("--build-arg", "JAVA_VERSION=${jdkVersion.get()}") +
                       listOf("--build-arg", "DIST_ZIP_URL=xdk-dist.zip") +
-                      computedTags.flatMap { tag -> listOf("--tag", "$baseImage:$tag") } +
+                      computedTags.flatMap { tag -> listOf("--tag", "$image:$tag") } +
                       listOf("--label", "org.opencontainers.image.revision=$commit") +
                       listOf("--label", "org.opencontainers.image.version=$version") +
                       listOf("--label", "org.opencontainers.image.source=https://github.com/xtclang/xvm/tree/$branch") +

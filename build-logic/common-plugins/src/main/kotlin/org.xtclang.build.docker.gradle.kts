@@ -51,11 +51,17 @@ fun createDockerBuildTask(
         // Wire git information from Palantir plugin (available for local builds) or CI env vars
         // CI sets GH_COMMIT/GH_BRANCH, local builds use Palantir versionDetails
         // Helper to get Palantir versionDetails property using reflection (avoids compile-time dependency)
+        // VersionDetailsImpl is non-public, so resolve the method via its public interface
+        // (or fall back to setAccessible) to avoid IllegalAccessException at invoke time.
         fun getVersionDetailsProperty(methodName: String, fallback: String): String? {
             return try {
                 @Suppress("UNCHECKED_CAST")
                 val versionDetails = (project.extensions.extraProperties["versionDetails"] as groovy.lang.Closure<*>).call()
-                versionDetails::class.java.getMethod(methodName).invoke(versionDetails) as? String ?: fallback
+                val klass = versionDetails::class.java
+                val method = klass.interfaces.firstNotNullOfOrNull { iface ->
+                    runCatching { iface.getMethod(methodName) }.getOrNull()
+                } ?: klass.getMethod(methodName).also { it.isAccessible = true }
+                method.invoke(versionDetails) as? String ?: fallback
             } catch (e: Exception) {
                 logger.warn("Failed to get $methodName from Palantir plugin: ${e.message}")
                 fallback
@@ -82,6 +88,7 @@ fun createDockerBuildTask(
         ciMode.set(providers.environmentVariable("CI").map { it == "true" }.orElse(false))
         userHome.set(providers.systemProperty("user.home"))
         dockerCommand.set(project.xdkProperties.string("org.xtclang.docker.command", "docker"))
+        baseImage.set(project.xdkProperties.string("org.xtclang.docker.image", "ghcr.io/xtclang/xvm"))
         dockerDir.set(layout.projectDirectory)
 
         // Output marker file for caching
