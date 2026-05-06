@@ -730,7 +730,11 @@ public abstract class OpCallable extends Op {
         bctx.loadCallArguments(code, jmdCall, anArgValue);
 
         if (fSpecial) {
-            code.invokespecial(cdTarget, sJitName, mdCall);
+            if (fInterface) {
+                code.invokevirtual(cdTarget, sJitName, mdCall);
+            } else {
+                code.invokespecial(cdTarget, sJitName, mdCall);
+            }
         } else {
             code.invokestatic(cdTarget, sJitName, mdCall, fInterface);
         }

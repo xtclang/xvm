@@ -151,8 +151,9 @@ public class JitMethodDesc {
 
     /**
      * @param cdContainer the container class; used only for constructors
+     *
      * @return the JitMethodDesc for the method associated with this signature for the specified
-     * container
+     *         container
      */
     public static JitMethodDesc of(Builder builder,
                                    TypeConstant[] paramTypes, TypeConstant[] returnTypes,

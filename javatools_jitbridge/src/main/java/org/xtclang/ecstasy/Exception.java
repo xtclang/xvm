@@ -26,7 +26,7 @@ public class Exception extends nConst {
      * Exception Constructor:
      *  construct(String? text = Null, Exception? cause = Null)
      */
-    public static Exception $new(Ctx ctx, nObj text, nObj cause) {
+    public static Exception $new(Ctx ctx, Object text, Object cause) {
         Exception ex = new Exception(ctx);
         construct(ctx, null, ex, text, cause);
         return ex;

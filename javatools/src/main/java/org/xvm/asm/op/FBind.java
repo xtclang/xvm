@@ -22,6 +22,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
@@ -315,44 +316,55 @@ public class FBind
                      }
                  }
                  retValue = new FunctionN(ctx, std, opt, imm);
-
             */
 
             RegisterInfo regArg = bctx.ensureRegister(code, anArg[i]);
-            if (!regArg.isSingle()) {
-                throw new UnsupportedOperationException("Add support for multi-slot binding");
-            }
 
             // compensate for the Ctx argument
             int nJitPos = 1 + jmdBefore.optimizedParams[nArgPos].index;
 
-            if (!fOptBefore) {
-                assert !fOptAfter && !regArg.cd().isPrimitive();
+            if (regArg.isSingle()) {
+                if (!fOptBefore) {
+                    assert !fOptAfter && !regArg.cd().isPrimitive();
 
-                bindArgument(code, slotStd, nJitPos, regArg, false);
-                code.aconst_null()
-                    .astore(slotOpt);
+                    bindArgument(code, slotStd, nJitPos, regArg, false);
+                    code.aconst_null()
+                        .astore(slotOpt);
 
-                computeImmutable(code, slotImm, regArg);
-            } else if (!fOptAfter) {
-                assert regArg.cd().isPrimitive(); // transition from opt -> !opt
+                    computeImmutable(code, slotImm, regArg);
+                } else if (!fOptAfter) {
+                    assert regArg.cd().isPrimitive(); // transition from opt -> !opt
 
-                bindArgument(code, slotStd, nJitPos, regArg, false);
-                code.aconst_null()
-                    .astore(slotOpt);
-            } else if (regArg.cd().isPrimitive()) {
-                bindArgument(code, slotStd, nJitPos, regArg, true);
-                bindArgument(code, slotOpt, nJitPos, regArg, false);
-            } else if (!regArg.type().isJavaPrimitive()) {
-                bindArgument(code, slotStd, nJitPos, regArg, false);
-                bindArgument(code, slotOpt, nJitPos, regArg, false);
+                    bindArgument(code, slotStd, nJitPos, regArg, false);
+                    code.aconst_null()
+                        .astore(slotOpt);
+                } else if (regArg.cd().isPrimitive()) {
+                    bindArgument(code, slotStd, nJitPos, regArg, true);
+                    bindArgument(code, slotOpt, nJitPos, regArg, false);
+                } else if (!regArg.type().isJavaPrimitive()) {
+                    bindArgument(code, slotStd, nJitPos, regArg, false);
+                    bindArgument(code, slotOpt, nJitPos, regArg, false);
 
-                computeImmutable(code, slotImm, regArg);
+                    computeImmutable(code, slotImm, regArg);
+                } else {
+                    // the type is primitive, but the CD is not
+                    bindArgument(code, slotStd, nJitPos, regArg, false);
+                    code.aconst_null()
+                        .astore(slotOpt);
+                }
+            } else if (regArg.flavor() == JitFlavor.XvmPrimitive) {
+                int[]       slots = regArg.slots();
+                ClassDesc[] cds   = regArg.slotCds();
+                assert fOptBefore;
+                code.aconst_null();
+
+                System.err.println("*** TODO JK/GG: Fix the NPE in binding");
+                ClassDesc cdFn = bctx.builder.ensureClassDesc(typeFn);
+                RegisterInfo regRet = bctx.ensureRegister(m_nRetValue, typeFn, cdFn, "");
+                bctx.storeValue(code, regRet, typeFn);
+                return -1;
             } else {
-                // the type is primitive, but the CD is not
-                bindArgument(code, slotStd, nJitPos, regArg, false);
-                code.aconst_null()
-                    .astore(slotOpt);
+                throw new UnsupportedOperationException("Add support for binding: " + regArg.getClass());
             }
 
             fOptBefore = fOptAfter;

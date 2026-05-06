@@ -1640,16 +1640,15 @@ public class CommonBuilder
             if (!isNativeMethod(eqName, mdWrapper)) {
                 // generate the standard "equals" wrapper that delegates to the optimized "equals$p"
                 classBuilder.withMethodBody(eqName, mdWrapper,
-                        ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
-                        (code) -> {
-                            loadCtx(code);
-                            code.aload(1)
-                                .aload(2)
-                                .aload(3)
-                                .invokestatic(cdThis, eqOptName, mdPrimitive);
-                            Builder.box(code, pool().typeBoolean());
-                            code.areturn();
-                        });
+                        ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, code -> {
+                    loadCtx(code);
+                    code.aload(1)
+                        .aload(2)
+                        .aload(3)
+                        .invokestatic(cdThis, eqOptName, mdPrimitive);
+                    Builder.box(code, pool().typeBoolean());
+                    code.areturn();
+                });
 
                 // generate the optimized "equals$p" with the actual implementation
                 if (!isNativeMethod(eqOptName, mdPrimitive)) {
@@ -2063,15 +2062,11 @@ public class CommonBuilder
                 code.invokestatic(CD_nType, "$ensureType",
                         MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
 
-                // load the first value to the stack (compare param 2)
+                // load the values
                 code.aload(value1Slot);
                 loadProperty(code, type, propId, false);
-                code.checkcast(propCmpJmd.standardParams[1].cd);
-
-                // load the second value to the stack (compare param 3)
                 code.aload(value2Slot);
                 loadProperty(code, type, propId, false);
-                code.checkcast(propCmpJmd.standardParams[2].cd);
 
                 // invoke the static compare method
                 IdentityConstant idTarget = cmpMethod.getIdentity().getClassIdentity();
@@ -2128,21 +2123,20 @@ public class CommonBuilder
                 // generate the standard "hashCode" wrapper that delegates to the optimized
                 // "hashCode$p"
                 classBuilder.withMethodBody(hashName, mdWrapper,
-                        ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
-                        (code) -> {
-                            loadCtx(code);
-                            code.aload(1)
-                                .aload(2)
-                                .invokestatic(cdThis, hashOptName, mdPrimitive);
-                            Builder.box(code, pool().typeInt64());
-                            code.areturn();
-                        });
+                        ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, code -> {
+                    loadCtx(code);
+                    code.aload(1)
+                        .aload(2)
+                        .invokestatic(cdThis, hashOptName, mdPrimitive);
+                    Builder.box(code, pool().typeInt64());
+                    code.areturn();
+                });
 
                 // generate the optimized "hashCode$p" with the actual implementation
                 if (!isNativeMethod(hashOptName, mdPrimitive)) {
                     classBuilder.withMethodBody(hashOptName, mdPrimitive,
                         ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, code ->
-                            assembleConstHashCode(className, code, thisType, hashSig, thisType, isCaching));
+                            assembleConstHashCode(className, code, thisType, hashSig, isCaching));
                 }
             }
         }

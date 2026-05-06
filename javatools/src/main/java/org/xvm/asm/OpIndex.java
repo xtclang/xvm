@@ -314,6 +314,12 @@ public abstract class OpIndex
             } else {
                 code.invokevirtual(reg.cd(), sJitName, jmd.optimizedMD);
             }
+
+            if (!fSet && typeEl.isXvmPrimitive()) {
+                // XVM primitive types are returned partially on the stack and partially in the Ctx
+                // TODO JK: how to do it more generically?
+                Builder.loadFromContext(code, CD_long, 0);
+            }
         }
 
         if (isAssignOp()) {

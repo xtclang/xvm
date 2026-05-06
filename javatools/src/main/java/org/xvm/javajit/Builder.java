@@ -296,18 +296,23 @@ public abstract class Builder {
             }
 
             // 1) ensure the method exists
-            String     jitName;
-            MethodBody body;
+            TypeConstant containerType = bctx.thisType;
+            String       jitName;
+            MethodBody   body;
+            TypeConstant sigType; // function or method type
             if (methodId.isLambda()) {
-                // generate the method itself
                 MethodStructure lambda = (MethodStructure) methodId.getComponent();
                 jitName = methodId.ensureJitMethodName(typeSystem).replace("->", LAMBDA);
                 body    = new MethodBody(lambda);
+                sigType = body.asFunctionType(pool(), containerType);
+
+                // generate the method itself
                 bctx.buildMethod(jitName, body);
             } else {
                 MethodInfo method = bctx.typeInfo.getMethodById(methodId);
                 jitName = method.ensureJitMethodName(typeSystem);
                 body    = method.getHead();
+                sigType = body.getIdentity().getType();
                 if (body.getIdentity().getNestedDepth() > 2) {
                     // methods nested inside properties or methods are not visible otherwise
                     // and need to built on-the-spot
@@ -316,10 +321,9 @@ public abstract class Builder {
             }
 
             // 2) create the MethodHandle(s)
-            TypeConstant  containerType = bctx.thisType;
-            ClassDesc     containerCD   = ClassDesc.of(bctx.className);
-            JitMethodDesc jmd           = body.getJitDesc(this, containerType);
-            boolean       isFunction    = body.getMethodStructure().isFunction();
+            ClassDesc     containerCD  = ClassDesc.of(bctx.className);
+            JitMethodDesc jmd          = body.getJitDesc(this, containerType);
+            boolean       isFunction   = body.getMethodStructure().isFunction();
 
             DirectMethodHandleDesc.Kind kind = isFunction
                     ? DirectMethodHandleDesc.Kind.STATIC
@@ -332,17 +336,16 @@ public abstract class Builder {
                     ? MethodHandleDesc.ofMethod(kind, containerCD, jitName+OPT, jmd.optimizedMD)
                     : null;
 
-            TypeConstant type = body.getIdentity().getType();
             if (isFunction) {
                 // 3) instantiate a function object
                 //      new FunctionN(ctx, stdHandle, optHandle, immutable);
-                assert type.isFunction();
+                assert sigType.isFunction();
 
                 ClassDesc cd = CD_nFunction;
                 code.new_(cd)
                     .dup()
                     .aload(code.parameterSlot(0)); // ctx
-                bctx.loadTypeConstant(code, type);
+                bctx.loadTypeConstant(code, sigType);
                 code.ldc(stdMD);
                 if (optMD == null) {
                     code.aconst_null();
@@ -352,18 +355,18 @@ public abstract class Builder {
                 code.iconst_1() // immutable = true
                     .invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
                         CD_MethodHandle, CD_MethodHandle, CD_boolean));
-                return new SingleSlot(type, Specific, cd, "");
+                return new SingleSlot(sigType, Specific, cd, "");
             } else {
                 // 3) instantiate an nMethod object
                 //      new nMethod(ctx, type, stdHandle, optHandle);
 
-                assert type.isMethod();
+                assert sigType.isMethod();
 
                 ClassDesc cd = CD_nMethod;
                 code.new_(cd)
                     .dup()
                     .aload(code.parameterSlot(0)); // ctx
-                bctx.loadTypeConstant(code, type);
+                bctx.loadTypeConstant(code, sigType);
                 code.ldc(stdMD);
                 if (optMD == null) {
                     code.aconst_null();
@@ -372,7 +375,7 @@ public abstract class Builder {
                 }
                 code.invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
                         CD_MethodHandle, CD_MethodHandle));
-                return new SingleSlot(type, Specific, cd, "");
+                return new SingleSlot(sigType, Specific, cd, "");
             }
         }
 
@@ -1463,6 +1466,7 @@ public abstract class Builder {
     public static final String N_nObj         = "org.xtclang.ecstasy.nObj";
     public static final String N_nPackage     = "org.xtclang.ecstasy.nPackage";
     public static final String N_nRef         = "org.xtclang.ecstasy.reflect.nRef";
+    public static final String N_nRangeInt8   = "org.xtclang.ecstasy.nRangeᐸInt8ᐳ";
     public static final String N_nRangeInt64  = "org.xtclang.ecstasy.nRangeᐸInt64ᐳ";
     public static final String N_nService     = "org.xtclang.ecstasy.nService";
     public static final String N_nType        = "org.xtclang.ecstasy.nType";
@@ -1543,6 +1547,7 @@ public abstract class Builder {
     public static final ClassDesc CD_nMethod       = ClassDesc.of(N_nMethod);
     public static final ClassDesc CD_nModule       = ClassDesc.of(N_nModule);
     public static final ClassDesc CD_nPackage      = ClassDesc.of(N_nPackage);
+    public static final ClassDesc CD_nRangeInt8    = ClassDesc.of(N_nRangeInt8);
     public static final ClassDesc CD_nRangeInt64   = ClassDesc.of(N_nRangeInt64);
 
     public static final ClassDesc CD_nConst        = ClassDesc.of(N_nConst);

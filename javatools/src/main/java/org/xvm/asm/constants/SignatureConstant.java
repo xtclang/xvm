@@ -7,6 +7,9 @@ import java.io.IOException;
 
 import java.util.Arrays;
 import java.util.List;
+
+import java.util.function.Function;
+
 import java.util.stream.Collectors;
 
 import java.util.concurrent.locks.StampedLock;
@@ -292,6 +295,47 @@ public class SignatureConstant
     }
 
     /**
+     * Transform all parameters and return types for this signature.
+     */
+    public SignatureConstant transformTypes(ConstantPool pool,
+                                            Function<TypeConstant, TypeConstant> transform) {
+        // transform params
+        TypeConstant[] atypeOldParams = m_aconstParams;
+        TypeConstant[] atypeNewParams = atypeOldParams;
+        boolean        fDiff          = false;
+        for (int i = 0, c = atypeOldParams.length; i < c; ++i) {
+            TypeConstant constOld = atypeOldParams[i];
+            TypeConstant constNew = transform.apply(constOld);
+            if (constNew != constOld) {
+                if (atypeNewParams == atypeOldParams) {
+                    atypeNewParams = atypeOldParams.clone();
+                    fDiff          = true;
+                }
+                atypeNewParams[i] = constNew;
+            }
+        }
+
+        // transform returns
+        TypeConstant[] atypeOldReturns = m_aconstReturns;
+        TypeConstant[] atypeNewReturns = atypeOldReturns;
+        for (int i = 0, c = atypeOldReturns.length; i < c; ++i) {
+            TypeConstant constOld = atypeOldReturns[i];
+            TypeConstant constNew = transform.apply(constOld);
+            if (constNew != constOld) {
+                if (atypeNewReturns == atypeOldReturns) {
+                    atypeNewReturns = atypeOldReturns.clone();
+                    fDiff           = true;
+                }
+                atypeNewReturns[i] = constNew;
+            }
+        }
+
+        return fDiff
+            ? pool.ensureSignatureConstant(getName(), atypeNewParams, atypeNewReturns)
+            : this;
+    }
+
+    /**
      * Check if this signature contains any auto-narrowing portion.
      *
      * @param fAllowVirtChild  if false, virtual child constants should not be checked for
@@ -329,38 +373,7 @@ public class SignatureConstant
      */
     public SignatureConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget,
                                                   IdentityConstant idCtx) {
-        TypeConstant[] aconstParamOriginal = m_aconstParams;
-        TypeConstant[] aconstParamResolved = aconstParamOriginal;
-        boolean        fDiff               = false;
-        for (int i = 0, c = aconstParamOriginal.length; i < c; ++i) {
-            TypeConstant constOriginal = aconstParamOriginal[i];
-            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, false, typeTarget, idCtx);
-            if (constOriginal != constResolved) {
-                if (aconstParamResolved == aconstParamOriginal) {
-                    aconstParamResolved = aconstParamOriginal.clone();
-                    fDiff               = true;
-                }
-                aconstParamResolved[i] = constResolved;
-            }
-        }
-
-        TypeConstant[] aconstReturnOriginal = m_aconstReturns;
-        TypeConstant[] aconstReturnResolved = aconstReturnOriginal;
-        for (int i = 0, c = aconstReturnOriginal.length; i < c; ++i) {
-            TypeConstant constOriginal = aconstReturnOriginal[i];
-            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, false, typeTarget, idCtx);
-            if (constOriginal != constResolved) {
-                if (aconstReturnResolved == aconstReturnOriginal) {
-                    aconstReturnResolved = aconstReturnOriginal.clone();
-                    fDiff                = true;
-                }
-                aconstReturnResolved[i] = constResolved;
-            }
-        }
-
-        return fDiff
-                ? pool.ensureSignatureConstant(getName(), aconstParamResolved, aconstReturnResolved)
-                : this;
+        return transformTypes(pool, type -> type.resolveAutoNarrowing(pool, false, typeTarget, idCtx));
     }
 
     /**
@@ -614,40 +627,7 @@ public class SignatureConstant
 
     @Override
     public SignatureConstant resolveTypedefs() {
-        // params
-        TypeConstant[] atypeOldParams = m_aconstParams;
-        TypeConstant[] atypeNewParams = atypeOldParams;
-        boolean        fDiff          = false;
-        for (int i = 0, c = atypeOldParams.length; i < c; ++i) {
-            TypeConstant constOld = atypeOldParams[i];
-            TypeConstant constNew = constOld.resolveTypedefs();
-            if (constNew != constOld) {
-                if (atypeNewParams == atypeOldParams) {
-                    atypeNewParams = atypeOldParams.clone();
-                    fDiff          = true;
-                }
-                atypeNewParams[i] = constNew;
-            }
-        }
-
-        // returns
-        TypeConstant[] atypeOldReturns = m_aconstReturns;
-        TypeConstant[] atypeNewReturns = atypeOldReturns;
-        for (int i = 0, c = atypeOldReturns.length; i < c; ++i) {
-            TypeConstant constOld = atypeOldReturns[i];
-            TypeConstant constNew = constOld.resolveTypedefs();
-            if (constNew != constOld) {
-                if (atypeNewReturns == atypeOldReturns) {
-                    atypeNewReturns = atypeOldReturns.clone();
-                    fDiff           = true;
-                }
-                atypeNewReturns[i] = constNew;
-            }
-        }
-
-        return fDiff
-                ? getConstantPool().ensureSignatureConstant(getName(), atypeNewParams, atypeNewReturns)
-                : this;
+        return transformTypes(getConstantPool(), TypeConstant::resolveTypedefs);
     }
 
     @Override

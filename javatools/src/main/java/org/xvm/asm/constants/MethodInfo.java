@@ -1262,8 +1262,7 @@ public class MethodInfo
     public JitMethodDesc getJitDesc(Builder builder, TypeConstant typeContainer) {
         MethodBody head = getHead();
         return switch (head.getImplementation()) {
-            case Capped
-                -> getChain()[1].getJitDesc(builder, typeContainer);
+            case Capped -> getChain()[1].getJitDesc(builder, typeContainer);
 
             case Delegating -> {
                 // there could be multiple delegates; take the first "real" one
@@ -1275,8 +1274,7 @@ public class MethodInfo
                 throw new IllegalStateException();
             }
 
-            default
-                -> head.getJitDesc(builder, typeContainer);
+            default -> head.getJitDesc(builder, typeContainer);
         };
     }
 

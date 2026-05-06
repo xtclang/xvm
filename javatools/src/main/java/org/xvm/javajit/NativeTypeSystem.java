@@ -301,6 +301,11 @@ public class NativeTypeSystem
         nativeByType.put(iterableᐸCharᐳ, Builder.N_IterableChar);
         nativeByType.put(iteratorᐸCharᐳ,  Builder.N_IteratorChar);
 
+        TypeConstant typeInt     = pool.typeInt64();
+        TypeConstant rangeᐸIntᐳ = pool.ensureParameterizedTypeConstant(pool.typeRange(), typeInt);
+
+        nativeByType.put(rangeᐸIntᐳ, Builder.N_nRangeInt64);
+
         // specialized builders
         nativeBuilders.put(pool.typeInt64(),  org.xvm.javajit.builders.Int64Builder.class);
 
