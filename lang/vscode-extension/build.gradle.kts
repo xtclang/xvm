@@ -1,5 +1,13 @@
+import com.github.gradle.node.npm.task.NpmTask
+
 plugins {
     base
+    alias(libs.plugins.langNodeGradle)
+}
+
+node {
+    version.set(libs.versions.langNode)
+    download.set(true)
 }
 
 // Configuration to consume TextMate grammar from root project
@@ -41,34 +49,36 @@ val copyIcon by tasks.registering(Copy::class) {
     into(layout.projectDirectory.dir("icons"))
 }
 
-// Copy LSP server JAR
+// Copy LSP server fat JAR (self-contained with all dependencies: LSP4J, tree-sitter, Logback)
 val copyLspServer by tasks.registering(Copy::class) {
-    description = "Copy LSP server JAR"
-    dependsOn(project(":lsp-server").tasks.named("jar"))
-    from(project(":lsp-server").tasks.named("jar"))
+    description = "Copy LSP server fat JAR"
+    dependsOn(project(":lsp-server").tasks.named("fatJar"))
+    from(project(":lsp-server").tasks.named("fatJar"))
     into(layout.projectDirectory.dir("server"))
     rename { "lsp-server.jar" }
 }
 
-// Run npm install
-val npmInstall by tasks.registering(Exec::class) {
-    description = "Install npm dependencies"
-    workingDir = layout.projectDirectory.asFile
-    commandLine("npm", "install")
+// Copy DAP server JAR (bundled for debugging support)
+val copyDapServer by tasks.registering(Copy::class) {
+    description = "Copy DAP server JAR"
+    dependsOn(project(":dap-server").tasks.named("jar"))
+    from(project(":dap-server").tasks.named("jar")) {
+        include("*.jar")
+    }
+    into(layout.projectDirectory.dir("server"))
+    rename { "dap-server.jar" }
+}
 
-    // Must run after copy tasks that write to the project directory
+// Configure the plugin-provided npmInstall task (runs `npm install` using the pinned Node)
+val npmInstall by tasks.existing {
     mustRunAfter(copyLanguageConfig, copyTextMateGrammar, copyIcon)
-
-    inputs.file(layout.projectDirectory.file("package.json"))
-    outputs.dir(layout.projectDirectory.dir("node_modules"))
 }
 
 // Compile TypeScript
-val npmCompile by tasks.registering(Exec::class) {
+val npmCompile by tasks.registering(NpmTask::class) {
     description = "Compile TypeScript"
     dependsOn(npmInstall)
-    workingDir = layout.projectDirectory.asFile
-    commandLine("npm", "run", "compile")
+    args.set(listOf("run", "compile"))
 
     inputs.dir(layout.projectDirectory.dir("src"))
     inputs.file(layout.projectDirectory.file("tsconfig.json"))
@@ -76,11 +86,10 @@ val npmCompile by tasks.registering(Exec::class) {
 }
 
 // Package the extension
-val packageExtension by tasks.registering(Exec::class) {
+val packageExtension by tasks.registering(NpmTask::class) {
     description = "Package VS Code extension"
-    dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyIcon, copyLspServer)
-    workingDir = layout.projectDirectory.asFile
-    commandLine("npm", "run", "package")
+    dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyIcon, copyLspServer, copyDapServer)
+    args.set(listOf("run", "package"))
 
     outputs.file(layout.projectDirectory.file("xtc-language-${project.version}.vsix"))
 }
@@ -92,7 +101,7 @@ val build by tasks.existing {
 
 // Assemble prepares all resources without packaging
 val assemble by tasks.existing {
-    dependsOn(copyTextMateGrammar, copyLanguageConfig, copyIcon, copyLspServer, npmCompile)
+    dependsOn(copyTextMateGrammar, copyLanguageConfig, copyIcon, copyLspServer, copyDapServer, npmCompile)
 }
 
 // Launch VS Code with extension loaded for testing
@@ -102,7 +111,8 @@ val runCode by tasks.registering(Exec::class) {
     dependsOn(assemble)
 
     val extensionPath = layout.projectDirectory.asFile.absolutePath
-    commandLine("code", "--extensionDevelopmentPath=$extensionPath")
+    val fixturesPath = layout.projectDirectory.dir("src/test/fixtures").asFile.absolutePath
+    commandLine("code", "--extensionDevelopmentPath=$extensionPath", fixturesPath)
 }
 
 val clean by tasks.existing(Delete::class) {

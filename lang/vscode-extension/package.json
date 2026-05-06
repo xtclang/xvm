@@ -20,7 +20,9 @@
         "xvm"
     ],
     "activationEvents": [
-        "onLanguage:xtc"
+        "onStartupFinished",
+        "onLanguage:xtc",
+        "workspaceContains:**/*.x"
     ],
     "main": "./out/extension.js",
     "contributes": {
@@ -58,11 +60,76 @@
             {
                 "command": "xtc.createProject",
                 "title": "XTC: Create New Project"
+            },
+            {
+                "command": "xtc.runModule",
+                "title": "XTC: Run Module"
+            },
+            {
+                "command": "xtc.restartServer",
+                "title": "XTC: Restart Language Server"
+            },
+            {
+                "command": "xtc.showServerOutput",
+                "title": "XTC: Show Language Server Output"
+            }
+        ],
+        "taskDefinitions": [
+            {
+                "type": "xtc",
+                "required": [
+                    "moduleName"
+                ],
+                "properties": {
+                    "moduleName": {
+                        "type": "string",
+                        "description": "The XTC module to run"
+                    },
+                    "methodName": {
+                        "type": "string",
+                        "description": "Method to invoke (defaults to 'run')"
+                    },
+                    "moduleArguments": {
+                        "type": "string",
+                        "description": "Comma-separated arguments passed to the module"
+                    },
+                    "useGradle": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Use Gradle to run (recommended for projects with build.gradle.kts)"
+                    },
+                    "quietMode": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Use -q flag for less verbose Gradle output"
+                    }
+                }
             }
         ],
         "configuration": {
             "title": "XTC Language",
             "properties": {
+                "xtc.java.home": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to Java 25+ installation (overrides JAVA_HOME). Leave empty to use JAVA_HOME or 'java' in PATH.",
+                    "scope": "machine-overridable"
+                },
+                "xtc.trace.server": {
+                    "type": "string",
+                    "enum": [
+                        "off",
+                        "messages",
+                        "verbose"
+                    ],
+                    "default": "off",
+                    "description": "Trace communication between VS Code and the XTC Language Server (for debugging)"
+                },
+                "xtc.inlayHints.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable inlay hints from the XTC Language Server"
+                },
                 "xtc.formatting.indentSize": {
                     "type": "integer",
                     "default": 4,
@@ -87,16 +154,82 @@
                     "type": "integer",
                     "default": 120,
                     "description": "Maximum line width (right margin)"
+                },
+                "xtc.sourceRoots": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [],
+                    "description": "Extra source root directories the XTC Language Server indexes (e.g. XDK standard-library sources). Accepts absolute paths to directories that contain .x source files outside the open workspace.",
+                    "scope": "machine-overridable"
                 }
             }
         },
         "configurationDefaults": {
+            "files.associations": {
+                "*.x": "xtc"
+            },
             "[xtc]": {
                 "editor.tabSize": 4,
                 "editor.insertSpaces": true,
-                "editor.formatOnType": true
+                "editor.formatOnType": true,
+                "editor.autoIndent": "full",
+                "editor.semanticHighlighting.enabled": true,
+                "editor.bracketPairColorization.enabled": true,
+                "editor.guides.bracketPairs": "active",
+                "editor.suggest.snippetsPreventQuickSuggestions": false,
+                "editor.wordBasedSuggestions": "off"
             }
-        }
+        },
+        "debuggers": [
+            {
+                "type": "xtc",
+                "label": "XTC Debug",
+                "languages": [
+                    "xtc"
+                ],
+                "configurationAttributes": {
+                    "launch": {
+                        "required": [
+                            "module"
+                        ],
+                        "properties": {
+                            "module": {
+                                "type": "string",
+                                "description": "The XTC module to debug"
+                            },
+                            "method": {
+                                "type": "string",
+                                "description": "Method to invoke (defaults to 'run')",
+                                "default": "run"
+                            },
+                            "args": {
+                                "type": "string",
+                                "description": "Comma-separated arguments passed to the module"
+                            },
+                            "cwd": {
+                                "type": "string",
+                                "description": "Working directory",
+                                "default": "${workspaceFolder}"
+                            }
+                        }
+                    }
+                },
+                "configurationSnippets": [
+                    {
+                        "label": "XTC: Launch Module",
+                        "description": "Launch and debug an XTC module",
+                        "body": {
+                            "type": "xtc",
+                            "request": "launch",
+                            "name": "Debug ${1:module}",
+                            "module": "${1:myapp}"
+                        }
+                    }
+                ]
+            }
+        ]
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
@@ -106,6 +239,7 @@
         "lint": "eslint src/"
     },
     "dependencies": {
+        "jdk-utils": "^0.6.0",
         "vscode-languageclient": "^9.0.1"
     },
     "devDependencies": {
