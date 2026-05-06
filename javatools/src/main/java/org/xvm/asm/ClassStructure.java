@@ -42,7 +42,6 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import org.xvm.util.Handy;
-import org.xvm.util.LinkedIterator;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
@@ -3354,24 +3353,15 @@ public class ClassStructure
     }
 
     @Override
-    public Iterator<? extends XvmStructure> getContained() {
+    public Iterable<? extends XvmStructure> getContained() {
         // we cannot use the "collectAnnotations" API at this time, since our module may not yet
         // be linked
-        List<Annotation> listAnno = null;
-        for (Contribution contrib : getContributionsAsList()) {
-            if (contrib.getComposition() == Composition.Annotation) {
-                if (listAnno == null) {
-                    listAnno = new ArrayList<>();
-                }
-                listAnno.add(contrib.getAnnotation());
-            }
-        }
+        var listAnno = getContributionsAsList().stream()
+                .filter(c -> c.getComposition() == Composition.Annotation)
+                .map(Contribution::getAnnotation)
+                .toList();
 
-        return listAnno == null
-                ? super.getContained()
-                : new LinkedIterator(
-                        super.getContained(),
-                        listAnno.iterator());
+        return listAnno.isEmpty() ? super.getContained() : containedWith(listAnno);
     }
 
     @Override
@@ -3604,8 +3594,8 @@ public class ClassStructure
         }
 
         // type parameters
-        Map mapThisParams = this.m_mapParams;
-        Map mapThatParams = that.m_mapParams;
+        var mapThisParams = this.m_mapParams;
+        var mapThatParams = that.m_mapParams;
         int cThisParams   = mapThisParams == null ? 0 : mapThisParams.size();
         int cThatParams   = mapThatParams == null ? 0 : mapThatParams.size();
 

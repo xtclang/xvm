@@ -59,7 +59,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
-import org.xvm.util.LinkedIterator;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
@@ -240,8 +239,7 @@ public class MethodStructure
      * Replace the annotations with an equivalent re-ordered array.
      */
     public void reorderAnnotations(Annotation[] annotations) {
-        assert new HashSet(Arrays.asList(annotations)).equals(
-               new HashSet(Arrays.asList(m_aAnnotations)));
+        assert Set.of(annotations).equals(Set.of(m_aAnnotations));
 
         m_aAnnotations = annotations;
     }
@@ -2016,12 +2014,10 @@ public class MethodStructure
     }
 
     @Override
-    public Iterator<? extends XvmStructure> getContained() {
+    public Iterable<? extends XvmStructure> getContained() {
         return getAnnotationCount() == 0
                 ? super.getContained()
-                : new LinkedIterator(
-                    super.getContained(),
-                    Arrays.stream(m_aAnnotations).iterator());
+                : containedWith(Arrays.asList(m_aAnnotations));
     }
 
     @Override
