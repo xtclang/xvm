@@ -18,10 +18,15 @@ module TestGenerics {
         console.print("type=" + list.Element);
 
         list.Element el0 = list[0];
-        console.print("el0=" + el0);
+        console.print($"{el0=}");
     }
 
     void testVirtualChild() {
+        Type t1 = Base<Int>.Child;
+        assert t1.toString() == "Base<Int>.Child";
+        Type t2 = Base<Int>.Child2<String>;
+        assert t2.toString() == "Base<Int>.Child2<String>";
+
         Base<Int> bi = new Base();
 
         Base<Int>.Child c1 = bi.new Child();
@@ -57,21 +62,22 @@ module TestGenerics {
 
         void createChild() {
             Child c1 = new Child(); // compile time type is B<T>.C
-            console.print("c1=" + c1);
+            console.print($"{c1=}");
 
             Base<Int> b2 = new Base<Int>();
             Base<Int>.Child c2 = b2.new Child();
-            console.print("c2=" + c2);
+            console.print($"{c2=}");
 
             Base<> b3 = createBase();
             Base<>.Child c3 = b3.new Child();
-            console.print("c3=" + c3);
+            console.print($"{c3=}");
 
             Base<String> b4 = new Derived<String>();
             Base<String>.Child c4 = b4.new Child();
-            console.print("c4=" + c4);
+            console.print($"{c4=}");
 
             Base<Int>.Child2<String> c5 = b2.new Child2<String>();
+            console.print($"{c5=}");
         }
 
         Base!<> createBase() {

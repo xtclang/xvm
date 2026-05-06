@@ -549,8 +549,18 @@ public class NameExpression
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         // evaluate the left side first (we'll need it to be done before re-resolving our own raw
         // argument)
+        ConstantPool pool = pool();
         if (left != null) {
-            Expression leftNew = left.validate(ctx, null, errs);
+            // if "left" is an "Outer" type then this expression may represent a virtual child
+            // (e.g.: Parent<T>.Child), so resolve the parent type based on the fact that it is an
+            // outer type
+            TypeConstant typeDesired = null;
+            if (typeRequired != null && typeRequired.isTypeOfType() && isIdentityMode(ctx, true) &&
+                    testFit(ctx, pool.typeInner().getType(), false, null).isFit()) {
+                typeDesired = pool.typeOuter().getType();
+            }
+
+            Expression leftNew = left.validate(ctx, typeDesired, errs);
             if (leftNew == null) {
                 // we couldn't resolve the left side; no reason to continue
                 return finishValidation(ctx, typeRequired, typeRequired, TypeFit.NoFit, null, errs);
@@ -575,7 +585,6 @@ public class NameExpression
 
         // validate the type parameters
         TypeConstant[] atypeParams = null;
-        ConstantPool   pool        = pool();
         if (hasTrailingTypeParams()) {
             int cParams = params.size();
             atypeParams = new TypeConstant[cParams];
@@ -2371,8 +2380,12 @@ public class NameExpression
                     IdentityConstant idThis = clzThis.getIdentityConstant();
                     if (idThis.equals(idTarget)) {
                         type = clzThis.getFormalType();
-                    } else {
-                        if (clzTarget.isVirtualChild()) {
+                    } else if (clzTarget.isVirtualChild()) {
+                        if (fTypeDesired && left instanceof NameExpression exprLeft &&
+                                exprLeft.isValidated() && exprLeft.getType().isTypeOfType()) {
+                            TypeConstant typeParent = exprLeft.getType().getParamType(0);
+                            type = pool.ensureVirtualChildTypeConstant(typeParent, clzTarget.getName());
+                        } else {
                             boolean        fMate   = idTarget.isNestMateOf(idThis);
                             ClassConstant  idBase  = fMate
                                 ? ((ClassConstant) idThis).getOutermost()
