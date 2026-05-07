@@ -9,8 +9,8 @@
 module TestSLogging {
     package slog import slogging.xtclang.org;
 
+    import slog.Attributes;
     import slog.AsyncHandler;
-    import slog.Attr;
     import slog.HandlerOptions;
     import slog.JSONHandler;
     import slog.Level;
@@ -26,7 +26,7 @@ module TestSLogging {
     void run() {
         console.print("=== TestSLogging: slog-shaped logging ===");
         runInjectedLogger();
-        runDerivedLoggersAndLazyAttrs();
+        runDerivedLoggersAttrs();
         runHandlerPrimitives();
         runContextBinding();
     }
@@ -42,7 +42,7 @@ module TestSLogging {
         assert logger.infoEnabled;
         assert !logger.debugEnabled;
 
-        logger.info("hello", [Attr.of("style", "slog")]);
+        logger.info("hello", ["style"="slog"]);
 
         @Volatile Int lazyCalls = 0;
         logger.debug(() -> {
@@ -54,59 +54,47 @@ module TestSLogging {
         logger.info(() -> {
             ++lazyCalls;
             return "lazy info message built after the Info check";
-        }, [Attr.of("scenario", "injected")]);
+        }, ["scenario"="injected"]);
         assert lazyCalls == 1;
 
         try {
             failingOperation();
         } catch (Exception e) {
-            logger.error("operation failed", [Attr.of("operation", "manual")], cause=e);
+            logger.error("operation failed", ["operation"="manual"], cause=e);
         }
 
         Level notice = new Level(2, "NOTICE");
-        logger.log(notice, "custom level", [Attr.of("severity", notice.severity)]);
+        logger.log(notice, "custom level", ["severity"=notice.severity]);
         logger.logAt(Level.Warn, () -> "source-aware lazy message",
-                "TestSLogging.x", 64, [Attr.of("source", "explicit")]);
+                "TestSLogging.x", 64, ["source"="explicit"]);
     }
 
     /**
      * The central slog idea: derive loggers with attrs/groups instead of named logger
-     * categories and MDC. Also exercises `Attr.lazy`, the POC equivalent of Go
-     * `LogValuer`.
+     * categories and MDC.
      */
-    void runDerivedLoggersAndLazyAttrs() {
-        console.print("--- derived loggers, groups, and lazy attrs ---");
+    void runDerivedLoggersAttrs() {
+        console.print("--- derived loggers and groups ---");
 
         MemoryHandler capture = new MemoryHandler();
         Logger        root    = new Logger(capture);
-        LazyCounter   counter = new LazyCounter();
 
-        Logger payments = root.with([
-                Attr.of  ("requestId", "r_slog"),
-                Attr.lazy("bound", () -> counter.value("bound-value")),
-        ]).withGroup("payments");
+        Logger payments = root.with(["requestId"="r_slog"]).withGroup("payments");
 
-        payments.info("charged", [
-                Attr.lazy ("payload", () -> counter.value("payload-value")),
-                Attr.group("card", [Attr.of("last4", "4242")]),
-                Attr.of   ("amount", 1099),
-        ]);
+        Attributes attrs = Map:["card"=["last4"="4242"], "amount"=1099];
+        payments.info("charged", attrs);
 
-        assert counter.calls == 2;
         assert capture.records.size == 1;
 
         Record record = capture.records[0];
         assert record.message == "charged";
-        assert record.attrs[0].key == "requestId";
-        assert record.attrs[1].key == "bound";
-        assert record.attrs[1].value.as(String) == "bound-value";
-        assert record.attrs[2].key == "payments";
-
-        Attr[] paymentAttrs = record.attrs[2].value.as(Attr[]);
-        assert paymentAttrs[0].key == "payload";
-        assert paymentAttrs[0].value.as(String) == "payload-value";
-        assert paymentAttrs[1].key == "card";
-        assert paymentAttrs[2].key == "amount";
+        assert record.attrs["requestId"] == "r_slog";
+        assert var paymentAttrs := record.attrs.get("payments");
+        assert paymentAttrs.is(Attributes);
+        assert paymentAttrs["amount"] == 1099;
+        assert var cardAttrs := paymentAttrs.get("card");
+        assert cardAttrs.is(Attributes);
+        assert cardAttrs["last4"] == "4242";
     }
 
     /**
@@ -119,19 +107,16 @@ module TestSLogging {
         MemoryHandler asyncTarget = new MemoryHandler();
         AsyncHandler  async       = new AsyncHandler(asyncTarget, 8);
         Logger        asyncLogger = new Logger(async);
-        asyncLogger.info("async record", [Attr.of("queued", True)]);
+        asyncLogger.info("async record", ["queued"=True]);
         async.flush();
         assert asyncTarget.records.size == 1;
 
         Logger textLogger = new Logger(new TextHandler(Level.Debug));
-        textLogger.debug("text handler debug", [Attr.of("visible", True)]);
+        textLogger.debug("text handler debug", ["visible"=True]);
 
         Logger jsonLogger = new Logger(new JSONHandler(
                 new HandlerOptions(Level.Debug, ["secret"])));
-        jsonLogger.info("json handler redaction", [
-                Attr.of("secret", "redact-me"),
-                Attr.of("visible", "ok"),
-        ]);
+        jsonLogger.info("json handler redaction", ["secret"="redact-me", "visible"="ok"]);
 
         Logger noop = new Logger(new NopHandler());
         assert !noop.errorEnabled;
@@ -147,7 +132,7 @@ module TestSLogging {
         MemoryHandler capture = new MemoryHandler();
         Logger        root    = new Logger(capture);
         LoggerContext context = new LoggerContext();
-        Logger        bound   = root.with([Attr.of("context", "bound")]);
+        Logger        bound   = root.with(["context"="bound"]);
 
         using (context.bind(bound)) {
             Logger current = context.currentOr(root);
@@ -155,8 +140,8 @@ module TestSLogging {
         }
 
         assert capture.records.size == 1;
-        assert capture.records[0].attrs[0].key == "context";
-        assert capture.records[0].attrs[0].value.as(String) == "bound";
+        assert var value := capture.records[0].attrs.get("context");
+        assert value.is(String) && value == "bound";
     }
 
     void failingOperation() {

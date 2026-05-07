@@ -14,24 +14,38 @@
  * Console`. Threshold fixed at construction. No accumulation, no shared mutable state.
  * See `doc/logging/design/design.md` ("Sink type: `const` vs `service`") for the full rule.
  */
-const TextHandler(HandlerOptions options = new HandlerOptions(), String groupName = "")
+const TextHandler
         implements Handler {
+
+    /**
+     * Create a [JSONHandler].
+     *
+     * @param options    (optional) the handler's options
+     * @param groupName  (optional) the handler's group name
+     * @param handler    (optional) the consumer that will process the String produced from the log
+     *                   [Record] (the default will print the json to the console)
+     */
+    construct (HandlerOptions? options = Null, String groupName = "", TextConsumer? consumer = Null)
+    {
+        this.options   = options ?: new HandlerOptions();
+        this.groupName = groupName;
+        this.consumer  = consumer ?: defaultConsumer;
+    }
+
+    typedef function void (String) as TextConsumer;
 
     /**
      * Single-arg convenience: configurable threshold, no group prefix.
      */
     construct(Level rootLevel) {
-        construct TextHandler(new HandlerOptions(rootLevel), "");
+        construct TextHandler(new HandlerOptions(rootLevel));
     }
 
-    /**
-     * Production-options convenience.
-     */
-    construct(HandlerOptions options) {
-        construct TextHandler(options, "");
-    }
+    HandlerOptions options;
 
-    @Inject Console console;
+    String groupName;
+
+    TextConsumer consumer;
 
     /**
      * Cheap threshold check. This is intentionally only arithmetic on the level's
@@ -60,11 +74,11 @@ const TextHandler(HandlerOptions options = new HandlerOptions(), String groupNam
         appendAttrs(buf, groupName, record.attrs);
         appendSource(buf, record);
 
-        console.print(buf.toString());
+        consumer(buf.toString());
 
         if (Exception e ?= record.exception) {
             // TODO(impl): pretty-print stack frames; for now rely on Exception.toString().
-            console.print(e.toString());
+            consumer(e.toString());
         }
     }
 
@@ -76,6 +90,11 @@ const TextHandler(HandlerOptions options = new HandlerOptions(), String groupNam
     @Override
     Handler withGroup(String name) {
         return name == "" ? this : new BoundHandler(delegate=this, groupName=name);
+    }
+
+    private static void defaultConsumer(String text) {
+        @Inject Console console;
+        console.print(text);
     }
 
     /**

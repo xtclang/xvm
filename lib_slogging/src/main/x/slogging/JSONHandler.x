@@ -19,22 +19,22 @@ const JSONHandler
      *
      * @param options    (optional) the handler's options
      * @param groupName  (optional) the handler's group name
-     * @param handler    (optional) the handler that will process the [JsonObject] produced from the
-     *                   log [Record] (the default will print the json to the console)
+     * @param handler    (optional) the consumer that will process the [JsonObject] produced from
+     *                   the log [Record] (the default will print the json to the console)
      */
-    construct (HandlerOptions? options = Null, String groupName = "", JsonHandler? handler = Null) {
+    construct (HandlerOptions? options = Null, String groupName = "", JsonConsumer? consumer = Null) {
         this.options   = options ?: new HandlerOptions();
         this.groupName = groupName;
-        this.handler   = handler ?: defaultHandler;
+        this.consumer  = consumer ?: defaultConsumer;
     }
 
-    typedef function void (JsonObject) as JsonHandler;
+    typedef function void (JsonObject) as JsonConsumer;
 
     HandlerOptions options;
 
     String groupName;
 
-    JsonHandler handler;
+    JsonConsumer consumer;
 
     /**
      * Cheap threshold check; no JSON work happens for disabled records.
@@ -49,10 +49,10 @@ const JSONHandler
      */
     @Override
     void handle(Record record) {
-        handler(toJson(record));
+        consumer(toJson(record));
     }
 
-    private static void defaultHandler(JsonObject obj) {
+    private static void defaultConsumer(JsonObject obj) {
         @Inject Console console;
         console.print(Printer.DEFAULT.render(obj));
     }
