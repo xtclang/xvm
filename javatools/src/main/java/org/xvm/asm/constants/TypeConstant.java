@@ -6797,46 +6797,42 @@ public abstract class TypeConstant
                     generateOrdered(bctx, code);
                     return;
 
-                case Op.OP_IS_EQ, Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
+                case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
+                     Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
                     // boolean equals(Ctx, primitives1..., primitives2...)
                     code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
-
-                    if (fLocalTrue) {
-                        if (nOp == Op.OP_IS_NEQ) {
-                            code.iconst_1()
-                                    .ixor();
-                        }
-                    } else {
-                        if (nOp == Op.OP_IS_EQ) {
-                            code.ifne(lblTrue);
-                        } else {
-                            code.ifeq(lblTrue);
-                        }
+                    switch (nOp) {
+                        case Op.OP_IS_EQ,  Op.OP_JMP_EQ  -> code.ifne(lblTrue);
+                        case Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> code.ifeq(lblTrue);
+                        default -> throw new IllegalStateException();
                     }
-                    return;
+                    break;
 
-                case Op.OP_IS_GT, Op.OP_IS_GTE, Op.OP_IS_LT, Op.OP_IS_LTE:
+                case Op.OP_IS_GT,  Op.OP_JMP_GT,
+                     Op.OP_IS_GTE, Op.OP_JMP_GTE,
+                     Op.OP_IS_LT,  Op.OP_JMP_LT,
+                     Op.OP_IS_LTE, Op.OP_JMP_LTE:
                     // int compare(Ctx, primitives1..., primitives2...)
                     code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
                     code.iconst_0();
 
                     switch (nOp) {
-                        case Op.OP_IS_GT:
+                        case Op.OP_IS_GT, Op.OP_JMP_GT:
                             // > 0
                             code.if_icmpge(lblTrue);
                             break;
 
-                        case Op.OP_IS_GTE:
+                        case Op.OP_IS_GTE, Op.OP_JMP_GTE:
                             // >= 0
                             code.if_icmpge(lblTrue);
                             break;
 
-                        case Op.OP_IS_LT:
+                        case Op.OP_IS_LT,  Op.OP_JMP_LT:
                             // < 0
                             code.if_icmplt(lblTrue);
                             break;
 
-                        case Op.OP_IS_LTE:
+                        case Op.OP_IS_LTE, Op.OP_JMP_LTE:
                             // <= 0
                             code.if_icmple(lblTrue);
                             break;
@@ -6844,6 +6840,7 @@ public abstract class TypeConstant
                         default:
                             throw new IllegalStateException();
                     }
+                    break;
             }
         } else {
             // type is a non-primitive
@@ -6985,14 +6982,14 @@ public abstract class TypeConstant
             }
         }
 
-        Label lblEnd = code.newLabel();
         if (fLocalTrue) {
+            Label lblEnd = code.newLabel();
             code.iconst_0()
                 .goto_(lblEnd)
                 .labelBinding(lblTrue)
-                .iconst_1();
+                .iconst_1()
+                .labelBinding(lblEnd);
         }
-        code.labelBinding(lblEnd);
     }
 
     /**
