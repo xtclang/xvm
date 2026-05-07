@@ -21,15 +21,15 @@
  *
  * Derived loggers are pure construction:
  *
- *      Logger requestLogger = logger.with([
- *              Attr.of("requestId", req.id),
- *              Attr.of("user",      req.userId),
+ *      Logger requestLogger = logger.with(Map:[
+ *              "requestId" = req.id,
+ *              "user"      = req.userId,
  *      ]);
  *
  * # Status
  *
  * **This module is a working comparison POC.** The core API, level checks, derived
- * loggers, groups, custom levels, lazy message/attr suppliers, runtime injection, source
+ * loggers, groups, custom levels, lazy message suppliers, runtime injection, source
  * metadata, context binding, and memory/text/JSON/no-op handlers are implemented and
  * covered by unit tests.
  *
@@ -38,7 +38,7 @@
  * The public API consists of:
  *      - [Logger]     — the user-facing concrete `const`
  *      - [Level]      — open-ended severity (Int + String label)
- *      - [Attr]       — single key/value pair carried as structured data
+ *      - [Attributes] — typedef for `Map<String, AnyValue>` carried as structured data
  *      - [Record]     — immutable record of a single log call (LogEvent equivalent)
  *      - [Handler]    — the SPI that backends implement (LogSink equivalent)
  *      - [LoggerContext] — optional SharedContext helper for request-scoped loggers
@@ -72,10 +72,34 @@ module slogging.xtclang.org {
     typedef function String() as MessageSupplier;
 
     /**
-     * Lazy attribute value supplier used by [Attr.lazy].
+     * AnyValue is used to represent various values of specific types in log message attributes.
      *
-     * This mirrors Go slog's `LogValuer` idea: expensive structured values can be
-     * represented at the call site without constructing them for disabled records.
+     * An AnyValue is either:
+     *
+     * - a primitive type: string, boolean, double precision floating point (IEEE 754-1985), or
+     *   signed 64 bit integer,
+     * - a homogeneous array of primitive type values. A homogeneous array MUST NOT contain values
+     *   of different types.
+     * - a byte array.
+     * - an array of AnyValue,
+     * - a Mmp<string, AnyValue>,
+     * - a Null value
+     *
+     * Arbitrary deep nesting of values for arrays and maps is allowed (essentially allows to
+     * represent an equivalent of a JSON object).
+     * Using array and map values may carry a higher performance overhead compared to primitive
+     * values.
      */
-    typedef function Object() as ObjectSupplier;
+    typedef PrimitiveValue | AnyValue[] | Map<String, AnyValue> as AnyValue;
+
+    /**
+     * The various primitive values allowed in an AnyValue.
+     */
+    typedef Nullable | Boolean | String | Int | IntLiteral | Float | FPLiteral | Byte[]
+            as PrimitiveValue;
+
+    /**
+     * A map of attribute key-value pairs carried by resources, scopes, and data points.
+     */
+    typedef Map<String, AnyValue> as Attributes;
 }

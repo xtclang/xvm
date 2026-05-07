@@ -1,4 +1,4 @@
-import slogging.Attr;
+import slogging.Attributes;
 import slogging.Handler;
 import slogging.Level;
 import slogging.Record;
@@ -11,10 +11,10 @@ import slogging.Record;
 service TrackingHandler
         implements Handler {
 
-    public/private Int      withAttrsCalls = 0;
-    public/private Int      withGroupCalls = 0;
-    public/private Attr[]   lastAttrs      = [];
-    public/private String[] groups         = [];
+    public/private Int        withAttrsCalls = 0;
+    public/private Int        withGroupCalls = 0;
+    public/private Attributes lastAttrs      = Map:[];
+    public/private String[]   groups         = [];
     private Record[] recordList = new Record[];
 
     @RO Record[] records.get() {
@@ -32,9 +32,9 @@ service TrackingHandler
     }
 
     @Override
-    Handler withAttrs(Attr[] attrs) {
+    Handler withAttrs(Attributes attrs) {
         ++withAttrsCalls;
-        lastAttrs = attrs.toArray(Constant);
+        lastAttrs = attrs.makeImmutable();
         return this;
     }
 

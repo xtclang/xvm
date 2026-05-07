@@ -9,7 +9,7 @@ import ecstasy.SharedContext;
  * models a logical execution context that flows across service calls and child fibers.
  * `LoggerContext` is the smallest explicit bridge:
  *
- *      Logger requestLog = logger.with([Attr.of("requestId", id)]);
+ *      Logger requestLog = logger.with(Map:["requestId"=id]);
  *      using (loggerContext.bind(requestLog)) {
  *          worker.process^();
  *      }

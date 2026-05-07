@@ -6,7 +6,7 @@
  * no separate `marker` or `keyValues` — categorisation and structured fields all live
  * in `attrs`.
  *
- * The `attrs` array carries the structured data visible to the current handler call.
+ * The `attrs` map carries the structured data visible to the current handler call.
  * Derived handlers may prepend attrs or wrap them in groups before forwarding to the
  * final backend. This matches Go slog's `Handler.WithAttrs` / `WithGroup` model.
  *
@@ -22,7 +22,7 @@ const Record(
         // Open integer severity.
         Level     level,
         // Structured data after any handler derivation has been applied.
-        Attr[]    attrs,
+        Attributes attrs,
         // Ecstasy-specific convenience for a thrown exception/cause.
         Exception? exception   = Null,
         // Optional source metadata.

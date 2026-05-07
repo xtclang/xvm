@@ -6,10 +6,10 @@
  *
  * # The contract
  *
- *      Boolean enabled(Level level)        — cheap fast-path filter
- *      void    handle(Record record)       — emit the record
- *      Handler withAttrs(Attr[] attrs)     — derive a pre-bound handler
- *      Handler withGroup(String name)      — derive a name-prefixed handler
+ *      Boolean enabled(Level level)            — cheap fast-path filter
+ *      void    handle(Record record)           — emit the record
+ *      Handler withAttrs(Attributes attrs)     — derive a pre-bound handler
+ *      Handler withGroup(String name)          — derive a name-prefixed handler
  *
  * The two extra methods exist so that when user code does `logger.with(attrs)` once and
  * then logs millions of records through the derived logger, the handler can do the
@@ -57,7 +57,7 @@ interface Handler {
      * [BoundHandler] for the default semantics, or return a handler-specific derived
      * instance that caches a rendered prefix.
      */
-    Handler withAttrs(Attr[] attrs);
+    Handler withAttrs(Attributes attrs);
 
     /**
      * Return a handler that namespaces subsequent attributes under the supplied group

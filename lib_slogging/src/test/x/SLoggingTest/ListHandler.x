@@ -1,4 +1,4 @@
-import slogging.Attr;
+import slogging.Attributes;
 import slogging.Handler;
 import slogging.Level;
 import slogging.Record;
@@ -44,13 +44,13 @@ service ListHandler
     }
 
     @Override
-    Handler withAttrs(Attr[] attrs) {
-        return attrs.empty ? this : new slogging.BoundHandler(this, attrs);
+    Handler withAttrs(Attributes attrs) {
+        return attrs.empty ? this : new slogging.BoundHandler(delegate=this, attrs=attrs);
     }
 
     @Override
     Handler withGroup(String name) {
-        return name == "" ? this : new slogging.BoundHandler(this, name);
+        return name == "" ? this : new slogging.BoundHandler(delegate=this, groupName=name);
     }
 
     void setLevel(Level level) {

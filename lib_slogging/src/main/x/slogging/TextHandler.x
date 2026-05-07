@@ -14,17 +14,8 @@
  * Console`. Threshold fixed at construction. No accumulation, no shared mutable state.
  * See `doc/logging/design/design.md` ("Sink type: `const` vs `service`") for the full rule.
  */
-const TextHandler(HandlerOptions options, String groupPrefix)
+const TextHandler(HandlerOptions options = new HandlerOptions(), String groupName = "")
         implements Handler {
-
-    /**
-     * No-arg convenience: threshold `Info`, no group prefix. See parallel comment on
-     * `lib_logging.ConsoleLogSink` for why we use explicit delegating constructors
-     * instead of default-arg synthesis.
-     */
-    construct() {
-        construct TextHandler(new HandlerOptions(), "");
-    }
 
     /**
      * Single-arg convenience: configurable threshold, no group prefix.
@@ -66,7 +57,7 @@ const TextHandler(HandlerOptions options, String groupPrefix)
            .append("msg=")
            .append(quote(record.message));
 
-        appendAttrs(buf, groupPrefix, record.attrs);
+        appendAttrs(buf, groupName, record.attrs);
         appendSource(buf, record);
 
         console.print(buf.toString());
@@ -78,27 +69,27 @@ const TextHandler(HandlerOptions options, String groupPrefix)
     }
 
     @Override
-    Handler withAttrs(Attr[] attrs) {
-        return attrs.empty ? this : new BoundHandler(this, attrs);
+    Handler withAttrs(Attributes attrs) {
+        return attrs.empty ? this : new BoundHandler(delegate=this, attrs=attrs);
     }
 
     @Override
     Handler withGroup(String name) {
-        return name == "" ? this : new BoundHandler(this, name);
+        return name == "" ? this : new BoundHandler(delegate=this, groupName=name);
     }
 
     /**
      * Render one attr `key=value`, prefixing with the active group path if any. Nested
-     * groups (an `Attr` whose value is `Attr[]`) are flattened with a dot separator —
-     * matches `slog.TextHandler`.
+     * groups (a value that is itself a `Map<String, AnyValue>`) are flattened with a dot
+     * separator — matches `slog.TextHandler`.
      */
-    private void renderAttr(StringBuffer buf, String prefix, Attr a) {
-        String key = prefix == "" ? a.key : $"{prefix}.{a.key}";
-        if (a.value.is(Attr[])) {
-            appendNestedAttrs(buf, key, a.value.as(Attr[]));
+    private void renderAttr(StringBuffer buf, String prefix, String key, AnyValue value) {
+        String fullKey = prefix == "" ? key : $"{prefix}.{key}";
+        if (value.is(Map<String, AnyValue>)) {
+            appendNestedAttrs(buf, fullKey, value);
         } else {
-            buf.append(key).append('=')
-               .append(options.redacts(a.key) ? options.redaction : a.value.toString());
+            buf.append(fullKey).append('=')
+               .append(options.redacts(key) ? options.redaction : value.toString());
         }
     }
 
@@ -106,10 +97,10 @@ const TextHandler(HandlerOptions options, String groupPrefix)
      * Append top-level attrs. Each attr starts with a leading space because the base
      * record fields have already been rendered.
      */
-    private void appendAttrs(StringBuffer buf, String prefix, Attr[] attrs) {
-        for (Attr attr : attrs) {
+    private void appendAttrs(StringBuffer buf, String prefix, Attributes attrs) {
+        for ((String key, AnyValue value) : attrs) {
             buf.append(' ');
-            renderAttr(buf, prefix, attr);
+            renderAttr(buf, prefix, key, value);
         }
     }
 
@@ -117,14 +108,14 @@ const TextHandler(HandlerOptions options, String groupPrefix)
      * Append children of an attr group. The first child continues in the current
      * position; later children are separated with spaces.
      */
-    private void appendNestedAttrs(StringBuffer buf, String prefix, Attr[] attrs) {
+    private void appendNestedAttrs(StringBuffer buf, String prefix, Map<String, AnyValue> attrs) {
         Boolean first = True;
-        for (Attr attr : attrs) {
+        for ((String key, AnyValue value) : attrs) {
             if (!first) {
                 buf.append(' ');
             }
             first = False;
-            renderAttr(buf, prefix, attr);
+            renderAttr(buf, prefix, key, value);
         }
     }
 

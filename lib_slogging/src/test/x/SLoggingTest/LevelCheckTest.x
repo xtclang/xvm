@@ -1,4 +1,3 @@
-import slogging.Attr;
 import slogging.Level;
 import slogging.Logger;
 

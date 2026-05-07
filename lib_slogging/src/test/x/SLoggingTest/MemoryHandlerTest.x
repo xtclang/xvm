@@ -1,4 +1,3 @@
-import slogging.Attr;
 import slogging.Level;
 import slogging.Logger;
 import slogging.MemoryHandler;
@@ -14,13 +13,13 @@ class MemoryHandlerTest {
         MemoryHandler handler = new MemoryHandler();
         Logger        logger  = new Logger(handler);
 
-        logger.info("processed", [Attr.of("count", 42)]);
+        logger.info("processed", Map:["count"=42]);
 
         assert handler.records.size == 1;
         assert handler.records[0].level   == Level.Info;
         assert handler.records[0].message == "processed";
         assert handler.records[0].attrs.size == 1;
-        assert handler.records[0].attrs[0].key == "count";
+        assert handler.records[0].attrs.contains("count");
     }
 
     @Test

@@ -1,4 +1,4 @@
-import slogging.Attr;
+import slogging.Attributes;
 import slogging.Logger;
 
 /**
@@ -16,18 +16,19 @@ class WithTest {
         ListHandler handler = new ListHandler();
         Logger      base    = new Logger(handler);
 
-        Logger derived = base.with([
-                Attr.of("requestId", "r_42"),
-                Attr.of("user",      "u_3"),
+        Logger derived = base.with(Map:[
+                "requestId" = "r_42",
+                "user"      = "u_3",
         ]);
 
         derived.info("processing");
 
         assert handler.records.size == 1;
-        Attr[] attrs = handler.records[0].attrs;
+        Attributes attrs = handler.records[0].attrs;
         assert attrs.size == 2;
-        assert attrs[0].key == "requestId" && attrs[0].value == "r_42";
-        assert attrs[1].key == "user"      && attrs[1].value == "u_3";
+        String[] keys = attrs.keys.toArray();
+        assert keys[0] == "requestId" && attrs["requestId"] == "r_42";
+        assert keys[1] == "user"      && attrs["user"]      == "u_3";
     }
 
     @Test
@@ -35,16 +36,17 @@ class WithTest {
         ListHandler handler = new ListHandler();
         Logger      base    = new Logger(handler);
 
-        Logger withA = base.with([Attr.of("a", 1)]);
-        Logger withB = withA.with([Attr.of("b", 2)]);
+        Logger withA = base.with(Map:["a"=1]);
+        Logger withB = withA.with(Map:["b"=2]);
 
         withB.info("event");
 
         assert handler.records.size == 1;
-        Attr[] attrs = handler.records[0].attrs;
+        Attributes attrs = handler.records[0].attrs;
         assert attrs.size == 2;
-        assert attrs[0].key == "a";
-        assert attrs[1].key == "b";
+        String[] keys = attrs.keys.toArray();
+        assert keys[0] == "a";
+        assert keys[1] == "b";
     }
 
     @Test
@@ -52,14 +54,15 @@ class WithTest {
         ListHandler handler = new ListHandler();
         Logger      base    = new Logger(handler);
 
-        Logger reqLog = base.with([Attr.of("requestId", "r_99")]);
+        Logger reqLog = base.with(Map:["requestId"="r_99"]);
 
-        reqLog.info("processing", [Attr.of("path", "/api")]);
+        reqLog.info("processing", Map:["path"="/api"]);
 
-        Attr[] attrs = handler.records[0].attrs;
+        Attributes attrs = handler.records[0].attrs;
         assert attrs.size == 2;
-        assert attrs[0].key == "requestId";
-        assert attrs[1].key == "path";
+        String[] keys = attrs.keys.toArray();
+        assert keys[0] == "requestId";
+        assert keys[1] == "path";
     }
 
     @Test
@@ -67,7 +70,7 @@ class WithTest {
         ListHandler handler = new ListHandler();
         Logger      base    = new Logger(handler);
 
-        Logger derived = base.with([Attr.of("k", "v")]);
+        Logger derived = base.with(Map:["k"="v"]);
 
         base.info("from base");
         derived.info("from derived");

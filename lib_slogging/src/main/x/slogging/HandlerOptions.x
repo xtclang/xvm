@@ -1,7 +1,7 @@
 /**
  * Shared production options for text/JSON handlers.
  *
- * The slog API keeps caller semantics in `Logger`/`Record`/`Attr`; formatting policy
+ * The slog API keeps caller semantics in `Logger`/`Record`/`Attributes`; formatting policy
  * belongs in handlers. This const captures the first production knobs without turning
  * the POC into a full configuration system.
  */
@@ -44,17 +44,7 @@ const HandlerOptions(
         String   exceptionKey,
         ) {
 
-    construct() {
-        construct HandlerOptions(Level.Info, [], "***", True,
-                "time", "level", "msg", "source", "exception");
-    }
-
-    construct(Level rootLevel) {
-        construct HandlerOptions(rootLevel, [], "***", True,
-                "time", "level", "msg", "source", "exception");
-    }
-
-    construct(Level rootLevel, String[] redactedKeys) {
+    construct(Level rootLevel = Info, String[] redactedKeys = []) {
         construct HandlerOptions(rootLevel, redactedKeys, "***", True,
                 "time", "level", "msg", "source", "exception");
     }

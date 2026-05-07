@@ -2,7 +2,7 @@ import json.Doc;
 import json.JsonObject;
 import json.Parser;
 
-import slogging.Attr;
+import slogging.AnyValue;
 import slogging.HandlerOptions;
 import slogging.JSONHandler;
 import slogging.Level;
@@ -18,20 +18,21 @@ class JSONHandlerTest {
     void shouldRenderParseableJsonWithEscapingAndNestedGroups() {
         JSONHandler handler = new JSONHandler();
         Exception   boom    = new Exception("bad \"card\"");
+        Map<String, AnyValue> userAttrs = Map:["id"="u_3"];
         Record      record  = new Record(
                 time       = new Time("2019-05-22T120123.456Z"),
                 message    = "charged \"ok\"",
                 level      = Level.Info,
-                attrs      = [
-                        Attr.of("amount", 1099),
-                        Attr.group("user", [Attr.of("id", "u_3")]),
+                attrs      = Map:[
+                        "amount" = 1099,
+                        "user"   = userAttrs,
                 ],
                 exception  = boom,
                 sourceFile = "PaymentService.x",
                 sourceLine = 42,
         );
 
-        JsonObject obj = parseObject(handler.render(record));
+        JsonObject obj = handler.toJson(record);
 
         assert obj["level"]  == "INFO";
         assert obj["msg"]    == "charged \"ok\"";
@@ -54,14 +55,15 @@ class JSONHandlerTest {
     @Test
     void shouldRenderGroupedDerivedLoggerAsNestedJson() {
         JSONHandler handler = new JSONHandler();
+        Map<String, AnyValue> paymentAttrs = Map:["amount"=1099];
         Record      record  = new Record(
                 time    = new Time("2019-05-22T120123.456Z"),
                 message = "charged",
                 level   = Level.Info,
-                attrs   = [Attr.group("payments", [Attr.of("amount", 1099)])],
+                attrs   = Map:["payments"=paymentAttrs],
         );
 
-        JsonObject obj = parseObject(handler.render(record));
+        JsonObject obj = handler.toJson(record);
 
         assert obj["payments"].is(JsonObject);
         JsonObject payments = obj["payments"].as(JsonObject);
@@ -76,10 +78,10 @@ class JSONHandlerTest {
                 time    = new Time("2019-05-22T120123.456Z"),
                 message = "auth",
                 level   = Level.Info,
-                attrs   = [Attr.of("token", "secret"), Attr.of("user", "u_1")],
+                attrs   = Map:["token"="secret", "user"="u_1"],
         );
 
-        JsonObject obj = parseObject(handler.render(record));
+        JsonObject obj = handler.toJson(record);
 
         assert obj["token"] == "***";
         assert obj["user"]  == "u_1";

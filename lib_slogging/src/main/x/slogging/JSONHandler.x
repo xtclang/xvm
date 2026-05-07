@@ -11,31 +11,30 @@ import json.Printer;
  * source metadata is emitted under `"source"`, and exceptions are represented
  * structurally.
  */
-const JSONHandler(HandlerOptions options, String groupPrefix)
+const JSONHandler
         implements Handler {
 
     /**
-     * No-arg convenience. See parallel comment on `lib_slogging.TextHandler`.
+     * Create a [JSONHandler].
+     *
+     * @param options    (optional) the handler's options
+     * @param groupName  (optional) the handler's group name
+     * @param handler    (optional) the handler that will process the [JsonObject] produced from the
+     *                   log [Record] (the default will print the json to the console)
      */
-    construct() {
-        construct JSONHandler(new HandlerOptions(), "");
+    construct (HandlerOptions? options = Null, String groupName = "", JsonHandler? handler = Null) {
+        this.options   = options ?: new HandlerOptions();
+        this.groupName = groupName;
+        this.handler   = handler ?: defaultHandler;
     }
 
-    /**
-     * Single-arg convenience: configurable threshold, no group prefix.
-     */
-    construct(Level rootLevel) {
-        construct JSONHandler(new HandlerOptions(rootLevel), "");
-    }
+    typedef function void (JsonObject) as JsonHandler;
 
-    /**
-     * Production-options convenience.
-     */
-    construct(HandlerOptions options) {
-        construct JSONHandler(options, "");
-    }
+    HandlerOptions options;
 
-    @Inject Console console;
+    String groupName;
+
+    JsonHandler handler;
 
     /**
      * Cheap threshold check; no JSON work happens for disabled records.
@@ -50,15 +49,12 @@ const JSONHandler(HandlerOptions options, String groupPrefix)
      */
     @Override
     void handle(Record record) {
-        console.print(render(record));
+        handler(toJson(record));
     }
 
-    /**
-     * Render a record to a compact JSON string. Exposed so tests and custom handlers can
-     * verify the JSON shape without intercepting `Console`.
-     */
-    String render(Record record) {
-        return Printer.DEFAULT.render(toJson(record));
+    private static void defaultHandler(JsonObject obj) {
+        @Inject Console console;
+        console.print(Printer.DEFAULT.render(obj));
     }
 
     /**
@@ -71,7 +67,7 @@ const JSONHandler(HandlerOptions options, String groupPrefix)
         obj.put(options.levelKey,   record.level.label);
         obj.put(options.messageKey, record.message);
 
-        JsonObject attrTarget = groupPrefix == "" ? obj : ensureObject(obj, groupPrefix);
+        JsonObject attrTarget = groupName == "" ? obj : ensureObject(obj, groupName);
         addAttrs(attrTarget, record.attrs);
 
         if (Exception e ?= record.exception) {
@@ -102,8 +98,8 @@ const JSONHandler(HandlerOptions options, String groupPrefix)
      * prefix instead.
      */
     @Override
-    Handler withAttrs(Attr[] attrs) {
-        return attrs.empty ? this : new BoundHandler(this, attrs);
+    Handler withAttrs(Attributes attrs) {
+        return attrs.empty ? this : new BoundHandler(delegate=this, attrs=attrs);
     }
 
     /**
@@ -111,22 +107,22 @@ const JSONHandler(HandlerOptions options, String groupPrefix)
      */
     @Override
     Handler withGroup(String name) {
-        return name == "" ? this : new BoundHandler(this, name);
+        return name == "" ? this : new BoundHandler(delegate=this, groupName=name);
     }
 
     /**
      * Add all attrs into a JSON object, preserving slog groups as nested objects.
      */
-    private void addAttrs(JsonObject obj, Attr[] attrs) {
-        for (Attr a : attrs) {
-            obj.put(a.key, options.redacts(a.key) ? options.redaction : attrValue(a.value));
+    private void addAttrs(JsonObject obj, Attributes attrs) {
+        for ((String key, AnyValue value) : attrs) {
+            obj.put(key, options.redacts(key) ? options.redaction : attrValue(value));
         }
     }
 
     /**
      * Convert an attribute value to a JSON document.
      */
-    private Doc attrValue(Object value) {
+    private Doc attrValue(AnyValue value) {
         if (String s := value.is(String)) {
             return s;
         }
@@ -145,13 +141,10 @@ const JSONHandler(HandlerOptions options, String groupPrefix)
         if (FPNumber n := value.is(FPNumber)) {
             return n.toFPLiteral();
         }
-        if (Attr[] attrs := value.is(Attr[])) {
-            JsonObject nested = json.newObject();
-            addAttrs(nested, attrs);
-            return nested.makeImmutable();
-        }
-        if (Exception e := value.is(Exception)) {
-            return exceptionJson(e);
+        if (Map<String, AnyValue> nested := value.is(Map<String, AnyValue>)) {
+            JsonObject obj = json.newObject();
+            addAttrs(obj, nested);
+            return obj.makeImmutable();
         }
 
         return value.toString();
@@ -172,8 +165,8 @@ const JSONHandler(HandlerOptions options, String groupPrefix)
     }
 
     /**
-     * Ensure a nested object path exists. Used only for the compatibility `groupPrefix`
-     * constructor; normal grouping flows through [BoundHandler] as `Attr.group(...)`.
+     * Ensure a nested object path exists. Used only for the compatibility `groupName`
+     * constructor; normal grouping flows through [BoundHandler] as nested attribute maps.
      */
     private JsonObject ensureObject(JsonObject root, String path) {
         JsonObject target = root;

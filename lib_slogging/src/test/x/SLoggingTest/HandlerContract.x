@@ -1,4 +1,5 @@
-import slogging.Attr;
+import slogging.AnyValue;
+import slogging.Attributes;
 import slogging.Handler;
 import slogging.Level;
 import slogging.Record;
@@ -16,15 +17,17 @@ class HandlerContract {
      * Verify that `withAttrs` prepends bound attributes to call-time attributes.
      */
     static void assertWithAttrsPrepend(Handler root, function Record[] () records) {
-        Handler derived = root.withAttrs([Attr.of("requestId", "r_1")]);
-        derived.handle(sample([Attr.of("path", "/checkout")]));
+        Handler derived = root.withAttrs(Map:["requestId"="r_1"]);
+        derived.handle(sample(Map:["path"="/checkout"]));
 
         Record[] captured = records();
         assert captured.size == 1;
-        assert captured[0].attrs.size == 2;
-        assert captured[0].attrs[0].key   == "requestId";
-        assert captured[0].attrs[0].value == "r_1";
-        assert captured[0].attrs[1].key   == "path";
+        Attributes attrs = captured[0].attrs;
+        assert attrs.size == 2;
+        String[] keys = attrs.keys.toArray();
+        assert keys[0] == "requestId";
+        assert attrs["requestId"] == "r_1";
+        assert keys[1] == "path";
     }
 
     /**
@@ -32,24 +35,24 @@ class HandlerContract {
      */
     static void assertWithGroupNests(Handler root, function Record[] () records) {
         Handler grouped = root.withGroup("payments");
-        grouped.handle(sample([Attr.of("amount", 1099)]));
+        grouped.handle(sample(Map:["amount"=1099]));
 
         Record[] captured = records();
         assert captured.size == 1;
-        assert captured[0].attrs.size == 1;
-        assert captured[0].attrs[0].key == "payments";
-        assert captured[0].attrs[0].value.is(Attr[]);
+        Attributes attrs = captured[0].attrs;
+        assert attrs.size == 1;
+        AnyValue paymentsValue = attrs["payments"] ?: assert;
+        assert paymentsValue.is(Map<String, AnyValue>);
 
-        Attr[] children = captured[0].attrs[0].value.as(Attr[]);
+        Map<String, AnyValue> children = paymentsValue.as(Map<String, AnyValue>);
         assert children.size == 1;
-        assert children[0].key   == "amount";
-        assert children[0].value == 1099;
+        assert children["amount"] == 1099;
     }
 
     /**
      * Shared sample record.
      */
-    private static Record sample(Attr[] attrs) {
+    private static Record sample(Attributes attrs) {
         return new Record(
                 time    = new Time("2019-05-22T120123.456Z"),
                 message = "event",

@@ -1,4 +1,3 @@
-import slogging.Attr;
 import slogging.Level;
 import slogging.Logger;
 
@@ -12,13 +11,13 @@ class EmissionTest {
         ListHandler handler = new ListHandler();
         Logger      logger  = new Logger(handler);
 
-        logger.info("hello", [Attr.of("count", 1)]);
+        logger.info("hello", Map:["count"=1]);
 
         assert handler.records.size == 1;
         assert handler.records[0].level   == Level.Info;
         assert handler.records[0].message == "hello";
         assert handler.records[0].attrs.size == 1;
-        assert handler.records[0].attrs[0].key == "count";
+        assert handler.records[0].attrs.contains("count");
     }
 
     @Test
@@ -44,7 +43,7 @@ class EmissionTest {
         Logger      logger  = new Logger(handler);
         Exception   boom    = new Exception("boom");
 
-        logger.error("failed", [Attr.of("status", 500)], cause=boom);
+        logger.error("failed", Map:["status"=500], cause=boom);
 
         assert handler.records.size == 1;
         assert handler.records[0].exception?.text == "boom" : assert;

@@ -1,4 +1,5 @@
-import slogging.Attr;
+import slogging.AnyValue;
+import slogging.Attributes;
 import slogging.Logger;
 
 /**
@@ -24,42 +25,44 @@ class WithGroupTest {
     @Test
     void shouldGroupOnlySubsequentAttrs() {
         ListHandler handler = new ListHandler();
-        Logger      base    = new Logger(handler).with([Attr.of("env", "prod")]);
+        Logger      base    = new Logger(handler).with(Map:["env"="prod"]);
         Logger      grouped = base.withGroup("payments");
 
-        grouped.info("charged", [Attr.of("amount", 1099)]);
+        grouped.info("charged", Map:["amount"=1099]);
 
         // Matches Go slog ordering: attrs bound before WithGroup stay outside the group;
         // attrs supplied after WithGroup are nested under the group.
         assert handler.records.size == 1;
-        Attr[] attrs = handler.records[0].attrs;
+        Attributes attrs = handler.records[0].attrs;
         assert attrs.size == 2;
-        assert attrs[0].key == "env";
-        assert attrs[1].key == "payments";
-        assert attrs[1].value.is(Attr[]);
+        String[] keys = attrs.keys.toArray();
+        assert keys[0] == "env";
+        assert keys[1] == "payments";
+        AnyValue paymentsValue = attrs["payments"] ?: assert;
+        assert paymentsValue.is(Map<String, AnyValue>);
 
-        Attr[] paymentAttrs = attrs[1].value.as(Attr[]);
+        Map<String, AnyValue> paymentAttrs = paymentsValue.as(Map<String, AnyValue>);
         assert paymentAttrs.size == 1;
-        assert paymentAttrs[0].key   == "amount";
-        assert paymentAttrs[0].value == 1099;
+        assert paymentAttrs["amount"] == 1099;
     }
 
     @Test
     void shouldPutAttrsBoundAfterGroupInsideGroup() {
         ListHandler handler = new ListHandler();
         Logger      base    = new Logger(handler);
-        Logger      grouped = base.withGroup("payments").with([Attr.of("currency", "SEK")]);
+        Logger      grouped = base.withGroup("payments").with(Map:["currency"="SEK"]);
 
-        grouped.info("charged", [Attr.of("amount", 1099)]);
+        grouped.info("charged", Map:["amount"=1099]);
 
-        Attr[] attrs = handler.records[0].attrs;
+        Attributes attrs = handler.records[0].attrs;
         assert attrs.size == 1;
-        assert attrs[0].key == "payments";
-        assert attrs[0].value.is(Attr[]);
+        AnyValue paymentsValue = attrs["payments"] ?: assert;
+        assert paymentsValue.is(Map<String, AnyValue>);
 
-        Attr[] paymentAttrs = attrs[0].value.as(Attr[]);
+        Map<String, AnyValue> paymentAttrs = paymentsValue.as(Map<String, AnyValue>);
         assert paymentAttrs.size == 2;
-        assert paymentAttrs[0].key == "currency";
-        assert paymentAttrs[1].key == "amount";
+        String[] paymentKeys = paymentAttrs.keys.toArray();
+        assert paymentKeys[0] == "currency";
+        assert paymentKeys[1] == "amount";
     }
 }

@@ -5,17 +5,10 @@
  * preserves attrs, groups, source metadata, and exceptions exactly as the caller
  * produced them.
  */
-service AsyncHandler(Handler delegate, Int capacity)
+service AsyncHandler(Handler delegate, Int capacity = 1024)
         implements Handler {
 
-    /**
-     * Convenience: bounded queue with room for 1024 records.
-     */
-    construct(Handler delegate) {
-        construct AsyncHandler(delegate, 1024);
-    }
-
-    private Record[] queue = new Record[];
+    private Record[] queue    = new Record[];
     private Boolean  draining = False;
     private Boolean  closed   = False;
 
@@ -49,7 +42,7 @@ service AsyncHandler(Handler delegate, Int capacity)
     }
 
     @Override
-    Handler withAttrs(Attr[] attrs) {
+    Handler withAttrs(Attributes attrs) {
         return attrs.empty ? this : new AsyncHandler(delegate.withAttrs(attrs), capacity);
     }
 

@@ -10,34 +10,20 @@
  *
  * The wrapper composes in the same order as Go slog:
  *
- *      logger.with([Attr.of("env", "prod")])
+ *      logger.with(Map:["env"="prod"])
  *            .withGroup("payments")
- *            .info("charged", [Attr.of("amount", 1099)]);
+ *            .info("charged", Map:["amount"=1099]);
  *
  * yields `env=prod` outside the `payments` group, while:
  *
  *      logger.withGroup("payments")
- *            .with([Attr.of("env", "prod")])
- *            .info("charged", [Attr.of("amount", 1099)]);
+ *            .with(Map:["env"="prod"])
+ *            .info("charged", Map:["amount"=1099]);
  *
  * yields both `env` and `amount` inside the `payments` group.
  */
-const BoundHandler(Handler delegate, Attr[] attrs, String? groupName)
+const BoundHandler(Handler delegate, Attributes attrs = [], String? groupName = Null)
         implements Handler {
-
-    /**
-     * Derive a handler with pre-bound attributes.
-     */
-    construct(Handler delegate, Attr[] attrs) {
-        construct BoundHandler(delegate, attrs.toArray(Constant), Null);
-    }
-
-    /**
-     * Derive a handler that groups subsequent attributes under `groupName`.
-     */
-    construct(Handler delegate, String groupName) {
-        construct BoundHandler(delegate, [], groupName);
-    }
 
     /**
      * Fast-path level check. Bound attrs and groups never affect enablement.
@@ -46,16 +32,17 @@ const BoundHandler(Handler delegate, Attr[] attrs, String? groupName)
     Boolean enabled(Level level) = delegate.enabled(level);
 
     /**
-     * Apply the bound attrs/group to the record, resolve any [Attr.lazy] values now
-     * that the logger has already passed the level check, then forward to the delegate.
+     * Apply the bound attrs/group to the record, then forward to the delegate.
      */
     @Override
     void handle(Record record) {
-        Attr[] merged = merge(Attr.resolveAll(attrs), Attr.resolveAll(record.attrs));
+        Attributes merged = merge(attrs, record.attrs);
         if (String group ?= groupName) {
-            merged = merged.empty
-                    ? []
-                    : [Attr.group(group, merged)].toArray(Constant);
+            if (!merged.empty) {
+                ListMap<String, AnyValue> wrapped = new ListMap();
+                wrapped.put(group, merged);
+                merged = wrapped.makeImmutable();
+            }
         }
 
         delegate.handle(new Record(
@@ -76,8 +63,8 @@ const BoundHandler(Handler delegate, Attr[] attrs, String? groupName)
      * `WithGroup(...).With(...)`.
      */
     @Override
-    Handler withAttrs(Attr[] more) {
-        return more.empty ? this : new BoundHandler(this, more);
+    Handler withAttrs(Attributes attrs) {
+        return attrs.empty ? this : new BoundHandler(delegate=this, attrs=attrs);
     }
 
     /**
@@ -85,17 +72,26 @@ const BoundHandler(Handler delegate, Attr[] attrs, String? groupName)
      */
     @Override
     Handler withGroup(String name) {
-        return name == "" ? this : new BoundHandler(this, name);
+        return name == "" ? this : new BoundHandler(delegate=this, groupName=name);
     }
 
     /**
-     * Immutable concatenation helper for passable records.
+     * Immutable concatenation helper preserving insertion order.
      */
-    private Attr[] merge(Attr[] first, Attr[] second) {
-        return first.empty
-                ? second.toArray(Constant)
-                : second.empty
-                    ? first.toArray(Constant)
-                    : (first + second).toArray(Constant);
+    private Attributes merge(Attributes first, Attributes second) {
+        if (first.empty) {
+            return second;
+        }
+        if (second.empty) {
+            return first;
+        }
+        ListMap<String, AnyValue> result = new ListMap(first.size + second.size);
+        for ((String key, AnyValue value) : first) {
+            result.put(key, value);
+        }
+        for ((String key, AnyValue value) : second) {
+            result.put(key, value);
+        }
+        return result.makeImmutable();
     }
 }

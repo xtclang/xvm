@@ -15,20 +15,20 @@
  *
  * # The user-facing API
  *
- *      logger.debug("computed", [Attr.of("ms", 12)]);
- *      logger.debug(() -> expensiveMessage(), [Attr.lazy("payload", () -> payloadJson)]);
- *      logger.info("processing", [Attr.of("path", req.path)]);
- *      logger.warn("retrying", [Attr.of("attempt", 3)]);
- *      logger.error("failed", [Attr.of("err", e)]);
- *      logger.log(NOTICE, "user signed in", [...]);
+ *      logger.debug("computed", Map:["ms"=12]);
+ *      logger.debug(() -> expensiveMessage());
+ *      logger.info("processing", Map:["path"=req.path]);
+ *      logger.warn("retrying", Map:["attempt"=3]);
+ *      logger.error("failed", cause=e);
+ *      logger.log(NOTICE, "user signed in");
  *
- *      Logger reqLog = logger.with([
- *              Attr.of("requestId", req.id),
- *              Attr.of("user",      req.userId),
+ *      Logger reqLog = logger.with(Map:[
+ *              "requestId" = req.id,
+ *              "user"      = req.userId,
  *      ]);
  *
  *      Logger groupLog = logger.withGroup("payments");
- *      groupLog.info("charged", [Attr.of("amount", 1099)]);
+ *      groupLog.info("charged", Map:["amount"=1099]);
  *      // text handler: 2026-04-29 INFO charged payments.amount=1099
  *      // json handler: {"level":"INFO","msg":"charged","payments":{"amount":1099}}
  *
@@ -41,34 +41,24 @@
  * `LogAttrs(ctx, level, msg, attrs...)` form; [LoggerContext] is the Ecstasy-shaped
  * optional context helper.
  */
-const Logger(Handler handler)
+const Logger
         implements Orderable {
 
     @Inject Clock clock;
-
-    /**
-     * Convenience: no-arg, wires a fresh [TextHandler] and empty attrs. This is the
-     * constructor the runtime would call for `@Inject Logger logger;` once the native
-     * resource supplier is registered (parallel to the SLF4J library's
-     * `NativeContainer.ensureLogger`).
-     *
-     * Explicit delegating constructors (rather than `attrs = []` default on the
-     * primary form) for the same reason as the SLF4J side: cross-module
-     * default-argument resolution on `const` constructors does not always synthesise
-     * the shorter form. See `lib_logging.BasicLogger`.
-     */
-    construct() {
-        construct Logger(new TextHandler());
-    }
 
     /**
      * Compatibility convenience: handler plus pre-bound attrs. The attrs are handed to
      * [Handler.withAttrs] immediately, which is the slog contract and what allows a
      * handler to pre-render or cache its own derived state.
      */
-    construct(Handler handler, Attr[] attrs) {
-        construct Logger(attrs.empty ? handler : handler.withAttrs(attrs));
+    construct(Handler? handler = Null, Attributes attrs = []) {
+        this.handler = handler ?: new TextHandler();
+        if (!attrs.empty) {
+            this.handler = this.handler.withAttrs(attrs);
+        }
     }
+
+    Handler handler;
 
     /**
      * Cheap `Debug` enabled check. Mirrors Go's `Logger.Enabled(ctx, slog.LevelDebug)`
@@ -78,7 +68,7 @@ const Logger(Handler handler)
 
     /**
      * Cheap `Info` enabled check. Use for multi-statement guarded work; for one-line
-     * expensive values, prefer `logger.info(() -> "...", [Attr.lazy("k", () -> v)])`.
+     * expensive values, prefer `logger.info(() -> "...")`.
      */
     @RO Boolean infoEnabled.get()  = handler.enabled(Level.Info);
 
@@ -103,50 +93,49 @@ const Logger(Handler handler)
      * structured values belong in `extra` attrs rather than `{}` placeholders. See
      * `doc/logging/usage/slog-parity.md` § "Message formatting".
      */
-    void debug(String message, Attr[] extra = [], Exception? cause = Null) =
+    void debug(String message, Attributes extra = Map:[], Exception? cause = Null) =
             log(Level.Debug, message, extra, cause);
 
     /**
      * Emit a `Debug` record whose message is computed after the handler's enabled check.
      */
-    void debug(MessageSupplier message, Attr[] extra = [], Exception? cause = Null) =
+    void debug(MessageSupplier message, Attributes extra = Map:[], Exception? cause = Null) =
             log(Level.Debug, message, extra, cause);
 
     /**
      * Emit an `Info` record.
      */
-    void info(String message, Attr[] extra = [], Exception? cause = Null) =
+    void info(String message, Attributes extra = Map:[], Exception? cause = Null) =
             log(Level.Info, message, extra, cause);
 
     /**
      * Emit an `Info` record whose message is computed after the handler's enabled check.
      */
-    void info(MessageSupplier message, Attr[] extra = [], Exception? cause = Null) =
+    void info(MessageSupplier message, Attributes extra = Map:[], Exception? cause = Null) =
             log(Level.Info, message, extra, cause);
 
     /**
      * Emit a `Warn` record.
      */
-    void warn(String message, Attr[] extra = [], Exception? cause = Null) =
+    void warn(String message, Attributes extra = Map:[], Exception? cause = Null) =
             log(Level.Warn, message, extra, cause);
 
     /**
      * Emit a `Warn` record whose message is computed after the handler's enabled check.
      */
-    void warn(MessageSupplier message, Attr[] extra = [], Exception? cause = Null) =
+    void warn(MessageSupplier message, Attributes extra = Map:[], Exception? cause = Null) =
             log(Level.Warn, message, extra, cause);
 
     /**
-     * Emit an `Error` record. `cause` is an Ecstasy convenience; the Go slog idiom is
-     * usually `slog.Any("err", err)`. Either form can be rendered by a handler.
+     * Emit an `Error` record. `cause` is an Ecstasy convenience for a thrown exception.
      */
-    void error(String message, Attr[] extra = [], Exception? cause = Null) =
+    void error(String message, Attributes extra = Map:[], Exception? cause = Null) =
             log(Level.Error, message, extra, cause);
 
     /**
      * Emit an `Error` record whose message is computed after the handler's enabled check.
      */
-    void error(MessageSupplier message, Attr[] extra = [], Exception? cause = Null) =
+    void error(MessageSupplier message, Attributes extra = Map:[], Exception? cause = Null) =
             log(Level.Error, message, extra, cause);
 
     /**
@@ -156,14 +145,14 @@ const Logger(Handler handler)
      * constructed and no attrs are merged. This mirrors Go slog's
      * `Handler.Enabled` fast path.
      */
-    void log(Level level, String message, Attr[] extra = [], Exception? cause = Null) {
+    void log(Level level, String message, Attributes extra = Map:[], Exception? cause = Null) {
         emit(level, message, extra, cause, Null, -1);
     }
 
     /**
      * Open-level emission with lazy message construction.
      */
-    void log(Level level, MessageSupplier message, Attr[] extra = [], Exception? cause = Null) {
+    void log(Level level, MessageSupplier message, Attributes extra = Map:[], Exception? cause = Null) {
         emit(level, message, extra, cause, Null, -1);
     }
 
@@ -176,7 +165,7 @@ const Logger(Handler handler)
      * caller-site sugar into this method without changing the handler contract.
      */
     void logAt(Level level, String message, String sourceFile, Int sourceLine,
-               Attr[] extra = [], Exception? cause = Null) {
+               Attributes extra = Map:[], Exception? cause = Null) {
         emit(level, message, extra, cause, sourceFile, sourceLine);
     }
 
@@ -184,7 +173,7 @@ const Logger(Handler handler)
      * Open-level emission with explicit source metadata and lazy message construction.
      */
     void logAt(Level level, MessageSupplier message, String sourceFile, Int sourceLine,
-               Attr[] extra = [], Exception? cause = Null) {
+               Attributes extra = Map:[], Exception? cause = Null) {
         emit(level, message, extra, cause, sourceFile, sourceLine);
     }
 
@@ -192,7 +181,7 @@ const Logger(Handler handler)
      * Common emission path used by [log] and [logAt]. The handler owns any attributes
      * attached by derived loggers; the record receives only call-time extras.
      */
-    private void emit(Level level, String message, Attr[] extra, Exception? cause,
+    private void emit(Level level, String message, Attributes extra, Exception? cause,
                       String? sourceFile, Int sourceLine) {
         if (!handler.enabled(level)) {
             return;
@@ -201,7 +190,7 @@ const Logger(Handler handler)
                 time       = clock.now,
                 message    = message,
                 level      = level,
-                attrs      = Attr.resolveAll(extra),
+                attrs      = extra,
                 exception  = cause,
                 sourceFile = sourceFile,
                 sourceLine = sourceLine,
@@ -209,11 +198,10 @@ const Logger(Handler handler)
     }
 
     /**
-     * Lazy-message equivalent of [emit]. Both message and lazy attrs resolve only after
-     * the handler accepts the level, matching Go slog's `Enabled` fast path and
-     * `LogValuer`-style value resolution.
+     * Lazy-message equivalent of [emit]. The message is resolved only after the handler
+     * accepts the level, matching Go slog's `Enabled` fast path.
      */
-    private void emit(Level level, MessageSupplier message, Attr[] extra, Exception? cause,
+    private void emit(Level level, MessageSupplier message, Attributes extra, Exception? cause,
                       String? sourceFile, Int sourceLine) {
         if (!handler.enabled(level)) {
             return;
@@ -222,7 +210,7 @@ const Logger(Handler handler)
                 time       = clock.now,
                 message    = message(),
                 level      = level,
-                attrs      = Attr.resolveAll(extra),
+                attrs      = extra,
                 exception  = cause,
                 sourceFile = sourceFile,
                 sourceLine = sourceLine,
@@ -241,7 +229,7 @@ const Logger(Handler handler)
      * fiber-local state, code passes around a logger that visibly carries request or
      * component attrs. See `doc/logging/usage/slog-parity.md`.
      */
-    Logger with(Attr[] more) {
+    Logger with(Attributes more) {
         if (more.empty) {
             return this;
         }

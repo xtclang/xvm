@@ -15,7 +15,7 @@
  *   - `LoggerContext` propagates request-scoped loggers;
  *   - `JSONHandler` renders parseable `lib_json` documents;
  *   - `HandlerContract` checks `withAttrs` / `withGroup` conformance;
- *   - `Attr.group(name, [...])` renders nested structure;
+ *   - nested attribute maps render as nested structure;
  *   - custom `Level` values comparable to / between the canonical four work.
  */
 module SLoggingTest {

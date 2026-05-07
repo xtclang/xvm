@@ -5,7 +5,7 @@
  *
  *      MemoryHandler h = new MemoryHandler();
  *      Logger logger = new Logger(h);
- *      logger.info("processed", [Attr.of("count", 42)]);
+ *      logger.info("processed", Map:["count"=42]);
  *      assert h.records.size == 1;
  *      assert h.records[0].level == Level.Info;
  *
@@ -25,7 +25,7 @@ service MemoryHandler
      * Mutable backing storage. Internal — Ecstasy forbids returning a mutable array
      * from a service call, so we expose [records] as an immutable snapshot below.
      */
-    private Record[] recordList = new Record[];
+    private Record[] recordList = new Array();
 
     /**
      * Immutable snapshot of the captured records, in emission order. Each access
@@ -58,8 +58,8 @@ service MemoryHandler
      * pre-bound attrs before the record reaches [handle].
      */
     @Override
-    Handler withAttrs(Attr[] attrs) {
-        return attrs.empty ? this : new BoundHandler(this, attrs);
+    Handler withAttrs(Attributes attrs) {
+        return attrs.empty ? this : new BoundHandler(delegate=this, attrs=attrs);
     }
 
     /**
@@ -67,7 +67,7 @@ service MemoryHandler
      */
     @Override
     Handler withGroup(String name) {
-        return name == "" ? this : new BoundHandler(this, name);
+        return name == "" ? this : new BoundHandler(delegate=this, groupName=name);
     }
 
     /**

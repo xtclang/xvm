@@ -1,4 +1,3 @@
-import slogging.Attr;
 import slogging.Logger;
 import slogging.LoggerContext;
 
@@ -11,7 +10,7 @@ class LoggerContextTest {
     void shouldExposeLoggerInsideUsingScope() {
         LoggerContext context = new LoggerContext();
         ListHandler   handler = new ListHandler();
-        Logger        logger  = new Logger(handler).with([Attr.of("requestId", "r_1")]);
+        Logger        logger  = new Logger(handler).with(Map:["requestId"="r_1"]);
 
         assert !context.current();
 
@@ -21,8 +20,8 @@ class LoggerContextTest {
         }
 
         assert handler.records.size == 1;
-        assert handler.records[0].attrs[0].key   == "requestId";
-        assert handler.records[0].attrs[0].value == "r_1";
+        assert handler.records[0].attrs.contains("requestId");
+        assert handler.records[0].attrs["requestId"] == "r_1";
         assert !context.current();
     }
 
