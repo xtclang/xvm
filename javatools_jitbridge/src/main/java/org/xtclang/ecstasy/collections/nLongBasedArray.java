@@ -11,6 +11,7 @@ import org.xtclang.ecstasy.text.String;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
+import org.xvm.util.ByteHashCollector;
 
 import static java.lang.Math.max;
 import static java.lang.System.arraycopy;
@@ -48,6 +49,8 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
     public ArrayType $delegate;
 
     public long[] $storage;
+
+    private long cachedHash;
 
     // ----- xObj API ------------------------------------------------------------------------------
 
@@ -757,5 +760,161 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
         }
 
         throw Exception.$unsupported(ctx, null); // TODO
+    }
+    // ----- HashableArray API ---------------------------------------------------------------------
+
+    /**
+     * The native implementation of HashableArray method:
+     * <pre>
+     *     static <CompileType extends HashableArray> Int hashCode(CompileType array)
+     * </pre>
+     */
+    static long hashCode$p(Ctx ctx, nLongBasedArray<?> array) {
+        if (array.$mut() == $CONSTANT) {
+            return array.cachedHash$get$p(ctx);
+        }
+        return array.calculateHash$p(ctx);
+    }
+
+    /**
+     * The native implementation of
+     * <pre>
+     *     private Int calculateHash() {
+     * </pre>
+     */
+    public long calculateHash$p(Ctx ctx) {
+        if ($delegate != null) {
+            return $delegate.calculateHash$p(ctx);
+        }
+        return $calculateHash(ctx);
+    }
+
+    protected abstract long $calculateHash(Ctx ctx);
+
+    protected long $calculate1BitHash(Ctx ctx) {
+        ByteHashCollector collector = ctx.createHashCollector();
+        long              size      = size$get$p(ctx);
+        for (long i = 0; i < size; i++) {
+            long n = $get1bitElement(i);
+            collector.addByte((byte) n);
+        }
+        return collector.compute();
+    }
+
+    protected long $calculate4BitUnsignedHash(Ctx ctx) {
+        ByteHashCollector collector = ctx.createHashCollector();
+        long              size      = size$get$p(ctx);
+        for (long i = 0; i < size; i++) {
+            long n = $get4bitUnsignedElement(i);
+            collector.addByte((byte) n);
+        }
+        return collector.compute();
+    }
+
+    protected long $calculate8BitSignedHash(Ctx ctx) {
+        ByteHashCollector collector = ctx.createHashCollector();
+        long              size      = size$get$p(ctx);
+        for (long i = 0; i < size; i++) {
+            long n = $get8bitSignedElement(i);
+            collector.addByte((byte) n);
+        }
+        return collector.compute();
+    }
+
+    protected long $calculate8BitUnsignedHash(Ctx ctx) {
+        ByteHashCollector collector = ctx.createHashCollector();
+        long              size      = size$get$p(ctx);
+        for (long i = 0; i < size; i++) {
+            long n = $get8bitUnsignedElement(i);
+            collector.addByte((byte) n);
+        }
+        return collector.compute();
+    }
+
+    protected long $calculate16BitSignedHash(Ctx ctx) {
+        ByteHashCollector collector = ctx.createHashCollector();
+        long              size      = size$get$p(ctx);
+        for (long i = 0; i < size; i++) {
+            long n = $get16bitSignedElement(i);
+            collector.addByte((byte) (n >>> 8));
+            collector.addByte((byte) n);
+        }
+        return collector.compute();
+    }
+
+    protected long $calculate16BitUnsignedHash(Ctx ctx) {
+        ByteHashCollector collector = ctx.createHashCollector();
+        long              size      = size$get$p(ctx);
+        for (long i = 0; i < size; i++) {
+            long n = $get16bitUnsignedElement(i);
+            collector.addByte((byte) (n >>> 8));
+            collector.addByte((byte) n);
+        }
+        return collector.compute();
+    }
+
+    protected long $calculate21BitUnsignedHash(Ctx ctx) {
+        ByteHashCollector collector = ctx.createHashCollector();
+        long              size      = size$get$p(ctx);
+        for (long i = 0; i < size; i++) {
+            long n = $get21bitUnsignedElement(i) & 0xFFFFFFL;
+            collector.addByte((byte) (n >>> 16));
+            collector.addByte((byte) (n >>> 8));
+            collector.addByte((byte) n);
+        }
+        return collector.compute();
+    }
+
+    protected long $calculate32BitSignedHash(Ctx ctx) {
+        ByteHashCollector collector = ctx.createHashCollector();
+        long              size      = size$get$p(ctx);
+        for (long i = 0; i < size; i++) {
+            long n = $get32bitSignedElement(i);
+            collector.addInt32((int) n);
+        }
+        return collector.compute();
+    }
+
+    protected long $calculate32BitUnsignedHash(Ctx ctx) {
+        ByteHashCollector collector = ctx.createHashCollector();
+        long              size      = size$get$p(ctx);
+        for (long i = 0; i < size; i++) {
+            long n = $get32bitUnsignedElement(i);
+            collector.addInt32((int) n);
+        }
+        return collector.compute();
+    }
+
+    protected long $calculate64BitHash(Ctx ctx) {
+        ByteHashCollector collector = ctx.createHashCollector();
+        int               size      = (int) size$get$p(ctx);
+        for (int i = 0; i < size; i++) {
+            long n = $storage[i];
+            collector.addLong(n);
+        }
+        return collector.compute();
+    }
+
+    protected long $calculate128BitHash(Ctx ctx) {
+        ByteHashCollector collector = ctx.createHashCollector();
+        int               size      = (int) size$get$p(ctx) * 2;
+        for (int i = 0; i < size; i++) {
+            long n = $storage[i];
+            collector.addLong(n);
+        }
+        return collector.compute();
+    }
+
+    /**
+     * The native implementation of HashableArray property getter:
+     * <pre>
+     *     private @Lazy Int cachedHash.calc() {
+     * </pre>
+     */
+    public long cachedHash$get$p(Ctx ctx) {
+        if (cachedHash == 0) {
+            cachedHash = hashCode$p(ctx, this);
+        }
+        return cachedHash;
     }
 }

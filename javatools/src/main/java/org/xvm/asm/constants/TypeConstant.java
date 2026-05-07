@@ -6514,6 +6514,7 @@ public abstract class TypeConstant
                     case "Dec32"   -> Builder.N_ArrayDec32;
                     case "Dec64"   -> Builder.N_ArrayDec64;
                     case "Dec128"  -> Builder.N_ArrayDec128;
+                    case "Float16" -> Builder.N_ArrayFloat16;
                     case "Float32" -> Builder.N_ArrayFloat32;
                     case "Float64" -> Builder.N_ArrayFloat64;
                     case "Nibble"  -> Builder.N_ArrayNibble;

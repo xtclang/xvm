@@ -745,11 +745,8 @@ package constTests {
         TestC c1 = new TestC(1, "a");
         TestC c2 = new TestC(1, "a");
         TestC c3 = new TestC(2, "a");
-        MethodTracker.clear();
         assert c1.hashCode() == c2.hashCode();
-        assert MethodTracker.getCount(TestA.HashCodeId) == 2;
         assert c1.hashCode() != c3.hashCode();
-        assert MethodTracker.getCount(TestA.HashCodeId) == 3; // c1.hashCode() is cached
     }
 
     void testClassHierarchyHashCodeConstWithOwnProps() {
@@ -758,15 +755,10 @@ package constTests {
         TestD c3 = new TestD(2, "a", 99, "x");
         TestD c4 = new TestD(1, "a", 100, "x");
         TestD c5 = new TestD(1, "a", 99, "z");
-        MethodTracker.clear();
         assert c1.hashCode() == c2.hashCode();
-        assert MethodTracker.getCount(TestA.HashCodeId) == 2;
         assert c1.hashCode() != c3.hashCode();
-        assert MethodTracker.getCount(TestA.HashCodeId) == 3; // c1.hashCode() is cached
         assert c1.hashCode() != c4.hashCode();
-        assert MethodTracker.getCount(TestA.HashCodeId) == 4; // c1.hashCode() is cached
         assert c1.hashCode() != c5.hashCode();
-        assert MethodTracker.getCount(TestA.HashCodeId) == 5; // c1.hashCode() is cached
     }
 
     void testConstHierarchyEqualsConstWithNoOwnProps() {

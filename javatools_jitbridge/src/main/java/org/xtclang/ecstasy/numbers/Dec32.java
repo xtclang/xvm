@@ -490,6 +490,16 @@ public class Dec32 extends DecimalFPNumber {
         return nBits;
     }
 
+    @Override
+    protected long[] $longValues() {
+        return new long[]{(long) $bits << 32};
+    }
+
+    @Override
+    protected long bitLength$get$p() {
+        return 32;
+    }
+
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override

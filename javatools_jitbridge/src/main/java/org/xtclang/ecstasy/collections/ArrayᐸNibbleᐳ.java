@@ -8,6 +8,7 @@ import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.numbers.Nibble;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
@@ -127,5 +128,26 @@ public class ArrayᐸNibbleᐳ
     @Override
     protected long $cap2len(long cap) {
         return $cap2len4bits(cap);
+    }
+
+    /**
+     * Internal method to create a nibble array from a long array.
+     * <p>
+     * This is called by various number types to return a nibble array representation of the number.
+     */
+    public static ArrayᐸNibbleᐳ $fromLongs(Ctx ctx, Mutability mutability, long bits, long... values) {
+        ConstantPool  pool = ctx.container.typeSystem.pool();
+        TypeConstant  type  = pool.ensureClassTypeConstant(pool.clzArray(), null, pool.typeNibble());
+        long          size  = bits / 4;
+        ArrayᐸNibbleᐳ array = $new$p(ctx, type, size, false);
+        array.$mut(mutability == null ? $CONSTANT : (int) mutability.$ordinal);
+        array.$storage = values;
+        array.$size((int) size);
+        return array;
+    }
+
+    @Override
+    protected long $calculateHash(Ctx ctx) {
+        return $calculate4BitUnsignedHash(ctx);
     }
 }

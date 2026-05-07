@@ -68,6 +68,16 @@ public class Int64 extends IntNumber {
         return BigDecimal.valueOf($value);
     }
 
+    @Override
+    protected long[] $longValues() {
+        return new long[]{$value};
+    }
+
+    @Override
+    protected long bitLength$get$p() {
+        return 64;
+    }
+
     /**
      * Int64 add(Int64! n)
      */

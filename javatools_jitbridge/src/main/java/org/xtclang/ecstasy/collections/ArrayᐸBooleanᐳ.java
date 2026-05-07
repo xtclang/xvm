@@ -138,4 +138,9 @@ public class ArrayᐸBooleanᐳ
     protected long $cap2len(long cap) {
         return $cap2len1bit(cap);
     }
+
+    @Override
+    protected long $calculateHash(Ctx ctx) {
+        return $calculate1BitHash(ctx);
+    }
 }

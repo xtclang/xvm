@@ -3,6 +3,8 @@ package org.xtclang.ecstasy;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import org.xtclang.ecstasy.collections.Hashable;
+
 import org.xtclang.ecstasy.numbers.Bit;
 import org.xtclang.ecstasy.numbers.Dec128;
 import org.xtclang.ecstasy.numbers.Dec32;
@@ -28,6 +30,8 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
 
+import org.xvm.util.ByteHashCollector;
+
 /**
  * All Ecstasy `Type` types must extend this class.
  */
@@ -47,6 +51,7 @@ public class nType
 
     private Method equalsMethod;
     private Method compareMethod;
+    private Method hashCodeMethod;
 
     public nObj alloc(Ctx ctx) {
         throw Exception.$unsupported(ctx, "Type " + $dataType);
@@ -153,6 +158,49 @@ public class nType
             throw Exception.$unsupported($ctx,
                 "Failed to invoke 'compare()` on class " + $dataType.getValueString());
         }
+    }
+
+    public long hashCode$p(Ctx ctx, Hashable value) {
+        if ($dataType.isJitPrimitive() ) {
+            ByteHashCollector collector = ctx.createHashCollector();
+            collector = switch (value) {
+                case Bit n1     -> collector.addInt8(n1.$value);
+                case Nibble n1  -> collector.addInt8(n1.$value);
+                case Int8 n1    -> collector.addInt8(n1.$value);
+                case Int16 n1   -> collector.addInt16(n1.$value);
+                case Int32 n1   -> collector.addInt32(n1.$value);
+                case Int64 n1   -> collector.addLong(n1.$value);
+                case UInt8 n1   -> collector.addInt8(n1.$value);
+                case UInt16 n1  -> collector.addInt16(n1.$value);
+                case UInt32 n1  -> collector.addInt32(n1.$value);
+                case UInt64 n1  -> collector.addLong(n1.$value);
+
+                case Int128 n1  -> collector.addLong(n1.$lowValue).addLong(n1.$highValue);
+                case UInt128 n1 -> collector.addLong(n1.$lowValue).addLong(n1.$highValue);
+
+                case Float32 n1 -> collector.addInt32(Float.floatToRawIntBits(n1.$value));
+                case Float64 n1 -> collector.addLong(Double.doubleToRawLongBits(n1.$value));
+
+                case Dec32 n1 -> collector.addInt32(n1.$bits);
+                case Dec64 n1 -> collector.addLong(n1.$bits);
+                case Dec128 n1 -> collector.addLong(n1.$lowBits).addLong(n1.$highBits);
+
+                default -> throw new UnsupportedOperationException($dataType.getValueString());
+            };
+            return collector.compute();
+        }
+
+        if (hashCodeMethod == null) {
+            hashCodeMethod = ensureMethod("hashCode$p", Hashable.class);
+        }
+
+        try {
+            return (long) hashCodeMethod.invoke(null, ctx, this, value);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw Exception.$unsupported($ctx,
+                    "Failed to invoke 'hashCode$p()` on class " + $dataType.getValueString());
+        }
+
     }
 
     private Method ensureMethod(java.lang.String methodName, java.lang.Class paramClass) {

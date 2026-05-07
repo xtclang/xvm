@@ -44,6 +44,16 @@ public class UInt16 extends IntNumber {
         return BigDecimal.valueOf($value);
     }
 
+    @Override
+    protected long[] $longValues() {
+        return new long[]{(long) $value << 48};
+    }
+
+    @Override
+    protected long bitLength$get$p() {
+        return 16;
+    }
+
     // ----- conversion ----------------------------------------------------------------------------
 
     /**

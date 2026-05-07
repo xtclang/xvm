@@ -40,6 +40,16 @@ public class Float16 extends BinaryFPNumber {
         return new BigDecimal($value);
     }
 
+    @Override
+    protected long[] $longValues() {
+        return new long[]{(long) $value << 48};
+    }
+
+    @Override
+    protected long bitLength$get$p() {
+        return 16;
+    }
+
     // ----- Orderable interface -------------------------------------------------------------------
 
     /**

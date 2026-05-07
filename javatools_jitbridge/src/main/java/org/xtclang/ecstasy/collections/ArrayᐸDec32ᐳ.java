@@ -136,4 +136,9 @@ public class ArrayᐸDec32ᐳ
     protected long $cap2len(long cap) {
         return $cap2len32bits(cap);
     }
+
+    @Override
+    protected long $calculateHash(Ctx ctx) {
+        return $calculate32BitUnsignedHash(ctx);
+    }
 }

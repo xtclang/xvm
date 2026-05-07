@@ -56,6 +56,16 @@ public class Float32 extends BinaryFPNumber {
         return Float.floatToRawIntBits($value) < 0;
     }
 
+    @Override
+    protected long[] $longValues() {
+        return new long[]{(long) $value << 32};
+    }
+
+    @Override
+    protected long bitLength$get$p() {
+        return 32;
+    }
+
     // ----- Orderable interface -------------------------------------------------------------------
 
     /**

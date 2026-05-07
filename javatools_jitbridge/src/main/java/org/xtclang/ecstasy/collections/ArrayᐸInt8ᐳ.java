@@ -138,4 +138,9 @@ public class ArrayᐸInt8ᐳ
     protected long $cap2len(long cap) {
         return $cap2len8bits(cap);
     }
+
+    @Override
+    protected long $calculateHash(Ctx ctx) {
+        return $calculate8BitSignedHash(ctx);
+    }
 }

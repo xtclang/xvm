@@ -1393,6 +1393,7 @@ public abstract class Builder {
     public static final String N_ArrayDec32   = "org.xtclang.ecstasy.collections.ArrayᐸDec32ᐳ";
     public static final String N_ArrayDec64   = "org.xtclang.ecstasy.collections.ArrayᐸDec64ᐳ";
     public static final String N_ArrayDec128  = "org.xtclang.ecstasy.collections.ArrayᐸDec128ᐳ";
+    public static final String N_ArrayFloat16 = "org.xtclang.ecstasy.collections.ArrayᐸFloat16ᐳ";
     public static final String N_ArrayFloat32 = "org.xtclang.ecstasy.collections.ArrayᐸFloat32ᐳ";
     public static final String N_ArrayFloat64 = "org.xtclang.ecstasy.collections.ArrayᐸFloat64ᐳ";
     public static final String N_ArrayNibble  = "org.xtclang.ecstasy.collections.ArrayᐸNibbleᐳ";
@@ -1417,6 +1418,7 @@ public abstract class Builder {
     public static final String N_Dec128       = "org.xtclang.ecstasy.numbers.Dec128";
     public static final String N_Enumeration  = "org.xtclang.ecstasy.reflect.Enumeration";
     public static final String N_Exception    = "org.xtclang.ecstasy.Exception";
+    public static final String N_Hashable     = "org.xtclang.ecstasy.collections.Hashable";
     public static final String N_Float16      = "org.xtclang.ecstasy.numbers.Float16";
     public static final String N_Float32      = "org.xtclang.ecstasy.numbers.Float32";
     public static final String N_Float64      = "org.xtclang.ecstasy.numbers.Float64";
@@ -1489,22 +1491,6 @@ public abstract class Builder {
      */
     public static final String XVM_PRIMITIVE_COMPARE = "$compare";
 
-    /**
-     * The name of the internal hashCode method expected to be present on XVM primitive types.
-     * The signature should be:
-     * <pre>
-     *     public long $hashCode(primitive p1, primitive p2 ...)
-     * </pre>
-     * Where the method returns a long and takes as parameters the primitive slots
-     * that make up the XVM primitive type.
-     * For example, an Int128 type is made up of two Java long values, so its hashCode signature
-     * would be:
-     * <pre>
-     *     public long $hashCode(long low1, long high1)
-     * </pre>
-     */
-    public static final String XVM_PRIMITIVE_HASHCODE = "$hashCode";
-
     // ----- well-known suffixes -------------------------------------------------------------------
 
     public static final String MODULE         = "¤module"; // the main module class name
@@ -1542,6 +1528,7 @@ public abstract class Builder {
     public static final ClassDesc CD_Comparable    = ClassDesc.of(N_Comparable);
     public static final ClassDesc CD_Enumeration   = ClassDesc.of(N_Enumeration);
     public static final ClassDesc CD_Exception     = ClassDesc.of(N_Exception);
+    public static final ClassDesc CD_Hashable      = ClassDesc.of(N_Hashable);
     public static final ClassDesc CD_nFunction     = ClassDesc.of(N_nFunction);
     public static final ClassDesc CD_nMethod       = ClassDesc.of(N_nMethod);
     public static final ClassDesc CD_nModule       = ClassDesc.of(N_nModule);

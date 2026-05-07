@@ -2,8 +2,8 @@
  * A [HashCollector] is a service that collects hashing information as a sequence of additions,
  * culminating in a hash value when nothing is left to add.
  *
- * The methods that *must* be implemented in a subclass are: [add(Byte)], [add(Byte[])],
- * [compute()], and [reset()].
+ * The methods that *must* be implemented in a subclass are: [add(Byte)], [compute()], and
+ * [reset()].
  *
  * It is expected that most implementations will support seeding the `HashCollector` in order to
  * better protect against "hash attacks".
@@ -20,7 +20,7 @@
  *         }
  *     }
  */
-@Abstract service HashCollector {
+interface HashCollector {
     /**
      * Add a [Boolean] value to the hash.
      *
@@ -82,7 +82,7 @@
      *
      * @return this [HashCollector]
      */
-    @Abstract @Op("+") HashCollector add(UInt8 value);
+    @Op("+") HashCollector add(UInt8 value);
 
     /**
      * Add an array of [UInt8] values to the hash.
@@ -91,7 +91,12 @@
      *
      * @return this [HashCollector]
      */
-    @Abstract @Op("+") HashCollector add(UInt8[] array);
+    @Op("+") HashCollector add(UInt8[] array) {
+        for (UInt8 value : array) {
+            add(value);
+        }
+        return this;
+    }
 
     /**
      * Add an [Int16] value to the hash.
@@ -522,7 +527,7 @@
      *
      * @return the hash code result
      */
-    @Abstract Int compute();
+    Int compute();
 
     /**
      * Return the HashCollector to its initial state. After computing a hash result using the
@@ -530,5 +535,5 @@
      *
      * @return this [HashCollector]
      */
-    @Abstract HashCollector reset();
+    HashCollector reset();
 }

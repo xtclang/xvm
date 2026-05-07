@@ -59,9 +59,9 @@ import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.registers.ExtendedSlot;
 import org.xvm.javajit.registers.MultiSlot;
 
+import org.xvm.util.ByteHashCollector;
 import org.xvm.util.ShallowSizeOf;
 
-import static java.lang.constant.ConstantDescs.CD_Long;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
@@ -1830,16 +1830,12 @@ public class CommonBuilder
                 // load value1 to the stack
                 code.aload(value1Slot);
                 loadProperty(code, type, propId, false);
-                if (propType.isInterfaceType()) {
-                    code.checkcast(propEqJmd.optimizedParams[1].cd);
-                }
+                code.checkcast(propEqJmd.optimizedParams[1].cd);
 
                 // load value2 to the stack
                 code.aload(value2Slot);
                 loadProperty(code, type, propId, false);
-                if (propType.isInterfaceType()) {
-                    code.checkcast(propEqJmd.optimizedParams[2].cd);
-                }
+                code.checkcast(propEqJmd.optimizedParams[2].cd);
 
                 ClassDesc cd = ensureClassDesc(propEqMethod.getIdentity().getNamespace().getType());
                 code.invokestatic(cd, eqOptName, propEqJmd.optimizedMD)
@@ -2080,10 +2076,12 @@ public class CommonBuilder
                 // load the first value to the stack (compare param 2)
                 code.aload(value1Slot);
                 loadProperty(code, type, propId, false);
+                code.checkcast(propCmpJmd.standardParams[1].cd);
 
                 // load the second value to the stack (compare param 3)
                 code.aload(value2Slot);
                 loadProperty(code, type, propId, false);
+                code.checkcast(propCmpJmd.standardParams[2].cd);
 
                 // invoke the static compare method
                 ClassDesc cd = ensureClassDesc(propCmpMethod.getIdentity().getNamespace().getType());
@@ -2121,11 +2119,17 @@ public class CommonBuilder
                                                  .getParentConstant()
                                                  .getParentConstant();
 
+        // if the size of this const is greater than 64 we will generate code to cache the
+        // computed hash in a long field.
+        boolean isCaching  = this.implSize > 64;
+
         // If the method is not explicitly implemented or the declaring type does not match the
         // current type (i.e. the method is declared on a supe class), then we can build the method
         if (impl != Implementation.Explicit || !thisConst.equals(declaredOn)) {
-            // create a {@link Long} field in the class to act as a hashCode cache
-            classBuilder.withField("$savedHashCode", CD_Long, ClassFile.ACC_PRIVATE);
+            if (isCaching) {
+                // create a {@link long} field in the class to act as a hashCode cache
+                classBuilder.withField("$savedHashCode", CD_long, ClassFile.ACC_PRIVATE);
+            }
 
             TypeConstant   resolvedType = type.resolveConstraints();
             ClassDesc      cd           = ensureClassDesc(resolvedType);
@@ -2152,7 +2156,7 @@ public class CommonBuilder
                 if (!isMethodOnTemplateClass(hashOptName, mdPrimitive)) {
                     classBuilder.withMethodBody(hashOptName, mdPrimitive,
                             ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
-                            code -> assembleConstHashCodeMethod(className, code, type, hashSig));
+                            code -> assembleConstHashCodeMethod(className, code, hashSig, isCaching));
                 }
             }
         }
@@ -2167,38 +2171,29 @@ public class CommonBuilder
      * </pre>
      * Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value
      */
-    private void assembleConstHashCodeMethod(String className, CodeBuilder code, TypeConstant type,
-                                             SignatureConstant hashSig) {
+    private void assembleConstHashCodeMethod(String className, CodeBuilder code,
+                                             SignatureConstant hashSig, boolean isCaching) {
 
-        TypeConstant typeHashable = pool().typeHashable();
-        ClassDesc    cdThis       = ensureClassDesc(type);
-        int          valueSlot    = 2;
-        int          resultSlot   = 3;
-        long         hashFactor   = 37L;
+        TypeConstant type          = typeInfo.getType();
+        ConstantPool pool          = pool();
+        TypeConstant typeHashable  = pool.typeHashable();
+        ClassDesc    cdThis        = ensureClassDesc(type);
+        int          valueSlot     = 2;
+        int          resultSlot    = 3;
 
         if (type.isJitPrimitive()) {
             // when the const type itself is a JIT primitive (Java primitive or XVM primitive),
-            // hashCode$p receives the boxed primitve value, and we just unbox and generate the
-            // hash code from the primitive types
-            ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
-
-            // load the value and unbox
+            // we call nType.hashCode$p(ctx, value) to get the hash code (where nType) is the
+            // type of the primitive
+            Builder.loadCtx(code);
+            loadTypeConstant(code, className, type);
+            code.invokestatic(CD_nType, "$ensureType",
+                    MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
+            Builder.loadCtx(code);
             Builder.load(code, cdThis, valueSlot);
-            Builder.unbox(code, type);
-            Builder.buildPrimitiveToLong(cds[0], code);
-            code.lstore(resultSlot);
-
-            for (int i = 1; i < cds.length; i++) {
-                Builder.buildPrimitiveToLong(cds[i], code);
-                code.lload(resultSlot)
-                        .ldc(hashFactor)
-                        .lmul()
-                        .ladd()
-                        .lstore(resultSlot);
-            }
-
-            code.lload(resultSlot)
-                    .lreturn();
+            code.invokevirtual(CD_nType, "hashCode$p",
+                    MethodTypeDesc.of(CD_long, CD_Ctx, CD_Hashable));
+            code.lreturn();
             return;
         }
 
@@ -2219,44 +2214,57 @@ public class CommonBuilder
             props.add(prop);
         }
 
-        // generate the code to check the cached hash code
-        // if the cached hashCode field $savedHashCode is non-null, return the cached value
-        Label compute = code.newLabel();
-        code.aload(valueSlot)
-            .getfield(cdThis, "$savedHashCode", CD_Long)
-            .dup()
-            .ifnull(compute)
-            .invokevirtual(CD_Long, "longValue", MethodTypeDesc.of(CD_long))
-            .lreturn();
+        if (isCaching) {
+            // generate the code to check the cached hash code
+            // if the cached hashCode field $savedHashCode is not zero, return the cached value
+            Label compute = code.newLabel();
+            code.aload(valueSlot)
+                    .getfield(cdThis, "$savedHashCode", CD_long) // load the cached hash
+                    .dup2()                      // duplicate the cached long value
+                    .loadConstant(0L)
+                    .lcmp()                      // compare the cached value to zero
+                    .ifeq(compute)               // if equal to zero, jump to the compute label
+                    .lreturn()                   // not zero, return the cached hash
+                    .labelBinding(compute)
+                    .pop2();   // pop the zero long from the stack, we will recalculate the hash
+        }
 
-        code.labelBinding(compute)
-            .pop();   // pop the null
+        // inject the HashCollector from the context by calling ctx.inject()
+        ClassDesc    cdHashCollector   = ClassDesc.of(ByteHashCollector.class.getName());
+
+        Builder.loadCtx(code);
+        code.invokevirtual(CD_Ctx, "createHashCollector", MethodTypeDesc.of(cdHashCollector));
+        // the HashCollector is now on the stack, we do not need to store it into a slot
+        // because each call to its add method returns the collector, so as we loop
+        // over properties, it will always be on the top of the stack for the next loop
+        // or for the final compute call
+
+        MethodTypeDesc mdAdd     = MethodTypeDesc.of(cdHashCollector, CD_long);
+        MethodTypeDesc mdCompute = MethodTypeDesc.of(CD_long);
 
         if (baseType != null) {
             // found super class with hashCode method, so call it first
             ClassDesc      cdExt   = ensureClassDesc(baseType.resolveConstraints());
             MethodTypeDesc mdSuper = MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cdExt);
 
+            // load the hash collector to the stack so we can later add the super class hash code
             loadCtx(code);
             code.aload(1)
                 .aload(valueSlot)
+                .checkcast(cdExt)
                 .invokestatic(cdExt, hashOptName, mdSuper)
-                // long hashCode from super class is on the stack, store into the result slot
-                .lstore(resultSlot);
-        } else {
-            // start with a zero result
-            code.lconst_0()
-                .lstore(resultSlot);
+                // long hashCode from super class is on the stack, add to the collector
+                .invokeinterface(cdHashCollector, "addLong", mdAdd);
+                // hash collector is on the stack
         }
 
         if (props.isEmpty()) {
             // if there are no properties, there's nothing to mix in; derive a stable
             // hash from the type's Ecstasy class name (computed at generation time)
-            code.lload(resultSlot)
-                .loadConstant(hashFactor)
-                .lmul()
-                .ldc((long) type.getEcstasyClassName().hashCode())
-                .ladd()
+            // the hash collector is on the stack
+            code.loadConstant((long) type.getEcstasyClassName().hashCode())
+                .invokeinterface(cdHashCollector, "addLong", mdAdd)
+                .invokeinterface(cdHashCollector, "compute", mdCompute)
                 .lreturn();
             return;
         }
@@ -2264,15 +2272,12 @@ public class CommonBuilder
         // iterate over the properties in rank order to generate a hash code
         props.sort(Comparator.comparingInt(PropertyInfo::getRank));
         for (PropertyInfo prop : props) {
+            // the hash collector should be on the stack
+
             PropertyConstant propId     = prop.getIdentity();
             TypeConstant     propType   = prop.getType();
             Label            doProp     = code.newLabel();
             Label            propIsNull = code.newLabel();
-
-            // result = result * 37 + propHash
-            code.lload(resultSlot)
-                .ldc(hashFactor)
-                .lmul();
 
             if (propType.isNullable()) {
                 // property may be null, so assemble null check
@@ -2294,8 +2299,9 @@ public class CommonBuilder
                 assert cd != null;
                 Builder.buildPrimitiveToLong(cd, code);
                 // long primitive hashCode on the stack
-            } else if (propType.isA(pool().typeService())) {
+            } else if (propType.isA(pool.typeService())) {
                 buildGetIdentityHashCode(code, prop, valueSlot);
+                // long primitive service identity hashCode on the stack
             } else if (!propType.isA(typeHashable)) {
                 // property is not Hashable, as doc'ed in Const.x we use zero for the hash code
                 code.lconst_0();
@@ -2315,21 +2321,31 @@ public class CommonBuilder
                 ClassDesc      cd     = ensureClassDesc(method.getIdentity().getNamespace()
                                                               .getType());
                 MethodTypeDesc md     = MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cd);
-                code.invokestatic(cd, hashOptName, md);
+                code.checkcast(cd)
+                    .invokestatic(cd, hashOptName, md);
                 // long hashCode on the stack
             }
             // add the result and store
             code.labelBinding(propIsNull)
-                .ladd()
-                .lstore(resultSlot);
+                .invokeinterface(cdHashCollector, "addLong", mdAdd);
+            // hash collector on the stack
         }
-        // load the result, store in the hashCode cache field and return the hashCode
-        code.aload(valueSlot)
-            .lload(resultSlot)
-            .invokestatic(CD_Long, "valueOf", MethodTypeDesc.of(CD_Long, CD_long))
-            .putfield(cdThis, "$savedHashCode", CD_Long)
-            .lload(resultSlot)
-            .lreturn();
+
+        // the hash collector should be on the stack,
+        // compute the result, store in the hashCode cache field and return the hashCode
+        code.invokeinterface(cdHashCollector, "compute", mdCompute);
+        // computed hash is on the stack
+
+        if (isCaching) {
+            code.lstore(resultSlot)  // save the result
+                .aload(valueSlot)    // load the const value
+                .lload(resultSlot)   // load the result and store in the cached hash code field
+                .putfield(cdThis, "$savedHashCode", CD_long)
+                .lload(resultSlot) // load the result and return it
+                .lreturn();
+        } else {
+            code.lreturn();
+        }
     }
 
     /**

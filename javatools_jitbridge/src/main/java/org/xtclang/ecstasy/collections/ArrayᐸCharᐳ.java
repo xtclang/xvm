@@ -185,4 +185,11 @@ public class ArrayᐸCharᐳ
     protected long $cap2len(long cap) {
         return $utf21 ? $cap2len21bits(cap) : $cap2len8bits(cap);
     }
+
+
+    @Override
+    protected long $calculateHash(Ctx ctx) {
+        return $utf21 ? $calculate21BitUnsignedHash(ctx)
+                      : $calculate8BitUnsignedHash(ctx);
+    }
 }

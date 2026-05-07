@@ -1771,7 +1771,8 @@ public class BuildContext {
                 loadTypeConstant(code, resourceType);
                 code.ldc(resourceName)
                     .aconst_null() // opts
-                    .invokevirtual(CD_Ctx, "inject", Ctx.MD_inject);
+                    .invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
+                    .checkcast(reg.cd());
                 storeValue(code, reg);
                 code.labelBinding(varStart);
                 return reg;

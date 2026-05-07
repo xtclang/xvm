@@ -56,6 +56,16 @@ public class Float64 extends BinaryFPNumber {
         return Double.doubleToRawLongBits($value) < 0L;
     }
 
+    @Override
+    protected long[] $longValues() {
+        return new long[]{Double.doubleToRawLongBits($value)};
+    }
+
+    @Override
+    protected long bitLength$get$p() {
+        return 64;
+    }
+
     // ----- Orderable interface -------------------------------------------------------------------
 
     /**

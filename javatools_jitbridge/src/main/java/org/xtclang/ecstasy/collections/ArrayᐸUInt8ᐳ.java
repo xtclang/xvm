@@ -137,4 +137,24 @@ public class ArrayᐸUInt8ᐳ
     protected long $cap2len(long cap) {
         return $cap2len8bits(cap);
     }
+
+    /**
+     * Internal method to create a UInt8 array from a long array.
+     * <p>
+     * This is called by various number types to return a byte array representation of the number.
+     */
+    public static ArrayᐸUInt8ᐳ $fromLongs(Ctx ctx, Mutability mutability, long bits, long... values) {
+        TypeConstant type  = ctx.container.typeSystem.pool().typeByteArray();
+        long         size  = bits / 8;
+        ArrayᐸUInt8ᐳ array = $new$p(ctx, type, size, false);
+        array.$mut(mutability == null ? $CONSTANT : (int) mutability.$ordinal);
+        array.$storage = values;
+        array.$size((int) size);
+        return array;
+    }
+
+    @Override
+    protected long $calculateHash(Ctx ctx) {
+        return $calculate8BitUnsignedHash(ctx);
+    }
 }

@@ -140,4 +140,9 @@ public class ArrayᐸInt64ᐳ
     protected long $cap2len(long cap) {
         return cap;
     }
+
+    @Override
+    protected long $calculateHash(Ctx ctx) {
+        return $calculate64BitHash(ctx);
+    }
 }

@@ -138,4 +138,9 @@ public class ArrayᐸUInt16ᐳ
     protected long $cap2len(long cap) {
         return $cap2len16bits(cap);
     }
+
+    @Override
+    protected long $calculateHash(Ctx ctx) {
+        return $calculate16BitUnsignedHash(ctx);
+    }
 }
