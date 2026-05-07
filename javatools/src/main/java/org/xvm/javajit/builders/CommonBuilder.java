@@ -3137,7 +3137,8 @@ public class CommonBuilder
 
     private final static String[] CLASS_WHITE_LIST = new String[] {
         "Test*", "test*",
-        "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
+        "Exception*",
+        "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState", "Assertion",
         "Boolean", "Ordered", "Orderable",
         "String",
         "Stringable",

@@ -1,4 +1,6 @@
 package org.xtclang.ecstasy.collections;
 
-public interface Hashable {
+import org.xtclang.ecstasy.Object;
+
+public interface Hashable extends Object {
 }

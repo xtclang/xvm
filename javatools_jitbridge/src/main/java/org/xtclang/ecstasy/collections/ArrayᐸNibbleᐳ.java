@@ -9,6 +9,7 @@ import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 import org.xtclang.ecstasy.numbers.Nibble;
 
 import org.xvm.asm.ConstantPool;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;

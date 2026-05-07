@@ -8,6 +8,7 @@ import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 import org.xtclang.ecstasy.numbers.Float32;
 
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.Ctx;
 
 /**
@@ -130,7 +131,6 @@ public class ArrayᐸFloat32ᐳ
     protected long $cap2len(long cap) {
         return $cap2len32bits(cap);
     }
-
 
     @Override
     protected long $calculateHash(Ctx ctx) {

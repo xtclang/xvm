@@ -1,5 +1,7 @@
 package org.xtclang.ecstasy.collections;
 
+import org.xtclang.ecstasy.Object;
+
 import org.xtclang.ecstasy.numbers.Int64;
 
 import org.xvm.javajit.Ctx;
@@ -7,8 +9,7 @@ import org.xvm.javajit.Ctx;
 /**
  * A native implementation of the HashCollector service.
  */
-@SuppressWarnings("UnusedReturnValue")
-public interface HashCollector {
+public interface HashCollector extends Object {
 
     /**
      * This is the native implementation of Const.x:

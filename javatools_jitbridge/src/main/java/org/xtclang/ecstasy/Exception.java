@@ -23,6 +23,16 @@ public class Exception extends nConst {
     public nException $exception;
 
     /**
+     * Exception Constructor:
+     *  construct(String? text = Null, Exception? cause = Null)
+     */
+    public static Exception $new(Ctx ctx, nObj text, nObj cause) {
+        Exception ex = new Exception(ctx);
+        construct(ctx, null, ex, text, cause);
+        return ex;
+    }
+
+    /**
      * This is a static method that will be called by the naturally constructed sub-classes.
      * See {@link org.xvm.javajit.builders.CommonBuilder#assembleNew}.
      *
@@ -76,10 +86,12 @@ public class Exception extends nConst {
         StringBuilder sb = new StringBuilder(className);
         sb.append(": ")
           .append(text == Nullable.Null ? "" : text.toString($ctx()));
-        for (StackTraceElement el : $exception.getStackTrace()) {
-            if (el.getFileName().endsWith(".x") && !el.getMethodName().startsWith("$")) {
-                sb.append("\n    at ")
-                  .append(el);
+        if ($exception != null) { // can be null only during construction
+            for (StackTraceElement el : $exception.getStackTrace()) {
+                if (el.getFileName().endsWith(".x") && !el.getMethodName().startsWith("$")) {
+                    sb.append("\n    at ")
+                      .append(el);
+                }
             }
         }
         return sb.toString();

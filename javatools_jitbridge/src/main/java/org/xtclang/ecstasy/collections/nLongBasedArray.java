@@ -11,6 +11,7 @@ import org.xtclang.ecstasy.text.String;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
+
 import org.xvm.util.ByteHashCollector;
 
 import static java.lang.Math.max;
