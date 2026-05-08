@@ -8,16 +8,16 @@ import slogging.Logger;
 class HandlerDerivationTest {
 
     @Test
-    void shouldCallHandlerWithAttrsWhenDerivingLogger() {
+    void shouldCallHandlerWithAttributesWhenDerivingLogger() {
         TrackingHandler handler = new TrackingHandler();
         Logger          base    = new Logger(handler);
 
         Logger derived = base.with(Map:["requestId"="r_1"]);
         derived.info("processing");
 
-        assert handler.withAttrsCalls == 1;
-        assert handler.lastAttrs.size == 1;
-        assert handler.lastAttrs["requestId"] == "r_1";
+        assert handler.withAttributesCalls == 1;
+        assert handler.lastAttributes.size == 1;
+        assert handler.lastAttributes["requestId"] == "r_1";
         assert handler.records.size == 1;
     }
 

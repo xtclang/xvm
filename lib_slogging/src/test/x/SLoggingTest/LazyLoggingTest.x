@@ -1,3 +1,4 @@
+import slogging.Level;
 import slogging.Logger;
 
 /**
@@ -12,7 +13,7 @@ class LazyLoggingTest {
         Logger      logger  = new Logger(handler);
         @Volatile Int calls = 0;
 
-        handler.setLevel(slogging.Level.Info);
+        handler.setLevel(Level.Info);
         logger.debug(() -> {
             ++calls;
             return "expensive debug message";

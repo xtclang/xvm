@@ -14,7 +14,7 @@
  *   - `Logger.logAt(...)` populates explicit source metadata;
  *   - `LoggerContext` propagates request-scoped loggers;
  *   - `JSONHandler` renders parseable `lib_json` documents;
- *   - `HandlerContract` checks `withAttrs` / `withGroup` conformance;
+ *   - `HandlerContract` checks `withAttributes` / `withGroup` conformance;
  *   - nested attribute maps render as nested structure;
  *   - custom `Level` values comparable to / between the canonical four work.
  */

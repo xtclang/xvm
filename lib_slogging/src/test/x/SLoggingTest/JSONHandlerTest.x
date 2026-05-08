@@ -18,14 +18,14 @@ class JSONHandlerTest {
     void shouldRenderParseableJsonWithEscapingAndNestedGroups() {
         JSONHandler handler = new JSONHandler();
         Exception   boom    = new Exception("bad \"card\"");
-        Map<String, AnyValue> userAttrs = Map:["id"="u_3"];
+        Map<String, AnyValue> userAttributes = Map:["id"="u_3"];
         Record      record  = new Record(
-                time       = new Time("2019-05-22T120123.456Z"),
+                timestamp  = new Time("2019-05-22T120123.456Z"),
                 message    = "charged \"ok\"",
                 level      = Level.Info,
-                attrs      = Map:[
+                attributes = Map:[
                         "amount" = 1099,
-                        "user"   = userAttrs,
+                        "user"   = userAttributes,
                 ],
                 exception  = boom,
                 sourceFile = "PaymentService.x",
@@ -55,12 +55,12 @@ class JSONHandlerTest {
     @Test
     void shouldRenderGroupedDerivedLoggerAsNestedJson() {
         JSONHandler handler = new JSONHandler();
-        Map<String, AnyValue> paymentAttrs = Map:["amount"=1099];
+        Map<String, AnyValue> paymentAttributes = Map:["amount"=1099];
         Record      record  = new Record(
-                time    = new Time("2019-05-22T120123.456Z"),
-                message = "charged",
-                level   = Level.Info,
-                attrs   = Map:["payments"=paymentAttrs],
+                timestamp  = new Time("2019-05-22T120123.456Z"),
+                message    = "charged",
+                level      = Level.Info,
+                attributes = Map:["payments"=paymentAttributes],
         );
 
         JsonObject obj = handler.toJson(record);
@@ -75,10 +75,10 @@ class JSONHandlerTest {
         JSONHandler handler = new JSONHandler(
                 new HandlerOptions(Level.Info, ["token"]));
         Record record = new Record(
-                time    = new Time("2019-05-22T120123.456Z"),
-                message = "auth",
-                level   = Level.Info,
-                attrs   = Map:["token"="secret", "user"="u_1"],
+                timestamp  = new Time("2019-05-22T120123.456Z"),
+                message    = "auth",
+                level      = Level.Info,
+                attributes = Map:["token"="secret", "user"="u_1"],
         );
 
         JsonObject obj = handler.toJson(record);

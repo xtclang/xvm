@@ -25,55 +25,45 @@ service MemoryHandler
      * Mutable backing storage. Internal — Ecstasy forbids returning a mutable array
      * from a service call, so we expose [records] as an immutable snapshot below.
      */
-    private Record[] recordList = new Array();
+    private Record[] recordList = new Record[];
 
     /**
      * Immutable snapshot of the captured records, in emission order. Each access
      * copies — same pattern as `lib_logging.MemoryLogSink.events`.
      */
-    @RO Record[] records.get() {
-        return recordList.toArray(Constant);
-    }
+    @RO Record[] records.get() = recordList.toArray(Constant);
 
     /**
      * Cheap threshold check. Defaults to `Debug`, matching Go slog's lowest canonical
      * level and making tests capture everything unless they opt into a stricter level.
      */
     @Override
-    Boolean enabled(Level level) {
-        return level.severity >= rootLevel.severity;
-    }
+    Boolean enabled(Level level) = level.enabledAtThreshold(rootLevel);
 
     /**
      * Capture the record in memory. This is the slog-shaped analogue of Logback's
      * `ListAppender` and `lib_logging.MemoryLogSink`.
      */
     @Override
-    void handle(Record record) {
-        recordList.add(record);
-    }
+    void handle(Record record) = recordList.add(record);
 
     /**
      * Derived loggers share this capture buffer, but [BoundHandler] applies the
-     * pre-bound attrs before the record reaches [handle].
+     * pre-bound attributes before the record reaches [handle].
      */
     @Override
-    Handler withAttrs(Attributes attrs) {
-        return attrs.empty ? this : new BoundHandler(delegate=this, attrs=attrs);
-    }
+    Handler withAttributes(Attributes attributes)
+            = attributes.empty ? this : new BoundHandler(delegate=this, attributes=attributes);
 
     /**
      * Group derived records while keeping the same capture buffer.
      */
     @Override
-    Handler withGroup(String name) {
-        return name == "" ? this : new BoundHandler(delegate=this, groupName=name);
-    }
+    Handler withGroup(String name)
+            = name.empty ? this : new BoundHandler(delegate=this, groupName=name);
 
     /**
      * Discard all captured records.
      */
-    void reset() {
-        recordList.clear();
-    }
+    void reset() = recordList.clear();
 }

@@ -9,7 +9,7 @@ import slogging.MemoryHandler;
 class MemoryHandlerTest {
 
     @Test
-    void shouldCaptureRecordWithAttrs() {
+    void shouldCaptureRecordWithAttributes() {
         MemoryHandler handler = new MemoryHandler();
         Logger        logger  = new Logger(handler);
 
@@ -18,8 +18,8 @@ class MemoryHandlerTest {
         assert handler.records.size == 1;
         assert handler.records[0].level   == Level.Info;
         assert handler.records[0].message == "processed";
-        assert handler.records[0].attrs.size == 1;
-        assert handler.records[0].attrs.contains("count");
+        assert handler.records[0].attributes.size == 1;
+        assert handler.records[0].attributes.contains("count");
     }
 
     @Test

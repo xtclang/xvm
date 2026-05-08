@@ -2,7 +2,7 @@
  * Async wrapper for a slog [Handler].
  *
  * Records are fully constructed before they enter this handler, so delayed emission
- * preserves attrs, groups, source metadata, and exceptions exactly as the caller
+ * preserves attributes, groups, source metadata, and exceptions exactly as the caller
  * produced them.
  */
 service AsyncHandler(Handler delegate, Int capacity = 1024)
@@ -23,9 +23,7 @@ service AsyncHandler(Handler delegate, Int capacity = 1024)
     @RO Int pending.get() = queue.size;
 
     @Override
-    Boolean enabled(Level level) {
-        return delegate.enabled(level);
-    }
+    Boolean enabled(Level level) = delegate.enabled(level);
 
     @Override
     void handle(Record record) {
@@ -42,21 +40,17 @@ service AsyncHandler(Handler delegate, Int capacity = 1024)
     }
 
     @Override
-    Handler withAttrs(Attributes attrs) {
-        return attrs.empty ? this : new AsyncHandler(delegate.withAttrs(attrs), capacity);
-    }
+    Handler withAttributes(Attributes attributes)
+            = attributes.empty ? this : new AsyncHandler(delegate.withAttributes(attributes), capacity);
 
     @Override
-    Handler withGroup(String name) {
-        return name == "" ? this : new AsyncHandler(delegate.withGroup(name), capacity);
-    }
+    Handler withGroup(String name)
+            = name.empty ? this : new AsyncHandler(delegate.withGroup(name), capacity);
 
     /**
      * Synchronously drain currently queued records.
      */
-    void flush() {
-        drain();
-    }
+    void flush() = drain();
 
     /**
      * Stop accepting new records. By default this drains pending records first.

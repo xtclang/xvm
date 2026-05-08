@@ -50,9 +50,7 @@ const Level(Int severity, String label)
      * `threshold`. Matches the SLF4J library's [logging.Level.enabledAtThreshold] for
      * caller convenience.
      */
-    Boolean enabledAtThreshold(Level threshold) {
-        return severity >= threshold.severity;
-    }
+    Boolean enabledAtThreshold(Level threshold) = severity >= threshold.severity;
 
     /**
      * Natural ordering is severity ordering.

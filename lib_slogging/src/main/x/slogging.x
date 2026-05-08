@@ -60,38 +60,39 @@
  *      lib_logging/src/main/x/logging.x            — the SLF4J-shaped sibling library
  */
 module slogging.xtclang.org {
-    package json import json.xtclang.org;
+    package convert import convert.xtclang.org;
+    package json    import json.xtclang.org;
 
     /**
      * Lazy message supplier used by [Logger].
      *
      * The logger invokes this function only after [Handler.enabled] accepts the record's
-     * level. This is the slog-shaped equivalent of Kotlin logging blocks and Java
-     * supplier-based logging APIs.
+     * level.
      */
-    typedef function String() as MessageSupplier;
+    typedef function AnyValue() as MessageSupplier;
 
     /**
      * AnyValue is used to represent various values of specific types in log message attributes.
      *
      * An AnyValue is either:
      *
-     * - a primitive type: string, boolean, double precision floating point (IEEE 754-1985), or
-     *   signed 64 bit integer,
-     * - a homogeneous array of primitive type values. A homogeneous array MUST NOT contain values
-     *   of different types.
-     * - a byte array.
+     * - a [PrimitiveValue] (Null, Boolean, String, integer or floating-point number, or byte
+     *   array),
      * - an array of AnyValue,
-     * - a Mmp<string, AnyValue>,
-     * - a Null value
+     * - a Map<String, AnyValue>.
      *
      * Arbitrary deep nesting of values for arrays and maps is allowed (essentially allows to
      * represent an equivalent of a JSON object).
      * Using array and map values may carry a higher performance overhead compared to primitive
      * values.
      */
-    typedef Nullable | Boolean | String | Int | IntLiteral | Float | FPLiteral | Byte[]
-            | AnyValue[] | Map<String, AnyValue> as AnyValue;
+    typedef PrimitiveValue | AnyValue[] | Map<String, AnyValue> as AnyValue;
+
+    /**
+     * The various primitive values allowed in an AnyValue.
+     */
+    typedef Nullable | Boolean | String | IntNumber | IntLiteral | Float | FPLiteral | Byte[]
+            as PrimitiveValue;
 
     /**
      * A map of attribute key-value pairs carried by resources, scopes, and data points.

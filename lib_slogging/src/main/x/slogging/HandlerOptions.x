@@ -44,20 +44,13 @@ const HandlerOptions(
         String   exceptionKey,
         ) {
 
-    construct(Level rootLevel = Info, String[] redactedKeys = []) {
+    construct(Level rootLevel = Level.Info, String[] redactedKeys = []) {
         construct HandlerOptions(rootLevel, redactedKeys, "***", True,
-                "time", "level", "msg", "source", "exception");
+                "timestamp", "level", "msg", "source", "exception");
     }
 
     /**
      * True iff the supplied key should be rendered as [redaction].
      */
-    Boolean redacts(String key) {
-        for (String candidate : redactedKeys) {
-            if (candidate == key) {
-                return True;
-            }
-        }
-        return False;
-    }
+    Boolean redacts(String key) = redactedKeys.contains(key);
 }

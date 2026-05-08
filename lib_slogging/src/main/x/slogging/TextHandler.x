@@ -18,15 +18,14 @@ const TextHandler
         implements Handler {
 
     /**
-     * Create a [JSONHandler].
+     * Create a [TextHandler].
      *
      * @param options    (optional) the handler's options
      * @param groupName  (optional) the handler's group name
-     * @param handler    (optional) the consumer that will process the String produced from the log
-     *                   [Record] (the default will print the json to the console)
+     * @param consumer   (optional) the consumer that will process the String produced from the log
+     *                   [Record] (the default will print the line to the console)
      */
-    construct (HandlerOptions? options = Null, String groupName = "", TextConsumer? consumer = Null)
-    {
+    construct(HandlerOptions? options = Null, String groupName = "", TextConsumer? consumer = Null) {
         this.options   = options ?: new HandlerOptions();
         this.groupName = groupName;
         this.consumer  = consumer ?: defaultConsumer;
@@ -52,26 +51,23 @@ const TextHandler
      * severity; no formatting or attribute walking belongs on the fast path.
      */
     @Override
-    Boolean enabled(Level level) {
-        return level.severity >= options.rootLevel.severity;
-    }
+    Boolean enabled(Level level) = level.enabledAtThreshold(options.rootLevel);
 
     /**
      * Render a record as one line of text. This is the POC equivalent of Go
-     * `slog.TextHandler.Handle`: the message is quoted and attrs are appended as
+     * `slog.TextHandler.Handle`: the message is quoted and attributes are appended as
      * `key=value` pairs.
      */
     @Override
     void handle(Record record) {
         StringBuffer buf = new StringBuffer();
-        buf.append(record.time.toString())
+        buf.append(record.timestamp.toString())
            .append(' ')
            .append(record.level.label.leftJustify(5, ' '))
            .append(' ')
-           .append("msg=")
-           .append(quote(record.message));
+           .append(record.message);
 
-        appendAttrs(buf, groupName, record.attrs);
+        appendAttributes(buf, groupName, record.attributes);
         appendSource(buf, record);
 
         consumer(buf.toString());
@@ -83,14 +79,12 @@ const TextHandler
     }
 
     @Override
-    Handler withAttrs(Attributes attrs) {
-        return attrs.empty ? this : new BoundHandler(delegate=this, attrs=attrs);
-    }
+    Handler withAttributes(Attributes attributes)
+            = attributes.empty ? this : new BoundHandler(delegate=this, attributes=attributes);
 
     @Override
-    Handler withGroup(String name) {
-        return name == "" ? this : new BoundHandler(delegate=this, groupName=name);
-    }
+    Handler withGroup(String name)
+            = name.empty ? this : new BoundHandler(delegate=this, groupName=name);
 
     private static void defaultConsumer(String text) {
         @Inject Console console;
@@ -103,9 +97,9 @@ const TextHandler
      * separator — matches `slog.TextHandler`.
      */
     private void renderAttr(StringBuffer buf, String prefix, String key, AnyValue value) {
-        String fullKey = prefix == "" ? key : $"{prefix}.{key}";
+        String fullKey = prefix.empty ? key : $"{prefix}.{key}";
         if (value.is(Map<String, AnyValue>)) {
-            appendNestedAttrs(buf, fullKey, value);
+            appendNestedAttributes(buf, fullKey, value);
         } else {
             buf.append(fullKey).append('=')
                .append(options.redacts(key) ? options.redaction : value.toString());
@@ -113,11 +107,11 @@ const TextHandler
     }
 
     /**
-     * Append top-level attrs. Each attr starts with a leading space because the base
+     * Append top-level attributes. Each attr starts with a leading space because the base
      * record fields have already been rendered.
      */
-    private void appendAttrs(StringBuffer buf, String prefix, Attributes attrs) {
-        for ((String key, AnyValue value) : attrs) {
+    private void appendAttributes(StringBuffer buf, String prefix, Attributes attributes) {
+        for ((String key, AnyValue value) : attributes) {
             buf.append(' ');
             renderAttr(buf, prefix, key, value);
         }
@@ -127,9 +121,9 @@ const TextHandler
      * Append children of an attr group. The first child continues in the current
      * position; later children are separated with spaces.
      */
-    private void appendNestedAttrs(StringBuffer buf, String prefix, Map<String, AnyValue> attrs) {
+    private void appendNestedAttributes(StringBuffer buf, String prefix, Map<String, AnyValue> attributes) {
         Boolean first = True;
-        for ((String key, AnyValue value) : attrs) {
+        for ((String key, AnyValue value) : attributes) {
             if (!first) {
                 buf.append(' ');
             }
@@ -154,10 +148,4 @@ const TextHandler
             }
         }
     }
-
-    /**
-     * POC string quoting. Production text output should escape quotes, newlines, and
-     * separators; that belongs with the production handler, not the API sketch.
-     */
-    private String quote(String s) = $"\"{s}\"";
 }

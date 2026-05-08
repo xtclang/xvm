@@ -4,37 +4,31 @@ import slogging.Level;
 import slogging.Record;
 
 /**
- * Test-only handler that records derivation hooks. It makes the `Handler.withAttrs` /
+ * Test-only handler that records derivation hooks. It makes the `Handler.withAttributes` /
  * `Handler.withGroup` part of the slog contract observable without depending on a
  * concrete renderer.
  */
 service TrackingHandler
         implements Handler {
 
-    public/private Int        withAttrsCalls = 0;
+    public/private Int        withAttributesCalls = 0;
     public/private Int        withGroupCalls = 0;
-    public/private Attributes lastAttrs      = Map:[];
+    public/private Attributes lastAttributes      = Map:[];
     public/private String[]   groups         = [];
     private Record[] recordList = new Record[];
 
-    @RO Record[] records.get() {
-        return recordList.toArray(Constant);
-    }
+    @RO Record[] records.get() = recordList.toArray(Constant);
 
     @Override
-    Boolean enabled(Level level) {
-        return True;
-    }
+    Boolean enabled(Level level) = True;
 
     @Override
-    void handle(Record record) {
-        recordList.add(record);
-    }
+    void handle(Record record) = recordList.add(record);
 
     @Override
-    Handler withAttrs(Attributes attrs) {
-        ++withAttrsCalls;
-        lastAttrs = attrs.makeImmutable();
+    Handler withAttributes(Attributes attributes) {
+        ++withAttributesCalls;
+        lastAttributes = attributes.makeImmutable();
         return this;
     }
 

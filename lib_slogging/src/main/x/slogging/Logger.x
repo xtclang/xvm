@@ -38,7 +38,7 @@
  * record construction, forward to handler), and [logAt] provides explicit source metadata
  * for callers or future compiler/runtime sugar. Runtime injection for
  * `@Inject slogging.Logger logger;` is registered by `NativeContainer`. There is no
- * `LogAttrs(ctx, level, msg, attrs...)` form; [LoggerContext] is the Ecstasy-shaped
+ * `LogAttributes(ctx, level, msg, attributes...)` form; [LoggerContext] is the Ecstasy-shaped
  * optional context helper.
  */
 const Logger
@@ -47,15 +47,13 @@ const Logger
     @Inject Clock clock;
 
     /**
-     * Compatibility convenience: handler plus pre-bound attrs. The attrs are handed to
-     * [Handler.withAttrs] immediately, which is the slog contract and what allows a
+     * Compatibility convenience: handler plus pre-bound attributes. The attributes are handed to
+     * [Handler.withAttributes] immediately, which is the slog contract and what allows a
      * handler to pre-render or cache its own derived state.
      */
-    construct(Handler? handler = Null, Attributes attrs = []) {
-        this.handler = handler ?: new TextHandler();
-        if (!attrs.empty) {
-            this.handler = this.handler.withAttrs(attrs);
-        }
+    construct(Handler? handler = Null, Attributes attributes = []) {
+        Handler base = handler ?: new TextHandler();
+        this.handler = attributes.empty ? base : base.withAttributes(attributes);
     }
 
     Handler handler;
@@ -90,71 +88,70 @@ const Logger
 
     /**
      * Emit a `Debug` record. The message is already a complete human-readable string;
-     * structured values belong in `extra` attrs rather than `{}` placeholders. See
+     * structured values belong in `extra` attributes rather than `{}` placeholders. See
      * `doc/logging/usage/slog-parity.md` § "Message formatting".
      */
-    void debug(String message, Attributes extra = Map:[], Exception? cause = Null) =
-            log(Level.Debug, message, extra, cause);
+    void debug(String message, Attributes extra = Map:[], Exception? cause = Null)
+            = log(Level.Debug, message, extra, cause);
 
     /**
      * Emit a `Debug` record whose message is computed after the handler's enabled check.
      */
-    void debug(MessageSupplier message, Attributes extra = Map:[], Exception? cause = Null) =
-            log(Level.Debug, message, extra, cause);
+    void debug(MessageSupplier message, Attributes extra = Map:[], Exception? cause = Null)
+            = log(Level.Debug, message, extra, cause);
 
     /**
      * Emit an `Info` record.
      */
-    void info(String message, Attributes extra = Map:[], Exception? cause = Null) =
-            log(Level.Info, message, extra, cause);
+    void info(String message, Attributes extra = Map:[], Exception? cause = Null)
+            = log(Level.Info, message, extra, cause);
 
     /**
      * Emit an `Info` record whose message is computed after the handler's enabled check.
      */
-    void info(MessageSupplier message, Attributes extra = Map:[], Exception? cause = Null) =
-            log(Level.Info, message, extra, cause);
+    void info(MessageSupplier message, Attributes extra = Map:[], Exception? cause = Null)
+            = log(Level.Info, message, extra, cause);
 
     /**
      * Emit a `Warn` record.
      */
-    void warn(String message, Attributes extra = Map:[], Exception? cause = Null) =
-            log(Level.Warn, message, extra, cause);
+    void warn(String message, Attributes extra = Map:[], Exception? cause = Null)
+            = log(Level.Warn, message, extra, cause);
 
     /**
      * Emit a `Warn` record whose message is computed after the handler's enabled check.
      */
-    void warn(MessageSupplier message, Attributes extra = Map:[], Exception? cause = Null) =
-            log(Level.Warn, message, extra, cause);
+    void warn(MessageSupplier message, Attributes extra = Map:[], Exception? cause = Null)
+            = log(Level.Warn, message, extra, cause);
 
     /**
      * Emit an `Error` record. `cause` is an Ecstasy convenience for a thrown exception.
      */
-    void error(String message, Attributes extra = Map:[], Exception? cause = Null) =
-            log(Level.Error, message, extra, cause);
+    void error(String message, Attributes extra = Map:[], Exception? cause = Null)
+            = log(Level.Error, message, extra, cause);
 
     /**
      * Emit an `Error` record whose message is computed after the handler's enabled check.
      */
-    void error(MessageSupplier message, Attributes extra = Map:[], Exception? cause = Null) =
-            log(Level.Error, message, extra, cause);
+    void error(MessageSupplier message, Attributes extra = Map:[], Exception? cause = Null)
+            = log(Level.Error, message, extra, cause);
 
     /**
      * Open-level emission. Use for custom levels.
      *
      * The enabled check is first. If the handler rejects `level`, no record is
-     * constructed and no attrs are merged. This mirrors Go slog's
+     * constructed and no attributes are merged. This mirrors Go slog's
      * `Handler.Enabled` fast path.
      */
-    void log(Level level, String message, Attributes extra = Map:[], Exception? cause = Null) {
-        emit(level, message, extra, cause, Null, -1);
-    }
+    void log(Level level, String message, Attributes extra = Map:[], Exception? cause = Null)
+            = emit(level, message, extra, cause, Null, -1);
 
     /**
      * Open-level emission with lazy message construction.
      */
-    void log(Level level, MessageSupplier message, Attributes extra = Map:[], Exception? cause = Null) {
-        emit(level, message, extra, cause, Null, -1);
-    }
+    void log(Level level, MessageSupplier message, Attributes extra = Map:[],
+            Exception? cause = Null)
+            = emit(level, message, extra, cause, Null, -1);
 
     /**
      * Open-level emission with explicit source metadata.
@@ -165,32 +162,30 @@ const Logger
      * caller-site sugar into this method without changing the handler contract.
      */
     void logAt(Level level, String message, String sourceFile, Int sourceLine,
-               Attributes extra = Map:[], Exception? cause = Null) {
-        emit(level, message, extra, cause, sourceFile, sourceLine);
-    }
+            Attributes extra = Map:[], Exception? cause = Null)
+            = emit(level, message, extra, cause, sourceFile, sourceLine);
 
     /**
      * Open-level emission with explicit source metadata and lazy message construction.
      */
     void logAt(Level level, MessageSupplier message, String sourceFile, Int sourceLine,
-               Attributes extra = Map:[], Exception? cause = Null) {
-        emit(level, message, extra, cause, sourceFile, sourceLine);
-    }
+            Attributes extra = Map:[], Exception? cause = Null)
+            = emit(level, message, extra, cause, sourceFile, sourceLine);
 
     /**
      * Common emission path used by [log] and [logAt]. The handler owns any attributes
      * attached by derived loggers; the record receives only call-time extras.
      */
     private void emit(Level level, String message, Attributes extra, Exception? cause,
-                      String? sourceFile, Int sourceLine) {
+            String? sourceFile, Int sourceLine) {
         if (!handler.enabled(level)) {
             return;
         }
         handler.handle(new Record(
-                time       = clock.now,
+                timestamp  = clock.now,
                 message    = message,
                 level      = level,
-                attrs      = extra,
+                attributes = extra,
                 exception  = cause,
                 sourceFile = sourceFile,
                 sourceLine = sourceLine,
@@ -202,15 +197,15 @@ const Logger
      * accepts the level, matching Go slog's `Enabled` fast path.
      */
     private void emit(Level level, MessageSupplier message, Attributes extra, Exception? cause,
-                      String? sourceFile, Int sourceLine) {
+            String? sourceFile, Int sourceLine) {
         if (!handler.enabled(level)) {
             return;
         }
         handler.handle(new Record(
-                time       = clock.now,
+                timestamp  = clock.now,
                 message    = message(),
                 level      = level,
-                attrs      = extra,
+                attributes = extra,
                 exception  = cause,
                 sourceFile = sourceFile,
                 sourceLine = sourceLine,
@@ -221,19 +216,19 @@ const Logger
      * Return a derived logger that carries the supplied attributes. Equivalent to
      * `slog.Logger.With(...)`.
      *
-     * The attrs are not stored in `Logger`; they live in the derived [Handler]. That is
-     * the key slog design point: a handler can pre-resolve attrs once at derivation time
+     * The attributes are not stored in `Logger`; they live in the derived [Handler]. That is
+     * the key slog design point: a handler can pre-resolve attributes once at derivation time
      * instead of merging or rendering them on every emission.
      *
      * This is the slog replacement for SLF4J MDC in the core API: instead of hidden
      * fiber-local state, code passes around a logger that visibly carries request or
-     * component attrs. See `doc/logging/usage/slog-parity.md`.
+     * component attributes. See `doc/logging/usage/slog-parity.md`.
      */
     Logger with(Attributes more) {
         if (more.empty) {
             return this;
         }
-        return new Logger(handler.withAttrs(more));
+        return new Logger(handler.withAttributes(more));
     }
 
     /**
@@ -244,7 +239,7 @@ const Logger
      * (`payments.amount`), while JSON handlers nest (`{"payments":{"amount":...}}`).
      */
     Logger withGroup(String groupName) {
-        if (groupName == "") {
+        if (groupName.empty) {
             return this;
         }
         return new Logger(handler.withGroup(groupName));

@@ -8,12 +8,12 @@
  *
  *      Boolean enabled(Level level)            — cheap fast-path filter
  *      void    handle(Record record)           — emit the record
- *      Handler withAttrs(Attributes attrs)     — derive a pre-bound handler
+ *      Handler withAttributes(Attributes attributes)     — derive a pre-bound handler
  *      Handler withGroup(String name)          — derive a name-prefixed handler
  *
- * The two extra methods exist so that when user code does `logger.with(attrs)` once and
+ * The two extra methods exist so that when user code does `logger.with(attributes)` once and
  * then logs millions of records through the derived logger, the handler can do the
- * "merge attrs into the namespace" work *once* at derivation time rather than on every
+ * "merge attributes into the namespace" work *once* at derivation time rather than on every
  * `handle` call.
  *
  * Handlers that do not maintain their own derived representation can return
@@ -57,7 +57,7 @@ interface Handler {
      * [BoundHandler] for the default semantics, or return a handler-specific derived
      * instance that caches a rendered prefix.
      */
-    Handler withAttrs(Attributes attrs);
+    Handler withAttributes(Attributes attributes);
 
     /**
      * Return a handler that namespaces subsequent attributes under the supplied group

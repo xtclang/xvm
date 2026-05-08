@@ -12,7 +12,7 @@ import slogging.Logger;
 class WithTest {
 
     @Test
-    void shouldCarryAttachedAttrsIntoRecord() {
+    void shouldCarryAttachedAttributesIntoRecord() {
         ListHandler handler = new ListHandler();
         Logger      base    = new Logger(handler);
 
@@ -24,11 +24,11 @@ class WithTest {
         derived.info("processing");
 
         assert handler.records.size == 1;
-        Attributes attrs = handler.records[0].attrs;
-        assert attrs.size == 2;
-        String[] keys = attrs.keys.toArray();
-        assert keys[0] == "requestId" && attrs["requestId"] == "r_42";
-        assert keys[1] == "user"      && attrs["user"]      == "u_3";
+        Attributes attributes = handler.records[0].attributes;
+        assert attributes.size == 2;
+        String[] keys = attributes.keys.toArray();
+        assert keys[0] == "requestId" && attributes["requestId"] == "r_42";
+        assert keys[1] == "user"      && attributes["user"]      == "u_3";
     }
 
     @Test
@@ -42,15 +42,15 @@ class WithTest {
         withB.info("event");
 
         assert handler.records.size == 1;
-        Attributes attrs = handler.records[0].attrs;
-        assert attrs.size == 2;
-        String[] keys = attrs.keys.toArray();
+        Attributes attributes = handler.records[0].attributes;
+        assert attributes.size == 2;
+        String[] keys = attributes.keys.toArray();
         assert keys[0] == "a";
         assert keys[1] == "b";
     }
 
     @Test
-    void shouldCombineAttachedAttrsWithCallTimeExtras() {
+    void shouldCombineAttachedAttributesWithCallTimeExtras() {
         ListHandler handler = new ListHandler();
         Logger      base    = new Logger(handler);
 
@@ -58,9 +58,9 @@ class WithTest {
 
         reqLog.info("processing", Map:["path"="/api"]);
 
-        Attributes attrs = handler.records[0].attrs;
-        assert attrs.size == 2;
-        String[] keys = attrs.keys.toArray();
+        Attributes attributes = handler.records[0].attributes;
+        assert attributes.size == 2;
+        String[] keys = attributes.keys.toArray();
         assert keys[0] == "requestId";
         assert keys[1] == "path";
     }
@@ -75,7 +75,7 @@ class WithTest {
         base.info("from base");
         derived.info("from derived");
 
-        assert handler.records[0].attrs.empty;
-        assert handler.records[1].attrs.size == 1;
+        assert handler.records[0].attributes.empty;
+        assert handler.records[1].attributes.size == 1;
     }
 }

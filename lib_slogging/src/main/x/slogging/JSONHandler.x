@@ -1,4 +1,7 @@
+import convert.formats.Base64Format;
+
 import json.Doc;
+import json.JsonArray;
 import json.JsonObject;
 import json.Printer;
 
@@ -19,10 +22,10 @@ const JSONHandler
      *
      * @param options    (optional) the handler's options
      * @param groupName  (optional) the handler's group name
-     * @param handler    (optional) the consumer that will process the [JsonObject] produced from
+     * @param consumer   (optional) the consumer that will process the [JsonObject] produced from
      *                   the log [Record] (the default will print the json to the console)
      */
-    construct (HandlerOptions? options = Null, String groupName = "", JsonConsumer? consumer = Null) {
+    construct(HandlerOptions? options = Null, String groupName = "", JsonConsumer? consumer = Null) {
         this.options   = options ?: new HandlerOptions();
         this.groupName = groupName;
         this.consumer  = consumer ?: defaultConsumer;
@@ -40,17 +43,13 @@ const JSONHandler
      * Cheap threshold check; no JSON work happens for disabled records.
      */
     @Override
-    Boolean enabled(Level level) {
-        return level.severity >= options.rootLevel.severity;
-    }
+    Boolean enabled(Level level) = level.enabledAtThreshold(options.rootLevel);
 
     /**
      * Render and print one JSON line.
      */
     @Override
-    void handle(Record record) {
-        consumer(toJson(record));
-    }
+    void handle(Record record) = consumer(toJson(record));
 
     private static void defaultConsumer(JsonObject obj) {
         @Inject Console console;
@@ -62,13 +61,14 @@ const JSONHandler
      * only prints the rendered document.
      */
     JsonObject toJson(Record record) {
-        JsonObject obj = json.newObject();
-        obj.put(options.timeKey,    record.time.toString());
+        JsonObject obj   = json.newObject();
+        IntLiteral nanos = (record.timestamp.epochPicos / 1000).toIntLiteral(); // epoch nanos
+        obj.put(options.timeKey,    nanos);
         obj.put(options.levelKey,   record.level.label);
-        obj.put(options.messageKey, record.message);
+        obj.put(options.messageKey, encodeAnyValue(record.message));
 
-        JsonObject attrTarget = groupName == "" ? obj : ensureObject(obj, groupName);
-        addAttrs(attrTarget, record.attrs);
+        JsonObject attrTarget = groupName.empty ? obj : ensureObject(obj, groupName);
+        addAttributes(attrTarget, record.attributes);
 
         if (Exception e ?= record.exception) {
             obj.put(options.exceptionKey, exceptionJson(e));
@@ -85,7 +85,7 @@ const JSONHandler
             }
         }
 
-        if (record.threadName != "") {
+        if (!record.threadName.empty) {
             obj.put("thread", record.threadName);
         }
 
@@ -93,36 +93,34 @@ const JSONHandler
     }
 
     /**
-     * Return a handler with pre-bound attrs. This implementation uses [BoundHandler];
+     * Return a handler with pre-bound attributes. This implementation uses [BoundHandler];
      * a lower-level production sink could override this method to cache a serialized
      * prefix instead.
      */
     @Override
-    Handler withAttrs(Attributes attrs) {
-        return attrs.empty ? this : new BoundHandler(delegate=this, attrs=attrs);
-    }
+    Handler withAttributes(Attributes attributes)
+            = attributes.empty ? this : new BoundHandler(delegate=this, attributes=attributes);
 
     /**
-     * Return a handler that nests subsequent attrs under `name`.
+     * Return a handler that nests subsequent attributes under `name`.
      */
     @Override
-    Handler withGroup(String name) {
-        return name == "" ? this : new BoundHandler(delegate=this, groupName=name);
-    }
+    Handler withGroup(String name)
+            = name.empty ? this : new BoundHandler(delegate=this, groupName=name);
 
     /**
-     * Add all attrs into a JSON object, preserving slog groups as nested objects.
+     * Add all attributes into a JSON object, preserving slog groups as nested objects.
      */
-    private void addAttrs(JsonObject obj, Attributes attrs) {
-        for ((String key, AnyValue value) : attrs) {
-            obj.put(key, options.redacts(key) ? options.redaction : attrValue(value));
+    private void addAttributes(JsonObject obj, Attributes attributes) {
+        for ((String key, AnyValue value) : attributes) {
+            obj.put(key, options.redacts(key) ? options.redaction : encodeAnyValue(value));
         }
     }
 
     /**
-     * Convert an attribute value to a JSON document.
+     * Convert an [AnyValue] value to a JSON document.
      */
-    private Doc attrValue(AnyValue value) {
+    private Doc encodeAnyValue(AnyValue value) {
         if (String s := value.is(String)) {
             return s;
         }
@@ -141,13 +139,24 @@ const JSONHandler
         if (FPNumber n := value.is(FPNumber)) {
             return n.toFPLiteral();
         }
-        if (Map<String, AnyValue> nested := value.is(Map<String, AnyValue>)) {
-            JsonObject obj = json.newObject();
-            addAttrs(obj, nested);
-            return obj.makeImmutable();
+        if (value.is(Byte[])) {
+            return Base64Format.Instance.encode(value);
         }
-
-        return value.toString();
+        if (value.is(AnyValue[])) {
+            JsonArray array = json.newArray();
+            for (AnyValue element : value) {
+                array.add(encodeAnyValue(element));
+            }
+            return array;
+        }
+        if (value.is(Map<String, AnyValue>)) {
+            JsonObject entries = json.newObject();
+            for ((String k, AnyValue v) : value) {
+                entries.put(k, encodeAnyValue(v));
+            }
+            return entries;
+        }
+        assert as $"Unhandled AnyValue to JSON conversion {&value.type}";
     }
 
     /**

@@ -17,7 +17,7 @@ class SourceLocationTest {
         assert handler.records.size == 1;
         assert handler.records[0].sourceFile == "PaymentService.x";
         assert handler.records[0].sourceLine == 77;
-        assert handler.records[0].attrs.contains("elapsedMs");
+        assert handler.records[0].attributes.contains("elapsedMs");
     }
 
     @Test

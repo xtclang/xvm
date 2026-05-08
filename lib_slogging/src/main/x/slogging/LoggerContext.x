@@ -4,7 +4,7 @@ import ecstasy.SharedContext;
  * Optional context helper for code that wants Go-slog-style request propagation without
  * passing a logger through every method signature.
  *
- * Go slog accepts `context.Context` on `LogAttrs` and `Handler.Enabled` / `Handle`.
+ * Go slog accepts `context.Context` on `LogAttributes` and `Handler.Enabled` / `Handle`.
  * Ecstasy does not need to copy that exact API to be familiar: [SharedContext] already
  * models a logical execution context that flows across service calls and child fibers.
  * `LoggerContext` is the smallest explicit bridge:
@@ -35,9 +35,7 @@ const LoggerContext {
      *
      * Use the returned token with `using` so the previous logger is restored reliably.
      */
-    SharedContext<Logger>.Token bind(Logger logger) {
-        return context.withValue(logger);
-    }
+    SharedContext<Logger>.Token bind(Logger logger) = context.withValue(logger);
 
     /**
      * Return the context logger when one is bound.
@@ -47,7 +45,5 @@ const LoggerContext {
     /**
      * Return the context logger, or `fallback` when no context logger is bound.
      */
-    Logger currentOr(Logger fallback) {
-        return context.hasValue() ?: fallback;
-    }
+    Logger currentOr(Logger fallback) = context.hasValue() ?: fallback;
 }

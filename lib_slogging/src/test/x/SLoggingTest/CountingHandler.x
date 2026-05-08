@@ -1,4 +1,5 @@
 import slogging.Attributes;
+import slogging.BoundHandler;
 import slogging.Handler;
 import slogging.Level;
 import slogging.Record;
@@ -14,9 +15,7 @@ service CountingHandler
     public/private Map<Level, Int> counts = new HashMap();
 
     @Override
-    Boolean enabled(Level level) {
-        return True;
-    }
+    Boolean enabled(Level level) = True;
 
     @Override
     void handle(Record record) {
@@ -27,12 +26,10 @@ service CountingHandler
     }
 
     @Override
-    Handler withAttrs(Attributes attrs) {
-        return attrs.empty ? this : new slogging.BoundHandler(delegate=this, attrs=attrs);
-    }
+    Handler withAttributes(Attributes attributes)
+            = attributes.empty ? this : new BoundHandler(delegate=this, attributes=attributes);
 
     @Override
-    Handler withGroup(String name) {
-        return name == "" ? this : new slogging.BoundHandler(delegate=this, groupName=name);
-    }
+    Handler withGroup(String name)
+            = name.empty ? this : new BoundHandler(delegate=this, groupName=name);
 }

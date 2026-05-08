@@ -1,4 +1,5 @@
 import slogging.Attributes;
+import slogging.BoundHandler;
 import slogging.Handler;
 import slogging.Level;
 import slogging.Record;
@@ -17,7 +18,7 @@ import slogging.Record;
 service ListHandler
         implements Handler {
 
-    public/private Level rootLevel = slogging.Level.Debug;
+    public/private Level rootLevel = Level.Debug;
 
     /**
      * Mutable backing storage. Internal — Ecstasy forbids returning a mutable array
@@ -29,35 +30,25 @@ service ListHandler
      * Immutable snapshot of the captured records, in emission order. Each access
      * copies — same pattern as `lib_logging.MemoryLogSink.events`.
      */
-    @RO Record[] records.get() {
-        return recordList.toArray(Constant);
-    }
+    @RO Record[] records.get() = recordList.toArray(Constant);
 
     @Override
-    Boolean enabled(Level level) {
-        return level.severity >= rootLevel.severity;
-    }
+    Boolean enabled(Level level) = level.enabledAtThreshold(rootLevel);
 
     @Override
-    void handle(Record record) {
-        recordList.add(record);
-    }
+    void handle(Record record) = recordList.add(record);
 
     @Override
-    Handler withAttrs(Attributes attrs) {
-        return attrs.empty ? this : new slogging.BoundHandler(delegate=this, attrs=attrs);
-    }
+    Handler withAttributes(Attributes attributes)
+            = attributes.empty ? this : new BoundHandler(delegate=this, attributes=attributes);
 
     @Override
-    Handler withGroup(String name) {
-        return name == "" ? this : new slogging.BoundHandler(delegate=this, groupName=name);
-    }
+    Handler withGroup(String name)
+            = name.empty ? this : new BoundHandler(delegate=this, groupName=name);
 
     void setLevel(Level level) {
         rootLevel = level;
     }
 
-    void reset() {
-        recordList.clear();
-    }
+    void reset() = recordList.clear();
 }

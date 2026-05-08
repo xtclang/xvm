@@ -4,7 +4,7 @@
  *
  * Go slog puts the power of `Logger.With` and `Logger.WithGroup` at the handler
  * boundary: a derived logger contains a derived handler. A production handler can
- * override [withAttrs] / [withGroup] to pre-render JSON fragments, allocate a cached text
+ * override [withAttributes] / [withGroup] to pre-render JSON fragments, allocate a cached text
  * prefix, or fold attributes into a backend-specific context object. `BoundHandler`
  * supplies the default implementation for handlers that only need correct semantics.
  *
@@ -22,21 +22,21 @@
  *
  * yields both `env` and `amount` inside the `payments` group.
  */
-const BoundHandler(Handler delegate, Attributes attrs = [], String? groupName = Null)
+const BoundHandler(Handler delegate, Attributes attributes = [], String? groupName = Null)
         implements Handler {
 
     /**
-     * Fast-path level check. Bound attrs and groups never affect enablement.
+     * Fast-path level check. Bound attributes and groups never affect enablement.
      */
     @Override
     Boolean enabled(Level level) = delegate.enabled(level);
 
     /**
-     * Apply the bound attrs/group to the record, then forward to the delegate.
+     * Apply the bound attributes/group to the record, then forward to the delegate.
      */
     @Override
     void handle(Record record) {
-        Attributes merged = merge(attrs, record.attrs);
+        Attributes merged = merge(attributes, record.attributes);
         if (String group ?= groupName) {
             if (!merged.empty) {
                 ListMap<String, AnyValue> wrapped = new ListMap();
@@ -46,10 +46,10 @@ const BoundHandler(Handler delegate, Attributes attrs = [], String? groupName = 
         }
 
         delegate.handle(new Record(
-                time       = record.time,
+                timestamp  = record.timestamp,
                 message    = record.message,
                 level      = record.level,
-                attrs      = merged,
+                attributes = merged,
                 exception  = record.exception,
                 sourceFile = record.sourceFile,
                 sourceLine = record.sourceLine,
@@ -63,17 +63,15 @@ const BoundHandler(Handler delegate, Attributes attrs = [], String? groupName = 
      * `WithGroup(...).With(...)`.
      */
     @Override
-    Handler withAttrs(Attributes attrs) {
-        return attrs.empty ? this : new BoundHandler(delegate=this, attrs=attrs);
-    }
+    Handler withAttributes(Attributes attributes)
+            = attributes.empty ? this : new BoundHandler(delegate=this, attributes=attributes);
 
     /**
      * Stack another group derivation around this handler.
      */
     @Override
-    Handler withGroup(String name) {
-        return name == "" ? this : new BoundHandler(delegate=this, groupName=name);
-    }
+    Handler withGroup(String name)
+            = name.empty ? this : new BoundHandler(delegate=this, groupName=name);
 
     /**
      * Immutable concatenation helper preserving insertion order.
@@ -86,12 +84,8 @@ const BoundHandler(Handler delegate, Attributes attrs = [], String? groupName = 
             return first;
         }
         ListMap<String, AnyValue> result = new ListMap(first.size + second.size);
-        for ((String key, AnyValue value) : first) {
-            result.put(key, value);
-        }
-        for ((String key, AnyValue value) : second) {
-            result.put(key, value);
-        }
+        result.putAll(first);
+        result.putAll(second);
         return result.makeImmutable();
     }
 }

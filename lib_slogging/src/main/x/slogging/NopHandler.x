@@ -31,7 +31,7 @@ const NopHandler
      * Deriving a no-op handler is still no-op.
      */
     @Override
-    Handler withAttrs(Attributes attrs) = this;
+    Handler withAttributes(Attributes attributes) = this;
 
     /**
      * Grouping a no-op handler is still no-op.

@@ -20,8 +20,8 @@ class LoggerContextTest {
         }
 
         assert handler.records.size == 1;
-        assert handler.records[0].attrs.contains("requestId");
-        assert handler.records[0].attrs["requestId"] == "r_1";
+        assert handler.records[0].attributes.contains("requestId");
+        assert handler.records[0].attributes["requestId"] == "r_1";
         assert !context.current();
     }
 

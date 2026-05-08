@@ -10,7 +10,7 @@ class HandlerContractTest {
     void shouldValidateMemoryHandlerDerivations() {
         MemoryHandler handler = new MemoryHandler();
 
-        HandlerContract.assertWithAttrsPrepend(handler, () -> handler.records);
+        HandlerContract.assertWithAttributesPrepend(handler, () -> handler.records);
 
         handler.reset();
 
