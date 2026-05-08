@@ -36,7 +36,7 @@ module TestSLogging {
      * works because the injector also keys by requested type.
      */
     void runInjectedLogger() {
-        console.print("--- injected slog Logger: levels, attrs, lazy messages ---");
+        console.print("--- injected slog Logger: levels, attributes, lazy messages ---");
 
         @Inject Logger logger;
         assert logger.infoEnabled;
@@ -70,26 +70,26 @@ module TestSLogging {
     }
 
     /**
-     * The central slog idea: derive loggers with attrs/groups instead of named logger
+     * The central slog idea: derive loggers with attributes/groups instead of named logger
      * categories and MDC.
      */
     void runDerivedLoggersAttrs() {
         console.print("--- derived loggers and groups ---");
 
         MemoryHandler capture = new MemoryHandler();
-        Logger        root    = new Logger(capture);
+        Logger        root    = new Logger(handler=capture);
 
         Logger payments = root.with(["requestId"="r_slog"]).withGroup("payments");
 
-        Attributes attrs = Map:["card"=["last4"="4242"], "amount"=1099];
-        payments.info("charged", attrs);
+        Attributes attributes = Map:["card"=["last4"="4242"], "amount"=1099];
+        payments.info("charged", attributes);
 
         assert capture.records.size == 1;
 
         Record record = capture.records[0];
         assert record.message == "charged";
-        assert record.attrs["requestId"] == "r_slog";
-        assert var paymentAttrs := record.attrs.get("payments");
+        assert record.attributes["requestId"] == "r_slog";
+        assert var paymentAttrs := record.attributes.get("payments");
         assert paymentAttrs.is(Attributes);
         assert paymentAttrs["amount"] == 1099;
         assert var cardAttrs := paymentAttrs.get("card");
@@ -140,7 +140,7 @@ module TestSLogging {
         }
 
         assert capture.records.size == 1;
-        assert var value := capture.records[0].attrs.get("context");
+        assert var value := capture.records[0].attributes.get("context");
         assert value.is(String) && value == "bound";
     }
 
