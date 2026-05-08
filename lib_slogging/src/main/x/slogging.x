@@ -90,13 +90,8 @@ module slogging.xtclang.org {
      * Using array and map values may carry a higher performance overhead compared to primitive
      * values.
      */
-    typedef PrimitiveValue | AnyValue[] | Map<String, AnyValue> as AnyValue;
-
-    /**
-     * The various primitive values allowed in an AnyValue.
-     */
     typedef Nullable | Boolean | String | Int | IntLiteral | Float | FPLiteral | Byte[]
-            as PrimitiveValue;
+            | AnyValue[] | Map<String, AnyValue> as AnyValue;
 
     /**
      * A map of attribute key-value pairs carried by resources, scopes, and data points.

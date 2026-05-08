@@ -18,8 +18,8 @@ class LevelTest {
     @Test
     void shouldSupportCustomLevels() {
         // The canonical levels are spaced four apart precisely so callers can interject.
-        Level notice   = new Level(2, "NOTICE");
-        Level critical = new Level(12, "CRITICAL");
+        Level notice   = new Level(10, "NOTICE");
+        Level critical = new Level(18, "CRITICAL");
 
         assert notice.severity   > Level.Info.severity;
         assert notice.severity   < Level.Warn.severity;

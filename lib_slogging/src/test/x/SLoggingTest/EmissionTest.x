@@ -53,7 +53,7 @@ class EmissionTest {
     void shouldRouteCustomLevelThroughLog() {
         ListHandler handler = new ListHandler();
         Logger      logger  = new Logger(handler);
-        Level       notice  = new Level(2, "NOTICE");
+        Level       notice  = new Level(10, "NOTICE");
 
         logger.log(notice, "user signed in");
 
