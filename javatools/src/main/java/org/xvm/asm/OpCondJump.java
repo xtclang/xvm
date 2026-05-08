@@ -415,7 +415,7 @@ public abstract class OpCondJump
             }
             if (type2.isNullable()) {
                 type2 = type2.removeNullable();
-                reg1  = bctx.narrowRegister(code, reg2, getAddress(), type2);
+                reg2  = bctx.narrowRegister(code, reg2, getAddress(), type2);
             }
             typeCmp = typeCmp.removeNullable();
         }
