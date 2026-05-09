@@ -875,7 +875,7 @@ public class BuildContext {
                     it.remove();
                 }
                 if (entry.getValue() instanceof Narrowed narrowedReg &&
-                        narrowedReg.scopeDepth() >= scope.depth) {
+                        narrowedReg.scopeDepth() > scope.depth) {
                     // copy the data and reset the register type
                     // TODO: track the data change to prevent unnecessary copy
                     RegisterInfo origReg = narrowedReg.origReg();
@@ -2056,7 +2056,11 @@ public class BuildContext {
             return origReg;
         }
 
-        if (fromAddr > currOpAddr + 1 && !canApplyNarrowing(fromAddr)) {
+        // we can apply the narrowing type in two scenarios:
+        //  - the specified address is the next op
+        //  - the specified address points to a start of a new scope
+        boolean isNewScope = isScopeEnter(fromAddr);
+        if (fromAddr > currOpAddr + 1 && !isNewScope) {
             // there is nothing to apply the narrowing to
             return origReg;
         }
@@ -2090,9 +2094,10 @@ public class BuildContext {
                 narrowedSlotCds = new ClassDesc[] {narrowedCD};
             }
 
+            int scopeDepth = isNewScope ? scope.depth + 1 : scope.depth;
             narrowedReg = new Narrowed(origReg.regId(), narrowedSlots, narrowingType,
                 narrowedFlavor, narrowedCD, narrowedSlotCds, origReg.name(),
-                scope.depth, false, origReg);
+                scopeDepth, false, origReg);
         }
 
         boolean applyInfo = fromAddr > currOpAddr;
@@ -2967,9 +2972,9 @@ public class BuildContext {
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
-     * @return true iff the narrowing type can be applied at the specified address
+     * @return true iff the specified address starts a new scope
      */
-    private boolean canApplyNarrowing(int addr) {
+    private boolean isScopeEnter(int addr) {
         Op[] ops     = methodStruct.getOps();
         Op   startOp = ops[addr].ensureOp();
 

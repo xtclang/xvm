@@ -6812,35 +6812,18 @@ public abstract class TypeConstant
                      Op.OP_IS_GTE, Op.OP_JMP_GTE,
                      Op.OP_IS_LT,  Op.OP_JMP_LT,
                      Op.OP_IS_LTE, Op.OP_JMP_LTE:
-                    // int compare(Ctx, primitives1..., primitives2...)
-                    code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
-                    code.iconst_0();
+                // int compare(Ctx, primitives1..., primitives2...)
+                code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
+                code.iconst_0();
 
-                    switch (nOp) {
-                        case Op.OP_IS_GT, Op.OP_JMP_GT:
-                            // > 0
-                            code.if_icmpge(lblTrue);
-                            break;
-
-                        case Op.OP_IS_GTE, Op.OP_JMP_GTE:
-                            // >= 0
-                            code.if_icmpge(lblTrue);
-                            break;
-
-                        case Op.OP_IS_LT,  Op.OP_JMP_LT:
-                            // < 0
-                            code.if_icmplt(lblTrue);
-                            break;
-
-                        case Op.OP_IS_LTE, Op.OP_JMP_LTE:
-                            // <= 0
-                            code.if_icmple(lblTrue);
-                            break;
-
-                        default:
-                            throw new IllegalStateException();
-                    }
-                    break;
+                switch (nOp) {
+                    case Op.OP_IS_GT,  Op.OP_JMP_GT  -> code.if_icmpge(lblTrue); // > 0
+                    case Op.OP_IS_GTE, Op.OP_JMP_GTE -> code.if_icmpge(lblTrue); // >= 0
+                    case Op.OP_IS_LT,  Op.OP_JMP_LT  -> code.if_icmplt(lblTrue); // < 0
+                    case Op.OP_IS_LTE, Op.OP_JMP_LTE -> code.if_icmple(lblTrue); // <= 0
+                    default -> throw new IllegalStateException();
+                }
+                break;
             }
         } else {
             // type is a non-primitive
@@ -6912,19 +6895,12 @@ public abstract class TypeConstant
                     code.invokestatic(cd, sJitName, md);
                 }
 
-                if (fLocalTrue) {
-                    if (nOp == Op.OP_IS_NEQ) {
-                        code.iconst_1()
-                            .ixor();
-                    }
-                } else {
-                    if (nOp == Op.OP_IS_EQ) {
-                        code.ifne(lblTrue);
-                    } else {
-                        code.ifeq(lblTrue);
-                    }
+                switch (nOp) {
+                    case Op.OP_IS_EQ,  Op.OP_JMP_EQ  -> code.ifne(lblTrue);
+                    case Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> code.ifeq(lblTrue);
+                    default -> throw new IllegalStateException();
                 }
-                return;
+                break;
 
             case Op.OP_CMP,
                  Op.OP_IS_GT,  Op.OP_JMP_GT,
