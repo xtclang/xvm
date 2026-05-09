@@ -10,6 +10,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.NumberSupport;
 import org.xvm.javajit.RegisterInfo;
@@ -58,19 +59,15 @@ public class GP_Mod
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx,
-                                        CodeBuilder  code,
-                                        RegisterInfo regTarget,
-                                        RegisterInfo regArg) {
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, 
+                                        RegisterInfo regTarget, RegisterInfo regArg) {
         buildPrimitiveMod(bctx, code, regTarget);
     }
 
     @Override
-    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
-                                                   CodeBuilder  code,
-                                                   RegisterInfo regTarget,
-                                                   int          nArgValue) {
+    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder code,
+                                                   RegisterInfo regTarget, int nArgValue) {
         buildXvmPrimitiveMod(bctx, code, regTarget, nArgValue);
-        return regTarget;
+        return regTarget.type();
     }
 }

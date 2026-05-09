@@ -282,9 +282,9 @@ public abstract class OpIndex
                 default          -> throw new UnsupportedOperationException(toName(getOpCode()));
             }
 
-            TypeConstant  typeIndex = bctx.getArgumentType(m_nIndex);
-            MethodInfo    method;
-            boolean       fSet = getOpCode() == OP_I_SET;
+            TypeConstant typeIndex = bctx.getArgumentType(m_nIndex);
+            MethodInfo   method;
+            boolean      fSet = getOpCode() == OP_I_SET;
             if (fSet) {
                 Set<MethodConstant> set = infoTarget.findOpMethods(sName, sOp, 2);
                 if (set.size() != 1) {
@@ -316,9 +316,11 @@ public abstract class OpIndex
             }
 
             if (!fSet && typeEl.isXvmPrimitive()) {
-                // XVM primitive types are returned partially on the stack and partially in the Ctx
-                // TODO JK: how to do it more generically?
-                Builder.loadFromContext(code, CD_long, 0);
+                // XVM primitive types may return partially on the stack and partially in the Ctx
+                ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(typeEl);
+                for (int i = 1; i < cds.length; i++) {
+                    Builder.loadFromContext(code, cds[i], i-1);
+                }
             }
         }
 

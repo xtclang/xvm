@@ -8,13 +8,19 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import java.util.Set;
+
+import java.util.function.Consumer;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo.MethodKind;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
@@ -24,6 +30,7 @@ import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nRangeInt64;
 import static org.xvm.javajit.Builder.CD_nRangeInt8;
 
@@ -68,29 +75,27 @@ public abstract class OpRange
             switch (cdTarget.descriptorString()) {
             case "J": {
                 ClassDesc cdRange = CD_nRangeInt64;
-                code.new_(cdRange)
-                    .dup();
                 bctx.loadCtx(code);
+                bctx.loadTypeConstant(code, typeTarget);
                 regTarget.load(code);
                 regArg.load(code);
                 addRangeAttributes(code);
 
-                code.invokespecial(cdRange, INIT_NAME,
-                        MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_long, CD_boolean, CD_boolean));
+                code.invokestatic(cdRange, "$new$p", MethodTypeDesc.of(cdRange, CD_Ctx, CD_TypeConstant,
+                    CD_long, CD_long, CD_boolean, CD_boolean, CD_boolean, CD_boolean));
                 break;
             }
 
             case "I": {
                 ClassDesc cdRange = CD_nRangeInt8;
-                code.new_(cdRange)
-                    .dup();
                 bctx.loadCtx(code);
+                bctx.loadTypeConstant(code, typeTarget);
                 regTarget.load(code);
                 regArg.load(code);
                 addRangeAttributes(code);
 
-                code.invokespecial(cdRange, INIT_NAME,
-                        MethodTypeDesc.of(CD_void, CD_Ctx, CD_int, CD_int, CD_boolean, CD_boolean));
+                code.invokestatic(cdRange, "$new$p", MethodTypeDesc.of(cdRange, CD_Ctx, CD_TypeConstant,
+                    CD_int, CD_int, CD_boolean, CD_boolean, CD_boolean, CD_boolean));
                 break;
             }
 
@@ -109,11 +114,36 @@ public abstract class OpRange
 
     protected void addRangeAttributes(CodeBuilder code) {
         switch (getOpCode()) {
-            case OP_GP_IRANGEI -> code.iconst_1().iconst_1();
-            case OP_GP_ERANGEI -> code.iconst_0().iconst_1();
-            case OP_GP_IRANGEE -> code.iconst_1().iconst_0();
-            case OP_GP_ERANGEE -> code.iconst_0().iconst_0();
+            case OP_GP_IRANGEI -> code.iconst_1().iconst_0().iconst_1().iconst_0();
+            case OP_GP_ERANGEI -> code.iconst_0().iconst_0().iconst_1().iconst_0();
+            case OP_GP_IRANGEE -> code.iconst_1().iconst_0().iconst_0().iconst_0();
+            case OP_GP_ERANGEE -> code.iconst_0().iconst_0().iconst_0().iconst_0();
             default            -> throw new IllegalStateException();
         }
+    }
+
+    @Override
+    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder  code,
+                                                   RegisterInfo regTarget, int nArgValue) {
+        TypeConstant typeEl = regTarget.type();
+        assert typeEl.equals(bctx.getArgumentType(nArgValue));
+
+        TypeConstant        typeRange = bctx.pool().ensureRangeType(regTarget.type());
+        Set<MethodConstant> setCtors  = typeRange.ensureTypeInfo().
+                    findMethods("construct", 4, MethodKind.Constructor);
+        assert setCtors.size() == 1;
+
+        MethodConstant idCtor = setCtors.iterator().next();
+        assert typeRange.ensureTypeInfo().getMethodById(idCtor) != null;
+
+        Consumer<JitMethodDesc> argsLoader = anArg -> {
+            regTarget.load(code);
+            bctx.loadArgument(code, nArgValue);
+            addRangeAttributes(code);
+            code.iconst_0();
+        };
+
+        bctx.buildNew(code, typeRange, idCtor, argsLoader);
+        return typeRange;
     }
 }

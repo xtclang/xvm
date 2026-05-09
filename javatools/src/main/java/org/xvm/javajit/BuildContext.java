@@ -19,6 +19,8 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
+import java.util.function.Consumer;
+
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -44,6 +46,7 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RegisterConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -1011,10 +1014,18 @@ public class BuildContext {
                 type = constant.getType();
 
                 if (constant instanceof PropertyConstant propId) {
-                    PropertyInfo propInfo = typeInfo.findProperty(propId);
-                    if (propInfo != null) {
-                        type = propInfo.inferImmutable(thisType);
+                    PropertyInfo prop = typeInfo.findProperty(propId);
+                    if (prop != null) {
+                        type = prop.inferImmutable(thisType);
                     }
+                }
+                if (isSpecialized &&
+                        constant instanceof MethodConstant methodId && methodId.isLambda()) {
+                    MethodStructure   lambda = (MethodStructure) methodId.getComponent();
+                    SignatureConstant sig    = lambda.resolveSignature(pool(), thisType);
+                    type = lambda.isFunction()
+                            ? sig.asFunctionType()
+                            : sig.asMethodType(pool(), thisType);
                 }
 
                 // if the type is an enum value, widen it to its parent Enumeration
@@ -2548,11 +2559,30 @@ public class BuildContext {
 
     /**
      * Call the "new$" [static] method.
+     *
+     * @param argIds  the ids for the argument values
      */
     public ClassDesc buildNew(CodeBuilder code, TypeConstant typeTarget,
-                              MethodConstant idCtor, int[] anArgValue) {
-        TypeInfo   infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+                              MethodConstant idCtor, int[] argIds) {
+        return buildNew(code, typeTarget, idCtor, jmdNew ->
+            loadCallArguments(code, jmdNew, argIds, typeTarget));
+    }
+
+    /**
+     * Call the "new$" [static] method.
+     *
+     * @param argsLoader  the function (consumer) that is responsible for loading the arguments
+     *                    on the Java stack
+     */
+    public ClassDesc buildNew(CodeBuilder code, TypeConstant typeTarget,
+                              MethodConstant idCtor, Consumer<JitMethodDesc> argsLoader) {
+        TypeInfo   infoTarget = typeTarget.ensureTypeInfo();
         MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
+
+        if (infoCtor == null) {
+            infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+            infoCtor   = infoTarget.getMethodById(idCtor);
+        }
 
         if (infoCtor == null) {
             throw new RuntimeException("Unresolvable constructor \"" +
@@ -2578,7 +2608,7 @@ public class BuildContext {
         if (infoTarget.hasGenericTypes()) {
             loadTypeConstant(code, typeTarget);
         }
-        loadCallArguments(code, jmdNew, anArgValue, typeTarget);
+        argsLoader.accept(jmdNew);
 
         code.invokestatic(cdTarget, sJitNew, md);
         return cdTarget;
@@ -3149,7 +3179,7 @@ public class BuildContext {
 
         // type parameter's type must be of Type<DataType, OuterType>
         assert typeType.isTypeOfType() && typeType.getParamsCount() >= 1;
-        TypeConstant typeParam = typeType.getParamType(0);
+        TypeConstant typeParam = typeType.getParamType(0).resolveGenerics(pool(), thisType);
         return typeParam.isAutoNarrowing()
                 ? typeParam.resolveAutoNarrowing(pool(), false, jitType, null)
                 : typeParam;

@@ -117,8 +117,7 @@ public abstract class OpIndexInPlace
         if (typeEl.isJavaPrimitive()) {
             buildOptimizedBinary(bctx, code, regElement, m_nValue);
         } else if (typeEl.isXvmPrimitive()) {
-            RegisterInfo regResult = buildXvmOptimizedBinary(bctx, code, regElement, m_nValue);
-            regResult.type();
+            buildXvmOptimizedBinary(bctx, code, regElement, m_nValue);
         }
 
         regElement.store(bctx, code, typeEl);

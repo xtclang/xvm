@@ -84,19 +84,15 @@ public class IP_Sub
     }
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx,
-                                        CodeBuilder  code,
-                                        RegisterInfo regTarget,
-                                        RegisterInfo regArg) {
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, 
+                                        RegisterInfo regTarget, RegisterInfo regArg) {
         buildPrimitiveSub(bctx, code, regTarget);
     }
 
     @Override
-    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
-                                                   CodeBuilder  code,
-                                                   RegisterInfo regTarget,
-                                                   int          nArgValue) {
+    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder code,
+                                                   RegisterInfo regTarget, int nArgValue) {
         buildXvmPrimitiveSub(bctx, code, regTarget, nArgValue);
-        return regTarget;
+        return regTarget.type();
     }
 }
