@@ -376,10 +376,19 @@ public class ReturnStatement
 
                 default:
                     if (cArgs > 1) {
-                        Label labelFalse = fCheck ? new Label("false") : null;
+                        Label labelFalse = null;
 
                         if (fCheck) {
-                            code.add(new JumpFalse(aArgs[0], labelFalse));
+                            Argument argRet = aArgs[0];
+                            if (argRet.equals(pool.valFalse())) {
+                                code.add(new Return_1(pool.valFalse()));
+                                break;
+                            } else if (argRet.equals(pool.valTrue())) {
+                                fCheck = false;
+                            } else {
+                                labelFalse = new Label("false");
+                                code.add(new JumpFalse(argRet, labelFalse));
+                            }
                         }
 
                         if (cArgs == cRets) {
