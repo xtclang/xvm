@@ -6,7 +6,7 @@ plugins {
 }
 
 node {
-    version.set(libs.versions.langNode)
+    version.set(libs.versions.lang.node.asProvider())
     download.set(true)
 }
 
@@ -69,9 +69,17 @@ val copyDapServer by tasks.registering(Copy::class) {
     rename { "dap-server.jar" }
 }
 
+// Copy LICENSE from repository root
+val copyLicense by tasks.registering(Copy::class) {
+    description = "Copy LICENSE from repository root"
+    from(layout.projectDirectory.file("../../LICENSE.md"))
+    into(layout.projectDirectory)
+    rename { "LICENSE.md" }
+}
+
 // Configure the plugin-provided npmInstall task (runs `npm install` using the pinned Node)
 val npmInstall by tasks.existing {
-    mustRunAfter(copyLanguageConfig, copyTextMateGrammar, copyIcon)
+    mustRunAfter(copyLanguageConfig, copyTextMateGrammar, copyIcon, copyLicense)
 }
 
 // Compile TypeScript
@@ -88,7 +96,7 @@ val npmCompile by tasks.registering(NpmTask::class) {
 // Package the extension
 val packageExtension by tasks.registering(NpmTask::class) {
     description = "Package VS Code extension"
-    dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyIcon, copyLspServer, copyDapServer)
+    dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyIcon, copyLspServer, copyDapServer, copyLicense)
     args.set(listOf("run", "package"))
 
     outputs.file(layout.projectDirectory.file("xtc-language-${project.version}.vsix"))
@@ -101,7 +109,7 @@ val build by tasks.existing {
 
 // Assemble prepares all resources without packaging
 val assemble by tasks.existing {
-    dependsOn(copyTextMateGrammar, copyLanguageConfig, copyIcon, copyLspServer, copyDapServer, npmCompile)
+    dependsOn(copyTextMateGrammar, copyLanguageConfig, copyIcon, copyLspServer, copyDapServer, copyLicense, npmCompile)
 }
 
 // Launch VS Code with extension loaded for testing
