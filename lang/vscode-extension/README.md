@@ -1,52 +1,280 @@
 # Ecstasy Language Support for VS Code
 
-Visual Studio Code extension for Ecstasy language support.
+Visual Studio Code extension for the [Ecstasy](https://xtclang.org) (XTC) programming language.
 
 ## Features
 
-- **Syntax highlighting** for `.x` files (via TextMate grammar)
-- **Language features via LSP** - hover, completion, go-to-definition, find references, outline
-  (see [LSP Server README](../lsp-server/README.md) for adapter details)
-- **Create Project** command to scaffold new XTC projects
+- **Syntax highlighting** for `.x` files via TextMate grammar, with semantic token layering for richer colours (types, methods, properties, annotations, modifiers)
+- **Language Server Protocol (LSP)** — hover, code completion, go-to-definition, find references, document outline, and inlay hints
+- **Debugger (DAP)** — launch and step-debug XTC modules via the Debug Adapter Protocol
+- **Tasks** — built-in Build, Test, Clean, and Run tasks for Gradle-based XTC projects
+- **Scaffolding** — "XTC: Create New Project" command to initialise new projects
+- **Code snippets** for common XTC constructs
+- **Automatic Java discovery** — finds or downloads a suitable Java 25+ JRE with no manual setup
 
 ## Requirements
 
-- VS Code 1.75.0 or later
-- Java 25+ (for the LSP server's tree-sitter adapter)
-- XDK installed with `xtc` command in PATH (for project creation)
+| Requirement | Version |
+|---|---|
+| VS Code | 1.96.0 or later |
+| Java | 25+ (auto-downloaded from Adoptium if not found) |
+| XDK / `xtc` CLI | Required only for the **Create Project** command |
 
 ## Installation
 
-### From VSIX (Development/Alpha Builds)
+### From VSIX
 
-1. Download the `.vsix` file from releases
-2. In VS Code: Extensions → `...` menu → "Install from VSIX..."
-3. Select the downloaded file
+1. Download `xtc-language-<version>.vsix` from the [releases page](https://github.com/xtclang/xvm/releases) or build it from source (see below).
+2. In VS Code: open the Extensions view → `···` menu → **Install from VSIX…**
+3. Select the downloaded file and reload when prompted.
 
 ### Building from Source
 
-> **Note:** All `./gradlew :lang:*` commands require `-PincludeBuildLang=true -PincludeBuildAttachLang=true` when run from the project root.
+> **Note:** All `./gradlew :lang:*` tasks require `-PincludeBuildLang=true -PincludeBuildAttachLang=true` when run from the repository root.
 
 ```bash
-# From the repository root
-./gradlew :lang:vscode-extension:build
+# Build the extension and produce the .vsix
+./gradlew :lang:vscode-extension:build \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true
 ```
 
-The extension will be packaged as `lang/vscode-extension/xtc-language-<version>.vsix`
+The packaged extension is written to `lang/vscode-extension/xtc-language-<version>.vsix`.
+
+## Getting Started
+
+### 1. Open a `.x` File
+
+Syntax highlighting activates automatically as soon as you open any file with the `.x` extension. No extra configuration is needed.
+
+### 2. Language Server
+
+The LSP server starts automatically in the background. Watch the status bar — bottom-right of the VS Code window:
+
+| Icon | Meaning |
+|---|---|
+| `⟳ XTC` (spinning) | Server is starting |
+| `✓ XTC` | Server is ready |
+| `⚠ XTC` | Server encountered an error — click to restart |
+| `✗ XTC` (red) | Server stopped — click to restart |
+
+Click any status bar item to open the **XTC Language Server** output panel for logs.
+
+If the `lsp-server.jar` is missing (i.e. you haven't built the extension yet), VS Code will show an error notification with a button to display the required build command.
+
+### 3. Java Discovery
+
+The extension locates a Java 25+ runtime in the following order:
+
+1. `xtc.java.home` VS Code setting (explicit override)
+2. System discovery via `jdk-utils` (checks `JAVA_HOME`, `PATH`, SDKMAN, mise, asdf, jEnv, Homebrew, Gradle cache, etc.)
+3. A previously downloaded JRE cached in the extension's global storage
+4. Automatic download from [Eclipse Adoptium](https://adoptium.net) into global storage
+
+For option 4 a progress notification appears during the download. The JRE is cached after the first download, so subsequent starts are instant.
 
 ## Usage
 
 ### Syntax Highlighting
 
-Open any `.x` file - syntax highlighting is automatic.
+Opens automatically for any `.x` file. Semantic tokens overlay the TextMate grammar once the language server is running, providing richer colour for types, methods, properties, annotations, and modifiers such as `static`, `@RO`, and `abstract`.
 
-### Creating a New Project
+### LSP Features
 
-1. Open Command Palette (Cmd+Shift+P / Ctrl+Shift+P)
-2. Run "XTC: Create New Project"
-3. Enter project name (letters, digits, underscores only)
-4. Select project type (Application, Library, Service)
-5. Choose parent folder
+Once the server status bar item shows `✓ XTC`, all LSP features are active:
+
+| Feature | How to trigger |
+|---|---|
+| **Hover** | Move the cursor over any symbol |
+| **Completion** | Type normally, or press `Ctrl+Space` to force suggestions |
+| **Go to Definition** | `F12` or `Ctrl+Click` |
+| **Find References** | `Shift+F12` |
+| **Document Outline** | **View → Outline** |
+| **Inlay Hints** | Shown inline automatically (toggle with `xtc.inlayHints.enabled`) |
+
+### Debugging
+
+1. Open a `.x` file containing an XTC module.
+2. Press `F5` (or go to **Run → Start Debugging**).
+3. VS Code detects the module name automatically and launches the DAP debug session.
+
+To customise the debug launch, add a configuration to `.vscode/launch.json`:
+
+```jsonc
+{
+    "type": "xtc",
+    "request": "launch",
+    "name": "Debug MyApp",
+    "module": "MyApp",
+    "method": "run",          // optional, defaults to "run"
+    "args": "arg1,arg2",      // optional, comma-separated
+    "cwd": "${workspaceFolder}"
+}
+```
+
+The DAP server requires `dap-server.jar` (produced by the build). If it is missing, VS Code shows an error notification.
+
+### Tasks
+
+The extension provides an **xtc** task type. For any workspace folder that contains a `build.gradle.kts`, the following tasks appear automatically in **Terminal → Run Task…**:
+
+| Task | Description |
+|---|---|
+| **Build** | Runs `./gradlew build` |
+| **Test** | Runs `./gradlew test` |
+| **Clean** | Runs `./gradlew clean` |
+
+You can also define custom run tasks in `.vscode/tasks.json`:
+
+```jsonc
+{
+    "type": "xtc",
+    "label": "Run MyApp",
+    "moduleName": "MyApp",
+    "methodName": "run",        // optional
+    "moduleArguments": "a,b",   // optional, comma-separated
+    "useGradle": true,          // true = ./gradlew runXtc, false = xtc run
+    "quietMode": true           // adds -q to the Gradle invocation
+}
+```
+
+### Commands
+
+Open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and search for **XTC**:
+
+| Command | Description |
+|---|---|
+| `XTC: Create New Project` | Scaffold a new XTC project in a chosen directory |
+| `XTC: Run Module` | Run a named XTC module via Gradle |
+| `XTC: Restart Language Server` | Stop and restart the LSP server |
+| `XTC: Show Language Server Output` | Open the LSP output panel |
+
+#### Creating a New Project
+
+1. Run **XTC: Create New Project** from the Command Palette.
+2. Enter a project name (must start with a letter or underscore; only letters, digits, and underscores are allowed).
+3. Select a project type: **Application**, **Library**, or **Service**.
+4. Choose a parent directory in the file picker.
+
+The command opens an integrated terminal and runs:
+```
+xtc init "<name>" --type <type> --dir "<parent>"
+```
+
+### Snippets
+
+Type a prefix in any `.x` file to insert a snippet:
+
+| Prefix | Inserts |
+|---|---|
+| `mod` | `module` declaration |
+| `cls` | `class` declaration |
+| `iface` | `interface` declaration |
+| `svc` | `service` declaration |
+| `mix` | `mixin` declaration |
+| `enu` | `enum` declaration |
+| `con` | `const` declaration |
+| `pkg` | `package` import |
+| `meth` | Method declaration |
+| `run` | `void run()` with `@Inject Console` |
+| `runa` | `void run(String[] args)` with `@Inject Console` |
+| `prop` | Property declaration |
+| `roprop` | Read-only computed property |
+| `construct` | Constructor |
+| `if` | `if` statement |
+| `ife` | `if-else` statement |
+
+## Settings
+
+All settings are under the `xtc` namespace in **Settings** (`Cmd+,` / `Ctrl+,`):
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `xtc.java.home` | string | `""` | Path to a Java 25+ installation directory. Overrides all automatic discovery. |
+| `xtc.trace.server` | enum | `"off"` | LSP wire-level tracing: `off`, `messages`, or `verbose`. |
+| `xtc.inlayHints.enabled` | boolean | `true` | Show inlay hints from the language server. |
+| `xtc.sourceRoots` | string[] | `[]` | Extra directories the language server indexes for `.x` files (e.g. XDK library sources). Accepts absolute paths. |
+| `xtc.formatting.indentSize` | integer | `4` | Spaces per indentation level. |
+| `xtc.formatting.continuationIndentSize` | integer | `8` | Spaces for continuation lines. |
+| `xtc.formatting.tabSize` | integer | `4` | Tab width in spaces. |
+| `xtc.formatting.insertSpaces` | boolean | `true` | Insert spaces instead of tabs. |
+| `xtc.formatting.maxLineWidth` | integer | `120` | Right-margin column. |
+
+### Changing Java Home
+
+Set `xtc.java.home` to the root of a Java 25+ installation (the directory that contains `bin/java`):
+
+```jsonc
+// .vscode/settings.json
+{
+    "xtc.java.home": "/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home"
+}
+```
+
+After changing this setting VS Code will prompt you to restart the language server.
+
+### Adding XDK Library Sources
+
+To get completions and hover information for the standard library, point `xtc.sourceRoots` at the `lib_ecstasy/src` directory of your XDK checkout:
+
+```jsonc
+{
+    "xtc.sourceRoots": [
+        "/path/to/xvm/lib_ecstasy/src/main/x"
+    ]
+}
+```
+
+After saving, VS Code will prompt you to restart the language server.
+
+## Troubleshooting
+
+| Symptom | Action |
+|---|---|
+| Status bar shows `⚠ XTC` or `✗ XTC` | Click the item to restart; check the **XTC Language Server** output panel for errors |
+| "JAR not found" error on startup | Build the extension: `./gradlew :lang:vscode-extension:assemble -PincludeBuildLang=true -PincludeBuildAttachLang=true` |
+| No completions or hover | Confirm the status bar shows `✓ XTC`; enable `xtc.trace.server: "verbose"` and check the output panel |
+| Wrong Java version | Set `xtc.java.home` to a Java 25+ installation |
+| `xtc init` not found on Create Project | Install the XDK and ensure `xtc` is on your `PATH` |
+
+## Development
+
+### Project Structure
+
+```text
+vscode-extension/
+├── package.json                    # Extension manifest and configuration schema
+├── tsconfig.json                   # TypeScript configuration
+├── src/
+│   ├── extension.ts                # Activation / deactivation entry point
+│   ├── commands.ts                 # Command registrations (createProject, runModule, …)
+│   ├── debug-adapter.ts            # DAP descriptor factory and launch config provider
+│   ├── java.ts                     # Java 25+ discovery and JVM argument construction
+│   ├── lsp-client.ts               # LSP client lifecycle, crash recovery, and wiring
+│   ├── status-bar.ts               # Status bar state management
+│   └── task-provider.ts            # Build / Test / Clean / Run task provider
+├── syntaxes/
+│   └── xtc.tmLanguage.json         # TextMate grammar (copied from tree-sitter build)
+├── language-configuration.json     # Bracket matching, comment toggles, etc.
+├── snippets/
+│   └── xtc.json                    # Code snippets
+├── server/
+│   ├── lsp-server.jar              # LSP server (copied from lang:lsp-server build)
+│   └── dap-server.jar              # DAP server (copied from lang:dap-server build)
+└── icons/
+    └── xtc.svg                     # File icon
+```
+
+### Building
+
+```bash
+# Build the VS Code extension only
+./gradlew :lang:vscode-extension:build \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true
+
+# Build all lang projects
+./gradlew :lang:build \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true
+```
 
 ### LSP Features
 

@@ -2,7 +2,7 @@ import com.github.gradle.node.npm.task.NpmTask
 
 plugins {
     base
-    alias(libs.plugins.langNodeGradle)
+    alias(libs.plugins.lang.node.gradle)
 }
 
 node {
