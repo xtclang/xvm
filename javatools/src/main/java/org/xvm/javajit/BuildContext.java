@@ -2834,9 +2834,6 @@ public class BuildContext {
 
                 default:
                     Builder.loadFromContext(code, cdRet, pdRet.altIndex);
-                    if (!cdRet.isPrimitive()) {
-                        code.checkcast(cdRet);
-                    }
                     break;
                 }
             }

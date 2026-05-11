@@ -43,7 +43,6 @@ import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Object;
-import static org.xvm.javajit.Builder.loadFromContext;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -474,7 +473,7 @@ public abstract class OpIndex
         if (onStack) {
             // load any remaining values from the context to the stack
             for (int i = 1 ; i < cds.length; i++) {
-                loadFromContext(code, cds[i], i - 1);
+                Builder.loadFromContext(code, cds[i], i - 1);
             }
         } else {
             if (typeEl.isXvmPrimitive()) {
@@ -484,7 +483,7 @@ public abstract class OpIndex
 
                 slots[0] = bctx.storeTempValue(code, cds[0]);
                 for (int i = 1 ; i < cds.length; i++) {
-                    loadFromContext(code, cds[i], i - 1);
+                    Builder.loadFromContext(code, cds[i], i - 1);
                     slots[i] = bctx.storeTempValue(code, cds[i]);
                 }
                 regElement = new MultiSlot(bctx, 0, slots, JitFlavor.XvmPrimitive, typeEl,

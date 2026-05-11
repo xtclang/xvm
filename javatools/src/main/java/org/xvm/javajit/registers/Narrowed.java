@@ -43,7 +43,7 @@ public record Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flav
 
     @Override
     public boolean isSingle() {
-        return true;
+        return slots.length == 1;
     }
 
     @Override
