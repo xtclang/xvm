@@ -72,9 +72,9 @@ val copyDapServer by tasks.registering(Copy::class) {
 // Copy LICENSE from repository root
 val copyLicense by tasks.registering(Copy::class) {
     description = "Copy LICENSE from repository root"
-    from(layout.projectDirectory.file("../../LICENSE.md"))
+    val compositeRoot = XdkPropertiesService.compositeRootDirectory(projectDir)
+    from(File(compositeRoot, "LICENSE.md"))
     into(layout.projectDirectory)
-    rename { "LICENSE.md" }
 }
 
 // Configure the plugin-provided npmInstall task (runs `npm install` using the pinned Node)
