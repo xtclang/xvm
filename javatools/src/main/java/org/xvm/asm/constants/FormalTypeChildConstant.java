@@ -4,6 +4,8 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.util.Collections;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 
@@ -102,7 +104,7 @@ public class FormalTypeChildConstant
             }
 
             TypeConstant type = typeConstraint.getSingleUnderlyingClass(true).getFormalType().
-                                    resolveFormalType(this);
+                                    getGenericParamType(sName, Collections.emptyList());
             assert type.isGenericType();
 
             PropertyConstant idProp = (PropertyConstant) type.getDefiningConstant();
