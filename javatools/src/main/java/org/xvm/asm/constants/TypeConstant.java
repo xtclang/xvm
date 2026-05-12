@@ -2302,8 +2302,8 @@ public abstract class TypeConstant
      * @param typeExtends the type (may be null) that the mixin extends
      * @param errs        the error list to log to
      *
-     * @return the set of identities represented that the mixin must use from its "into" (and not
-     *     from any other contributions)
+     * @return the set of identities that the mixin must use from its "into" (and not from any other
+     *         contributions)
      */
     private Set<IdentityConstant> analyzeMixin(
             IdentityConstant   idThis,
@@ -2384,10 +2384,20 @@ public abstract class TypeConstant
             Set<IdentityConstant> setVisited,
             Set<IdentityConstant> setOmit,
             ErrorListener         errs) {
-        if (!isSingleUnderlyingClass(true)) {
+        IdentityConstant idThis;
+        if (isSingleUnderlyingClass(true)) {
+            idThis = getSingleUnderlyingClass(true);
+        } else if (isSingleDefiningConstant()) {
+            switch (getDefiningConstant().getFormat()) {
+            case IsConst   -> idThis = getConstantPool().clzConst();
+            case IsEnum    -> idThis = getConstantPool().clzEnum();
+            case IsModule  -> idThis = getConstantPool().clzModule();
+            case IsPackage -> idThis = getConstantPool().clzModule();
+            default        -> { return; }
+            }
+        } else {
             return;
         }
-        IdentityConstant idThis = getSingleUnderlyingClass(true);
         if (setVisited.contains(idThis) || setOmit != null && setOmit.contains(idThis)) {
             return;
         }
@@ -4382,44 +4392,23 @@ public abstract class TypeConstant
                                     "TODO: handle nidContrib=" + nidContrib + " vs. abandoned nidBase=" + nidBase + ')');
                         }
                     } else if (methodBase.isCapped()) {
-// TODO CP remove?
-//
-//                         normally, if the base is capped and there is a contribution on top of
-//                         that base, it's an error, but there are exceptions to that rule when we
-//                         are applying a mixin/annotation
-//                         TODO CP doc
-//                         there are four options:
-//                         1) obvious layer on (normal)
-//                         2) ignore because contents are redundant (common with mixins); for example,
-//                            the contribution is a single "into" body, and the MethodInfo that it would
-//                            be layering onto includes everything that the "into" refers to
-//                         3) separate column (possible with mixins); for example, the contribution is
-//                            from a mixin and the underling base is a mixin that is being extended
-//                         4) error
-
-// TODO CP - what is this talking about?!? remove?
-//
-//                            // the "super" method we found is capped, but the cap itself apparently
-//                            // didn't match; this can happen for "into (A | B)" annotations
-//                            // replace the capped method with the narrowing one
-//                            nidBase = methodBase.getNarrowingMethod(mapVirtMethods);
-//
-//                            assert nidBase != null;
-//                            methodResult = mapVirtMethods.get(nidBase);
-
                         // it's an error if the base is present (not just an "into") and capped,
                         // and an attempt is made to put something (i.e. more than just the same or
-                        // a narrower "into") on top of it
-                        if (!(bodyContribTail.isInto() && bodyContrib == bodyContribTail)) {
-                            // the "super" method we found is capped, but the cap itself apparently
-                            // didn't match; this means that the attempted override is illegal
-                            MethodConstant id = methodBase.getIdentity();
-                            log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_ILLEGAL,
-                                    idContrib.getNamespace().getValueString(),
-                                    id.getSignature().getValueString(),
-                                    id.getNamespace().getValueString());
-                            nidBase = null;
+                        // a narrower "into") on top of it; first, preview the "layer on" process to
+                        // make sure that the contribution should not just be ignored
+                        MethodInfo methodPreview = methodBase.layerOn(methodContrib, fSelf, ErrorListener.BLACKHOLE);
+                        if (methodPreview == methodBase) {
+                            continue;
                         }
+
+                        // the "super" method we found is capped, but the cap itself apparently
+                        // didn't match; this means that the attempted override is illegal
+                        MethodConstant id = methodBase.getIdentity();
+                        log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_ILLEGAL,
+                                idContrib.getNamespace().getValueString(),
+                                id.getSignature().getValueString(),
+                                id.getNamespace().getValueString());
+                        nidBase = null;
                     } else {
                         MethodInfo methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
                         if (methodResult == null || methodResult == methodBase) {
@@ -6457,7 +6446,7 @@ public abstract class TypeConstant
     }
 
     /**
-     * @return the TypeConstant that should be implemented,
+     * @return the TypeConstant that should be implemented TODO
      */
     public TypeConstant asImplementable() {
         return switch (getCategory()) {
