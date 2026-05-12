@@ -25,17 +25,17 @@ module TestProps {
         Duration timeBase = timer.elapsed;
 
         timer.reset();
-        for (Int i = 0; i < iterations; ++i) {
-            s.x += i; // 1
-            s.x += i; // 2
-            s.x += i; // 3
-            s.x += i; // 4
-            s.x += i; // 5
-            s.x += i; // 6
-            s.x += i; // 7
-            s.x += i; // 8
-            s.x += i; // 9
-            s.x += i; // 10
+        for (Int i : 1..iterations) {
+            s.x += i;
+            s.x *= i;
+            s.x |= i;
+            s.x ^= i;
+            s.x <<= i;
+            s.x /= i;
+            s.x >>= i;
+            s.x &= i;
+            s.x %= i;
+            s.x >>>= i;
         }
         Duration time = timer.elapsed;
         console.print($"get/set property latency {((time - timeBase) / (iterations * 10)).nanoseconds} ns");
