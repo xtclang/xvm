@@ -20,7 +20,7 @@ const TypeSystem {
      * @param modules  an array of modules
      * @param shared   (optional) an array of indicators of which modules are shared
      */
-    construct(Module[] modules, Boolean[] shared=[], Set<String> definedNames=[]) {
+    construct(Module[] modules, Boolean[] shared = [], Set<String> definedNames = []) {
         assert modules.size > 0;
         if (!modules.is(immutable)) {
             modules = modules.freeze();

@@ -29,12 +29,12 @@ class Comment(String text)
     }
 
     @Override
-    Int estimateStringLength(Boolean pretty = False, Int indent=0) {
+    Int estimateStringLength(Boolean pretty = False, Int indent = 0) {
         return 7 + (text.empty ? 0 : text.size + 1);
     }
 
     @Override
-    Writer appendTo(Writer buf, Boolean pretty = False, String indent="") {
+    Writer appendTo(Writer buf, Boolean pretty = False, String indent = "") {
         "<!--".appendTo(buf);
         if (!text.empty) {
             if (!text[0].isWhitespace()) {

@@ -35,8 +35,8 @@ class EntityRef(String text)
     // TODO need a property or helper that looks up the reference and returns the corresponding value
 
     @Override
-    Int estimateStringLength(Boolean pretty = False, Int indent=0) = text.size;
+    Int estimateStringLength(Boolean pretty = False, Int indent = 0) = text.size;
 
     @Override
-    Writer appendTo(Writer buf, Boolean pretty = False, String indent="") = text.appendTo(buf);
+    Writer appendTo(Writer buf, Boolean pretty = False, String indent = "") = text.appendTo(buf);
 }

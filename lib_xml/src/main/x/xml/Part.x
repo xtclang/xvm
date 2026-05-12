@@ -62,14 +62,14 @@ interface Part
      *                default space-optimized format
      */
     @Override
-    @Abstract Int estimateStringLength(Boolean pretty = False, Int indent=0);
+    @Abstract Int estimateStringLength(Boolean pretty = False, Int indent = 0);
 
     /**
      * @param pretty  pass `True` to format for a human reader, which will be larger than the
      *                default space-optimized format
      */
     @Override
-    @Abstract Writer appendTo(Writer buf, Boolean pretty = False, String indent="");
+    @Abstract Writer appendTo(Writer buf, Boolean pretty = False, String indent = "");
 
     @Override
     static <CompileType extends Part> Int64 hashCode(CompileType value) {

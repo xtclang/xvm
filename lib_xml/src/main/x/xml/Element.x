@@ -157,7 +157,7 @@ interface Element
     }
 
     @Override
-    Int estimateStringLength(Boolean pretty = False, Int indent=0) {
+    Int estimateStringLength(Boolean pretty = False, Int indent = 0) {
         List<Part> parts = this.parts;
         if (parts.empty) {
             return indent + name.size + 3;

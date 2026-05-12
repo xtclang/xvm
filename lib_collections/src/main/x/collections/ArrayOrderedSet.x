@@ -18,7 +18,7 @@ class ArrayOrderedSet<Element extends Orderable>
     /**
      * Create an ArrayOrderedSet from an array of values.
      */
-    construct(Element[] elements, Orderer? compare=Null) {
+    construct(Element[] elements, Orderer? compare = Null) {
         // if you cannot afford a compare function, one will be provided for you
         compare ?:= (v1, v2) -> v1 <=> v2;
 

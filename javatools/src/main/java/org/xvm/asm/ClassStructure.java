@@ -326,10 +326,8 @@ public class ClassStructure
         }
 
         return switch (getFormat()) {
-            case CLASS   -> true;
-            case CONST   -> true;
-            case SERVICE -> true;
-            default      -> false;
+            case CLASS, SERVICE, CONST -> true;
+            default                    -> false;
         };
     }
 
@@ -1062,7 +1060,7 @@ public class ClassStructure
 
     /**
      * Check if the specified annotation type is "into Class", meaning that the annotation applies
-     * to the meta-data of the class and is not actually mixed into the class functionality itself.
+     * to the metadata of the class and is not actually mixed into the class functionality itself.
      *
      * A slight complication comes from a scenario when the annotation applies to a union of
      * types, for example:
@@ -1076,7 +1074,7 @@ public class ClassStructure
      *
      * @param typeAnno  the annotation type
      *
-     * @return true iff the annotation applies to the class meta-data
+     * @return true iff the annotation applies to the class metadata
      */
     public boolean isIntoClassAnnotation(TypeConstant typeAnno) {
         assert typeAnno.isExplicitClassIdentity(true);
@@ -3255,10 +3253,8 @@ public class ClassStructure
                 if (fGenerateCode) {
                     Code code = methAppendTo.ensureCode();
 
-                    // Appender<Char> appendTo(Appender<Char> appender)
-                    //    {
-                    //    return this.toString().appendTo(appender);
-                    //}
+                    // Appender<Char> appendTo(Appender<Char> appender) =
+                    //    this.toString().appendTo(appender);
                     Register regThis     = new Register(typeAppender, "this"    , Op.A_THIS);
                     Register regAppender = new Register(typeAppender, "appender", 0);
                     Register regString   = code.createRegister(typeAppender, "toString");

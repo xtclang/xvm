@@ -138,7 +138,7 @@ interface Ref<Referent> {
      * behavior is never guaranteed, but it should not be surprising in the case of [selfContained]
      * references, and it is also _possible_ in references that are **not** [selfContained]. The
      * rationale is that two deeply immutable structures that are "bitwise identical" can safely
-     * share a reference [Identity], and there space and time efficiencies for doing so.
+     * share a reference [Identity], and there exist space and time efficiencies for doing so.
      *
      * As long as a reference to the [Identity] of an [Object] is held, the [Object] will not be
      * garbage-collected, and any subsequent request for an [Identity] from the same underlying

@@ -323,7 +323,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
      *                corresponding paths
      */
     static Catalog buildCatalog(WebApp app, Map<Class<WebService>, WSConstructor> extras = []) {
-        ClassInfo[] classInfos    = new ClassInfo[];
+        ClassInfo[] classInfos   = new ClassInfo[];
         Class[]     sessionAnnos = new Class[];
 
         Set<String> declaredPaths = new HashSet<String>();
@@ -387,7 +387,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
      * to the ClassInfo array along with session annotations array.
      */
     private static void scanClasses(Class[] classes, ClassInfo[] classInfos, Class[] sessionAnnos,
-                             Set<String> declaredPaths) {
+                                    Set<String> declaredPaths) {
         for (Class child : classes) {
             if (child.annotatedBy(Abstract)) {
                 continue;
@@ -419,7 +419,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
 
                 // don't scan imported modules
                 if (!pkg.isModuleImport()) {
-                    scanClasses(pkg.as(Package).classes, classInfos, sessionAnnos, declaredPaths);
+                    scanClasses(pkg.classes, classInfos, sessionAnnos, declaredPaths);
                 }
             }
         }
