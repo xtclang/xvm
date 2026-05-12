@@ -3,6 +3,7 @@ package org.xtclang.ecstasy.collections;
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Iterable;
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.Range;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
@@ -24,7 +25,7 @@ public class ArrayᐸObjectᐳ
     }
 
     public ArrayᐸObjectᐳ $delegate;
-    public nObj[] $storage;
+    public Object[] $storage;
 
     // ----- xObj API ------------------------------------------------------------------------------
 
@@ -48,7 +49,7 @@ public class ArrayᐸObjectᐳ
             if (i > 0) {
                 buf.append(", ");
             }
-            nObj o = getElement$p(ctx, i);
+            Object o = getElement$p(ctx, i);
             buf.append(o.toString(ctx));
         }
         buf.append(']');
@@ -73,7 +74,7 @@ public class ArrayᐸObjectᐳ
     /**
      * @see {@link Array#$new$1$p}
      */
-    public static ArrayᐸObjectᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    public static ArrayᐸObjectᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         ctx.alloc(size * 8); // REVIEW + HEADER_SIZE?
         ArrayᐸObjectᐳ array = new ArrayᐸObjectᐳ(ctx, type);
         array.$mut($FIXED);
@@ -114,7 +115,7 @@ public class ArrayᐸObjectᐳ
         return $delegate == null ? ($sizeEtc & $SIZE_MASK) : $delegate.size$get$p(ctx);
     }
 
-    @Override public nObj getElement$p(Ctx ctx, long index) {
+    @Override public Object getElement$p(Ctx ctx, long index) {
         if ($delegate != null) {
             return $delegate.getElement$p(ctx, index);
         }
@@ -130,7 +131,7 @@ public class ArrayᐸObjectᐳ
         }
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, nObj value) {
+    @Override public void setElement$p(Ctx ctx, long index, Object value) {
         if ($delegate != null) {
             $delegate.setElement$p(ctx, index, value);
             return;
@@ -159,7 +160,7 @@ public class ArrayᐸObjectᐳ
     }
 
     @Override
-    public ArrayᐸObjectᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸObjectᐳ add(Ctx ctx, Object element) {
         if ($delegate != null) {
             $delegate.add(ctx, element);
             return this;
@@ -234,7 +235,7 @@ public class ArrayᐸObjectᐳ
         return $delegate;
     }
 
-    @Override protected Object $storage() {
+    @Override protected java.lang.Object $storage() {
         return $storage;
     }
 

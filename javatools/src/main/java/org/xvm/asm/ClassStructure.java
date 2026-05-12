@@ -3173,7 +3173,7 @@ public class ClassStructure
                 !method.getIdentityConstant().getNamespace().equals(getConstantPool().clzObject());
         };
 
-        MethodStructure fnThis = findMethodDeep(sName, test);
+        MethodStructure fnThis = findMethod(sName, test);
 
         if (fnThis == null) {
             // 1) build parameters;

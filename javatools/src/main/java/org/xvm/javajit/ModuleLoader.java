@@ -10,6 +10,8 @@ import java.lang.classfile.constantpool.ClassEntry;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.util.function.Predicate;
+
 import org.xvm.asm.ModuleStructure;
 
 import static org.xvm.util.Handy.isHexit;
@@ -106,7 +108,7 @@ public class ModuleLoader
 
     // ----- debugging -----------------------------------------------------------------------------
 
-    public void dump(PrintStream out) {
+    public void dump(PrintStream out, Predicate<String> filter) {
         // TODO: REMOVE
 
         // the "dumping" itself causes the classes to be transitively loaded;
@@ -116,10 +118,14 @@ public class ModuleLoader
             List<ClassModel> currentlyLoaded = new ArrayList<>(loadedClasses);
             loadedClasses.clear();
             for (ClassModel model : currentlyLoaded) {
+                String className = model.thisClass().asInternalName();
+                if (!filter.test(className)) {
+                    continue;
+                }
+
                 boolean isInterface = (model.flags().flagsMask() & ClassFile.ACC_INTERFACE) != 0;
-                out.println("\n**** " +
-                        (isInterface ? "interface " : "class ") +
-                        model.thisClass().asInternalName().replace('/', '.'));
+                out.println("\n**** " + (isInterface ? "interface " : "class ") +
+                        className.replace('/', '.'));
 
                 model.superclass().ifPresent(ce ->
                     out.println("Extends: " + ce.asInternalName().replace('/', '.')));

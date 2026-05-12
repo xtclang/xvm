@@ -2,6 +2,7 @@ package org.xtclang.ecstasy.reflect;
 
 import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nObj;
+
 import org.xvm.javajit.Ctx;
 
 /**
@@ -11,5 +12,5 @@ public interface Ref extends Object {
     /**
      * @return the referent of this reference
      */
-    nObj get(Ctx ctx);
+    Object get(Ctx ctx);
 }

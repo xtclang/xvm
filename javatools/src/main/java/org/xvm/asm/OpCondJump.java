@@ -415,15 +415,10 @@ public abstract class OpCondJump
             }
             if (type2.isNullable()) {
                 type2 = type2.removeNullable();
-                reg1  = bctx.narrowRegister(code, reg2, getAddress(), type2);
+                reg2  = bctx.narrowRegister(code, reg2, getAddress(), type2);
             }
             typeCmp = typeCmp.removeNullable();
         }
-
-        // TODO: can we get rid of typeCmp?
-        TypeConstant typeCommon =
-            selectCommonType(type1, type2, ErrorListener.BLACKHOLE).removeNullable();
-        assert typeCmp.isEquivalent(typeCommon) || typeCmp.isFormalType();
 
         typeCmp.buildCompare(bctx, code, nOp, reg1, reg2, lblTrue);
 
@@ -531,21 +526,21 @@ public abstract class OpCondJump
             comparePrimitive(code, cds[cds.length-1], lblJump);
         }
 
-        case Widened -> {
-            RegisterInfo regLoaded = reg.load(code);
+        case Widened, Ref -> {
+            reg.load(code);
             switch (op) {
             case OP_JMP_NULL:
                 Builder.loadNull(code);
                 code.if_acmpeq(lblJump);
-                bctx.narrowRegister(code, regLoaded, regLoaded.type().removeNullable());
-                bctx.narrowRegister(code, regLoaded, nAddrJump, bctx.pool().typeNullable());
+                bctx.narrowRegister(code, reg, reg.type().removeNullable());
+                bctx.narrowRegister(code, reg, nAddrJump, bctx.pool().typeNullable());
                 break;
 
             case OP_JMP_NNULL:
                 Builder.loadNull(code);
                 code.if_acmpne(lblJump);
-                bctx.narrowRegister(code, regLoaded, bctx.pool().typeNullable());
-                bctx.narrowRegister(code, regLoaded, nAddrJump, regLoaded.type().removeNullable());
+                bctx.narrowRegister(code, reg, bctx.pool().typeNullable());
+                bctx.narrowRegister(code, reg, nAddrJump, reg.type().removeNullable());
                 break;
 
             default:

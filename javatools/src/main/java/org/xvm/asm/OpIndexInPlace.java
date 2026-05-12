@@ -102,7 +102,7 @@ public abstract class OpIndexInPlace
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected int getValueIndex() {
+    protected int getValueId() {
         return m_nValue;
     }
 
@@ -112,13 +112,12 @@ public abstract class OpIndexInPlace
 
         RegisterInfo regElement = loadArrayElement(bctx, code, regArray);
         regElement.load(code);
-        bctx.loadArgument(code, getValueIndex());
+        bctx.loadArgument(code, getValueId());
 
         if (typeEl.isJavaPrimitive()) {
             buildOptimizedBinary(bctx, code, regElement, m_nValue);
         } else if (typeEl.isXvmPrimitive()) {
-            RegisterInfo regResult = buildXvmOptimizedBinary(bctx, code, regElement, m_nValue);
-            regResult.type();
+            buildXvmOptimizedBinary(bctx, code, regElement, m_nValue);
         }
 
         regElement.store(bctx, code, typeEl);

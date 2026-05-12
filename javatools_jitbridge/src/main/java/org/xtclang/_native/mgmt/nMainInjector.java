@@ -7,6 +7,8 @@ import java.util.function.Function;
 
 import org.xtclang._native.io.TerminalConsole;
 
+import org.xtclang.ecstasy.text.String;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -47,6 +49,8 @@ public class nMainInjector
     public void addNativeResources() {
         ConstantPool pool     = xvm.ecstasyPool;
         TypeConstant pureType = pool.ensureEcstasyTypeConstant("io.Console");
+
+        Class temporaryLoadStringClassToPrimeConstTypeInfo = String.class;
 
         suppliers.put(new Resource(pureType, "console"), TerminalConsole::$create);
     }

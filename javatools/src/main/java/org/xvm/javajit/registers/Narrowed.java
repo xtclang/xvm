@@ -43,7 +43,7 @@ public record Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flav
 
     @Override
     public boolean isSingle() {
-        return true;
+        return slots.length == 1;
     }
 
     @Override
@@ -110,8 +110,9 @@ public record Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flav
             return RegisterInfo.super.store(bctx, code, type);
         }
         else {
-            assert type.isA(original().type());
-            return bctx.narrowRegister(code, original(), type).store(bctx, code, type);
+            assert Builder.isJitAssignable(type, original().type());
+            RegisterInfo origReg = bctx.resetRegister(this).store(bctx, code, type);
+            return bctx.narrowRegister(code, origReg, type);
         }
     }
 
@@ -128,7 +129,7 @@ public record Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flav
      */
     public RegisterInfo widen(BuildContext bctx, CodeBuilder code, TypeConstant wideType) {
         TypeConstant prevType = type();
-        RegisterInfo origReg = original();
+        RegisterInfo origReg  = original();
         TypeConstant origType = origReg.type();
 
         assert !prevType.equals(wideType) && wideType.isA(origType);

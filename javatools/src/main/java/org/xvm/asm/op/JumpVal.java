@@ -391,7 +391,7 @@ public class JumpVal
 
         if (cRows == 1) {
             // only a single case, so just build an if ladder
-            RegisterInfo regArg = bctx.loadArgument(code, m_nArgCond);
+            RegisterInfo regArg = bctx.getRegisterInfo(code, m_nArgCond);
             buildIfLadder(bctx, code, regArg);
         } else {
             // retrieve the base type

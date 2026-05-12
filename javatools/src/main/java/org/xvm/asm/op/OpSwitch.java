@@ -31,6 +31,7 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
 
 import static org.xvm.javajit.Builder.CD_TypeConstant;
+import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
 import static org.xvm.javajit.Builder.MD_xvmType;
 
@@ -431,8 +432,11 @@ public abstract class OpSwitch
             }
         } else {
             reg.load(code);
+            if (reg.type().isJitInterface()) {
+                code.checkcast(CD_nObj);
+            }
             bctx.loadCtx(code);
-            code.invokevirtual(reg.cd(), "$xvmType", MD_xvmType);
+            code.invokevirtual(CD_nObj, "$xvmType", MD_xvmType);
             bctx.loadTypeConstant(code, typeConst);
             code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
             code.ifne(label);

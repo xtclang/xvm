@@ -5,12 +5,16 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
 import org.xvm.asm.constants.MethodConstant;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -122,6 +126,20 @@ public class NewC_N
     protected String getParamsString() {
         return getParamsString(m_anArgValue, m_aArgValue);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        computeChildType(bctx, m_nParentValue);
+    }
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildNewC(bctx, code, m_nParentValue, m_anArgValue);
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int m_nParentValue;
     private int[] m_anArgValue;

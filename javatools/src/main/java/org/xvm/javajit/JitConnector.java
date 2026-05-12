@@ -8,9 +8,13 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import java.util.function.Predicate;
 
 import org.xvm.api.Connector;
 
@@ -77,8 +81,9 @@ public class JitConnector
     public void invoke0Impl(MethodStructure methodStructure, String... args) {
         String typeName = ts.owned[0].module.getIdentityConstant().getType().ensureJitClassName(ts);
 
-        TypeSystemLoader loader = ts.loader;
-        ConstantPool     pool   = ts.pool();
+        TypeSystemLoader loader    = ts.loader;
+        ConstantPool     pool      = ts.pool();
+        Set<String>      dumpNames = new HashSet<>(Arrays.asList(CLASS_DUMP_LIST));
         try {
             Class  mainClass = loader.loadClass(typeName);
             Ctx    ctx       = Ctx.get();
@@ -99,7 +104,7 @@ public class JitConnector
                 Method      newMethod   = arrayClass.getDeclaredMethod("$new$p", Ctx.class, TypeConstant.class, Long.TYPE, Boolean.TYPE);
                 Object      stringArray = newMethod.invoke(null, ctx, stringArrayType, (long) args.length, false);
                 Class       stringClass = loader.loadClass(Builder.N_String);
-                Class       objectClass = loader.loadClass(Builder.N_nObj);
+                Class       objectClass = loader.loadClass(Builder.N_Object);
                 Constructor stringCtor  = stringClass.getDeclaredConstructor(Ctx.class, String.class);
                 Method      addMethod   = arrayClass.getDeclaredMethod("add", Ctx.class, objectClass);
                 for (String arg : args) {
@@ -113,7 +118,9 @@ public class JitConnector
                 stringArray = makeImmutMethod.invoke(stringArray, ctx);
 
                 // run(stringArray);
-                Method runMethod = mainClass.getMethod("run$p", Ctx.class, arrayClass);
+                Method runMethod = mainClass.getMethod(
+                    methodStructure.getReturnCount() == 0 ? "run" : "run$p",
+                    Ctx.class, arrayClass);
                 result = runMethod.invoke(module, ctx, stringArray);
             }
             switch (result) {
@@ -130,26 +137,50 @@ public class JitConnector
         } catch (InvocationTargetException e) {
             Throwable cause = e.getCause();
             String    name  = cause.getClass().getSimpleName();
-            if (name.equals("xException") ||
-                    name.startsWith(TypeSystem.ClassfileShape.Exception.prefix)) {
+            if (name.startsWith(TypeSystem.ClassfileShape.Exception.prefix) ||
+                name.charAt(0) == TypeSystem.NO_MOD) {
+
                 try {
                     // TODO: add the service info; see Utils.log()
                     System.out.println("\nUnhandled exception: " +
                         cause.getClass().getField("exception").get(cause));
                 } catch (Throwable ignore) {}
             } else {
+                if (cause instanceof VerifyError) {
+                    dumpNames.add(extractVerifyErrorClassName(cause.getMessage()));
+                }
                 e.printStackTrace(System.err);
                 throw new RuntimeException(cause);
             }
         } finally {
             try {
                 // dump the generated classes
-                loader.dump(new PrintStream(
-                    new FileOutputStream(loader.typeSystem.mainModule().getSimpleName() + ".jasm")));
-                xvm.nativeTypeSystem.loader.dump(
-                            new PrintStream(new FileOutputStream("ecstasy.jasm")));
+                Predicate<String> filter = dumpNames::contains;
+
+                String moduleName = loader.typeSystem.mainModule().getSimpleName();
+                loader.dump(new PrintStream(new FileOutputStream(moduleName + ".jasm")), filter);
+                xvm.nativeTypeSystem.loader
+                      .dump(new PrintStream(new FileOutputStream("ecstasy.jasm")), filter);
             } catch (IOException ignore) {}
         }
+    }
+
+    /**
+     * Extract the class name from the VerifyError message that looks like:
+     *
+     *      VarifyError
+     *      Location:
+     *          org/xtclang/ecstasy/[ClassName].[MethodName]([MethodSignature])
+     */
+    private String extractVerifyErrorClassName(String message) {
+        int locationIndex = message.indexOf("Location:");
+        if (locationIndex == -1) {
+            return "";
+        }
+
+        String tail     = message.substring(locationIndex + "Location:".length());
+        int    dotIndex = tail.indexOf('.');
+        return dotIndex == -1 ? "" : tail.substring(0, dotIndex).trim();
     }
 
     @Override
@@ -181,4 +212,9 @@ public class JitConnector
      * The result of "main" method invocation.
      */
     private long result = 1;
+
+    // TEMPORARY: manually added names
+    private final static String[] CLASS_DUMP_LIST = new String[] {
+        "org/examples/test/¤module"
+    };
 }

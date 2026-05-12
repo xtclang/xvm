@@ -14,8 +14,8 @@ import static org.xvm.javajit.Builder.CD_Dec128;
 import static org.xvm.javajit.Builder.CD_Dec32;
 import static org.xvm.javajit.Builder.CD_Dec64;
 import static org.xvm.javajit.Builder.CD_Int128;
+import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.CD_UInt128;
-import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.CDs_Int;
 import static org.xvm.javajit.Builder.CDs_Long;
 import static org.xvm.javajit.Builder.CDs_LongLong;
@@ -44,7 +44,7 @@ public class JitTypeDesc {
             ? JitParamDesc.getPrimitiveClass(type)
             : type.isSingleUnderlyingClass(true)
                 ? builder.ensureClassDesc(type)
-                : CD_nObj;
+                : CD_Object;
     }
 
     /**
@@ -85,12 +85,10 @@ public class JitTypeDesc {
     /**
      * @return the widening ClassDesc if the specified type needs to be widened; null otherwise
      */
-    public static ClassDesc getWidenedClass(TypeConstant type) {
-        if (!type.isSingleUnderlyingClass(true)) {
-            // TODO: this could be more specific
-            return CD_nObj;
-        }
-        return null;
+    public static ClassDesc getWidenedClass(Builder builder, TypeConstant type) {
+        return type.isSingleUnderlyingClass(true)
+                ? null
+                : ClassDesc.of(type.getCanonicalJitType().ensureJitClassName(builder.typeSystem));
     }
 
     public static ClassDesc getNullableXvmPrimitiveClass(TypeConstant type) {

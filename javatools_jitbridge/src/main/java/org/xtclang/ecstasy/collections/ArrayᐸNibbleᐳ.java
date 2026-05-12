@@ -3,10 +3,13 @@ package org.xtclang.ecstasy.collections;
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Iterable;
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.numbers.Nibble;
+
+import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -43,7 +46,7 @@ public class ArrayᐸNibbleᐳ
         return array;
     }
 
-    public static ArrayᐸNibbleᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    public static ArrayᐸNibbleᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof Nibble boxed) {
             ctx.alloc(size); // REVIEW + HEADER_SIZE?
             ArrayᐸNibbleᐳ array = new ArrayᐸNibbleᐳ(ctx, type);
@@ -84,12 +87,12 @@ public class ArrayᐸNibbleᐳ
         return (int) $getElement$pi(ctx, index);
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, nObj value) {
+    @Override public void setElement$p(Ctx ctx, long index, Object value) {
         setElement$pi(ctx, index, ((Nibble) value).$value);
     }
 
     @Override
-    public ArrayᐸNibbleᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸNibbleᐳ add(Ctx ctx, Object element) {
         return add$p(ctx, ((Nibble) element).$value);
     }
 
@@ -127,5 +130,26 @@ public class ArrayᐸNibbleᐳ
     @Override
     protected long $cap2len(long cap) {
         return $cap2len4bits(cap);
+    }
+
+    /**
+     * Internal method to create a nibble array from a long array.
+     * <p>
+     * This is called by various number types to return a nibble array representation of the number.
+     */
+    public static ArrayᐸNibbleᐳ $fromLongs(Ctx ctx, Mutability mutability, long bits, long... values) {
+        ConstantPool  pool = ctx.container.typeSystem.pool();
+        TypeConstant  type  = pool.ensureClassTypeConstant(pool.clzArray(), null, pool.typeNibble());
+        long          size  = bits / 4;
+        ArrayᐸNibbleᐳ array = $new$p(ctx, type, size, false);
+        array.$mut(mutability == null ? $CONSTANT : (int) mutability.$ordinal);
+        array.$storage = values;
+        array.$size((int) size);
+        return array;
+    }
+
+    @Override
+    protected long $calculateHash(Ctx ctx) {
+        return $calculate4BitUnsignedHash(ctx);
     }
 }

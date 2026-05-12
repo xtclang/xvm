@@ -4,7 +4,7 @@ import java.util.Arrays;
 
 import org.xtclang.ecstasy.Boolean;
 import org.xtclang.ecstasy.Iterable;
-import org.xtclang.ecstasy.nObj;
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -30,7 +30,7 @@ public class ArrayᐸBooleanᐳ
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
-     * Array Constructor: construct(Int capacity = 0)
+     * @see {@link Array#$new$p}
      */
     public static ArrayᐸBooleanᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
@@ -42,7 +42,10 @@ public class ArrayᐸBooleanᐳ
         return array;
     }
 
-    public static ArrayᐸBooleanᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    /**
+     * @see {@link Array#$new$1$p}
+     */
+    public static ArrayᐸBooleanᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof Boolean boxed) {
             ctx.alloc(size); // REVIEW + HEADER_SIZE?
             ArrayᐸBooleanᐳ array = new ArrayᐸBooleanᐳ(ctx, type);
@@ -62,11 +65,17 @@ public class ArrayᐸBooleanᐳ
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @see {@link Array#$new$2}
+     */
     public static ArrayᐸBooleanᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @see {@link Array#$new$3}
+     */
     public static ArrayᐸBooleanᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸBooleanᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
@@ -80,7 +89,7 @@ public class ArrayᐸBooleanᐳ
         return $getElement$pi(ctx, index) != 0;
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, nObj value) {
+    @Override public void setElement$p(Ctx ctx, long index, Object value) {
         setElement$pb(ctx, index, ((Boolean) value).$value);
     }
 
@@ -89,7 +98,7 @@ public class ArrayᐸBooleanᐳ
     }
 
     @Override
-    public ArrayᐸBooleanᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸBooleanᐳ add(Ctx ctx, Object element) {
         return add$p(ctx, ((Boolean) element).$value);
     }
 
@@ -128,5 +137,10 @@ public class ArrayᐸBooleanᐳ
     @Override
     protected long $cap2len(long cap) {
         return $cap2len1bit(cap);
+    }
+
+    @Override
+    protected long $calculateHash(Ctx ctx) {
+        return $calculate1BitHash(ctx);
     }
 }

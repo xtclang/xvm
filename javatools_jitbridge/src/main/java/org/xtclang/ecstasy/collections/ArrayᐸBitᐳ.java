@@ -3,7 +3,7 @@ package org.xtclang.ecstasy.collections;
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Iterable;
-import org.xtclang.ecstasy.nObj;
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.numbers.Bit;
@@ -31,7 +31,7 @@ public class ArrayᐸBitᐳ
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
-     * Array Constructor: construct(Int capacity = 0)
+     * @see {@link Array#$new$p}
      */
     public static ArrayᐸBitᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
@@ -43,7 +43,10 @@ public class ArrayᐸBitᐳ
         return array;
     }
 
-    public static ArrayᐸBitᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    /**
+     * @see {@link Array#$new$1$p}
+     */
+    public static ArrayᐸBitᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof Bit boxed) {
             ctx.alloc(size); // REVIEW + HEADER_SIZE?
             ArrayᐸBitᐳ array = new ArrayᐸBitᐳ(ctx, type);
@@ -63,11 +66,17 @@ public class ArrayᐸBitᐳ
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @see {@link Array#$new$2}
+     */
     public static ArrayᐸBitᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @see {@link Array#$new$3}
+     */
     public static ArrayᐸBitᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸBitᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
@@ -81,12 +90,12 @@ public class ArrayᐸBitᐳ
         return (int) $getElement$pi(ctx, index);
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, nObj value) {
+    @Override public void setElement$p(Ctx ctx, long index, Object value) {
         setElement$pi(ctx, index, ((Bit) value).$value);
     }
 
     @Override
-    public ArrayᐸBitᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸBitᐳ add(Ctx ctx, Object element) {
         return add$p(ctx, ((Bit) element).$value);
     }
 
@@ -125,5 +134,24 @@ public class ArrayᐸBitᐳ
     @Override
     protected long $cap2len(long cap) {
         return $cap2len1bit(cap);
+    }
+
+    /**
+     * Internal method to create a bit array from a long array.
+     * <p>
+     * This is called by various number types to return a bit array representation of the number.
+     */
+    public static ArrayᐸBitᐳ $fromLongs(Ctx ctx, Mutability mutability, long bits, long... values) {
+        TypeConstant type  = ctx.container.typeSystem.pool().typeBitArray();
+        ArrayᐸBitᐳ   array = $new$p(ctx, type, bits , false);
+        array.$mut(mutability == null ? $CONSTANT : (int) mutability.$ordinal);
+        array.$storage = values;
+        array.$size((int) bits);
+        return array;
+    }
+
+    @Override
+    protected long $calculateHash(Ctx ctx) {
+        return $calculate1BitHash(ctx);
     }
 }

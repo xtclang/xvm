@@ -8,6 +8,8 @@ import java.util.function.Function;
 import org.xvm.asm.Constant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.util.ByteHashCollector;
+
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_void;
 
@@ -161,6 +163,11 @@ public final class Ctx {
         Function supplier = container.injector.supplierOf(resourceType, resourceName);
 
         return supplier == null ? null : supplier.apply(opts);
+    }
+
+    public ByteHashCollector createHashCollector() {
+        // TODO make the seed configurable and pass to the constructor?
+        return new ByteHashCollector.Simple();
     }
 
     // ----- debugging support ---------------------------------------------------------------------

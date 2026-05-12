@@ -1,6 +1,7 @@
 package org.xtclang.ecstasy.reflect;
 
 import org.xtclang.ecstasy.Exception;
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nType;
 
@@ -33,14 +34,14 @@ public class nRef
     }
 
     @Override
-    public nObj get(Ctx ctx) {
+    public Object get(Ctx ctx) {
         return $referent;
     }
 
     @Override
-    public void set(Ctx ctx, nObj referent) {
+    public void set(Ctx ctx, Object referent) {
         if ($isVar) {
-            $referent = referent;
+            $referent = (nObj) referent;
         } else {
             throw Exception.$ro(ctx, "Ref is read-only");
         }

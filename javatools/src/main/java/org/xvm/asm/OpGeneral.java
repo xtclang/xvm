@@ -206,8 +206,7 @@ public abstract class OpGeneral
             TypeConstant typeResult = method.getSignature().getRawReturns()[0];
             if (!typeResult.equals(typeTarget)) {
                 tmx.assign(getAddress(), m_nRetValue,
-                    typeResult.resolveGenerics(bctx.pool(), typeTarget)
-                              .resolveAutoNarrowing(bctx.pool(), false, typeTarget, null));
+                    typeResult.resolveAutoNarrowing(bctx.pool(), false, typeTarget, null));
                 return;
             }
         }
@@ -227,8 +226,7 @@ public abstract class OpGeneral
                 assertNotMultislot(regTarget);
                 typeResult = buildOptimizedBinary(bctx, code, regTarget, m_nArgValue);
             } else if (typeTarget.isXvmPrimitive()) {
-                RegisterInfo regResult = buildXvmOptimizedBinary(bctx, code, regTarget, m_nArgValue);
-                typeResult = regResult.type();
+                typeResult = buildXvmOptimizedBinary(bctx, code, regTarget, m_nArgValue);
             } else {
                 MethodInfo    method   = findOpMethod(bctx, typeTarget);
                 String        sJitName = method.ensureJitMethodName(bctx.typeSystem);

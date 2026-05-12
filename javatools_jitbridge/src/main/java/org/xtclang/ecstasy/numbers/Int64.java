@@ -2,7 +2,7 @@ package org.xtclang.ecstasy.numbers;
 
 import java.math.BigDecimal;
 
-import org.xtclang.ecstasy.Comparable;
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Orderable;
 import org.xtclang.ecstasy.Ordered;
@@ -66,6 +66,16 @@ public class Int64 extends IntNumber {
     @Override
     public BigDecimal $toBigDecimal() {
         return BigDecimal.valueOf($value);
+    }
+
+    @Override
+    protected long[] $longValues() {
+        return new long[]{$value};
+    }
+
+    @Override
+    protected long bitLength$get$p() {
+        return 64;
     }
 
     /**
@@ -299,7 +309,7 @@ public class Int64 extends IntNumber {
      *
      *  static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
      */
-    public static Boolean equals(Ctx ctx, nType type, Comparable value1, Comparable value2) {
+    public static Boolean equals(Ctx ctx, nType type, Object value1, Object value2) {
         long l1 = ((Int64) value1).$value;
         long l2 = ((Int64) value2).$value;
         return l1 == l2 ? Boolean.TRUE : Boolean.FALSE;

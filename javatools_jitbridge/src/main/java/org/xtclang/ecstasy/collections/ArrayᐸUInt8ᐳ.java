@@ -3,6 +3,7 @@ package org.xtclang.ecstasy.collections;
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Iterable;
+import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
@@ -46,7 +47,7 @@ public class ArrayᐸUInt8ᐳ
     /**
      * @see {@link Array#$new$1$p}
      */
-    public static ArrayᐸUInt8ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    public static ArrayᐸUInt8ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof UInt8 boxed) {
             ctx.alloc(size); // REVIEW + HEADER_SIZE?
             ArrayᐸUInt8ᐳ array = new ArrayᐸUInt8ᐳ(ctx, type);
@@ -92,12 +93,12 @@ public class ArrayᐸUInt8ᐳ
         return (int) $getElement$pi(ctx, index);
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, nObj value) {
+    @Override public void setElement$p(Ctx ctx, long index, Object value) {
         setElement$pi(ctx, index, ((UInt8) value).$value);
     }
 
     @Override
-    public ArrayᐸUInt8ᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸUInt8ᐳ add(Ctx ctx, Object element) {
         return add$p(ctx, ((UInt8) element).$value);
     }
 
@@ -136,5 +137,25 @@ public class ArrayᐸUInt8ᐳ
     @Override
     protected long $cap2len(long cap) {
         return $cap2len8bits(cap);
+    }
+
+    /**
+     * Internal method to create a UInt8 array from a long array.
+     * <p>
+     * This is called by various number types to return a byte array representation of the number.
+     */
+    public static ArrayᐸUInt8ᐳ $fromLongs(Ctx ctx, Mutability mutability, long bits, long... values) {
+        TypeConstant type  = ctx.container.typeSystem.pool().typeByteArray();
+        long         size  = bits / 8;
+        ArrayᐸUInt8ᐳ array = $new$p(ctx, type, size, false);
+        array.$mut(mutability == null ? $CONSTANT : (int) mutability.$ordinal);
+        array.$storage = values;
+        array.$size((int) size);
+        return array;
+    }
+
+    @Override
+    protected long $calculateHash(Ctx ctx) {
+        return $calculate8BitUnsignedHash(ctx);
     }
 }

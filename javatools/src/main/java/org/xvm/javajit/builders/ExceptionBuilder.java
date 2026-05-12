@@ -83,7 +83,7 @@ public class ExceptionBuilder extends CommonBuilder {
             superCD = getShapeDesc(ensureJitClassName(superType), ClassfileShape.Exception);
         }
 
-        ClassDesc exCD = ensureClassDesc(typeInfo.getType());
+        ClassDesc exCD = ensureClassDesc(thisType);
 
         classBuilder.withFlags(ClassFile.ACC_PUBLIC)
                     .withSuperclass(superCD);

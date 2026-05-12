@@ -42,6 +42,7 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 
+import static org.xvm.javajit.Builder.CD_Exception;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.TypeSystem.ID_NUM;
 
@@ -619,6 +620,23 @@ public abstract class OpCallable extends Op {
     }
 
     /**
+     * ComputeType support for NEW_C ops.
+     */
+    protected void computeChildType(BuildContext bctx, int nParentArg) {
+        TypeConstant   typeParent  = bctx.getArgumentType(nParentArg);
+        MethodConstant idCtor      = bctx.getConstant(m_nFunctionId, MethodConstant.class);
+        assert idCtor.isConstructor();
+
+        ConstantPool    pool        = bctx.pool();;
+        ClassStructure  structChild = (ClassStructure) idCtor.getComponent().getParent().getParent();
+        TypeConstant    typeChild   = structChild.isVirtualChild()
+                ? pool.ensureVirtualChildTypeConstant(typeParent, structChild.getName())
+                : structChild.getCanonicalType();
+
+        bctx.typeMatrix.assign(getAddress(), m_nRetValue, typeChild);
+    }
+
+    /**
      * Build support for CALL_ ops.
      */
     protected int buildCall(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
@@ -646,12 +664,14 @@ public abstract class OpCallable extends Op {
                 sJitName += ID_NUM + String.valueOf(nDepth);
 
                 bctx.buildSuper(sJitName, nDepth);
+                fInterface = false;
             } else {
-                cdTarget = bctx.builder.ensureClassDesc(idCallee.getType());
+                TypeConstant typeCallee = idCallee.getType();
+                cdTarget   = bctx.builder.ensureClassDesc(typeCallee);
+                fInterface = typeCallee.isJitInterface();
             }
-            jmdCall    = bodySuper.getJitDesc(bctx.builder, bctx.typeInfo.getType());
-            fSpecial   = true;
-            fInterface = false;
+            jmdCall  = bodySuper.getJitDesc(bctx.builder, bctx.thisType);
+            fSpecial = true;
             code.aload(0); // super() can only be on "this"
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
             MethodConstant   idMethod   = bctx.getConstant(m_nFunctionId, MethodConstant.class);
@@ -710,7 +730,11 @@ public abstract class OpCallable extends Op {
         bctx.loadCallArguments(code, jmdCall, anArgValue);
 
         if (fSpecial) {
-            code.invokespecial(cdTarget, sJitName, mdCall);
+            if (fInterface) {
+                code.invokevirtual(cdTarget, sJitName, mdCall);
+            } else {
+                code.invokespecial(cdTarget, sJitName, mdCall);
+            }
         } else {
             code.invokestatic(cdTarget, sJitName, mdCall, fInterface);
         }
@@ -738,8 +762,7 @@ public abstract class OpCallable extends Op {
     protected int buildNewG(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
         TypeConstant typeTarget;
         if (nTypeArg <= CONSTANT_OFFSET) {
-            typeTarget = bctx.getTypeConstant(nTypeArg).
-                resolveGenerics(bctx.pool(), bctx.typeInfo.getType());
+            typeTarget = bctx.getTypeConstant(nTypeArg);
         } else {
             assert nTypeArg >= 0;
             RegisterInfo regXType = bctx.loadArgument(code, nTypeArg);
@@ -751,6 +774,14 @@ public abstract class OpCallable extends Op {
         bctx.buildNew(code, typeTarget, idCtor, anArgValue);
 
         bctx.storeValue(code, m_nRetValue, typeTarget);
+        return -1;
+    }
+
+    /**
+     * Support for NEW_C ops.
+     */
+    protected int buildNewC(BuildContext bctx, CodeBuilder code, int nParentArg, int[] anArgValue) {
+        Builder.throwException(code, CD_Exception, "Not implemented: " + toName(getOpCode()));
         return -1;
     }
 
@@ -773,7 +804,7 @@ public abstract class OpCallable extends Op {
         String    sJitCtor;
         if (infoTarget.getFormat() == Format.MIXIN) {
             cdTarget   = ClassDesc.of(bctx.className);
-            typeTarget = bctx.typeInfo.getType();
+            typeTarget = bctx.thisType;
             sJitCtor   = idTarget.getName() + "$" + infoCtor.ensureJitMethodName(bctx.typeSystem);
 
             bctx.buildMethod(sJitCtor, infoCtor.getHead());

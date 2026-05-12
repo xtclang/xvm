@@ -823,18 +823,24 @@ public class ParameterizedTypeConstant
     public TypeConstant getCanonicalJitType() {
         assert isSingleUnderlyingClass(true);
 
+        TypeConstant typeCanonical = m_typeCanonical;
+        if (typeCanonical != null) {
+            return typeCanonical;
+        }
+
         ConstantPool    pool           = getConstantPool();
         ClassStructure  clz            = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
         var             listTypeParams = clz.getTypeParamsAsList();
         var             listContribs   = clz.collectConditionalIncorporates(this);
 
+        TypeConstant typeOrig = m_constType;;
         // TODO: REMOVE - compensation for Array handling in TypeConstant#buildJitClassName
-        if (m_constType.isArray() && !getParamType(0).isJitPrimitive()) {
+        if (typeOrig.isArray() && !getParamType(0).isJitPrimitive()) {
             return pool.ensureArrayType(pool.typeObject());
         }
 
         boolean fFunction;
-        if ((fFunction = m_constType.isFunction()) || m_constType.isMethod()) {
+        if ((fFunction = typeOrig.isFunction()) || typeOrig.isMethod()) {
             // functions are special; we need to canonicalize the params and return types
 
             TypeConstant[] atypeParams  = pool.extractFunctionParams(this);
@@ -859,13 +865,23 @@ public class ParameterizedTypeConstant
                     : this;
         }
 
+        TypeConstant typeResolved = typeOrig.getCanonicalJitType();
+        boolean      fDiff        = typeResolved != typeOrig;
+        boolean      fTrivial     = true;
+
         TypeConstant[] aconstOriginal  = m_atypeParams;
         TypeConstant[] aconstCanonical = aconstOriginal;
-        boolean        fDiff           = false;
-        boolean        fTrivial        = true;
         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
-            TypeConstant typeOriginal = aconstOriginal[i];
-            if (typeOriginal.isJitPrimitive()) {
+            TypeConstant typeParamOriginal = aconstOriginal[i];
+            if (typeParamOriginal.isJitPrimitive()) {
+                TypeConstant typeParamResolved = typeParamOriginal.getCanonicalJitType();
+                if (!typeParamResolved.equals(typeParamOriginal)) {
+                    if (!fDiff) {
+                        aconstCanonical = aconstCanonical.clone();
+                        fDiff    = true;
+                    }
+                    aconstCanonical[i] = typeParamResolved;
+                }
                 fTrivial = false;
             } else {
                 var            entryParam     = listTypeParams.get(i);
@@ -873,7 +889,9 @@ public class ParameterizedTypeConstant
                 TypeConstant   typeConstraint = entryParam.getValue();
 
                 // drop the actual type down to the constraint
-                if (!typeConstraint.equals(typeOriginal)) {
+                if (typeConstraint.isFormalTypeSequence()) {
+                    aconstCanonical[i] = pool.typeObject();
+                } else if (!typeConstraint.equals(typeParamOriginal)) {
                     if (!fDiff) {
                         aconstCanonical = aconstCanonical.clone();
                         fDiff    = true;
@@ -911,10 +929,10 @@ public class ParameterizedTypeConstant
             }
         }
 
-        return fTrivial
-                ? m_constType // TerminalTypeConstant
+        return m_typeCanonical = fTrivial
+                ? typeResolved // TerminalTypeConstant
                 : fDiff
-                    ? pool.ensureParameterizedTypeConstant(m_constType, aconstCanonical)
+                    ? pool.ensureParameterizedTypeConstant(typeResolved, aconstCanonical)
                     : this;
     }
 
@@ -1156,4 +1174,10 @@ public class ParameterizedTypeConstant
      * Cached conversion result.
      */
     private transient TypeConstant m_typeResolvedPrev;
+
+    /**
+     * Cached Jit canonical type.
+     */
+    private transient TypeConstant m_typeCanonical;
+
 }

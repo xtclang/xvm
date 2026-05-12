@@ -560,17 +560,26 @@ public class MethodBody {
         JitMethodDesc jmd = m_jmd;
         if (jmd == null ||
                 isCtorOrValidator() && !typeContainer.removeAccess().equals(m_typeJmdContainer)) {
-            MethodStructure   method        = getMethodStructure();
-            TypeConstant      typeCanonical = typeContainer.getCanonicalJitType().normalizeParameters();
-            SignatureConstant sigActual     = getIdentity().getSignature().
-                                                    resolveGenericTypes(builder.typeSystem.pool(), typeCanonical);
+            MethodStructure   method = getMethodStructure();
+            SignatureConstant sig    = method.resolveSignature(
+                                            builder.pool(), typeContainer.getCanonicalJitType());
 
-            m_jmd = jmd = JitMethodDesc.of(builder, sigActual.getRawParams(), sigActual.getRawReturns(),
+            m_jmd = jmd = JitMethodDesc.of(builder, sig.getRawParams(), sig.getRawReturns(),
                                 isCtorOrValidator(), builder.ensureClassDesc(typeContainer),
                                 method.getTypeParamCount() + method.getRequiredParamCount());
             m_typeJmdContainer = typeContainer;
         }
         return jmd;
+    }
+
+    /**
+     * @return the function or method type for the function or method represented by this body
+     */
+    public TypeConstant asFunctionType(ConstantPool pool, TypeConstant typeContainer) {
+        SignatureConstant sig = getMethodStructure().resolveSignature(pool(), typeContainer);
+        return isFunction()
+                ? sig.asFunctionType()
+                : sig.asMethodType(pool, typeContainer);
     }
 
     // ----- fields --------------------------------------------------------------------------------

@@ -843,7 +843,7 @@ public abstract class Launcher<T extends LauncherOptions>
     protected void validateModulePath() {
         for (var file : options().getModulePath()) {
             if (!file.exists()) {
-                log(ERROR, "File or directory {} does not exist", quoted(file));
+                log(INFO, "File or directory {} does not exist", quoted(file));
             } else if (file.isFile()) {
                 validateReadableFile(file, ".xtc");
             } else if (!file.canRead()) {

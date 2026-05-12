@@ -604,6 +604,9 @@
         return (value1 <=> value2) == Equal;
     }
 
+    @Override
+    static <CompileType extends Number> Int hashCode(CompileType value) = value.toInt64();
+
 
     // ----- Stringable support --------------------------------------------------------------------
 

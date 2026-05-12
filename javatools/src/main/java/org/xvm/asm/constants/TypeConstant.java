@@ -88,14 +88,15 @@ import org.xvm.util.TransientThreadLocal;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
 
-import static org.xvm.javajit.Builder.CD_Comparable;
 import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.CD_Orderable;
 import static org.xvm.javajit.Builder.CD_Ordered;
-import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.N_nRangeInt64;
 import static org.xvm.javajit.Builder.OPT;
+import static org.xvm.javajit.Builder.XVM_PRIMITIVE_COMPARE;
+import static org.xvm.javajit.Builder.XVM_PRIMITIVE_EQUALS;
 
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
@@ -953,7 +954,7 @@ public abstract class TypeConstant
      */
     private static TypeConstant combineOneParameterized(ConstantPool pool,
                                                         TypeConstant t1, TypeConstant t2) {
-        if (t1 instanceof ParameterizedTypeConstant &&
+        if (t1 instanceof ParameterizedTypeConstant && !t2.isFormalType() &&
                 t1.isA(pool.typeClass()) == t2.isA(pool.typeClass()) &&
                 t2.isA(t1.getUnderlyingType()) &&
                 t2.isSingleUnderlyingClass(true) && !t2.isParamsSpecified()) {
@@ -6470,15 +6471,15 @@ public abstract class TypeConstant
      * Ensure a unique ClassDesc for this type for the specified TypeSystem.
      */
     public ClassDesc ensureClassDesc(TypeSystem ts) {
-        return isSingleUnderlyingClass(true)
-            ? ClassDesc.of(ensureJitClassName(ts))
-            : CD_nObj;
+        return ClassDesc.of(getCanonicalJitType().ensureJitClassName(ts));
     }
 
     /**
      * Ensure a unique Java class name for this type for the specified TypeSystem.
      */
     public String ensureJitClassName(TypeSystem ts) {
+        assert isSingleUnderlyingClass(true);
+
         String sJitName = m_sJitName;
         if (sJitName == null) {
             // get the master instance of the type constant
@@ -6512,6 +6513,7 @@ public abstract class TypeConstant
                     case "Dec32"   -> Builder.N_ArrayDec32;
                     case "Dec64"   -> Builder.N_ArrayDec64;
                     case "Dec128"  -> Builder.N_ArrayDec128;
+                    case "Float16" -> Builder.N_ArrayFloat16;
                     case "Float32" -> Builder.N_ArrayFloat32;
                     case "Float64" -> Builder.N_ArrayFloat64;
                     case "Nibble"  -> Builder.N_ArrayNibble;
@@ -6577,7 +6579,7 @@ public abstract class TypeConstant
      * @return true iff objects of this type can be represented by a single primitive Java value
      */
     public boolean isJavaPrimitive() {
-        return isModifyingType() && getUnderlyingType().isJitPrimitive();
+        return isModifyingType() && getUnderlyingType().isJavaPrimitive();
     }
 
     /**
@@ -6601,7 +6603,9 @@ public abstract class TypeConstant
      */
     public boolean isJitInterface() {
         // Ref and Var are always represented is by "nRef" class
-        return isInterfaceType() && !this.isA(getConstantPool().typeRef());
+        ConstantPool pool = getConstantPool();
+        return isInterfaceType() && !this.isA(pool.typeRef()) ||
+            getCanonicalJitType().equals(pool.typeObject());
     }
 
     /**
@@ -6621,7 +6625,7 @@ public abstract class TypeConstant
         if ((cd = JitTypeDesc.getNullableXvmPrimitiveClass(this)) != null) {
             return new JitTypeDesc(getCanonicalJitType(), NullableXvmPrimitive, cd);
         }
-        if ((cd = JitTypeDesc.getWidenedClass(this)) != null) {
+        if ((cd = JitTypeDesc.getWidenedClass(builder, this)) != null) {
             return new JitTypeDesc(getCanonicalJitType(), Widened, cd);
         }
         assert isSingleUnderlyingClass(true);
@@ -6630,19 +6634,41 @@ public abstract class TypeConstant
     }
 
     /**
+     * Canonical JIT type for an arbitrary Ecstasy type represents a type that JIT compiler uses for
+     * variables and properties that hold non-primitive instances of the corresponding type. The
+     * cannonical type is **always** either {@link TerminalTypeConstant} with a
+     * {@link #isSingleUnderlyingClass} or a {@link ParameterizedTypeConstant} with
+     * non-parameterized canonical types as parameters.
+     * <p/>
+     * The following should hold :
+     *  <ul>
+     *    <li>for any type T, T is-a C(T)</li>
+     *    <li>if T2 is-a T1, then C(T2) is-a C(T1)</li>
+     *    <li>for any type T, the JitClassName(T) == JitClassName(C(T))</li>
+     *  </ul>
+     * <p/>
+     * For every non-parameterized type of {@link #isSingleUnderlyingClass single underlyin class}
+     * (regardless of access and immutability modifications) the canonical type is the corrsponding
+     * {@link TerminalTypeConstant}.
+     * <br/>
+     * For a parameterized type with parameters of non-primitive types with trivial constraints,
+     * the canonical type is also the corrsponding {@link TerminalTypeConstant}; otherwise it s
+     * the parameterized type with parameters of primitive or constraint types.
+     * <br/>
+     * For union or difference types, the canonical type is {@link ConstantPool#typeObject()}.
+     * <br/>
+     * For intersection types, it's the most specific canonical type across the contributing types.
+     *
      * @return a canonical Jit type where all the type parameters are either primitive types
      *         or corresponding formal type constraint types
      */
     public TypeConstant getCanonicalJitType() {
-        if (!isModifyingType()) {
-            return removeAutoNarrowing();
+        if (isModifyingType()) {
+            return getUnderlyingType().getCanonicalJitType();
         }
 
-        TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.getCanonicalJitType();
-        return constResolved == constOriginal
-                ? this
-                : cloneSingle(getConstantPool(), constResolved);
+        assert isSingleUnderlyingClass(true);
+        return removeAutoNarrowing();
     }
 
     /**
@@ -6698,7 +6724,7 @@ public abstract class TypeConstant
                              RegisterInfo reg1, TypeConstant argType, ClassDesc cdArg,
                              Runnable argLoader, Label lblTrue) {
         TypeConstant type1 = reg1.type();
-        assert type1.isA(this) && argType.isA(this) || this.isFormalType();
+        assert type1.isA(this) && argType.isA(this) || this.containsFormalType(false);
 
         boolean fLocalTrue = lblTrue == null;
         if (fLocalTrue) {
@@ -6764,83 +6790,69 @@ public abstract class TypeConstant
             }
         } else if (isXvmPrimitive()) {
             // type is a custom XVM primitive
-            ClassDesc[]  cds      = JitTypeDesc.getXvmPrimitiveClasses(this);
-            ClassDesc[]  cdParams = new ClassDesc[cds.length * 2 + 1];
-
-            cdParams[0] = CD_Ctx;
-            System.arraycopy(cds, 0, cdParams, 1, cds.length);
-            System.arraycopy(cds, 0, cdParams, cds.length + 1, cds.length);
+            ClassDesc[] cds      = JitTypeDesc.getXvmPrimitiveClasses(this);
+            ClassDesc[] cdParams = new ClassDesc[cds.length * 2];
+            // both "equals" and "compare" take two arguments of the same extended Java type
+            System.arraycopy(cds, 0, cdParams, 0, cds.length);
+            System.arraycopy(cds, 0, cdParams, cds.length, cds.length);
 
             String         methodName;
             MethodTypeDesc methodDesc;
             switch (nOp) {
                 case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
                      Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> {
-                    methodName = "equals" + OPT;
+                    // by convention, all XVM primitives have this method
+                    methodName = XVM_PRIMITIVE_EQUALS;
                     methodDesc = MethodTypeDesc.of(CD_boolean, cdParams);
                 }
                 case Op.OP_IS_GT,  Op.OP_JMP_GT,
                      Op.OP_IS_GTE, Op.OP_JMP_GTE,
                      Op.OP_IS_LT,  Op.OP_JMP_LT,
-                     Op.OP_IS_LTE, Op.OP_JMP_LTE -> {
-                    methodName = "compare" + OPT;
+                     Op.OP_IS_LTE, Op.OP_JMP_LTE,
+                     Op.OP_CMP -> {
+                    // by convention, all XVM primitives have this method
+                    methodName = XVM_PRIMITIVE_COMPARE;
                     methodDesc = MethodTypeDesc.of(CD_int, cdParams);
                 }
                 default -> throw new IllegalStateException();
             }
 
-            bctx.loadCtx(code);
             reg1.load(code);
             argLoader.run();
 
             switch (nOp) {
-                case Op.OP_IS_EQ, Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
-                    // boolean equals(Ctx, primitives1..., primitives2...)
+                case Op.OP_CMP:
                     code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
-
-                    if (fLocalTrue) {
-                        if (nOp == Op.OP_IS_NEQ) {
-                            code.iconst_1()
-                                    .ixor();
-                        }
-                    } else {
-                        if (nOp == Op.OP_IS_EQ) {
-                            code.ifne(lblTrue);
-                        } else {
-                            code.ifeq(lblTrue);
-                        }
-                    }
+                    generateOrdered(bctx, code);
                     return;
 
-                case Op.OP_IS_GT, Op.OP_IS_GTE, Op.OP_IS_LT, Op.OP_IS_LTE:
-                    // int compare(Ctx, primitives1..., primitives2...)
+                case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
+                     Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
+                    // boolean equals(Ctx, primitives1..., primitives2...)
                     code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
-                    code.iconst_0();
-
                     switch (nOp) {
-                        case Op.OP_IS_GT:
-                            // > 0
-                            code.if_icmpge(lblTrue);
-                            break;
-
-                        case Op.OP_IS_GTE:
-                            // >= 0
-                            code.if_icmpge(lblTrue);
-                            break;
-
-                        case Op.OP_IS_LT:
-                            // < 0
-                            code.if_icmplt(lblTrue);
-                            break;
-
-                        case Op.OP_IS_LTE:
-                            // <= 0
-                            code.if_icmple(lblTrue);
-                            break;
-
-                        default:
-                            throw new IllegalStateException();
+                        case Op.OP_IS_EQ,  Op.OP_JMP_EQ  -> code.ifne(lblTrue);
+                        case Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> code.ifeq(lblTrue);
+                        default -> throw new IllegalStateException();
                     }
+                    break;
+
+                case Op.OP_IS_GT,  Op.OP_JMP_GT,
+                     Op.OP_IS_GTE, Op.OP_JMP_GTE,
+                     Op.OP_IS_LT,  Op.OP_JMP_LT,
+                     Op.OP_IS_LTE, Op.OP_JMP_LTE:
+                // int compare(Ctx, primitives1..., primitives2...)
+                code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
+                code.iconst_0();
+
+                switch (nOp) {
+                    case Op.OP_IS_GT,  Op.OP_JMP_GT  -> code.if_icmpge(lblTrue); // > 0
+                    case Op.OP_IS_GTE, Op.OP_JMP_GTE -> code.if_icmpge(lblTrue); // >= 0
+                    case Op.OP_IS_LT,  Op.OP_JMP_LT  -> code.if_icmplt(lblTrue); // < 0
+                    case Op.OP_IS_LTE, Op.OP_JMP_LTE -> code.if_icmple(lblTrue); // <= 0
+                    default -> throw new IllegalStateException();
+                }
+                    break;
             }
         } else {
             // type is a non-primitive
@@ -6852,7 +6864,8 @@ public abstract class TypeConstant
                 case Op.OP_IS_GT,  Op.OP_JMP_GT,
                      Op.OP_IS_GTE, Op.OP_JMP_GTE,
                      Op.OP_IS_LT,  Op.OP_JMP_LT,
-                     Op.OP_IS_LTE, Op.OP_JMP_LTE  -> pool.sigCompare();
+                     Op.OP_IS_LTE, Op.OP_JMP_LTE,
+                     Op.OP_CMP                    -> pool.sigCompare();
                 default -> throw new IllegalStateException();
             };
 
@@ -6865,7 +6878,7 @@ public abstract class TypeConstant
                 cd = CD_nType;
                 switch (nOp) {
                     case Op.OP_IS_EQ,  Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> {
-                        md       = MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_Comparable, CD_Comparable);
+                        md       = MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_Object, CD_Object);
                         sJitName = "equals$p";
                     }
                     default -> {
@@ -6904,26 +6917,19 @@ public abstract class TypeConstant
             case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
                  Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
                 if (isFormal) {
-                    // boolean equals$p(Ctx,xObj,xObj)
+                    // boolean equals$p(Ctx,Object,Object)
                     code.invokevirtual(cd, sJitName, md);
                 } else {
-                    // static boolean equals$p(Ctx,nType,nObj,nObj)
+                    // static boolean equals$p(Ctx,nType,Object,Object)
                     code.invokestatic(cd, sJitName, md);
                 }
 
-                if (fLocalTrue) {
-                    if (nOp == Op.OP_IS_NEQ) {
-                        code.iconst_1()
-                            .ixor();
-                    }
-                } else {
-                    if (nOp == Op.OP_IS_EQ) {
-                        code.ifne(lblTrue);
-                    } else {
-                        code.ifeq(lblTrue);
-                    }
+                switch (nOp) {
+                    case Op.OP_IS_EQ,  Op.OP_JMP_EQ  -> code.ifne(lblTrue);
+                    case Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> code.ifeq(lblTrue);
+                    default -> throw new IllegalStateException();
                 }
-                return;
+                break;
 
             case Op.OP_CMP,
                  Op.OP_IS_GT,  Op.OP_JMP_GT,
@@ -6932,10 +6938,10 @@ public abstract class TypeConstant
                  Op.OP_IS_LTE, Op.OP_JMP_LTE :
 
                 if (isFormal) {
-                    // Ordered compare(Ctx,nObj,nObj)
+                    // Ordered compare(Ctx,Object,Object)
                     code.invokevirtual(cd, sJitName, md);
                 } else {
-                    // static Ordered compare(Ctx,nType,nObj,nObj)
+                    // static Ordered compare(Ctx,nType,Object,Object)
                     code.invokestatic(cd, sJitName, md);
                 }
 
@@ -6981,14 +6987,14 @@ public abstract class TypeConstant
             }
         }
 
-        Label lblEnd = code.newLabel();
         if (fLocalTrue) {
+            Label lblEnd = code.newLabel();
             code.iconst_0()
                 .goto_(lblEnd)
                 .labelBinding(lblTrue)
-                .iconst_1();
+                .iconst_1()
+                .labelBinding(lblEnd);
         }
-        code.labelBinding(lblEnd);
     }
 
     /**
@@ -7015,6 +7021,9 @@ public abstract class TypeConstant
         }
     }
 
+    /**
+     * Convert the int value on Java stack to an Ordered enum value.
+     */
     private void generateOrdered(BuildContext bctx, CodeBuilder code) {
         ConstantPool pool = bctx.pool();
 

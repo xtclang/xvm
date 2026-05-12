@@ -2128,6 +2128,7 @@ public class ConstantPool
     public ClassConstant     clzListMap()        {ClassConstant     c = m_clzListMap;        if (c == null) {m_clzListMap        = c = (ClassConstant) getImplicitlyImportedIdentity("ListMap"         );} return c;}
     public ClassConstant     clzSliceable()      {ClassConstant     c = m_clzSliceable;      if (c == null) {m_clzSliceable      = c = (ClassConstant) getImplicitlyImportedIdentity("Sliceable"       );} return c;}
     public ClassConstant     clzOrderable()      {ClassConstant     c = m_clzOrderable;      if (c == null) {m_clzOrderable      = c = (ClassConstant) getImplicitlyImportedIdentity("Orderable"       );} return c;}
+    public ClassConstant     clzHashable()       {ClassConstant     c = m_clzHashable;       if (c == null) {m_clzHashable       = c = (ClassConstant) getImplicitlyImportedIdentity("Hashable"        );} return c;}
     public ClassConstant     clzTuple()          {ClassConstant     c = m_clzTuple;          if (c == null) {m_clzTuple          = c = (ClassConstant) getImplicitlyImportedIdentity("Tuple"           );} return c;}
     public ClassConstant     clzCondTuple()      {ClassConstant     c = m_clzCondTuple;      if (c == null) {m_clzCondTuple      = c = (ClassConstant) getImplicitlyImportedIdentity("ConditionalTuple");} return c;}
     public ClassConstant     clzAuto()           {ClassConstant     c = m_clzAuto;           if (c == null) {m_clzAuto           = c = (ClassConstant) getImplicitlyImportedIdentity("Auto"            );} return c;}
@@ -2217,6 +2218,7 @@ public class ConstantPool
     public TypeConstant      typeListMap()       {TypeConstant      c = m_typeListMap;       if (c == null) {m_typeListMap       = c = ensureTerminalTypeConstant(clzListMap()                         );} return c;}
     public TypeConstant      typeSliceable()     {TypeConstant      c = m_typeSliceable;     if (c == null) {m_typeSliceable     = c = ensureTerminalTypeConstant(clzSliceable()                       );} return c;}
     public TypeConstant      typeOrderable()     {TypeConstant      c = m_typeOrderable;     if (c == null) {m_typeOrderable     = c = ensureTerminalTypeConstant(clzOrderable()                       );} return c;}
+    public TypeConstant      typeHashable()      {TypeConstant      c = m_typeHashable;      if (c == null) {m_typeHashable      = c = ensureTerminalTypeConstant(clzHashable()                        );} return c;}
     public TypeConstant      typeSequential()    {TypeConstant      c = m_typeSequential;    if (c == null) {m_typeSequential    = c = ensureTerminalTypeConstant(clzSequential()                      );} return c;}
     public TypeConstant      typeNumber()        {TypeConstant      c = m_typeNumber;        if (c == null) {m_typeNumber        = c = ensureTerminalTypeConstant(clzNumber()                          );} return c;}
     public TypeConstant      typeRange()         {TypeConstant      c = m_typeRange;         if (c == null) {m_typeRange         = c = ensureTerminalTypeConstant(clzRange()                           );} return c;}
@@ -2264,6 +2266,7 @@ public class ConstantPool
     public SignatureConstant sigToString()       {SignatureConstant c = m_sigToString;       if (c == null) {m_sigToString       = c = getSignature("Object",    "toString",  0)                        ;} return c;}
     public SignatureConstant sigEquals()         {SignatureConstant c = m_sigEquals;         if (c == null) {m_sigEquals         = c = getSignature("Object",    "equals",    3)                        ;} return c;}
     public SignatureConstant sigCompare()        {SignatureConstant c = m_sigCompare;        if (c == null) {m_sigCompare        = c = getSignature("Orderable", "compare",   3)                        ;} return c;}
+    public SignatureConstant sigHashCode()       {SignatureConstant c = m_sigHashCode;       if (c == null) {m_sigHashCode       = c = getSignature("Hashable",  "hashCode",  2)                        ;} return c;}
     public SignatureConstant sigClose()          {SignatureConstant c = m_sigClose;          if (c == null) {m_sigClose          = c = getSignature("Closeable", "close",     1)                        ;} return c;}
     public SignatureConstant sigValidator()      {SignatureConstant c = m_sigValidator;      if (c == null) {m_sigValidator      = c = ensureSignatureConstant("assert", NO_TYPES, NO_TYPES)            ;} return c;}
 
@@ -3158,7 +3161,8 @@ public class ConstantPool
         if (!idRight.equals(clzFunction())) {
             // compare the "naked" contribution
             ClassStructure clzRight = (ClassStructure) idRight.getComponent();
-            if (clzRight.calculateRelation(this, typeFunction(), idRight.getType()) != Relation.IS_A) {
+            if (clzRight == null ||
+                    clzRight.calculateRelation(this, typeFunction(), idRight.getType()) != Relation.IS_A) {
                 return Relation.INCOMPATIBLE;
             }
         }
@@ -3361,6 +3365,8 @@ public class ConstantPool
                     if (typeParams.isTuple()) {
                         return typeParams.getParamTypesArray();
                     }
+                } else if (typeFunction instanceof IntersectionTypeConstant typeInter) {
+                    return typeInter.extractFunctionParams();
                 }
                 return TypeConstant.NO_TYPES;
             }
@@ -3403,6 +3409,8 @@ public class ConstantPool
                     if (typeParams.isTuple()) {
                         return typeParams.getParamTypesArray();
                     }
+                } else if (typeFunction instanceof IntersectionTypeConstant typeInter) {
+                    return typeInter.extractFunctionReturns();
                 }
                 return TypeConstant.NO_TYPES;
             }
@@ -3451,15 +3459,13 @@ public class ConstantPool
      * @return a new function type that skips the specified parameter
      */
     public TypeConstant bindFunctionParam(TypeConstant typeFn, int iParam) {
-        assert typeFn.isFunction() && typeFn.getParamsCount() > 0;
+        assert typeFn.isFunction();
 
-        TypeConstant typeP = typeFn.getParamType(0);
-        TypeConstant typeR = typeFn.getParamType(1);
+        TypeConstant[] atypeParams = extractFunctionParams(typeFn);
+        int            cParamsNew  = atypeParams.length - 1;
+        assert 0 <= cParamsNew && iParam <= cParamsNew;
 
-        int cParamsNew = typeP.getParamsCount() - 1;
-        assert typeP.isTuple() && iParam <= cParamsNew;
-
-        TypeConstant[] atypeParams = typeP.getParamTypesArray();
+        TypeConstant typeP;
         if (cParamsNew == 0) {
             // canonical Tuple represents Void
             typeP = typeTuple0();
@@ -3473,6 +3479,10 @@ public class ConstantPool
             }
             typeP = ensureTupleType(atypeNew);
         }
+
+        TypeConstant typeR = typeFn instanceof ParameterizedTypeConstant
+                ? typeFn.getParamType(1)
+                : ensureTupleType(extractFunctionReturns(typeFn));
 
         return ensureParameterizedTypeConstant(typeFunction(), typeP, typeR);
     }
@@ -3653,6 +3663,7 @@ public class ConstantPool
         m_clzMap            = null;
         m_clzListMap        = null;
         m_clzOrderable      = null;
+        m_clzHashable       = null;
         m_clzTuple          = null;
         m_clzCondTuple      = null;
         m_clzAuto           = null;
@@ -3746,6 +3757,7 @@ public class ConstantPool
         m_typeListMap       = null;
         m_typeSliceable     = null;
         m_typeOrderable     = null;
+        m_typeHashable      = null;
         m_typeSequential    = null;
         m_typeNumber        = null;
         m_typeFreezable     = null;
@@ -3779,6 +3791,7 @@ public class ConstantPool
         m_sigToString       = null;
         m_sigEquals         = null;
         m_sigCompare        = null;
+        m_sigHashCode       = null;
         m_sigClose          = null;
         m_sigValidator      = null;
         m_infoPlaceholder   = null;
@@ -3957,6 +3970,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzListMap;
     private transient ClassConstant     m_clzSliceable;
     private transient ClassConstant     m_clzOrderable;
+    private transient ClassConstant     m_clzHashable;
     private transient ClassConstant     m_clzTuple;
     private transient ClassConstant     m_clzCondTuple;
     private transient ClassConstant     m_clzAuto;
@@ -4050,6 +4064,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeListMap;
     private transient TypeConstant      m_typeSliceable;
     private transient TypeConstant      m_typeOrderable;
+    private transient TypeConstant      m_typeHashable;
     private transient TypeConstant      m_typeSequential;
     private transient TypeConstant      m_typeNumber;
     private transient TypeConstant      m_typeFreezable;
@@ -4090,6 +4105,7 @@ public class ConstantPool
     private transient SignatureConstant m_sigToString;
     private transient SignatureConstant m_sigEquals;
     private transient SignatureConstant m_sigCompare;
+    private transient SignatureConstant m_sigHashCode;
     private transient SignatureConstant m_sigClose;
     private transient SignatureConstant m_sigValidator;
     private transient TypeInfo          m_infoPlaceholder;
