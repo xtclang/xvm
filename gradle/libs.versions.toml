@@ -149,6 +149,7 @@ xdk-jsondb = { group = "org.xtclang", name = "lib-jsondb" }
 xdk-net = { group = "org.xtclang", name = "lib-net" }
 xdk-oodb = { group = "org.xtclang", name = "lib-oodb" }
 xdk-sec = { group = "org.xtclang", name = "lib-sec" }
+xdk-telemetry = { group = "org.xtclang", name = "lib-telemetry" }
 xdk-web = { group = "org.xtclang", name = "lib-web" }
 xdk-webauth = { group = "org.xtclang", name = "lib-webauth" }
 xdk-webcli = { group = "org.xtclang", name = "lib-webcli" }

@@ -9,12 +9,14 @@
  * forwarding (80 -> 8080, 443 -> 8090).
  */
 @WebApp
+@Instrumented
 module Hello {
-    package json  import json.xtclang.org;
-    package net   import net.xtclang.org;
-    package sec   import sec.xtclang.org;
-    package web   import web.xtclang.org;
-    package xenia import xenia.xtclang.org;
+    package json      import json.xtclang.org;
+    package net       import net.xtclang.org;
+    package sec       import sec.xtclang.org;
+    package web       import web.xtclang.org;
+    package xenia     import xenia.xtclang.org;
+    package telemetry import telemetry.xtclang.org;
 
     import ecstasy.io.FileInputStream;
     import ecstasy.io.FileOutputStream;
@@ -31,6 +33,21 @@ module Hello {
     import xenia.CookieBroker;
     import xenia.Http1Request;
     import xenia.SessionManager;
+
+    import telemetry.Resource;
+    import telemetry.annotations.Instrumented;
+    import telemetry.metrics.Aggregation;
+    import telemetry.metrics.AggregationTemporality;
+    import telemetry.metrics.Counter;
+    import telemetry.metrics.Histogram;
+    import telemetry.metrics.InstrumentDescriptor;
+    import telemetry.metrics.InstrumentSelector;
+    import telemetry.metrics.Meter;
+    import telemetry.metrics.StreamConfig;
+    import telemetry.metrics.View;
+    import telemetry.metrics.export.PeriodicExportingMetricReader;
+    import telemetry.metrics.export.otlp.OtlpJsonExporter;
+    import telemetry.metrics.memory.InMemoryMeterProvider;
 
     void run(String[] args=["localhost", "localhost:8080/8090"]) {
         @Inject Console console;
@@ -115,12 +132,89 @@ module Hello {
         }
     }
 
+        service Measurements(Callback[] callbacks) {
+
+            typedef function void (Float64) as Callback;
+
+            @Inject Clock  clock;
+
+            Measurement measure() {
+                return new Measurement(clock.now);
+            }
+
+            const Measurement(Time start) implements Closeable {
+                @Override
+                void close(Exception? cause = Null) {
+                    Time     end    = clock.now;
+                    Float64  millis = (end - start).nanoseconds.toFloat64() / 1000000.0;
+                    for (Callback callback : callbacks) {
+                        callback(millis);
+                    }
+                }
+            }
+        }
+
     package inner {
         @WebService("/")
         service Simple {
+
+            // ----- telemetry -----------------------------------------------------------------
+
+            // Replace the endpoint with your backend URL.
+            // For Basic Auth over HTTPS add an Authorization header — see METRICS.md for examples:
+            //   headers = ["Authorization" = $"Basic {base64Credentials}"]
+            private InMemoryMeterProvider metricsProvider =
+                    new InMemoryMeterProvider(
+                        resource    = new Resource([
+                            Resource.ServiceNameKey    = "hello-app",
+                            Resource.ServiceVersionKey = "1.0.0",
+                        ]),
+                        temporality = Cumulative,
+                        // Views customise which instruments are exported and how.
+                        views = [
+                            // Keep only route and status attributes on request counts.
+                            new View(new InstrumentSelector(name = "hello.greeting.requests"),
+                                     new StreamConfig(attributeKeys = ["route", "status"])),
+                            // Use exponential buckets for latency — captures outliers without
+                            // requiring pre-defined bucket boundaries.
+                            new View(new InstrumentSelector(name = "hello.greeting.duration"),
+                                     new StreamConfig(aggregation = new Aggregation.Base2ExponentialHistogramAggregation())),
+                            // Suppress internal debug instruments entirely.
+                            new View(new InstrumentSelector(name = "hello.debug.*"),
+                                     new StreamConfig(aggregation = Aggregation.Drop)),
+                        ],
+                        readers = [new PeriodicExportingMetricReader(
+                            new OtlpJsonExporter(endpoint = "http://localhost:9009/otlp",
+                                                 headers  = ["X-Scope-OrgID" = "demo"]),
+                            Duration.ofSeconds(15))]);
+
+            private Meter meter =
+                    metricsProvider.getMeter("hello.inner.Simple", version = "1.0.0");
+
+            private Counter greetingRequests =
+                    meter.createCounter(new InstrumentDescriptor(
+                        "hello.greeting.requests",
+                        unit        = "{request}",
+                        description = "Number of GET /hello requests served"));
+
+            private Histogram greetingDuration =
+                    meter.createHistogram(
+                        new InstrumentDescriptor(
+                            "hello.greeting.duration",
+                            unit        = "ms",
+                            description = "Latency of GET /hello requests"));
+
+            private Measurements measurements
+                    = new Measurements(callbacks=[greetingDuration.record,
+                                        (t) -> greetingRequests.inc()]);
+
+            // ----- session data --------------------------------------------------------------
+
             SimpleData simpleData.get() {
                 return session?.as(SimpleData) : assert;
             }
+
+            // ----- endpoints -----------------------------------------------------------------
 
             @Get
             ResponseOut home() {
@@ -129,8 +223,24 @@ module Hello {
 
             @Get("hello")
             String greeting() {
-                return "Hi";
+                using (var _ = measurements.measure()) {
+                    return "Hi";
+                }
+//                @Inject Timer timer;
+//                timer.start();
+//                try {
+//                    return "Hi";
+//                } finally {
+//                    timer.stop();
+//                    greetingRequests.add(Int:1);
+//                    @Inject Console console;
+//                    timer.stop();
+//                    Float64 t = timer.elapsed.nanoseconds.toFloat64() / 1000000.0;
+//                    console.print($"Request took {t} ms");
+//                    greetingDuration.record(t);
+//                }
             }
+
 
             @HttpsRequired(autoRedirect=True)
             @Get("s")

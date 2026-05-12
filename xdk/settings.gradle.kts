@@ -28,6 +28,7 @@ listOf(
     "lib_jsondb",
     "lib_oodb",
     "lib_sec",
+    "lib_telemetry",
     "lib_web",
     "lib_webauth",
     "lib_webcli",
