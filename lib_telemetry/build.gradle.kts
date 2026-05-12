@@ -1,0 +1,15 @@
+plugins {
+    alias(libs.plugins.xtc)
+}
+
+dependencies {
+    xdkJavaTools(libs.javatools)
+    xtcModule(libs.xdk.ecstasy)
+    xtcModule(libs.xdk.collections)
+    xtcModule(libs.xdk.convert)
+    xtcModule(libs.xdk.json)
+    xtcModule(libs.xdk.web)
+    xtcModule(libs.xdk.xunit)
+    xtcModuleTest(libs.javatools.bridge)
+    xtcModuleTest(libs.xdk.xunit.engine)
+}
