@@ -109,9 +109,9 @@ public class IIP_Sub
     }
 
     @Override
-    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder  code,
+    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder  code,
                                                    RegisterInfo regTarget, int nArgValue) {
         buildXvmPrimitiveSub(bctx, code, regTarget, nArgValue);
-        return regTarget;
+        return regTarget.type();
     }
 }

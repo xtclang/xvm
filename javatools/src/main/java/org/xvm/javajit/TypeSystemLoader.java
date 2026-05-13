@@ -4,6 +4,8 @@ import java.io.PrintStream;
 
 import java.util.Arrays;
 
+import java.util.function.Predicate;
+
 import org.xvm.asm.ModuleStructure;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
@@ -80,8 +82,8 @@ public class TypeSystemLoader
 
     // ----- debugging -----------------------------------------------------------------------------
 
-    public void dump(PrintStream out) {
+    public void dump(PrintStream out, Predicate<String> filter) {
         // Arrays.stream(shared).forEach(loader -> loader.dump(out));
-        Arrays.stream(owned).forEach(loader -> loader.dump(out));
+        Arrays.stream(owned).forEach(loader -> loader.dump(out, filter));
     }
 }

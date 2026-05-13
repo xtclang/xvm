@@ -42,8 +42,7 @@ import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_nObj;
-import static org.xvm.javajit.Builder.loadFromContext;
+import static org.xvm.javajit.Builder.CD_Object;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -227,7 +226,8 @@ public abstract class OpIndex
         ConstantPool pool       = bctx.pool();
         RegisterInfo reg        = bctx.loadArgument(code, m_nTarget);
         TypeConstant typeTarget = reg.type();
-        TypeConstant typeEl     = computeElementType(bctx.getTypeInfo(typeTarget));
+        TypeInfo     infoTarget = bctx.getTypeInfo(typeTarget);
+        TypeConstant typeEl     = computeElementType(infoTarget);
         boolean      fPrimitive = typeEl.isJitPrimitive();
 
         if (typeTarget.isArray()) {
@@ -240,16 +240,16 @@ public abstract class OpIndex
                 switch (getOpCode()) {
                     case OP_I_GET -> {
                         code.invokevirtual(cdArray, "getElement$p",
-                            MethodTypeDesc.of(CD_nObj, CD_Ctx, CD_long));
+                            MethodTypeDesc.of(CD_Object, CD_Ctx, CD_long));
                         if (!typeEl.equals(pool.typeObject())) {
                             code.checkcast(bctx.builder.ensureClassDesc(typeEl));
                         }
                     }
 
                     case OP_I_SET -> {
-                        bctx.loadArgument(code, getValueIndex());
+                        bctx.loadArgument(code, getValueId());
                         code.invokevirtual(cdArray, "setElement$p",
-                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_nObj));
+                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_Object));
                     }
 
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));
@@ -281,26 +281,45 @@ public abstract class OpIndex
                 default          -> throw new UnsupportedOperationException(toName(getOpCode()));
             }
 
-            TypeConstant  typeArg  = bctx.getArgumentType(m_nIndex);
-            MethodInfo    method   = bctx.getTypeInfo(typeTarget).findOpMethod(sName, sOp, typeArg);
+            TypeConstant typeIndex = bctx.getArgumentType(m_nIndex);
+            MethodInfo   method;
+            boolean      fSet = getOpCode() == OP_I_SET;
+            if (fSet) {
+                Set<MethodConstant> set = infoTarget.findOpMethods(sName, sOp, 2);
+                if (set.size() != 1) {
+                    throw new UnsupportedOperationException(
+                        "Cannot resolve the method: " + sName + " on " + typeTarget.getValueString());
+                }
+                method = infoTarget.getMethodById(set.iterator().next());
+
+            } else {
+                method = infoTarget.findOpMethod(sName, sOp, typeIndex);
+            }
+
             JitMethodDesc jmd      = method.getJitDesc(bctx.builder, typeTarget);
             String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
 
-            MethodTypeDesc mdCall;
-            if (jmd.isOptimized) {
-                mdCall  = jmd.optimizedMD;
-                sJitName += Builder.OPT;
-            }
-            else {
-                mdCall = jmd.standardMD;
-            }
-            bctx.loadCtx(code);
-            bctx.loadCallArguments(code, jmd, new int[] {m_nIndex});
+            assert jmd.isOptimized;
+            sJitName += Builder.OPT;
 
-            if (typeTarget.isJitInterface()) {
-                code.invokeinterface(reg.cd(), sJitName, mdCall);
+            bctx.loadCtx(code);
+            if (fSet) {
+                bctx.loadCallArguments(code, jmd, new int[] {m_nIndex, getValueId()});
             } else {
-                code.invokevirtual(reg.cd(), sJitName, mdCall);
+                bctx.loadCallArguments(code, jmd, new int[] {m_nIndex});
+            }
+            if (typeTarget.isJitInterface()) {
+                code.invokeinterface(reg.cd(), sJitName, jmd.optimizedMD);
+            } else {
+                code.invokevirtual(reg.cd(), sJitName, jmd.optimizedMD);
+            }
+
+            if (!fSet && typeEl.isXvmPrimitive()) {
+                // XVM primitive types may return partially on the stack and partially in the Ctx
+                ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(typeEl);
+                for (int i = 1; i < cds.length; i++) {
+                    Builder.loadFromContext(code, cds[i], i-1);
+                }
             }
         }
 
@@ -344,9 +363,9 @@ public abstract class OpIndex
 
 
     /**
-     * @return the index of the argument value for corresponding ops
+     * @return the id of the argument value for corresponding ops
      */
-    protected int getValueIndex() {
+    protected int getValueId() {
         throw new UnsupportedOperationException("TODO " + getClass().getName());
     }
 
@@ -424,7 +443,7 @@ public abstract class OpIndex
      *         {@link RegisterInfo} representing the array element
      */
     private RegisterInfo loadArrayElement(BuildContext bctx, CodeBuilder code,
-            RegisterInfo regArray, boolean onStack) {
+                                          RegisterInfo regArray, boolean onStack) {
 
         TypeConstant type    = regArray.type();
         TypeConstant typeEl  = type.resolveGenericType("Element");
@@ -438,14 +457,11 @@ public abstract class OpIndex
         if (javaPrimitive) {
             cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
             cds  = new ClassDesc[]{cdEl};
-        } else if (xvmPrimitive) {
+        } else {
+            assert xvmPrimitive;
             cds  = JitTypeDesc.getXvmPrimitiveClasses(typeEl);
             cdEl = cds[0];
-        } else {
-            cdEl = CD_nObj;
-            cds  = new ClassDesc[]{cdEl};
         }
-        assert cdEl != null;
 
         // get the element from the array
         bctx.loadCtx(code);
@@ -457,7 +473,7 @@ public abstract class OpIndex
         if (onStack) {
             // load any remaining values from the context to the stack
             for (int i = 1 ; i < cds.length; i++) {
-                loadFromContext(code, cds[i], i - 1);
+                Builder.loadFromContext(code, cds[i], i - 1);
             }
         } else {
             if (typeEl.isXvmPrimitive()) {
@@ -467,7 +483,7 @@ public abstract class OpIndex
 
                 slots[0] = bctx.storeTempValue(code, cds[0]);
                 for (int i = 1 ; i < cds.length; i++) {
-                    loadFromContext(code, cds[i], i - 1);
+                    Builder.loadFromContext(code, cds[i], i - 1);
                     slots[i] = bctx.storeTempValue(code, cds[i]);
                 }
                 regElement = new MultiSlot(bctx, 0, slots, JitFlavor.XvmPrimitive, typeEl,

@@ -31,10 +31,8 @@ public abstract class OpOptimized
      *
      * @return the type of the result of the operation
      */
-    protected TypeConstant buildOptimizedBinary(BuildContext bctx,
-                                                CodeBuilder  code,
-                                                RegisterInfo regTarget,
-                                                int          nArgValue) {
+    protected TypeConstant buildOptimizedBinary(BuildContext bctx, CodeBuilder  code,
+                                                RegisterInfo regTarget, int nArgValue) {
         RegisterInfo regLoaded = regTarget.load(code);
         RegisterInfo regArg    = bctx.loadArgument(code, nArgValue);
         ClassDesc    cdArg     = regArg.cd();
@@ -59,10 +57,8 @@ public abstract class OpOptimized
      * @param regTarget  the {@link RegisterInfo} for the target of the operation
      * @param regArg     the {@link RegisterInfo} for the argument of the operation
      */
-    protected void buildOptimizedBinary(BuildContext bctx,
-                                        CodeBuilder  code,
-                                        RegisterInfo regTarget,
-                                        RegisterInfo regArg) {
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code,
+                                        RegisterInfo regTarget, RegisterInfo regArg) {
          throw new UnsupportedOperationException();
      }
 
@@ -86,17 +82,15 @@ public abstract class OpOptimized
      * <p>
      * Neither the target nor argument should have been loaded to the stack.
      *
-     * @param bctx       the current build context
-     * @param code       the code builder to add the op codes to
-     * @param regTarget  the register containing the target of the operation
-     * @param nArgValue  the register containing the operation argument
+     * @param bctx      the current build context
+     * @param code      the code builder to add the op codes to
+     * @param regTarget the register containing the target of the operation
+     * @param nArgValue the id of the register containing the operation argument
      *
-     * @return the target register used for the operation
+     * @return the type of the resulting value (on Java stack)
      */
-    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
-                                                   CodeBuilder  code,
-                                                   RegisterInfo regTarget,
-                                                   int          nArgValue) {
+    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder code,
+                                                   RegisterInfo regTarget, int nArgValue) {
         RegisterInfo regLoaded = regTarget.load(code);
         RegisterInfo regArg    = bctx.loadArgument(code, nArgValue);
         if (!regArg.cd().equals(regLoaded.cd())) {
@@ -104,7 +98,7 @@ public abstract class OpOptimized
                     regArg.type().getValueString() + " to " + regLoaded.type().getValueString());
         }
         buildXvmOptimizedBinary(bctx, code, regLoaded, regArg);
-        return regLoaded;
+        return regLoaded.type();
     }
 
 
@@ -117,10 +111,8 @@ public abstract class OpOptimized
      * @param regTarget  the {@link RegisterInfo} for the target of the operation
      * @param regArg     the {@link RegisterInfo} for the argument of the operation
      */
-    protected void buildXvmOptimizedBinary(BuildContext bctx,
-                                           CodeBuilder  code,
-                                           RegisterInfo regTarget,
-                                           RegisterInfo regArg) {
+    protected void buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder code,
+                                           RegisterInfo regTarget, RegisterInfo regArg) {
         throw new UnsupportedOperationException();
     }
 
@@ -134,9 +126,7 @@ public abstract class OpOptimized
      * @param code       the code builder to add the op codes to
      * @param regTarget  that final result type
      */
-    protected void buildXvmOptimizedUnary(BuildContext bctx,
-                                          CodeBuilder  code,
-                                          RegisterInfo regTarget) {
+    protected void buildXvmOptimizedUnary(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         throw new UnsupportedOperationException();
     }
 }

@@ -35,6 +35,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PendingTypeConstant;
 import org.xvm.asm.constants.RegisterConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -946,6 +947,46 @@ public class MethodStructure
         }
     }
 
+    /**
+     * Resolve the signature of this method as being called on the specified type.
+     *
+     * @param pool        the ConstantPool to use
+     * @param typeTarget  the target type
+     *
+     * @return the resolved signature
+     */
+    public SignatureConstant resolveSignature(ConstantPool pool, TypeConstant typeTarget) {
+        SignatureConstant sigResolved =
+                getIdentityConstant().getSignature().resolveGenericTypes(pool, typeTarget);
+
+        // generic types are passed to "static" lambdas as type parameters
+        if (isLambda() && getTypeParamCount() > 0) {
+            SignatureConstant sigOrig = sigResolved;
+
+            sigResolved = sigResolved.resolveGenericTypes(pool, new GenericTypeResolver() {
+                @Override
+                public TypeConstant resolveGenericType(String formalName) {
+                    return null;
+                }
+
+                @Override
+                public TypeConstant resolveFormalType(FormalConstant formalConst) {
+                    MethodConstant methodId = getIdentityConstant();
+                    for (Parameter param : getParamArray()) {
+                        if (param.isTypeParameter() &&
+                                formalConst.equals(param.asTypeParameterConstant(methodId))) {
+                            TypeConstant typeOfType = sigOrig.getRawParams()[param.getIndex()];
+                            assert typeOfType.isTypeOfType();
+                            TypeConstant type = typeOfType.getParamType(0);
+                            return type.isJitPrimitive() ? type : null;
+                        }
+                    }
+                    return null;
+                }
+            });
+        }
+        return sigResolved;
+    }
 
     // ----- run-time support ----------------------------------------------------------------------
 
@@ -1096,6 +1137,9 @@ public class MethodStructure
         setAbstract(false);
         resetRuntimeInfo();
 
+        if (getName().equals("compare") && getIdentityConstant().getNamespace().getName().equals("Const")) {
+            int q= 0;
+        }
         m_fNative    = true;
         m_fTransient = true;
     }

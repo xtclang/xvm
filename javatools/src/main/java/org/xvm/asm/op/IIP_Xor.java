@@ -10,6 +10,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpIndexInPlace;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.RegisterInfo;
 
@@ -97,9 +98,9 @@ public class IIP_Xor
     }
 
     @Override
-    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder  code,
+    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder  code,
                                                    RegisterInfo regTarget, int nArgValue) {
         buildXvmPrimitiveXor(bctx, code, regTarget, nArgValue);
-        return regTarget;
+        return regTarget.type();
     }
 }

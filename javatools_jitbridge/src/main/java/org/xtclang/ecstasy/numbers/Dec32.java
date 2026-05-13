@@ -5,11 +5,7 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.math.RoundingMode;
 
-import org.xtclang.ecstasy.Comparable;
-import org.xtclang.ecstasy.Orderable;
-import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.OutOfBounds;
-import org.xtclang.ecstasy.nType;
 
 import org.xvm.javajit.Ctx;
 
@@ -97,34 +93,6 @@ public class Dec32 extends DecimalFPNumber {
 
     public static Dec32 $box(int value) {
         return new Dec32(value);
-    }
-
-    /**
-     * Determine whether two Dec32 primitives are equal.
-     *
-     * @param ctx    the context
-     * @param bits1  the bits of the first value
-     * @param bits2  the bits of the second value
-     *
-     * @return {@code true} iff the two Dec32 primitives are equal
-     */
-    public static boolean equals$p(Ctx ctx, int bits1, int bits2) {
-        return bits1 == bits2;
-    }
-
-    /**
-     * Compare two Dec32 primitives.
-     *
-     * @param ctx    the current {@link Ctx}
-     * @param bits1  the bits of the first value
-     * @param bits2  the bits of the second value
-     *
-     * @return a negative integer if the first Dec32 is lower than the second, zero if both Dec32
-     *         values are equal, or a positive integer if the first Dec32 is greater than the
-     *         second.
-     */
-    public static int compare$p(Ctx ctx, int bits1, int bits2) {
-        return new Dec32(bits1).$compareForObjectOrder(new Dec32(bits2));
     }
 
     // ----- Op methods ----------------------------------------------------------------------------
@@ -318,33 +286,33 @@ public class Dec32 extends DecimalFPNumber {
         return $bits;
     }
 
-    // ----- Orderable interface -------------------------------------------------------------------
+    // ----- internal JIT support ------------------------------------------------------------------
 
     /**
-     * The primitive implementation of:
-     * <pre>
-     * static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
-     * </pre>
+     * The internal compare method for two Dec32 values called by the compare methods generated
+     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleConstCompare}
+     * and also in {@link TypeConstant#buildCompare}
+     *
+     * @param bits1  the bits of the first value
+     * @param bits2  the bits of the second value
+     *
+     * @return a negative integer if the first Dec32 is lower than the second, zero if both Dec32
+     *         values are equal, or a positive integer if the first Dec32 is greater than the
+     *         second.
      */
-    public static Ordered compare(Ctx ctx, nType type, Orderable value1, Orderable value2) {
-        Dec32 decThis = (Dec32) value1;
-        Dec32 decThat = (Dec32) value2;
-        int   order   = decThis.$compareForObjectOrder(decThat);
-        return order < 0  ? Ordered.Lesser.$INSTANCE
-                : order == 0 ? Ordered.Equal.$INSTANCE
-                : Ordered.Greater.$INSTANCE;
+    public static int $compare(int bits1, int bits2) {
+        return new Dec32(bits1).$compareForObjectOrder(new Dec32(bits2));
     }
 
     /**
-     * The primitive implementation of:
-     * <pre>
-     *  static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
-     * </pre>
+     * The internal equals method for two Dec32 values called by the equals methods generated
+     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleConstEquals} Method}
+     * and also in {@link TypeConstant#buildCompare}
+     *
+     * @return {@code true} if the two Dec32 values are equal, {@code false} otherwise.
      */
-    public static Boolean equals(Ctx ctx, nType type, Comparable value1, Comparable value2) {
-        long l1 = ((Dec32) value1).$bits;
-        long l2 = ((Dec32) value2).$bits;
-        return l1 == l2 ? Boolean.TRUE : Boolean.FALSE;
+    public static boolean $equals(int value1, int value2) {
+        return value1 == value2;
     }
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -518,6 +486,16 @@ public class Dec32 extends DecimalFPNumber {
         return nBits;
     }
 
+    @Override
+    protected long[] $longValues() {
+        return new long[]{(long) $bits << 32};
+    }
+
+    @Override
+    protected long bitLength$get$p() {
+        return 32;
+    }
+
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -526,7 +504,7 @@ public class Dec32 extends DecimalFPNumber {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(java.lang.Object obj) {
         return obj instanceof Dec32 that && this.$bits == that.$bits;
     }
 }

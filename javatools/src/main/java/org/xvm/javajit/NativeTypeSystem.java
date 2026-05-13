@@ -134,11 +134,6 @@ public class NativeTypeSystem
     private final Map<TypeConstant, String> nativeByType = new ConcurrentHashMap<>();
 
     /**
-     * A registry of function JIT class names keyed by the function types.
-     */
-    public final Map<TypeConstant, String> nativeFunctions = new ConcurrentHashMap<>();
-
-    /**
      * A cache of builders for native classes keyed by type.
      */
     public final Map<TypeConstant, Class> nativeBuilders = new ConcurrentHashMap<>();
@@ -163,7 +158,9 @@ public class NativeTypeSystem
                 byte[] classBytes = in.readAllBytes();
                 String simpleName = name.substring(name.lastIndexOf('.') + 1);
                        simpleName = simpleName.substring(simpleName.lastIndexOf('$') + 1);
-                if (simpleName.codePointAt(0) == NO_MOD || isEnumerationClass(simpleName)) {
+                if (simpleName.codePointAt(0) == NO_MOD
+                        || isEnumerationClass(simpleName)
+                        || className.equals(Builder.N_Function)) {
                     // by convention the classes that start with an "n" are "no-modification"
                     // classes that we take "as is" (they must not be augmented)
                     return classBytes;
@@ -212,7 +209,7 @@ public class NativeTypeSystem
                 if (struct == null) {
                     throw new RuntimeException("Structure is missing for " + moduleLoader.prefix + name);
                 }
-                TypeConstant type = struct.getCanonicalType();
+                TypeConstant type = struct.getFormalType();
                 if (formals.length > 0) {
                     type = type.adoptParameters(pool(), formals);
                 }
@@ -290,19 +287,24 @@ public class NativeTypeSystem
         nativeByClass.put(pool.clzEnum(),      Builder.N_nEnum);
         nativeByClass.put(pool.clzEnumValue(), Builder.N_nEnum);
         nativeByClass.put(pool.clzModule(),    Builder.N_nModule);
-        nativeByClass.put(pool.clzObject(),    Builder.N_nObj);
+        nativeByClass.put(pool.clzObject(),    Builder.N_Object);
         nativeByClass.put(pool.clzRef(),       Builder.N_nRef);
         nativeByClass.put(pool.clzService(),   Builder.N_nService);
         nativeByClass.put(pool.clzType(),      Builder.N_nType);
         nativeByClass.put(pool.clzVar(),       Builder.N_nRef);
 
         // various types used by native classes
-        TypeConstant typeChar       = pool.typeChar();
+        TypeConstant typeChar        = pool.typeChar();
         TypeConstant iterableᐸCharᐳ = pool.ensureParameterizedTypeConstant(pool.typeIterable(), typeChar);
         TypeConstant iteratorᐸCharᐳ = pool.ensureParameterizedTypeConstant(pool.typeIterator(), typeChar);
 
         nativeByType.put(iterableᐸCharᐳ, Builder.N_IterableChar);
         nativeByType.put(iteratorᐸCharᐳ,  Builder.N_IteratorChar);
+
+        TypeConstant typeInt     = pool.typeInt64();
+        TypeConstant rangeᐸIntᐳ = pool.ensureParameterizedTypeConstant(pool.typeRange(), typeInt);
+
+        nativeByType.put(rangeᐸIntᐳ, Builder.N_nRangeInt64);
 
         // specialized builders
         nativeBuilders.put(pool.typeInt64(),  org.xvm.javajit.builders.Int64Builder.class);
@@ -311,11 +313,6 @@ public class NativeTypeSystem
 
         // prime the function name counter
         xvm.createUniqueSuffix("");
-
-        // xFunction.ꖛ0: function void()
-        nativeFunctions.put(
-            pool.buildFunctionType(TypeConstant.NO_TYPES, TypeConstant.NO_TYPES),
-            Builder.N_nFunction + "$ꖛ0");
     }
 }
 

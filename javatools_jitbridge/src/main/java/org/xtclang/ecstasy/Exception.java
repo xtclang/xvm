@@ -1,5 +1,7 @@
 package org.xtclang.ecstasy;
 
+import java.util.Objects;
+
 import org.xvm.javajit.Ctx;
 import org.xvm.javajit.Ctx.CtorCtx;
 
@@ -14,11 +16,21 @@ public class Exception extends nConst {
     }
 
     // natural property type: String?
-    public nObj text;
+    public Object text;
     // natural property type: Exception?
-    public nObj cause;
+    public Object cause;
     // the associated native Java exception
     public nException $exception;
+
+    /**
+     * Exception Constructor:
+     *  construct(String? text = Null, Exception? cause = Null)
+     */
+    public static Exception $new(Ctx ctx, Object text, Object cause) {
+        Exception ex = new Exception(ctx);
+        construct(ctx, null, ex, text, cause);
+        return ex;
+    }
 
     /**
      * This is a static method that will be called by the naturally constructed sub-classes.
@@ -28,7 +40,7 @@ public class Exception extends nConst {
      *
      * @see {@link org.xvm.asm.constants.MethodConstant#ensureJitMethodName}
      */
-    public static void construct(Ctx ctx, CtorCtx cctx, Exception thi$, nObj message, nObj cause) {
+    public static void construct(Ctx ctx, CtorCtx cctx, Exception thi$, Object message, Object cause) {
         thi$.text       = message instanceof String text ? text : Nullable.Null;
         thi$.cause      = cause instanceof Exception e ? e : Nullable.Null;
         thi$.$exception = thi$.$createJavaException(cause instanceof Exception e ? e.$exception : null);
@@ -74,10 +86,12 @@ public class Exception extends nConst {
         StringBuilder sb = new StringBuilder(className);
         sb.append(": ")
           .append(text == Nullable.Null ? "" : text.toString($ctx()));
-        for (StackTraceElement el : $exception.getStackTrace()) {
-            if (el.getFileName().endsWith(".x") && !el.getMethodName().startsWith("$")) {
-                sb.append("\n    at ")
-                  .append(el);
+        if ($exception != null) { // can be null only during construction
+            for (StackTraceElement el : $exception.getStackTrace()) {
+                if (el.getFileName().endsWith(".x") && !el.getMethodName().startsWith("$")) {
+                    sb.append("\n    at ")
+                      .append(el);
+                }
             }
         }
         return sb.toString();
@@ -104,5 +118,45 @@ public class Exception extends nConst {
      */
     public static nException $rt(Ctx ctx, java.lang.String text) {
         return new Exception(ctx).$init(ctx, text, null);
+    }
+
+    // ----- Orderable interface -------------------------------------------------------------------
+
+    /**
+     * The native implementation of:
+     *
+     * static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
+     */
+    public static Ordered compare(Ctx ctx, nType type, Exception value1, Exception value2) {
+        int i = Long.compare(hashCode$p(ctx, type, value1), hashCode$p(ctx, type, value2));
+        return i < 0  ? Ordered.Lesser.$INSTANCE
+             : i == 0 ? Ordered.Equal.$INSTANCE
+                      : Ordered.Greater.$INSTANCE;
+    }
+
+    /**
+     * The native implementation of:
+     *
+     *  static <CompileType extends Exception> Boolean equals(CompileType value1, CompileType value2)
+     */
+    public static boolean equals$p(Ctx ctx, nType type, Exception value1, Exception value2) {
+        if (!nObj.equals$p(ctx, ((nObj) value1.text).$type(ctx), value1.text, value2.text)) {
+            return false;
+        }
+        if (!nObj.equals$p(ctx, ((nObj) value1.cause).$type(ctx), value1.cause, value2.cause)) {
+            return false;
+        }
+        return value1.$exception.equals(value2.$exception);
+    }
+
+    // ----- Hashable interface --------------------------------------------------------------------
+
+    /**
+     * The native implementation of:
+     *
+     * static <CompileType extends Hashable> Int hashCode(CompileType value);;
+     */
+    public static long hashCode$p(Ctx ctx, nType type, Exception ex) {
+        return Objects.hash(ex.text, ex.cause, ex.$exception);
     }
 }

@@ -22,7 +22,6 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
-import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
 
@@ -321,12 +320,9 @@ public abstract class OpInvocable extends Op {
         TypeConstant      typeTarget = bctx.getArgumentType(m_nTarget);
         TypeInfo          infoTarget = bctx.getTypeInfo(typeTarget);
         MethodConstant    idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
-        MethodInfo        methodInfo = infoTarget.getMethodById(idMethod);
-        SignatureConstant sig        = methodInfo.getSignature();
+        MethodInfo        infoMethod = infoTarget.getMethodById(idMethod, true); // TODO: HACK
+        SignatureConstant sig        = infoMethod.getSignature();
 
-        if (sig.containsGenericTypes()) {
-            sig = sig.resolveGenericTypes(pool, typeTarget);
-        }
         if (sig.containsAutoNarrowing(true)) {
             sig = sig.resolveAutoNarrowing(pool, typeTarget, null);
         }
@@ -335,7 +331,7 @@ public abstract class OpInvocable extends Op {
             if (method == null) {
 
                 // TODO: add support for nested ids (see the interpreter logic above)
-                MethodInfo infoMethod = infoTarget.getMethodBySignature(sig);
+                infoMethod = infoTarget.getMethodBySignature(sig);
                 assert infoMethod != null;
                 method = infoMethod.getHead().getMethodStructure();
             }

@@ -76,7 +76,7 @@ public abstract class Builder {
     /**
      * @return TypeConstant for "this" type
      */
-    protected TypeConstant getThisType() {
+    public TypeConstant getThisType() {
         throw new UnsupportedOperationException();
     }
 
@@ -199,7 +199,7 @@ public abstract class Builder {
 
         case FloatConstant floatConstant:
             return switch (floatConstant.getFormat()) {
-                case Float32 -> {
+                case Float16, Float32 -> {
                     code.loadConstant(floatConstant.getValue().floatValue());
                     yield new SingleSlot(constant.getType(), Primitive, CD_float, "");
                 }
@@ -278,12 +278,9 @@ public abstract class Builder {
         case PropertyConstant propId: {
             // support for the "local property" mode
             code.aload(0);
-            JitMethodDesc jmd = loadProperty(code, getThisType(), propId);
-
-            TypeConstant type = jmd.isOptimized
-                    ? jmd.optimizedReturns[0].type
-                    : jmd.standardReturns[0].type;
-            JitTypeDesc jtd = type.getJitDesc(this);
+            PropertyInfo info = loadProperty(code, getThisType(), propId);
+            TypeConstant type = info.getType();
+            JitTypeDesc  jtd  = type.getJitDesc(this);
             if (jtd.flavor == NullablePrimitive) {
                 throw new UnsupportedOperationException("TODO multislot property");
             }
@@ -299,18 +296,23 @@ public abstract class Builder {
             }
 
             // 1) ensure the method exists
-            String     jitName;
-            MethodBody body;
+            TypeConstant containerType = bctx.thisType;
+            String       jitName;
+            MethodBody   body;
+            TypeConstant sigType; // function or method type
             if (methodId.isLambda()) {
-                // generate the method itself
                 MethodStructure lambda = (MethodStructure) methodId.getComponent();
                 jitName = methodId.ensureJitMethodName(typeSystem).replace("->", LAMBDA);
                 body    = new MethodBody(lambda);
+                sigType = body.asFunctionType(pool(), containerType);
+
+                // generate the method itself
                 bctx.buildMethod(jitName, body);
             } else {
                 MethodInfo method = bctx.typeInfo.getMethodById(methodId);
                 jitName = method.ensureJitMethodName(typeSystem);
                 body    = method.getHead();
+                sigType = body.getIdentity().getType();
                 if (body.getIdentity().getNestedDepth() > 2) {
                     // methods nested inside properties or methods are not visible otherwise
                     // and need to built on-the-spot
@@ -319,10 +321,9 @@ public abstract class Builder {
             }
 
             // 2) create the MethodHandle(s)
-            TypeConstant  containerType = bctx.typeInfo.getType();
-            ClassDesc     containerCD   = ClassDesc.of(bctx.className);
-            JitMethodDesc jmd           = body.getJitDesc(this, containerType);
-            boolean       isFunction    = body.getMethodStructure().isFunction();
+            ClassDesc     containerCD  = ClassDesc.of(bctx.className);
+            JitMethodDesc jmd          = body.getJitDesc(this, containerType);
+            boolean       isFunction   = body.getMethodStructure().isFunction();
 
             DirectMethodHandleDesc.Kind kind = isFunction
                     ? DirectMethodHandleDesc.Kind.STATIC
@@ -335,17 +336,16 @@ public abstract class Builder {
                     ? MethodHandleDesc.ofMethod(kind, containerCD, jitName+OPT, jmd.optimizedMD)
                     : null;
 
-            TypeConstant type = body.getIdentity().getType();
             if (isFunction) {
                 // 3) instantiate a function object
                 //      new FunctionN(ctx, stdHandle, optHandle, immutable);
-                assert type.isFunction();
+                assert sigType.isFunction();
 
                 ClassDesc cd = CD_nFunction;
                 code.new_(cd)
                     .dup()
                     .aload(code.parameterSlot(0)); // ctx
-                bctx.loadTypeConstant(code, type);
+                bctx.loadTypeConstant(code, sigType);
                 code.ldc(stdMD);
                 if (optMD == null) {
                     code.aconst_null();
@@ -355,18 +355,18 @@ public abstract class Builder {
                 code.iconst_1() // immutable = true
                     .invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
                         CD_MethodHandle, CD_MethodHandle, CD_boolean));
-                return new SingleSlot(type, Specific, cd, "");
+                return new SingleSlot(sigType, Specific, cd, "");
             } else {
                 // 3) instantiate an nMethod object
                 //      new nMethod(ctx, type, stdHandle, optHandle);
 
-                assert type.isMethod();
+                assert sigType.isMethod();
 
                 ClassDesc cd = CD_nMethod;
                 code.new_(cd)
                     .dup()
                     .aload(code.parameterSlot(0)); // ctx
-                bctx.loadTypeConstant(code, type);
+                bctx.loadTypeConstant(code, sigType);
                 code.ldc(stdMD);
                 if (optMD == null) {
                     code.aconst_null();
@@ -375,7 +375,7 @@ public abstract class Builder {
                 }
                 code.invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
                         CD_MethodHandle, CD_MethodHandle));
-                return new SingleSlot(type, Specific, cd, "");
+                return new SingleSlot(sigType, Specific, cd, "");
             }
         }
 
@@ -622,7 +622,7 @@ public abstract class Builder {
             cdArray   = CD_ArrayObj;
             className = N_ArrayObj;
             addMethod = "add";
-            mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_nObj);
+            mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_Object);
         }
 
         // Note: we remove the immutability here; it will be added back upon "$makeImmut"
@@ -663,9 +663,9 @@ public abstract class Builder {
      *
      * This method assumes the "owner" ref is loaded on Java stack.
      *
-     * @return the JitMethodDesc for the "get" method
+     * @return the PropertyInfo for the property
      */
-    public JitMethodDesc loadProperty(CodeBuilder code, TypeConstant typeContainer,
+    public PropertyInfo loadProperty(CodeBuilder code, TypeConstant typeContainer,
                                       PropertyConstant propId) {
         return loadProperty(code, typeContainer, propId, true);
     }
@@ -677,9 +677,9 @@ public abstract class Builder {
      *
      * @param allowUnboxing  if true, allow property access optimization
      *
-     * @return the JitMethodDesc for the "get" method
+     * @return the PropertyInfo for the property
      */
-    public JitMethodDesc loadProperty(CodeBuilder code, TypeConstant typeContainer,
+    public PropertyInfo loadProperty(CodeBuilder code, TypeConstant typeContainer,
                                       PropertyConstant propId, boolean allowUnboxing) {
         PropertyInfo  xvmInfo    = propId.getPropertyInfo(typeContainer);
         PropertyInfo  jitInfo    = propId.getPropertyInfo(typeContainer.getCanonicalJitType());
@@ -702,10 +702,22 @@ public abstract class Builder {
             code.invokevirtual(ensureClassDesc(typeOwner), getterName, md);
         }
 
-        if (!xvmInfo.getType().equals(jitInfo.getType())) {
-            code.checkcast(ensureClassDesc(xvmInfo.getType()));
+        TypeConstant jitType = jitInfo.getType();
+        TypeConstant xvmType = xvmInfo.getType();
+        if (!isJitAssignable(jitType, xvmType)) {
+            code.checkcast(ensureClassDesc(xvmType));
         }
-        return jmdGet;
+        return xvmInfo;
+    }
+
+    public void loadOptimizedReturnsToStack(CodeBuilder code, JitMethodDesc md) {
+        JitParamDesc[] params = md.optimizedReturns;
+        int            count  = md.standardReturns[0].type.isNullable()
+                                        ? params.length - 1 : params.length;
+        // the first return should be on the stack, so we need to load the remainder
+        for (int i = 1; i < count; i++) {
+            loadFromContext(code, params[i].cd, params[i].altIndex);
+        }
     }
 
     /**
@@ -783,6 +795,33 @@ public abstract class Builder {
             }
         } else {
             code.aconst_null();
+        }
+    }
+
+    /**
+     * Build the byte codes to convert a primitive value on the stack into a Java {@code long}
+     * value on the stack.
+     *
+     * @param cd    the type of the primitive to convert
+     * @param code  the code builder to which the byte codes should be appended
+     */
+    public static void buildPrimitiveToLong(ClassDesc cd, CodeBuilder code) {
+        switch (cd.descriptorString()) {
+            case "Z", "B", "S", "I":
+                code.i2l();
+                break;
+            case "J":
+                // already long
+                break;
+            case "F":
+                code.invokestatic(CD_JavaFloat, "floatToRawIntBits",
+                        MethodTypeDesc.of(CD_int, CD_float));
+                code.i2l();
+                break;
+            case "D":
+                code.invokestatic(CD_JavaDouble, "doubleToRawLongBits",
+                        MethodTypeDesc.of(CD_long, CD_double));
+                break;
         }
     }
 
@@ -1260,11 +1299,6 @@ public abstract class Builder {
     /**
      * Add the code to throw an Ecstasy exception. The code we produce is equivalent to:
      * {@code throw new Exception(ctx).$init(ctx, text, null);}
-     *
-     * @param code
-     * @param exCD         the ClassDesc for the Ecstasy exception (e.g. TypeMismatch)
-     * @param text         the exception text
-     * @param buildContext
      */
     public static void throwException(CodeBuilder code, ClassDesc exCD, String text) {
         invokeDefaultConstructor(code, exCD);
@@ -1288,6 +1322,13 @@ public abstract class Builder {
      */
     public static void throwOutOfBounds(CodeBuilder code, String text) {
         throwException(code, ClassDesc.of(N_OutOfBounds), text);
+    }
+
+    /**
+     * Add the code to throw an "IllegalState" exception.
+     */
+    public static void throwIllegalState(CodeBuilder code, String text) {
+        throwException(code, ClassDesc.of(N_IllegalState), text);
     }
 
     /**
@@ -1325,6 +1366,16 @@ public abstract class Builder {
         return ClassDesc.of(getShapeName(className, shape));
     }
 
+    /**
+     * Check if the assignment of the variable of the `srcType` to the variable of `dstType`
+     * requires a "checkcast".
+     *
+     * @return true iff the assignment is JIT-valid, false if the "checkcast" opcode is necessary
+     */
+    public static boolean isJitAssignable(TypeConstant srcType, TypeConstant dstType) {
+        return srcType.getCanonicalJitType().isA(dstType.getCanonicalJitType());
+    }
+
     // ----- TEMPORARY: debugging support ----------------------------------------------------------
 
     /**
@@ -1336,6 +1387,15 @@ public abstract class Builder {
             .invokevirtual(Builder.CD_Ctx, "log", MethodTypeDesc.of(CD_void, CD_JavaString));
     }
 
+    /**
+     * TODO: replace with more configurable
+     *
+     * @return true to generate the debug info into the bytecode
+     */
+    public boolean isDebugInfo() {
+        return true;
+    }
+
     // ----- native class names --------------------------------------------------------------------
 
     public static final String N_Array        = "org.xtclang.ecstasy.collections.Array";
@@ -1345,6 +1405,7 @@ public abstract class Builder {
     public static final String N_ArrayDec32   = "org.xtclang.ecstasy.collections.ArrayᐸDec32ᐳ";
     public static final String N_ArrayDec64   = "org.xtclang.ecstasy.collections.ArrayᐸDec64ᐳ";
     public static final String N_ArrayDec128  = "org.xtclang.ecstasy.collections.ArrayᐸDec128ᐳ";
+    public static final String N_ArrayFloat16 = "org.xtclang.ecstasy.collections.ArrayᐸFloat16ᐳ";
     public static final String N_ArrayFloat32 = "org.xtclang.ecstasy.collections.ArrayᐸFloat32ᐳ";
     public static final String N_ArrayFloat64 = "org.xtclang.ecstasy.collections.ArrayᐸFloat64ᐳ";
     public static final String N_ArrayNibble  = "org.xtclang.ecstasy.collections.ArrayᐸNibbleᐳ";
@@ -1367,8 +1428,10 @@ public abstract class Builder {
     public static final String N_Dec32        = "org.xtclang.ecstasy.numbers.Dec32";
     public static final String N_Dec64        = "org.xtclang.ecstasy.numbers.Dec64";
     public static final String N_Dec128       = "org.xtclang.ecstasy.numbers.Dec128";
+    public static final String N_Function     = "org.xtclang.ecstasy.reflect.Function";
     public static final String N_Enumeration  = "org.xtclang.ecstasy.reflect.Enumeration";
     public static final String N_Exception    = "org.xtclang.ecstasy.Exception";
+    public static final String N_Hashable     = "org.xtclang.ecstasy.collections.Hashable";
     public static final String N_Float16      = "org.xtclang.ecstasy.numbers.Float16";
     public static final String N_Float32      = "org.xtclang.ecstasy.numbers.Float32";
     public static final String N_Float64      = "org.xtclang.ecstasy.numbers.Float64";
@@ -1377,6 +1440,7 @@ public abstract class Builder {
     public static final String N_Int32        = "org.xtclang.ecstasy.numbers.Int32";
     public static final String N_Int64        = "org.xtclang.ecstasy.numbers.Int64";
     public static final String N_Int128       = "org.xtclang.ecstasy.numbers.Int128";
+    public static final String N_IllegalState = "org.xtclang.ecstasy.IllegalState";
     public static final String N_IterableChar = "org.xtclang.ecstasy.IterableᐸCharᐳ";
     public static final String N_IteratorChar = "org.xtclang.ecstasy.IteratorᐸCharᐳ";
     public static final String N_Nibble       = "org.xtclang.ecstasy.numbers.Nibble";
@@ -1402,9 +1466,44 @@ public abstract class Builder {
     public static final String N_nObj         = "org.xtclang.ecstasy.nObj";
     public static final String N_nPackage     = "org.xtclang.ecstasy.nPackage";
     public static final String N_nRef         = "org.xtclang.ecstasy.reflect.nRef";
+    public static final String N_nRangeInt8   = "org.xtclang.ecstasy.nRangeᐸInt8ᐳ";
     public static final String N_nRangeInt64  = "org.xtclang.ecstasy.nRangeᐸInt64ᐳ";
     public static final String N_nService     = "org.xtclang.ecstasy.nService";
     public static final String N_nType        = "org.xtclang.ecstasy.nType";
+
+    // ----- well-known method names ---------------------------------------------------------------
+
+    /**
+     * The name of the internal equals method expected to be present on XVM primitive types.
+     * The signature should be:
+     * <pre>
+     *     public boolean $equals(primitive p1, primitive p2 ...)
+     * </pre>
+     * Where the method returns a boolean and takes as parameters two sets of the primitive
+     * types that make up the XVM primitive type.
+     * For example, an Int128 type is made up of two Java long values, so its equals signature
+     * would be:
+     * <pre>
+     *     public boolean $equals(long low1, long high1, long low2, long high2)
+     * </pre>
+     */
+    public static final String XVM_PRIMITIVE_EQUALS = "$equals";
+
+    /**
+     * The name of the internal compare method expected to be present on XVM primitive types.
+     * The signature should be:
+     * <pre>
+     *     public int $compare(primitive p1, primitive p2 ...)
+     * </pre>
+     * Where the method returns an int and takes as parameters two sets of the primitive
+     * types that make up the XVM primitive type.
+     * For example, an Int128 type is made up of two Java long values, so its compare signature
+     * would be:
+     * <pre>
+     *     public int $compare(long low1, long high1, long low2, long high2)
+     * </pre>
+     */
+    public static final String XVM_PRIMITIVE_COMPARE = "$compare";
 
     // ----- well-known suffixes -------------------------------------------------------------------
 
@@ -1443,10 +1542,12 @@ public abstract class Builder {
     public static final ClassDesc CD_Comparable    = ClassDesc.of(N_Comparable);
     public static final ClassDesc CD_Enumeration   = ClassDesc.of(N_Enumeration);
     public static final ClassDesc CD_Exception     = ClassDesc.of(N_Exception);
+    public static final ClassDesc CD_Hashable      = ClassDesc.of(N_Hashable);
     public static final ClassDesc CD_nFunction     = ClassDesc.of(N_nFunction);
     public static final ClassDesc CD_nMethod       = ClassDesc.of(N_nMethod);
     public static final ClassDesc CD_nModule       = ClassDesc.of(N_nModule);
     public static final ClassDesc CD_nPackage      = ClassDesc.of(N_nPackage);
+    public static final ClassDesc CD_nRangeInt8    = ClassDesc.of(N_nRangeInt8);
     public static final ClassDesc CD_nRangeInt64   = ClassDesc.of(N_nRangeInt64);
 
     public static final ClassDesc CD_nConst        = ClassDesc.of(N_nConst);
@@ -1488,6 +1589,7 @@ public abstract class Builder {
     public static final ClassDesc CD_TypeConstant  = ClassDesc.of(TypeConstant.class.getName());
     public static final ClassDesc CD_TypeSystem    = ClassDesc.of(TypeSystem.class.getName());
 
+    public static final ClassDesc CD_JavaSystem    = ClassDesc.of(java.lang.System.class.getName());
     public static final ClassDesc CD_JavaBoolean   = ClassDesc.of(java.lang.Boolean.class.getName());
     public static final ClassDesc CD_JavaDouble    = ClassDesc.of(java.lang.Double.class.getName());
     public static final ClassDesc CD_JavaFloat    = ClassDesc.of(java.lang.Float.class.getName());

@@ -10,10 +10,10 @@ import java.util.Map;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.AssertStmtAST;
 import org.xvm.asm.ast.ConstantExprAST;
@@ -30,13 +30,10 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.Assert;
 import org.xvm.asm.op.AssertM;
 import org.xvm.asm.op.AssertV;
-import org.xvm.asm.op.IsNot;
 import org.xvm.asm.op.Jump;
-import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpNCond;
 import org.xvm.asm.op.JumpNFirst;
 import org.xvm.asm.op.JumpNSample;
-import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.New_N;
 import org.xvm.asm.op.Throw;
@@ -407,12 +404,10 @@ public class AssertStatement
                 cond = getCondition(i);
             }
 
-            Label   labelAssert = fAutoMessage ? new Label("assert_" + i) : labelMessage;
-            boolean fNegated    = false;
+            Label labelAssert = fAutoMessage ? new Label("assert_" + i) : labelMessage;
             if (cond instanceof AssignmentStatement stmtCond) {
-                fNegated = stmtCond.isNegated();
-
-                Label labelNeg = fNegated ? new Label("negated") : null;
+                boolean fNegated = stmtCond.isNegated();
+                Label   labelNeg = fNegated ? new Label("negated") : null;
 
                 stmtCond.setConditionFalseLabel(fNegated ? labelNeg : labelAssert);
 
@@ -473,18 +468,17 @@ public class AssertStatement
                 }
 
                 fCompletes &= exprCond.isCompletable();
-                Argument argCond = exprCond.generateArgument(ctx, code, true, errs);
+
+                Label    labelNext = new Label("next"+i);
+                Constant valFalse  = pool.valFalse();
+
+                exprCond.generateConditionalJump(ctx, code, labelNext, true, errs);
 
                 if (fAutoMessage) {
-                    if (fNegated) {
-                        Register regNeg = code.createRegister(pool.typeBoolean());
-                        code.add(new IsNot(argCond, regNeg));
-                        argCond = regNeg;
-                    }
                     if (fDebug) {
-                        code.add(new Assert(argCond, null));
+                        code.add(new Assert(valFalse, null));
                     } else if (mapTrace.isEmpty()) {
-                        code.add(new AssertM(argCond, constNew, constText));
+                        code.add(new AssertM(valFalse, constNew, constText));
                     } else {
                         List<Argument> argV = new ArrayList<>();
                         for (Expression expr : mapTrace.values()) {
@@ -492,13 +486,12 @@ public class AssertStatement
                             Collections.addAll(argV, aArgs);
                         }
                         code.add(new AssertV(
-                                argCond, constNew, constText, argV.toArray(Expression.NO_RVALUES)));
+                                valFalse, constNew, constText, argV.toArray(Expression.NO_RVALUES)));
                     }
                 } else {
-                    code.add(fNegated
-                            ? new JumpTrue(argCond, labelMessage)
-                            : new JumpFalse(argCond, labelMessage));
+                    code.add(new Jump(labelMessage));
                 }
+                code.add(labelNext);
 
                 aAstCond[i] = exprCond.getExprAST(ctx);
             }

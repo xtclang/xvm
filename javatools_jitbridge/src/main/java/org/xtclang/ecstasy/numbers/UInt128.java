@@ -3,7 +3,6 @@ package org.xtclang.ecstasy.numbers;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
-import org.xtclang.ecstasy.Comparable;
 import org.xtclang.ecstasy.Orderable;
 import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.OutOfBounds;
@@ -53,6 +52,16 @@ public class UInt128 extends IntNumber {
     @Override
     public BigDecimal $toBigDecimal() {
         return new BigDecimal($asBigInteger());
+    }
+
+    @Override
+    protected long[] $longValues() {
+        return new long[]{$highValue, $lowValue};
+    }
+
+    @Override
+    protected long bitLength$get$p() {
+        return 128;
     }
 
     /**
@@ -364,52 +373,41 @@ public class UInt128 extends IntNumber {
                 : unsigned1 == unsigned2 ? Ordered.Equal.$INSTANCE : Ordered.Greater.$INSTANCE;
     }
 
+    // ----- internal JIT support ------------------------------------------------------------------
+
     /**
-     * Compare two Int128 primitives.
+     * The internal compare method for two UInt128 values called by the compare methods generated
+     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleConstCompare}
+     * and also in {@link TypeConstant#buildCompare}
      *
-     * @param ctx    the context
-     * @param low1   the low 64 bits of the first Int128
-     * @param high1  the high 64 bits of the first Int128
-     * @param low2   the low 64 bits of the second Int128
-     * @param high2  the high 64 bits of the second Int128
+     * @param low1   the low 64 bits of the first UInt128
+     * @param high1  the high 64 bits of the first UInt128
+     * @param low2   the low 64 bits of the second UInt128
+     * @param high2  the high 64 bits of the second UInt128
      *
-     * @return a negative integer if the first Int28 is lower than the second, zero if both
-     * Int128 values are equal, or a positive integer if the first Int128 is greater than the
+     * @return a negative integer if the first UInt128 is lower than the second, zero if both
+     * UInt128 values are equal, or a positive integer if the first UInt128 is greater than the
      * second.
      */
-    public static int compare$p(Ctx ctx, long low1, long high1, long low2, long high2) {
-        if (high1 != high2) {
-            return Long.compareUnsigned(high1, high2);
-        }
-        return Long.compareUnsigned(low1, low2);
+    public static int $compare(long low1, long high1, long low2, long high2) {
+        return high1 == high2 ? Long.compareUnsigned(low1, low2)
+                              : Long.compareUnsigned(high1, high2);
     }
 
     /**
-     * The primitive implementation of:
-     * <p>
-     * {@code static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);}
-     */
-    public static Boolean equals(Ctx ctx, nType type, Comparable value1, Comparable value2) {
-        Int128 i1 = (Int128) value1;
-        Int128 i2 = (Int128) value2;
-        return i1.$lowValue == i2.$lowValue && i1.$highValue == i2.$highValue
-                ? Boolean.TRUE
-                : Boolean.FALSE;
-    }
-
-    /**
-     * Determine whether two Int128 primitives are equal.
+     * The internal equals method for two Int128 values called by the equals methods generated
+     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleConstEquals} Method}
+     * and also in {@link TypeConstant#buildCompare}
      *
-     * @param ctx    the context
-     * @param low1   the low 64 bits of the first Int128
-     * @param high1  the high 64 bits of the first Int128
-     * @param low2   the low 64 bits of the second Int128
-     * @param high2  the high 64 bits of the second Int128
+     * @param low1   the low 64 bits of the first UInt128
+     * @param high1  the high 64 bits of the first UInt128
+     * @param low2   the low 64 bits of the second UInt128
+     * @param high2  the high 64 bits of the second UInt128
      *
-     * @return {@code true} iff the two Int128 primitives are equal
+     * @return {@code true} if the two UInt128 values are equal, {@code false} otherwise.
      */
-    public static boolean equals$p(Ctx ctx, long low1, long high1, long low2, long high2) {
-        return low1 == low2 && high1 == high2;
+    public static boolean $equals(long low1, long high1, long low2, long high2) {
+        return high1 == high2 && low1 == low2;
     }
 
     // ----- debugging support ---------------------------------------------------------------------

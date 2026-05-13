@@ -175,11 +175,18 @@ public class Assert
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        if (!isAlwaysFalse(bctx) || m_nConstructor == A_IGNORE) {
+            super.computeTypes(bctx);
+        }
+        // else don't propagate anything
+    }
+
+    @Override
     public int build(BuildContext bctx, CodeBuilder code) {
         Label labelEnd = code.newLabel();
 
-        boolean fAlwaysFalse = m_nTest <= Op.CONSTANT_OFFSET
-            && bctx.getConstant(m_nTest).equals(bctx.pool().valFalse());
+        boolean fAlwaysFalse = isAlwaysFalse(bctx);
         if (!fAlwaysFalse) {
             bctx.loadArgument(code, m_nTest);
             code.ifne(labelEnd);
@@ -208,6 +215,14 @@ public class Assert
             code.labelBinding(labelEnd);
         }
         return -1;
+    }
+
+    /**
+     * @return true iff this assert is always False
+     */
+    protected boolean isAlwaysFalse(BuildContext bctx) {
+        return m_nTest <= Op.CONSTANT_OFFSET
+            && bctx.getConstant(m_nTest).equals(bctx.pool().valFalse());
     }
 
     /**

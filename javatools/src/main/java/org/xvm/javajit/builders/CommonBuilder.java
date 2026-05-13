@@ -13,6 +13,7 @@ import java.lang.constant.MethodTypeDesc;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -35,10 +36,12 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.UnionTypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
@@ -56,9 +59,11 @@ import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.registers.ExtendedSlot;
 import org.xvm.javajit.registers.MultiSlot;
 
+import org.xvm.util.ByteHashCollector;
 import org.xvm.util.ShallowSizeOf;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
@@ -75,20 +80,25 @@ public class CommonBuilder
     public CommonBuilder(TypeSystem typeSystem, TypeConstant type) {
         super(typeSystem);
 
-        assert type.isSingleUnderlyingClass(true);
+        assert type.isSingleUnderlyingClass(true) && !type.isAccessSpecified();
 
-        ConstantPool pool = typeSystem.pool();
+        this.classStruct = (ClassStructure) type.getSingleUnderlyingClass(true).getComponent();
 
-        this.typeInfo    = pool.ensureAccessTypeConstant(type, Access.PRIVATE).ensureTypeInfo();
-        this.structInfo  = pool.ensureAccessTypeConstant(type, Access.STRUCT).ensureTypeInfo();
-        this.classStruct = typeInfo.getClassStructure();
+        // if the class is parameterizable, the type must be either formal or specialized
+        // (some formal parameters resolved to XVM primitive types)
+        assert classStruct.isParameterized() == type.isParamsSpecified();
+
+        this.thisType    = type.ensureAccess(Access.PRIVATE);
+        this.typeInfo    = thisType.ensureTypeInfo();
+        this.structInfo  = thisType.ensureAccess(Access.STRUCT).ensureTypeInfo();
         this.thisId      = classStruct.getIdentityConstant();
         this.isInterface = classStruct.getFormat() == Format.INTERFACE;
     }
 
-    protected final TypeInfo         typeInfo;
-    protected final TypeInfo         structInfo;
     protected final ClassStructure   classStruct;
+    protected final TypeConstant     thisType;      // PRIVATE
+    protected final TypeInfo         typeInfo;      // PRIVATE
+    protected final TypeInfo         structInfo;
     protected final IdentityConstant thisId;
     protected final boolean          isInterface;
 
@@ -130,7 +140,7 @@ public class CommonBuilder
 
         // prime the type registry with "this" type
         Map<TypeConstant, Integer> types = new HashMap<>();
-        types.put(typeInfo.getType(), 0);
+        types.put(thisType, 0);
         typeConstants.put(className, types);
 
         if (assembleImplClass(className, classBuilder)) {
@@ -151,8 +161,8 @@ public class CommonBuilder
     }
 
     @Override
-    protected TypeConstant getThisType() {
-        return typeInfo.getType();
+    public TypeConstant getThisType() {
+        return thisType;
     }
 
     @Override
@@ -170,7 +180,7 @@ public class CommonBuilder
     /**
      * Compute the ClassDesc for the super class.
      */
-    protected ClassDesc getSuperCD() {
+    public ClassDesc getSuperCD() {
         TypeConstant superType = typeInfo.getExtends();
         return superType == null
             ? CD_nObj
@@ -257,7 +267,7 @@ public class CommonBuilder
 
             default:
                 // TODO: support for mixin, annotations, etc
-                throw new RuntimeException("Not implemented " + typeInfo.getType());
+                throw new RuntimeException("Not implemented " + thisType);
         }
         classBuilder.withFlags(flags);
 
@@ -421,8 +431,10 @@ public class CommonBuilder
             code.labelBinding(startScope);
 
             int ctxSlot = code.allocateLocal(TypeKind.REFERENCE);
-            code.localVariable(ctxSlot, "ctx", CD_Ctx, startScope, endScope)
-                .invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
+            if (isDebugInfo()) {
+                code.localVariable(ctxSlot, "ctx", CD_Ctx, startScope, endScope);
+            }
+            code.invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
                 .astore(0);
 
             // add static field initialization
@@ -542,8 +554,9 @@ public class CommonBuilder
                 Label startScope = code.newLabel();
                 Label endScope   = code.newLabel();
                 code.labelBinding(startScope);
-
-                code.localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, startScope, endScope);
+                if (isDebugInfo()) {
+                    code.localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, startScope, endScope);
+                }
 
                 callSuperInitializer(code, className);
 
@@ -1089,6 +1102,10 @@ public class CommonBuilder
         if (!isInterface) {
             assembleXvmType(className, classBuilder);
         }
+
+        if (typeInfo.getFormat() == Format.CONST) {
+            assembleConstMethods(className, classBuilder);
+        }
     }
 
     /**
@@ -1136,7 +1153,7 @@ public class CommonBuilder
                 return;
             }
 
-            JitMethodDesc jmDesc = method.getJitDesc(this, typeInfo.getType());
+            JitMethodDesc jmDesc = method.getJitDesc(this);
             assembleMethod(className, classBuilder, method, jitName, jmDesc);
 
             if (method.isCtorOrValidator() && !typeInfo.isAbstract()) {
@@ -1568,12 +1585,916 @@ public class CommonBuilder
     }
 
     /**
+     * Assemble the necessary methods for a constant type in the provided class builder.
+     *
+     * @param className     the name of the class being built
+     * @param classBuilder  the class builder to which methods will be added
+     */
+    protected void assembleConstMethods(String className, ClassBuilder classBuilder) {
+        if (!thisType.isA(pool().typeNumber()) && !thisType.isJitPrimitive()) {
+            // we only generate equals and compare for non-primitive types
+            assembleConstEquals(className, classBuilder);
+            assembleConstCompare(className, classBuilder);
+        }
+        // the reason we need to generate "hashCode" for primitive types is to produce
+        // non-predictable implementations
+        // TODO JK: consider implementing them natively via a Ctx-based facility, in which
+        //  case we can simplify the code production
+        assembleConstHashCode(className, classBuilder);
+        // TODO JK: Stringable appendTo estimateStringLength
+    }
+
+    /**
+     * If this builder is an {@link AugmentingBuilder}, determine whether the specified method
+     * exists in a native class.
+     *
+     * @return {@code true} if the specified method exists for the native (augmented) class
+     */
+    protected boolean isNativeMethod(String jitName, MethodTypeDesc md) {
+        return false;
+    }
+
+    /**
+     * Generate the const implementation of:
+     * <pre>
+     *     static <CompileType extends T> Boolean equals(T value1, T value2)
+     * </pre>
+     * Generate the "equals", "equals$p" and possibly "$equals" methods for a const type if the
+     * methods do not already exist.
+     */
+    protected void assembleConstEquals(String className, ClassBuilder classBuilder) {
+        SignatureConstant eqSig    = pool().sigEquals();
+        MethodInfo        eqMethod = typeInfo.getMethodBySignature(eqSig);
+        Implementation    impl     = eqMethod.getHead().getImplementation();
+        IdentityConstant  targetId = eqMethod.getIdentity().getNamespace();
+
+        // If the method is not explicitly implemented or the declaring type does not match the
+        // current type (i.e. the method is declared on a super class), then we can build the method
+        if (impl != Implementation.Explicit || !thisId.equals(targetId)) {
+            ClassDesc      cdThis      = ClassDesc.of(className);
+            String         eqName      = eqSig.getName();
+            String         eqOptName   = eqName + OPT;
+            MethodTypeDesc mdWrapper   = MethodTypeDesc.of(CD_Boolean, CD_Ctx, CD_nType, cdThis, cdThis);
+            MethodTypeDesc mdPrimitive = MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_nType, cdThis, cdThis);
+
+            if (!isNativeMethod(eqName, mdWrapper)) {
+                // generate the standard "equals" wrapper that delegates to the optimized "equals$p"
+                classBuilder.withMethodBody(eqName, mdWrapper,
+                        ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, code -> {
+                    loadCtx(code);
+                    code.aload(1)
+                        .aload(2)
+                        .aload(3)
+                        .invokestatic(cdThis, eqOptName, mdPrimitive);
+                    Builder.box(code, pool().typeBoolean());
+                    code.areturn();
+                });
+
+                // generate the optimized "equals$p" with the actual implementation
+                if (!isNativeMethod(eqOptName, mdPrimitive)) {
+                    classBuilder.withMethodBody(eqOptName, mdPrimitive,
+                        ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
+                        code -> assembleConstEquals(className, code, thisType, eqSig));
+                }
+            }
+        }
+    }
+
+    /**
+     * Generate the body of the "equals$p" method for a const type.
+     * <p>
+     * The generated method signature is:
+     * <pre>
+     *     public static boolean equals$p(Ctx ctx, nType type, T value1, T value2)
+     * </pre>
+     * where T is the const type being built.
+     * <p>
+     * Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value1, Slot 3 = value2
+     */
+    private void assembleConstEquals(String className, CodeBuilder code, TypeConstant type,
+                                     SignatureConstant eqSig) {
+        // all primitives must have a manually coded native implementation
+        assert !type.isJitPrimitive();
+
+        Label  returnFalse = code.newLabel();
+        String eqOptName   = eqSig.getName() + OPT;
+
+        TypeConstant baseType = getImplementationBase(eqSig);
+        if (baseType != null) {
+            // found super class with equals method, so call it first
+            ClassDesc      cdBase  = ensureClassDesc(baseType);
+            MethodTypeDesc mdSuper = MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_nType, cdBase, cdBase);
+
+            loadCtx(code);
+            code.aload(1)
+                .aload(2)
+                .aload(3)
+                .invokestatic(cdBase, eqOptName, mdSuper)
+                .ifeq(returnFalse);
+        }
+
+        // create the list of properties to be compared so we can sort them
+        List<PropertyInfo> props = new ArrayList<>();
+        for (PropertyInfo prop : structInfo.getProperties().values()) {
+            TypeConstant propType = prop.getType();
+
+            if (!propType.isNullable() && propType instanceof UnionTypeConstant) {
+                throw new UnsupportedOperationException("Union types not yet supported");
+            }
+
+            if (!isConstFormingProperty(prop, baseType)) {
+                continue;
+            }
+            props.add(prop);
+        }
+
+        int value1Slot    = 2;
+        int value2Slot    = 3;
+        int nullCheckSlot = 4; // we can use slot 4 to hold the result of the null check
+
+        // iterate over all the properties needed to be compared
+        // we sort by the properties rank and compare in that order
+        props.sort(Comparator.comparingInt(PropertyInfo::getRank));
+        for (PropertyInfo prop : props) {
+            if (!isConstFormingProperty(prop, baseType)) {
+                continue;
+            }
+
+            PropertyConstant propId    = prop.getIdentity();
+            TypeConstant     propType  = prop.getType();
+            Label            skipProp  = code.newLabel();
+            Label            checkProp = code.newLabel();
+
+            if (propType.isNullable()) {
+                // properties may be null, so assemble null check
+                Label ifNull1    = code.newLabel();
+                Label ifNull2    = code.newLabel();
+                Label checkProp2 = code.newLabel();
+                Label compare    = code.newLabel();
+                Label notEqual   = code.newLabel();
+
+                code.aload(value1Slot);
+                loadProperty(code, type, propId, false);
+                loadNull(code);
+                code.if_acmpeq(ifNull1)
+                    .iconst_0() // zero on the stack if null
+                    .goto_(checkProp2)
+                    .labelBinding(ifNull1)
+                    .iconst_1(); // one on the stack if not null
+
+                code.labelBinding(checkProp2)
+                    .istore(nullCheckSlot) // store the result of the null check in slot 4
+                    .aload(value2Slot);
+                loadProperty(code, type, propId, false);
+                loadNull(code);
+                code.if_acmpeq(ifNull2)
+                    .iconst_0() // zero on the stack if null
+                    .goto_(compare)
+                    .labelBinding(ifNull2)
+                    .iconst_1() // one on the stack if not null
+                    .labelBinding(compare)
+                    .iload(nullCheckSlot) // reload the null check result
+                    .if_icmpne(notEqual)  // if two ints on the stack are not equal jump
+                    .iload(nullCheckSlot) // reload the null check result
+                    .ifeq(skipProp)       // if null skip
+                    .goto_(checkProp)     // else props are not null, so we need to compare
+                    .labelBinding(notEqual)
+                    .goto_(returnFalse);
+            }
+
+            propType = propType.removeNullable();
+
+            code.labelBinding(checkProp);
+            if (propType.isJavaPrimitive()) {
+                // Java primitive: load both property values as primitives and compare directly
+                code.aload(value1Slot);
+                loadProperty(code, type, propId, true);
+                code.aload(value2Slot);
+                loadProperty(code, type, propId, true);
+
+                ClassDesc cdPrim = JitTypeDesc.getPrimitiveClass(propType);
+                assert cdPrim != null;
+                switch (cdPrim.descriptorString()) {
+                    case "I", "S", "B", "Z":
+                        code.if_icmpne(returnFalse);
+                        break;
+                    case "J":
+                        code.lcmp()
+                            .ifne(returnFalse);
+                        break;
+                    case "F":
+                        code.fcmpl()
+                            .ifne(returnFalse);
+                        break;
+                    case "D":
+                        code.dcmpl()
+                            .ifne(returnFalse);
+                        break;
+                }
+            } else if (propType.isXvmPrimitive()) {
+                // XVM primitive: call static $equals(primitives1..., primitives2...)
+                ClassDesc[]    cdParams = getJitPrimitivePairMethodParams(propType);
+                MethodTypeDesc md       = MethodTypeDesc.of(CD_boolean, cdParams);
+
+                // load both property values as unboxed primitives onto the stack
+                code.aload(value1Slot);
+                PropertyInfo  info = loadProperty(code, type, propId, true);
+                JitMethodDesc jmd  = info.getGetterJitDesc(this);
+                loadOptimizedReturnsToStack(code, jmd);
+                code.aload(value2Slot);
+                loadProperty(code, type, propId, true);
+                loadOptimizedReturnsToStack(code, jmd);
+
+                code.invokestatic(ensureClassDesc(propType), XVM_PRIMITIVE_EQUALS, md)
+                    .ifeq(returnFalse);
+            } else if (propType.isA(pool().typeService())) {
+                buildGetIdentityHashCode(code, prop, value1Slot);
+                buildGetIdentityHashCode(code, prop, value2Slot);
+                code.lcmp()
+                    .ifne(returnFalse);
+            } else {
+                // Object type: call static equals$p(Ctx, nType, T, T) -> boolean
+                MethodInfo    eqMethod = propType.ensureTypeInfo().getMethodBySignature(eqSig);
+                JitMethodDesc eqJmd    = eqMethod.getJitDesc(this, propType);
+
+                loadCtx(code);
+
+                // load nType for the property type: nType.$ensureType(Ctx, TypeConstant)
+                loadCtx(code);
+                loadTypeConstant(code, className, propType);
+                code.invokestatic(CD_nType, "$ensureType",
+                        MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
+
+                // load the values
+                code.aload(value1Slot);
+                loadProperty(code, type, propId, false);
+                code.aload(value2Slot);
+                loadProperty(code, type, propId, false);
+
+                ClassDesc cdTarget = ensureClassDesc(propType);
+                code.invokestatic(cdTarget, eqOptName, eqJmd.optimizedMD)
+                    .ifeq(returnFalse);
+            }
+            // we jump here if the prop is nullable and the null check determined both were null
+            code.labelBinding(skipProp);
+        }
+
+        // fall-through, all properties equal
+        code.iconst_1()
+            .ireturn();
+
+        // at least one property is not equal
+        code.labelBinding(returnFalse)
+            .iconst_0()
+            .ireturn();
+    }
+
+    /**
+     * Generate the "compare" method if it does not already exist.
+     * <pre>
+     *     static <CompileType extends T> Ordered compare(T value1, T value2)
+     * </pre>
+     */
+    protected void assembleConstCompare(String className, ClassBuilder classBuilder) {
+        SignatureConstant cmpSig    = pool().sigCompare();
+        MethodInfo        cmpMethod = typeInfo.getMethodBySignature(cmpSig);
+        Implementation    impl      = cmpMethod.getHead().getImplementation();
+        IdentityConstant  targetId  = cmpMethod.getIdentity().getNamespace();
+
+        // If the method is not explicitly implemented or the declaring type does not match the
+        // current type (i.e., the method is declared on a supe class), then we can build the method
+        if (impl != Implementation.Explicit || !thisId.equals(targetId)) {
+            ClassDesc      cdThis  = ClassDesc.of(className);
+            String         cmpName = cmpSig.getName();
+            MethodTypeDesc md      = MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_nType, cdThis, cdThis);
+
+            if (!isNativeMethod(cmpName, md)) {
+                // generate the standard "compare" method
+                classBuilder.withMethodBody(cmpName, md,
+                        ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
+                        code -> assembleConstCompare(className, code, thisType, cmpSig));
+            }
+        }
+    }
+
+    /**
+     * Generate the body of the "compare" method for a const type.
+     * <p>
+     * The generated method signature is:
+     * <pre>
+     *     public static Ordered compare(Ctx ctx, nType CompileType, T value1, T value2)
+     * </pre>
+     * where T is the const type being built.
+     * <p>
+     * Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value1, Slot 3 = value2
+     */
+    private void assembleConstCompare(String className, CodeBuilder code, TypeConstant type,
+                                      SignatureConstant cmpSig) {
+        // all primitives must have a manually coded native implementation
+        assert !type.isJitPrimitive();
+
+        ConstantPool       pool          = pool();
+        TypeConstant       typeOrderable = pool.typeOrderable();
+        List<PropertyInfo> props         = new ArrayList<>();
+        TypeConstant       baseType      = getImplementationBase(cmpSig);
+
+        // create the list of properties to be compared so we can sort them
+        for (PropertyInfo prop : structInfo.getProperties().values()) {
+            if (!isConstFormingProperty(prop, baseType)) {
+                continue;
+            }
+
+            TypeConstant propType = prop.getType();
+            if (!propType.isNullable() && propType instanceof UnionTypeConstant) {
+                throw new UnsupportedOperationException("Union types not yet supported");
+            }
+
+            props.add(prop);
+        }
+
+        if (baseType != null) {
+            // found super class with compare method, so call it first
+            ClassDesc      cdExt   = ensureClassDesc(baseType);
+            MethodTypeDesc mdSuper = MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_nType, cdExt, cdExt);
+
+            loadCtx(code);
+            code.aload(1)
+                    .aload(2)
+                    .aload(3)
+                    .invokestatic(cdExt, cmpSig.getName(), mdSuper)
+                    .dup();
+            loadConstant(code, pool.valEqual());
+            Label propEqual = code.newLabel();
+            code.if_acmpeq(propEqual)
+                    .areturn();
+            code.labelBinding(propEqual)
+                    .pop();
+        }
+
+        int value1Slot    = 2;
+        int value2Slot    = 3;
+        int nullCheckSlot = 4; // we can use slot 4 to hold the result of the null check
+
+        // iterate over all the properties needed to be compared
+        // we sort by the property rank and compare in that order
+        props.sort(Comparator.comparingInt(PropertyInfo::getRank));
+        for (PropertyInfo prop : props) {
+            PropertyConstant propId    = prop.getIdentity();
+            TypeConstant     propType  = prop.getType();
+            Label            skipProp  = code.newLabel();
+            Label            checkProp = code.newLabel();
+
+            if (propType.isNullable()) {
+                // properties may be null, so assemble null check
+                Label ifNull1    = code.newLabel();
+                Label ifNull2    = code.newLabel();
+                Label checkProp2 = code.newLabel();
+                Label compare    = code.newLabel();
+
+                code.aload(value1Slot);
+                loadProperty(code, type, propId, false);
+                loadNull(code);
+                code.if_acmpeq(ifNull1)
+                    .iconst_0() // zero on the stack if null
+                    .goto_(checkProp2)
+                    .labelBinding(ifNull1)
+                    .iconst_1(); // one on the stack if not null
+
+                code.labelBinding(checkProp2)
+                    .istore(nullCheckSlot) // store the result of the null check in slot 4
+                    .aload(value2Slot);
+                loadProperty(code, type, propId, false);
+                loadNull(code);
+                code.if_acmpeq(ifNull2)
+                    .iconst_0() // zero on the stack if null
+                    .goto_(compare)
+                    .labelBinding(ifNull2)
+                    .iconst_1() // one on the stack if not null
+                    .labelBinding(compare)
+                    .iload(nullCheckSlot) // reload the prop1 null check result
+                    .isub(); // two ints on the stack, subtract to get result
+                convertIntToOrdered(code, false);
+                // to get here must be Equal
+                code.iload(nullCheckSlot) // reload the prop1 null check result
+                    .ifeq(skipProp);      // if it is zero, both props were null so jump to skip
+            }
+
+            code.labelBinding(checkProp);
+            propType = propType.removeNullable();
+
+            if (propType.isJavaPrimitive()) {
+                // Java primitive: load both values, compare directly, convert int to Ordered
+                ClassDesc cdPrim = JitTypeDesc.getPrimitiveClass(propType);
+                assert cdPrim != null;
+
+                code.aload(value1Slot);
+                loadProperty(code, type, propId, true);
+                convertIfUnsignedPrimitive(code, propType);
+                code.aload(value2Slot);
+                loadProperty(code, type, propId, true);
+                convertIfUnsignedPrimitive(code, propType);
+
+                // produce an int comparison result on the stack
+                switch (cdPrim.descriptorString()) {
+                    case "I", "S", "B", "Z":
+                        code.isub();
+                        break;
+                    case "J":
+                        code.lcmp();
+                        break;
+                    case "F":
+                        code.fcmpl();
+                        break;
+                    case "D":
+                        code.dcmpl();
+                        break;
+                }
+
+                // int result on stack: if zero, this property is equal; continue to next
+                // otherwise convert to an Ordered and return
+                convertIntToOrdered(code, false);
+            } else if (propType.isXvmPrimitive()) {
+                // XVM primitive: call static $compare(primitives1..., primitives2...)
+                ClassDesc[]    cdParams = getJitPrimitivePairMethodParams(propType);
+                MethodTypeDesc md       = MethodTypeDesc.of(CD_int, cdParams);
+
+                code.aload(value1Slot);
+                PropertyInfo  info = loadProperty(code, type, propId, true);
+                JitMethodDesc jmd  = info.getGetterJitDesc(this);
+                loadOptimizedReturnsToStack(code, jmd);
+                code.aload(value2Slot);
+                loadProperty(code, type, propId, true);
+                loadOptimizedReturnsToStack(code, jmd);
+
+                code.invokestatic(ensureClassDesc(propType), XVM_PRIMITIVE_COMPARE, md);
+
+                // int result on stack: if zero, this property is equal; continue to next
+                // otherwise convert to an Ordered and return
+                convertIntToOrdered(code, false);
+            } else if (propType.isA(pool().typeService())) {
+                // for services, we compare the service identity
+                buildGetIdentityHashCode(code, prop, value1Slot);
+                buildGetIdentityHashCode(code, prop, value2Slot);
+                code.lcmp();
+                // int result on stack: if zero, this property is equal; continue to next
+                // otherwise convert to an Ordered and return
+                convertIntToOrdered(code, false);
+            } else if (!propType.isA(typeOrderable)) {
+                // property is an Object but not Orderable
+                // as doc'ed in Const.x, we compare the identity hash code
+                buildGetIdentityHashCode(code, prop, value1Slot);
+                buildGetIdentityHashCode(code, prop, value2Slot);
+                code.lcmp();
+                // int result on stack: if zero, this property is equal; continue to next
+                // otherwise convert to an Ordered and return
+                convertIntToOrdered(code, false);
+            } else {
+                // Object type: call static compare(Ctx, nType, T, T) -> Ordered
+                MethodInfo    cmpMethod = propType.ensureTypeInfo().getMethodBySignature(cmpSig);
+                JitMethodDesc cmpJmd    = cmpMethod.getJitDesc(this, propType);
+
+                // load the context to the stack (compare param 0)
+                loadCtx(code);
+
+                // get and load the nType to the stack (compare param 1)
+                loadCtx(code);
+                loadTypeConstant(code, className, propType);
+                code.invokestatic(CD_nType, "$ensureType",
+                        MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
+
+                // load the values
+                code.aload(value1Slot);
+                loadProperty(code, type, propId, false);
+                code.aload(value2Slot);
+                loadProperty(code, type, propId, false);
+
+                // invoke the static compare method
+                IdentityConstant idTarget = cmpMethod.getIdentity().getClassIdentity();
+                ClassDesc        cdTarget = ensureClassDesc(idTarget.getType());
+                code.invokestatic(cdTarget, cmpSig.getName(), cmpJmd.standardMD)
+                    .dup();
+                loadConstant(code, pool.valEqual());
+                Label isEqual = code.newLabel();
+                code.if_acmpeq(isEqual)
+                    .areturn();
+                code.labelBinding(isEqual)
+                    .pop();
+            }
+            // we jump here if the prop is nullable and the null check determined both were null
+            code.labelBinding(skipProp);
+        }
+
+        // all properties equal
+        loadConstant(code, pool.valEqual());
+        code.areturn();
+    }
+
+    /**
+     * Generate the "hashCode", "hashCode$p" if the methods do not already exist.
+     * <pre>
+     *     static <CompileType extends T> Int hashCode(T value)
+     * </pre>
+     */
+    protected void assembleConstHashCode(String className, ClassBuilder classBuilder) {
+        SignatureConstant hashSig    = pool().sigHashCode();
+        MethodInfo        hashMethod = typeInfo.getMethodBySignature(hashSig);
+        Implementation    impl       = hashMethod.getHead().getImplementation();
+        IdentityConstant  targetId   = hashMethod.getIdentity().getNamespace();
+
+        // if the size of this const is greater than 64 we will generate code to cache the
+        // computed hash in a long field.
+        boolean isCaching  = this.implSize > 64;
+
+        // If the method is not explicitly implemented or the declaring type does not match the
+        // current type (i.e. the method is declared on a supe class), then we can build the method
+        if (impl != Implementation.Explicit || !thisId.equals(targetId)) {
+            if (isCaching) {
+                // create a {@link long} field in the class to act as a hashCode cache
+                classBuilder.withField("$savedHashCode", CD_long, ClassFile.ACC_PRIVATE);
+            }
+
+            ClassDesc      cdThis      = ClassDesc.of(className);
+            String         hashName    = hashSig.getName();
+            String         hashOptName = hashName + OPT;
+            MethodTypeDesc mdWrapper   = MethodTypeDesc.of(CD_Int64, CD_Ctx, CD_nType, cdThis);
+            MethodTypeDesc mdPrimitive = MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cdThis);
+
+            if (!isNativeMethod(hashName, mdWrapper)) {
+                // generate the standard "hashCode" wrapper that delegates to the optimized
+                // "hashCode$p"
+                classBuilder.withMethodBody(hashName, mdWrapper,
+                        ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, code -> {
+                    loadCtx(code);
+                    code.aload(1)
+                        .aload(2)
+                        .invokestatic(cdThis, hashOptName, mdPrimitive);
+                    Builder.box(code, pool().typeInt64());
+                    code.areturn();
+                });
+
+                // generate the optimized "hashCode$p" with the actual implementation
+                if (!isNativeMethod(hashOptName, mdPrimitive)) {
+                    classBuilder.withMethodBody(hashOptName, mdPrimitive,
+                        ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, code ->
+                            assembleConstHashCode(className, code, thisType, hashSig, isCaching));
+                }
+            }
+        }
+    }
+
+    /**
+     * Generate the body of the "hashCode$p" method for a const type.
+     * <p>
+     * The generated method signature is:
+     * <pre>
+     *     public static long hashCode$p(Ctx ctx, nType CompileType, T value)
+     * </pre>
+     * Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value
+     */
+    private void assembleConstHashCode(String className, CodeBuilder code, TypeConstant type,
+                                             SignatureConstant hashSig, boolean isCaching) {
+
+        ConstantPool pool         = pool();
+        TypeConstant typeHashable = pool.typeHashable();
+        ClassDesc    cdThis       = ensureClassDesc(type);
+        int          valueSlot    = 2;
+        int          resultSlot   = 3;
+
+        if (type.isJitPrimitive()) {
+            // when the const type itself is a JIT primitive (Java primitive or XVM primitive),
+            // we call nType.hashCode$p(ctx, value) to get the hash code (where nType) is the
+            // type of the primitive
+            Builder.loadCtx(code);
+            loadTypeConstant(code, className, type);
+            code.invokestatic(CD_nType, "$ensureType",
+                    MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
+            Builder.loadCtx(code);
+            Builder.load(code, cdThis, valueSlot);
+            code.invokevirtual(CD_nType, "hashCode$p",
+                    MethodTypeDesc.of(CD_long, CD_Ctx, CD_Hashable));
+            code.lreturn();
+            return;
+        }
+
+        TypeConstant       baseType    = getImplementationBase(hashSig);
+        String             hashOptName = hashSig.getName() + OPT;
+        List<PropertyInfo> props       = new ArrayList<>();
+
+        // create the list of properties to be compared so we can sort them
+        for (PropertyInfo prop : structInfo.getProperties().values()) {
+            if (!isConstFormingProperty(prop, baseType)) {
+                continue;
+            }
+
+            TypeConstant propType = prop.getType();
+            if (!propType.isNullable() && propType instanceof UnionTypeConstant) {
+                throw new UnsupportedOperationException("Union types not yet supported");
+            }
+            props.add(prop);
+        }
+
+        if (isCaching) {
+            // generate the code to check the cached hash code
+            // if the cached hashCode field $savedHashCode is not zero, return the cached value
+            Label compute = code.newLabel();
+            code.aload(valueSlot)
+                    .getfield(cdThis, "$savedHashCode", CD_long) // load the cached hash
+                    .dup2()                      // duplicate the cached long value
+                    .loadConstant(0L)
+                    .lcmp()                      // compare the cached value to zero
+                    .ifeq(compute)               // if equal to zero, jump to the compute label
+                    .lreturn()                   // not zero, return the cached hash
+                    .labelBinding(compute)
+                    .pop2();   // pop the zero long from the stack, we will recalculate the hash
+        }
+
+        // inject the HashCollector from the context by calling ctx.inject()
+        ClassDesc    cdHashCollector   = ClassDesc.of(ByteHashCollector.class.getName());
+
+        Builder.loadCtx(code);
+        code.invokevirtual(CD_Ctx, "createHashCollector", MethodTypeDesc.of(cdHashCollector));
+        // the HashCollector is now on the stack, we do not need to store it into a slot
+        // because each call to its add method returns the collector, so as we loop
+        // over properties, it will always be on the top of the stack for the next loop
+        // or for the final compute call
+
+        MethodTypeDesc mdAdd     = MethodTypeDesc.of(cdHashCollector, CD_long);
+        MethodTypeDesc mdCompute = MethodTypeDesc.of(CD_long);
+
+        if (baseType != null) {
+            // found super class with hashCode method, so call it first
+            ClassDesc      cdBase  = ensureClassDesc(baseType);
+            MethodTypeDesc mdSuper = MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cdBase);
+
+            // load the hash collector to the stack so we can later add the super class hash code
+            loadCtx(code);
+            code.aload(1)
+                .aload(valueSlot)
+                .checkcast(cdBase)
+                .invokestatic(cdBase, hashOptName, mdSuper)
+                // long hashCode from super class is on the stack, add to the collector
+                .invokeinterface(cdHashCollector, "addLong", mdAdd);
+                // hash collector is on the stack
+        }
+
+        if (props.isEmpty()) {
+            // if there are no properties, there's nothing to mix in; derive a stable
+            // hash from the type's Ecstasy class name (computed at generation time)
+            // the hash collector is on the stack
+            code.loadConstant((long) type.getEcstasyClassName().hashCode())
+                .invokeinterface(cdHashCollector, "addLong", mdAdd)
+                .invokeinterface(cdHashCollector, "compute", mdCompute)
+                .lreturn();
+            return;
+        }
+
+        // iterate over the properties in rank order to generate a hash code
+        props.sort(Comparator.comparingInt(PropertyInfo::getRank));
+        for (PropertyInfo prop : props) {
+            // the hash collector should be on the stack
+
+            PropertyConstant propId     = prop.getIdentity();
+            TypeConstant     propType   = prop.getType();
+            Label            doProp     = code.newLabel();
+            Label            propIsNull = code.newLabel();
+
+            if (propType.isNullable()) {
+                // property may be null, so assemble null check
+                code.aload(valueSlot);
+                loadProperty(code, type, propId, false);
+                loadNull(code);
+                code.if_acmpne(doProp)  // not Null, so process the property
+                    .lconst_0()         // hash code is zero if Null
+                    .goto_(propIsNull); // jump to the end, property is Null
+            }
+
+            code.labelBinding(doProp);
+            if (propType.isJavaPrimitive()) {
+                // load the primitive value and convert to long in-line — all Java primitives
+                // fit into a 64-bit long
+                // TODO JK: this is not quite correct; it needs to go to **the same** algorithm
+                //          as the "hashCode" production
+                code.aload(valueSlot);
+                loadProperty(code, type, propId, true);
+                ClassDesc cd = JitTypeDesc.getPrimitiveClass(propType);
+                assert cd != null;
+                Builder.buildPrimitiveToLong(cd, code);
+                // long primitive hashCode on the stack
+            } else if (propType.isA(pool.typeService())) {
+                buildGetIdentityHashCode(code, prop, valueSlot);
+                // long primitive service identity hashCode on the stack
+            } else if (!propType.isA(typeHashable)) {
+                // property is not Hashable, as doc'ed in Const.x we use zero for the hash code
+                code.lconst_0();
+            } else {
+                // call hashCode$p(Ctx, nType, T) -> long
+                loadCtx(code);
+
+                // nType for the property type: nType.$ensureType(Ctx, TypeConstant)
+                loadCtx(code);
+                loadTypeConstant(code, className, propType);
+                code.invokestatic(CD_nType, "$ensureType",
+                        MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
+                code.aload(valueSlot);
+                loadProperty(code, type, propId, false);
+
+                if (propType.isJitPrimitive()) {
+                    ClassDesc      cdTarget = ensureClassDesc(propType);
+                    MethodTypeDesc mdHash   = MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cdTarget);
+                    code.invokestatic(ensureClassDesc(propType), hashOptName, mdHash);
+                } else {
+                    MethodInfo    hashMethod = propType.ensureTypeInfo().getMethodBySignature(hashSig);
+                    JitMethodDesc hashJmd    = hashMethod.getJitDesc(this, propType);
+
+                    IdentityConstant idTarget = hashMethod.getIdentity().getClassIdentity();
+                    ClassDesc        cdTarget = ensureClassDesc(idTarget.getType());
+                    code.checkcast(cdTarget)
+                        .invokestatic(cdTarget, hashOptName, hashJmd.optimizedMD);
+                }
+                // long hashCode on the stack
+            }
+            // add the result and store
+            code.labelBinding(propIsNull)
+                .invokeinterface(cdHashCollector, "addLong", mdAdd);
+            // hash collector on the stack
+        }
+
+        // the hash collector should be on the stack,
+        // compute the result, store in the hashCode cache field and return the hashCode
+        code.invokeinterface(cdHashCollector, "compute", mdCompute);
+        // computed hash is on the stack
+
+        if (isCaching) {
+            code.lstore(resultSlot)  // save the result
+                .aload(valueSlot)    // load the const value
+                .lload(resultSlot)   // load the result and store in the cached hash code field
+                .putfield(cdThis, "$savedHashCode", CD_long)
+                .lload(resultSlot) // load the result and return it
+                .lreturn();
+        } else {
+            code.lreturn();
+        }
+    }
+
+    /**
+     * Determine whether the specified property should be used when auto-generating constant
+     * method for Orderable, Hashable, Stringable, Comparable, etc.
+     *
+     * @param prop      the property to check
+     * @param baseType  the base type to check against
+     *
+     * @return          true if the property can be used for constant method generation
+     */
+    protected boolean isConstFormingProperty(PropertyInfo prop, TypeConstant baseType) {
+        return isConstFormingProperty(prop, baseType, false);
+    }
+
+    /**
+     * Determine whether the specified property should be used when auto-generating constant
+     * method for Orderable, Hashable, Stringable, Comparable, etc.
+     *
+     * @param prop       the property to check
+     * @param baseType   the base type to check against
+     * @param allowLazy  {@code true} if lazy properties should be considered for constant method
+     *                   generation
+     *
+     * @return          true if the property can be used for constant method generation
+     */
+    protected boolean isConstFormingProperty(PropertyInfo prop, TypeConstant baseType,
+                                             boolean allowLazy) {
+        PropertyConstant propId = prop.getIdentity();
+        if (baseType != null && baseType.ensureTypeInfo().findProperty(propId, true) != null) {
+            // we are only interested in properties not known to the base class
+            return false;
+        }
+
+        return prop.hasField() && !prop.isTransient() && (allowLazy || !prop.isLazy());
+    }
+
+    /**
+     * Return the ClassDesc array representing two primitive values of the given type — used as
+     * parameters for the {@code $equals} and {@code $compare} methods, which both take two sets
+     * of the primitive slots that make up the type.
+     *
+     * @param type  the JIT primitive type to obtain the parameters for
+     *
+     * @return the ClassDesc array {@code [slots..., slots...]} — two copies of the primitive slots
+     */
+    protected ClassDesc[] getJitPrimitivePairMethodParams(TypeConstant type) {
+        ClassDesc[] cdParams;
+        if (type.isXvmPrimitive()) {
+            ClassDesc[] cds  = JitTypeDesc.getXvmPrimitiveClasses(type);
+            cdParams = new ClassDesc[cds.length * 2];
+            System.arraycopy(cds, 0, cdParams, 0, cds.length);
+            System.arraycopy(cds, 0, cdParams, cds.length, cds.length);
+        } else {
+            ClassDesc cd = JitTypeDesc.getPrimitiveClass(type);
+            cdParams = new ClassDesc[]{cd, cd};
+        }
+        return cdParams;
+    }
+
+    /**
+     * @return the first type from this type's class hierarchy that is either a const or has an
+     *         implementation of the specified method; or return {code null} if no class in the
+     *         hierarchy has the specified method
+     */
+    protected TypeConstant getImplementationBase(SignatureConstant sig) {
+        TypeConstant typeExtends = typeInfo.getExtends();
+        while (typeExtends != null) {
+            if (typeExtends.ensureTypeInfo().getFormat() == Format.CONST) {
+                return typeExtends;
+            }
+
+            // super class is not a const, so look for an implementation of the method
+            TypeInfo   info   = typeExtends.ensureTypeInfo();
+            MethodInfo method = info.getMethodBySignature(sig);
+            if (method != null) {
+                if (method.getIdentity().getNamespace().equals(info.getIdentity())) {
+                    return typeExtends;
+                }
+            }
+            typeExtends = info.getExtends();
+        }
+        return null;
+    }
+
+    protected static void convertIfUnsignedPrimitive(CodeBuilder code, TypeConstant type) {
+        String name = type.getSingleUnderlyingClass(false).getName();
+        switch (name) {
+            case "UInt32":
+                code.loadConstant(Integer.MIN_VALUE)
+                    .iadd();
+                break;
+            case "UInt64":
+                code.loadConstant(Long.MIN_VALUE)
+                    .ladd();
+                break;
+        }
+    }
+
+    /**
+     * If the Java primitive {@code int} on the stack is non-zero build the code to return the
+     * corresponding {@code Ordered} otherwise fall-through.
+     *
+     * @param code           the {@link CodeBuilder} to use to generate the code
+     * @param returnIfEqual  {@code true} to generate an areturn op to return Equal or {@code
+     *                       false} to just pop the result from the stack and fall through if the
+     *                       result is Equal
+     */
+    protected void convertIntToOrdered(CodeBuilder code, boolean returnIfEqual) {
+        ConstantPool pool      = pool();
+        Label        propEqual = code.newLabel();
+        Label        propLt    = code.newLabel();
+
+        code.dup()
+            .ifeq(propEqual);
+
+        // non-zero: return Lesser or Greater
+        code.iflt(propLt);
+        loadConstant(code, pool.valGreater());
+        code.areturn()
+            .labelBinding(propLt);
+        loadConstant(code, pool.valLesser());
+        code.areturn();
+
+        code.labelBinding(propEqual);
+        if (returnIfEqual) {
+            loadConstant(code, pool.valEqual());
+            code.areturn();
+        } else {
+            code.pop();
+        }
+    }
+
+    /**
+     * Generate the byte codes to put the identity hash code for a property onto the stack.
+     *
+     * @param code       the {@link CodeBuilder} to use to generate byte codes
+     * @param prop       the {@link PropertyInfo} for the property
+     * @param ownerSlot  the slot of the property owner
+     */
+    void buildGetIdentityHashCode(CodeBuilder code, PropertyInfo prop, int ownerSlot) {
+        // TODO the JIT does not yet support getting identity,
+        //  in Ecstasy it is &value.identity.hashCode()
+        //  for now we just use the Java System.identityHashCode()
+        PropertyConstant propId = prop.getIdentity();
+
+        code.aload(ownerSlot);
+        loadProperty(code, thisType, propId, false);
+        // call Java's System.identityHashCode(prop);
+        code.invokestatic(CD_JavaSystem, "identityHashCode",
+                          MethodTypeDesc.of(CD_int, CD_JavaObject))
+            .i2l();
+    }
+
+    /**
      * Assemble the "routing" method for a capped method.
      */
     protected void assembleCapRouting(String className, ClassBuilder classBuilder,
                                       MethodInfo srcMethod, MethodInfo dstMethod) {
-        JitMethodDesc jmdSrc = srcMethod.getJitDesc(this, typeInfo.getType());
-        JitMethodDesc jmdDst = dstMethod.getJitDesc(this, typeInfo.getType());
+        JitMethodDesc jmdSrc = srcMethod.getJitDesc(this);
+        JitMethodDesc jmdDst = dstMethod.getJitDesc(this);
 
         String srcName = srcMethod.ensureJitMethodName(typeSystem);
         String dstName = dstMethod.ensureJitMethodName(typeSystem);
@@ -1636,9 +2557,9 @@ public class CommonBuilder
                 return;
             }
 
-            JitParamDesc[] dstReturns = jmdDst.standardReturns;
-            TypeConstant   srcRetType = srcReturns[0].type;
-            TypeConstant   dstRetType = dstReturns[0].type;
+//            JitParamDesc[] dstReturns = jmdDst.standardReturns;
+//            TypeConstant   srcRetType = srcReturns[0].type;
+//            TypeConstant   dstRetType = dstReturns[0].type;
 
             // the natural return is at the top of the stack now;
             // TODO TEMPORARY: assume the same Ctx positions for returns
@@ -1761,14 +2682,13 @@ public class CommonBuilder
     protected void assemblePropertyDelegation(String className, ClassBuilder classBuilder,
                                               MethodInfo srcMethod, PropertyConstant propDelegate) {
         String        srcName   = srcMethod.ensureJitMethodName(typeSystem);
-        JitMethodDesc jmd       = srcMethod.getJitDesc(this, typeInfo.getType());
+        JitMethodDesc jmd       = srcMethod.getJitDesc(this);
         PropertyInfo  propInfo  = typeInfo.findProperty(propDelegate);
         TypeConstant  dstType   = propInfo.getType();
         TypeInfo      dstInfo   = dstType.ensureTypeInfo();
         MethodInfo    dstMethod = dstInfo.getMethodById(srcMethod.getIdentity());
         String        dstName   = dstMethod.ensureJitMethodName(typeSystem);
 
-        assert srcMethod.getJitDesc(this, typeInfo.getType()).equals(jmd);
         assert !srcName.equals(dstName);
 
         int extraCount = jmd.getImplicitParamCount();
@@ -1788,7 +2708,7 @@ public class CommonBuilder
                                     JitParamDesc[] params, JitParamDesc[] returns) {
         classBuilder.withMethodBody(srcName, md, ClassFile.ACC_PUBLIC, code -> {
             code.aload(0); // this
-            loadProperty(code, typeInfo.getType(), propDelegate, /*don't unbox*/ false);
+            loadProperty(code, thisType, propDelegate, /*don't unbox*/ false);
 
             TypeConstant dstType = dstMethod.getJitIdentity().getNamespace().getType();
 
@@ -1964,16 +2884,20 @@ public class CommonBuilder
         }
 
         classBuilder.withMethodBody(jitName, md, flags, code -> {
-            Label startScope = code.newLabel();
-            Label endScope   = code.newLabel();
+            Label   startScope = code.newLabel();
+            Label   endScope   = code.newLabel();
+            boolean debugInfo  = isDebugInfo();
 
             code.labelBinding(startScope);
 
             int ctxSlot    = code.parameterSlot(0);
             int extraSlots = 1;
-            code.localVariable(ctxSlot, "$ctx", CD_Ctx, startScope, endScope);
+            int typeSlot   = -1;
 
-            int typeSlot = -1;
+            if (debugInfo) {
+                code.localVariable(ctxSlot, "$ctx", CD_Ctx, startScope, endScope);
+            }
+
             if (hasType) {
                 typeSlot = code.parameterSlot(1);
                 extraSlots++;
@@ -1994,7 +2918,9 @@ public class CommonBuilder
 
                 // step 3: (initializer)
                 thisSlot = code.allocateLocal(TypeKind.REFERENCE);
-                code.localVariable(thisSlot, "thi$", CD_this, startScope, endScope);
+                if (debugInfo) {
+                    code.localVariable(thisSlot, "thi$", CD_this, startScope, endScope);
+                }
                 invokeDefaultConstructor(code, CD_this);
                 code.astore(thisSlot);
 
@@ -2010,7 +2936,9 @@ public class CommonBuilder
             // CtorCtx cctx = ctx.ctorCtx();
 
             int cctxSlot = code.allocateLocal(TypeKind.REFERENCE);
-            code.localVariable(cctxSlot, "cctx", CD_CtorCtx, startScope, endScope);
+            if (debugInfo) {
+                code.localVariable(cctxSlot, "cctx", CD_CtorCtx, startScope, endScope);
+            }
             code.aload(ctxSlot)
                 .invokevirtual(CD_Ctx, "ctorCtx", MethodTypeDesc.of(CD_CtorCtx))
                 .astore(cctxSlot)
@@ -2019,7 +2947,7 @@ public class CommonBuilder
             // step 6: call the constructor
             // construct$17(ctx, cctx, [type], thi$, x, y, z);
             String        ctorName = constructor.ensureJitMethodName(typeSystem);
-            JitMethodDesc ctorDesc = constructor.getJitDesc(this, typeInfo.getType());
+            JitMethodDesc ctorDesc = constructor.getJitDesc(this);
 
             code.aload(ctxSlot)
                 .aload(cctxSlot)
@@ -2146,21 +3074,29 @@ public class CommonBuilder
     protected void generateCode(MethodTypeDesc md, BuildContext bctx, CodeBuilder code) {
 
         String moduleName = thisId.getModuleConstant().getName();
-        if (Arrays.stream(TEST_SET).anyMatch(name -> {
+        String className  = bctx.className;
+        GenerateStub:
+        if (Arrays.stream(CLASS_WHITE_LIST).anyMatch(name -> {
                 if (name.endsWith("*")) {
                     name = name.substring(0, name.length() - 1);
-                    return bctx.className.contains(name) || moduleName.contains(name);
+                    return className.contains(name) || moduleName.contains(name);
                 } else {
-                    return bctx.className.endsWith(name) || moduleName.endsWith(name);
+                    return className.endsWith(name) || moduleName.endsWith(name);
                 }})) {
+
+                if (Arrays.stream(CLASS_BLACK_LIST).anyMatch(className::endsWith)) {
+                    break GenerateStub;
+                }
+
             bctx.assembleCode(code);
-        } else {
-            if (SKIP_SET.add(bctx.className)) {
-                System.err.println("*** Skipping code gen for " + bctx.className);
-            }
-            defaultLoad(code, md.returnType());
-            addReturn(code, md.returnType());
+            return;
         }
+
+        if (SKIP_SET.add(bctx.className)) {
+            System.err.println("*** Skipping code gen for " + bctx.className);
+        }
+        defaultLoad(code, md.returnType());
+        addReturn(code, md.returnType());
     }
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -2186,21 +3122,28 @@ public class CommonBuilder
         return thisId.getValueString();
     }
 
-    private final static String[] TEST_SET = new String[] {
+    private final static String[] CLASS_WHITE_LIST = new String[] {
         "Test*", "test*",
-        "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
-        "Boolean", "Ordered",
-        "Orderable",
-        "Stringable",
-        "Float*",
+        "Exception*",
+        "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState", "Assertion",
+        "Boolean", "Ordered", "Orderable",
         "String",
+        "Stringable",
         "StringBuffer",
+        "Float*",
+        "Array",
+        "Iterable",
+        "Iterator",
+        "List",
+        "TerminalConsole",
 //        "Dec32", "Dec64", // need to change to SingleSlot
 //        "UInt",     // depends on GP_DIVREM
 //        "FPNumber", // depends on Bit support
 //        "Int",      // depends on "switch" implementation
-        "Array",
-        "TerminalConsole",
     };
+
+    private final static String[] CLASS_BLACK_LIST = new String[] {
+    };
+
     private final static HashSet<String> SKIP_SET = new HashSet<>();
 }

@@ -1463,6 +1463,15 @@ public abstract class Op {
 
         case OP_PIP_ADD:     return new PIP_Add     (in, aconst);
         case OP_PIP_SUB:     return new PIP_Sub     (in, aconst);
+        case OP_PIP_MUL:     return new PIP_Mul     (in, aconst);
+        case OP_PIP_DIV:     return new PIP_Div     (in, aconst);
+        case OP_PIP_MOD:     return new PIP_Mod     (in, aconst);
+        case OP_PIP_SHL:     return new PIP_Shl     (in, aconst);
+        case OP_PIP_SHR:     return new PIP_Shr     (in, aconst);
+        case OP_PIP_USHR:    return new PIP_ShrAll  (in, aconst);
+        case OP_PIP_AND:     return new PIP_And     (in, aconst);
+        case OP_PIP_OR:      return new PIP_Or      (in, aconst);
+        case OP_PIP_XOR:     return new PIP_Xor     (in, aconst);
 
         case OP_I_GET:       return new I_Get       (in, aconst);
         case OP_I_SET:       return new I_Set       (in, aconst);

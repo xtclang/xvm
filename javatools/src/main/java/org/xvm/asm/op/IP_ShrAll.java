@@ -80,11 +80,9 @@ public class IP_ShrAll
     }
 
     @Override
-    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
-                                                   CodeBuilder  code,
-                                                   RegisterInfo regTarget,
-                                                   int          nArgValue) {
+    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder code,
+                                                   RegisterInfo regTarget, int nArgValue) {
         buildXvmPrimitiveUnsignedShr(bctx, code, regTarget, nArgValue);
-        return regTarget;
+        return regTarget.type();
     }
 }

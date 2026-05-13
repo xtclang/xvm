@@ -6,7 +6,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.Ctx;
 
 public class nRangeᐸInt64ᐳ
-    extends Range {
+        extends Range {
 
     private nRangeᐸInt64ᐳ(Ctx ctx, long first, long last, boolean firstExclusive, boolean lastExclusive) {
         super(ctx);
@@ -36,9 +36,8 @@ public class nRangeᐸInt64ᐳ
     // ----- Range / Interval API ------------------------------------------------------------------
 
     public static nRangeᐸInt64ᐳ $new$p(Ctx ctx, TypeConstant type, long first, long last,
-            boolean firstExclusive, boolean _firstExclusive, boolean lastExclusive,
-            boolean _lastExclusive) {
-
+                                        boolean firstExclusive, boolean _firstExclusive,
+                                        boolean lastExclusive, boolean _lastExclusive) {
         return new nRangeᐸInt64ᐳ(ctx, first, last, !_firstExclusive && firstExclusive,
                 !_lastExclusive && lastExclusive);
     }
@@ -211,7 +210,7 @@ public class nRangeᐸInt64ᐳ
         return true;
     }
 
-    // TODO how to do the opposite, i.e. return an xObj reference to an Ecstasy Range+Sequence object from 1 long value
+    // TODO how to do the opposite, i.e. return an nObj reference to an Ecstasy Range+Sequence object from 1 long value
 
     public static long $lowerBound(long n) {
         return n >> 34;
@@ -357,7 +356,7 @@ public class nRangeᐸInt64ᐳ
         return ($lowerBound(n) << 1) | ($lowerExclusive(n) ? E128 : 0) | ($descending(n) ? D128 : 0);
     }
 
-    // TODO how to do the opposite, i.e. return an xObj reference to an Ecstasy Range+Sequence object from 2 long values
+    // TODO how to do the opposite, i.e. return an nObj reference to an Ecstasy Range+Sequence object from 2 long values
 
     public static long $lowerBound(long n1, long n2) {
         return n1 >> 2;

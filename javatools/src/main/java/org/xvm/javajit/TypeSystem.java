@@ -3,6 +3,7 @@ package org.xvm.javajit;
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassHierarchyResolver;
+import java.lang.classfile.ClassHierarchyResolver.ClassHierarchyInfo;
 
 import java.lang.classfile.attribute.SourceFileAttribute;
 
@@ -317,14 +318,29 @@ public class TypeSystem {
                 }
             };
 
+            // there seems to be a bug in the ClassFile.build() that asks the ClassHierarchyResolver
+            // to resolve the exact class it's building; the logic below is a simple compensation
+            ClassHierarchyResolver resolver = classDesc -> {
+                String clzName = classDesc.descriptorString();
+                assert clzName.charAt(0) == 'L' && clzName.charAt(clzName.length() - 1) == ';';
+                clzName = clzName.replace('/', '.').substring(1, clzName.length() - 1);
+
+                if (clzName.equals(className)) {
+                    return art.type().isJitInterface()
+                        ? ClassHierarchyInfo.ofInterface()
+                        : ClassHierarchyInfo.ofClass(((CommonBuilder) builder).getSuperCD());
+                }
+
+                return ClassHierarchyResolver.ofClassLoading(loader).getClassInfo(classDesc);
+            };
+
             // There are other options that can be useful:
             //     DeadCodeOption.PATCH_DEAD_CODE
             //     DebugElementsOption.DROP_DEBUG
             //     LineNumbersOption.DROP_LINE_NUMBERS
             // TODO: force some of them or make configurable
             ClassFile classFile = ClassFile.of(
-                ClassFile.ClassHierarchyResolverOption.of(
-                    ClassHierarchyResolver.ofClassLoading(loader)),
+                ClassFile.ClassHierarchyResolverOption.of(resolver),
                 ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
                 ClassFile.StackMapsOption.GENERATE_STACK_MAPS,
                 ClassFile.DeadLabelsOption.DROP_DEAD_LABELS
@@ -441,7 +457,7 @@ public class TypeSystem {
         String xvmName = unescapeJitName(name).replace('$', '.');
         if (module.getChildByPath(xvmName) instanceof ClassStructure struct) {
             if (type == null) {
-                type = struct.getCanonicalType();
+                type = struct.getFormalType();
             }
             return new Artifact(type, struct, shape);
         }

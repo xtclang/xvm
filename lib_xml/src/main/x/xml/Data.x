@@ -33,7 +33,7 @@ class Data(String text)
     }
 
     @Override
-    Int estimateStringLength(Boolean pretty = False, Int indent=0) {
+    Int estimateStringLength(Boolean pretty = False, Int indent = 0) {
         String text = this.text;
         Int    of   = 0;
         Int    len  = text.size;
@@ -63,5 +63,5 @@ class Data(String text)
     }
 
     @Override
-    Writer appendTo(Writer buf, Boolean pretty = False, String indent="") = writeData(buf, text);
+    Writer appendTo(Writer buf, Boolean pretty = False, String indent = "") = writeData(buf, text);
 }

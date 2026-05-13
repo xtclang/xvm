@@ -59,6 +59,8 @@ import org.xvm.runtime.template.reflect.xInjector;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.runtime.template._native.collections.xBasicHashCollector;
+
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms;
 import org.xvm.runtime.template._native.crypto.xRTCertificateManager;
 import org.xvm.runtime.template._native.crypto.xRTKeyStore;
@@ -366,6 +368,11 @@ public class NativeContainer
         // +++ xvmProperties
         TypeConstant typeProps = pool.ensureMapType(pool.typeString(), pool.typeString());
         addResourceSupplier(new InjectionKey("properties", typeProps), this::ensureProperties);
+
+        // +++ collections.HashCollector
+        xBasicHashCollector templateHashCollector = xBasicHashCollector.INSTANCE;
+        TypeConstant        typeHashCollector     = templateHashCollector.getCanonicalType();
+        addResourceSupplier(new InjectionKey("hash", typeHashCollector), templateHashCollector::ensureCollector);
     }
 
     /**

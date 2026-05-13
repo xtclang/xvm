@@ -85,19 +85,15 @@ public class IP_Add
     }
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx,
-                                        CodeBuilder  code,
-                                        RegisterInfo regTarget,
-                                        RegisterInfo regArg) {
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, 
+                                        RegisterInfo regTarget, RegisterInfo regArg) {
         buildPrimitiveAdd(bctx, code, regTarget);
     }
 
     @Override
-    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
-                                                   CodeBuilder  code,
-                                                   RegisterInfo regTarget,
-                                                   int          nArgValue) {
+    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder code,
+                                                   RegisterInfo regTarget, int nArgValue) {
         buildXvmPrimitiveAdd(bctx, code, regTarget, nArgValue);
-        return regTarget;
+        return regTarget.type();
     }
 }

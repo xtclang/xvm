@@ -33,7 +33,7 @@ class CData(String text)
     }
 
     @Override
-    Int estimateStringLength(Boolean pretty = False, Int indent=0) = text.size + 12; // "<![CDATA[" ... "]]>"
+    Int estimateStringLength(Boolean pretty = False, Int indent = 0) = text.size + 12; // "<![CDATA[" ... "]]>"
 
     @Override
     Writer appendTo(Writer buf, Boolean pretty = False, String indent="") = writeCData(buf, text);
