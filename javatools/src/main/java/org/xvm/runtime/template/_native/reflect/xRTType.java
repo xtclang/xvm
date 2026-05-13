@@ -1357,7 +1357,7 @@ public class xRTType
         int            cTypes  = atypes.length;
         TypeHandle[]   ahTypes = new TypeHandle[cTypes];
         for (int i = 0; i < cTypes; ++i) {
-            ahTypes[i] = atypes[i].normalizeParameters().ensureTypeHandle(frame.f_context.f_container);
+            ahTypes[i] = atypes[i].ensureTypeHandle(frame.f_context.f_container);
         }
 
         ObjectHandle hArray = xArray.createImmutableArray(
