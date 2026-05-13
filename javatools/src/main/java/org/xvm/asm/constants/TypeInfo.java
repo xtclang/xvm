@@ -3,6 +3,7 @@ package org.xvm.asm.constants;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -2409,7 +2410,7 @@ public class TypeInfo {
               .append(f_mapTypeParams.size())
               .append(')');
             int i = 0;
-            for (Entry<Object, ParamInfo> entry : f_mapTypeParams.entrySet()) {
+            for (Entry<Object, ParamInfo> entry : f_mapTypeParams.entrySet().stream().sorted(KeySorter).toList()) {
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ")
@@ -2468,7 +2469,7 @@ public class TypeInfo {
               .append(f_mapProps.size())
               .append(')');
             int i = 0;
-            for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet()) {
+            for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet().stream().sorted(KeySorter).toList()) {
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ");
@@ -2486,7 +2487,7 @@ public class TypeInfo {
               .append(f_mapMethods.size())
               .append(')');
             int i = 0;
-            for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet()) {
+            for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet().stream().sorted(KeySorter).toList()) {
                 MethodInfo method = entry.getValue();
                 if (fRuntime && method.isCapped()) {
                     continue;
@@ -2631,6 +2632,26 @@ public class TypeInfo {
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * Sorts various keys of a map.
+     */
+    public static final Comparator<Map.Entry> KeySorter = (e1, e2) -> {
+        Object k1 = e1.getKey();
+        Object k2 = e2.getKey();
+        if (k1 == null || k2 == null) {
+            return k1 == k2 ? 0 : k1 == null ? -1 : 1;
+        } if (k1 == k2 || k1.equals(k2)) {
+            return 0;
+        } else if (k1 instanceof String s1) {
+            return k2 instanceof String s2 ? s1.compareTo(s2) : -1;
+        } else if (k1 instanceof IdentityConstant c1) {
+            return k2 instanceof IdentityConstant c2 ? c1.compareTo(c2) : -1;
+        } else if (k1 instanceof NestedIdentity n1) {
+            return k2 instanceof NestedIdentity n2 ? n1.compareTo(n2) : -1;
+        }
+        throw new IllegalStateException("unsupported type: " + k1.getClass().getSimpleName());
+    };
 
     public enum Progress {
         // the ordinal values are significant: place-holder=1, incomplete=2, complete=3

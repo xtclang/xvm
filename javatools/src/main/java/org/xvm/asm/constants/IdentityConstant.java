@@ -373,10 +373,11 @@ public abstract class IdentityConstant
     }
 
     /**
-     * A class used to as a nested identity for members not directly nested (or in the case of
-     * methods, methods whose multi-method parent is not directly nested).
+     * A class used as a nested identity for members not directly nested under an Ecstasy class (or
+     * in the case of methods, methods whose multi-method parent is not directly nested).
      */
-    public class NestedIdentity {
+    public class NestedIdentity
+            implements Comparable<NestedIdentity>{
         public NestedIdentity() {
             this(null);
         }
@@ -455,6 +456,45 @@ public abstract class IdentityConstant
             }
 
             return idThis.isNested() == idThat.isNested();
+        }
+
+        @Override
+        public int compareTo(NestedIdentity that) {
+            IdentityConstant idThis = this.getIdentityConstant();
+            IdentityConstant idThat = that.getIdentityConstant();
+            if (idThis == idThat) {
+                return 0;
+            }
+
+            int result = idThis.getNestedDepth() - idThat.getNestedDepth();
+            if (result != 0) {
+                return result;
+            }
+
+            boolean fTop = true;
+            while (idThis.isNested() && idThat.isNested()) {
+                Object oThis = idThis.getPathElement();
+                Object oThat = idThat.getPathElement();
+                if (fTop) {
+                    oThis = this.resolve(oThis);
+                    oThat = that.resolve(oThat);
+                    fTop  = false;
+                }
+                if (!oThis.equals(oThat)) {
+                    try {
+                        result = ((Comparable) oThis).compareTo((Comparable) oThat);
+                    } catch (Exception e) {
+                        result = idThis.getPathElementString().compareTo(idThat.getPathElementString());
+                    }
+                    if (result != 0) {
+                        return result;
+                    }
+                }
+                idThis = idThis.getNamespace();
+                idThat = idThat.getNamespace();
+            }
+
+            return idThis.compareTo(idThat);
         }
 
         private Object resolve(Object element) {
