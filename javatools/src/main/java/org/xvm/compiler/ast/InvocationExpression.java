@@ -351,7 +351,7 @@ public class InvocationExpression
             TypeConstant typeLeft = null;
             if (exprLeft != null) {
                 typeLeft = exprLeft.getImplicitType(ctx);
-                if (typeLeft == null) {
+                if (typeLeft == null || typeLeft.containsUnresolved()) {
                     // the fact that getImplicitType() returned null may mean that the "left" name
                     // is not resolvable; try to produce a proper error message in that case
                     exprLeft.testFit(ctx, pool.typeObject(), fExhaustive, errs);
