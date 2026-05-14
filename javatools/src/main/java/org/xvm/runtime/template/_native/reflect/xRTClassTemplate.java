@@ -445,8 +445,8 @@ public class xRTClassTemplate
     public int getPropertyType(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         ClassStructure clz = (ClassStructure) hComponent.getComponent();
 
-        return frame.assignValue(iReturn, xRTTypeTemplate.makeHandle(
-            frame.f_context.f_container, clz.getIdentityConstant().getFormalType()));
+        return frame.assignValue(iReturn,
+            xRTTypeTemplate.makeHandle(frame.f_context.f_container, clz.getIdentityConstant().getType()));
     }
 
     /**
