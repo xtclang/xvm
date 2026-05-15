@@ -22,10 +22,10 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
-import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
+
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -323,48 +323,35 @@ public class FBind
             // compensate for the Ctx argument
             int nJitPos = 1 + jmdBefore.optimizedParams[nArgPos].index;
 
-            if (regArg.isSingle()) {
-                if (!fOptBefore) {
-                    assert !fOptAfter && !regArg.cd().isPrimitive();
+            TypeConstant argType = regArg.type();
+            if (!fOptBefore) {
+                assert !fOptAfter;
+                bindArgument(code, slotStd, nJitPos, regArg, true);
+                code.aconst_null()
+                    .astore(slotOpt);
 
-                    bindArgument(code, slotStd, nJitPos, regArg, false);
-                    code.aconst_null()
-                        .astore(slotOpt);
-
+                // all JIT primitives are immutable
+                if (!argType.isJitPrimitive()) {
                     computeImmutable(code, slotImm, regArg);
-                } else if (!fOptAfter) {
-                    assert regArg.cd().isPrimitive(); // transition from opt -> !opt
-
-                    bindArgument(code, slotStd, nJitPos, regArg, false);
-                    code.aconst_null()
-                        .astore(slotOpt);
-                } else if (regArg.cd().isPrimitive()) {
-                    bindArgument(code, slotStd, nJitPos, regArg, true);
-                    bindArgument(code, slotOpt, nJitPos, regArg, false);
-                } else if (!regArg.type().isJavaPrimitive()) {
-                    bindArgument(code, slotStd, nJitPos, regArg, false);
-                    bindArgument(code, slotOpt, nJitPos, regArg, false);
-
-                    computeImmutable(code, slotImm, regArg);
-                } else {
-                    // the type is primitive, but the CD is not
-                    bindArgument(code, slotStd, nJitPos, regArg, false);
-                    code.aconst_null()
-                        .astore(slotOpt);
                 }
-            } else if (regArg.flavor() == JitFlavor.XvmPrimitive) {
-                int[]       slots = regArg.slots();
-                ClassDesc[] cds   = regArg.slotCds();
-                assert fOptBefore;
-                code.aconst_null();
+            } else if (!fOptAfter) {
+                assert argType.isJitPrimitive(); // transition from opt -> !opt
 
-                System.err.println("*** TODO JK/GG: Fix the NPE in binding");
-                ClassDesc cdFn = bctx.builder.ensureClassDesc(typeFn);
-                RegisterInfo regRet = bctx.ensureRegister(m_nRetValue, typeFn, cdFn, "");
-                bctx.storeValue(code, regRet, typeFn);
-                return -1;
+                bindArgument(code, slotStd, nJitPos, regArg, true);
+                code.aconst_null()
+                    .astore(slotOpt);
+            } else if (argType.isJitPrimitive()) {
+                // even though the "jmdBefore.isOptimized" may be true, the actual parameter we are
+                // binding here may not be optimized, in which case we will need to box any primitive
+                // values when binding
+                boolean fBoxParam = !jmdBefore.standardParams[i].type.isJitPrimitive();
+                bindArgument(code, slotStd, nJitPos, regArg, true);
+                bindArgument(code, slotOpt, nJitPos, regArg, fBoxParam);
             } else {
-                throw new UnsupportedOperationException("Add support for binding: " + regArg.getClass());
+                bindArgument(code, slotStd, nJitPos, regArg, false);
+                bindArgument(code, slotOpt, nJitPos, regArg, false);
+
+                computeImmutable(code, slotImm, regArg);
             }
 
             fOptBefore = fOptAfter;
@@ -393,17 +380,40 @@ public class FBind
 
         // create an Object array with one element (for the single value to bind)
         // and store the arg value at index zero
-        code.iconst_1()
-            .anewarray(CD_JavaObject)
-            .dup()
-            .iconst_0();
-        RegisterInfo regLoaded = regArg.load(code);
-        if (fBox) {
-            Builder.box(code, regLoaded);
-        } else if (regLoaded.cd().isPrimitive()) {
-            Builder.boxJava(code, regLoaded.cd());
+        int[] slots = regArg.slots();
+        int   dims  = fBox ? 1 : slots.length;
+
+        code.loadConstant(dims)
+            .anewarray(CD_JavaObject);
+
+        for (int i = 0; i < dims; i++) {
+            // we need to duplicate the array reference for each element
+            // that we will later call aastore for
+            // e.g. unboxed XVM primitives will have multiple slots
+            code.dup();
         }
-        code.aastore();
+
+        if (regArg.type().isJitPrimitive()) {
+            if (fBox) {
+                code.iconst_0();
+                RegisterInfo regLoaded = regArg.load(code);
+                Builder.box(code, regLoaded);
+                code.aastore();
+            } else {
+                ClassDesc[] cds = regArg.slotCds();
+                for (int i = 0; i < dims; i++) {
+                    code.loadConstant(i);
+                    Builder.load(code, cds[i], slots[i]);
+                    Builder.boxJava(code, cds[i]);
+                    code.aastore();
+                }
+            }
+        } else {
+            assert dims == 1;
+            code.iconst_0();
+            regArg.load(code);
+            code.aastore();
+        }
 
         code.invokestatic(ClassDesc.of("java.lang.invoke.MethodHandles"), "insertArguments",
                 MethodTypeDesc.of(CD_MethodHandle, CD_MethodHandle, CD_int, CD_JavaObject.arrayType()))

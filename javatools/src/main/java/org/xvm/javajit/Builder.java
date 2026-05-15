@@ -15,6 +15,7 @@ import java.math.BigInteger;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.*;
 
@@ -281,13 +282,33 @@ public abstract class Builder {
             PropertyInfo info = loadProperty(code, getThisType(), propId);
             TypeConstant type = info.getType();
             JitTypeDesc  jtd  = type.getJitDesc(this);
-            if (jtd.flavor == NullablePrimitive) {
-                throw new UnsupportedOperationException("TODO multislot property");
+            switch (jtd.flavor) {
+                case NullablePrimitive:
+                    // load the null flag value from the context to the stack
+                    loadFromContext(code, CD_boolean, 0);
+                    return new ExtendedSlot(bctx, Op.A_STACK, 0, 0, jtd.flavor, type,
+                            jtd.cd, "");
+
+                case XvmPrimitive:
+                case NullableXvmPrimitive:
+                    // for XVM primitives, the first value is on the stack, but we need to load any
+                    // remaining values from the context onto the stack
+                    ClassDesc[] cds  = JitTypeDesc.getXvmPrimitiveClasses(type);
+                    int         slot = 0;
+                    for (int i = 1; i < cds.length; i++) {
+                        Builder.loadFromContext(code, cds[i], slot++);
+                    }
+                    if (jtd.flavor == NullableXvmPrimitive) {
+                        // load the boolean Null flag from the context
+                        loadFromContext(code, CD_boolean, slot);
+                    }
+                    return new MultiSlot(bctx, jtd.flavor, type, jtd.cd, cds);
+                case Specific, Primitive, Widened:
+                    // single property value is on the stack
+                    return new SingleSlot(type, jtd.flavor, jtd.cd, "");
+                default:
+                    throw new IllegalStateException("TODO Unsupported flavor: " + jtd.flavor);
             }
-            if (jtd.flavor == NullableXvmPrimitive) {
-                throw new UnsupportedOperationException("TODO nullable XVM primitive property");
-            }
-            return new SingleSlot(type, jtd.flavor, jtd.cd, "");
         }
 
         case MethodConstant methodId: {
