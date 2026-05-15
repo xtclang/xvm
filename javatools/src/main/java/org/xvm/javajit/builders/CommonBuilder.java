@@ -3074,7 +3074,11 @@ public class CommonBuilder
     protected void generateCode(MethodTypeDesc md, BuildContext bctx, CodeBuilder code) {
 
         String moduleName = thisId.getModuleConstant().getName();
-        String className  = bctx.className;
+        int    baseIndex  = bctx.className.lastIndexOf(TypeSystem.ID_NUM);
+        String className  = baseIndex > 0
+                ? bctx.className.substring(0, baseIndex)
+                : bctx.className;
+
         GenerateStub:
         if (Arrays.stream(CLASS_WHITE_LIST).anyMatch(name -> {
                 if (name.endsWith("*")) {
@@ -3084,9 +3088,9 @@ public class CommonBuilder
                     return className.endsWith(name) || moduleName.endsWith(name);
                 }})) {
 
-                if (Arrays.stream(CLASS_BLACK_LIST).anyMatch(className::endsWith)) {
-                    break GenerateStub;
-                }
+            if (Arrays.stream(CLASS_BLACK_LIST).anyMatch(className::endsWith)) {
+                break GenerateStub;
+            }
 
             bctx.assembleCode(code);
             return;

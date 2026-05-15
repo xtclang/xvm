@@ -318,23 +318,16 @@ public abstract class OpInvocable extends Op {
 
         ConstantPool      pool       = bctx.pool();
         TypeConstant      typeTarget = bctx.getArgumentType(m_nTarget);
-        TypeInfo          infoTarget = bctx.getTypeInfo(typeTarget);
-        MethodConstant    idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
-        MethodInfo        infoMethod = infoTarget.getMethodById(idMethod, true); // TODO: HACK
+        MethodInfo        infoMethod = computeMethodInfo(bctx, typeTarget);
         SignatureConstant sig        = infoMethod.getSignature();
 
         if (sig.containsAutoNarrowing(true)) {
             sig = sig.resolveAutoNarrowing(pool, typeTarget, null);
         }
-        if (sig.containsTypeParameters()) {
-            MethodStructure method = (MethodStructure) idMethod.getComponent();
-            if (method == null) {
 
-                // TODO: add support for nested ids (see the interpreter logic above)
-                infoMethod = infoTarget.getMethodBySignature(sig);
-                assert infoMethod != null;
-                method = infoMethod.getHead().getMethodStructure();
-            }
+        if (sig.containsTypeParameters()) {
+            MethodStructure method = (MethodStructure) infoMethod.getIdentity().getComponent();
+            assert method != null;
             sig = sig.resolveGenericTypes(pool, bctx.createTypeResolver(method, anArgValue));
         }
 
@@ -352,36 +345,21 @@ public abstract class OpInvocable extends Op {
     }
 
     protected int buildInvoke(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
-        ConstantPool   pool       = bctx.pool();
-        RegisterInfo   regTarget  = bctx.loadArgument(code, m_nTarget);
-        ClassDesc      cdTarget   = regTarget.cd();
-        TypeConstant   typeTarget = regTarget.type();
-        MethodConstant idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
-        TypeInfo       infoTarget = bctx.getTypeInfo(typeTarget);
-        MethodInfo     infoMethod = infoTarget.getMethodById(idMethod);
-
-        if (infoMethod == null) {
-            SignatureConstant sig = idMethod.getSignature();
-
-            if (sig.containsGenericTypes()) {
-                sig = sig.resolveGenericTypes(pool, typeTarget);
-            }
-
-            // TODO: add support for nested ids (see the interpreter logic above)
-            infoMethod = infoTarget.getMethodBySignature(sig);
-            assert infoMethod != null;
-        }
-
+        RegisterInfo regTarget    = bctx.loadArgument(code, m_nTarget);
+        ClassDesc    cdTarget     = regTarget.cd();
+        TypeConstant typeTarget   = regTarget.type();
+        TypeInfo     infoTarget   = bctx.getTypeInfo(typeTarget);
+        MethodInfo   infoMethod   = computeMethodInfo(bctx, typeTarget);
         JitMethodDesc  jmd        = infoMethod.getJitDesc(bctx.builder, typeTarget);
         String         methodName = infoMethod.ensureJitMethodName(bctx.typeSystem);
         boolean        fOptimized = jmd.isOptimized;
-        MethodTypeDesc md;
 
         if (regTarget.flavor().isOptimized) {
             Builder.box(code, regTarget);
             cdTarget = bctx.builder.ensureClassDesc(regTarget.type());
         }
 
+        MethodTypeDesc md;
         if (fOptimized) {
             md         = jmd.optimizedMD;
             methodName += Builder.OPT;
@@ -405,6 +383,21 @@ public abstract class OpInvocable extends Op {
             bctx.assignReturns(code, jmd, cReturns, anVar);
         }
         return -1;
+    }
+
+    protected MethodInfo computeMethodInfo(BuildContext bctx, TypeConstant typeTarget) {
+        TypeInfo        infoTarget = bctx.getTypeInfo(typeTarget);
+        MethodConstant  idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
+        MethodInfo      infoMethod = infoTarget.getMethodById(idMethod, true); // runtime hack
+        if (infoMethod == null) {
+            SignatureConstant sig = idMethod.getSignature();
+            if (bctx.isSpecialized) {
+                sig = sig.resolveGenericTypes(bctx.pool(), bctx.jitType);
+            }
+            infoMethod = infoTarget.getMethodBySignature(sig);
+            assert infoMethod != null;
+        }
+        return infoMethod;
     }
 
     // ----- fields --------------------------------------------------------------------------------
