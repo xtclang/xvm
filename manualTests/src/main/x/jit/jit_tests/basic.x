@@ -23,6 +23,7 @@ package basic {
                 passed &= runTest(() -> propertyInitTests.run());
                 passed &= runTest(() -> refTests.run());
                 passed &= runTest(() -> constTests.run());
+                passed &= runTest(() -> fbindTests.run());
             } catch (IllegalState e) {
                 console.print(e);
             }

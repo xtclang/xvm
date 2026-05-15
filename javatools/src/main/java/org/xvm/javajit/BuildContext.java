@@ -2726,7 +2726,7 @@ public class BuildContext {
                 case Specific:
                     switch (destFlavor) {
                     case Specific:
-                        if (retType.isAutoNarrowing()) {
+                        if (retType.isAutoNarrowing() || !retType.equals(destType)) {
                             builder.generateCheckCast(code, destType);
                         }
                         break;
@@ -2740,11 +2740,28 @@ public class BuildContext {
                         Builder.unbox(code, destType);
                         break;
 
-                    case NullablePrimitive:
-                        // TODO: resolve the type parameter and check for Null if necessary
-                        builder.generateCheckCast(code, destType.removeNullable());
+                    case NullablePrimitive, NullableXvmPrimitive:
+                        Label        lblNotNull   = code.newLabel();
+                        Label        lblDone      = code.newLabel();
+                        TypeConstant typeSansNull = destType.removeNullable();
+                        ClassDesc[]  primitiveCds = typeSansNull.isXvmPrimitive()
+                                ? JitTypeDesc.getXvmPrimitiveClasses(typeSansNull)
+                                : new ClassDesc[]{JitTypeDesc.getPrimitiveClass(typeSansNull)};
+
+                        code.dup();
+                        Builder.loadNull(code);
+                        code.if_acmpne(lblNotNull)
+                            .pop();
+                        for (ClassDesc cd : primitiveCds) {
+                            Builder.defaultLoad(code, cd);
+                        }
+                        code.iconst_1()
+                            .goto_(lblDone)
+                            .labelBinding(lblNotNull)
+                            .checkcast(builder.ensureClassDesc(typeSansNull));
                         Builder.unbox(code, destType);
-                        code.iconst_0();
+                        code.iconst_0()
+                            .labelBinding(lblDone);
                         break;
 
                     default:
