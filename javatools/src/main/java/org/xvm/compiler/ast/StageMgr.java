@@ -14,6 +14,7 @@ import org.xvm.asm.constants.IdentityConstant;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.CompilerException;
 
 import org.xvm.compiler.ast.AstNode.ChildIterator;
 
@@ -74,14 +75,24 @@ public class StageMgr {
      *         target stage
      */
     public boolean processComplete() {
-        if (getErrorListener().isAbortDesired()) {
+        ErrorListener errs = m_errs;
+        if (errs.isAbortDesired()) {
             return false;
         }
 
         if (m_listRevisit != null) {
             for (AstNode node : takeRevisitList()) {
-                processInternal(node);
-                if (getErrorListener().isAbortDesired()) {
+                try {
+                    processInternal(node);
+                } catch (CompilerException e) {
+                    // there is a possibility that during the "resolveName" phase we have not
+                    // resolved some annotation parameters and moved to the "validateContent" phase;
+                    // now if class A validation relies on class B with unresolved annotations
+                    // it may throw the CompilerException (see UnresolvedName#getType)
+                    node.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, e.getMessage());
+                    return false;
+                }
+                if (errs.isAbortDesired()) {
                     return false;
                 }
             }

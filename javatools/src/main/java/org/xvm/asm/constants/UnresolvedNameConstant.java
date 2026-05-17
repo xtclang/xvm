@@ -8,6 +8,9 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+
+import org.xvm.compiler.CompilerException;
+
 import org.xvm.util.Hash;
 
 
@@ -182,6 +185,11 @@ public class UnresolvedNameConstant
             }
         }
         return null;
+    }
+
+    @Override
+    public TypeConstant getType() {
+        throw new CompilerException(getName());
     }
 
     @Override

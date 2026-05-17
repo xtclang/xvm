@@ -5,6 +5,7 @@ module TestAnnotations {
         testWatch();
         testAnnotations();
         testAnnotations2();
+        testAnnotations3();
         testMethodAnno();
         testClassAnno();
         testDefaultParams();
@@ -130,6 +131,29 @@ module TestAnnotations {
                 }
             }
         }
+    }
+
+    void testAnnotations3() {
+        interface Predicate {
+            Boolean eval();
+        }
+
+        annotation PreComputed(Boolean value = False) into Predicate {
+            @Override Boolean eval() = value;
+        }
+
+        @PreComputed(True)
+        class ClassA implements Predicate {
+            ClassB b = new ClassB();
+
+            @Override
+            Boolean eval() = b.eval();
+        }
+
+        @PreComputed(True)
+        class ClassB implements Predicate {}
+
+       assert new ClassA().eval() == True;
     }
 
     @Tagged(weight=1)
