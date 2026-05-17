@@ -16,6 +16,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.CompilerException;
 
 import org.xvm.util.Hash;
 import org.xvm.util.Severity;
@@ -122,7 +123,7 @@ public class UnresolvedTypeConstant
         if (isTypeResolved()) {
             return m_type;
         }
-        throw new IllegalStateException();
+        throw new CompilerException(m_constId.getName());
     }
 
     @Override
