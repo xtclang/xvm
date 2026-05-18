@@ -2449,16 +2449,17 @@ public class Frame
         public TypeConstant getType() {
             TypeConstant type = m_type;
             if ((m_nStyle & RESOLVED_TYPE) == 0) {
+                boolean fDynamic;
                 if (type == null) {
                     assert m_resolver != null;
                     type = m_resolver.resolve(Frame.this, m_nTargetId, m_nTypeId);
+                    fDynamic = type.containsDynamicType();
+                } else {
+                    fDynamic = type.containsDynamicType();
+                    type = type.resolveGenerics(poolContext(), getGenericsResolver(fDynamic));
                 }
 
                 // don't cache dynamic types
-                boolean fDynamic = type.containsDynamicType();
-
-                type = type.resolveGenerics(poolContext(), getGenericsResolver(fDynamic));
-
                 if (fDynamic) {
                     m_nStyle |= TYPE_DYNAMIC;
                 } else {
@@ -2548,7 +2549,8 @@ public class Frame
                 typeArray = frame.getLocalType(nTargetReg, null);
             }
 
-            return typeArray.getParamType(typeArray.isTuple() ? iAuxId : 0);
+            TypeConstant typeEl = typeArray.getParamType(typeArray.isTuple() ? iAuxId : 0);
+            return typeEl.resolveGenerics(frame.poolContext(), frame.getGenericsResolver(false));
         }
     };
 
