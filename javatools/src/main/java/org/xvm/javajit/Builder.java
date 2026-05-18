@@ -46,7 +46,6 @@ import static org.xvm.asm.Constant.Format.Int128;
 
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
 import static org.xvm.javajit.JitFlavor.XvmPrimitive;
-import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 
@@ -732,6 +731,8 @@ public abstract class Builder {
     }
 
     public void loadOptimizedReturnsToStack(CodeBuilder code, JitMethodDesc md) {
+        // if the return type is nullable, the caller should have already have processed the
+        // extension flag
         JitParamDesc[] params = md.optimizedReturns;
         int            count  = md.standardReturns[0].type.isNullable()
                                         ? params.length - 1 : params.length;

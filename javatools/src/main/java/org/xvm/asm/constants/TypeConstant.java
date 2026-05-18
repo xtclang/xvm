@@ -6603,7 +6603,7 @@ public abstract class TypeConstant
      * @return {@code true} if this type is either a Java primitive or an Ecstasy primitive type.
      */
     public boolean isJitPrimitive() {
-        return isJavaPrimitive() || isXvmPrimitive();
+        return removeNullable().isJavaPrimitive() || removeNullable().isXvmPrimitive();
     }
 
     /**
@@ -6647,7 +6647,7 @@ public abstract class TypeConstant
      * variables and properties that hold non-primitive instances of the corresponding type. The
      * cannonical type is **always** either {@link TerminalTypeConstant} with a
      * {@link #isSingleUnderlyingClass} or a {@link ParameterizedTypeConstant} with
-     * non-parameterized canonical types as parameters.
+     * non-parameterized {@link #isJitPrimitive() JIT primitive} types as parameters.
      * <p/>
      * The following should hold :
      *  <ul>
