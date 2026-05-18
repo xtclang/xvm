@@ -156,6 +156,8 @@ public class PropertyConstant
     }
 
     /**
+     * Note, that this yields "false" for FormalChildConstant (e.g. CompileType.Element).
+     *
      * @return true iff this property is a generic type parameter
      */
     public boolean isFormalType() {
