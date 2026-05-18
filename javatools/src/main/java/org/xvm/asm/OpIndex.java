@@ -314,11 +314,12 @@ public abstract class OpIndex
                 code.invokevirtual(reg.cd(), sJitName, jmd.optimizedMD);
             }
 
-            if (!fSet && typeEl.isXvmPrimitive()) {
-                // XVM primitive types may return partially on the stack and partially in the Ctx
-                ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(typeEl);
-                for (int i = 1; i < cds.length; i++) {
-                    Builder.loadFromContext(code, cds[i], i-1);
+            if (!fSet && jmd.optimizedReturns.length > 1) {
+                // load any additional return values from the context
+                // e.g. XVM primitives and nullable primitives
+                for (int i = 1; i < jmd.optimizedReturns.length; i++) {
+                    JitParamDesc optRet = jmd.optimizedReturns[i];
+                    Builder.loadFromContext(code, optRet.cd, optRet.altIndex);
                 }
             }
         }

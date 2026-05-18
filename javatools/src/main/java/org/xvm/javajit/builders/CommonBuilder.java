@@ -803,37 +803,26 @@ public class CommonBuilder
                             .aload(0)
                             .getfield(CD_this, jitFieldName+EXT, CD_boolean);
                     }
-                    storeToContext(code, CD_boolean, 1);
+                    storeToContext(code, CD_boolean, jmd.optimizedReturns[1].altIndex);
                     addReturn(code, cdOpt);
                     break;
 
                 case XvmPrimitive:
                 case NullableXvmPrimitive:
-                    TypeConstant type = prop.getType();
-                    ClassDesc[]  cds  = JitTypeDesc.getXvmPrimitiveClasses(type);
-                    int          slot = 0;
-                    if (prop.isConstant()) {
-                        code.getstatic(CD_this, jitFieldName + "$0", cds[0]);
-                        for (int i = 1; i < cds.length; i++) {
-                            code.getstatic(CD_this, jitFieldName + "$" + i, cds[i]);
-                            storeToContext(code, cds[i], slot++);
+                    JitParamDesc[] optRets = jmd.optimizedReturns;
+                    for (int i = 0; i < optRets.length; i++) {
+                        String name = jitFieldName + (optRets[i].extension ? EXT : "$" + i);
+                        if (prop.isConstant()) {
+                            code.getstatic(CD_this, name, optRets[i].cd);
+                        } else {
+                            code.aload(0).getfield(CD_this, name, optRets[i].cd);
                         }
-                        if (pdOpt.flavor == NullableXvmPrimitive) {
-                            code.getstatic(CD_this, jitFieldName + EXT, CD_boolean);
-                            storeToContext(code, CD_boolean, slot);
-                        }
-                    } else {
-                        code.aload(0).getfield(CD_this, jitFieldName + "$0", cds[0]);
-                        for (int i = 1; i < cds.length; i++) {
-                            code.aload(0).getfield(CD_this, jitFieldName + "$" + i, cds[i]);
-                            storeToContext(code, cds[i], slot++);
-                        }
-                        if (pdOpt.flavor == NullableXvmPrimitive) {
-                            code.aload(0).getfield(CD_this, jitFieldName + EXT, CD_boolean);
-                            storeToContext(code, CD_boolean, slot);
+
+                        if (i > 0) {
+                            storeToContext(code, optRets[i].cd, optRets[i].altIndex);
                         }
                     }
-                    addReturn(code, cds[0]);
+                    addReturn(code, optRets[0].cd);
                     break;
 
                 default:
@@ -1720,12 +1709,13 @@ public class CommonBuilder
                 continue;
             }
 
-            PropertyConstant propId    = prop.getIdentity();
-            TypeConstant     propType  = prop.getType();
-            Label            skipProp  = code.newLabel();
-            Label            checkProp = code.newLabel();
+            PropertyConstant propId     = prop.getIdentity();
+            TypeConstant     propType   = prop.getType();
+            Label            skipProp   = code.newLabel();
+            Label            checkProp  = code.newLabel();
+            boolean          isNullable = propType.isNullable();
 
-            if (propType.isNullable()) {
+            if (isNullable) {
                 // properties may be null, so assemble null check
                 Label ifNull1    = code.newLabel();
                 Label ifNull2    = code.newLabel();
@@ -1737,10 +1727,10 @@ public class CommonBuilder
                 loadProperty(code, type, propId, false);
                 loadNull(code);
                 code.if_acmpeq(ifNull1)
-                    .iconst_0() // zero on the stack if null
+                    .iconst_1() // one on the stack if not null
                     .goto_(checkProp2)
                     .labelBinding(ifNull1)
-                    .iconst_1(); // one on the stack if not null
+                    .iconst_0(); // zero on the stack if null
 
                 code.labelBinding(checkProp2)
                     .istore(nullCheckSlot) // store the result of the null check in slot 4
@@ -1748,10 +1738,10 @@ public class CommonBuilder
                 loadProperty(code, type, propId, false);
                 loadNull(code);
                 code.if_acmpeq(ifNull2)
-                    .iconst_0() // zero on the stack if null
+                    .iconst_1() // one on the stack if not null
                     .goto_(compare)
                     .labelBinding(ifNull2)
-                    .iconst_1() // one on the stack if not null
+                    .iconst_0() // zero on the stack if null
                     .labelBinding(compare)
                     .iload(nullCheckSlot) // reload the null check result
                     .if_icmpne(notEqual)  // if two ints on the stack are not equal jump
@@ -1760,9 +1750,9 @@ public class CommonBuilder
                     .goto_(checkProp)     // else props are not null, so we need to compare
                     .labelBinding(notEqual)
                     .goto_(returnFalse);
-            }
 
-            propType = propType.removeNullable();
+                propType = propType.removeNullable();
+            }
 
             code.labelBinding(checkProp);
             if (propType.isJavaPrimitive()) {
@@ -1816,6 +1806,7 @@ public class CommonBuilder
                 // Object type: call static equals$p(Ctx, nType, T, T) -> boolean
                 MethodInfo    eqMethod = propType.ensureTypeInfo().getMethodBySignature(eqSig);
                 JitMethodDesc eqJmd    = eqMethod.getJitDesc(this, propType);
+                ClassDesc     cdProp   = ensureClassDesc(propType);
 
                 loadCtx(code);
 
@@ -1828,11 +1819,16 @@ public class CommonBuilder
                 // load the values
                 code.aload(value1Slot);
                 loadProperty(code, type, propId, false);
+                if (isNullable) {
+                    code.checkcast(cdProp);
+                }
                 code.aload(value2Slot);
                 loadProperty(code, type, propId, false);
+                if (isNullable) {
+                    code.checkcast(cdProp);
+                }
 
-                ClassDesc cdTarget = ensureClassDesc(propType);
-                code.invokestatic(cdTarget, eqOptName, eqJmd.optimizedMD)
+                code.invokestatic(cdProp, eqOptName, eqJmd.optimizedMD)
                     .ifeq(returnFalse);
             }
             // we jump here if the prop is nullable and the null check determined both were null
@@ -1939,12 +1935,13 @@ public class CommonBuilder
         // we sort by the property rank and compare in that order
         props.sort(Comparator.comparingInt(PropertyInfo::getRank));
         for (PropertyInfo prop : props) {
-            PropertyConstant propId    = prop.getIdentity();
-            TypeConstant     propType  = prop.getType();
-            Label            skipProp  = code.newLabel();
-            Label            checkProp = code.newLabel();
+            PropertyConstant propId     = prop.getIdentity();
+            TypeConstant     propType   = prop.getType();
+            Label            skipProp   = code.newLabel();
+            Label            checkProp  = code.newLabel();
+            boolean          isNullable = propType.isNullable();
 
-            if (propType.isNullable()) {
+            if (isNullable) {
                 // properties may be null, so assemble null check
                 Label ifNull1    = code.newLabel();
                 Label ifNull2    = code.newLabel();
@@ -1955,10 +1952,10 @@ public class CommonBuilder
                 loadProperty(code, type, propId, false);
                 loadNull(code);
                 code.if_acmpeq(ifNull1)
-                    .iconst_0() // zero on the stack if null
+                    .iconst_1() // one on the stack if not null
                     .goto_(checkProp2)
                     .labelBinding(ifNull1)
-                    .iconst_1(); // one on the stack if not null
+                    .iconst_0(); // zero on the stack if null
 
                 code.labelBinding(checkProp2)
                     .istore(nullCheckSlot) // store the result of the null check in slot 4
@@ -1966,22 +1963,23 @@ public class CommonBuilder
                 loadProperty(code, type, propId, false);
                 loadNull(code);
                 code.if_acmpeq(ifNull2)
-                    .iconst_0() // zero on the stack if null
+                    .iconst_1() // one on the stack if not null
                     .goto_(compare)
                     .labelBinding(ifNull2)
-                    .iconst_1() // one on the stack if not null
+                    .iconst_0() // zero on the stack if null
                     .labelBinding(compare)
                     .iload(nullCheckSlot) // reload the prop1 null check result
-                    .isub(); // two ints on the stack, subtract to get result
+                    .isub().ineg(); // two ints on the stack, subtract to get result (then negate
+                                    // as they are the wrong way around)
                 convertIntToOrdered(code, false);
                 // to get here must be Equal
                 code.iload(nullCheckSlot) // reload the prop1 null check result
                     .ifeq(skipProp);      // if it is zero, both props were null so jump to skip
+
+                propType = propType.removeNullable();
             }
 
             code.labelBinding(checkProp);
-            propType = propType.removeNullable();
-
             if (propType.isJavaPrimitive()) {
                 // Java primitive: load both values, compare directly, convert int to Ordered
                 ClassDesc cdPrim = JitTypeDesc.getPrimitiveClass(propType);
@@ -2062,15 +2060,22 @@ public class CommonBuilder
                 code.invokestatic(CD_nType, "$ensureType",
                         MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
 
-                // load the values
-                code.aload(value1Slot);
-                loadProperty(code, type, propId, false);
-                code.aload(value2Slot);
-                loadProperty(code, type, propId, false);
-
                 // invoke the static compare method
                 IdentityConstant idTarget = cmpMethod.getIdentity().getClassIdentity();
                 ClassDesc        cdTarget = ensureClassDesc(idTarget.getType());
+
+                // load the values
+                code.aload(value1Slot);
+                loadProperty(code, type, propId, false);
+                if (isNullable) {
+                    code.checkcast(cdTarget);
+                }
+                code.aload(value2Slot);
+                loadProperty(code, type, propId, false);
+                if (isNullable) {
+                    code.checkcast(cdTarget);
+                }
+
                 code.invokestatic(cdTarget, cmpSig.getName(), cmpJmd.standardMD)
                     .dup();
                 loadConstant(code, pool.valEqual());
@@ -2257,8 +2262,9 @@ public class CommonBuilder
             TypeConstant     propType   = prop.getType();
             Label            doProp     = code.newLabel();
             Label            propIsNull = code.newLabel();
+            boolean          isNullable = propType.isNullable();
 
-            if (propType.isNullable()) {
+            if (isNullable) {
                 // property may be null, so assemble null check
                 code.aload(valueSlot);
                 loadProperty(code, type, propId, false);
@@ -2266,19 +2272,22 @@ public class CommonBuilder
                 code.if_acmpne(doProp)  // not Null, so process the property
                     .lconst_0()         // hash code is zero if Null
                     .goto_(propIsNull); // jump to the end, property is Null
+
+                propType = propType.removeNullable();
             }
 
             code.labelBinding(doProp);
-            if (propType.isJavaPrimitive()) {
-                // load the primitive value and convert to long in-line — all Java primitives
-                // fit into a 64-bit long
-                // TODO JK: this is not quite correct; it needs to go to **the same** algorithm
-                //          as the "hashCode" production
+            if (propType.isJitPrimitive()) {
+                // generate the same code that used for primitive constant hashCode$p
+                Builder.loadCtx(code);
+                loadTypeConstant(code, ensureJitClassName(propType), propType);
+                code.invokestatic(CD_nType, "$ensureType",
+                        MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
+                Builder.loadCtx(code);
                 code.aload(valueSlot);
-                loadProperty(code, type, propId, true);
-                ClassDesc cd = JitTypeDesc.getPrimitiveClass(propType);
-                assert cd != null;
-                Builder.buildPrimitiveToLong(cd, code);
+                loadProperty(code, type, propId, false);
+                code.invokevirtual(CD_nType, "hashCode$p",
+                        MethodTypeDesc.of(CD_long, CD_Ctx, CD_Hashable));
                 // long primitive hashCode on the stack
             } else if (propType.isA(pool.typeService())) {
                 buildGetIdentityHashCode(code, prop, valueSlot);
@@ -2298,19 +2307,13 @@ public class CommonBuilder
                 code.aload(valueSlot);
                 loadProperty(code, type, propId, false);
 
-                if (propType.isJitPrimitive()) {
-                    ClassDesc      cdTarget = ensureClassDesc(propType);
-                    MethodTypeDesc mdHash   = MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cdTarget);
-                    code.invokestatic(ensureClassDesc(propType), hashOptName, mdHash);
-                } else {
-                    MethodInfo    hashMethod = propType.ensureTypeInfo().getMethodBySignature(hashSig);
-                    JitMethodDesc hashJmd    = hashMethod.getJitDesc(this, propType);
+                MethodInfo    hashMethod = propType.ensureTypeInfo().getMethodBySignature(hashSig);
+                JitMethodDesc hashJmd    = hashMethod.getJitDesc(this, propType);
 
-                    IdentityConstant idTarget = hashMethod.getIdentity().getClassIdentity();
-                    ClassDesc        cdTarget = ensureClassDesc(idTarget.getType());
-                    code.checkcast(cdTarget)
-                        .invokestatic(cdTarget, hashOptName, hashJmd.optimizedMD);
-                }
+                IdentityConstant idTarget = hashMethod.getIdentity().getClassIdentity();
+                ClassDesc        cdTarget = ensureClassDesc(idTarget.getType());
+                code.checkcast(cdTarget)
+                    .invokestatic(cdTarget, hashOptName, hashJmd.optimizedMD);
                 // long hashCode on the stack
             }
             // add the result and store
@@ -3126,6 +3129,8 @@ public class CommonBuilder
         "Test*", "test*",
         "Exception*",
         "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState", "Assertion",
+        "Deadlock", "TimedOut", "OutOfMemory", "StackOverflow", "ReadOnly", "TypeMismatch",
+        "ConcurrentModification", "NotAssigned", "NotImplemented", "Closed", "NotShareable",
         "Boolean", "Ordered", "Orderable",
         "String",
         "Stringable",
