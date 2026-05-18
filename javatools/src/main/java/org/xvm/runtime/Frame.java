@@ -2566,9 +2566,9 @@ public class Frame
                 ? frame.f_ahVar[nTargetReg].getType()
                 : frame.getLocalType(nTargetReg, null);
 
-            return constProperty.isFormalType()
+            return constProperty.isFormalType() // is it a generic type?
                 ? constProperty.getFormalType().resolveGenerics(pool, typeTarget).getType()
-                : constProperty.getType().resolveGenerics(pool, typeTarget);
+                : constProperty.getType().resolveGenerics(pool, frame.getGenericsResolver(false));
         }
     };
 
