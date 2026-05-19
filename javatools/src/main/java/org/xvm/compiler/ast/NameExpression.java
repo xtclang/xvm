@@ -803,9 +803,9 @@ public class NameExpression
         }
 
         // if the type could fully be resolved in the current context, do it now
-        if (type != null && type.isGenericType()) {
+        if (type != null && type.containsGenericType(true)) {
             TypeConstant typeResolved = type.resolveGenerics(pool, ctx.getThisType());
-            if (!typeResolved.isGenericType()) {
+            if (!typeResolved.containsGenericType(true)) {
                 type = typeResolved;
             }
         }
