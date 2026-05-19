@@ -335,7 +335,7 @@
     @Override
     MapCollector<Key, Value, Map<Key, Value>> defaultCollector() {
         // unwind to the original original map
-        Map? original = this.original;
+        Map<Key, Object>? original = this.original;
         while (original.is(DeferredMap<Key, Object>)) {
             original = original.original;
         }

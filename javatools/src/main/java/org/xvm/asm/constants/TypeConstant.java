@@ -151,11 +151,32 @@ public abstract class TypeConstant
     }
 
 
+    public void report(FormalConstant constFormal, TypeConstant tOld, TypeConstant tNew) {
+        if (!isTuple()) {
+            String msg = getValueString() + " used to resolve " +
+                constFormal + " to " + tOld + " now " + tNew;
+            if (REPORTS.add(msg)) {
+                System.err.println("*** " + msg);
+            }
+        }
+    }
+
+    static Set<String> REPORTS = new HashSet<>();
+
+
     // ----- GenericTypeResolver -------------------------------------------------------------------
 
     @Override
-    public TypeConstant resolveGenericType(String sFormalName) {
-        return getGenericParamType(sFormalName, Collections.emptyList());
+    public TypeConstant resolveFormalType(FormalConstant constFormal) {
+        if (isModifyingType()) {
+            return getUnderlyingType().resolveFormalType(constFormal);
+        }
+
+        TypeConstant t = resolveGenericType(constFormal.getName());
+        if (t != null) {
+            report(constFormal, t, null);
+        }
+        return null;
     }
 
 
@@ -476,6 +497,13 @@ public abstract class TypeConstant
      */
     public boolean containsGenericParam(String sName) {
         return isModifyingType() && getUnderlyingType().containsGenericParam(sName);
+    }
+
+    /**
+     * Find the type of the specified formal parameter for this type.
+     */
+    public TypeConstant resolveGenericType(String sFormalName) {
+        return getGenericParamType(sFormalName, Collections.emptyList());
     }
 
     /**

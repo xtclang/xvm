@@ -3526,7 +3526,7 @@ public class ConstantPool
 
     private TypeInfo computeNakedRefInfo(TypeConstant typeReferent) {
         GenericTypeResolver resolver =
-                sFormalName -> "Referent".equals(sFormalName) ? typeReferent : null;
+                constFormal -> "Referent".equals(constFormal.getName()) ? typeReferent : null;
 
         if (m_typeNakedRef == null) {
             throw new IllegalStateException("Mack module (javatools_turtle) is missing");

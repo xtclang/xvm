@@ -11,6 +11,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PackageStructure;
@@ -196,16 +197,19 @@ public class xRTType
     public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn) {
         TypeHandle hType = (TypeHandle) hTarget;
 
-        if (idProp instanceof FormalTypeChildConstant) {
-            TypeConstant typeTarget = hType.getDataType();
-            TypeConstant typeValue  =
-                "OuterType".equals(idProp.getName()) && typeTarget.isVirtualChild()
-                    ? typeTarget.getParentType()
-                    : typeTarget.resolveFormalType(idProp);
+        // this is almost identical to FTC.resolve(GTR) except it returns the "unsafe" type
+        GenericTypeResolver resolver = constFormal ->
+            switch (constFormal.getName()) {
+                case "DataType"  -> hType.getUnsafeDataType();
+                case "OuterType" -> hType.getOuterType();
+                default          -> null;
+            };
 
+        if (idProp.isFormalType()) {
+            TypeConstant typeValue = idProp.resolve(resolver);
             return typeValue == null
                 ? frame.raiseException(xException.invalidType(frame,
-                    "Unknown formal type: " + idProp.getName()))
+                        "Unknown formal type: " + idProp.getName()))
                 : frame.assignValue(iReturn, typeValue.ensureTypeHandle(frame.f_context.f_container));
         }
 

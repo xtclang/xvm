@@ -251,18 +251,10 @@ public class Parameter
      */
     public GenericTypeResolver asGenericTypeResolver(MethodConstant constMethod, TypeConstant type) {
         assert isTypeParameter();
-        TypeParameterConstant constParam = asTypeParameterConstant(constMethod);
-        return new GenericTypeResolver() {
-            @Override
-            public TypeConstant resolveGenericType(String sFormalName) {
-                return null;
-            }
 
-            @Override
-            public TypeConstant resolveFormalType(FormalConstant constFormal) {
-                return constFormal.equals(constParam) ? type : null;
-            }
-        };
+        TypeParameterConstant constParam = asTypeParameterConstant(constMethod);
+
+        return constFormal -> constFormal.equals(constParam) ? type : null;
     }
 
     /**

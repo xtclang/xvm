@@ -1149,17 +1149,7 @@ public class LambdaExpression
                 asParams    = asAllParams;
 
                 if (!mapRedefine.isEmpty()) {
-                    GenericTypeResolver resolver = new GenericTypeResolver() {
-                        @Override
-                        public TypeConstant resolveGenericType(String sFormalName) {
-                            return null;
-                        }
-
-                        @Override
-                        public TypeConstant resolveFormalType(FormalConstant constFormal) {
-                            return mapRedefine.get(constFormal);
-                        }
-                    };
+                    GenericTypeResolver resolver = mapRedefine::get;
 
                     for (int i = cTypeParams, c = atypeParams.length; i < c; i++) {
                         TypeConstant typeOld = atypeParams[i].resolveTypedefs();
@@ -1489,11 +1479,6 @@ public class LambdaExpression
                     return constDynamic.getConstraintType();
                 }
             }
-            return null;
-        }
-
-        @Override
-        public TypeConstant resolveGenericType(String sFormalName) {
             return null;
         }
 

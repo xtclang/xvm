@@ -1176,7 +1176,7 @@ public abstract class AstNode
                     // incompatible types
                     continue;
                 }
-                sigMethod = sigMethod.resolveGenericTypes(pool, GenericTypeResolver.of(mapTypeParams));
+                sigMethod = sigMethod.resolveGenericTypes(pool, mapTypeParams::get);
             }
 
             TypeConstant[] atypeParam = sigMethod.getRawParams();
@@ -1261,7 +1261,7 @@ public abstract class AstNode
 
                     fit = TypeFit.NoFit;
                 } else {
-                    sigMethod = sigMethod.resolveGenericTypes(pool, GenericTypeResolver.of(mapTypeParams));
+                    sigMethod = sigMethod.resolveGenericTypes(pool, mapTypeParams::get);
                 }
             }
 

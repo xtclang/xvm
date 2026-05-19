@@ -322,6 +322,22 @@ public class IntersectionTypeConstant
     }
 
     @Override
+    public TypeConstant resolveFormalType(FormalConstant constFormal) {
+        // for Intersection types, either side needs to find it, but if both do, take the narrower one
+        TypeConstant typeActual1 = m_constType1.resolveFormalType(constFormal);
+        TypeConstant typeActual2 = m_constType2.resolveFormalType(constFormal);
+
+        if (typeActual1 == null) {
+            return typeActual2;
+        }
+        if (typeActual2 == null) {
+            return typeActual1;
+        }
+
+        return typeActual1.combine(getConstantPool(), typeActual2);
+    }
+
+    @Override
     public ResolutionResult resolveContributedName(
             String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
         // for the IntersectionType to contribute a name, either side needs to find it

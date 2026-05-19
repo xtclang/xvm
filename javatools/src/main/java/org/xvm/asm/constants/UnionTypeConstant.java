@@ -378,6 +378,22 @@ public class UnionTypeConstant
     }
 
     @Override
+    public TypeConstant resolveFormalType(FormalConstant constFormal) {
+        TypeConstant typeActual1 = m_constType1.resolveFormalType(constFormal);
+        TypeConstant typeActual2 = m_constType2.resolveFormalType(constFormal);
+
+        if (typeActual1 == null || typeActual2 == null) {
+            return null;
+        }
+
+        return typeActual1.isA(typeActual2)
+                ? typeActual2
+                : typeActual2.isA(typeActual1)
+                    ? typeActual1
+                    : getConstantPool().ensureUnionTypeConstant(typeActual1, typeActual2);
+    }
+
+    @Override
     public ResolutionResult resolveContributedName(
             String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
         // for the UnionType to contribute a name, either both sides need to find exactly

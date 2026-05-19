@@ -402,6 +402,18 @@ public class TerminalTypeConstant
     }
 
     @Override
+    public TypeConstant resolveFormalType(FormalConstant constFormal) {
+        if (constFormal.getFormat() == Format.Property) {
+            return resolveGenericType(constFormal.getName());
+        }
+        TypeConstant t = resolveGenericType(constFormal.getName());
+        if (t != null) {
+            report(constFormal, t, null);
+        }
+        return null;
+    }
+
+    @Override
     public boolean isAnnotated() {
         TypeConstant type = resolveTypedefs();
         return type != this && type.isAnnotated();

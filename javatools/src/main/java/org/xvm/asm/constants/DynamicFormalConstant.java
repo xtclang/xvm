@@ -203,7 +203,7 @@ public class DynamicFormalConstant
 
     @Override
     public String getValueString() {
-        return getName() + '.' + m_constFormal.getName();
+        return getName();
     }
 
     @Override
