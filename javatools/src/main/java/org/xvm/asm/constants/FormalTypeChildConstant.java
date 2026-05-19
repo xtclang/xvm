@@ -81,6 +81,18 @@ public class FormalTypeChildConstant
     }
 
 
+    // ----- PropertyConstant methods --------------------------------------------------------------
+
+    @Override
+    public boolean isFormalType() {
+        return true;
+    }
+
+    public boolean isTypeSequenceTypeParameter() {
+        return false;
+    }
+
+
     // ----- FormalConstant methods ----------------------------------------------------------------
 
     @Override
@@ -118,6 +130,34 @@ public class FormalTypeChildConstant
 
     @Override
     public TypeConstant resolve(GenericTypeResolver resolver) {
+        if (resolver instanceof TypeConstant typeType && typeType.isTypeOfType()) {
+            switch (getName()) {
+            case "DataType":
+                return typeType.getParamType(0);
+            case "OuterType":
+                return typeType.getParamType(1);
+            }
+        }
+
+        TypeConstant typeResolved = super.resolve(resolver);
+        if (typeResolved != null) {
+            return typeResolved;
+        }
+
+        FormalConstant constParent = getParentConstant();
+        TypeConstant   typeParent = constParent.resolve(resolver);
+        if (typeParent == null) {
+            return null;
+        }
+
+        TypeConstant type = typeParent.resolveGenericType(getName());
+        if (type == null) {
+            int q= 0;
+        }
+        return type;
+    }
+
+    public TypeConstant resolveOld(GenericTypeResolver resolver) {
         TypeConstant typeResolved = super.resolve(resolver);
         if (typeResolved == null) {
             if (resolver instanceof TypeConstant typeType && typeType.isTypeOfType()) {

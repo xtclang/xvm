@@ -355,8 +355,9 @@ public class MethodConstant
 
     // ----- GenericTypeResolver interface ---------------------------------------------------------
 
+
     @Override
-    public TypeConstant resolveGenericType(String sFormalName) {
+    public TypeConstant resolveFormalType(FormalConstant constFormal) {
         MethodStructure method = (MethodStructure) getComponent();
         if (method != null) {
             // look for a name match only amongst the method's formal type parameters
@@ -364,9 +365,19 @@ public class MethodConstant
             for (int i = 0, c = method.getTypeParamCount(); i < c; i++) {
                 Parameter param = method.getParam(i);
 
-                if (sFormalName.equals(param.getName())) {
-                    return param.asTypeParameterConstant(this).getType();
+                assert param.isTypeParameter();
+
+                TypeParameterConstant constParam = param.asTypeParameterConstant(this);
+                if (constParam.equals(constFormal)) {
+                    return constParam.getType();
                 }
+                if (constFormal instanceof TypeParameterConstant constFormalParam &&
+                        constFormalParam.getRegister() == constParam.getRegister()) {
+                    // ideally, we need to chek the alignment of the methods
+                    return constParam.getType();
+                }
+                // JUST TEMPORARY - REMOVE
+                assert !constFormal.getName().equals(param.getName());
             }
         }
         return null;

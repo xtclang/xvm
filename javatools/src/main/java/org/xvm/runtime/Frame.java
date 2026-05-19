@@ -21,6 +21,7 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.FormalConstant;
+import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -922,7 +923,7 @@ public class Frame
                         // arrays allow to delegate to instances of different types using views
                         break;
                     }
-                    System.err.println("WARNING: suspicious assignment at " + this +
+                    System.err.println("WARNING: suspicious assignment " + this +
                         " from: " + typeFrom.getValueString() + " to: " + typeTo.getValueString());
                     break;
                 }
@@ -1889,13 +1890,6 @@ public class Frame
     }
 
     @Override
-    public TypeConstant resolveGenericType(String sFormalName) {
-        return f_hThis == null
-                ? null
-                : f_hThis.getType().resolveGenericType(sFormalName);
-    }
-
-    @Override
     public TypeConstant resolveFormalType(FormalConstant constFormal) {
         Frame frame = this;
         int   nRegister;
@@ -1917,7 +1911,9 @@ public class Frame
                 }
                 return null;
             }
-            return resolveGenericType(sFormalName);
+            return f_hThis == null
+                ? null
+                : f_hThis.getType().resolveGenericType(sFormalName);
         }
 
         case TypeParameter: {
@@ -2568,8 +2564,8 @@ public class Frame
                 ? frame.f_ahVar[nTargetReg].getType()
                 : frame.getLocalType(nTargetReg, null);
 
-            return constProperty.isFormalType() // is it a generic type?
-                ? constProperty.getFormalType().resolveGenerics(pool, typeTarget).getType()
+            return constProperty.isFormalType()
+                ? typeTarget.resolveFormalType(constProperty).getType()
                 : constProperty.getType().resolveGenerics(pool, frame.getGenericsResolver(false));
         }
     };

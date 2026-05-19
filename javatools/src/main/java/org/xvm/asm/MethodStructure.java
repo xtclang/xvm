@@ -901,10 +901,10 @@ public class MethodStructure
                     typeParam = typeParam.resolveGenerics(pool, typeTarget);
                 }
                 if (!mapTypeGeneric.isEmpty()) {
-                    typeParam = typeParam.resolveGenerics(pool, mapTypeGeneric::get);
+                    typeParam = typeParam.resolveGenerics(pool, GenericTypeResolver.of(mapTypeGeneric));
                 }
                 if (!mapTypeParams.isEmpty()) {
-                    typeParam = typeParam.resolveGenerics(pool, GenericTypeResolver.of(mapTypeParams));
+                    typeParam = typeParam.resolveGenerics(pool, mapTypeParams::get);
                 }
 
                 TypeConstant typeConstraint = typeParam.getParamType(0);
@@ -937,7 +937,8 @@ public class MethodStructure
                 if (typeResolved == null) {
                     // save off a resolved constraint
                     mapTypeGeneric.computeIfAbsent(sName, _ ->
-                            entry.getValue().resolveGenerics(pool, mapTypeGeneric::get));
+                            entry.getValue().resolveGenerics(pool,
+                                GenericTypeResolver.of(mapTypeGeneric)));
                 } else {
                     // take the narrowest type
                     mapTypeGeneric.merge(sName, typeResolved, (typeOld, typeNew) ->
@@ -963,26 +964,18 @@ public class MethodStructure
         if (isLambda() && getTypeParamCount() > 0) {
             SignatureConstant sigOrig = sigResolved;
 
-            sigResolved = sigResolved.resolveGenericTypes(pool, new GenericTypeResolver() {
-                @Override
-                public TypeConstant resolveGenericType(String formalName) {
-                    return null;
-                }
-
-                @Override
-                public TypeConstant resolveFormalType(FormalConstant formalConst) {
-                    MethodConstant methodId = getIdentityConstant();
-                    for (Parameter param : getParamArray()) {
-                        if (param.isTypeParameter() &&
-                                formalConst.equals(param.asTypeParameterConstant(methodId))) {
-                            TypeConstant typeOfType = sigOrig.getRawParams()[param.getIndex()];
-                            assert typeOfType.isTypeOfType();
-                            TypeConstant type = typeOfType.getParamType(0);
-                            return type.isJitPrimitive() ? type : null;
-                        }
+            sigResolved = sigResolved.resolveGenericTypes(pool, formalConst -> {
+                MethodConstant methodId = getIdentityConstant();
+                for (Parameter param : getParamArray()) {
+                    if (param.isTypeParameter() &&
+                            formalConst.equals(param.asTypeParameterConstant(methodId))) {
+                        TypeConstant typeOfType = sigOrig.getRawParams()[param.getIndex()];
+                        assert typeOfType.isTypeOfType();
+                        TypeConstant type = typeOfType.getParamType(0);
+                        return type.isJitPrimitive() ? type : null;
                     }
-                    return null;
                 }
+                return null;
             });
         }
         return sigResolved;

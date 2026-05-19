@@ -1374,28 +1374,20 @@ public class ServiceContext {
             return i -> atype[i];
         }
 
-        GenericTypeResolver resolver = new GenericTypeResolver() {
-            @Override
-            public TypeConstant resolveGenericType(String sFormalName) {
-                return null;
-            }
-
-            @Override
-            public TypeConstant resolveFormalType(FormalConstant constFormal) {
-                if (constFormal instanceof TypeParameterConstant constTypeParam) {
-                    int             nRegister = constTypeParam.getRegister();
-                    MethodConstant  idMethod  = hFunction.getMethodId();
-                    MethodStructure method    = idMethod == null
-                            ? null
-                            : (MethodStructure) idMethod.getComponent();
-                    if (method != null && nRegister < method.getTypeParamCount() &&
-                            method.getParam(nRegister).getName().equals(constTypeParam.getName())) {
-                        return ahArg[nRegister].getType().getParamType(0);
-                    }
+        GenericTypeResolver resolver = constFormal -> {
+            if (constFormal instanceof TypeParameterConstant constTypeParam) {
+                int             nRegister = constTypeParam.getRegister();
+                MethodConstant  idMethod  = hFunction.getMethodId();
+                MethodStructure method    = idMethod == null
+                        ? null
+                        : (MethodStructure) idMethod.getComponent();
+                if (method != null && nRegister < method.getTypeParamCount() &&
+                        method.getParam(nRegister).getName().equals(constTypeParam.getName())) {
+                    return ahArg[nRegister].getType().getParamType(0);
                 }
-
-                return null;
             }
+
+            return null;
         };
 
         return i -> {

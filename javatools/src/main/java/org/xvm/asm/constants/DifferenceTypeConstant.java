@@ -205,6 +205,12 @@ public class DifferenceTypeConstant
     }
 
     @Override
+    public TypeConstant resolveFormalType(FormalConstant constFormal) {
+        // only the left side needs to have it, and it doesn't matter what the right side has
+        return m_constType1.resolveFormalType(constFormal);
+    }
+
+    @Override
     public ResolutionResult resolveContributedName(
             String sName, Access access, MethodConstant idMethod, ResolutionCollector collector) {
         // for the DifferenceType to contribute a name, the first side needs to find it,

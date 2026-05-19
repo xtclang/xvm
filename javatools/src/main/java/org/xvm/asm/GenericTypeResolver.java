@@ -13,14 +13,6 @@ import org.xvm.asm.constants.TypeConstant;
  */
 @FunctionalInterface
 public interface GenericTypeResolver {
-    /**
-     * Resolve the generic type based on the formal parameter name.
-     *
-     * @param sFormalName  the formal parameter name
-     *
-     * @return a resolved type, or null if it could not be resolved
-     */
-    TypeConstant resolveGenericType(String sFormalName);
 
     /**
      * Resolve the generic type based on the FormalConstant representing a formal parameter.
@@ -29,16 +21,12 @@ public interface GenericTypeResolver {
      *
      * @return a resolved type, or null if it could not be resolved
      */
-    default TypeConstant resolveFormalType(FormalConstant constFormal) {
-        return constFormal instanceof PropertyConstant
-            ? resolveGenericType(constFormal.getName())
-            : null;
-    }
+    TypeConstant resolveFormalType(FormalConstant constFormal);
 
     /**
-     * Create a GenericTypeResolver based on the specified map.
+     * Create a GenericTypeResolver for generic properties based on the specified map.
      */
-    static GenericTypeResolver of(Map<FormalConstant, TypeConstant> mapResolve) {
+    static GenericTypeResolver of(Map<String, TypeConstant> mapResolve) {
         return new TypeParameterResolver(mapResolve);
     }
     /**
@@ -49,23 +37,22 @@ public interface GenericTypeResolver {
     }
 
     /**
-     * Trivial GenericTypeResolver implementation based on a Map<FormalConstant, TypeConstant>.
+     * Trivial GenericTypeResolver implementation for generic properties based on a
+     * Map<String, TypeConstant>.
      */
     class TypeParameterResolver
             implements GenericTypeResolver {
-        public TypeParameterResolver(Map<FormalConstant, TypeConstant> mapResolve) {
+        public TypeParameterResolver(Map<String, TypeConstant> mapResolve) {
             this.mapResolve = mapResolve;
         }
 
-        public TypeConstant resolveGenericType(String sFormalName) {
-            return null;
-        }
-
         public TypeConstant resolveFormalType(FormalConstant constFormal) {
-            return mapResolve.get(constFormal);
+            return constFormal.getFormat() == Constant.Format.Property
+                    ? mapResolve.get(constFormal.getName())
+                    : null;
         }
 
-        private final Map<FormalConstant, TypeConstant> mapResolve;
+        private final Map<String, TypeConstant> mapResolve;
     }
 
     /**
@@ -76,14 +63,6 @@ public interface GenericTypeResolver {
         public ChainResolver(GenericTypeResolver resolver1, GenericTypeResolver resolver2) {
             this.resolver1 = resolver1;
             this.resolver2 = resolver2;
-        }
-
-        @Override
-        public TypeConstant resolveGenericType(String sFormalName) {
-            TypeConstant type = resolver1.resolveGenericType(sFormalName);
-            return type == null
-                    ? resolver2.resolveGenericType(sFormalName)
-                    : type;
         }
 
         @Override
