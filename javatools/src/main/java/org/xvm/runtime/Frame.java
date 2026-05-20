@@ -2564,7 +2564,7 @@ public class Frame
                 ? frame.f_ahVar[nTargetReg].getType()
                 : frame.getLocalType(nTargetReg, null);
 
-            return constProperty.isFormalType()
+            return constProperty.isFormalType() && constProperty.getFormat() == Constant.Format.Property
                 ? typeTarget.resolveFormalType(constProperty).getType()
                 : constProperty.getType().resolveGenerics(pool, frame.getGenericsResolver(false));
         }
