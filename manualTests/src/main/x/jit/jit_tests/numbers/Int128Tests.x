@@ -539,14 +539,10 @@ class Int128Tests {
                 try {
                     testThrow(i);
                 } catch (IOException e) {
-                    console.print("IOException caught");
                     continue;
                 } catch (Unsupported e) {
-                    console.print("Unsupported caught");
                     return i + 10;
                 } finally {
-                    console.print("Finally: ", True);
-                    console.print(i);
                     if (i == 2) {
                         return i + 40;
                     }
@@ -554,7 +550,6 @@ class Int128Tests {
             }
             return -1;
         } finally {
-            console.print("Done");
         }
     }
 

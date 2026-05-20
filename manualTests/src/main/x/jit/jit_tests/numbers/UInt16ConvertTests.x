@@ -76,21 +76,12 @@ class UInt16ConvertTests {
     }
 
     void testUInt16ToInt8(UInt16 a, Int8 expected) {
-        console.print("Test Int16 ", True);
-        console.print(a, True);
-        console.print(" to Int8 expected=", True);
-        console.print(expected, True);
         Int8 b = a.toInt8();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt16ToInt8WithBoundsCheck(UInt16 a, Int8 expected, Boolean oob) {
-        console.print("Test Int16 ", True);
-        console.print(a, True);
         if (oob) {
-            console.print(" to Int8 throws OutOfBounds");
             try {
                 a.toInt8(True);
                 assert as "Expected OutOfBounds to be thrown";
@@ -98,28 +89,18 @@ class UInt16ConvertTests {
                 // expected
             }
         } else {
-            console.print(" to Int8 succeeds");
             Int8 b = a.toInt8(True);
             assert b == expected;
         }
     }
 
     void testUInt16ToInt16(UInt16 a, Int16 expected) {
-        console.print("Test Int16 ", True);
-        console.print(a, True);
-        console.print(" to Int16 expected=", True);
-        console.print(expected, True);
         Int16 b = a.toInt16();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt16ToInt16WithBoundsCheck(UInt16 a, Int16 expected, Boolean oob) {
-        console.print("Test Int16 ", True);
-        console.print(a, True);
         if (oob) {
-            console.print(" to Int16 throws OutOfBounds");
             try {
                 a.toInt16(True);
                 assert as "Expected OutOfBounds to be thrown";
@@ -127,61 +108,33 @@ class UInt16ConvertTests {
                 // expected
             }
         } else {
-            console.print(" to Int16 succeeds");
             Int16 b = a.toInt16(True);
             assert b == expected;
         }
     }
 
     void testUInt16ToInt32(UInt16 a, Int32 expected) {
-        console.print("Test Int16 ", True);
-        console.print(a, True);
-        console.print(" to Int32 expected=", True);
-        console.print(expected, True);
         Int32 b = a.toInt32();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt16ToInt64(UInt16 a, Int64 expected) {
-        console.print("Test Int16 ", True);
-        console.print(a, True);
-        console.print(" to Int64 expected=", True);
-        console.print(expected, True);
         Int64 b = a.toInt64();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt16ToInt128(UInt16 a, Int128 expected) {
-        console.print("Test Int16 ", True);
-        console.print(a, True);
-        console.print(" to Int128 expected=", True);
-        console.print(expected, True);
         Int128 b = a.toInt128();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt16ToUInt8(UInt16 a, UInt8 expected) {
-        console.print("Test Int16 ", True);
-        console.print(a, True);
-        console.print(" to UInt8 expected=", True);
-        console.print(expected, True);
         UInt8 b = a.toUInt8();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt16ToUInt8WithBoundsCheck(UInt16 a, UInt8 expected, Boolean oob) {
-        console.print("Test Int16 ", True);
-        console.print(a, True);
         if (oob) {
-            console.print(" to UInt8 throws OutOfBounds");
             try {
                 a.toUInt8(True);
                 assert as "Expected OutOfBounds to be thrown";
@@ -189,28 +142,18 @@ class UInt16ConvertTests {
                 // expected
             }
         } else {
-            console.print(" to UInt8 succeeds");
             UInt8 b = a.toUInt8(True);
             assert b == expected;
         }
     }
 
     void testUInt16ToUInt16(UInt16 a, UInt16 expected) {
-        console.print("Test Int16 ", True);
-        console.print(a, True);
-        console.print(" to UInt16 expected=", True);
-        console.print(expected, True);
         UInt16 b = a.toUInt16();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt16ToUInt16WithBoundsCheck(UInt16 a, UInt16 expected, Boolean oob) {
-        console.print("Test Int16 ", True);
-        console.print(a, True);
         if (oob) {
-            console.print(" to UInt16 throws OutOfBounds");
             try {
                 a.toUInt16(True);
                 assert as "Expected OutOfBounds to be thrown";
@@ -218,42 +161,23 @@ class UInt16ConvertTests {
                 // expected
             }
         } else {
-            console.print(" to UInt16 succeeds");
             UInt16 b = a.toUInt16(True);
             assert b == expected;
         }
     }
 
     void testUInt16ToUInt32(UInt16 a, UInt32 expected) {
-        console.print("Test Int16 ", True);
-        console.print(a, True);
-        console.print(" to UInt32 expected=", True);
-        console.print(expected, True);
         UInt32 b = a.toUInt32();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt16ToUInt64(UInt16 a, UInt64 expected) {
-        console.print("Test Int16 ", True);
-        console.print(a, True);
-        console.print(" to UInt64 expected=", True);
-        console.print(expected, True);
         UInt64 b = a.toUInt64();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt16ToUInt128(UInt16 a, UInt128 expected) {
-        console.print("Test Int16 ", True);
-        console.print(a, True);
-        console.print(" to UInt128 expected=", True);
-        console.print(expected, True);
         UInt128 b = a.toUInt128();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 }
