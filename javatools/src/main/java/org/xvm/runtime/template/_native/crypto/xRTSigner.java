@@ -95,7 +95,7 @@ public class xRTSigner
                 byte[]  abData = xRTUInt8Delegate.getBytes(haData);
 
                 Key privateKey = xRTAlgorithms.extractKey(frame, hKey,
-                                        mac.getAlgorithm(), KeyForm.Private);
+                                        mac.getAlgorithm(), KeyForm.PrivateOrSecret);
                 mac.init(privateKey);
                 abSig = mac.doFinal(abData);
             } else {
