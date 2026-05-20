@@ -194,8 +194,16 @@ public class ParameterizedTypeConstant
             FormalConstant          constParent = constChild.getParentConstant();
             TypeConstant            typeParent  = resolveFormalType(constParent);
             if (typeParent != null) {
-                if (typeParent.isTypeOfType()) {
-                    return typeParent.getParamType(0).resolveGenericType(constChild.getName());
+                // this could be either resolution of the generic type's constraint (e.g.
+                // Serializable.Key in MapMapping.x) or Type's generic type (e.g. Key.DataType in
+                // the same class)
+                String       sName        = constChild.getName();
+                TypeConstant typeResolved = typeParent.resolveGenericType(sName);
+                if (typeResolved == null && !typeParent.isFormalType()) {
+                    typeResolved = typeParent.getType().resolveGenericType(sName);
+                }
+                if (typeResolved != null) {
+                    return typeResolved;
                 }
             }
             break;
@@ -204,15 +212,9 @@ public class ParameterizedTypeConstant
         case TypeParameter: {
             TypeParameterConstant constParam = (TypeParameterConstant) constFormal;
             MethodConstant        idMethod   = constParam.getMethod();
-            // TODO: explain
             if (idMethod.isLambda()) {
-                return resolveGenericType(constFormal.getName());
-            }
-
-            if (this.isTypeOfType()) {
-                // the constant represents a formal type parameter and this is a type of type;
-                // we are most probably resolving the FormalTypeChild (e.g. CompileType.Element)
-                return this;
+                // TODO: explain
+                return resolveGenericType(constParam.getName());
             }
         }
         }

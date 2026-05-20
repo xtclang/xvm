@@ -130,72 +130,15 @@ public class FormalTypeChildConstant
 
     @Override
     public TypeConstant resolve(GenericTypeResolver resolver) {
-        if (resolver instanceof TypeConstant typeType && typeType.isTypeOfType()) {
-            switch (getName()) {
-            case "DataType":
-                return typeType.getParamType(0);
-            case "OuterType":
-                return typeType.getParamType(1);
-            }
-        }
-
         TypeConstant typeResolved = super.resolve(resolver);
         if (typeResolved != null) {
             return typeResolved;
         }
 
-        FormalConstant constParent = getParentConstant();
-        TypeConstant   typeParent = constParent.resolve(resolver);
-        if (typeParent == null) {
-            return null;
-        }
-
-        TypeConstant type = typeParent.resolveGenericType(getName());
-        if (type == null) {
-            int q= 0;
-        }
-        return type;
-    }
-
-    public TypeConstant resolveOld(GenericTypeResolver resolver) {
-        TypeConstant typeResolved = super.resolve(resolver);
-        if (typeResolved == null) {
-            if (resolver instanceof TypeConstant typeType && typeType.isTypeOfType()) {
-                // this is a formal child (e.g. SubType.Element) resolving against a type of type;
-                // resolve the underlying type and return the corresponding type of type
-                TypeConstant type = typeType.getParamType(0).resolveFormalType(this);
-                if (type != null) {
-                    return type.getType();
-                }
-            }
-            FormalConstant idParent   = getParentConstant();
-            TypeConstant   typeParent = idParent.resolve(resolver);
-
-            if (typeParent == null) {
-                return null;
-            }
-
-            if (typeParent.isFormalType()) {
-                FormalConstant idParentResolved = (FormalConstant) typeParent.getDefiningConstant();
-                if (idParentResolved != idParent) {
-                    switch (idParentResolved.getFormat()) {
-                    case FormalTypeChild:
-                    case TypeParameter:
-                        return idParentResolved.getConstantPool().
-                            ensureFormalTypeChildConstant(idParentResolved, getName()).getType();
-                    }
-                }
-                return null;
-            }
-
-            typeResolved = typeParent.resolveFormalType(this);
-            if (typeResolved == null) {
-                // the formal parent can also be treated as a Type
-                // (see NameResolver.resolveFormalDotName())
-                typeResolved = typeParent.getType().resolveFormalType(this);
-            }
-        }
-        return typeResolved;
+        TypeConstant typeParent = getParentConstant().resolve(resolver);
+        return typeParent == null
+                ? null
+                : typeParent.resolveGenericType(getName());
     }
 
     @Override
