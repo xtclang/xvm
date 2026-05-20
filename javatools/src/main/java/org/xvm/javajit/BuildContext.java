@@ -2741,27 +2741,8 @@ public class BuildContext {
                         break;
 
                     case NullablePrimitive, NullableXvmPrimitive:
-                        Label        lblNotNull   = code.newLabel();
-                        Label        lblDone      = code.newLabel();
                         TypeConstant typeSansNull = destType.removeNullable();
-                        ClassDesc[]  primitiveCds = typeSansNull.isXvmPrimitive()
-                                ? JitTypeDesc.getXvmPrimitiveClasses(typeSansNull)
-                                : new ClassDesc[]{JitTypeDesc.getPrimitiveClass(typeSansNull)};
-
-                        code.dup();
-                        Builder.loadNull(code);
-                        code.if_acmpne(lblNotNull)
-                            .pop();
-                        for (ClassDesc cd : primitiveCds) {
-                            Builder.defaultLoad(code, cd);
-                        }
-                        code.iconst_1()
-                            .goto_(lblDone)
-                            .labelBinding(lblNotNull)
-                            .checkcast(builder.ensureClassDesc(typeSansNull));
-                        Builder.unbox(code, destType);
-                        code.iconst_0()
-                            .labelBinding(lblDone);
+                        Builder.unboxNullable(code, destType, builder.ensureClassDesc(typeSansNull));
                         break;
 
                     default:

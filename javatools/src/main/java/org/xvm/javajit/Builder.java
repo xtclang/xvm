@@ -993,6 +993,39 @@ public abstract class Builder {
     }
 
     /**
+     * Generate code to perform a null check and unbox the the JIT primitive reference that is on
+     * the top of the stack.
+     *
+     * In: a boxed JIT primitive reference, or Null
+     * Out: the unboxed primitive value or its null representation
+     *
+     * @param type  the primitive type for the boxed value
+     */
+    public static void unboxNullable(CodeBuilder code, TypeConstant type, ClassDesc cd) {
+        Label        lblNotNull   = code.newLabel();
+        Label        lblDone      = code.newLabel();
+        TypeConstant typeSansNull = type.removeNullable();
+        ClassDesc[]  primitiveCds = typeSansNull.isXvmPrimitive()
+                                    ? JitTypeDesc.getXvmPrimitiveClasses(typeSansNull)
+                                    : new ClassDesc[]{JitTypeDesc.getPrimitiveClass(typeSansNull)};
+
+        code.dup();
+        Builder.loadNull(code);
+        code.if_acmpne(lblNotNull)
+            .pop();
+        for (ClassDesc primitiveCd : primitiveCds) {
+            Builder.defaultLoad(code, primitiveCd);
+        }
+        code.iconst_1()
+            .goto_(lblDone)
+            .labelBinding(lblNotNull)
+            .checkcast(cd);
+        Builder.unbox(code, type);
+        code.iconst_0()
+            .labelBinding(lblDone);
+    }
+
+    /**
      * Generate unboxing opcodes for a wrapper reference on the Java stack.
      *
      * In: a boxed Java reference
