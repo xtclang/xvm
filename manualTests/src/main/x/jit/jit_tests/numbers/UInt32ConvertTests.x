@@ -92,21 +92,12 @@ class UInt32ConvertTests {
     }
 
     void testUInt32ToInt8(UInt32 a, Int8 expected) {
-        console.print("Test UInt32 ", True);
-        console.print(a, True);
-        console.print(" to Int8 expected=", True);
-        console.print(expected, True);
         Int8 b = a.toInt8();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt32ToInt8WithBoundsCheck(UInt32 a, Int8 expected, Boolean oob) {
-        console.print("Test UInt32 ", True);
-        console.print(a, True);
         if (oob) {
-            console.print(" to Int8 throws OutOfBounds");
             try {
                 a.toInt8(True);
                 assert as "Expected OutOfBounds to be thrown";
@@ -114,28 +105,18 @@ class UInt32ConvertTests {
                 // expected
             }
         } else {
-            console.print(" to Int8 succeeds");
             Int8 b = a.toInt8(True);
             assert b == expected;
         }
     }
 
     void testUInt32ToInt16(UInt32 a, Int16 expected) {
-        console.print("Test UInt32 ", True);
-        console.print(a, True);
-        console.print(" to Int16 expected=", True);
-        console.print(expected, True);
         Int16 b = a.toInt16();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt32ToInt16WithBoundsCheck(UInt32 a, Int16 expected, Boolean oob) {
-        console.print("Test UInt32 ", True);
-        console.print(a, True);
         if (oob) {
-            console.print(" to Int16 throws OutOfBounds");
             try {
                 a.toInt16(True);
                 assert as "Expected OutOfBounds to be thrown";
@@ -143,61 +124,33 @@ class UInt32ConvertTests {
                 // expected
             }
         } else {
-            console.print(" to Int16 succeeds");
             Int16 b = a.toInt16(True);
             assert b == expected;
         }
     }
 
     void testUInt32ToInt32(UInt32 a, Int32 expected) {
-        console.print("Test UInt32 ", True);
-        console.print(a, True);
-        console.print(" to Int32 expected=", True);
-        console.print(expected, True);
         Int32 b = a.toInt32();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt32ToInt64(UInt32 a, Int64 expected) {
-        console.print("Test UInt32 ", True);
-        console.print(a, True);
-        console.print(" to Int64 expected=", True);
-        console.print(expected, True);
         Int64 b = a.toInt64();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt32ToInt128(UInt32 a, Int128 expected) {
-        console.print("Test UInt32 ", True);
-        console.print(a, True);
-        console.print(" to Int128 expected=", True);
-        console.print(expected, True);
         Int128 b = a.toInt128();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt32ToUInt8(UInt32 a, UInt8 expected) {
-        console.print("Test UInt32 ", True);
-        console.print(a, True);
-        console.print(" to UInt8 expected=", True);
-        console.print(expected, True);
         UInt8 b = a.toUInt8();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt32ToUInt8WithBoundsCheck(UInt32 a, UInt8 expected, Boolean oob) {
-        console.print("Test UInt32 ", True);
-        console.print(a, True);
         if (oob) {
-            console.print(" to UInt8 throws OutOfBounds");
             try {
                 a.toUInt8(True);
                 assert as "Expected OutOfBounds to be thrown";
@@ -205,28 +158,18 @@ class UInt32ConvertTests {
                 // expected
             }
         } else {
-            console.print(" to UInt8 succeeds");
             UInt8 b = a.toUInt8(True);
             assert b == expected;
         }
     }
 
     void testUInt32ToUInt16(UInt32 a, UInt16 expected) {
-        console.print("Test UInt32 ", True);
-        console.print(a, True);
-        console.print(" to UInt16 expected=", True);
-        console.print(expected, True);
         UInt16 b = a.toUInt16();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt32ToUInt16WithBoundsCheck(UInt32 a, UInt16 expected, Boolean oob) {
-        console.print("Test UInt32 ", True);
-        console.print(a, True);
         if (oob) {
-            console.print(" to UInt16 throws OutOfBounds");
             try {
                 a.toUInt16(True);
                 assert as "Expected OutOfBounds to be thrown";
@@ -234,28 +177,18 @@ class UInt32ConvertTests {
                 // expected
             }
         } else {
-            console.print(" to UInt16 succeeds");
             UInt16 b = a.toUInt16(True);
             assert b == expected;
         }
     }
 
     void testUInt32ToUInt32(UInt32 a, UInt32 expected) {
-        console.print("Test UInt32 ", True);
-        console.print(a, True);
-        console.print(" to UInt32 expected=", True);
-        console.print(expected, True);
         UInt32 b = a.toUInt32();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt32ToUInt32WithBoundsCheck(UInt32 a, UInt32 expected, Boolean oob) {
-        console.print("Test UInt32 ", True);
-        console.print(a, True);
         if (oob) {
-            console.print(" to UInt32 throws OutOfBounds");
             try {
                 a.toUInt32(True);
                 assert as "Expected OutOfBounds to be thrown";
@@ -263,28 +196,18 @@ class UInt32ConvertTests {
                 // expected
             }
         } else {
-            console.print(" to UInt32 succeeds");
             UInt32 b = a.toUInt32(True);
             assert b == expected;
         }
     }
 
     void testUInt32ToUInt64(UInt32 a, UInt64 expected) {
-        console.print("Test UInt32 ", True);
-        console.print(a, True);
-        console.print(" to UInt64 expected=", True);
-        console.print(expected, True);
         UInt64 b = a.toUInt64();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt32ToUInt64WithBoundsCheck(UInt32 a, UInt64 expected, Boolean oob) {
-        console.print("Test UInt32 ", True);
-        console.print(a, True);
         if (oob) {
-            console.print(" to UInt64 throws OutOfBounds");
             try {
                 a.toUInt64(True);
                 assert as "Expected OutOfBounds to be thrown";
@@ -292,28 +215,18 @@ class UInt32ConvertTests {
                 // expected
             }
         } else {
-            console.print(" to UInt64 succeeds");
             UInt64 b = a.toUInt64(True);
             assert b == expected;
         }
     }
 
     void testUInt32ToUInt128(UInt32 a, UInt128 expected) {
-        console.print("Test UInt32 ", True);
-        console.print(a, True);
-        console.print(" to UInt128 expected=", True);
-        console.print(expected, True);
         UInt128 b = a.toUInt128();
-        console.print(" actual=", True);
-        console.print(b);
         assert b == expected;
     }
 
     void testUInt32ToUInt128WithBoundsCheck(UInt32 a, UInt128 expected, Boolean oob) {
-        console.print("Test UInt32 ", True);
-        console.print(a, True);
         if (oob) {
-            console.print(" to UInt128 throws OutOfBounds");
             try {
                 a.toUInt128(True);
                 assert as "Expected OutOfBounds to be thrown";
@@ -321,7 +234,6 @@ class UInt32ConvertTests {
                 // expected
             }
         } else {
-            console.print(" to UInt128 succeeds");
             UInt128 b = a.toUInt128(True);
             assert b == expected;
         }
