@@ -124,8 +124,8 @@ service RTAlgorithms {
      */
     static Tuple<String, KeySize>[] macs = [
         ("HmacSHA1",    16),
-        ("HmacSHA256", [16, 128]),
-        ("HmacSHA512", [32, 128]),
+        ("HmacSHA256", [16, 32, 44]),
+        ("HmacSHA512", [32, 64]),
     ];
 
     /**
