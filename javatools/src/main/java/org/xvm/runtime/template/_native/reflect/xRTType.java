@@ -11,7 +11,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PackageStructure;
@@ -20,6 +19,7 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ChildInfo;
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -197,25 +197,31 @@ public class xRTType
     public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn) {
         TypeHandle hType = (TypeHandle) hTarget;
 
-        // this is almost identical to FTC.resolve(GTR) except it returns the "unsafe" type
-        GenericTypeResolver resolver = constFormal ->
-            switch (constFormal.getName()) {
-                case "DataType"  -> hType.getUnsafeDataType();
-                case "OuterType" -> hType.getOuterType();
-                default          -> null;
-            };
-
+        // the property could be either:
+        //  1) a regular property on RTType
+        //  2) a formal child property of the type's data type (CompileType.Element)
+        //  3) a generic property of Type (DataType, OuterType)
         if (idProp.isFormalType()) {
-            TypeConstant typeValue = idProp.resolve(resolver);
+            String sName = idProp.getName();
+            TypeConstant typeValue = null;
+            if (idProp.getFormat() == Constant.Format.Property) {
+                // this is almost identical to FTC.resolve(GTR) except it returns the "unsafe" type
+                typeValue = switch (idProp.getName()) {
+                    case "DataType"  -> hType.getUnsafeDataType();
+                    case "OuterType" -> hType.getOuterType();
+                    default          -> null;
+                };
+            } else {
+                typeValue = hType.getUnsafeDataType().resolveGenericType(sName);
+                if (typeValue == null) {
+                    typeValue = hType.getType().resolveGenericType(sName);
+                }
+            }
+
             return typeValue == null
                 ? frame.raiseException(xException.invalidType(frame,
                         "Unknown formal type: " + idProp.getName()))
                 : frame.assignValue(iReturn, typeValue.ensureTypeHandle(frame.f_context.f_container));
-        }
-
-        if ("DataType".equals(idProp.getName())) {
-            TypeConstant typeResult = hType.getUnsafeDataType();
-            return frame.assignValue(iReturn, typeResult.ensureTypeHandle(frame.f_context.f_container));
         }
         return super.getPropertyValue(frame, hTarget, idProp, iReturn);
     }

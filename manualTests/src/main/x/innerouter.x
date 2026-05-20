@@ -2,9 +2,9 @@ module TestInnerOuter {
     @Inject Console console;
 
     void run() {
-//        testSimple();
-//        testStaticIface();
-//        testAnonInner();
+        testSimple();
+        testStaticIface();
+        testAnonInner();
         testFunky();
     }
 
