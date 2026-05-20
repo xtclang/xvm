@@ -243,7 +243,15 @@ public class xRTAlgorithms
                 };
 
             case "HmacSHA1", "HmacSHA256", "HmacSHA512":
-                // fall through
+                return switch (keyForm) {
+                    case PublicOrSecret, PrivateOrSecret ->
+                        new SecretKeySpec(abRaw, sAlgorithm);
+
+                    default ->
+                        throw new GeneralSecurityException(
+                            sAlgorithm + " algorithm only supports secret keys");
+                };
+
             default:
                 // unlike specific cases above, default implementation uses generic "SecretKeySpec"
                 return switch (keyForm) {
