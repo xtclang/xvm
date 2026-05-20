@@ -443,42 +443,7 @@ public abstract class Builder {
         }
 
         case RangeConstant rangeConst: {
-            TypeConstant   rangeType = rangeConst.getType();
-            TypeConstant   elType    = rangeType.getParamType(0);
-            Constant[]     values    = rangeConst.getValue();
-            MethodTypeDesc mdNew;
-            ClassDesc      cdRange;
-            String         className;
-
-            // TODO: how/where to cache the result ??
-            if (elType.isJitPrimitive()) {
-                switch (elType.getSingleUnderlyingClass(false).getName()) {
-                    case "Int64":
-                        cdRange   = CD_nRangeInt64;
-                        className = N_nRangeInt64;
-                        mdNew     = MethodTypeDesc.of(cdRange, CD_Ctx, CD_TypeConstant, CD_long,
-                                        CD_long, CD_boolean, CD_boolean, CD_boolean, CD_boolean);
-                        break;
-
-                    default:
-                        throw new UnsupportedOperationException("TODO");
-                    }
-            } else {
-                // non-primitive range - must be Orderable and also maybe Sequential
-                throw new UnsupportedOperationException("TODO");
-            }
-
-            loadCtx(code);
-            loadTypeConstant(code, className, rangeType);
-            loadConstant(bctx, code, values[0]);
-            loadConstant(bctx, code, values[1]);
-            code.loadConstant(rangeConst.isFirstExcluded() ? 1 : 0);
-            code.iconst_0();
-            code.loadConstant(rangeConst.isLastExcluded() ? 1 : 0);
-            code.iconst_0();
-            code.invokestatic(cdRange, "$new$p", mdNew);
-
-            return new SingleSlot(rangeType, Specific, ensureClassDesc(rangeType), "");
+            return loadRange(bctx, code, rangeConst);
         }
 
         default:
@@ -667,6 +632,71 @@ public abstract class Builder {
             .aload(code.parameterSlot(0))
             .invokevirtual(cdArray, "$makeImmut", MethodTypeDesc.of(CD_void, CD_Ctx));
         return new SingleSlot(arrayType, Specific, ensureClassDesc(arrayType), "");
+    }
+
+    private SingleSlot loadRange(BuildContext bctx, CodeBuilder code, RangeConstant rangeConst) {
+        TypeConstant   rangeType = rangeConst.getType();
+        TypeConstant   elType    = rangeType.getParamType(0);
+        Constant[]     values    = rangeConst.getValue();
+        ClassDesc      cdRange;
+        ClassDesc      cdPrimitive;
+        String         className;
+
+        // TODO: how/where to cache the result ??
+        if (elType.isJitPrimitive()) {
+            switch (elType.getSingleUnderlyingClass(false).getName()) {
+                case "Boolean":
+                    cdRange     = CD_nRangeBoolean;
+                    className   = N_nRangeBoolean;
+                    cdPrimitive = CD_int;
+                    break;
+
+                case "Int8":
+                    cdRange     = CD_nRangeInt8;
+                    className   = N_nRangeInt8;
+                    cdPrimitive = CD_int;
+                    break;
+
+                case "Int64":
+                    cdRange     = CD_nRangeInt64;
+                    className   = N_nRangeInt64;
+                    cdPrimitive = CD_long;
+                    break;
+
+                case "Float32":
+                    cdRange     = CD_nRangeFloat32;
+                    className   = N_nRangeFloat32;
+                    cdPrimitive = CD_float;
+                    break;
+
+                case "Float64":
+                    cdRange     = CD_nRangeFloat64;
+                    className   = N_nRangeFloat64;
+                    cdPrimitive = CD_double;
+                    break;
+
+                default:
+                    throw new UnsupportedOperationException("TODO");
+            }
+        } else {
+            // non-primitive range - must be Orderable and also maybe Sequential
+            throw new UnsupportedOperationException("TODO");
+        }
+
+        MethodTypeDesc mdNew = MethodTypeDesc.of(cdRange, CD_Ctx, CD_TypeConstant, cdPrimitive,
+                cdPrimitive, CD_boolean, CD_boolean, CD_boolean, CD_boolean);
+
+        loadCtx(code);
+        loadTypeConstant(code, className, rangeType);
+        loadConstant(bctx, code, values[0]);
+        loadConstant(bctx, code, values[1]);
+        code.loadConstant(rangeConst.isFirstExcluded() ? 1 : 0);
+        code.iconst_0();
+        code.loadConstant(rangeConst.isLastExcluded() ? 1 : 0);
+        code.iconst_0();
+        code.invokestatic(cdRange, "$new$p", mdNew);
+
+        return new SingleSlot(rangeType, Specific, ensureClassDesc(rangeType), "");
     }
 
     /**
@@ -1185,7 +1215,7 @@ public abstract class Builder {
             break;
 
         case "D": // double
-            code.invokestatic(CD_JavaDouble, "valueOf", MethodTypeDesc.of(CD_JavaDouble, CD_Double));
+            code.invokestatic(CD_JavaDouble, "valueOf", MethodTypeDesc.of(CD_JavaDouble, CD_double));
             break;
 
         default:
@@ -1521,6 +1551,9 @@ public abstract class Builder {
     public static final String N_nObj         = "org.xtclang.ecstasy.nObj";
     public static final String N_nPackage     = "org.xtclang.ecstasy.nPackage";
     public static final String N_nRef         = "org.xtclang.ecstasy.reflect.nRef";
+    public static final String N_nRangeBoolean = "org.xtclang.ecstasy.nRangeᐸBooleanᐳ";
+    public static final String N_nRangeFloat32 = "org.xtclang.ecstasy.nRangeᐸFloat32ᐳ";
+    public static final String N_nRangeFloat64 = "org.xtclang.ecstasy.nRangeᐸFloat64ᐳ";
     public static final String N_nRangeInt8   = "org.xtclang.ecstasy.nRangeᐸInt8ᐳ";
     public static final String N_nRangeInt64  = "org.xtclang.ecstasy.nRangeᐸInt64ᐳ";
     public static final String N_nService     = "org.xtclang.ecstasy.nService";
@@ -1602,6 +1635,9 @@ public abstract class Builder {
     public static final ClassDesc CD_nMethod       = ClassDesc.of(N_nMethod);
     public static final ClassDesc CD_nModule       = ClassDesc.of(N_nModule);
     public static final ClassDesc CD_nPackage      = ClassDesc.of(N_nPackage);
+    public static final ClassDesc CD_nRangeBoolean = ClassDesc.of(N_nRangeBoolean);
+    public static final ClassDesc CD_nRangeFloat32 = ClassDesc.of(N_nRangeFloat32);
+    public static final ClassDesc CD_nRangeFloat64 = ClassDesc.of(N_nRangeFloat64);
     public static final ClassDesc CD_nRangeInt8    = ClassDesc.of(N_nRangeInt8);
     public static final ClassDesc CD_nRangeInt64   = ClassDesc.of(N_nRangeInt64);
 

@@ -4,19 +4,19 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
 
-public class nRangeᐸInt8ᐳ
+public class nRangeᐸBooleanᐳ
         extends nLongRange {
 
-    private nRangeᐸInt8ᐳ(Ctx ctx, int first, int last, boolean firstExclusive, boolean lastExclusive) {
+    private nRangeᐸBooleanᐳ(Ctx ctx, int first, int last, boolean firstExclusive, boolean lastExclusive) {
         super(ctx, first, last, firstExclusive, lastExclusive);
     }
 
     // ----- Range / Interval API ------------------------------------------------------------------
 
-    public static nRangeᐸInt8ᐳ $new$p(Ctx ctx, TypeConstant type, int first, int last,
-                                      boolean firstExclusive, boolean _firstExclusive,
-                                      boolean lastExclusive, boolean _lastExclusive) {
-        return new nRangeᐸInt8ᐳ(ctx, first, last,
+    public static nRangeᐸBooleanᐳ $new$p(Ctx ctx, TypeConstant type, int first, int last,
+                                         boolean firstExclusive, boolean _firstExclusive,
+                                         boolean lastExclusive, boolean _lastExclusive) {
+        return new nRangeᐸBooleanᐳ(ctx, first, last,
                 !_firstExclusive && firstExclusive, !_lastExclusive && lastExclusive);
     }
 
@@ -49,7 +49,7 @@ public class nRangeᐸInt8ᐳ
 
     public int effectiveLowerBound$get$p(Ctx ctx) {
         if ($lowerExclusive) {
-            if ($lowerBound == Byte.MAX_VALUE) {
+            if ($lowerBound == Integer.MAX_VALUE) {
                 throw Exception.$oob(ctx, null);
             }
             return (int) $lowerBound + 1;
@@ -59,7 +59,7 @@ public class nRangeᐸInt8ᐳ
 
     public int effectiveUpperBound$get$p(Ctx ctx) {
         if ($upperExclusive) {
-            if ($upperBound == Byte.MIN_VALUE) {
+            if ($upperBound == Integer.MIN_VALUE) {
                 throw Exception.$oob(ctx, null);
             }
             return (int) $upperBound - 1;

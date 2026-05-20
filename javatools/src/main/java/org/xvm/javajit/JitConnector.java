@@ -155,7 +155,7 @@ public class JitConnector
         } finally {
             try {
                 // dump the generated classes
-                Predicate<String> filter = dumpNames::contains;
+                Predicate<String> filter = s -> dumpNames.stream().anyMatch(s::contains);
 
                 String moduleName = loader.typeSystem.mainModule().getSimpleName();
                 loader.dump(new PrintStream(new FileOutputStream(moduleName + ".jasm")), filter);
@@ -215,6 +215,6 @@ public class JitConnector
 
     // TEMPORARY: manually added names
     private final static String[] CLASS_DUMP_LIST = new String[] {
-        "org/examples/test/¤module"
+        "org/examples/test/¤module",
     };
 }
