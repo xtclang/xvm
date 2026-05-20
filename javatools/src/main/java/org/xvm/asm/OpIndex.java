@@ -228,11 +228,12 @@ public abstract class OpIndex
         TypeConstant typeTarget = reg.type();
         TypeInfo     infoTarget = bctx.getTypeInfo(typeTarget);
         TypeConstant typeEl     = computeElementType(infoTarget);
+        boolean      fNullable  = typeEl.isNullable();
         boolean      fPrimitive = typeEl.isJitPrimitive();
 
         if (typeTarget.isArray()) {
             ClassDesc cdArray = bctx.builder.ensureClassDesc(typeTarget);
-            if (fPrimitive) {
+            if (fPrimitive && !fNullable) {
                 buildPrimitiveArrayOp(bctx, code, reg, typeEl);
             } else {
                 bctx.loadCtx(code);
@@ -243,6 +244,14 @@ public abstract class OpIndex
                             MethodTypeDesc.of(CD_Object, CD_Ctx, CD_long));
                         if (!typeEl.equals(pool.typeObject())) {
                             code.checkcast(bctx.builder.ensureClassDesc(typeEl));
+                        }
+
+                        if (fPrimitive) {
+                            // the element is primitive, but the method return will be Object,
+                            // most likely the type is a nullable JIT primitive.
+                            // we need to perform a null check and unbox
+                            ClassDesc cd = bctx.builder.ensureClassDesc(typeEl.removeNullable());
+                            Builder.unboxNullable(code, typeEl, cd);
                         }
                     }
 
@@ -314,12 +323,24 @@ public abstract class OpIndex
                 code.invokevirtual(reg.cd(), sJitName, jmd.optimizedMD);
             }
 
-            if (!fSet && jmd.optimizedReturns.length > 1) {
-                // load any additional return values from the context
-                // e.g. XVM primitives and nullable primitives
-                for (int i = 1; i < jmd.optimizedReturns.length; i++) {
-                    JitParamDesc optRet = jmd.optimizedReturns[i];
-                    Builder.loadFromContext(code, optRet.cd, optRet.altIndex);
+            if (!fSet) {
+                if (jmd.optimizedReturns.length > 1) {
+                    // load any additional return values from the context
+                    // e.g. XVM primitives and nullable primitives
+                    for (int i = 1; i < jmd.optimizedReturns.length; i++) {
+                        JitParamDesc optRet = jmd.optimizedReturns[i];
+                        Builder.loadFromContext(code, optRet.cd, optRet.altIndex);
+                    }
+                } else if (fPrimitive && !jmd.standardReturns[0].type.isJitPrimitive()) {
+                    // the element is primitive, but the optimized return is not,
+                    // most likely the type is a nullable primitive,
+                    // we need to perform a null check and unbox
+                    if (fNullable) {
+                        ClassDesc cd = bctx.builder.ensureClassDesc(typeEl.removeNullable());
+                        Builder.unboxNullable(code, typeEl, cd);
+                    } else {
+                        Builder.unbox(code, typeEl);
+                    }
                 }
             }
         }
@@ -450,8 +471,8 @@ public abstract class OpIndex
         TypeConstant typeEl  = type.resolveGenericType("Element");
         ClassDesc    cdArray = bctx.builder.ensureClassDesc(type);
 
-        boolean javaPrimitive = typeEl.isJavaPrimitive();
-        boolean xvmPrimitive  = typeEl.isXvmPrimitive();
+        boolean javaPrimitive = typeEl.removeNullable().isJavaPrimitive();
+        boolean xvmPrimitive  = typeEl.removeNullable().isXvmPrimitive();
 
         ClassDesc[] cds;
         ClassDesc   cdEl;

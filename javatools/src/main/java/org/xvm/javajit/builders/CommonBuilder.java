@@ -1727,10 +1727,10 @@ public class CommonBuilder
                 loadProperty(code, type, propId, false);
                 loadNull(code);
                 code.if_acmpeq(ifNull1)
-                    .iconst_1() // one on the stack if not null
+                    .iconst_1() // true on the stack if not null
                     .goto_(checkProp2)
                     .labelBinding(ifNull1)
-                    .iconst_0(); // zero on the stack if null
+                    .iconst_0(); // false on the stack if null
 
                 code.labelBinding(checkProp2)
                     .istore(nullCheckSlot) // store the result of the null check in slot 4
@@ -1738,13 +1738,13 @@ public class CommonBuilder
                 loadProperty(code, type, propId, false);
                 loadNull(code);
                 code.if_acmpeq(ifNull2)
-                    .iconst_1() // one on the stack if not null
+                    .iconst_1() // true on the stack if not null
                     .goto_(compare)
                     .labelBinding(ifNull2)
-                    .iconst_0() // zero on the stack if null
+                    .iconst_0() // false on the stack if null
                     .labelBinding(compare)
                     .iload(nullCheckSlot) // reload the null check result
-                    .if_icmpne(notEqual)  // if two ints on the stack are not equal jump
+                    .if_icmpne(notEqual)  // if two booleans on the stack are not equal jump
                     .iload(nullCheckSlot) // reload the null check result
                     .ifeq(skipProp)       // if null skip
                     .goto_(checkProp)     // else props are not null, so we need to compare
@@ -1952,10 +1952,10 @@ public class CommonBuilder
                 loadProperty(code, type, propId, false);
                 loadNull(code);
                 code.if_acmpeq(ifNull1)
-                    .iconst_1() // one on the stack if not null
+                    .iconst_1() // true on the stack if not null
                     .goto_(checkProp2)
                     .labelBinding(ifNull1)
-                    .iconst_0(); // zero on the stack if null
+                    .iconst_0(); // false on the stack if null
 
                 code.labelBinding(checkProp2)
                     .istore(nullCheckSlot) // store the result of the null check in slot 4
@@ -1963,14 +1963,14 @@ public class CommonBuilder
                 loadProperty(code, type, propId, false);
                 loadNull(code);
                 code.if_acmpeq(ifNull2)
-                    .iconst_1() // one on the stack if not null
+                    .iconst_1() // true on the stack if not null
                     .goto_(compare)
                     .labelBinding(ifNull2)
-                    .iconst_0() // zero on the stack if null
+                    .iconst_0() // false on the stack if null
                     .labelBinding(compare)
                     .iload(nullCheckSlot) // reload the prop1 null check result
-                    .isub().ineg(); // two ints on the stack, subtract to get result (then negate
-                                    // as they are the wrong way around)
+                    .isub().ineg(); // two booleans (ints) on the stack, subtract to get an "order"
+                                    // (then negate as they are the wrong way around)
                 convertIntToOrdered(code, false);
                 // to get here must be Equal
                 code.iload(nullCheckSlot) // reload the prop1 null check result
