@@ -42,13 +42,6 @@ val copyLanguageConfig by tasks.registering(Copy::class) {
     into(layout.projectDirectory)
 }
 
-// Copy icon from IntelliJ plugin
-val copyIcon by tasks.registering(Copy::class) {
-    description = "Copy XTC icon"
-    from(project(":intellij-plugin").file("src/main/resources/icons"))
-    into(layout.projectDirectory.dir("icons"))
-}
-
 // Copy LSP server fat JAR (self-contained with all dependencies: LSP4J, tree-sitter, Logback)
 val copyLspServer by tasks.registering(Copy::class) {
     description = "Copy LSP server fat JAR"
@@ -79,7 +72,7 @@ val copyLicense by tasks.registering(Copy::class) {
 
 // Configure the plugin-provided npmInstall task (runs `npm install` using the pinned Node)
 val npmInstall by tasks.existing {
-    mustRunAfter(copyLanguageConfig, copyTextMateGrammar, copyIcon, copyLicense)
+    mustRunAfter(copyLanguageConfig, copyTextMateGrammar, copyLicense)
 }
 
 // Compile TypeScript
@@ -96,7 +89,7 @@ val npmCompile by tasks.registering(NpmTask::class) {
 // Package the extension
 val packageExtension by tasks.registering(NpmTask::class) {
     description = "Package VS Code extension"
-    dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyIcon, copyLspServer, copyDapServer, copyLicense)
+    dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense)
     args.set(listOf("run", "package"))
 
     outputs.file(layout.projectDirectory.file("xtc-language-${project.version}.vsix"))
@@ -109,7 +102,7 @@ val build by tasks.existing {
 
 // Assemble prepares all resources without packaging
 val assemble by tasks.existing {
-    dependsOn(copyTextMateGrammar, copyLanguageConfig, copyIcon, copyLspServer, copyDapServer, copyLicense, npmCompile)
+    dependsOn(copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, npmCompile)
 }
 
 // Launch VS Code with extension loaded for testing

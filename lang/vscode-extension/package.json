@@ -13,12 +13,22 @@
         "vscode": "^1.96.0"
     },
     "categories": [
-        "Programming Languages"
+        "Programming Languages",
+        "Debuggers",
+        "Snippets",
+        "Formatters"
     ],
     "keywords": [
         "xtc",
-        "xvm"
+        "xvm",
+        "ecstasy",
+        "xtclang"
     ],
+    "icon": "icons/xtc.png",
+    "galleryBanner": {
+        "color": "#1f2937",
+        "theme": "dark"
+    },
     "activationEvents": [
         "onStartupFinished",
         "onLanguage:xtc",
@@ -38,8 +48,8 @@
                 ],
                 "configuration": "./language-configuration.json",
                 "icon": {
-                    "light": "./icons/xtc.svg",
-                    "dark": "./icons/xtc.svg"
+                    "light": "./icons/xtc-file.png",
+                    "dark": "./icons/xtc-file.png"
                 }
             }
         ],
