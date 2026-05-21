@@ -403,14 +403,9 @@ public class TerminalTypeConstant
 
     @Override
     public TypeConstant resolveFormalType(FormalConstant constFormal) {
-        if (constFormal.getFormat() == Format.Property) {
-            return resolveGenericType(constFormal.getName());
-        }
-        TypeConstant t = resolveGenericType(constFormal.getName());
-        if (t != null) {
-            report(constFormal, t, null);
-        }
-        return null;
+        return constFormal.getFormat() == Format.Property
+                ? resolveGenericType(constFormal.getName())
+                : null;
     }
 
     @Override

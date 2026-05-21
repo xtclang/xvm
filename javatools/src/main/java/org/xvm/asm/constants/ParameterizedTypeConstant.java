@@ -199,12 +199,9 @@ public class ParameterizedTypeConstant
                 // the same class)
                 String       sName        = constChild.getName();
                 TypeConstant typeResolved = typeParent.resolveGenericType(sName);
-                if (typeResolved == null && !typeParent.isFormalType()) {
-                    typeResolved = typeParent.getType().resolveGenericType(sName);
-                }
-                if (typeResolved != null) {
-                    return typeResolved;
-                }
+                return typeResolved == null && !typeParent.isFormalType()
+                        ? typeParent.getType().resolveGenericType(sName)
+                        : typeResolved;
             }
             break;
         }
@@ -213,15 +210,11 @@ public class ParameterizedTypeConstant
             TypeParameterConstant constParam = (TypeParameterConstant) constFormal;
             MethodConstant        idMethod   = constParam.getMethod();
             if (idMethod.isLambda()) {
-                // TODO: explain
+                // lambdas capture generic types as formal type parameters of the same name
                 return resolveGenericType(constParam.getName());
             }
+            break;
         }
-        }
-
-        TypeConstant t = resolveGenericType(constFormal.getName());
-        if (t != null) {
-            report(constFormal, t, null);
         }
         return null;
     }

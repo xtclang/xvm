@@ -2905,13 +2905,12 @@ public class NameExpression
                             idMethod, regLeft, idFormal, sName).getType();
                 }
             } else if (typeProp.containsGenericType(true)) {
-                // if the property type contains a generic type and that
-                // generic type belongs to the left argument, replace it with
-                // a corresponding dynamic type
+                // if the property type contains a generic type and that generic type belongs to the
+                // left argument, replace it with a corresponding dynamic type
                 GenericTypeResolver resolver = idFormal ->
                     idFormal.getParentConstant().equals(idParent)
                         ? pool.ensureDynamicFormal(idMethod, regLeft, idFormal, sName).getType()
-                        : null; // typeResolved.resolveGenericType(idFormal.getName());
+                        : null;
 
                 return typeProp.resolveGenerics(pool, resolver);
             }

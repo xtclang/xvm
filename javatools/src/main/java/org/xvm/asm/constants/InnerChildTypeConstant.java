@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.Collections;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;

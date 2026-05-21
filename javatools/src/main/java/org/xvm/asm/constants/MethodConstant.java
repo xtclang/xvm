@@ -373,11 +373,9 @@ public class MethodConstant
                 }
                 if (constFormal instanceof TypeParameterConstant constFormalParam &&
                         constFormalParam.getRegister() == constParam.getRegister()) {
-                    // ideally, we need to chek the alignment of the methods
+                    // ideally, we need to check the alignment of the methods
                     return constParam.getType();
                 }
-                // JUST TEMPORARY - REMOVE
-                assert !constFormal.getName().equals(param.getName());
             }
         }
         return null;

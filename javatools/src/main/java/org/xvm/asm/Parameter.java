@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
-import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -253,7 +252,6 @@ public class Parameter
         assert isTypeParameter();
 
         TypeParameterConstant constParam = asTypeParameterConstant(constMethod);
-
         return constFormal -> constFormal.equals(constParam) ? type : null;
     }
 

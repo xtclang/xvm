@@ -13,7 +13,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.compiler.ast.Context;
