@@ -3,6 +3,7 @@ package org.xvm.runtime.template._native.crypto;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
@@ -18,7 +19,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 
 /**
@@ -161,11 +161,8 @@ public class KeyStoreOperationsTest {
 
     @Test
     public void testExtractKeyReturnsNullForMissingFile() {
-        try {
-            assertNull(KeyStoreOperations.extractKey("/nonexistent/path.p12", PASSWORD, "key"));
-        } catch (Exception e) {
-            fail(e.getMessage());
-        }
+        assertThrows(IOException.class, () ->
+            KeyStoreOperations.extractKey("/nonexistent/path.p12", PASSWORD, "key"));
     }
 
     @Test
@@ -200,11 +197,8 @@ public class KeyStoreOperationsTest {
 
     @Test
     public void testDeleteKeyStoreEntryNonexistentFile() {
-        try {
-            KeyStoreOperations.deleteKeyStoreEntry("/nonexistent/path.p12", PASSWORD, "alias");
-        } catch (Exception e) {
-            fail(e.getMessage());
-        }
+        assertThrows(IOException.class, () ->
+            KeyStoreOperations.deleteKeyStoreEntry("/nonexistent/path.p12", PASSWORD, "alias"));
     }
 
     @Test

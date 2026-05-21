@@ -81,7 +81,7 @@ public class KeyStoreOperations {
      * does not exist or the keystore file does not exist).
      */
     public static void deleteKeyStoreEntry(String sPath, char[] achPwd, String sAlias)
-            throws  GeneralSecurityException, IOException {
+            throws GeneralSecurityException, IOException {
         File file = new File(sPath);
         if (file.exists()) {
             KeyStore keyStore = KeyStore.getInstance("PKCS12");
