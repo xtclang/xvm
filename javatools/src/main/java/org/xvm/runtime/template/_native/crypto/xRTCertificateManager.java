@@ -8,6 +8,7 @@ import java.io.IOException;
 
 import java.nio.file.Path;
 
+import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyStore;
@@ -18,8 +19,14 @@ import java.security.cert.X509Certificate;
 import java.time.Duration;
 
 import java.util.List;
-import java.util.concurrent.Callable;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+
+import org.bouncycastle.operator.OperatorCreationException;
+
+import org.shredzone.acme4j.Account;
 import org.shredzone.acme4j.AccountBuilder;
 import org.shredzone.acme4j.Authorization;
 import org.shredzone.acme4j.Order;
@@ -31,11 +38,13 @@ import org.shredzone.acme4j.util.CSRBuilder;
 import org.shredzone.acme4j.util.KeyPairUtils;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -53,16 +62,12 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.crypto.xRTKeyStore.KeyStoreHandle;
 
-import org.xvm.util.Handy;
-
 
 /**
  * Native implementation of the xRTCertificateManager.x service.
  * <p>
- * This class replaces the previous ProcessBuilder-based implementation that shelled out to
- * {@code keytool}, {@code openssl}, and {@code certbot}. Every operation now uses pure Java
- * APIs (JDK crypto, BouncyCastle, acme4j) that produce byte-for-byte compatible PKCS12
- * keystore entries. Keystores created by this implementation can be read by keytool and
+ * It uses pure Java APIs (JDK crypto, BouncyCastle, acme4j) that produce byte-for-byte compatible
+ * PKCS12 keystore entries. Keystores created by this implementation can be read by keytool and
  * openssl, and vice versa — verified by {@code KeyStoreCompatibilityTest}.
  */
 public class xRTCertificateManager
@@ -93,9 +98,9 @@ public class xRTCertificateManager
 
     @Override
     public TypeConstant getCanonicalType() {
-        var type = m_typeCanonical;
+        TypeConstant type = m_typeCanonical;
         if (type == null) {
-            var pool = pool();
+            ConstantPool pool = pool();
             m_typeCanonical = type = pool.ensureTerminalTypeConstant(
                     pool.ensureClassConstant(pool.ensureModuleConstant("crypto.xtclang.org"),
                     "CertificateManager"));
@@ -107,9 +112,9 @@ public class xRTCertificateManager
      * Injection support method.
      */
     public ObjectHandle ensureManager(Frame frame, ObjectHandle hOpts) {
-        var hProvider = hOpts instanceof StringHandle hS ? hS : xString.makeHandle("self");
-        var clz = getCanonicalClass();
-        var hMgr = createServiceHandle(
+        StringHandle     hProvider = hOpts instanceof StringHandle hS ? hS : xString.makeHandle("self");
+        ClassComposition clz       = getCanonicalClass();
+        ServiceHandle    hMgr      = createServiceHandle(
                 f_container.createServiceContext("CertificateManager"), clz, getCanonicalType());
         hMgr.setField(0, hProvider);
         return hMgr;
@@ -119,21 +124,21 @@ public class xRTCertificateManager
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn) {
         return switch (method.getName()) {
-            case "keystoreForImpl" ->
+            case "keystoreForImpl"        ->
                 invokeKeystoreFor(frame, ahArg, iReturn);
-            case "encryptKeyStoreImpl" ->
-                invokeAsIOTask(frame, () -> invokeEncryptKeystore(frame, ahArg));
-            case "createCertificateImpl" ->
-                invokeAsIOTask(frame, () ->
+            case "encryptKeyStoreImpl"    ->
+                invokeAsIOTask(frame, ()  -> invokeEncryptKeystore(frame, ahArg));
+            case "createCertificateImpl"  ->
+                invokeAsIOTask(frame, ()  ->
                     invokeCreateCertificate(frame, (ServiceHandle) hTarget, ahArg));
-            case "revokeCertificateImpl" ->
-                invokeAsIOTask(frame, () ->
+            case "revokeCertificateImpl"  ->
+                invokeAsIOTask(frame, ()  ->
                     invokeRevokeCertificate(frame, (ServiceHandle) hTarget, ahArg));
             case "createSymmetricKeyImpl" ->
-                invokeAsIOTask(frame, () -> invokeCreateSymmetricKey(frame, ahArg));
-            case "createPasswordImpl" ->
-                invokeAsIOTask(frame, () -> invokeCreatePassword(frame, ahArg));
-            case "extractKeyImpl" ->
+                invokeAsIOTask(frame, ()  -> invokeCreateSymmetricKey(frame, ahArg));
+            case "createPasswordImpl"     ->
+                invokeAsIOTask(frame, ()  -> invokeCreatePassword(frame, ahArg));
+            case "extractKeyImpl"         ->
                 invokeExtractKey(frame, ahArg, iReturn);
             default ->
                 super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -141,17 +146,16 @@ public class xRTCertificateManager
     }
 
     private int invokeAsIOTask(Frame frame, Callable<ExceptionHandle> task) {
-        var cfResult = frame.f_context.f_container.scheduleIO(task);
+        CompletableFuture<ExceptionHandle> cfResult = frame.f_context.f_container.scheduleIO(task);
         Frame.Continuation continuation = frameCaller -> {
             try {
-                var hFailure = cfResult.get();
+                ExceptionHandle hFailure = cfResult.get();
                 return hFailure == null ? Op.R_NEXT : frameCaller.raiseException(hFailure);
-            } catch (Throwable e) {
-                // TODO: catching Throwable and discarding the cause is bad practice; the
-                //  full exception chain (including stack trace) is lost, making debugging
-                //  nearly impossible. raiseException should support a Throwable cause so
-                //  it can be logged or chained into the XVM exception model.
-                return frameCaller.raiseException("Unexpected execution failure " + e);
+            } catch (InterruptedException | ExecutionException e) {
+                // TODO: we temporarily print the stack trace for unhandled exceptions here; remove
+                e.printStackTrace();
+                return frameCaller.raiseException(
+                    xException.makeObscure(frame, "Unexpected execution failure " + e.getMessage()));
             }
         };
         return frame.waitForIO(cfResult, continuation);
@@ -176,9 +180,15 @@ public class xRTCertificateManager
      * JDK crypto primitives that keytool uses internally. The resulting PKCS12 keystore
      * entry is interchangeable with keytool output.
      * <p>
-     * For providers "certbot"/"certbot-staging", replaces the multi-step native flow:
-     * {@code openssl genpkey} → {@code openssl req} → {@code certbot certonly --webroot}
-     * → {@code openssl pkcs12 -export} → {@code keytool -importkeystore}. The Java
+     * For providers "certbot"/"certbot-staging", replaces the multistep native flow:
+     * <pre>{@code
+     *    openssl genpkey
+     *    openssl req
+     *    certbot certonly --webroot
+     *    openssl pkcs12 -export
+     *    keytool -importkeystore}
+     * </pre>
+     * The Java
      * implementation uses acme4j to speak the ACME protocol directly, eliminating all
      * intermediate files and format conversions. Challenge files are written to the same
      * {@code .challenge/.well-known/acme-challenge/} directory that certbot's webroot
@@ -186,37 +196,35 @@ public class xRTCertificateManager
      */
     private ExceptionHandle invokeCreateCertificate(Frame frame, ServiceHandle hMgr,
                                                     ObjectHandle[] ahArg) {
-        var hStorePath  = (StringHandle) ahArg[0];
-        var hPwd        = xRTKeyStore.getPassword(frame, ahArg[1]);
-        var sName       = ((StringHandle) ahArg[2]).getStringValue();
-        var sDName      = ((StringHandle) ahArg[3]).getStringValue();
-        var sProvider   = ((StringHandle) hMgr.getField(0)).getStringValue();
-        var sStorePath  = hStorePath.getStringValue();
-        var achPwd      = hPwd.getValue();
+        StringHandle hStorePath  = (StringHandle) ahArg[0];
+        StringHandle hPwd        = xRTKeyStore.getPassword(frame, ahArg[1]);
+        String       sName       = ((StringHandle) ahArg[2]).getStringValue();
+        String       sDName      = ((StringHandle) ahArg[3]).getStringValue();
+        String       sProvider   = ((StringHandle) hMgr.getField(0)).getStringValue();
+        String       sStorePath  = hStorePath.getStringValue();
+        char[]       achPwd      = hPwd.getValue();
 
         try {
             KeyStoreOperations.deleteKeyStoreEntry(sStorePath, achPwd, sName);
 
             return switch (sProvider) {
                 case "self" -> {
-                    KeyStoreOperations.createSelfSignedCertificate(
-                            sStorePath, achPwd, sName, sDName);
+                    KeyStoreOperations.createSelfSignedCertificate(sStorePath, achPwd, sName, sDName);
                     yield null;
                 }
                 case "certbot-staging" -> {
-                    createCertificateWithAcme(
-                            sStorePath, achPwd, sName, sDName, true, hStorePath);
+                    createCertificateWithAcme(sStorePath, achPwd, sName, sDName, true, hStorePath);
                     yield null;
                 }
                 case "certbot" -> {
-                    createCertificateWithAcme(
-                            sStorePath, achPwd, sName, sDName, false, hStorePath);
+                    createCertificateWithAcme(sStorePath, achPwd, sName, sDName, false, hStorePath);
                     yield null;
                 }
                 default -> xException.makeHandle(frame,
                         "Unsupported certificate provider: " + sProvider);
             };
-        } catch (Exception e) { // TODO: tighten to AcmeException | GeneralSecurityException | IOException | InterruptedException
+        } catch (AcmeException | OperatorCreationException | GeneralSecurityException |
+                 IOException | InterruptedException e) {
             return xException.obscureIoException(frame, e.getMessage());
         }
     }
@@ -234,44 +242,43 @@ public class xRTCertificateManager
      * server's Retry-After header, rather than the old approach of blocking on
      * {@code process.waitFor(300, SECONDS)} while certbot polled internally.
      */
-    private void createCertificateWithAcme(String sStorePath, char[] achPwd,
-                                           String sName, String sDName,
+    private void createCertificateWithAcme(String sStorePath, char[] achPwd, String sName, String sDName,
                                            boolean fStaging, StringHandle hStorePath)
-            throws Exception { // TODO: tighten to AcmeException | GeneralSecurityException | IOException | InterruptedException
+                throws AcmeException, GeneralSecurityException, IOException, InterruptedException {
         int ofDomain = sDName.indexOf("CN=");
         assert ofDomain >= 0;
-        var sDomain      = sDName.substring(ofDomain + 3);
-        var dirChallenge = getChallengePath(hStorePath);
+
+        String sDomain      = sDName.substring(ofDomain + 3);
+        File   dirChallenge = getChallengePath(hStorePath);
         if (!dirChallenge.exists() && !dirChallenge.mkdir() || !dirChallenge.isDirectory()) {
             throw new IOException("Cannot create directory: " + dirChallenge.getAbsolutePath());
         }
 
-        var domainKeyPair  = KeyPairUtils.createKeyPair(2048);
-        var accountKeyPair = KeyPairUtils.createKeyPair(2048);
-        var session        = new Session(acmeServerUri(fStaging));
+        KeyPair domainKeyPair  = KeyPairUtils.createKeyPair(2048);
+        KeyPair accountKeyPair = KeyPairUtils.createKeyPair(2048);
+        Session session        = new Session(acmeServerUri(fStaging));
+        Account acmeAccount    = new AccountBuilder()
+                                    .agreeToTermsOfService()
+                                    .useKeyPair(accountKeyPair)
+                                    .create(session);
 
-        var account = new AccountBuilder()
-                .agreeToTermsOfService()
-                .useKeyPair(accountKeyPair)
-                .create(session);
+        Order acmeOrder = acmeAccount.newOrder().domain(sDomain).create();
 
-        var order = account.newOrder().domain(sDomain).create();
+        processHttpChallenges(acmeOrder.getAuthorizations(), dirChallenge, sDomain);
 
-        processHttpChallenges(order.getAuthorizations(), dirChallenge, sDomain);
-
-        var csrBuilder = buildCSR(sDName, sDomain);
+        CSRBuilder csrBuilder = buildCSR(sDName, sDomain);
         csrBuilder.sign(domainKeyPair);
-        order.execute(csrBuilder.getEncoded());
+        acmeOrder.execute(csrBuilder.getEncoded());
 
-        var orderStatus = order.waitForCompletion(ACME_TIMEOUT);
+        Status orderStatus = acmeOrder.waitForCompletion(ACME_TIMEOUT);
         if (orderStatus != Status.VALID) {
             throw new AcmeException("Certificate order failed for " + sDomain
                     + " (status: " + orderStatus + ")");
         }
 
-        var certChain = order.getCertificate().getCertificateChain();
+        List<X509Certificate> certChain = acmeOrder.getCertificate().getCertificateChain();
 
-        var keyStore = KeyStoreOperations.loadOrCreateKeyStore(sStorePath, achPwd);
+        KeyStore keyStore = KeyStoreOperations.loadOrCreateKeyStore(sStorePath, achPwd);
         keyStore.setKeyEntry(sName, domainKeyPair.getPrivate(), achPwd,
                 certChain.toArray(new Certificate[0]));
         KeyStoreOperations.saveKeyStore(keyStore, sStorePath, achPwd);
@@ -287,30 +294,30 @@ public class xRTCertificateManager
      */
     private void processHttpChallenges(List<Authorization> authorizations,
                                        File dirChallenge, String sDomain)
-            throws Exception { // TODO: tighten to AcmeException | IOException | InterruptedException
-        for (var auth : authorizations) {
+            throws AcmeException, IOException, InterruptedException {
+        for (Authorization auth : authorizations) {
             if (auth.getStatus() != Status.PENDING) {
                 continue;
             }
 
-            var challenge = auth.findChallenge(Http01Challenge.class)
+            Http01Challenge challenge = auth.findChallenge(Http01Challenge.class)
                     .orElseThrow(() -> new AcmeException(
                             "No HTTP-01 challenge available for " + sDomain));
 
-            var challengeDir = new File(dirChallenge,
+            File challengeDir = new File(dirChallenge,
                     ".well-known" + File.separator + "acme-challenge");
             if (!challengeDir.exists() && !challengeDir.mkdirs()) {
                 throw new IOException("Cannot create challenge directory: " + challengeDir);
             }
 
-            var challengeFile = new File(challengeDir, challenge.getToken());
+            File challengeFile = new File(challengeDir, challenge.getToken());
             try (var writer = new FileWriter(challengeFile)) {
                 writer.write(challenge.getAuthorization());
             }
 
             try {
                 challenge.trigger();
-                var authStatus = auth.waitForCompletion(ACME_TIMEOUT);
+                Status authStatus = auth.waitForCompletion(ACME_TIMEOUT);
                 if (authStatus != Status.VALID) {
                     throw new AcmeException("Challenge failed for " + sDomain
                             + " (status: " + authStatus + ")");
@@ -364,16 +371,16 @@ public class xRTCertificateManager
      */
     private ExceptionHandle invokeRevokeCertificate(Frame frame, ServiceHandle hMgr,
                                                     ObjectHandle[] ahArg) {
-        var sPath     = ((StringHandle) ahArg[0]).getStringValue();
-        var achPwd    = xRTKeyStore.getPassword(frame, ahArg[1]).getValue();
-        var sName     = ((StringHandle) ahArg[2]).getStringValue();
-        var sProvider = ((StringHandle) hMgr.getField(0)).getStringValue();
+        String sPath     = ((StringHandle) ahArg[0]).getStringValue();
+        char[] achPwd    = xRTKeyStore.getPassword(frame, ahArg[1]).getValue();
+        String sName     = ((StringHandle) ahArg[2]).getStringValue();
+        String sProvider = ((StringHandle) hMgr.getField(0)).getStringValue();
 
         try {
             switch (sProvider) {
                 case "self" -> {}
                 case "certbot-staging" -> revokeWithAcme(sPath, achPwd, sName, true);
-                case "certbot" -> revokeWithAcme(sPath, achPwd, sName, false);
+                case "certbot"         -> revokeWithAcme(sPath, achPwd, sName, false);
                 default -> {
                     return xException.makeHandle(frame,
                             "Unsupported certificate provider: " + sProvider);
@@ -382,7 +389,7 @@ public class xRTCertificateManager
 
             KeyStoreOperations.deleteKeyStoreEntry(sPath, achPwd, sName);
             return null;
-        } catch (Exception e) { // TODO: tighten to AcmeException | GeneralSecurityException | IOException
+        } catch (AcmeException | GeneralSecurityException | IOException e) {
             return xException.obscureIoException(frame, e.getMessage());
         }
     }
@@ -390,28 +397,27 @@ public class xRTCertificateManager
     /**
      * Revoke a certificate using the ACME protocol via acme4j.
      * <p>
-     * Uses domain-key-authenticated revocation: the private key that signed the CSR is
-     * extracted from the keystore and used to prove ownership to the ACME server. This is
-     * one of two revocation mechanisms defined in RFC 8555 §7.6 (the other being account-
-     * key revocation). We use domain-key revocation because the account keypair is ephemeral
-     * (generated fresh per certificate request) and not persisted, whereas the domain key
-     * is always in the keystore alongside the certificate.
+     * Uses domain-key-authenticated revocation: the private key that signed the CSR is extracted
+     * from the keystore and used to prove ownership to the ACME server. This is one of two
+     * revocation mechanisms defined in RFC 8555 §7.6 (the other being account-key revocation).
+     * We use domain-key revocation because the account keypair is ephemeral (generated fresh per
+     * certificate request) and not persisted, whereas the domain key is always in the keystore
+     * alongside the certificate.
      */
     private void revokeWithAcme(String sStorePath, char[] achPwd, String sName, boolean fStaging)
-            throws Exception { // TODO: tighten to AcmeException | GeneralSecurityException | IOException
-        var keyStore = KeyStoreOperations.loadOrCreateKeyStore(sStorePath, achPwd);
-        var cert     = keyStore.getCertificate(sName);
+            throws AcmeException, GeneralSecurityException, IOException {
+        KeyStore    keyStore = KeyStoreOperations.loadOrCreateKeyStore(sStorePath, achPwd);
+        Certificate cert     = keyStore.getCertificate(sName);
 
         if (cert instanceof X509Certificate x509Cert) {
-            var privateKey = keyStore.getKey(sName, achPwd);
+            Key privateKey = keyStore.getKey(sName, achPwd);
             if (privateKey == null) {
-                throw new AcmeException(
-                        "Cannot revoke certificate '" + sName
+                throw new AcmeException("Cannot revoke certificate '" + sName
                                 + "': private key not found in keystore");
             }
 
-            var domainKeyPair = new KeyPair(x509Cert.getPublicKey(), (PrivateKey) privateKey);
-            var session       = new Session(acmeServerUri(fStaging));
+            KeyPair domainKeyPair = new KeyPair(x509Cert.getPublicKey(), (PrivateKey) privateKey);
+            Session session       = new Session(acmeServerUri(fStaging));
 
             org.shredzone.acme4j.Certificate.revoke(session, domainKeyPair, x509Cert, null);
         }
@@ -435,14 +441,14 @@ public class xRTCertificateManager
      * {@code SecretKeyEntry} in the PKCS12 keystore is identical in format.
      */
     private ExceptionHandle invokeCreateSymmetricKey(Frame frame, ObjectHandle[] ahArg) {
-        var sPath  = ((StringHandle) ahArg[0]).getStringValue();
-        var achPwd = xRTKeyStore.getPassword(frame, ahArg[1]).getValue();
-        var sName  = ((StringHandle) ahArg[2]).getStringValue();
+        String sPath  = ((StringHandle) ahArg[0]).getStringValue();
+        char[] achPwd = xRTKeyStore.getPassword(frame, ahArg[1]).getValue();
+        String sName  = ((StringHandle) ahArg[2]).getStringValue();
 
         try {
             KeyStoreOperations.createSymmetricKey(sPath, achPwd, sName);
             return null;
-        } catch (Exception e) { // TODO: tighten to GeneralSecurityException | IOException
+        } catch (GeneralSecurityException | IOException e) {
             return xException.obscureIoException(frame, e.getMessage());
         }
     }
@@ -462,15 +468,15 @@ public class xRTCertificateManager
      * — the same internal representation that keytool's {@code -importpass} produces.
      */
     private ExceptionHandle invokeCreatePassword(Frame frame, ObjectHandle[] ahArg) {
-        var sPath     = ((StringHandle) ahArg[0]).getStringValue();
-        var achPwd    = xRTKeyStore.getPassword(frame, ahArg[1]).getValue();
-        var sName     = ((StringHandle) ahArg[2]).getStringValue();
-        var sPwdValue = ((StringHandle) ahArg[3]).getStringValue();
+        String sPath     = ((StringHandle) ahArg[0]).getStringValue();
+        char[] achPwd    = xRTKeyStore.getPassword(frame, ahArg[1]).getValue();
+        String sName     = ((StringHandle) ahArg[2]).getStringValue();
+        String sPwdValue = ((StringHandle) ahArg[3]).getStringValue();
 
         try {
             KeyStoreOperations.createPassword(sPath, achPwd, sName, sPwdValue);
             return null;
-        } catch (Exception e) { // TODO: tighten to GeneralSecurityException | IOException
+        } catch (GeneralSecurityException | IOException e) {
             return xException.obscureIoException(frame, e.getMessage());
         }
     }
@@ -483,55 +489,44 @@ public class xRTCertificateManager
      *     "Byte[] extractKeyImpl(String|KeyStore pathOrStore, Password pwd, String name)"
      */
     private int invokeExtractKey(Frame frame, ObjectHandle[] ahArg, int iReturn) {
-        var hPathOrStore = ahArg[0];
-        var hPwd         = xRTKeyStore.getPassword(frame, ahArg[1]);
-        var hName        = (StringHandle) ahArg[2];
+        ObjectHandle hPathOrStore = ahArg[0];
+        StringHandle hPwd         = xRTKeyStore.getPassword(frame, ahArg[1]);
+        StringHandle hName        = (StringHandle) ahArg[2];
 
-        var cfResult = frame.f_context.f_container.scheduleIO(
+        CompletableFuture<Key> cfResult = frame.f_context.f_container.scheduleIO(
                 () -> loadKey(hPathOrStore, hPwd, hName));
 
         Frame.Continuation continuation = frameCaller -> {
             try {
-                var key = cfResult.get();
+                Key key = cfResult.get();
                 return key == null
                         ? frameCaller.raiseException(xException.ioException(frameCaller,
                                 "Invalid or inaccessible key \"" + hName.getStringValue() + '"'))
                         : frameCaller.assignValue(iReturn,
                                 xArray.makeByteArrayHandle(key.getEncoded(), Mutability.Constant));
-            } catch (Throwable e) {
-                // TODO: catching Throwable and discarding the cause is bad practice; the
-                //  full exception chain (including stack trace) is lost, making debugging
-                //  nearly impossible. raiseException should support a Throwable cause so
-                //  it can be logged or chained into the XVM exception model.
-                return frameCaller.raiseException("Unexpected execution failure " + e);
+            } catch (InterruptedException | ExecutionException e) {
+                // TODO: we temporarily print the stack trace for unhandled exceptions here; remove
+                e.printStackTrace();
+                return frameCaller.raiseException(
+                    xException.makeObscure(frame, "Unexpected execution failure " + e));
             }
         };
         return frame.waitForIO(cfResult, continuation);
     }
 
-    private Key loadKey(ObjectHandle hPathOrStore, StringHandle hPwd, StringHandle hName) {
-        var achPwd = hPwd.getValue();
-        var sKey   = hName.getStringValue();
+    private Key loadKey(ObjectHandle hPathOrStore, StringHandle hPwd, StringHandle hName)
+            throws GeneralSecurityException, IOException {
+        char[] achPwd = hPwd.getValue();
+        String sKey   = hName.getStringValue();
 
-        try {
-            KeyStore keyStore;
-            if (hPathOrStore instanceof StringHandle hPath) {
-                keyStore = KeyStore.getInstance("PKCS12");
-                keyStore.load(new FileInputStream(hPath.getStringValue()), achPwd);
-            } else {
-                keyStore = ((KeyStoreHandle) hPathOrStore).f_keyStore;
-            }
-            return keyStore.getKey(sKey, achPwd);
-        } catch (Exception e) { // TODO: tighten to GeneralSecurityException | IOException
-            // TODO: swallowing the exception here loses the root cause; callers have no
-            //  way to distinguish "key not found" from "keystore corrupt" or "wrong password".
-            //  We should use a proper logging framework (e.g. SLF4J) instead of System.err;
-            //  with a real logger, swallowed/wrapped exceptions could at least be emitted at
-            //  logger.debug level so they are recoverable when diagnosing production issues.
-            System.err.println(Handy.logTime() + " [Debug]: Failed to load key: " + sKey +
-                    " (" + e.getMessage() + ")");
-            return null;
+        KeyStore keyStore;
+        if (hPathOrStore instanceof StringHandle hPath) {
+            keyStore = KeyStore.getInstance("PKCS12");
+            keyStore.load(new FileInputStream(hPath.getStringValue()), achPwd);
+        } else {
+            keyStore = ((KeyStoreHandle) hPathOrStore).f_keyStore;
         }
+        return keyStore.getKey(sKey, achPwd);
     }
 
     /**
@@ -539,9 +534,9 @@ public class xRTCertificateManager
      *     "keystoreForImpl(Byte[] contents, Password pwd)"
      */
     private int invokeKeystoreFor(Frame frame, ObjectHandle[] ahArg, int iReturn) {
-        var hContent  = (ArrayHandle) ahArg[0];
-        var hPwd      = xRTKeyStore.getPassword(frame, ahArg[1]);
-        var hKeyStore = xRTKeyStore.INSTANCE.ensureKeyStore(frame, hContent, hPwd);
+        ArrayHandle  hContent  = (ArrayHandle) ahArg[0];
+        StringHandle hPwd      = xRTKeyStore.getPassword(frame, ahArg[1]);
+        ObjectHandle hKeyStore = xRTKeyStore.INSTANCE.ensureKeyStore(frame, hContent, hPwd);
 
         return frame.assignDeferredValue(iReturn, hKeyStore);
     }
@@ -555,9 +550,9 @@ public class xRTCertificateManager
      * {@link java.security.KeyStore} API.
      */
     private ExceptionHandle invokeEncryptKeystore(Frame frame, ObjectHandle[] ahArg) {
-        var sPath     = ((StringHandle) ahArg[0]).getStringValue();
-        var achPwd    = xRTKeyStore.getPassword(frame, ahArg[1]).getValue();
-        var achPwdNew = ((StringHandle) ahArg[2]).getValue();
+        String sPath     = ((StringHandle) ahArg[0]).getStringValue();
+        char[] achPwd    = xRTKeyStore.getPassword(frame, ahArg[1]).getValue();
+        char[] achPwdNew = ((StringHandle) ahArg[2]).getValue();
 
         try {
             KeyStoreOperations.changeStorePassword(sPath, achPwd, achPwdNew);
@@ -581,6 +576,7 @@ public class xRTCertificateManager
 
     // ----- data fields and constants -------------------------------------------------------------
 
-    private static final Duration ACME_TIMEOUT = Duration.ofMinutes(5);
+    private static final Duration ACME_TIMEOUT = Duration.ofMinutes(2);
+
     private TypeConstant m_typeCanonical;
 }
