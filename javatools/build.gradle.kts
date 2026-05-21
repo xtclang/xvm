@@ -30,6 +30,9 @@ dependencies {
     implementation(libs.jline)
     implementation(libs.apache.commons.cli)
     implementation(libs.gson)
+    implementation(libs.acme4j.client)
+    implementation(libs.bouncycastle.pkix)
+    implementation(libs.bouncycastle.provider)
     testCompileOnly(libs.jetbrains.annotations)
     testImplementation(libs.javatools.utils)
 }
@@ -187,7 +190,14 @@ val jar by tasks.existing(Jar::class) {
         cfg.filter { it.name.endsWith(".jar") }.map { file ->
             zipTree(file).matching {
                 // Exclude module-info files from dependencies - fat JARs should not be JPMS modules
+                // Exclude signature files from signed jars (e.g. BouncyCastle) that break fat jars
                 exclude("module-info.class", "META-INF/versions/*/module-info.class")
+                // Exclude signature files from signed jars (e.g. BouncyCastle) that break fat jars
+                exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
+                // Exclude dependency metadata that causes duplicates in fat jars
+                exclude("META-INF/MANIFEST.MF", "META-INF/**/MANIFEST.MF")
+                exclude("META-INF/OSGI-INF/**", "META-INF/versions/*/OSGI-INF/**")
+                exclude("META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/maven/**")
             }
         }
     })
