@@ -2564,9 +2564,15 @@ public class Frame
                 ? frame.f_ahVar[nTargetReg].getType()
                 : frame.getLocalType(nTargetReg, null);
 
-            return constProperty.isFormalType() && constProperty.getFormat() == Constant.Format.Property
-                ? typeTarget.resolveFormalType(constProperty).getType()
-                : constProperty.getType().resolveGenerics(pool, frame.getGenericsResolver(false));
+            boolean fFormal = constProperty.isFormalType();
+            if (fFormal && constProperty.getFormat() == Constant.Format.Property) {
+                return typeTarget.resolveFormalType(constProperty).getType();
+            }
+            TypeConstant typeResolved = constProperty.getType().
+                resolveGenerics(pool, frame.getGenericsResolver(false));
+            return fFormal
+                ? typeResolved.getType()
+                : typeResolved;
         }
     };
 
