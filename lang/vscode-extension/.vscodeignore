@@ -1,8 +1,15 @@
 .vscode/**
 .vscode-test/**
+.gradle/**
+.github/**
+.gitignore
 src/**
 node_modules/**
-.gitignore
-*.map
+build/**
+build.gradle.kts
+eslint.config.mjs
+package-lock.json
 tsconfig.json
+*.map
 **/*.ts
+*.vsix
