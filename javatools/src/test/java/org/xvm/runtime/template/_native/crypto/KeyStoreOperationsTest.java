@@ -197,8 +197,8 @@ public class KeyStoreOperationsTest {
 
     @Test
     public void testDeleteKeyStoreEntryNonexistentFile() {
-        assertThrows(IOException.class, () ->
-            KeyStoreOperations.deleteKeyStoreEntry("/nonexistent/path.p12", PASSWORD, "alias"));
+        // should not throw
+        KeyStoreOperations.deleteKeyStoreEntry("/nonexistent/path.p12", PASSWORD, "alias");
     }
 
     @Test

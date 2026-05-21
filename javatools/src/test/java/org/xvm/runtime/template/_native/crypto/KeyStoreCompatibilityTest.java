@@ -16,6 +16,7 @@ import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -196,8 +197,8 @@ public class KeyStoreCompatibilityTest {
         assertNotNull(cert2);
 
         // new cert should be different (new keypair)
-        assertTrue(!cert1.getSerialNumber().equals(cert2.getSerialNumber()),
-                "renewed cert should have different serial");
+        assertNotEquals(cert1.getSerialNumber(), cert2.getSerialNumber(),
+            "renewed cert should have different serial");
 
         // but same subject
         assertEquals(cert1.getSubjectX500Principal(), cert2.getSubjectX500Principal());

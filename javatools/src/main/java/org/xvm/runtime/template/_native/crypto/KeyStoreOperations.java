@@ -80,18 +80,21 @@ public class KeyStoreOperations {
      * Delete an entry from a keystore, silently ignoring errors (e.g. if the alias
      * does not exist or the keystore file does not exist).
      */
-    public static void deleteKeyStoreEntry(String sPath, char[] achPwd, String sAlias)
-            throws GeneralSecurityException, IOException {
-        File file = new File(sPath);
-        if (file.exists()) {
-            KeyStore keyStore = KeyStore.getInstance("PKCS12");
-            try (FileInputStream in = new FileInputStream(file)) {
-                keyStore.load(in, achPwd);
+    public static void deleteKeyStoreEntry(String sPath, char[] achPwd, String sAlias) {
+        try {
+            File file = new File(sPath);
+            if (file.exists()) {
+                KeyStore keyStore = KeyStore.getInstance("PKCS12");
+                try (FileInputStream in = new FileInputStream(file)) {
+                    keyStore.load(in, achPwd);
+                }
+                if (keyStore.containsAlias(sAlias)) {
+                    keyStore.deleteEntry(sAlias);
+                    saveKeyStore(keyStore, sPath, achPwd);
+                }
             }
-            if (keyStore.containsAlias(sAlias)) {
-                keyStore.deleteEntry(sAlias);
-                saveKeyStore(keyStore, sPath, achPwd);
-            }
+        } catch (GeneralSecurityException | IOException ignore) {
+            // intentionally silent; enttry may not exist
         }
     }
 
@@ -104,7 +107,8 @@ public class KeyStoreOperations {
      */
     public static void createSelfSignedCertificate(String sStorePath, char[] achPwd,
                                                    String sName, String sDName)
-            throws AcmeException, OperatorCreationException, GeneralSecurityException, IOException, InterruptedException {
+            throws AcmeException, OperatorCreationException,
+                   GeneralSecurityException, IOException, InterruptedException {
         KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA");
         keyPairGen.initialize(2048, new SecureRandom());
         KeyPair keyPair = keyPairGen.generateKeyPair();
