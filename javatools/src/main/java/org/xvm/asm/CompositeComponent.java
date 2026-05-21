@@ -6,7 +6,6 @@ import java.io.DataOutput;
 import java.io.PrintWriter;
 
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -393,7 +392,7 @@ public class CompositeComponent
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public Iterator<? extends XvmStructure> getContained() {
+    public Iterable<? extends XvmStructure> getContained() {
         // TODO this is not correct, if some of the structures have additional "contained" structures, i.e. need Component.getBodyContained()
         return f_siblings.get(0).getContained();
     }
