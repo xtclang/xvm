@@ -1,29 +1,42 @@
 module TestSimple {
+
+    package xenia import xenia.xtclang.org;
+
     @Inject Console console;
 
-    void run(String[] args = []) {
-        assert test1(1, 3) == "default";
-        assert test2(1, 3) == "default";
-
+    void run() {
+        scanClasses(xenia, "xenia.", new String[]);
     }
 
-    String test1(Int64 n1, Int64 n2) {
-        switch (n1, n2) {
-        case 1, 2:
-            return "one";
-        case 3, 4:
-            return "two";
-        default:
-            return "default";
+    void scanClasses(Package pkg, String prefix, String[] visitedModules) {
+        Int counter = 0;
+        for (Class clz : pkg.classes) {
+            if (clz.annotatedBy(Abstract)) {
+                console.print($"Skipping abstract {clz.name.quoted()}");
+                continue;
+            }
+
+            if (Object innerPkg := clz.isSingleton(), innerPkg.is(Package)) {
+                String name  = &innerPkg.class.name;
+                String qname = prefix + name;
+                if (Module imported := innerPkg.isModuleImport()) {
+                    String moduleName = imported.qualifiedName;
+                    if (visitedModules.contains(moduleName)) {
+                        continue;
+                    } else {
+                        visitedModules += moduleName;
+                        console.print($"*** looking into imported module {moduleName.quoted()}");
+                        qname = imported.simpleName;
+                    }
+                }
+
+                // this used to throw an exception when looking at "@Narrowable GenericMapping"
+                // inside of the json module
+                scanClasses(innerPkg, qname + '.', visitedModules);
+            } else {
+                counter++;
+            }
         }
-    }
-
-    String test2(Int64 n1, Int64 n2) {
-        return switch (n1, n2) {
-            case 1, 2: "one";
-            case 3, 4: "two";
-            default:   "default";
-        };
+        console.print($"package {&pkg.class.name.quoted()} contains {counter} classes");
     }
 }
-

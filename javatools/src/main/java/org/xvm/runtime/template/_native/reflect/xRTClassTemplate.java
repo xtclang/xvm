@@ -280,8 +280,9 @@ public class xRTClassTemplate
                         ahNames[i] = xString.makeHandle(param.getName());
                         if (ahParam[i] == null) {
                             if (!param.hasDefaultValue()) {
-                                return frameCaller.raiseException("missing default value for parameter \"" +
-                                        param.getName() + "\" at " + ctor.getIdentityConstant());
+                                return frameCaller.raiseException(
+                                    "missing default value for parameter \"" + param.getName() +
+                                    "\" at " + ctor.getIdentityConstant().getValueString());
                             }
 
                             ahParam[i] = frameCaller.getConstHandle(param.getDefaultValue());
@@ -444,8 +445,8 @@ public class xRTClassTemplate
     public int getPropertyType(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         ClassStructure clz = (ClassStructure) hComponent.getComponent();
 
-        return frame.assignValue(iReturn,
-            xRTTypeTemplate.makeHandle(frame.f_context.f_container, clz.getIdentityConstant().getType()));
+        return frame.assignValue(iReturn, xRTTypeTemplate.makeHandle(
+            frame.f_context.f_container, clz.getIdentityConstant().getType()));
     }
 
     /**

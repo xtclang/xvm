@@ -526,6 +526,11 @@ public class xRTTypeTemplate
         if (clzMixin.getFormat() == Component.Format.ANNOTATION) {
             ConstantPool pool = frame.poolContext();
 
+            // if an annotation is parameterized, we should attempt to adopt the parameters
+            if (typeInto.isParamsSpecified() && !typeThis.isParamsSpecified()) {
+                typeThis = typeThis.adoptParameters(pool, typeInto);
+            }
+
             // note, that the annotation could be into the Class itself
             if (typeThis.isA(typeInto) ||
                     pool.ensureParameterizedTypeConstant(pool.typeClass(), typeThis).isA(typeInto)) {
