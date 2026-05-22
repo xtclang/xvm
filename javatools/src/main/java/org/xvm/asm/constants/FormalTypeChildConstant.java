@@ -88,6 +88,7 @@ public class FormalTypeChildConstant
         return true;
     }
 
+    @Override
     public boolean isTypeSequenceTypeParameter() {
         return false;
     }
@@ -157,6 +158,11 @@ public class FormalTypeChildConstant
     @Override
     public FormalConstant getParentConstant() {
         return (FormalConstant) super.getParentConstant();
+    }
+
+    @Override
+    public IdentityConstant getNamespace() {
+        return getTopParent().getNamespace();
     }
 
     @Override
