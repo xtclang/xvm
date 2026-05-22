@@ -29,6 +29,8 @@ package uint64ArrayTests {
         shouldAndInPlace();
         shouldOrInPlace();
         shouldXorInPlace();
+        shouldIterateUsingForLoop();
+        shouldIterateUsingIterator();
 
         console.print(">>>> Running UInt64 Array Tests >>>>");
     }
@@ -227,5 +229,47 @@ package uint64ArrayTests {
         assert array[0] == 10;
         assert array[1] == 0x45;
         assert array[2] == 30;
+    }
+
+    void shouldIterateUsingForLoop() {
+        UInt64[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
+        array.add(40);
+        array.add(50);
+        array.add(60);
+        array.add(70);
+        array.add(80);
+        array.add(90);
+        array.add(100);
+
+        Int i = 0;
+        for (UInt64 n : array) {
+            assert n == array[i];
+            i++;
+        }
+        assert i == array.size;
+    }
+
+    void shouldIterateUsingIterator() {
+        UInt64[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
+        array.add(40);
+        array.add(50);
+        array.add(60);
+        array.add(70);
+        array.add(80);
+        array.add(90);
+        array.add(100);
+
+        Int i = 0;
+        for (UInt64 n : array.iterator()) {
+            assert n == array[i];
+            i++;
+        }
+        assert i == array.size;
     }
 }

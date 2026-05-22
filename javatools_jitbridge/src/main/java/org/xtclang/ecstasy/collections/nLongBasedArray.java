@@ -3,7 +3,9 @@ package org.xtclang.ecstasy.collections;
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Exception;
+import org.xtclang.ecstasy.Iterator;
 import org.xtclang.ecstasy.nException;
+import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.text.String;
@@ -35,8 +37,19 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
         extends Array
         implements Cloneable {
 
-    public nLongBasedArray(Ctx ctx, TypeConstant type) {
+    protected nLongBasedArray(Ctx ctx, TypeConstant type) {
         super(ctx, type);
+    }
+
+    /**
+     * Create a {@link #$CONSTANT} {@link nLongBasedArray} initialized with data.
+     */
+    protected nLongBasedArray(Ctx ctx, TypeConstant type, long[] data, long size) {
+        super(ctx, type);
+        // TODO how do we handle huge arrays?
+        $storage = data;
+        $size((int) size);
+        $mut($CONSTANT);
     }
 
     // REVIEW: to save space, we could combine the $storage and $delegate fields into a single field, e.g.
@@ -80,6 +93,11 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
     protected abstract java.lang.String $elementToString(Ctx ctx, long index);
 
     // ----- Array API -----------------------------------------------------------------------------
+
+    @Override
+    public TypeConstant $xvmType(Ctx ctx) {
+        return $isImmut() ? $type.freeze() : $type;
+    }
 
     @Override public long capacity$get$p(Ctx ctx) {
         return $delegate == null
@@ -917,5 +935,32 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
             cachedHash = hashCode$p(ctx, this);
         }
         return cachedHash;
+    }
+
+    // ---- Iterator implementation ----------------------------------------------------------------
+
+    /**
+     * A base class for {@link Iterator} implementations in subclasses.
+     */
+    protected abstract class nBaseIterator extends nObj implements Iterator {
+        public nBaseIterator(Ctx ctx) {
+            super(ctx);
+        }
+
+        protected int index = 0;
+
+        @Override
+        public boolean $isImmut() {
+            return false;
+        }
+
+        @Override
+        public boolean next$p(Ctx ctx) {
+            if (index < size$get$p(ctx)) {
+                ctx.i0 = $getElement$pi(ctx, index++);
+                return true;
+            }
+            return false;
+        }
     }
 }

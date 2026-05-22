@@ -4,8 +4,12 @@ import java.util.Arrays;
 
 import org.xtclang.ecstasy.Boolean;
 import org.xtclang.ecstasy.Iterable;
+import org.xtclang.ecstasy.IteratorᐸBooleanᐳ;
 import org.xtclang.ecstasy.Object;
+import org.xtclang.ecstasy.nType;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
+
+import org.xtclang.ecstasy.numbers.Int64;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -81,20 +85,28 @@ public class ArrayᐸBooleanᐳ
         throw new UnsupportedOperationException();
     }
 
-    @Override public Boolean getElement$p(Ctx ctx, long index) {
-        return Boolean.$box(getElement$pi(ctx, index));
+    public Boolean getElement(Ctx ctx, Int64 index) {
+        return Boolean.$box(getElement$pi(ctx, index.$value));
+    }
+
+    public boolean getElement$p(Ctx ctx, long index) {
+        return getElement$pi(ctx, index);
     }
 
     public boolean getElement$pi(Ctx ctx, long index) {
         return $getElement$pi(ctx, index) != 0;
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, Object value) {
-        setElement$pb(ctx, index, ((Boolean) value).$value);
+    public void setElement(Ctx ctx, Int64 index, Object value) {
+        setElement$pi(ctx, index.$value, ((Boolean) value).$value ? 1 : 0);
     }
 
-    public void setElement$pb(Ctx ctx, long index, boolean value) {
+    public void setElement$p(Ctx ctx, long index, boolean value) {
         setElement$pi(ctx, index, value ? 1 : 0);
+    }
+
+    public IteratorᐸBooleanᐳ iterator(Ctx ctx) {
+        return new nIterator(ctx);
     }
 
     @Override
@@ -114,8 +126,8 @@ public class ArrayᐸBooleanᐳ
     // ----- Array internals -----------------------------------------------------------------------
 
     @Override
-    protected java.lang.String $elementToString(Ctx ctx, long index) {
-        Boolean c = getElement$p(ctx, index);
+    protected String $elementToString(Ctx ctx, long index) {
+        Boolean c = Boolean.$box(getElement$pi(ctx, index));
         return c.toString(ctx).toString();
     }
 
@@ -142,5 +154,18 @@ public class ArrayᐸBooleanᐳ
     @Override
     protected long $calculateHash(Ctx ctx) {
         return $calculate1BitHash(ctx);
+    }
+
+    // ---- Iterator implementation ----------------------------------------------------------------
+
+    private class nIterator extends nBaseIterator implements IteratorᐸBooleanᐳ {
+        public nIterator(Ctx ctx) {
+            super(ctx);
+        }
+
+        @Override
+        public nType Element$get(Ctx ctx) {
+            return nType.$ensureType(ctx, ctx.container.typeSystem.pool().typeBoolean());
+        }
     }
 }

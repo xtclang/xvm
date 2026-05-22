@@ -8,6 +8,8 @@ import org.xtclang.ecstasy.Range;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
+import org.xtclang.ecstasy.numbers.Int64;
+
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -62,8 +64,6 @@ public class ArrayᐸObjectᐳ
      * @see {@link Array#$new$p}
      */
     public static ArrayᐸObjectᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
-        assert !type.isImmutable();
-
         ctx.alloc(64); // REVIEW how big?
         ArrayᐸObjectᐳ array = new ArrayᐸObjectᐳ(ctx, type);
         array.$mut($MUTABLE);
@@ -115,7 +115,11 @@ public class ArrayᐸObjectᐳ
         return $delegate == null ? ($sizeEtc & $SIZE_MASK) : $delegate.size$get$p(ctx);
     }
 
-    @Override public Object getElement$p(Ctx ctx, long index) {
+    public Object getElement(Ctx ctx, Int64 index) {
+        return getElement$p(ctx, index.$value);
+    }
+
+    public Object getElement$p(Ctx ctx, long index) {
         if ($delegate != null) {
             return $delegate.getElement$p(ctx, index);
         }
@@ -131,7 +135,11 @@ public class ArrayᐸObjectᐳ
         }
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, Object value) {
+    public void setElement(Ctx ctx, Int64 index, Object value) {
+        setElement$p(ctx, index.$value, value);
+    }
+
+    public void setElement$p(Ctx ctx, long index, Object value) {
         if ($delegate != null) {
             $delegate.setElement$p(ctx, index, value);
             return;

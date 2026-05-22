@@ -14,6 +14,8 @@ package booleanArrayTests {
         shouldAddElement();
         shouldAddElementUsingOperator();
         shouldAddMultipleElement();
+        shouldIterateUsingForLoop();
+        shouldIterateUsingIterator();
 
         console.print("<<<< Finished Boolean Array Tests <<<<");
     }
@@ -88,5 +90,47 @@ package booleanArrayTests {
         assert array[7] == False;
         assert array[8] == True;
         assert array[9] == True;
+    }
+
+    void shouldIterateUsingForLoop() {
+        Boolean[] array = new Array();
+        array.add(True);
+        array.add(False);
+        array.add(True);
+        array.add(True);
+        array.add(False);
+        array.add(False);
+        array.add(True);
+        array.add(False);
+        array.add(True);
+        array.add(True);
+
+        Int i = 0;
+        for (Boolean n : array) {
+            assert n == array[i];
+            i++;
+        }
+        assert i == array.size;
+    }
+
+    void shouldIterateUsingIterator() {
+        Boolean[] array = new Array();
+        array.add(True);
+        array.add(False);
+        array.add(True);
+        array.add(True);
+        array.add(False);
+        array.add(False);
+        array.add(True);
+        array.add(False);
+        array.add(True);
+        array.add(True);
+
+        Int i = 0;
+        for (Boolean n : array.iterator()) {
+            assert n == array[i];
+            i++;
+        }
+        assert i == array.size;
     }
 }

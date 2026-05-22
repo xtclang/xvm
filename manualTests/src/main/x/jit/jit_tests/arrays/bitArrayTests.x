@@ -14,6 +14,8 @@ package bitArrayTests {
         shouldAddElement();
         shouldAddElementUsingOperator();
         shouldAddMultipleElement();
+        shouldIterateUsingForLoop();
+        shouldIterateUsingIterator();
 
         console.print(">>>> Running Bit Array Tests >>>>");
     }
@@ -88,5 +90,47 @@ package bitArrayTests {
         assert array[7] == 0;
         assert array[8] == 1;
         assert array[9] == 1;
+    }
+
+    void shouldIterateUsingForLoop() {
+        Bit[] array = new Array();
+        array.add(1);
+        array.add(0);
+        array.add(1);
+        array.add(1);
+        array.add(0);
+        array.add(0);
+        array.add(1);
+        array.add(0);
+        array.add(1);
+        array.add(1);
+
+        Int i = 0;
+        for (Bit n : array) {
+            assert n == array[i];
+            i++;
+        }
+        assert i == array.size;
+    }
+
+    void shouldIterateUsingIterator() {
+        Bit[] array = new Array();
+        array.add(1);
+        array.add(0);
+        array.add(1);
+        array.add(1);
+        array.add(0);
+        array.add(0);
+        array.add(1);
+        array.add(0);
+        array.add(1);
+        array.add(1);
+
+        Int i = 0;
+        for (Bit n : array.iterator()) {
+            assert n == array[i];
+            i++;
+        }
+        assert i == array.size;
     }
 }

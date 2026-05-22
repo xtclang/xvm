@@ -29,6 +29,8 @@ package uint128ArrayTests {
         shouldAndInPlace();
         shouldOrInPlace();
         shouldXorInPlace();
+        shouldIterateUsingForLoop();
+        shouldIterateUsingIterator();
 
         console.print(">>>> Running UInt128 Array Tests >>>>");
     }
@@ -227,5 +229,47 @@ package uint128ArrayTests {
         assert array[0] == 10;
         assert array[1] == 0x45;
         assert array[2] == 30;
+    }
+
+    void shouldIterateUsingForLoop() {
+        UInt128[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
+        array.add(40);
+        array.add(50);
+        array.add(60);
+        array.add(70);
+        array.add(80);
+        array.add(90);
+        array.add(18446744073709551616);
+
+        Int i = 0;
+        for (UInt128 n : array) {
+            assert n == array[i];
+            i++;
+        }
+        assert i == array.size;
+    }
+
+    void shouldIterateUsingIterator() {
+        UInt128[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
+        array.add(40);
+        array.add(50);
+        array.add(60);
+        array.add(70);
+        array.add(80);
+        array.add(90);
+        array.add(18446744073709551616);
+
+        Int i = 0;
+        for (UInt128 n : array.iterator()) {
+            assert n == array[i];
+            i++;
+        }
+        assert i == array.size;
     }
 }

@@ -39,6 +39,8 @@ package charArrayTests {
         shouldAddInPlaceOutOfBounds();
         shouldSubInPlace();
         shouldSubInPlaceOutOfBounds();
+        shouldIterateUsingForLoop();
+        shouldIterateUsingIterator();
 
         console.print(">>>> Running Char Array Tests >>>>");
     }
@@ -223,5 +225,47 @@ package charArrayTests {
         } catch (OutOfBounds e) {
             // expected
         }
+    }
+
+    void shouldIterateUsingForLoop() {
+        Char[] array = new Array();
+        array.add('a');
+        array.add('b');
+        array.add('c');
+        array.add('d');
+        array.add('e');
+        array.add('f');
+        array.add('g');
+        array.add('h');
+        array.add('i');
+        array.add('j');
+
+        Int i = 0;
+        for (Char n : array) {
+            assert n == array[i];
+            i++;
+        }
+        assert i == array.size;
+    }
+
+    void shouldIterateUsingIterator() {
+        Char[] array = new Array();
+        array.add('a');
+        array.add('b');
+        array.add('c');
+        array.add('d');
+        array.add('e');
+        array.add('f');
+        array.add('g');
+        array.add('h');
+        array.add('i');
+        array.add('j');
+
+        Int i = 0;
+        for (Char n : array.iterator()) {
+            assert n == array[i];
+            i++;
+        }
+        assert i == array.size;
     }
 }

@@ -318,37 +318,6 @@ public abstract class Array
 
     /**
      * Native implementation of:
-     * <p>
-     * Element getElement(Int index)
-     * <p>
-     * <p>
-     * Obtain the element at the specified index.
-     *
-     * @param index the element index
-     * @return the element value
-     */
-    public Object getElement$p(Ctx ctx, long index) {
-        throw new UnsupportedOperationException("TODO");
-    }
-
-    /**
-     * Native implementation of:
-     *
-     *   void setElement(Int index, Element value)
-     *
-     * Store the specified element value at the specified index.
-     *
-     * If the Array is immutable, this method must throw an exception without mutating the array.
-     *
-     * @param index  the element index
-     * @param value  the element value
-     */
-    public void setElement$p(Ctx ctx, long index, Object value) {
-        throw new UnsupportedOperationException("TODO");
-    }
-
-    /**
-     * Native implementation of:
      *
      *   Var<Element> elementAt(Int index)
      *

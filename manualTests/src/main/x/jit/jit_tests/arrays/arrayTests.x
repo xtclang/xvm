@@ -9,6 +9,7 @@ package arrayTests {
         testConstStringArray();
         testAnonArrayVar();
         testNamedArrayVar();
+        shouldIterateUsingForLoop();
     }
 
     void testStringAsArray() {
@@ -56,6 +57,16 @@ package arrayTests {
         assert c.size == 2;
         assert c[0] == 'a';
         assert c[1] == 'b';
+    }
+
+    void shouldIterateUsingForLoop() {
+        String[] array = ["one", "two", "three"];
+
+        Int i = 0;
+        for (String n : array) {
+            assert n == array[i];
+            i++;
+        }
     }
 
     class Test {

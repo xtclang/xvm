@@ -14,6 +14,8 @@ package nibbleArrayTests {
         shouldAddElement();
         shouldAddElementUsingOperator();
         shouldAddMultipleElement();
+        shouldIterateUsingForLoop();
+        shouldIterateUsingIterator();
 
         console.print(">>>> Running Nibble Array Tests >>>>");
     }
@@ -88,5 +90,47 @@ package nibbleArrayTests {
         assert array[7] == 0x08;
         assert array[8] == 0x09;
         assert array[9] == 0x0A;
+    }
+
+    void shouldIterateUsingForLoop() {
+        Nibble[] array = new Array();
+        array.add(0x01);
+        array.add(0x02);
+        array.add(0x03);
+        array.add(0x04);
+        array.add(0x05);
+        array.add(0x06);
+        array.add(0x07);
+        array.add(0x08);
+        array.add(0x09);
+        array.add(0x0A);
+
+        Int i = 0;
+        for (Nibble n : array) {
+            assert n == array[i];
+            i++;
+        }
+        assert i == array.size;
+    }
+
+    void shouldIterateUsingIterator() {
+        Nibble[] array = new Array();
+        array.add(0x01);
+        array.add(0x02);
+        array.add(0x03);
+        array.add(0x04);
+        array.add(0x05);
+        array.add(0x06);
+        array.add(0x07);
+        array.add(0x08);
+        array.add(0x09);
+        array.add(0x0A);
+
+        Int i = 0;
+        for (Nibble n : array.iterator()) {
+            assert n == array[i];
+            i++;
+        }
+        assert i == array.size;
     }
 }
