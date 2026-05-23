@@ -42,7 +42,7 @@ export class XtcDebugConfigurationProvider implements vscode.DebugConfigurationP
             const editor = vscode.window.activeTextEditor;
             if (editor?.document.languageId === 'xtc') {
                 config.type = 'xtc';
-                config.name = 'Debug XTC Module';
+                config.name = 'Debug Ecstasy Module';
                 config.request = 'launch';
                 const text = editor.document.getText();
                 const match = /^\s*module\s+(\w+)/m.exec(text);
@@ -52,7 +52,7 @@ export class XtcDebugConfigurationProvider implements vscode.DebugConfigurationP
             }
         }
         if (!config.module) {
-            return vscode.window.showInformationMessage('Cannot find an XTC module to debug').then(() => undefined);
+            return vscode.window.showInformationMessage('Cannot find an Ecstasy module to debug').then(() => undefined);
         }
         return config;
     }

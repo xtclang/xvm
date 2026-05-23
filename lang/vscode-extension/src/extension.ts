@@ -1,4 +1,4 @@
-// XTC Language Support for VS Code
+// Ecstasy (XTC) Language Support for VS Code
 //
 // Semantic tokens are enabled by default in the LSP server. VS Code automatically
 // layers them on top of the TextMate grammar — types, methods, properties, annotations,

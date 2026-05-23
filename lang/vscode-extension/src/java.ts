@@ -123,7 +123,7 @@ async function downloadJre(context: vscode.ExtensionContext): Promise<string> {
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: `Downloading Java ${REQUIRED_MAJOR} JRE for XTC Language Support`,
+      title: `Downloading Java ${REQUIRED_MAJOR} JRE for Ecstasy Language Support`,
       cancellable: false,
     },
     async (progress) => {

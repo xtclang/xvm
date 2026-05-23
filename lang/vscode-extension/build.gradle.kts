@@ -1,4 +1,5 @@
 import com.github.gradle.node.npm.task.NpmTask
+import com.github.gradle.node.task.NodeTask
 
 plugins {
     base
@@ -70,6 +71,25 @@ val copyLicense by tasks.registering(Copy::class) {
     into(layout.projectDirectory)
 }
 
+// Generate the marketplace icon (xtc.png, 256x256) and the language file icon
+// (xtc-file.png, 32x32) from doc/logo/x.jpg in the repository root. We derive
+// PNGs rather than checking them in so the single JPEG source of truth in
+// doc/logo/ stays canonical; the `sharp` devDependency handles the conversion.
+val generateIcons by tasks.registering(NodeTask::class) {
+    description = "Generate VS Code marketplace and file icons from doc/logo/x.jpg"
+    dependsOn(tasks.named("npmInstall"))
+    val compositeRoot = XdkPropertiesService.compositeRootDirectory(projectDir)
+    val sourceLogo = File(compositeRoot, "doc/logo/x.jpg")
+    val outDir = layout.projectDirectory.dir("icons")
+    val scriptFile = layout.projectDirectory.file("scripts/generate-icons.cjs")
+    script.set(scriptFile.asFile)
+    args.set(listOf(sourceLogo.absolutePath, outDir.asFile.absolutePath))
+    inputs.file(sourceLogo)
+    inputs.file(scriptFile)
+    outputs.file(outDir.file("xtc.png"))
+    outputs.file(outDir.file("xtc-file.png"))
+}
+
 // Configure the plugin-provided npmInstall task (runs `npm install` using the pinned Node)
 val npmInstall by tasks.existing {
     mustRunAfter(copyLanguageConfig, copyTextMateGrammar, copyLicense)
@@ -89,7 +109,7 @@ val npmCompile by tasks.registering(NpmTask::class) {
 // Package the extension
 val packageExtension by tasks.registering(NpmTask::class) {
     description = "Package VS Code extension"
-    dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense)
+    dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, generateIcons)
     args.set(listOf("run", "package"))
 
     outputs.file(layout.projectDirectory.file("xtc-language-${project.version}.vsix"))
@@ -102,7 +122,7 @@ val build by tasks.existing {
 
 // Assemble prepares all resources without packaging
 val assemble by tasks.existing {
-    dependsOn(copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, npmCompile)
+    dependsOn(copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, npmCompile, generateIcons)
 }
 
 // Launch VS Code with extension loaded for testing
@@ -122,5 +142,7 @@ val clean by tasks.existing(Delete::class) {
     delete(layout.projectDirectory.dir("server"))
     delete(layout.projectDirectory.file("syntaxes/xtc.tmLanguage.json"))
     delete(layout.projectDirectory.file("language-configuration.json"))
+    delete(layout.projectDirectory.file("icons/xtc.png"))
+    delete(layout.projectDirectory.file("icons/xtc-file.png"))
     delete(fileTree(layout.projectDirectory) { include("*.vsix") })
 }

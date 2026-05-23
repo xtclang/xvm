@@ -4,17 +4,17 @@ Official Visual Studio Code extension for the **[Ecstasy programming language](h
 
 Ecstasy is a modular, object-oriented language designed for secure, multi-tenant cloud computing. The language is statically typed, uses a verifiable bytecode format, and ships with first-class support for services, fibers, and immutability. This extension brings rich IDE tooling for Ecstasy directly into VS Code: syntax highlighting, semantic tokens, hover, completion, navigation, debugging, project scaffolding, and Gradle task integration.
 
-![XTC](icons/xtc.png)
+![Ecstasy](icons/xtc.png)
 
 ## Features
 
 - **Syntax highlighting** for `.x` files via a TextMate grammar generated from the official tree-sitter parser
 - **Semantic tokens** — types, methods, properties, annotations, and modifiers (`static`, `@RO`, `abstract`, etc.) get richer colour from the language server
 - **Language Server Protocol (LSP)** — hover, completions, go-to-definition, find references, document outline, inlay hints, and diagnostics
-- **Debug Adapter Protocol (DAP)** — launch and step-debug XTC modules with breakpoints, variables, and call stack inspection
+- **Debug Adapter Protocol (DAP)** — launch and step-debug Ecstasy modules with breakpoints, variables, and call stack inspection
 - **Tasks** — auto-discovered Gradle Build / Test / Clean / Run tasks for any workspace that contains a `build.gradle.kts`
-- **Project scaffolding** — `XTC: Create New Project` command to bootstrap a new XTC application, library, or service
-- **Snippets** for common XTC constructs (`module`, `class`, `service`, `mixin`, `const`, etc.)
+- **Project scaffolding** — `Ecstasy: Create New Project` command to bootstrap a new Ecstasy application, library, or service
+- **Snippets** for common Ecstasy constructs (`module`, `class`, `service`, `mixin`, `const`, etc.)
 - **Automatic Java discovery** — finds or downloads a suitable Java 25+ JRE; no manual setup needed
 
 ## Requirements
@@ -29,7 +29,7 @@ Ecstasy is a modular, object-oriented language designed for secure, multi-tenant
 
 ### From the Marketplace
 
-Search for **XTC Language Support** in the Extensions view (`Cmd+Shift+X` / `Ctrl+Shift+X`) and click **Install**.
+Search for **Ecstasy Language Support** in the Extensions view (`Cmd+Shift+X` / `Ctrl+Shift+X`) and click **Install**.
 
 ### From a VSIX
 
@@ -50,7 +50,7 @@ The resulting `xtc-language-<version>.vsix` is written to `lang/vscode-extension
 
 ## Quick Start
 
-1. Open any folder containing `.x` files (or run `XTC: Create New Project`).
+1. Open any folder containing `.x` files (or run `Ecstasy: Create New Project`).
 2. Open a `.x` source file — syntax highlighting activates immediately.
 3. Watch the bottom-right status bar for the LSP server state — once it shows `✓ XTC`, all language features are live.
 
@@ -95,7 +95,7 @@ Once the status bar shows `✓ XTC`:
 
 ### Debugging
 
-1. Open a `.x` file containing an XTC module.
+1. Open a `.x` file containing an Ecstasy module.
 2. Press `F5` (or **Run → Start Debugging**) — the module name is auto-detected.
 
 To customise the launch, add a configuration to `.vscode/launch.json`:
@@ -138,14 +138,14 @@ Custom run tasks can be added to `.vscode/tasks.json`:
 
 ### Commands
 
-Open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and search for **XTC**:
+Open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and search for **Ecstasy**:
 
-| Command                              | Description                                            |
-|--------------------------------------|--------------------------------------------------------|
-| `XTC: Create New Project`            | Scaffold a new XTC project (`xtc init`)                |
-| `XTC: Run Module`                    | Run a named XTC module via Gradle                      |
-| `XTC: Restart Language Server`       | Stop and restart the LSP server                        |
-| `XTC: Show Language Server Output`   | Open the LSP output channel                            |
+| Command                                  | Description                                            |
+|------------------------------------------|--------------------------------------------------------|
+| `Ecstasy: Create New Project`            | Scaffold a new Ecstasy project (`xtc init`)            |
+| `Ecstasy: Run Module`                    | Run a named Ecstasy module via Gradle                  |
+| `Ecstasy: Restart Language Server`       | Stop and restart the LSP server                        |
+| `Ecstasy: Show Language Server Output`   | Open the LSP output channel                            |
 
 ### Snippets
 
@@ -229,7 +229,7 @@ This extension contributes the following defaults for the `xtc` language:
 | No completions or hover                                | Confirm `✓ XTC` in the status bar; enable `xtc.trace.server: "verbose"` and inspect the output channel. |
 | Wrong Java version detected                            | Set `xtc.java.home` to a Java 25+ installation directory.                                               |
 | `xtc init` not found when running **Create Project**   | Install the XDK and put `xtc` on your `PATH`.                                                           |
-| `.x` files not highlighted                             | Run **Developer: Reload Window**; verify the file's language mode (bottom-right) is `XTC`.              |
+| `.x` files not highlighted                             | Run **Developer: Reload Window**; verify the file's language mode (bottom-right) is `Ecstasy`.          |
 
 For deeper diagnostics, open **View → Output** and select **XTC Language Server**.
 
@@ -243,7 +243,7 @@ vscode-extension/
 ├── tsconfig.json                   # TypeScript configuration
 ├── src/
 │   ├── extension.ts                # Activation / deactivation entry point
-│   ├── commands.ts                 # XTC: ... command registrations
+│   ├── commands.ts                 # Ecstasy: ... command registrations
 │   ├── debug-adapter.ts            # DAP descriptor factory and config provider
 │   ├── java.ts                     # Java 25+ discovery and JVM argument construction
 │   ├── lsp-client.ts               # LSP client lifecycle and crash recovery

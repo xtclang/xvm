@@ -19,7 +19,7 @@ export function registerCommands(context: vscode.ExtensionContext, outputChannel
         vscode.commands.registerCommand('xtc.runModule', async (_uri: string, moduleName: string) => {
             if (!moduleName) {
                 const input = await vscode.window.showInputBox({
-                    prompt: 'Enter XTC module name to run',
+                    prompt: 'Enter Ecstasy module name to run',
                     placeHolder: 'myapp',
                 });
                 if (!input) {
@@ -77,7 +77,7 @@ export function registerCommands(context: vscode.ExtensionContext, outputChannel
             terminal.show();
             terminal.sendText(`xtc init "${projectName}" --type ${projectType.toLowerCase()} --dir "${parentPath}"`);
 
-            vscode.window.showInformationMessage(`Creating XTC ${projectType} project: ${projectName}`);
+            vscode.window.showInformationMessage(`Creating Ecstasy ${projectType} project: ${projectName}`);
         })
     );
 }

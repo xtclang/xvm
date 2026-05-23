@@ -1,7 +1,7 @@
 {
     "name": "xtc-language",
-    "displayName": "XTC Language Support",
-    "description": "XTC language support with syntax highlighting and LSP features",
+    "displayName": "Ecstasy Language Support",
+    "description": "Visual Studio Code support for the Ecstasy programming language (also known by its file extension and informal short-form, XTC). Source files use the .x extension. Includes syntax highlighting, LSP-based language features (hover, completion, go-to-definition), debugging via DAP, snippets, and project scaffolding.",
     "version": "0.4.4",
     "publisher": "xtclang",
     "license": "Apache-2.0",
@@ -19,10 +19,12 @@
         "Formatters"
     ],
     "keywords": [
+        "ecstasy",
+        "ecstasy-language",
         "xtc",
         "xvm",
-        "ecstasy",
-        "xtclang"
+        "xtclang",
+        "xdk"
     ],
     "icon": "icons/xtc.png",
     "galleryBanner": {
@@ -40,6 +42,7 @@
             {
                 "id": "xtc",
                 "aliases": [
+                    "Ecstasy",
                     "XTC",
                     "xtc"
                 ],
@@ -69,19 +72,19 @@
         "commands": [
             {
                 "command": "xtc.createProject",
-                "title": "XTC: Create New Project"
+                "title": "Ecstasy: Create New Project"
             },
             {
                 "command": "xtc.runModule",
-                "title": "XTC: Run Module"
+                "title": "Ecstasy: Run Module"
             },
             {
                 "command": "xtc.restartServer",
-                "title": "XTC: Restart Language Server"
+                "title": "Ecstasy: Restart Language Server"
             },
             {
                 "command": "xtc.showServerOutput",
-                "title": "XTC: Show Language Server Output"
+                "title": "Ecstasy: Show Language Server Output"
             }
         ],
         "taskDefinitions": [
@@ -93,7 +96,7 @@
                 "properties": {
                     "moduleName": {
                         "type": "string",
-                        "description": "The XTC module to run"
+                        "description": "The Ecstasy (.xtc) module to run"
                     },
                     "methodName": {
                         "type": "string",
@@ -117,7 +120,7 @@
             }
         ],
         "configuration": {
-            "title": "XTC Language",
+            "title": "Ecstasy",
             "properties": {
                 "xtc.java.home": {
                     "type": "string",
@@ -195,7 +198,7 @@
         "debuggers": [
             {
                 "type": "xtc",
-                "label": "XTC Debug",
+                "label": "Ecstasy Debug",
                 "languages": [
                     "xtc"
                 ],
@@ -207,7 +210,7 @@
                         "properties": {
                             "module": {
                                 "type": "string",
-                                "description": "The XTC module to debug"
+                                "description": "The Ecstasy (.xtc) module to debug"
                             },
                             "method": {
                                 "type": "string",
@@ -228,8 +231,8 @@
                 },
                 "configurationSnippets": [
                     {
-                        "label": "XTC: Launch Module",
-                        "description": "Launch and debug an XTC module",
+                        "label": "Ecstasy: Launch Module",
+                        "description": "Launch and debug an Ecstasy module",
                         "body": {
                             "type": "xtc",
                             "request": "launch",
@@ -258,6 +261,7 @@
         "@types/vscode": "^1.96.0",
         "@vscode/vsce": "^3.2.0",
         "eslint": "^9.17.0",
+        "sharp": "^0.33.5",
         "typescript": "^5.7.0",
         "typescript-eslint": "^8.19.0"
     }

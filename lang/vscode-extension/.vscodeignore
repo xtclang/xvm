@@ -4,6 +4,7 @@
 .github/**
 .gitignore
 src/**
+scripts/**
 node_modules/**
 build/**
 build.gradle.kts

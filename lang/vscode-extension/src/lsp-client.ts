@@ -113,7 +113,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
                 }
                 updateStatusBar('stopped');
                 void vscode.window.showErrorMessage(
-                    `XTC Language Server crashed ${crashCount} times and will not be restarted. Use "XTC: Restart Language Server" to restart manually.`
+                    `XTC Language Server crashed ${crashCount} times and will not be restarted. Use "Ecstasy: Restart Language Server" to restart manually.`
                 );
                 return { action: CloseAction.DoNotRestart };
             }
