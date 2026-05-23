@@ -192,7 +192,6 @@ module.exports = grammar({
         // Array type literal conflicts
         [$._non_bi_type, $.array_type_literal],
         [$._non_bi_type, $._expression],
-        [$.member_type, $._expression],
         [$._non_bi_type, $._expression, $.array_type_literal],
     ],
 
@@ -654,8 +653,15 @@ module.exports = grammar({
         //   Map<K,V>.Entry → member_type(generic_type, Entry)
         //   Map<K,V>.Entry<X>.Inner → member_type(member_type(...), Inner)
         //   ecstasy.lang.src.Compiler → qualified_type_name (NOT member_type!)
-        // The base must have type arguments - this prevents ambiguity with qualified names
-        member_type: $ => prec.left(seq(choice($.generic_type, $.member_type), '.', $.identifier, optional($.type_arguments))),
+        // The base must have type arguments - this prevents ambiguity with qualified names.
+        // The with-type-arguments form is given higher precedence than `member_expression`
+        // (whose prec is MAX_PRECEDENCE_PLUS_2) so that a value-position virtual-child type
+        // literal like `Base<Int>.Child2<String>` is parsed as a single `member_type` rather
+        // than `member_expression(Base<Int>, Child2)` followed by an unparseable `<String>;`.
+        member_type: $ => choice(
+            prec.left({{MAX_PRECEDENCE_PLUS_3}}, seq(choice($.generic_type, $.member_type), '.', $.identifier, $.type_arguments)),
+            prec.left(seq(choice($.generic_type, $.member_type), '.', $.identifier)),
+        ),
         // Type arguments can include constraints: <Key, Value extends Shareable>
         // Can also include angle-bracket type lists for method signatures: Method<Target, <Params>, <Return>>
         // Can be empty: Class<> for wildcard/inferred type arguments
@@ -716,6 +722,7 @@ module.exports = grammar({
             $.const_declaration,
             $.enum_declaration,
             $.mixin_declaration,
+            $.annotation_declaration,
             $.service_declaration,
             // Local function declarations (functions defined inside method bodies)
             $.local_function_declaration,
@@ -1234,6 +1241,12 @@ module.exports = grammar({
             // Generic type literal as expression - for type literals like: Type x = Map<Key, Value>
             // Also handles qualified type names with type args: Map<Serializable.Key, Serializable.Value>
             $.generic_type,
+            // Member type literal as expression - for virtual-child type literals like:
+            // Type x = Base<Int>.Child2<String>. Without this, the trailing <String> after
+            // a member access is mis-parsed as a binary '<' / '>' comparison chain.
+            // The static precedence on `member_type`'s with-type-arguments form (above)
+            // makes it outrank `member_expression`, so no GLR conflict is needed here.
+            $.member_type,
             // Parenthesized type as expression - for type method calls: (immutable).and(type)
             // In XTC, types are first-class values and methods can be called on them
             $.parenthesized_type,

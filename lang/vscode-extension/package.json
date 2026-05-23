@@ -1,7 +1,7 @@
 {
     "name": "xtc-language",
-    "displayName": "XTC Language Support",
-    "description": "XTC language support with syntax highlighting and LSP features",
+    "displayName": "Ecstasy Language Support",
+    "description": "Visual Studio Code support for the Ecstasy programming language (also known by its file extension and informal short-form, XTC). Source files use the .x extension. Includes syntax highlighting, LSP-based language features (hover, completion, go-to-definition), debugging via DAP, snippets, and project scaffolding.",
     "version": "0.4.4",
     "publisher": "xtclang",
     "license": "Apache-2.0",
@@ -13,14 +13,28 @@
         "vscode": "^1.96.0"
     },
     "categories": [
-        "Programming Languages"
+        "Programming Languages",
+        "Debuggers",
+        "Snippets",
+        "Formatters"
     ],
     "keywords": [
+        "ecstasy",
+        "ecstasy-language",
         "xtc",
-        "xvm"
+        "xvm",
+        "xtclang",
+        "xdk"
     ],
+    "icon": "icons/xtc.png",
+    "galleryBanner": {
+        "color": "#1f2937",
+        "theme": "dark"
+    },
     "activationEvents": [
-        "onLanguage:xtc"
+        "onStartupFinished",
+        "onLanguage:xtc",
+        "workspaceContains:**/*.x"
     ],
     "main": "./out/extension.js",
     "contributes": {
@@ -28,6 +42,7 @@
             {
                 "id": "xtc",
                 "aliases": [
+                    "Ecstasy",
                     "XTC",
                     "xtc"
                 ],
@@ -36,8 +51,8 @@
                 ],
                 "configuration": "./language-configuration.json",
                 "icon": {
-                    "light": "./icons/xtc.svg",
-                    "dark": "./icons/xtc.svg"
+                    "light": "./icons/xtc-file.png",
+                    "dark": "./icons/xtc-file.png"
                 }
             }
         ],
@@ -57,12 +72,77 @@
         "commands": [
             {
                 "command": "xtc.createProject",
-                "title": "XTC: Create New Project"
+                "title": "Ecstasy: Create New Project"
+            },
+            {
+                "command": "xtc.runModule",
+                "title": "Ecstasy: Run Module"
+            },
+            {
+                "command": "xtc.restartServer",
+                "title": "Ecstasy: Restart Language Server"
+            },
+            {
+                "command": "xtc.showServerOutput",
+                "title": "Ecstasy: Show Language Server Output"
+            }
+        ],
+        "taskDefinitions": [
+            {
+                "type": "xtc",
+                "required": [
+                    "moduleName"
+                ],
+                "properties": {
+                    "moduleName": {
+                        "type": "string",
+                        "description": "The Ecstasy (.xtc) module to run"
+                    },
+                    "methodName": {
+                        "type": "string",
+                        "description": "Method to invoke (defaults to 'run')"
+                    },
+                    "moduleArguments": {
+                        "type": "string",
+                        "description": "Comma-separated arguments passed to the module"
+                    },
+                    "useGradle": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Use Gradle to run (recommended for projects with build.gradle.kts)"
+                    },
+                    "quietMode": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Use -q flag for less verbose Gradle output"
+                    }
+                }
             }
         ],
         "configuration": {
-            "title": "XTC Language",
+            "title": "Ecstasy",
             "properties": {
+                "xtc.java.home": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to Java 25+ installation (overrides JAVA_HOME). Leave empty to use JAVA_HOME or 'java' in PATH.",
+                    "scope": "machine-overridable"
+                },
+                "xtc.trace.server": {
+                    "type": "string",
+                    "enum": [
+                        "off",
+                        "messages",
+                        "verbose"
+                    ],
+                    "default": "off",
+                    "description": "Trace communication between VS Code and the XTC Language Server (for debugging)"
+                },
+                "xtc.inlayHints.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable inlay hints from the XTC Language Server"
+                },
                 "xtc.formatting.indentSize": {
                     "type": "integer",
                     "default": 4,
@@ -87,16 +167,82 @@
                     "type": "integer",
                     "default": 120,
                     "description": "Maximum line width (right margin)"
+                },
+                "xtc.sourceRoots": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [],
+                    "description": "Extra source root directories the XTC Language Server indexes (e.g. XDK standard-library sources). Accepts absolute paths to directories that contain .x source files outside the open workspace.",
+                    "scope": "machine-overridable"
                 }
             }
         },
         "configurationDefaults": {
+            "files.associations": {
+                "*.x": "xtc"
+            },
             "[xtc]": {
                 "editor.tabSize": 4,
                 "editor.insertSpaces": true,
-                "editor.formatOnType": true
+                "editor.formatOnType": true,
+                "editor.autoIndent": "full",
+                "editor.semanticHighlighting.enabled": true,
+                "editor.bracketPairColorization.enabled": true,
+                "editor.guides.bracketPairs": "active",
+                "editor.suggest.snippetsPreventQuickSuggestions": false,
+                "editor.wordBasedSuggestions": "off"
             }
-        }
+        },
+        "debuggers": [
+            {
+                "type": "xtc",
+                "label": "Ecstasy Debug",
+                "languages": [
+                    "xtc"
+                ],
+                "configurationAttributes": {
+                    "launch": {
+                        "required": [
+                            "module"
+                        ],
+                        "properties": {
+                            "module": {
+                                "type": "string",
+                                "description": "The Ecstasy (.xtc) module to debug"
+                            },
+                            "method": {
+                                "type": "string",
+                                "description": "Method to invoke (defaults to 'run')",
+                                "default": "run"
+                            },
+                            "args": {
+                                "type": "string",
+                                "description": "Comma-separated arguments passed to the module"
+                            },
+                            "cwd": {
+                                "type": "string",
+                                "description": "Working directory",
+                                "default": "${workspaceFolder}"
+                            }
+                        }
+                    }
+                },
+                "configurationSnippets": [
+                    {
+                        "label": "Ecstasy: Launch Module",
+                        "description": "Launch and debug an Ecstasy module",
+                        "body": {
+                            "type": "xtc",
+                            "request": "launch",
+                            "name": "Debug ${1:module}",
+                            "module": "${1:myapp}"
+                        }
+                    }
+                ]
+            }
+        ]
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
@@ -106,6 +252,7 @@
         "lint": "eslint src/"
     },
     "dependencies": {
+        "jdk-utils": "^0.6.0",
         "vscode-languageclient": "^9.0.1"
     },
     "devDependencies": {
@@ -114,6 +261,7 @@
         "@types/vscode": "^1.96.0",
         "@vscode/vsce": "^3.2.0",
         "eslint": "^9.17.0",
+        "sharp": "^0.34.5",
         "typescript": "^5.7.0",
         "typescript-eslint": "^8.19.0"
     }

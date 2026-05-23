@@ -61,6 +61,7 @@ Thumbs.db
 # Build directories (Gradle)
 classes/
 build/
+bin/
 
 # Build directories (IntelliJ)
 out/
