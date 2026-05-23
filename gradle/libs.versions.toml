@@ -51,7 +51,7 @@ mockito = "5.23.0"
 # =============================================================================
 # Everything below is only used when includeBuildLang=true.
 lang-kotlin = "2.3.21"
-lang-kotlinx-serialization = "1.10.0"
+lang-kotlinx-serialization = "1.11.0"
 lang-ktlint = "14.2.0"
 lang-ktlint-engine = "1.8.0"
 
@@ -72,14 +72,14 @@ lang-node-gradle-plugin = "7.1.0"
 # Lang tooling - IntelliJ plugin
 # =============================================================================
 lang-intellij-ide = "2026.1"
-lang-intellij-platform-gradle-plugin = "2.14.0"
+lang-intellij-platform-gradle-plugin = "2.16.0"
 # JUnit 4.x is required at RUNTIME by the IntelliJ Platform test harness
 # (com.intellij.testFramework). IntelliJ's test infrastructure internally depends on JUnit 4
 # runners and rules, even when tests themselves are written with JUnit 5/Jupiter. Without this
 # on the testRuntimeOnly classpath, IntelliJ platform tests fail with ClassNotFoundException
 # for org.junit.Test or org.junit.runners.BlockJUnit4ClassRunner.
 lang-intellij-junit4-compat = "4.13.2"
-lang-intellij-lsp4ij = "0.19.3"
+lang-intellij-lsp4ij = "0.19.4"
 
 # =============================================================================
 # Lang tooling - Tree-sitter native library
@@ -91,7 +91,7 @@ apache-commons-compress = "1.28.0"
 # The LSP server runs OUT-OF-PROCESS for classloader isolation (avoids lsp4j conflicts with LSP4IJ).
 lang-jtreesitter = "0.26.0"
 # tree-sitter-cli must match jtreesitter major.minor for ABI compatibility
-lang-tree-sitter-cli = "0.26.8"
+lang-tree-sitter-cli = "0.26.9"
 tukaani-xz = "1.12"
 # Zig compiler for cross-compiling native tree-sitter libraries
 lang-zig = "0.15.2"
