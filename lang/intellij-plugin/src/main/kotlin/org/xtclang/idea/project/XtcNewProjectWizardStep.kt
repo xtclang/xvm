@@ -15,6 +15,7 @@ import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.ui.dsl.builder.Panel
 import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindSelected
+import org.xtclang.idea.PluginPaths
 import org.xtclang.idea.run.XtcRunConfiguration
 import org.xtclang.idea.run.XtcRunConfigurationType
 import org.xvm.tool.XtcProjectCreator
@@ -50,7 +51,7 @@ class XtcNewProjectWizardStep(
         val base = baseData ?: return logger.error("No base data available")
         val projectPath = Path(base.path).resolve(base.name)
         val xtcVersion =
-            PluginManager.getInstance().findEnabledPlugin(PluginId.getId("org.xtclang.idea"))?.version
+            PluginManager.getInstance().findEnabledPlugin(PluginId.getId(PluginPaths.PLUGIN_ID))?.version
                 ?: XtcProjectCreator.DEFAULT_XTC_VERSION
 
         logger.info("Creating Ecstasy project: path=$projectPath, type=$projectType, multiModule=$multiModule, xtcVersion=$xtcVersion")

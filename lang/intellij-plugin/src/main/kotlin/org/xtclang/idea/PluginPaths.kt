@@ -14,7 +14,10 @@ import java.nio.file.Path
  * with LSP4IJ's lsp4j. The `bin/` directory is not on IntelliJ's classloader path.
  */
 object PluginPaths {
-    private const val PLUGIN_ID = "org.xtclang.idea"
+    /** Plugin ID, must match `<id>` in `META-INF/plugin.xml`. The single source
+     *  of truth for the string — every other call site that needs it should
+     *  reference `PluginPaths.PLUGIN_ID` rather than duplicate the literal. */
+    const val PLUGIN_ID = "org.xtclang.idea"
     private val logger = logger<PluginPaths>()
 
     /**

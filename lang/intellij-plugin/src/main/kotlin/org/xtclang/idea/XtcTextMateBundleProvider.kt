@@ -29,7 +29,7 @@ class XtcTextMateBundleProvider : TextMateBundleProvider {
     override fun getBundles(): List<TextMateBundleProvider.PluginBundle> {
         logger.warn("XtcTextMateBundleProvider.getBundles() called")
 
-        val plugin = PluginManager.getInstance().findEnabledPlugin(PluginId.getId("org.xtclang.idea"))
+        val plugin = PluginManager.getInstance().findEnabledPlugin(PluginId.getId(PluginPaths.PLUGIN_ID))
         if (plugin == null) {
             logger.warn("Ecstasy plugin not found via PluginManager.findEnabledPlugin")
             return emptyList()
