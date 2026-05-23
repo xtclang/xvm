@@ -22,9 +22,16 @@ Likely candidates: user-facing labels, dialog messages, exception messages. Rule
 
 Not audited as part of this branch. Both are covered by `:lang:lsp-server:test` and the per-feature manual test plan, so there's no immediate quality signal that something is wrong. Worth a focused review session on its own.
 
-### 3. Cross-IDE integration test parity
+### 3. Cross-IDE integration test parity — Tier B (Platform fixtures)
 
-VS Code now has 7 integration tests (file association, JAR bundling, activation surfaces, LSP startup, snippet expansion). IntelliJ has 1 (`LspServerJarResolutionTest`). The disjoint coverage is fine for now — each test guards the failure modes specific to its IDE — but bringing the IntelliJ side up to similar surface coverage is a worthwhile follow-up.
+Tier A — the manifest / live-template / bundled-resource parity tests — landed in this branch (`PluginManifestTest`, `LiveTemplateRegistrationTest`, `BundledResourcesTest`). What remains is Tier B: tests that need IntelliJ Platform test fixtures (`BasePlatformTestCase` / `LightProjectDescriptor`) to verify *runtime* registration of extension points, not just manifest declarations.
+
+Candidate Tier B coverage:
+
+* **File-type registration runtime test** — load the plugin into a test IDE instance, then assert `FileTypeManager.getFileTypeByExtension("x")` returns the Ecstasy/TextMate file type. Counterpart to VS Code's `extension.test.ts`'s runtime languageId check.
+* **LSP startup smoke test** — actually spin up LSP4IJ + the LSP server JVM and send a hover. Heavyweight; the IntelliJ Platform test fixtures aren't designed for this.
+
+Effort: half day to set up the platform-test plumbing (BasePlatformTestCase / fixtures, IntelliJ test dependencies), then the tests themselves are modest. Defer to its own branch.
 
 ## Resolved during `lsp/vscode2`
 
