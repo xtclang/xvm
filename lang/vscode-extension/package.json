@@ -245,9 +245,10 @@
         ]
     },
     "scripts": {
-        "vscode:prepublish": "npm run compile",
+        "vscode:prepublish": "npm run bundle",
+        "bundle": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --platform=node --target=node22 --minify",
         "compile": "tsc -p ./",
-        "watch": "tsc -watch -p ./",
+        "watch": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --platform=node --target=node22 --watch",
         "package": "vsce package",
         "lint": "eslint src/",
         "test:vscode": "node ./scripts/run-vscode-tests.cjs"
@@ -264,6 +265,7 @@
         "@types/vscode": "^1.96.0",
         "@vscode/test-electron": "^2.5.2",
         "@vscode/vsce": "^3.2.0",
+        "esbuild": "^0.25.0",
         "eslint": "^9.17.0",
         "glob": "^11.0.3",
         "mocha": "^11.7.4",

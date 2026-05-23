@@ -25,6 +25,34 @@ function ensureXtcLanguageAssociation(document: vscode.TextDocument): void {
     }
 }
 
+/**
+ * On first activation, check whether the user has an explicit `files.associations` entry
+ * for `*.x` that points to a language other than `xtc`. If so, offer a one-time prompt to
+ * update it permanently. This covers users who previously had the Logos (or another) extension
+ * claim `.x` files and dismissed the VS Code conflict picker in a way that wrote a conflicting
+ * entry into their global settings.json.
+ *
+ * The prompt is shown at most once (tracked via globalState). If the user declines, the
+ * runtime `ensureXtcLanguageAssociation` listener continues to fix the language per-session.
+ */
+async function fixFilesAssociation(context: vscode.ExtensionContext): Promise<void> {
+    const STATE_KEY = 'xtc.filesAssociationChecked';
+    if (context.globalState.get<boolean>(STATE_KEY)) {
+        return;
+    }
+    await context.globalState.update(STATE_KEY, true);
+
+    const config = vscode.workspace.getConfiguration('files');
+    const inspected = config.inspect<Record<string, string>>('associations');
+    const globalAssociations = inspected?.globalValue ?? {};
+    const conflictingLanguage = globalAssociations['*.x'];
+
+    if (conflictingLanguage && conflictingLanguage !== 'xtc') {
+        const updated = { ...globalAssociations, '*.x': 'xtc' };
+        await config.update('associations', updated, vscode.ConfigurationTarget.Global);
+    }
+}
+
 export function activate(context: vscode.ExtensionContext): void {
     console.log('XTC Language Support is now active');
 
@@ -50,6 +78,8 @@ export function activate(context: vscode.ExtensionContext): void {
     // the doc until the tab is focused — without this listener, restored tabs
     // can stick at the default languageId (plaintext / Logos / etc.) until
     // the user re-opens the file manually.
+    void fixFilesAssociation(context);
+
     context.subscriptions.push(
         { dispose: () => process.off('unhandledRejection', rejectionHandler) },
         vscode.workspace.onDidOpenTextDocument(ensureXtcLanguageAssociation),
