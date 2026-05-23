@@ -4,15 +4,7 @@ Items surfaced during the `lsp/vscode2` work that were explicitly deferred to ke
 
 ## Build / tooling
 
-### 1. `:lang:vscode-extension:runCode` assumes `code` is on PATH
-
-**Symptom:** the task hardcodes `commandLine("code", "--extensionDevelopmentPath=...", fixturesPath)`. On a machine where the `code` CLI isn't installed (it's an optional VS Code "shell command" install), the task fails opaquely with `exit code 127`.
-
-**Fix:** add a one-shot existence check via `providers.exec` and emit a clear error pointing at VS Code's "Install 'code' command in PATH" command palette entry.
-
-**Effort:** ~5 lines.
-
-### 2. Wire `:lang:vscode-extension:testVscodeExtension` into CI
+### 1. Wire `:lang:vscode-extension:testVscodeExtension` into CI
 
 **Current state:** opt-in only — not attached to `:check`. Headless wrapper auto-detects Linux + missing DISPLAY and prepends `xvfb-run` when available; falls back with a clear warning otherwise.
 
@@ -50,3 +42,4 @@ These were on the deferred list at the start of the branch but were resolved in-
 
 * **Tree-sitter `extractTreeSitterSource` race** — `downloadTreeSitterSource` was missing an `outputs.file(...)` declaration so Gradle's UP-TO-DATE check didn't invalidate when the tar.gz went missing externally. Fixed by declaring the output and dropping the redundant custom `onlyIf`. Verified by deleting the tar.gz between builds: download correctly re-runs.
 * **`:lang:intellij-plugin:verifyPlugin` clean run** — verifier reports `Compatible` against both IU-261.25134.12 and IU-262.6228.19 with zero internal-API / deprecated / experimental-API hits after the `PluginManagerCore → PluginManager.findEnabledPlugin` migration.
+* **`:lang:vscode-extension:runCode` PATH preflight** — the task now resolves the `code` CLI against `$PATH` before invoking it and emits a clear "open Cmd Palette → Shell Command: Install 'code' command in PATH" message when missing, instead of letting `Exec` fail with `exit code 127`.

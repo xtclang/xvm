@@ -154,7 +154,40 @@ val runCode by tasks.registering(Exec::class) {
 
     val extensionPath = layout.projectDirectory.asFile.absolutePath
     val fixturesPath = layout.projectDirectory.dir("src/test/fixtures").asFile.absolutePath
+    // Capture PATH + OS at config time so the doFirst stays CC-safe (no
+    // System.getenv / System.getProperty calls inside the task action).
+    val pathEnv = providers.environmentVariable("PATH").orElse("").get()
+    val isWindows = providers.systemProperty("os.name").get().lowercase().contains("windows")
+    val candidateBinaries = if (isWindows) listOf("code.cmd", "code.exe") else listOf("code")
+
     commandLine("code", "--extensionDevelopmentPath=$extensionPath", fixturesPath)
+
+    // Preflight: fail fast with a useful message if `code` isn't on PATH,
+    // rather than letting Exec emit a cryptic `exit code 127`. The CLI is
+    // an optional VS Code install step ("Shell Command: Install 'code'
+    // command in PATH") that surprises developers who installed VS Code
+    // via the .app/.dmg without running that command palette action.
+    doFirst {
+        val found = pathEnv.split(File.pathSeparator).any { dir ->
+            candidateBinaries.any { name -> File(dir, name).canExecute() }
+        }
+        if (!found) {
+            throw GradleException(
+                """
+                |The `code` CLI is not on PATH, so this task cannot launch VS Code.
+                |
+                |How to fix: open VS Code, press Cmd+Shift+P (macOS) or Ctrl+Shift+P
+                |(Linux/Windows), and run "Shell Command: Install 'code' command in PATH".
+                |Open a new shell after it finishes so the updated PATH is picked up,
+                |then re-run this task.
+                |
+                |Alternative that needs no PATH change: open lang/vscode-extension/
+                |in VS Code and press F5 — that launches the Extension Development Host
+                |directly from the IDE, equivalent to what this task does from the CLI.
+                """.trimMargin(),
+            )
+        }
+    }
 }
 
 val clean by tasks.existing(Delete::class) {
