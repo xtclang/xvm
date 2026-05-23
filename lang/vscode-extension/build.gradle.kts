@@ -106,13 +106,77 @@ val npmCompile by tasks.registering(NpmTask::class) {
     outputs.dir(layout.projectDirectory.dir("out"))
 }
 
+// Optional version suffix for the VS Code extension only. Pass
+// `-Pvscode.version.suffix=alpha.20260523T120000` to package an extension
+// whose internal version is e.g. "0.4.4-alpha.20260523T120000" rather than
+// the base "0.4.4". The suffix is appended to whatever base version is in
+// package.json today (any existing `-suffix` is stripped first, so the
+// operation is idempotent across re-runs).
+//
+// Scope: this ONLY affects what gets baked into the produced .vsix's
+// package.json — the file on disk is mutated transiently during the
+// package step and restored by a `finalizedBy` task, so neither
+// composite-root tasks nor any other subproject see the modification.
+// Without the property, package.json is used as-is and the file is never
+// touched.
+//
+// Use case: producing alpha builds for VS Code Marketplace pre-release
+// publication without bumping the canonical XDK-aligned version everywhere
+// else in the repo.
+val vscodeVersionSuffix: Provider<String> = providers.gradleProperty("vscode.version.suffix")
+
+val stampVscodeVersion by tasks.registering {
+    description = "Apply -Pvscode.version.suffix to lang/vscode-extension/package.json (no-op when unset)"
+    val pkgJsonFile = layout.projectDirectory.file("package.json").asFile
+    val backupFile = layout.projectDirectory.file("package.json.version-backup").asFile
+    val suffixProvider = vscodeVersionSuffix
+    onlyIf { suffixProvider.isPresent }
+    doFirst {
+        val suffix = suffixProvider.get()
+        val originalContent = pkgJsonFile.readText()
+        // Stash the original so finalizedBy can restore it; overwrite any
+        // stale backup left by a previous interrupted run.
+        backupFile.writeText(originalContent)
+
+        val versionRegex = Regex("\"version\"\\s*:\\s*\"([^\"]+)\"")
+        val match = versionRegex.find(originalContent)
+            ?: error("package.json is missing a \"version\" field")
+        val currentVersion = match.groupValues[1]
+        // Strip any existing pre-release tag before re-applying — keeps repeat
+        // invocations from compounding (e.g. 0.4.4-alpha.X-alpha.Y).
+        val baseVersion = currentVersion.substringBefore("-")
+        val stamped = "$baseVersion-$suffix"
+        val updated = originalContent.replace(match.value, "\"version\": \"$stamped\"")
+        pkgJsonFile.writeText(updated)
+        logger.lifecycle("[vscode-extension] Stamped package.json version: $currentVersion → $stamped")
+    }
+}
+
+val restoreVscodeVersion by tasks.registering {
+    description = "Restore lang/vscode-extension/package.json from the backup written by stampVscodeVersion"
+    val pkgJsonFile = layout.projectDirectory.file("package.json").asFile
+    val backupFile = layout.projectDirectory.file("package.json.version-backup").asFile
+    val suffixProvider = vscodeVersionSuffix
+    onlyIf { suffixProvider.isPresent && backupFile.exists() }
+    doLast {
+        pkgJsonFile.writeText(backupFile.readText())
+        backupFile.delete()
+        logger.lifecycle("[vscode-extension] Restored package.json from version-stamp backup")
+    }
+}
+
 // Package the extension
 val packageExtension by tasks.registering(NpmTask::class) {
     description = "Package VS Code extension"
-    dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, generateIcons)
+    dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, generateIcons, stampVscodeVersion)
+    finalizedBy(restoreVscodeVersion)
     args.set(listOf("run", "package"))
 
-    outputs.file(layout.projectDirectory.file("xtc-language-${project.version}.vsix"))
+    // Declare the version suffix as an input so changing `-Pvscode.version.suffix`
+    // invalidates the task cache. Without this, switching the suffix would
+    // produce stale .vsix outputs because vsce package's only declared input
+    // (the source tree) hasn't changed.
+    inputs.property("vscodeVersionSuffix", vscodeVersionSuffix.orElse(""))
 }
 
 // Headless integration test: launches VS Code via @vscode/test-electron with
