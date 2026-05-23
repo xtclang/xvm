@@ -5,6 +5,7 @@
 .gitignore
 src/**
 scripts/**
+out/test/**
 node_modules/**
 build/**
 build.gradle.kts

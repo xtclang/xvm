@@ -115,6 +115,27 @@ val packageExtension by tasks.registering(NpmTask::class) {
     outputs.file(layout.projectDirectory.file("xtc-language-${project.version}.vsix"))
 }
 
+// Headless integration test: launches VS Code via @vscode/test-electron with
+// the extension loaded from the build tree, opens src/test/fixtures/hello.x,
+// and asserts that the .x file is associated with the "xtc" language. This is
+// the only way to verify the contributes.languages mapping + the runtime
+// setTextDocumentLanguage fallback short of installing the .vsix into the
+// user's profile and clicking around manually.
+//
+// Not wired into `check` by default because on headless Linux runners this
+// needs `xvfb-run` (or a similar virtual display). The intent is that local
+// developers run it explicitly, and CI opt-in via xvfb if/when desired.
+val testVscodeExtension by tasks.registering(NpmTask::class) {
+    group = "verification"
+    description = "Run headless integration tests for the VS Code extension"
+    dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, generateIcons)
+    args.set(listOf("run", "test:vscode"))
+    // Cache directory used by @vscode/test-electron to keep the downloaded
+    // VS Code build across runs; declared as input so a corrupted cache
+    // can be cleared by `./gradlew :lang:vscode-extension:clean`.
+    inputs.dir(layout.projectDirectory.dir("src/test"))
+}
+
 // Main build task - configure the existing task from base plugin
 val build by tasks.existing {
     dependsOn(packageExtension)
@@ -144,5 +165,6 @@ val clean by tasks.existing(Delete::class) {
     delete(layout.projectDirectory.file("language-configuration.json"))
     delete(layout.projectDirectory.file("icons/xtc.png"))
     delete(layout.projectDirectory.file("icons/xtc-file.png"))
+    delete(layout.projectDirectory.dir(".vscode-test"))
     delete(fileTree(layout.projectDirectory) { include("*.vsix") })
 }

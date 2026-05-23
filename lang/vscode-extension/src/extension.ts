@@ -40,10 +40,24 @@ export function activate(context: vscode.ExtensionContext): void {
     };
     process.on('unhandledRejection', rejectionHandler);
     
-    // Register rejection handler cleanup and language association
+    // Register rejection handler cleanup and language association.
+    // We listen on three signals because each catches a different way a .x file
+    // can end up mis-labeled: onDidOpenTextDocument fires when a new document
+    // is loaded (covers Explorer click and Quick Open); the textDocuments
+    // forEach fixes anything already open at activation time; and
+    // onDidChangeActiveTextEditor catches the "tab restored from a previous
+    // session but not in textDocuments yet" case where VS Code defers loading
+    // the doc until the tab is focused — without this listener, restored tabs
+    // can stick at the default languageId (plaintext / Logos / etc.) until
+    // the user re-opens the file manually.
     context.subscriptions.push(
         { dispose: () => process.off('unhandledRejection', rejectionHandler) },
-        vscode.workspace.onDidOpenTextDocument(ensureXtcLanguageAssociation)
+        vscode.workspace.onDidOpenTextDocument(ensureXtcLanguageAssociation),
+        vscode.window.onDidChangeActiveTextEditor(editor => {
+            if (editor) {
+                ensureXtcLanguageAssociation(editor.document);
+            }
+        })
     );
     vscode.workspace.textDocuments.forEach(ensureXtcLanguageAssociation);
 
