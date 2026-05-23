@@ -1,6 +1,6 @@
 package org.xtclang.idea
 
-import com.intellij.ide.plugins.PluginManagerCore
+import com.intellij.ide.plugins.PluginManager
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.extensions.PluginId
 import java.nio.file.Files
@@ -21,7 +21,7 @@ object PluginPaths {
      * Find a server JAR in the plugin's `bin/` directory.
      *
      * Resolution order:
-     * 1. `PluginManagerCore` plugin path (works for all IDE versions)
+     * 1. `PluginManager.findEnabledPlugin` plugin path (public IntelliJ Platform API)
      * 2. Classloader-based fallback (for development/test scenarios)
      *
      * @param jarName the JAR filename, e.g. `"xtc-lsp-server.jar"` or `"xtc-dap-server.jar"`
@@ -30,7 +30,7 @@ object PluginPaths {
     fun findServerJar(jarName: String): Path {
         val searchedPaths = mutableListOf<Path>()
 
-        PluginManagerCore.getPlugin(PluginId.getId(PLUGIN_ID))?.let { plugin ->
+        PluginManager.getInstance().findEnabledPlugin(PluginId.getId(PLUGIN_ID))?.let { plugin ->
             val candidate = plugin.pluginPath.resolve("bin/$jarName")
             searchedPaths.add(candidate)
             resolveInBin(plugin.pluginPath, jarName)?.let { return it }

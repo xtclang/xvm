@@ -75,7 +75,7 @@ class XtcRunConfiguration(
             moduleName.takeIf { it.isNotBlank() }?.let { addParameter(it) }
             moduleArguments.split(",").filter { it.isNotBlank() }.forEach(::addParameter)
             workDirectory = project.basePath?.let { Path(it).toFile() }
-            logger.info("Running XTC: $commandLineString")
+            logger.info("Running Ecstasy: $commandLineString")
         }
 
     override fun readExternal(element: Element) {
@@ -112,7 +112,7 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
             row("Module name:") {
                 textField()
                     .bindText(::moduleName)
-                    .comment("The XTC module to run (overrides build.gradle.kts default)")
+                    .comment("The Ecstasy (.xtc) module to run (overrides build.gradle.kts default)")
             }
             row("Method name:") {
                 textField()

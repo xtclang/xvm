@@ -8,12 +8,17 @@ import org.xtclang.idea.XtcIconProvider
 import javax.swing.Icon
 
 /**
- * Run configuration type for XTC applications.
+ * Run configuration type for Ecstasy applications.
+ *
+ * `getId()` and `XtcConfigurationFactory.getId()` are internal identifiers
+ * persisted in workspace.xml across sessions — they MUST remain stable
+ * ("XtcRunConfiguration", "XtcConfigurationFactory") even though everything
+ * user-facing now reads "Ecstasy".
  */
 class XtcRunConfigurationType : ConfigurationType {
-    override fun getDisplayName() = "XTC Application"
+    override fun getDisplayName() = "Ecstasy Application"
 
-    override fun getConfigurationTypeDescription() = "Run an XTC application"
+    override fun getConfigurationTypeDescription() = "Run an Ecstasy application"
 
     override fun getIcon(): Icon = XtcIconProvider.XTC_ICON ?: com.intellij.icons.AllIcons.FileTypes.Any_type
 
@@ -23,14 +28,14 @@ class XtcRunConfigurationType : ConfigurationType {
 }
 
 /**
- * Factory for creating XTC run configurations.
+ * Factory for creating Ecstasy run configurations.
  */
 class XtcConfigurationFactory(
     type: ConfigurationType,
 ) : ConfigurationFactory(type) {
     override fun getId() = "XtcConfigurationFactory"
 
-    override fun getName() = "XTC Application"
+    override fun getName() = "Ecstasy Application"
 
-    override fun createTemplateConfiguration(project: Project): RunConfiguration = XtcRunConfiguration(project, this, "XTC Application")
+    override fun createTemplateConfiguration(project: Project): RunConfiguration = XtcRunConfiguration(project, this, "Ecstasy Application")
 }
