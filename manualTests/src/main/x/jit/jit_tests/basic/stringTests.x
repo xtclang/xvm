@@ -17,14 +17,14 @@ package stringTests {
         String s     = "";
         Char[] chars = s.chars;
         assert chars.size == 0;
-        assert chars.is(immutable);
+        assert chars.mutability == Constant;
     }
 
     void shouldGetCharArrayString() {
         String s     = "abcdef";
         Char[] chars = s.chars;
         assert chars.size == s.size;
-        assert chars.is(immutable);
+        assert chars.mutability == Constant;
         assert chars[0] == 'a';
         assert chars[1] == 'b';
         assert chars[2] == 'c';
