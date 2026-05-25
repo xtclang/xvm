@@ -2594,14 +2594,15 @@ public class CommonBuilder
                 TypeConstant dstType   = dstPd.type;
                 JitFlavor    srcFlavor = srcPd.flavor;
                 JitFlavor    dstFlavor = dstPd.flavor;
-                boolean      checkCast = false;
-                boolean      invalid   = false;
 
+                AddTransformation:
                 if (srcFlavor == dstFlavor) {
                     load(code, srcPd.cd, srcSlot);
-                    checkCast = !srcType.isJitPrimitive();
+
+                    if (!srcType.isJitPrimitive() && !srcType.equals(dstType)) {
+                        generateCheckCast(code, dstType);
+                    }
                 } else {
-                    AddTransformation:
                     switch (srcPd.flavor) {
                     case Specific:
                         switch (dstPd.flavor) {
@@ -2612,22 +2613,19 @@ public class CommonBuilder
                             }
                             Builder.unbox(code, dstType);
                             break AddTransformation;
+                        }
+                        break;
 
-                        default:
-                            invalid = true;
-                            break;
-                    }
-
-                    default:
-                        invalid = true;
+                    case Primitive:
+                        switch (dstPd.flavor) {
+                        case PrimitiveWithDefault:
+                            code.aload(srcSlot)
+                                .iconst_0(); // false
+                            break AddTransformation;
+                        }
                         break;
                     }
-                }
 
-                if (checkCast && !srcType.equals(dstType)) {
-                    generateCheckCast(code, dstType);
-                }
-                if (invalid) {
                     throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
                                                             "; dst=" + dstFlavor);
                 }
@@ -2667,15 +2665,54 @@ public class CommonBuilder
                 return;
             }
 
+            // the natural return is at the top of the stack now;
             JitParamDesc[] dstReturns = jmdDst.optimizedReturns;
 
-            JitParamDesc srcPd = srcReturns[0];
-            JitParamDesc dstPd = dstReturns[0];
+            for (int i = 0; i < retCount; i++) {
+                JitParamDesc srcPd     = srcReturns[i];
+                JitParamDesc dstPd     = dstReturns[i];
+                JitFlavor    srcFlavor = srcPd.flavor;
+                JitFlavor    dstFlavor = dstPd.flavor;
 
-            // the natural return is at the top of the stack now;
-            // TEMPORARY: assume the same Ctx positions for returns TODO
-            assert srcPd.flavor == dstPd.flavor;
-            addReturn(code, srcPd.cd);
+                AddTransformation:
+                if (srcFlavor == dstFlavor) {
+                    if (i == 0) {
+                        addReturn(code, srcPd.cd);
+                    } else {
+                        if (srcPd.altIndex != dstPd.altIndex) {
+                            throw new UnsupportedOperationException("Copy context");
+                        }
+                    }
+                } else {
+                    switch (srcFlavor) {
+                    case Specific:
+                        switch (dstFlavor) {
+                        case Primitive:
+                            if (i == 0) {
+                                box(code, dstPd.type);
+                                addReturn(code, srcPd.cd);
+                            } else {
+                                loadFromContext(code, dstPd.cd, dstPd.altIndex);
+                                box(code, dstPd.type);
+                                storeToContext(code, srcPd.cd, srcPd.altIndex);
+                            }
+                            break AddTransformation;
+
+                        case XvmPrimitive:
+                            if (i == 0) {
+                                box(code, dstPd.type);
+                                addReturn(code, srcPd.cd);
+                            } else {
+                                System.err.println("TODO: copy XvmPrimitive " + className + "." + srcName);
+                            }
+                            break AddTransformation;
+
+                        }
+                    }
+                    throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
+                                                            "; dst=" + dstFlavor);
+                }
+            }
         });
     }
 

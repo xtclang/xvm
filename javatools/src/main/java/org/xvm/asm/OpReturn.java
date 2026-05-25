@@ -226,6 +226,11 @@ public abstract class OpReturn
 
                 case Specific:
                     switch (pdRet.flavor) {
+                    case Primitive:
+                        Builder.unbox(code, regRet);
+                        cd = pdRet.cd;
+                        break;
+
                     case NullablePrimitive:
                         // e.g.: Int? f() = Null;
                         assert fOptimized && regRet.type().isOnlyNullable();
@@ -250,7 +255,7 @@ public abstract class OpReturn
                         Builder.defaultLoad(code, cd);
                         break;
 
-                    case Specific, Widened, Primitive, XvmPrimitive:
+                    case Specific, Widened, XvmPrimitive:
                         break;
 
                     default:

@@ -40,11 +40,14 @@ public class Xvm {
         for (int i = 0; i < locks.length; ++i) {
             locks[i] = new Object();
         }
+
+        primeNameCounters();
+
         this.systemRepo       = repo;
         this.nativeTypeSystem = NativeTypeSystem.create(this, repo);
 
         register(this.nativeTypeSystem);
-        this.nativeContainer  = createContainer(null, nativeTypeSystem, FailEverythingInjector);
+        this.nativeContainer = createContainer(null, nativeTypeSystem, FailEverythingInjector);
 
         ModuleLoader ecstasy = null;
         ModuleLoader _native = null;
@@ -381,10 +384,19 @@ public class Xvm {
      *
      * @param ts  the new TypeSystem
      */
-    void register(TypeSystem ts) {
+    private void register(TypeSystem ts) {
         // add the TypeSystem
         if (typeSystems.putIfAbsent(ts.name, new WeakReference<>(ts)) != null) {
             throw new IllegalStateException();
+        }
+    }
+
+    /**
+     * Accommodate the native method names into the name counters.
+     */
+    private void primeNameCounters() {
+        for (String name : NativeNames.reservedMethodSuffix.values()) {
+            nameCounters.put(name, 0);
         }
     }
 
