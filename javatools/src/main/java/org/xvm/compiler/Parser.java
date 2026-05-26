@@ -2231,6 +2231,19 @@ public class Parser {
     TypedefStatement parseTypeDefStatement(Expression exprCond, Token tokenAccess) {
         Token keyword = expect(Id.TYPEDEF);
 
+        Mark mark = mark();
+        if (peek(Id.IDENTIFIER)) {
+            Token           alias      = expect(Id.IDENTIFIER);
+            List<Parameter> typeParams = peek(Id.COMP_LT) ? parseTypeParameterList(true) : null;
+            if (typeParams != null && match(Id.AS) != null) {
+                TypeExpression type = parseExtendedTypeExpression();
+                expect(Id.SEMICOLON);
+                return new TypedefStatement(exprCond, tokenAccess == null ? keyword : tokenAccess,
+                        typeParams, alias, type);
+            }
+            restore(mark);
+        }
+
         TypeExpression type = parseExtendedTypeExpression();
 
         // required "as" keyword (note: previously optional)
@@ -2240,7 +2253,8 @@ public class Parser {
 
         expect(Id.SEMICOLON);
 
-        return new TypedefStatement(exprCond, tokenAccess == null ? keyword : tokenAccess, type, simpleName);
+        return new TypedefStatement(exprCond, tokenAccess == null ? keyword : tokenAccess,
+                null, simpleName, type);
     }
 
     /**

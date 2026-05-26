@@ -19,6 +19,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ExprAST;
@@ -369,7 +370,14 @@ public class NamedTypeExpression
                 atypeParams[i] = listParams.get(i).ensureTypeConstant(ctx, errs);
             }
 
-            type = pool.ensureParameterizedTypeConstant(type, atypeParams);
+            TypedefStructure typedef = getParameterizedTypedef(constId);
+            if (typedef != null) {
+                if (atypeParams.length == typedef.getTypeParamCount()) {
+                    type = typedef.resolveTypeParameters(type, atypeParams);
+                }
+            } else {
+                type = pool.ensureParameterizedTypeConstant(type, atypeParams);
+            }
         }
 
         if (access != null && access != Access.PUBLIC) {
@@ -638,7 +646,15 @@ public class NamedTypeExpression
             if (atypeParams == null) {
                 return null;
             }
-            if (type.isParamsSpecified()) {
+            TypedefStructure typedef = getParameterizedTypedef(m_constId);
+            if (typedef != null) {
+                if (atypeParams.length != typedef.getTypeParamCount()) {
+                    log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_MISMATCH);
+                    return null;
+                }
+
+                type = typedef.resolveTypeParameters(type, atypeParams);
+            } else if (type.isParamsSpecified()) {
                 TypeConstant[] atypeActual = type.getParamTypesArray();
                 if (!Arrays.equals(atypeActual, atypeParams)) {
                     // this can happen for example, if m_constId is a typedef for a function
@@ -1011,19 +1027,32 @@ public class NamedTypeExpression
             return false;
         }
 
-        if (format == Format.Property || format == Format.Typedef) {
+        if (format == Format.Property) {
             if (paramTypes != null) {
                 log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                 return false;
             }
-            if (format == Format.Property &&
-                    (!((PropertyConstant) constId).isFormalType() ||
-                        names != null && names.size() > 1)) {
+            if (!((PropertyConstant) constId).isFormalType() ||
+                    names != null && names.size() > 1) {
                 log(errs, Severity.ERROR, Compiler.INVALID_FORMAL_TYPE_IDENTITY);
                 return false;
             }
         }
+
+        if (format == Format.Typedef && paramTypes != null && getParameterizedTypedef(constId) == null) {
+            log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+            return false;
+        }
         return true;
+    }
+
+    private TypedefStructure getParameterizedTypedef(Constant constId) {
+        if (constId instanceof TypedefConstant idTypedef &&
+                idTypedef.getComponent() instanceof TypedefStructure typedef &&
+                typedef.isParameterized()) {
+            return typedef;
+        }
+        return null;
     }
 
 
