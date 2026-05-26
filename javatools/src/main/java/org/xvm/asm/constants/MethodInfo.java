@@ -551,7 +551,10 @@ public class MethodInfo
             if (body.getImplementation() == Implementation.Capped) {
                 MethodInfo methodNarrowing = infoType.getNarrowingMethod(this);
                 assert methodNarrowing != this;
-                return methodNarrowing.getTopmostMethodStructure(infoType);
+                if (methodNarrowing != null) {
+                    return methodNarrowing.getTopmostMethodStructure(infoType);
+                }
+                continue;
             }
 
             MethodStructure method = body.getMethodStructure();

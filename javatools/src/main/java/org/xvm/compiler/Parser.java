@@ -2231,16 +2231,28 @@ public class Parser {
     TypedefStatement parseTypeDefStatement(Expression exprCond, Token tokenAccess) {
         Token keyword = expect(Id.TYPEDEF);
 
-        TypeExpression type = parseExtendedTypeExpression();
+        try (SafeLookAhead attempt = new SafeLookAhead()) {
+            TypeExpression type = parseExtendedTypeExpression();
+            expect(Id.AS);
+            Token simpleName = expect(Id.IDENTIFIER);
+            expect(Id.SEMICOLON);
 
-        // required "as" keyword (note: previously optional)
+            if (attempt.isClean()) {
+                attempt.keepResults();
+                return new TypedefStatement(exprCond, tokenAccess == null ? keyword : tokenAccess,
+                        null, simpleName, type);
+            }
+        } catch (CompilerException ignore) {
+        }
+
+        Token           alias      = expect(Id.IDENTIFIER);
+        List<Parameter> typeParams = parseTypeParameterList(true);
         expect(Id.AS);
-
-        Token simpleName = expect(Id.IDENTIFIER);
-
+        TypeExpression  type       = parseExtendedTypeExpression();
         expect(Id.SEMICOLON);
 
-        return new TypedefStatement(exprCond, tokenAccess == null ? keyword : tokenAccess, type, simpleName);
+        return new TypedefStatement(exprCond, tokenAccess == null ? keyword : tokenAccess,
+                typeParams, alias, type);
     }
 
     /**

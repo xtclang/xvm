@@ -11,9 +11,11 @@ import java.lang.classfile.Label;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -978,7 +980,10 @@ public abstract class TypeConstant
                     atype2[i] = te1.combine(pool, te2);
                 }
             }
-            return pool.ensureParameterizedTypeConstant(t2, atype2);
+            TypeConstant typeBase = t2.isRelationalType()
+                    ? t2.getSingleUnderlyingClass(true).getType()
+                    : t2;
+            return pool.ensureParameterizedTypeConstant(typeBase, atype2);
         }
         return null;
     }
@@ -5351,9 +5356,19 @@ public abstract class TypeConstant
             return relation;
         }
 
-        Set<TypeConstant> setInProgress = m_tloInProgress.get();
+        TransientThreadLocal<Set<TypeConstant>>             tloInProgress    = m_tloInProgress;
+        TransientThreadLocal<Deque<RelationBreadcrumb>>     tloBreadcrumbs   = m_tloBreadcrumbs;
+        Set<TypeConstant>                                   setInProgress    =
+                tloInProgress == null ? null : tloInProgress.get();
+        Deque<RelationBreadcrumb>                           dequeBreadcrumbs =
+                tloBreadcrumbs == null ? null : tloBreadcrumbs.get();
 
         if (setInProgress != null && setInProgress.contains(typeLeft)) {
+            if ((typeLeft.containsRecursiveType() || typeRight.containsRecursiveType())
+                    && dequeBreadcrumbs != null && !dequeBreadcrumbs.isEmpty()) {
+                return Relation.IS_A_WEAK;
+            }
+
             // we are in recursion; this can only happen for duck-typing, for example:
             //
             //    interface I { I! foo(); }
@@ -5452,7 +5467,16 @@ public abstract class TypeConstant
         if (setInProgress == null) {
             m_tloInProgress.set(setInProgress = new HashSet<>());
         }
+        if (dequeBreadcrumbs == null) {
+            if (m_tloBreadcrumbs == null) {
+                s_tloBreadcrumbs.compareAndSet(this, null, new TransientThreadLocal<>());
+            }
+            m_tloBreadcrumbs.set(dequeBreadcrumbs = new ArrayDeque<>());
+        }
+
+        RelationBreadcrumb breadcrumb = new RelationBreadcrumb(typeLeft, typeRight);
         setInProgress.add(typeLeft);
+        dequeBreadcrumbs.addLast(breadcrumb);
         try {
             relation = typeRight.calculateRelationToLeft(typeLeft);
 
@@ -5465,9 +5489,18 @@ public abstract class TypeConstant
             mapRelations.remove(typeLeft);
             throw e;
         } finally {
+            RelationBreadcrumb breadcrumbLast = dequeBreadcrumbs.peekLast();
+            if (breadcrumb.equals(breadcrumbLast)) {
+                dequeBreadcrumbs.removeLast();
+            } else {
+                dequeBreadcrumbs.removeLastOccurrence(breadcrumb);
+            }
             setInProgress.remove(typeLeft);
             if (setInProgress.isEmpty()) {
                 m_tloInProgress.remove();
+            }
+            if (dequeBreadcrumbs.isEmpty()) {
+                m_tloBreadcrumbs.remove();
             }
         }
         return relation;
@@ -7300,6 +7333,7 @@ public abstract class TypeConstant
         Map<TypeConstant, Relation> mapRelations = m_mapRelations;
         if (mapRelations == null) {
             s_tloInProgress.compareAndSet(this, null, new TransientThreadLocal<>());
+            s_tloBreadcrumbs.compareAndSet(this, null, new TransientThreadLocal<>());
             mapRelations = m_mapRelations = new ConcurrentHashMap<>();
         }
         return mapRelations;
@@ -7327,14 +7361,17 @@ public abstract class TypeConstant
      * @return false iff the duck-typing is known to be impossible
      */
     protected boolean isDuckTypeAbleFrom(TypeConstant typeRight) {
-        // interfaces are duck-type able except Tuple, Function and Orderable
-        // (the later due to the fact that it has no abstract methods and
-        //  is well-known by the runtime only by its "compare" function)
-        if (!isInterfaceType() || isVirtualChild() || isTuple()) {
+        // RFC-1 DEBT: typedef was intended as the duck typing pillar; restore by unwrapping
+        // typedef via resolveTypedefs() which returns the underlying type for duck check.
+        // Exclude Tuple, Function and Orderable (no abstract methods; runtime-only "compare").
+        if (isVirtualChild() || isTuple()) {
+            return false;
+        }
+        TypeConstant typeLeft = resolveTypedefs();
+        if (!typeLeft.isInterfaceType()) {
             return false;
         }
 
-        TypeConstant typeLeft = this;
         if (typeLeft.isSingleDefiningConstant() && typeRight.isSingleDefiningConstant()
             && typeRight.getDefiningConstant().equals(typeLeft.getDefiningConstant())) {
             // we have just tested the relationship between C<T1> and C<T2> and got
@@ -7469,6 +7506,38 @@ public abstract class TypeConstant
     }
 
     /**
+     * Breadcrumb used to identify a recursive relation edge while unwinding recursive type checks.
+     */
+    private static final class RelationBreadcrumb {
+        private RelationBreadcrumb(TypeConstant typeLeft, TypeConstant typeRight) {
+            this.typeLeft  = typeLeft;
+            this.typeRight = typeRight;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (!(obj instanceof RelationBreadcrumb that)) {
+                return false;
+            }
+            return typeLeft.equals(that.typeLeft) && typeRight.equals(that.typeRight);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * typeLeft.hashCode() + typeRight.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            return "left=" + typeLeft.getValueString()
+                 + "; right=" + typeRight.getValueString();
+        }
+
+        private final TypeConstant typeLeft;
+        private final TypeConstant typeRight;
+    }
+
+    /**
      * Consumption/production options.
      */
     public enum Usage {
@@ -7536,6 +7605,13 @@ public abstract class TypeConstant
     private transient volatile TransientThreadLocal<Set<TypeConstant>> m_tloInProgress;
     private static final AtomicReferenceFieldUpdater<TypeConstant, TransientThreadLocal> s_tloInProgress =
             AtomicReferenceFieldUpdater.newUpdater(TypeConstant.class, TransientThreadLocal.class, "m_tloInProgress");
+
+    /**
+     * The stack of in-progress "isA()" relation breadcrumbs.
+     */
+    private transient volatile TransientThreadLocal<Deque<RelationBreadcrumb>> m_tloBreadcrumbs;
+    private static final AtomicReferenceFieldUpdater<TypeConstant, TransientThreadLocal> s_tloBreadcrumbs =
+            AtomicReferenceFieldUpdater.newUpdater(TypeConstant.class, TransientThreadLocal.class, "m_tloBreadcrumbs");
 
     /**
      * A cache of "consumes" responses.
