@@ -109,27 +109,6 @@ public class TypedefStructure
     }
 
     /**
-     * @return true iff this typedef declares generic type parameters
-     */
-    public boolean isParameterized() {
-        return getTypeParamCount() > 0;
-    }
-
-    /**
-     * Obtain the type parameters for this typedef in declaration order.
-     *
-     * @return the ordered list of type parameter names and constraint types
-     */
-    public List<Map.Entry<String, TypeConstant>> getTypeParamsAsList() {
-        List<PropertyStructure> listProps = getTypeParamProperties();
-        List<Map.Entry<String, TypeConstant>> list = new ArrayList<>(listProps.size());
-        for (PropertyStructure prop : listProps) {
-            list.add(Map.entry(prop.getName(), extractConstraint(prop)));
-        }
-        return list;
-    }
-
-    /**
      * Update (narrow) the constraint type for the specified generic type.
      *
      * @param sName           the generic type name
@@ -211,10 +190,6 @@ public class TypedefStructure
             }
         }
         return list;
-    }
-
-    private TypeConstant extractConstraint(PropertyStructure prop) {
-        return prop.getType().getParamType(0);
     }
 
 
