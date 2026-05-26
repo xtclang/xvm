@@ -14,6 +14,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypedefConstant;
 
@@ -146,6 +147,18 @@ public class TypedefStructure
         for (int i = 0, c = atypeParams.length; i < c; ++i) {
             PropertyConstant idFormal = listParams.get(i).getIdentityConstant();
             mapResolve.put(idFormal, atypeParams[i]);
+        }
+
+        // If the resolved type is from a typedef with type parameters, preserve the typedef identity
+        // by wrapping the typedef constant with the resolved type parameters. This ensures
+        // type.toString() returns the typedef alias form (e.g., "Series<Int>") rather than the
+        // underlying type (e.g., "MetaSeries<Int, Int>"), which is critical for JSON serialization.
+        if (typeAlias instanceof TerminalTypeConstant) {
+            // Create a ParameterizedTypeConstant that wraps the typedef constant,
+            // preserving the typedef alias name with its type parameters
+            return getConstantPool().ensureParameterizedTypeConstant(
+                    getConstantPool().ensureTerminalTypeConstant(getIdentityConstant()),
+                    atypeParams);
         }
 
         return typeAlias.resolveGenerics(getConstantPool(), GenericTypeResolver.of(mapResolve));
