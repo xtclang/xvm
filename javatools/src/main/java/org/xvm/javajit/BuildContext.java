@@ -2647,6 +2647,24 @@ public class BuildContext {
 
             if (i == 0) {
                 switch (pdRet.flavor) {
+                case Primitive: {
+                    assert isOptimized;
+                    switch (destFlavor) {
+                    case Specific, Widened:
+                        Builder.box(code, retType);
+                        break;
+
+                    case Primitive:
+                        // nothing to do
+                        break;
+
+                    default:
+                        invalid = true;
+                        break;
+                    }
+                    break;
+                }
+
                 case NullablePrimitive: {
                     assert isOptimized;
                     JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
@@ -2685,6 +2703,20 @@ public class BuildContext {
                     for (int j = 1, retIndex = 0; j < optIndexes.length; j++, retIndex++) {
                         JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
                         Builder.loadFromContext(code, retDesc.cd, retIndex);
+                    }
+
+                    switch (destFlavor) {
+                    case Specific, Widened:
+                        Builder.box(code, retType);
+                        break;
+
+                    case XvmPrimitive:
+                        // nothing to do
+                        break;
+
+                    default:
+                        invalid = true;
+                        break;
                     }
                     break;
                 }
@@ -2754,6 +2786,26 @@ public class BuildContext {
                 }
             } else {
                 switch (pdRet.flavor) {
+                case Primitive: {
+                    assert isOptimized;
+                    Builder.loadFromContext(code, cdRet, pdRet.altIndex);
+
+                    switch (destFlavor) {
+                    case Specific, Widened:
+                        Builder.box(code, retType);
+                        break;
+
+                    case Primitive:
+                        // nothing to do
+                        break;
+
+                    default:
+                        invalid = true;
+                        break;
+                    }
+                    break;
+                }
+
                 case NullablePrimitive: {
                     assert isOptimized;
                     JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
@@ -2793,6 +2845,20 @@ public class BuildContext {
                     for (int optIndex : optIndexes) {
                         JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
                         Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
+                    }
+
+                    switch (destFlavor) {
+                    case Specific, Widened:
+                        Builder.box(code, retType);
+                        break;
+
+                    case XvmPrimitive:
+                        // nothing to do
+                        break;
+
+                    default:
+                        invalid = true;
+                        break;
                     }
                     break;
                 }

@@ -1223,20 +1223,7 @@ public class MethodInfo
     }
 
     private static boolean isJitEquivalent(SignatureConstant sig1, SignatureConstant sig2) {
-        TypeConstant[] atype1  = sig1.getRawParams();
-        TypeConstant[] atype2  = sig2.getRawParams();
-        int            cParams = atype1.length;
-
-        if (atype2.length != cParams) {
-            return false;
-        }
-
-        for (int i = 0; i < cParams; i++) {
-            if (!atype1[i].equals(atype2[i])) {
-                return false;
-            }
-        }
-        return true;
+        return sig1.equals(sig2);
     }
 
     /**

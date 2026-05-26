@@ -2699,11 +2699,24 @@ public class CommonBuilder
                             break AddTransformation;
 
                         case XvmPrimitive:
-                            if (i == 0) {
-                                box(code, dstPd.type);
+                            // we need to load the rest of the primitive returns from the context
+                            // if i == 0 then the first primitive value is already on the stack
+                            boolean doReturn = i == 0;
+                            int     index    = doReturn ? i + 1 : i;
+                            while (index < dstReturns.length
+                                   && dstReturns[index].index == dstPd.index) {
+                                loadFromContext(code, dstReturns[index].cd,
+                                        dstReturns[index].altIndex);
+                                index++;
+                            }
+                            // skip over the returns we have processed from the context
+                            i = index - 1;
+
+                            box(code, dstPd.type);
+                            if (doReturn) {
                                 addReturn(code, srcPd.cd);
                             } else {
-                                System.err.println("TODO: copy XvmPrimitive " + className + "." + srcName);
+                                storeToContext(code, srcPd.cd, srcPd.altIndex);
                             }
                             break AddTransformation;
 
