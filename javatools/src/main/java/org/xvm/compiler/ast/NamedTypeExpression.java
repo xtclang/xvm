@@ -1049,7 +1049,7 @@ public class NamedTypeExpression
     private TypedefStructure getParameterizedTypedef(Constant constId) {
         if (constId instanceof TypedefConstant idTypedef &&
                 idTypedef.getComponent() instanceof TypedefStructure typedef &&
-                typedef.isParameterized()) {
+                typedef.getTypeParamCount() > 0) {
             return typedef;
         }
         return null;
