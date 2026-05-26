@@ -67,6 +67,7 @@ public class PropertyConstant
         case Package:
         case Class:
         case NativeClass:
+        case Typedef:
         case Property:
         case Method:
             break;

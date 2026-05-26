@@ -50,6 +50,11 @@ public class ParserTest {
         parse("class DependentFutureRef delegates Ref(value) {}");
     }
 
+    @Test
+    public void testGenericTypedef() {
+        parse("module Test {class Box<T> {} typedef Alias<T> as Box<T>;}");
+    }
+
     static void parse(String value) {
             parse(new Source(value));
     }
