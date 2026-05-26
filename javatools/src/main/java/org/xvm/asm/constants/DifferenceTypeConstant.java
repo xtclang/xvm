@@ -32,6 +32,16 @@ public class DifferenceTypeConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
+     * RFC-1 DEBT: Check if this is a "simple" difference where only Object is being subtracted.
+     * This is a HACK - proper implementation for general DifferenceType constants is still needed.
+     *
+     * @return true if the subtrahend is Object
+     */
+    protected boolean isObjectSubtraction() {
+        return m_constType2.equals(getConstantPool().typeObject());
+    }
+
+    /**
      * Constructor used for deserialization.
      *
      * @param pool    the ConstantPool that will contain this Constant
@@ -445,15 +455,14 @@ public class DifferenceTypeConstant
 
     @Override
     protected boolean isDuckTypeAbleFrom(TypeConstant typeRight) {
-        // RFC-1 DEBT: HACK - for now we only allow a diff to the Object (e.g. Stringable - Object)
-        return m_constType1.isInterfaceType() && m_constType2.equals(getConstantPool().typeObject());
+        // RFC-1 DEBT: HACK - only Object subtraction allowed (see isObjectSubtraction())
+        return m_constType1.isInterfaceType() && isObjectSubtraction();
     }
 
     @Override
     protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight,
                                                                Access accessLeft, List<TypeConstant> listLeft) {
         // RFC-1 DEBT: HACK - same restriction as isDuckTypeAbleFrom; only Object subtraction allowed
-        // TODO GG: proper implementation for general DifferenceType constants
         return m_constType1.isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
     }
 
