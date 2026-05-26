@@ -106,13 +106,98 @@ val npmCompile by tasks.registering(NpmTask::class) {
     outputs.dir(layout.projectDirectory.dir("out"))
 }
 
+// Optional version suffix for the VS Code extension only. Pass
+// `-Pvscode.version.suffix=alpha.20260523T120000` to package an extension
+// whose internal version is e.g. "0.4.4-alpha.20260523T120000" rather than
+// the base "0.4.4". The suffix is appended to whatever base version is in
+// package.json today (any existing `-suffix` is stripped first, so the
+// operation is idempotent across re-runs).
+//
+// Scope: this ONLY affects what gets baked into the produced .vsix's
+// package.json — the file on disk is mutated transiently during the
+// package step and restored by a `finalizedBy` task, so neither
+// composite-root tasks nor any other subproject see the modification.
+// Without the property, package.json is used as-is and the file is never
+// touched.
+//
+// Use case: producing alpha builds for VS Code Marketplace pre-release
+// publication without bumping the canonical XDK-aligned version everywhere
+// else in the repo.
+val vscodeVersionSuffix: Provider<String> = providers.gradleProperty("vscode.version.suffix")
+
+val stampVscodeVersion by tasks.registering {
+    description = "Apply -Pvscode.version.suffix to lang/vscode-extension/package.json (no-op when unset)"
+    val pkgJsonFile = layout.projectDirectory.file("package.json").asFile
+    val backupFile = layout.projectDirectory.file("package.json.version-backup").asFile
+    val suffixProvider = vscodeVersionSuffix
+    onlyIf { suffixProvider.isPresent }
+    doFirst {
+        val suffix = suffixProvider.get()
+        val originalContent = pkgJsonFile.readText()
+        // Stash the original so finalizedBy can restore it; overwrite any
+        // stale backup left by a previous interrupted run.
+        backupFile.writeText(originalContent)
+
+        val versionRegex = Regex("\"version\"\\s*:\\s*\"([^\"]+)\"")
+        val match = versionRegex.find(originalContent)
+            ?: error("package.json is missing a \"version\" field")
+        val currentVersion = match.groupValues[1]
+        // Strip any existing pre-release tag before re-applying — keeps repeat
+        // invocations from compounding (e.g. 0.4.4-alpha.X-alpha.Y).
+        val baseVersion = currentVersion.substringBefore("-")
+        val stamped = "$baseVersion-$suffix"
+        val updated = originalContent.replace(match.value, "\"version\": \"$stamped\"")
+        pkgJsonFile.writeText(updated)
+        logger.lifecycle("[vscode-extension] Stamped package.json version: $currentVersion → $stamped")
+    }
+}
+
+val restoreVscodeVersion by tasks.registering {
+    description = "Restore lang/vscode-extension/package.json from the backup written by stampVscodeVersion"
+    val pkgJsonFile = layout.projectDirectory.file("package.json").asFile
+    val backupFile = layout.projectDirectory.file("package.json.version-backup").asFile
+    val suffixProvider = vscodeVersionSuffix
+    onlyIf { suffixProvider.isPresent && backupFile.exists() }
+    doLast {
+        pkgJsonFile.writeText(backupFile.readText())
+        backupFile.delete()
+        logger.lifecycle("[vscode-extension] Restored package.json from version-stamp backup")
+    }
+}
+
 // Package the extension
 val packageExtension by tasks.registering(NpmTask::class) {
     description = "Package VS Code extension"
-    dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, generateIcons)
+    dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, generateIcons, stampVscodeVersion)
+    finalizedBy(restoreVscodeVersion)
     args.set(listOf("run", "package"))
 
-    outputs.file(layout.projectDirectory.file("xtc-language-${project.version}.vsix"))
+    // Declare the version suffix as an input so changing `-Pvscode.version.suffix`
+    // invalidates the task cache. Without this, switching the suffix would
+    // produce stale .vsix outputs because vsce package's only declared input
+    // (the source tree) hasn't changed.
+    inputs.property("vscodeVersionSuffix", vscodeVersionSuffix.orElse(""))
+}
+
+// Headless integration test: launches VS Code via @vscode/test-electron with
+// the extension loaded from the build tree, opens src/test/fixtures/hello.x,
+// and asserts that the .x file is associated with the "xtc" language. This is
+// the only way to verify the contributes.languages mapping + the runtime
+// setTextDocumentLanguage fallback short of installing the .vsix into the
+// user's profile and clicking around manually.
+//
+// Not wired into `check` by default because on headless Linux runners this
+// needs `xvfb-run` (or a similar virtual display). The intent is that local
+// developers run it explicitly, and CI opt-in via xvfb if/when desired.
+val testVscodeExtension by tasks.registering(NpmTask::class) {
+    group = "verification"
+    description = "Run headless integration tests for the VS Code extension"
+    dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, generateIcons)
+    args.set(listOf("run", "test:vscode"))
+    // Cache directory used by @vscode/test-electron to keep the downloaded
+    // VS Code build across runs; declared as input so a corrupted cache
+    // can be cleared by `./gradlew :lang:vscode-extension:clean`.
+    inputs.dir(layout.projectDirectory.dir("src/test"))
 }
 
 // Main build task - configure the existing task from base plugin
@@ -133,7 +218,40 @@ val runCode by tasks.registering(Exec::class) {
 
     val extensionPath = layout.projectDirectory.asFile.absolutePath
     val fixturesPath = layout.projectDirectory.dir("src/test/fixtures").asFile.absolutePath
+    // Capture PATH + OS at config time so the doFirst stays CC-safe (no
+    // System.getenv / System.getProperty calls inside the task action).
+    val pathEnv = providers.environmentVariable("PATH").orElse("").get()
+    val isWindows = providers.systemProperty("os.name").get().lowercase().contains("windows")
+    val candidateBinaries = if (isWindows) listOf("code.cmd", "code.exe") else listOf("code")
+
     commandLine("code", "--extensionDevelopmentPath=$extensionPath", fixturesPath)
+
+    // Preflight: fail fast with a useful message if `code` isn't on PATH,
+    // rather than letting Exec emit a cryptic `exit code 127`. The CLI is
+    // an optional VS Code install step ("Shell Command: Install 'code'
+    // command in PATH") that surprises developers who installed VS Code
+    // via the .app/.dmg without running that command palette action.
+    doFirst {
+        val found = pathEnv.split(File.pathSeparator).any { dir ->
+            candidateBinaries.any { name -> File(dir, name).canExecute() }
+        }
+        if (!found) {
+            throw GradleException(
+                """
+                |The `code` CLI is not on PATH, so this task cannot launch VS Code.
+                |
+                |How to fix: open VS Code, press Cmd+Shift+P (macOS) or Ctrl+Shift+P
+                |(Linux/Windows), and run "Shell Command: Install 'code' command in PATH".
+                |Open a new shell after it finishes so the updated PATH is picked up,
+                |then re-run this task.
+                |
+                |Alternative that needs no PATH change: open lang/vscode-extension/
+                |in VS Code and press F5 — that launches the Extension Development Host
+                |directly from the IDE, equivalent to what this task does from the CLI.
+                """.trimMargin(),
+            )
+        }
+    }
 }
 
 val clean by tasks.existing(Delete::class) {
@@ -144,5 +262,6 @@ val clean by tasks.existing(Delete::class) {
     delete(layout.projectDirectory.file("language-configuration.json"))
     delete(layout.projectDirectory.file("icons/xtc.png"))
     delete(layout.projectDirectory.file("icons/xtc-file.png"))
+    delete(layout.projectDirectory.dir(".vscode-test"))
     delete(fileTree(layout.projectDirectory) { include("*.vsix") })
 }

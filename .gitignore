@@ -65,10 +65,6 @@ bin/
 
 # Build directories (IntelliJ)
 out/
-.intellijPlatform/
-
-# Node.js
-node_modules/
 
 # Tooling and project files
 prj/

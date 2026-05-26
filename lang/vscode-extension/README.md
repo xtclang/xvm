@@ -279,6 +279,28 @@ vscode-extension/
     -PincludeBuildLang=true -PincludeBuildAttachLang=true
 ```
 
+### Testing
+
+| Task | Command | What it does |
+|------|---------|--------------|
+| **Headless integration test** | `./gradlew :lang:vscode-extension:testVscodeExtension -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Spawns a real VS Code instance via `@vscode/test-electron`, loads the extension from the build tree, opens `src/test/fixtures/hello.x`, and asserts the document's `languageId === "xtc"`. The primary regression guard for the file-association pipeline. |
+| **Interactive smoke test** | `./gradlew :lang:vscode-extension:runCode -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Launches VS Code in Extension Development Host mode with `src/test/fixtures/` open. Use this to verify highlighting, hover, completion, etc. by eye. |
+| **Compile only** | `./gradlew :lang:vscode-extension:npmCompile -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Runs `tsc -p ./`; fastest feedback when editing TypeScript. |
+
+The headless test uses `@vscode/test-electron`, which downloads a self-contained VS Code build into `lang/vscode-extension/.vscode-test/` (~210 MB, gitignored). The cache survives `gradlew clean` for the same reason `.intellijPlatform/` does — re-downloading on every clean would be punishing.
+
+**Platform behaviour of `testVscodeExtension`:**
+- **macOS / Windows**: a VS Code window appears briefly during the test (Electron has no true headless mode on these platforms) and closes when the test finishes.
+- **Linux with `DISPLAY` set**: same as above, launches against the existing display.
+- **Linux without `DISPLAY` (e.g. CI runners) and with `xvfb-run` installed**: the test wrapper auto-detects this and prepends `xvfb-run -a` so the test runs fully headless. Install via `apt-get install -y xvfb` if you need to opt in on CI.
+- **Linux without `DISPLAY` and without `xvfb-run`**: the wrapper prints a clear warning and attempts the launch anyway — it fails fast with a missing-display error rather than hiding the problem.
+
+The wrapper script (`scripts/run-vscode-tests.cjs`) does the platform detection in Node so the Gradle task definition stays platform-independent.
+
+**Tests are not auto-attached to `:check`.** The test downloads ~210 MB on first run and requires either a display or `xvfb`; both make it a poor fit for unconditional CI runs. Wire it into your CI pipeline explicitly when you want it.
+
+For end-to-end LSP / DAP / file-association regression coverage, see the **VS Code Extension** section in [`../doc/MANUAL_TEST_PLAN.md`](../doc/MANUAL_TEST_PLAN.md).
+
 ### Running from VS Code (Extension Development Host)
 
 1. Open the `lang/vscode-extension/` folder in VS Code.

@@ -1,0 +1,20 @@
+# Ignore rules scoped to the lang/ composite build.
+#
+# Lives here (not at the repo root) so that lang/ stays self-contained
+# in preparation for a future extraction into its own repository, and so
+# that the top-level .gitignore only describes patterns that are truly
+# repo-wide.
+
+# IntelliJ Platform Gradle plugin cache.
+# The intellij-platform-gradle-plugin downloads target IDE builds into
+# `lang/.intellijPlatform/` (~4 GB) for buildPlugin / verifyPlugin /
+# runIde / test. Outside `build/` on purpose: it is expensive to recreate
+# and `gradlew clean` should not wipe it. The plugin manages its own
+# lifecycle for this cache.
+.intellijPlatform/
+
+# Node module caches for any lang/ subpackage that uses Node tooling
+# (currently lang/vscode-extension and the build-time tooling in
+# lang/dsl). package-lock.json IS tracked at the subpackage level for
+# reproducible installs; node_modules/ is the install output.
+node_modules/

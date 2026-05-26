@@ -245,9 +245,9 @@ jobs:
                   echo "  📋 lang/ changed                 : ${LANG_CHANGED:-<unset>}"
                   echo "  📋 event                         : $EVENT_NAME on $REF"
                   if [ "$VALIDATE_LANG" = "true" ]; then
-                      echo "🌳 Lang validation (tree-sitter + LSP + verifyPlugin): WILL RUN"
+                      echo "🌳 Lang validation (tree-sitter + LSP + verifyPlugin + vscode-extension): WILL RUN"
                   else
-                      echo "⏭️ Lang validation (tree-sitter + LSP + verifyPlugin): WILL SKIP"
+                      echo "⏭️ Lang validation (tree-sitter + LSP + verifyPlugin + vscode-extension): WILL SKIP"
                   fi
                   echo "  📋 Validation reason  : $VALIDATE_REASON"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -485,7 +485,7 @@ jobs:
                 inspect_gradle_cache "after manual tests"
                 echo "✅ Manual tests completed"
 
-            - name: Skip Tree-sitter (no lang validation triggered)
+            - name: Skip lang validation (no lang/ changes)
               if: |
                   success() &&
                   matrix.os == 'ubuntu-latest' &&
@@ -494,7 +494,7 @@ jobs:
                   echo "⏭️ Skipping Tree-sitter validation"
                   echo "Reason: ${{ steps.publish-flags.outputs.validate-lang-reason }}"
 
-            - name: Validate Tree-sitter Grammar and LSP Adapters
+            - name: Validate lang (tree-sitter grammar, LSP adapters, VS Code extension)
               if: |
                   success() &&
                   matrix.os == 'ubuntu-latest' &&
@@ -543,6 +543,29 @@ jobs:
                   echo "📋 Running LSP tests with TREESITTER adapter (-Plsp.adapter=treesitter)..."
                   ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:lsp-server:test -Plsp.adapter=treesitter
                   echo "✅ Tree-sitter adapter tests: PASSED"
+
+                  echo ""
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                  echo "📦 VS CODE EXTENSION INTEGRATION TESTS"
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+                  # @vscode/test-electron launches a real Electron build inside
+                  # the Linux runner. Without a virtual framebuffer it has no
+                  # display to draw on, so we install xvfb if it is not already
+                  # present. ubuntu-latest images ship with it sometimes but
+                  # not always; the `command -v` guard is cheap either way.
+                  if ! command -v xvfb-run >/dev/null 2>&1; then
+                      echo "📋 Installing xvfb for headless Electron..."
+                      sudo apt-get update -qq
+                      sudo apt-get install -y -qq xvfb
+                  fi
+
+                  echo ""
+                  echo "📋 Running VS Code extension integration tests..."
+                  # scripts/run-vscode-tests.cjs auto-detects Linux + no DISPLAY
+                  # + xvfb-run on PATH and wraps the test runner accordingly.
+                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:vscode-extension:testVscodeExtension
+                  echo "✅ VS Code extension tests: PASSED"
 
                   echo ""
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

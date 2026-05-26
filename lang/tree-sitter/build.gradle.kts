@@ -173,13 +173,21 @@ val downloadTreeSitterSource by tasks.registering(Download::class) {
 
     val version = treeSitterRuntimeVersion
     val url = "https://github.com/tree-sitter/tree-sitter/archive/refs/tags/v$version.tar.gz"
-    val destPath = treeSitterSourceDir.get().file("tree-sitter-$version.tar.gz").asFile.absolutePath
+    val destFile = treeSitterSourceDir.map { it.file("tree-sitter-$version.tar.gz") }
+    val destPath = destFile.get().asFile.absolutePath
     src(url)
-    dest(treeSitterSourceDir.map { it.file("tree-sitter-$version.tar.gz") })
+    dest(destFile)
     overwrite(false)
     onlyIfModified(true)
     quiet(true)
-    onlyIf { !File(destPath).exists() }
+    // Declare the downloaded tar.gz as a Gradle output so the standard
+    // up-to-date check re-runs the task when the file goes missing on
+    // disk (e.g. partial cleanup). Without this, the previous custom
+    // onlyIf interacted with the Download plugin's internal
+    // `.lastmodified` marker and the configuration cache to silently
+    // report the task as SKIPPED while leaving destPath nonexistent,
+    // which crashed extractTreeSitterSource at FileNotFoundException.
+    outputs.file(destFile)
 
     logTimed("[tree-sitter] Downloading source v$version...\n[tree-sitter]   URL:  $url\n[tree-sitter]   Dest: $destPath") { elapsed ->
         val size = File(destPath).length().humanSize()

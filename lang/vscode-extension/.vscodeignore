@@ -5,6 +5,8 @@
 .gitignore
 src/**
 scripts/**
+out/**
+!out/extension.js
 node_modules/**
 build/**
 build.gradle.kts

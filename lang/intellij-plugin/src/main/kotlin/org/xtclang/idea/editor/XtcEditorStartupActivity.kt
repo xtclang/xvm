@@ -31,7 +31,7 @@ class XtcEditorStartupActivity : ProjectActivity {
         val semanticTokensProperty = System.getProperty("xtc.lsp.semanticTokens")
         val semanticTokensEnv = System.getenv("XTC_LSP_SEMANTIC_TOKENS")
         logger.warn(
-            "XTC editor diagnostics for project '${project.name}': " +
+            "Ecstasy editor diagnostics for project '${project.name}': " +
                 "globalColorScheme='$scheme', " +
                 "fileTypeByExtension('x')='${fileTypeForExtension.name}' (${fileTypeForExtension.javaClass.name}), " +
                 "xtc.lsp.semanticTokens='$semanticTokensProperty', " +
@@ -77,7 +77,7 @@ class XtcEditorStartupActivity : ProjectActivity {
         val fileType = virtualFile.fileType
         val language = psiFile?.language
         logger.warn(
-            "XTC file diagnostics ($phase): path='${virtualFile.path}', " +
+            "Ecstasy file diagnostics ($phase): path='${virtualFile.path}', " +
                 "fileType='${fileType.name}' (${fileType.javaClass.name}), " +
                 "psiLanguage='${language?.id ?: "<none>"}' (${language?.javaClass?.name ?: "<none>"})",
         )

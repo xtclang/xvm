@@ -848,6 +848,133 @@ at startup to confirm they're active.
 
 ---
 
+## VS Code Extension Playbook
+
+A self-contained QA runbook for verifying the **VS Code extension** against the same feature surface the IntelliJ plugin is tested against in sections 1–19. Use this whenever you ship a `.vsix` (release, snapshot, or local build) and want end-to-end confidence that nothing regressed for VS Code users. Headless regression coverage of the file-association pipeline is provided by `:lang:vscode-extension:testVscodeExtension` (see the [extension README](../vscode-extension/README.md#testing)); the playbook below covers everything that test can't, which is the interactive LSP / DAP / UI surface.
+
+### Setup
+
+```bash
+# 1. Build a fresh .vsix from this checkout
+./gradlew :lang:vscode-extension:build \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true
+
+# 2. Install (or upgrade) it
+code --install-extension lang/vscode-extension/xtc-language-0.4.4.vsix
+
+# 3. Confirm the LSP server JAR is present (built as part of step 1)
+ls lang/lsp-server/build/libs/xtc-lsp-server-*-all.jar
+
+# 4. Open a workspace with .x files (TestModule.x from section 3 is sufficient)
+code /path/to/xtc-project
+```
+
+> **Alternative — no install.** `./gradlew :lang:vscode-extension:runCode -PincludeBuildLang=true -PincludeBuildAttachLang=true` launches VS Code in Extension Development Host mode against the build tree with `src/test/fixtures/hello.x` open. Useful for verifying without touching the user profile.
+
+### Keybindings reference
+
+| Action | macOS | Linux / Windows |
+|--------|-------|-----------------|
+| Command Palette | `Cmd+Shift+P` | `Ctrl+Shift+P` |
+| Go to Definition | `F12` or `Cmd+Click` | `F12` or `Ctrl+Click` |
+| Peek Definition | `Opt+F12` | `Alt+F12` |
+| Find References | `Shift+F12` | `Shift+F12` |
+| Rename Symbol | `F2` | `F2` |
+| Quick Fix / Code Actions | `Cmd+.` | `Ctrl+.` |
+| Hover | mouse hover | mouse hover |
+| Trigger Completion | `Ctrl+Space` | `Ctrl+Space` |
+| Trigger Parameter Hints | `Cmd+Shift+Space` | `Ctrl+Shift+Space` |
+| Format Document | `Shift+Opt+F` | `Shift+Alt+F` |
+| Format Selection | `Cmd+K Cmd+F` | `Ctrl+K Ctrl+F` |
+| Outline | View → Outline | View → Outline |
+| Toggle Line Comment | `Cmd+/` | `Ctrl+/` |
+| Toggle Block Comment | `Shift+Opt+A` | `Shift+Alt+A` |
+| Fold / Unfold | `Cmd+Opt+[` / `]` | `Ctrl+Shift+[` / `]` |
+| Restart Language Server | Cmd Palette → "Ecstasy: Restart Language Server" | Cmd Palette → "Ecstasy: Restart Language Server" |
+| Show Server Output | Cmd Palette → "Ecstasy: Show Language Server Output" | same |
+
+### Pre-flight checks
+
+| # | Check | How | Pass condition |
+|---|-------|-----|----------------|
+| P1 | Extension is loaded | Extensions panel → search "Ecstasy" | "Ecstasy Language Support" listed with version `0.4.4`+ |
+| P2 | `.x` files map to Ecstasy language | Open any `.x` file | Status bar (bottom right) reads "Ecstasy" |
+| P3 | LSP server started | Status bar (bottom right) | Shows `✓ XTC` (green check). `⟳ XTC` = starting, `⚠ XTC` = error, `✗ XTC` = stopped |
+| P4 | Adapter selection visible | Output panel (`Cmd/Ctrl+Shift+U`) → "XTC Language Server" channel | `Backend: TreeSitter` (or `Backend: Mock` if `-Plsp.adapter=mock` build) |
+| P5 | Semantic tokens enabled | Same output channel | `semantic tokens ENABLED (23 types, 10 modifiers)` |
+| P6 | Java runtime detected | Same output channel at startup | `Java home: /path/to/java` (Java 25+) |
+| P7 | Snippets registered | Type `mod` then `Tab` in a `.x` file | Expands to a `module` declaration skeleton |
+
+If P3 stays `⟳`/`⚠`/`✗`, click the status bar item to restart the server. If that fails, jump to [Troubleshooting → VS Code LSP Not Starting](#vs-code-lsp-not-starting).
+
+### Feature playbook
+
+This table maps every numbered feature from sections 1–19 to the exact VS Code action and verification surface. The numeric IDs (e.g. `3.5`) match the test-case IDs in the per-feature sections above — refer there for fine-grained subtests and expected outputs.
+
+| § | Feature | VS Code action | Where to verify | Notes |
+|----|---------|---------------|-----------------|-------|
+| 1 | Syntax highlighting (TextMate) | Open `TestModule.x` | Editor view — keywords/strings/comments colored | Active even before LSP connects (P3 still pending). If absent on a `.x` file, P2 failed. |
+| 2 | Hover | Hover mouse over a symbol; or `Cmd+K Cmd+I` for keyboard | Tooltip popup | See §2 for expected content per symbol kind. |
+| 3 | Completion | Type a prefix → `Ctrl+Space` | Completion popup | Subtests 3.1–3.11 — each row in §3 applies verbatim. |
+| 4 | Go to Definition | `F12` or `Cmd+Click` on a symbol | Editor jumps to declaration | Subtests 4.1–4.10 — see §4. `Opt+F12` peeks instead of jumping. |
+| 5 | Find References | `Shift+F12` on a symbol | "References" peek view | §5 covers both same-file and cross-file expectations. |
+| 6 | Outline | View → Outline (or Cmd+Shift+O for symbols-in-file) | Outline panel populates | §6 — module / class / method hierarchy. |
+| 7 | Diagnostics | Save a `.x` file with a known syntax error | Problems panel (Cmd+Shift+M) + red squigglies | §7. The mock adapter reports fewer diagnostics than tree-sitter. |
+| 8 | Document highlight | Click on an identifier | Other same-name occurrences in file get a subtle highlight box | §8. |
+| 9 | Selection ranges | Place cursor in expression → `Shift+Opt+Cmd+→` (macOS) or `Shift+Alt+→` | Selection expands outward through AST nodes | §9. |
+| 10 | Folding ranges | Click the gutter triangles or `Cmd+Opt+[` | Block / method / class folds | §10 — verify all listed scopes fold correctly. |
+| 11 | Rename symbol | Place cursor on symbol → `F2` → type new name → Enter | All in-file references rename atomically | §11. Cross-file rename is TODO (see Future Enhancements). |
+| 12 | Code actions | Place cursor on a diagnostic → `Cmd+.` | Quick-fix menu appears | §12 — varies by adapter. |
+| 13 | Document formatting | `Shift+Opt+F` (whole) or `Cmd+K Cmd+F` (selection) | Reformatted source per `xtc.formatting.*` settings | §13. `editor.formatOnSave: true` to verify continuous formatting. |
+| 13a | On-type formatting (auto-indent) | Press Enter inside a class / method / `{}` block | Cursor indents to the correct level | §13a. Requires `editor.formatOnType: true` (default for `[xtc]`). |
+| 13b | Code style settings | Edit `xtc.formatting.indentSize`, `tabSize`, etc. in `Cmd+,` | Subsequent formatting honors the new values | §13b. The Ecstasy-specific UI section is under **Settings → Extensions → Ecstasy**. |
+| 13c | Settings → LSP round-trip | Same as 13b, then trigger a format | LSP server picks up new options via `workspace/configuration` | §13c. Check server log for `Updated formatting options: ...`. |
+| 14 | Signature help | Inside a method-call argument list, `Cmd+Shift+Space` | Parameter-list overlay | §14. |
+| 15 | Document links | URLs / file paths in comments | Cmd+Click activates them | §15. |
+| 15a | Extra source roots (`xtc.sourceRoots`) | Set the setting (string array), restart server, Cmd+Click into an imported external module | Definition jumps into the external tree | §15a subtests apply verbatim. **VS Code uses the `xtc.sourceRoots` setting key**, not env vars or system props (the env-var / sysprop paths are tested separately in §15a.1–.2). |
+| 16 | Comment toggling | `Cmd+/` (line) or `Shift+Opt+A` (block) | Lines / blocks comment-toggle | §16 in the IntelliJ-marked section also applies to VS Code via the language-configuration commentary mapping. |
+| 17 | Snippets | Type a prefix (`mod`, `cls`, `svc`, `mix`, `con`, `meth`, `run`, `if`, `ife` …) then `Tab` | Expansion appears with tab stops | §17 is IntelliJ-specific in framing, but every snippet in `lang/vscode-extension/snippets/xtc.json` is the VS Code counterpart. |
+| 18 | Code lens (run actions) | Open a module/class with a `void run()` | `Run` / `Debug` codelens above the method signature | §18. Powered by the LSP server, identical contract. |
+| 19 | Semantic tokens | Open any `.x` file with `editor.semanticHighlighting.enabled: true` (default for `[xtc]`) | Types / methods / properties / annotations colored distinctly | §19. Subtests 19.1–19.11 apply verbatim. |
+
+### VS Code-specific concerns (not covered by the IntelliJ sections)
+
+These have no IntelliJ analogue (or are surfaced differently). They round out the QA pass.
+
+| # | Concern | How to verify | Pass condition |
+|---|---------|--------------|----------------|
+| V1 | File association on stale profile | Open a workspace where `files.associations` in user `settings.json` maps `"*.x"` to `"plaintext"` or another language | Status bar still shows "Ecstasy" within ~1s; the extension's `ensureXtcLanguageAssociation` hook overrides via `setTextDocumentLanguage`. |
+| V2 | File association on tab restore | Close VS Code with a `.x` file open in a non-active tab → reopen the workspace → click the tab | Tab loads with `Ecstasy` language, not the default. Verifies the `onDidChangeActiveTextEditor` listener. |
+| V3 | Status bar lifecycle | Watch the bottom-right status item during server startup, idle, restart | Transitions `⟳ XTC` → `✓ XTC` on start; `✓` → `⟳` → `✓` on Cmd-Palette "Ecstasy: Restart Language Server"; `✗ XTC` on crash (LSP server JAR removed or JVM killed) |
+| V4 | Output channel routing | Open Output panel → dropdown | Two channels: `XTC Language Server` (LSP traffic) and `Log (Extension Host)` (extension's own `console.log`/warn/error). No errors in either under normal use. |
+| V5 | Trace setting | Set `xtc.trace.server: "verbose"` in `settings.json` → restart server | `XTC Language Server` output channel now shows every JSON-RPC frame |
+| V6 | Java discovery fallback | Unset `JAVA_HOME`, leave `xtc.java.home` empty → restart VS Code | Extension finds Java via `jdk-utils` (SDKMAN, mise, Homebrew, Gradle cache, etc.) — log line `Java home: …` at startup |
+| V7 | Java auto-download | On a machine with no Java 25+: same as V6, but `jdk-utils` finds nothing | Progress notification `Downloading Java 25 JRE for Ecstasy Language Support`; subsequent restart uses the cached JRE silently |
+| V8 | Tasks (Gradle build / test / clean / run) | In a workspace with a `build.gradle.kts`, open Terminal → Run Task… | "Build", "Test", "Clean" tasks listed under "xtc"; selecting runs `./gradlew build/test/clean` |
+| V9 | Custom task (`xtc.runModule`) | Add a `tasks.json` entry of type `"xtc"` with `moduleName: "TestModule"` → Terminal → Run Task → pick it | Runs `./gradlew runXtc -PmoduleName=TestModule` (or `xtc run TestModule` if `useGradle: false`) |
+| V10 | DAP launch from defaults | Open a `.x` with `void run()` → press `F5` | Launches "Debug Ecstasy Module"; auto-detects the module name from `module Foo {}` declaration |
+| V11 | DAP launch from `launch.json` | Add a `"type": "xtc"` config → set breakpoint → `F5` | Stops at breakpoint; variables / call stack visible in Debug panel |
+| V12 | Create-project command | Cmd Palette → "Ecstasy: Create New Project" → pick `class` / `library` / `service`, pick a folder, enter a name | Terminal labeled "XTC" opens and runs `xtc init <name> --type <kind> --dir <folder>`; new project skeleton appears |
+| V13 | Extension uninstall is clean | Uninstall via Extensions panel → reload | No leftover language association for `.x`; the LSP server JVM is terminated (visible in `jps` / Activity Monitor) |
+| V14 | `.vsix` re-install replaces cleanly | `code --install-extension xtc-language-*.vsix --force` from a session that already has the extension loaded | Extension reloads; status bar reconnects; no duplicate output channels |
+| V15 | `.x` file icon | Look at any `.x` file in the Explorer view | Custom Ecstasy file icon shown (`icons/xtc-file.png`), not the generic document glyph |
+| V16 | Marketplace icon | Extensions panel → click the extension entry | Marketplace icon `icons/xtc.png` (256×256 Ecstasy logo) renders at the top of the details page |
+
+### Headless regression test (automated)
+
+The single automated check that exercises the manifest end-to-end:
+
+```bash
+./gradlew :lang:vscode-extension:testVscodeExtension \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true
+```
+
+It downloads a pinned VS Code build into `.vscode-test/`, loads the extension from the build tree, opens `src/test/fixtures/hello.x`, and asserts `editor.document.languageId === 'xtc'`. Runs in <30 s after the first cached download.
+
+This is the only automated gate for V1/V2 (file association); everything else in this playbook is interactive. Wire `testVscodeExtension` into CI when you want a continuous canary for the manifest pipeline (needs `xvfb` on headless Linux runners — the wrapper auto-detects).
+
+---
+
 ## Future Enhancements
 
 ### 20. Linked Editing Ranges
