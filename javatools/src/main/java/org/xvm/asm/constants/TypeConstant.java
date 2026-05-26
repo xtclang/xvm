@@ -978,7 +978,10 @@ public abstract class TypeConstant
                     atype2[i] = te1.combine(pool, te2);
                 }
             }
-            return pool.ensureParameterizedTypeConstant(t2, atype2);
+            TypeConstant typeBase = t2.isRelationalType()
+                    ? t2.getSingleUnderlyingClass(true).getType()
+                    : t2;
+            return pool.ensureParameterizedTypeConstant(typeBase, atype2);
         }
         return null;
     }
