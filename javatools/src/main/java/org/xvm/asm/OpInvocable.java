@@ -345,11 +345,11 @@ public abstract class OpInvocable extends Op {
     }
 
     protected int buildInvoke(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
-        RegisterInfo regTarget    = bctx.loadArgument(code, m_nTarget);
-        ClassDesc    cdTarget     = regTarget.cd();
-        TypeConstant typeTarget   = regTarget.type();
-        TypeInfo     infoTarget   = bctx.getTypeInfo(typeTarget);
-        MethodInfo   infoMethod   = computeMethodInfo(bctx, typeTarget);
+        RegisterInfo   regTarget  = bctx.loadArgument(code, m_nTarget);
+        ClassDesc      cdTarget   = regTarget.cd();
+        TypeConstant   typeTarget = regTarget.type();
+        TypeInfo       infoTarget = bctx.getTypeInfo(typeTarget);
+        MethodInfo     infoMethod = computeMethodInfo(bctx, typeTarget);
         JitMethodDesc  jmd        = infoMethod.getJitDesc(bctx.builder, typeTarget);
         String         methodName = infoMethod.ensureJitMethodName(bctx.typeSystem);
         boolean        fOptimized = jmd.isOptimized;

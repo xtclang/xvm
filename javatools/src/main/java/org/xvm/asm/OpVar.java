@@ -232,12 +232,12 @@ public abstract class OpVar
 
             bctx.typeMatrix.declare(getAddress(), m_nVar, typeVar);
         } else {
-            super.computeTypes(bctx);
+            throw new UnsupportedOperationException(Op.toName(getOpCode()));
         }
     }
 
     /**
-     * Build an array variable.
+     * Build an array variable (for VAR_S, VAR_SN).
      *
      * @param bctx        the current build context
      * @param code        the {@link CodeBuilder} to use to generate op codes

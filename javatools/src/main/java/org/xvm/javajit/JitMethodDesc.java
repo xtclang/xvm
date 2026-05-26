@@ -48,7 +48,7 @@ public class JitMethodDesc {
     }
 
     /**
-     * @return an optimized JitParamDesc for the specified standard argument index.
+     * @return an optimized JitParamDesc for the specified standard argument index
      */
     public JitParamDesc getOptimizedParam(int argIndex) {
         return optimizedParams[getOptimizedParamIndex(argIndex)];
@@ -72,7 +72,7 @@ public class JitMethodDesc {
     }
 
     /**
-     * @return an index of the optimized JitParamDesc for the specified standard argument index.
+     * @return an index of the optimized JitParamDesc for the specified standard argument index
      */
     public int getOptimizedParamIndex(int argIndex) {
         for (int i = 0, c = optimizedParams.length; i < c; i++) {
@@ -84,14 +84,14 @@ public class JitMethodDesc {
     }
 
     /**
-     * @return an optimized JitParamDesc for the specified standard return index.
+     * @return an optimized JitParamDesc for the specified standard return index
      */
     public JitParamDesc getOptimizedReturn(int retIndex) {
         return optimizedReturns[getOptimizedReturnIndex(retIndex)];
     }
 
     /**
-     * @return an index of the optimized JitParamDesc for the specified standard return index.
+     * @return an index of the optimized JitParamDesc for the specified standard return index
      */
     public int getOptimizedReturnIndex(int retIndex) {
         for (int i = 0, c = optimizedReturns.length; i < c; i++) {
@@ -104,7 +104,7 @@ public class JitMethodDesc {
 
     /**
      * @return all the indexes of the optimized JitParamDesc for the specified standard return
-     * index.
+     *         index
      */
     public int[] getAllOptimizedReturnIndexes(int retIndex) {
         List<Integer> list = new ArrayList<>(optimizedReturns.length);

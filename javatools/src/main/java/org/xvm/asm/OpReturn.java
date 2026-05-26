@@ -130,9 +130,9 @@ public abstract class OpReturn
                 case XvmPrimitive:
                     // iSynth - the primitive values into slots in reverse order
                     for (int j = optIndexes.length - 1; j >= 0; j--) {
-                        retDesc = jmd.optimizedReturns[optIndexes[j]];
-                        slotName   = GuardAll.returnSlotName(retDesc);
-                        slotR  = bctx.scope.getSynthetic(slotName, true);
+                        retDesc  = jmd.optimizedReturns[optIndexes[j]];
+                        slotName = GuardAll.returnSlotName(retDesc);
+                        slotR    = bctx.scope.getSynthetic(slotName, true);
                         Builder.store(code, retDesc.cd, slotR);
                     }
                     break;
