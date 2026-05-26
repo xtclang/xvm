@@ -1609,7 +1609,7 @@ public class BuildContext {
                     Builder.unbox(code, typeTo);
                     break AddTransformation;
 
-                case Widened:
+                case Widened, Ref:
                     // nothing to do
                     break AddTransformation;
 
@@ -1782,12 +1782,13 @@ public class BuildContext {
             }
         }
 
-        int          slot = scope.allocateLocal(regId, TypeKind.REFERENCE);
-        JitTypeDesc  jtd  = type.getJitDesc(builder);
-        RegisterInfo ref  = new Ref(this, regId, slot, name, isVar, type, jtd.flavor);
+        int          slot  = scope.allocateLocal(regId, TypeKind.REFERENCE);
+        JitTypeDesc  jtd   = type.getJitDesc(builder);
+        RegisterInfo ref   = new Ref(this, regId, slot, name, isVar, type.getParamType(0), jtd.flavor);
+        Label        label = code.newLabel();
 
         registerInfos.put(regId, ref);
-        unassignedRegisters.put(ref, scope.startLabel);
+        unassignedRegisters.put(ref, label);
         return ref;
     }
 
