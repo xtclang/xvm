@@ -705,7 +705,7 @@ public class BuildContext {
 
                 Label ifNotDefault = code.newLabel();
                 if (flavor == PrimitiveWithDefault) {
-                    // if the "extSlot" is true, use the value from the method structure
+                    // if the "extSlot" is "true", use the value from the method structure
                     int extSlot = code.parameterSlot(extraArgs + i + 1);
                     i++; // we consumed the next param
                     code.iload(extSlot)
@@ -1010,29 +1010,29 @@ public class BuildContext {
                     constant instanceof DecoratedClassConstant) {
                 IdentityConstant constId = (IdentityConstant) constant;
                 type = constId.getValueType(pool(), null);
+            } else if (constant instanceof PropertyConstant propId) {
+                type = propId.getType();
+
+                PropertyInfo prop = typeInfo.findProperty(propId);
+                if (prop != null) {
+                    type = prop.inferImmutable(thisType);
+                }
+            } else if (isSpecialized &&
+                    constant instanceof MethodConstant methodId && methodId.isLambda()) {
+                MethodStructure   lambda = (MethodStructure) methodId.getComponent();
+                SignatureConstant sig    = lambda.resolveSignature(pool(), thisType);
+                type = lambda.isFunction()
+                        ? sig.asFunctionType()
+                        : sig.asMethodType(pool(), thisType);
             } else {
                 type = constant.getType();
-
-                if (constant instanceof PropertyConstant propId) {
-                    PropertyInfo prop = typeInfo.findProperty(propId);
-                    if (prop != null) {
-                        type = prop.inferImmutable(thisType);
-                    }
-                }
-                if (isSpecialized &&
-                        constant instanceof MethodConstant methodId && methodId.isLambda()) {
-                    MethodStructure   lambda = (MethodStructure) methodId.getComponent();
-                    SignatureConstant sig    = lambda.resolveSignature(pool(), thisType);
-                    type = lambda.isFunction()
-                            ? sig.asFunctionType()
-                            : sig.asMethodType(pool(), thisType);
-                }
 
                 // if the type is an enum value, widen it to its parent Enumeration
                 if (type.isEnumValue()) {
                     type = type.getSingleUnderlyingClass(false).getNamespace().getType();
                 }
             }
+
             return type;
         }
 
@@ -1952,7 +1952,7 @@ public class BuildContext {
 
             case NullablePrimitive:
                 switch (dstFlavor) {
-                case Specific, SpecificWithDefault, Widened, WidenedWithDefault:
+                case Specific, SpecificWithDefault, Widened, WidenedWithDefault: {
                     // loadArgument() has already loaded the value and the boolean
                     Label ifTrue = code.newLabel();
                     Label endIf  = code.newLabel();
@@ -1964,6 +1964,12 @@ public class BuildContext {
                     Builder.pop(code, srcReg.cd());
                     Builder.loadNull(code);
                     code.labelBinding(endIf);
+                    continue;
+                }
+
+                case NullablePrimitiveWithDefault:
+                    // loadArgument() has already loaded an int representing a boolean value; both
+                    // 0 and 1 will work as expected (-1 representing a default is never coming in)
                     continue;
                 }
                 break;
