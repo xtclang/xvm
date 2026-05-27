@@ -52,6 +52,7 @@ import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.ModuleLoader;
+import org.xvm.javajit.NativeNames;
 import org.xvm.javajit.NativeTypeSystem;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
@@ -1971,7 +1972,7 @@ public class CommonBuilder
                     .iload(nullCheckSlot) // reload the prop1 null check result
                     .isub().ineg(); // two booleans (ints) on the stack, subtract to get an "order"
                                     // (then negate as they are the wrong way around)
-                convertIntToOrdered(code, false);
+                convertIntToOrdered(code);
                 // to get here must be Equal
                 code.iload(nullCheckSlot) // reload the prop1 null check result
                     .ifeq(skipProp);      // if it is zero, both props were null so jump to skip
@@ -2010,7 +2011,7 @@ public class CommonBuilder
 
                 // int result on stack: if zero, this property is equal; continue to next
                 // otherwise convert to an Ordered and return
-                convertIntToOrdered(code, false);
+                convertIntToOrdered(code);
             } else if (propType.isXvmPrimitive()) {
                 // XVM primitive: call static $compare(primitives1..., primitives2...)
                 ClassDesc[]    cdParams = getJitPrimitivePairMethodParams(propType);
@@ -2028,7 +2029,7 @@ public class CommonBuilder
 
                 // int result on stack: if zero, this property is equal; continue to next
                 // otherwise convert to an Ordered and return
-                convertIntToOrdered(code, false);
+                convertIntToOrdered(code);
             } else if (propType.isA(pool().typeService())) {
                 // for services, we compare the service identity
                 buildGetIdentityHashCode(code, prop, value1Slot);
@@ -2036,7 +2037,7 @@ public class CommonBuilder
                 code.lcmp();
                 // int result on stack: if zero, this property is equal; continue to next
                 // otherwise convert to an Ordered and return
-                convertIntToOrdered(code, false);
+                convertIntToOrdered(code);
             } else if (!propType.isA(typeOrderable)) {
                 // property is an Object but not Orderable
                 // as doc'ed in Const.x, we compare the identity hash code
@@ -2045,7 +2046,7 @@ public class CommonBuilder
                 code.lcmp();
                 // int result on stack: if zero, this property is equal; continue to next
                 // otherwise convert to an Ordered and return
-                convertIntToOrdered(code, false);
+                convertIntToOrdered(code);
             } else {
                 // Object type: call static compare(Ctx, nType, T, T) -> Ordered
                 MethodInfo    cmpMethod = propType.ensureTypeInfo().getMethodBySignature(cmpSig);
@@ -2437,15 +2438,10 @@ public class CommonBuilder
     }
 
     /**
-     * If the Java primitive {@code int} on the stack is non-zero build the code to return the
-     * corresponding {@code Ordered} otherwise fall-through.
-     *
-     * @param code           the {@link CodeBuilder} to use to generate the code
-     * @param returnIfEqual  {@code true} to generate an areturn op to return Equal or {@code
-     *                       false} to just pop the result from the stack and fall through if the
-     *                       result is Equal
+     * If the Java primitive {@code int} on the stack is non-zero, build the code to return the
+     * corresponding {@code Ordered}; otherwise fall-through.
      */
-    protected void convertIntToOrdered(CodeBuilder code, boolean returnIfEqual) {
+    protected void convertIntToOrdered(CodeBuilder code) {
         ConstantPool pool      = pool();
         Label        propEqual = code.newLabel();
         Label        propLt    = code.newLabel();
@@ -2461,19 +2457,13 @@ public class CommonBuilder
         loadConstant(code, pool.valLesser());
         code.areturn();
 
-        code.labelBinding(propEqual);
-        if (returnIfEqual) {
-            loadConstant(code, pool.valEqual());
-            code.areturn();
-        } else {
-            code.pop();
-        }
+        code.labelBinding(propEqual)
+            .pop();
     }
 
     /**
      * Generate the byte codes to put the identity hash code for a property onto the stack.
      *
-     * @param code       the {@link CodeBuilder} to use to generate byte codes
      * @param prop       the {@link PropertyInfo} for the property
      * @param ownerSlot  the slot of the property owner
      */
@@ -2503,9 +2493,10 @@ public class CommonBuilder
         String dstName = dstMethod.ensureJitMethodName(typeSystem);
 
         if (srcName.equals(dstName)) {
-            // it must be a cap with a covariant return;
-            // at the moment SignatureConstant.ensureJitMethodName() ignore the return values,
-            // but we may need to change that...
+            // it must be a covariant cap for a virtual constructor or a method manually
+            // implemented natively
+            assert srcMethod.containsVirtualConstructor() ||
+                NativeNames.findReservedJitName(srcMethod.getIdentity()) != null;
             return;
         }
 
@@ -3196,9 +3187,10 @@ public class CommonBuilder
         "List",
         "TerminalConsole",
 //        "Dec32", "Dec64", // need to change to SingleSlot
-//        "UInt",     // depends on GP_DIVREM
-//        "FPNumber", // depends on Bit support
-//        "Int",      // depends on "switch" implementation
+//        "UInt",           // depends on GP_DIVREM
+//        "FPNumber",       // depends on Bit support
+//        "Int",            // depends on "switch" implementation
+//        "Collection"      // needs improved formal type resolution
     };
 
     private final static String[] CLASS_BLACK_LIST = new String[] {

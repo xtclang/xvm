@@ -1201,17 +1201,23 @@ public class MethodInfo
      */
     public static MethodConstant getJitIdentity(MethodBody[] aBody) {
         // for methods   -  get the lowest in the chain with the same signature; ignore implicits
+        //                  (unless it's the obly body) and caps
         // for functions -  get the highest in the chain
         MethodConstant    id  = null;
         SignatureConstant sig = null;
         for (MethodBody body : aBody) {
+            Implementation impl = body.getImplementation();
+            if (impl == Implementation.Capped) {
+                // the cap is never the JIT identity; go lower
+                continue;
+            }
             if (id == null) {
                 id = body.getIdentity();
                 if (body.isFunction() || body.isVirtualConstructor()) {
                     break;
                 }
                 sig = body.getSignature();
-            } else if (body.getImplementation() == Implementation.Implicit) {
+            } else if (impl == Implementation.Implicit) {
                 // ignore
             } else if (isJitEquivalent(body.getSignature(), sig)) {
                 id = body.getIdentity();
