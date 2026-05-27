@@ -225,7 +225,7 @@ public abstract class OpVar
                     bctx.getTypeConstant(m_nType);
 
                 case OP_VAR_D, OP_VAR_DN ->
-                    bctx.getConstant(m_nType, TypeConstant.class).getParamType(0);
+                    bctx.getTypeConstant(m_nType).getParamType(0);
 
                 default -> throw new UnsupportedOperationException(Op.toName(getOpCode()));
             };
