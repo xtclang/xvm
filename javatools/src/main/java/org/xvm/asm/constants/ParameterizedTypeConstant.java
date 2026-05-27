@@ -28,6 +28,7 @@ import org.xvm.asm.Register;
 import org.xvm.util.Hash;
 import org.xvm.util.Severity;
 
+import static org.xvm.util.Handy.cow;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
@@ -252,7 +253,6 @@ public class ParameterizedTypeConstant
     public TypeConstant resolveTypedefs() {
         TypeConstant constOriginal = m_constType;
         TypeConstant constResolved = constOriginal.resolveTypedefs();
-        boolean      fDiff         = constOriginal != constResolved;
 
         if (constResolved.isParamsSpecified()) {
             // TODO: soft assert; needs to be removed
@@ -263,20 +263,12 @@ public class ParameterizedTypeConstant
         TypeConstant[] aconstOriginal = m_atypeParams;
         TypeConstant[] aconstResolved = aconstOriginal;
         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
-            TypeConstant constParamOriginal = aconstOriginal[i];
-            TypeConstant constParamResolved = constParamOriginal.resolveTypedefs();
-            if (constParamOriginal != constParamResolved) {
-                if (aconstResolved == aconstOriginal) {
-                    aconstResolved = aconstOriginal.clone();
-                }
-                aconstResolved[i] = constParamResolved;
-                fDiff = true;
-            }
+            aconstResolved = cow(aconstOriginal, aconstResolved, i,
+                    aconstOriginal[i].resolveTypedefs());
         }
-
-        return fDiff
-                ? getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved)
-                : this;
+        return constResolved == constOriginal && aconstResolved == aconstOriginal
+                ? this
+                : getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved);
     }
 
     @Override
@@ -300,7 +292,6 @@ public class ParameterizedTypeConstant
 
         TypeConstant constOriginal = m_constType;
         TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
-        boolean      fDiff         = constOriginal != constResolved;
 
         assert !constResolved.isParamsSpecified();
 
@@ -315,18 +306,14 @@ public class ParameterizedTypeConstant
                     assert c == 1 && constParamResolved.isTuple();
                     aconstResolved = constParamResolved.getParamTypesArray();
                 } else {
-                    if (aconstResolved == aconstOriginal) {
-                        aconstResolved = aconstOriginal.clone();
-                    }
-                    aconstResolved[i] = constParamResolved;
+                    aconstResolved = cow(aconstOriginal, aconstResolved, i, constParamResolved);
                 }
-                fDiff = true;
             }
         }
 
-        TypeConstant typeResolved = fDiff
-            ? pool.ensureParameterizedTypeConstant(constResolved, aconstResolved)
-            : this;
+        TypeConstant typeResolved = constResolved == constOriginal && aconstResolved == aconstOriginal
+                ? this
+                : pool.ensureParameterizedTypeConstant(constResolved, aconstResolved);
 
         if (fCache) {
             long stamp = m_lockPrev.tryWriteLock();
@@ -343,27 +330,19 @@ public class ParameterizedTypeConstant
     public TypeConstant resolveConstraints(boolean fPendingOnly) {
         TypeConstant constOriginal = m_constType;
         TypeConstant constResolved = constOriginal.resolveConstraints(fPendingOnly);
-        boolean      fDiff         = constOriginal != constResolved;
 
         assert !constResolved.isParamsSpecified();
 
         TypeConstant[] aconstOriginal = m_atypeParams;
         TypeConstant[] aconstResolved = aconstOriginal;
         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
-            TypeConstant constParamOriginal = aconstOriginal[i];
-            TypeConstant constParamResolved = constParamOriginal.resolveConstraints(fPendingOnly);
-            if (constParamOriginal != constParamResolved) {
-                if (aconstResolved == aconstOriginal) {
-                    aconstResolved = aconstOriginal.clone();
-                }
-                aconstResolved[i] = constParamResolved;
-                fDiff = true;
-            }
+            aconstResolved = cow(aconstOriginal, aconstResolved, i,
+                    aconstOriginal[i].resolveConstraints(fPendingOnly));
         }
 
-        return fDiff
-                ? getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved)
-                : this;
+        return constResolved == constOriginal && aconstResolved == aconstOriginal
+                ? this
+                : getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved);
     }
 
     @Override
@@ -375,14 +354,8 @@ public class ParameterizedTypeConstant
         TypeConstant[] aconstOriginal = m_atypeParams;
         TypeConstant[] aconstResolved = aconstOriginal;
         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
-            TypeConstant constParamOriginal = aconstOriginal[i];
-            TypeConstant constParamResolved = constParamOriginal.resolveDynamicConstraints(register);
-            if (constParamOriginal != constParamResolved) {
-                if (aconstResolved == aconstOriginal) {
-                    aconstResolved = aconstOriginal.clone();
-                }
-                aconstResolved[i] = constParamResolved;
-            }
+            aconstResolved = cow(aconstOriginal, aconstResolved, i,
+                    aconstOriginal[i].resolveDynamicConstraints(register));
         }
 
         return aconstResolved == aconstOriginal
@@ -548,25 +521,16 @@ public class ParameterizedTypeConstant
 
         if (constOriginal == constResolved) {
             // scenarios 4, 5
-            boolean        fDiff          = false;
             TypeConstant[] aconstOriginal = m_atypeParams;
             TypeConstant[] aconstResolved = aconstOriginal;
             for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
-                TypeConstant constParamOriginal = aconstOriginal[i];
-                TypeConstant constParamResolved = constParamOriginal.
-                            resolveAutoNarrowing(pool, false, typeTarget, idCtx);
-                if (constParamOriginal != constParamResolved) {
-                    if (aconstResolved == aconstOriginal) {
-                        aconstResolved = aconstOriginal.clone();
-                    }
-                    aconstResolved[i] = constParamResolved;
-                    fDiff = true;
-                }
+                aconstResolved = cow(aconstOriginal, aconstResolved, i,
+                    aconstOriginal[i].resolveAutoNarrowing(pool, false, typeTarget, idCtx));
             }
 
-            return fDiff
-                    ? pool.ensureParameterizedTypeConstant(constOriginal, aconstResolved)
-                    : this;
+            return aconstResolved == aconstOriginal
+                    ? this
+                    : pool.ensureParameterizedTypeConstant(constOriginal, aconstResolved);
         } else {
             if (constResolved.isParamsSpecified()) {
                 // scenario 3b
@@ -581,15 +545,8 @@ public class ParameterizedTypeConstant
                         TypeConstant[] aconstOriginal = m_atypeParams;
                         TypeConstant[] aconstResolved = aconstOriginal;
                         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
-                            TypeConstant constParamOriginal = aconstOriginal[i];
-                            TypeConstant constParamResolved = constParamOriginal.
-                                    resolveAutoNarrowing(pool, false, typeTarget, idCtx);
-                            if (constParamOriginal != constParamResolved) {
-                                if (aconstResolved == aconstOriginal) {
-                                    aconstResolved = aconstOriginal.clone();
-                                }
-                                aconstResolved[i] = constParamResolved;
-                            }
+                            aconstResolved = cow(aconstOriginal, aconstResolved, i,
+                                    aconstOriginal[i].resolveAutoNarrowing(pool, false, typeTarget, idCtx));
                         }
                         return pool.ensureParameterizedTypeConstant(constResolved, aconstResolved);
                     }
@@ -697,30 +654,22 @@ public class ParameterizedTypeConstant
     @Override
     public TypeConstant resolvePending(ConstantPool pool, TypeConstant typeActual) {
         if (typeActual instanceof ParameterizedTypeConstant that) {
-            TypeConstant   constUnderlyingThis = this.m_constType;
-            TypeConstant   constUnderlyingThat = that.m_constType;
+            TypeConstant constUnderlyingThis = this.m_constType;
+            TypeConstant constUnderlyingThat = that.m_constType;
             if (constUnderlyingThat.isA(constUnderlyingThis)) {
-                TypeConstant[] aconstThis = this.m_atypeParams;
-                TypeConstant[] aconstThat = that.m_atypeParams;
+                TypeConstant[] aconstThis     = this.m_atypeParams;
+                TypeConstant[] aconstThat     = that.m_atypeParams;
                 TypeConstant[] aconstResolved = aconstThis;
 
                 for (int i = 0, c = Math.min(aconstThis.length, aconstThat.length); i < c; ++i) {
-                    TypeConstant constParamOriginal = aconstThis[i];
-                    TypeConstant constParamResolved = constParamOriginal.
-                            resolvePending(pool, aconstThat[i]);
-                    if (constParamOriginal != constParamResolved) {
-                        if (aconstResolved == aconstThis) {
-                            aconstResolved = aconstThis.clone();
-                        }
-                        aconstResolved[i] = constParamResolved;
-                    }
+                    aconstResolved = cow(aconstThis, aconstResolved, i,
+                            aconstThis[i].resolvePending(pool, aconstThat[i]));
                 }
 
                 return aconstResolved == aconstThis
                         ? this
                         : getConstantPool().ensureParameterizedTypeConstant(
                                 constUnderlyingThis, aconstResolved);
-
             }
         }
 
@@ -752,24 +701,17 @@ public class ParameterizedTypeConstant
 
     @Override
     public TypeConstant widenEnumValueTypes() {
-        TypeConstant   constUnderlying = m_constType;
         TypeConstant[] aconstOriginal  = m_atypeParams;
         TypeConstant[] aconstResolved  = aconstOriginal;
 
         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
-            TypeConstant constParamOriginal = aconstOriginal[i];
-            TypeConstant constParamResolved = constParamOriginal.widenEnumValueTypes();
-            if (constParamOriginal != constParamResolved) {
-                if (aconstResolved == aconstOriginal) {
-                    aconstResolved = aconstOriginal.clone();
-                }
-                aconstResolved[i] = constParamResolved;
-            }
+            aconstResolved = cow(aconstOriginal, aconstResolved, i,
+                    aconstOriginal[i].widenEnumValueTypes());
         }
 
         return aconstResolved == aconstOriginal
                 ? this
-                : getConstantPool().ensureParameterizedTypeConstant(constUnderlying, aconstResolved);
+                : getConstantPool().ensureParameterizedTypeConstant(m_constType, aconstResolved);
     }
 
 
@@ -902,7 +844,6 @@ public class ParameterizedTypeConstant
         }
 
         TypeConstant typeResolved = typeOrig.getCanonicalJitType();
-        boolean      fDiff        = typeResolved != typeOrig;
         boolean      fTrivial     = true;
 
         TypeConstant[] aconstOriginal  = m_atypeParams;
@@ -910,14 +851,8 @@ public class ParameterizedTypeConstant
         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
             TypeConstant typeParamOriginal = aconstOriginal[i];
             if (typeParamOriginal.isJitPrimitive()) {
-                TypeConstant typeParamResolved = typeParamOriginal.getCanonicalJitType();
-                if (!typeParamResolved.equals(typeParamOriginal)) {
-                    if (!fDiff) {
-                        aconstCanonical = aconstCanonical.clone();
-                        fDiff    = true;
-                    }
-                    aconstCanonical[i] = typeParamResolved;
-                }
+                aconstCanonical = cow(aconstOriginal, aconstCanonical, i,
+                        aconstOriginal[i].getCanonicalJitType());
                 fTrivial = false;
             } else {
                 var            entryParam     = listTypeParams.get(i);
@@ -926,13 +861,9 @@ public class ParameterizedTypeConstant
 
                 // drop the actual type down to the constraint
                 if (typeConstraint.isFormalTypeSequence()) {
-                    aconstCanonical[i] = pool.typeObject();
+                    aconstCanonical = cow(aconstOriginal, aconstCanonical, i, pool.typeObject());
                 } else if (!typeConstraint.equals(typeParamOriginal)) {
-                    if (!fDiff) {
-                        aconstCanonical = aconstCanonical.clone();
-                        fDiff    = true;
-                    }
-                    aconstCanonical[i] = typeConstraint;
+                    aconstCanonical = cow(aconstOriginal, aconstCanonical, i, typeConstraint);
 
                     if (!typeConstraint.equals(pool.typeObject())) {
                         fTrivial = false;
@@ -950,13 +881,7 @@ public class ParameterizedTypeConstant
                         // indicates a non-constrained formal type
                         typeContrib = pool.typeObject();
                     }
-                    if (!typeContrib.equals(typeConstraint)) {
-                        if (!fDiff) {
-                            aconstCanonical = aconstCanonical.clone();
-                            fDiff    = true;
-                        }
-                    aconstCanonical[i] = typeContrib;
-                    }
+                    aconstCanonical = cow(aconstOriginal, aconstCanonical, i, typeContrib);
 
                     if (!typeContrib.equals(pool.typeObject())) {
                         fTrivial = false;
@@ -967,28 +892,20 @@ public class ParameterizedTypeConstant
 
         return m_typeCanonical = fTrivial
                 ? typeResolved // TerminalTypeConstant
-                : fDiff
-                    ? pool.ensureParameterizedTypeConstant(typeResolved, aconstCanonical)
-                    : this;
+                : typeResolved == typeOrig && aconstCanonical == aconstOriginal
+                    ? this
+                    : pool.ensureParameterizedTypeConstant(typeResolved, aconstCanonical);
     }
 
     /**
      * @return an array of converted canonical types; null if no changes were made
      */
     private TypeConstant[] toCanonicalTypes(TypeConstant[] atype) {
-        boolean fDiff = false;
+        TypeConstant[] atypeCanonical = atype;
         for (int i = 0, c = atype.length; i < c; ++i) {
-            TypeConstant typeOrig  = atype[i];
-            TypeConstant typeCanon = typeOrig.getCanonicalJitType();
-            if (!typeCanon.equals(typeOrig)) {
-                if (!fDiff) {
-                    atype = atype.clone();
-                    fDiff = true;
-                }
-                atype[i] = typeCanon;
-            }
+            atypeCanonical = cow(atype, atypeCanonical, i, atype[i].getCanonicalJitType());
         }
-        return fDiff ? atype : null;
+        return atypeCanonical;
     }
 
     // ----- Constant methods ----------------------------------------------------------------------
@@ -1164,7 +1081,6 @@ public class ParameterizedTypeConstant
 
         return false;
     }
-
 
     // ----- Object methods ------------------------------------------------------------------------
 

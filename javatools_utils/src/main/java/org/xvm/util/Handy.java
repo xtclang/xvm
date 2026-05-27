@@ -48,7 +48,7 @@ public final class Handy {
      *
      * @return the hexadecimal representation of the passed nibble
      */
-    public static char nibbleToChar(final int n) {
+    public static char nibbleToChar(int n) {
         int nibble = n & 0xf;
         return (nibble <= 9)
                 ? (char) ('0' + nibble)
@@ -64,7 +64,7 @@ public final class Handy {
      *
      * @return the StringBuilder
      */
-    public static StringBuilder appendByteAsHex(final StringBuilder sb, final int n) {
+    public static StringBuilder appendByteAsHex(StringBuilder sb, int n) {
         return sb.append(nibbleToChar(n >> 4))
                  .append(nibbleToChar(n));
     }
@@ -76,7 +76,7 @@ public final class Handy {
      *
      * @return a String representation of the byte
      */
-    public static String byteToHexString(final int n) {
+    public static String byteToHexString(int n) {
         return appendByteAsHex(new StringBuilder(4).append("0x"), n).toString();
     }
 
@@ -90,7 +90,7 @@ public final class Handy {
      *
      * @return the StringBuilder
      */
-    public static StringBuilder appendByteArrayAsHex(final StringBuilder sb, final byte[] ab, final int of, final int cb) {
+    public static StringBuilder appendByteArrayAsHex(StringBuilder sb, byte[] ab, int of, int cb) {
         sb.ensureCapacity(sb.length() + cb * 2);
         int offset = of;
         int count = cb;
@@ -110,7 +110,7 @@ public final class Handy {
      *
      * @return the StringBuilder
      */
-    public static StringBuilder appendByteArrayAsHex(final StringBuilder sb, final byte[] ab) {
+    public static StringBuilder appendByteArrayAsHex(StringBuilder sb, byte[] ab) {
         return appendByteArrayAsHex(sb, ab, 0, ab.length);
     }
 
@@ -123,7 +123,7 @@ public final class Handy {
      *
      * @return a String representation of the byte array
      */
-    public static String byteArrayToHexString(final byte[] ab, final int of, final int cb) {
+    public static String byteArrayToHexString(byte[] ab, int of, int cb) {
         return appendByteArrayAsHex(new StringBuilder(2 + cb * 2).append("0x"),
                 ab, of, cb).toString();
     }
@@ -135,7 +135,7 @@ public final class Handy {
      *
      * @return a String representation of the byte array
      */
-    public static String byteArrayToHexString(final byte[] ab) {
+    public static String byteArrayToHexString(byte[] ab) {
         return byteArrayToHexString(ab, 0, ab.length);
     }
 
@@ -146,7 +146,7 @@ public final class Handy {
      *
      * @return a byte array
      */
-    public static byte[] hexStringToByteArray(final String s) {
+    public static byte[] hexStringToByteArray(String s) {
         int ofch = 0;
         int cch  = s.length();
         int ofb  = 0;
@@ -158,7 +158,7 @@ public final class Handy {
             --cb;
         }
 
-        final byte[] ab = new byte[cb];
+        byte[] ab = new byte[cb];
 
         // handle the case where the first nibble is an implied (missing) '0'
         if ((cch & 0x1) != 0) {
@@ -186,7 +186,7 @@ public final class Handy {
      *
      * @return a String containing the hex dump
      */
-    public static String byteArrayToHexDump(final byte[] ab, final int of, final int cb, final int cBytesPerLine) {
+    public static String byteArrayToHexDump(byte[] ab, int of, int cb, int cBytesPerLine) {
         assert ab != null;
         assert of >= 0 && cb >= 0 &&  of + cb <= ab.length;
         assert cBytesPerLine > 0;
@@ -195,20 +195,20 @@ public final class Handy {
         int count = cb;
 
         // first figure out how many digits it will take to show the address
-        final int cchAddr = countHexDigits(offset + count) + 1 & ~0x01;
+        int cchAddr = countHexDigits(offset + count) + 1 & ~0x01;
 
         // format is 12F0: 00 12 32 A0 ????\n
         // line length is addressLen + 4*cbPerLine + 3
-        final int    cch = cchAddr + cBytesPerLine * 4 + 3;
-        final char[] ach = new char[cch];
+        int    cch = cchAddr + cBytesPerLine * 4 + 3;
+        char[] ach = new char[cch];
         Arrays.fill(ach, ' ');
         ach[cchAddr] = ':';
         ach[cch-1]   = '\n';
 
-        final int           cLines = Math.max((count + cBytesPerLine - 1) / cBytesPerLine, 1);
-        final StringBuilder sb     = new StringBuilder(cLines * cch);
-        final int           ofHex  = cchAddr + 2;
-        final int           ofChar = ofHex + cBytesPerLine * 3;
+        int           cLines = Math.max((count + cBytesPerLine - 1) / cBytesPerLine, 1);
+        StringBuilder sb     = new StringBuilder(cLines * cch);
+        int           ofHex  = cchAddr + 2;
+        int           ofChar = ofHex + cBytesPerLine * 3;
 
         for (int iLine = 0; iLine < cLines; ++iLine) {
             // format the address
@@ -246,7 +246,7 @@ public final class Handy {
      *
      * @return a String containing the hex dump
      */
-    public static String byteArrayToHexDump(final byte[] ab, final int cBytesPerLine) {
+    public static String byteArrayToHexDump(byte[] ab, int cBytesPerLine) {
         return byteArrayToHexDump(ab, 0, ab.length, cBytesPerLine);
     }
 
@@ -258,7 +258,7 @@ public final class Handy {
      *
      * @return the long value
      */
-    public static long byteArrayToLong(final byte[] ab, final int of) {
+    public static long byteArrayToLong(byte[] ab, int of) {
         int offset = of;
         return   ((long) (ab[offset++])        << 56)
                + ((long) (ab[offset++] & 0xFF) << 48)
@@ -277,7 +277,7 @@ public final class Handy {
      *
      * @return the byte array
      */
-    public static byte[] toByteArray(final long l) {
+    public static byte[] toByteArray(long l) {
         return new byte[] {
             (byte) (l >> 56),
             (byte) (l >> 48),
@@ -297,7 +297,7 @@ public final class Handy {
      * @param ab  the byte array to copy into
      * @param of  the byte array offset to write the long value at
      */
-    public static void toByteArray(final long l, final byte[] ab, final int of) {
+    public static void toByteArray(long l, byte[] ab, int of) {
         int offset = of;
         ab[offset++] = (byte) (l >> 56);
         ab[offset++] = (byte) (l >> 48);
@@ -317,7 +317,7 @@ public final class Handy {
      *
      * @return the number of hex digits required to render the int value
      */
-    public static int countHexDigits(final int n) {
+    public static int countHexDigits(int n) {
         return Math.max((32 - Integer.numberOfLeadingZeros(n) + 3) / 4, 1);
     }
 
@@ -331,7 +331,7 @@ public final class Handy {
      *
      * @return the StringBuilder
      */
-    public static StringBuilder appendIntAsHex(final StringBuilder sb, final int n, final int cch) {
+    public static StringBuilder appendIntAsHex(StringBuilder sb, int n, int cch) {
         assert cch >= 0 && cch <= 8;
         for (int cBits = (cch-1) * 4; cBits >= 0; cBits -= 4) {
             sb.append(nibbleToChar(n >> cBits));
@@ -347,7 +347,7 @@ public final class Handy {
      *
      * @return the StringBuilder
      */
-    public static StringBuilder appendIntAsHex(final StringBuilder sb, final int n) {
+    public static StringBuilder appendIntAsHex(StringBuilder sb, int n) {
         return appendIntAsHex(sb, n, 8);
     }
 
@@ -358,7 +358,7 @@ public final class Handy {
      *
      * @return a hexadecimal String representation of the value
      */
-    public static String intToHexString(final int n) {
+    public static String intToHexString(int n) {
         return appendIntAsHex(new StringBuilder(10).append("0x"), n).toString();
     }
 
@@ -370,7 +370,7 @@ public final class Handy {
      *
      * @return the number of hex digits required to render the long value
      */
-    public static int countHexDigits(final long n) {
+    public static int countHexDigits(long n) {
         return Math.max((64 - Long.numberOfLeadingZeros(n) + 3) / 4, 1);
     }
 
@@ -384,7 +384,7 @@ public final class Handy {
      *
      * @return the StringBuilder
      */
-    public static StringBuilder appendLongAsHex(final StringBuilder sb, final long n, final int cch) {
+    public static StringBuilder appendLongAsHex(StringBuilder sb, long n, int cch) {
         assert cch >= 0 && cch <= 16;
         for (int cBits = (cch-1) * 4; cBits >= 0; cBits -= 4) {
             sb.append(nibbleToChar((int) (n >> cBits)));
@@ -400,7 +400,7 @@ public final class Handy {
      *
      * @return the StringBuilder
      */
-    public static StringBuilder appendLongAsHex(final StringBuilder sb, final long n) {
+    public static StringBuilder appendLongAsHex(StringBuilder sb, long n) {
         return appendLongAsHex(sb, n, 16);
     }
 
@@ -412,7 +412,7 @@ public final class Handy {
      *
      * @return a hexadecimal String representation of the value
      */
-    public static String longToHexString(final long n) {
+    public static String longToHexString(long n) {
         return appendLongAsHex(new StringBuilder(18).append("0x"), n).toString();
     }
 
@@ -425,7 +425,7 @@ public final class Handy {
      *
      * @return the offset of the first character after the two hex digits
      */
-    public static int renderByteToHex(final int n, final char[] ach, final int of) {
+    public static int renderByteToHex(int n, char[] ach, int of) {
         ach[of  ] = nibbleToChar(n >> 4);
         ach[of+1] = nibbleToChar(n);
         return of + 2;
@@ -442,7 +442,7 @@ public final class Handy {
      *
      * @return the offset of the first character after the last hex digit
      */
-    public static int renderIntToHex(final int n, final char[] ach, final int of, final int cch) {
+    public static int renderIntToHex(int n, char[] ach, int of, int cch) {
         int value = n;
         for (int i = 0; i < cch; ++i) {
             ach[of+cch-i-1] = nibbleToChar(value);
@@ -462,7 +462,7 @@ public final class Handy {
      *
      * @return the offset of the first character after the last hex digit
      */
-    public static int renderLongToHex(final long n, final char[] ach, final int of, final int cch) {
+    public static int renderLongToHex(long n, char[] ach, int of, int cch) {
         long value = n;
         for (int i = 0; i < cch; ++i) {
             ach[of+cch-i-1] = nibbleToChar((int) value);
@@ -478,7 +478,7 @@ public final class Handy {
      *
      * @return true iff the character is a decimal digit
      */
-    public static boolean isDigit(final char ch) {
+    public static boolean isDigit(char ch) {
         return ch >= '0' & ch <= '9';
     }
 
@@ -489,7 +489,7 @@ public final class Handy {
      *
      * @return the integer value of the specified decimal digit
      */
-    public static int digitValue(final char ch) {
+    public static int digitValue(char ch) {
         assert isDigit(ch);
         return ch - '0';
     }
@@ -501,7 +501,7 @@ public final class Handy {
      *
      * @return true iff the character is a hexadecimal digit
      */
-    public static boolean isHexit(final char ch) {
+    public static boolean isHexit(char ch) {
         // hexits in the Unicode range appear in this order:
         //   {..., 0, ..., 9, ..., A, ..., F, ..., a, ..., f, ...}
         // so a hexit has to be in the range 0..f, and the entire character
@@ -520,7 +520,7 @@ public final class Handy {
      *
      * @return the integer value of the specified hexadecimal digit
      */
-    public static int hexitValue(final char ch) {
+    public static int hexitValue(char ch) {
         assert isHexit(ch);
         return ch <= '9' ? ch - '0' : (ch | 0x20) - ('a' - 0xa);
     }
@@ -533,7 +533,7 @@ public final class Handy {
      *
      * @return true iff the character is an ASCII letter
      */
-    public static boolean isAsciiLetter(final char ch) {
+    public static boolean isAsciiLetter(char ch) {
         // ASCII letters in the Unicode range appear in this order:
         //   {..., A, ..., Z, ..., a, ..., z, ...}
         return ch >= 'A' & ch <= 'z' & ((1L << ('z' - ch)) &
@@ -554,7 +554,7 @@ public final class Handy {
      *
      * @return the number of occurrences of the character
      */
-    public static int countChar(final String s, final char ch) {
+    public static int countChar(String s, char ch) {
         int c  = 0;
         int of = s.indexOf(ch);
         while (of >= 0) {
@@ -573,7 +573,7 @@ public final class Handy {
      *
      * @return the array of Strings parsed from the passed String
      */
-    public static String[] parseDelimitedString(final String s, final char chDelim) {
+    public static String[] parseDelimitedString(String s, char chDelim) {
         if (s == null) {
             return null;
         }
@@ -607,7 +607,7 @@ public final class Handy {
      *
      * @return a string containing the specified number of the specified character
      */
-    public static String dup(final char ch, final int cch) {
+    public static String dup(char ch, int cch) {
         return String.valueOf(ch).repeat(cch);
     }
 
@@ -619,7 +619,7 @@ public final class Handy {
      *
      * @return the indented String
      */
-    public static String indentLines(final String sText, final String sIndent) {
+    public static String indentLines(String sText, String sIndent) {
         int cchOld = sText.length();
         if (cchOld == 0) {
             return "";
@@ -656,7 +656,7 @@ public final class Handy {
      *
      * @return true iff the character should be escaped in order to be displayed
      */
-    public static boolean isCharEscaped(final char ch) {
+    public static boolean isCharEscaped(char ch) {
         if (ch < 0x80) {
             return ch < 0x20 || ch == '\'' || ch == '\"' || ch == '\\' || ch == 0x7F;
         } else {
@@ -672,7 +672,7 @@ public final class Handy {
      *
      * @return the StringBuilder
      */
-    public static StringBuilder appendChar(final StringBuilder sb, final char ch) {
+    public static StringBuilder appendChar(StringBuilder sb, char ch) {
         if (isCharEscaped(ch)) {
             return switch (ch) {
                 case '\\' -> sb.append("\\\\");
@@ -702,7 +702,7 @@ public final class Handy {
      *
      * @return a string showing the specified character, escaped if necessary
      */
-    public static String quotedChar(final char ch) {
+    public static String quotedChar(char ch) {
         return appendChar(new StringBuilder(9).append('\''), ch).append('\'').toString();
     }
 
@@ -714,7 +714,7 @@ public final class Handy {
      *
      * @return the StringBuilder
      */
-    public static StringBuilder appendString(final StringBuilder sb, final String s) {
+    public static StringBuilder appendString(StringBuilder sb, String s) {
         for (int of = 0, cch = s.length(); of < cch; ++of) {
             appendChar(sb, s.charAt(of));
         }
@@ -729,16 +729,16 @@ public final class Handy {
      * @return a String showing the quoted version of the passed String,
      *         escaping characters if and when necessary
      */
-    public static String quotedString(final String s) {
+    public static String quotedString(String s) {
         return appendString(new StringBuilder(s.length() + 2).append('\"'), s).append(
                 '\"').toString();
     }
 
-    public static String quoted(final Object o) {
+    public static String quoted(Object o) {
         return quotedString(Objects.toString(o));
     }
 
-    public static String unquoted(final Object o) {
+    public static String unquoted(Object o) {
         return unquotedString(Objects.toString(o));
     }
 
@@ -750,7 +750,7 @@ public final class Handy {
      *
      * @return the offset of the closing quote, or -1 if no closing quote could be found
      */
-    public static int closingQuote(final String s, final int of) {
+    public static int closingQuote(String s, int of) {
         int offset = of;
         if (s == null || offset < 0) {
             throw new IllegalArgumentException();
@@ -823,7 +823,7 @@ public final class Handy {
      *
      * @return the String value that was present in the quoted String,
      */
-    public static String unquotedString(final String s) {
+    public static String unquotedString(String s) {
         int cch = s.length();
         if (cch < 2 || s.charAt(0) != s.charAt(cch-1) || "\"'`".indexOf(s.charAt(0)) < 0) {
             // it's not a quoted string
@@ -897,7 +897,7 @@ public final class Handy {
      *
      * @return date/time string in "yyyy-MM-dd HH:mm:ss" format
      */
-    public static String dateString(final long cMillis) {
+    public static String dateString(long cMillis) {
         return logTime(cMillis, DATE_TIME_FORMATTER);
     }
 
@@ -907,7 +907,7 @@ public final class Handy {
      *
      * @return date/time string in "yyyy-MM-dd HH:mm:ss" format, or the default value if cMillis is 0
      */
-    public static String dateString(final long cMillis, final String defaultValue) {
+    public static String dateString(long cMillis, String defaultValue) {
         return cMillis == 0L ? defaultValue : dateString(cMillis);
     }
 
@@ -921,7 +921,7 @@ public final class Handy {
     /**
      * @return date/time string in specified format in UTC time zone
      */
-    public static String logTime(final long cMillis, final DateTimeFormatter formatter) {
+    public static String logTime(long cMillis, DateTimeFormatter formatter) {
         return Instant.ofEpochMilli(cMillis)
             .atZone(ZoneId.of("UTC"))
             .format(formatter);
@@ -940,7 +940,7 @@ public final class Handy {
      * @throws NumberFormatException  if the integer does not fit into
      *         a <tt>long</tt> value
      */
-    public static long readPackedLong(final DataInput in)
+    public static long readPackedLong(DataInput in)
             throws IOException {
         return PackedInteger.readLong(in);
     }
@@ -953,7 +953,7 @@ public final class Handy {
      *
      * @throws IOException  if an I/O exception occurs
      */
-    public static void writePackedLong(final DataOutput out, final long n)
+    public static void writePackedLong(DataOutput out, long n)
             throws IOException {
         PackedInteger.writeLong(out, n);
     }
@@ -967,7 +967,7 @@ public final class Handy {
      *
      * @throws java.io.IOException  if an I/O exception occurs
      */
-    public static int readPackedInt(final DataInput in)
+    public static int readPackedInt(DataInput in)
             throws IOException {
         long n = readPackedLong(in);
         if (n < Integer.MIN_VALUE || n > Integer.MAX_VALUE) {
@@ -985,7 +985,7 @@ public final class Handy {
      *
      * @throws IOException  if an I/O exception occurs
      */
-    public static void writeMagnitude(final DataOutput out, final int n)
+    public static void writeMagnitude(DataOutput out, int n)
             throws IOException {
         if (n < 0) {
             throw new IOException("negative magnitude (" + n + ") is illegal");
@@ -996,7 +996,7 @@ public final class Handy {
     /**
      * Read a variable-length encoded 32-bit integer magnitude from a stream.
      * <p>
-     * Note that while the XVM itself is a 64-bit machine, final Java does not support 64-bit (or even
+     * Note that while the XVM itself is a 64-bit machine, Java does not support 64-bit (or even
      * unsigned 32-bit) magnitudes. This method is a convenience method that verifies that the
      * magnitude is within a range supported by Java.
      *
@@ -1006,7 +1006,7 @@ public final class Handy {
      *
      * @throws java.io.IOException  if an I/O exception occurs
      */
-    public static int readMagnitude(final DataInput in)
+    public static int readMagnitude(DataInput in)
             throws IOException {
         long n = readPackedLong(in);
         if (n > Integer.MAX_VALUE) {
@@ -1023,7 +1023,7 @@ public final class Handy {
     /**
      * Read a variable-length encoded 32-bit integer index from a stream.
      * <p>
-     * Note that while the XVM itself is a 64-bit machine, final Java does not support 64-bit (or even
+     * Note that while the XVM itself is a 64-bit machine, Java does not support 64-bit (or even
      * unsigned 32-bit) indexes. This method is a convenience method that verifies that the index is
      * within a range supported by Java.
      *
@@ -1034,7 +1034,7 @@ public final class Handy {
      *
      * @throws java.io.IOException  if an I/O exception occurs
      */
-    public static int readIndex(final DataInput in)
+    public static int readIndex(DataInput in)
             throws IOException {
         long n = readPackedLong(in);
         if (n > Integer.MAX_VALUE) {
@@ -1063,7 +1063,7 @@ public final class Handy {
      * @throws IOException  if an I/O exception occurs while reading the data,
      *         or if a UTF-8 format error is detected
      */
-    public static int readUtf8Char(final DataInput in)
+    public static int readUtf8Char(DataInput in)
             throws IOException {
         int b = in.readUnsignedByte();
         if ((b & 0x80) == 0) {
@@ -1104,7 +1104,7 @@ public final class Handy {
      * @throws IOException  if an I/O exception occurs while reading the data,
      *         or if a UTF-8 format error is detected
      */
-    private static int nextCharBits(final DataInput in)
+    private static int nextCharBits(DataInput in)
             throws IOException {
         int n = in.readUnsignedByte();
         if ((n & 0b11000000) != 0b10000000) {
@@ -1123,7 +1123,7 @@ public final class Handy {
      * @throws IOException  if an I/O exception occurs while writing the data,
      *         or if a UTF-8 format error is detected
      */
-    public static void writeUtf8Char(final DataOutput out, final int ch)
+    public static void writeUtf8Char(DataOutput out, int ch)
             throws IOException {
         if ((ch & ~0x7F) == 0) {
             // ASCII - single byte 0xxxxxxx format
@@ -1184,7 +1184,7 @@ public final class Handy {
      * @throws IOException  if an I/O exception occurs while reading the data,
      *         or if a UTF-8 format error is detected
      */
-    public static String readUtf8String(final DataInput in)
+    public static String readUtf8String(DataInput in)
             throws IOException {
         int           cb  = readMagnitude(in);
         int           cch = cb - readMagnitude(in);
@@ -1222,14 +1222,14 @@ public final class Handy {
      * @throws IOException  if an I/O exception occurs while writing the data,
      *         or if a UTF-8 format error is detected
      */
-    public static void writeUtf8String(final DataOutput out, final String s)
+    public static void writeUtf8String(DataOutput out, String s)
             throws IOException {
         // figure out the actual number of Unicode code-points (not the number
         // of "Java chars") and how many bytes the UTF-8 format will use
-        final int   cch  = s.length();      // count of UTF-16 "Java chars"
-        final int[] anch = new int[cch];    // array of Unicode code points
-        int cb   = 0;                       // count of bytes
-        int cnch = 0;                       // count of Unicode code points
+        int   cch  = s.length();      // count of UTF-16 "Java chars"
+        int[] anch = new int[cch];    // array of Unicode code points
+        int   cb   = 0;               // count of bytes
+        int   cnch = 0;               // count of Unicode code points
         for (int ofch = 0; ofch < cch; ++ofch) {
             char ch = s.charAt(ofch);
             int  nch;
@@ -1275,7 +1275,7 @@ public final class Handy {
      *
      * @throws UTFDataFormatException  if an invalid character is passed
      */
-    private static int calcUtf8Length(final int ch)
+    private static int calcUtf8Length(int ch)
             throws IOException {
         if ((ch & ~0x7F) == 0) {
             // ASCII - single byte 0xxxxxxx format
@@ -1304,7 +1304,7 @@ public final class Handy {
      * @param file  a file (may be null)
      * @return Optional containing the parent file, or empty if file is null or has no parent
      */
-    public static Optional<File> parentOf(final File file) {
+    public static Optional<File> parentOf(File file) {
         return Optional.ofNullable(file).map(File::getParentFile);
     }
 
@@ -1316,18 +1316,18 @@ public final class Handy {
      *
      * @return a resolved file or directory
      */
-    public static File resolveFile(final File file) {
+    public static File resolveFile(File file) {
         if (file != null) {
             try {
                 return file.getCanonicalFile();
-            } catch (final IOException e) {
+            } catch (IOException e) {
                 return file.getAbsoluteFile();
             }
         }
 
         try {
             return new File(".").getAbsoluteFile().getCanonicalFile();
-        } catch (final IOException e) {
+        } catch (IOException e) {
             return new File(".").getAbsoluteFile();
         }
     }
@@ -1342,7 +1342,7 @@ public final class Handy {
      * @return the indicated file or directory, or null if it could not be navigated to
      */
     @SuppressWarnings("unused")
-    static File navigateTo(final File file, final String sPath) {
+    static File navigateTo(File file, String sPath) {
         File currentFile = file;
         String currentPath = sPath;
         if (currentFile == null) {
@@ -1355,7 +1355,7 @@ public final class Handy {
             currentPath = currentPath.replace(File.separatorChar, '/');
         }
 
-        for (final String sPart : parseDelimitedString(currentPath, '/')) {
+        for (String sPart : parseDelimitedString(currentPath, '/')) {
             currentFile = switch (sPart) {
                 case "."  -> currentFile;
                 case ".." -> currentFile.getParentFile();
@@ -1373,7 +1373,7 @@ public final class Handy {
     /**
      * @return a list of files in the specified directory ordered by case-insensitive name
      */
-    public static List<File> listFiles(final File dir) {
+    public static List<File> listFiles(File dir) {
         if (dir == null || !dir.isDirectory()) {
             return List.of();
         }
@@ -1396,7 +1396,7 @@ public final class Handy {
      *
      * @return a list of zero or more files that match the specified extension
      */
-    public static List<File> listFiles(final File dir, final String extension) {
+    public static List<File> listFiles(File dir, String extension) {
         if (dir == null || !dir.isDirectory()) {
             return List.of();
         }
@@ -1413,7 +1413,7 @@ public final class Handy {
      *
      * @return true iff the passed file name contains any path indicators
      */
-    public static boolean isPathed(final String sFile) {
+    public static boolean isPathed(String sFile) {
         return sFile.indexOf('/') >= 0 || sFile.indexOf(File.separatorChar) >= 0;
     }
 
@@ -1425,7 +1425,7 @@ public final class Handy {
      *
      * @return the extension, if the file has an extension; otherwise null
      */
-    public static String getExtension(final File file) {
+    public static String getExtension(File file) {
         return file == null ? null : getExtension(file.getName());
     }
 
@@ -1437,7 +1437,7 @@ public final class Handy {
      *
      * @return the extension, if the file has an extension; otherwise null
      */
-    public static String getExtension(final String sFile) {
+    public static String getExtension(String sFile) {
         if (sFile == null) {
             return null;
         }
@@ -1459,7 +1459,7 @@ public final class Handy {
      *
      * @return the same file name, but without an extension (if it previously had an extension)
      */
-    public static String removeExtension(final String sFile) {
+    public static String removeExtension(String sFile) {
         int ofDot = sFile.lastIndexOf('.');
         if (ofDot <= 0) {
             return sFile;
@@ -1477,7 +1477,7 @@ public final class Handy {
      *
      * @return a string for display of the file's path
      */
-    public static String toPathString(final File file) {
+    public static String toPathString(File file) {
         if (file == null) {
             return "<null>";
         }
@@ -1486,7 +1486,7 @@ public final class Handy {
         String sAbs;
         try {
             sAbs = file.getCanonicalPath();
-        } catch (final IOException e) {
+        } catch (IOException e) {
             sAbs = file.getAbsolutePath();
         }
 
@@ -1502,7 +1502,7 @@ public final class Handy {
      *
      * @return true if the file check passes
      */
-    public static boolean checkReadable(final File file) {
+    public static boolean checkReadable(File file) {
         return file != null && file.exists() && !file.isDirectory() && file.canRead();
     }
 
@@ -1516,7 +1516,7 @@ public final class Handy {
      * @throws IOException  if an IOException occurs while reading the
      *         FileStructure
      */
-    public static InputStream toInputStream(final File file)
+    public static InputStream toInputStream(File file)
             throws IOException {
         if (!file.exists()) {
             throw new IOException("file does not exist: " + file);
@@ -1539,7 +1539,7 @@ public final class Handy {
      * @throws IOException  indicates a failure to read the binary contents
      *         of the specified file
      */
-    public static byte[] readFileBytes(final File file)
+    public static byte[] readFileBytes(File file)
             throws IOException {
         if (file == null) {
             throw new IllegalArgumentException("file required");
@@ -1549,7 +1549,7 @@ public final class Handy {
             throw new FileNotFoundException(file.toString());
         }
 
-        final long lcb = file.length();
+        long lcb = file.length();
         if (lcb == 0L) {
             return EMPTY_BYTE_ARRAY;
         } else if (lcb > Integer.MAX_VALUE - 1024) {
@@ -1572,7 +1572,7 @@ public final class Handy {
      * @throws IOException  indicates a failure to read the character contents
      *         of the specified file
      */
-    public static char[] readFileChars(final File file)
+    public static char[] readFileChars(File file)
             throws IOException {
         return readFileChars(file, null);
     }
@@ -1591,7 +1591,7 @@ public final class Handy {
      *         of the specified file
      */
     @SuppressWarnings({ "fallthrough", "DataFlowIssue", "DefaultNotLastCaseInSwitch" })
-    public static char[] readFileChars(final File file, String sEncoding)
+    public static char[] readFileChars(File file, String sEncoding)
             throws IOException {
         byte[] ab = readFileBytes(file);
         int    cb = ab.length;
@@ -1673,7 +1673,7 @@ public final class Handy {
      *
      * @return the index of the value's first occurrence in the array, otherwise -1
      */
-    public static <T> int scan(final T[] array, final T value) {
+    public static <T> int scan(T[] array, T value) {
         if (value == null) {
             return scanRef(array, null);
         }
@@ -1696,7 +1696,7 @@ public final class Handy {
      *
      * @return the index of the value's first occurrence in the array, otherwise -1
      */
-    public static <T> int scanRef(final T[] array, final T value) {
+    public static <T> int scanRef(T[] array, T value) {
         if (array != null) {
             for (int i = 0; i < array.length; ++i) {
                 if (array[i] == value) {
@@ -1714,7 +1714,7 @@ public final class Handy {
      *
      * @return a sorted copy of the passed array
      */
-    public static <T extends Comparable<? super T>> T[] sorted(final T[] array) {
+    public static <T extends Comparable<? super T>> T[] sorted(T[] array) {
         T[] result = Arrays.copyOf(array, array.length);
         sort(result);
         return result;
@@ -1729,12 +1729,11 @@ public final class Handy {
      *
      * @return a sorted copy of the passed array
      */
-    public static <T> T[] sorted(final T[] array, final Comparator<T> order) {
+    public static <T> T[] sorted(T[] array, Comparator<T> order) {
         T[] result = Arrays.copyOf(array, array.length);
         sort(result, order);
         return result;
     }
-
 
     /**
      * Given an array of "base" elements and an array of elements that are being evaluated as some
@@ -1748,7 +1747,7 @@ public final class Handy {
      *         duplicates of elements in the {@code aoBase} array
      */
      @SuppressWarnings("unused")
-     public static <T> T[] dedupAdds(final T[] aoBase, final T[] aoAdd) {
+     public static <T> T[] dedupAdds(T[] aoBase, T[] aoAdd) {
         // there's a fair likelihood that *ALL* of the "adds" will be duplicates, and a fair
         // likelihood that *NONE* of the "adds" will be unique, so assume both up front, and only
         // de-optimize when *BOTH* of those two things have been proven to be false
@@ -1759,7 +1758,7 @@ public final class Handy {
         ArrayList<T> listDeDup = null;
         NextLayer: for (int iAdd = 0; iAdd < cAdd; ++iAdd) {
             T oAdd = aoAdd[iAdd];
-            for (final T t : aoBase) {
+            for (T t : aoBase) {
                 if (oAdd.equals(t)) {
                     // we found a duplicate; is it the first one?
                     if (fNoDups) {
@@ -1819,7 +1818,7 @@ public final class Handy {
      *
      * @return an array containing all the elements of both passed arrays
      */
-    public static <T> T[] append(final T[] aoBase, final T[] aoAdd) {
+    public static <T> T[] append(T[] aoBase, T[] aoAdd) {
         int cBase = aoBase.length;
         if (cBase == 0) {
             return aoAdd;
@@ -1843,7 +1842,7 @@ public final class Handy {
      *
      * @return the expanded array containing the passed value
      */
-    public static <T> T[] append(final T[] array, final T value) {
+    public static <T> T[] append(T[] array, T value) {
         assert array != null && value != null;
         T[] newArray = Arrays.copyOf(array, array.length + 1);
         newArray[array.length] = value;
@@ -1858,7 +1857,7 @@ public final class Handy {
      *
      * @return an array containing all the elements
      */
-    public static <T> T[] prepend(final T[] aoBase, final T oAdd) {
+    public static <T> T[] prepend(T[] aoBase, T oAdd) {
         T[] aNew = Arrays.copyOf(aoBase, aoBase.length + 1);
         System.arraycopy(aoBase, 0, aNew, 1, aoBase.length);
         aNew[0] = oAdd;
@@ -1874,7 +1873,7 @@ public final class Handy {
      *
      * @return the contracted array
      */
-    public static <T> T[] delete(final T[] array, final int index) {
+    public static <T> T[] delete(T[] array, int index) {
         assert array != null && index >= 0 && index < array.length;
         T[] newArray = Arrays.copyOf(array, array.length - 1);
         if (index < newArray.length) {
@@ -1891,7 +1890,7 @@ public final class Handy {
      *
      * @return a new ArrayList of the first {@code c} elements of the {@code ao} array
      */
-    public static <T> ArrayList<T> startList(final T[] ao, final int c) {
+    public static <T> ArrayList<T> startList(T[] ao, int c) {
         return appendList(new ArrayList<>(), ao, 0, c);
     }
 
@@ -1906,11 +1905,30 @@ public final class Handy {
      * @return the list
      */
 
-    public static <T> ArrayList<T> appendList(final ArrayList<T> list, final T[] ao, final int of, final int c) {
+    public static <T> ArrayList<T> appendList(ArrayList<T> list, T[] ao, int of, int c) {
         Arrays.stream(ao, of, of + c).forEach(list::add);
         return list;
     }
 
+    /**
+     * Helper method for the "copy-on-write array" pattern.
+     *
+     * @param orig   the original array
+     * @param curr   the current array
+     * @param index  the index of the element to be written (replaced)
+     * @param val    the value to write
+     *
+     * @return the resulting array
+     */
+    public static <T> T[] cow(T[] orig, T[] curr, int index, T val) {
+        if (curr[index] != val) {
+            if (curr == orig) {
+                curr = orig.clone();
+            }
+            curr[index] = val;
+        }
+        return curr;
+    }
 
     // ----- hashing & equality --------------------------------------------------------------------
 
@@ -1921,7 +1939,7 @@ public final class Handy {
      *
      * @return a hashcode
      */
-    public static int hashCode(final Object o) {
+    public static int hashCode(Object o) {
         return Hash.of(o);
     }
 
@@ -1934,7 +1952,7 @@ public final class Handy {
      *
      * @return true iff <tt>o1</tt> is equals to <tt>o2</tt>
      */
-    public static boolean equals(final Object o1, final Object o2) {
+    public static boolean equals(Object o1, Object o2) {
         if (o1 == null) {
             return o2 == null;
         }
@@ -1942,8 +1960,8 @@ public final class Handy {
             return false;
         }
 
-        final Class<?> clz1 = o1.getClass();
-        final Class<?> clz2 = o2.getClass();
+        Class<?> clz1 = o1.getClass();
+        Class<?> clz2 = o2.getClass();
         if (clz1 != clz2) {
             return false;
         }
@@ -1973,7 +1991,7 @@ public final class Handy {
      * @return negative, zero, or positive iff <tt>ao1</tt> is less than, equal
      *         to, or greater than <tt>ao2</tt>
      */
-    public static <T extends Comparable<? super T>> int compareArrays(final T[] ao1, final T[] ao2) {
+    public static <T extends Comparable<? super T>> int compareArrays(T[] ao1, T[] ao2) {
         return Arrays.compare(ao1, ao2);
     }
 
@@ -1987,12 +2005,12 @@ public final class Handy {
      * @throws IllegalArgumentException  if the array is null, or any elements
      *         of the array are null
      */
-    public static boolean checkElementsNonNull(final Object[] ao) {
+    public static boolean checkElementsNonNull(Object[] ao) {
         if (ao == null) {
             throw new IllegalArgumentException("array is null");
         }
 
-        for (final Object o : ao) {
+        for (Object o : ao) {
             if (o == null) {
                 throw new IllegalArgumentException("array element is null");
             }
@@ -2011,7 +2029,7 @@ public final class Handy {
      *
      * @throws IllegalArgumentException  if the value is null
      */
-    public static boolean require(final String name, final Object value) {
+    public static boolean require(String name, Object value) {
         if (value == null) {
             throw new IllegalArgumentException((name == null ? "Required value" : name) + " is null");
         }
