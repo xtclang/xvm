@@ -3,7 +3,10 @@ package org.xvm.javajit;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 /**
  * This class serves as a registry for pre-reserved class/method/property names.
@@ -20,6 +23,9 @@ public class NativeNames {
         reservedMethodSuffix.put("Boolean/not/0", "not");
         reservedMethodSuffix.put("Boolean/toByte/0", "toByte");
 
+        reservedMethodSuffix.put("collections.Array/add/1",     "add");
+        reservedMethodSuffix.put("collections.Array/addAll/1", "addAll");
+        reservedMethodSuffix.put("collections.Array/delete/1", "delete");
         reservedMethodSuffix.put("collections.Array.ArrayDelegate/reify/1", "reify");
         reservedMethodSuffix.put("collections.Collection/reify/0", "reify");
 
@@ -36,31 +42,45 @@ public class NativeNames {
         reservedMethodSuffix.put("numbers.Number/toUInt128/1", "toUInt128");
         reservedMethodSuffix.put("numbers.Number/toUIntN/0",   "toUIntN");
 
-        reservedMethodSuffix.put("numbers.FPConvertible/toDec32/0",   "toDec32");
-        reservedMethodSuffix.put("numbers.FPConvertible/toDec64/0",   "toDec64");
-        reservedMethodSuffix.put("numbers.FPConvertible/toDec128/0",  "toDec128");
-        reservedMethodSuffix.put("numbers.FPConvertible/toFloat32/0", "toFloat32");
-        reservedMethodSuffix.put("numbers.FPConvertible/toFloat64/0", "toFloat64");
+        reservedMethodSuffix.put("numbers.Number/toDec32/0",   "toDec32");
+        reservedMethodSuffix.put("numbers.Number/toDec64/0",   "toDec64");
+        reservedMethodSuffix.put("numbers.Number/toDec128/0",  "toDec128");
+        reservedMethodSuffix.put("numbers.Number/toFloat16/0", "toFloat16");
+        reservedMethodSuffix.put("numbers.Number/toFloat32/0", "toFloat32");
+        reservedMethodSuffix.put("numbers.Number/toFloat64/0", "toFloat64");
 
-        reservedMethodSuffix.put("numbers.FPNumber/toInt8/2",    "toInt8$FP");
-        reservedMethodSuffix.put("numbers.FPNumber/toInt16/2",   "toInt16$FP");
-        reservedMethodSuffix.put("numbers.FPNumber/toInt32/2",   "toInt32$FP");
-        reservedMethodSuffix.put("numbers.FPNumber/toInt64/2",   "toInt64$FP");
-        reservedMethodSuffix.put("numbers.FPNumber/toInt128/2",  "toInt128$FP");
-        reservedMethodSuffix.put("numbers.FPNumber/toIntN/1",    "toIntN$FP");
-        reservedMethodSuffix.put("numbers.FPNumber/toUInt8/2",   "toUInt8$FP");
-        reservedMethodSuffix.put("numbers.FPNumber/toUInt16/2",  "toUInt16$FP");
-        reservedMethodSuffix.put("numbers.FPNumber/toUInt32/2",  "toUInt32$FP");
-        reservedMethodSuffix.put("numbers.FPNumber/toUInt64/2",  "toUInt64$FP");
-        reservedMethodSuffix.put("numbers.FPNumber/toUInt128/2", "toUInt128$FP");
-        reservedMethodSuffix.put("numbers.FPNumber/toUIntN/1",   "toUIntN$FP");
+        reservedMethodSuffix.put("numbers.Number/toInt8/2",    "toInt8$FP");
+        reservedMethodSuffix.put("numbers.Number/toInt16/2",   "toInt16$FP");
+        reservedMethodSuffix.put("numbers.Number/toInt32/2",   "toInt32$FP");
+        reservedMethodSuffix.put("numbers.Number/toInt64/2",   "toInt64$FP");
+        reservedMethodSuffix.put("numbers.Number/toInt128/2",  "toInt128$FP");
+        reservedMethodSuffix.put("numbers.Number/toIntN/1",    "toIntN$FP");
+        reservedMethodSuffix.put("numbers.Number/toUInt8/2",   "toUInt8$FP");
+        reservedMethodSuffix.put("numbers.Number/toUInt16/2",  "toUInt16$FP");
+        reservedMethodSuffix.put("numbers.Number/toUInt32/2",  "toUInt32$FP");
+        reservedMethodSuffix.put("numbers.Number/toUInt64/2",  "toUInt64$FP");
+        reservedMethodSuffix.put("numbers.Number/toUInt128/2", "toUInt128$FP");
+        reservedMethodSuffix.put("numbers.Number/toUIntN/1",   "toUIntN$FP");
     }
 
     /**
      * @return a reserved name for the specified method or null if unknown
      */
     public static String findReservedJitName(MethodConstant methodId) {
-        String key = methodId.getNamespace().getPathString() + "/" +
+        IdentityConstant classId   = methodId.getNamespace();
+        TypeConstant     classType = classId.getType();
+        String           className;
+
+        ConstantPool pool = classId.getConstantPool();
+        if (classType.isA(pool.typeNumber()) ||
+                classType.isA(pool.ensureEcstasyTypeConstant("numbers.FPNumber")) ||
+                classType.isA(pool.ensureEcstasyTypeConstant("numbers.FPConvertible"))) {
+            className = "numbers.Number";
+        } else {
+            className = classId.getPathString();
+        }
+
+        String key = className + "/" +
                      methodId.getName() + "/" +
                      methodId.getSignature().getParamCount();
         return reservedMethodSuffix.get(key);
