@@ -77,6 +77,8 @@ public class xFuture
         markNativeMethod("complete", null, VOID);
         markNativeMethod("completeExceptionally", null, VOID);
 
+        markNativeMethod("peekException", null, null);
+
         markNativeProperty("assigned");
         markNativeProperty("completion");
 
@@ -182,6 +184,18 @@ public class xFuture
         }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+    }
+
+    @Override
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn) {
+        FutureHandle hThis = (FutureHandle) hTarget;
+
+        switch (method.getName()) {
+        case "peekException":
+            return invokePeekException(frame, hThis, aiReturn);
+        }
+
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
 
     @Override
@@ -572,6 +586,21 @@ public class xFuture
             });
             return frame.assignValue(iReturn, hWhen);
         }
+    }
+
+    /**
+     * Implementation of "conditional Exception peekException()".
+     */
+    protected int invokePeekException(Frame frame, FutureHandle hThis, int[] aiReturn) {
+        CompletableFuture<ObjectHandle> cfThis = hThis.getFuture();
+        if (cfThis.isDone()) {
+            ObjectHandle[] ahR = extractResult(frame, cfThis);
+            if (ahR[1] != xNullable.NULL) {
+                // the future terminated exceptionally; return the exception
+                return frame.assignValues(aiReturn, xBoolean.TRUE, ahR[1]);
+            }
+        }
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
     }
 
     /**
