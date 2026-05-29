@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
-import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -251,18 +250,9 @@ public class Parameter
      */
     public GenericTypeResolver asGenericTypeResolver(MethodConstant constMethod, TypeConstant type) {
         assert isTypeParameter();
-        TypeParameterConstant constParam = asTypeParameterConstant(constMethod);
-        return new GenericTypeResolver() {
-            @Override
-            public TypeConstant resolveGenericType(String sFormalName) {
-                return null;
-            }
 
-            @Override
-            public TypeConstant resolveFormalType(FormalConstant constFormal) {
-                return constFormal.equals(constParam) ? type : null;
-            }
-        };
+        TypeParameterConstant constParam = asTypeParameterConstant(constMethod);
+        return constFormal -> constFormal.equals(constParam) ? type : null;
     }
 
     /**

@@ -184,6 +184,42 @@ public class ParameterizedTypeConstant
     }
 
     @Override
+    public TypeConstant resolveFormalType(FormalConstant constFormal) {
+        switch (constFormal.getFormat()) {
+        case Property:
+            return resolveGenericType(constFormal.getName());
+
+        case FormalTypeChild: {
+            FormalTypeChildConstant constChild  = (FormalTypeChildConstant) constFormal;
+            FormalConstant          constParent = constChild.getParentConstant();
+            TypeConstant            typeParent  = resolveFormalType(constParent);
+            if (typeParent != null) {
+                // this could be either resolution of the generic type's constraint (e.g.
+                // Serializable.Key in MapMapping.x) or Type's generic type (e.g. Key.DataType in
+                // the same class)
+                String       sName        = constChild.getName();
+                TypeConstant typeResolved = typeParent.resolveGenericType(sName);
+                return typeResolved == null && !typeParent.isFormalType()
+                        ? typeParent.getType().resolveGenericType(sName)
+                        : typeResolved;
+            }
+            break;
+        }
+
+        case TypeParameter: {
+            TypeParameterConstant constParam = (TypeParameterConstant) constFormal;
+            MethodConstant        idMethod   = constParam.getMethod();
+            if (idMethod.isLambda()) {
+                // lambdas capture generic types as formal type parameters of the same name
+                return resolveGenericType(constParam.getName());
+            }
+            break;
+        }
+        }
+        return null;
+    }
+
+    @Override
     public boolean isExplicitClassIdentity(boolean fAllowParams) {
         return fAllowParams && getUnderlyingType().isExplicitClassIdentity(false);
     }
@@ -833,7 +869,7 @@ public class ParameterizedTypeConstant
         var             listTypeParams = clz.getTypeParamsAsList();
         var             listContribs   = clz.collectConditionalIncorporates(this);
 
-        TypeConstant typeOrig = m_constType;;
+        TypeConstant typeOrig = m_constType;
         // TODO: REMOVE - compensation for Array handling in TypeConstant#buildJitClassName
         if (typeOrig.isArray() && !getParamType(0).isJitPrimitive()) {
             return pool.ensureArrayType(pool.typeObject());

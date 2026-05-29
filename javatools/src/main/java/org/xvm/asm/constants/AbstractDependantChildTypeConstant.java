@@ -156,6 +156,10 @@ public abstract class AbstractDependantChildTypeConstant
         ConstantPool pool       = getConstantPool();
         TypeConstant typeParent = m_typeParent;
 
+        if ("OuterType".equals(sName)) {
+            return typeParent;
+        }
+
         TypeConstant type;
         if (typeParent.containsGenericParam(sName)) {
             // the passed in list applies only to the child and should not be used by the parent

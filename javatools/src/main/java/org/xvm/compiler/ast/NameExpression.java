@@ -803,9 +803,9 @@ public class NameExpression
         }
 
         // if the type could fully be resolved in the current context, do it now
-        if (type != null && type.isGenericType()) {
+        if (type != null && type.containsGenericType(true)) {
             TypeConstant typeResolved = type.resolveGenerics(pool, ctx.getThisType());
-            if (!typeResolved.isGenericType()) {
+            if (!typeResolved.containsGenericType(true)) {
                 type = typeResolved;
             }
         }
@@ -2801,7 +2801,7 @@ public class NameExpression
                     }
 
                     // resolve the function signature against all the types we know by now
-                    typeFn          = typeFn.resolveGenerics(pool, GenericTypeResolver.of(mapTypeParams));
+                    typeFn          = typeFn.resolveGenerics(pool, mapTypeParams::get);
                     m_mapTypeParams = mapTypeParams;
                 }
 
@@ -2905,23 +2905,12 @@ public class NameExpression
                             idMethod, regLeft, idFormal, sName).getType();
                 }
             } else if (typeProp.containsGenericType(true)) {
-                // if the property type contains a generic type and that
-                // generic type belongs to the left argument, replace it with
-                // a corresponding dynamic type
-                GenericTypeResolver resolver = new GenericTypeResolver() {
-                    @Override
-                    public TypeConstant resolveGenericType(String sFormalName) {
-                        return typeResolved.resolveGenericType(sFormalName);
-                    }
-
-                    @Override
-                    public TypeConstant resolveFormalType(FormalConstant idFormal) {
-                        return idFormal.getParentConstant().equals(idParent)
-                            ? pool.ensureDynamicFormal(
-                                idMethod, regLeft, idFormal, sName).getType()
-                            : resolveGenericType(idFormal.getName());
-                    }
-                };
+                // if the property type contains a generic type and that generic type belongs to the
+                // left argument, replace it with a corresponding dynamic type
+                GenericTypeResolver resolver = idFormal ->
+                    idFormal.getParentConstant().equals(idParent)
+                        ? pool.ensureDynamicFormal(idMethod, regLeft, idFormal, sName).getType()
+                        : null;
 
                 return typeProp.resolveGenerics(pool, resolver);
             }

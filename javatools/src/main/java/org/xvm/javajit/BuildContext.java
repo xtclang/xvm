@@ -3072,11 +3072,6 @@ public class BuildContext {
     public GenericTypeResolver createTypeResolver(MethodStructure method, int[] argIds) {
         return new GenericTypeResolver() {
             @Override
-            public TypeConstant resolveGenericType(String sFormalName) {
-                return null;
-            }
-
-            @Override
             public TypeConstant resolveFormalType(FormalConstant constFormal) {
                 MethodConstant methodId = method.getIdentityConstant();
                 for (Parameter param : method.getParamArray()) {
@@ -3106,17 +3101,7 @@ public class BuildContext {
             }
 
             if (type.containsFormalType(true)) {
-                type = type.resolveGenerics(pool(), new GenericTypeResolver() {
-                    @Override
-                    public TypeConstant resolveGenericType(String formalName) {
-                        return jitType.resolveGenericType(formalName);
-                    }
-
-                    @Override
-                    public TypeConstant resolveFormalType(FormalConstant formalConst) {
-                        return BuildContext.this.resolveFormalType(formalConst);
-                    }
-                });
+                type = type.resolveGenerics(pool(), BuildContext.this::resolveFormalType);
             }
         }
         return type;

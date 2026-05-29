@@ -172,6 +172,19 @@ public class PropertyClassTypeConstant
     }
 
     @Override
+    public TypeConstant resolveFormalType(FormalConstant constFormal) {
+        if (constFormal.getFormat() == Format.Property) {
+            // ideally we need to check if the property's namespace aligns
+            TypeConstant typeResolved = getRefType().resolveFormalType(constFormal);
+            return typeResolved == null
+                    ? getParentType().resolveFormalType(constFormal)
+                    : typeResolved;
+        }
+        return null;
+
+    }
+
+    @Override
     public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams) {
         return this;
     }

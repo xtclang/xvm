@@ -118,8 +118,12 @@ public class DynamicFormalConstant
     }
 
 
-    // ----- DynamicConstant methods ---------------------------------------------------------------
+    // ----- FormalConstant methods ----------------------------------------------------------------
 
+    @Override
+    public String getName() {
+        return m_constFormal.getName();
+    }
 
     @Override
     public TypeConstant getConstraintType() {
@@ -199,7 +203,7 @@ public class DynamicFormalConstant
 
     @Override
     public String getValueString() {
-        return getName() + '.' + m_constFormal.getName();
+        return getName();
     }
 
     @Override

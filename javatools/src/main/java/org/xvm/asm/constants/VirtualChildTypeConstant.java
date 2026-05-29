@@ -247,6 +247,17 @@ public class VirtualChildTypeConstant
                 : pool.ensureVirtualChildTypeConstant(typeParentResolved, m_constName.getValue());
     }
 
+    @Override
+    public TypeConstant resolveFormalType(FormalConstant constFormal) {
+        if (constFormal.getFormat() == Format.Property) {
+            // ideally we need to check if the property's namespace aligns
+            TypeConstant typeResolved = resolveGenericType(constFormal.getName());
+            return typeResolved == null
+                    ? getParentType().resolveFormalType(constFormal)
+                    : typeResolved;
+        }
+        return null;
+    }
 
     // ----- type comparison support ---------------------------------------------------------------
 
