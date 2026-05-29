@@ -2207,7 +2207,7 @@ public class BuildContext {
 
     /**
      * @return the type info for the specified type while adjusting access for types that are
-     *         "next mates" to this context's type
+     *         "nest mates" to this context's type
      */
     public TypeInfo getTypeInfo(TypeConstant type) {
         if (type.isFormalType()) {
@@ -3166,7 +3166,7 @@ public class BuildContext {
      * {@link #jitType}.
      */
     protected TypeConstant resolveSpecialized(TypeConstant type) {
-        if (isSpecialized) {
+        if (isSpecialized && (!methodStruct.isFunction() || methodStruct.isLambda())) {
             if (type.isAutoNarrowing()) {
                 type = type.resolveAutoNarrowing(pool(), false, jitType, null);
             }
