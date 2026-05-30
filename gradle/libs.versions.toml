@@ -24,7 +24,7 @@ bouncycastle = "1.82"
 gson = "2.13.2"
 jakarta-activation = "2.1.4"
 jakarta-xml-bind-api = "4.0.5"
-jaxb-runtime = "4.0.8"
+jaxb-runtime = "4.0.9"
 jetbrains-annotations = "26.1.0"
 jline = "4.0.15"
 
@@ -58,7 +58,7 @@ lang-ktlint-engine = "1.8.0"
 # =============================================================================
 # Lang tooling - LSP, DAP & logging
 # =============================================================================
-lang-logback = "1.5.32"
+lang-logback = "1.5.33"
 lang-lsp4j = "1.0.0"
 lang-slf4j = "2.0.18"
 
