@@ -1,8 +1,6 @@
 package org.xtclang.idea
 
-import com.intellij.ide.plugins.PluginManager
 import com.intellij.openapi.diagnostic.logger
-import com.intellij.openapi.extensions.PluginId
 import org.jetbrains.plugins.textmate.api.TextMateBundleProvider
 import kotlin.io.path.exists
 
@@ -29,9 +27,9 @@ class XtcTextMateBundleProvider : TextMateBundleProvider {
     override fun getBundles(): List<TextMateBundleProvider.PluginBundle> {
         logger.warn("XtcTextMateBundleProvider.getBundles() called")
 
-        val plugin = PluginManager.getInstance().findEnabledPlugin(PluginId.getId(PluginPaths.PLUGIN_ID))
+        val plugin = PluginPaths.selfDescriptor()
         if (plugin == null) {
-            logger.warn("Ecstasy plugin not found via PluginManager.findEnabledPlugin")
+            logger.warn("Ecstasy plugin descriptor not found via own PluginAwareClassLoader")
             return emptyList()
         }
 
