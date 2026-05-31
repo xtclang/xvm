@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.regex.Pattern;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,10 +30,29 @@ public class XtcProjectCreator {
     public static final String DEFAULT_XTC_VERSION = "0.4.4";
 
     /**
-     * Default Gradle version for generated projects.
-     * Should match the version used by the XVM repository.
+     * Compile-time fallback Gradle version, used only to generate a wrapper from scratch when the
+     * composite build's gradle-wrapper.properties is not bundled as a resource (see
+     * {@link #copyWrapperFromResources()}, which otherwise copies that file verbatim). In normal
+     * IDE/CLI builds the bundled wrapper is the single source of truth, so this constant is rarely
+     * hit; keep it roughly in sync with the repo wrapper anyway.
      */
-    public static final String DEFAULT_GRADLE_VERSION = "9.5.0";
+    public static final String DEFAULT_GRADLE_VERSION = "9.5.1";
+
+    /**
+     * Strict pattern for a resolvable XTC version coordinate written into a generated
+     * {@code gradle/libs.versions.toml}: {@code MAJOR.MINOR.PATCH} with an optional
+     * {@code -SNAPSHOT}, {@code -alpha}, or {@code -beta} qualifier -- and nothing else.
+     *
+     * <p>This deliberately rejects publication build-ids that are <em>not</em> resolvable
+     * Maven/Gradle coordinates, e.g. the JetBrains Marketplace plugin version
+     * {@code 0.4.4-SNAPSHOT.20260526090539} (a UTC upload-uniqueness suffix) or the VS Code
+     * packaging version {@code 0.4.4-alpha.20260523T120000}. A {@code -SNAPSHOT} resolves via
+     * Maven metadata ({@code 0.4.4-SNAPSHOT} maps to {@code 0.4.4-<date>.<time>-<n>}); a literal
+     * {@code .<timestamp>} tail turns the string into a fixed release version that was never
+     * published anywhere, so Gradle cannot resolve it.
+     */
+    public static final Pattern XTC_VERSION_PATTERN =
+        Pattern.compile("\\d+\\.\\d+\\.\\d+(-(SNAPSHOT|alpha|beta))?");
 
     /**
      * Project types supported by the creator.
@@ -123,9 +143,40 @@ public class XtcProjectCreator {
         this.projectPath = projectPath;
         this.type = type;
         this.multiModule = multiModule;
-        this.xtcVersion = xtcVersion != null ? xtcVersion : DEFAULT_XTC_VERSION;
+        this.xtcVersion = sanitizeXtcVersion(xtcVersion);
         this.gradleVersion = gradleVersion != null ? gradleVersion : DEFAULT_GRADLE_VERSION;
         this.useLocalAndSnapshotRepos = useLocalAndSnapshotRepos;
+    }
+
+    /**
+     * @param version a version string, may be null
+     * @return {@code true} iff {@code version} is a resolvable XTC version coordinate
+     *         (see {@link #XTC_VERSION_PATTERN}); {@code false} for null, blank, or any
+     *         string carrying a build/timestamp suffix
+     */
+    public static boolean isValidXtcVersion(String version) {
+        return version != null && XTC_VERSION_PATTERN.matcher(version).matches();
+    }
+
+    /**
+     * Reduce a (possibly decorated) build/publication version to the resolvable XTC
+     * coordinate that belongs in a generated version catalog.
+     *
+     * <p>Publication pipelines append a build suffix for upload uniqueness -- JetBrains
+     * Marketplace uses {@code <base>-SNAPSHOT.<utc>} and VS Code packaging uses
+     * {@code <base>-alpha.<utc>}. Those decorated strings are not resolvable coordinates,
+     * so we keep only the leading {@code MAJOR.MINOR.PATCH[-qualifier]} part. Input with no
+     * valid leading coordinate (null, blank, garbage) falls back to {@link #DEFAULT_XTC_VERSION}.
+     *
+     * @param version the raw version (e.g. the installed plugin's own version), may be null
+     * @return a version guaranteed to satisfy {@link #isValidXtcVersion(String)}
+     */
+    public static String sanitizeXtcVersion(String version) {
+        if (version == null || version.isBlank()) {
+            return DEFAULT_XTC_VERSION;
+        }
+        var matcher = XTC_VERSION_PATTERN.matcher(version.trim());
+        return matcher.lookingAt() ? matcher.group() : DEFAULT_XTC_VERSION;
     }
 
     /**
@@ -255,6 +306,15 @@ public class XtcProjectCreator {
     }
 
     private String generateVersionCatalog() {
+        // Defense in depth: never emit a catalog that pins a non-resolvable version. The
+        // constructor sanitizes xtcVersion, so this invariant should always hold; if it does
+        // not, a future change broke it and we fail loudly here rather than ship a project
+        // that cannot resolve its XTC plugin/XDK.
+        if (!isValidXtcVersion(xtcVersion)) {
+            throw new IllegalStateException(
+                "Refusing to generate version catalog with non-resolvable XTC version: '" + xtcVersion
+                    + "'. Expected MAJOR.MINOR.PATCH optionally followed by -SNAPSHOT, -alpha, or -beta.");
+        }
         return """
             [versions]
             xtc = "%s"
@@ -665,10 +725,19 @@ public class XtcProjectCreator {
             }
         }
 
-        // Generate gradle-wrapper.properties with the specified Gradle version
-        // (don't copy from resources - we need the dynamic version)
+        // Copy gradle-wrapper.properties verbatim from the bundled composite-build wrapper so the
+        // generated project uses exactly the Gradle version the XDK is built and tested with -- a
+        // single source of truth, with no hardcoded version that can drift. Fall back to generating
+        // it only if that specific resource is somehow absent.
         Path wrapperDir = projectPath.resolve("gradle/wrapper");
-        writeFile(wrapperDir.resolve("gradle-wrapper.properties"), generateWrapperProperties());
+        Path wrapperProps = wrapperDir.resolve("gradle-wrapper.properties");
+        try (InputStream in = getClass().getResourceAsStream("/gradle-wrapper/gradle/wrapper/gradle-wrapper.properties")) {
+            if (in != null) {
+                Files.copy(in, wrapperProps, StandardCopyOption.REPLACE_EXISTING);
+            } else {
+                writeFile(wrapperProps, generateWrapperProperties());
+            }
+        }
 
         return true;
     }
