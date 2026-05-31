@@ -147,6 +147,17 @@ jobs:
                   filters: |
                       lang:
                         - 'lang/**'
+                        # Sources that live OUTSIDE lang/ but are synced or bundled INTO the
+                        # lang plugin at build time, so a change to any of them changes the
+                        # plugin's output and must trigger a lang build/test (and, on master,
+                        # an IntelliJ plugin republish). Keep this list in sync with
+                        # lang/intellij-plugin/build.gradle.kts (syncXtcProjectCreator copies
+                        # the Java source; syncGradleWrapperResources bundles the wrapper that
+                        # generated projects ship with).
+                        - 'javatools/src/main/java/org/xvm/tool/XtcProjectCreator.java'
+                        - 'gradlew'
+                        - 'gradlew.bat'
+                        - 'gradle/wrapper/**'
 
             - name: 🌳 Lang validation decision
               shell: bash
