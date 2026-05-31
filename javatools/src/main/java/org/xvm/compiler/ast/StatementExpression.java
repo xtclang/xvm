@@ -142,7 +142,6 @@ public class StatementExpression
             return TypeFit.Fit;
         }
 
-        assert m_atypeRequired == null && m_collector == null;
         if (isValidated()) {
             TypeConstant[] aActualTypes   = getTypes();
             int            cActualTypes   = aActualTypes.length;
@@ -157,6 +156,8 @@ public class StatementExpression
             }
             return TypeFit.Fit;
         }
+
+        assert m_atypeRequired == null && m_collector == null;
 
         m_atypeRequired = atypeRequired;
 

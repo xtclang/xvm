@@ -849,8 +849,7 @@ public class InvocationExpression
                         // previous type parameters, for example:
                         //   <T1 extends Base, T2 extends T1> foo(T1 v1, T2 v2) {...}
                         if (typeConstraint.containsTypeParameter(true)) {
-                            typeConstraint = typeConstraint.resolveGenerics(pool,
-                                                GenericTypeResolver.of(mapTypeParams));
+                            typeConstraint = typeConstraint.resolveGenerics(pool, mapTypeParams::get);
                         }
 
                         if (!typeArg.isA(typeConstraint)) {
@@ -874,8 +873,7 @@ public class InvocationExpression
                         sigMethod = sigMethod.resolveAutoNarrowing(pool, typeLeft, null);
                     }
                     if (!mapTypeParams.isEmpty()) {
-                        sigMethod = sigMethod.resolveGenericTypes(pool,
-                                        GenericTypeResolver.of(mapTypeParams));
+                        sigMethod = sigMethod.resolveGenericTypes(pool, mapTypeParams::get);
                     }
                     atypeResult = sigMethod.getRawReturns();
 
@@ -921,7 +919,7 @@ public class InvocationExpression
                     }
 
                     if (!mapTypeParams.isEmpty()) {
-                        typeFn = typeFn.resolveGenerics(pool, GenericTypeResolver.of(mapTypeParams));
+                        typeFn = typeFn.resolveGenerics(pool, mapTypeParams::get);
                     }
 
                     atypeResult = new TypeConstant[] {typeFn};
@@ -2890,7 +2888,7 @@ public class InvocationExpression
                 method.resolveTypeParameters(pool(), typeTarget, atypeArgs, atypeReturn, fAllowPending);
 
         if (mapTypeParams.size() == method.getTypeParamCount()) {
-            return GenericTypeResolver.of(mapTypeParams);
+            return mapTypeParams::get;
         }
 
         log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,

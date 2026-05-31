@@ -156,8 +156,10 @@ public abstract class TypeConstant
     // ----- GenericTypeResolver -------------------------------------------------------------------
 
     @Override
-    public TypeConstant resolveGenericType(String sFormalName) {
-        return getGenericParamType(sFormalName, Collections.emptyList());
+    public TypeConstant resolveFormalType(FormalConstant constFormal) {
+        return isModifyingType()
+                ? getUnderlyingType().resolveFormalType(constFormal)
+                : null;
     }
 
 
@@ -478,6 +480,13 @@ public abstract class TypeConstant
      */
     public boolean containsGenericParam(String sName) {
         return isModifyingType() && getUnderlyingType().containsGenericParam(sName);
+    }
+
+    /**
+     * Find the type of the specified formal parameter for this type.
+     */
+    public TypeConstant resolveGenericType(String sFormalName) {
+        return getGenericParamType(sFormalName, Collections.emptyList());
     }
 
     /**

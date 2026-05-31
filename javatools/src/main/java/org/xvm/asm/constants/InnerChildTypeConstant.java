@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Collections;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
@@ -107,6 +109,13 @@ public class InnerChildTypeConstant
     @Override
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type) {
         return pool.ensureInnerChildTypeConstant(type, m_idChild);
+    }
+
+    @Override
+    public TypeConstant resolveFormalType(FormalConstant constFormal) {
+        return constFormal.getFormat() == Format.Property
+                ? getGenericParamType(constFormal.getName(), Collections.emptyList())
+                : null;
     }
 
 

@@ -3771,8 +3771,11 @@ public class ClassStructure
         }
 
         @Override
-        public TypeConstant resolveGenericType(String sFormalName) {
-            return extractGenericType(f_pool, sFormalName, m_listActual);
+        public TypeConstant resolveFormalType(FormalConstant constFormal) {
+            // ideally, we need to check the constant's identity
+            return constFormal.getFormat() == Constant.Format.Property
+                    ? extractGenericType(f_pool, constFormal.getName(), m_listActual)
+                    : null;
         }
 
         private final ConstantPool f_pool;

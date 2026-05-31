@@ -165,7 +165,11 @@ public class AnnotatedTypeConstant
                 mapResolve.put(sName, type);
             }
         }
-        return m_typeAnno = typeFormal.resolveGenerics(getConstantPool(), mapResolve::get);
+        return m_typeAnno = typeFormal.resolveGenerics(getConstantPool(), constFormal ->
+            constFormal.getFormat() == Format.Property
+                    ? mapResolve.get(constFormal.getName())
+                    : null
+        );
     }
 
     /**
@@ -341,6 +345,14 @@ public class AnnotatedTypeConstant
         return constResolved == constOriginal || constResolved.isRelationalType()
                 ? this
                 : cloneSingle(pool, constResolved);
+    }
+
+    @Override
+    public TypeConstant resolveFormalType(FormalConstant constFormal) {
+        TypeConstant typeResolved = getAnnotationType().resolveFormalType(constFormal);
+        return typeResolved == null
+                ? super.resolveFormalType(constFormal)
+                : typeResolved;
     }
 
     @Override

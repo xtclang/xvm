@@ -1502,26 +1502,6 @@ public class Context {
                         : extractElementType(arg);
             }
 
-            @Override
-            public TypeConstant resolveGenericType(String sFormalName) {
-                // in the absence of any additional information, only pick generic types
-                for (Map.Entry<FormalConstant, TypeConstant> entry :
-                            getFormalTypeMap(branch).entrySet()) {
-                    FormalConstant constFormal = entry.getKey();
-                    if (constFormal instanceof PropertyConstant &&
-                            constFormal.getName().equals(sFormalName)) {
-                        return entry.getValue();
-                    }
-                }
-
-                Argument arg = getLocalVar(sFormalName, branch);
-                return arg == null
-                        ? isFunction()
-                                ? null
-                                : getThisClass().getFormalType().resolveGenericType(sFormalName)
-                        : extractElementType(arg);
-            }
-
             private TypeConstant extractElementType(Argument arg) {
                 TypeConstant typeType = arg.getType();
                 return typeType.isTypeOfType()
