@@ -19,6 +19,7 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.Version;
 
 import org.xvm.compiler.CompilerException;
+import org.xvm.compiler.Lexer;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 
@@ -656,7 +657,7 @@ public class ModuleInfo {
         if (srcDir == null || srcFile == null) {
             return null;
         }
-        
+
         if (isSourceTree()) {
             assert fileName != null;
             File subDir = new File(srcDir, fileName);
@@ -909,8 +910,9 @@ public class ModuleInfo {
             for (File file : listFiles(thisDir)) {
                 String name = file.getName();
                 if (file.isDirectory()) {
-                    // if the directory has no corresponding ".x" file, then it is an implied package
-                    if (!(new File(thisDir, name + ".x")).exists() && name.indexOf('.') < 0) {
+                    // if the directory has no corresponding ".x" file, then it is an implied package;
+                    // ignore invalid package names; they wouldn't have compiled anyway
+                    if (!new File(thisDir, name + ".x").exists() && Lexer.isValidIdentifier(name)) {
                         DirNode child = new DirNode(this, file, null);
                         packageNodes().add(child);
                         child.buildSourceTree();
@@ -1332,7 +1334,6 @@ public class ModuleInfo {
             String[] segments = parseDelimitedString(resPath, '/');
             for (int i = 0, last = segments.length - 1; i <= last; ++i) {
                 String segment = segments[i];
-                //noinspection StatementWithEmptyBody
                 if (segment.isEmpty() || ".".equals(segment)) {
                     // nothing to do
                 } else if ("..".equals(segment)) {
