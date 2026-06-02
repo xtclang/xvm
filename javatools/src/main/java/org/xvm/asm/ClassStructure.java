@@ -3590,8 +3590,8 @@ public class ClassStructure
         }
 
         // type parameters
-        var mapThisParams = this.m_mapParams;
-        var mapThatParams = that.m_mapParams;
+        Map<StringConstant, TypeConstant> mapThisParams = this.m_mapParams;
+        Map<StringConstant, TypeConstant> mapThatParams = that.m_mapParams;
         int cThisParams   = mapThisParams == null ? 0 : mapThisParams.size();
         int cThatParams   = mapThatParams == null ? 0 : mapThatParams.size();
 

@@ -240,7 +240,8 @@ public class MethodStructure
      * Replace the annotations with an equivalent re-ordered array.
      */
     public void reorderAnnotations(Annotation[] annotations) {
-        assert Set.of(annotations).equals(Set.of(m_aAnnotations));
+        assert new HashSet<>(Arrays.asList(annotations)).equals(
+               new HashSet<>(Arrays.asList(m_aAnnotations)));
 
         m_aAnnotations = annotations;
     }
