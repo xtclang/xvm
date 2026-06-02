@@ -1,8 +1,8 @@
 package org.xtclang.idea
 
-import com.intellij.ide.plugins.PluginManager
+import com.intellij.ide.plugins.cl.PluginAwareClassLoader
 import com.intellij.openapi.diagnostic.logger
-import com.intellij.openapi.extensions.PluginId
+import com.intellij.openapi.extensions.PluginDescriptor
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -21,11 +21,23 @@ object PluginPaths {
     private val logger = logger<PluginPaths>()
 
     /**
+     * This plugin's own [PluginDescriptor], or `null` if it cannot be determined.
+     *
+     * Resolved from our own classes' classloader, which the IntelliJ Platform loads
+     * via a [PluginAwareClassLoader] that carries the owning plugin's descriptor. This
+     * is the supported, public way for a plugin to obtain its own descriptor (path,
+     * version, id). It deliberately avoids `PluginManager.findEnabledPlugin(PluginId)`
+     * and `PluginManagerCore.getPlugin(PluginId)`, both of which are marked
+     * `@ApiStatus.Internal` as of 2026.2 and flagged by the Plugin Verifier.
+     */
+    fun selfDescriptor(): PluginDescriptor? = (PluginPaths::class.java.classLoader as? PluginAwareClassLoader)?.pluginDescriptor
+
+    /**
      * Find a server JAR in the plugin's `bin/` directory.
      *
      * Resolution order:
-     * 1. `PluginManager.findEnabledPlugin` plugin path (public IntelliJ Platform API)
-     * 2. Classloader-based fallback (for development/test scenarios)
+     * 1. Own [PluginDescriptor] plugin path (via [selfDescriptor], public API)
+     * 2. Classloader code-source fallback (for development/test scenarios)
      *
      * @param jarName the JAR filename, e.g. `"xtc-lsp-server.jar"` or `"xtc-dap-server.jar"`
      * @throws IllegalStateException if the JAR cannot be found
@@ -33,12 +45,12 @@ object PluginPaths {
     fun findServerJar(jarName: String): Path {
         val searchedPaths = mutableListOf<Path>()
 
-        PluginManager.getInstance().findEnabledPlugin(PluginId.getId(PLUGIN_ID))?.let { plugin ->
-            val candidate = plugin.pluginPath.resolve("bin/$jarName")
+        selfDescriptor()?.pluginPath?.let { pluginPath ->
+            val candidate = pluginPath.resolve("bin/$jarName")
             searchedPaths.add(candidate)
-            resolveInBin(plugin.pluginPath, jarName)?.let { return it }
+            resolveInBin(pluginPath, jarName)?.let { return it }
             logger.warn("$jarName not at expected location: $candidate")
-            logger.warn("Plugin directory contents: ${plugin.pluginPath.toFile().listFiles()?.map { it.name }}")
+            logger.warn("Plugin directory contents: ${pluginPath.toFile().listFiles()?.map { it.name }}")
         }
 
         // Fallback: find via classloader (our class is in lib/, JAR is in bin/)

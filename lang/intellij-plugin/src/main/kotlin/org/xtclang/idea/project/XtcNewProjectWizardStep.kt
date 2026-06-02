@@ -1,13 +1,11 @@
 package org.xtclang.idea.project
 
 import com.intellij.execution.RunManager
-import com.intellij.ide.plugins.PluginManager
 import com.intellij.ide.wizard.AbstractNewProjectWizardStep
 import com.intellij.ide.wizard.NewProjectWizardBaseData.Companion.baseData
 import com.intellij.ide.wizard.NewProjectWizardStep
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.logger
-import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.LocalFileSystem
@@ -51,7 +49,7 @@ class XtcNewProjectWizardStep(
         val base = baseData ?: return logger.error("No base data available")
         val projectPath = Path(base.path).resolve(base.name)
         val xtcVersion =
-            PluginManager.getInstance().findEnabledPlugin(PluginId.getId(PluginPaths.PLUGIN_ID))?.version
+            PluginPaths.selfDescriptor()?.version
                 ?: XtcProjectCreator.DEFAULT_XTC_VERSION
 
         logger.info("Creating Ecstasy project: path=$projectPath, type=$projectType, multiModule=$multiModule, xtcVersion=$xtcVersion")

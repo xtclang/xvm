@@ -427,6 +427,14 @@ intellijPlatform {
     // 2026.1.x patches and 2026.2 EAPs are checked as soon as JetBrains
     // publishes them. failureLevel is explicit so the build fails on real
     // breaks but not on every deprecated/experimental API touch.
+    //
+    // INTERNAL_API_USAGES is included so the build fails if the plugin calls an
+    // IntelliJ API marked @ApiStatus.Internal. Such APIs are not meant for client
+    // plugins and can change without notice; gating on them here is what catches a
+    // regression like a switch to PluginManager.findEnabledPlugin (internal) over
+    // PluginManagerCore.getPlugin (public). Previously these were only logged as
+    // "Compatible. N usages of internal API" and silently passed CI while still
+    // generating a JetBrains verifier email on every Marketplace upload.
     pluginVerification {
         ides {
             recommended()
@@ -436,6 +444,7 @@ intellijPlatform {
                 VerifyPluginTask.FailureLevel.COMPATIBILITY_PROBLEMS,
                 VerifyPluginTask.FailureLevel.INVALID_PLUGIN,
                 VerifyPluginTask.FailureLevel.MISSING_DEPENDENCIES,
+                VerifyPluginTask.FailureLevel.INTERNAL_API_USAGES,
             )
     }
 }
