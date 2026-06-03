@@ -941,8 +941,11 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * A base class for {@link Iterator} implementations in subclasses.
+     * <p>
+     * This class does not implement {@link Iterator} because this would cause default method
+     * conflicts in subclasses. Each subclass must specify the relevant "implements" clause.
      */
-    protected abstract class nBaseIterator extends nObj implements Iterator {
+    protected abstract class nBaseIterator extends nObj {
         public nBaseIterator(Ctx ctx) {
             super(ctx);
         }
@@ -954,7 +957,12 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
             return false;
         }
 
-        @Override
+        /**
+         * The native implementation of {@link Iterator}
+         * <pre>
+         *     conditional Element next();
+         * </pre>
+         */
         public boolean next$p(Ctx ctx) {
             if (index < size$get$p(ctx)) {
                 ctx.i0 = $getElement$pi(ctx, index++);
