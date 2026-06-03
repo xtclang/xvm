@@ -158,7 +158,6 @@ public abstract class OpRange
             regTarget.load(code);
             bctx.loadArgument(code, nArgValue);
             addRangeAttributes(code);
-            code.iconst_0();
         };
 
         bctx.buildNew(code, typeRange, idCtor, argsLoader);
