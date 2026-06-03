@@ -814,6 +814,9 @@ PostfixExpression
     PostfixExpression ".new" NewFinish
     PostfixExpression ".as" "(" AnyTypeExpression ")"
     PostfixExpression ".is" "(" AnyTypeExpression ")"
+    PostfixExpression "." StatementBlock                // https://github.com/xtclang/xvm/issues/437
+    PostfixExpression "." "this" "->" StatementBlock      // https://github.com/xtclang/xvm/issues/437
+    PostfixExpression "." Name "->" StatementBlock      // https://github.com/xtclang/xvm/issues/437
 
 ArrayDims
     "[" DimIndicatorList-opt "]"
