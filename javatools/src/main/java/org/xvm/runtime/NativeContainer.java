@@ -85,6 +85,8 @@ import org.xvm.runtime.template._native.temporal.xNanosTimer;
 import org.xvm.runtime.template._native.web.xRTConnector;
 import org.xvm.runtime.template._native.web.xRTServer;
 
+import org.xvm.tool.Launcher.LauncherException;
+
 import org.xvm.util.Handy;
 
 
@@ -113,7 +115,22 @@ public class NativeContainer
         ModuleStructure moduleNative = f_repository.loadModule(NATIVE_MODULE);
 
         if (moduleRoot == null || moduleTurtle == null || moduleNative == null) {
-            throw new IllegalStateException("Native libraries are missing");
+            String sDesc = null;
+            int    count = 0;
+            if (moduleRoot == null) {
+                sDesc = ECSTASY_MODULE;
+                ++count;
+            }
+            if (moduleTurtle == null) {
+                sDesc = count == 0 ? TURTLE_MODULE : (sDesc + ", " + TURTLE_MODULE);
+                ++count;
+            }
+            if (moduleNative == null) {
+                sDesc = count == 0 ? NATIVE_MODULE : (sDesc + ", " + NATIVE_MODULE);
+                ++count;
+            }
+            throw new LauncherException(true, "Missing boot-strap " +
+                    (count == 1 ?  "library" : "libraries") + ": " + sDesc);
         }
 
         // "root" is a merge of "native" module into the "system"
@@ -176,7 +193,7 @@ public class NativeContainer
                         Container.class, ClassStructure.class, Boolean.TYPE).
                         newInstance(this, structClass, Boolean.TRUE));
                 } catch (Exception e) {
-                    throw new RuntimeException("Constructor failed for " + clz.getName(), e);
+                    throw new LauncherException(true, "Constructor failed for " + clz.getName(), e);
                 }
             }
         }
@@ -210,7 +227,7 @@ public class NativeContainer
                        .forEach(entry -> mapTemplateClasses.put(componentName(entry.getName()),
                                                                 classForName(entry.getName())));
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new LauncherException(e);
         }
     }
 
@@ -259,7 +276,7 @@ public class NativeContainer
                     try {
                         mapTemplateClasses.put(sQualifiedName, Class.forName(sClass));
                     } catch (ClassNotFoundException e) {
-                        throw new IllegalStateException("Cannot load " + sClass, e);
+                        throw new LauncherException(true, "Cannot load " + sClass, e);
                     }
                 }
             } else {
@@ -799,9 +816,6 @@ public class NativeContainer
             sComponent = "collections.Array";
             break;
 
-        case MapEntry:
-            throw new UnsupportedOperationException("TODO: " + constValue);
-
         case Class:
         case DecoratedClass:
         case NativeClass:
@@ -823,8 +837,9 @@ public class NativeContainer
                     ? "_native.reflect.RTFunction" : "_native.reflect.RTMethod";
             break;
 
+        case MapEntry:
         default:
-            throw new IllegalStateException(constValue.toString());
+            throw new LauncherException(true, "No implementation for constant: " + constValue.toString());
         }
 
         return getClassStructure(sComponent).getIdentityConstant().getType();
@@ -835,7 +850,7 @@ public class NativeContainer
             return f_mapIdByName.computeIfAbsent(sName, s ->
                 getClassStructure(s).getIdentityConstant());
         } catch (NullPointerException e) {
-            throw new IllegalArgumentException("Missing constant: " + sName);
+            throw new LauncherException(true, "Missing constant: " + sName, e);
         }
     }
 
