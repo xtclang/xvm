@@ -490,7 +490,8 @@ public class JumpVal
     }
 
     private void buildCharSwitch(BuildContext bctx, CodeBuilder code, RegisterInfo regArg) {
-        throw new UnsupportedOperationException();
+        // a primitive Char is an int, so we can just build an int switch
+        buildIntSwitch(bctx, code, regArg);
     }
 
     private void buildLongSwitch(BuildContext bctx, CodeBuilder code, RegisterInfo regArg) {
