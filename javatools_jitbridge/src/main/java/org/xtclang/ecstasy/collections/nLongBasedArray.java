@@ -941,10 +941,9 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * A base class for {@link Iterator} implementations in subclasses.
-     * <p>
-     * This class does not implement {@link Iterator} because this would cause default method
-     * conflicts in subclasses. Each subclass must specify the relevant "implements" clause.
      */
+    // TODO potentially we may not need this (and subclasses) when we generate the iterator()
+    //  method on List
     protected abstract class nBaseIterator extends nObj implements Iterator {
         public nBaseIterator(Ctx ctx) {
             super(ctx);
