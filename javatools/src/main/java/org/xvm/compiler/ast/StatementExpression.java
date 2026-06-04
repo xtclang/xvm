@@ -15,6 +15,8 @@ import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
 
@@ -46,9 +48,29 @@ public class StatementExpression
     /**
      * Construct a StatementExpression.
      *
-     * @param body  the
+     * @param body  the {@link StatementBlock} that contains the body of this StatementExpression
      */
     public StatementExpression(StatementBlock body) {
+        this.body = body;
+    }
+
+    /**
+     * Construct a StatementExpression that exists as an extension of the context provided by the
+     * passed expression, as if this StatementExpression were a method on the object resulting from
+     * the passed expression.
+     *
+     * @param left  the expression to the left of the dot
+     * @param name  the optional local variable name for use within the body that represents the
+     *              object resulting from the passed expression; default is "this"
+     * @param body  the {@link StatementBlock} that contains the body of this StatementExpression
+     */
+    public StatementExpression(Expression left, Token name, StatementBlock body) {
+        assert left != null;
+        assert name == null || name.getId() == Id.IDENTIFIER || name.getId() == Id.THIS;
+        assert body != null;
+
+        this.left = left;
+        this.name = name;
         this.body = body;
     }
 
@@ -56,6 +78,9 @@ public class StatementExpression
 
     @Override
     public long getStartPosition() {
+        if (left != null) {
+            return left.getStartPosition();
+        }
         return body.getStartPosition();
     }
 
@@ -302,17 +327,21 @@ public class StatementExpression
 
     @Override
     public String toString() {
+        // TODO CP
         return body.toString();
     }
 
     @Override
     public String toDumpString() {
+        // TODO CP
         return body.toDumpString();
     }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
+    protected Expression     left;
+    protected Token          name;
     protected StatementBlock body;
 
     private transient TypeConstant[] m_atypeRequired;
@@ -320,5 +349,5 @@ public class StatementExpression
     private transient Assignable[]   m_aLVal;
     private transient BinaryAST      m_astBody;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(StatementExpression.class, "body");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(StatementExpression.class, "left", "body");
 }

@@ -2919,7 +2919,7 @@ public class Parser {
     }
 
     /**
-     * Parse a prefix expression.
+     * Parse a postfix expression.
      *
      * <p/><code><pre>
      * PostfixExpression
@@ -2934,6 +2934,9 @@ public class Parser {
      *     PostfixExpression ".new" NewFinish
      *     PostfixExpression ".as" "(" AnyTypeExpression ")"
      *     PostfixExpression ".is" "(" AnyTypeExpression ")"
+     *     PostfixExpression "." StatementBlock
+     *     PostfixExpression "." "this" "->" StatementBlock
+     *     PostfixExpression "." Name "->" StatementBlock
      *
      * ArrayDims
      *     "[" DimIndicators-opt "]"
@@ -3019,6 +3022,10 @@ public class Parser {
                         name = match(Id.NEW);
                         if (name == null) {
                             name = expect(Id.IDENTIFIER);
+                            if (noDeRef == null && match(Id.LAMBDA) != null) {
+                                expr = new StatementExpression(expr, name, parseStatementBlock());
+                                break;
+                            }
                         }
                     }
                     long                 lEndPos = name.getEndPosition();
@@ -3046,6 +3053,16 @@ public class Parser {
                     }
                     break;
                 }
+
+                case Id.THIS:
+                    Token tokThis = expect(Id.THIS);
+                    expect(Id.LAMBDA);
+                    expr = new StatementExpression(expr, tokThis, parseStatementBlock());
+                    break;
+
+                case L_CURLY:
+                    expr = new StatementExpression(expr, null, parseStatementBlock());
+                    break;
 
                 default:
                     // unexpected token, so pretend we were looking for a name
