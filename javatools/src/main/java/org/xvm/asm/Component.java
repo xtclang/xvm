@@ -22,6 +22,8 @@ import java.util.Set;
 
 import java.util.function.Consumer;
 
+import java.util.stream.Stream;
+
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -48,6 +50,7 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.stream;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -2078,8 +2081,19 @@ public abstract class Component
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    public Iterator<? extends XvmStructure> getContained() {
-        return children().iterator();
+    public Iterable<? extends XvmStructure> getContained() {
+        return children();
+    }
+
+    /**
+     * Build an {@link Iterable} view that yields this component's children followed by the given
+     * extras. Used by overrides of {@link #getContained()} that need to splice in additional
+     * structures (annotations, etc.) without materializing the whole sequence.
+     */
+    protected Iterable<? extends XvmStructure> containedWith(Iterable<? extends XvmStructure> extras) {
+        return () -> Stream.<XvmStructure>concat(
+                children().stream(),
+                stream(extras)).iterator();
     }
 
     @Override

@@ -9,7 +9,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+
+import java.util.stream.Stream;
 
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
@@ -46,6 +50,7 @@ import static org.xvm.util.Handy.readUtf8String;
 import static org.xvm.util.Handy.renderByteToHex;
 import static org.xvm.util.Handy.renderIntToHex;
 import static org.xvm.util.Handy.renderLongToHex;
+import static org.xvm.util.Handy.stream;
 import static org.xvm.util.Handy.writeUtf8String;
 
 /**
@@ -477,5 +482,41 @@ public class HandyTest {
                 appendByteArrayAsHex(sb, b, off, len);
             }
         });
+    }
+
+    @Test
+    public void testStreamOfEmptyIterable() {
+        assertEquals(0L, stream(List.<String>of()).count());
+    }
+
+    @Test
+    public void testStreamPreservesOrderAndContent() {
+        var src = List.of("a", "b", "c");
+        assertEquals(src, stream(src).toList());
+    }
+
+    @Test
+    public void testStreamFromLazyIterable() {
+        // Iterable lambda whose .iterator() builds a fresh source each call -- this is the
+        // shape used by Component.containedWith(...) for lazy concatenation.
+        Iterable<Integer> lazy = () -> Stream.of(1, 2, 3).iterator();
+
+        // Two independent iterations must both yield the full sequence -- catches the bug
+        // where the helper accidentally consumes a single shared iterator.
+        assertEquals(List.of(1, 2, 3), stream(lazy).toList());
+        assertEquals(List.of(1, 2, 3), stream(lazy).toList());
+    }
+
+    @Test
+    public void testStreamSnapshotIsLiveByDefault() {
+        // stream(iterable) does not snapshot -- mutation of the source between iteration
+        // starts is visible. Documents the contract so callers know to copy if they need
+        // a frozen view (as ConstantPool.getContained does via List.copyOf).
+        var src = new ArrayList<>(List.of("a", "b"));
+        var firstSnapshot = stream(src).toList();
+        src.add("c");
+        var secondSnapshot = stream(src).toList();
+        assertEquals(List.of("a", "b"), firstSnapshot);
+        assertEquals(List.of("a", "b", "c"), secondSnapshot);
     }
 }

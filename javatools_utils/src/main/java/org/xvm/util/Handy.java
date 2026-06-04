@@ -26,6 +26,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
 import static java.util.Arrays.sort;
 
 
@@ -2013,6 +2016,17 @@ public final class Handy {
             throw new IllegalArgumentException((name == null ? "Required value" : name) + " is null");
         }
         return true;
+    }
+
+    /**
+     * Adapt an {@link Iterable} into a sequential {@link Stream}.
+     *
+     * @param iterable  the iterable to wrap
+     *
+     * @return a sequential stream over the iterable's elements
+     */
+    public static <T> Stream<T> stream(final Iterable<T> iterable) {
+        return StreamSupport.stream(iterable.spliterator(), false);
     }
 
 
