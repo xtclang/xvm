@@ -143,6 +143,13 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     @Override
+    protected void assembleGenericProperty(ClassBuilder classBuilder, String name) {
+        if (findMethod(name + "$get", null) == null) {
+            super.assembleGenericProperty(classBuilder, name);
+        }
+    }
+
+    @Override
     protected void assembleMethod(String className, ClassBuilder classBuilder, MethodInfo method,
                                   String jitName, JitMethodDesc jmd) {
         if (method.isCtorOrValidator()) {

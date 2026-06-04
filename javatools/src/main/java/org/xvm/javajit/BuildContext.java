@@ -155,7 +155,8 @@ public class BuildContext {
         this.isFunction    = propInfo.isConstant();
         this.isConstructor = false;
         this.isOptimized   = methodDesc.optimizedMD != null;
-        this.isSpecialized = jitType.isParamsSpecified();
+        this.isSpecialized = jitType.isParamsSpecified() &&
+                            !jitType.equals(typeInfo.getClassStructure().getCanonicalType());
         this.typeMatrix    = new TypeMatrix(this);
     }
 
@@ -3141,23 +3142,20 @@ public class BuildContext {
      * @return a GenericTypeResolver for FormalTypeParameters within the current context
      */
     public GenericTypeResolver createTypeResolver(MethodStructure method, int[] argIds) {
-        return new GenericTypeResolver() {
-            @Override
-            public TypeConstant resolveFormalType(FormalConstant constFormal) {
-                MethodConstant methodId = method.getIdentityConstant();
-                for (Parameter param : method.getParamArray()) {
-                    if (param.isTypeParameter() &&
-                            constFormal.equals(param.asTypeParameterConstant(methodId))) {
-                        TypeConstant type = getArgumentType(argIds[param.getIndex()]);
+        return constFormal -> {
+            MethodConstant methodId = method.getIdentityConstant();
+            for (Parameter param : method.getParamArray()) {
+                if (param.isTypeParameter() &&
+                        constFormal.equals(param.asTypeParameterConstant(methodId))) {
+                    TypeConstant type = getArgumentType(argIds[param.getIndex()]);
 
-                        // the register the type parameter points to must be an nType instance;
-                        // its type is a type-of-type-of-type
-                        assert type.getParamType(0).isTypeOfType();
-                        return type.getParamType(0).getParamType(0);
-                    }
+                    // the register the type parameter points to must be an nType instance;
+                    // its type is a type-of-type-of-type
+                    assert type.getParamType(0).isTypeOfType();
+                    return type.getParamType(0).getParamType(0);
                 }
-                return null;
             }
+            return null;
         };
     }
 

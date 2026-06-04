@@ -89,19 +89,24 @@ public class CommonBuilder
         // (some formal parameters resolved to XVM primitive types)
         assert classStruct.isParameterized() == type.isParamsSpecified();
 
-        this.thisType    = type.ensureAccess(Access.PRIVATE);
-        this.typeInfo    = thisType.ensureTypeInfo();
-        this.structInfo  = thisType.ensureAccess(Access.STRUCT).ensureTypeInfo();
-        this.thisId      = classStruct.getIdentityConstant();
-        this.isInterface = classStruct.getFormat() == Format.INTERFACE;
+        this.thisType      = type.ensureAccess(Access.PRIVATE);
+        this.typeInfo      = thisType.ensureTypeInfo();
+        this.structInfo    = thisType.ensureAccess(Access.STRUCT).ensureTypeInfo();
+        this.thisId        = classStruct.getIdentityConstant();
+        this.isInterface   = classStruct.getFormat() == Format.INTERFACE;
+        this.jitType       = thisType.getCanonicalJitType();
+        this.isSpecialized = jitType.isParamsSpecified() &&
+                            !jitType.equals(classStruct.getCanonicalType());
     }
 
     protected final ClassStructure   classStruct;
     protected final TypeConstant     thisType;      // PRIVATE
     protected final TypeInfo         typeInfo;      // PRIVATE
+    protected final TypeConstant     jitType;       // PUBLIC
     protected final TypeInfo         structInfo;
     protected final IdentityConstant thisId;
     protected final boolean          isInterface;
+    protected final boolean          isSpecialized;
 
     /**
      * The shallow size of object in bytes.
@@ -141,7 +146,7 @@ public class CommonBuilder
 
         // prime the type registry with "this" type
         Map<TypeConstant, Integer> types = new HashMap<>();
-        types.put(thisType, 0);
+        types.put(jitType, 0);
         typeConstants.put(className, types);
 
         if (assembleImplClass(className, classBuilder)) {
@@ -967,7 +972,7 @@ public class CommonBuilder
     /**
      * Assemble the generic property accessors for the "Impl" shape.
      */
-    private void assembleGenericProperty(ClassBuilder classBuilder, String name) {
+    protected void assembleGenericProperty(ClassBuilder classBuilder, String name) {
         classBuilder.withMethodBody(name + "$get", MethodTypeDesc.of(CD_nType, CD_Ctx),
             ClassFile.ACC_PUBLIC, code ->
                 // return nObj.$type(ctx, name);
@@ -3181,7 +3186,7 @@ public class CommonBuilder
         "Stringable",
         "StringBuffer",
         "Float*",
-        "Array",
+//        "Array",          // depends on JMP_VAL implementation
         "Iterable",
         "Iterator",
         "List",
