@@ -2,6 +2,7 @@ package org.xtclang.ecstasy.numbers;
 
 import java.math.BigDecimal;
 
+import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.nConst;
 
 import org.xtclang.ecstasy.text.String;
@@ -28,6 +29,15 @@ public class Bit extends nConst {
 
     public String toString(Ctx ctx) {
         return String.of(ctx, Integer.toString($value));
+    }
+
+    public long estimateStringLength$p(Ctx ctx) {
+        return 1;
+    }
+
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
+        char c = $value == 0 ? '0' : '1';
+        return appender.add$p(ctx, c);
     }
 
     /**

@@ -39,9 +39,13 @@ class Dec32Tests {
         testDecAsNullableDecReturn();
         testNullableDecConditionalReturn();
 
+        // Stringable
+        testAppendTo();
+        testEstimateStringLength();
+
         // Op tests
 
-        console.print("<<<<< Finished Dec32Tests Conversion tests >>>>>");
+        console.print("<<<<< Finished Dec32Tests tests >>>>>");
     }
 
     // ----- comparison tests ----------------------------------------------------------------------
@@ -303,5 +307,40 @@ class Dec32Tests {
             return True, Null;
         }
         return False;
+    }
+
+    // ----- Stringable tests ----------------------------------------------------------------------
+
+    void testAppendTo() {
+        assert callAppendTo(0) == "0";
+        assert callAppendTo(1) == "1";
+        assert callAppendTo(-1) == "-1";
+        assert callAppendTo(10) == "10";
+        assert callAppendTo(-10) == "-10";
+        assert callAppendTo(1000) == "1000";
+        assert callAppendTo(-1000) == "-1000";
+    }
+
+    String callAppendTo(Dec32 n) {
+        StringBuffer buf = new StringBuffer();
+        n.appendTo(buf);
+        return buf.toString();
+    }
+
+    void testEstimateStringLength() {
+        Dec32 n = 0;
+        assert n.estimateStringLength() == 1;
+        n = 1;
+        assert n.estimateStringLength() == 1;
+        n = -1;
+        assert n.estimateStringLength() == 2;
+        n = 10;
+        assert n.estimateStringLength() == 2;
+        n = -10;
+        assert n.estimateStringLength() == 3;
+        n = 1000;
+        assert n.estimateStringLength() == 4;
+        n = -1000;
+        assert n.estimateStringLength() == 5;
     }
 }

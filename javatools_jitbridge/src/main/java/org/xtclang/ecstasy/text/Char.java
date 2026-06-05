@@ -1,5 +1,6 @@
 package org.xtclang.ecstasy.text;
 
+import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.nConst;
 
@@ -96,8 +97,20 @@ public class Char extends nConst {
         return String.of(null, toString());
     }
 
+    public long estimateStringLength$p(Ctx ctx) {
+        return 1;
+    }
+
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
+        return appender.add$p(ctx, $value);
+    }
+
     @Override
     public java.lang.String toString() {
         return java.lang.Character.toString($value);
+    }
+
+    public long toInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return $value;
     }
 }

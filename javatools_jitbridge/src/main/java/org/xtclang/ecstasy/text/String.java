@@ -1,5 +1,6 @@
 package org.xtclang.ecstasy.text;
 
+import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.IteratorᐸCharᐳ;
 import org.xtclang.ecstasy.Object;
@@ -371,6 +372,18 @@ public class String
         }
 
         return (int) (data[(int) (index >>> 3)] >>> (8 * (~index & 0b111))) & 0xFF;
+    }
+
+    public long estimateStringLength$p(Ctx ctx) {
+        return size$get$p(ctx);
+    }
+
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ buf) {
+        long size = size$get$p(ctx);
+        for (long i = 0; i < size; i++) {
+            buf = buf.add$p(ctx, getContinued(ctx, 0, i));
+        }
+        return buf;
     }
 
     @Override

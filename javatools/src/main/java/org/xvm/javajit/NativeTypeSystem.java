@@ -229,7 +229,8 @@ public class NativeTypeSystem
                 ClassFile.ClassHierarchyResolverOption.of(
                     ClassHierarchyResolver.ofClassLoading(loader)),
                 ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
-                ClassFile.StackMapsOption.GENERATE_STACK_MAPS);
+                ClassFile.StackMapsOption.GENERATE_STACK_MAPS,
+                ClassFile.DeadLabelsOption.DROP_DEAD_LABELS);
         return classFile.transformClass(model, (classBuilder, element) -> {
             if (element instanceof Interfaces) {
                 // don't copy an interface list; it would prevent the builder to add any;
@@ -297,6 +298,9 @@ public class NativeTypeSystem
         TypeConstant typeChar        = pool.typeChar();
         TypeConstant iterableᐸCharᐳ = pool.ensureParameterizedTypeConstant(pool.typeIterable(), typeChar);
         nativeByType.put(iterableᐸCharᐳ, Builder.N_IterableChar);
+
+        TypeConstant appenderᐸCharᐳ = pool.ensureParameterizedTypeConstant(pool.typeAppender(), typeChar);
+        nativeByType.put(appenderᐸCharᐳ, Builder.N_AppenderChar);
 
         TypeConstant[] primitiveTypes = new TypeConstant[] {pool.typeBit(), pool.typeBoolean(),
                 typeChar, pool.typeDec32(), pool.typeDec64(), pool.typeDec128(), pool.typeFloat32(),

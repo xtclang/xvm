@@ -49,8 +49,9 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     public boolean assembleImplClass(String className, ClassBuilder classBuilder) {
+        // do not augment Object and
         // since nRef is both Ref and Var, ignore "Var" interface; it causes circular initialization
-        if (thisId.equals(pool().clzVar())) {
+        if (thisId.equals(pool().clzObject()) || thisId.equals(pool().clzVar())) {
             return false;
         }
 

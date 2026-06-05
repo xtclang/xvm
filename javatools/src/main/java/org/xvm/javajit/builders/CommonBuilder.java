@@ -189,7 +189,7 @@ public class CommonBuilder
     public ClassDesc getSuperCD() {
         TypeConstant superType = typeInfo.getExtends();
         return superType == null
-            ? CD_nObj
+            ? (typeInfo.getType().isConst() ? CD_nConst : CD_nObj)
             : ensureClassDesc(superType);
     }
 
@@ -295,6 +295,10 @@ public class CommonBuilder
                     }
                     break;
             }
+        }
+        if (classStruct.getFormat() == Format.INTERFACE && !interfaces.contains(CD_Object)) {
+            // all interfaces extend org.xtclang.ecstasy.Object
+            interfaces.add(CD_Object);
         }
         if (!interfaces.isEmpty()) {
             classBuilder.withInterfaceSymbols(interfaces);
@@ -1590,13 +1594,17 @@ public class CommonBuilder
             // we only generate equals and compare for non-primitive types
             assembleConstEquals(className, classBuilder);
             assembleConstCompare(className, classBuilder);
+
+            // despite the fact IntNumber and subclasses have natural implementations of these
+            // methods, for now we use native implementations
+            assembleConstAppendTo(classBuilder);
+            assembleConstEstimateStringLength(className, classBuilder);
         }
         // the reason we need to generate "hashCode" for primitive types is to produce
         // non-predictable implementations
         // TODO JK: consider implementing them natively via a Ctx-based facility, in which
         //  case we can simplify the code production
         assembleConstHashCode(className, classBuilder);
-        // TODO JK: Stringable appendTo estimateStringLength
     }
 
     /**
@@ -2343,6 +2351,340 @@ public class CommonBuilder
         } else {
             code.lreturn();
         }
+    }
+
+    /**
+     * Generate the "Stringable" method "estimateStringLength" and "estimateStringLength$p" if
+     * they do not already exist.
+     * <pre>
+     *     Int estimateStringLength();
+     * </pre>
+     */
+    protected void assembleConstEstimateStringLength(String className, ClassBuilder classBuilder) {
+        SignatureConstant signature = pool().sigEstimateStrLen();
+        MethodInfo        method    = typeInfo.getMethodBySignature(signature);
+        Implementation    impl      = method.getHead().getImplementation();
+        IdentityConstant  targetId  = method.getIdentity().getNamespace();
+
+        // If the method is not explicitly implemented or capped or the declaring type does not
+        // match the current type (i.e. the method is declared on a supe class), then we can
+        // build the method
+        if ((impl != Implementation.Explicit && impl != Implementation.Capped)
+            || !thisId.equals(targetId)) {
+
+            ClassDesc      cdThis        = ClassDesc.of(className);
+            String         methodName    = signature.getName();
+            String         methodOptName = methodName + OPT;
+            MethodTypeDesc mdWrapper     = MethodTypeDesc.of(CD_Int64, CD_Ctx);
+            MethodTypeDesc mdPrimitive   = MethodTypeDesc.of(CD_long, CD_Ctx);
+
+            if (!isNativeMethod(methodName, mdWrapper)) {
+                // generate the standard "estimateStingLength" wrapper that delegates to the
+                // optimized "estimateStingLength$p"
+                classBuilder.withMethodBody(methodName, mdWrapper, ClassFile.ACC_PUBLIC,
+                        code -> {
+                            code.aload(0); // load this
+                            loadCtx(code);
+                            code.invokevirtual(cdThis, methodOptName, mdPrimitive);
+                            Builder.box(code, pool().typeInt64());
+                            code.areturn();
+                        });
+
+                // generate the optimized "estimateStringLength$p" with the actual implementation
+                if (!isNativeMethod(methodOptName, mdPrimitive)) {
+                    classBuilder.withMethodBody(methodOptName, mdPrimitive, ClassFile.ACC_PUBLIC,
+                        code -> assembleConstEstimateStringLength(code, thisType));
+                }
+            }
+        }
+    }
+
+    /**
+     * Generate the optimized "Stringable" method "estimateStringLength$p" method
+     * <pre>
+     *     long estimateStringLength$p(Ctx);
+     * </pre>
+     */
+    protected void assembleConstEstimateStringLength(CodeBuilder code, TypeConstant type) {
+        ConstantPool   pool           = pool();
+        TypeConstant   typeStringable = pool.typeStringable();
+        MethodTypeDesc mdEstStringLen = MethodTypeDesc.of(CD_long, CD_Ctx);
+        MethodTypeDesc mdToString     = MethodTypeDesc.of(CD_String, CD_Ctx);
+        MethodTypeDesc mdStringSize   = MethodTypeDesc.of(CD_long, CD_Ctx);
+        String         methodName     = "estimateStringLength$p";
+        int            thisSlot       = 0;
+        int            resultSlot     = 2;
+
+
+        // create the list of properties to be compared so we can sort them
+        List<PropertyInfo> props = new ArrayList<>();
+        for (PropertyInfo prop : structInfo.getProperties().values()) {
+            if (!isConstFormingProperty(prop, null, true)) {
+                continue;
+            }
+
+            TypeConstant propType = prop.getType();
+            if (!propType.isNullable() && propType instanceof UnionTypeConstant) {
+                throw new UnsupportedOperationException("Union types not yet supported");
+            }
+            props.add(prop);
+        }
+
+        // store the initial result (which is 2, for the open/close brackets "()")
+        code.loadConstant(2L)
+            .lstore(resultSlot);
+
+        // iterate over all the properties
+        // we sort by the property rank and compare in that order
+        props.sort(Comparator.comparingInt(PropertyInfo::getRank));
+        boolean addComma = false;
+        for (PropertyInfo prop : props) {
+            PropertyConstant propId     = prop.getIdentity();
+            TypeConstant     propType   = prop.getType();
+            Label            skipProp   = code.newLabel();
+            Label            checkProp  = code.newLabel();
+            boolean          isNullable = propType.isNullable();
+
+            if (prop.isLazy()) {
+                // TODO add lazy assigned check and if not assigned jump to code.goto_(skipProp)
+            }
+
+            if (addComma) {
+                // add 2 to the result for the comma and space
+                code.lload(resultSlot)
+                    .loadConstant(2L)
+                    .ladd()
+                    .lstore(resultSlot);
+            }
+            addComma = true;
+
+            // append the property name length plus 1 for the equal sign
+            String name = propId.getName();
+            code.lload(resultSlot)
+                .loadConstant((long) name.length() + 1L)
+                .ladd()
+                .lstore(resultSlot);
+
+            if (isNullable) {
+                // load the property value (do not unbox primitives)
+                code.aload(thisSlot);
+                loadProperty(code, type, propId, false);
+                loadNull(code);
+                code.if_acmpne(checkProp); // not null, go to "checkProp"
+                // property is Null, so add 4 (for "Null") to the result
+                code.lload(resultSlot)
+                    .loadConstant(4L)
+                    .ladd()
+                    .lstore(resultSlot)
+                    .goto_(skipProp); // skip any remaining processing for this property
+
+                propType = propType.removeNullable();
+            }
+
+            ClassDesc cdProp = ensureClassDesc(propType);
+
+            code.labelBinding(checkProp);
+            code.aload(thisSlot);
+            loadProperty(code, type, propId, false);
+            if (isNullable) {
+                code.checkcast(cdProp);
+            }
+            if (propType.isA(typeStringable)) {
+                // property is Stringable, so call its estimateStringLength$p method
+                loadCtx(code);
+                code.invokevirtual(cdProp, methodName, mdEstStringLen);
+            } else {
+                // use propValue.toString(Ctx) as the value to add the string size
+                loadCtx(code);
+                code.invokevirtual(cdProp, "toString", mdToString);
+                loadCtx(code);
+                code.invokevirtual(CD_String, "size$get$p", mdStringSize);
+            }
+            // string size is on the stack, add to the result
+            code.lload(resultSlot)
+                .ladd()
+                .lstore(resultSlot);
+
+            // we jump here if the prop is nullable and is null, or the property is @Lazy and
+            // is unassigned
+            code.labelBinding(skipProp);
+        }
+
+        // load and return the result
+        code.lload(resultSlot)
+            .lreturn();
+    }
+
+    /**
+     * Generate the "appendTo" method if it does not already exist.
+     * <pre>
+     *     Appender<Char> appendTo(Appender<Char> buf);
+     * </pre>
+     */
+    protected void assembleConstAppendTo(ClassBuilder classBuilder) {
+        SignatureConstant appendSig    = pool().sigAppendTo();
+        MethodInfo        appendMethod = typeInfo.getMethodBySignature(appendSig);
+        Implementation    impl         = appendMethod.getHead().getImplementation();
+        IdentityConstant  targetId     = appendMethod.getIdentity().getNamespace();
+
+        // If the method is not explicitly implemented or the declaring type does not match the
+        // current type (i.e., the method is declared on a super class), then we can build the
+        // method
+        if ((impl != Implementation.Explicit && impl != Implementation.Capped)
+            || !thisId.equals(targetId)) {
+
+            String         name = appendSig.getName();
+            MethodTypeDesc md   = MethodTypeDesc.of(CD_AppenderChar, CD_Ctx, CD_AppenderChar);
+
+            if (!isNativeMethod(name, md)) {
+                // generate the standard "compare" method
+                classBuilder.withMethodBody(name, md, ClassFile.ACC_PUBLIC, code ->
+                        assembleConstAppendTo(code, thisType));
+            }
+        }
+    }
+
+    /**
+     * Generate the native "appendTo" method.
+     * <pre>
+     *     Appender<Char> appendTo(Appender<Char> buf);
+     * </pre>
+     */
+    private void assembleConstAppendTo(CodeBuilder code, TypeConstant type) {
+        ConstantPool   pool           = pool();
+        TypeConstant   typeStringable = pool.typeStringable();
+        ClassDesc      cdThis         = ensureClassDesc(type);
+        MethodTypeDesc mdAppendTo     = MethodTypeDesc.of(CD_AppenderChar, CD_Ctx, CD_AppenderChar);
+        MethodTypeDesc mdAdd          = MethodTypeDesc.of(CD_AppenderChar, CD_Ctx, CD_int);
+        MethodTypeDesc mdToString     = MethodTypeDesc.of(CD_String, CD_Ctx);
+        int            thisSlot       = 0;
+        int            appenderSlot   = 2;
+
+        // create the list of properties to be compared so we can sort them
+        List<PropertyInfo> props = new ArrayList<>();
+        for (PropertyInfo prop : structInfo.getProperties().values()) {
+            if (!isConstFormingProperty(prop, null, true)) {
+                continue;
+            }
+
+            TypeConstant propType = prop.getType();
+            if (!propType.isNullable() && propType instanceof UnionTypeConstant) {
+                throw new UnsupportedOperationException("Union types not yet supported");
+            }
+            props.add(prop);
+        }
+
+        // append the open bracket '('
+        code.aload(appenderSlot);
+        loadCtx(code);
+        code.loadConstant('(')
+            .invokeinterface(CD_AppenderChar, "add$p", mdAdd)
+            .pop();
+
+        // iterate over all the properties
+        // we sort by the property rank and compare in that order
+        props.sort(Comparator.comparingInt(PropertyInfo::getRank));
+        boolean addComma = false;
+        for (PropertyInfo prop : props) {
+            PropertyConstant propId     = prop.getIdentity();
+            TypeConstant     propType   = prop.getType();
+            Label            skipProp   = code.newLabel();
+            Label            checkProp  = code.newLabel();
+            boolean          isNullable = propType.isNullable();
+
+            if (prop.isLazy()) {
+                // TODO add lazy assigned check and if not assigned jump to
+                // code.goto_(skipProp);
+            }
+
+            // append a comma and space if required
+            if (addComma) {
+                code.aload(appenderSlot);
+                loadCtx(code);
+                code.loadConstant(',')
+                    .invokeinterface(CD_AppenderChar, "add$p", mdAdd);
+                loadCtx(code);
+                code.loadConstant(' ')
+                    .invokeinterface(CD_AppenderChar, "add$p", mdAdd)
+                    .pop();
+            }
+            addComma = true;
+
+            // append the property name
+            String name = propId.getName();
+            code.aload(appenderSlot);
+            for (char c : name.toCharArray()) {
+                loadCtx(code);
+                code.loadConstant(c)
+                    .invokeinterface(CD_AppenderChar, "add$p", mdAdd);
+            }
+            // append an '='
+            loadCtx(code);
+            code.loadConstant('=')
+                .invokeinterface(CD_AppenderChar, "add$p", mdAdd)
+                .pop(); // pop the appender from the stack
+
+            if (isNullable) {
+                // load the property value (do not unbox primitives)
+                code.aload(thisSlot);
+                loadProperty(code, type, propId, false);
+                loadNull(code);
+                code.if_acmpne(checkProp); // not null, go to "checkProp"
+                // property is Null, so append "Null" to the appender
+                code.aload(appenderSlot);
+                for (char c : "Null".toCharArray()) {
+                    loadCtx(code);
+                    code.loadConstant(c)
+                        .invokeinterface(CD_AppenderChar, "add$p", mdAdd);
+                }
+                code.pop()            // pop the appender from the stack
+                    .goto_(skipProp); // skip any remaining processing for this property
+
+                propType = propType.removeNullable();
+            }
+
+            ClassDesc cdProp = ensureClassDesc(propType);
+
+            code.labelBinding(checkProp);
+            if (propType.isA(typeStringable)) {
+                // property is Stringable, so call appendTo
+                // load the property value (do not unbox primitives)
+                code.aload(thisSlot);
+                loadProperty(code, type, propId, false);
+                if (isNullable) {
+                    code.checkcast(cdProp);
+                }
+                loadCtx(code);
+                code.aload(appenderSlot)
+                    .invokevirtual(cdProp, "appendTo", mdAppendTo)
+                    .pop();
+            } else {
+                // use propValue.toString(Ctx) as the value to append
+                // load the property value (do not unbox primitives)
+                code.aload(thisSlot);
+                loadProperty(code, type, propId, false);
+                if (isNullable) {
+                    code.checkcast(cdProp);
+                }
+                loadCtx(code);
+                code.invokevirtual(cdProp, "toString", mdToString);
+                loadCtx(code);
+                code.aload(appenderSlot)
+                    .invokevirtual(CD_String, "appendTo", mdAppendTo)
+                    .pop();
+            }
+
+            // we jump here if the prop is nullable and is null, or the property is @Lazy and
+            // is unassigned
+            code.labelBinding(skipProp);
+        }
+
+        // append the closing bracket ')' and return the appender
+        code.aload(appenderSlot);
+        loadCtx(code);
+        code.loadConstant(')')
+            .invokeinterface(CD_AppenderChar, "add$p", mdAdd)
+            .areturn();
     }
 
     /**
@@ -3187,14 +3529,19 @@ public class CommonBuilder
         "StringBuffer",
         "Float*",
 //        "Array",          // depends on JMP_VAL implementation
-        "Iterable",
-        "Iterator",
+        "Iterable*",
+        "Iterator*",
         "List",
         "TerminalConsole",
+        "Appender",
+        "AppenderᐸCharᐳ",
+        "StringBuffer",
+        "Const",
+        "Stringable",
 //        "Dec32", "Dec64", // need to change to SingleSlot
 //        "UInt",           // depends on GP_DIVREM
 //        "FPNumber",       // depends on Bit support
-//        "Int",            // depends on "switch" implementation
+//        "Int",            // depends on Char "switch" implementation, depends on Char
 //        "Collection"      // needs improved formal type resolution
     };
 

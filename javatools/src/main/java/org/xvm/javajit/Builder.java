@@ -1541,6 +1541,7 @@ public abstract class Builder {
     public static final String N_UInt32       = "org.xtclang.ecstasy.numbers.UInt32";
     public static final String N_UInt64       = "org.xtclang.ecstasy.numbers.UInt64";
     public static final String N_UInt128      = "org.xtclang.ecstasy.numbers.UInt128";
+    public static final String N_AppenderChar = "org.xtclang.ecstasy.AppenderᐸCharᐳ";
 
     public static final String N_nConst       = "org.xtclang.ecstasy.nConst";
     public static final String N_nEnum        = "org.xtclang.ecstasy.nEnum";
@@ -1673,6 +1674,7 @@ public abstract class Builder {
     public static final ClassDesc CD_UInt32        = ClassDesc.of(N_UInt32);
     public static final ClassDesc CD_UInt64        = ClassDesc.of(N_UInt64);
     public static final ClassDesc CD_UInt128       = ClassDesc.of(N_UInt128);
+    public static final ClassDesc CD_AppenderChar  = ClassDesc.of(N_AppenderChar);
 
     public static final ClassDesc CD_Container     = ClassDesc.of(Container.class.getName());
     public static final ClassDesc CD_Ctx           = ClassDesc.of(Ctx.class.getName());

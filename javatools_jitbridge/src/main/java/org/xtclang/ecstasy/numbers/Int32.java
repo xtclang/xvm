@@ -2,6 +2,7 @@ package org.xtclang.ecstasy.numbers;
 
 import java.math.BigDecimal;
 
+import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.OutOfBounds;
 
 import org.xtclang.ecstasy.text.String;
@@ -26,6 +27,17 @@ public class Int32 extends IntNumber {
     @Override
     public String toString(Ctx ctx) {
         return String.of(ctx, Integer.toString($value));
+    }
+
+    public long estimateStringLength$p(Ctx ctx) {
+        return $estimateStringLength($value);
+    }
+
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
+        for (char c : Integer.toString($value).toCharArray()) {
+            appender = appender.add$p(ctx, c);
+        }
+        return appender;
     }
 
     /**

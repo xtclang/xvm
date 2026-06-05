@@ -2248,6 +2248,7 @@ public class ConstantPool
     public TypeConstant      typeString१()       {TypeConstant      c = m_typeString१;       if (c == null) {m_typeString१       = c = ensureNullableTypeConstant(typeString()                          );} return c;}
     public TypeConstant      typeInjector()      {TypeConstant      c = m_typeInjector;      if (c == null) {m_typeInjector      = c = ensureTerminalTypeConstant(clzInjector()                        );} return c;}
     public TypeConstant      typeRounding()      {TypeConstant      c = m_typeRounding;      if (c == null) {m_typeRounding      = c = ensureTerminalTypeConstant(clzRounding()                        );} return c;}
+    public TypeConstant      typeAppender()      {TypeConstant      c = m_typeAppender;      if (c == null) {m_typeAppender      = c = ensureTerminalTypeConstant(clzAppender()                        );} return c;}
 
     public IntConstant       val0()              {IntConstant       c = m_val0;              if (c == null) {m_val0              = c = ensureIntConstant(0)                                             ;} return c;}
     public SingletonConstant valFalse()          {SingletonConstant c = m_valFalse;          if (c == null) {m_valFalse          = c = ensureSingletonConstConstant(clzFalse()                         );} return c;}
@@ -2263,6 +2264,8 @@ public class ConstantPool
 
     public RegisterConstant  valDefault()        {RegisterConstant  c = m_valDefault;        if (c == null) {m_valDefault        = c = new RegisterConstant(this, Register.DEFAULT)                     ;} return c;}
 
+    public SignatureConstant sigAppendTo()       {SignatureConstant c = m_sigAppendTo;       if (c == null) {m_sigAppendTo       = c = getSignature("Stringable",  "appendTo",  1)                      ;} return c;}
+    public SignatureConstant sigEstimateStrLen() {SignatureConstant c = m_sigEstStrLen;      if (c == null) {m_sigEstStrLen      = c = getSignature("Stringable",  "estimateStringLength",  0)          ;} return c;}
     public SignatureConstant sigToString()       {SignatureConstant c = m_sigToString;       if (c == null) {m_sigToString       = c = getSignature("Object",    "toString",  0)                        ;} return c;}
     public SignatureConstant sigEquals()         {SignatureConstant c = m_sigEquals;         if (c == null) {m_sigEquals         = c = getSignature("Object",    "equals",    3)                        ;} return c;}
     public SignatureConstant sigCompare()        {SignatureConstant c = m_sigCompare;        if (c == null) {m_sigCompare        = c = getSignature("Orderable", "compare",   3)                        ;} return c;}
@@ -2335,6 +2338,7 @@ public class ConstantPool
     protected ClassConstant  clzTowardPositive(){return (ClassConstant) getImplicitlyImportedIdentity("TowardPositive"           );}
     protected ClassConstant  clzTowardZero()    {return (ClassConstant) getImplicitlyImportedIdentity("TowardZero"               );}
     protected ClassConstant  clzTowardNegative(){return (ClassConstant) getImplicitlyImportedIdentity("TowardNegative"           );}
+    protected ClassConstant  clzAppender()      {return (ClassConstant) getImplicitlyImportedIdentity("Appender"                 );}
 
     /**
      * A special TypeInfo that acts as a place-holder for "this TypeInfo is currently being built".
@@ -4107,6 +4111,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeFileNode;
     private transient TypeConstant      m_typeInjector;
     private transient TypeConstant      m_typeRounding;
+    private transient TypeConstant      m_typeAppender;
     private transient IntConstant       m_val0;
     private transient SingletonConstant m_valFalse;
     private transient SingletonConstant m_valTrue;
@@ -4124,6 +4129,8 @@ public class ConstantPool
     private transient SignatureConstant m_sigEquals;
     private transient SignatureConstant m_sigCompare;
     private transient SignatureConstant m_sigHashCode;
+    private transient SignatureConstant m_sigAppendTo;
+    private transient SignatureConstant m_sigEstStrLen;
     private transient SignatureConstant m_sigClose;
     private transient SignatureConstant m_sigValidator;
     private transient TypeInfo          m_infoPlaceholder;
