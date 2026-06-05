@@ -296,7 +296,7 @@ public class CommonBuilder
                     break;
             }
         }
-        if (classStruct.getFormat() == Format.INTERFACE && !interfaces.contains(CD_Object)) {
+        if (this.isInterface) {
             // all interfaces extend org.xtclang.ecstasy.Object
             interfaces.add(CD_Object);
         }

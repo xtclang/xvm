@@ -374,10 +374,13 @@ public class String
         return (int) (data[(int) (index >>> 3)] >>> (8 * (~index & 0b111))) & 0xFF;
     }
 
-    public long estimateStringLength$p(Ctx ctx) {
-        return size$get$p(ctx);
-    }
-
+    /**
+     * The native implementation of String.x
+     * <pre>
+     *    Appender<Char> appendTo(Appender<Char> buf)
+     * </pre>
+     * This is native as it will perform better and avoid creating a char array
+     */
     public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ buf) {
         long size = size$get$p(ctx);
         for (long i = 0; i < size; i++) {

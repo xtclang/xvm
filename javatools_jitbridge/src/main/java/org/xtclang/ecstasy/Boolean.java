@@ -75,16 +75,6 @@ public class Boolean
         return this.$value ? (byte) 1 : (byte) 0;
     }
 
-    public long estimateStringLength$p(Ctx ctx) {
-        // this method should only be called on subclasses
-        throw new UnsupportedOperationException();
-    }
-
-    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
-        // this method should only be called on subclasses
-        throw new UnsupportedOperationException();
-    }
-
     @Override
     public String toString(Ctx ctx) {
         return $name;
@@ -94,40 +84,14 @@ public class Boolean
         public False() {
             super(false, 0, String.of(null, "False"));
         }
-
-        @Override
-        public long estimateStringLength$p(Ctx ctx) {
-            return 5;
-        }
-
-        @Override
-        public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
-            return appender.add$p(ctx, 'F')
-                    .add$p(ctx, 'a')
-                    .add$p(ctx, 'l')
-                    .add$p(ctx, 's')
-                    .add$p(ctx, 'e');
-        }
     }
 
     public static class True extends Boolean {
         public True() {
             super(true, 1, String.of(null, "True"));
         }
-
-        @Override
-        public long estimateStringLength$p(Ctx ctx) {
-            return 4;
-        }
-
-        @Override
-        public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
-            return appender.add$p(ctx, 'T')
-                    .add$p(ctx, 'r')
-                    .add$p(ctx, 'u')
-                    .add$p(ctx, 'e');
-        }
     }
+
     // ----- debugging support ---------------------------------------------------------------------
 
     @Override
