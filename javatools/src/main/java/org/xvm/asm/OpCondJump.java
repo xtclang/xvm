@@ -336,7 +336,7 @@ public abstract class OpCondJump
 
             case OP_JMP_TYPE, OP_JMP_NTYPE: {
                 // we can only infer types for registers and constant types
-                if (m_nArg < 0 || m_nArg2 > CONSTANT_OFFSET) {
+                if (!bctx.isRegister(m_nArg) || m_nArg2 > CONSTANT_OFFSET) {
                     break;
                 }
                 TypeConstant typeTarget = bctx.getArgumentType(m_nArg);

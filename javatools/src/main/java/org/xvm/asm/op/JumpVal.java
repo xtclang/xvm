@@ -391,7 +391,7 @@ public class JumpVal
 
         if (cRows == 1) {
             // only a single case, so just build an if ladder
-            RegisterInfo regArg = bctx.getRegisterInfo(code, m_nArgCond);
+            RegisterInfo regArg = bctx.ensureRegister(code, m_nArgCond);
             buildIfLadder(bctx, code, regArg);
         } else {
             // retrieve the base type
@@ -408,7 +408,7 @@ public class JumpVal
                 constant = range.getFirst();
             }
 
-            RegisterInfo regArg = bctx.getRegisterInfo(code, m_nArgCond);
+            RegisterInfo regArg = bctx.ensureRegister(code, m_nArgCond);
             if (regArg.type().isNullable()) {
                 // the type being switched on is nullable, so check to see whether any of the
                 // cases is Null. If so, build a null check to jump to that case's label, otherwise

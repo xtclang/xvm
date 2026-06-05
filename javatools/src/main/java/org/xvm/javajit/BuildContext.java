@@ -126,7 +126,8 @@ public class BuildContext {
         this.isFunction    = methodInfo.isFunction();
         this.isConstructor = methodInfo.isCtorOrValidator();
         this.isOptimized   = methodDesc.optimizedMD != null;
-        this.isSpecialized = jitType.isParamsSpecified();
+        this.isSpecialized = jitType.isParamsSpecified() &&
+                            !jitType.equals(typeInfo.getClassStructure().getCanonicalType());
         this.typeMatrix    = new TypeMatrix(this);
     }
 
@@ -611,6 +612,13 @@ public class BuildContext {
     public Constant getConstant(int argId) {
         assert argId <= Op.CONSTANT_OFFSET;
         return methodStruct.getLocalConstants()[Op.CONSTANT_OFFSET - argId];
+    }
+
+    /**
+     * @return true iff the argument id represents a register
+     */
+    public boolean isRegister(int argId) {
+        return argId >= 0 || argId == Op.A_THIS;
     }
 
     /**

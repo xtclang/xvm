@@ -786,6 +786,14 @@ public abstract class OpCallable extends Op {
     }
 
     /**
+     * Support for NEW_V ops.
+     */
+    protected int buildNewV(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
+        Builder.throwException(code, CD_Exception, "Not implemented: " + toName(getOpCode()));
+        return -1;
+    }
+
+    /**
      * Support for CONSTR_ ops.
      */
     protected int buildConstruct(BuildContext bctx, CodeBuilder code, int[] anArgValue) {

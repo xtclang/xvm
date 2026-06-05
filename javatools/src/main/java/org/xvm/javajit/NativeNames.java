@@ -23,9 +23,10 @@ public class NativeNames {
         reservedMethodSuffix.put("Boolean/not/0", "not");
         reservedMethodSuffix.put("Boolean/toByte/0", "toByte");
 
-        reservedMethodSuffix.put("collections.Array/add/1",     "add");
+        reservedMethodSuffix.put("collections.Array/add/1",    "add");
         reservedMethodSuffix.put("collections.Array/addAll/1", "addAll");
         reservedMethodSuffix.put("collections.Array/delete/1", "delete");
+        reservedMethodSuffix.put("collections.Array/reify/1",  "reify");
         reservedMethodSuffix.put("collections.Array.ArrayDelegate/reify/1", "reify");
         reservedMethodSuffix.put("collections.Collection/reify/0", "reify");
 

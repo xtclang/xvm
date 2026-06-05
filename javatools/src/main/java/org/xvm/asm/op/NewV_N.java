@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
@@ -12,6 +14,8 @@ import org.xvm.asm.OpCallable;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -139,6 +143,19 @@ public class NewV_N
         return Argument.toIdString(m_argType, m_nType) + ", " +
                getParamsString(m_anArgValue, m_aArgValue);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+//    @Override
+//    public void computeTypes(BuildContext bctx) {
+//    }
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildNewV(bctx, code, m_nType, NO_ARGS);
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int   m_nType;
     private int[] m_anArgValue;
