@@ -6920,10 +6920,7 @@ public abstract class TypeConstant
                 bctx.loadType(code, getType()); // type of this type
             }
             reg1.load(code);
-            // TODO Why do we need these checkcasts?
-            code.checkcast(reg1.cd());
             argLoader.run();
-            code.checkcast(cdArg);
 
             switch (nOp) {
             case Op.OP_IS_EQ,  Op.OP_JMP_EQ,

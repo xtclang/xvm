@@ -2637,18 +2637,16 @@ public class BuildContext {
         boolean isOptimized = jmd.isOptimized;
 
         for (int i = 0; i < cReturns; i++) {
-            int          iOpt    = isOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
-            JitParamDesc pdRet   = isOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
-            TypeConstant retType = pdRet.type;
-            ClassDesc    cdRet   = pdRet.cd;
-            int          regId   = anVar[i];
+            int          iOpt  = isOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
+            JitParamDesc pdRet = isOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
+            int          regId = anVar[i];
 
             if (regId == Op.A_IGNORE) {
                 // The return is ignored, e.g just calling foo() instead of x = foo();
                 // if i == 0 then we need to pop the value from the stack, otherwise the return
                 // value is in the context, so we can just ignore it
                 if (i == 0) {
-                    Builder.pop(code, cdRet);
+                    Builder.pop(code, pdRet.cd);
                 }
                 continue;
             }
@@ -2656,8 +2654,8 @@ public class BuildContext {
             TypeConstant destType = getReturnType(regId);
             assert destType != null;
 
-            JitTypeDesc jitDesc    = destType.getJitDesc(builder);
-            JitFlavor   destFlavor = jitDesc.flavor;
+            JitTypeDesc tdDest     = destType.getJitDesc(builder);
+            JitFlavor   destFlavor = tdDest.flavor;
             boolean     invalid    = false;
 
             if (i == 0) {
@@ -2666,7 +2664,7 @@ public class BuildContext {
                     assert isOptimized;
                     switch (destFlavor) {
                     case Specific, Widened:
-                        Builder.box(code, retType);
+                        Builder.box(code, destType);
                         break;
 
                     case Primitive:
@@ -2696,10 +2694,10 @@ public class BuildContext {
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
                         code.ifne(ifTrue);
-                        Builder.box(code, retType);
+                        Builder.box(code, destType);
                         code.goto_(endIf)
                                 .labelBinding(ifTrue);
-                        Builder.pop(code, cdRet);
+                        Builder.pop(code, pdRet.cd);
                         Builder.loadNull(code);
                         code.labelBinding(endIf);
                         break;
@@ -2722,7 +2720,7 @@ public class BuildContext {
 
                     switch (destFlavor) {
                     case Specific, Widened:
-                        Builder.box(code, retType);
+                        Builder.box(code, destType);
                         break;
 
                     case XvmPrimitive:
@@ -2750,7 +2748,7 @@ public class BuildContext {
                             JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
                             Builder.loadFromContext(code, retDesc.cd, retIndex);
                         }
-                        Builder.box(code, retType);
+                        Builder.box(code, destType);
                         code.goto_(endIf).labelBinding(ifTrue);
                         Builder.pop(code, jmd.optimizedReturns[0].cd);
                         Builder.loadNull(code);
@@ -2773,10 +2771,11 @@ public class BuildContext {
 
                 case Specific:
                     switch (destFlavor) {
-                    case Specific:
+                    case Specific: {
+                        TypeConstant retType = pdRet.type;
                         if (retType.isAutoNarrowing() || !retType.equals(destType)) {
                             builder.generateCheckCast(code, destType);
-                        }
+                        }}
                         break;
 
                     case Widened:
@@ -2803,11 +2802,11 @@ public class BuildContext {
                 switch (pdRet.flavor) {
                 case Primitive: {
                     assert isOptimized;
-                    Builder.loadFromContext(code, cdRet, pdRet.altIndex);
+                    Builder.loadFromContext(code, tdDest.cd, pdRet.altIndex);
 
                     switch (destFlavor) {
                     case Specific, Widened:
-                        Builder.box(code, retType);
+                        Builder.box(code, destType);
                         break;
 
                     case Primitive:
@@ -2825,7 +2824,7 @@ public class BuildContext {
                     assert isOptimized;
                     JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
 
-                    Builder.loadFromContext(code, cdRet, pdRet.altIndex);
+                    Builder.loadFromContext(code, tdDest.cd, pdRet.altIndex);
                     Builder.loadFromContext(code, pdExt.cd, pdExt.altIndex);
                     // if the value is `True`, then the return value is Ecstasy `Null`
 
@@ -2838,7 +2837,7 @@ public class BuildContext {
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
                         code.ifeq(ifTrue);
-                        Builder.box(code, retType);
+                        Builder.box(code, destType);
                         code.goto_(endIf);
                         code.labelBinding(ifTrue)
                             .pop();
@@ -2864,7 +2863,7 @@ public class BuildContext {
 
                     switch (destFlavor) {
                     case Specific, Widened:
-                        Builder.box(code, retType);
+                        Builder.box(code, destType);
                         break;
 
                     case XvmPrimitive:
@@ -2892,7 +2891,7 @@ public class BuildContext {
                             JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
                             Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
                         }
-                        Builder.box(code, retType);
+                        Builder.box(code, destType);
                         code.goto_(endIf);
                         code.labelBinding(ifTrue);
                         Builder.loadNull(code);
@@ -2913,7 +2912,7 @@ public class BuildContext {
                 }
 
                 default:
-                    Builder.loadFromContext(code, cdRet, pdRet.altIndex);
+                    Builder.loadFromContext(code, tdDest.cd, pdRet.altIndex);
                     break;
                 }
             }

@@ -1296,7 +1296,9 @@ public abstract class Builder {
                     .loadConstant(returnIndex-8)
                     .aaload();
             }
-            code.checkcast(cd);
+            if (!cd.equals(CD_Object)) {
+                code.checkcast(cd);
+            }
         }
     }
 
