@@ -468,18 +468,9 @@ public abstract class Array
      * </pre>
      */
     public Array removeAll$p(Ctx ctx, nFunction shouldRemove) {
-        // TODO can this be removed if Array.x removeAll can be compiled?
-        throw new UnsupportedOperationException("TODO");
-    }
-
-    /**
-     * Native implementation of:
-     * <pre>
-     *   Array! toArray(Mutability? mutability = Null, Boolean inPlace = False)
-     * </pre>
-     */
-    public Array toArray$p(Ctx ctx, Object mutability, boolean inPlace, boolean inPlace$dflt) {
-        // TODO can this be removed if Array.x toArray() can be compiled?
+        // REVIEW: the problem is that the natural code for "removeAll" uses an Array<Int>;
+        //         to compile it we need to have to load Array<Int>, which extends Array
+        //         resulting in the CircularClassInitialization error
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -665,6 +656,6 @@ public abstract class Array
 
     @Override public java.lang.String toString() {
         // TODO keep it small, show relevant info like size, type, a few elements ...
-        return "";
+        return "Array";
     }
 }

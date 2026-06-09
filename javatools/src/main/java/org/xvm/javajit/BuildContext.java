@@ -2095,8 +2095,9 @@ public class BuildContext {
             narrowedSlotCds = origReg.slotCds();
             narrowedReg     = ref.narrow(narrowingType);
         } else {
-            JitFlavor narrowedFlavor = narrowingType.getJitDesc(builder).flavor;
-                      narrowedCD     = JitTypeDesc.getJitClass(builder, narrowingType);
+            JitTypeDesc narrowedDesc   = narrowingType.getJitDesc(builder);
+            JitFlavor   narrowedFlavor = narrowedDesc.flavor;
+                        narrowedCD     = narrowedDesc.cd;
             if (narrowingType.isJavaPrimitive()) {
                 narrowedSlots   = new int[] {scope.allocateJavaSlot(narrowedCD)};
                 narrowedSlotCds = new ClassDesc[] {narrowedCD};

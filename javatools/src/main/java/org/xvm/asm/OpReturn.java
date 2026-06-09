@@ -264,6 +264,21 @@ public abstract class OpReturn
                     }
                     break;
 
+                case Widened:
+                    switch (pdRet.flavor) {
+                        case Specific:
+                            code.checkcast(pdRet.cd);
+                            break;
+
+                        case Widened:
+                            break;
+
+                        default:
+                            fValid = false;
+                            break;
+                    }
+                    break;
+
                 case NullableXvmPrimitive:
                     switch (pdRet.flavor) {
                     case NullableXvmPrimitive:
