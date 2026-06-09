@@ -41,6 +41,8 @@ package charArrayTests {
         shouldSubInPlaceOutOfBounds();
         shouldIterateUsingForLoop();
         shouldIterateUsingIterator();
+        shouldDeleteSpecificIndexFromArray();
+        shouldInsertValueIntoArray();
 
         console.print(">>>> Running Char Array Tests >>>>");
     }
@@ -267,5 +269,37 @@ package charArrayTests {
             i++;
         }
         assert i == array.size;
+    }
+
+    void shouldDeleteSpecificIndexFromArray() {
+        Char[] array = new Array();
+        array.add('a');
+        array.add('b');
+        array.add('c');
+        array.add('d');
+        array.add('e');
+
+        array.delete(2);
+        assert array.size == 4;
+        assert array[0] == 'a';
+        assert array[1] == 'b';
+        assert array[2] == 'd';
+        assert array[3] == 'e';
+    }
+
+    void shouldInsertValueIntoArray() {
+        Char[] array = new Array();
+        array.add('a');
+        array.add('b');
+        array.add('c');
+        array.add('d');
+
+        array.insert(2, 'z');
+        assert array.size == 5;
+        assert array[0] == 'a';
+        assert array[1] == 'b';
+        assert array[2] == 'z';
+        assert array[3] == 'c';
+        assert array[4] == 'd';
     }
 }

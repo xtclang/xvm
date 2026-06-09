@@ -120,6 +120,24 @@ public class ArrayᐸUInt8ᐳ
         return super.add$p(ctx, value);
     }
 
+    public ArrayᐸUInt8ᐳ insert$p(Ctx ctx, long index, int value) {
+        if (index < 0 || index > size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $insert(ctx, index, 1);
+        $set8bitElement(index, value);
+        return this;
+    }
+
+    @Override
+    public ArrayᐸUInt8ᐳ delete$p(Ctx ctx, long index) {
+        if (index < 0 || index >= size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $delete(ctx, index, 1);
+        return this;
+    }
+
     @Override
     public ArrayᐸUInt8ᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
         return (ArrayᐸUInt8ᐳ) super.slice(ctx, range);
@@ -171,6 +189,16 @@ public class ArrayᐸUInt8ᐳ
     @Override
     protected long $calculateHash(Ctx ctx) {
         return $calculate8BitUnsignedHash(ctx);
+    }
+
+    @Override
+    protected void $deleteElements(long index, long count) {
+        $delete8bit(index, count);
+    }
+
+    @Override
+    protected void $insertElements(long index, long count) {
+        $insert8bit(index, count);
     }
 
     // ---- Iterator implementation ----------------------------------------------------------------

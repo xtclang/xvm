@@ -113,6 +113,24 @@ public class ArrayᐸFloat64ᐳ
         return super.add$p(ctx, Double.doubleToRawLongBits(value));
     }
 
+    public ArrayᐸFloat64ᐳ insert$p(Ctx ctx, long index, double value) {
+        if (index < 0 || index > size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $insert(ctx, index, 1);
+        $storage[(int) index] = Double.doubleToRawLongBits(value);
+        return this;
+    }
+
+    @Override
+    public ArrayᐸFloat64ᐳ delete$p(Ctx ctx, long index) {
+        if (index < 0 || index >= size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $delete(ctx, index, 1);
+        return this;
+    }
+
     @Override
     public ArrayᐸFloat64ᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
         return (ArrayᐸFloat64ᐳ) super.slice(ctx, range);
@@ -150,6 +168,16 @@ public class ArrayᐸFloat64ᐳ
     @Override
     protected long $calculateHash(Ctx ctx) {
         return $calculate64BitHash(ctx);
+    }
+
+    @Override
+    protected void $deleteElements(long index, long count) {
+        $delete64bit(index, count);
+    }
+
+    @Override
+    protected void $insertElements(long index, long count) {
+        $insert64bit(index, count);
     }
 
     // ---- Iterator implementation ----------------------------------------------------------------

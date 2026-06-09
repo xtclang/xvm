@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import java.lang.classfile.ClassFile;
-import java.lang.classfile.ClassHierarchyResolver;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.Interfaces;
 import java.lang.classfile.MethodModel;
@@ -213,7 +212,8 @@ public class NativeTypeSystem
                 if (formals.length > 0) {
                     type = type.adoptParameters(pool(), formals);
                 }
-                return augmentNativeClass(model, className, type);
+                Artifact art = deduceArtifact(moduleLoader.module, name);
+                return augmentNativeClass(model, className, type, art);
             }
         } catch (IOException ignore) {}
 
@@ -224,10 +224,12 @@ public class NativeTypeSystem
     /**
      * Augment the existing native class with the Ecstasy methods.
      */
-    private byte[] augmentNativeClass(ClassModel model, String className, TypeConstant type) {
+    private byte[] augmentNativeClass(ClassModel model, String className, TypeConstant type,
+                                      Artifact art) {
+
         ClassFile classFile = ClassFile.of(
-                ClassFile.ClassHierarchyResolverOption.of(
-                    ClassHierarchyResolver.ofClassLoading(loader)),
+                ClassFile.ClassHierarchyResolverOption
+                         .of(createClassHierarchyResolver(className, art)),
                 ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
                 ClassFile.StackMapsOption.GENERATE_STACK_MAPS,
                 ClassFile.DeadLabelsOption.DROP_DEAD_LABELS);

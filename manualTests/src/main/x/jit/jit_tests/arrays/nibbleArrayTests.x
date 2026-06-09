@@ -16,6 +16,8 @@ package nibbleArrayTests {
         shouldAddMultipleElement();
         shouldIterateUsingForLoop();
         shouldIterateUsingIterator();
+        shouldDeleteSpecificIndexFromArray();
+        shouldInsertValueIntoArray();
 
         console.print(">>>> Running Nibble Array Tests >>>>");
     }
@@ -132,5 +134,73 @@ package nibbleArrayTests {
             i++;
         }
         assert i == array.size;
+    }
+
+    void shouldDeleteSpecificIndexFromArray() {
+        Nibble[] array = new Array();
+        array.add(1);
+        array.add(2);
+        array.add(3);
+        array.add(4);
+        array.add(5);
+
+        // delete from middle
+        array.delete(2);
+        assert array.size == 4;
+        assert array[0] == 1;
+        assert array[1] == 2;
+        assert array[2] == 4;
+        assert array[3] == 5;
+
+        // delete from index zero
+        array.delete(0);
+        assert array.size == 3;
+        assert array[0] == 2;
+        assert array[1] == 4;
+        assert array[2] == 5;
+
+        // delete from last index
+        array.delete(2);
+        assert array.size == 2;
+        assert array[0] == 2;
+        assert array[1] == 4;
+    }
+
+    void shouldInsertValueIntoArray() {
+        Nibble[] array = new Array();
+        array.add(1);
+        array.add(2);
+        array.add(3);
+        array.add(4);
+
+        // insert in middle
+        array.insert(2, 5);
+        assert array.size == 5;
+        assert array[0] == 1;
+        assert array[1] == 2;
+        assert array[2] == 5;
+        assert array[3] == 3;
+        assert array[4] == 4;
+
+        // insert at index zero
+        array.insert(0, 0);
+        assert array.size == 6;
+        assert array[0] == 0;
+        assert array[1] == 1;
+        assert array[2] == 2;
+        assert array[3] == 5;
+        assert array[4] == 3;
+        assert array[5] == 4;
+
+        // insert at the end
+        array.insert(array.size, 6);
+        assert array.size == 7;
+        assert array[0] == 0;
+        assert array[1] == 1;
+        assert array[2] == 2;
+        assert array[3] == 5;
+        assert array[4] == 3;
+        assert array[5] == 4;
+        assert array[6] == 6;
     }
 }

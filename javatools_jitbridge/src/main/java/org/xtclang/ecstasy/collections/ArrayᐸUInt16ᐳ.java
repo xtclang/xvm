@@ -120,6 +120,24 @@ public class ArrayᐸUInt16ᐳ
         return super.add$p(ctx, value);
     }
 
+    public ArrayᐸUInt16ᐳ insert$p(Ctx ctx, long index, int value) {
+        if (index < 0 || index > size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $insert(ctx, index, 1);
+        $set16bitElement(index, value);
+        return this;
+    }
+
+    @Override
+    public ArrayᐸUInt16ᐳ delete$p(Ctx ctx, long index) {
+        if (index < 0 || index >= size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $delete(ctx, index, 1);
+        return this;
+    }
+
     @Override
     public ArrayᐸUInt16ᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
         return (ArrayᐸUInt16ᐳ) super.slice(ctx, range);
@@ -157,6 +175,16 @@ public class ArrayᐸUInt16ᐳ
     @Override
     protected long $calculateHash(Ctx ctx) {
         return $calculate16BitUnsignedHash(ctx);
+    }
+
+    @Override
+    protected void $deleteElements(long index, long count) {
+        $delete16bit(index, count);
+    }
+
+    @Override
+    protected void $insertElements(long index, long count) {
+        $insert16bit(index, count);
     }
 
     // ---- Iterator implementation ----------------------------------------------------------------

@@ -114,6 +114,24 @@ public class ArrayᐸFloat32ᐳ
         return super.add$p(ctx, Float.floatToRawIntBits(value));
     }
 
+    public ArrayᐸFloat32ᐳ insert$p(Ctx ctx, long index, float value) {
+        if (index < 0 || index > size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $insert(ctx, index, 1);
+        $set32bitElement(index, Float.floatToRawIntBits(value));
+        return this;
+    }
+
+    @Override
+    public ArrayᐸFloat32ᐳ delete$p(Ctx ctx, long index) {
+        if (index < 0 || index >= size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $delete(ctx, index, 1);
+        return this;
+    }
+
     @Override
     public ArrayᐸFloat32ᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
         return (ArrayᐸFloat32ᐳ) super.slice(ctx, range);
@@ -151,6 +169,16 @@ public class ArrayᐸFloat32ᐳ
     @Override
     protected long $calculateHash(Ctx ctx) {
         return $calculate32BitUnsignedHash(ctx);
+    }
+
+    @Override
+    protected void $deleteElements(long index, long count) {
+        $delete32bit(index, count);
+    }
+
+    @Override
+    protected void $insertElements(long index, long count) {
+        $insert32bit(index, count);
     }
 
     // ---- Iterator implementation ----------------------------------------------------------------

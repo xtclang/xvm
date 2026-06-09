@@ -146,6 +146,24 @@ public class ArrayᐸCharᐳ
         return super.add$p(ctx, (long) ch);
     }
 
+    public ArrayᐸCharᐳ insert$p(Ctx ctx, long index, int value) {
+        if (index < 0 || index > size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $insert(ctx, index, 1);
+        $setElement(ctx, index, value);
+        return this;
+    }
+
+    @Override
+    public ArrayᐸCharᐳ delete$p(Ctx ctx, long index) {
+        if (index < 0 || index >= size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $delete(ctx, index, 1);
+        return this;
+    }
+
     public ArrayᐸCharᐳ addAll(Ctx ctx, IterableᐸCharᐳ values) {
         IteratorᐸCharᐳ iter = values.iterator(ctx);
         while (iter.next$p(ctx)) {
@@ -207,6 +225,24 @@ public class ArrayᐸCharᐳ
     protected long $calculateHash(Ctx ctx) {
         return $utf21 ? $calculate21BitUnsignedHash(ctx)
                       : $calculate8BitUnsignedHash(ctx);
+    }
+
+    @Override
+    protected void $deleteElements(long index, long count) {
+        if ($utf21) {
+            $delete21bit(index, count);
+        } else {
+            $delete8bit(index, count);
+        }
+    }
+
+    @Override
+    protected void $insertElements(long index, long count) {
+        if ($utf21) {
+            $insert21bit(index, count);
+        } else {
+            $insert8bit(index, count);
+        }
     }
 
     public IteratorᐸCharᐳ iterator(Ctx ctx) {

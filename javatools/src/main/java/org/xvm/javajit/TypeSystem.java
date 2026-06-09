@@ -318,29 +318,14 @@ public class TypeSystem {
                 }
             };
 
-            // there seems to be a bug in the ClassFile.build() that asks the ClassHierarchyResolver
-            // to resolve the exact class it's building; the logic below is a simple compensation
-            ClassHierarchyResolver resolver = classDesc -> {
-                String clzName = classDesc.descriptorString();
-                assert clzName.charAt(0) == 'L' && clzName.charAt(clzName.length() - 1) == ';';
-                clzName = clzName.replace('/', '.').substring(1, clzName.length() - 1);
-
-                if (clzName.equals(className)) {
-                    return art.type().isJitInterface()
-                        ? ClassHierarchyInfo.ofInterface()
-                        : ClassHierarchyInfo.ofClass(((CommonBuilder) builder).getSuperCD());
-                }
-
-                return ClassHierarchyResolver.ofClassLoading(loader).getClassInfo(classDesc);
-            };
-
             // There are other options that can be useful:
             //     DeadCodeOption.PATCH_DEAD_CODE
             //     DebugElementsOption.DROP_DEBUG
             //     LineNumbersOption.DROP_LINE_NUMBERS
             // TODO: force some of them or make configurable
             ClassFile classFile = ClassFile.of(
-                ClassFile.ClassHierarchyResolverOption.of(resolver),
+                ClassFile.ClassHierarchyResolverOption
+                         .of(createClassHierarchyResolver(className, art)),
                 ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
                 ClassFile.StackMapsOption.GENERATE_STACK_MAPS,
                 ClassFile.DeadLabelsOption.DROP_DEAD_LABELS
@@ -349,6 +334,27 @@ public class TypeSystem {
             return classFile.build(ClassDesc.of(className), handler);
         }
         return null;
+    }
+
+    protected ClassHierarchyResolver createClassHierarchyResolver(String className, Artifact art) {
+        if (art == null || art.type.isA(pool().typeModule()) || art.type.isA(pool().typeException())) {
+            return ClassHierarchyResolver.ofClassLoading(loader);
+        }
+
+        // there seems to be a bug in the ClassFile.build() that asks the ClassHierarchyResolver
+        // to resolve the exact class it's building; the logic below is a simple compensation
+        return classDesc -> {
+            String clzName = classDesc.descriptorString();
+            assert clzName.charAt(0) == 'L' && clzName.charAt(clzName.length() - 1) == ';';
+            clzName = clzName.replace('/', '.').substring(1, clzName.length() - 1);
+
+            if (clzName.equals(className)) {
+                return art.type().isJitInterface()
+                    ? ClassHierarchyInfo.ofInterface()
+                    : ClassHierarchyInfo.ofClass(((CommonBuilder) ensureBuilder(art)).getSuperCD());
+            }
+            return ClassHierarchyResolver.ofClassLoading(loader).getClassInfo(classDesc);
+        };
     }
 
     /**

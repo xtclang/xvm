@@ -3528,7 +3528,7 @@ public class CommonBuilder
         "Stringable",
         "StringBuffer",
         "Float*",
-//        "Array",          // depends on JMP_VAL implementation
+        "Array",          // depends on JMP_VAL implementation
         "Iterable*",
         "Iterator*",
         "List",

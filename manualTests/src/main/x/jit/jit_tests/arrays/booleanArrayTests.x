@@ -16,6 +16,8 @@ package booleanArrayTests {
         shouldAddMultipleElement();
         shouldIterateUsingForLoop();
         shouldIterateUsingIterator();
+        shouldDeleteSpecificIndexFromArray();
+        shouldInsertValueIntoArray();
 
         console.print("<<<< Finished Boolean Array Tests <<<<");
     }
@@ -132,5 +134,37 @@ package booleanArrayTests {
             i++;
         }
         assert i == array.size;
+    }
+
+    void shouldDeleteSpecificIndexFromArray() {
+        Boolean[] array = new Array();
+        array.add(True);
+        array.add(False);
+        array.add(True);
+        array.add(True);
+        array.add(False);
+
+        array.delete(2);
+        assert array.size == 4;
+        assert array[0] == True;
+        assert array[1] == False;
+        assert array[2] == True;
+        assert array[3] == False;
+    }
+
+    void shouldInsertValueIntoArray() {
+        Boolean[] array = new Array();
+        array.add(True);
+        array.add(False);
+        array.add(True);
+        array.add(False);
+
+        array.insert(2, True);
+        assert array.size == 5;
+        assert array[0] == True;
+        assert array[1] == False;
+        assert array[2] == True;
+        assert array[3] == True;
+        assert array[4] == False;
     }
 }

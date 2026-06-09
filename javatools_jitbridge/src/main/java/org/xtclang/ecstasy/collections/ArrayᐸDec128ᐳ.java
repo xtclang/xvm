@@ -127,6 +127,24 @@ public class ArrayᐸDec128ᐳ
         return super.add$p(ctx, lowValue);
     }
 
+    public ArrayᐸDec128ᐳ insert$p(Ctx ctx, long index, long lowValue, long highValue) {
+        if (index < 0 || index > size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $insert(ctx, index, 1);
+        $set128bitElement(index, lowValue, highValue);
+        return this;
+    }
+
+    @Override
+    public ArrayᐸDec128ᐳ delete$p(Ctx ctx, long index) {
+        if (index < 0 || index >= size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $delete(ctx, index, 1);
+        return this;
+    }
+
     @Override
     public ArrayᐸDec128ᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
         return (ArrayᐸDec128ᐳ) super.slice(ctx, range);
@@ -165,6 +183,16 @@ public class ArrayᐸDec128ᐳ
     @Override
     protected long $calculateHash(Ctx ctx) {
         return $calculate128BitHash(ctx);
+    }
+
+    @Override
+    protected void $deleteElements(long index, long count) {
+        $delete128bit(index, count);
+    }
+
+    @Override
+    protected void $insertElements(long index, long count) {
+        $insert128bit(index, count);
     }
 
     // ---- Iterator implementation ----------------------------------------------------------------

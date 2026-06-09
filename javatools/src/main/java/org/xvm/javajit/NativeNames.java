@@ -23,12 +23,15 @@ public class NativeNames {
         reservedMethodSuffix.put("Boolean/not/0", "not");
         reservedMethodSuffix.put("Boolean/toByte/0", "toByte");
 
-        reservedMethodSuffix.put("collections.Array/add/1",    "add");
-        reservedMethodSuffix.put("collections.Array/addAll/1", "addAll");
-        reservedMethodSuffix.put("collections.Array/delete/1", "delete");
-        reservedMethodSuffix.put("collections.Array/reify/1",  "reify");
+        reservedMethodSuffix.put("collections.Array/add/1",                 "add");
+        reservedMethodSuffix.put("collections.Array/addAll/1",              "addAll");
+        reservedMethodSuffix.put("collections.Array/delete/1",              "delete");
+        reservedMethodSuffix.put("collections.Array/insert/2",              "insert");
+        reservedMethodSuffix.put("collections.Array/insertAll/2",           "insertAll");
+        reservedMethodSuffix.put("collections.Array/reify/1",               "reify");
+        reservedMethodSuffix.put("collections.Array/removeAll/1",           "removeAll");
         reservedMethodSuffix.put("collections.Array.ArrayDelegate/reify/1", "reify");
-        reservedMethodSuffix.put("collections.Collection/reify/0", "reify");
+        reservedMethodSuffix.put("collections.Collection/reify/0",          "reify");
 
         reservedMethodSuffix.put("numbers.Number/toInt8/1",    "toInt8");
         reservedMethodSuffix.put("numbers.Number/toInt16/1",   "toInt16");

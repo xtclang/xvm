@@ -16,6 +16,8 @@ package bitArrayTests {
         shouldAddMultipleElement();
         shouldIterateUsingForLoop();
         shouldIterateUsingIterator();
+        shouldDeleteSpecificIndexFromArray();
+        shouldInsertValueIntoArray();
 
         console.print(">>>> Running Bit Array Tests >>>>");
     }
@@ -132,5 +134,73 @@ package bitArrayTests {
             i++;
         }
         assert i == array.size;
+    }
+
+    void shouldDeleteSpecificIndexFromArray() {
+        Bit[] array = new Array();
+        array.add(1);
+        array.add(0);
+        array.add(1);
+        array.add(1);
+        array.add(0);
+
+        // delete from middle
+        array.delete(2);
+        assert array.size == 4;
+        assert array[0] == 1;
+        assert array[1] == 0;
+        assert array[2] == 1;
+        assert array[3] == 0;
+
+        // delete from index zero
+        array.delete(0);
+        assert array.size == 3;
+        assert array[0] == 0;
+        assert array[1] == 1;
+        assert array[2] == 0;
+
+        // delete from last index
+        array.delete(2);
+        assert array.size == 2;
+        assert array[0] == 0;
+        assert array[1] == 1;
+    }
+
+    void shouldInsertValueIntoArray() {
+        Bit[] array = new Array();
+        array.add(1);
+        array.add(0);
+        array.add(1);
+        array.add(0);
+
+        // insert in middle
+        array.insert(2, 1);
+        assert array.size == 5;
+        assert array[0] == 1;
+        assert array[1] == 0;
+        assert array[2] == 1;
+        assert array[3] == 1;
+        assert array[4] == 0;
+
+        // insert at index zero
+        array.insert(0, 0);
+        assert array.size == 6;
+        assert array[0] == 0;
+        assert array[1] == 1;
+        assert array[2] == 0;
+        assert array[3] == 1;
+        assert array[4] == 1;
+        assert array[5] == 0;
+
+        // insert at the end
+        array.insert(array.size, 1);
+        assert array.size == 7;
+        assert array[0] == 0;
+        assert array[1] == 1;
+        assert array[2] == 0;
+        assert array[3] == 1;
+        assert array[4] == 1;
+        assert array[5] == 0;
+        assert array[6] == 1;
     }
 }

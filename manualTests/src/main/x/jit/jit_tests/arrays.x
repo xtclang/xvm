@@ -30,6 +30,7 @@ package arrays {
                 passed &= runTest(() -> bitArrayTests.run());
                 passed &= runTest(() -> booleanArrayTests.run());
                 passed &= runTest(() -> nibbleArrayTests.run());
+                passed &= runTest(() -> stringArrayTests.run());
             } catch (IllegalState e) {
                 console.print(e);
             }

@@ -31,6 +31,8 @@ package int128ArrayTests {
         shouldXorInPlace();
         shouldIterateUsingForLoop();
         shouldIterateUsingIterator();
+        shouldDeleteSpecificIndexFromArray();
+        shouldInsertValueIntoArray();
 
         console.print(">>>> Running Int128 Array Tests >>>>");
     }
@@ -271,5 +273,73 @@ package int128ArrayTests {
             i++;
         }
         assert i == array.size;
+    }
+
+    void shouldDeleteSpecificIndexFromArray() {
+        Int128[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(18446744073709551616);
+        array.add(40);
+        array.add(50);
+
+        // delete from middle
+        array.delete(2);
+        assert array.size == 4;
+        assert array[0] == 10;
+        assert array[1] == 20;
+        assert array[2] == 40;
+        assert array[3] == 50;
+
+        // delete from index zero
+        array.delete(0);
+        assert array.size == 3;
+        assert array[0] == 20;
+        assert array[1] == 40;
+        assert array[2] == 50;
+
+        // delete from last index
+        array.delete(2);
+        assert array.size == 2;
+        assert array[0] == 20;
+        assert array[1] == 40;
+    }
+
+    void shouldInsertValueIntoArray() {
+        Int128[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(40);
+        array.add(50);
+
+        // insert in middle
+        array.insert(2, 18446744073709551616);
+        assert array.size == 5;
+        assert array[0] == 10;
+        assert array[1] == 20;
+        assert array[2] == 18446744073709551616;
+        assert array[3] == 40;
+        assert array[4] == 50;
+
+        // insert at index zero
+        array.insert(0, 5);
+        assert array.size == 6;
+        assert array[0] == 5;
+        assert array[1] == 10;
+        assert array[2] == 20;
+        assert array[3] == 18446744073709551616;
+        assert array[4] == 40;
+        assert array[5] == 50;
+
+        // insert at the end
+        array.insert(array.size, 60);
+        assert array.size == 7;
+        assert array[0] == 5;
+        assert array[1] == 10;
+        assert array[2] == 20;
+        assert array[3] == 18446744073709551616;
+        assert array[4] == 40;
+        assert array[5] == 50;
+        assert array[6] == 60;
     }
 }

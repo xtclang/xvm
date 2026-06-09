@@ -2,7 +2,7 @@ package org.xtclang.ecstasy.collections;
 
 import org.xtclang.ecstasy.nEnum;
 import org.xtclang.ecstasy.Object;
-import org.xtclang.ecstasy.Range;
+import org.xtclang.ecstasy.nFunction;
 import org.xtclang.ecstasy.nType;
 
 import org.xtclang.ecstasy.reflect.Enumeration;
@@ -360,32 +360,13 @@ public abstract class Array
         throw new UnsupportedOperationException("TODO");
     }
 
-    /*
+    /**
      * Native implementation of:
      *
      *   Array addAll(Iterable<Element> values)
      *
      */
     public Array addAll(Ctx ctx, Iterable values) {
-        throw new UnsupportedOperationException("TODO");
-    }
-
-    /**
-     * Native implementation of:
-     *
-     *    Array reversed(Boolean inPlace = False) {
-     */
-    public Array reversedꖛ0$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
-        throw new UnsupportedOperationException("TODO");
-    }
-
-
-    /**
-     * Native implementation of:
-     *
-     *   Array replace(Int index, Element value)
-     */
-    public Array replaceꖛ0$p(Ctx ctx, long index, Object value) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -401,27 +382,9 @@ public abstract class Array
     /**
      * Native implementation of:
      *
-     *   Array insertAll(Int index, Iterable<Element> values)
-     */
-    public Array insertAll$p(Ctx ctx, long index, Iterable values) {
-        throw new UnsupportedOperationException("TODO");
-    }
-
-    /**
-     * Native implementation of:
-     *
      *   Array delete(Int index)
      */
     public Array delete$p(Ctx ctx, long index) {
-        throw new UnsupportedOperationException("TODO");
-    }
-
-    /**
-     * Native implementation of:
-     *
-     *   Array deleteAll(Interval<Int> indexes)
-     */
-    public Array deleteAll(Ctx ctx, Range indexes) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -496,6 +459,28 @@ public abstract class Array
             case 3  -> Mutability.Mutable;
             default -> throw new IllegalStateException();
         };
+    }
+
+    /**
+     * Native implementation of:
+     * <pre>
+     *   (Array, Int) removeAll(function Boolean(Element) shouldRemove)
+     * </pre>
+     */
+    public Array removeAll$p(Ctx ctx, nFunction shouldRemove) {
+        // TODO can this be removed if Array.x removeAll can be compiled?
+        throw new UnsupportedOperationException("TODO");
+    }
+
+    /**
+     * Native implementation of:
+     * <pre>
+     *   Array! toArray(Mutability? mutability = Null, Boolean inPlace = False)
+     * </pre>
+     */
+    public Array toArray$p(Ctx ctx, Object mutability, boolean inPlace, boolean inPlace$dflt) {
+        // TODO can this be removed if Array.x toArray() can be compiled?
+        throw new UnsupportedOperationException("TODO");
     }
 
     // ----- TEMPORARY: SHOULD BE NATURAL ----------------------------------------------------------

@@ -118,6 +118,24 @@ public class ArrayᐸBitᐳ
         return super.add$p(ctx, value);
     }
 
+    public ArrayᐸBitᐳ insert$p(Ctx ctx, long index, int value) {
+        if (index < 0 || index > size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $insert(ctx, index, 1);
+        $set1bitElement(index, value);
+        return this;
+    }
+
+    @Override
+    public ArrayᐸBitᐳ delete$p(Ctx ctx, long index) {
+        if (index < 0 || index >= size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $delete(ctx, index, 1);
+        return this;
+    }
+
     @Override
     public ArrayᐸBitᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
         return (ArrayᐸBitᐳ) super.slice(ctx, range);
@@ -168,6 +186,16 @@ public class ArrayᐸBitᐳ
     @Override
     protected long $calculateHash(Ctx ctx) {
         return $calculate1BitHash(ctx);
+    }
+
+    @Override
+    protected void $deleteElements(long index, long count) {
+        $delete1bit(index, count);
+    }
+
+    @Override
+    protected void $insertElements(long index, long count) {
+        $insert1bit(index, count);
     }
 
     // ---- Iterator implementation ----------------------------------------------------------------
