@@ -2231,16 +2231,20 @@ public class Parser {
     TypedefStatement parseTypeDefStatement(Expression exprCond, Token tokenAccess) {
         Token keyword = expect(Id.TYPEDEF);
 
+        // Optional template parameter list: <T1, T2 extends Bound>
+        List<Parameter> templateParams = parseTypeParameterList(false);
+
         TypeExpression type = parseExtendedTypeExpression();
 
         // required "as" keyword (note: previously optional)
         expect(Id.AS);
 
-        Token simpleName = expect(Id.IDENTIFIER);
+        // Parse the alias name - could be a simple identifier or a parameterized type like Pair<A,B>
+        TypeExpression aliasType = parseNamedTypeExpression(null);
 
         expect(Id.SEMICOLON);
 
-        return new TypedefStatement(exprCond, tokenAccess == null ? keyword : tokenAccess, type, simpleName);
+        return new TypedefStatement(exprCond, tokenAccess == null ? keyword : tokenAccess, templateParams, type, aliasType);
     }
 
     /**

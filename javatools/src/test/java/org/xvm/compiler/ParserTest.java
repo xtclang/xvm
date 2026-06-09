@@ -50,6 +50,11 @@ public class ParserTest {
         parse("class DependentFutureRef delegates Ref(value) {}");
     }
 
+    @Test
+    public void testTypedefTemplateParams() {
+        parse("module Test { typedef <T> List<T> as MyList<T>; void run() {} }");
+    }
+
     static void parse(String value) {
             parse(new Source(value));
     }
