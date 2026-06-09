@@ -336,6 +336,12 @@ public class TypeSystem {
         return null;
     }
 
+    /**
+     * Create a ClassHierarchyResolver to compensate for what seems to be a weakness in the
+     * ClassFile builder. Despite the fact that at the start of building a class we provide
+     * all relevant information (e.g. class attributes, the super class), the builder may fire a
+     * {@link ClassHierarchyResolver#getClassInfo} request regarding the info about the class itself.
+     */
     protected ClassHierarchyResolver createClassHierarchyResolver(String className, Artifact art) {
         if (art == null || art.type.isA(pool().typeModule()) || art.type.isA(pool().typeException())) {
             return ClassHierarchyResolver.ofClassLoading(loader);
