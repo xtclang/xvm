@@ -445,9 +445,12 @@ const Duration(Int128 picoseconds)
     /**
      * Division: return a fraction of this duration.
      */
-    @Op("/") Duration div(Int divisor) {
-        return new Duration(this.picoseconds / divisor.toInt128());
-    }
+    @Op("/") Duration div(Int divisor) = new Duration(this.picoseconds / divisor.toInt128());
+
+    /**
+     * Division: return the ratio of two durations.
+     */
+    @Op("/") Int128 div(Duration divisor) = this.picoseconds / divisor.picoseconds;
 
 
     // ----- Stringable ----------------------------------------------------------------------------

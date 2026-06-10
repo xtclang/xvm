@@ -346,6 +346,10 @@ module TestLiterals {
 
         duration = new Duration("10.5S");
         console.print($"10.5S duration={duration} or {Duration:10.5S}");
+
+        assert Duration.Minute/Duration.Second == 60;
+        assert Duration.Hour/Duration.Minute == 60;
+        assert Duration.Day/Duration.Hour == 24;
     }
 
     void testLexer() {
