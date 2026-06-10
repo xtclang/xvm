@@ -1,5 +1,6 @@
 package org.xtclang.ecstasy.text;
 
+import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.IteratorᐸCharᐳ;
 import org.xtclang.ecstasy.Object;
@@ -8,6 +9,11 @@ import org.xtclang.ecstasy.nConst;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nType;
 
+import org.xtclang.ecstasy.collections.ArrayᐸCharᐳ;
+
+import org.xvm.asm.ConstantPool;
+
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
@@ -183,6 +189,21 @@ public class String
         return $xvm().nativeTypeSystem.pool().typeString();
     }
 
+    /**
+     * Native implementation of String.x constructor:
+     * <pre>
+     *     construct(Char[] chars)
+     * </pre>
+     */
+    public static String $new(Ctx ctx,TypeConstant type, ArrayᐸCharᐳ chars) {
+        // TODO handle huge arrays
+        ArrayᐸCharᐳ content = chars.$isImmut() ? chars : chars.freeze$p(ctx, false, true);
+        long         size    = content.size$get$p(ctx);
+        String string = new String(ctx, content.$storage, chars.$utf21, 0, 0, (int) size, null);
+        string.chars = content;
+        return string;
+    }
+
     // ----- fields --------------------------------------------------------------------------------
 
     /**
@@ -222,7 +243,36 @@ public class String
      */
     public static final String EmptyString = new String(null, new long[0], true, 0, 0, 0, null);
 
+    /**
+     * The lazily initialized String.x property:
+     * <pre>
+     *     Char[] chars;
+     * </pre>
+     */
+    private ArrayᐸCharᐳ chars;
+
     // ----- String API ----------------------------------------------------------------------------
+
+    /**
+     * The native implementation of String.x property getter:
+     * <pre>
+     *     Char[] chars;
+     * </pre>
+     */
+    public ArrayᐸCharᐳ chars$get(Ctx ctx) {
+        if (chars == null) {
+            ConstantPool  pool         = ctx.container.typeSystem.pool();
+            ClassConstant clz          = pool.clzArray();
+            TypeConstant typeChar      = pool.typeChar();
+            TypeConstant typeCharArray = pool.ensureClassTypeConstant(clz, null, typeChar);
+            // TODO what if this String has a next continuation?
+            assert next == null;
+            ArrayᐸCharᐳ array = new ArrayᐸCharᐳ(ctx, typeCharArray, data, size$get$p(ctx), unicode);
+            array.$makeImmut(ctx);
+            chars = array;
+        }
+        return chars;
+    }
 
     /**
      * Native implementation of:
@@ -322,6 +372,21 @@ public class String
         }
 
         return (int) (data[(int) (index >>> 3)] >>> (8 * (~index & 0b111))) & 0xFF;
+    }
+
+    /**
+     * The native implementation of String.x
+     * <pre>
+     *    Appender<Char> appendTo(Appender<Char> buf)
+     * </pre>
+     * This is native as it will perform better and avoid creating a char array
+     */
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ buf) {
+        long size = size$get$p(ctx);
+        for (long i = 0; i < size; i++) {
+            buf = buf.add$p(ctx, getContinued(ctx, 0, i));
+        }
+        return buf;
     }
 
     @Override

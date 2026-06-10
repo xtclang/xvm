@@ -1201,17 +1201,23 @@ public class MethodInfo
      */
     public static MethodConstant getJitIdentity(MethodBody[] aBody) {
         // for methods   -  get the lowest in the chain with the same signature; ignore implicits
+        //                  (unless it's the obly body) and caps
         // for functions -  get the highest in the chain
         MethodConstant    id  = null;
         SignatureConstant sig = null;
         for (MethodBody body : aBody) {
+            Implementation impl = body.getImplementation();
+            if (impl == Implementation.Capped) {
+                // the cap is never the JIT identity; go lower
+                continue;
+            }
             if (id == null) {
                 id = body.getIdentity();
                 if (body.isFunction() || body.isVirtualConstructor()) {
                     break;
                 }
                 sig = body.getSignature();
-            } else if (body.getImplementation() == Implementation.Implicit) {
+            } else if (impl == Implementation.Implicit) {
                 // ignore
             } else if (isJitEquivalent(body.getSignature(), sig)) {
                 id = body.getIdentity();
@@ -1223,20 +1229,7 @@ public class MethodInfo
     }
 
     private static boolean isJitEquivalent(SignatureConstant sig1, SignatureConstant sig2) {
-        TypeConstant[] atype1  = sig1.getRawParams();
-        TypeConstant[] atype2  = sig2.getRawParams();
-        int            cParams = atype1.length;
-
-        if (atype2.length != cParams) {
-            return false;
-        }
-
-        for (int i = 0; i < cParams; i++) {
-            if (!atype1[i].equals(atype2[i])) {
-                return false;
-            }
-        }
-        return true;
+        return sig1.equals(sig2);
     }
 
     /**

@@ -126,7 +126,8 @@ public class BuildContext {
         this.isFunction    = methodInfo.isFunction();
         this.isConstructor = methodInfo.isCtorOrValidator();
         this.isOptimized   = methodDesc.optimizedMD != null;
-        this.isSpecialized = jitType.isParamsSpecified();
+        this.isSpecialized = jitType.isParamsSpecified() &&
+                            !jitType.equals(typeInfo.getClassStructure().getCanonicalType());
         this.typeMatrix    = new TypeMatrix(this);
     }
 
@@ -155,7 +156,8 @@ public class BuildContext {
         this.isFunction    = propInfo.isConstant();
         this.isConstructor = false;
         this.isOptimized   = methodDesc.optimizedMD != null;
-        this.isSpecialized = jitType.isParamsSpecified();
+        this.isSpecialized = jitType.isParamsSpecified() &&
+                            !jitType.equals(typeInfo.getClassStructure().getCanonicalType());
         this.typeMatrix    = new TypeMatrix(this);
     }
 
@@ -613,6 +615,13 @@ public class BuildContext {
     }
 
     /**
+     * @return true iff the argument id represents a register
+     */
+    public boolean isRegister(int argId) {
+        return argId >= 0 || argId == Op.A_THIS;
+    }
+
+    /**
      * Obtain the Constant at the specified index, verifying it is of the expected type.
      *
      * @param argId  the argument id
@@ -705,7 +714,7 @@ public class BuildContext {
 
                 Label ifNotDefault = code.newLabel();
                 if (flavor == PrimitiveWithDefault) {
-                    // if the "extSlot" is true, use the value from the method structure
+                    // if the "extSlot" is "true", use the value from the method structure
                     int extSlot = code.parameterSlot(extraArgs + i + 1);
                     i++; // we consumed the next param
                     code.iload(extSlot)
@@ -1010,29 +1019,29 @@ public class BuildContext {
                     constant instanceof DecoratedClassConstant) {
                 IdentityConstant constId = (IdentityConstant) constant;
                 type = constId.getValueType(pool(), null);
+            } else if (constant instanceof PropertyConstant propId) {
+                type = propId.getType();
+
+                PropertyInfo prop = typeInfo.findProperty(propId);
+                if (prop != null) {
+                    type = prop.inferImmutable(thisType);
+                }
+            } else if (isSpecialized &&
+                    constant instanceof MethodConstant methodId && methodId.isLambda()) {
+                MethodStructure   lambda = (MethodStructure) methodId.getComponent();
+                SignatureConstant sig    = lambda.resolveSignature(pool(), thisType);
+                type = lambda.isFunction()
+                        ? sig.asFunctionType()
+                        : sig.asMethodType(pool(), thisType);
             } else {
                 type = constant.getType();
-
-                if (constant instanceof PropertyConstant propId) {
-                    PropertyInfo prop = typeInfo.findProperty(propId);
-                    if (prop != null) {
-                        type = prop.inferImmutable(thisType);
-                    }
-                }
-                if (isSpecialized &&
-                        constant instanceof MethodConstant methodId && methodId.isLambda()) {
-                    MethodStructure   lambda = (MethodStructure) methodId.getComponent();
-                    SignatureConstant sig    = lambda.resolveSignature(pool(), thisType);
-                    type = lambda.isFunction()
-                            ? sig.asFunctionType()
-                            : sig.asMethodType(pool(), thisType);
-                }
 
                 // if the type is an enum value, widen it to its parent Enumeration
                 if (type.isEnumValue()) {
                     type = type.getSingleUnderlyingClass(false).getNamespace().getType();
                 }
             }
+
             return type;
         }
 
@@ -1609,7 +1618,7 @@ public class BuildContext {
                     Builder.unbox(code, typeTo);
                     break AddTransformation;
 
-                case Widened:
+                case Widened, Ref:
                     // nothing to do
                     break AddTransformation;
 
@@ -1782,12 +1791,13 @@ public class BuildContext {
             }
         }
 
-        int          slot = scope.allocateLocal(regId, TypeKind.REFERENCE);
-        JitTypeDesc  jtd  = type.getJitDesc(builder);
-        RegisterInfo ref  = new Ref(this, regId, slot, name, isVar, type, jtd.flavor);
+        int          slot  = scope.allocateLocal(regId, TypeKind.REFERENCE);
+        JitTypeDesc  jtd   = type.getJitDesc(builder);
+        RegisterInfo ref   = new Ref(this, regId, slot, name, isVar, type.getParamType(0), jtd.flavor);
+        Label        label = code.newLabel();
 
         registerInfos.put(regId, ref);
-        unassignedRegisters.put(ref, scope.startLabel);
+        unassignedRegisters.put(ref, label);
         return ref;
     }
 
@@ -1951,7 +1961,7 @@ public class BuildContext {
 
             case NullablePrimitive:
                 switch (dstFlavor) {
-                case Specific, SpecificWithDefault, Widened, WidenedWithDefault:
+                case Specific, SpecificWithDefault, Widened, WidenedWithDefault: {
                     // loadArgument() has already loaded the value and the boolean
                     Label ifTrue = code.newLabel();
                     Label endIf  = code.newLabel();
@@ -1963,6 +1973,12 @@ public class BuildContext {
                     Builder.pop(code, srcReg.cd());
                     Builder.loadNull(code);
                     code.labelBinding(endIf);
+                    continue;
+                }
+
+                case NullablePrimitiveWithDefault:
+                    // loadArgument() has already loaded an int representing a boolean value; both
+                    // 0 and 1 will work as expected (-1 representing a default is never coming in)
                     continue;
                 }
                 break;
@@ -2079,8 +2095,9 @@ public class BuildContext {
             narrowedSlotCds = origReg.slotCds();
             narrowedReg     = ref.narrow(narrowingType);
         } else {
-            JitFlavor narrowedFlavor = narrowingType.getJitDesc(builder).flavor;
-                      narrowedCD     = JitTypeDesc.getJitClass(builder, narrowingType);
+            JitTypeDesc narrowedDesc   = narrowingType.getJitDesc(builder);
+            JitFlavor   narrowedFlavor = narrowedDesc.flavor;
+                        narrowedCD     = narrowedDesc.cd;
             if (narrowingType.isJavaPrimitive()) {
                 narrowedSlots   = new int[] {scope.allocateJavaSlot(narrowedCD)};
                 narrowedSlotCds = new ClassDesc[] {narrowedCD};
@@ -2200,7 +2217,7 @@ public class BuildContext {
 
     /**
      * @return the type info for the specified type while adjusting access for types that are
-     *         "next mates" to this context's type
+     *         "nest mates" to this context's type
      */
     public TypeInfo getTypeInfo(TypeConstant type) {
         if (type.isFormalType()) {
@@ -2621,18 +2638,16 @@ public class BuildContext {
         boolean isOptimized = jmd.isOptimized;
 
         for (int i = 0; i < cReturns; i++) {
-            int          iOpt    = isOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
-            JitParamDesc pdRet   = isOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
-            TypeConstant retType = pdRet.type;
-            ClassDesc    cdRet   = pdRet.cd;
-            int          regId   = anVar[i];
+            int          iOpt  = isOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
+            JitParamDesc pdRet = isOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
+            int          regId = anVar[i];
 
             if (regId == Op.A_IGNORE) {
                 // The return is ignored, e.g just calling foo() instead of x = foo();
                 // if i == 0 then we need to pop the value from the stack, otherwise the return
                 // value is in the context, so we can just ignore it
                 if (i == 0) {
-                    Builder.pop(code, cdRet);
+                    Builder.pop(code, pdRet.cd);
                 }
                 continue;
             }
@@ -2640,12 +2655,30 @@ public class BuildContext {
             TypeConstant destType = getReturnType(regId);
             assert destType != null;
 
-            JitTypeDesc jitDesc    = destType.getJitDesc(builder);
-            JitFlavor   destFlavor = jitDesc.flavor;
+            JitTypeDesc tdDest     = destType.getJitDesc(builder);
+            JitFlavor   destFlavor = tdDest.flavor;
             boolean     invalid    = false;
 
             if (i == 0) {
                 switch (pdRet.flavor) {
+                case Primitive: {
+                    assert isOptimized;
+                    switch (destFlavor) {
+                    case Specific, Widened:
+                        Builder.box(code, destType);
+                        break;
+
+                    case Primitive:
+                        // nothing to do
+                        break;
+
+                    default:
+                        invalid = true;
+                        break;
+                    }
+                    break;
+                }
+
                 case NullablePrimitive: {
                     assert isOptimized;
                     JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
@@ -2662,10 +2695,10 @@ public class BuildContext {
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
                         code.ifne(ifTrue);
-                        Builder.box(code, retType);
+                        Builder.box(code, destType);
                         code.goto_(endIf)
                                 .labelBinding(ifTrue);
-                        Builder.pop(code, cdRet);
+                        Builder.pop(code, pdRet.cd);
                         Builder.loadNull(code);
                         code.labelBinding(endIf);
                         break;
@@ -2685,6 +2718,20 @@ public class BuildContext {
                         JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
                         Builder.loadFromContext(code, retDesc.cd, retIndex);
                     }
+
+                    switch (destFlavor) {
+                    case Specific, Widened:
+                        Builder.box(code, destType);
+                        break;
+
+                    case XvmPrimitive:
+                        // nothing to do
+                        break;
+
+                    default:
+                        invalid = true;
+                        break;
+                    }
                     break;
                 }
 
@@ -2702,7 +2749,7 @@ public class BuildContext {
                             JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
                             Builder.loadFromContext(code, retDesc.cd, retIndex);
                         }
-                        Builder.box(code, retType);
+                        Builder.box(code, destType);
                         code.goto_(endIf).labelBinding(ifTrue);
                         Builder.pop(code, jmd.optimizedReturns[0].cd);
                         Builder.loadNull(code);
@@ -2725,10 +2772,11 @@ public class BuildContext {
 
                 case Specific:
                     switch (destFlavor) {
-                    case Specific:
-                        if (retType.isAutoNarrowing()) {
+                    case Specific: {
+                        TypeConstant retType = pdRet.type;
+                        if (retType.isAutoNarrowing() || !retType.equals(destType)) {
                             builder.generateCheckCast(code, destType);
-                        }
+                        }}
                         break;
 
                     case Widened:
@@ -2740,11 +2788,9 @@ public class BuildContext {
                         Builder.unbox(code, destType);
                         break;
 
-                    case NullablePrimitive:
-                        // TODO: resolve the type parameter and check for Null if necessary
-                        builder.generateCheckCast(code, destType.removeNullable());
-                        Builder.unbox(code, destType);
-                        code.iconst_0();
+                    case NullablePrimitive, NullableXvmPrimitive:
+                        TypeConstant typeSansNull = destType.removeNullable();
+                        Builder.unboxNullable(code, destType, builder.ensureClassDesc(typeSansNull));
                         break;
 
                     default:
@@ -2755,11 +2801,31 @@ public class BuildContext {
                 }
             } else {
                 switch (pdRet.flavor) {
+                case Primitive: {
+                    assert isOptimized;
+                    Builder.loadFromContext(code, tdDest.cd, pdRet.altIndex);
+
+                    switch (destFlavor) {
+                    case Specific, Widened:
+                        Builder.box(code, destType);
+                        break;
+
+                    case Primitive:
+                        // nothing to do
+                        break;
+
+                    default:
+                        invalid = true;
+                        break;
+                    }
+                    break;
+                }
+
                 case NullablePrimitive: {
                     assert isOptimized;
                     JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
 
-                    Builder.loadFromContext(code, cdRet, pdRet.altIndex);
+                    Builder.loadFromContext(code, tdDest.cd, pdRet.altIndex);
                     Builder.loadFromContext(code, pdExt.cd, pdExt.altIndex);
                     // if the value is `True`, then the return value is Ecstasy `Null`
 
@@ -2772,7 +2838,7 @@ public class BuildContext {
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
                         code.ifeq(ifTrue);
-                        Builder.box(code, retType);
+                        Builder.box(code, destType);
                         code.goto_(endIf);
                         code.labelBinding(ifTrue)
                             .pop();
@@ -2795,6 +2861,20 @@ public class BuildContext {
                         JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
                         Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
                     }
+
+                    switch (destFlavor) {
+                    case Specific, Widened:
+                        Builder.box(code, destType);
+                        break;
+
+                    case XvmPrimitive:
+                        // nothing to do
+                        break;
+
+                    default:
+                        invalid = true;
+                        break;
+                    }
                     break;
                 }
 
@@ -2812,7 +2892,7 @@ public class BuildContext {
                             JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
                             Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
                         }
-                        Builder.box(code, retType);
+                        Builder.box(code, destType);
                         code.goto_(endIf);
                         code.labelBinding(ifTrue);
                         Builder.loadNull(code);
@@ -2833,7 +2913,7 @@ public class BuildContext {
                 }
 
                 default:
-                    Builder.loadFromContext(code, cdRet, pdRet.altIndex);
+                    Builder.loadFromContext(code, tdDest.cd, pdRet.altIndex);
                     break;
                 }
             }
@@ -3070,23 +3150,20 @@ public class BuildContext {
      * @return a GenericTypeResolver for FormalTypeParameters within the current context
      */
     public GenericTypeResolver createTypeResolver(MethodStructure method, int[] argIds) {
-        return new GenericTypeResolver() {
-            @Override
-            public TypeConstant resolveFormalType(FormalConstant constFormal) {
-                MethodConstant methodId = method.getIdentityConstant();
-                for (Parameter param : method.getParamArray()) {
-                    if (param.isTypeParameter() &&
-                            constFormal.equals(param.asTypeParameterConstant(methodId))) {
-                        TypeConstant type = getArgumentType(argIds[param.getIndex()]);
+        return constFormal -> {
+            MethodConstant methodId = method.getIdentityConstant();
+            for (Parameter param : method.getParamArray()) {
+                if (param.isTypeParameter() &&
+                        constFormal.equals(param.asTypeParameterConstant(methodId))) {
+                    TypeConstant type = getArgumentType(argIds[param.getIndex()]);
 
-                        // the register the type parameter points to must be an nType instance;
-                        // its type is a type-of-type-of-type
-                        assert type.getParamType(0).isTypeOfType();
-                        return type.getParamType(0).getParamType(0);
-                    }
+                    // the register the type parameter points to must be an nType instance;
+                    // its type is a type-of-type-of-type
+                    assert type.getParamType(0).isTypeOfType();
+                    return type.getParamType(0).getParamType(0);
                 }
-                return null;
             }
+            return null;
         };
     }
 
@@ -3095,7 +3172,7 @@ public class BuildContext {
      * {@link #jitType}.
      */
     protected TypeConstant resolveSpecialized(TypeConstant type) {
-        if (isSpecialized) {
+        if (isSpecialized && (!methodStruct.isFunction() || methodStruct.isLambda())) {
             if (type.isAutoNarrowing()) {
                 type = type.resolveAutoNarrowing(pool(), false, jitType, null);
             }

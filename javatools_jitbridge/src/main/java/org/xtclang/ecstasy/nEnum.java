@@ -39,6 +39,26 @@ public abstract class nEnum
         return name$get(ctx);
     }
 
+    /**
+     * Native implementation of Enum.x
+     * <pre>
+     *     Int estimateStringLength() = name.size;
+     * </pre>
+     */
+    public long estimateStringLength$p(Ctx ctx) {
+        return name$get(ctx).size$get$p(ctx);
+    }
+
+    /**
+     * Native implementation of Enum.x
+     * <pre>
+     *     Appender<Char> appendTo(Appender<Char> buf) = name.appendTo(buf);
+     * </pre>
+     */
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
+        return name$get(ctx).appendTo(ctx, appender);
+    }
+
     @Override
     public java.lang.String toString() {
         return name$get(null).toString();

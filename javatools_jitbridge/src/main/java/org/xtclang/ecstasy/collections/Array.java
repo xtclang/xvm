@@ -2,7 +2,7 @@ package org.xtclang.ecstasy.collections;
 
 import org.xtclang.ecstasy.nEnum;
 import org.xtclang.ecstasy.Object;
-import org.xtclang.ecstasy.Range;
+import org.xtclang.ecstasy.nFunction;
 import org.xtclang.ecstasy.nType;
 
 import org.xtclang.ecstasy.reflect.Enumeration;
@@ -318,37 +318,6 @@ public abstract class Array
 
     /**
      * Native implementation of:
-     * <p>
-     * Element getElement(Int index)
-     * <p>
-     * <p>
-     * Obtain the element at the specified index.
-     *
-     * @param index the element index
-     * @return the element value
-     */
-    public Object getElement$p(Ctx ctx, long index) {
-        throw new UnsupportedOperationException("TODO");
-    }
-
-    /**
-     * Native implementation of:
-     *
-     *   void setElement(Int index, Element value)
-     *
-     * Store the specified element value at the specified index.
-     *
-     * If the Array is immutable, this method must throw an exception without mutating the array.
-     *
-     * @param index  the element index
-     * @param value  the element value
-     */
-    public void setElement$p(Ctx ctx, long index, Object value) {
-        throw new UnsupportedOperationException("TODO");
-    }
-
-    /**
-     * Native implementation of:
      *
      *   Var<Element> elementAt(Int index)
      *
@@ -391,32 +360,13 @@ public abstract class Array
         throw new UnsupportedOperationException("TODO");
     }
 
-    /*
+    /**
      * Native implementation of:
      *
      *   Array addAll(Iterable<Element> values)
      *
      */
     public Array addAll(Ctx ctx, Iterable values) {
-        throw new UnsupportedOperationException("TODO");
-    }
-
-    /**
-     * Native implementation of:
-     *
-     *    Array reversed(Boolean inPlace = False) {
-     */
-    public Array reversedꖛ0$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
-        throw new UnsupportedOperationException("TODO");
-    }
-
-
-    /**
-     * Native implementation of:
-     *
-     *   Array replace(Int index, Element value)
-     */
-    public Array replaceꖛ0$p(Ctx ctx, long index, Object value) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -432,27 +382,9 @@ public abstract class Array
     /**
      * Native implementation of:
      *
-     *   Array insertAll(Int index, Iterable<Element> values)
-     */
-    public Array insertAll$p(Ctx ctx, long index, Iterable values) {
-        throw new UnsupportedOperationException("TODO");
-    }
-
-    /**
-     * Native implementation of:
-     *
      *   Array delete(Int index)
      */
     public Array delete$p(Ctx ctx, long index) {
-        throw new UnsupportedOperationException("TODO");
-    }
-
-    /**
-     * Native implementation of:
-     *
-     *   Array deleteAll(Interval<Int> indexes)
-     */
-    public Array deleteAll(Ctx ctx, Range indexes) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -527,6 +459,19 @@ public abstract class Array
             case 3  -> Mutability.Mutable;
             default -> throw new IllegalStateException();
         };
+    }
+
+    /**
+     * Native implementation of:
+     * <pre>
+     *   (Array, Int) removeAll(function Boolean(Element) shouldRemove)
+     * </pre>
+     */
+    public Array removeAll$p(Ctx ctx, nFunction shouldRemove) {
+        // REVIEW: the problem is that the natural code for "removeAll" uses an Array<Int>;
+        //         to compile it we need to have to load Array<Int>, which extends Array
+        //         resulting in the CircularClassInitialization error
+        throw new UnsupportedOperationException("TODO");
     }
 
     // ----- TEMPORARY: SHOULD BE NATURAL ----------------------------------------------------------
@@ -711,6 +656,6 @@ public abstract class Array
 
     @Override public java.lang.String toString() {
         // TODO keep it small, show relevant info like size, type, a few elements ...
-        return "";
+        return "Array";
     }
 }

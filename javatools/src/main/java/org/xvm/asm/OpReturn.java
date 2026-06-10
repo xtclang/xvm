@@ -130,9 +130,9 @@ public abstract class OpReturn
                 case XvmPrimitive:
                     // iSynth - the primitive values into slots in reverse order
                     for (int j = optIndexes.length - 1; j >= 0; j--) {
-                        retDesc = jmd.optimizedReturns[optIndexes[j]];
-                        slotName   = GuardAll.returnSlotName(retDesc);
-                        slotR  = bctx.scope.getSynthetic(slotName, true);
+                        retDesc  = jmd.optimizedReturns[optIndexes[j]];
+                        slotName = GuardAll.returnSlotName(retDesc);
+                        slotR    = bctx.scope.getSynthetic(slotName, true);
                         Builder.store(code, retDesc.cd, slotR);
                     }
                     break;
@@ -226,6 +226,11 @@ public abstract class OpReturn
 
                 case Specific:
                     switch (pdRet.flavor) {
+                    case Primitive:
+                        Builder.unbox(code, regRet);
+                        cd = pdRet.cd;
+                        break;
+
                     case NullablePrimitive:
                         // e.g.: Int? f() = Null;
                         assert fOptimized && regRet.type().isOnlyNullable();
@@ -250,12 +255,27 @@ public abstract class OpReturn
                         Builder.defaultLoad(code, cd);
                         break;
 
-                    case Specific, Widened, Primitive, XvmPrimitive:
+                    case Specific, Widened, XvmPrimitive:
                         break;
 
                     default:
                         fValid = false;
                         break;
+                    }
+                    break;
+
+                case Widened:
+                    switch (pdRet.flavor) {
+                        case Specific:
+                            code.checkcast(pdRet.cd);
+                            break;
+
+                        case Widened:
+                            break;
+
+                        default:
+                            fValid = false;
+                            break;
                     }
                     break;
 

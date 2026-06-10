@@ -39,7 +39,11 @@ class Float64Tests {
         testDecAsNullableDecReturn();
         testNullableDecConditionalReturn();
 
-        console.print("<<<<< Finished Float64Tests Conversion tests >>>>>");
+        // Stringable
+        testAppendTo();
+        testEstimateStringLength();
+
+        console.print("<<<<< Finished Float64Tests tests >>>>>");
     }
 
     // ----- comparison tests ----------------------------------------------------------------------
@@ -301,5 +305,34 @@ class Float64Tests {
             return True, Null;
         }
         return False;
+    }
+
+    // ----- Stringable tests ----------------------------------------------------------------------
+
+    void testAppendTo() {
+        assert callAppendTo(0) == "0.0";
+        assert callAppendTo(1) == "1.0";
+        assert callAppendTo(-1) == "-1.0";
+        assert callAppendTo(10) == "10.0";
+        assert callAppendTo(-10) == "-10.0";
+    }
+
+    String callAppendTo(Float64 n) {
+        StringBuffer buf = new StringBuffer();
+        n.appendTo(buf);
+        return buf.toString();
+    }
+
+    void testEstimateStringLength() {
+        Float64 n = 0;
+        assert n.estimateStringLength() == 3; // "0.0"
+        n = 1;
+        assert n.estimateStringLength() == 3; // "1.0"
+        n = -1;
+        assert n.estimateStringLength() == 4; // "-1.0"
+        n = 10;
+        assert n.estimateStringLength() == 4; // "10.0"
+        n = -10;
+        assert n.estimateStringLength() == 5; // "-10.0"
     }
 }

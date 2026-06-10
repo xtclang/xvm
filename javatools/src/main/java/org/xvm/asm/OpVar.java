@@ -225,19 +225,19 @@ public abstract class OpVar
                     bctx.getTypeConstant(m_nType);
 
                 case OP_VAR_D, OP_VAR_DN ->
-                    bctx.getConstant(m_nType, TypeConstant.class).getParamType(0);
+                    bctx.getTypeConstant(m_nType).getParamType(0);
 
                 default -> throw new UnsupportedOperationException(Op.toName(getOpCode()));
             };
 
             bctx.typeMatrix.declare(getAddress(), m_nVar, typeVar);
         } else {
-            super.computeTypes(bctx);
+            throw new UnsupportedOperationException(Op.toName(getOpCode()));
         }
     }
 
     /**
-     * Build an array variable.
+     * Build an array variable (for VAR_S, VAR_SN).
      *
      * @param bctx        the current build context
      * @param code        the {@link CodeBuilder} to use to generate op codes

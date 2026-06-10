@@ -52,8 +52,8 @@ public enum JitFlavor {
     /**
      * A parameter of the {@link #Primitive} flavor with a default value.
      * <p>
-     * Implication is that an additional `boolean` value is used, indicating that the default
-     * value should be used.
+     * Implication is that an additional `boolean` value is used, with `true` indicating that the
+     * default value should be used.
      * <p>
      * Note: this flavor can only be used by the {@link JitMethodDesc}
      */
@@ -63,7 +63,8 @@ public enum JitFlavor {
      * Double-slot Java primitives (e.g. (boolean, boolean), (int, boolean), (long, boolean)) that
      * represents a `Nullable` xtc value type (e.g. Boolean?, Char?, Int?)
      * <p>
-     * Implication is that an additional `boolean` value is used, indicating that the value is Null.
+     * Implication is that an additional `boolean` value is used, with `true` indicating that the
+     * value is Null.
      */
     NullablePrimitive(true, null),
 

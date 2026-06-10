@@ -3,6 +3,7 @@ package org.xtclang.ecstasy.numbers;
 import java.math.BigDecimal;
 import java.math.MathContext;
 
+import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.Orderable;
 import org.xtclang.ecstasy.Ordered;
@@ -34,6 +35,17 @@ public class Float32 extends BinaryFPNumber {
     @Override
     public String toString(Ctx ctx) {
         return String.of(ctx, Float.toString($value));
+    }
+
+    public long estimateStringLength$p(Ctx ctx) {
+        return Float.toString($value).length();
+    }
+
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
+        for (char c : Float.toString($value).toCharArray()) {
+            appender = appender.add$p(ctx, c);
+        }
+        return appender;
     }
 
     @Override

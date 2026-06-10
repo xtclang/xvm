@@ -20,11 +20,9 @@ public class ArrayBuilder extends AugmentingBuilder {
         super(typeSystem, type, model);
 
         DELEGATE_TYPE = pool().ensureEcstasyTypeConstant("collections.Array.ArrayDelegate");
-        specialization = type.isParamsSpecified();
     }
 
     protected final TypeConstant DELEGATE_TYPE;
-    protected final boolean specialization;
 
     @Override
     public ClassDesc ensureClassDesc(TypeConstant type) {
@@ -52,7 +50,7 @@ public class ArrayBuilder extends AugmentingBuilder {
     @Override
     protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
         // don't create any methods for array specializations
-        if (!specialization) {
+        if (!isSpecialized) {
             super.assembleImplMethods(className, classBuilder);
         }
     }
@@ -60,13 +58,14 @@ public class ArrayBuilder extends AugmentingBuilder {
     @Override
     protected void assembleImplProperties(String className, ClassBuilder classBuilder) {
         // don't create any properties for array specializations
-        if (!specialization) {
+        if (!isSpecialized) {
             super.assembleImplProperties(className, classBuilder);
         }
     }
 
     @Override
-    protected void assembleMethod(String className, ClassBuilder classBuilder, MethodInfo method, String jitName, JitMethodDesc jmd) {
+    protected void assembleMethod(String className, ClassBuilder classBuilder, MethodInfo method,
+                                  String jitName, JitMethodDesc jmd) {
         // all constructors are native
         if (!method.isCtorOrValidator()) {
             super.assembleMethod(className, classBuilder, method, jitName, jmd);

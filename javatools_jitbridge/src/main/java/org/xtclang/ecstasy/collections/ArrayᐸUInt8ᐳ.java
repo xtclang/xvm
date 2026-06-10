@@ -3,10 +3,12 @@ package org.xtclang.ecstasy.collections;
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Iterable;
+import org.xtclang.ecstasy.IteratorᐸUInt8ᐳ;
 import org.xtclang.ecstasy.Object;
-import org.xtclang.ecstasy.nObj;
+import org.xtclang.ecstasy.nType;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
+import org.xtclang.ecstasy.numbers.Int64;
 import org.xtclang.ecstasy.numbers.UInt8;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -85,16 +87,28 @@ public class ArrayᐸUInt8ᐳ
         throw new UnsupportedOperationException();
     }
 
-    @Override public UInt8 getElement$p(Ctx ctx, long index) {
-        return UInt8.$box(getElement$pi(ctx, index));
+    public UInt8 getElement(Ctx ctx, Int64 index) {
+        return UInt8.$box(getElement$pi(ctx, index.$value));
+    }
+
+    public int getElement$p(Ctx ctx, long index) {
+        return getElement$pi(ctx, index);
     }
 
     public int getElement$pi(Ctx ctx, long index) {
         return (int) $getElement$pi(ctx, index);
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, Object value) {
-        setElement$pi(ctx, index, ((UInt8) value).$value);
+    public void setElement(Ctx ctx, Int64 index, Object value) {
+        setElement$pi(ctx, index.$value, ((UInt8) value).$value);
+    }
+
+    public void setElement$p(Ctx ctx, long index, int value) {
+        setElement$pi(ctx, index, value);
+    }
+
+    public IteratorᐸUInt8ᐳ iterator(Ctx ctx) {
+        return new nIterator(ctx);
     }
 
     @Override
@@ -106,6 +120,24 @@ public class ArrayᐸUInt8ᐳ
         return super.add$p(ctx, value);
     }
 
+    public ArrayᐸUInt8ᐳ insert$p(Ctx ctx, long index, int value) {
+        if (index < 0 || index > size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $insert(ctx, index, 1);
+        $set8bitElement(index, value);
+        return this;
+    }
+
+    @Override
+    public ArrayᐸUInt8ᐳ delete$p(Ctx ctx, long index) {
+        if (index < 0 || index >= size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $delete(ctx, index, 1);
+        return this;
+    }
+
     @Override
     public ArrayᐸUInt8ᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
         return (ArrayᐸUInt8ᐳ) super.slice(ctx, range);
@@ -115,7 +147,7 @@ public class ArrayᐸUInt8ᐳ
 
     @Override
     protected String $elementToString(Ctx ctx, long index) {
-        UInt8 c = getElement$p(ctx, index);
+        UInt8 c = UInt8.$box(getElement$p(ctx, index));
         return c.toString(ctx).toString();
     }
 
@@ -157,5 +189,28 @@ public class ArrayᐸUInt8ᐳ
     @Override
     protected long $calculateHash(Ctx ctx) {
         return $calculate8BitUnsignedHash(ctx);
+    }
+
+    @Override
+    protected void $deleteElements(long index, long count) {
+        $delete8bit(index, count);
+    }
+
+    @Override
+    protected void $insertElements(long index, long count) {
+        $insert8bit(index, count);
+    }
+
+    // ---- Iterator implementation ----------------------------------------------------------------
+
+    private class nIterator extends nBaseIterator implements IteratorᐸUInt8ᐳ {
+        public nIterator(Ctx ctx) {
+            super(ctx);
+        }
+
+        @Override
+        public nType Element$get(Ctx ctx) {
+            return nType.$ensureType(ctx, ctx.container.typeSystem.pool().typeUInt8());
+        }
     }
 }

@@ -23,6 +23,7 @@ package switches {
                 passed &= runTest(() -> stringSwitchTests.run());
                 passed &= runTest(() -> enumSwitchTests.run());
                 passed &= runTest(() -> typeSwitchTests.run());
+                passed &= runTest(() -> charSwitchTests.run());
             } catch (IllegalState e) {
                 console.print(e);
             }

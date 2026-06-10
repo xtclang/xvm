@@ -5,93 +5,115 @@ package constTests {
     void run() {
         console.print(">>>> Running Const Tests >>>>");
 
-        emptyConstShouldBeEqual();
-        emptyConstShouldBeOrderable();
-        emptyConstShouldHaveNoneZeroHashCode();
+        testEmptyConstShouldBeEqual();
+        testEmptyConstShouldBeOrderable();
+        testEmptyConstShouldHaveNoneZeroHashCode();
+        testEmptyConstShouldBeStringable();
 
-        simpleConstEquality();
-        simpleConstHashCode();
-        simpleConstCompare();
+        testSimpleConstEquality();
+        testSimpleConstHashCode();
+        testSimpleTestConstCompare();
+        testSimpleConstShouldBeStringable();
 
-        constWithConstEquality();
-        constWithConstHashCode();
-        constWithConstCompare();
+        testConstWithConstEquality();
+        testConstWithConstHashCode();
+        testConstWithConstCompare();
+        testConstWithConstShouldBeStringable();
 
-        constWithBitEquality();
-        constWithBitCompare();
-        constWithBitHashCode();
+        testConstWithBitEquality();
+        testConstWithBitCompare();
+        testConstWithBitHashCode();
+        testConstWithBitShouldBeStringable();
 
-        constWithBooleanEquality();
-        constWithBooleanCompare();
-        constWithBooleanHashCode();
+        testConstWithBooleanEquality();
+        testConstWithBooleanCompare();
+        testConstWithBooleanHashCode();
+        testConstWithBooleanShouldBeStringable();
 
-        constWithCharEquality();
-        constWithCharCompare();
-        constWithCharHashCode();
+        testConstWithCharEquality();
+        testConstWithCharCompare();
+        testConstWithCharHashCode();
+        testConstWithCharShouldBeStringable();
 
-        constWithDec32Equality();
-        constWithDec32Compare();
-        constWithDec32HashCode();
+        testConstWithDec32Equality();
+        testConstWithDec32Compare();
+        testConstWithDec32HashCode();
+        testConstWithDec32ShouldBeStringable();
 
-        constWithDec64Equality();
-        constWithDec64Compare();
-        constWithDec64HashCode();
+        testConstWithDec64Equality();
+        testConstWithDec64Compare();
+        testConstWithDec64HashCode();
+        testConstWithDec64ShouldBeStringable();
 
-        constWithFloat32Equality();
-        constWithFloat32Compare();
-        constWithFloat32HashCode();
+        testConstWithFloat32Equality();
+        testConstWithFloat32Compare();
+        testConstWithFloat32HashCode();
+        testConstWithFloat32ShouldBeStringable();
 
-        constWithFloat64Equality();
-        constWithFloat64Compare();
-        constWithFloat64HashCode();
+        testConstWithFloat64Equality();
+        testConstWithFloat64Compare();
+        testConstWithFloat64HashCode();
+        testConstWithFloat64ShouldBeStringable();
 
-        constWithInt8Equality();
-        constWithInt8Compare();
-        constWithInt8HashCode();
+        testConstWithInt8Equality();
+        testConstWithInt8Compare();
+        testConstWithInt8HashCode();
+        testConstWithInt8ShouldBeStringable();
 
-        constWithInt16Equality();
-        constWithInt16Compare();
-        constWithInt16HashCode();
+        testConstWithInt16Equality();
+        testConstWithInt16Compare();
+        testConstWithInt16HashCode();
+        testConstWithInt16ShouldBeStringable();
 
-        constWithInt32Equality();
-        constWithInt32Compare();
-        constWithInt32HashCode();
+        testConstWithInt32Equality();
+        testConstWithInt32Compare();
+        testConstWithInt32HashCode();
+        testConstWithInt32ShouldBeStringable();
 
-        constWithInt64Equality();
-        constWithInt64Compare();
-        constWithInt64HashCode();
+        testConstWithInt64Equality();
+        testConstWithInt64Compare();
+        testConstWithInt64HashCode();
+        testConstWithInt64ShouldBeStringable();
 
-        constWithInt128Equality();
-        constWithInt128Compare();
-        constWithInt128HashCode();
+        testConstWithInt128Equality();
+        testConstWithInt128Compare();
+        testConstWithInt128HashCode();
+        testConstWithInt128ShouldBeStringable();
 
-        constWithNibbleEquality();
-        constWithNibbleCompare();
-        constWithNibbleHashCode();
+        testConstWithNibbleEquality();
+        testConstWithNibbleCompare();
+        testConstWithNibbleHashCode();
+        testConstWithNibbleShouldBeStringable();
 
-        constWithStringEquality();
-        constWithStringCompare();
-        constWithStringHashCode();
+        testConstWithStringEquality();
+        testConstWithStringCompare();
+        testConstWithStringHashCode();
+        testConstWithStringShouldBeStringable();
 
-        constWithUInt8Equality();
-        constWithUInt8Compare();
-        constWithUInt8HashCode();
+        testConstWithUInt8Equality();
+        testConstWithUInt8Compare();
+        testConstWithUInt8HashCode();
+        testConstWithUInt8ShouldBeStringable();
 
-        constWithUInt16Equality();
-        constWithUInt16Compare();
-        constWithUInt16HashCode();
+        testConstWithUInt16Equality();
+        testConstWithUInt16Compare();
+        testConstWithUInt16HashCode();
+        testConstWithUInt16ShouldBeStringable();
 
-        constWithUInt32Equality();
-        constWithUInt32Compare();
-        constWithUInt32HashCode();
+        testConstWithUInt32Equality();
+        testConstWithUInt32Compare();
+        testConstWithUInt32HashCode();
+        testConstWithUInt32ShouldBeStringable();
 
-        constWithUInt64Equality();
-        constWithUInt64Compare();
-        constWithUInt64HashCode();
+        testConstWithUInt64Equality();
+        testConstWithUInt64Compare();
+        testConstWithUInt64HashCode();
+        testConstWithUInt64ShouldBeStringable();
 
-        constWithUInt128Equality();
-        constWithUInt128Compare();
-        constWithUInt128HashCode();
+        testConstWithUInt128Equality();
+        testConstWithUInt128Compare();
+        testConstWithUInt128HashCode();
+        testConstWithUInt128ShouldBeStringable();
 
         testClassHierarchyEqualsConstWithNoOwnProps();
         testClassHierarchyEqualsConstWithOwnProps();
@@ -99,6 +121,7 @@ package constTests {
         testClassHierarchyCompareConstWithOwnProps();
         testClassHierarchyHashCodeConstWithNoOwnProps();
         testClassHierarchyHashCodeConstWithOwnProps();
+        testConstHierarchyWithNoOwnPropsIsStringable();
 
         testConstHierarchyEqualsConstWithNoOwnProps();
         testConstHierarchyEqualsConstWithOwnProps();
@@ -106,59 +129,69 @@ package constTests {
         testConstHierarchyCompareConstWithOwnProps();
         testConstHierarchyHashCodeConstWithNoOwnProps();
         testConstHierarchyHashCodeConstWithOwnProps();
+        testConstHierarchyWithWithOwnPropsIsStringable();
 
-        testConstWithNotComparableProp();
+        testTestConstWithNotComparableProp();
         testConstWithNotOrderableProp();
         testConstWithNotHashableProp();
+
+        testConstWithServiceIsStringable();
+        testConstWithNullablePropIsStringable();
 
         console.print("<<<< Finished Const Tests <<<<<");
     }
 
-    void emptyConstShouldBeEqual() {
-        EmptyConst c1 = new EmptyConst();
-        EmptyConst c2 = new EmptyConst();
+    void testEmptyConstShouldBeEqual() {
+        TestEmptyConst c1 = new TestEmptyConst();
+        TestEmptyConst c2 = new TestEmptyConst();
         assert c1 == c2;
     }
 
-    void emptyConstShouldBeOrderable() {
-        EmptyConst c1 = new EmptyConst();
-        EmptyConst c2 = new EmptyConst();
+    void testEmptyConstShouldBeOrderable() {
+        TestEmptyConst c1 = new TestEmptyConst();
+        TestEmptyConst c2 = new TestEmptyConst();
         assert c1 <=> c2 == Equal;
     }
 
-    void emptyConstShouldHaveNoneZeroHashCode() {
-        EmptyConst c1 = new EmptyConst();
-        EmptyConst c2 = new EmptyConst();
+    void testEmptyConstShouldHaveNoneZeroHashCode() {
+        TestEmptyConst c1 = new TestEmptyConst();
+        TestEmptyConst c2 = new TestEmptyConst();
         assert c1.hashCode() != 0;
         assert c2.hashCode() != 0;
         assert c1.hashCode() == c2.hashCode();
     }
 
-    void simpleConstEquality() {
-        SimpleConst c1 = new SimpleConst(1, "a");
-        SimpleConst c2 = new SimpleConst(1, "a");
-        SimpleConst c3 = new SimpleConst(2, "a");
-        SimpleConst c4 = new SimpleConst(1, "b");
+    void testEmptyConstShouldBeStringable() {
+        TestEmptyConst c1 = new TestEmptyConst();
+        assert c1.estimateStringLength() == 2;
+        assert c1.toString() == "()";
+    }
+
+    void testSimpleConstEquality() {
+        TestSimpleConst c1 = new TestSimpleConst(1, "a");
+        TestSimpleConst c2 = new TestSimpleConst(1, "a");
+        TestSimpleConst c3 = new TestSimpleConst(2, "a");
+        TestSimpleConst c4 = new TestSimpleConst(1, "b");
         assert c1 == c2;
         assert c1 != c3;
         assert c1 != c4;
     }
 
-    void simpleConstHashCode() {
-        SimpleConst c1 = new SimpleConst(1, "a");
-        SimpleConst c2 = new SimpleConst(1, "a");
-        SimpleConst c3 = new SimpleConst(2, "a");
-        SimpleConst c4 = new SimpleConst(1, "b");
+    void testSimpleConstHashCode() {
+        TestSimpleConst c1 = new TestSimpleConst(1, "a");
+        TestSimpleConst c2 = new TestSimpleConst(1, "a");
+        TestSimpleConst c3 = new TestSimpleConst(2, "a");
+        TestSimpleConst c4 = new TestSimpleConst(1, "b");
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
         assert c1.hashCode() != c4.hashCode();
     }
 
-    void simpleConstCompare() {
-        SimpleConst c1 = new SimpleConst(1, "a");
-        SimpleConst c2 = new SimpleConst(1, "a");
-        SimpleConst c3 = new SimpleConst(2, "a");
-        SimpleConst c4 = new SimpleConst(1, "b");
+    void testSimpleTestConstCompare() {
+        TestSimpleConst c1 = new TestSimpleConst(1, "a");
+        TestSimpleConst c2 = new TestSimpleConst(1, "a");
+        TestSimpleConst c3 = new TestSimpleConst(2, "a");
+        TestSimpleConst c4 = new TestSimpleConst(1, "b");
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c1 <=> c4 == Lesser;
@@ -166,31 +199,37 @@ package constTests {
         assert c4 <=> c1 == Greater;
     }
 
-    void constWithConstEquality() {
-        ConstWithConst c1 = new ConstWithConst(new SimpleConst(1, "a"));
-        ConstWithConst c2 = new ConstWithConst(new SimpleConst(1, "a"));
-        ConstWithConst c3 = new ConstWithConst(new SimpleConst(2, "a"));
-        ConstWithConst c4 = new ConstWithConst(new SimpleConst(1, "b"));
+    void testSimpleConstShouldBeStringable() {
+        TestSimpleConst c1 = new TestSimpleConst(1, "a");
+        assert c1.estimateStringLength() == 10;
+        assert c1.toString() == "(n=1, s=a)";
+    }
+
+    void testConstWithConstEquality() {
+        TestConstWithConst c1 = new TestConstWithConst(new TestSimpleConst(1, "a"));
+        TestConstWithConst c2 = new TestConstWithConst(new TestSimpleConst(1, "a"));
+        TestConstWithConst c3 = new TestConstWithConst(new TestSimpleConst(2, "a"));
+        TestConstWithConst c4 = new TestConstWithConst(new TestSimpleConst(1, "b"));
         assert c1 == c2;
         assert c1 != c3;
         assert c1 != c4;
     }
 
-    void constWithConstHashCode() {
-        ConstWithConst c1 = new ConstWithConst(new SimpleConst(1, "a"));
-        ConstWithConst c2 = new ConstWithConst(new SimpleConst(1, "a"));
-        ConstWithConst c3 = new ConstWithConst(new SimpleConst(2, "a"));
-        ConstWithConst c4 = new ConstWithConst(new SimpleConst(1, "b"));
+    void testConstWithConstHashCode() {
+        TestConstWithConst c1 = new TestConstWithConst(new TestSimpleConst(1, "a"));
+        TestConstWithConst c2 = new TestConstWithConst(new TestSimpleConst(1, "a"));
+        TestConstWithConst c3 = new TestConstWithConst(new TestSimpleConst(2, "a"));
+        TestConstWithConst c4 = new TestConstWithConst(new TestSimpleConst(1, "b"));
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
         assert c1.hashCode() != c4.hashCode();
     }
 
-    void constWithConstCompare() {
-        ConstWithConst c1 = new ConstWithConst(new SimpleConst(1, "a"));
-        ConstWithConst c2 = new ConstWithConst(new SimpleConst(1, "a"));
-        ConstWithConst c3 = new ConstWithConst(new SimpleConst(2, "a"));
-        ConstWithConst c4 = new ConstWithConst(new SimpleConst(1, "b"));
+    void testConstWithConstCompare() {
+        TestConstWithConst c1 = new TestConstWithConst(new TestSimpleConst(1, "a"));
+        TestConstWithConst c2 = new TestConstWithConst(new TestSimpleConst(1, "a"));
+        TestConstWithConst c3 = new TestConstWithConst(new TestSimpleConst(2, "a"));
+        TestConstWithConst c4 = new TestConstWithConst(new TestSimpleConst(1, "b"));
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c1 <=> c4 == Lesser;
@@ -198,479 +237,605 @@ package constTests {
         assert c4 <=> c1 == Greater;
     }
 
-    void constWithBitEquality() {
-        ConstWithBit c1 = new ConstWithBit(0);
-        ConstWithBit c2 = new ConstWithBit(0);
-        ConstWithBit c3 = new ConstWithBit(1);
+    void testConstWithConstShouldBeStringable() {
+        TestConstWithConst c1 = new TestConstWithConst(new TestSimpleConst(1, "a"));
+        assert c1.estimateStringLength() == 14;
+        assert c1.toString() == "(c=(n=1, s=a))";
+    }
+
+    void testConstWithBitEquality() {
+        TestConstWithBit c1 = new TestConstWithBit(0);
+        TestConstWithBit c2 = new TestConstWithBit(0);
+        TestConstWithBit c3 = new TestConstWithBit(1);
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithBitCompare() {
-        ConstWithBit c1 = new ConstWithBit(0);
-        ConstWithBit c2 = new ConstWithBit(0);
-        ConstWithBit c3 = new ConstWithBit(1);
+    void testConstWithBitCompare() {
+        TestConstWithBit c1 = new TestConstWithBit(0);
+        TestConstWithBit c2 = new TestConstWithBit(0);
+        TestConstWithBit c3 = new TestConstWithBit(1);
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithBitHashCode() {
-        ConstWithBit c1 = new ConstWithBit(0);
-        ConstWithBit c2 = new ConstWithBit(0);
-        ConstWithBit c3 = new ConstWithBit(1);
+    void testConstWithBitHashCode() {
+        TestConstWithBit c1 = new TestConstWithBit(0);
+        TestConstWithBit c2 = new TestConstWithBit(0);
+        TestConstWithBit c3 = new TestConstWithBit(1);
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
-    void constWithBooleanEquality() {
-        ConstWithBoolean c1 = new ConstWithBoolean(False);
-        ConstWithBoolean c2 = new ConstWithBoolean(False);
-        ConstWithBoolean c3 = new ConstWithBoolean(True);
+    void testConstWithBitShouldBeStringable() {
+        TestConstWithBit c1 = new TestConstWithBit(0);
+        assert c1.estimateStringLength() == 5;
+        assert c1.toString() == "(b=0)";
+        TestConstWithBit c2 = new TestConstWithBit(1);
+        assert c2.estimateStringLength() == 5;
+        assert c2.toString() == "(b=1)";
+    }
+
+    void testConstWithBooleanEquality() {
+        TestConstWithBoolean c1 = new TestConstWithBoolean(False);
+        TestConstWithBoolean c2 = new TestConstWithBoolean(False);
+        TestConstWithBoolean c3 = new TestConstWithBoolean(True);
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithBooleanCompare() {
-        ConstWithBoolean c1 = new ConstWithBoolean(False);
-        ConstWithBoolean c2 = new ConstWithBoolean(False);
-        ConstWithBoolean c3 = new ConstWithBoolean(True);
+    void testConstWithBooleanCompare() {
+        TestConstWithBoolean c1 = new TestConstWithBoolean(False);
+        TestConstWithBoolean c2 = new TestConstWithBoolean(False);
+        TestConstWithBoolean c3 = new TestConstWithBoolean(True);
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithBooleanHashCode() {
-        ConstWithBoolean c1 = new ConstWithBoolean(False);
-        ConstWithBoolean c2 = new ConstWithBoolean(False);
-        ConstWithBoolean c3 = new ConstWithBoolean(True);
+    void testConstWithBooleanHashCode() {
+        TestConstWithBoolean c1 = new TestConstWithBoolean(False);
+        TestConstWithBoolean c2 = new TestConstWithBoolean(False);
+        TestConstWithBoolean c3 = new TestConstWithBoolean(True);
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
-    void constWithCharEquality() {
-        ConstWithChar c1 = new ConstWithChar('a');
-        ConstWithChar c2 = new ConstWithChar('a');
-        ConstWithChar c3 = new ConstWithChar('b');
+    void testConstWithBooleanShouldBeStringable() {
+        TestConstWithBoolean c1 = new TestConstWithBoolean(True);
+        assert c1.estimateStringLength() == 8;
+        assert c1.toString() == "(b=True)";
+        TestConstWithBoolean c2 = new TestConstWithBoolean(False);
+        assert c2.estimateStringLength() == 9;
+        assert c2.toString() == "(b=False)";
+    }
+
+    void testConstWithCharEquality() {
+        TestConstWithChar c1 = new TestConstWithChar('a');
+        TestConstWithChar c2 = new TestConstWithChar('a');
+        TestConstWithChar c3 = new TestConstWithChar('b');
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithCharCompare() {
-        ConstWithChar c1 = new ConstWithChar('a');
-        ConstWithChar c2 = new ConstWithChar('a');
-        ConstWithChar c3 = new ConstWithChar('b');
+    void testConstWithCharCompare() {
+        TestConstWithChar c1 = new TestConstWithChar('a');
+        TestConstWithChar c2 = new TestConstWithChar('a');
+        TestConstWithChar c3 = new TestConstWithChar('b');
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithCharHashCode() {
-        ConstWithChar c1 = new ConstWithChar('a');
-        ConstWithChar c2 = new ConstWithChar('a');
-        ConstWithChar c3 = new ConstWithChar('b');
+    void testConstWithCharHashCode() {
+        TestConstWithChar c1 = new TestConstWithChar('a');
+        TestConstWithChar c2 = new TestConstWithChar('a');
+        TestConstWithChar c3 = new TestConstWithChar('b');
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
-    void constWithDec32Equality() {
-        ConstWithDec32 c1 = new ConstWithDec32(1.0);
-        ConstWithDec32 c2 = new ConstWithDec32(1.0);
-        ConstWithDec32 c3 = new ConstWithDec32(2.0);
+    void testConstWithCharShouldBeStringable() {
+        TestConstWithChar c1 = new TestConstWithChar('a');
+        assert c1.estimateStringLength() == 5;
+        assert c1.toString() == "(c=a)";
+    }
+
+    void testConstWithDec32Equality() {
+        TestConstWithDec32 c1 = new TestConstWithDec32(1.0);
+        TestConstWithDec32 c2 = new TestConstWithDec32(1.0);
+        TestConstWithDec32 c3 = new TestConstWithDec32(2.0);
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithDec32Compare() {
-        ConstWithDec32 c1 = new ConstWithDec32(1.0);
-        ConstWithDec32 c2 = new ConstWithDec32(1.0);
-        ConstWithDec32 c3 = new ConstWithDec32(2.0);
+    void testConstWithDec32Compare() {
+        TestConstWithDec32 c1 = new TestConstWithDec32(1.0);
+        TestConstWithDec32 c2 = new TestConstWithDec32(1.0);
+        TestConstWithDec32 c3 = new TestConstWithDec32(2.0);
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithDec32HashCode() {
-        ConstWithDec32 c1 = new ConstWithDec32(1.0);
-        ConstWithDec32 c2 = new ConstWithDec32(1.0);
-        ConstWithDec32 c3 = new ConstWithDec32(2.0);
+    void testConstWithDec32HashCode() {
+        TestConstWithDec32 c1 = new TestConstWithDec32(1.0);
+        TestConstWithDec32 c2 = new TestConstWithDec32(1.0);
+        TestConstWithDec32 c3 = new TestConstWithDec32(2.0);
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
-    void constWithDec64Equality() {
-        ConstWithDec64 c1 = new ConstWithDec64(1.0);
-        ConstWithDec64 c2 = new ConstWithDec64(1.0);
-        ConstWithDec64 c3 = new ConstWithDec64(2.0);
+    void testConstWithDec32ShouldBeStringable() {
+        TestConstWithDec32 c1 = new TestConstWithDec32(1.5);
+        assert c1.estimateStringLength() == 7;
+        assert c1.toString() == "(d=1.5)";
+    }
+
+    void testConstWithDec64Equality() {
+        TestConstWithDec64 c1 = new TestConstWithDec64(1.0);
+        TestConstWithDec64 c2 = new TestConstWithDec64(1.0);
+        TestConstWithDec64 c3 = new TestConstWithDec64(2.0);
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithDec64Compare() {
-        ConstWithDec64 c1 = new ConstWithDec64(1.0);
-        ConstWithDec64 c2 = new ConstWithDec64(1.0);
-        ConstWithDec64 c3 = new ConstWithDec64(2.0);
+    void testConstWithDec64Compare() {
+        TestConstWithDec64 c1 = new TestConstWithDec64(1.0);
+        TestConstWithDec64 c2 = new TestConstWithDec64(1.0);
+        TestConstWithDec64 c3 = new TestConstWithDec64(2.0);
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithDec64HashCode() {
-        ConstWithDec64 c1 = new ConstWithDec64(1.0);
-        ConstWithDec64 c2 = new ConstWithDec64(1.0);
-        ConstWithDec64 c3 = new ConstWithDec64(2.0);
+    void testConstWithDec64HashCode() {
+        TestConstWithDec64 c1 = new TestConstWithDec64(1.0);
+        TestConstWithDec64 c2 = new TestConstWithDec64(1.0);
+        TestConstWithDec64 c3 = new TestConstWithDec64(2.0);
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
-    void constWithFloat32Equality() {
-        ConstWithFloat32 c1 = new ConstWithFloat32(1.0);
-        ConstWithFloat32 c2 = new ConstWithFloat32(1.0);
-        ConstWithFloat32 c3 = new ConstWithFloat32(2.0);
+    void testConstWithDec64ShouldBeStringable() {
+        TestConstWithDec64 c1 = new TestConstWithDec64(1.5);
+        assert c1.estimateStringLength() == 7;
+        assert c1.toString() == "(d=1.5)";
+    }
+
+    void testConstWithFloat32Equality() {
+        TestConstWithFloat32 c1 = new TestConstWithFloat32(1.0);
+        TestConstWithFloat32 c2 = new TestConstWithFloat32(1.0);
+        TestConstWithFloat32 c3 = new TestConstWithFloat32(2.0);
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithFloat32Compare() {
-        ConstWithFloat32 c1 = new ConstWithFloat32(1.0);
-        ConstWithFloat32 c2 = new ConstWithFloat32(1.0);
-        ConstWithFloat32 c3 = new ConstWithFloat32(2.0);
+    void testConstWithFloat32Compare() {
+        TestConstWithFloat32 c1 = new TestConstWithFloat32(1.0);
+        TestConstWithFloat32 c2 = new TestConstWithFloat32(1.0);
+        TestConstWithFloat32 c3 = new TestConstWithFloat32(2.0);
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithFloat32HashCode() {
-        ConstWithFloat32 c1 = new ConstWithFloat32(1.0);
-        ConstWithFloat32 c2 = new ConstWithFloat32(1.0);
-        ConstWithFloat32 c3 = new ConstWithFloat32(2.0);
+    void testConstWithFloat32HashCode() {
+        TestConstWithFloat32 c1 = new TestConstWithFloat32(1.0);
+        TestConstWithFloat32 c2 = new TestConstWithFloat32(1.0);
+        TestConstWithFloat32 c3 = new TestConstWithFloat32(2.0);
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
-    void constWithFloat64Equality() {
-        ConstWithFloat64 c1 = new ConstWithFloat64(1.0);
-        ConstWithFloat64 c2 = new ConstWithFloat64(1.0);
-        ConstWithFloat64 c3 = new ConstWithFloat64(2.0);
+    void testConstWithFloat32ShouldBeStringable() {
+        TestConstWithFloat32 c1 = new TestConstWithFloat32(1.5);
+        assert c1.estimateStringLength() == 7;
+        assert c1.toString() == "(f=1.5)";
+    }
+
+    void testConstWithFloat64Equality() {
+        TestConstWithFloat64 c1 = new TestConstWithFloat64(1.0);
+        TestConstWithFloat64 c2 = new TestConstWithFloat64(1.0);
+        TestConstWithFloat64 c3 = new TestConstWithFloat64(2.0);
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithFloat64Compare() {
-        ConstWithFloat64 c1 = new ConstWithFloat64(1.0);
-        ConstWithFloat64 c2 = new ConstWithFloat64(1.0);
-        ConstWithFloat64 c3 = new ConstWithFloat64(2.0);
+    void testConstWithFloat64Compare() {
+        TestConstWithFloat64 c1 = new TestConstWithFloat64(1.0);
+        TestConstWithFloat64 c2 = new TestConstWithFloat64(1.0);
+        TestConstWithFloat64 c3 = new TestConstWithFloat64(2.0);
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithFloat64HashCode() {
-        ConstWithFloat64 c1 = new ConstWithFloat64(1.0);
-        ConstWithFloat64 c2 = new ConstWithFloat64(1.0);
-        ConstWithFloat64 c3 = new ConstWithFloat64(2.0);
+    void testConstWithFloat64HashCode() {
+        TestConstWithFloat64 c1 = new TestConstWithFloat64(1.0);
+        TestConstWithFloat64 c2 = new TestConstWithFloat64(1.0);
+        TestConstWithFloat64 c3 = new TestConstWithFloat64(2.0);
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
-    void constWithInt8Equality() {
-        ConstWithInt8 c1 = new ConstWithInt8(1);
-        ConstWithInt8 c2 = new ConstWithInt8(1);
-        ConstWithInt8 c3 = new ConstWithInt8(2);
+    void testConstWithFloat64ShouldBeStringable() {
+        TestConstWithFloat64 c1 = new TestConstWithFloat64(1.5);
+        assert c1.estimateStringLength() == 7;
+        assert c1.toString() == "(f=1.5)";
+    }
+
+    void testConstWithInt8Equality() {
+        TestConstWithInt8 c1 = new TestConstWithInt8(1);
+        TestConstWithInt8 c2 = new TestConstWithInt8(1);
+        TestConstWithInt8 c3 = new TestConstWithInt8(2);
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithInt8Compare() {
-        ConstWithInt8 c1 = new ConstWithInt8(1);
-        ConstWithInt8 c2 = new ConstWithInt8(1);
-        ConstWithInt8 c3 = new ConstWithInt8(2);
+    void testConstWithInt8Compare() {
+        TestConstWithInt8 c1 = new TestConstWithInt8(1);
+        TestConstWithInt8 c2 = new TestConstWithInt8(1);
+        TestConstWithInt8 c3 = new TestConstWithInt8(2);
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithInt8HashCode() {
-        ConstWithInt8 c1 = new ConstWithInt8(1);
-        ConstWithInt8 c2 = new ConstWithInt8(1);
-        ConstWithInt8 c3 = new ConstWithInt8(2);
+    void testConstWithInt8HashCode() {
+        TestConstWithInt8 c1 = new TestConstWithInt8(1);
+        TestConstWithInt8 c2 = new TestConstWithInt8(1);
+        TestConstWithInt8 c3 = new TestConstWithInt8(2);
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
-    void constWithInt16Equality() {
-        ConstWithInt16 c1 = new ConstWithInt16(1);
-        ConstWithInt16 c2 = new ConstWithInt16(1);
-        ConstWithInt16 c3 = new ConstWithInt16(2);
+    void testConstWithInt8ShouldBeStringable() {
+        TestConstWithInt8 c1 = new TestConstWithInt8(1);
+        assert c1.estimateStringLength() == 5;
+        assert c1.toString() == "(i=1)";
+    }
+
+    void testConstWithInt16Equality() {
+        TestConstWithInt16 c1 = new TestConstWithInt16(1);
+        TestConstWithInt16 c2 = new TestConstWithInt16(1);
+        TestConstWithInt16 c3 = new TestConstWithInt16(2);
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithInt16Compare() {
-        ConstWithInt16 c1 = new ConstWithInt16(1);
-        ConstWithInt16 c2 = new ConstWithInt16(1);
-        ConstWithInt16 c3 = new ConstWithInt16(2);
+    void testConstWithInt16Compare() {
+        TestConstWithInt16 c1 = new TestConstWithInt16(1);
+        TestConstWithInt16 c2 = new TestConstWithInt16(1);
+        TestConstWithInt16 c3 = new TestConstWithInt16(2);
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithInt16HashCode() {
-        ConstWithInt16 c1 = new ConstWithInt16(1);
-        ConstWithInt16 c2 = new ConstWithInt16(1);
-        ConstWithInt16 c3 = new ConstWithInt16(2);
+    void testConstWithInt16HashCode() {
+        TestConstWithInt16 c1 = new TestConstWithInt16(1);
+        TestConstWithInt16 c2 = new TestConstWithInt16(1);
+        TestConstWithInt16 c3 = new TestConstWithInt16(2);
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
-    void constWithInt32Equality() {
-        ConstWithInt32 c1 = new ConstWithInt32(1);
-        ConstWithInt32 c2 = new ConstWithInt32(1);
-        ConstWithInt32 c3 = new ConstWithInt32(2);
+    void testConstWithInt16ShouldBeStringable() {
+        TestConstWithInt16 c1 = new TestConstWithInt16(1);
+        assert c1.estimateStringLength() == 5;
+        assert c1.toString() == "(i=1)";
+    }
+
+    void testConstWithInt32Equality() {
+        TestConstWithInt32 c1 = new TestConstWithInt32(1);
+        TestConstWithInt32 c2 = new TestConstWithInt32(1);
+        TestConstWithInt32 c3 = new TestConstWithInt32(2);
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithInt32Compare() {
-        ConstWithInt32 c1 = new ConstWithInt32(1);
-        ConstWithInt32 c2 = new ConstWithInt32(1);
-        ConstWithInt32 c3 = new ConstWithInt32(2);
+    void testConstWithInt32Compare() {
+        TestConstWithInt32 c1 = new TestConstWithInt32(1);
+        TestConstWithInt32 c2 = new TestConstWithInt32(1);
+        TestConstWithInt32 c3 = new TestConstWithInt32(2);
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithInt32HashCode() {
-        ConstWithInt32 c1 = new ConstWithInt32(1);
-        ConstWithInt32 c2 = new ConstWithInt32(1);
-        ConstWithInt32 c3 = new ConstWithInt32(2);
+    void testConstWithInt32HashCode() {
+        TestConstWithInt32 c1 = new TestConstWithInt32(1);
+        TestConstWithInt32 c2 = new TestConstWithInt32(1);
+        TestConstWithInt32 c3 = new TestConstWithInt32(2);
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
-    void constWithInt64Equality() {
-        ConstWithInt64 c1 = new ConstWithInt64(1);
-        ConstWithInt64 c2 = new ConstWithInt64(1);
-        ConstWithInt64 c3 = new ConstWithInt64(2);
+    void testConstWithInt32ShouldBeStringable() {
+        TestConstWithInt32 c1 = new TestConstWithInt32(1);
+        assert c1.estimateStringLength() == 5;
+        assert c1.toString() == "(i=1)";
+    }
+
+    void testConstWithInt64Equality() {
+        TestConstWithInt64 c1 = new TestConstWithInt64(1);
+        TestConstWithInt64 c2 = new TestConstWithInt64(1);
+        TestConstWithInt64 c3 = new TestConstWithInt64(2);
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithInt64Compare() {
-        ConstWithInt64 c1 = new ConstWithInt64(1);
-        ConstWithInt64 c2 = new ConstWithInt64(1);
-        ConstWithInt64 c3 = new ConstWithInt64(2);
+    void testConstWithInt64Compare() {
+        TestConstWithInt64 c1 = new TestConstWithInt64(1);
+        TestConstWithInt64 c2 = new TestConstWithInt64(1);
+        TestConstWithInt64 c3 = new TestConstWithInt64(2);
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithInt64HashCode() {
-        ConstWithInt64 c1 = new ConstWithInt64(1);
-        ConstWithInt64 c2 = new ConstWithInt64(1);
-        ConstWithInt64 c3 = new ConstWithInt64(2);
+    void testConstWithInt64HashCode() {
+        TestConstWithInt64 c1 = new TestConstWithInt64(1);
+        TestConstWithInt64 c2 = new TestConstWithInt64(1);
+        TestConstWithInt64 c3 = new TestConstWithInt64(2);
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
-    void constWithInt128Equality() {
-        ConstWithInt128 c1 = new ConstWithInt128(1);
-        ConstWithInt128 c2 = new ConstWithInt128(1);
-        ConstWithInt128 c3 = new ConstWithInt128(2);
+    void testConstWithInt64ShouldBeStringable() {
+        TestConstWithInt64 c1 = new TestConstWithInt64(1);
+        assert c1.estimateStringLength() == 5;
+        assert c1.toString() == "(i=1)";
+    }
+
+    void testConstWithInt128Equality() {
+        TestConstWithInt128 c1 = new TestConstWithInt128(1);
+        TestConstWithInt128 c2 = new TestConstWithInt128(1);
+        TestConstWithInt128 c3 = new TestConstWithInt128(2);
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithInt128Compare() {
-        ConstWithInt128 c1 = new ConstWithInt128(1);
-        ConstWithInt128 c2 = new ConstWithInt128(1);
-        ConstWithInt128 c3 = new ConstWithInt128(2);
+    void testConstWithInt128Compare() {
+        TestConstWithInt128 c1 = new TestConstWithInt128(1);
+        TestConstWithInt128 c2 = new TestConstWithInt128(1);
+        TestConstWithInt128 c3 = new TestConstWithInt128(2);
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithInt128HashCode() {
-        ConstWithInt128 c1 = new ConstWithInt128(1);
-        ConstWithInt128 c2 = new ConstWithInt128(1);
-        ConstWithInt128 c3 = new ConstWithInt128(2);
+    void testConstWithInt128HashCode() {
+        TestConstWithInt128 c1 = new TestConstWithInt128(1);
+        TestConstWithInt128 c2 = new TestConstWithInt128(1);
+        TestConstWithInt128 c3 = new TestConstWithInt128(2);
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
-    void constWithNibbleEquality() {
-        ConstWithNibble c1 = new ConstWithNibble(0);
-        ConstWithNibble c2 = new ConstWithNibble(0);
-        ConstWithNibble c3 = new ConstWithNibble(1);
+    void testConstWithInt128ShouldBeStringable() {
+        TestConstWithInt128 c1 = new TestConstWithInt128(1);
+        assert c1.estimateStringLength() == 5;
+        assert c1.toString() == "(n=1)";
+    }
+
+    void testConstWithNibbleEquality() {
+        TestConstWithNibble c1 = new TestConstWithNibble(0);
+        TestConstWithNibble c2 = new TestConstWithNibble(0);
+        TestConstWithNibble c3 = new TestConstWithNibble(1);
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithNibbleCompare() {
-        ConstWithNibble c1 = new ConstWithNibble(0);
-        ConstWithNibble c2 = new ConstWithNibble(0);
-        ConstWithNibble c3 = new ConstWithNibble(1);
+    void testConstWithNibbleCompare() {
+        TestConstWithNibble c1 = new TestConstWithNibble(0);
+        TestConstWithNibble c2 = new TestConstWithNibble(0);
+        TestConstWithNibble c3 = new TestConstWithNibble(1);
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithNibbleHashCode() {
-        ConstWithNibble c1 = new ConstWithNibble(0);
-        ConstWithNibble c2 = new ConstWithNibble(0);
-        ConstWithNibble c3 = new ConstWithNibble(1);
+    void testConstWithNibbleHashCode() {
+        TestConstWithNibble c1 = new TestConstWithNibble(0);
+        TestConstWithNibble c2 = new TestConstWithNibble(0);
+        TestConstWithNibble c3 = new TestConstWithNibble(1);
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
-    void constWithStringEquality() {
-        ConstWithString c1 = new ConstWithString("a");
-        ConstWithString c2 = new ConstWithString("a");
-        ConstWithString c3 = new ConstWithString("b");
+    void testConstWithNibbleShouldBeStringable() {
+        TestConstWithNibble c1 = new TestConstWithNibble(1);
+        assert c1.estimateStringLength() == 5;
+        assert c1.toString() == "(n=1)";
+    }
+
+    void testConstWithStringEquality() {
+        TestConstWithString c1 = new TestConstWithString("a");
+        TestConstWithString c2 = new TestConstWithString("a");
+        TestConstWithString c3 = new TestConstWithString("b");
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithStringCompare() {
-        ConstWithString c1 = new ConstWithString("a");
-        ConstWithString c2 = new ConstWithString("a");
-        ConstWithString c3 = new ConstWithString("b");
+    void testConstWithStringCompare() {
+        TestConstWithString c1 = new TestConstWithString("a");
+        TestConstWithString c2 = new TestConstWithString("a");
+        TestConstWithString c3 = new TestConstWithString("b");
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithStringHashCode() {
-        ConstWithString c1 = new ConstWithString("a");
-        ConstWithString c2 = new ConstWithString("a");
-        ConstWithString c3 = new ConstWithString("b");
+    void testConstWithStringHashCode() {
+        TestConstWithString c1 = new TestConstWithString("a");
+        TestConstWithString c2 = new TestConstWithString("a");
+        TestConstWithString c3 = new TestConstWithString("b");
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
-    void constWithUInt8Equality() {
-        ConstWithUInt8 c1 = new ConstWithUInt8(1);
-        ConstWithUInt8 c2 = new ConstWithUInt8(1);
-        ConstWithUInt8 c3 = new ConstWithUInt8(2);
+    void testConstWithStringShouldBeStringable() {
+        TestConstWithString c1 = new TestConstWithString("abc");
+        assert c1.estimateStringLength() == 7;
+        assert c1.toString() == "(s=abc)";
+    }
+
+    void testConstWithUInt8Equality() {
+        TestConstWithUInt8 c1 = new TestConstWithUInt8(1);
+        TestConstWithUInt8 c2 = new TestConstWithUInt8(1);
+        TestConstWithUInt8 c3 = new TestConstWithUInt8(2);
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithUInt8Compare() {
-        ConstWithUInt8 c1 = new ConstWithUInt8(1);
-        ConstWithUInt8 c2 = new ConstWithUInt8(1);
-        ConstWithUInt8 c3 = new ConstWithUInt8(2);
+    void testConstWithUInt8Compare() {
+        TestConstWithUInt8 c1 = new TestConstWithUInt8(1);
+        TestConstWithUInt8 c2 = new TestConstWithUInt8(1);
+        TestConstWithUInt8 c3 = new TestConstWithUInt8(2);
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithUInt8HashCode() {
-        ConstWithUInt8 c1 = new ConstWithUInt8(1);
-        ConstWithUInt8 c2 = new ConstWithUInt8(1);
-        ConstWithUInt8 c3 = new ConstWithUInt8(2);
+    void testConstWithUInt8HashCode() {
+        TestConstWithUInt8 c1 = new TestConstWithUInt8(1);
+        TestConstWithUInt8 c2 = new TestConstWithUInt8(1);
+        TestConstWithUInt8 c3 = new TestConstWithUInt8(2);
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
-    void constWithUInt16Equality() {
-        ConstWithUInt16 c1 = new ConstWithUInt16(1);
-        ConstWithUInt16 c2 = new ConstWithUInt16(1);
-        ConstWithUInt16 c3 = new ConstWithUInt16(2);
+    void testConstWithUInt8ShouldBeStringable() {
+        TestConstWithUInt8 c1 = new TestConstWithUInt8(1);
+        assert c1.estimateStringLength() == 5;
+        assert c1.toString() == "(i=1)";
+    }
+
+    void testConstWithUInt16Equality() {
+        TestConstWithUInt16 c1 = new TestConstWithUInt16(1);
+        TestConstWithUInt16 c2 = new TestConstWithUInt16(1);
+        TestConstWithUInt16 c3 = new TestConstWithUInt16(2);
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithUInt16Compare() {
-        ConstWithUInt16 c1 = new ConstWithUInt16(1);
-        ConstWithUInt16 c2 = new ConstWithUInt16(1);
-        ConstWithUInt16 c3 = new ConstWithUInt16(2);
+    void testConstWithUInt16Compare() {
+        TestConstWithUInt16 c1 = new TestConstWithUInt16(1);
+        TestConstWithUInt16 c2 = new TestConstWithUInt16(1);
+        TestConstWithUInt16 c3 = new TestConstWithUInt16(2);
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithUInt16HashCode() {
-        ConstWithUInt16 c1 = new ConstWithUInt16(1);
-        ConstWithUInt16 c2 = new ConstWithUInt16(1);
-        ConstWithUInt16 c3 = new ConstWithUInt16(2);
+    void testConstWithUInt16HashCode() {
+        TestConstWithUInt16 c1 = new TestConstWithUInt16(1);
+        TestConstWithUInt16 c2 = new TestConstWithUInt16(1);
+        TestConstWithUInt16 c3 = new TestConstWithUInt16(2);
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
-    void constWithUInt32Equality() {
-        ConstWithUInt32 c1 = new ConstWithUInt32(1);
-        ConstWithUInt32 c2 = new ConstWithUInt32(1);
-        ConstWithUInt32 c3 = new ConstWithUInt32(2);
+    void testConstWithUInt16ShouldBeStringable() {
+        TestConstWithUInt16 c1 = new TestConstWithUInt16(1);
+        assert c1.estimateStringLength() == 5;
+        assert c1.toString() == "(i=1)";
+    }
+
+    void testConstWithUInt32Equality() {
+        TestConstWithUInt32 c1 = new TestConstWithUInt32(1);
+        TestConstWithUInt32 c2 = new TestConstWithUInt32(1);
+        TestConstWithUInt32 c3 = new TestConstWithUInt32(2);
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithUInt32Compare() {
-        ConstWithUInt32 c1 = new ConstWithUInt32(1);
-        ConstWithUInt32 c2 = new ConstWithUInt32(1);
-        ConstWithUInt32 c3 = new ConstWithUInt32(2);
+    void testConstWithUInt32Compare() {
+        TestConstWithUInt32 c1 = new TestConstWithUInt32(1);
+        TestConstWithUInt32 c2 = new TestConstWithUInt32(1);
+        TestConstWithUInt32 c3 = new TestConstWithUInt32(2);
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithUInt32HashCode() {
-        ConstWithUInt32 c1 = new ConstWithUInt32(1);
-        ConstWithUInt32 c2 = new ConstWithUInt32(1);
-        ConstWithUInt32 c3 = new ConstWithUInt32(2);
+    void testConstWithUInt32HashCode() {
+        TestConstWithUInt32 c1 = new TestConstWithUInt32(1);
+        TestConstWithUInt32 c2 = new TestConstWithUInt32(1);
+        TestConstWithUInt32 c3 = new TestConstWithUInt32(2);
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
-    void constWithUInt64Equality() {
-        ConstWithUInt64 c1 = new ConstWithUInt64(1);
-        ConstWithUInt64 c2 = new ConstWithUInt64(1);
-        ConstWithUInt64 c3 = new ConstWithUInt64(2);
+    void testConstWithUInt32ShouldBeStringable() {
+        TestConstWithUInt32 c1 = new TestConstWithUInt32(1);
+        assert c1.estimateStringLength() == 5;
+        assert c1.toString() == "(i=1)";
+    }
+
+    void testConstWithUInt64Equality() {
+        TestConstWithUInt64 c1 = new TestConstWithUInt64(1);
+        TestConstWithUInt64 c2 = new TestConstWithUInt64(1);
+        TestConstWithUInt64 c3 = new TestConstWithUInt64(2);
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithUInt64Compare() {
-        ConstWithUInt64 c1 = new ConstWithUInt64(1);
-        ConstWithUInt64 c2 = new ConstWithUInt64(1);
-        ConstWithUInt64 c3 = new ConstWithUInt64(2);
+    void testConstWithUInt64Compare() {
+        TestConstWithUInt64 c1 = new TestConstWithUInt64(1);
+        TestConstWithUInt64 c2 = new TestConstWithUInt64(1);
+        TestConstWithUInt64 c3 = new TestConstWithUInt64(2);
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithUInt64HashCode() {
-        ConstWithUInt64 c1 = new ConstWithUInt64(1);
-        ConstWithUInt64 c2 = new ConstWithUInt64(1);
-        ConstWithUInt64 c3 = new ConstWithUInt64(2);
+    void testConstWithUInt64HashCode() {
+        TestConstWithUInt64 c1 = new TestConstWithUInt64(1);
+        TestConstWithUInt64 c2 = new TestConstWithUInt64(1);
+        TestConstWithUInt64 c3 = new TestConstWithUInt64(2);
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
-    void constWithUInt128Equality() {
-        ConstWithUInt128 c1 = new ConstWithUInt128(1);
-        ConstWithUInt128 c2 = new ConstWithUInt128(1);
-        ConstWithUInt128 c3 = new ConstWithUInt128(2);
+    void testConstWithUInt64ShouldBeStringable() {
+        TestConstWithUInt64 c1 = new TestConstWithUInt64(1);
+        assert c1.estimateStringLength() == 5;
+        assert c1.toString() == "(i=1)";
+    }
+
+    void testConstWithUInt128Equality() {
+        TestConstWithUInt128 c1 = new TestConstWithUInt128(1);
+        TestConstWithUInt128 c2 = new TestConstWithUInt128(1);
+        TestConstWithUInt128 c3 = new TestConstWithUInt128(2);
         assert c1 == c2;
         assert c1 != c3;
     }
 
-    void constWithUInt128Compare() {
-        ConstWithUInt128 c1 = new ConstWithUInt128(1);
-        ConstWithUInt128 c2 = new ConstWithUInt128(1);
-        ConstWithUInt128 c3 = new ConstWithUInt128(2);
+    void testConstWithUInt128Compare() {
+        TestConstWithUInt128 c1 = new TestConstWithUInt128(1);
+        TestConstWithUInt128 c2 = new TestConstWithUInt128(1);
+        TestConstWithUInt128 c3 = new TestConstWithUInt128(2);
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
         assert c3 <=> c2 == Greater;
     }
 
-    void constWithUInt128HashCode() {
-        ConstWithUInt128 c1 = new ConstWithUInt128(1);
-        ConstWithUInt128 c2 = new ConstWithUInt128(1);
-        ConstWithUInt128 c3 = new ConstWithUInt128(2);
+    void testConstWithUInt128HashCode() {
+        TestConstWithUInt128 c1 = new TestConstWithUInt128(1);
+        TestConstWithUInt128 c2 = new TestConstWithUInt128(1);
+        TestConstWithUInt128 c3 = new TestConstWithUInt128(2);
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
+    }
+
+    void testConstWithUInt128ShouldBeStringable() {
+        TestConstWithUInt128 c1 = new TestConstWithUInt128(1);
+        assert c1.estimateStringLength() == 5;
+        assert c1.toString() == "(n=1)";
     }
 
     void testClassHierarchyEqualsConstWithNoOwnProps() {
@@ -762,23 +927,29 @@ package constTests {
     }
 
     void testConstHierarchyEqualsConstWithNoOwnProps() {
-        ConstC c1 = new ConstC(1, "a");
-        ConstC c2 = new ConstC(1, "a");
-        ConstC c3 = new ConstC(2, "a");
-        ConstC c4 = new ConstC(1, "b");
+        TestConstC c1 = new TestConstC(1, "a");
+        TestConstC c2 = new TestConstC(1, "a");
+        TestConstC c3 = new TestConstC(2, "a");
+        TestConstC c4 = new TestConstC(1, "b");
         MethodTracker.clear();
         assert c1 == c2;
         assert c1 != c3;
         assert c1 != c4;
     }
 
+    void testConstHierarchyWithNoOwnPropsIsStringable() {
+        TestConstC c1 = new TestConstC(2, "a");
+        assert c1.estimateStringLength() == 10;
+        assert c1.toString() == "(n=2, s=a)";
+    }
+
     void testConstHierarchyEqualsConstWithOwnProps() {
-        ConstD c1 = new ConstD(1, "a", 99, "x");
-        ConstD c2 = new ConstD(1, "a", 99, "x");
-        ConstD c3 = new ConstD(2, "a", 99, "x");
-        ConstD c4 = new ConstD(1, "b", 99, "x");
-        ConstD c5 = new ConstD(1, "a", 100, "x");
-        ConstD c6 = new ConstD(1, "a", 99, "z");
+        TestConstD c1 = new TestConstD(1, "a", 99, "x");
+        TestConstD c2 = new TestConstD(1, "a", 99, "x");
+        TestConstD c3 = new TestConstD(2, "a", 99, "x");
+        TestConstD c4 = new TestConstD(1, "b", 99, "x");
+        TestConstD c5 = new TestConstD(1, "a", 100, "x");
+        TestConstD c6 = new TestConstD(1, "a", 99, "z");
         MethodTracker.clear();
         assert c1 == c2;
         assert c1 != c3;
@@ -788,10 +959,10 @@ package constTests {
     }
 
     void testConstHierarchyCompareConstWithNoOwnProps() {
-        ConstC c1 = new ConstC(1, "a");
-        ConstC c2 = new ConstC(1, "a");
-        ConstC c3 = new ConstC(2, "a");
-        ConstC c4 = new ConstC(1, "b");
+        TestConstC c1 = new TestConstC(1, "a");
+        TestConstC c2 = new TestConstC(1, "a");
+        TestConstC c3 = new TestConstC(2, "a");
+        TestConstC c4 = new TestConstC(1, "b");
         MethodTracker.clear();
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
@@ -799,12 +970,12 @@ package constTests {
     }
 
     void testConstHierarchyCompareConstWithOwnProps() {
-        ConstD c1 = new ConstD(1, "a", 99, "x");
-        ConstD c2 = new ConstD(1, "a", 99, "x");
-        ConstD c3 = new ConstD(2, "a", 99, "x");
-        ConstD c4 = new ConstD(1, "b", 99, "x");
-        ConstD c5 = new ConstD(1, "a", 100, "x");
-        ConstD c6 = new ConstD(1, "a", 99, "z");
+        TestConstD c1 = new TestConstD(1, "a", 99, "x");
+        TestConstD c2 = new TestConstD(1, "a", 99, "x");
+        TestConstD c3 = new TestConstD(2, "a", 99, "x");
+        TestConstD c4 = new TestConstD(1, "b", 99, "x");
+        TestConstD c5 = new TestConstD(1, "a", 100, "x");
+        TestConstD c6 = new TestConstD(1, "a", 99, "z");
         MethodTracker.clear();
         assert c1 <=> c2 == Equal;
         assert c1 <=> c3 == Lesser;
@@ -814,20 +985,20 @@ package constTests {
     }
 
     void testConstHierarchyHashCodeConstWithNoOwnProps() {
-        ConstC c1 = new ConstC(1, "a");
-        ConstC c2 = new ConstC(1, "a");
-        ConstC c3 = new ConstC(2, "a");
+        TestConstC c1 = new TestConstC(1, "a");
+        TestConstC c2 = new TestConstC(1, "a");
+        TestConstC c3 = new TestConstC(2, "a");
         MethodTracker.clear();
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
     }
 
     void testConstHierarchyHashCodeConstWithOwnProps() {
-        ConstD c1 = new ConstD(1, "a", 99, "x");
-        ConstD c2 = new ConstD(1, "a", 99, "x");
-        ConstD c3 = new ConstD(2, "a", 99, "x");
-        ConstD c4 = new ConstD(1, "a", 100, "x");
-        ConstD c5 = new ConstD(1, "a", 99, "z");
+        TestConstD c1 = new TestConstD(1, "a", 99, "x");
+        TestConstD c2 = new TestConstD(1, "a", 99, "x");
+        TestConstD c3 = new TestConstD(2, "a", 99, "x");
+        TestConstD c4 = new TestConstD(1, "a", 100, "x");
+        TestConstD c5 = new TestConstD(1, "a", 99, "z");
         MethodTracker.clear();
         assert c1.hashCode() == c2.hashCode();
         assert c1.hashCode() != c3.hashCode();
@@ -835,14 +1006,20 @@ package constTests {
         assert c1.hashCode() != c5.hashCode();
     }
 
-    void testConstWithNotComparableProp() {
+    void testConstHierarchyWithWithOwnPropsIsStringable() {
+        TestConstD c1 = new TestConstD(2, "a", 99, "x");
+        assert c1.estimateStringLength() == 21;
+        assert c1.toString() == "(n=2, s=a, i=99, t=x)";
+    }
+
+    void testTestConstWithNotComparableProp() {
         TestE t1 = new TestE(1);
         TestE t2 = new TestE(1);
         TestE t3 = new TestE(2);
-        ConstWithNotComparableProp c1 = new ConstWithNotComparableProp(t1);
-        ConstWithNotComparableProp c2 = new ConstWithNotComparableProp(t1);
-        ConstWithNotComparableProp c3 = new ConstWithNotComparableProp(t2);
-        ConstWithNotComparableProp c4 = new ConstWithNotComparableProp(t3);
+        TestConstWithNotComparableProp c1 = new TestConstWithNotComparableProp(t1);
+        TestConstWithNotComparableProp c2 = new TestConstWithNotComparableProp(t1);
+        TestConstWithNotComparableProp c3 = new TestConstWithNotComparableProp(t2);
+        TestConstWithNotComparableProp c4 = new TestConstWithNotComparableProp(t3);
 
         // c1 and c2 have the same instance of TestE so should have the same identity
         assert c1 == c2;
@@ -852,9 +1029,9 @@ package constTests {
     }
 
     void testConstWithNotOrderableProp() {
-        ConstWithNotComparableProp c1 = new ConstWithNotComparableProp(new TestE(1));
-        ConstWithNotComparableProp c2 = new ConstWithNotComparableProp(new TestE(1));
-        ConstWithNotComparableProp c3 = new ConstWithNotComparableProp(new TestE(2));
+        TestConstWithNotComparableProp c1 = new TestConstWithNotComparableProp(new TestE(1));
+        TestConstWithNotComparableProp c2 = new TestConstWithNotComparableProp(new TestE(1));
+        TestConstWithNotComparableProp c3 = new TestConstWithNotComparableProp(new TestE(2));
         // TestE does not implement Orderable so will never be equal
         assert c1 <=> c2 != Equal;
         assert c1 <=> c3 != Equal;
@@ -864,10 +1041,10 @@ package constTests {
         TestE t1 = new TestE(1);
         TestE t2 = new TestE(1);
         TestE t3 = new TestE(2);
-        ConstWithNotComparableProp c1 = new ConstWithNotComparableProp(t1);
-        ConstWithNotComparableProp c2 = new ConstWithNotComparableProp(t1);
-        ConstWithNotComparableProp c3 = new ConstWithNotComparableProp(t2);
-        ConstWithNotComparableProp c4 = new ConstWithNotComparableProp(t3);
+        TestConstWithNotComparableProp c1 = new TestConstWithNotComparableProp(t1);
+        TestConstWithNotComparableProp c2 = new TestConstWithNotComparableProp(t1);
+        TestConstWithNotComparableProp c3 = new TestConstWithNotComparableProp(t2);
+        TestConstWithNotComparableProp c4 = new TestConstWithNotComparableProp(t3);
 
         // Const.x doc states that a property of a const that is not Hashable should use zero for
         // its hash code. This means that all the consts will have the same hash code.
@@ -876,13 +1053,30 @@ package constTests {
         assert c1.hashCode() == c4.hashCode();
     }
 
-    // ----- test constants ------------------------------------------------------------------------
+    void testConstWithServiceIsStringable() {
+        TestServiceA         svc      = new TestServiceA();
+        TestConstWithService c1       = new TestConstWithService(svc);
+        String               expected = "(svc=" + svc.toString() + ")";
+        assert c1.estimateStringLength() == expected.size;
+        assert c1.toString() == expected;
+    }
 
-    const EmptyConst;
+    void testConstWithNullablePropIsStringable() {
+        TestConstWithNullableProp c1 = new TestConstWithNullableProp(Null);
+        assert c1.estimateStringLength() == 8;
+        assert c1.toString() == "(s=Null)";
+        TestConstWithNullableProp c2 = new TestConstWithNullableProp("abcdef");
+        assert c2.estimateStringLength() == 10;
+        assert c2.toString() == "(s=abcdef)";
+    }
 
-    const SimpleConst(Int n, String s);
+    // ----- test TestConstAnts ------------------------------------------------------------------------
 
-    const ConstWithConst(SimpleConst c);
+    const TestEmptyConst;
+
+    const TestSimpleConst(Int n, String s);
+
+    const TestConstWithConst(TestSimpleConst c);
 
     /**
      * Non-const class used to test generation of methods in consts that extend non-const classes.
@@ -972,60 +1166,62 @@ package constTests {
         }
     }
 
-    service ServiceA
+    service TestServiceA
             implements Orderable, Hashable {
 
         static Int EqualsId = 1;
         static Int CompareId = 2;
         static Int HashCodeId = 3;
 
-        static <CompileType extends ServiceA> Boolean equals(CompileType value1, CompileType value2) {
+        static <CompileType extends TestServiceA> Boolean equals(CompileType value1, CompileType value2) {
             MethodTracker.called(EqualsId);
             return True;
         }
 
-        static <CompileType extends ServiceA> Ordered compare(CompileType value1, CompileType value2) {
+        static <CompileType extends TestServiceA> Ordered compare(CompileType value1, CompileType value2) {
             MethodTracker.called(CompareId);
             return Equal;
         }
 
-        static <CompileType extends ServiceA> Int hashCode(CompileType value1) {
+        static <CompileType extends TestServiceA> Int hashCode(CompileType value1) {
             MethodTracker.called(HashCodeId);
             return 99;
         }
     }
 
-    const ConstWithNotComparableProp(TestE e);
+    const TestConstWithNotComparableProp(TestE e);
 
-    const ConstWithService(ServiceA svc);
+    const TestConstWithService(TestServiceA svc);
 
-    const ConstA(Int n);
+    const TestConstA(Int n);
 
-    const ConstB(Int n, String s) extends ConstA(n);
+    const TestConstB(Int n, String s) extends TestConstA(n);
 
-    const ConstC(Int n, String s) extends ConstB(n, s);
+    const TestConstC(Int n, String s) extends TestConstB(n, s);
 
-    const ConstD(Int n, String s, Int i, String t) extends ConstB(n, s);
+    const TestConstD(Int n, String s, Int i, String t) extends TestConstB(n, s);
 
-    const ConstWithBit(Bit b);
-    const ConstWithBoolean(Boolean b);
-    const ConstWithChar(Char c);
-    const ConstWithDec32(Dec32 d);
-    const ConstWithDec64(Dec64 d);
-    const ConstWithFloat32(Float32 f);
-    const ConstWithFloat64(Float64 f);
-    const ConstWithInt8(Int8 i);
-    const ConstWithInt16(Int16 i);
-    const ConstWithInt32(Int32 i);
-    const ConstWithInt64(Int64 i);
-    const ConstWithInt128(Int128 n);
-    const ConstWithNibble(Nibble n);
-    const ConstWithString(String s);
-    const ConstWithUInt8(UInt8 i);
-    const ConstWithUInt16(UInt16 i);
-    const ConstWithUInt32(UInt32 i);
-    const ConstWithUInt64(UInt64 i);
-    const ConstWithUInt128(UInt128 n);
+    const TestConstWithBit(Bit b);
+    const TestConstWithBoolean(Boolean b);
+    const TestConstWithChar(Char c);
+    const TestConstWithDec32(Dec32 d);
+    const TestConstWithDec64(Dec64 d);
+    const TestConstWithFloat32(Float32 f);
+    const TestConstWithFloat64(Float64 f);
+    const TestConstWithInt8(Int8 i);
+    const TestConstWithInt16(Int16 i);
+    const TestConstWithInt32(Int32 i);
+    const TestConstWithInt64(Int64 i);
+    const TestConstWithInt128(Int128 n);
+    const TestConstWithNibble(Nibble n);
+    const TestConstWithString(String s);
+    const TestConstWithUInt8(UInt8 i);
+    const TestConstWithUInt16(UInt16 i);
+    const TestConstWithUInt32(UInt32 i);
+    const TestConstWithUInt64(UInt64 i);
+    const TestConstWithUInt128(UInt128 n);
+
+    const TestConstWithNullableProp(String? s);
 
     /**
      * A service to help track method calls during tests.console

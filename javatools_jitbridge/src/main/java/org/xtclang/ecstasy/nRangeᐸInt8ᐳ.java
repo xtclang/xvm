@@ -5,32 +5,11 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.Ctx;
 
 public class nRangeᐸInt8ᐳ
-        extends Range {
+        extends nLongRange {
 
     private nRangeᐸInt8ᐳ(Ctx ctx, int first, int last, boolean firstExclusive, boolean lastExclusive) {
-        super(ctx);
-
-        if (first > last) {
-            $lowerBound     = last;
-            $lowerExclusive = lastExclusive;
-            $upperBound     = first;
-            $upperExclusive = firstExclusive;
-            $descending     = true;
-        } else {
-            $lowerBound     = first;
-            $lowerExclusive = firstExclusive;
-            $upperBound     = last;
-            $upperExclusive = lastExclusive;
-            $descending     = false;
-        }
+        super(ctx, first, last, firstExclusive, lastExclusive);
     }
-
-    public final int     $lowerBound;
-    public final boolean $lowerExclusive;
-    public final int     $upperBound;
-    public final boolean $upperExclusive;
-    public final boolean $descending;
-
 
     // ----- Range / Interval API ------------------------------------------------------------------
 
@@ -42,48 +21,22 @@ public class nRangeᐸInt8ᐳ
     }
 
     int first$get$p(Ctx ctx) {
-        return $descending ? $upperBound : $lowerBound;
-    }
-
-    /**
-     * True iff the starting bound of the range is exclusive.
-     */
-    boolean firstExclusive$get$p(Ctx ctx) {
-        return $descending ? $upperExclusive : $lowerExclusive;
+        return (int) ($descending ? $upperBound : $lowerBound);
     }
 
     /**
      * The ending bound of the range.
      */
     int last$get$p(Ctx ctx) {
-        return $descending ? $lowerBound : $upperBound;
-    }
-
-    /**
-     * True iff the ending bound of the range is exclusive.
-     */
-    boolean lastExclusive$get$p(Ctx ctx) {
-        return $descending ? $lowerExclusive : $upperExclusive;
+        return (int) ($descending ? $lowerBound : $upperBound);
     }
 
     public int lowerBound$get$p(Ctx ctx) {
-        return $lowerBound;
-    }
-
-    public boolean lowerExclusive$get$p(Ctx ctx) {
-        return $lowerExclusive;
+        return (int) $lowerBound;
     }
 
     public int upperBound$get$p(Ctx ctx) {
-        return $upperBound;
-    }
-
-    public boolean upperExclusive$get$p(Ctx ctx) {
-        return $upperExclusive;
-    }
-
-    public boolean descending$get$p(Ctx ctx) {
-        return $descending;
+        return (int) $upperBound;
     }
 
     public int effectiveFirst$get$p(Ctx ctx) {
@@ -96,22 +49,22 @@ public class nRangeᐸInt8ᐳ
 
     public int effectiveLowerBound$get$p(Ctx ctx) {
         if ($lowerExclusive) {
-            if ($lowerBound == Integer.MAX_VALUE) {
+            if ($lowerBound == Byte.MAX_VALUE) {
                 throw Exception.$oob(ctx, null);
             }
-            return $lowerBound + 1;
+            return (int) $lowerBound + 1;
         }
-        return $lowerBound;
+        return (int) $lowerBound;
     }
 
     public int effectiveUpperBound$get$p(Ctx ctx) {
         if ($upperExclusive) {
-            if ($upperBound == Integer.MIN_VALUE) {
+            if ($upperBound == Byte.MIN_VALUE) {
                 throw Exception.$oob(ctx, null);
             }
-            return $upperBound - 1;
+            return (int) $upperBound - 1;
         }
-        return $lowerBound;
+        return (int) $lowerBound;
     }
 
     public boolean empty$get$p(Ctx ctx) {
@@ -128,11 +81,11 @@ public class nRangeᐸInt8ᐳ
     }
 
     public int size$get$p(Ctx ctx) {
-        return Math.max(0, $upperBound - $lowerBound + 1 - ($lowerExclusive ? 1 : 0) - ($upperExclusive ? 1 : 0));
+        return (int) Math.max(0, $upperBound - $lowerBound + 1 - ($lowerExclusive ? 1 : 0) - ($upperExclusive ? 1 : 0));
     }
 
     public int getElement$p(Ctx ctx, int index) {
-        int result;
+        long result;
         if ($descending) {
             result = $upperBound - index - ($upperExclusive ? 1 : 0);
             if (result < effectiveLowerBound$get$p(ctx)) {
@@ -144,6 +97,18 @@ public class nRangeᐸInt8ᐳ
                 throw Exception.$oob(ctx, null);
             }
         }
-        return result;
+        return (int) result;
+    }
+
+    // ----- JIT Support ---------------------------------------------------------------------------
+
+    @Override
+    protected long $firstAsLong(Ctx ctx) {
+        return first$get$p(ctx);
+    }
+
+    @Override
+    protected long $lastAsLong(Ctx ctx) {
+        return last$get$p(ctx);
     }
 }

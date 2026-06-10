@@ -75,6 +75,11 @@ public class Boolean
         return this.$value ? (byte) 1 : (byte) 0;
     }
 
+    @Override
+    public String toString(Ctx ctx) {
+        return $name;
+    }
+
     public static class False extends Boolean {
         public False() {
             super(false, 0, String.of(null, "False"));
@@ -86,6 +91,7 @@ public class Boolean
             super(true, 1, String.of(null, "True"));
         }
     }
+
     // ----- debugging support ---------------------------------------------------------------------
 
     @Override

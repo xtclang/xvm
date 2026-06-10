@@ -2,6 +2,7 @@ package org.xtclang.ecstasy.numbers;
 
 import java.math.BigDecimal;
 
+import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.nConst;
 
 import org.xtclang.ecstasy.text.String;
@@ -28,6 +29,17 @@ public class Nibble extends nConst {
 
     public String toString(Ctx ctx) {
         return String.of(ctx, Integer.toUnsignedString($value));
+    }
+
+    public long estimateStringLength$p(Ctx ctx) {
+        return (int) Math.log10($value) + 1;
+    }
+
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
+        for (char c : Integer.toUnsignedString($value).toCharArray()) {
+            appender = appender.add$p(ctx, c);
+        }
+        return appender;
     }
 
     /**

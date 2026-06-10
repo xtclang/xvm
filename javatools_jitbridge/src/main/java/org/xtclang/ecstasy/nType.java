@@ -24,6 +24,7 @@ import org.xtclang.ecstasy.numbers.UInt32;
 import org.xtclang.ecstasy.numbers.UInt64;
 import org.xtclang.ecstasy.numbers.UInt8;
 import org.xtclang.ecstasy.reflect.Type;
+import org.xtclang.ecstasy.text.Char;
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -168,6 +169,8 @@ public class nType
             ByteHashCollector collector = ctx.createHashCollector();
             collector = switch (value) {
                 case Bit n1     -> collector.addInt8(n1.$value);
+                case Boolean b  -> collector.addInt8(b.$value ? 1 : 0);
+                case Char c     -> collector.addInt32(c.$value);
                 case Nibble n1  -> collector.addInt8(n1.$value);
                 case Int8 n1    -> collector.addInt8(n1.$value);
                 case Int16 n1   -> collector.addInt16(n1.$value);

@@ -14,6 +14,10 @@ package nibbleArrayTests {
         shouldAddElement();
         shouldAddElementUsingOperator();
         shouldAddMultipleElement();
+        shouldIterateUsingForLoop();
+        shouldIterateUsingIterator();
+        shouldDeleteSpecificIndexFromArray();
+        shouldInsertValueIntoArray();
 
         console.print(">>>> Running Nibble Array Tests >>>>");
     }
@@ -88,5 +92,115 @@ package nibbleArrayTests {
         assert array[7] == 0x08;
         assert array[8] == 0x09;
         assert array[9] == 0x0A;
+    }
+
+    void shouldIterateUsingForLoop() {
+        Nibble[] array = new Array();
+        array.add(0x01);
+        array.add(0x02);
+        array.add(0x03);
+        array.add(0x04);
+        array.add(0x05);
+        array.add(0x06);
+        array.add(0x07);
+        array.add(0x08);
+        array.add(0x09);
+        array.add(0x0A);
+
+        Int i = 0;
+        for (Nibble n : array) {
+            assert n == array[i];
+            i++;
+        }
+        assert i == array.size;
+    }
+
+    void shouldIterateUsingIterator() {
+        Nibble[] array = new Array();
+        array.add(0x01);
+        array.add(0x02);
+        array.add(0x03);
+        array.add(0x04);
+        array.add(0x05);
+        array.add(0x06);
+        array.add(0x07);
+        array.add(0x08);
+        array.add(0x09);
+        array.add(0x0A);
+
+        Int i = 0;
+        for (Nibble n : array.iterator()) {
+            assert n == array[i];
+            i++;
+        }
+        assert i == array.size;
+    }
+
+    void shouldDeleteSpecificIndexFromArray() {
+        Nibble[] array = new Array();
+        array.add(1);
+        array.add(2);
+        array.add(3);
+        array.add(4);
+        array.add(5);
+
+        // delete from middle
+        array.delete(2);
+        assert array.size == 4;
+        assert array[0] == 1;
+        assert array[1] == 2;
+        assert array[2] == 4;
+        assert array[3] == 5;
+
+        // delete from index zero
+        array.delete(0);
+        assert array.size == 3;
+        assert array[0] == 2;
+        assert array[1] == 4;
+        assert array[2] == 5;
+
+        // delete from last index
+        array.delete(2);
+        assert array.size == 2;
+        assert array[0] == 2;
+        assert array[1] == 4;
+    }
+
+    void shouldInsertValueIntoArray() {
+        Nibble[] array = new Array();
+        array.add(1);
+        array.add(2);
+        array.add(3);
+        array.add(4);
+
+        // insert in middle
+        array.insert(2, 5);
+        assert array.size == 5;
+        assert array[0] == 1;
+        assert array[1] == 2;
+        assert array[2] == 5;
+        assert array[3] == 3;
+        assert array[4] == 4;
+
+        // insert at index zero
+        array.insert(0, 0);
+        assert array.size == 6;
+        assert array[0] == 0;
+        assert array[1] == 1;
+        assert array[2] == 2;
+        assert array[3] == 5;
+        assert array[4] == 3;
+        assert array[5] == 4;
+
+        // insert at the end
+        array.insert(array.size, 6);
+        assert array.size == 7;
+        assert array[0] == 0;
+        assert array[1] == 1;
+        assert array[2] == 2;
+        assert array[3] == 5;
+        assert array[4] == 3;
+        assert array[5] == 4;
+        assert array[6] == 6;
     }
 }

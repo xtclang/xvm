@@ -49,8 +49,9 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     public boolean assembleImplClass(String className, ClassBuilder classBuilder) {
+        // do not augment Object and
         // since nRef is both Ref and Var, ignore "Var" interface; it causes circular initialization
-        if (thisId.equals(pool().clzVar())) {
+        if (thisId.equals(pool().clzObject()) || thisId.equals(pool().clzVar())) {
             return false;
         }
 
@@ -139,6 +140,13 @@ public class AugmentingBuilder extends CommonBuilder {
     protected void generateTrivialSetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
         if (findMethod(prop.ensureSetterJitMethodName(typeSystem), null) == null) {
             super.generateTrivialSetter(className, classBuilder, prop);
+        }
+    }
+
+    @Override
+    protected void assembleGenericProperty(ClassBuilder classBuilder, String name) {
+        if (findMethod(name + "$get", null) == null) {
+            super.assembleGenericProperty(classBuilder, name);
         }
     }
 

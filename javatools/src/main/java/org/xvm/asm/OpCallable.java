@@ -707,7 +707,8 @@ public abstract class OpCallable extends Op {
             bctx.loadCtx(code);
             bctx.loadCallArguments(code, jmdCall, anArgValue);
 
-            code.invokevirtual(CD_MethodHandle, "invokeExact",
+            // TODO JK - work out when and how we can call invokeExact
+            code.invokevirtual(CD_MethodHandle, "invoke",
                 jmdCall.isOptimized ? jmdCall.optimizedMD : jmdCall.standardMD);
 
             if (m_nRetValue != Op.A_IGNORE) {
@@ -721,8 +722,7 @@ public abstract class OpCallable extends Op {
         if (jmdCall.isOptimized) {
             mdCall  = jmdCall.optimizedMD;
             sJitName += Builder.OPT;
-        }
-        else {
+        } else {
             mdCall = jmdCall.standardMD;
         }
 
@@ -781,6 +781,14 @@ public abstract class OpCallable extends Op {
      * Support for NEW_C ops.
      */
     protected int buildNewC(BuildContext bctx, CodeBuilder code, int nParentArg, int[] anArgValue) {
+        Builder.throwException(code, CD_Exception, "Not implemented: " + toName(getOpCode()));
+        return -1;
+    }
+
+    /**
+     * Support for NEW_V ops.
+     */
+    protected int buildNewV(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
         Builder.throwException(code, CD_Exception, "Not implemented: " + toName(getOpCode()));
         return -1;
     }

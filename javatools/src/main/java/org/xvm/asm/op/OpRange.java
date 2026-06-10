@@ -24,13 +24,16 @@ import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_double;
+import static java.lang.constant.ConstantDescs.CD_float;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
-import static java.lang.constant.ConstantDescs.CD_void;
-import static java.lang.constant.ConstantDescs.INIT_NAME;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
+import static org.xvm.javajit.Builder.CD_nRangeBoolean;
+import static org.xvm.javajit.Builder.CD_nRangeFloat32;
+import static org.xvm.javajit.Builder.CD_nRangeFloat64;
 import static org.xvm.javajit.Builder.CD_nRangeInt64;
 import static org.xvm.javajit.Builder.CD_nRangeInt8;
 
@@ -66,6 +69,8 @@ public abstract class OpRange
 
         if (cdTarget.isPrimitive()) {
             RegisterInfo regArg = bctx.ensureRegister(code, m_nArgValue);
+            ClassDesc    cdRange;
+            ClassDesc    cdPrim;
 
             if (!regArg.cd().equals(cdTarget)) {
                 throw new UnsupportedOperationException("Convert " +
@@ -74,36 +79,49 @@ public abstract class OpRange
 
             switch (cdTarget.descriptorString()) {
             case "J": {
-                ClassDesc cdRange = CD_nRangeInt64;
-                bctx.loadCtx(code);
-                bctx.loadTypeConstant(code, typeTarget);
-                regTarget.load(code);
-                regArg.load(code);
-                addRangeAttributes(code);
-
-                code.invokestatic(cdRange, "$new$p", MethodTypeDesc.of(cdRange, CD_Ctx, CD_TypeConstant,
-                    CD_long, CD_long, CD_boolean, CD_boolean, CD_boolean, CD_boolean));
+                cdRange = CD_nRangeInt64;
+                cdPrim  = CD_long;
                 break;
             }
 
             case "I": {
-                ClassDesc cdRange = CD_nRangeInt8;
-                bctx.loadCtx(code);
-                bctx.loadTypeConstant(code, typeTarget);
-                regTarget.load(code);
-                regArg.load(code);
-                addRangeAttributes(code);
-
-                code.invokestatic(cdRange, "$new$p", MethodTypeDesc.of(cdRange, CD_Ctx, CD_TypeConstant,
-                    CD_int, CD_int, CD_boolean, CD_boolean, CD_boolean, CD_boolean));
+                cdRange = CD_nRangeInt8;
+                cdPrim  = CD_int;
                 break;
             }
 
-            case "S", "B", "Z":
+            case "F": {
+                cdRange = CD_nRangeFloat32;
+                cdPrim  = CD_float;
+                break;
+            }
+
+            case "D": {
+                cdRange = CD_nRangeFloat64;
+                cdPrim  = CD_double;
+                break;
+            }
+
+            case "Z": {
+                cdRange = CD_nRangeBoolean;
+                cdPrim  = CD_int;
+                break;
+            }
+
+            case "S", "B":
             default:
-                throw new IllegalStateException("Not implemented: Range< " +
+                throw new IllegalStateException("Not implemented: Range<" +
                     typeTarget.getValueString() + ">");
             }
+
+            bctx.loadCtx(code);
+            bctx.loadTypeConstant(code, typeTarget);
+            regTarget.load(code);
+            regArg.load(code);
+            addRangeAttributes(code);
+
+            code.invokestatic(cdRange, "$new$p", MethodTypeDesc.of(cdRange, CD_Ctx,
+                    CD_TypeConstant, cdPrim, cdPrim, CD_boolean, CD_boolean, CD_boolean, CD_boolean));
 
             bctx.storeValue(code, bctx.ensureRegister(m_nRetValue, typeTarget));
         } else {
@@ -140,7 +158,6 @@ public abstract class OpRange
             regTarget.load(code);
             bctx.loadArgument(code, nArgValue);
             addRangeAttributes(code);
-            code.iconst_0();
         };
 
         bctx.buildNew(code, typeRange, idCtor, argsLoader);

@@ -288,7 +288,7 @@ public class MethodConstant
     public String ensureJitMethodName(TypeSystem ts) {
         String sJitName = m_sJitName;
         if (sJitName == null) {
-            if (isFunction() || isConstructor()) {
+            if (isFunction() || (isConstructor() && !isVirtualConstructor())) {
                 // function names don't have to be unique across the type system, but they may need
                 // to be unique within the class scope; the reason is that two distinct XTC
                 // functions f(String|Person sp) and f(Int|Animal ia) could end up being compiled

@@ -29,6 +29,9 @@ package int32ArrayTests {
         shouldAndInPlace();
         shouldOrInPlace();
         shouldXorInPlace();
+        shouldIterateUsingForLoop();
+        shouldDeleteSpecificIndexFromArray();
+        shouldInsertValueIntoArray();
 
         console.print(">>>> Running Int32 Array Tests >>>>");
     }
@@ -227,5 +230,58 @@ package int32ArrayTests {
         assert array[0] == 10;
         assert array[1] == 0x45;
         assert array[2] == 30;
+    }
+
+    void shouldIterateUsingForLoop() {
+        Int32[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
+        array.add(40);
+        array.add(50);
+        array.add(60);
+        array.add(70);
+        array.add(80);
+        array.add(90);
+        array.add(100);
+
+        Int i = 0;
+        for (Int32 n : array) {
+            assert n == array[i];
+            i++;
+        }
+        assert i == array.size;
+    }
+
+    void shouldDeleteSpecificIndexFromArray() {
+        Int32[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
+        array.add(40);
+        array.add(50);
+
+        array.delete(2);
+        assert array.size == 4;
+        assert array[0] == 10;
+        assert array[1] == 20;
+        assert array[2] == 40;
+        assert array[3] == 50;
+    }
+
+    void shouldInsertValueIntoArray() {
+        Int32[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
+        array.add(40);
+
+        array.insert(2, 25);
+        assert array.size == 5;
+        assert array[0] == 10;
+        assert array[1] == 20;
+        assert array[2] == 25;
+        assert array[3] == 30;
+        assert array[4] == 40;
     }
 }

@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import java.lang.classfile.ClassFile;
-import java.lang.classfile.ClassHierarchyResolver;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.Interfaces;
 import java.lang.classfile.MethodModel;
@@ -225,11 +224,13 @@ public class NativeTypeSystem
      * Augment the existing native class with the Ecstasy methods.
      */
     private byte[] augmentNativeClass(ClassModel model, String className, TypeConstant type) {
+        Builder   builder   = ensureBuilder(type, model);
         ClassFile classFile = ClassFile.of(
-                ClassFile.ClassHierarchyResolverOption.of(
-                    ClassHierarchyResolver.ofClassLoading(loader)),
+                ClassFile.ClassHierarchyResolverOption
+                         .of(builder.createClassHierarchyResolver(className)),
                 ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
-                ClassFile.StackMapsOption.GENERATE_STACK_MAPS);
+                ClassFile.StackMapsOption.GENERATE_STACK_MAPS,
+                ClassFile.DeadLabelsOption.DROP_DEAD_LABELS);
         return classFile.transformClass(model, (classBuilder, element) -> {
             if (element instanceof Interfaces) {
                 // don't copy an interface list; it would prevent the builder to add any;
@@ -253,7 +254,7 @@ public class NativeTypeSystem
 
             if (element instanceof Superclass) {
                 // augment the new classfile using the Ecstasy class structure (just once!)
-                ensureBuilder(type, model).assembleImpl(className, classBuilder);
+                builder.assembleImpl(className, classBuilder);
             }
         });
     }
@@ -296,10 +297,24 @@ public class NativeTypeSystem
         // various types used by native classes
         TypeConstant typeChar        = pool.typeChar();
         TypeConstant iterableᐸCharᐳ = pool.ensureParameterizedTypeConstant(pool.typeIterable(), typeChar);
-        TypeConstant iteratorᐸCharᐳ = pool.ensureParameterizedTypeConstant(pool.typeIterator(), typeChar);
-
         nativeByType.put(iterableᐸCharᐳ, Builder.N_IterableChar);
-        nativeByType.put(iteratorᐸCharᐳ,  Builder.N_IteratorChar);
+
+        TypeConstant appenderᐸCharᐳ = pool.ensureParameterizedTypeConstant(pool.typeAppender(), typeChar);
+        nativeByType.put(appenderᐸCharᐳ, Builder.N_AppenderChar);
+
+        TypeConstant[] primitiveTypes = new TypeConstant[] {pool.typeBit(), pool.typeBoolean(),
+                typeChar, pool.typeDec32(), pool.typeDec64(), pool.typeDec128(), pool.typeFloat32(),
+                pool.typeFloat64(), pool.typeInt8(), pool.typeInt16(), pool.typeInt32(),
+                pool.typeInt64(), pool.typeInt128(), pool.typeNibble(), pool.typeUInt8(),
+                pool.typeUInt16(), pool.typeUInt32(), pool.typeUInt64(), pool.typeUInt128()
+        };
+
+        for (TypeConstant type : primitiveTypes) {
+            TypeConstant typeIter  = pool.ensureParameterizedTypeConstant(pool.typeIterator(), type);
+            String       typeName  = type.getSingleUnderlyingClass(false).getName();
+            String       className = "org.xtclang.ecstasy.Iteratorᐸ" + typeName + "ᐳ";
+            nativeByType.put(typeIter,  className);
+        }
 
         TypeConstant typeInt     = pool.typeInt64();
         TypeConstant rangeᐸIntᐳ = pool.ensureParameterizedTypeConstant(pool.typeRange(), typeInt);

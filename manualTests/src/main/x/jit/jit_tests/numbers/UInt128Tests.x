@@ -129,7 +129,11 @@ class UInt128Tests {
         testUInt128OpXor();
         testUInt128OpXorInPlace();
 
-        console.print("<<<<< Finished UInt128Tests Conversion tests >>>>>");
+        // Stringable
+        testAppendTo();
+        testEstimateStringLength();
+
+        console.print("<<<<< Finished UInt128Tests tests >>>>>");
     }
 
     // ----- comparison tests ----------------------------------------------------------------------
@@ -525,14 +529,10 @@ class UInt128Tests {
                 try {
                     testThrow(i);
                 } catch (IOException e) {
-                    console.print("IOException caught");
                     continue;
                 } catch (Unsupported e) {
-                    console.print("Unsupported caught");
                     return i + 10;
                 } finally {
-                    console.print("Finally: ", True);
-                    console.print(i);
                     if (i == 2) {
                         return i + 40;
                     }
@@ -540,7 +540,6 @@ class UInt128Tests {
             }
             return 1;
         } finally {
-            console.print("Done");
         }
     }
 
@@ -936,5 +935,34 @@ class UInt128Tests {
         UInt128 n = 0x00F2_F0F2_F0F0_F0F0_F0F0_F0F0_F0F0_F0F0;
         n ^= 0x0AA0_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA;
         assert n == 0x0A52_5A58_5A5A_5A5A_5A5A_5A5A_5A5A_5A5A;
+    }
+
+    // ----- Stringable tests ----------------------------------------------------------------------
+
+    void testAppendTo() {
+        assert callAppendTo(0) == "0";
+        assert callAppendTo(1) == "1";
+        assert callAppendTo(10) == "10";
+        assert callAppendTo(1000) == "1000";
+        assert callAppendTo(198765) == "198765";
+    }
+
+    String callAppendTo(UInt128 n) {
+        StringBuffer buf = new StringBuffer();
+        n.appendTo(buf);
+        return buf.toString();
+    }
+
+    void testEstimateStringLength() {
+        UInt128 n = 0;
+        assert n.estimateStringLength() == 1;
+        n = 1;
+        assert n.estimateStringLength() == 1;
+        n = 10;
+        assert n.estimateStringLength() == 2;
+        n = 1000;
+        assert n.estimateStringLength() == 4;
+        n = 9876543;
+        assert n.estimateStringLength() == 7;
     }
 }

@@ -39,7 +39,11 @@ class Dec64Tests {
         testDecAsNullableDecReturn();
         testNullableDecConditionalReturn();
 
-        console.print("<<<<< Finished Dec64Tests Conversion tests >>>>>");
+        // Stringable
+        testAppendTo();
+        testEstimateStringLength();
+
+        console.print("<<<<< Finished Dec64Tests tests >>>>>");
     }
 
     // ----- comparison tests ----------------------------------------------------------------------
@@ -301,5 +305,46 @@ class Dec64Tests {
             return True, Null;
         }
         return False;
+    }
+
+    // ----- Stringable tests ----------------------------------------------------------------------
+
+    void testAppendTo() {
+        assert callAppendTo(0) == "0";
+        assert callAppendTo(1) == "1";
+        assert callAppendTo(-1) == "-1";
+        assert callAppendTo(10) == "10";
+        assert callAppendTo(-10) == "-10";
+        assert callAppendTo(1000) == "1000";
+        assert callAppendTo(-1000) == "-1000";
+        assert callAppendTo(198765) == "198765";
+        assert callAppendTo(-198765) == "-198765";
+    }
+
+    String callAppendTo(Dec64 n) {
+        StringBuffer buf = new StringBuffer();
+        n.appendTo(buf);
+        return buf.toString();
+    }
+
+    void testEstimateStringLength() {
+        Dec64 n = 0;
+        assert n.estimateStringLength() == 1;
+        n = 1;
+        assert n.estimateStringLength() == 1;
+        n = -1;
+        assert n.estimateStringLength() == 2;
+        n = 10;
+        assert n.estimateStringLength() == 2;
+        n = -10;
+        assert n.estimateStringLength() == 3;
+        n = 1000;
+        assert n.estimateStringLength() == 4;
+        n = -1000;
+        assert n.estimateStringLength() == 5;
+        n = 9876543;
+        assert n.estimateStringLength() == 7;
+        n = -9876543;
+        assert n.estimateStringLength() == 8;
     }
 }

@@ -3,10 +3,12 @@ package org.xtclang.ecstasy.collections;
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Iterable;
+import org.xtclang.ecstasy.IteratorᐸNibbleᐳ;
 import org.xtclang.ecstasy.Object;
-import org.xtclang.ecstasy.nObj;
+import org.xtclang.ecstasy.nType;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
+import org.xtclang.ecstasy.numbers.Int64;
 import org.xtclang.ecstasy.numbers.Nibble;
 
 import org.xvm.asm.ConstantPool;
@@ -79,16 +81,28 @@ public class ArrayᐸNibbleᐳ
         throw new UnsupportedOperationException();
     }
 
-    @Override public Nibble getElement$p(Ctx ctx, long index) {
-        return Nibble.$box(getElement$pi(ctx, index));
+    public Nibble getElement(Ctx ctx, Int64 index) {
+        return Nibble.$box(getElement$pi(ctx, index.$value));
+    }
+
+    public int getElement$p(Ctx ctx, long index) {
+        return getElement$pi(ctx, index);
     }
 
     public int getElement$pi(Ctx ctx, long index) {
         return (int) $getElement$pi(ctx, index);
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, Object value) {
-        setElement$pi(ctx, index, ((Nibble) value).$value);
+    public void setElement(Ctx ctx, Int64 index, Object value) {
+        setElement$pi(ctx, index.$value, ((Nibble) value).$value);
+    }
+
+    public void setElement$p(Ctx ctx, long index, int value) {
+        setElement$pi(ctx, index, value);
+    }
+
+    public IteratorᐸNibbleᐳ iterator(Ctx ctx) {
+        return new nIterator(ctx);
     }
 
     @Override
@@ -100,6 +114,24 @@ public class ArrayᐸNibbleᐳ
         return super.add$p(ctx, value);
     }
 
+    public ArrayᐸNibbleᐳ insert$p(Ctx ctx, long index, int value) {
+        if (index < 0 || index > size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $insert(ctx, index, 1);
+        $set4bitElement(index, value);
+        return this;
+    }
+
+    @Override
+    public ArrayᐸNibbleᐳ delete$p(Ctx ctx, long index) {
+        if (index < 0 || index >= size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $delete(ctx, index, 1);
+        return this;
+    }
+
     @Override
     public ArrayᐸNibbleᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
         return (ArrayᐸNibbleᐳ) super.slice(ctx, range);
@@ -109,7 +141,7 @@ public class ArrayᐸNibbleᐳ
 
     @Override
     protected String $elementToString(Ctx ctx, long index) {
-        Nibble c = getElement$p(ctx, index);
+        Nibble c = Nibble.$box(getElement$p(ctx, index));
         return c.toString(ctx).toString();
     }
 
@@ -151,5 +183,28 @@ public class ArrayᐸNibbleᐳ
     @Override
     protected long $calculateHash(Ctx ctx) {
         return $calculate4BitUnsignedHash(ctx);
+    }
+
+    @Override
+    protected void $deleteElements(long index, long count) {
+        $delete4bit(index, count);
+    }
+
+    @Override
+    protected void $insertElements(long index, long count) {
+        $insert4bit(index, count);
+    }
+
+    // ---- Iterator implementation ----------------------------------------------------------------
+
+    private class nIterator extends nBaseIterator implements IteratorᐸNibbleᐳ {
+        public nIterator(Ctx ctx) {
+            super(ctx);
+        }
+
+        @Override
+        public nType Element$get(Ctx ctx) {
+            return nType.$ensureType(ctx, ctx.container.typeSystem.pool().typeNibble());
+        }
     }
 }

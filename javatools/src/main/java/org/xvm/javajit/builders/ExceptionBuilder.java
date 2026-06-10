@@ -90,12 +90,12 @@ public class ExceptionBuilder extends CommonBuilder {
 
         classBuilder.withMethodBody(INIT_NAME, MethodTypeDesc.of(CD_void, CD_Throwable, exCD),
                 ClassFile.ACC_PUBLIC, code -> {
-            MethodTypeDesc superMD =  MethodTypeDesc.of(CD_void,
-                    CD_Throwable, ensureClassDesc(superType));
+            ClassDesc      superCd = ensureClassDesc(superType);
+            MethodTypeDesc superMD = MethodTypeDesc.of(CD_void, CD_Throwable, superCd);
             code.aload(0)
                 .aload(1)
                 .aload(2)
-                .checkcast(CD_Exception)
+                .checkcast(superCd)
                 .invokespecial(superCD, INIT_NAME, superMD)
                 .return_();
             }

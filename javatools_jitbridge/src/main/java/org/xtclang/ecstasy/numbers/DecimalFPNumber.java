@@ -3,6 +3,8 @@ package org.xtclang.ecstasy.numbers;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+import org.xtclang.ecstasy.AppenderᐸCharᐳ;
+
 import org.xvm.javajit.Ctx;
 
 import org.xtclang.ecstasy.text.String;
@@ -29,6 +31,17 @@ public abstract class DecimalFPNumber
     @Override
     public String toString(Ctx ctx) {
         return String.of(ctx, $toBigDecimal().toEngineeringString());
+    }
+
+    public long estimateStringLength$p(Ctx ctx) {
+        return $toBigDecimal().toEngineeringString().length();
+    }
+
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
+        for (char c : $toBigDecimal().toEngineeringString().toCharArray()) {
+            appender = appender.add$p(ctx, c);
+        }
+        return appender;
     }
 
     /**

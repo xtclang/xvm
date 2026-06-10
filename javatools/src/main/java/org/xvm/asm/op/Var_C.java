@@ -12,7 +12,10 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -115,13 +118,18 @@ public class Var_C
 
     @Override
     public void computeTypes(BuildContext bctx) {
-        bctx.typeMatrix.declare(getAddress(), m_nVar, bctx.getArgumentType(m_nArgValue));
+        TypeConstant typeVar = bctx.getArgumentType(m_nArgValue);
+        assert typeVar.isA(bctx.pool().typeVar());
+        bctx.typeMatrix.declare(getAddress(), m_nVar, typeVar.getParamType(0));
     }
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        bctx.introduceRegister(code, m_nVar, bctx.getArgumentType(m_nArgValue), "");
-        throw new UnsupportedOperationException("create a dynamic ref");
+        RegisterInfo regSrc = bctx.loadArgument(code, m_nArgValue);
+        RegisterInfo regDst = bctx.introduceRef(code, m_nVar, regSrc.type(), "", true);
+        code.astore(regDst.slot());
+        bctx.ensureRegisterScope(code, regDst);
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

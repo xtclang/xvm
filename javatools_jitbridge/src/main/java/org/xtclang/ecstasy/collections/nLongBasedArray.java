@@ -3,7 +3,9 @@ package org.xtclang.ecstasy.collections;
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Exception;
+import org.xtclang.ecstasy.Iterator;
 import org.xtclang.ecstasy.nException;
+import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.text.String;
@@ -35,8 +37,19 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
         extends Array
         implements Cloneable {
 
-    public nLongBasedArray(Ctx ctx, TypeConstant type) {
+    protected nLongBasedArray(Ctx ctx, TypeConstant type) {
         super(ctx, type);
+    }
+
+    /**
+     * Create a {@link #$CONSTANT} {@link nLongBasedArray} initialized with data.
+     */
+    protected nLongBasedArray(Ctx ctx, TypeConstant type, long[] data, long size) {
+        super(ctx, type);
+        // TODO how do we handle huge arrays?
+        $storage = data;
+        $size((int) size);
+        $mut($CONSTANT);
     }
 
     // REVIEW: to save space, we could combine the $storage and $delegate fields into a single field, e.g.
@@ -80,6 +93,11 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
     protected abstract java.lang.String $elementToString(Ctx ctx, long index);
 
     // ----- Array API -----------------------------------------------------------------------------
+
+    @Override
+    public TypeConstant $xvmType(Ctx ctx) {
+        return $isImmut() ? $type.freeze() : $type;
+    }
 
     @Override public long capacity$get$p(Ctx ctx) {
         return $delegate == null
@@ -743,10 +761,9 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
         }
 
         if (index < size) {
-            // move elements [index..size)
-            arraycopy($storage, (int) index, $storage, (int) (index+count), size-((int) index));
-            throw Exception.$unsupported(ctx, null); // TODO
+            $insertElements(index, count);
         }
+        $size(size + (int) count);
     }
 
     @Override public void $delete(Ctx ctx, long index, long count) {
@@ -760,7 +777,186 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
             throw $ro(ctx);
         }
 
-        throw Exception.$unsupported(ctx, null); // TODO
+        int size = $sizeEtc & $SIZE_MASK;
+        if (index < 0 || count < 0 || index + count > size) {
+            throw $oob(ctx, index); // or should we use index + count?
+        }
+
+        if (count == 0) {
+            return;
+        }
+
+        $deleteElements(index, count);
+        $size(size - (int) count);
+    }
+
+    /**
+     * Delete elements from the underlying storage.
+     *
+     * @param index  the index of the first element to delete
+     * @param count  the number of elements to delete
+     */
+    protected abstract void $deleteElements(long index, long count);
+
+    /**
+     * Insert space for elements into the underlying storage.
+     *
+     * @param index  the index at which to insert space
+     * @param count  the number of elements to insert space for
+     */
+    protected abstract void $insertElements(long index, long count);
+
+    /**
+     * Insert space for elements into a 1-bit packed array.
+     */
+    protected void $insert1bit(long index, long count) {
+        int size = $sizeEtc & $SIZE_MASK;
+        for (long i = size - 1; i >= index; i--) {
+            $set1bitElement(i + count, $get1bitElement(i));
+        }
+    }
+
+    /**
+     * Insert space for elements into a 4-bit packed array.
+     */
+    protected void $insert4bit(long index, long count) {
+        int size = $sizeEtc & $SIZE_MASK;
+        for (long i = size - 1; i >= index; i--) {
+            $set4bitElement(i + count, $get4bitUnsignedElement(i));
+        }
+    }
+
+    /**
+     * Insert space for elements into an 8-bit packed array.
+     */
+    protected void $insert8bit(long index, long count) {
+        int size = $sizeEtc & $SIZE_MASK;
+        for (long i = size - 1; i >= index; i--) {
+            $set8bitElement(i + count, $get8bitUnsignedElement(i));
+        }
+    }
+
+    /**
+     * Insert space for elements into a 16-bit packed array.
+     */
+    protected void $insert16bit(long index, long count) {
+        int size = $sizeEtc & $SIZE_MASK;
+        for (long i = size - 1; i >= index; i--) {
+            $set16bitElement(i + count, $get16bitUnsignedElement(i));
+        }
+    }
+
+    /**
+     * Insert space for elements into a 32-bit packed array.
+     */
+    protected void $insert32bit(long index, long count) {
+        int size = $sizeEtc & $SIZE_MASK;
+        for (long i = size - 1; i >= index; i--) {
+            $set32bitElement(i + count, $get32bitUnsignedElement(i));
+        }
+    }
+
+    /**
+     * Insert space for elements into a 64-bit array.
+     */
+    protected void $insert64bit(long index, long count) {
+        int size = $sizeEtc & $SIZE_MASK;
+        arraycopy($storage, (int) index, $storage, (int) (index + count), size - (int) index);
+    }
+
+    /**
+     * Insert space for elements into a 21-bit packed array.
+     */
+    protected void $insert21bit(long index, long count) {
+        int size = $sizeEtc & $SIZE_MASK;
+        for (long i = size - 1; i >= index; i--) {
+            long val = $getElement(null, i);
+            $setElement(null, i + count, val);
+        }
+    }
+
+    /**
+     * Insert space for elements into a 128-bit array.
+     */
+    protected void $insert128bit(long index, long count) {
+        int size = $sizeEtc & $SIZE_MASK;
+        arraycopy($storage, (int) index * 2, $storage, (int) (index + count) * 2, (size - (int) index) * 2);
+    }
+
+    /**
+     * Delete elements from a 1-bit packed array.
+     */
+    protected void $delete1bit(long index, long count) {
+        int size = $sizeEtc & $SIZE_MASK;
+        for (long i = index; i < size - count; i++) {
+            $set1bitElement(i, $get1bitElement(i + count));
+        }
+    }
+
+    /**
+     * Delete elements from a 4-bit packed array.
+     */
+    protected void $delete4bit(long index, long count) {
+        int size = $sizeEtc & $SIZE_MASK;
+        for (long i = index; i < size - count; i++) {
+            $set4bitElement(i, $get4bitUnsignedElement(i + count));
+        }
+    }
+
+    /**
+     * Delete elements from an 8-bit packed array.
+     */
+    protected void $delete8bit(long index, long count) {
+        int size = $sizeEtc & $SIZE_MASK;
+        for (long i = index; i < size - count; i++) {
+            $set8bitElement(i, $get8bitUnsignedElement(i + count));
+        }
+    }
+
+    /**
+     * Delete elements from a 16-bit packed array.
+     */
+    protected void $delete16bit(long index, long count) {
+        int size = $sizeEtc & $SIZE_MASK;
+        for (long i = index; i < size - count; i++) {
+            $set16bitElement(i, $get16bitUnsignedElement(i + count));
+        }
+    }
+
+    /**
+     * Delete elements from a 32-bit packed array.
+     */
+    protected void $delete32bit(long index, long count) {
+        int size = $sizeEtc & $SIZE_MASK;
+        for (long i = index; i < size - count; i++) {
+            $set32bitElement(i, $get32bitUnsignedElement(i + count));
+        }
+    }
+
+    /**
+     * Delete elements from a 64-bit array.
+     */
+    protected void $delete64bit(long index, long count) {
+        int size = $sizeEtc & $SIZE_MASK;
+        arraycopy($storage, (int) (index + count), $storage, (int) index, size - (int) (index + count));
+    }
+
+    /**
+     * Delete elements from a 21-bit packed array.
+     */
+    protected void $delete21bit(long index, long count) {
+        int size = $sizeEtc & $SIZE_MASK;
+        for (long i = index; i < size - count; i++) {
+            $setElement(null, i, $getElement(null, i + count));
+        }
+    }
+
+    /**
+     * Delete elements from a 128-bit array.
+     */
+    protected void $delete128bit(long index, long count) {
+        int size = $sizeEtc & $SIZE_MASK;
+        arraycopy($storage, (int) (index + count) * 2, $storage, (int) index * 2, (size - (int) (index + count)) * 2);
     }
     // ----- HashableArray API ---------------------------------------------------------------------
 
@@ -917,5 +1113,39 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
             cachedHash = hashCode$p(ctx, this);
         }
         return cachedHash;
+    }
+
+    // ---- Iterator implementation ----------------------------------------------------------------
+
+    /**
+     * A base class for {@link Iterator} implementations in subclasses.
+     */
+    // TODO potentially we may not need this (and subclasses) when we generate the iterator()
+    //  method on List
+    protected abstract class nBaseIterator extends nObj implements Iterator {
+        public nBaseIterator(Ctx ctx) {
+            super(ctx);
+        }
+
+        protected int index = 0;
+
+        @Override
+        public boolean $isImmut() {
+            return false;
+        }
+
+        /**
+         * The native implementation of {@link Iterator}
+         * <pre>
+         *     conditional Element next();
+         * </pre>
+         */
+        public boolean next$p(Ctx ctx) {
+            if (index < size$get$p(ctx)) {
+                ctx.i0 = $getElement$pi(ctx, index++);
+                return true;
+            }
+            return false;
+        }
     }
 }

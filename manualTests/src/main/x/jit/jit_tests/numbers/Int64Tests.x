@@ -111,7 +111,11 @@ class Int64Tests {
         testInt64OpXor();
         testInt64OpXorInPlace();
 
-        console.print("<<<<< Finished Int64Tests Conversion tests >>>>>");
+        // Stringable
+        testAppendTo();
+        testEstimateStringLength();
+
+        console.print("<<<<< Finished Int64Tests tests >>>>>");
     }
 
     // ----- comparison tests ----------------------------------------------------------------------
@@ -744,5 +748,46 @@ class Int64Tests {
         Int64 n = 0x00F2_F0F2_F0F0_F0F0;
         n ^= 0x0AA0_AAAA_AAAA_AAAA;
         assert n == 0x0A52_5A58_5A5A_5A5A;
+    }
+
+    // ----- Stringable tests ----------------------------------------------------------------------
+
+    void testAppendTo() {
+        assert callAppendTo(0) == "0";
+        assert callAppendTo(1) == "1";
+        assert callAppendTo(-1) == "-1";
+        assert callAppendTo(10) == "10";
+        assert callAppendTo(-10) == "-10";
+        assert callAppendTo(1000) == "1000";
+        assert callAppendTo(-1000) == "-1000";
+        assert callAppendTo(198765) == "198765";
+        assert callAppendTo(-198765) == "-198765";
+    }
+
+    String callAppendTo(Int64 n) {
+        StringBuffer buf = new StringBuffer();
+        n.appendTo(buf);
+        return buf.toString();
+    }
+
+    void testEstimateStringLength() {
+        Int64 n = 0;
+        assert n.estimateStringLength() == 1;
+        n = 1;
+        assert n.estimateStringLength() == 1;
+        n = -1;
+        assert n.estimateStringLength() == 2;
+        n = 10;
+        assert n.estimateStringLength() == 2;
+        n = -10;
+        assert n.estimateStringLength() == 3;
+        n = 1000;
+        assert n.estimateStringLength() == 4;
+        n = -1000;
+        assert n.estimateStringLength() == 5;
+        n = 9876543;
+        assert n.estimateStringLength() == 7;
+        n = -9876543;
+        assert n.estimateStringLength() == 8;
     }
 }

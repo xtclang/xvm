@@ -3,10 +3,13 @@ package org.xtclang.ecstasy.collections;
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Iterable;
+import org.xtclang.ecstasy.Iterator;
 import org.xtclang.ecstasy.Object;
-import org.xtclang.ecstasy.Range;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
+import org.xtclang.ecstasy.nType;
+
+import org.xtclang.ecstasy.numbers.Int64;
 
 import org.xtclang.ecstasy.text.String;
 
@@ -62,8 +65,6 @@ public class ArrayᐸObjectᐳ
      * @see {@link Array#$new$p}
      */
     public static ArrayᐸObjectᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
-        assert !type.isImmutable();
-
         ctx.alloc(64); // REVIEW how big?
         ArrayᐸObjectᐳ array = new ArrayᐸObjectᐳ(ctx, type);
         array.$mut($MUTABLE);
@@ -115,7 +116,18 @@ public class ArrayᐸObjectᐳ
         return $delegate == null ? ($sizeEtc & $SIZE_MASK) : $delegate.size$get$p(ctx);
     }
 
-    @Override public Object getElement$p(Ctx ctx, long index) {
+    @Override public Mutability mutability$get(Ctx ctx) {
+        // TODO find out why this does not work if removed
+        // even though this method just calls super, it must be here to stop the JIT
+        // overriding it with its own implementation
+        return super.mutability$get(ctx);
+    }
+
+    public Object getElement(Ctx ctx, Int64 index) {
+        return getElement$p(ctx, index.$value);
+    }
+
+    public Object getElement$p(Ctx ctx, long index) {
         if ($delegate != null) {
             return $delegate.getElement$p(ctx, index);
         }
@@ -131,7 +143,11 @@ public class ArrayᐸObjectᐳ
         }
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, Object value) {
+    public void setElement(Ctx ctx, Int64 index, Object value) {
+        setElement$p(ctx, index.$value, value);
+    }
+
+    public void setElement$p(Ctx ctx, long index, Object value) {
         if ($delegate != null) {
             $delegate.setElement$p(ctx, index, value);
             return;
@@ -157,6 +173,16 @@ public class ArrayᐸObjectᐳ
         } catch (ArrayIndexOutOfBoundsException e) {
             throw $oob(ctx, index);
         }
+    }
+
+    /**
+     * The native implementation of List.x
+     * <pre>
+     *     Iterator<Element> iterator()
+     * </pre>
+     */
+    public Iterator iterator(Ctx ctx) {
+        return new nIterator(ctx);
     }
 
     @Override
@@ -187,13 +213,21 @@ public class ArrayᐸObjectᐳ
         }
     }
 
-    @Override public ArrayᐸObjectᐳ delete$p(Ctx ctx, long index) {
-        $delete(ctx, index, 1);
+    @Override public ArrayᐸObjectᐳ insert$p(Ctx ctx, long index, Object element) {
+        if (index < 0 || index > size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $insert(ctx, index, 1);
+        setElement$p(ctx, index, element);
         return this;
     }
 
-    @Override public ArrayᐸObjectᐳ deleteAll(Ctx ctx, Range indexes) {
-        throw new UnsupportedOperationException("TODO CP");
+    @Override public ArrayᐸObjectᐳ delete$p(Ctx ctx, long index) {
+        if (index < 0 || index >= size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $delete(ctx, index, 1);
+        return this;
     }
 
     @Override public ArrayᐸObjectᐳ clear(Ctx ctx) {
@@ -315,6 +349,7 @@ public class ArrayᐸObjectᐳ
             arraycopy($storage, (int) index, $storage, (int) (index+count), size-((int) index));
             Arrays.fill($storage, (int) index, (int) (index+count), null); // <-- might be safe to remove this code (after we test)
         }
+        $size(size + (int) count);
     }
 
     @Override protected void $delete(Ctx ctx, long index, long count) {
@@ -363,5 +398,39 @@ public class ArrayᐸObjectᐳ
             Arrays.fill($storage, newSize, oldSize, null);
         }
         $sizeEtc = $sizeEtc & $MUT_MASK | newSize;
+    }
+
+    // ---- Iterator implementation ----------------------------------------------------------------
+
+    /**
+     * A native implementation of Iterator.x
+     */
+    private class nIterator extends nObj implements Iterator {
+        // TODO Why do we get a TypeMismatch if this class implements IteratorᐸObjectᐳ
+
+        public nIterator(Ctx ctx) {
+            super(ctx);
+        }
+
+        private int index = 0;
+
+        @Override
+        public boolean $isImmut() {
+            return false;
+        }
+
+        @Override
+        public nType Element$get(Ctx ctx) {
+            return nType.$ensureType(ctx, $type);
+        }
+
+        @Override
+        public boolean next$p(Ctx ctx) {
+            if (index < size$get$p(ctx)) {
+                ctx.o0 = getElement$p(ctx, index++);
+                return true;
+            }
+            return false;
+        }
     }
 }

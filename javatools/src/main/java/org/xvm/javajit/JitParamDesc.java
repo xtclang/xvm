@@ -45,7 +45,8 @@ public class JitParamDesc extends JitTypeDesc {
     }
 
     /**
-     * @return the JitParams record for the specified parameter type.
+     * @return the JitParams record for the specified parameter type; used only for a single
+     *         return value or single parameter call
      */
     public static JitParams computeJitParams(Builder builder, TypeConstant type) {
         JitParamDesc[] apdOptParam = null;
@@ -65,7 +66,7 @@ public class JitParamDesc extends JitTypeDesc {
                 new JitParamDesc(type, Widened, cdStd, 0, 0, false)};
             apdOptParam = new JitParamDesc[] {
                 new JitParamDesc(type, NullablePrimitive, cd, 0, 0, false),
-                new JitParamDesc(type, NullablePrimitive, CD_boolean, 0, 1, true)
+                new JitParamDesc(type, NullablePrimitive, CD_boolean, 0, 0, true)
             };
         } else if ((JitTypeDesc.getXvmPrimitiveClass(type)) != null) {
             ClassDesc cdStd = builder.ensureClassDesc(type);
@@ -74,7 +75,7 @@ public class JitParamDesc extends JitTypeDesc {
             ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
             apdOptParam = new JitParamDesc[cds.length];
             for (int i = 0; i < cds.length; i++) {
-                apdOptParam[i] = new JitParamDesc(type, XvmPrimitive, cds[i], 0, i, i > 0);
+                apdOptParam[i] = new JitParamDesc(type, XvmPrimitive, cds[i], 0, i - 1, false);
             }
         } else if ((JitTypeDesc.getNullableXvmPrimitiveClass(type)) != null) {
             ClassDesc cdStd = builder.ensureClassDesc(type);
@@ -82,11 +83,12 @@ public class JitParamDesc extends JitTypeDesc {
                     new JitParamDesc(type, Widened, cdStd, 0, 0, false)};
             ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
             apdOptParam = new JitParamDesc[cds.length + 1];
+            int altIndex = -1;
             for (int i = 0; i < cds.length; i++) {
-                apdOptParam[i] = new JitParamDesc(type, NullableXvmPrimitive, cds[i], 0, i, false);
+                apdOptParam[i] = new JitParamDesc(type, NullableXvmPrimitive, cds[i], 0, altIndex++, false);
             }
             apdOptParam[cds.length] =
-                    new JitParamDesc(type, NullableXvmPrimitive, CD_boolean, 0, cds.length, true);
+                    new JitParamDesc(type, NullableXvmPrimitive, CD_boolean, 0, altIndex, true);
         } else if ((cd = JitTypeDesc.getWidenedClass(builder, type)) != null) {
             apdStdParam = new JitParamDesc[] {
                 new JitParamDesc(type, Widened, cd, 0, 0, false)};

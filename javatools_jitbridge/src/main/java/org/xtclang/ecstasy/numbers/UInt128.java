@@ -3,6 +3,7 @@ package org.xtclang.ecstasy.numbers;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.Orderable;
 import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.OutOfBounds;
@@ -38,6 +39,17 @@ public class UInt128 extends IntNumber {
             toString = $toString = String.of(ctx, $asBigInteger().toString());
         }
         return toString;
+    }
+
+    public long estimateStringLength$p(Ctx ctx) {
+        return $asBigInteger().toString().length();
+    }
+
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
+        for (char c : $asBigInteger().toString().toCharArray()) {
+            appender = appender.add$p(ctx, c);
+        }
+        return appender;
     }
 
     /**

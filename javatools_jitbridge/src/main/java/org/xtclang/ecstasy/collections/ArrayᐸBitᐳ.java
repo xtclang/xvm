@@ -3,10 +3,13 @@ package org.xtclang.ecstasy.collections;
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Iterable;
+import org.xtclang.ecstasy.IteratorᐸBitᐳ;
 import org.xtclang.ecstasy.Object;
+import org.xtclang.ecstasy.nType;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.numbers.Bit;
+import org.xtclang.ecstasy.numbers.Int64;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -82,16 +85,28 @@ public class ArrayᐸBitᐳ
         throw new UnsupportedOperationException();
     }
 
-    @Override public Bit getElement$p(Ctx ctx, long index) {
-        return Bit.$box(getElement$pi(ctx, index));
+    public Bit getElement(Ctx ctx, Int64 index) {
+        return Bit.$box(getElement$pi(ctx, index.$value));
+    }
+
+    public int getElement$p(Ctx ctx, long index) {
+        return getElement$pi(ctx, index);
     }
 
     public int getElement$pi(Ctx ctx, long index) {
         return (int) $getElement$pi(ctx, index);
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, Object value) {
-        setElement$pi(ctx, index, ((Bit) value).$value);
+    public void setElement(Ctx ctx, Int64 index, Object value) {
+        setElement$pi(ctx, index.$value, ((Bit) value).$value);
+    }
+
+    public void setElement$p(Ctx ctx, long index, int value) {
+        setElement$pi(ctx, index, value);
+    }
+
+    public IteratorᐸBitᐳ iterator(Ctx ctx) {
+        return new nIterator(ctx);
     }
 
     @Override
@@ -103,6 +118,24 @@ public class ArrayᐸBitᐳ
         return super.add$p(ctx, value);
     }
 
+    public ArrayᐸBitᐳ insert$p(Ctx ctx, long index, int value) {
+        if (index < 0 || index > size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $insert(ctx, index, 1);
+        $set1bitElement(index, value);
+        return this;
+    }
+
+    @Override
+    public ArrayᐸBitᐳ delete$p(Ctx ctx, long index) {
+        if (index < 0 || index >= size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $delete(ctx, index, 1);
+        return this;
+    }
+
     @Override
     public ArrayᐸBitᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
         return (ArrayᐸBitᐳ) super.slice(ctx, range);
@@ -112,8 +145,8 @@ public class ArrayᐸBitᐳ
 
     @Override
     protected String $elementToString(Ctx ctx, long index) {
-        Bit c = getElement$p(ctx, index);
-        return c.toString(ctx).toString();
+        int i = getElement$pi(ctx, index);
+        return String.valueOf(i);
     }
 
     @Override
@@ -153,5 +186,28 @@ public class ArrayᐸBitᐳ
     @Override
     protected long $calculateHash(Ctx ctx) {
         return $calculate1BitHash(ctx);
+    }
+
+    @Override
+    protected void $deleteElements(long index, long count) {
+        $delete1bit(index, count);
+    }
+
+    @Override
+    protected void $insertElements(long index, long count) {
+        $insert1bit(index, count);
+    }
+
+    // ---- Iterator implementation ----------------------------------------------------------------
+
+    private class nIterator extends nBaseIterator implements IteratorᐸBitᐳ {
+        public nIterator(Ctx ctx) {
+            super(ctx);
+        }
+
+        @Override
+        public nType Element$get(Ctx ctx) {
+            return nType.$ensureType(ctx, ctx.container.typeSystem.pool().typeBit());
+        }
     }
 }
