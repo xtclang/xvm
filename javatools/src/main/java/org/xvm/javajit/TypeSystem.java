@@ -2,8 +2,6 @@ package org.xvm.javajit;
 
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassFile;
-import java.lang.classfile.ClassHierarchyResolver;
-import java.lang.classfile.ClassHierarchyResolver.ClassHierarchyInfo;
 
 import java.lang.classfile.attribute.SourceFileAttribute;
 
@@ -325,7 +323,7 @@ public class TypeSystem {
             // TODO: force some of them or make configurable
             ClassFile classFile = ClassFile.of(
                 ClassFile.ClassHierarchyResolverOption
-                         .of(createClassHierarchyResolver(className, art)),
+                         .of(builder.createClassHierarchyResolver(className)),
                 ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
                 ClassFile.StackMapsOption.GENERATE_STACK_MAPS,
                 ClassFile.DeadLabelsOption.DROP_DEAD_LABELS
@@ -334,33 +332,6 @@ public class TypeSystem {
             return classFile.build(ClassDesc.of(className), handler);
         }
         return null;
-    }
-
-    /**
-     * Create a ClassHierarchyResolver to compensate for what seems to be a weakness in the
-     * ClassFile builder. Despite the fact that at the start of building a class we provide
-     * all relevant information (e.g. class attributes, the super class), the builder may fire a
-     * {@link ClassHierarchyResolver#getClassInfo} request regarding the info about the class itself.
-     */
-    protected ClassHierarchyResolver createClassHierarchyResolver(String className, Artifact art) {
-        if (art == null || art.type.isA(pool().typeModule()) || art.type.isA(pool().typeException())) {
-            return ClassHierarchyResolver.ofClassLoading(loader);
-        }
-
-        // there seems to be a bug in the ClassFile.build() that asks the ClassHierarchyResolver
-        // to resolve the exact class it's building; the logic below is a simple compensation
-        return classDesc -> {
-            String clzName = classDesc.descriptorString();
-            assert clzName.charAt(0) == 'L' && clzName.charAt(clzName.length() - 1) == ';';
-            clzName = clzName.replace('/', '.').substring(1, clzName.length() - 1);
-
-            if (clzName.equals(className)) {
-                return art.type().isJitInterface()
-                    ? ClassHierarchyInfo.ofInterface()
-                    : ClassHierarchyInfo.ofClass(((CommonBuilder) ensureBuilder(art)).getSuperCD());
-            }
-            return ClassHierarchyResolver.ofClassLoading(loader).getClassInfo(classDesc);
-        };
     }
 
     /**

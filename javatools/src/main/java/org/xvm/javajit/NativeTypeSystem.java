@@ -212,8 +212,7 @@ public class NativeTypeSystem
                 if (formals.length > 0) {
                     type = type.adoptParameters(pool(), formals);
                 }
-                Artifact art = deduceArtifact(moduleLoader.module, name);
-                return augmentNativeClass(model, className, type, art);
+                return augmentNativeClass(model, className, type);
             }
         } catch (IOException ignore) {}
 
@@ -224,12 +223,11 @@ public class NativeTypeSystem
     /**
      * Augment the existing native class with the Ecstasy methods.
      */
-    private byte[] augmentNativeClass(ClassModel model, String className, TypeConstant type,
-                                      Artifact art) {
-
+    private byte[] augmentNativeClass(ClassModel model, String className, TypeConstant type) {
+        Builder   builder   = ensureBuilder(type, model);
         ClassFile classFile = ClassFile.of(
                 ClassFile.ClassHierarchyResolverOption
-                         .of(createClassHierarchyResolver(className, art)),
+                         .of(builder.createClassHierarchyResolver(className)),
                 ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
                 ClassFile.StackMapsOption.GENERATE_STACK_MAPS,
                 ClassFile.DeadLabelsOption.DROP_DEAD_LABELS);
@@ -256,7 +254,7 @@ public class NativeTypeSystem
 
             if (element instanceof Superclass) {
                 // augment the new classfile using the Ecstasy class structure (just once!)
-                ensureBuilder(type, model).assembleImpl(className, classBuilder);
+                builder.assembleImpl(className, classBuilder);
             }
         });
     }

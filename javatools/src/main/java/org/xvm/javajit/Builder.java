@@ -1,6 +1,7 @@
 package org.xvm.javajit;
 
 import java.lang.classfile.ClassBuilder;
+import java.lang.classfile.ClassHierarchyResolver;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 import java.lang.classfile.TypeKind;
@@ -31,7 +32,6 @@ import org.xvm.type.Decimal64;
 
 import org.xvm.util.PackedInteger;
 
-import static java.lang.constant.ConstantDescs.CD_Double;
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 import static java.lang.constant.ConstantDescs.CD_Throwable;
 import static java.lang.constant.ConstantDescs.CD_boolean;
@@ -86,6 +86,45 @@ public abstract class Builder {
      */
     protected void loadTypeConstant(CodeBuilder code, String className, TypeConstant type) {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Compute the ClassDesc for the super class of the class built by this builder.
+     */
+    public ClassDesc getSuperCD() {
+        TypeConstant thisType  = getThisType();
+        TypeInfo     typeInfo  = thisType.ensureTypeInfo();
+        TypeConstant superType = typeInfo.getExtends();
+        return superType == null
+            ? thisType.isConst() ? CD_nConst : CD_nObj
+            : ensureClassDesc(superType);
+    }
+
+    /**
+     * Create a ClassHierarchyResolver to compensate for what seems to be a weakness in the
+     * ClassFile builder. Despite the fact that at the start of building a class we provide
+     * all relevant information (e.g. class attributes, the super class), the builder may fire a
+     * {@link ClassHierarchyResolver#getClassInfo} request regarding the info about the class itself.
+     */
+    public ClassHierarchyResolver createClassHierarchyResolver(String className) {
+        TypeConstant thisType = getThisType();
+        if (thisType.isA(pool().typeModule()) || thisType.isA(pool().typeException())) {
+            return ClassHierarchyResolver.ofClassLoading(typeSystem.loader);
+        }
+
+        return classDesc -> {
+            String clzName = classDesc.descriptorString();
+            assert clzName.charAt(0) == 'L' && clzName.charAt(clzName.length() - 1) == ';';
+            clzName = clzName.replace('/', '.').substring(1, clzName.length() - 1);
+
+            if (clzName.equals(className)) {
+                return thisType.isJitInterface()
+                    ? ClassHierarchyResolver.ClassHierarchyInfo.ofInterface()
+                    : ClassHierarchyResolver.ClassHierarchyInfo.ofClass(getSuperCD());
+            }
+
+            return ClassHierarchyResolver.ofClassLoading(typeSystem.loader).getClassInfo(classDesc);
+        };
     }
 
     // ----- helper methods ------------------------------------------------------------------------

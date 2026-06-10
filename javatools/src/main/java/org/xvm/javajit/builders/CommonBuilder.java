@@ -184,16 +184,6 @@ public class CommonBuilder
     }
 
     /**
-     * Compute the ClassDesc for the super class.
-     */
-    public ClassDesc getSuperCD() {
-        TypeConstant superType = typeInfo.getExtends();
-        return superType == null
-            ? (typeInfo.getType().isConst() ? CD_nConst : CD_nObj)
-            : ensureClassDesc(superType);
-    }
-
-    /**
      * Compute the instance size of the generated class(es). If more than one class gets generated,
      * the return value reflects the total size of all instantiated objects. Specialized builders
      * should override this method augmenting the memory requirement accordingly.
