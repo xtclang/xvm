@@ -116,13 +116,6 @@ public class ArrayᐸObjectᐳ
         return $delegate == null ? ($sizeEtc & $SIZE_MASK) : $delegate.size$get$p(ctx);
     }
 
-    @Override public Mutability mutability$get(Ctx ctx) {
-        // TODO find out why this does not work if removed
-        // even though this method just calls super, it must be here to stop the JIT
-        // overriding it with its own implementation
-        return super.mutability$get(ctx);
-    }
-
     public Object getElement(Ctx ctx, Int64 index) {
         return getElement$p(ctx, index.$value);
     }
