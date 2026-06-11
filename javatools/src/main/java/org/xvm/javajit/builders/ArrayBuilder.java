@@ -20,9 +20,12 @@ public class ArrayBuilder extends AugmentingBuilder {
         super(typeSystem, type, model);
 
         DELEGATE_TYPE = pool().ensureEcstasyTypeConstant("collections.Array.ArrayDelegate");
+        isObjectArray = type.getParamType(0).equals(typeSystem.pool().typeObject());
     }
 
     protected final TypeConstant DELEGATE_TYPE;
+
+    protected final boolean isObjectArray;
 
     @Override
     public ClassDesc ensureClassDesc(TypeConstant type) {
@@ -50,7 +53,7 @@ public class ArrayBuilder extends AugmentingBuilder {
     @Override
     protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
         // don't create any methods for array specializations
-        if (!isSpecialized) {
+        if (!isSpecialized && !isObjectArray) {
             super.assembleImplMethods(className, classBuilder);
         }
     }
@@ -58,7 +61,7 @@ public class ArrayBuilder extends AugmentingBuilder {
     @Override
     protected void assembleImplProperties(String className, ClassBuilder classBuilder) {
         // don't create any properties for array specializations
-        if (!isSpecialized) {
+        if (!isSpecialized && !isObjectArray) {
             super.assembleImplProperties(className, classBuilder);
         }
     }
