@@ -544,10 +544,9 @@ class UInt128Tests {
     }
 
     void testThrow(UInt128 i) {
-// ToDo why does this fail to compile with the JIT?
-//        if (i < 0) {
-//            return;
-//        }
+        if (i < 0) {
+            return;
+        }
         if (i == 0) {
             throw new IOException("Test IO");
         } else if (i == 1) {

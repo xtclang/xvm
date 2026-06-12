@@ -2542,7 +2542,6 @@ public class CommonBuilder
     private void assembleConstAppendTo(CodeBuilder code, TypeConstant type) {
         ConstantPool   pool           = pool();
         TypeConstant   typeStringable = pool.typeStringable();
-        ClassDesc      cdThis         = ensureClassDesc(type);
         MethodTypeDesc mdAppendTo     = MethodTypeDesc.of(CD_AppenderChar, CD_Ctx, CD_AppenderChar);
         MethodTypeDesc mdAdd          = MethodTypeDesc.of(CD_AppenderChar, CD_Ctx, CD_int);
         MethodTypeDesc mdToString     = MethodTypeDesc.of(CD_String, CD_Ctx);

@@ -12,9 +12,9 @@ package condMixinTests {
         import t1.*;
 
         Test<String> ts = new Test("hello");
+        assert ts.size() == 5;
         console.print("1a) Element=", True);
         console.print(ts.Element);
-        assert ts.size() < 6; // TODO: the result is incorrect (zero) until we compile String.x
 
         Test<Int> ti = new Test(42);
         console.print("1b) Element=", True);
