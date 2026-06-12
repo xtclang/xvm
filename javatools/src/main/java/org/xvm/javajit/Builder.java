@@ -122,7 +122,13 @@ public abstract class Builder {
                     ? ClassHierarchyResolver.ClassHierarchyInfo.ofInterface()
                     : ClassHierarchyResolver.ClassHierarchyInfo.ofClass(getSuperCD());
             }
-
+            // TODO: the problem is that the natural code for "removeAll" uses an Array<Int>;
+            //       to compile it we need to have to load Array<Int>, which extends Array
+            //       resulting in the CircularClassInitialization error
+            // The upcoming name work should remove this
+            if (clzName.equals(N_ArrayInt64)) {
+                return ClassHierarchyResolver.ClassHierarchyInfo.ofClass(CD_Array);
+            }
             return ClassHierarchyResolver.ofClassLoading(typeSystem.loader).getClassInfo(classDesc);
         };
     }

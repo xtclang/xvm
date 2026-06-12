@@ -2,7 +2,6 @@ package org.xtclang.ecstasy.collections;
 
 import org.xtclang.ecstasy.nEnum;
 import org.xtclang.ecstasy.Object;
-import org.xtclang.ecstasy.nFunction;
 import org.xtclang.ecstasy.nType;
 
 import org.xtclang.ecstasy.reflect.Enumeration;
@@ -459,25 +458,6 @@ public abstract class Array
             case 3  -> Mutability.Mutable;
             default -> throw new IllegalStateException();
         };
-    }
-
-    /**
-     * Native implementation of:
-     * <pre>
-     *   (Array, Int) removeAll(function Boolean(Element) shouldRemove)
-     * </pre>
-     */
-    public Array removeAll$p(Ctx ctx, nFunction shouldRemove) {
-        // REVIEW: the problem is that the natural code for "removeAll" uses an Array<Int>;
-        //         to compile it we need to have to load Array<Int>, which extends Array
-        //         resulting in the CircularClassInitialization error
-        throw new UnsupportedOperationException("TODO");
-    }
-
-    // ----- TEMPORARY: SHOULD BE NATURAL ----------------------------------------------------------
-
-    public Array duplicate(Ctx ctx) {
-        throw new UnsupportedOperationException("TODO");
     }
 
     // ----- Array internals -----------------------------------------------------------------------

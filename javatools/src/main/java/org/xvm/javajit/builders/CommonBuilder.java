@@ -322,8 +322,7 @@ public class CommonBuilder
                 else if (prop.isInitialized()) {
                     initProps.add(prop);
                 }
-            }
-            else {
+            } else {
                 // not our responsibility
             }
         }
@@ -3519,8 +3518,8 @@ public class CommonBuilder
         "StringBuffer",
         "Float*",
         "Array",
-        "Iterable*",
-        "Iterator*",
+        "Iterable",
+        "Iterator",
         "List",
         "TerminalConsole",
         "Appender",

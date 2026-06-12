@@ -1118,11 +1118,11 @@ public class BuildContext {
                 // narrow, but stay boxed for primitive types
                 ClassDesc narrowedCD = builder.ensureClassDesc(mtxType);
 
-                // if already loaded - cast here and don't cast on load
                 reg = new Narrowed(regId, reg.slots(), mtxType, Specific, narrowedCD, reg.slotCds(),
-                        reg.name(), depth, !loaded, reg);
+                        reg.name(), depth, reg);
                 registerInfos.put(regId, reg);
-                    if (loaded) {
+                if (loaded) {
+                    // if already loaded, then add a cast
                     code.checkcast(narrowedCD);
                 }
             }
@@ -2117,8 +2117,7 @@ public class BuildContext {
 
             int scopeDepth = isNewScope ? scope.depth + 1 : scope.depth;
             narrowedReg = new Narrowed(origReg.regId(), narrowedSlots, narrowingType,
-                narrowedFlavor, narrowedCD, narrowedSlotCds, origReg.name(),
-                scopeDepth, false, origReg);
+                narrowedFlavor, narrowedCD, narrowedSlotCds, origReg.name(), scopeDepth, origReg);
         }
 
         boolean applyInfo = fromAddr > currOpAddr;
