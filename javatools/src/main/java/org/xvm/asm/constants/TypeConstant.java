@@ -6574,7 +6574,7 @@ public abstract class TypeConstant
 
         StringBuilder sb = new StringBuilder()
             .append(loader.prefix)
-            .append(id.getJitName(ts));
+            .append(id.getClassJitName(ts));
 
         TypeConstant typeCanonical = getCanonicalJitType();
         if (typeCanonical.getParamsCount() > 0) {

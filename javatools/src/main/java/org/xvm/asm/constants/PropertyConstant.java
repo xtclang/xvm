@@ -314,6 +314,11 @@ public class PropertyConstant
 
     // ----- JIT support ---------------------------------------------------------------------------
 
+    @Override
+    protected StringBuilder buildJitClassName(TypeSystem ts) {
+        return getNamespace().buildJitClassName(ts).append('$').append(getName());
+    }
+
     /**
      * Ensure a unique name for this property at the specified TypeSystem.
      */
