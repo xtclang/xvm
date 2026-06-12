@@ -93,9 +93,9 @@ package stringSwitchTests {
         assert performRangeSwitch("af") == "one";
         assert performRangeSwitch("az") == "one";
         assert performRangeSwitch("abc") == "two";
-//        assert performRangeSwitch("ba") == "three";
-//        assert performRangeSwitch("bf") == "three";
-//        assert performRangeSwitch("bz") == "three";
+        assert performRangeSwitch("ba") == "three";
+        assert performRangeSwitch("bf") == "three";
+        assert performRangeSwitch("bz") == "three";
         assert performRangeSwitch("xyz") == "default";
     }
 
@@ -107,9 +107,8 @@ package stringSwitchTests {
             return "two";
         case "aa".."az":
             return "one";
-// ToDo: This should work, but it blows up with multiple range cases
-//        case "ba".."bz":
-//            return "three";
+        case "ba".."bz":
+            return "three";
         default:
             return "default";
         }
