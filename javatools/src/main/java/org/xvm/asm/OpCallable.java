@@ -666,7 +666,9 @@ public abstract class OpCallable extends Op {
                 bctx.buildSuper(sJitName, nDepth);
                 fInterface = false;
             } else {
-                TypeConstant typeCallee = idCallee.getType();
+                TypeConstant typeCallee = bctx.isSpecialized
+                        ? idCallee.getFormalType().resolveGenerics(bctx.pool(), bctx.thisType)
+                        : idCallee.getType();
                 cdTarget   = bctx.builder.ensureClassDesc(typeCallee);
                 fInterface = typeCallee.isJitInterface();
             }
@@ -730,11 +732,10 @@ public abstract class OpCallable extends Op {
         bctx.loadCallArguments(code, jmdCall, anArgValue);
 
         if (fSpecial) {
-            if (fInterface) {
-                code.invokevirtual(cdTarget, sJitName, mdCall);
-            } else {
-                code.invokespecial(cdTarget, sJitName, mdCall);
-            }
+            // Note: when the caller is a direct subinterface of the interface being called we need
+            // to use invokespecial on an interface method, which is only legal if we don't
+            // skip levels in the hierarchy
+            code.invokespecial(cdTarget, sJitName, mdCall, fInterface);
         } else {
             code.invokestatic(cdTarget, sJitName, mdCall, fInterface);
         }
