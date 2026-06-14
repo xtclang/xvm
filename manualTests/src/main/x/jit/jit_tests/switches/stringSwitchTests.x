@@ -100,8 +100,6 @@ package stringSwitchTests {
     }
 
     String performRangeSwitch(String s) {
-// ToDo: This will not work if the first case is a range
-
         switch (s) {
         case "abc":
             return "two";

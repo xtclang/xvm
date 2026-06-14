@@ -34,13 +34,12 @@ class GpShlTests {
         assert value == 0x2AAAAAAAAAAAAAA0;
     }
 
-// TODO: Fails - Could not find an operation on "UInt" and "UInt" resulting in "UInt" type. ("<<")
     void testGpShlUInt() {
-//        UInt value1 = 0;
-//        UInt value2 = 0xAAAAAAAAAAAAAAAA;
-//        UInt value3 = 2;
-//        value1 = value2 << value3;
-//        assert value1 == 0xAAAAAAAAAAAAAAA8;
+        UInt value1 = 0;
+        UInt value2 = 0xAAAAAAAAAAAAAAAA;
+        Int  value3 = 2;
+        value1 = value2 << value3;
+        assert value1 == 0xAAAAAAAAAAAAAAA8;
     }
 
     void testGpShlInt8() {
