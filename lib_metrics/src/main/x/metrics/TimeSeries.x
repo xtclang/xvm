@@ -17,6 +17,8 @@ import ecstasy.collections.Aggregator;
  *     Int[] perHourSums = rpm.query(Hour,   24, new agg.Sum());   // hourly sums
  */
 class TimeSeries<Value> {
+    @Inject Clock clock;
+
     construct(Duration resolution, Duration retention, Value? defaultValue = Null) {
         assert retention >= resolution as "retention must be not smaller than resolution";
 
@@ -50,6 +52,13 @@ class TimeSeries<Value> {
      * The default value to use for "missing" slots.
      */
     public/private Value defaultValue;
+
+    /**
+     * The time representing the end of the retained samples window.
+     */
+    Time endTime.get() = newestIndex < 0
+            ? clock.now
+            : new Time(resolution.picoseconds * newestIndex);
 
     /**
      * The ring buffer of sample values. A slot for which no sample exists within the currently
@@ -87,34 +96,39 @@ class TimeSeries<Value> {
     }
 
     /**
-     * Return [count] aggregated values in chronological order (oldest first) ending at the index
-     * for [endTime] (or, when [endTime] is `Null`, at the most recently touched sample).
+     * Collect up to [count] aggregated values in chronological order (oldest first) ending at the
+     * index for [endTime] (or, when [endTime] is `Null`, at the most recently touched sample).
      *
      * The [rate] should be greater than the [resolution]; each returned slot spans `rate/resolution`
      * underlying samples. When [folder] is `Null`, the slot's value is the most recent non-default
      * value in its window (snapshot semantics). When [folder] is provided, the values in each
      * window are folded via that aggregator. A slot value is equal to `defaultValue` when none of
      * its underlying samples received any value.
+     *
+     * @return the array of no more than `count` values
+     * @return the timestamp of the oldest sample
      */
-    Value[] query(Duration rate, Int count, Time? endTime = Null,
-                  Aggregator<Value, Value>? folder = Null) {
+    (immutable Value[] data, Time oldest) query(
+            Duration rate, Int count, Aggregator<Value, Value>? folder = Null, Time? endTime = Null) {
         assert:arg count > 0 as "count must be positive";
         assert:arg rate >= resolution as "the rate ({rate}) must be at least the resolution ({resolution})";
 
-        Value[] result = new Value[count](defaultValue);
+        Int valuesPerEntry = (rate / resolution).toInt64();
+        Int endIndex       = endTime == Null ? newestIndex : indexOf(endTime).minOf(newestIndex);
+
         if (newestIndex < 0) {
-            return result;
+            return [], new Time(0);
         }
 
-        Int valuesPerEntry = (rate / resolution).toInt64();
-        Int endIndex        = endTime == Null ? newestIndex : indexOf(endTime);
+        count = count.minOf(capacity/valuesPerEntry);
 
+        Value[] data = new Value[count](defaultValue);
         for (Int i : 0..<count) {
             Int hi = endIndex - (count - 1 - i) * valuesPerEntry;
             Int lo = hi - valuesPerEntry + 1;
-            result[i] = foldRange(lo, hi, folder);
+            data[i] = foldRange(lo, hi, folder);
         }
-        return result;
+        return data.makeImmutable(), new Time(resolution.picoseconds * (newestIndex - count));
     }
 
     /**

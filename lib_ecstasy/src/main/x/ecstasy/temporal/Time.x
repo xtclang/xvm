@@ -147,14 +147,14 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
      * Add a Duration to this Time, resulting in a Time.
      */
     @Op("+") Time add(Duration duration) {
-        return new Time(epochPicos + duration.picoseconds.toInt128(), timezone);
+        return new Time(epochPicos + duration.picoseconds, timezone);
     }
 
     /**
      * Subtract a Duration from this Time, resulting in a Time.
      */
     @Op("-") Time sub(Duration duration) {
-        return new Time(epochPicos - duration.picoseconds.toInt128(), timezone);
+        return new Time(epochPicos - duration.picoseconds, timezone);
     }
 
     /**
