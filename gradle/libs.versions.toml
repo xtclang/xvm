@@ -27,6 +27,7 @@ jakarta-xml-bind-api = "4.0.5"
 jaxb-runtime = "4.0.9"
 jetbrains-annotations = "26.1.0"
 jline = "4.0.15"
+slf4j = "2.0.18"
 
 # =============================================================================
 # Build tooling & publishing
@@ -172,6 +173,7 @@ jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", versi
 jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jaxb-runtime" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
 jline = { module = "org.jline:jline", version.ref = "jline" }
+slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 
 # =============================================================================
 # Testing (shared across XDK and lang)

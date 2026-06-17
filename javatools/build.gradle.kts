@@ -33,6 +33,7 @@ dependencies {
     implementation(libs.acme4j.client)
     implementation(libs.bouncycastle.pkix)
     implementation(libs.bouncycastle.provider)
+    implementation(libs.slf4j.nop) // to avoid startup warnings while preserving no-op logging
     testCompileOnly(libs.jetbrains.annotations)
     testImplementation(libs.javatools.utils)
 }
@@ -226,12 +227,12 @@ val jar by tasks.existing(Jar::class) {
 val versionOutputTest by tasks.registering(Test::class) {
     description = "Run tests that verify version output contains git and API information"
     group = VERIFICATION_GROUP
-    
+
     dependsOn(jar, tasks.test)
-    
+
     // Only run the version-related tests
     include("**/BuildInfoTest.class", "**/LauncherVersionTest.class")
-    
+
     doFirst {
         logger.info("[javatools] Verifying version output contains expected git and API information")
     }
