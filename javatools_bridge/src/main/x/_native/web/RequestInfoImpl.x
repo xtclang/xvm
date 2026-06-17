@@ -422,18 +422,18 @@ service RequestInfoImpl(RTServer       server,
 
     @Override
     void respond(Int status, String[] headerNames, String[] headerValues, Byte[] body) {
+        notifyObservers(status);
+
         server.setHeaders(context, status, headerNames, headerValues, body.empty ? -1 : body.size);
         server.setBodyBytes(context, body, final=True);
-        for (Notify notify : observers) {
-            try {
-                notify(status);
-            } catch (Exception ignore) {}
-        }
     }
 
     @Override
-    void setHeaders(Int status, String[] headerNames, String[] headerValues, Int responseLength) =
-            server.setHeaders(context, status, headerNames, headerValues, responseLength);
+    void setHeaders(Int status, String[] headerNames, String[] headerValues, Int responseLength) {
+        notifyObservers(status);
+
+        server.setHeaders(context, status, headerNames, headerValues, responseLength);
+    }
 
     @Override
     void setBodyBytes(Byte[] bytes) = server.setBodyBytes(context, bytes, final=True);
@@ -446,6 +446,18 @@ service RequestInfoImpl(RTServer       server,
             Boolean final     = chunk.size < chunkSize;
             server.setBodyBytes(context, chunk, final);
         } while (!final);
+    }
+
+    /**
+     * Notify the observers and clear the observers list.
+     */
+    private void notifyObservers(Int status) {
+        for (Notify notify : observers) {
+            try {
+                notify(status);
+            } catch (Exception ignore) {}
+        }
+        observers = [];
     }
 
     @Override

@@ -186,6 +186,7 @@ service HttpHandler
         for (Int i : 0 ..< count) {
             Int index = (i + next) % count;
             if (!busy[index]) {
+                busy[index] = True;
                 lastIndex = index;
                 return index;
             }
@@ -200,7 +201,7 @@ service HttpHandler
         // TODO: check the total number of pending requests and throw a "reject" if over the limit
 
         // we are at the max; add the overload evenly
-        return lastIndex++;
+        return lastIndex <- (lastIndex + 1) % count;
     }
 
     /**
