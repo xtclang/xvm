@@ -15,6 +15,7 @@ import java.math.BigInteger;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -776,6 +777,10 @@ public abstract class Builder {
      */
     public PropertyInfo loadProperty(CodeBuilder code, TypeConstant typeContainer,
                                       PropertyConstant propId, boolean allowUnboxing) {
+        if (typeContainer.containsFormalType(true)) {
+            typeContainer = typeContainer.resolveConstraints().ensureAccess(Constants.Access.PRIVATE);
+        }
+
         PropertyInfo  xvmInfo    = propId.getPropertyInfo(typeContainer);
         PropertyInfo  jitInfo    = propId.getPropertyInfo(typeContainer.getCanonicalJitType());
         TypeConstant  typeOwner  = jitInfo.getOwnerType(this, typeContainer);

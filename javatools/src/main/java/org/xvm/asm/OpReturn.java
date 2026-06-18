@@ -227,7 +227,7 @@ public abstract class OpReturn
                 case Specific:
                     switch (pdRet.flavor) {
                     case Primitive:
-                        Builder.unbox(code, regRet);
+                        Builder.unbox(code, pdRet.type);
                         cd = pdRet.cd;
                         break;
 

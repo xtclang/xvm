@@ -68,8 +68,13 @@ public class ArrayᐸFloat32ᐳ
     }
 
     public static ArrayᐸFloat32ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
-        // TODO
-        throw new UnsupportedOperationException();
+        long size = elements.size$get$p(ctx);
+        ctx.alloc(size * 4); // REVIEW + HEADER_SIZE?
+        ArrayᐸFloat32ᐳ array = new ArrayᐸFloat32ᐳ(ctx, type);
+        array.$mut($MUTABLE);
+        array.addAll(ctx, elements);
+        array.$mut((int) mutability.ordinal$get$p(ctx));
+        return array;
     }
 
     public static ArrayᐸFloat32ᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸFloat32ᐳ that) {

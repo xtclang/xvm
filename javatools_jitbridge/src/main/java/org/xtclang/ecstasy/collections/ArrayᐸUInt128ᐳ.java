@@ -1,6 +1,7 @@
 package org.xtclang.ecstasy.collections;
 
 import org.xtclang.ecstasy.Iterable;
+import org.xtclang.ecstasy.Iterator;
 import org.xtclang.ecstasy.IteratorᐸUInt128ᐳ;
 import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nType;
@@ -75,8 +76,13 @@ public class ArrayᐸUInt128ᐳ
      * @see {@link Array#$new$2}
      */
     public static ArrayᐸUInt128ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
-        // TODO
-        throw new UnsupportedOperationException();
+        long size = elements.size$get$p(ctx);
+        ctx.alloc(size * 16); // REVIEW + HEADER_SIZE?
+        ArrayᐸUInt128ᐳ array = new ArrayᐸUInt128ᐳ(ctx, type);
+        array.$mut($MUTABLE);
+        array.addAll(ctx, elements);
+        array.$mut((int) mutability.ordinal$get$p(ctx));
+        return array;
     }
 
     /**
@@ -104,8 +110,8 @@ public class ArrayᐸUInt128ᐳ
         setElement$pi(ctx, index.$value, ((UInt128) value).$lowValue, ((UInt128) value).$highValue);
     }
 
-    public void setElement$p(Ctx ctx, long index, UInt128 value) {
-        setElement$pi(ctx, index, value.$lowValue, value.$highValue);
+    public void setElement$p(Ctx ctx, long index, long lowValue, long highValue) {
+        setElement$pi(ctx, index, lowValue, highValue);
     }
 
     public void setElement$pi(Ctx ctx, long index, long lowValue, long highValue) {
@@ -125,6 +131,15 @@ public class ArrayᐸUInt128ᐳ
     public ArrayᐸUInt128ᐳ add$p(Ctx ctx, long lowValue, long highValue) {
         ctx.i0 = highValue;
         return super.add$p(ctx, lowValue);
+    }
+
+    @Override
+    public Array addAll(Ctx ctx, Iterable values) {
+        Iterator it = values.iterator(ctx);
+        while (it.next$p(ctx)) {
+            add$p(ctx, ctx.i0, ctx.i1);
+        }
+        return this;
     }
 
     public ArrayᐸUInt128ᐳ insert$p(Ctx ctx, long index, long lowValue, long highValue) {

@@ -564,7 +564,8 @@ public class MethodBody {
             SignatureConstant sig    = method.resolveSignature(
                                             builder.pool(), typeContainer.getCanonicalJitType());
 
-            m_jmd = jmd = JitMethodDesc.of(builder, sig.getRawParams(), sig.getRawReturns(),
+            // TODO why can't the result be cached in m_jmd
+            jmd = JitMethodDesc.of(builder, sig.getRawParams(), sig.getRawReturns(),
                                 isCtorOrValidator(), builder.ensureClassDesc(typeContainer),
                                 method.getTypeParamCount() + method.getRequiredParamCount());
             m_typeJmdContainer = typeContainer;

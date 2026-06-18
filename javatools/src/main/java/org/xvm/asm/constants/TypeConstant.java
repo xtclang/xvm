@@ -6509,6 +6509,7 @@ public abstract class TypeConstant
         ConstantPool     pool = getConstantPool();
         IdentityConstant id   = getSingleUnderlyingClass(true);
         if (id.equals(pool.clzArray())) {
+            // see ParameterizedTypeConstant#buildJitClassName
             TypeConstant typeEl = getParamType(0);
             if (typeEl.isFormalType() || typeEl.equals(pool.typeObject())) {
                 return Builder.N_ArrayObj;

@@ -33,7 +33,7 @@ public abstract class Number
     public ArrayᐸBitᐳ bits$get(Ctx ctx) {
         if ($bitArray == null) {
             long bits = bitLength$get$p();
-            $bitArray = ArrayᐸBitᐳ.$fromLongs(ctx, Array.Mutability.Constant, bits, $longValues());
+            $bitArray = ArrayᐸBitᐳ.$fromLongs(ctx, Array.Mutability.Constant.$INSTANCE, bits, $longValues());
         }
         return $bitArray;
     }
@@ -46,7 +46,7 @@ public abstract class Number
      */
     public ArrayᐸBitᐳ toBitArray(Ctx ctx, Array.Mutability mutability) {
         long bits = bitLength$get$p();
-        if (mutability == null || mutability == Array.Mutability.Constant) {
+        if (mutability == null || mutability == Array.Mutability.Constant.$INSTANCE) {
             return bits$get(ctx);
         }
         return ArrayᐸBitᐳ.$fromLongs(ctx, mutability, bits, $longValues());

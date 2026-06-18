@@ -254,4 +254,14 @@ public class AugmentingBuilder extends CommonBuilder {
     protected boolean isNativeMethod(String jitName, MethodTypeDesc md) {
         return findMethod(jitName, md) != null;
     }
+
+    @Override
+    protected boolean isNativeField(String jitName, ClassDesc cd) {
+        FieldModel fm = findField(jitName);
+        if (fm != null) {
+            assert fm.fieldTypeSymbol().equals(cd);
+            return true;
+        }
+        return false;
+    }
 }

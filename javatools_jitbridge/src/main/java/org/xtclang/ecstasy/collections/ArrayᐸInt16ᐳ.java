@@ -75,8 +75,13 @@ public class ArrayᐸInt16ᐳ
      * @see {@link Array#$new$2}
      */
     public static ArrayᐸInt16ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
-        // TODO
-        throw new UnsupportedOperationException();
+        long size = elements.size$get$p(ctx);
+        ctx.alloc(size * 2); // REVIEW + HEADER_SIZE?
+        ArrayᐸInt16ᐳ array = new ArrayᐸInt16ᐳ(ctx, type);
+        array.$mut($MUTABLE);
+        array.addAll(ctx, elements);
+        array.$mut((int) mutability.ordinal$get$p(ctx));
+        return array;
     }
 
     /**

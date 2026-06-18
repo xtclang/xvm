@@ -45,8 +45,7 @@ package genericTests {
 
         void testType() {
             if (Int i := value.is(Int)) {
-                console.print("it's an Int; next is ", True);
-                console.print(++i);
+                console.print($"it's an Int; next is {++i}");
             }
             if (String s := value.is(String)) {
                 console.print("it's a String; size is ", True);

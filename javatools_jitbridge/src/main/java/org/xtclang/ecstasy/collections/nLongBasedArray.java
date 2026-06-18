@@ -3,6 +3,7 @@ package org.xtclang.ecstasy.collections;
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Exception;
+import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.Iterator;
 import org.xtclang.ecstasy.nException;
 import org.xtclang.ecstasy.nObj;
@@ -169,6 +170,15 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
     @Override public long size$get$p(Ctx ctx) {
         // for virtual calls coded against xArray$Int64, this avoids the virtual field accessor
         return $delegate == null ? ($sizeEtc & $SIZE_MASK) : $delegate.size$get$p(ctx);
+    }
+
+    @Override
+    public Array addAll(Ctx ctx, Iterable values) {
+        Iterator it = values.iterator(ctx);
+        while (it.next$p(ctx)) {
+            add$p(ctx, ctx.i0);
+        }
+        return this;
     }
 
     /**

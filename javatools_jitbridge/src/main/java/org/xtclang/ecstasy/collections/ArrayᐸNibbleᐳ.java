@@ -72,8 +72,13 @@ public class ArrayᐸNibbleᐳ
     }
 
     public static ArrayᐸNibbleᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
-        // TODO
-        throw new UnsupportedOperationException();
+        long size = elements.size$get$p(ctx);
+        ctx.alloc(size / 2); // REVIEW + HEADER_SIZE?
+        ArrayᐸNibbleᐳ array = new ArrayᐸNibbleᐳ(ctx, type);
+        array.$mut($MUTABLE);
+        array.addAll(ctx, elements);
+        array.$mut((int) mutability.ordinal$get$p(ctx));
+        return array;
     }
 
     public static ArrayᐸNibbleᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸNibbleᐳ that) {
