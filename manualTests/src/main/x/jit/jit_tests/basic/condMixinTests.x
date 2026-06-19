@@ -13,12 +13,10 @@ package condMixinTests {
 
         Test<String> ts = new Test("hello");
         assert ts.size() == 5;
-        console.print("1a) Element=", True);
-        console.print(ts.Element);
+        console.print($"1a) Element={ts.Element}");
 
         Test<Int> ti = new Test(42);
-        console.print("1b) Element=", True);
-        console.print(ti.Element);
+        console.print($"1b) Element={ti.Element}");
         assert ti.value() == 42;
     }
 
@@ -26,13 +24,11 @@ package condMixinTests {
         import t2.*;
 
         Test<String> ts = new Test("hello");
-        console.print("2a) Element=", True);
-        console.print(ts.Element);
+        console.print($"2a) Element={ts.Element}");
         assert ts.size() == 5;
 
         Test<Int> ti = new Test(42);
-        console.print("2b) Element=", True);
-        console.print(ti.Element);
+        console.print($"2b) Element={ti.Element}");
         assert ti.value() == 42;
     }
 

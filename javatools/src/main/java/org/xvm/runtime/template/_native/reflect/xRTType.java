@@ -201,7 +201,7 @@ public class xRTType
         //  3) a generic property of Type (DataType, OuterType)
         if (idProp.isFormalType()) {
             String sName = idProp.getName();
-            TypeConstant typeValue = null;
+            TypeConstant typeValue;
             if (idProp.getFormat() == Constant.Format.Property) {
                 // this is almost identical to FTC.resolve(GTR) except it returns the "unsafe" type
                 typeValue = switch (idProp.getName()) {

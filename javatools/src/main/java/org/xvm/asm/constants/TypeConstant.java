@@ -6612,9 +6612,9 @@ public abstract class TypeConstant
      *         cast explicitly to {@code nObj} class to invoke its methods
      */
     public boolean isJitInterface() {
-        // Ref and Var are always represented is by "nRef" class
+        // Ref/Var and Type are always represented by native classes
         ConstantPool pool = getConstantPool();
-        return isInterfaceType() && !this.isA(pool.typeRef()) ||
+        return isInterfaceType() && !this.isA(pool.typeRef()) && !this.isA(pool.typeType()) ||
             getCanonicalJitType().equals(pool.typeObject());
     }
 
