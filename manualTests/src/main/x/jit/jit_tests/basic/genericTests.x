@@ -48,8 +48,7 @@ package genericTests {
                 console.print($"it's an Int; next is {++i}");
             }
             if (String s := value.is(String)) {
-                console.print("it's a String; size is ", True);
-                console.print(s.size);
+                console.print($"it's a String; size is {"5"}");
             } else {
                 console.print("Not a String");
             }

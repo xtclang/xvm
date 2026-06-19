@@ -24,8 +24,7 @@ package tryTests {
             console.print("1) Unsupported caught");
             throw e;
         } finally {
-            console.print("1) Finally: ", True);
-            console.print(TRY.exception?.text : "no exception");
+            console.print($"1) Finally: {TRY.exception?.text : "no exception"}");
         }
     }
 
@@ -41,8 +40,7 @@ package tryTests {
                     console.print("2) Unsupported caught");
                     return i + 10;
                 } finally {
-                    console.print("2) Finally: ", True);
-                    console.print(i);
+                    console.print($"2) Finally: {i}");
                     if (i == 2) {
                         return i + 40;
                     }
@@ -71,8 +69,7 @@ package tryTests {
         try {
             assert flag as "Flag is not set";
         } catch (IllegalState e) {
-            console.print("Assert 1) ", True);
-            console.print(e.text);
+            console.print($"Assert 1) {e.text}");
         }
     }
 
@@ -80,8 +77,7 @@ package tryTests {
         try {
             assert Int i := next(flag), Int j := next(flag);
         } catch (Exception e) {
-            console.print("Assert 2) ", True);
-            console.print(e.text);
+            console.print($"Assert 2) {e.text}");
         }
     }
 
