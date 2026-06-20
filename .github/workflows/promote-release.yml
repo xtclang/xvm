@@ -135,7 +135,7 @@ jobs:
                   echo "✅ Valid version: $VERSION"
 
             - name: Checkout release tag
-              uses: actions/checkout@v6
+              uses: actions/checkout@v7
               with:
                   ref: v${{ steps.version.outputs.version }}
                   fetch-depth: 1
