@@ -1611,6 +1611,7 @@ public abstract class Builder {
     public static final String N_nRangeInt64  = "org.xtclang.ecstasy.nRangeᐸInt64ᐳ";
     public static final String N_nService     = "org.xtclang.ecstasy.nService";
     public static final String N_nType        = "org.xtclang.ecstasy.nType";
+    public static final String N_nUtil        = "org.xtclang.ecstasy.nUtil";
 
     // ----- well-known method names ---------------------------------------------------------------
 
@@ -1700,6 +1701,7 @@ public abstract class Builder {
     public static final ClassDesc CD_nObj          = ClassDesc.of(N_nObj);
     public static final ClassDesc CD_nRef          = ClassDesc.of(N_nRef);
     public static final ClassDesc CD_nType         = ClassDesc.of(N_nType);
+    public static final ClassDesc CD_nUtil         = ClassDesc.of(N_nUtil);
 
     public static final ClassDesc CD_Bit           = ClassDesc.of(N_Bit);
     public static final ClassDesc CD_Boolean       = ClassDesc.of(N_Boolean);

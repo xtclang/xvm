@@ -5,6 +5,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
+import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
@@ -12,6 +17,13 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitFlavor;
+import org.xvm.javajit.JitTypeDesc;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -21,6 +33,16 @@ import org.xvm.runtime.template.xBoolean.BooleanHandle;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
+
+import static java.lang.constant.ConstantDescs.CD_void;
+import static java.lang.constant.ConstantDescs.INIT_NAME;
+
+import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_JavaString;
+import static org.xvm.javajit.Builder.CD_Object;
+import static org.xvm.javajit.Builder.CD_String;
+import static org.xvm.javajit.Builder.CD_nUtil;
+import static org.xvm.javajit.Builder.MD_StringOf;
 
 
 /**
@@ -76,26 +98,8 @@ public class AssertV
             return iPC + 1;
         }
 
-        // first, get the unformatted String from the constant pool and split it up into its
-        // pieces
-        if (m_asParts == null) {
-            String   sMsg    = frame.getString(m_nMsgConstId);
-            int      cVals   = m_anValue.length;
-            String[] asParts = new String[cVals + 1];
-            for (int i = 0; i < cVals; ++i) {
-                String sReplace = "{" + i + "}";
-                int of = sMsg.indexOf(sReplace);
-                if (of > 0) {
-                    asParts[i] = sMsg.substring(0, of);
-                    sMsg = sMsg.substring(of + sReplace.length());
-                } else {
-                    asParts[i] = "";
-                }
-            }
-            assert sMsg != null;
-            asParts[cVals] = sMsg;
-            m_asParts = asParts;
-        }
+        // first, get the unformatted String from the constant pool and split it up into its pieces
+        String[] asParts = splitMessage(frame.getString(m_nMsgConstId));
 
         // get the trace variable and constant values to display; note that some values could
         // be unassigned conditional returns
@@ -110,9 +114,9 @@ public class AssertV
         }
 
         // build the assertion message and finish by throwing it
-        StringBuilder      sb         = new StringBuilder(m_asParts[0]);
+        StringBuilder      sb         = new StringBuilder(asParts[0]);
         Frame.Continuation doComplete = (frameCaller) -> complete(frameCaller, iPC, sb.toString());
-        return new MessageToString(sb, ahArg, m_asParts, doComplete).doNext(frame);
+        return new MessageToString(sb, ahArg, asParts, doComplete).doNext(frame);
     }
 
     /**
@@ -222,6 +226,168 @@ public class AssertV
         sb.append(')');
         return sb.toString();
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    protected void buildMessage(BuildContext bctx, CodeBuilder code) {
+        String[]       asParts         = splitMessage(bctx.getString(m_nMsgConstId));
+        ClassDesc      cdBuilder       = ClassDesc.of(StringBuilder.class.getName());
+        MethodTypeDesc mdBuilderInit   = MethodTypeDesc.of(CD_void);
+        MethodTypeDesc mdAppendText    = MethodTypeDesc.of(CD_void, cdBuilder, CD_JavaString);
+        MethodTypeDesc mdAppendValue   = MethodTypeDesc.of(CD_void, CD_Ctx, cdBuilder, CD_Object);
+        MethodTypeDesc mdJavaToString  = MethodTypeDesc.of(CD_JavaString);
+
+        bctx.loadCtx(code);
+        code.new_(cdBuilder)
+            .dup()
+            .invokespecial(cdBuilder, INIT_NAME, mdBuilderInit);
+        for (int i = 0, c = m_anValue.length; i < c; ++i) {
+            appendString(code, mdAppendText, asParts[i]);
+            appendValue(bctx, code, mdAppendValue, m_anValue[i], asParts, i);
+        }
+        code.invokevirtual(cdBuilder, "toString", mdJavaToString)
+            .invokestatic(CD_String, "of", MD_StringOf);
+    }
+
+    private void appendValue(BuildContext bctx, CodeBuilder code, MethodTypeDesc mdAppendValue,
+                             int nValue, String[] asParts, int index) {
+        RegisterInfo reg = nValue >= 0
+                ? bctx.getRegisterInfo(code, nValue)
+                : null;
+        if (nValue >= 0) {
+            // match the interpreter: render unavailable trace values as empty
+            if (reg == null) {
+                return;
+            }
+            String  sExpression = asParts[0];
+            String  sName       = reg.name();
+            boolean fSkip       = index > 0
+                    && sName != null
+                    && sName.startsWith("v$")
+                    && reg.type().isA(bctx.pool().typeBoolean())
+                    && (sExpression.contains("&&") || sExpression.contains("||"));
+            if (fSkip) {
+                return;
+            }
+            RegisterInfo original = reg.original();
+            if (original != reg) {
+                // narrowed temps may not exist on all failure paths - print the source value;
+                // keep ctx and buffer live after appendTo consumes its arguments
+                code.dup2();
+                original.load(code);
+                appendLoadedRegister(code, mdAppendValue, original);
+                return;
+            }
+        }
+
+        // keep ctx and buffer live after appendTo consumes its arguments
+        code.dup2();
+        reg = bctx.loadArgument(code, nValue);
+        appendLoadedRegister(code, mdAppendValue, reg);
+    }
+
+    private void appendLoadedRegister(CodeBuilder code, MethodTypeDesc mdAppendValue,
+                                      RegisterInfo reg) {
+        JitFlavor flavor = reg.flavor();
+        if (flavor.isOptimized) {
+            switch (flavor) {
+                case Primitive, XvmPrimitive -> {
+                    Builder.box(code, reg);
+                    appendLoadedValue(code, mdAppendValue);
+                }
+                case NullablePrimitive ->
+                    appendNullablePrimitiveValue(code, mdAppendValue, reg);
+
+                case NullableXvmPrimitive ->
+                    appendNullableXvmPrimitiveValue(code, mdAppendValue, reg);
+
+                default ->
+                    throw new UnsupportedOperationException("Unsupported flavor: " + flavor);
+            }
+        }
+        else {
+            appendLoadedValue(code, mdAppendValue);
+        }
+    }
+
+    private void appendNullablePrimitiveValue(CodeBuilder code, MethodTypeDesc mdAppendValue,
+                                              RegisterInfo reg) {
+        // stack: ctx, buffer, ctx, buffer, primitive value, isNull
+        Label ifNull = code.newLabel();
+        Label endIf  = code.newLabel();
+        code.ifne(ifNull);
+        TypeConstant type = reg.type().removeNullable();
+        Builder.box(code, type);
+        appendLoadedValue(code, mdAppendValue);
+        code.goto_(endIf)
+            .labelBinding(ifNull);
+
+        // stack: ctx, buffer, ctx, buffer, primitive value
+        Builder.pop(code, reg.cd());
+        Builder.loadNull(code);
+        appendLoadedValue(code, mdAppendValue);
+        code.labelBinding(endIf);
+    }
+
+    private void appendNullableXvmPrimitiveValue(CodeBuilder code, MethodTypeDesc mdAppendValue,
+                                                 RegisterInfo reg) {
+        // stack: ctx, buffer, ctx, buffer, xvm primitive slot values, isNull
+        Label ifNull = code.newLabel();
+        Label endIf  = code.newLabel();
+        code.ifne(ifNull);
+        TypeConstant type = reg.type().removeNullable();
+        Builder.box(code, type);
+        appendLoadedValue(code, mdAppendValue);
+        code.goto_(endIf)
+            .labelBinding(ifNull);
+
+        // stack: ctx, buffer, ctx, buffer, xvm primitive slot values
+        ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
+        for (int i = cds.length - 1; i >= 0; --i) {
+            Builder.pop(code, cds[i]);
+        }
+        Builder.loadNull(code);
+        appendLoadedValue(code, mdAppendValue);
+        code.labelBinding(endIf);
+    }
+
+    private void appendLoadedValue(CodeBuilder code, MethodTypeDesc mdAppendValue) {
+        code.invokestatic(CD_nUtil, "appendTo", mdAppendValue);
+    }
+
+    private void appendString(CodeBuilder code, MethodTypeDesc mdAppendText, String sText) {
+        if (!sText.isEmpty()) {
+            code.dup()
+                .ldc(sText)
+                .invokestatic(CD_nUtil, "appendText", mdAppendText);
+        }
+    }
+
+    private String[] splitMessage(String sMsg) {
+        String[] asParts = m_asParts;
+        if (asParts == null) {
+            int count = m_anValue.length;
+            asParts = new String[count + 1];
+            for (int i = 0; i < count; ++i) {
+                String sTag  = "{" + i + "}";
+                int    ofTag = sMsg.indexOf(sTag);
+                if (ofTag >= 0) {
+                    asParts[i] = sMsg.substring(0, ofTag);
+                    sMsg       = sMsg.substring(ofTag + sTag.length());
+                } else {
+                    asParts[i] = "";
+                }
+            }
+            // the suffix after the last placeholder may be empty, but it must exist
+            assert sMsg != null;
+            asParts[count] = sMsg;
+            m_asParts = asParts;
+        }
+        return asParts;
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int[] m_anValue;
 
