@@ -91,7 +91,7 @@ public class Float16 extends BinaryFPNumber {
 
     @Override
     public float toFloat32$p(Ctx ctx) {
-        return (float) $value;
+        return $value;
     }
 
     @Override

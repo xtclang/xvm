@@ -1256,7 +1256,7 @@ public class LambdaExpression
     // ----- debugging assistance ------------------------------------------------------------------
 
     public String toSignatureString() {
-        var sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
 
         List<?> source = params == null ? paramNames : params;
         sb.append('(')

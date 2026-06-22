@@ -13,6 +13,7 @@ import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
+import java.util.stream.Stream;
 
 import org.gradle.testfixtures.ProjectBuilder;
 
@@ -70,7 +71,7 @@ public class XtcLauncherRuntimeTest {
     }
 
     private List<File> sortedFiles(final Path... files) {
-        return List.of(files).stream()
+        return Stream.of(files)
             .map(Path::toFile)
             .sorted(Comparator.comparing(File::getAbsolutePath))
             .toList();

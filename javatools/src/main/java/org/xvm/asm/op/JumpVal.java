@@ -624,7 +624,7 @@ public class JumpVal
                 nMin = Math.min(nMin, lFirst);
                 nMax = Math.max(nMax, lLast);
 
-                cCases += (int) (lLast - lFirst); // no need for "+1" since we already counted it
+                cCases += (lLast - lFirst); // no need for "+1" since we already counted it
             } else if (constant instanceof EnumValueConstant) {
                 // must be the Null case, which we have already handled
                 continue;

@@ -90,8 +90,7 @@ public class EnumValueConstant
         ClassConstant constNew = (ClassConstant) constOld.resolveTypedefs();
         return constNew == constOld
                 ? this
-                : (EnumValueConstant) getConstantPool().register(
-                        new EnumValueConstant(getConstantPool(), constNew));
+                : getConstantPool().register(new EnumValueConstant(getConstantPool(), constNew));
     }
 
     @Override

@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
  * {@link TransientHasherReference} are obtained from the pool via {@link #of} and returned to the pool via
  * {@link #close}.
  */
-class TransientHasherReference<T>
+public class TransientHasherReference<T>
         extends HasherReference<T> implements AutoCloseable {
     /**
      * Stacks of {@link TransientHasherReference}s.
