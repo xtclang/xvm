@@ -14,7 +14,6 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.javajit.registers.Ref;

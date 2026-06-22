@@ -1,7 +1,6 @@
 package org.xtclang.ecstasy.reflect;
 
 import org.xtclang.ecstasy.Object;
-import org.xtclang.ecstasy.nObj;
 
 import org.xvm.javajit.Ctx;
 

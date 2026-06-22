@@ -4,7 +4,6 @@ package org.xvm.asm;
 import java.util.Map;
 
 import org.xvm.asm.constants.FormalConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 

@@ -2,7 +2,6 @@ package org.xvm.runtime.template.reflect;
 
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.TypeConstant;

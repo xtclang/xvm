@@ -298,7 +298,7 @@ public class String
      */
     public String add(Ctx ctx, Object obj) {
         // TODO CP: optimize
-        return of(ctx, this.toString() + obj.toString(ctx).toString());
+        return of(ctx, this + obj.toString(ctx).toString());
     }
 
     /**

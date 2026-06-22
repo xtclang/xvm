@@ -1,6 +1,5 @@
 package org.xtclang.plugin.tasks;
 
-import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_ID;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_SUFFIX;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_MODULE_FILE_EXTENSION;
 import static org.xtclang.plugin.XtcPluginUtils.FileUtils.getFileExtension;

@@ -31,10 +31,6 @@ public class xClassTemplate
     }
 
     @Override
-    public void initNative() {
-    }
-
-    @Override
     public int callEqualsImpl(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         return hValue1 instanceof ComponentTemplateHandle &&

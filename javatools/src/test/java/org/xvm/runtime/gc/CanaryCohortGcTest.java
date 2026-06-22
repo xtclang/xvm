@@ -1,6 +1,5 @@
 package org.xvm.runtime.gc;
 
-import org.xvm.runtime.template._native.mgmt.xCoreRepository;
 import org.xvm.util.ShallowSizeOf;
 
 import java.lang.ref.PhantomReference;

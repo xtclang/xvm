@@ -22,7 +22,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.CD_nType;
 

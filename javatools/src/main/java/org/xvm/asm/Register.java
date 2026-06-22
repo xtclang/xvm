@@ -33,7 +33,7 @@ public class Register
 
         m_fRO        = false;
         m_type       = type;
-        m_sName      = sName;
+        f_sName      = sName;
         m_iArg       = UNKNOWN + (method == null ? 0 : method.getUnassignedRegisterIndex());
         f_nOrigIndex = m_iArg;
     }
@@ -64,7 +64,7 @@ public class Register
 
         m_fRO        = isPredefinedReadonly(iArg);
         m_type       = type;
-        m_sName      = sName;
+        f_sName      = sName;
         m_iArg       = iArg;
         f_nOrigIndex = iArg;
     }
@@ -191,7 +191,7 @@ public class Register
      */
     public Register narrowType(TypeConstant typeNarrowed) {
         // even when the types are the same, the shadow carries "not-in-place" flag
-        ShadowRegister regShadow = new ShadowRegister(typeNarrowed, m_sName, f_nOrigIndex);
+        ShadowRegister regShadow = new ShadowRegister(typeNarrowed, f_sName, f_nOrigIndex);
         TypeConstant   typeReg   = m_typeReg;
         if (typeReg != null) {
             if (typeReg.isAnnotated() && !typeNarrowed.equals(m_type)) {
@@ -209,7 +209,7 @@ public class Register
      * Create a shadow register that has the same type as the original register.
      */
     public Register restoreType() {
-        return new ShadowRegister(getOriginalType(), m_sName, f_nOrigIndex);
+        return new ShadowRegister(getOriginalType(), f_sName, f_nOrigIndex);
     }
 
     /**
@@ -231,7 +231,7 @@ public class Register
      * @return the register name, or null
      */
     public String getName() {
-        return m_sName;
+        return f_sName;
     }
 
     /**
@@ -401,9 +401,9 @@ public class Register
     public RegAllocAST getRegAllocAST() {
         RegAllocAST astAlloc = m_astAlloc;
         if (astAlloc == null) {
-            StringConstant constName = m_sName == null
+            StringConstant constName = f_sName == null
                     ? null
-                    : m_type.getConstantPool().ensureStringConstant(m_sName);
+                    : m_type.getConstantPool().ensureStringConstant(f_sName);
             m_astAlloc = astAlloc = m_typeReg == null
                     ? new RegAllocAST(m_type, constName)
                     : new RegAllocAST(m_typeReg, m_type, constName);
@@ -818,7 +818,7 @@ public class Register
     /**
      * The optional name of the register.
      */
-    private String m_sName;
+    private final String f_sName;
 
     /**
      * The type of the register itself (typically null).

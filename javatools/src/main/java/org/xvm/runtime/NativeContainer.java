@@ -839,7 +839,7 @@ public class NativeContainer
 
         case MapEntry:
         default:
-            throw new LauncherException(true, "No implementation for constant: " + constValue.toString());
+            throw new LauncherException(true, "No implementation for constant: " + constValue);
         }
 
         return getClassStructure(sComponent).getIdentityConstant().getType();

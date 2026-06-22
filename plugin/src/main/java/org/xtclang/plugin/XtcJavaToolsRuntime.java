@@ -16,7 +16,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.zip.ZipFile;
 
-import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_JAR;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_MANIFEST;
 import static org.xtclang.plugin.XtcPluginUtils.FileUtils.formatJarMetadata;

@@ -35,8 +35,6 @@ import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
-import org.shredzone.acme4j.exception.AcmeException;
-
 
 /**
  * Pure Java keystore and certificate operations that replace the previous native tool
@@ -107,8 +105,8 @@ public class KeyStoreOperations {
      */
     public static void createSelfSignedCertificate(String sStorePath, char[] achPwd,
                                                    String sName, String sDName)
-            throws AcmeException, OperatorCreationException,
-                   GeneralSecurityException, IOException, InterruptedException {
+            throws OperatorCreationException, GeneralSecurityException,
+                   IOException, InterruptedException {
         KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA");
         keyPairGen.initialize(2048, new SecureRandom());
         KeyPair keyPair = keyPairGen.generateKeyPair();

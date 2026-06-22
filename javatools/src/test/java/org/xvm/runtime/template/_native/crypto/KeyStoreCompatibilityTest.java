@@ -4,7 +4,6 @@ package org.xvm.runtime.template._native.crypto;
 import java.io.File;
 
 import java.security.KeyPair;
-import java.security.KeyStore;
 import java.security.cert.X509Certificate;
 
 import java.util.concurrent.TimeUnit;

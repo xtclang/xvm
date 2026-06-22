@@ -3,7 +3,6 @@ package org.xtclang.plugin.runtime.impl;
 import org.gradle.api.logging.Logger;
 
 import org.xvm.asm.ErrorList;
-import org.xvm.asm.ErrorListener;
 import org.xvm.tool.Console;
 import org.xvm.tool.Launcher;
 import org.xvm.tool.Runner;

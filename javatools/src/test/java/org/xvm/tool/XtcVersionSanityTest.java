@@ -70,7 +70,7 @@ class XtcVersionSanityTest {
     @Test
     void fallsBackToDefaultForUnusableInput() {
         for (var v : new String[] {null, "", "   ", "garbage", "not-a-version"}) {
-            assertEquals(XtcProjectCreator.DEFAULT_XTC_VERSION, XtcProjectCreator.sanitizeXtcVersion(v), String.valueOf(v));
+            assertEquals(XtcProjectCreator.DEFAULT_XTC_VERSION, XtcProjectCreator.sanitizeXtcVersion(v), v);
         }
     }
 
@@ -141,7 +141,7 @@ class XtcVersionSanityTest {
         var creator =
             new XtcProjectCreator(projectPath, XtcProjectCreator.ProjectType.APPLICATION, false, xtcVersion, null);
         var result = creator.create();
-        assertTrue(result.success(), String.valueOf(xtcVersion) + ": " + result.message());
+        assertTrue(result.success(), xtcVersion + ": " + result.message());
         return Files.readString(projectPath.resolve("gradle/libs.versions.toml"));
     }
 

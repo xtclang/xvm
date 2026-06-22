@@ -22,7 +22,6 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
-import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xArray;

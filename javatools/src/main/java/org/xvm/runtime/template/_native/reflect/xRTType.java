@@ -19,8 +19,6 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ChildInfo;
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.FormalConstant;
-import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;

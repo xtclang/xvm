@@ -9,7 +9,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.AssignAST;
