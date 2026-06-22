@@ -21,7 +21,6 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.FormalConstant;
-import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -1017,8 +1016,11 @@ public class Frame
      * @return one of R_NEXT, R_CALL or R_EXCEPTION values
      */
     public int assignTuple(int nVar, ObjectHandle... ahValue) {
-        TypeComposition clazz = getVarInfo(nVar).getType().ensureClass(this);
+        if (nVar == Op.A_IGNORE) {
+            return Op.R_NEXT;
+        }
 
+        TypeComposition clazz = getVarInfo(nVar).getType().ensureClass(this);
         return assignValue(nVar, xTuple.makeHandle(clazz, ahValue));
     }
 
