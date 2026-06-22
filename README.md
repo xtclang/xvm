@@ -10,7 +10,9 @@ Ecstasy virtual machine (XVM) project.
 ### Option 1: Homebrew (macOS/Linux) - Recommended
 ```bash
 # Install Homebrew if you don't have it: https://brew.sh/
-brew tap xtclang/xvm && brew install xdk-latest
+brew tap xtclang/xvm
+brew trust --tap xtclang/xvm
+brew install xtclang/xvm/xdk-latest
 
 # Create your first Ecstasy program
 echo 'module HelloWorld { void run() { @Inject Console console; console.print("Hello, World!"); } }' > HelloWorld.x
@@ -121,7 +123,9 @@ Homebrew provides continuously updated `xdk-latest` builds from our CI pipeline:
 
 ```bash
 # Install Homebrew if you have not already done so: https://brew.sh/
-brew tap xtclang/xvm && brew install xdk-latest
+brew tap xtclang/xvm
+brew trust --tap xtclang/xvm
+brew install xtclang/xvm/xdk-latest
 
 # Upgrade to latest CI build (choose one):
 brew update && brew upgrade xdk-latest  # Standard approach
