@@ -808,7 +808,7 @@ public class TerminalTypeConstant
                     TypeConstant typeConstraint = idTypeParam.getConstraintType().
                         resolveConstraints().
                         resolveGenerics(pool,
-                            sName -> sFormalName.equals(sName) ? typeActual : null);
+                            constFormal -> sFormalName.equals(constFormal.getName()) ? typeActual : null);
                     return typeActual.isA(typeConstraint)
                             ? typeActual
                             : null;
@@ -824,7 +824,7 @@ public class TerminalTypeConstant
                 TypeConstant typeConstraint = idProp.getConstraintType().
                     resolveConstraints().
                     resolveGenerics(pool,
-                        sName -> sFormalName.equals(sName) ? typeActual : null);
+                        constFormal -> sFormalName.equals(constFormal.getName()) ? typeActual : null);
                 return typeActual.isA(typeConstraint)
                         ? typeActual
                         : null;
