@@ -110,7 +110,10 @@ package uint64ArrayTests {
     }
 
     void shouldPreInc() {
-        UInt64[] array = [10, 20, UInt64.MaxValue];
+        UInt64[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(UInt64.MaxValue);
         UInt64 c = ++array[1];
         assert c == 21;
         assert array[0] == 10;
@@ -119,7 +122,10 @@ package uint64ArrayTests {
     }
 
     void shouldPostInc() {
-        UInt64[] array = [10, 20, UInt64.MaxValue];
+        UInt64[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(UInt64.MaxValue);
         UInt64 c = array[1]++;
         assert c == 20;
         assert array[0] == 10;
@@ -128,7 +134,10 @@ package uint64ArrayTests {
     }
 
     void shouldPreDec() {
-        UInt64[] array = [10, 20, UInt64.MaxValue];
+        UInt64[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(UInt64.MaxValue);
         UInt64 c = --array[2];
         assert c == (UInt64.MaxValue - 1);
         assert array[0] == 10;
@@ -137,7 +146,10 @@ package uint64ArrayTests {
     }
 
     void shouldPostDec() {
-        UInt64[] array = [10, 20, UInt64.MaxValue];
+        UInt64[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(UInt64.MaxValue);
         UInt64 c = array[2]--;
         assert c == UInt64.MaxValue;
         assert array[0] == 10;
@@ -146,7 +158,10 @@ package uint64ArrayTests {
     }
 
     void shouldAddInPlace() {
-        UInt64[] array = [10, 20, UInt64.MaxValue];
+        UInt64[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(UInt64.MaxValue);
         array[1] += 5;
         assert array[0] == 10;
         assert array[1] == 25;
@@ -154,7 +169,10 @@ package uint64ArrayTests {
     }
 
     void shouldSubInPlace() {
-        UInt64[] array = [10, 20, UInt64.MaxValue];
+        UInt64[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(UInt64.MaxValue);
         array[2] -= 5;
         assert array[0] == 10;
         assert array[1] == 20;
@@ -162,7 +180,10 @@ package uint64ArrayTests {
     }
 
     void shouldMultiplyInPlace() {
-        UInt64[] array = [10, 20, 30];
+        UInt64[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
         array[1] *= 5;
         assert array[0] == 10;
         assert array[1] == 100;
@@ -170,7 +191,10 @@ package uint64ArrayTests {
     }
 
     void shouldDivideInPlace() {
-        UInt64[] array = [10, 20, 30];
+        UInt64[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
         array[1] /= 5;
         assert array[0] == 10;
         assert array[1] == 4;
@@ -178,7 +202,10 @@ package uint64ArrayTests {
     }
 
     void shouldModulusInPlace() {
-        UInt64[] array = [10, 21, 30];
+        UInt64[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] %= 5;
         assert array[0] == 10;
         assert array[1] == 21 % 5;
@@ -186,7 +213,10 @@ package uint64ArrayTests {
     }
 
     void shouldShiftLeftInPlace() {
-        UInt64[] array = [10, 21, 30];
+        UInt64[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] <<= 5;
         assert array[0] == 10;
         assert array[1] == 21 << 5;
@@ -194,7 +224,10 @@ package uint64ArrayTests {
     }
 
     void shouldShiftRightInPlace() {
-        UInt64[] array = [10, 21, 30];
+        UInt64[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] >>= 5;
         assert array[0] == 10;
         assert array[1] == 21 >> 5;
@@ -202,7 +235,10 @@ package uint64ArrayTests {
     }
 
     void shouldUnsignedShiftRightInPlace() {
-        UInt64[] array = [10, 21, 30];
+        UInt64[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] >>>= 5;
         assert array[0] == 10;
         assert array[1] == 21 >>> 5;
@@ -210,7 +246,10 @@ package uint64ArrayTests {
     }
 
     void shouldAndInPlace() {
-        UInt64[] array = [10, 21, 30];
+        UInt64[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] &= 5;
         assert array[0] == 10;
         assert array[1] == 21 & 5;
@@ -218,7 +257,10 @@ package uint64ArrayTests {
     }
 
     void shouldOrInPlace() {
-        UInt64[] array = [10, 21, 30];
+        UInt64[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] |= 5;
         assert array[0] == 10;
         assert array[1] == 21 | 5;
@@ -226,7 +268,10 @@ package uint64ArrayTests {
     }
 
     void shouldXorInPlace() {
-        UInt64[] array = [10, 0x4A, 30];
+        UInt64[] array = new Array();
+        array.add(10);
+        array.add(0x4A);
+        array.add(30);
         array[1] ^= 0x0F;
         assert array[0] == 10;
         assert array[1] == 0x45;

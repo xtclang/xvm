@@ -119,7 +119,10 @@ package int8ArrayTests {
     }
 
     void shouldPreInc() {
-        Int8[] array = [10, 20, Int8.MaxValue];
+        Int8[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(Int8.MaxValue);
         Int8 c = ++array[1];
         assert c == 21;
         assert array[0] == 10;
@@ -128,7 +131,10 @@ package int8ArrayTests {
     }
 
     void shouldPostInc() {
-        Int8[] array = [10, 20, Int8.MaxValue];
+        Int8[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(Int8.MaxValue);
         Int8 c = array[1]++;
         assert c == 20;
         assert array[0] == 10;
@@ -137,7 +143,10 @@ package int8ArrayTests {
     }
 
     void shouldPreDec() {
-        Int8[] array = [10, 20, Int8.MaxValue];
+        Int8[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(Int8.MaxValue);
         Int8 c = --array[2];
         assert c == (Int8.MaxValue - 1);
         assert array[0] == 10;
@@ -146,7 +155,10 @@ package int8ArrayTests {
     }
 
     void shouldPostDec() {
-        Int8[] array = [10, 20, Int8.MaxValue];
+        Int8[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(Int8.MaxValue);
         Int8 c = array[2]--;
         assert c == Int8.MaxValue;
         assert array[0] == 10;
@@ -155,7 +167,10 @@ package int8ArrayTests {
     }
 
     void shouldAddInPlace() {
-        Int8[] array = [10, 20, Int8.MaxValue];
+        Int8[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(Int8.MaxValue);
         array[1] += 5;
         assert array[0] == 10;
         assert array[1] == 25;
@@ -163,7 +178,10 @@ package int8ArrayTests {
     }
 
     void shouldSubInPlace() {
-        Int8[] array = [10, 20, Int8.MaxValue];
+        Int8[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(Int8.MaxValue);
         array[2] -= 5;
         assert array[0] == 10;
         assert array[1] == 20;
@@ -171,7 +189,10 @@ package int8ArrayTests {
     }
 
     void shouldMultiplyInPlace() {
-        Int8[] array = [10, 20, 30];
+        Int8[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
         array[1] *= 5;
         assert array[0] == 10;
         assert array[1] == 100;
@@ -179,7 +200,10 @@ package int8ArrayTests {
     }
 
     void shouldDivideInPlace() {
-        Int8[] array = [10, 20, 30];
+        Int8[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
         array[1] /= 5;
         assert array[0] == 10;
         assert array[1] == 4;
@@ -187,7 +211,10 @@ package int8ArrayTests {
     }
 
     void shouldModulusInPlace() {
-        Int8[] array = [10, 21, 30];
+        Int8[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] %= 5;
         assert array[0] == 10;
         assert array[1] == 21 % 5;
@@ -195,7 +222,10 @@ package int8ArrayTests {
     }
 
     void shouldShiftLeftInPlace() {
-        Int8[] array = [10, 21, 30];
+        Int8[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] <<= 2;
         assert array[0] == 10;
         assert array[1] == 21 << 2;
@@ -203,7 +233,10 @@ package int8ArrayTests {
     }
 
     void shouldShiftRightInPlace() {
-        Int8[] array = [10, 21, 30];
+        Int8[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] >>= 5;
         assert array[0] == 10;
         assert array[1] == 21 >> 5;
@@ -211,7 +244,10 @@ package int8ArrayTests {
     }
 
     void shouldUnsignedShiftRightInPlace() {
-        Int8[] array = [10, 21, 30];
+        Int8[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] >>>= 5;
         assert array[0] == 10;
         assert array[1] == 21 >>> 5;
@@ -219,7 +255,10 @@ package int8ArrayTests {
     }
 
     void shouldAndInPlace() {
-        Int8[] array = [10, 21, 30];
+        Int8[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] &= 5;
         assert array[0] == 10;
         assert array[1] == 21 & 5;
@@ -227,7 +266,10 @@ package int8ArrayTests {
     }
 
     void shouldOrInPlace() {
-        Int8[] array = [10, 21, 30];
+        Int8[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] |= 5;
         assert array[0] == 10;
         assert array[1] == 21 | 5;
@@ -235,7 +277,10 @@ package int8ArrayTests {
     }
 
     void shouldXorInPlace() {
-        Int8[] array = [10, 0x4A, 30];
+        Int8[] array = new Array();
+        array.add(10);
+        array.add(0x4A);
+        array.add(30);
         array[1] ^= 0x0F;
         assert array[0] == 10;
         assert array[1] == 0x45;

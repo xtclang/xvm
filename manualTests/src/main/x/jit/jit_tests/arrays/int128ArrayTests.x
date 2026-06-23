@@ -110,7 +110,10 @@ package int128ArrayTests {
     }
 
     void shouldPreInc() {
-        Int128[] array = [10, 20, Int128.MaxValue];
+        Int128[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(Int128.MaxValue);
         Int128 c = ++array[1];
         assert c == 21;
         assert array[0] == 10;
@@ -119,7 +122,10 @@ package int128ArrayTests {
     }
 
     void shouldPostInc() {
-        Int128[] array = [10, 20, Int128.MaxValue];
+        Int128[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(Int128.MaxValue);
         Int128 c = array[1]++;
         assert c == 20;
         assert array[0] == 10;
@@ -128,7 +134,10 @@ package int128ArrayTests {
     }
 
     void shouldPreDec() {
-        Int128[] array = [10, 20, Int128.MaxValue];
+        Int128[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(Int128.MaxValue);
         Int128 c = --array[2];
         assert c == (Int128.MaxValue - 1);
         assert array[0] == 10;
@@ -137,7 +146,10 @@ package int128ArrayTests {
     }
 
     void shouldPostDec() {
-        Int128[] array = [10, 20, Int128.MaxValue];
+        Int128[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(Int128.MaxValue);
         Int128 c = array[2]--;
         assert c == Int128.MaxValue;
         assert array[0] == 10;
@@ -146,7 +158,10 @@ package int128ArrayTests {
     }
 
     void shouldAddInPlace() {
-        Int128[] array = [10, 20, Int128.MaxValue];
+        Int128[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(Int128.MaxValue);
         array[1] += 5;
         assert array[0] == 10;
         assert array[1] == 25;
@@ -154,7 +169,10 @@ package int128ArrayTests {
     }
 
     void shouldSubInPlace() {
-        Int128[] array = [10, 20, Int128.MaxValue];
+        Int128[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(Int128.MaxValue);
         array[2] -= 5;
         assert array[0] == 10;
         assert array[1] == 20;
@@ -162,7 +180,10 @@ package int128ArrayTests {
     }
 
     void shouldMultiplyInPlace() {
-        Int128[] array = [10, 20, 30];
+        Int128[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
         array[1] *= 5;
         assert array[0] == 10;
         assert array[1] == 100;
@@ -170,7 +191,10 @@ package int128ArrayTests {
     }
 
     void shouldDivideInPlace() {
-        Int128[] array = [10, 20, 30];
+        Int128[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
         array[1] /= 5;
         assert array[0] == 10;
         assert array[1] == 4;
@@ -178,7 +202,10 @@ package int128ArrayTests {
     }
 
     void shouldModulusInPlace() {
-        Int128[] array = [10, 21, 30];
+        Int128[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] %= 5;
         assert array[0] == 10;
         assert array[1] == 21 % 5;
@@ -186,7 +213,10 @@ package int128ArrayTests {
     }
 
     void shouldShiftLeftInPlace() {
-        Int128[] array = [10, 21, 30];
+        Int128[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] <<= 5;
         assert array[0] == 10;
         assert array[1] == 21 << 5;
@@ -194,7 +224,10 @@ package int128ArrayTests {
     }
 
     void shouldShiftRightInPlace() {
-        Int128[] array = [10, 21, 30];
+        Int128[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] >>= 5;
         assert array[0] == 10;
         assert array[1] == 21 >> 5;
@@ -202,7 +235,10 @@ package int128ArrayTests {
     }
 
     void shouldUnsignedShiftRightInPlace() {
-        Int128[] array = [10, 21, 30];
+        Int128[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] >>>= 5;
         assert array[0] == 10;
         assert array[1] == 21 >>> 5;
@@ -210,7 +246,10 @@ package int128ArrayTests {
     }
 
     void shouldAndInPlace() {
-        Int128[] array = [10, 21, 30];
+        Int128[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] &= 5;
         assert array[0] == 10;
         assert array[1] == 21 & 5;
@@ -218,7 +257,10 @@ package int128ArrayTests {
     }
 
     void shouldOrInPlace() {
-        Int128[] array = [10, 21, 30];
+        Int128[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] |= 5;
         assert array[0] == 10;
         assert array[1] == 21 | 5;
@@ -226,7 +268,10 @@ package int128ArrayTests {
     }
 
     void shouldXorInPlace() {
-        Int128[] array = [10, 0x4A, 30];
+        Int128[] array = new Array();
+        array.add(10);
+        array.add(0x4A);
+        array.add(30);
         array[1] ^= 0x0F;
         assert array[0] == 10;
         assert array[1] == 0x45;

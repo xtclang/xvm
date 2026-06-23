@@ -121,7 +121,7 @@ package charArrayTests {
     }
 
     void shouldPreInc() {
-        Char[] array = ['a', 'b', 'z'];
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
         Char c = ++array[1];
         assert c == 'c';
         assert array[1] == 'c';
@@ -140,7 +140,7 @@ package charArrayTests {
     }
 
     void shouldPostInc() {
-        Char[] array = ['a', 'b', 'z'];
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
         Char c = array[1]++;
         assert c == 'b';
         assert array[1] == 'c';
@@ -159,14 +159,14 @@ package charArrayTests {
     }
 
     void shouldPreDec() {
-        Char[] array = ['a', 'b', 'z'];
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
         Char c = --array[2];
         assert c == 'y';
         assert array[2] == 'y';
     }
 
     void shouldPreDecOutOfBounds() {
-        Char[] array = ['a', 'b', 'z'];
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
         array[1] = minChar();
         try {
             Char c = --array[1];
@@ -177,14 +177,14 @@ package charArrayTests {
     }
 
     void shouldPostDec() {
-        Char[] array = ['a', 'b', 'z'];
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
         Char c = array[2]--;
         assert c == 'z';
         assert array[2] == 'y';
     }
 
     void shouldPostDecOutOfBounds() {
-        Char[] array = ['a', 'b', 'z'];
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
         array[1] = minChar();
         try {
             Char c = array[1]--;
@@ -195,7 +195,7 @@ package charArrayTests {
     }
 
     void shouldAddInPlace() {
-        Char[] array = ['a', 'b', 'z'];
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
         array[1] += 5;
         assert array[1] == 'g';
     }
@@ -213,13 +213,13 @@ package charArrayTests {
     }
 
     void shouldSubInPlace() {
-        Char[] array = ['a', 'b', 'z'];
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
         array[2] -= 5;
         assert array[2] == 'u';
     }
 
     void shouldSubInPlaceOutOfBounds() {
-        Char[] array = ['a', 'b', 'z'];
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
         array[1] = minChar();
         try {
             array[1] -= 5;

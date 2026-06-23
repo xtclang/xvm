@@ -100,7 +100,10 @@ package dec32ArrayTests {
     }
 
     void shouldAddInPlace() {
-        Dec32[] array = [10, 20, 100];
+        Dec32[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(100);
         array[1] += 5;
         assert array[0] == 10;
         assert array[1] == 25;
@@ -108,7 +111,10 @@ package dec32ArrayTests {
     }
 
     void shouldSubInPlace() {
-        Dec32[] array = [10, 20, 100];
+        Dec32[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(100);
         array[2] -= 5;
         assert array[0] == 10;
         assert array[1] == 20;
@@ -116,7 +122,10 @@ package dec32ArrayTests {
     }
 
     void shouldMultiplyInPlace() {
-        Dec32[] array = [10, 20, 30];
+        Dec32[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
         array[1] *= 5;
         assert array[0] == 10;
         assert array[1] == 100;
@@ -124,7 +133,10 @@ package dec32ArrayTests {
     }
 
     void shouldDivideInPlace() {
-        Dec32[] array = [10, 20, 30];
+        Dec32[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
         array[1] /= 5;
         assert array[0] == 10;
         assert array[1] == 4;
@@ -132,7 +144,10 @@ package dec32ArrayTests {
     }
 
     void shouldModulusInPlace() {
-        Dec32[] array = [10, 21, 30];
+        Dec32[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] %= 5;
         assert array[0] == 10;
         assert array[1] == 21 % 5;

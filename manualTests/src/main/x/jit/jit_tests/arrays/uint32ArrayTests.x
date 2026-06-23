@@ -110,7 +110,10 @@ package uint32ArrayTests {
     }
 
     void shouldPreInc() {
-        UInt32[] array = [10, 20, UInt32.MaxValue];
+        UInt32[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(UInt32.MaxValue);
         UInt32 c = ++array[1];
         assert c == 21;
         assert array[0] == 10;
@@ -119,7 +122,10 @@ package uint32ArrayTests {
     }
 
     void shouldPostInc() {
-        UInt32[] array = [10, 20, UInt32.MaxValue];
+        UInt32[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(UInt32.MaxValue);
         UInt32 c = array[1]++;
         assert c == 20;
         assert array[0] == 10;
@@ -128,7 +134,10 @@ package uint32ArrayTests {
     }
 
     void shouldPreDec() {
-        UInt32[] array = [10, 20, UInt32.MaxValue];
+        UInt32[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(UInt32.MaxValue);
         UInt32 c = --array[2];
         assert c == (UInt32.MaxValue - 1);
         assert array[0] == 10;
@@ -137,7 +146,10 @@ package uint32ArrayTests {
     }
 
     void shouldPostDec() {
-        UInt32[] array = [10, 20, UInt32.MaxValue];
+        UInt32[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(UInt32.MaxValue);
         UInt32 c = array[2]--;
         assert c == UInt32.MaxValue;
         assert array[0] == 10;
@@ -146,7 +158,10 @@ package uint32ArrayTests {
     }
 
     void shouldAddInPlace() {
-        UInt32[] array = [10, 20, UInt32.MaxValue];
+        UInt32[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(UInt32.MaxValue);
         array[1] += 5;
         assert array[0] == 10;
         assert array[1] == 25;
@@ -154,7 +169,10 @@ package uint32ArrayTests {
     }
 
     void shouldSubInPlace() {
-        UInt32[] array = [10, 20, UInt32.MaxValue];
+        UInt32[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(UInt32.MaxValue);
         array[2] -= 5;
         assert array[0] == 10;
         assert array[1] == 20;
@@ -162,7 +180,10 @@ package uint32ArrayTests {
     }
 
     void shouldMultiplyInPlace() {
-        UInt32[] array = [10, 20, 30];
+        UInt32[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
         array[1] *= 5;
         assert array[0] == 10;
         assert array[1] == 100;
@@ -170,7 +191,10 @@ package uint32ArrayTests {
     }
 
     void shouldDivideInPlace() {
-        UInt32[] array = [10, 20, 30];
+        UInt32[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
         array[1] /= 5;
         assert array[0] == 10;
         assert array[1] == 4;
@@ -178,7 +202,10 @@ package uint32ArrayTests {
     }
 
     void shouldModulusInPlace() {
-        UInt32[] array = [10, 21, 30];
+        UInt32[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] %= 5;
         assert array[0] == 10;
         assert array[1] == 21 % 5;
@@ -186,7 +213,10 @@ package uint32ArrayTests {
     }
 
     void shouldShiftLeftInPlace() {
-        UInt32[] array = [10, 21, 30];
+        UInt32[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] <<= 5;
         assert array[0] == 10;
         assert array[1] == 21 << 5;
@@ -194,7 +224,10 @@ package uint32ArrayTests {
     }
 
     void shouldShiftRightInPlace() {
-        UInt32[] array = [10, 21, 30];
+        UInt32[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] >>= 5;
         assert array[0] == 10;
         assert array[1] == 21 >> 5;
@@ -202,7 +235,10 @@ package uint32ArrayTests {
     }
 
     void shouldUnsignedShiftRightInPlace() {
-        UInt32[] array = [10, 21, 30];
+        UInt32[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] >>>= 5;
         assert array[0] == 10;
         assert array[1] == 21 >>> 5;
@@ -210,7 +246,10 @@ package uint32ArrayTests {
     }
 
     void shouldAndInPlace() {
-        UInt32[] array = [10, 21, 30];
+        UInt32[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] &= 5;
         assert array[0] == 10;
         assert array[1] == 21 & 5;
@@ -218,7 +257,10 @@ package uint32ArrayTests {
     }
 
     void shouldOrInPlace() {
-        UInt32[] array = [10, 21, 30];
+        UInt32[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] |= 5;
         assert array[0] == 10;
         assert array[1] == 21 | 5;
@@ -226,7 +268,10 @@ package uint32ArrayTests {
     }
 
     void shouldXorInPlace() {
-        UInt32[] array = [10, 0x4A, 30];
+        UInt32[] array = new Array();
+        array.add(10);
+        array.add(0x4A);
+        array.add(30);
         array[1] ^= 0x0F;
         assert array[0] == 10;
         assert array[1] == 0x45;

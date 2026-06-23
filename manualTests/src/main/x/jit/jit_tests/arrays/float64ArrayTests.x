@@ -99,7 +99,10 @@ package float64ArrayTests {
     }
 
     void shouldAddInPlace() {
-        Float64[] array = [10, 20, 100];
+        Float64[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(100);
         array[1] += 5;
         assert array[0] == 10;
         assert array[1] == 25;
@@ -107,7 +110,10 @@ package float64ArrayTests {
     }
 
     void shouldSubInPlace() {
-        Float64[] array = [10, 20, 100];
+        Float64[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(100);
         array[2] -= 5;
         assert array[0] == 10;
         assert array[1] == 20;
@@ -115,7 +121,10 @@ package float64ArrayTests {
     }
 
     void shouldMultiplyInPlace() {
-        Float64[] array = [10, 20, 30];
+        Float64[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
         array[1] *= 5;
         assert array[0] == 10;
         assert array[1] == 100;
@@ -123,7 +132,10 @@ package float64ArrayTests {
     }
 
     void shouldDivideInPlace() {
-        Float64[] array = [10, 20, 30];
+        Float64[] array = new Array();
+        array.add(10);
+        array.add(20);
+        array.add(30);
         array[1] /= 5;
         assert array[0] == 10;
         assert array[1] == 4;
@@ -131,7 +143,10 @@ package float64ArrayTests {
     }
 
     void shouldModulusInPlace() {
-        Float64[] array = [10, 21, 30];
+        Float64[] array = new Array();
+        array.add(10);
+        array.add(21);
+        array.add(30);
         array[1] %= 5;
         assert array[0] == 10;
         assert array[1] == 21 % 5;
