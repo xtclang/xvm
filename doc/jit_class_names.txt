@@ -1,0 +1,182 @@
+Ecstasy to Java Classfile compiler (JIT) class naming conventions:
+
+1. All Java interfaces produced by the JIT compiler extend "org.xtclang.ecstasy.Object"; all
+   produced Java classes extend (directly or indirectly) "org.xtclang.ecstasy.nObj", which
+   implements "org.xtclang.ecstasy.Object"".
+
+2. An Ecstasy type is called a "Java-Primitive" type iff we choose to implement it using a Java
+   primitive value (for example: Int64 -> long, Char -> int, Boolean -> boolean)
+
+3. An Ecstasy type is called an "XVM-Primitive" type iff we choose to implement it using two or more
+   Java primitive values (for example Int128 -> (long, long), Range<Int> -> (long, long, boolean, boolean))
+
+4. An Ecstasy type is called an "JIT-Primitive" type iff it is XVM-Primitive type or a "Nullable"
+   form thereof.
+
+5. For every Ecstasy type T there is a "JIT Call Class Name" CC(T), such that:
+    a) for any Ecstasy method with a parameter or return type of T the corresponding Java signature
+       uses the Java class or interface name of CC(T);
+    b) the "nObj.$xvmType()" method of CC(T) returns a TypeConstant that must be an "isA()" of T;
+       (if CC(T) is a Java interface, it can always be cast to "nObj")
+
+6. For every Ecstasy type T that represents a non-abstract instantiatable class there is a
+   "JIT Instance Class Name" IC(T), such that:
+    a) a "NEW" op for type T produces an instance of Java class IC(T);
+    d) IC(T) and CC(T) are not neccessarily the same, in which case
+        1) CC(T) is either an abstract Java class or an interface;
+        2) IC(T) either extends or implements CC(T).
+    c) if CC(T) is an abstract class, then JIT generates an equivalent interface by prefixing "i$"
+       to the class name, which CC(T) naturally implements;
+    d) if T contains a formal type, the IC(T) is not known at the compile time and will be computed
+       at the run time instead.
+
+7. For an Ecstasy type T that is an interface, mixin, annotation or a pure type, there is no IC(T)
+   and only CC(T) is generated, which in that case is a Java interface. For an Ecstasy abstract
+   class, there is no IC(T) and CC(T) is an abstract Java class.
+
+8. An Ecstasy type is called "Specializable" iff:
+    a) it is parameterized (has generic types);
+    b) at least one of the generic type is constrained by a type that can be assigned from a
+       JIT-Primitive type.
+
+9. Java classes generated for a Specializable type fall into three categories:
+   a) When at least one generic type parameter is a JIT-Primitive type, the corresponding produced
+      Java class is called a "Specialized" class.
+   b) If no generic type parameter is a JIT-Primitive type, the produced Java class is called a
+      "Generalized" class.
+   c) If the Specializable type is not an interface, then in addition to the "Generalized" and
+      "Specialized" classes that the JIT may generate, it will:
+      1) if the Specializable type does not extend a Specializable type then:
+        i) generate an abstract Java class (Specialized Base Class [SBC]) that implements the
+           Generalized interface and is extended by each of the "Generalized" and "Specialized"
+           classes, and
+        ii) generate a synthetic interface (Specialized base interface [SBI]) that contains all the
+            methods of the SBC
+      2) if the Specializable type extends a Specializable type, generate a "Generalized interface"
+         that is implemented by all of the "Generalized" and "Specialized" classes and which
+         implements SBI for the super class
+
+   Note: Specializable Ecstasy types always have a single underlying class (as defined by the
+         TypeConstant.isSingleUnderlyingClass() API)
+
+   Example:
+     If a Specializable Ecstasy type D<T1, T2, T3> extends a Specializable Ecstasy type B<T1, T2>
+     and at least one of the generic types is JIT-Primitive then the corresponding Specialized Java
+     class J(D<T1, T2, T3>) extends the Specialized Java class J(B<T1, T2>).
+     If a Specializable Ecstasy type D<T1, T2, T3> extends a non-Specializable Ecstasy type B<T1, T2>,
+     the Specialized Java class J(D<T1, T2, T3>) extends the Generalized J(D).
+
+10. Below are some examples of canonical types and corresponding Java class names (note: we are using
+   special characters for '<' and '>' etc.)
+
+     Ecstasy type           JIT-Instance Class Name       JIT-Call class names    Notes
+     ---------------------|-----------------------------|----------------------|----------
+     Boolean              | Boolean                     | same as ICN          | simple
+     Int                  | Int64                       | same as ICN          | simple
+     Range                | Range<Orderable>            | Range                | SBC
+     Range<Element>       | [computed at run-time]      | Range                | SBC
+     Range<Person>        | Range<Orderable>            | same as ICN          | generalized
+     Range<Color>         | Range<Sequential>           | same as ICN          | specialized
+     Range<Int>           | Range<Int>                  | same as ICN          | specializar
+     Map<Key, Value>      | N/A                         | Map                  | SBI
+     Map<Int, Char>       | N/A                         | Map<Int,Char>        | specialized
+     Map<Int, Int[]>      | N/A                         | Map<Int,Object>      | specialized
+     Map<String, Int>     | N/A                         | Map<Object,Int>      | specialized
+     HashMap<Key, Value>  | [computed at run-time]      | HashMap              | SBI
+     HashMap<Int, Char>   | HashMap<Int,Char>           | same as ICN          | specialized
+     HasMap<Int, Int[]>   | HashMap<Int,Object>         | same as ICN          | specialized
+     HashMap<String, Int> | HashMap<Object,Int>         | same as ICN          | specialized
+     Array<Element>       | [computed at run-time]      | Array                | SBC
+     Array<Person>        | Array<Object>               | same as ICN          | generalized
+     Array<Int>           | Array<Int>                  | same as ICN          | specialized
+
+     In the above examples:
+        - Range<Orderable> extends Range, which is an abstract class;
+        - Range<Sequential> extends Range<Orderable>, implements Interval<Sequential>;
+        - Range<Int> extends Range, implements Interval<Int>
+        - all Map<*,*> are interfaces that extends Map interface;
+        - Map<Int,Char> is an interface that extends Map
+        - HashMap is an interface that extends i$HasherMap
+        - all HashMap<*,*> are classes that implement HashMap
+
+11. Every mixin and annotation produces an interface of the corresponding name.
+
+12. If the class has conditional incorporates, the situation becomes a bit more complicated. Let's
+   say that the class has the following structure:
+
+       class C<T0, T1>
+            incorporates conditional M<T1 extends Hashable>
+
+   Also, let's say that class Person is Hashable.
+
+     Ecstasy type           JIT-Instance Class Name       JIT-Call class names    Notes
+     ---------------------|-----------------------------|----------------------|----------
+     C<String, Freezable> | C<Object,Object>            | same as ICN          | SBC
+     C<String, Person>    | C<Object,Hashable>          | same as ICN          | CBC
+     C<Int, Freezable>    | C<Int,Object>               | same as ICN          | specialized
+     C<Int, Person>       | C<Int,Hashable>             | same as ICN          | specialized
+     C<Int, Int>          | C<Int,Int>                  | same as ICN          | specialized
+
+
+        - C<String,Person> implements M<Hashable>
+        - C<Int,Person>    implements M<Hashable>
+        - C<Int,Int>       implements M<Int>
+
+13. All functions only generated on the SBC.
+
+
+===== Work pad =====
+
+assume 3x Ecstasy types
+ - some A (might be Object, might be some abstract or non-abstract base class)
+ - some B<T> : A    where B is for "Base" class
+ - some D<T> : B<T> where D for "Derived" class
+
+ JIT produces:
+                         A (whatever it is)
+
+                                 ^
+                                 |
+
+                         interface i$B
+class B<Object> -->      abstract B implements i$B     <--  class B<Int>      "the shoulders"
+
+        ^                        ^                             ^
+        |                        |                             |              "long arms"
+
+class D<Object> ~~>      interface i$D extends i$B     <~~  class D<Int>
+
+// Ecstasy
+class C {
+    void foo(Range<Person> range) {...}
+    void bar(Range range) {...}
+    <T> Range<T> baz(T t1, T t2) {
+        return new Range<T>(t1, t2);
+    }
+}
+
+// Java
+class C {
+    void foo(Ctx ctx, Range<Orderable> range) {...} // or (Ctx ctx, Range#0 range)
+    void bar(Ctx ctx, Range range) {...}            // or (Ctx ctx, i$Range range) if Range extended Specializable
+    Range baz(Ctx ctx, nType type, Orderable t1, Orderable t2) {
+        return Range.new$(ctx, type, t1, t2);
+    }
+}
+
+class Range {
+    // ...
+    Range new$(Ctx ctx, nType type, Orderable t1, Orderable t2) {
+        // preferred
+        return type.$class().new$(ctx, t1, t2);
+
+        // not desirable:
+        case ... -> new Range<Orderable>(...)
+        case ... -> new Range<Int>(...)
+        case ... -> new Range<Int?>(...)
+        case ... -> new Range<Int128>(...)
+        case ... -> new Range<Int128?>(...)
+        ...
+    }
+    // ...
+}

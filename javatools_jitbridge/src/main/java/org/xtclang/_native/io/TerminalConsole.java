@@ -18,7 +18,7 @@ import org.xvm.runtime.template._native.io.xTerminalConsole;
  * Native implementation for _native.TerminalConsole.
  */
 public class TerminalConsole
-    extends nService
+        extends nService
         implements Console {
 
     public TerminalConsole() {
