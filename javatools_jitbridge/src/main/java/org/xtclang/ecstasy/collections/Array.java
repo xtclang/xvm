@@ -1,8 +1,9 @@
 package org.xtclang.ecstasy.collections;
 
+import org.xtclang.ecstasy.IterableᐸCharᐳ;
+import org.xtclang.ecstasy.Iterator;
 import org.xtclang.ecstasy.nEnum;
 import org.xtclang.ecstasy.Object;
-import org.xtclang.ecstasy.nFunction;
 import org.xtclang.ecstasy.nType;
 
 import org.xtclang.ecstasy.reflect.Enumeration;
@@ -94,11 +95,6 @@ public abstract class Array
         public final long         $ordinal;
         public final String       $name;
 
-        public static Mutability Constant   = new Mutability(0, String.of(null, "Constant"));
-        public static Mutability Persistent = new Mutability(1, String.of(null, "Persistent"));
-        public static Mutability Fixed      = new Mutability(2, String.of(null, "Fixed"));
-        public static Mutability Mutable    = new Mutability(3, String.of(null, "Mutable"));
-
         @Override public TypeConstant $xvmType(Ctx ctx) {
             return $type;
         }
@@ -123,6 +119,34 @@ public abstract class Array
         public java.lang.String toString() {
             return "Mutability." + $name.toString();
         }
+
+        public static class Constant extends Mutability {
+            public static Constant $INSTANCE = new Constant();
+            public Constant() {
+                super(0, String.of(null, "Constant"));
+            }
+        }
+
+        public static class Persistent extends Mutability {
+            public static Persistent $INSTANCE = new Persistent();
+            public Persistent() {
+                super(1, String.of(null, "Persistent"));
+            }
+        }
+
+        public static class Fixed extends Mutability {
+            public static Fixed $INSTANCE = new Fixed();
+            public Fixed() {
+                super(2, String.of(null, "Fixed"));
+            }
+        }
+
+        public static class Mutable extends Mutability {
+            public static Mutable $INSTANCE = new Mutable();
+            public Mutable() {
+                super(3, String.of(null, "Mutable"));
+            }
+        }
     }
 
     public static class eMutability extends Enumeration {
@@ -134,17 +158,17 @@ public abstract class Array
         public static final eMutability $INSTANCE = new eMutability(Ctx.get());
 
         public static final String[] $names = new String[] {
-            Mutability.Constant.$name,
-            Mutability.Persistent.$name,
-            Mutability.Fixed.$name,
-            Mutability.Mutable.$name,
+            Mutability.Constant.$INSTANCE.$name,
+            Mutability.Persistent.$INSTANCE.$name,
+            Mutability.Fixed.$INSTANCE.$name,
+            Mutability.Mutable.$INSTANCE.$name,
         };
 
         public static final Mutability[] $values = new Mutability[] {
-            Mutability.Constant,
-            Mutability.Persistent,
-            Mutability.Fixed,
-            Mutability.Mutable,
+            Mutability.Constant.$INSTANCE,
+            Mutability.Persistent.$INSTANCE,
+            Mutability.Fixed.$INSTANCE,
+            Mutability.Mutable.$INSTANCE,
         };
 
         @Override
@@ -212,7 +236,30 @@ public abstract class Array
      * Array Constructor: construct(Mutability mutability, Iterable<Element> elements = [])
      */
     public static Array $new$2(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
-        throw new UnsupportedOperationException(); // must be implemented by subclasses
+        // TODO this is temporary; review and if possible remove the overrides
+        return switch(type.getParamType(0).getSingleUnderlyingClass(true).getName()) {
+            case "Bit"     -> ArrayᐸBitᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Boolean" -> ArrayᐸBooleanᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Char"    -> ArrayᐸCharᐳ.$new$2(ctx, type, mutability, (IterableᐸCharᐳ) elements);
+            case "Dec32"   -> ArrayᐸDec32ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Dec64"   -> ArrayᐸDec64ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Dec128"  -> ArrayᐸDec128ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Float32" -> ArrayᐸFloat32ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Float64" -> ArrayᐸFloat64ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Int8"    -> ArrayᐸInt8ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Int16"   -> ArrayᐸInt16ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Int32"   -> ArrayᐸInt32ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Int64"   -> ArrayᐸInt64ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Int128"  -> ArrayᐸInt128ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Nibble"  -> ArrayᐸNibbleᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Object"  -> ArrayᐸObjectᐳ.$new$2(ctx, type, mutability, elements);
+            case "UInt8"   -> ArrayᐸUInt8ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "UInt16"  -> ArrayᐸUInt16ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "UInt32"  -> ArrayᐸUInt32ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "UInt64"  -> ArrayᐸUInt64ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "UInt128" -> ArrayᐸUInt128ᐳ.$new$2$p(ctx, type, mutability, elements);
+            default        -> throw new UnsupportedOperationException("Unsupported array type " + type);
+        };
     }
 
     /**
@@ -367,7 +414,7 @@ public abstract class Array
      *
      */
     public Array addAll(Ctx ctx, Iterable values) {
-        throw new UnsupportedOperationException("TODO");
+        throw new UnsupportedOperationException("Should never be called");
     }
 
     /**
@@ -453,32 +500,15 @@ public abstract class Array
      */
     public Mutability mutability$get(Ctx ctx) {
         return switch ($mut()) {
-            case 0  -> Mutability.Constant;
-            case 1  -> Mutability.Persistent;
-            case 2  -> Mutability.Fixed;
-            case 3  -> Mutability.Mutable;
+            case 0  -> Mutability.Constant.$INSTANCE;
+            case 1  -> Mutability.Persistent.$INSTANCE;
+            case 2  -> Mutability.Fixed.$INSTANCE;
+            case 3  -> Mutability.Mutable.$INSTANCE;
             default -> throw new IllegalStateException();
         };
     }
 
-    /**
-     * Native implementation of:
-     * <pre>
-     *   (Array, Int) removeAll(function Boolean(Element) shouldRemove)
-     * </pre>
-     */
-    public Array removeAll$p(Ctx ctx, nFunction shouldRemove) {
-        // REVIEW: the problem is that the natural code for "removeAll" uses an Array<Int>;
-        //         to compile it we need to have to load Array<Int>, which extends Array
-        //         resulting in the CircularClassInitialization error
-        throw new UnsupportedOperationException("TODO");
-    }
-
-    // ----- TEMPORARY: SHOULD BE NATURAL ----------------------------------------------------------
-
-    public Array duplicate(Ctx ctx) {
-        throw new UnsupportedOperationException("TODO");
-    }
+    public abstract Iterator iterator(Ctx ctx);
 
     // ----- Array internals -----------------------------------------------------------------------
 

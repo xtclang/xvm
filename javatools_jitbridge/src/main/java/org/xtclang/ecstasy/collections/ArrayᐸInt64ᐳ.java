@@ -73,8 +73,13 @@ public class ArrayᐸInt64ᐳ
      * @see {@link Array#$new$2}
      */
     public static ArrayᐸInt64ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
-        // TODO
-        throw new UnsupportedOperationException();
+        long size = elements.size$get$p(ctx);
+        ctx.alloc(size * 8); // REVIEW + HEADER_SIZE?
+        ArrayᐸInt64ᐳ array = new ArrayᐸInt64ᐳ(ctx, type);
+        array.$mut($MUTABLE);
+        array.addAll(ctx, elements);
+        array.$mut((int) mutability.ordinal$get$p(ctx));
+        return array;
     }
 
     /**

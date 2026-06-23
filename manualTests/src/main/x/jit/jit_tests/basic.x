@@ -10,6 +10,7 @@ package basic {
 
             Boolean passed = True;
             try {
+                passed &= runTest(() -> assertTests.run());
                 passed &= runTest(() -> callTests.run());
                 passed &= runTest(() -> condMixinTests.run());
                 passed &= runTest(() -> delegationTests.run());

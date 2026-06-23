@@ -223,12 +223,12 @@ public class ModuleConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public String getJitName(TypeSystem ts) {
+    public String getClassJitName(TypeSystem ts) {
         return Builder.MODULE;
     }
 
     @Override
-    protected StringBuilder buildJitName(TypeSystem ts) {
+    protected StringBuilder buildJitClassName(TypeSystem ts) {
         return new StringBuilder();
     }
 

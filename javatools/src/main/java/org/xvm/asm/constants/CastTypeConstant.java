@@ -2,7 +2,6 @@ package org.xvm.asm.constants;
 
 import java.io.DataOutput;
 
-import java.lang.constant.ClassDesc;
 import org.xvm.asm.ConstantPool;
 import org.xvm.javajit.TypeSystem;
 
@@ -71,27 +70,37 @@ public class CastTypeConstant
 
     @Override
     public boolean isJavaPrimitive() {
-        return getUnderlyingType2().isJavaPrimitive();
+        return getBaseType().isJavaPrimitive() || getUnderlyingType2().isJavaPrimitive();
     }
 
     @Override
     public boolean isXvmPrimitive() {
-        return getUnderlyingType2().isXvmPrimitive();
-    }
-
-    @Override
-    public ClassDesc ensureClassDesc(TypeSystem ts) {
-        return getUnderlyingType2().ensureClassDesc(ts);
+        return getBaseType().isXvmPrimitive() || getUnderlyingType2().isXvmPrimitive();
     }
 
     @Override
     public String ensureJitClassName(TypeSystem ts) {
-        return getUnderlyingType2().ensureJitClassName(ts);
+        return getCanonicalJitType().ensureJitClassName(ts);
     }
 
     @Override
     public TypeConstant getCanonicalJitType() {
-        return getUnderlyingType2().getCanonicalJitType();
+        TypeConstant typeBase = getBaseType().getCanonicalJitType();
+        TypeConstant typeCast = getUnderlyingType2().getCanonicalJitType();
+
+        // the code below could be written mush simpler, but first, we want to isolate the
+        // simplest paths and there is a possibility we need to do something special the
+        // "orthogonal" scenario at the bottom
+        if (typeBase.isA(typeCast)) {
+            return typeBase;
+        }
+        if (typeCast.isA(typeBase)) {
+            return typeCast;
+        }
+
+        // the types are orthogonal; keep the base, since this is what the JIT compiler knows;
+        // it will have to cast the targets...
+        return typeBase;
     }
 
     // ----- Constant methods ----------------------------------------------------------------------

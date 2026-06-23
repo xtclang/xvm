@@ -386,6 +386,9 @@ public abstract class OpInvocable extends Op {
     }
 
     protected MethodInfo computeMethodInfo(BuildContext bctx, TypeConstant typeTarget) {
+        if (typeTarget.containsFormalType(true)) {
+            typeTarget = typeTarget.resolveConstraints().ensureAccess(Access.PRIVATE);
+        }
         TypeInfo        infoTarget = bctx.getTypeInfo(typeTarget);
         MethodConstant  idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
         MethodInfo      infoMethod = infoTarget.getMethodById(idMethod, true); // runtime hack

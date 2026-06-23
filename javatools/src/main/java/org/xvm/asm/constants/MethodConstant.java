@@ -277,9 +277,8 @@ public class MethodConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected StringBuilder buildJitName(TypeSystem ts) {
-        return getParentConstant().buildJitName(ts)         // TODO CP getNamespace() ??
-                .append(getSignature().ensureJitMethodName(ts));
+    protected StringBuilder buildJitClassName(TypeSystem ts) {
+        return getNamespace().buildJitClassName(ts).append('$').append(getName());
     }
 
     /**

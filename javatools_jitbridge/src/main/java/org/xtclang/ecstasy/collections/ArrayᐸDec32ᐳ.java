@@ -74,8 +74,13 @@ public class ArrayᐸDec32ᐳ
      * @see {@link Array#$new$2}
      */
     public static ArrayᐸDec32ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
-        // TODO
-        throw new UnsupportedOperationException();
+        long size = elements.size$get$p(ctx);
+        ctx.alloc(size * 4); // REVIEW + HEADER_SIZE?
+        ArrayᐸDec32ᐳ array = new ArrayᐸDec32ᐳ(ctx, type);
+        array.$mut($MUTABLE);
+        array.addAll(ctx, elements);
+        array.$mut((int) mutability.ordinal$get$p(ctx));
+        return array;
     }
 
     /**

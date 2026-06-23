@@ -15,6 +15,8 @@ import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.RegisterInfo;
 
+import static org.xvm.javajit.Builder.CD_Object;
+
 import static org.xvm.javajit.JitFlavor.AlwaysNull;
 
 /**
@@ -24,16 +26,15 @@ import static org.xvm.javajit.JitFlavor.AlwaysNull;
  * @param slots       the identifiers of the slots that store the value represented by this register
  * @param type        the {@link TypeConstant} of the value this register represents
  * @param flavor      the {@link JitFlavor} of the value this register represents
- * @param cd          the {@link ClassDesc} of the value this register represents
+ * @param cd          the {@link ClassDesc} of the value this register represents; always boxed
  * @param slotCds     the {@link ClassDesc} instances for each slot
  * @param name        the name of the value represented by this register
  * @param scopeDepth  the scope depth this narrowed register was introduced at
- * @param castOnLoad  if true, the register {@link #load} operation requires a cast
  * @param origReg     the original register info
  */
 public record Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flavor,
                        ClassDesc cd, ClassDesc[] slotCds, String name, int scopeDepth,
-                       boolean castOnLoad, RegisterInfo origReg)
+                       RegisterInfo origReg)
     implements RegisterInfo {
 
     @Override
@@ -55,12 +56,12 @@ public record Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flav
     public RegisterInfo load(CodeBuilder code) {
         if (flavor == AlwaysNull) {
             Builder.loadNull(code);
-        }
-        else {
+        } else {
             for (int i = 0; i < slotCds.length; i++) {
                 Builder.load(code, slotCds[i], slots[i]);
             }
-            if (castOnLoad) {
+            // if this register is not an Object nor an unboxed JIT primitive, then add a cast
+            if (!slotCds[0].isPrimitive() && !cd.equals(CD_Object)) {
                 code.checkcast(cd);
             }
         }
@@ -80,18 +81,15 @@ public record Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flav
                         assert origReg instanceof ExtendedSlot;
                         code.iconst_0() // false
                             .istore(((ExtendedSlot) origReg).extSlot());
-                    }
-                    else {
+                    } else {
                         Builder.box(code, type());
                     }
-                }
-                else if (type().isXvmPrimitive()) {
+                } else if (type().isXvmPrimitive()) {
                     if (origReg.type().isXvmPrimitive()) {
                         assert origReg instanceof MultiSlot;
                         code.iconst_0() // false
                             .istore(((MultiSlot) origReg).extSlot());
-                    }
-                    else {
+                    } else {
                         Builder.box(code, type());
                     }
                 }
@@ -108,8 +106,7 @@ public record Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flav
 
         if (type.isA(this.type())) {
             return RegisterInfo.super.store(bctx, code, type);
-        }
-        else {
+        } else {
             assert Builder.isJitAssignable(type, original().type());
             RegisterInfo origReg = bctx.resetRegister(this).store(bctx, code, type);
             return bctx.narrowRegister(code, origReg, type);
@@ -142,8 +139,7 @@ public record Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flav
                     assert origReg instanceof ExtendedSlot;
                     code.iconst_0() // false
                         .istore(((ExtendedSlot) origReg).extSlot());
-                }
-                else {
+                } else {
                     Builder.box(code, prevType);
                 }
             }

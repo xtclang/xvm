@@ -71,6 +71,18 @@ public class nType
         throw Exception.$unsupported(ctx, "Type " + $dataType);
     }
 
+    // TODO: Stringable methods below are temporary; remove when we can compile Type.x
+    public long estimateStringLength$p(Ctx ctx) {
+        return 0;
+    }
+
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
+        for (char c : $dataType.getValueString().toCharArray()) {
+            appender = appender.add$p(ctx, c);
+        }
+        return appender;
+    }
+
     @Override
     public String toString(Ctx ctx) {
         return String.of(ctx, $dataType.getValueString());

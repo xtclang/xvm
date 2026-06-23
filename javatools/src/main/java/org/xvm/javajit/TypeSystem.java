@@ -10,9 +10,11 @@ import java.lang.constant.ClassDesc;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.SignatureConstant;
@@ -433,7 +435,16 @@ public class TypeSystem {
         int          idOffset = name.indexOf(ID_NUM);
         if (idOffset > 0) {
             // the name represents a parameterized type with primitive actual type(s)
-            type = (TypeConstant) pool().getConstant(Integer.valueOf(name.substring(idOffset+1)));
+            // or a class constant for inner classes
+            Constant constant = pool().getConstant(Integer.valueOf(name.substring(idOffset+1)));
+            if (constant instanceof TypeConstant constType) {
+                type = constType;
+            } else if (constant instanceof ClassConstant constClass) {
+                return new Artifact(constClass.getType(),
+                    (ClassStructure) constClass.getComponent(), shape);
+            } else {
+                throw new IllegalArgumentException("Unsupported suffix: " + constant.toString());
+            }
             name = name.substring(0, idOffset);
         }
 

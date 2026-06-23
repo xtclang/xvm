@@ -203,10 +203,8 @@ public class RangeConstant
      * @return the effective first value in the interval (ie if it were inclusive)
      */
     public Constant getEffectiveFirst() {
-        assert isInterval();
-
         Constant constFirst = getFirst();
-        return isFirstExcluded()
+        return isInterval() && isFirstExcluded()
                 ? constFirst.apply(isReverse() ? Id.SUB : Id.ADD,
                         getConstantPool().ensureLiteralConstant(Format.IntLiteral, "1"))
                 : constFirst;
@@ -216,10 +214,8 @@ public class RangeConstant
      * @return the effective last value in the interval (ie if it were inclusive)
      */
     public Constant getEffectiveLast() {
-        assert isInterval();
-
         Constant constLast = getLast();
-        return isLastExcluded()
+        return isInterval() && isLastExcluded()
             ? constLast.apply(isReverse() ? Id.ADD : Id.SUB,
                         getConstantPool().ensureLiteralConstant(Format.IntLiteral, "1"))
             : constLast;

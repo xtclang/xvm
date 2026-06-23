@@ -18,6 +18,7 @@ import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.Handy;
 
+import static org.xvm.javajit.TypeSystem.ID_NUM;
 import static org.xvm.javajit.TypeSystem.escapeJitClassName;
 
 /**
@@ -653,25 +654,33 @@ public abstract class IdentityConstant
     /**
      * @return a dot or '$'-delimited string that represents the corresponding Jit class name
      */
-    protected String getJitName(TypeSystem ts) {
-        return escapeJitClassName(buildJitName(ts).substring(1));
+    protected String getClassJitName(TypeSystem ts) {
+        return escapeJitClassName(buildJitClassName(ts).substring(1));
     }
 
     /**
-     * Support for {@link #getJitName}.
+     * Support for {@link #getClassJitName}.
      */
-    protected StringBuilder buildJitName(TypeSystem ts) {
+    protected StringBuilder buildJitClassName(TypeSystem ts) {
         IdentityConstant idParent = getParentConstant();
-        char chDelim = switch (idParent.getFormat()) {
-            case Module, Package         -> '.';
-            case Class, Property, Method -> '$';
+        char    chDelim;
+        boolean fUsePosition;
+        switch (idParent.getFormat()) {
+            case Module, Package   -> {chDelim = '.'; fUsePosition = false;}
+            case Class             -> {chDelim = '$'; fUsePosition = false;}
+            case Property, Method  -> {chDelim = '$'; fUsePosition = true; }
             default ->
                 throw new IllegalStateException("unexpected parent constant: " + idParent);
-        };
+        }
 
-        return idParent.buildJitName(ts)
-               .append(chDelim)
-               .append(getName());
+        StringBuilder sb = idParent.buildJitClassName(ts)
+                                   .append(chDelim)
+                                   .append(getName());
+        if (fUsePosition) {
+            assert getComponent() != null;
+            sb.append(ID_NUM).append(getPosition());
+        }
+        return sb;
     }
 
 

@@ -1117,12 +1117,13 @@ public class BuildContext {
 
                 // narrow, but stay boxed for primitive types
                 ClassDesc narrowedCD = builder.ensureClassDesc(mtxType);
+                JitFlavor flavor     = regType.getJitDesc(builder).flavor;
 
-                // if already loaded - cast here and don't cast on load
-                reg = new Narrowed(regId, reg.slots(), mtxType, Specific, narrowedCD, reg.slotCds(),
-                        reg.name(), depth, !loaded, reg);
+                reg = new Narrowed(regId, reg.slots(), mtxType, flavor, narrowedCD, reg.slotCds(),
+                        reg.name(), depth, reg);
                 registerInfos.put(regId, reg);
-                    if (loaded) {
+                if (loaded) {
+                    // if already loaded, then add a cast
                     code.checkcast(narrowedCD);
                 }
             }
@@ -1976,6 +1977,12 @@ public class BuildContext {
                     continue;
                 }
 
+                case Primitive:
+                    assert !srcReg.type().isOnlyNullable();
+                    // pop the nullable flag
+                    code.pop();
+                    continue;
+
                 case NullablePrimitiveWithDefault:
                     // loadArgument() has already loaded an int representing a boolean value; both
                     // 0 and 1 will work as expected (-1 representing a default is never coming in)
@@ -2013,6 +2020,12 @@ public class BuildContext {
                     }
                     Builder.loadNull(code);
                     code.labelBinding(endIf);
+                    continue;
+
+                case XvmPrimitive:
+                    assert !srcReg.type().isOnlyNullable();
+                    // pop the nullable flag
+                    code.pop();
                     continue;
                 }
                 break;
@@ -2117,8 +2130,7 @@ public class BuildContext {
 
             int scopeDepth = isNewScope ? scope.depth + 1 : scope.depth;
             narrowedReg = new Narrowed(origReg.regId(), narrowedSlots, narrowingType,
-                narrowedFlavor, narrowedCD, narrowedSlotCds, origReg.name(),
-                scopeDepth, false, origReg);
+                narrowedFlavor, narrowedCD, narrowedSlotCds, origReg.name(), scopeDepth, origReg);
         }
 
         boolean applyInfo = fromAddr > currOpAddr;

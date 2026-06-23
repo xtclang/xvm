@@ -69,6 +69,8 @@ package callTests {
 
         assert testNullableXvmPrimitiveWithDefault(7) == 7;
         assert testNullableXvmPrimitiveWithDefault()  == 42;
+
+        testSuperCall();
     }
 
     Int testStandardWithDefault(Int i, Int j = 2) = i + j;
@@ -114,4 +116,20 @@ package callTests {
     Int128 testXvmPrimitiveWithDefault(Int128 i = 42) = i;
 
     Int128 testNullableXvmPrimitiveWithDefault(Int128? i = 42) = i == Null ? 0 : i;
+
+    void testSuperCall() {
+        interface I0 {
+            Int f() = 10;
+        }
+
+        interface I1 extends I0 {
+            @Override
+            Int f() = super() + 1;
+        }
+
+        class Test implements I1 {
+        }
+
+        assert new Test().f() == 11;
+    }
 }

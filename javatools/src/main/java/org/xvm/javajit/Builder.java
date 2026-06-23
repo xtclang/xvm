@@ -15,6 +15,7 @@ import java.math.BigInteger;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -122,7 +123,13 @@ public abstract class Builder {
                     ? ClassHierarchyResolver.ClassHierarchyInfo.ofInterface()
                     : ClassHierarchyResolver.ClassHierarchyInfo.ofClass(getSuperCD());
             }
-
+            // TODO: the problem is that the natural code for "removeAll" uses an Array<Int>;
+            //       to compile it we need to have to load Array<Int>, which extends Array
+            //       resulting in the CircularClassInitialization error
+            // The upcoming name work should remove this
+            if (clzName.equals(N_ArrayInt64)) {
+                return ClassHierarchyResolver.ClassHierarchyInfo.ofClass(CD_Array);
+            }
             return ClassHierarchyResolver.ofClassLoading(typeSystem.loader).getClassInfo(classDesc);
         };
     }
@@ -770,6 +777,10 @@ public abstract class Builder {
      */
     public PropertyInfo loadProperty(CodeBuilder code, TypeConstant typeContainer,
                                       PropertyConstant propId, boolean allowUnboxing) {
+        if (typeContainer.containsFormalType(true)) {
+            typeContainer = typeContainer.resolveConstraints().ensureAccess(Constants.Access.PRIVATE);
+        }
+
         PropertyInfo  xvmInfo    = propId.getPropertyInfo(typeContainer);
         PropertyInfo  jitInfo    = propId.getPropertyInfo(typeContainer.getCanonicalJitType());
         TypeConstant  typeOwner  = jitInfo.getOwnerType(this, typeContainer);
@@ -1600,6 +1611,7 @@ public abstract class Builder {
     public static final String N_nRangeInt64  = "org.xtclang.ecstasy.nRangeᐸInt64ᐳ";
     public static final String N_nService     = "org.xtclang.ecstasy.nService";
     public static final String N_nType        = "org.xtclang.ecstasy.nType";
+    public static final String N_nUtil        = "org.xtclang.ecstasy.nUtil";
 
     // ----- well-known method names ---------------------------------------------------------------
 
@@ -1689,6 +1701,7 @@ public abstract class Builder {
     public static final ClassDesc CD_nObj          = ClassDesc.of(N_nObj);
     public static final ClassDesc CD_nRef          = ClassDesc.of(N_nRef);
     public static final ClassDesc CD_nType         = ClassDesc.of(N_nType);
+    public static final ClassDesc CD_nUtil         = ClassDesc.of(N_nUtil);
 
     public static final ClassDesc CD_Bit           = ClassDesc.of(N_Bit);
     public static final ClassDesc CD_Boolean       = ClassDesc.of(N_Boolean);
