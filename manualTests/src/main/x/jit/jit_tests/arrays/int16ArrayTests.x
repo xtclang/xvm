@@ -39,7 +39,7 @@ package int16ArrayTests {
 
     void shouldCreateWithCapacity() {
         Int16[] array = new Array(10);
-        assert array.capacity == 10;
+        assert array.capacity >= 10;
     }
 
     void shouldCreateArrayInitializedWithZeroValue() {

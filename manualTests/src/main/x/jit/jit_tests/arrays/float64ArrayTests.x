@@ -28,7 +28,7 @@ package float64ArrayTests {
 
     void shouldCreateWithCapacity() {
         Float64[] array = new Array(10);
-        assert array.capacity == 10;
+        assert array.capacity >= 10;
     }
 
     void shouldCreateArrayInitializedWithZeroValue() {

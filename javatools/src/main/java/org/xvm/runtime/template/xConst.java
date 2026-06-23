@@ -668,10 +668,6 @@ public class xConst
             this.iReturn = iReturn;
 
             iterFields = clzBase.getFieldLayout().entrySet().iterator();
-            if (!iterFields.hasNext()) {
-                // no fields; use a stable non-zero value
-                lResult = clzBase.hashCode();
-            }
         }
 
         @Override
@@ -747,6 +743,11 @@ public class xConst
                 default:
                     throw new IllegalStateException();
                 }
+            }
+
+            if (lResult == 0) {
+                // use a stable non-zero value
+                lResult = clzBase.hashCode();
             }
 
             JavaLong hHash = xInt64.makeHandle(lResult);

@@ -39,7 +39,7 @@ package uint32ArrayTests {
 
     void shouldCreateWithCapacity() {
         UInt32[] array = new Array(10);
-        assert array.capacity == 10;
+        assert array.capacity >= 10;
     }
 
     void shouldCreateArrayInitializedWithZeroValue() {

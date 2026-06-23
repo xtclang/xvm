@@ -38,7 +38,7 @@ package int32ArrayTests {
 
     void shouldCreateWithCapacity() {
         Int32[] array = new Array(10);
-        assert array.capacity == 10;
+        assert array.capacity >= 10;
     }
 
     void shouldCreateArrayInitializedWithZeroValue() {

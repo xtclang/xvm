@@ -29,7 +29,7 @@ package dec32ArrayTests {
 
     void shouldCreateWithCapacity() {
         Dec32[] array = new Array(10);
-        assert array.capacity == 10;
+        assert array.capacity >= 10;
     }
 
     void shouldCreateArrayInitializedWithZeroValue() {

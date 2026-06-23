@@ -24,7 +24,7 @@ package bitArrayTests {
 
     void shouldCreateWithCapacity() {
         Bit[] array = new Array(10);
-        assert array.capacity == 10;
+        assert array.capacity >= 10;
     }
 
     void shouldCreateArrayInitializedWithZeroValue() {

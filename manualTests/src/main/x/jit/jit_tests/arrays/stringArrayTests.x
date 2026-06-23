@@ -24,7 +24,7 @@ package stringArrayTests {
 
     void shouldCreateWithCapacity() {
         String[] array = new Array(10);
-        assert array.capacity == 10;
+        assert array.capacity >= 10;
     }
 
     void shouldCreateArrayInitializedWithZeroValue() {

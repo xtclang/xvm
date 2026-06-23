@@ -70,6 +70,16 @@ public abstract class LongBasedDelegate
             setValue(al, i, lValue);
         }
 
+        // null out the tail
+        int cStore = storage(cSize);
+        for (int i = cSize, c = cStore * f_nValuesPerLong; i < c; i++) {
+            setValue(al, i, 0);
+        }
+
+        if (cStore < al.length) {
+            Arrays.fill(al, cStore, al.length, 0);
+        }
+
         hDelegate.m_cSize = cSize;
         return hDelegate;
     }
@@ -162,11 +172,15 @@ public abstract class LongBasedDelegate
         }
         hDelegate.m_cSize++;
 
-        if (lIndex == cSize) {
-            setValue(alValue, cSize, ((JavaLong) hElement).getValue());
+        if (lIndex < cSize) {
+            // move over
+            for (long i = cSize; i >= lIndex; --i) {
+                setValue(alValue, i+1, getValue(alValue, i));
+            }
         } else {
-            throw new UnsupportedOperationException("TODO GG"); // move the longs
+            assert lIndex == cSize;
         }
+        setValue(alValue, lIndex, ((JavaLong) hElement).getValue());
     }
 
     @Override

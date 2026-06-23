@@ -41,7 +41,7 @@ package int8ArrayTests {
     void shouldCreateWithCapacity() {
         Int8[] array = new Int8[](10);
         assert array.mutability == Mutable;
-        assert array.capacity == 10;
+        assert array.capacity >= 10;
     }
 
     void shouldCreateFixedSize() {

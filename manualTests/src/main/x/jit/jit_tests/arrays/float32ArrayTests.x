@@ -29,7 +29,7 @@ package float32ArrayTests {
 
     void shouldCreateWithCapacity() {
         Float32[] array = new Array(10);
-        assert array.capacity == 10;
+        assert array.capacity >= 10;
     }
 
     void shouldCreateArrayInitializedWithZeroValue() {

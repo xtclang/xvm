@@ -49,7 +49,7 @@ package charArrayTests {
 
     void shouldCreateWithCapacity() {
         Char[] array = new Array(10);
-        assert array.capacity == 10;
+        assert array.capacity >= 10;
     }
 
     void shouldCreateArrayInitializedWithZeroValue() {

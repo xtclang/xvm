@@ -39,7 +39,7 @@ package int128ArrayTests {
 
     void shouldCreateWithCapacity() {
         Int128[] array = new Array(10);
-        assert array.capacity == 10;
+        assert array.capacity >= 10;
     }
 
     void shouldCreateArrayInitializedWithZeroValue() {

@@ -7,7 +7,7 @@ class ConstHelper {
      */
     static Int estimateStringLength(immutable String[] names, immutable Object[] fields) {
         Int c      = names.size;
-        Int length = c == 0 ? 0 : c * 3 - 1; // (=, =,) --> 2 + (fields.size - 1) * 3
+        Int length = c == 0 ? 2 : c * 3; // (=, =, =) --> 2 + fields.size* 3 - 2
         for (Int i = 0; i < c; i++) {
             length += names[i].size;
 

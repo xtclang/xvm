@@ -1,6 +1,8 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
 
+import java.util.Arrays;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
@@ -76,6 +78,38 @@ public class xRTNibbleDelegate
     }
 
     @Override
+    public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
+        NibbleArrayHandle hDelegate = (NibbleArrayHandle) hTarget;
+
+        return frame.assignValue(iReturn, xInt64.makeHandle((long) hDelegate.m_abValue.length << 1));
+    }
+
+    @Override
+    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue) {
+        assert cSize > 0;
+
+        NibbleArrayHandle hDelegate = (NibbleArrayHandle) hTarget;
+        byte[]            ab        = hDelegate.m_abValue;
+        int               nNibble   = getValue((GenericHandle) hValue);
+        byte              bValue    = (byte) (nNibble << 4 | nNibble);
+        int               cStore    = storage(cSize);
+
+        Arrays.fill(ab, 0, cStore, bValue);
+
+        // null out the tail
+        if ((cSize & 1) != 0) {
+            ab[cStore-1] &= (byte) 0xF0;
+        }
+
+        if (cStore < ab.length) {
+            Arrays.fill(ab, cStore, ab.length, (byte) 0);
+        }
+
+        hDelegate.m_cSize = cSize;
+        return hDelegate;
+    }
+
+    @Override
     protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
         NibbleArrayHandle hDelegate = (NibbleArrayHandle) hTarget;
         int               nNibble   = getNibble(hDelegate.m_abValue, lIndex);
@@ -115,8 +149,9 @@ public class xRTNibbleDelegate
         hDelegate.m_cSize++;
 
         if (lIndex < cSize) {
-            for (long i = lIndex + 1; i < cSize; i++) {
-                setNibble(abValue, i, getNibble(abValue, i-1));
+            // shift backward so each source nibble is read before it is overwritten
+            for (long i = cSize; i > lIndex; --i) {
+                setNibble(abValue, i, getNibble(abValue, i - 1));
             }
         }
         setNibble(abValue, lIndex, getValue((GenericHandle) hElement));
