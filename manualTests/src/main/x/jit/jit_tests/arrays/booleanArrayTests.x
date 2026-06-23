@@ -44,9 +44,7 @@ package booleanArrayTests {
     void shouldCreateConstantArray() {
         Boolean[] array = [False, True, True];
         assert array.size == 3;
-        assert array[0] == False;
-        assert array[1] == True;
-        assert array[2] == True;
+        assert array[0] == False && array[1] == True && array[2] == True;
     }
 
     void shouldBeEmpty() {
@@ -82,16 +80,9 @@ package booleanArrayTests {
         array.add(True);
         array.add(True);
         assert array.size == 10;
-        assert array[0] == True;
-        assert array[1] == False;
-        assert array[2] == True;
-        assert array[3] == True;
-        assert array[4] == False;
-        assert array[5] == False;
-        assert array[6] == True;
-        assert array[7] == False;
-        assert array[8] == True;
-        assert array[9] == True;
+        assert array[0] == True  && array[1] == False && array[2] == True && array[3] == True;
+        assert array[4] == False && array[5] == False && array[6] == True && array[7] == False;
+        assert array[8] == True  && array[9] == True;
     }
 
     void shouldIterateUsingForLoop() {
@@ -146,10 +137,7 @@ package booleanArrayTests {
 
         array.delete(2);
         assert array.size == 4;
-        assert array[0] == True;
-        assert array[1] == False;
-        assert array[2] == True;
-        assert array[3] == False;
+        assert array[0] == True && array[1] == False && array[2] == True && array[3] == False;
     }
 
     void shouldInsertValueIntoArray() {
@@ -161,10 +149,7 @@ package booleanArrayTests {
 
         array.insert(2, True);
         assert array.size == 5;
-        assert array[0] == True;
-        assert array[1] == False;
-        assert array[2] == True;
-        assert array[3] == True;
+        assert array[0] == True && array[1] == False && array[2] == True && array[3] == True;
         assert array[4] == False;
     }
 }

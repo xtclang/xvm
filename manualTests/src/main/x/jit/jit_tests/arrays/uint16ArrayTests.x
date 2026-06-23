@@ -58,9 +58,7 @@ package uint16ArrayTests {
     void shouldCreateConstantArray() {
         UInt16[] array = [10, 20, UInt16.MaxValue];
         assert array.size == 3;
-        assert array[0] == 10;
-        assert array[1] == 20;
-        assert array[2] == UInt16.MaxValue;
+        assert array[0] == 10 && array[1] == 20 && array[2] == UInt16.MaxValue;
     }
 
     void shouldBeEmpty() {
@@ -96,16 +94,9 @@ package uint16ArrayTests {
         array.add(90);
         array.add(100);
         assert array.size == 10;
-        assert array[0] == 10;
-        assert array[1] == 20;
-        assert array[2] == 30;
-        assert array[3] == 40;
-        assert array[4] == 50;
-        assert array[5] == 60;
-        assert array[6] == 70;
-        assert array[7] == 80;
-        assert array[8] == 90;
-        assert array[9] == 100;
+        assert array[0] == 10 && array[1] == 20 && array[2] == 30 && array[3] == 40;
+        assert array[4] == 50 && array[5] == 60 && array[6] == 70 && array[7] == 80;
+        assert array[8] == 90 && array[9] == 100;
     }
 
     void shouldPreInc() {
@@ -115,9 +106,7 @@ package uint16ArrayTests {
         array.add(UInt16.MaxValue);
         UInt16 c = ++array[1];
         assert c == 21;
-        assert array[0] == 10;
-        assert array[1] == 21;
-        assert array[2] == UInt16.MaxValue;
+        assert array[0] == 10 && array[1] == 21 && array[2] == UInt16.MaxValue;
     }
 
     void shouldPostInc() {
@@ -127,9 +116,7 @@ package uint16ArrayTests {
         array.add(UInt16.MaxValue);
         UInt16 c = array[1]++;
         assert c == 20;
-        assert array[0] == 10;
-        assert array[1] == 21;
-        assert array[2] == UInt16.MaxValue;
+        assert array[0] == 10 && array[1] == 21 && array[2] == UInt16.MaxValue;
     }
 
     void shouldPreDec() {
@@ -139,9 +126,7 @@ package uint16ArrayTests {
         array.add(UInt16.MaxValue);
         UInt16 c = --array[2];
         assert c == (UInt16.MaxValue - 1);
-        assert array[0] == 10;
-        assert array[1] == 20;
-        assert array[2] == (UInt16.MaxValue - 1);
+        assert array[0] == 10 && array[1] == 20 && array[2] == (UInt16.MaxValue - 1);
     }
 
     void shouldPostDec() {
@@ -151,9 +136,7 @@ package uint16ArrayTests {
         array.add(UInt16.MaxValue);
         UInt16 c = array[2]--;
         assert c == UInt16.MaxValue;
-        assert array[0] == 10;
-        assert array[1] == 20;
-        assert array[2] == (UInt16.MaxValue - 1);
+        assert array[0] == 10 && array[1] == 20 && array[2] == (UInt16.MaxValue - 1);
     }
 
     void shouldAddInPlace() {
@@ -162,9 +145,7 @@ package uint16ArrayTests {
         array.add(20);
         array.add(UInt16.MaxValue);
         array[1] += 5;
-        assert array[0] == 10;
-        assert array[1] == 25;
-        assert array[2] == UInt16.MaxValue;
+        assert array[0] == 10 && array[1] == 25 && array[2] == UInt16.MaxValue;
     }
 
     void shouldSubInPlace() {
@@ -173,9 +154,7 @@ package uint16ArrayTests {
         array.add(20);
         array.add(UInt16.MaxValue);
         array[2] -= 5;
-        assert array[0] == 10;
-        assert array[1] == 20;
-        assert array[2] == (UInt16.MaxValue - 5);
+        assert array[0] == 10 && array[1] == 20 && array[2] == (UInt16.MaxValue - 5);
     }
 
     void shouldMultiplyInPlace() {
@@ -184,9 +163,7 @@ package uint16ArrayTests {
         array.add(20);
         array.add(30);
         array[1] *= 5;
-        assert array[0] == 10;
-        assert array[1] == 100;
-        assert array[2] == 30;
+        assert array[0] == 10 && array[1] == 100 && array[2] == 30;
     }
 
     void shouldDivideInPlace() {
@@ -195,9 +172,7 @@ package uint16ArrayTests {
         array.add(20);
         array.add(30);
         array[1] /= 5;
-        assert array[0] == 10;
-        assert array[1] == 4;
-        assert array[2] == 30;
+        assert array[0] == 10 && array[1] == 4 && array[2] == 30;
     }
 
     void shouldModulusInPlace() {
@@ -206,9 +181,7 @@ package uint16ArrayTests {
         array.add(21);
         array.add(30);
         array[1] %= 5;
-        assert array[0] == 10;
-        assert array[1] == 21 % 5;
-        assert array[2] == 30;
+        assert array[0] == 10 && array[1] == 21 % 5 && array[2] == 30;
     }
 
     void shouldShiftLeftInPlace() {
@@ -217,9 +190,7 @@ package uint16ArrayTests {
         array.add(21);
         array.add(30);
         array[1] <<= 5;
-        assert array[0] == 10;
-        assert array[1] == 21 << 5;
-        assert array[2] == 30;
+        assert array[0] == 10 && array[1] == 21 << 5 && array[2] == 30;
     }
 
     void shouldShiftRightInPlace() {
@@ -228,9 +199,7 @@ package uint16ArrayTests {
         array.add(21);
         array.add(30);
         array[1] >>= 5;
-        assert array[0] == 10;
-        assert array[1] == 21 >> 5;
-        assert array[2] == 30;
+        assert array[0] == 10 && array[1] == 21 >> 5 && array[2] == 30;
     }
 
     void shouldUnsignedShiftRightInPlace() {
@@ -239,9 +208,7 @@ package uint16ArrayTests {
         array.add(21);
         array.add(30);
         array[1] >>>= 5;
-        assert array[0] == 10;
-        assert array[1] == 21 >>> 5;
-        assert array[2] == 30;
+        assert array[0] == 10 && array[1] == 21 >>> 5 && array[2] == 30;
     }
 
     void shouldAndInPlace() {
@@ -250,9 +217,7 @@ package uint16ArrayTests {
         array.add(21);
         array.add(30);
         array[1] &= 5;
-        assert array[0] == 10;
-        assert array[1] == 21 & 5;
-        assert array[2] == 30;
+        assert array[0] == 10 && array[1] == 21 & 5 && array[2] == 30;
     }
 
     void shouldOrInPlace() {
@@ -261,9 +226,7 @@ package uint16ArrayTests {
         array.add(21);
         array.add(30);
         array[1] |= 5;
-        assert array[0] == 10;
-        assert array[1] == 21 | 5;
-        assert array[2] == 30;
+        assert array[0] == 10 && array[1] == 21 | 5 && array[2] == 30;
     }
 
     void shouldXorInPlace() {
@@ -272,9 +235,7 @@ package uint16ArrayTests {
         array.add(0x4A);
         array.add(30);
         array[1] ^= 0x0F;
-        assert array[0] == 10;
-        assert array[1] == 0x45;
-        assert array[2] == 30;
+        assert array[0] == 10 && array[1] == 0x45 && array[2] == 30;
     }
 
     void shouldIterateUsingForLoop() {
@@ -309,23 +270,17 @@ package uint16ArrayTests {
         // delete from middle
         array.delete(2);
         assert array.size == 4;
-        assert array[0] == 10;
-        assert array[1] == 20;
-        assert array[2] == 40;
-        assert array[3] == 50;
+        assert array[0] == 10 && array[1] == 20 && array[2] == 40 && array[3] == 50;
 
         // delete from index zero
         array.delete(0);
         assert array.size == 3;
-        assert array[0] == 20;
-        assert array[1] == 40;
-        assert array[2] == 50;
+        assert array[0] == 20 && array[1] == 40 && array[2] == 50;
 
         // delete from last index
         array.delete(2);
         assert array.size == 2;
-        assert array[0] == 20;
-        assert array[1] == 40;
+        assert array[0] == 20 && array[1] == 40;
     }
 
     void shouldInsertValueIntoArray() {
@@ -338,31 +293,19 @@ package uint16ArrayTests {
         // insert in middle
         array.insert(2, 25);
         assert array.size == 5;
-        assert array[0] == 10;
-        assert array[1] == 20;
-        assert array[2] == 25;
-        assert array[3] == 30;
+        assert array[0] == 10 && array[1] == 20 && array[2] == 25 && array[3] == 30;
         assert array[4] == 40;
 
         // insert at index zero
         array.insert(0, 5);
         assert array.size == 6;
-        assert array[0] == 5;
-        assert array[1] == 10;
-        assert array[2] == 20;
-        assert array[3] == 25;
-        assert array[4] == 30;
-        assert array[5] == 40;
+        assert array[0] == 5  && array[1] == 10 && array[2] == 20 && array[3] == 25;
+        assert array[4] == 30 && array[5] == 40;
 
         // insert at the end
         array.insert(array.size, 50);
         assert array.size == 7;
-        assert array[0] == 5;
-        assert array[1] == 10;
-        assert array[2] == 20;
-        assert array[3] == 25;
-        assert array[4] == 30;
-        assert array[5] == 40;
-        assert array[6] == 50;
+        assert array[0] == 5  && array[1] == 10 && array[2] == 20 && array[3] == 25;
+        assert array[4] == 30 && array[5] == 40 && array[6] == 50;
     }
 }

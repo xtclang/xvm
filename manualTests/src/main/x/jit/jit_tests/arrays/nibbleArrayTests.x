@@ -44,9 +44,7 @@ package nibbleArrayTests {
     void shouldCreateConstantArray() {
         Nibble[] array = [0x0A, 0x05, 0x0F];
         assert array.size == 3;
-        assert array[0] == 0x0A;
-        assert array[1] == 0x05;
-        assert array[2] == 0x0F;
+        assert array[0] == 0x0A && array[1] == 0x05 && array[2] == 0x0F;
     }
 
     void shouldBeEmpty() {
@@ -82,16 +80,9 @@ package nibbleArrayTests {
         array.add(0x09);
         array.add(0x0A);
         assert array.size == 10;
-        assert array[0] == 0x01;
-        assert array[1] == 0x02;
-        assert array[2] == 0x03;
-        assert array[3] == 0x04;
-        assert array[4] == 0x05;
-        assert array[5] == 0x06;
-        assert array[6] == 0x07;
-        assert array[7] == 0x08;
-        assert array[8] == 0x09;
-        assert array[9] == 0x0A;
+        assert array[0] == 0x01 && array[1] == 0x02 && array[2] == 0x03 && array[3] == 0x04;
+        assert array[4] == 0x05 && array[5] == 0x06 && array[6] == 0x07 && array[7] == 0x08;
+        assert array[8] == 0x09 && array[9] == 0x0A;
     }
 
     void shouldIterateUsingForLoop() {
@@ -147,23 +138,17 @@ package nibbleArrayTests {
         // delete from middle
         array.delete(2);
         assert array.size == 4;
-        assert array[0] == 1;
-        assert array[1] == 2;
-        assert array[2] == 4;
-        assert array[3] == 5;
+        assert array[0] == 1 && array[1] == 2 && array[2] == 4 && array[3] == 5;
 
         // delete from index zero
         array.delete(0);
         assert array.size == 3;
-        assert array[0] == 2;
-        assert array[1] == 4;
-        assert array[2] == 5;
+        assert array[0] == 2 && array[1] == 4 && array[2] == 5;
 
         // delete from last index
         array.delete(2);
         assert array.size == 2;
-        assert array[0] == 2;
-        assert array[1] == 4;
+        assert array[0] == 2 && array[1] == 4;
     }
 
     void shouldInsertValueIntoArray() {
@@ -176,31 +161,19 @@ package nibbleArrayTests {
         // insert in middle
         array.insert(2, 5);
         assert array.size == 5;
-        assert array[0] == 1;
-        assert array[1] == 2;
-        assert array[2] == 5;
-        assert array[3] == 3;
+        assert array[0] == 1 && array[1] == 2 && array[2] == 5 && array[3] == 3;
         assert array[4] == 4;
 
         // insert at index zero
         array.insert(0, 0);
         assert array.size == 6;
-        assert array[0] == 0;
-        assert array[1] == 1;
-        assert array[2] == 2;
-        assert array[3] == 5;
-        assert array[4] == 3;
-        assert array[5] == 4;
+        assert array[0] == 0 && array[1] == 1 && array[2] == 2 && array[3] == 5;
+        assert array[4] == 3 && array[5] == 4;
 
         // insert at the end
         array.insert(array.size, 6);
         assert array.size == 7;
-        assert array[0] == 0;
-        assert array[1] == 1;
-        assert array[2] == 2;
-        assert array[3] == 5;
-        assert array[4] == 3;
-        assert array[5] == 4;
-        assert array[6] == 6;
+        assert array[0] == 0 && array[1] == 1 && array[2] == 2 && array[3] == 5;
+        assert array[4] == 3 && array[5] == 4 && array[6] == 6;
     }
 }
