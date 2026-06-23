@@ -232,6 +232,7 @@ public abstract class OpIndex
         boolean      fPrimitive = typeEl.isJitPrimitive();
 
         if (typeTarget.isArray()) {
+            // TODO JK: call Array.ensureWriteable() for any mutating op
             ClassDesc cdArray = bctx.builder.ensureClassDesc(typeTarget);
             if (fPrimitive && !fNullable) {
                 buildPrimitiveArrayOp(bctx, code, reg, typeEl);
@@ -300,7 +301,6 @@ public abstract class OpIndex
                         "Cannot resolve the method: " + sName + " on " + typeTarget.getValueString());
                 }
                 method = infoTarget.getMethodById(set.iterator().next());
-
             } else {
                 method = infoTarget.findOpMethod(sName, sOp, typeIndex);
             }

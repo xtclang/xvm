@@ -256,15 +256,21 @@ public class AssertV
                 ? bctx.getRegisterInfo(code, nValue)
                 : null;
         if (nValue >= 0) {
-            // match the interpreter: render unavailable trace values as empty
             if (reg == null) {
                 return;
             }
-            String  sExpression = asParts[0];
-            String  sName       = reg.name();
-            boolean fSkip       = index > 0
+            String sName       = reg.name();
+            String sExpression = asParts[0];
+
+            // The 'asParts[index]' is the message text before this value placeholder, such as
+            // ", range=" for a named value or ", range1.covers(range2)=" for a call result;
+            // the "(" check identifies method-call trace labels, which use compiler-created
+            // Boolean temps that may have no value when short-circuiting skips the call loading;
+            // skip these call-result temps and keep ordinary named Boolean values
+            boolean fSkip = index > 0
                     && sName != null
                     && sName.startsWith("v$")
+                    && asParts[index].contains("(")
                     && reg.type().isA(bctx.pool().typeBoolean())
                     && (sExpression.contains("&&") || sExpression.contains("||"));
             if (fSkip) {

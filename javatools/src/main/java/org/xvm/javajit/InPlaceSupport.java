@@ -44,7 +44,7 @@ public interface InPlaceSupport
         Label  labelOK = code.newLabel();
         String msg;
 
-        if ("Char".equals(reg.type().getSingleUnderlyingClass(true).getName())) {
+        if (reg.type().removeAccess().equals(bctx.pool().typeChar())) {
             // we need to code a range check for Char inc/dec ops
             code.iload(reg.slot());
             switch (opCode) {

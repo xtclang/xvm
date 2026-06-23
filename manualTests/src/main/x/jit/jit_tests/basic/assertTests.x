@@ -28,7 +28,7 @@ package assertTests {
             assert value != Null || value2;
             assert as "expected IllegalState";
         } catch (IllegalState e) {
-            assertText(e, "\"value != Null || value2\": value=Null, value2=");
+            assertText(e, "\"value != Null || value2\": value=Null, value2=False");
         }
     }
 
@@ -46,7 +46,7 @@ package assertTests {
             assert value != Null || value2;
             assert as "expected IllegalState";
         } catch (IllegalState e) {
-            assertText(e, "\"value != Null || value2\": value=Null, value2=");
+            assertText(e, "\"value != Null || value2\": value=Null, value2=False");
         }
     }
 

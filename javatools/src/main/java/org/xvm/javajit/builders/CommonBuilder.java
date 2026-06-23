@@ -2225,8 +2225,8 @@ public class CommonBuilder
                     .pop2();   // pop the zero long from the stack, we will recalculate the hash
         }
 
-        // inject the HashCollector from the context by calling ctx.inject()
-        ClassDesc    cdHashCollector   = ClassDesc.of(ByteHashCollector.class.getName());
+        // get the HashCollector from the context
+        ClassDesc cdHashCollector = ClassDesc.of(ByteHashCollector.class.getName());
 
         Builder.loadCtx(code);
         code.invokevirtual(CD_Ctx, "createHashCollector", MethodTypeDesc.of(cdHashCollector));
@@ -2255,9 +2255,8 @@ public class CommonBuilder
         }
 
         if (props.isEmpty()) {
-            // if there are no properties, there's nothing to mix in; derive a stable
-            // hash from the type's Ecstasy class name (computed at generation time)
-            // the hash collector is on the stack
+            // if there are no properties derive a stable hash from the type's Ecstasy class name
+            // (computed at generation time); the hash collector is on the stack
             code.loadConstant((long) type.getEcstasyClassName().hashCode())
                 .invokeinterface(cdHashCollector, "addLong", mdAdd)
                 .invokeinterface(cdHashCollector, "compute", mdCompute)
