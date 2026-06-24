@@ -572,6 +572,17 @@ public abstract class BaseInt128
         }
 
         @Override
+        public int compareTo(ObjectHandle that) {
+            LongLong llThat = ((LongLongHandle) that).m_llValue;
+            BaseInt128 template = (BaseInt128) getTemplate();
+
+            // range switches compare native handles without calling the template
+            return template.f_fSigned
+                    ? m_llValue.compare(llThat)
+                    : m_llValue.compareUnsigned(llThat);
+        }
+
+        @Override
         public String toString() {
             return super.toString() + m_llValue;
         }
