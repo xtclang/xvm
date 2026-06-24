@@ -24,6 +24,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.type.Decimal32;
 import org.xvm.type.Decimal64;
+import org.xvm.type.Decimal128;
 
 
 /**
@@ -150,10 +151,13 @@ public class xFPLiteral
             return frame.assignValue(iReturn,
                     xDec64.INSTANCE.makeHandle(new Decimal64(hLiteral.getValue())));
 
+        case "toDec128":
+            return frame.assignValue(iReturn,
+                    xDec128.INSTANCE.makeHandle(new Decimal128(hLiteral.getValue())));
+
         case "toFloat128":
         case "toFloatN":
         case "toDecN":
-        case "toDec128":
             throw new UnsupportedOperationException(); // TODO
         }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);

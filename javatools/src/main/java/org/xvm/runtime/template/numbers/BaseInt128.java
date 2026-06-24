@@ -362,25 +362,13 @@ public abstract class BaseInt128
     @Override
     public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn) {
         LongLong ll = ((LongLongHandle) hTarget).getValue();
-        LongLong llr = ll.prev(f_fSigned);
-
-        if (llr == LongLong.OVERFLOW) {
-            return overflow(frame);
-        }
-
-        return frame.assignValue(iReturn, makeHandle(llr));
+        return frame.assignValue(iReturn, makeHandle(ll.subUnchecked(LongLong.ONE)));
     }
 
     @Override
     public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn) {
         LongLong ll = ((LongLongHandle) hTarget).getValue();
-        LongLong llr = ll.next(f_fSigned);
-
-        if (llr == LongLong.OVERFLOW) {
-            return overflow(frame);
-        }
-
-        return frame.assignValue(iReturn, makeHandle(llr));
+        return frame.assignValue(iReturn, makeHandle(ll.addUnchecked(LongLong.ONE)));
     }
 
     @Override
