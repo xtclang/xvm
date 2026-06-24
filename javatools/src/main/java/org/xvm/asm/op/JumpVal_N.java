@@ -237,12 +237,17 @@ public class JumpVal_N
                     }
                 } else {
                     // this is an "is(_)" column
-                    TypeConstant     typeVal  = hValue.getType();
+                    TypeConstant     typeVal  = hValue.getUnsafeType();
                     ObjectHandle[][] aahCases = m_aahCases;
 
                     for (int iRow = 0, cRows = aahCases.length; iRow < cRows; iRow++) {
-                        TypeHandle hCase = (TypeHandle) aahCases[iRow][iCol];
-                        if (typeVal.isA(hCase.getDataType())) {
+                        ObjectHandle hCase = aahCases[iRow][iCol];
+                        if (hCase == ObjectHandle.DEFAULT) {
+                            // wildcard bits are merged after exact type checks
+                            continue;
+                        }
+
+                        if (typeVal.isA(((TypeHandle) hCase).getDataType())) {
                             ixColumn |= (1L << iRow);
                         }
                     }

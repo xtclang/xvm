@@ -434,7 +434,7 @@ public class xConst
 
             return frame.call1(FN_ESTIMATE_LENGTH, null, ahVars, iReturn);
         } else {
-            return frame.assignValue(iReturn, xInt64.makeHandle(0));
+            return frame.assignValue(iReturn, xInt64.makeHandle(2));
         }
     }
 
