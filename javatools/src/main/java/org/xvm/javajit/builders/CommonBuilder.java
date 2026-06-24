@@ -560,123 +560,91 @@ public class CommonBuilder
 
                 // add field initialization
                 for (PropertyInfo prop : props) {
-                    if (prop.getInitializer() == null) {
-                        code.aload(0); // Stack: { this }
-
-                        TypeConstant type       = prop.getType();
-                        TypeConstant baseType   = type.removeNullable();
-                        ClassDesc    cdProp     = type.ensureClassDesc(typeSystem);
-                        RegisterInfo reg        = loadConstant(code, prop.getInitialValue());
-                        String       jitName    = prop.getIdentity()
-                                                      .ensureJitPropertyName(typeSystem);
-                        JitFlavor    regFlavor  = reg.flavor();
-                        JitFlavor    propFlavor = baseType.isJavaPrimitive()
-                                                    ? JitFlavor.Primitive
-                                                    : baseType.isXvmPrimitive()
-                                                        ? JitFlavor.XvmPrimitive
-                                                        : JitFlavor.Specific;
-
-                        // Switch on the register flavor (the value being set into the property)
-                        // and then switch on the property flavor
-                        //
-                        // Specific     -> Specific     e.g. String s = "Foo" or String? s = Null
-                        // Specific     -> Primitive    must be setting primitive property to Null
-                        // Specific     -> XvmPrimitive must be setting primitive property to Null
-                        // Primitive    -> Primitive    e.g. Int = 100
-                        // Primitive    -> Specific     e.g. Int | String is = 100
-                        // XvmPrimitive -> XvmPrimitive e.g. Int128 = 100
-                        // XvmPrimitive -> Specific     e.g. Int128 | String is = 100
-
-                        boolean invalid = false;
-                        switch (reg.flavor()) {
-                            case Specific:
-                                switch (propFlavor) {
-                                case Specific:
-                                    code.putfield(CD_this, jitName, cdProp);
-                                    break;
-
-                                case Primitive:
-                                    // must be setting a primitive to Null
-                                    assert reg.type().isOnlyNullable();
-                                    code.pop();
-                                    ClassDesc cd = JitTypeDesc.getPrimitiveClass(baseType);
-                                    Builder.defaultLoad(code, cd);
-                                    code.putfield(CD_this, jitName, cd)
-                                        .aload(0)
-                                        .iconst_1()
-                                        .putfield(CD_this, jitName + EXT, CD_boolean);
-                                    break;
-
-                                case XvmPrimitive:
-                                    // must be setting a XVM primitive to Null
-                                    assert reg.type().isOnlyNullable();
-                                    code.pop();
-                                    ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(baseType);
-                                    for (int i = 0; i < cds.length; i++) {
-                                        Builder.defaultLoad(code, cds[i]);
-                                        code.putfield(CD_this, jitName + "$" + i, cds[i])
-                                            .aload(0);
-                                    }
-                                    code.iconst_1()
-                                        .putfield(CD_this, jitName + EXT, CD_boolean);
-                                    break;
-
-                                default:
-                                    invalid = true;
-                                }
-                                break;
-
-                            case Primitive:
-                                switch (propFlavor) {
-                                case Primitive:
-                                    code.putfield(CD_this, jitName, reg.cd());
-                                    break;
-
-                                case Specific:
-                                    Builder.box(code, reg);
-                                    code.putfield(CD_this, jitName, cdProp);
-                                    break;
-
-                                default:
-                                    invalid = true;
-                                }
-                                break;
-
-                            case XvmPrimitive:
-                                switch (propFlavor) {
-                                case XvmPrimitive:
-                                    ClassDesc[] cds = reg.slotCds();
-                                    for (int i = cds.length - 1; i >= 0; i--) {
-                                        code.aload(0) // Stack: { this }
-                                            .dup_x2()
-                                            .pop()
-                                            .putfield(CD_this, jitName + "$" + i, cds[i]);
-                                    }
-                                    code.pop(); // pop the extra "aload(0)" from the stack
-                                    break;
-
-                                case Specific:
-                                    Builder.box(code, reg);
-                                    code.putfield(CD_this, jitName, cdProp);
-                                    break;
-
-                                default:
-                                    invalid = true;
-                                }
-                                break;
-
-                            default:
-                                invalid = true;
-                        }
-
-                        if (invalid) {
-                            throw new IllegalStateException("Invalid register flavor: " + regFlavor +
-                                " for property: " + propFlavor);
-                        }
-                    } else {
+                    if (prop.getInitializer() != null) {
                         throw new UnsupportedOperationException("Field initializer");
                     }
+
+                    code.aload(0); // Stack: { this }
+
+                    TypeConstant type       = prop.getType();
+                    TypeConstant baseType   = type.removeNullable();
+                    ClassDesc    cdProp     = type.ensureClassDesc(typeSystem);
+                    RegisterInfo reg        = loadConstant(code, prop.getInitialValue());
+                    String       jitName    = prop.getIdentity()
+                                                  .ensureJitPropertyName(typeSystem);
+                    JitFlavor    regFlavor  = reg.flavor();
+                    JitFlavor    propFlavor = baseType.isJavaPrimitive()
+                                                ? JitFlavor.Primitive
+                                                : baseType.isXvmPrimitive()
+                                                    ? JitFlavor.XvmPrimitive
+                                                    : JitFlavor.Specific;
+
+                    // Switch on the register flavor (the value being set into the property)
+                    // and then switch on the property flavor
+                    //
+                    // Specific     -> Specific     e.g. String s = "Foo" or String? s = Null
+                    // Specific     -> Primitive    must be setting primitive property to Null
+                    // Specific     -> XvmPrimitive must be setting primitive property to Null
+                    // Primitive    -> Primitive    e.g. Int = 100
+                    // Primitive    -> Specific     e.g. Int | String is = 100
+                    // XvmPrimitive -> XvmPrimitive e.g. Int128 = 100
+                    // XvmPrimitive -> Specific     e.g. Int128 | String is = 100
+
+                    switch (regFlavor.name() + "->" + propFlavor.name()) {
+                    case "Specific->Specific" ->
+                        code.putfield(CD_this, jitName, cdProp);
+
+                    case "Specific->Primitive" -> {
+                        // must be setting a primitive to Null
+                        assert reg.type().isOnlyNullable();
+                        code.pop();
+                        ClassDesc cd = JitTypeDesc.getPrimitiveClass(baseType);
+                        Builder.defaultLoad(code, cd);
+                        code.putfield(CD_this, jitName, cd)
+                            .aload(0)
+                            .iconst_1()
+                            .putfield(CD_this, jitName + EXT, CD_boolean);
+                    }
+
+                    case "Specific->XvmPrimitive" -> {
+                        // must be setting a XVM primitive to Null
+                        assert reg.type().isOnlyNullable();
+                        code.pop();
+                        ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(baseType);
+                        for (int i = 0; i < cds.length; i++) {
+                            Builder.defaultLoad(code, cds[i]);
+                            code.putfield(CD_this, jitName + "$" + i, cds[i])
+                                .aload(0);
+                        }
+                        code.iconst_1()
+                            .putfield(CD_this, jitName + EXT, CD_boolean);
+                    }
+
+                    case "Primitive->Primitive" ->
+                        code.putfield(CD_this, jitName, reg.cd());
+
+                    case "Primitive->Specific", "XvmPrimitive->Specific" -> {
+                        Builder.box(code, reg);
+                        code.putfield(CD_this, jitName, cdProp);
+                    }
+
+                    case "XvmPrimitive->XvmPrimitive" -> {
+                        ClassDesc[] cds = reg.slotCds();
+                        for (int i = cds.length - 1; i >= 0; i--) {
+                            code.aload(0) // Stack: { this }
+                                .dup_x2()
+                                .pop()
+                                .putfield(CD_this, jitName + "$" + i, cds[i]);
+                        }
+                        code.pop(); // pop the extra "aload(0)" from the stack
+                    }
+
+                    default ->
+                        throw new IllegalStateException("Invalid register flavor: " + regFlavor +
+                            " for property: " + propFlavor);
+                    }
                 }
+
                 code.labelBinding(endScope)
                     .return_();
             }
@@ -2931,7 +2899,6 @@ public class CommonBuilder
                 JitFlavor    srcFlavor = srcPd.flavor;
                 JitFlavor    dstFlavor = dstPd.flavor;
 
-                AddTransformation:
                 if (srcFlavor == dstFlavor) {
                     load(code, srcPd.cd, srcSlot);
 
@@ -2939,31 +2906,25 @@ public class CommonBuilder
                         generateCheckCast(code, dstType);
                     }
                 } else {
-                    switch (srcPd.flavor) {
-                    case Specific:
-                        switch (dstPd.flavor) {
-                        case Primitive, XvmPrimitive:
-                            code.aload(srcSlot);
-                            if (!srcType.equals(dstType)) {
-                                generateCheckCast(code, dstType);
-                            }
-                            Builder.unbox(code, dstType);
-                            break AddTransformation;
+                    switch (srcFlavor.name() + "->" + dstFlavor.name()) {
+                    case "Specific->Primitive",
+                         "Specific->XvmPrimitive":
+                        code.aload(srcSlot);
+                        if (!srcType.equals(dstType)) {
+                            generateCheckCast(code, dstType);
                         }
+                        Builder.unbox(code, dstType);
                         break;
 
-                    case Primitive:
-                        switch (dstPd.flavor) {
-                        case PrimitiveWithDefault:
-                            code.aload(srcSlot)
-                                .iconst_0(); // false
-                            break AddTransformation;
-                        }
+                    case "Primitive->PrimitiveWithDefault":
+                        code.aload(srcSlot)
+                            .iconst_0(); // false
                         break;
+
+                    default:
+                        throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
+                                                                "; dst=" + dstFlavor);
                     }
-
-                    throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
-                                                            "; dst=" + dstFlavor);
                 }
             }
 
@@ -3010,7 +2971,6 @@ public class CommonBuilder
                 JitFlavor    srcFlavor = srcPd.flavor;
                 JitFlavor    dstFlavor = dstPd.flavor;
 
-                AddTransformation:
                 if (srcFlavor == dstFlavor) {
                     if (i == 0) {
                         addReturn(code, srcPd.cd);
@@ -3020,46 +2980,45 @@ public class CommonBuilder
                         }
                     }
                 } else {
-                    switch (srcFlavor) {
-                    case Specific:
-                        switch (dstFlavor) {
-                        case Primitive:
-                            if (i == 0) {
-                                box(code, dstPd.type);
-                                addReturn(code, srcPd.cd);
-                            } else {
-                                loadFromContext(code, dstPd.cd, dstPd.altIndex);
-                                box(code, dstPd.type);
-                                storeToContext(code, srcPd.cd, srcPd.altIndex);
-                            }
-                            break AddTransformation;
-
-                        case XvmPrimitive:
-                            // we need to load the rest of the primitive returns from the context
-                            // if i == 0 then the first primitive value is already on the stack
-                            boolean doReturn = i == 0;
-                            int     index    = doReturn ? i + 1 : i;
-                            while (index < dstReturns.length
-                                   && dstReturns[index].index == dstPd.index) {
-                                loadFromContext(code, dstReturns[index].cd,
-                                        dstReturns[index].altIndex);
-                                index++;
-                            }
-                            // skip over the returns we have processed from the context
-                            i = index - 1;
-
+                    switch (srcFlavor.name() + "->" + dstFlavor.name()) {
+                    case "Specific->Primitive":
+                        if (i == 0) {
                             box(code, dstPd.type);
-                            if (doReturn) {
-                                addReturn(code, srcPd.cd);
-                            } else {
-                                storeToContext(code, srcPd.cd, srcPd.altIndex);
-                            }
-                            break AddTransformation;
-
+                            addReturn(code, srcPd.cd);
+                        } else {
+                            loadFromContext(code, dstPd.cd, dstPd.altIndex);
+                            box(code, dstPd.type);
+                            storeToContext(code, srcPd.cd, srcPd.altIndex);
                         }
+                        break;
+
+                    case "Specific->XvmPrimitive": {
+                        // we need to load the rest of the primitive returns from the context
+                        // if i == 0 then the first primitive value is already on the stack
+                        boolean doReturn = i == 0;
+                        int     index    = doReturn ? i + 1 : i;
+                        while (index < dstReturns.length
+                               && dstReturns[index].index == dstPd.index) {
+                            loadFromContext(code, dstReturns[index].cd,
+                                    dstReturns[index].altIndex);
+                            index++;
+                        }
+                        // skip over the returns we have processed from the context
+                        i = index - 1;
+
+                        box(code, dstPd.type);
+                        if (doReturn) {
+                            addReturn(code, srcPd.cd);
+                        } else {
+                            storeToContext(code, srcPd.cd, srcPd.altIndex);
+                        }
+                        break;
                     }
-                    throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
-                                                            "; dst=" + dstFlavor);
+
+                    default:
+                        throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
+                                                                "; dst=" + dstFlavor);
+                    }
                 }
             }
         });
