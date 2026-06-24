@@ -238,7 +238,12 @@ public class xNanosTimer
          */
         public GenericHandle elapsedDuration(Frame frame) {
             GenericHandle hDuration = new GenericHandle(s_clzDuration);
-            LongLong      llPicos   = new LongLong(elapsed(frame)).mul(PICOS_PER_NANO_LL);
+            LongLong      llPicos   = new LongLong(elapsed(frame)).mulChecked(PICOS_PER_NANO_LL);
+
+            if (llPicos == LongLong.OVERFLOW) {
+                // unimaginable scenario - replace with a practical infinity
+                llPicos = new LongLong(Long.MAX_VALUE);
+            }
 
             hDuration.setField(null, "picoseconds", xInt128.INSTANCE.makeHandle(llPicos));
             hDuration.makeImmutable();

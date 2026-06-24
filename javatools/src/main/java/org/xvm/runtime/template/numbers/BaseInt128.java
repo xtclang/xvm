@@ -31,15 +31,14 @@ import org.xvm.util.PackedInteger;
 
 
 /**
- * Abstract base for Int128 and UInt128.
+ * Abstract base for Int128 and UInt128.  All operations except "next" and "prev" are "unchecked".
  */
 public abstract class BaseInt128
         extends xIntNumber {
     public BaseInt128(Container container, ClassStructure structure, boolean fSigned) {
         super(container, structure, false);
 
-        f_fSigned  = fSigned;
-        f_fChecked = false;
+        f_fSigned = fSigned;
     }
 
     @Override
@@ -330,67 +329,34 @@ public abstract class BaseInt128
             return frame.assignValue(iReturn, hTarget);
         }
 
-        LongLong llr = ll.negate();
-        if (f_fChecked && llr == LongLong.OVERFLOW) {
-            return overflow(frame);
-        }
-
-        return frame.assignValue(iReturn, makeHandle(llr));
+        return frame.assignValue(iReturn, makeHandle(ll.negateUnchecked()));
     }
 
     @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn) {
-        if (f_fChecked && !f_fSigned) {
-            return overflow(frame);
-        }
-
         LongLong ll = ((LongLongHandle) hTarget).getValue();
-        LongLong llr = ll.negate();
-
-        if (f_fChecked && llr == LongLong.OVERFLOW) {
-            return overflow(frame);
-        }
-
-        return frame.assignValue(iReturn, makeHandle(llr));
+        return frame.assignValue(iReturn, makeHandle(ll.negateUnchecked()));
     }
 
     @Override
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         LongLong ll2 = ((LongLongHandle) hArg).getValue();
-        LongLong llr = f_fSigned ? ll1.add(ll2) : ll1.addUnsigned(ll2);
-
-        if (f_fChecked && llr == LongLong.OVERFLOW) {
-            return overflow(frame);
-        }
-
-        return frame.assignValue(iReturn, makeHandle(llr));
+        return frame.assignValue(iReturn, makeHandle(ll1.addUnchecked(ll2)));
     }
 
     @Override
     public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         LongLong ll2 = ((LongLongHandle) hArg).getValue();
-        LongLong llr = f_fSigned ?  ll1.sub(ll2) : ll1.subUnassigned(ll2);
-
-        if (f_fChecked && llr == LongLong.OVERFLOW) {
-            return overflow(frame);
-        }
-
-        return frame.assignValue(iReturn, makeHandle(llr));
+        return frame.assignValue(iReturn, makeHandle(ll1.subUnchecked(ll2)));
     }
 
     @Override
     public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         LongLong ll2 = ((LongLongHandle) hArg).getValue();
-        LongLong llr = f_fSigned ? ll1.mul(ll2) : ll1.mulUnsigned(ll2);
-
-        if (f_fChecked && llr == LongLong.OVERFLOW) {
-            return overflow(frame);
-        }
-
-        return frame.assignValue(iReturn, makeHandle(llr));
+        return frame.assignValue(iReturn, makeHandle(ll1.mulUnchecked(ll2)));
     }
 
     @Override
@@ -398,7 +364,7 @@ public abstract class BaseInt128
         LongLong ll = ((LongLongHandle) hTarget).getValue();
         LongLong llr = ll.prev(f_fSigned);
 
-        if (f_fChecked && llr == LongLong.OVERFLOW) {
+        if (llr == LongLong.OVERFLOW) {
             return overflow(frame);
         }
 
@@ -410,7 +376,7 @@ public abstract class BaseInt128
         LongLong ll = ((LongLongHandle) hTarget).getValue();
         LongLong llr = ll.next(f_fSigned);
 
-        if (f_fChecked && llr == LongLong.OVERFLOW) {
+        if (llr == LongLong.OVERFLOW) {
             return overflow(frame);
         }
 
@@ -426,10 +392,6 @@ public abstract class BaseInt128
             ? ll1.div(ll2)
             : ll1.divUnsigned(ll2);
 
-        if (f_fChecked && llDiv == LongLong.OVERFLOW) {
-            return overflow(frame);
-        }
-
         return frame.assignValue(iReturn, makeHandle(llDiv));
     }
 
@@ -441,10 +403,6 @@ public abstract class BaseInt128
         LongLong llMod = f_fSigned
             ? ll1.mod(ll2)
             : ll1.modUnsigned(ll2);
-
-        if (f_fChecked && llMod == LongLong.OVERFLOW) {
-            return overflow(frame);
-        }
 
         return frame.assignValue(iReturn, makeHandle(llMod));
     }
@@ -463,9 +421,6 @@ public abstract class BaseInt128
 
         LongLong llDiv = allQuoRem[0];
         LongLong llRem = allQuoRem[1];
-        if (f_fChecked && llDiv == LongLong.OVERFLOW) {
-            return overflow(frame);
-        }
         return frame.assignValues(aiReturn, makeHandle(llDiv), makeHandle(llRem));
     }
 
@@ -635,5 +590,4 @@ public abstract class BaseInt128
     }
 
     public final boolean f_fSigned;
-    public final boolean f_fChecked; // for now, it's always false
 }
