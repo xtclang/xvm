@@ -341,6 +341,12 @@ public class xIntLiteral
     }
 
     @Override
+    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
+        IntNHandle hLiteral = (IntNHandle) hTarget;
+        return frame.assignValue(iReturn, xInt64.makeHandle(hLiteral.getValue().hashCode()));
+    }
+
+    @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
         IntNHandle hLiteral = (IntNHandle) hTarget;
         return frame.assignValue(iReturn, hLiteral.getText());
