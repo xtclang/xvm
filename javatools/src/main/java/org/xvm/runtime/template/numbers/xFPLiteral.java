@@ -167,6 +167,13 @@ public class xFPLiteral
         return new FPNHandle(getCanonicalClass(), decValue, hText);
     }
 
+
+    @Override
+    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
+        FPNHandle hLiteral = (FPNHandle) hTarget;
+        return frame.assignValue(iReturn, xInt64.makeHandle(hLiteral.getValue().hashCode()));
+    }
+
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
         FPNHandle hLiteral = (FPNHandle) hTarget;
