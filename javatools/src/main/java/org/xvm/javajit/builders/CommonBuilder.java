@@ -3478,7 +3478,7 @@ public class CommonBuilder
 
     @Override
     public String toString() {
-        return thisId.getValueString();
+        return thisType.removeAccess().getValueString();
     }
 
     private final static String[] CLASS_WHITE_LIST = new String[] {

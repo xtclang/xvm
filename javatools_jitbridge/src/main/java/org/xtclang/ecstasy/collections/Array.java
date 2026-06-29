@@ -189,12 +189,8 @@ public abstract class Array
 
     // ----- nObj API ------------------------------------------------------------------------------
 
-    /**
-     * Note: It's expected that some subclasses (e.g. "Int[]") will know their type implicitly,
-     *       while others will need to add a field to hold the type (e.g. "Point[]").
-     */
     @Override public TypeConstant $xvmType(Ctx ctx) {
-        throw new UnsupportedOperationException("TODO");
+        return $isImmut() ? $type.freeze() : $type;
     }
 
     /**

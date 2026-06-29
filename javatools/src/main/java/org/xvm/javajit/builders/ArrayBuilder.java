@@ -123,10 +123,7 @@ public class ArrayBuilder extends AugmentingBuilder {
     @Override
     protected void doAssembleMethod(ClassBuilder classBuilder, BuildContext bctx, MethodInfo method,
                                     String jitName, MethodTypeDesc md, int flags) {
-        if (!isSpecialized && !isObjectArray) {
-            // generating code for the base Array, so generate the actual code
-            super.doAssembleMethod(classBuilder, bctx, method, jitName, md, flags);
-        } else {
+        if (isSpecialized || isObjectArray) {
             // generating code for a specialized array so generate a wrapper that calls the
             // method on the base array
             classBuilder.withMethod(jitName, md, flags, methodBuilder -> {
@@ -134,6 +131,9 @@ public class ArrayBuilder extends AugmentingBuilder {
                     methodBuilder.withCode(code -> generateSuperWrapper(md, bctx, code));
                 }
             });
+        } else {
+            // generate the actual code for the base Array
+            super.doAssembleMethod(classBuilder, bctx, method, jitName, md, flags);
         }
     }
 
@@ -214,5 +214,10 @@ public class ArrayBuilder extends AugmentingBuilder {
     protected void assembleNew(String className, ClassBuilder classBuilder,
                                MethodInfo constructor, String jitName, JitMethodDesc jmd) {
         // all constructors are native
+    }
+
+    @Override
+    protected void assembleXvmType(String className, ClassBuilder classBuilder) {
+        // Array.java implements "$xvmType(Ctx ctx)"
     }
 }
