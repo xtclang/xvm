@@ -30,15 +30,15 @@ public abstract class DecimalFPNumber
 
     @Override
     public String toString(Ctx ctx) {
-        return String.of(ctx, $toBigDecimal().toEngineeringString());
+        return String.of(ctx, toString());
     }
 
     public long estimateStringLength$p(Ctx ctx) {
-        return $toBigDecimal().toEngineeringString().length();
+        return toString().length();
     }
 
     public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
-        for (char c : $toBigDecimal().toEngineeringString().toCharArray()) {
+        for (char c : toString().toCharArray()) {
             appender = appender.add$p(ctx, c);
         }
         return appender;
@@ -614,7 +614,7 @@ public abstract class DecimalFPNumber
         if ($isFinite()) {
             return $isZero() && $isSigned()
                     ? "-0"
-                    : $toBigDecimal().stripTrailingZeros().toEngineeringString();
+                    : $toBigDecimal().toString();
         }
 
         if ($isInfinite()) {

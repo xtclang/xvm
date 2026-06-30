@@ -36,29 +36,29 @@ public class TestNumber {
     @Test
     public void test128Signed() {
         // add
-        assertEquals(new LongLong(1+2), new LongLong(1).add(new LongLong(2)), "1+2");
-        assertEquals(new LongLong(-1+2), new LongLong(-1).add(new LongLong(2)), "-1+2");
-        assertEquals(new LongLong(-1-2), new LongLong(-1).add(new LongLong(-2)), "-1-2");
-        assertEquals(new LongLong(MIN64, 0), new LongLong(MAX64).add(new LongLong(1)), "MAX64+1");
-        assertEquals(MIN128H, MAX128L.add(new LongLong(1)),"MAX64LOW+1");
-        assertEquals(MAX128L, MIN128H.add(new LongLong(-1)), "MIN128HIGH-1");
-        assertEquals(new LongLong(-1), MAX128.add(MIN128), "MAX+MIN");
+        assertEquals(new LongLong(1+2), new LongLong(1).addUnchecked(new LongLong(2)), "1+2");
+        assertEquals(new LongLong(-1+2), new LongLong(-1).addUnchecked(new LongLong(2)), "-1+2");
+        assertEquals(new LongLong(-1-2), new LongLong(-1).addUnchecked(new LongLong(-2)), "-1-2");
+        assertEquals(new LongLong(MIN64, 0), new LongLong(MAX64).addUnchecked(new LongLong(1)), "MAX64+1");
+        assertEquals(MIN128H, MAX128L.addUnchecked(new LongLong(1)),"MAX64LOW+1");
+        assertEquals(MAX128L, MIN128H.addUnchecked(new LongLong(-1)), "MIN128HIGH-1");
+        assertEquals(new LongLong(-1), MAX128.addUnchecked(MIN128), "MAX+MIN");
 
-        assertEquals(LongLong.OVERFLOW, MAX128.add(new LongLong(1)), "MAX+1");
-        assertEquals(LongLong.OVERFLOW, MAX128.add(MAX128), "MAX+MAX");
-        assertEquals(LongLong.OVERFLOW, MIN128.add(new LongLong(-1)), "MIN-1");
-        assertEquals(LongLong.OVERFLOW, MIN128.add(MIN128), "MIN+MIN");
+        assertEquals(LongLong.OVERFLOW, MAX128.addChecked(new LongLong(1)), "MAX+1");
+        assertEquals(LongLong.OVERFLOW, MAX128.addChecked(MAX128), "MAX+MAX");
+        assertEquals(LongLong.OVERFLOW, MIN128.addChecked(new LongLong(-1)), "MIN-1");
+        assertEquals(LongLong.OVERFLOW, MIN128.addChecked(MIN128), "MIN+MIN");
 
         // sub
-        assertEquals(new LongLong(2-1), new LongLong(2).sub(new LongLong(1)), "2-1");
-        assertEquals(new LongLong(-1+2), new LongLong(-1).sub(new LongLong(-2)), "-1+2");
-        assertEquals(new LongLong(-1-2), new LongLong(-1).sub(new LongLong(2)), "-1-2");
-        assertEquals(new LongLong(MIN64, 0), new LongLong(MAX64).sub(new LongLong(-1)), "MAX64+1");
-        assertEquals(MIN128H, MAX128L.sub(new LongLong(-1)), "MAX128LOW+1");
-        assertEquals(MAX128L, MIN128H.sub(new LongLong(1)), "MIN128HIGH-1");
+        assertEquals(new LongLong(2-1), new LongLong(2).subUnchecked(new LongLong(1)), "2-1");
+        assertEquals(new LongLong(-1+2), new LongLong(-1).subUnchecked(new LongLong(-2)), "-1+2");
+        assertEquals(new LongLong(-1-2), new LongLong(-1).subUnchecked(new LongLong(2)), "-1-2");
+        assertEquals(new LongLong(MIN64, 0), new LongLong(MAX64).subUnchecked(new LongLong(-1)), "MAX64+1");
+        assertEquals(MIN128H, MAX128L.subUnchecked(new LongLong(-1)), "MAX128LOW+1");
+        assertEquals(MAX128L, MIN128H.subUnchecked(new LongLong(1)), "MIN128HIGH-1");
 
-        assertEquals(LongLong.OVERFLOW, MAX128.sub(new LongLong(-1)), "MAX+1");
-        assertEquals(LongLong.OVERFLOW, MIN128.sub(new LongLong(1)), "MIN-1");
+        assertEquals(LongLong.OVERFLOW, MAX128.subChecked(new LongLong(-1)), "MAX+1");
+        assertEquals(LongLong.OVERFLOW, MIN128.subChecked(new LongLong(1)), "MIN-1");
     }
 
     @Test

@@ -7,7 +7,7 @@ import java.math.BigInteger;
 /**
  * 128 bit long implementation used by both Int128 and UInt128.
  *
- * TODO: optimize out BigInteger use for multiplication and division;
+ * TODO: optimize out BigInteger use for multiplication and division
  * @see <a href="https://mrob.com/pub/math/int128.c.txt">int128.c</a>
  */
 public class LongLong {
@@ -42,7 +42,7 @@ public class LongLong {
                 : m_lHigh == 0L;
     }
 
-    public LongLong add(LongLong ll) {
+    public LongLong addChecked(LongLong ll) {
         long l1L = m_lLow;
         long l1H = m_lHigh;
         long l2L = ll.m_lLow;
@@ -66,7 +66,7 @@ public class LongLong {
         return new LongLong(lrL, lrH);
     }
 
-    public LongLong addUnsigned(LongLong ll) {
+    public LongLong addUnsignedChecked(LongLong ll) {
         long l1L = m_lLow;
         long l1H = m_lHigh;
         long l2L = ll.m_lLow;
@@ -89,7 +89,23 @@ public class LongLong {
         return new LongLong(lrL, lrH);
     }
 
-    public LongLong sub(LongLong ll) {
+    public LongLong addUnchecked(LongLong ll) {
+        // unchecked Int128/UInt128 arithmetic wraps modulo 2^128
+        long l1L = m_lLow;
+        long l1H = m_lHigh;
+        long l2L = ll.m_lLow;
+        long l2H = ll.m_lHigh;
+        long lrL = l1L + l2L;
+        long lrH = l1H + l2H;
+
+        if (((l1L & l2L) | ((l1L | l2L) & ~lrL)) < 0) {
+            lrH++;
+        }
+
+        return new LongLong(lrL, lrH);
+    }
+
+    public LongLong subChecked(LongLong ll) {
         long l1L = m_lLow;
         long l1H = m_lHigh;
         long l2L = ll.m_lLow;
@@ -114,7 +130,7 @@ public class LongLong {
         return new LongLong(lrL, lrH);
     }
 
-    public LongLong subUnassigned(LongLong ll) {
+    public LongLong subUnsignedChecked(LongLong ll) {
         long l1L = m_lLow;
         long l1H = m_lHigh;
         long l2L = ll.m_lLow;
@@ -138,7 +154,23 @@ public class LongLong {
         return new LongLong(lrL, lrH);
     }
 
-    public LongLong mul(LongLong ll) {
+    public LongLong subUnchecked(LongLong ll) {
+        // unchecked Int128/UInt128 arithmetic wraps modulo 2^128
+        long l1L = m_lLow;
+        long l1H = m_lHigh;
+        long l2L = ll.m_lLow;
+        long l2H = ll.m_lHigh;
+        long lrL = l1L - l2L;
+        long lrH = l1H - l2H;
+
+        if (((~l1L & l2L) | ((~l1L | l2L) & lrL)) < 0) {
+            lrH--;
+        }
+
+        return new LongLong(lrL, lrH);
+    }
+
+    public LongLong mulChecked(LongLong ll) {
         BigInteger bi1 = toBigInteger();
         BigInteger bi2 = ll.toBigInteger();
         BigInteger bir = bi1.multiply(bi2);
@@ -148,7 +180,15 @@ public class LongLong {
             : OVERFLOW;
     }
 
-    public LongLong mulUnsigned(LongLong ll) {
+    public LongLong mulUnchecked(LongLong ll) {
+        BigInteger bi1 = toUnsignedBigInteger();
+        BigInteger bi2 = ll.toUnsignedBigInteger();
+
+        // keep only the low 128 bits of the product
+        return fromBigInteger(bi1.multiply(bi2).and(BIG_MASK128));
+    }
+
+    public LongLong mulUnsignedChecked(LongLong ll) {
         BigInteger bi1 = toUnsignedBigInteger();
         BigInteger bi2 = ll.toUnsignedBigInteger();
         BigInteger bir = bi1.multiply(bi2);
@@ -390,12 +430,18 @@ public class LongLong {
         return new LongLong(m_lLow - 1, m_lHigh);
     }
 
-    public LongLong negate() {
+    public LongLong negateChecked() {
         if (m_lHigh == Long.MIN_VALUE && m_lLow == 0) {
             return OVERFLOW;
         }
 
-        return complement().next(true);
+        long lLow = -m_lLow;
+        return new LongLong(lLow, ~m_lHigh + (lLow == 0 ? 1 : 0));
+    }
+
+    public LongLong negateUnchecked() {
+        long lLow = -m_lLow;
+        return new LongLong(lLow, ~m_lHigh + (lLow == 0 ? 1 : 0));
     }
 
     public LongLong and(LongLong ll) {
@@ -415,6 +461,8 @@ public class LongLong {
     }
 
     public LongLong shl(int n) {
+        // shifts on Int128/UInt128 use only the low seven bits of the count
+        n &= 0x7F;
         if (n < 64) {
             return n == 0
                 ? this
@@ -425,6 +473,8 @@ public class LongLong {
     }
 
     public LongLong shr(int n) {
+        // shifts on Int128 use only the low seven bits of the count
+        n &= 0x7F;
         if (n < 64) {
             return n == 0
                 ? this
@@ -435,6 +485,8 @@ public class LongLong {
     }
 
     public LongLong ushr(int n) {
+        // shifts on Int128/UInt128 use only the low seven bits of the count
+        n &= 0x7F;
         if (n < 64) {
             return n == 0
                 ? this
@@ -571,7 +623,8 @@ public class LongLong {
     public static final LongLong[] ZEROx2       = new LongLong[] {ZERO, ZERO};
     public static final LongLong[] OVERFLOWx2   = new LongLong[] {OVERFLOW, OVERFLOW};
 
-    protected static final BigInteger BIG_MASK64 = new BigInteger("FFFFFFFFFFFFFFFF", 16);
+    protected static final BigInteger BIG_MASK64  = new BigInteger("FFFFFFFFFFFFFFFF", 16);
+    protected static final BigInteger BIG_MASK128 = BigInteger.ONE.shiftLeft(128).subtract(BigInteger.ONE);
 
     protected final long m_lLow;
     protected final long m_lHigh;

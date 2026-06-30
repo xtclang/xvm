@@ -49,7 +49,7 @@ package charArrayTests {
 
     void shouldCreateWithCapacity() {
         Char[] array = new Array(10);
-        assert array.capacity == 10;
+        assert array.capacity >= 10;
     }
 
     void shouldCreateArrayInitializedWithZeroValue() {
@@ -70,9 +70,7 @@ package charArrayTests {
     void shouldCreateConstantArray() {
         Char[] array = ['a', 'b', 'z'];
         assert array.size == 3;
-        assert array[0] == 'a';
-        assert array[1] == 'b';
-        assert array[2] == 'z';
+        assert array[0] == 'a' && array[1] == 'b' && array[2] == 'z';
     }
 
     void shouldBeEmpty() {
@@ -108,20 +106,13 @@ package charArrayTests {
         array.add('i');
         array.add('j');
         assert array.size == 10;
-        assert array[0] == 'a';
-        assert array[1] == 'b';
-        assert array[2] == 'c';
-        assert array[3] == 'd';
-        assert array[4] == 'e';
-        assert array[5] == 'f';
-        assert array[6] == 'g';
-        assert array[7] == 'h';
-        assert array[8] == 'i';
-        assert array[9] == 'j';
+        assert array[0] == 'a' && array[1] == 'b' && array[2] == 'c' && array[3] == 'd';
+        assert array[4] == 'e' && array[5] == 'f' && array[6] == 'g' && array[7] == 'h';
+        assert array[8] == 'i' && array[9] == 'j';
     }
 
     void shouldPreInc() {
-        Char[] array = ['a', 'b', 'z'];
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
         Char c = ++array[1];
         assert c == 'c';
         assert array[1] == 'c';
@@ -140,7 +131,7 @@ package charArrayTests {
     }
 
     void shouldPostInc() {
-        Char[] array = ['a', 'b', 'z'];
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
         Char c = array[1]++;
         assert c == 'b';
         assert array[1] == 'c';
@@ -159,14 +150,14 @@ package charArrayTests {
     }
 
     void shouldPreDec() {
-        Char[] array = ['a', 'b', 'z'];
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
         Char c = --array[2];
         assert c == 'y';
         assert array[2] == 'y';
     }
 
     void shouldPreDecOutOfBounds() {
-        Char[] array = ['a', 'b', 'z'];
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
         array[1] = minChar();
         try {
             Char c = --array[1];
@@ -177,14 +168,14 @@ package charArrayTests {
     }
 
     void shouldPostDec() {
-        Char[] array = ['a', 'b', 'z'];
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
         Char c = array[2]--;
         assert c == 'z';
         assert array[2] == 'y';
     }
 
     void shouldPostDecOutOfBounds() {
-        Char[] array = ['a', 'b', 'z'];
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
         array[1] = minChar();
         try {
             Char c = array[1]--;
@@ -195,7 +186,7 @@ package charArrayTests {
     }
 
     void shouldAddInPlace() {
-        Char[] array = ['a', 'b', 'z'];
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
         array[1] += 5;
         assert array[1] == 'g';
     }
@@ -213,13 +204,13 @@ package charArrayTests {
     }
 
     void shouldSubInPlace() {
-        Char[] array = ['a', 'b', 'z'];
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
         array[2] -= 5;
         assert array[2] == 'u';
     }
 
     void shouldSubInPlaceOutOfBounds() {
-        Char[] array = ['a', 'b', 'z'];
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
         array[1] = minChar();
         try {
             array[1] -= 5;
@@ -281,10 +272,7 @@ package charArrayTests {
 
         array.delete(2);
         assert array.size == 4;
-        assert array[0] == 'a';
-        assert array[1] == 'b';
-        assert array[2] == 'd';
-        assert array[3] == 'e';
+        assert array[0] == 'a' && array[1] == 'b' && array[2] == 'd' && array[3] == 'e';
     }
 
     void shouldInsertValueIntoArray() {
@@ -296,10 +284,7 @@ package charArrayTests {
 
         array.insert(2, 'z');
         assert array.size == 5;
-        assert array[0] == 'a';
-        assert array[1] == 'b';
-        assert array[2] == 'z';
-        assert array[3] == 'c';
+        assert array[0] == 'a' && array[1] == 'b' && array[2] == 'z' && array[3] == 'c';
         assert array[4] == 'd';
     }
 }

@@ -54,7 +54,10 @@ public class ArrayᐸCharᐳ
      * @see {@link Array#$new$p}
      */
     public static ArrayᐸCharᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
-        assert !type.isImmutable();
+        if (type.isImmutable()) {
+            // an immutable array can use its own type to create a new array
+            type = type.removeImmutable();
+        }
 
         ctx.alloc(64); // REVIEW how big?
         ArrayᐸCharᐳ array = new ArrayᐸCharᐳ(ctx, type);
@@ -99,9 +102,11 @@ public class ArrayᐸCharᐳ
     public static ArrayᐸCharᐳ $new$2(Ctx ctx, TypeConstant type, Mutability mutability, IterableᐸCharᐳ elements) {
         long size = elements.size$get$p(ctx);
         ArrayᐸCharᐳ array = $new$p(ctx, type, size, false);
+        array.$mut($MUTABLE);
         for (IteratorᐸCharᐳ it = elements.iterator(ctx); it.next$p(ctx);) {
             array.add$p(ctx, ctx.i0);
         }
+        array.$mut((int) mutability.ordinal$get$p(ctx));
         return array;
     }
 

@@ -29,6 +29,11 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.text.xString;
 
 import org.xvm.type.Decimal;
+import org.xvm.type.Decimal32;
+import org.xvm.type.Decimal64;
+import org.xvm.type.Decimal128;
+
+import org.xvm.util.PackedInteger;
 
 
 /**
@@ -47,6 +52,9 @@ public abstract class BaseDecFP
         markNativeMethod("toInt64",   null, null);
         markNativeMethod("toFloat32", null, null);
         markNativeMethod("toFloat64", null, null);
+        markNativeMethod("toDec32",   null, null);
+        markNativeMethod("toDec64",   null, null);
+        markNativeMethod("toDec128",  null, null);
         markNativeMethod("toIntN",    null, null);
         markNativeMethod("toUIntN",   null, null);
         markNativeMethod("toFloatN",  null, null);
@@ -90,6 +98,12 @@ public abstract class BaseDecFP
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn) {
         switch (method.getName()) {
+        case "toIntN":
+            return convertToIntN(frame, ((DecimalHandle) hTarget).getValue(), hArg, iReturn);
+
+        case "toUIntN":
+            return convertToUIntN(frame, ((DecimalHandle) hTarget).getValue(), hArg, iReturn);
+
         case "add":
             return invokeAdd(frame, hTarget, hArg, iReturn);
 
@@ -154,19 +168,24 @@ public abstract class BaseDecFP
                 ? frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(dec.toBigDecimal().doubleValue()))
                 : overflow(frame);
 
+        case "toDec32":
+            return frame.assignValue(iReturn, xDec32.INSTANCE.makeHandle(toDec32(dec)));
+
+        case "toDec64":
+            return frame.assignValue(iReturn, xDec64.INSTANCE.makeHandle(toDec64(dec)));
+
+        case "toDec128":
+            return frame.assignValue(iReturn, xDec128.INSTANCE.makeHandle(toDec128(dec)));
+
         case "toInt64": {
-            ObjectHandle hTrunc = ahArg[0]; // TODO CP find all "hTrunc" and "fTruncate" and flip them to "check bounds"
+            boolean      fCheckBounds = ahArg[0] == xBoolean.TRUE;
             ObjectHandle hRound = ahArg[1];
 
             if (dec.isFinite()) {
-                int iMode = hRound == ObjectHandle.DEFAULT
-                    ? 3
-                    : ((EnumHandle) hRound).getOrdinal();
-                dec = dec.round(Rounding.values()[iMode].getMode());
-
-                BigInteger n  = dec.toBigDecimal().unscaledValue();
-                int        cb = (n.bitLength() + 7) / 8;
-                if (cb <= 8) {
+                BigInteger n = roundedInteger(dec, hRound);
+                if (!fCheckBounds ||
+                        n.compareTo(BigInteger.valueOf(Long.MIN_VALUE)) >= 0 &&
+                        n.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) <= 0) {
                     return frame.assignValue(iReturn, xInt64.makeHandle(n.longValue()));
                 }
             }
@@ -177,6 +196,10 @@ public abstract class BaseDecFP
 
         case "toIntN":
         case "toUIntN":
+            return method.getName().equals("toIntN")
+                    ? convertToIntN(frame, dec, ObjectHandle.DEFAULT, iReturn)
+                    : convertToUIntN(frame, dec, ObjectHandle.DEFAULT, iReturn);
+
         case "toFloatN":
         case "toDecN":
             throw new UnsupportedOperationException(); // TODO
@@ -392,6 +415,77 @@ public abstract class BaseDecFP
      */
     public int convertLong(Frame frame, long lValue, int iReturn) {
         return frame.assignValue(iReturn, makeHandle((double) lValue));
+    }
+
+    protected int convertToIntN(Frame frame, Decimal dec, ObjectHandle hRound, int iReturn) {
+        if (!dec.isFinite()) {
+            return overflow(frame);
+        }
+
+        return frame.assignValue(iReturn,
+                xIntN.INSTANCE.makeInt(new PackedInteger(roundedInteger(dec, hRound))));
+    }
+
+    protected int convertToUIntN(Frame frame, Decimal dec, ObjectHandle hRound, int iReturn) {
+        if (!dec.isFinite()) {
+            return overflow(frame);
+        }
+
+        BigInteger n = roundedInteger(dec, hRound);
+        if (n.signum() < 0) {
+            return overflow(frame);
+        }
+
+        return frame.assignValue(iReturn, xUIntN.INSTANCE.makeInt(new PackedInteger(n)));
+    }
+
+    protected BigInteger roundedInteger(Decimal dec, ObjectHandle hRound) {
+        int iMode = hRound == ObjectHandle.DEFAULT
+                ? 3
+                : ((EnumHandle) hRound).getOrdinal();
+        return dec.round(Rounding.values()[iMode].getMode()).toBigDecimal().toBigInteger();
+    }
+
+    protected Decimal32 toDec32(Decimal dec) {
+        if (!dec.isFinite()) {
+            return dec.isNaN()
+                    ? Decimal32.NaN
+                    : dec.isSigned() ? Decimal32.NEG_INFINITY : Decimal32.POS_INFINITY;
+        }
+
+        try {
+            return new Decimal32(dec.toBigDecimal());
+        } catch (Decimal.RangeException e) {
+            return (Decimal32) e.getDecimal();
+        }
+    }
+
+    protected Decimal64 toDec64(Decimal dec) {
+        if (!dec.isFinite()) {
+            return dec.isNaN()
+                    ? Decimal64.NaN
+                    : dec.isSigned() ? Decimal64.NEG_INFINITY : Decimal64.POS_INFINITY;
+        }
+
+        try {
+            return new Decimal64(dec.toBigDecimal());
+        } catch (Decimal.RangeException e) {
+            return (Decimal64) e.getDecimal();
+        }
+    }
+
+    protected Decimal128 toDec128(Decimal dec) {
+        if (!dec.isFinite()) {
+            return dec.isNaN()
+                    ? Decimal128.NaN
+                    : dec.isSigned() ? Decimal128.NEG_INFINITY : Decimal128.POS_INFINITY;
+        }
+
+        try {
+            return new Decimal128(dec.toBigDecimal());
+        } catch (Decimal.RangeException e) {
+            return (Decimal128) e.getDecimal();
+        }
     }
 
     /**

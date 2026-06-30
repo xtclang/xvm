@@ -668,7 +668,7 @@ public abstract class Decimal {
         if (isFinite()) {
             return isZero() && isSigned()
                 ? "-0"
-                : toBigDecimal().stripTrailingZeros().toEngineeringString();
+                : toBigDecimal().toString();
         }
 
         if (isInfinite()) {

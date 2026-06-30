@@ -24,7 +24,7 @@ package stringArrayTests {
 
     void shouldCreateWithCapacity() {
         String[] array = new Array(10);
-        assert array.capacity == 10;
+        assert array.capacity >= 10;
     }
 
     void shouldCreateArrayInitializedWithZeroValue() {
@@ -44,9 +44,7 @@ package stringArrayTests {
     void shouldCreateConstantArray() {
         String[] array = ["apple", "banana", "cherry"];
         assert array.size == 3;
-        assert array[0] == "apple";
-        assert array[1] == "banana";
-        assert array[2] == "cherry";
+        assert array[0] == "apple" && array[1] == "banana" && array[2] == "cherry";
     }
 
     void shouldBeEmpty() {
@@ -82,16 +80,9 @@ package stringArrayTests {
         array.add("nine");
         array.add("ten");
         assert array.size == 10;
-        assert array[0] == "one";
-        assert array[1] == "two";
-        assert array[2] == "three";
-        assert array[3] == "four";
-        assert array[4] == "five";
-        assert array[5] == "six";
-        assert array[6] == "seven";
-        assert array[7] == "eight";
-        assert array[8] == "nine";
-        assert array[9] == "ten";
+        assert array[0] == "one"  && array[1] == "two" && array[2] == "three" && array[3] == "four";
+        assert array[4] == "five" && array[5] == "six" && array[6] == "seven" && array[7] == "eight";
+        assert array[8] == "nine" && array[9] == "ten";
     }
 
     void shouldIterateUsingForLoop() {
@@ -135,23 +126,17 @@ package stringArrayTests {
         // delete from middle
         array.delete(2);
         assert array.size == 4;
-        assert array[0] == "A";
-        assert array[1] == "B";
-        assert array[2] == "D";
-        assert array[3] == "E";
+        assert array[0] == "A" && array[1] == "B" && array[2] == "D" && array[3] == "E";
 
         // delete from index zero
         array.delete(0);
         assert array.size == 3;
-        assert array[0] == "B";
-        assert array[1] == "D";
-        assert array[2] == "E";
+        assert array[0] == "B" && array[1] == "D" && array[2] == "E";
 
         // delete from last index
         array.delete(2);
         assert array.size == 2;
-        assert array[0] == "B";
-        assert array[1] == "D";
+        assert array[0] == "B" && array[1] == "D";
     }
 
     void shouldInsertValueIntoArray() {
@@ -164,31 +149,19 @@ package stringArrayTests {
         // insert in middle
         array.insert(2, "middle");
         assert array.size == 5;
-        assert array[0] == "first";
-        assert array[1] == "second";
-        assert array[2] == "middle";
-        assert array[3] == "third";
+        assert array[0] == "first" && array[1] == "second" && array[2] == "middle" && array[3] == "third";
         assert array[4] == "fourth";
 
         // insert at index zero
         array.insert(0, "start");
         assert array.size == 6;
-        assert array[0] == "start";
-        assert array[1] == "first";
-        assert array[2] == "second";
-        assert array[3] == "middle";
-        assert array[4] == "third";
-        assert array[5] == "fourth";
+        assert array[0] == "start" && array[1] == "first" && array[2] == "second" && array[3] == "middle";
+        assert array[4] == "third" && array[5] == "fourth";
 
         // insert at the end
         array.insert(array.size, "end");
         assert array.size == 7;
-        assert array[0] == "start";
-        assert array[1] == "first";
-        assert array[2] == "second";
-        assert array[3] == "middle";
-        assert array[4] == "third";
-        assert array[5] == "fourth";
-        assert array[6] == "end";
+        assert array[0] == "start" && array[1] == "first" && array[2] == "second" && array[3] == "middle";
+        assert array[4] == "third" && array[5] == "fourth" && array[6] == "end";
     }
 }

@@ -2,6 +2,7 @@ package org.xvm.runtime.template.numbers;
 
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
@@ -23,6 +24,13 @@ import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.text.xString;
 
+import org.xvm.type.Decimal;
+import org.xvm.type.Decimal32;
+import org.xvm.type.Decimal64;
+import org.xvm.type.Decimal128;
+
+import org.xvm.util.PackedInteger;
+
 
 /**
  * Base class for native BinaryFPNumber (Float16, 32, 64) support.
@@ -38,7 +46,9 @@ public abstract class BaseBinaryFP
         super.initNative();
 
         markNativeMethod("toInt64",   null, null);
+        markNativeMethod("toDec32",   null, null);
         markNativeMethod("toDec64",   null, null);
+        markNativeMethod("toDec128",  null, null);
         markNativeMethod("toFloat32", null, null);
         markNativeMethod("toFloat64", null, null);
         markNativeMethod("toIntN",    null, null);
@@ -70,6 +80,12 @@ public abstract class BaseBinaryFP
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn) {
         switch (method.getName()) {
+        case "toIntN":
+            return convertToIntN(frame, ((FloatHandle) hTarget).getValue(), hArg, iReturn);
+
+        case "toUIntN":
+            return convertToUIntN(frame, ((FloatHandle) hTarget).getValue(), hArg, iReturn);
+
         case "add":
             return invokeAdd(frame, hTarget, hArg, iReturn);
 
@@ -129,36 +145,30 @@ public abstract class BaseBinaryFP
         case "abs":
             return frame.assignValue(iReturn, makeHandle(Math.abs(d)));
 
-        case "toInt64": {
-            boolean  fCheckBound = ahArg[0] == xBoolean.TRUE;
-            Rounding rounding    = Rounding.values()[ahArg[1] == ObjectHandle.DEFAULT
-                                        ? 0
-                                        : ((EnumHandle) ahArg[1]).getOrdinal()];
-            if (fCheckBound && !Double.isFinite(d)) {
-                return overflow(frame);
-            }
+        case "toInt64":
+            return convertToInt64(frame, d, ahArg, iReturn);
 
-            long l = switch (rounding) {
-                case TiesToEven     -> (long) d;
-                case TiesToAway     -> d < 0 ? -Math.round(-d) : Math.round(d);
-                case TowardPositive -> (long) Math.ceil(d);
-                case TowardZero     -> (long) (d < 0 ? Math.ceil(d) : Math.floor(d));
-                case TowardNegative -> (long) Math.floor(d);
-            };
-            return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(l));
-        }
+        case "toDec32":
+            return frame.assignValue(iReturn, xDec32.INSTANCE.makeHandle(toDec32(d)));
 
         case "toDec64":
-            return frame.assignValue(iReturn, xDec64.INSTANCE.makeHandle(d));
+            return frame.assignValue(iReturn, xDec64.INSTANCE.makeHandle(toDec64(d)));
+
+        case "toDec128":
+            return frame.assignValue(iReturn, xDec128.INSTANCE.makeHandle(toDec128(d)));
 
         case "toFloat32":
             return frame.assignValue(iReturn, xFloat32.INSTANCE.makeHandle(d));
 
         case "toFloat64":
-            return frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(d));
+            return frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(toFloat64(d)));
 
         case "toIntN":
         case "toUIntN":
+            return method.getName().equals("toIntN")
+                    ? convertToIntN(frame, d, ObjectHandle.DEFAULT, iReturn)
+                    : convertToUIntN(frame, d, ObjectHandle.DEFAULT, iReturn);
+
         case "toFloatN":
         case "toDecN":
             throw new UnsupportedOperationException(); // TODO
@@ -369,6 +379,111 @@ public abstract class BaseBinaryFP
      */
     public int convertLong(Frame frame, long lValue, int iReturn) {
         return frame.assignValue(iReturn, makeHandle((double) lValue));
+    }
+
+    protected int convertToInt64(Frame frame, double d, ObjectHandle[] ahArg, int iReturn) {
+        boolean fCheckBound = ahArg[0] == xBoolean.TRUE;
+        if (!Double.isFinite(d)) {
+            if (fCheckBound) {
+                return overflow(frame);
+            }
+
+            Rounding rounding = Rounding.values()[ahArg[1] == ObjectHandle.DEFAULT
+                ? 0
+                : ((EnumHandle) ahArg[1]).getOrdinal()];
+            long l = switch (rounding) {
+                case TiesToEven     -> (long) Math.rint(d);
+                case TiesToAway     -> (long) (d < 0 ? Math.floor(d) : Math.ceil(d));
+                case TowardPositive -> (long) Math.ceil(d);
+                case TowardZero     -> (long) (d < 0 ? Math.ceil(d) : Math.floor(d));
+                case TowardNegative -> (long) Math.floor(d);
+            };
+            return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(l));
+        }
+
+        BigInteger n = roundedInteger(d, ahArg[1]);
+        return fCheckBound && n.bitLength() >= Long.SIZE
+                ? overflow(frame)
+                : frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(n.longValue()));
+    }
+
+    protected int convertToIntN(Frame frame, double d, ObjectHandle hRound, int iReturn) {
+        if (!Double.isFinite(d)) {
+            return overflow(frame);
+        }
+
+        return frame.assignValue(iReturn,
+                xIntN.INSTANCE.makeInt(new PackedInteger(roundedInteger(d, hRound))));
+    }
+
+    protected int convertToUIntN(Frame frame, double d, ObjectHandle hRound, int iReturn) {
+        if (!Double.isFinite(d)) {
+            return overflow(frame);
+        }
+
+        BigInteger n = roundedInteger(d, hRound);
+        if (n.signum() < 0) {
+            return overflow(frame);
+        }
+
+        return frame.assignValue(iReturn, xUIntN.INSTANCE.makeInt(new PackedInteger(n)));
+    }
+
+    protected BigInteger roundedInteger(double d, ObjectHandle hRound) {
+        int iMode = hRound == ObjectHandle.DEFAULT
+                ? 3
+                : ((EnumHandle) hRound).getOrdinal();
+        return toBigDecimal(d).setScale(0, Rounding.values()[iMode].getMode()).toBigInteger();
+    }
+
+    protected BigDecimal toBigDecimal(double d) {
+        return new BigDecimal(toString(d));
+    }
+
+    protected Decimal32 toDec32(double d) {
+        if (!Double.isFinite(d)) {
+            return Double.isNaN(d)
+                    ? Decimal32.NaN
+                    : d < 0 ? Decimal32.NEG_INFINITY : Decimal32.POS_INFINITY;
+        }
+
+        try {
+            return new Decimal32(new BigDecimal(toString(d)));
+        } catch (Decimal.RangeException e) {
+            return (Decimal32) e.getDecimal();
+        }
+    }
+
+    protected Decimal64 toDec64(double d) {
+        if (!Double.isFinite(d)) {
+            return Double.isNaN(d)
+                    ? Decimal64.NaN
+                    : d < 0 ? Decimal64.NEG_INFINITY : Decimal64.POS_INFINITY;
+        }
+
+        try {
+            return new Decimal64(new BigDecimal(toString(d)));
+        } catch (Decimal.RangeException e) {
+            return (Decimal64) e.getDecimal();
+        }
+    }
+
+    protected Decimal128 toDec128(double d) {
+        if (!Double.isFinite(d)) {
+            return Double.isNaN(d)
+                    ? Decimal128.NaN
+                    : d < 0 ? Decimal128.NEG_INFINITY : Decimal128.POS_INFINITY;
+        }
+
+        try {
+            return new Decimal128(new BigDecimal(toString(d)));
+        } catch (Decimal.RangeException e) {
+            return (Decimal128) e.getDecimal();
+        }
+    }
+
+    protected double toFloat64(double d) {
+        return d;
     }
 
     /**

@@ -183,6 +183,7 @@ public abstract class LongLongDelegate
 
         if (lIndex < cSize - 1) {
             System.arraycopy(alValue, nIndex + 2, alValue, nIndex, 2*cSize - nIndex - 2);
+            nIndex = 2*cSize;
         }
 
         alValue[nIndex]   = 0;

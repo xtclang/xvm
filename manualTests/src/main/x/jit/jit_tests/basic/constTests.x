@@ -115,6 +115,7 @@ package constTests {
         testConstWithUInt128HashCode();
         testConstWithUInt128ShouldBeStringable();
 
+        // +++ TODO: these tests fail under the interpreter
         testClassHierarchyEqualsConstWithNoOwnProps();
         testClassHierarchyEqualsConstWithOwnProps();
         testClassHierarchyCompareConstWithNoOwnProps();
@@ -122,6 +123,7 @@ package constTests {
         testClassHierarchyHashCodeConstWithNoOwnProps();
         testClassHierarchyHashCodeConstWithOwnProps();
         testConstHierarchyWithNoOwnPropsIsStringable();
+        // ---
 
         testConstHierarchyEqualsConstWithNoOwnProps();
         testConstHierarchyEqualsConstWithOwnProps();
@@ -131,9 +133,11 @@ package constTests {
         testConstHierarchyHashCodeConstWithOwnProps();
         testConstHierarchyWithWithOwnPropsIsStringable();
 
+        // +++ TODO: these tests fail under the interpreter
         testTestConstWithNotComparableProp();
         testConstWithNotOrderableProp();
         testConstWithNotHashableProp();
+        // ---
 
         testConstWithServiceIsStringable();
         testConstWithNullablePropIsStringable();

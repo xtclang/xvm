@@ -95,11 +95,6 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     // ----- Array API -----------------------------------------------------------------------------
 
-    @Override
-    public TypeConstant $xvmType(Ctx ctx) {
-        return $isImmut() ? $type.freeze() : $type;
-    }
-
     @Override public long capacity$get$p(Ctx ctx) {
         return $delegate == null
                 ? $storage == null ? $capCfg(ctx) : $storageCapacity()
@@ -488,6 +483,10 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
     }
 
     public void setElement$pi(Ctx ctx, long index, long value) {
+        if ($isImmut()) {
+            throw $ro(ctx);
+        }
+
         if ($delegate != null) {
             $delegate.setElement$pi(ctx, index, value);
             return;

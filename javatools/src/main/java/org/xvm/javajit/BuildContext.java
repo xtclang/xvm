@@ -1609,125 +1609,67 @@ public class BuildContext {
             //  - NullablePrimitive -> Primitive  (Int? n = 5; assert call(n);)
             //  - NullablePrimitive -> Specific   (Int? n = Null; assert call(n);)
 
-            boolean invalid = false;
+            switch (srcFlavor.name() + "->" + dstFlavor.name()) {
+            case "Specific->Primitive",
+                 "Specific->XvmPrimitive":
+                Builder.unbox(code, typeTo);
+                break;
 
-            AddTransformation:
-            switch (srcFlavor) {
-            case Specific:
-                switch (dstFlavor) {
-                case Primitive, XvmPrimitive:
-                    Builder.unbox(code, typeTo);
-                    break AddTransformation;
+            case "Specific->Widened",
+                 "Specific->Ref":
+                // nothing to do
+                break;
 
-                case Widened, Ref:
-                    // nothing to do
-                    break AddTransformation;
+            case "Specific->NullablePrimitive":
+                assert typeFrom.isOnlyNullable();
+                code.pop(); // throw away Null; load the default value and "true"
+                Builder.defaultLoad(code, regTo.cd());
+                code.iconst_1();
+                break;
 
-                case NullablePrimitive:
-                    assert typeFrom.isOnlyNullable();
-                    code.pop(); // throw away Null; load the default value and "true"
-                    Builder.defaultLoad(code, regTo.cd());
-                    code.iconst_1();
-                    break AddTransformation;
-
-                case NullableXvmPrimitive:
-                    assert typeFrom.isOnlyNullable();
-                    code.pop(); // throw away Null; load the default values and "true"
-                    for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(typeTo)) {
-                        Builder.defaultLoad(code, cd);
-                    }
-                    code.iconst_1();
-                    break AddTransformation;
-
-                default:
-                    invalid = true;
-                    break AddTransformation;
+            case "Specific->NullableXvmPrimitive":
+                assert typeFrom.isOnlyNullable();
+                code.pop(); // throw away Null; load the default values and "true"
+                for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(typeTo)) {
+                    Builder.defaultLoad(code, cd);
                 }
+                code.iconst_1();
+                break;
 
-            case Primitive:
-                switch (dstFlavor) {
-                case Specific, Widened:
-                    Builder.box(code, typeFrom);
-                    break AddTransformation;
+            case "Primitive->Specific",
+                 "Primitive->Widened":
+                Builder.box(code, typeFrom);
+                break;
 
-                case NullablePrimitive:
-                    // the value is already on Java stack; just load "false"
-                    code.iconst_0();
-                    break AddTransformation;
+            case "Primitive->NullablePrimitive",
+                 "XvmPrimitive->NullableXvmPrimitive":
+                // the value is already on Java stack; just load "false"
+                code.iconst_0();
+                break;
 
-                default:
-                    invalid = true;
-                    break AddTransformation;
-                }
+            case "Widened->Specific":
+                // we must have added "checkcast" above already
+                assert allowUpcast;
+                break;
 
-            case Widened:
-                switch (dstFlavor) {
-                case Specific:
-                    // we must have added "checkcast" above already
-                    assert allowUpcast;
-                    break AddTransformation;
+            case "NullablePrimitive->Specific":
+                assert typeTo.isOnlyNullable();
+                code.pop();
+                Builder.loadNull(code);
+                break;
 
-                default:
-                    invalid = true;
-                    break AddTransformation;
-                }
+            case "NullablePrimitive->Primitive",
+                 "NullableXvmPrimitive->XvmPrimitive":
+                // the boolean and the value(s) are on the Java stack; just pop the boolean
+                code.pop();
+                break;
 
-            case NullablePrimitive:
-                switch (dstFlavor) {
-                case Specific:
-                    assert typeTo.isOnlyNullable();
-                    code.pop();
-                    Builder.loadNull(code);
-                    break AddTransformation;
-
-                case Primitive:
-                    // the boolean and the value are on the Java stack; just pop the boolean
-                    code.pop();
-                    break AddTransformation;
-
-                default:
-                    invalid = true;
-                    break AddTransformation;
-                }
-
-            case XvmPrimitive:
-                switch (dstFlavor) {
-                case Specific:
-                    Builder.box(code, typeTo);
-                    break AddTransformation;
-
-                case NullableXvmPrimitive:
-                    // the value is already on Java stack; just load "false"
-                    code.iconst_0();
-                    break AddTransformation;
-
-                default:
-                    invalid = true;
-                    break AddTransformation;
-                }
-
-            case NullableXvmPrimitive:
-                switch (dstFlavor) {
-                    case Specific:
-                        Builder.box(code, typeTo);
-                        break AddTransformation;
-
-                    case XvmPrimitive:
-                        // the boolean and the values are on the Java stack; just pop the boolean
-                        code.pop();
-                        break AddTransformation;
-
-                    default:
-                        invalid = true;
-                        break AddTransformation;
-                }
+            case "XvmPrimitive->Specific",
+                 "NullableXvmPrimitive->Specific":
+                Builder.box(code, typeTo);
+                break;
 
             default:
-                invalid = true;
-                break;
-            }
-
-            if (invalid) {
                 throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
                                                         "; dst=" + dstFlavor);
             }
@@ -1904,134 +1846,119 @@ public class BuildContext {
             //  - Primitive -> Widened            (Int n; f(n) with f(Int|String))
             //  - Primitive -> NullablePrimitive  (Int n; f(n) with f(Int?))
             //  - NullablePrimitive -> Specific   (Int? n; f(n) with f(Object)
-            switch (srcFlavor) {
-            case Specific:
-                switch (dstFlavor) {
-                case SpecificWithDefault:
-                    // nothing to do
-                    continue;
+            switch (srcFlavor.name() + "->" + dstFlavor.name()) {
+            case "Specific->SpecificWithDefault":
+            case "Widened->Specific",
+                 "Widened->SpecificWithDefault",
+                 "Widened->WidenedWithDefault":
+                // nothing to do
+                continue;
 
-                case Widened, WidenedWithDefault:
-                    if (srcReg.type().isJitInterface()) {
-                        code.checkcast(CD_nObj);
-                    }
-                    continue;
-
-                case NullablePrimitive, NullablePrimitiveWithDefault:
-                    assert srcReg.type().isOnlyNullable();
-                    code.pop(); // throw away Null; load the default value and "true"
-                    Builder.defaultLoad(code, pd.cd);
-                    code.iconst_1();
-                    continue;
-
-                case NullableXvmPrimitive, NullableXvmPrimitiveWithDefault:
-                    assert srcReg.type().isOnlyNullable();
-                    code.pop(); // throw away Null; load the default primitive values and "true"
-                    int[] anIndexes = jmd.getAllOptimizedParams(pd.index);
-                    // the last opt arg will be the boolean flag, fill the others with the default
-                    for (int nIndex = 0; nIndex < anIndexes.length - 1; nIndex++) {
-                        Builder.defaultLoad(code, jmd.optimizedParams[anIndexes[nIndex]].cd);
-                    }
-                    // add the boolean "true" (same as int "1") to indicate Null
-                    code.iconst_1();
-                    continue;
+            case "Specific->Widened",
+                 "Specific->WidenedWithDefault":
+                if (srcReg.type().isJitInterface()) {
+                    code.checkcast(CD_nObj);
                 }
-                break;
+                continue;
 
-            case Widened:
-                switch (dstFlavor) {
-                case Specific, SpecificWithDefault, WidenedWithDefault:
-                    // nothing to do
-                    continue;
+            case "Specific->NullablePrimitive",
+                 "Specific->NullablePrimitiveWithDefault":
+                assert srcReg.type().isOnlyNullable();
+                code.pop(); // throw away Null; load the default value and "true"
+                Builder.defaultLoad(code, pd.cd);
+                code.iconst_1();
+                continue;
+
+            case "Specific->NullableXvmPrimitive",
+                 "Specific->NullableXvmPrimitiveWithDefault": {
+                assert srcReg.type().isOnlyNullable();
+                code.pop(); // throw away Null; load the default primitive values and "true"
+                int[] anIndexes = jmd.getAllOptimizedParams(pd.index);
+                // the last opt arg will be the boolean flag, fill the others with the default
+                for (int nIndex = 0; nIndex < anIndexes.length - 1; nIndex++) {
+                    Builder.defaultLoad(code, jmd.optimizedParams[anIndexes[nIndex]].cd);
                 }
-                break;
-
-            case Primitive:
-                switch (dstFlavor) {
-                case Specific, SpecificWithDefault, Widened, WidenedWithDefault:
-                    assert Builder.isJitAssignable(srcReg.type(), pd.type);
-                    Builder.box(code, srcReg.type());
-                    continue;
-
-                case NullablePrimitive, PrimitiveWithDefault, NullablePrimitiveWithDefault:
-                    // loadArgument() has already loaded the value; just load "false"
-                    code.iconst_0();
-                    continue;
-                }
-                break;
-
-            case NullablePrimitive:
-                switch (dstFlavor) {
-                case Specific, SpecificWithDefault, Widened, WidenedWithDefault: {
-                    // loadArgument() has already loaded the value and the boolean
-                    Label ifTrue = code.newLabel();
-                    Label endIf  = code.newLabel();
-
-                    code.ifne(ifTrue);
-                    Builder.box(code, srcReg.type().removeNullable());
-                    code.goto_(endIf)
-                        .labelBinding(ifTrue);
-                    Builder.pop(code, srcReg.cd());
-                    Builder.loadNull(code);
-                    code.labelBinding(endIf);
-                    continue;
-                }
-
-                case Primitive:
-                    assert !srcReg.type().isOnlyNullable();
-                    // pop the nullable flag
-                    code.pop();
-                    continue;
-
-                case NullablePrimitiveWithDefault:
-                    // loadArgument() has already loaded an int representing a boolean value; both
-                    // 0 and 1 will work as expected (-1 representing a default is never coming in)
-                    continue;
-                }
-                break;
-
-            case XvmPrimitive:
-                switch (dstFlavor) {
-                case Specific, SpecificWithDefault, Widened, WidenedWithDefault:
-                    assert Builder.isJitAssignable(srcReg.type(), pd.type);
-                    Builder.box(code, srcReg.type());
-                    continue;
-
-                case NullableXvmPrimitive, XvmPrimitiveWithDefault, NullableXvmPrimitiveWithDefault:
-                    // loadArgument() has already loaded the value; just load "false"
-                    code.iconst_0();
-                    continue;
-                }
-                break;
-
-            case NullableXvmPrimitive:
-                switch (dstFlavor) {
-                case Specific, SpecificWithDefault, Widened, WidenedWithDefault:
-                    // loadArgument() has already loaded the value and the boolean
-                    Label ifTrue = code.newLabel();
-                    Label endIf  = code.newLabel();
-
-                    code.ifne(ifTrue);
-                    Builder.box(code, srcReg.type().removeNullable());
-                    code.goto_(endIf)
-                            .labelBinding(ifTrue);
-                    for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(srcReg.type())) {
-                        Builder.pop(code, cd);
-                    }
-                    Builder.loadNull(code);
-                    code.labelBinding(endIf);
-                    continue;
-
-                case XvmPrimitive:
-                    assert !srcReg.type().isOnlyNullable();
-                    // pop the nullable flag
-                    code.pop();
-                    continue;
-                }
-                break;
+                // add the boolean "true" (same as int "1") to indicate Null
+                code.iconst_1();
+                continue;
             }
-            throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
-                                                    "; dst=" + dstFlavor);
+
+            case "Primitive->Specific",
+                 "Primitive->SpecificWithDefault",
+                 "Primitive->Widened",
+                 "Primitive->WidenedWithDefault",
+                 "XvmPrimitive->Specific",
+                 "XvmPrimitive->SpecificWithDefault",
+                 "XvmPrimitive->Widened",
+                 "XvmPrimitive->WidenedWithDefault":
+                assert Builder.isJitAssignable(srcReg.type(), pd.type);
+                Builder.box(code, srcReg.type());
+                continue;
+
+            case "Primitive->NullablePrimitive",
+                 "Primitive->PrimitiveWithDefault",
+                 "Primitive->NullablePrimitiveWithDefault",
+                 "XvmPrimitive->NullableXvmPrimitive",
+                 "XvmPrimitive->XvmPrimitiveWithDefault",
+                 "XvmPrimitive->NullableXvmPrimitiveWithDefault":
+                // loadArgument() has already loaded the value; just load "false"
+                code.iconst_0();
+                continue;
+
+            case "NullablePrimitive->Specific",
+                 "NullablePrimitive->SpecificWithDefault",
+                 "NullablePrimitive->Widened",
+                 "NullablePrimitive->WidenedWithDefault": {
+                // loadArgument() has already loaded the value and the boolean
+                Label ifTrue = code.newLabel();
+                Label endIf  = code.newLabel();
+
+                code.ifne(ifTrue);
+                Builder.box(code, srcReg.type().removeNullable());
+                code.goto_(endIf)
+                    .labelBinding(ifTrue);
+                Builder.pop(code, srcReg.cd());
+                Builder.loadNull(code);
+                code.labelBinding(endIf);
+                continue;
+            }
+
+            case "NullablePrimitive->Primitive",
+                 "NullableXvmPrimitive->XvmPrimitive":
+                assert !srcReg.type().isOnlyNullable();
+                // pop the nullable flag
+                code.pop();
+                continue;
+
+            case "NullablePrimitive->NullablePrimitiveWithDefault":
+                // loadArgument() has already loaded an int representing a boolean value; both
+                // 0 and 1 will work as expected (-1 representing a default is never coming in)
+                continue;
+
+            case "NullableXvmPrimitive->Specific",
+                 "NullableXvmPrimitive->SpecificWithDefault",
+                 "NullableXvmPrimitive->Widened",
+                 "NullableXvmPrimitive->WidenedWithDefault": {
+                // loadArgument() has already loaded the value and the boolean
+                Label ifTrue = code.newLabel();
+                Label endIf  = code.newLabel();
+
+                code.ifne(ifTrue);
+                Builder.box(code, srcReg.type().removeNullable());
+                code.goto_(endIf)
+                        .labelBinding(ifTrue);
+                for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(srcReg.type())) {
+                    Builder.pop(code, cd);
+                }
+                Builder.loadNull(code);
+                code.labelBinding(endIf);
+                continue;
+            }
+
+            default:
+                throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
+                                                        "; dst=" + dstFlavor);
+            }
         }
     }
 
@@ -2427,157 +2354,96 @@ public class BuildContext {
             //  - NullablePrimitive -> Primitive  (Int? n = 5; assert call(n);)
             //  - NullablePrimitive -> Specific   (Int? n = Null; assert call(n);)
 
-            boolean invalid = false;
+            switch (srcFlavor.name() + "->" + dstFlavor.name()) {
+            case "Specific->Primitive",
+                 "Specific->XvmPrimitive" ->
+                Builder.unbox(code, pd.type);
 
-            AddTransformation:
-            switch (srcFlavor) {
-            case Specific:
-                switch (dstFlavor) {
-                case Primitive, XvmPrimitive:
+            case "Specific->Widened" -> {} // nothing to do
+
+            case "Specific->NullablePrimitive" -> {
+                if (srcType.isOnlyNullable()) {
+                    code.pop(); // throw away Null; load the default value and "true"
+                    Builder.defaultLoad(code, pd.cd);
+                    code.iconst_1();
+                } else {
                     Builder.unbox(code, pd.type);
-                    break AddTransformation;
-
-                case Widened:
-                    // nothing to do
-                    break AddTransformation;
-
-                case NullablePrimitive:
-                    if (srcType.isOnlyNullable()) {
-                        code.pop(); // throw away Null; load the default value and "true"
-                        Builder.defaultLoad(code, pd.cd);
-                        code.iconst_1();
-                    } else {
-                        Builder.unbox(code, pd.type);
-                        code.iconst_0();
-                    }
-                    break AddTransformation;
-
-                case NullableXvmPrimitive:
-                    if (srcType.isOnlyNullable()) {
-                        code.pop(); // throw away Null; load the default values and "true"
-                        for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(pd.type)) {
-                            Builder.defaultLoad(code, cd);
-                        }
-                        code.iconst_1();
-                    } else {
-                        Builder.unbox(code, pd.type);
-                        code.iconst_0();
-                    }
-                    break AddTransformation;
-
-                default:
-                    invalid = true;
-                    break AddTransformation;
-                }
-
-            case Widened:
-                switch (dstFlavor) {
-                case Specific: {
-                    TypeConstant dstType = propInfo.getType();
-                    if (!Builder.isJitAssignable(srcType, dstType)) {
-                        code.checkcast(builder.ensureClassDesc(dstType));
-                    }
-                    break AddTransformation;
-                }
-
-                case Primitive, XvmPrimitive:
-                    builder.generateCheckCast(code, pd.type);
-                    Builder.unbox(code, pd.type);
-                    break AddTransformation;
-
-                default:
-                    invalid = true;
-                    break AddTransformation;
-                }
-
-            case Primitive:
-                switch (dstFlavor) {
-                case Specific, Widened:
-                    Builder.box(code, srcType);
-                    break AddTransformation;
-
-                case NullablePrimitive:
-                    // the value is already on Java stack; just load "false"
                     code.iconst_0();
-                    break AddTransformation;
-
-                default:
-                    invalid = true;
-                    break AddTransformation;
                 }
-
-            case NullablePrimitive:
-                switch (dstFlavor) {
-                case Specific, Widened:
-                    Label ifNull = code.newLabel();
-                    Label endIf  = code.newLabel();
-
-                    code.ifne(ifNull);
-                    Builder.box(code, srcType);
-                    code.goto_(endIf)
-                        .labelBinding(ifNull);
-                    Builder.pop(code, builder, srcType);
-                    Builder.loadNull(code);
-                    code.labelBinding(endIf);
-                    break AddTransformation;
-
-                case Primitive:
-                    code.pop(); // throw away boolean null flag;
-                    break AddTransformation;
-
-                default:
-                    invalid = true;
-                    break AddTransformation;
-                }
-
-            case XvmPrimitive:
-                switch (dstFlavor) {
-                case Specific, Widened:
-                    Builder.box(code, srcType);
-                    break AddTransformation;
-
-                case NullableXvmPrimitive:
-                    // the value is already on the Java stack; just load "false"
-                    code.iconst_0();
-                    break AddTransformation;
-
-                default:
-                    invalid = true;
-                    break AddTransformation;
-                }
-
-            case NullableXvmPrimitive:
-                switch (dstFlavor) {
-                    case Specific, Widened:
-                        Label ifNull = code.newLabel();
-                        Label endIf  = code.newLabel();
-
-                        code.ifne(ifNull);
-                        Builder.box(code, srcType);
-                        code.goto_(endIf)
-                            .labelBinding(ifNull);
-                        for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(srcType)) {
-                            Builder.pop(code, cd);
-                        }
-                        Builder.loadNull(code);
-                        code.labelBinding(endIf);
-                        break AddTransformation;
-
-                    case XvmPrimitive:
-                        code.pop(); // throw away boolean null flag;
-                        break AddTransformation;
-
-                    default:
-                        invalid = true;
-                        break AddTransformation;
-                }
-
-            default:
-                invalid = true;
-                break;
             }
 
-            if (invalid) {
+            case "Specific->NullableXvmPrimitive" -> {
+                if (srcType.isOnlyNullable()) {
+                    code.pop(); // throw away Null; load the default values and "true"
+                    for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(pd.type)) {
+                        Builder.defaultLoad(code, cd);
+                    }
+                    code.iconst_1();
+                } else {
+                    Builder.unbox(code, pd.type);
+                    code.iconst_0();
+                }
+            }
+
+            case "Widened->Specific" -> {
+                TypeConstant dstType = propInfo.getType();
+                if (!Builder.isJitAssignable(srcType, dstType)) {
+                    code.checkcast(builder.ensureClassDesc(dstType));
+                }
+            }
+
+            case "Widened->Primitive",
+                 "Widened->XvmPrimitive" -> {
+                builder.generateCheckCast(code, pd.type);
+                Builder.unbox(code, pd.type);
+            }
+
+            case "Primitive->Specific",
+                 "Primitive->Widened",
+                 "XvmPrimitive->Specific",
+                 "XvmPrimitive->Widened" ->
+                Builder.box(code, srcType);
+
+            case "Primitive->NullablePrimitive",
+                 "XvmPrimitive->NullableXvmPrimitive" ->
+                // the value is already on Java stack; just load "false"
+                code.iconst_0();
+
+            case "NullablePrimitive->Specific",
+                 "NullablePrimitive->Widened" -> {
+                Label ifNull = code.newLabel();
+                Label endIf  = code.newLabel();
+
+                code.ifne(ifNull);
+                Builder.box(code, srcType);
+                code.goto_(endIf)
+                    .labelBinding(ifNull);
+                Builder.pop(code, builder, srcType);
+                Builder.loadNull(code);
+                code.labelBinding(endIf);
+            }
+
+            case "NullablePrimitive->Primitive",
+                 "NullableXvmPrimitive->XvmPrimitive" ->
+                code.pop(); // throw away boolean null flag;
+
+            case "NullableXvmPrimitive->Specific",
+                 "NullableXvmPrimitive->Widened" -> {
+                Label ifNull = code.newLabel();
+                Label endIf  = code.newLabel();
+
+                code.ifne(ifNull);
+                Builder.box(code, srcType);
+                code.goto_(endIf)
+                    .labelBinding(ifNull);
+                for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(srcType)) {
+                    Builder.pop(code, cd);
+                }
+                Builder.loadNull(code);
+                code.labelBinding(endIf);
+            }
+
+            default ->
                 throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
                                                         "; dst=" + dstFlavor);
             }
@@ -2669,60 +2535,51 @@ public class BuildContext {
 
             JitTypeDesc tdDest     = destType.getJitDesc(builder);
             JitFlavor   destFlavor = tdDest.flavor;
-            boolean     invalid    = false;
+            JitFlavor   retFlavor  = pdRet.flavor;
+            String      transform  = retFlavor.name() + "->" + destFlavor.name();
 
             if (i == 0) {
-                switch (pdRet.flavor) {
-                case Primitive: {
+                switch (transform) {
+                case "Primitive->Specific",
+                     "Primitive->Widened" -> {
                     assert isOptimized;
-                    switch (destFlavor) {
-                    case Specific, Widened:
-                        Builder.box(code, destType);
-                        break;
-
-                    case Primitive:
-                        // nothing to do
-                        break;
-
-                    default:
-                        invalid = true;
-                        break;
-                    }
-                    break;
+                    Builder.box(code, destType);
                 }
 
-                case NullablePrimitive: {
+                case "Primitive->Primitive" -> {
                     assert isOptimized;
-                    JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
+                    // nothing to do
+                }
+
+                case "NullablePrimitive->NullablePrimitive" -> {
+                    assert isOptimized;
+                    JitParamDesc pdExt = jmd.optimizedReturns[iOpt + 1];
+
+                    // if the value is `True`, then the return value is Ecstasy `Null`
+                    Builder.loadFromContext(code, CD_boolean, pdExt.altIndex);
+                }
+
+                case "NullablePrimitive->Specific",
+                     "NullablePrimitive->Widened" -> {
+                    assert isOptimized;
+                    JitParamDesc pdExt = jmd.optimizedReturns[iOpt + 1];
 
                     // if the value is `True`, then the return value is Ecstasy `Null`
                     Builder.loadFromContext(code, CD_boolean, pdExt.altIndex);
 
-                    switch (destFlavor) {
-                    case NullablePrimitive:
-                        // nothing to do
-                        break;
-
-                    case Specific, Widened:
-                        Label ifTrue = code.newLabel();
-                        Label endIf  = code.newLabel();
-                        code.ifne(ifTrue);
-                        Builder.box(code, destType);
-                        code.goto_(endIf)
-                                .labelBinding(ifTrue);
-                        Builder.pop(code, pdRet.cd);
-                        Builder.loadNull(code);
-                        code.labelBinding(endIf);
-                        break;
-
-                    default:
-                        invalid = true;
-                        break;
-                    }
-                    break;
+                    Label ifTrue = code.newLabel();
+                    Label endIf = code.newLabel();
+                    code.ifne(ifTrue);
+                    Builder.box(code, destType);
+                    code.goto_(endIf)
+                        .labelBinding(ifTrue);
+                    Builder.pop(code, pdRet.cd);
+                    Builder.loadNull(code);
+                    code.labelBinding(endIf);
                 }
 
-                case XvmPrimitive: {
+                case "XvmPrimitive->Specific",
+                     "XvmPrimitive->Widened" -> {
                     assert isOptimized;
                     // process the remaining primitives by loading from the context
                     int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
@@ -2730,110 +2587,99 @@ public class BuildContext {
                         JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
                         Builder.loadFromContext(code, retDesc.cd, retIndex);
                     }
-
-                    switch (destFlavor) {
-                    case Specific, Widened:
-                        Builder.box(code, destType);
-                        break;
-
-                    case XvmPrimitive:
-                        // nothing to do
-                        break;
-
-                    default:
-                        invalid = true;
-                        break;
-                    }
-                    break;
+                    Builder.box(code, destType);
                 }
-
-                case NullableXvmPrimitive: {
+                case "XvmPrimitive->XvmPrimitive" -> {
+                    assert isOptimized;
+                    // process the remaining primitives by loading from the context
+                    int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                    for (int j = 1, retIndex = 0; j < optIndexes.length; j++, retIndex++) {
+                        JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
+                        Builder.loadFromContext(code, retDesc.cd, retIndex);
+                    }
+                }
+                case "NullableXvmPrimitive->Specific",
+                     "NullableXvmPrimitive->Widened" -> {
                     assert isOptimized;
                     int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
 
-                    switch (destFlavor) {
-                    case Specific, Widened:
-                        Builder.loadFromContext(code, CD_boolean, optIndexes[optIndexes.length - 1]);
-                        Label ifTrue = code.newLabel();
-                        Label endIf = code.newLabel();
-                        code.ifne(ifTrue);
-                        for (int j = 1, retIndex = 0; j < optIndexes.length - 1; j++, retIndex++) {
-                            JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
-                            Builder.loadFromContext(code, retDesc.cd, retIndex);
-                        }
-                        Builder.box(code, destType);
-                        code.goto_(endIf).labelBinding(ifTrue);
-                        Builder.pop(code, jmd.optimizedReturns[0].cd);
-                        Builder.loadNull(code);
-                        code.labelBinding(endIf);
-                        break;
-
-                    case NullableXvmPrimitive:
-                        for (int j = 1, retIndex = 0; j < optIndexes.length; j++, retIndex++) {
-                            JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
-                            Builder.loadFromContext(code, retDesc.cd, retIndex);
-                        }
-                        break;
-
-                    default:
-                        invalid = true;
-                        break;
+                    Builder.loadFromContext(code, CD_boolean, optIndexes[optIndexes.length - 1]);
+                    Label ifTrue = code.newLabel();
+                    Label endIf = code.newLabel();
+                    code.ifne(ifTrue);
+                    for (int j = 1, retIndex = 0; j < optIndexes.length - 1; j++, retIndex++) {
+                        JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
+                        Builder.loadFromContext(code, retDesc.cd, retIndex);
                     }
-                    break;
+                    Builder.box(code, destType);
+                    code.goto_(endIf).labelBinding(ifTrue);
+                    Builder.pop(code, jmd.optimizedReturns[0].cd);
+                    Builder.loadNull(code);
+                    code.labelBinding(endIf);
                 }
 
-                case Specific:
-                    switch (destFlavor) {
-                    case Specific: {
-                        TypeConstant retType = pdRet.type;
-                        if (retType.isAutoNarrowing() || !retType.equals(destType)) {
-                            builder.generateCheckCast(code, destType);
-                        }}
-                        break;
-
-                    case Widened:
-                        // nothing to do
-                        break;
-
-                    case Primitive:
-                        builder.generateCheckCast(code, destType);
-                        Builder.unbox(code, destType);
-                        break;
-
-                    case NullablePrimitive, NullableXvmPrimitive:
-                        TypeConstant typeSansNull = destType.removeNullable();
-                        Builder.unboxNullable(code, destType, builder.ensureClassDesc(typeSansNull));
-                        break;
-
-                    default:
-                        invalid = true;
-                        break;
+                case "NullableXvmPrimitive->NullableXvmPrimitive" -> {
+                    assert isOptimized;
+                    int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                    for (int j = 1, retIndex = 0; j < optIndexes.length; j++, retIndex++) {
+                        JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
+                        Builder.loadFromContext(code, retDesc.cd, retIndex);
                     }
-                    break;
+                }
+
+                case "Specific->Specific" -> {
+                    TypeConstant retType = pdRet.type;
+                    if (retType.isAutoNarrowing() || !retType.equals(destType)) {
+                        builder.generateCheckCast(code, destType);
+                    }
+                }
+
+                case "Specific->Widened",
+                     "Widened->Specific",
+                     "Widened->Widened" -> {
+                    // nothing to do
+                }
+
+                case "Specific->Primitive" -> {
+                    builder.generateCheckCast(code, destType);
+                    Builder.unbox(code, destType);
+                }
+
+                case "Specific->NullablePrimitive",
+                     "Specific->NullableXvmPrimitive" -> {
+                    TypeConstant typeSansNull = destType.removeNullable();
+                    Builder.unboxNullable(code, destType, builder.ensureClassDesc(typeSansNull));
+                }
+
+                default ->
+                    throw new UnsupportedOperationException("cannot store return flavor "
+                            + retFlavor + " into " + destFlavor);
                 }
             } else {
-                switch (pdRet.flavor) {
-                case Primitive: {
+                switch (transform) {
+                case "Primitive->Specific",
+                     "Primitive->Widened" -> {
                     assert isOptimized;
                     Builder.loadFromContext(code, tdDest.cd, pdRet.altIndex);
-
-                    switch (destFlavor) {
-                    case Specific, Widened:
-                        Builder.box(code, destType);
-                        break;
-
-                    case Primitive:
-                        // nothing to do
-                        break;
-
-                    default:
-                        invalid = true;
-                        break;
-                    }
-                    break;
+                    Builder.box(code, destType);
                 }
 
-                case NullablePrimitive: {
+                case "Primitive->Primitive" -> {
+                    assert isOptimized;
+                    Builder.loadFromContext(code, tdDest.cd, pdRet.altIndex);
+                }
+
+                case "NullablePrimitive->NullablePrimitive"-> {
+                    assert isOptimized;
+                    JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
+
+                    Builder.loadFromContext(code, tdDest.cd, pdRet.altIndex);
+                    Builder.loadFromContext(code, pdExt.cd, pdExt.altIndex);
+                    // if the value is `True`, then the return value is Ecstasy `Null`
+                }
+
+                case "NullablePrimitive->Specific",
+                     "NullablePrimitive->Widened" -> {
                     assert isOptimized;
                     JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
 
@@ -2841,31 +2687,19 @@ public class BuildContext {
                     Builder.loadFromContext(code, pdExt.cd, pdExt.altIndex);
                     // if the value is `True`, then the return value is Ecstasy `Null`
 
-                    switch (destFlavor) {
-                    case NullablePrimitive:
-                        // nothing to do
-                        break;
-
-                    case Specific, Widened:
-                        Label ifTrue = code.newLabel();
-                        Label endIf  = code.newLabel();
-                        code.ifeq(ifTrue);
-                        Builder.box(code, destType);
-                        code.goto_(endIf);
-                        code.labelBinding(ifTrue)
-                            .pop();
-                        Builder.loadNull(code);
-                        code.labelBinding(endIf);
-                        break;
-
-                    default:
-                        invalid = true;
-                        break;
-                    }
-                    break;
+                    Label ifTrue = code.newLabel();
+                    Label endIf  = code.newLabel();
+                    code.ifeq(ifTrue);
+                    Builder.box(code, destType);
+                    code.goto_(endIf);
+                    code.labelBinding(ifTrue)
+                        .pop();
+                    Builder.loadNull(code);
+                    code.labelBinding(endIf);
                 }
 
-                case XvmPrimitive: {
+                case "XvmPrimitive->Specific",
+                     "XvmPrimitive->Widened" -> {
                     assert isOptimized;
                     // process the remaining primitives by loading from the context
                     int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
@@ -2873,66 +2707,63 @@ public class BuildContext {
                         JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
                         Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
                     }
-
-                    switch (destFlavor) {
-                    case Specific, Widened:
-                        Builder.box(code, destType);
-                        break;
-
-                    case XvmPrimitive:
-                        // nothing to do
-                        break;
-
-                    default:
-                        invalid = true;
-                        break;
-                    }
-                    break;
+                    Builder.box(code, destType);
                 }
 
-                case NullableXvmPrimitive: {
+                case "XvmPrimitive->XvmPrimitive" -> {
+                    assert isOptimized;
+                    // process the remaining primitives by loading from the context
+                    int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                    for (int optIndex : optIndexes) {
+                        JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
+                        Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
+                    }
+                }
+
+                case "NullableXvmPrimitive->Specific",
+                     "NullableXvmPrimitive->Widened" -> {
                     assert isOptimized;
                     int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
 
-                    switch (destFlavor) {
-                    case Specific, Widened:
-                        Builder.loadFromContext(code, CD_boolean, optIndexes[optIndexes.length - 1]);
-                        Label ifTrue = code.newLabel();
-                        Label endIf  = code.newLabel();
-                        code.iconst_0().if_icmpeq(ifTrue);
-                        for (int optIndex : optIndexes) {
-                            JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
-                            Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
-                        }
-                        Builder.box(code, destType);
-                        code.goto_(endIf);
-                        code.labelBinding(ifTrue);
-                        Builder.loadNull(code);
-                        code.labelBinding(endIf);
-
-                    case NullableXvmPrimitive:
-                        for (int optIndex : optIndexes) {
-                            JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
-                            Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
-                        }
-                        break;
-
-                    default:
-                        invalid = true;
-                        break;
+                    Builder.loadFromContext(code, CD_boolean, optIndexes[optIndexes.length - 1]);
+                    Label ifTrue = code.newLabel();
+                    Label endIf  = code.newLabel();
+                    code.iconst_0().if_icmpeq(ifTrue);
+                    for (int optIndex : optIndexes) {
+                        JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
+                        Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
                     }
-                    break;
+                    Builder.box(code, destType);
+                    code.goto_(endIf);
+                    code.labelBinding(ifTrue);
+                    Builder.loadNull(code);
+                    code.labelBinding(endIf);
+
+                    for (int optIndex : optIndexes) {
+                        JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
+                        Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
+                    }
                 }
 
-                default:
+                case "NullableXvmPrimitive->NullableXvmPrimitive" -> {
+                    assert isOptimized;
+                    int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                    for (int optIndex : optIndexes) {
+                        JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
+                        Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
+                    }
+                }
+
+                case "Specific->Specific",
+                     "Specific->Widened",
+                     "Widened->Specific",
+                     "Widened->Widened" ->
                     Builder.loadFromContext(code, tdDest.cd, pdRet.altIndex);
-                    break;
-                }
-            }
 
-            if (invalid) {
-                throw new UnsupportedOperationException("cannot store return flavor "
-                        + pdRet.flavor + " into " + destFlavor);
+                default ->
+                    throw new UnsupportedOperationException("cannot store return flavor "
+                            + retFlavor + " into " + destFlavor);
+                }
             }
 
             storeValue(code, regId, destType);

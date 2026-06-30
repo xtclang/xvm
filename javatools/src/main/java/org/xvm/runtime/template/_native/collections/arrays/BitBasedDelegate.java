@@ -115,16 +115,16 @@ public abstract class BitBasedDelegate
         if (isSet(hValue)) {
             int ix = index(cSize - 1);
             if (ix > 0) {
-                Arrays.fill(ab, 0, ix - 1, (byte) 1);
+                Arrays.fill(ab, 0, ix, (byte) 0xFF);
             }
 
             ab[ix] = tailMask(cSize - 1);
 
             if (ix + 1 < ab.length) {
-                Arrays.fill(ab, ix + 1, ab.length - 1, (byte) 0);
+                Arrays.fill(ab, ix + 1, ab.length, (byte) 0);
             }
         } else {
-            Arrays.fill(ab, 0, ab.length - 1, (byte) 0);
+            Arrays.fill(ab, 0, ab.length, (byte) 0);
         }
 
         hDelegate.m_cSize = cSize;
@@ -192,8 +192,9 @@ public abstract class BitBasedDelegate
         hDelegate.m_cSize++;
 
         if (lIndex < cSize) {
-            for (long i = lIndex + 1; i < cSize; i++) {
-                setBit(abValue, i, getBit(abValue, i-1));
+            // shift backward so each source bit is read before it is overwritten
+            for (long i = cSize; i > lIndex; --i) {
+                setBit(abValue, i, getBit(abValue, i - 1));
             }
         }
         setBit(abValue, lIndex, isSet(hElement));
@@ -379,7 +380,7 @@ public abstract class BitBasedDelegate
      * @return the tail mask (all zeros pass the bit's position)
      */
     public static byte tailMask(long iBit) {
-        return (byte) (0x80 >> (iBit & 0x7));
+        return (byte) (0xFF << (7 - (iBit & 0x7)));
     }
 
 
