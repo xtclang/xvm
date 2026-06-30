@@ -50,7 +50,7 @@ public interface RegisterInfo {
      * @return the jit type for XTC register
      */
     default TypeConstant jitType() {
-        return type().getCanonicalJitType();
+        return type().getCallableJitType();
     }
 
     /**

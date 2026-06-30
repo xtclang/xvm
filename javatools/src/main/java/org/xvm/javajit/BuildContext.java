@@ -118,7 +118,7 @@ public class BuildContext {
         this.className     = className;
         this.typeInfo      = typeInfo;
         this.thisType      = typeInfo.getType();
-        this.jitType       = thisType.getCanonicalJitType();
+        this.jitType       = thisType.getCallableJitType();
         this.callChain     = methodInfo.getChain();
         this.methodStruct  = callChain[0].getMethodStructure();
         this.callDepth     = 0;
@@ -142,7 +142,7 @@ public class BuildContext {
         this.className     = className;
         this.typeInfo      = typeInfo;
         this.thisType      = typeInfo.getType();
-        this.jitType       = thisType.getCanonicalJitType();
+        this.jitType       = thisType.getCallableJitType();
         this.callDepth     = 0;
         this.callChain     = isGetter
                 ? propInfo.ensureOptimizedGetChain(typeInfo, null)

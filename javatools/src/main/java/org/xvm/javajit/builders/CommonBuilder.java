@@ -31,6 +31,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -93,7 +94,7 @@ public class CommonBuilder
         this.structInfo    = thisType.ensureAccess(Access.STRUCT).ensureTypeInfo();
         this.thisId        = classStruct.getIdentityConstant();
         this.isInterface   = classStruct.getFormat() == Format.INTERFACE;
-        this.jitType       = thisType.getCanonicalJitType();
+        this.jitType       = thisType.getCallableJitType();
         this.isSpecialized = jitType.isParamsSpecified() &&
                             !jitType.equals(classStruct.getCanonicalType());
     }
@@ -159,6 +160,99 @@ public class CommonBuilder
     }
 
     @Override
+    public void assembleClassOfClass(String className, ClassBuilder classBuilder) {
+        // generated code example:
+        //      class cPerson extends Class implements Replicable {
+        //          public cPerson(Ctx ctx, TypeConstant publicType) {
+        //              super(ctx, publicType);
+        //      }
+        //
+        classBuilder.withSuperclass(CD_Class);
+
+        // the only reason we would build a class of Class is if the original class implements
+        // any funky interfaces in which case we need to generate corresponding routing methods
+
+        Set<ClassDesc>   interfaces = new HashSet<>();
+        List<MethodInfo> virtCtors  = new ArrayList<>();
+        List<MethodInfo> funkyImpls = new ArrayList<>();
+        for (MethodInfo method : typeInfo.getMethods().values()) {
+            IdentityConstant ifaceId;
+            if (method.getVirtualConstructor() instanceof MethodBody virtCtor) {
+                ifaceId = virtCtor.getIdentity().getNamespace();
+                virtCtors.add(method);
+            } else if (method.getAbstractFunction() instanceof MethodBody funkyBody) {
+                ifaceId = funkyBody.getIdentity().getNamespace();
+                funkyImpls.add(method);
+            } else {
+                continue;
+            }
+            interfaces.add(ensureClassDesc(ifaceId.getType()));
+        }
+
+        if (interfaces.isEmpty()) {
+            throw new IllegalStateException("Failed to find funky interface");
+        }
+        classBuilder.withInterfaceSymbols(interfaces.toArray(new ClassDesc[0]));
+
+        // add the constructor
+        MethodTypeDesc initMD = MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant);
+        classBuilder.withMethodBody(INIT_NAME, initMD, ClassFile.ACC_PUBLIC, code ->
+            code.aload(0)
+                .aload(1)
+                .aload(2)
+                .invokespecial(CD_Class, INIT_NAME, initMD)
+                .return_());
+
+        TypeConstant targetType = typeInfo.getType();
+        ClassDesc    targetCD   = ensureClassDesc(targetType);
+        for (MethodInfo method : funkyImpls) {
+            MethodBody funkyBody = method.getAbstractFunction();
+            // TODO:
+        }
+
+        for (MethodInfo method : virtCtors) {
+            MethodBody virtCtor = method.getVirtualConstructor();
+
+            // generate a routing implementation; for example for a "Person" class:
+            //      class Person implements Replicable {}
+            // we need to add a method on "cPerson" class:
+            //      Person $new() {return new Person();}
+
+            if (method.isCapped()) {
+                String     name1   = method.ensureJitMethodName(typeSystem);
+                MethodInfo method2 = typeInfo.getNarrowingMethod(method);
+                String     name2   = method2.ensureJitMethodName(typeSystem);
+
+                int q = 0;
+            }
+            String jitName = virtCtor.getIdentity().
+                    ensureJitMethodName(typeSystem).replace("construct", NEW);
+            JitMethodDesc jmd = Builder.convertConstructToNew(typeInfo, targetCD,
+                    (JitCtorDesc) method.getJitDesc(this, targetType));
+
+            MethodTypeDesc md;
+            int            count;
+            if (jmd.isOptimized) {
+                jitName += OPT;
+                md    = jmd.optimizedMD;
+                count = jmd.getImplicitParamCount() + jmd.optimizedParams.length;
+            } else {
+                md    = jmd.standardMD;
+                count = jmd.getImplicitParamCount() + jmd.standardParams.length;
+            }
+
+            final String _jitName = jitName;
+            classBuilder.withMethodBody(jitName, md, ClassFile.ACC_PUBLIC, code -> {
+                for (int i = 0; i < count; i++) {
+                    load(code, md.parameterType(i), code.parameterSlot(i));
+                }
+                code.invokestatic(targetCD, _jitName, md)
+                    .areturn();
+            });
+        }
+    }
+
+    @Override
     public void assemblePure(String className, ClassBuilder classBuilder) {
         // assemblePureClass(className, classBuilder);
         // assemblePureProperties(className, classBuilder);
@@ -180,6 +274,12 @@ public class CommonBuilder
         // see assembleStaticInitializer()
         ClassDesc CD_this = ClassDesc.of(className);
         code.getstatic(CD_this, "$type" + index, CD_TypeConstant);
+
+        if (type.containsFormalType(true)) {
+           // TODO: it appears that we're missing type resolution logic; for  example if the passed
+           //       in type is Array<Element>, we need to resolve it against "$type" at some point;
+           //       should we have call "resolveGeneric(pool, type)" right here?
+        }
     }
 
     /**
@@ -274,7 +374,16 @@ public class CommonBuilder
      * Assemble interfaces for the "Impl" shape.
      */
     protected void assembleImplInterfaces(ClassBuilder classBuilder) {
-        List<ClassDesc> interfaces  = new ArrayList<>();
+        List<ClassDesc> interfaces = new ArrayList<>();
+
+//        // specialized interfaces always extend canonical ones (e.g. List<Int> extends List)
+//        if (isSpecialized && classStruct.getFormat() == Format.INTERFACE) {
+//            TypeConstant canonicalType = classStruct.getIdentityConstant().getType();
+//            if (shouldAddInterface(canonicalType)) {
+//                interfaces.add(getCallableClassDesc(canonicalType));
+//            }
+//        }
+
         for (Contribution contrib : typeInfo.getContributionList()) {
             switch (contrib.getComposition()) {
                 case Implements:
@@ -592,7 +701,7 @@ public class CommonBuilder
 
                     TypeConstant type       = prop.getType();
                     TypeConstant baseType   = type.removeNullable();
-                    ClassDesc    cdProp     = type.ensureClassDesc(typeSystem);
+                    ClassDesc    cdProp     = type.getCallableClassDesc(typeSystem);
                     RegisterInfo reg        = loadConstant(code, prop.getInitialValue());
                     String       jitName    = prop.getIdentity()
                                                   .ensureJitPropertyName(typeSystem);
@@ -1150,7 +1259,8 @@ public class CommonBuilder
             JitMethodDesc jmDesc = method.getJitDesc(this);
             assembleMethod(className, classBuilder, method, jitName, jmDesc);
 
-            if (method.isCtorOrValidator() && !typeInfo.isAbstract()) {
+            if (!typeInfo.isAbstract() && method.isCtorOrValidator() ||
+                    isInterface && method.isVirtualConstructor()) {
                 String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
                 JitMethodDesc newDesc = Builder.convertConstructToNew(typeInfo,
                                             ClassDesc.of(className), (JitCtorDesc) jmDesc);
@@ -3255,13 +3365,24 @@ public class CommonBuilder
         boolean   hasType     = typeInfo.hasGenericTypes();
         ClassDesc CD_this     = ClassDesc.of(className);
 
-        // Note: the "$init" is a virtual method for singletons and "$new" is static otherwise;
-        //       see assembleStaticInitializer()
         int flags = ClassFile.ACC_PUBLIC;
+
+        // Note: the "$init" is a virtual method for singletons, "$new" is virtual for virtual
+        // constructors and static otherwise
+
+        if (isInterface && constructor.isVirtualConstructor()) {
+            flags |= ClassFile.ACC_ABSTRACT;
+
+            classBuilder.withMethod(jitName, jmd.standardMD, flags, code -> {});
+            if (jmd.isOptimized) {
+                classBuilder.withMethod(jitName+OPT, jmd.optimizedMD, flags, code -> {});
+            }
+            return;
+        }
+
         if (!isSingleton) {
             flags |= ClassFile.ACC_STATIC;
         }
-
         MethodTypeDesc md;
         if (jmd.isOptimized) {
             assembleMethodWrapper(className, classBuilder, jitName, jmd, true);
@@ -3417,12 +3538,17 @@ public class CommonBuilder
             md = jmd.standardMD;
         }
 
+        MakeStatic:
         if (method.isFunction() || method.isCtorOrValidator()) {
-            if (method.isAbstract() && classStruct.getFormat() == Format.INTERFACE) {
-                // this must be a funky interface method; just ignore
-                return;
+            if (isInterface) {
+                if (method.isAbstractFunction()) {
+                    // this is a funky interface method; create a virtual method declaration
+                    break MakeStatic;
+                } else if (method.isVirtualConstructor()) {
+                    // virtual constructors only generate the "new$" virtual method declarations
+                    return;
+                }
             }
-
             flags |= ClassFile.ACC_STATIC;
         }
 
@@ -3492,7 +3618,7 @@ public class CommonBuilder
         }
 
         if (SKIP_SET.add(bctx.className)) {
-            System.err.println("*** Skipping code gen for " + bctx.className);
+            // System.err.println("*** Skipping code gen for " + bctx.className);
         }
         defaultLoad(code, md.returnType());
         addReturn(code, md.returnType());

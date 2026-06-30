@@ -9,12 +9,14 @@ import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.TypeSystem;
@@ -219,5 +221,38 @@ public class ArrayBuilder extends AugmentingBuilder {
     @Override
     protected void assembleXvmType(String className, ClassBuilder classBuilder) {
         // Array.java implements "$xvmType(Ctx ctx)"
+    }
+
+    // ----- helper methods-------------------------------------------------------------------------
+
+    /**
+     * @return an array class name for the specified element type
+     */
+    public static String getArrayName(TypeConstant typeEl) {
+        IdentityConstant idEl = typeEl.getSingleUnderlyingClass(false);
+
+        return switch (idEl.getName()) {
+            case "Bit"      -> Builder.N_ArrayBit;
+            case "Boolean"  -> Builder.N_ArrayBoolean;
+            case "Char"     -> Builder.N_ArrayChar;
+            case "Dec32"    -> Builder.N_ArrayDec32;
+            case "Dec64"    -> Builder.N_ArrayDec64;
+            case "Dec128"   -> Builder.N_ArrayDec128;
+            case "Float16"  -> Builder.N_ArrayFloat16;
+            case "Float32"  -> Builder.N_ArrayFloat32;
+            case "Float64"  -> Builder.N_ArrayFloat64;
+            case "Nibble"   -> Builder.N_ArrayNibble;
+            case "Int8"     -> Builder.N_ArrayInt8;
+            case "Int16"    -> Builder.N_ArrayInt16;
+            case "Int32"    -> Builder.N_ArrayInt32;
+            case "Int64"    -> Builder.N_ArrayInt64;
+            case "Int128"   -> Builder.N_ArrayInt128;
+            case "UInt8"    -> Builder.N_ArrayUInt8;
+            case "UInt16"   -> Builder.N_ArrayUInt16;
+            case "UInt32"   -> Builder.N_ArrayUInt32;
+            case "UInt64"   -> Builder.N_ArrayUInt64;
+            case "UInt128"  -> Builder.N_ArrayUInt128;
+            default         -> throw new UnsupportedOperationException();
+        };
     }
 }

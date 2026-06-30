@@ -300,13 +300,13 @@ public class TypeSystem {
             Builder builder   = ensureBuilder(art);
             Consumer<? super ClassBuilder> handler = classBuilder -> {
                 switch (art.shape) {
-                case Impl:
+                case Impl, Enum:
                     classBuilder.with(SourceFileAttribute.of(art.clz.getSourceFileName()));
                     builder.assembleImpl(className, classBuilder);
                     break;
 
-                case Enum:
-                    builder.assembleImpl(className, classBuilder);
+                case Class:
+                    builder.assembleClassOfClass(className, classBuilder);
                     break;
 
                 case Exception:
@@ -314,7 +314,7 @@ public class TypeSystem {
                     break;
 
                 default:
-                    throw new UnsupportedOperationException();
+                    throw new UnsupportedOperationException("Unsupported shape " + art.shape);
                 }
             };
 
@@ -481,12 +481,27 @@ public class TypeSystem {
      * @return the JIT name of the `Enumeration` class
      */
     public static String enumerationClass(String name) {
+        return flavorClassName(name, ENUM);
+    }
+
+    /**
+     * Build a class name for the `Class` class of the specific already-escaped class name.
+     *
+     * @param name  the JIT name of the class of Class
+     *
+     * @return the JIT name of the `Class` class
+     */
+    public static String classOfClass(String name) {
+        return flavorClassName(name, CLASS);
+    }
+
+    private static String flavorClassName(String name, char flavor) {
         int offset = max(name.lastIndexOf('.'), name.lastIndexOf('$')) + 1;
         return new StringBuilder(name.length() + ENUM > 0xFFFF ? 2 : 1)
-                .append(name, 0, offset)
-                .appendCodePoint(ENUM)
-                .append(name, offset, name.length())
-                .toString();
+            .append(name, 0, offset)
+            .appendCodePoint(flavor)
+            .append(name, offset, name.length())
+            .toString();
     }
 
     /**

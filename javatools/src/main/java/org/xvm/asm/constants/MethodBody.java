@@ -777,7 +777,7 @@ public class MethodBody {
                 isCtorOrValidator() && !typeContainer.removeAccess().equals(m_typeJmdContainer)) {
             MethodStructure   method = getClassifyingMethodStructure();
             SignatureConstant sig    = method.resolveSignature(
-                                            builder.pool(), typeContainer.getCanonicalJitType());
+                                            builder.pool(), typeContainer.getCallableJitType());
 
             // TODO why can't the result be cached in m_jmd
             jmd = JitMethodDesc.of(builder, sig.getRawParams(), sig.getRawReturns(),

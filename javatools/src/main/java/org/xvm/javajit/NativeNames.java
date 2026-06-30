@@ -30,6 +30,7 @@ public class NativeNames {
         reservedMethodSuffix.put("collections.Array/insertAll/2",           "insertAll");
         reservedMethodSuffix.put("collections.Array/reify/1",               "reify");
         reservedMethodSuffix.put("collections.Array/removeAll/1",           "removeAll");
+        reservedMethodSuffix.put("collections.Array/toString/1",            "removeAll");
         reservedMethodSuffix.put("collections.Array.ArrayDelegate/reify/1", "reify");
         reservedMethodSuffix.put("collections.Collection/reify/0",          "reify");
 

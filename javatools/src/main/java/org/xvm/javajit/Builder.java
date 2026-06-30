@@ -68,6 +68,13 @@ public abstract class Builder {
     }
 
     /**
+     * Assemble the java class for the "class" shape.
+     */
+    public void assembleClassOfClass(String className, ClassBuilder classBuilder) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
      * Assemble the java class for the "pure" shape.
      */
     public void assemblePure(String className, ClassBuilder classBuilder) {
@@ -147,13 +154,28 @@ public abstract class Builder {
      * Ensure a unique ClassDesc for the specified type.
      */
     public ClassDesc ensureClassDesc(TypeConstant type) {
-        return type.ensureClassDesc(typeSystem);
+        return type.getCallableClassDesc(typeSystem);
     }
 
     /**
-     * Ensure a unique Java class name for the specified type.
+     * Ensure a unique Java class that represents a "JIT Call Class Name" for the specified type in
+     * this builder's TypeSystem.
+     *
+     * @see doc/jit_class_names.txt
      */
     public String ensureJitClassName(TypeConstant type) {
+        return type.ensureJitClassName(typeSystem);
+    }
+
+    /**
+     * Ensure a unique Java class that represents a "JIT Instance Class Name" for the specified type
+     * in this builder's TypeSystem.
+     *
+     * @see doc/jit_class_names.txt
+     */
+    public String ensureJitInstanceClassName(TypeConstant type) {
+        assert type.isSingleUnderlyingClass(false);
+        // TODO
         return type.ensureJitClassName(typeSystem);
     }
 
@@ -798,7 +820,7 @@ public abstract class Builder {
         }
 
         PropertyInfo  xvmInfo    = propId.getPropertyInfo(typeContainer);
-        PropertyInfo  jitInfo    = propId.getPropertyInfo(typeContainer.getCanonicalJitType());
+        PropertyInfo  jitInfo    = propId.getPropertyInfo(typeContainer.getCallableJitType());
         TypeConstant  typeOwner  = jitInfo.getOwnerType(this, typeContainer);
         JitMethodDesc jmdGet     = jitInfo.getGetterJitDesc(this);
         String        getterName = jitInfo.ensureGetterJitMethodName(typeSystem);
@@ -1566,7 +1588,7 @@ public abstract class Builder {
      * @return true iff the assignment is JIT-valid, false if the "checkcast" opcode is necessary
      */
     public static boolean isJitAssignable(TypeConstant srcType, TypeConstant dstType) {
-        return srcType.getCanonicalJitType().isA(dstType.getCanonicalJitType());
+        return srcType.getCallableJitType().isA(dstType.getCallableJitType());
     }
 
     // ----- TEMPORARY: debugging support ----------------------------------------------------------

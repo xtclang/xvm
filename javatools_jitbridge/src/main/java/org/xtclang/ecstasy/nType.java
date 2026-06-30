@@ -5,31 +5,18 @@ import java.lang.reflect.Method;
 
 import org.xtclang.ecstasy.collections.Hashable;
 
-import org.xtclang.ecstasy.numbers.Bit;
-import org.xtclang.ecstasy.numbers.Dec128;
-import org.xtclang.ecstasy.numbers.Dec32;
-import org.xtclang.ecstasy.numbers.Dec64;
-import org.xtclang.ecstasy.numbers.Float16;
-import org.xtclang.ecstasy.numbers.Float32;
-import org.xtclang.ecstasy.numbers.Float64;
-import org.xtclang.ecstasy.numbers.Int128;
-import org.xtclang.ecstasy.numbers.Int16;
-import org.xtclang.ecstasy.numbers.Int32;
-import org.xtclang.ecstasy.numbers.Int64;
-import org.xtclang.ecstasy.numbers.Int8;
-import org.xtclang.ecstasy.numbers.Nibble;
-import org.xtclang.ecstasy.numbers.UInt128;
-import org.xtclang.ecstasy.numbers.UInt16;
-import org.xtclang.ecstasy.numbers.UInt32;
-import org.xtclang.ecstasy.numbers.UInt64;
-import org.xtclang.ecstasy.numbers.UInt8;
+import org.xtclang.ecstasy.numbers.*;
+
+import org.xtclang.ecstasy.reflect.Class;
 import org.xtclang.ecstasy.reflect.Type;
+
 import org.xtclang.ecstasy.text.Char;
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
+import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.ByteHashCollector;
 
@@ -37,11 +24,13 @@ import org.xvm.util.ByteHashCollector;
  * All Ecstasy `Type` types must extend this class.
  */
 public class nType
-    extends nConst
+        extends nConst
         implements Type {
 
     private nType(Ctx ctx, TypeConstant type) {
         super(ctx);
+
+        assert !type.containsFormalType(true);
 
         $ctx      = ctx;
         $dataType = type;
@@ -53,9 +42,35 @@ public class nType
     private Method equalsMethod;
     private Method compareMethod;
     private Method hashCodeMethod;
+    private Class  xvmClass;
 
     public nObj alloc(Ctx ctx) {
         throw Exception.$unsupported(ctx, "Type " + $dataType);
+    }
+
+    /**
+     * @return  an instance of the {@link Class class of class} for this type
+     */
+    public Class $xvmClass(Ctx ctx) {
+        if (xvmClass == null) {
+            TypeSystem       typeSystem  = ctx.container.typeSystem;
+            java.lang.String className   = $dataType.ensureJitClassName(typeSystem);
+            java.lang.String classOfType = TypeSystem.classOfClass(className);
+            try {
+                java.lang.Class clz;
+                try {
+                    clz = typeSystem.loader.loadClass(classOfType);
+                } catch (ClassNotFoundException cnfe) {
+                    return xvmClass = new Class(ctx, $dataType);
+                }
+                xvmClass = (Class) clz.getDeclaredConstructor(Ctx.class, TypeConstant.class).
+                            newInstance(ctx, $dataType);
+
+            } catch (java.lang.Exception e) {
+                throw new Exception(ctx).$init(ctx, "Failed to load a class for: " + className, e);
+            }
+        }
+        return xvmClass;
     }
 
     @Override public TypeConstant $xvmType(Ctx ctx) {
@@ -104,7 +119,7 @@ public class nType
             return true;
         }
 
-        // TODO: replace the reflection with a virtual call to $class().equals(this, v1, v2)
+        // TODO: replace the reflection with a virtual call to $xvmClass().equals(this, v1, v2)
         if (equalsMethod == null) {
             equalsMethod = ensureMethod("equals$p", Object.class);
         }
