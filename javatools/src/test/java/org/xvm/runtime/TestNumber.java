@@ -44,10 +44,10 @@ public class TestNumber {
         assertEquals(MAX128L, MIN128H.addUnchecked(new LongLong(-1)), "MIN128HIGH-1");
         assertEquals(new LongLong(-1), MAX128.addUnchecked(MIN128), "MAX+MIN");
 
-        assertEquals(LongLong.OVERFLOW, MAX128.addUnchecked(new LongLong(1)), "MAX+1");
-        assertEquals(LongLong.OVERFLOW, MAX128.addUnchecked(MAX128), "MAX+MAX");
-        assertEquals(LongLong.OVERFLOW, MIN128.addUnchecked(new LongLong(-1)), "MIN-1");
-        assertEquals(LongLong.OVERFLOW, MIN128.addUnchecked(MIN128), "MIN+MIN");
+        assertEquals(LongLong.OVERFLOW, MAX128.addChecked(new LongLong(1)), "MAX+1");
+        assertEquals(LongLong.OVERFLOW, MAX128.addChecked(MAX128), "MAX+MAX");
+        assertEquals(LongLong.OVERFLOW, MIN128.addChecked(new LongLong(-1)), "MIN-1");
+        assertEquals(LongLong.OVERFLOW, MIN128.addChecked(MIN128), "MIN+MIN");
 
         // sub
         assertEquals(new LongLong(2-1), new LongLong(2).subUnchecked(new LongLong(1)), "2-1");
@@ -57,8 +57,8 @@ public class TestNumber {
         assertEquals(MIN128H, MAX128L.subUnchecked(new LongLong(-1)), "MAX128LOW+1");
         assertEquals(MAX128L, MIN128H.subUnchecked(new LongLong(1)), "MIN128HIGH-1");
 
-        assertEquals(LongLong.OVERFLOW, MAX128.subUnchecked(new LongLong(-1)), "MAX+1");
-        assertEquals(LongLong.OVERFLOW, MIN128.subUnchecked(new LongLong(1)), "MIN-1");
+        assertEquals(LongLong.OVERFLOW, MAX128.subChecked(new LongLong(-1)), "MAX+1");
+        assertEquals(LongLong.OVERFLOW, MIN128.subChecked(new LongLong(1)), "MIN-1");
     }
 
     @Test
