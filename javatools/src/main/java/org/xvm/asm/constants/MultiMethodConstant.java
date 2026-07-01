@@ -46,6 +46,7 @@ public class MultiMethodConstant
         case Module:
         case Package:
         case Class:
+        case PureType:
         case NativeClass:
         case Method:
         case Property:

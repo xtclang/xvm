@@ -146,6 +146,12 @@ public abstract class NamedConstant
             chSep   = '.';
             break;
 
+        case PureType:
+            // TODO GG or CP improve
+            sParent = "";
+            chSep   = '^';
+            break;
+
         default:
             throw new IllegalStateException("parent=" + constParent);
         }

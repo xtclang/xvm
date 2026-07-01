@@ -21,11 +21,14 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import java.util.Set;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -125,7 +128,7 @@ public final class Handy {
      */
     public static String byteArrayToHexString(byte[] ab, int of, int cb) {
         return appendByteArrayAsHex(new StringBuilder(2 + cb * 2).append("0x"),
-                ab, of, cb).toString();
+                                    ab, of, cb).toString();
     }
 
     /**
@@ -261,13 +264,13 @@ public final class Handy {
     public static long byteArrayToLong(byte[] ab, int of) {
         int offset = of;
         return   ((long) (ab[offset++])        << 56)
-               + ((long) (ab[offset++] & 0xFF) << 48)
-               + ((long) (ab[offset++] & 0xFF) << 40)
-               + ((long) (ab[offset++] & 0xFF) << 32)
-               + ((long) (ab[offset++] & 0xFF) << 24)
-               + (       (ab[offset++] & 0xFF) << 16)
-               + (       (ab[offset++] & 0xFF) << 8 )
-               + (        ab[offset  ] & 0xFF       );
+                + ((long) (ab[offset++] & 0xFF) << 48)
+                + ((long) (ab[offset++] & 0xFF) << 40)
+                + ((long) (ab[offset++] & 0xFF) << 32)
+                + ((long) (ab[offset++] & 0xFF) << 24)
+                + (       (ab[offset++] & 0xFF) << 16)
+                + (       (ab[offset++] & 0xFF) << 8 )
+                + (        ab[offset  ] & 0xFF       );
     }
 
     /**
@@ -279,14 +282,14 @@ public final class Handy {
      */
     public static byte[] toByteArray(long l) {
         return new byte[] {
-            (byte) (l >> 56),
-            (byte) (l >> 48),
-            (byte) (l >> 40),
-            (byte) (l >> 32),
-            (byte) (l >> 24),
-            (byte) (l >> 16),
-            (byte) (l >> 8 ),
-            (byte) l,
+                (byte) (l >> 56),
+                (byte) (l >> 48),
+                (byte) (l >> 40),
+                (byte) (l >> 32),
+                (byte) (l >> 24),
+                (byte) (l >> 16),
+                (byte) (l >> 8 ),
+                (byte) l,
         };
     }
 
@@ -923,8 +926,8 @@ public final class Handy {
      */
     public static String logTime(long cMillis, DateTimeFormatter formatter) {
         return Instant.ofEpochMilli(cMillis)
-            .atZone(ZoneId.of("UTC"))
-            .format(formatter);
+                      .atZone(ZoneId.of("UTC"))
+                      .format(formatter);
     }
 
     // ----- packed integers -----------------------------------------------------------------------
@@ -1195,7 +1198,7 @@ public final class Handy {
                 if (!Character.isSupplementaryCodePoint(ch)) {
                     throw new UTFDataFormatException(
                             "Character is outside of UTF-16 (including supplemental) range: " +
-                            intToHexString(ch));
+                                    intToHexString(ch));
                 }
 
                 // the "supplemental" range is composed of two UTF-16 characters
@@ -1343,7 +1346,7 @@ public final class Handy {
      */
     @SuppressWarnings("unused")
     static File navigateTo(File file, String sPath) {
-        File currentFile = file;
+        File currentFile   = file;
         String currentPath = sPath;
         if (currentFile == null) {
             return null;
@@ -1491,8 +1494,8 @@ public final class Handy {
         }
 
         return sPath.equals(sAbs)
-            ? sPath
-            : sPath + " (" + sAbs + ')';
+                ? sPath
+                : sPath + " (" + sAbs + ')';
     }
 
     /**
@@ -1555,7 +1558,7 @@ public final class Handy {
         } else if (lcb > Integer.MAX_VALUE - 1024) {
             // assume a maximum byte array size just under 2GB
             throw new IOException("file exceeds max supported length (2GB): "
-                    + file + "=" + lcb + " bytes");
+                                          + file + "=" + lcb + " bytes");
         }
 
         return Files.readAllBytes(file.toPath());
@@ -1666,6 +1669,70 @@ public final class Handy {
     // ----- array and collection helpers ----------------------------------------------------------
 
     /**
+     * Scan the array to verify the presence of a value, using the value's
+     * {@link Object#equals(Object)} method.
+     *
+     * @param array  an array of values, or null
+     * @param value  the value to find, or null
+     *
+     * @return true iff the value is in the array
+     */
+    public static <T> boolean contains(final T[] array, final T value) {
+        return scan(array, value) >= 0;
+    }
+
+    /**
+     * Scan the array to verify the presence of a value, using reference equality.
+     *
+     * @param array  an array of values, or null
+     * @param value  the value to find, or null
+     *
+     * @return true iff the value is in the array
+     */
+    public static <T> boolean containsRef(final T[] array, final T value) {
+        return scanRef(array, value) >= 0;
+    }
+
+    /**
+     * Scan the array to verify the presence of all values, using each value's
+     * {@link Object#equals(Object)} method.
+     *
+     * @param array   an array of values, or null
+     * @param values  the value to find, or null
+     *
+     * @return true iff no value from "values" is absent in the array
+     */
+    public static <T> boolean containsAll(final T[] array, final T[] values) {
+        if (array != values && values != null) {
+            for (T value : values) {
+                if (!contains(array, value)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Scan the array to verify the presence of all values, using reference equality.
+     *
+     * @param array   an array of values, or null
+     * @param values  the value to find, or null
+     *
+     * @return true iff no value from "values" is absent in the array
+     */
+    public static <T> boolean containsAllRefs(final T[] array, final T[] values) {
+        if (array != values) {
+            for (T value : values) {
+                if (!containsRef(array, value)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
      * Scan the array for an equal value, using the value's {@link Object#equals(Object)} method.
      *
      * @param array  an array of values, or null
@@ -1746,8 +1813,8 @@ public final class Handy {
      * @return an array containing all the elements from the {@code aoAdd} array that are not
      *         duplicates of elements in the {@code aoBase} array
      */
-     @SuppressWarnings("unused")
-     public static <T> T[] dedupAdds(T[] aoBase, T[] aoAdd) {
+    @SuppressWarnings("unused")
+    public static <T> T[] dedupAdds(T[] aoBase, T[] aoAdd) {
         // there's a fair likelihood that *ALL* of the "adds" will be duplicates, and a fair
         // likelihood that *NONE* of the "adds" will be unique, so assume both up front, and only
         // de-optimize when *BOTH* of those two things have been proven to be false
@@ -1808,6 +1875,33 @@ public final class Handy {
             return Arrays.copyOf(aoAdd, 0);
         }
         return listDeDup.toArray(Arrays.copyOf(aoAdd, listDeDup.size()));
+    }
+
+    /**
+     * Store the specified element in the current array at the specified index, iff the value
+     * differs from the value already in the array at that specified index. If the current array is
+     * passed as null, then compare against the value in the original array instead, and only if it
+     * differs: (i) lazily copy the original array into a new "current array" and (ii) store the
+     * specified element in that new "current array".
+     *
+     * @param aoOrig  a non-null array of values to copy from iff the specified value is changing
+     * @param aoCur   a possibly-null array of values, lazily created if necessary
+     * @param i       the index into the array of values to replace
+     * @param o       the value to store at the specified index
+     *
+     * @return "null" iff "aoCur" is passed as "null" and the specified value "o" matches the value
+     *         at the specified index in "aoOrig"; otherwise, a non-null array with "o" stored at
+     *         index "i", which array is the non-null array passed as "aoCur" or otherwise a clone
+     *         of "aoOrig"
+     */
+    public static <T> T[] replace(final T[] aoOrig, T[] aoCur, int i, T o) {
+        if (o != (aoCur == null ? aoOrig : aoCur)[i]) {
+            if (aoCur == null) {
+                aoCur = aoOrig.clone();
+            }
+            aoCur[i] = o;
+        }
+        return aoCur;
     }
 
     /**
@@ -1930,6 +2024,80 @@ public final class Handy {
         return curr;
     }
 
+    /**
+     * Add the specified value to the specified list. If the list is passed as null, then first
+     * create a new ArrayList to hold the specified value.
+     *
+     * @param list   a list, or null
+     * @param value  a value to add to the list
+     *
+     * @return a list containing the specified value; never null
+     */
+    public static <T> List<T> lazyAdd(List<T> list, final T value) {
+        if (list == null) {
+            list = new ArrayList<>();
+        }
+        list.add(value);
+        return list;
+    }
+
+    /**
+     * Add the specified values to the specified list. If the list is passed as null, then first
+     * create a new ArrayList to hold the specified values.
+     *
+     * @param list    a list, or null
+     * @param values  an array of values to add to the list, or null
+     *
+     * @return a list containing the specified values, or null if the list was null and there were
+     *         no values to add
+     */
+    public static <T> List<T> lazyAddAll(List<T> list, final T[] values) {
+        if (values != null && values.length > 0) {
+            if (list == null) {
+                list = new ArrayList<>(values.length);
+            }
+            Collections.addAll(list, values);
+        }
+        return list;
+    }
+
+    /**
+     * Add the specified values to the specified list. If the list is passed as null, then first
+     * create a new ArrayList to hold the specified values.
+     *
+     * @param list    a list, or null
+     * @param values  a list of values to add to the list, or null
+     *
+     * @return a list containing the specified values, or null if the list was null and there were
+     *         no values to add
+     */
+    public static <T> List<T> lazyAddAll(List<T> list, final List<T> values) {
+        if (values != null && !values.isEmpty()) {
+            if (list == null) {
+                list = new ArrayList<>();
+            }
+            list.addAll(values);
+        }
+        return list;
+    }
+
+    /**
+     * Add the specified value to the specified set. If the set is passed as null, then first
+     * create a new HashSet to hold the specified value.
+     *
+     * @param set    a set, or null
+     * @param value  a value to add to the set
+     *
+     * @return a set containing the specified value; never null
+     */
+    public static <T> Set<T> lazyAdd(Set<T> set, final T value) {
+        if (set == null) {
+            set = new HashSet<>();
+        }
+        set.add(value);
+        return set;
+    }
+
     // ----- hashing & equality --------------------------------------------------------------------
 
     /**
@@ -1968,17 +2136,17 @@ public final class Handy {
 
         Class<?> clzComp = clz1.getComponentType();
         return clzComp == null
-            ? o1.equals(o2)
-            : clzComp.isPrimitive()
-                ? clzComp == int.class ? Arrays.equals(    (int[]) o1,     (int[]) o2)
-                : clzComp == long.class ? Arrays.equals(   (long[]) o1,    (long[]) o2)
-                : clzComp == byte.class ? Arrays.equals(   (byte[]) o1,    (byte[]) o2)
-                : clzComp == char.class ? Arrays.equals(   (char[]) o1,    (char[]) o2)
-                : clzComp == double.class ? Arrays.equals( (double[]) o1,  (double[]) o2)
-                : clzComp == float.class ? Arrays.equals(  (float[]) o1,   (float[]) o2)
-                : clzComp == short.class ? Arrays.equals(  (short[]) o1,   (short[]) o2)
-                                          : Arrays.equals((boolean[]) o1, (boolean[]) o2)
-            : Arrays.equals((Object[]) o1, (Object[]) o2);
+                ? o1.equals(o2)
+                : clzComp.isPrimitive()
+                        ? clzComp == int.class    ? Arrays.equals(    (int[]) o1,     (int[]) o2)
+                        : clzComp == long.class   ? Arrays.equals(   (long[]) o1,    (long[]) o2)
+                        : clzComp == byte.class   ? Arrays.equals(   (byte[]) o1,    (byte[]) o2)
+                        : clzComp == char.class   ? Arrays.equals(   (char[]) o1,    (char[]) o2)
+                        : clzComp == double.class ? Arrays.equals( (double[]) o1,  (double[]) o2)
+                        : clzComp == float.class  ? Arrays.equals(  (float[]) o1,   (float[]) o2)
+                        : clzComp == short.class  ? Arrays.equals(  (short[]) o1,   (short[]) o2)
+                                                  : Arrays.equals((boolean[]) o1, (boolean[]) o2)
+                : Arrays.equals((Object[]) o1, (Object[]) o2);
     }
 
     /**

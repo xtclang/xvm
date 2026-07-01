@@ -392,14 +392,19 @@ public class ThrowExpression
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-
         if (isTodo() && message != null) {
             // the message contains "T0D0"
             sb.append(message);
         } else {
             sb.append(keyword);
 
-            if (expr != null) {
+            if (isTodo()) {
+                sb.append('(');
+                if (expr != null) {
+                    sb.append(expr);
+                }
+                sb.append(')');
+            } else if (expr != null) {
                 sb.append(' ')
                   .append(expr);
             }
@@ -409,8 +414,6 @@ public class ThrowExpression
                   .append(message);
             }
         }
-
-        sb.append(';');
         return sb.toString();
     }
 

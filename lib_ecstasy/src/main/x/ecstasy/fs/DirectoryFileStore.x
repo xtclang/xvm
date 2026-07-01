@@ -332,6 +332,7 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
     const FileWrapper
             extends FileNodeWrapper
             implements File {
+
         construct(File origFile) {
             construct FileNodeWrapper(origFile);
         }

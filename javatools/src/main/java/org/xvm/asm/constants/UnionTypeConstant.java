@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,7 +25,6 @@ import org.xvm.asm.ComponentResolver.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
@@ -154,13 +152,13 @@ public class UnionTypeConstant
      */
     public void decompose(Set<TypeConstant> setTypes) {
         TypeConstant type1 = m_constType1;
-        TypeConstant type2 = m_constType2;
-
         if (type1 instanceof UnionTypeConstant typeUnion) {
             typeUnion.decompose(setTypes);
         } else {
             setTypes.add(type1);
         }
+
+        TypeConstant type2 = m_constType2;
         if (type2 instanceof UnionTypeConstant typeUnion) {
             typeUnion.decompose(setTypes);
         } else {
@@ -320,20 +318,12 @@ public class UnionTypeConstant
 
         Category cat1 = m_constType1.getCategory();
         Category cat2 = m_constType2.getCategory();
-
-        return switch (cat1) {
-            case CLASS -> switch (cat2) {
-                    case CLASS -> Category.CLASS;
-                    default    -> Category.OTHER;
-                };
-
-            case IFACE -> switch (cat2) {
-                    case IFACE -> Category.IFACE;
-                    default    -> Category.OTHER;
-                };
-
-            default -> Category.OTHER;
-        };
+        if (cat1 == cat2) {
+            if (cat1 == Category.CLASS || cat1 == Category.IFACE) {
+                return cat1;
+            }
+        }
+        return Category.OTHER;
     }
 
     @Override
@@ -637,7 +627,7 @@ public class UnionTypeConstant
                         bodySynth = new PropertyBody(propSynth,
                                 new ParamInfo(sName, prop1.getConstraintType(), prop1.getType()));
                     } else {
-                        bodySynth = new PropertyBody(propSynth, Implementation.Implicit,
+                        bodySynth = new PropertyBody(propSynth, Implementation.Union,
                             null, type1, /*fRO*/ false, /*fRO*/ true, /*fCustom*/ false,
                             Effect.None, Effect.None, /*fReqField*/ false, /*fConst*/ false, null, null);
                     }
@@ -649,112 +639,104 @@ public class UnionTypeConstant
     }
 
     @Override
-    protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo info1, TypeInfo info2, ErrorListener errs) {
-        if (info1 == null || info2 == null) {
+    protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo infoType1, TypeInfo infoType2, ErrorListener errs) {
+        if (infoType1 == null || infoType2 == null) {
             return Collections.emptyMap();
         }
 
-        // calling info.getNarrowingMethod() can change the content of "MethodBySignature", causing
-        // a CME, so we defer this call util later, collecting the source info
-        Map<MethodInfo,     TypeInfo>   mapCapped = new HashMap<>();
-        Map<MethodConstant, MethodInfo> mapMerged = new HashMap<>();
-
-        NextEntry:
-        for (Map.Entry<SignatureConstant, MethodInfo> entry : info1.ensureMethodsBySignature().entrySet()) {
+        ConstantPool                    pool        = getConstantPool();
+        IdentityConstant                idThis      = pool.ensurePureIdentityConstant(this);
+        Map<MethodConstant, MethodInfo> mapMerged   = new HashMap<>();
+        int                             highestRank = 0;
+        for (Map.Entry<SignatureConstant, MethodInfo> entry :
+                infoType1.ensureMethodsBySignature().entrySet()) {
             SignatureConstant sig     = entry.getKey();
             MethodInfo        method1 = entry.getValue();
-
-            if (method1.isCtorOrValidator()) {
+            MethodInfo        method2 = infoType2.getMethodBySignature(sig, this);
+            if (method2 == null) {
                 continue;
             }
 
-            MethodInfo method2 = info2.getMethodBySignature(sig);
-            if (method2 != null && !method2.isCtorOrValidator()) {
-                // the method exists in both maps;
-                // check for a "common" structure and build a "subset" info
-                if (method1.equals(method2)) {
-                    // trivial "equality" scenario
-                    mapMerged.put(method1.getIdentity(), method1);
+            // discard constructors and constructor-validators unless both sides are contributing a
+            // matching virtual constructor
+            if ((method1.isCtorOrValidator() || method2.isCtorOrValidator())
+                    && !(method1.isVirtualConstructor() && method2.isVirtualConstructor())) {
+                continue;
+            }
 
-                    if (method1.isCapped()) {
-                        mapCapped.put(method1, info1);
-                    }
-                    continue;
-                }
+            // the method exists in both maps
+            MethodConstant idMerge   = null;
+            MethodInfo     infoMerge = null;
+            if (method1.equals(method2)) {
+                // trivial "equality" scenario
+                idMerge   = method1.getIdentity();
+                infoMerge = method1;
+            } else if (method1.isFunction() == method2.isFunction()) {
+                idMerge   = pool.ensureMethodConstant(idThis, sig);
+                infoMerge = new MethodInfo(new MethodBody[]{
+                        new MethodBody(idMerge, sig, method1, method2)}, method1.getRank());
+            }
 
-                MethodBody[] abody1 = method1.getChain();
-                MethodBody[] abody2 = method2.getChain();
-
-                for (int i1 = 0, c1 = abody1.length; i1 < c1; i1++) {
-                    MethodBody     body1 = abody1[i1];
-                    MethodConstant id1   = body1.getIdentity();
-
-                    for (MethodBody body2 : abody2) {
-                        if (body2.getIdentity().equals(id1)) {
-                            MethodInfo methodBase = new MethodInfo(Arrays.copyOfRange(abody1, i1, c1),
-                                                            method1.getRank());
-                            mapMerged.put(id1, methodBase);
-                            if (methodBase.isCapped()) {
-                                mapCapped.put(methodBase, info1);
-                            }
-
-                            continue NextEntry;
-                        }
-                    }
-                }
-
-                // there is no common identity; at least one must be an interface to allow it to be
-                // called as it were duck-typeable
-                boolean f1 = info1.getFormat() == Component.Format.INTERFACE;
-                boolean f2 = info2.getFormat() == Component.Format.INTERFACE;
-                if (f1 || f2) {
-                    if (f1) {
-                        mapMerged.put(method1.getIdentity(), method1);
-                        if (method1.isCapped()) {
-                            mapCapped.put(method1, info1);
-                        }
-                    } else {
-                        mapMerged.put(method2.getIdentity(), method2);
-                        if (method2.isCapped()) {
-                            mapCapped.put(method2, info2);
-                        }
-                    }
-                    continue;
-                }
-
-                // nothing worked, but if the signatures are identical, we can still create an
-                // implicit MethodBody that would allow it to be invoked at run-time
-                if (method1.getSignature().equals(method2.getSignature()) &&
-                        method1.isVirtual() && method2.isVirtual() &&
-                        !sig.containsGenericTypes()) {
-                    ModuleStructure module         = getConstantPool().getFileStructure().getModule();
-                    ClassStructure  clzSynthParent = module.ensureSyntheticInterface(getValueString());
-                    MethodStructure methodSynth    = clzSynthParent.ensureSyntheticMethod(sig);
-                    MethodConstant  idSynthMethod  = methodSynth.getIdentityConstant();
-
-                    mapMerged.put(idSynthMethod,
-                        new MethodInfo(new MethodBody(idSynthMethod, sig, Implementation.Implicit),
-                                method1.getRank()));
-                }
+            if (idMerge != null) {
+                highestRank = Math.max(highestRank, infoMerge.getRank());
+                mapMerged.put(idMerge, infoMerge);
             }
         }
 
-        if (!mapCapped.isEmpty()) {
-            // make sure that for all capped method, the corresponding narrowing methods
-            // made it; otherwise remove the capped one
-            for (Map.Entry<MethodInfo, TypeInfo> entry : mapCapped.entrySet()) {
-                MethodInfo     methodCapped    = entry.getKey();
-                TypeInfo       info            = entry.getValue();
-                MethodConstant idCapped        = methodCapped.getIdentity();
-                MethodInfo     methodNarrowing = info.getNarrowingMethod(methodCapped);
-                MethodConstant idNarrowing     = methodNarrowing.getIdentity();
+        // add union-specific synthetic funky methods, as appropriate; all union types must have an
+        // equals() function:
+        //   static <CompileType extends Union> Boolean equals(CompileType value1, CompileType value2);
+        createNativeFunction(pool, idThis, "equals", pool.typeBoolean(), 2, ++highestRank, mapMerged);
 
-                if (!mapMerged.containsKey(idNarrowing)) {
-                    mapMerged.remove(idCapped);
-                }
-            }
+        // all Orderable union types must have a compare() function:
+        //   static <CompileType extends Union> Ordered compare(CompileType value1, CompileType value2);
+        if (infoType1.getType().isA(pool.typeOrderable()) && infoType2.getType().isA(pool.typeOrderable())) {
+            createNativeFunction(pool, idThis, "compare", pool.typeOrdered(), 2, ++highestRank, mapMerged);
         }
+
+        // all Hashable union types must have a hashCode() function:
+        //   static <CompileType extends Union> Int hashCode(CompileType value);
+        if (infoType1.getType().isA(pool.typeHashable()) && infoType2.getType().isA(pool.typeHashable())) {
+            createNativeFunction(pool, idThis, "hashCode", pool.typeInt64(), 1, ++highestRank, mapMerged);
+        }
+
         return mapMerged;
+    }
+
+    /**
+     * Internal: a set of "funky" method names for doing a quick check that we need to look closer.
+     */
+    private static final HashSet<String> SpecialFunkies = new HashSet<>(List.of("equals", "hashCode", "compare"));
+
+    /**
+     * Internal: allow Java to create an array of TypeConstant without having to type ugly code
+     * repeatedly.
+     */
+    private TypeConstant[] typesOf(TypeConstant... types) {
+        return types;
+    }
+
+    /**
+     * Internal: Create a native representation of a "function" that must exist on the union type.
+     */
+    private MethodConstant createNativeFunction(
+            ConstantPool                    pool,
+            IdentityConstant                idThis,
+            String                          sName,
+            TypeConstant                    typeReturn,
+            int                             cValues,
+            int                             iRank,
+            Map<MethodConstant, MethodInfo> mapMethods) {
+        assert cValues == 1 || cValues == 2;
+        TypeConstant           typeCompileType = pool.ensureParameterizedTypeConstant(pool.typeType(), this);
+        UnresolvedTypeConstant typeValue       = new UnresolvedTypeConstant(pool, null);
+        SignatureConstant      sigFn           = pool.ensureSignatureConstant(sName,
+                  cValues == 1 ? typesOf(typeCompileType, typeValue) : typesOf(typeCompileType, typeValue, typeValue),
+                  typesOf(typeReturn));
+        MethodConstant         idFn            = pool.ensureMethodConstant(idThis, sigFn);
+        typeValue.resolve(new TypeParameterConstant(pool, idFn, "CompileType", 0).getType());
+        mapMethods.put(idFn, new MethodInfo(new MethodBody(idFn, sigFn, Implementation.Native), iRank));
+        return idFn;
     }
 
     @Override
@@ -767,12 +749,10 @@ public class UnionTypeConstant
         ListMap<String, ChildInfo> map2     = info2.getChildInfosByName();
         ListMap<String, ChildInfo> mapMerge = new ListMap<>();
         for (Map.Entry<String, ChildInfo> entry : map1.entrySet()) {
-            String sChild = entry.getKey();
-
-            if (map2.containsKey(sChild)) {
-                ChildInfo child1 = map1.get(sChild);
-                ChildInfo child2 = map2.get(sChild);
-
+            String    sChild = entry.getKey();
+            ChildInfo child1 = entry.getValue();
+            ChildInfo child2 = map2.get(sChild);
+            if (child2 != null) {
                 ChildInfo childM = child1.layerOn(child2);
                 if (childM != null) {
                     mapMerge.put(sChild, entry.getValue());
@@ -784,6 +764,27 @@ public class UnionTypeConstant
 
 
     // ----- type comparison support ---------------------------------------------------------------
+
+    /**
+     * Calculate a relation for an ambient union-context probe; either context leg can supply the
+     * concrete class for either candidate type.
+     *
+     * @param typeLeft   the first candidate type
+     * @param typeRight  the second candidate type
+     *
+     * @return the best context-free relation
+     */
+    public Relation calculateRelationInContext(TypeConstant typeLeft, TypeConstant typeRight) {
+        TypeConstant typeCtx1 = getUnderlyingType();
+        Relation     rel1     = TypeConstant.calculateContextFreeRelation(typeCtx1, typeLeft).bestOf(
+                                TypeConstant.calculateContextFreeRelation(typeCtx1, typeRight));
+
+        TypeConstant typeCtx2 = getUnderlyingType2();
+        Relation     rel2     = TypeConstant.calculateContextFreeRelation(typeCtx2, typeLeft).bestOf(
+                                TypeConstant.calculateContextFreeRelation(typeCtx2, typeRight));
+
+        return rel1.bestOf(rel2);
+    }
 
     @Override
     protected Relation calculateRelationToLeft(TypeConstant typeLeft) {

@@ -273,6 +273,15 @@ public abstract class RelationalTypeConstant
     }
 
     @Override
+    protected void collectContribs(
+            Set<IdentityConstant> setVisited,
+            Set<IdentityConstant> setOmit,
+            ErrorListener         errs) {
+        m_constType1.collectContribs(setVisited, setOmit, errs);
+        m_constType2.collectContribs(setVisited, setOmit, errs);
+    }
+
+    @Override
     public boolean containsDynamicType(Register register) {
         return m_constType1.containsDynamicType(register)
             || m_constType2.containsDynamicType(register);
@@ -411,6 +420,11 @@ public abstract class RelationalTypeConstant
     }
 
     @Override
+    public TypeConstant asImplementable() {
+        return this;
+    }
+
+    @Override
     public boolean isIntoPropertyType() {
         return false;
     }
@@ -488,31 +502,32 @@ public abstract class RelationalTypeConstant
      *
      * @return merged TypeInfo
      */
-    protected TypeInfo mergeTypeInfo(TypeInfo info1, TypeInfo info2, int cInvals, ErrorListener errs) {
-        return new TypeInfo(this,
-                            cInvals,
-                            null,                   // struct
-                            0,                      // depth
-                            false,                  // synthetic
-                            mergeTypeParams(info1, info2, errs),
-                            Annotation.NO_ANNOTATIONS,
-                            mergeAnnotations(info1, info2, errs),
-                            null,                   // typeExtends
-                            null,                   // typeRebase
-                            null,                   // typeInto
-                            Collections.emptyList(), // listProcess,
-                            ListMap.EMPTY,          // listmapClassChain
-                            ListMap.EMPTY,          // listmapDefaultChain
-                            mergeProperties(info1, info2, errs),
-                            mergeMethods(info1, info2, errs),
-                            Collections.emptyMap(),  // mapVirtProps
-                            Collections.emptyMap(),  // mapVirtMethods
-                            mergeChildren(info1, info2, errs),
-                            mergeDepends(info1, info2),
-                            info1 == null || info2 == null
-                                    ? TypeInfo.Progress.Incomplete
-                                    : info1.getProgress().worstOf(info2.getProgress())
-                            );
+    TypeInfo mergeTypeInfo(TypeInfo info1, TypeInfo info2, int cInvals, ErrorListener errs) {
+        return new TypeInfo(
+                this,
+                cInvals,
+                null,                                   // struct
+                0,                                      // depth
+                false,                                  // synthetic
+                mergeTypeParams(info1, info2, errs),
+                Annotation.NO_ANNOTATIONS,
+                mergeAnnotations(info1, info2, errs),
+                null,                                   // typeExtends
+                null,                                   // typeRebase
+                null,                                   // typeInto
+                Collections.emptyList(),                // listProcess,
+                ListMap.EMPTY,                          // listmapClassChain
+                ListMap.EMPTY,                          // listmapDefaultChain
+                mergeProperties(info1, info2, errs),
+                mergeMethods(info1, info2, errs),
+                Collections.emptyMap(),                 // mapVirtProps
+                Collections.emptyMap(),                 // mapVirtMethods
+                mergeChildren(info1, info2, errs),
+                mergeDepends(info1, info2),
+                info1 == null || info2 == null
+                        ? TypeInfo.Progress.Incomplete
+                        : info1.getProgress().worstOf(info2.getProgress())
+                );
     }
 
 

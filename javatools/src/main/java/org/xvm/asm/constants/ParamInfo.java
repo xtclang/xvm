@@ -102,7 +102,6 @@ public class ParamInfo {
         return f_typeConstraint.isFormalTypeSequence();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -123,7 +122,6 @@ public class ParamInfo {
 
         return sb.toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

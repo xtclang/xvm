@@ -8,12 +8,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
 import java.util.function.Consumer;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ComponentResolver.ResolutionCollector;
 import org.xvm.asm.ComponentResolver.ResolutionResult;
 import org.xvm.asm.Constant;
@@ -322,8 +324,19 @@ public class PropertyClassTypeConstant
                 collectChildInfo(idBase, false, prop, mapTypeParams,
                     mapContribProps, mapContribMethods, mapContribChildren, listExplode, 0, 0, errs);
 
-                if (!listExplode.isEmpty()) {
-                    // TODO: explode properties
+                for (PropertyConstant idProp : listExplode) {
+                    PropertyInfo propExplode = mapContribProps.remove(idProp);
+                    assert propExplode != null;
+
+                    PropertyConstant idReplace = pool.ensurePropertyConstant(idBase, idProp.getName());
+                    propExplode = layerOnProp(idBase, ContribSource.Self, null, mapProps,
+                            mapVirtProps, typeContrib, idReplace, propExplode, errs);
+
+                    if (idBase.getComponent() instanceof ClassStructure clzBase &&
+                            !explodeProperty(idBase, clzBase, idReplace, propExplode, mapProps,
+                                    mapVirtProps, mapMethods, mapVirtMethods, errs)) {
+                        return null;
+                    }
                 }
 
                 if (mapContribProps.isEmpty() && mapContribMethods.isEmpty() &&
@@ -369,17 +382,24 @@ public class PropertyClassTypeConstant
             }
 
             if (!mapContribProps.isEmpty()) {
-                layerOnProps(idBase, fSelf, null, mapProps, mapVirtProps, typeContrib,
-                        mapContribProps, errs);
+// TODO CP is there ever a ContribSource for annotations, mixins, conditional mixins, ...
+                layerOnProps(idBase, fSelf ? ContribSource.Self : ContribSource.Regular, null,
+                        mapProps, mapVirtProps, typeContrib, mapContribProps, errs);
             }
 
             if (!mapContribMethods.isEmpty()) {
+// TODO CP is there ever a ContribSource for annotations, mixins, conditional mixins, ...
                 layerOnMethods(idBase, fSelf ? ContribSource.Self : ContribSource.Regular, null,
                         mapMethods, mapVirtMethods, typeContrib, mapContribMethods, errs);
             }
 
             if (!mapContribChildren.isEmpty()) {
                 // TODO process children
+// TODO CP remove
+String s = "*** skipping TypeInfo generation for {" + mapContribChildren.keySet() + "} on " + idBase;
+if (SKIPPED.add(s)) {
+    System.out.println(s);
+}
             }
         }
 
@@ -390,7 +410,8 @@ public class PropertyClassTypeConstant
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
                 null, TypeInfo.Progress.Complete);
     }
-
+// TODO CP remove
+private static HashSet<String> SKIPPED = new HashSet<>();
 
     // ----- run-time support ----------------------------------------------------------------------
 

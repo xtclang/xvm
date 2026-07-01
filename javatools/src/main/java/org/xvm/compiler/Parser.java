@@ -3438,6 +3438,8 @@ public class Parser {
             // name or other lvalue list (known to be followed by `->` or `<-`)
             // type+name list (known to be followed by `->`)
             Token tokLParen = expect(Id.L_PAREN);
+            // TODO CP shouldn't this be:
+            // (match(Id.R_PAREN, match(Id.COMMA) == null) != null) {
             if (match(Id.R_PAREN, match(Id.COMMA) != null) != null) {
                 Token lambdaOp = match(Id.LAMBDA);
                 if (lambdaOp != null) {
@@ -4043,7 +4045,6 @@ public class Parser {
 
         case "Tuple": {
             expect(Id.L_PAREN);
-
             List<Expression> exprs = null;
             while (match(Id.R_PAREN) == null) {
                 if (exprs == null) {

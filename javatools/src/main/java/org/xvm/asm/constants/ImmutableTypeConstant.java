@@ -40,8 +40,10 @@ public class ImmutableTypeConstant
         if (constType == null) {
             throw new IllegalArgumentException("type required");
         }
-        if (!constType.isSingleDefiningConstant()) {
-            throw new IllegalArgumentException("immutability cannot be specified for a relational type");
+        if (!constType.isSingleUnderlyingClass(true) && !constType.containsUnresolved()) {
+            if (!constType.isSingleDefiningConstant()) { // TODO GG remove this carve-out
+                throw new IllegalArgumentException("immutability cannot be specified for type: " + constType);
+            }
         }
 
         m_constType = constType;

@@ -817,6 +817,7 @@ public abstract class Constant
         ThisClass,
         ParentClass,
         ChildClass,
+        PureType,
         TypeParameter,
         FormalTypeChild,
         DynamicFormal,
@@ -859,7 +860,8 @@ public abstract class Constant
         ConditionNamed,
         ConditionPresent,
         ConditionVersionMatches,
-        ConditionVersioned;
+        ConditionVersioned,
+        ;
 
         // -------------------------------------------------------------------------------------
 

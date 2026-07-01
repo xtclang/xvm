@@ -2,6 +2,8 @@ package org.xvm.asm.constants;
 
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ConstantPool;
@@ -34,10 +36,17 @@ public class MethodBody {
      *
      * @param id    the method constant that this body represents
      * @param sig   the resolved signature of the method
-     * @param impl  one of Implicit, Declared, Default, Native, or Explicit
+     * @param impl  one of FromInto, Declared, Default, Native, or Explicit
      */
     public MethodBody(MethodConstant id, SignatureConstant sig, Implementation impl) {
         this(id, sig, impl, null);
+    }
+
+    /**
+     * Internal constructor for a union type.
+     */
+    MethodBody(MethodConstant id, SignatureConstant sig, MethodInfo method1, MethodInfo method2) {
+        this(id, sig, Implementation.Union, new MethodInfo[] {method1, method2});
     }
 
     /**
@@ -49,11 +58,17 @@ public class MethodBody {
      * @param target  a <i>resolved</i> nid (a SignatureConstant for non-nested) from the
      *                "narrowing" chain for a Capped Implementation;
      *                a PropertyConstant for a Delegating or Field Implementation;
+     *                a MethodInfo (which may be from an incomplete TypeInfo build) for a FromInto
+     *                Implementation;
+     *                an array of two MethodInfo objects for a Union Implementation;
      *                otherwise null
      */
     public MethodBody(MethodConstant id, SignatureConstant sig, Implementation impl, Object target) {
         assert id != null && sig != null && impl != null;
         switch (impl) {
+        case FromInto:
+            assert target == null || target instanceof MethodInfo;
+            break;
         case Capped:
             assert target instanceof SignatureConstant
                 || target instanceof IdentityConstant.NestedIdentity;
@@ -61,6 +76,12 @@ public class MethodBody {
         case Delegating:
         case Field:
             assert target instanceof PropertyConstant;
+            break;
+        case Union:
+            assert target instanceof MethodInfo[] legs
+                    && legs.length == 2 && legs[0] != null && legs[1] != null;
+            break;
+        case Implicit:
             break;
         default:
             assert target == null;
@@ -119,26 +140,41 @@ public class MethodBody {
     }
 
     /**
-     * @return the Access required for the method
+     * @return the Access required for the method, or null if unknown
      */
     public Access getAccess() {
-        return m_structMethod == null
-                ? Access.PUBLIC
-                : m_structMethod.getAccess();
+        if (m_structMethod != null) {
+            return m_structMethod.getAccess();
+        }
+
+        switch (m_impl) {
+        case FromInto:
+            MethodInfo infoInto = getIntoMethodInfo();
+            return infoInto == null ? null : infoInto.getAccess();
+
+        case Delegating:
+        case Field:
+        case Capped:
+            // TODO CP - need more context info!!!
+        }
+
+        return null;
     }
 
     /**
      * @return the MethodStructure that this MethodBody represents, or null if the method
      *         implementation does not have a MethodStructure, such as when the implementation is
-     *         Delegating, Field, or Capped
+     *         FromInto, Delegating, Field, or Capped
      */
     public MethodStructure getMethodStructure() {
         MethodStructure structMethod = m_structMethod;
         if (structMethod == null) {
             switch (m_impl) {
-            case Capped:
+            case FromInto:
+            case Implicit:
             case Delegating:
             case Field:
+            case Capped:
                 return null;
 
             default:
@@ -164,7 +200,9 @@ public class MethodBody {
      */
     public boolean isAbstract() {
         return switch (m_impl) {
-            case Implicit,
+            case FromInto,
+                 Implicit,          // this body is abstract, but what it represents may not be
+                 Union,             // this body is abstract, but the 2x union "legs" may not be
                  Declared,
                  Abstract,
                  SansCode -> true;  // special case -> it could be used to make a chain non-abstract,
@@ -184,9 +222,11 @@ public class MethodBody {
      */
     public boolean isConcrete() {
         return switch (m_impl) {
-            case Implicit,
+            case FromInto,
+                 Implicit,          // this body is abstract, but what it represents may not be
+                 Union,             // this body is abstract, but the 2x union "legs" may not be
                  Declared,
-                 Default,               // default methods are neither abstract nor concrete
+                 Default,           // default methods are neither abstract nor concrete
                  Abstract,
                  SansCode -> false;
 
@@ -207,20 +247,86 @@ public class MethodBody {
     }
 
     /**
-     * @return true iff this is a constructor or validator, and not a method or function
+     * @return assuming that this is the last body in a chain in a method in a TypeInfo, determine
+     *         if this body represents a method present in an "into" type
      */
-    public boolean isCtorOrValidator() {
-        MethodStructure structMethod = getMethodStructure();
-        return structMethod != null &&
-            (structMethod.isConstructor() || structMethod.isValidator());
+    public boolean isInto() {
+        return m_impl == Implementation.FromInto;
+    }
+
+    /**
+     * @return the (potentially incomplete) MethodInfo from which the "into" MethodBody was created
+     */
+    MethodInfo getIntoMethodInfo() {
+        assert isInto();
+        return (MethodInfo) m_target;
+    }
+
+    /**
+     * @return true iff the method body is on a (i.e. from a) mixin
+     */
+    public boolean isMixin() {
+        if (getImplementation().EXISTS == Existence.Class) {
+            MethodStructure structMethod = getMethodStructure();
+            if (structMethod != null && structMethod.getContaining() instanceof ClassStructure clz) {
+                    Format fmt = clz.getFormat();
+                    return fmt == Format.ANNOTATION || fmt == Format.MIXIN;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @return true iff this is a constructor
+     */
+    public boolean isConstructor() {
+        MethodStructure structMethod = getClassifyingMethodStructure();
+        return structMethod != null && structMethod.isConstructor();
     }
 
     /**
      * @return true iff this is a virtual constructor
      */
     public boolean isVirtualConstructor() {
-        MethodStructure structMethod = getMethodStructure();
+        MethodStructure structMethod = getClassifyingMethodStructure();
         return structMethod != null && structMethod.isVirtualConstructor();
+    }
+
+    /**
+     * @return true iff this is a validator
+     */
+    public boolean isValidator() {
+        MethodStructure structMethod = getClassifyingMethodStructure();
+        return structMethod != null && structMethod.isValidator();
+    }
+
+    /**
+     * @return true iff this is a constructor or validator, and not a method or function
+     */
+    public boolean isCtorOrValidator() {
+        MethodStructure structMethod = getClassifyingMethodStructure();
+        return structMethod != null &&
+            (structMethod.isConstructor() || structMethod.isValidator());
+    }
+
+    /**
+     * @return the MethodStructure used for classification, even when this body is an implicit
+     *         FromInto placeholder that deliberately exposes no executable structure
+     */
+    private MethodStructure getClassifyingMethodStructure() {
+        MethodStructure structMethod = getMethodStructure();
+        if (structMethod != null || !isInto()) {
+            return structMethod;
+        }
+
+        MethodInfo infoInto = getIntoMethodInfo();
+        if (infoInto != null) {
+            return infoInto.getHead().getClassifyingMethodStructure();
+        }
+
+        return m_id.getComponent() instanceof MethodStructure method
+                ? method
+                : null;
     }
 
     /**
@@ -228,14 +334,6 @@ public class MethodBody {
      */
     public boolean isAbstractFunction() {
         return isFunction() && getImplementation() == Implementation.Declared;
-    }
-
-    /**
-     * @return true iff this is a validator
-     */
-    public boolean isValidator() {
-        MethodStructure structMethod = getMethodStructure();
-        return structMethod != null && structMethod.isValidator();
     }
 
     /**
@@ -262,6 +360,10 @@ public class MethodBody {
      * @return true iff this specifies the @Override annotation
      */
     public boolean isOverride() {
+        if (isUnion()) {
+            return getUnionLeft().getHead().isOverride() && getUnionRight().getHead().isOverride();
+        }
+
         return findAnnotation(pool().clzOverride()) != null;
     }
 
@@ -269,6 +371,10 @@ public class MethodBody {
      * @return true iff this method is native
      */
     public boolean isNative() {
+        if (isUnion()) {
+            return getUnionLeft().getHead().isNative() && getUnionRight().getHead().isNative();
+        }
+
         return m_impl == Implementation.Native;
     }
 
@@ -276,7 +382,13 @@ public class MethodBody {
      * Mark this body as native
      */
     public void markNative() {
-        m_impl = Implementation.Native;
+        if (isUnion()) {
+            getUnionLeft().getHead().markNative();
+            getUnionRight().getHead().markNative();
+        } else {
+            m_impl = Implementation.Native;
+        }
+
     }
 
     /**
@@ -284,7 +396,9 @@ public class MethodBody {
      */
     public boolean isOptimized() {
         return switch (m_impl) {
-            case Implicit,
+            case FromInto,
+                 Implicit,
+                 Union,
                  Declared,
                  Abstract,
                  SansCode,
@@ -299,6 +413,33 @@ public class MethodBody {
     }
 
     /**
+     * @return true iff this MethodBody represents the Union of two MethodInfos
+     */
+    public boolean isUnion() {
+        return m_impl == Implementation.Union;
+    }
+
+    /**
+     * @return the left "leg" of the union MethodInfo
+     */
+    public MethodInfo getUnionLeft() {
+        if (m_target instanceof MethodInfo[] legs) {
+            return legs[0];
+        }
+        throw new IllegalStateException("not a union: " + this);
+    }
+
+    /**
+     * @return the left "leg" of the union MethodInfo
+     */
+    public MethodInfo getUnionRight() {
+        if (m_target instanceof MethodInfo[] legs) {
+            return legs[1];
+        }
+        throw new IllegalStateException("not a union: " + this);
+    }
+
+    /**
      * @return the Implementation form of this MethodBody
      */
     public Implementation getImplementation() {
@@ -309,6 +450,10 @@ public class MethodBody {
      * @return true if this method is known to call "super",the next body in the chain
      */
     public boolean usesSuper() {
+        if (isUnion()) {
+            return getUnionLeft().getHead().usesSuper() && getUnionRight().getHead().usesSuper();
+        }
+
         return m_impl == Implementation.Explicit && getMethodStructure().usesSuper();
     }
 
@@ -317,6 +462,7 @@ public class MethodBody {
      */
     public boolean blocksSuper() {
         switch (m_impl) {
+        case FromInto:
         case Implicit:
         case Declared:
         case Capped:    // this does redirect, but eventually the chain comes back to the super
@@ -335,6 +481,10 @@ public class MethodBody {
             assert !structMethod.isAbstract();
             return !structMethod.usesSuper();
 
+        case Union:
+            // TODO GG TODO CP "||" or "&&"
+            return getUnionLeft().getHead().blocksSuper() || getUnionRight().getHead().blocksSuper();
+
         default:
             throw new IllegalStateException();
         }
@@ -345,6 +495,12 @@ public class MethodBody {
      *         method to
      */
     public PropertyConstant getPropertyConstant() {
+        if (isUnion()) {
+            PropertyConstant propLeft  = getUnionLeft().getHead().getPropertyConstant();
+            PropertyConstant propRight = getUnionRight().getHead().getPropertyConstant();
+            return propLeft != null && propRight != null && propLeft.equals(propRight) ? propLeft : null;
+        }
+
         return m_impl == Implementation.Delegating || m_impl == Implementation.Field
                 ? (PropertyConstant) m_target
                 : null;
@@ -355,7 +511,30 @@ public class MethodBody {
      *         is a cap
      */
     public Object getNarrowingNestedIdentity() {
-        return m_impl == Implementation.Capped ? m_target : null;
+        if (m_impl == Implementation.Capped) {
+            return m_target;
+        }
+
+        if (m_impl == Implementation.FromInto) {
+            MethodInfo intoInfo = getIntoMethodInfo();
+            if (intoInfo != null) {
+                return intoInfo.getHead().getNarrowingNestedIdentity();
+            }
+        }
+
+        if (m_impl == Implementation.Union) {
+            Object nidLeft  = getUnionLeft().getHead().getNarrowingNestedIdentity();
+            Object nidRight = getUnionRight().getHead().getNarrowingNestedIdentity();
+            if (nidLeft == null) {
+                return nidRight;
+            }
+            if (nidRight == null) {
+                return nidLeft;
+            }
+            return nidLeft; // TODO GG or CP ???
+        }
+
+        return null;
     }
 
     /**
@@ -382,6 +561,10 @@ public class MethodBody {
      * @return true iff this is an auto converting method
      */
     public boolean isAuto() {
+        if (isUnion()) {
+            return getUnionLeft().isAuto() && getUnionRight().isAuto();
+        }
+
         // all @Auto methods must have no required params and a single return value
         SignatureConstant sig       = m_id.getSignature();
         MethodStructure   struct    = getMethodStructure();
@@ -390,6 +573,22 @@ public class MethodBody {
                 : struct.getParamCount() - struct.getDefaultParamCount();
         return cRequired == 0 && sig.getReturnCount() > 0 &&
                findAnnotation(pool().clzAuto()) != null;
+    }
+
+    /**
+     * @return true iff this MethodInfo represents an "@Op" operator method
+     */
+    public boolean isOp() {
+        if (isInto()) {
+            MethodInfo info = getIntoMethodInfo();
+            return info != null && info.isOp();
+        }
+
+        if (isUnion()) {
+            return getUnionLeft().isOp() && getUnionRight().isOp();
+        }
+
+        return findAnnotation(pool().clzOp()) != null;
     }
 
     /**
@@ -405,6 +604,14 @@ public class MethodBody {
         // must be a method (not a function)
         if (isFunction() || isCtorOrValidator()) {
             return false;
+        }
+
+        if (isInto()) {
+            return getIntoMethodInfo().isOp(sName, sOp, cParams);
+        }
+
+        if (isUnion()) {
+            return getUnionLeft().isOp(sName, sOp, cParams) && getUnionRight().isOp(sName, sOp, cParams);
         }
 
         // there has to be an @Op annotation
@@ -445,7 +652,6 @@ public class MethodBody {
         return ConstantPool.getCurrentPool();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -479,13 +685,21 @@ public class MethodBody {
           .append(m_impl);
 
         if (m_target != null) {
-            sb.append(", target=")
-              .append(m_target instanceof Constant constant ? constant.getValueString() : m_target);
+            sb.append(", target=");
+            if (isInto()) {
+                sb.append(getIntoMethodInfo().getHead().getIdentity());
+                if (getIntoMethodInfo().isCapped()) {
+                    sb.append(" (Capped -> ")
+                      .append(getIntoMethodInfo().getHead().getNarrowingNestedIdentity())
+                      .append(")");
+                }
+            } else {
+                sb.append(m_target instanceof Constant constant ? constant.getValueString() : m_target);
+            }
         }
 
         return sb.append('}').toString();
     }
-
 
     // ----- enumeration: Implementation -----------------------------------------------------------
 
@@ -493,9 +707,10 @@ public class MethodBody {
      * An enumeration of various forms of method body implementations.
      * <p/>
      * <ul>
-     * <li><b>Implicit</b> - the method body represents a method known to exist for compilation
+     * <li><b>FromInto</b> - the method body represents a method known to exist for compilation
      * purposes, but is otherwise not present; this is the result of the {@code into} clause, or the
      * methods of {@code Object} in the context of an interface, for example;</li>
+     * <li><b>Union</b> - the method body represents the union of two MethodInfos from a union type;
      * <li><b>Declared</b> - the method body represents a declared but non-implemented method;</li>
      * <li><b>Default</b> - the method body is a default implementation from an interface;</li>
      * <li><b>Abstract</b> - the method body is on a class, but is explicitly abstract;</li>
@@ -510,31 +725,32 @@ public class MethodBody {
      * </ul>
      */
     public enum Implementation {
-        Implicit,
-        Declared,
-        Default,
-        Abstract,
-        SansCode,
-        Capped,
-        Delegating,
-        Field,
-        Native,
-        Explicit;
+        FromInto(Existence.Implicit),           // these must only exist within a mixin's TypeInfo
+        Implicit(Existence.Implicit),           // assumed to exist with an Explicit Implementation
+        Union(Existence.Implicit),              // a union of two methods on a union type
+        Declared(Existence.Interface),
+        Default(Existence.Interface),
+        Abstract(Existence.Class),
+        SansCode(Existence.Class),
+        Capped(Existence.Class),
+        Delegating(Existence.Class),
+        Field(Existence.Class),
+        Native(Existence.Class),
+        Explicit(Existence.Class),
+        ;
 
-        public Existence getExistence() {
-            return switch (this) {
-                case Implicit -> Existence.Implied;
-                case Declared, Default -> Existence.Interface;
-                default -> Existence.Class;
-            };
+        private Implementation(Existence existence) {
+            EXISTS = existence;
         }
+
+        public final Existence EXISTS;
     }
 
     /**
      * An enumeration of various forms of method existence:
      * <p/>
      * <ul>
-     * <li><b>Implied</b> - the method exists implicitly; this is the result of the {@code into}
+     * <li><b>Implicit</b> - the method exists implicitly; this is the result of the {@code into}
      * clause, or the methods of {@code Object} in the context of an interface, for example;</li>
      * <li><b>Interface</b> - the method is defined as part of an interface;</li>
      * <li><b>Class</b> - the method is defined as part of a class.</li>
@@ -545,11 +761,10 @@ public class MethodBody {
      * considered to have an Existence of "Class".
      */
     public enum Existence {
-        Implied,
+        Implicit,
         Interface,
         Class
     }
-
 
     // ----- JIT support ---------------------------------------------------------------------------
 
@@ -611,13 +826,22 @@ public class MethodBody {
     /**
      * The constant denoting additional information (if required) for the MethodBody implementation:
      * <ul>
-     * <li>For Implementation Capped, this specifies a <i>resolved</i> nid for the narrowing method
-     * that the cap redirects execution to via a virtual method call;</li>
-     * <li>For Implementation Delegating, this specifies the property which contains the reference
+     * <li>For Implementation "Capped", this specifies a <i>resolved</i> nid for the narrowing
+     * method that the cap redirects execution to via a virtual method call;</li>
+     * <li>For Implementation "Delegating", this specifies the property which contains the reference
      * to delegate to.</li>
-     * <li>For Implementation Field, this specifies the property that the method body corresponds
+     * <li>For Implementation "Field", this specifies the property that the method body corresponds
      * to. For example, this is used to represent the field access for a {@code get()} method on a
      * property.</li>
+     * <li>For Implementation "FromInto", this specifies a MethodInfo that the MethodBody came from.
+     * (The value may be null.) First, this makes it possible to avoid incorporates/into infinite
+     * recursion. Second, capped chains are visible from the mixin side, allowing for meaningful
+     * compiler errors to be raised when methods on the mixin side are overriding known-capped
+     * chains. (A mixin may be incorporated at runtime in a manner that collides with a cap, but
+     * this would be a validation error at link- or run-time, not at compile-time; the goal is to
+     * catch errors at compile time if possible.)</li>
+     * <li>For Implementation "Union", this is an array of two MethodInfo, representing the two
+     * "legs" of the union.</li>
      * </ul>
      */
     private final Object m_target;
@@ -636,4 +860,9 @@ public class MethodBody {
      * The container type for which the JitMethodDesc above was computed (used only for constructors).
      */
     private transient TypeConstant m_typeJmdContainer;
+
+    /**
+     * TODO CP remove this field
+     */
+    transient boolean m_fDuplicate;
 }

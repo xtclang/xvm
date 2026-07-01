@@ -5,8 +5,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import java.util.function.Predicate;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -17,12 +21,14 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.MethodBody.Existence;
 import org.xvm.asm.constants.MethodBody.Implementation;
 
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.TypeSystem;
 
+import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendList;
@@ -62,12 +68,14 @@ public class MethodInfo
      * Cap this method chain with a redirection to a narrowed method chain. Error checking is the
      * responsibility of the caller.
      *
-     * @param typeCtx  the type, for which the MethodInfo is built
-     * @param that     the method chain to redirect to, which is the narrowed form of this MethodInfo
+     * @param idThis   the id of this MethodInfo being capped
+     * @param nidThat  the "target" to use in the resulting cap
+     * @param that     the target MethodInfo (containing the method chain to redirect to), which is
+     *                 the narrowed form of this MethodInfo
      *
-     * @return a capped version of this method chain
+     * @return a capped version of this MethodInfo
      */
-    MethodInfo capWith(TypeConstant typeCtx, MethodInfo that) {
+    MethodInfo capWith(MethodConstant idThis, Object nidThat, MethodInfo that) {
         // both method chains must be virtual, and neither can already be capped
         assert this.isOverridable() || this.containsVirtualConstructor();
         assert that.isOverridable() || that.isPotentialPropertyOverlay()
@@ -87,15 +95,11 @@ public class MethodInfo
             }
         }
 
-        ConstantPool   pool  = pool();
-        MethodConstant idCap = pool.ensureMethodConstant(idThat.getParentConstant(), sigThis);
-
         MethodBody[] aOld = m_aBody;
         int          cOld = aOld.length;
         MethodBody[] aNew = new MethodBody[cOld+1];
 
-        aNew[0] = new MethodBody(idCap, sigThis, Implementation.Capped,
-                                    idThat.resolveNestedIdentity(pool, typeCtx));
+        aNew[0] = new MethodBody(idThis, sigThis, Implementation.Capped, nidThat);
         System.arraycopy(aOld, 0, aNew, 1, cOld);
 
         return new MethodInfo(aNew, f_nRank);
@@ -113,9 +117,6 @@ public class MethodInfo
      * @return the resulting MethodInfo
      */
     public MethodInfo layerOn(MethodInfo that, boolean fSelf, ErrorListener errs) {
-        assert this.getIdentity().getName().equals(that.getIdentity().getName());
-        assert !this.isFunction() && !that.isFunction();
-
         if (!this.getAccess().isAsAccessibleAs(Access.PROTECTED) ||
             !that.getAccess().isAsAccessibleAs(Access.PROTECTED) ||
             (this.isCtorOrValidator() && !this.containsVirtualConstructor()) ||
@@ -128,7 +129,7 @@ public class MethodInfo
             return this;
         }
 
-        if (this.equals(that)) {
+        if (this.equals(that) || this.containsAllBodies(that)) {
             return this;
         }
 
@@ -177,6 +178,34 @@ public class MethodInfo
             }
         }
 
+        MethodBody tailAdd = aAdd[cAdd-1];
+        if (tailAdd.isInto()) {
+            MethodBody tailBase = aBase[cBase-1];
+            if (cAdd == 2 && aAdd[0].getImplementation() == Implementation.Capped) {
+                // the "into" is capped in the mixin but nothing else is in the chain, which implies
+                // that there is some other method signature in the mixin that did (and thus, will)
+                // cause the cap to occur; instead of trying to resolve the cap here, we need to
+                // simply ignore the cap, because re-evaluating the narrowing method (but within the
+                // context of the TypeInfo that we're building) will create a correct cap, which may
+                // be even "more correct" than the cap we have found in the mixin (which didn't know
+                // exactly what class(es) it would be incorporated into)
+                return this;
+            } else  if (tailBase.isInto() && !tailAdd.equals(tailBase)) {
+                // the "into" from the add narrows the "into" from the base, so use it instead of
+                // the "into" from the base
+                aBase = aBase.clone();
+                aBase[cBase-1] = tailAdd;
+                --cAdd;
+            } else if (cAdd == 1) {
+                // discard the duplicate "into" from the add, and since it's the only thing to add,
+                // that means that the result of layering on is the base (no change)
+                return this;
+            } else {
+                // discard the duplicate "into" from the add
+                --cAdd;
+            }
+        }
+
         ArrayList<MethodBody> listMerge = null;
         NextLayer: for (int iThat = 0; iThat < cAdd; ++iThat) {
             MethodBody bodyThat = aAdd[iThat];
@@ -185,7 +214,8 @@ public class MethodInfo
             // equivalent bodies would sit next to each other; since Object is present on every
             // single type, exclude it from this check
             boolean fAllowDuplicate = bodyThat.getIdentity().getNamespace() != pool().clzObject() &&
-                bodyThat.getImplementation().getExistence() == MethodBody.Existence.Interface;
+                    bodyThat.getImplementation().EXISTS == Existence.Interface &&
+                    !containsBody(b -> b.getImplementation().EXISTS == Existence.Class);
 
             for (int iThis = 0; iThis < cBase; ++iThis) {
                 // discard duplicate "into" and class methods
@@ -350,57 +380,9 @@ public class MethodInfo
     }
 
     /**
-     * Retain only method bodies that originate from the identities specified in the passed sets.
-     *
-     * @param constId     the identity of the method for this operation
-     * @param setClass    the set of identities that call chain bodies can come from
-     * @param setDefault  the set of identities that default bodies can come from
-     *
-     * @return the resulting MethodInfo, or null if nothing has been retained
-     */
-    public MethodInfo retainOnly(MethodConstant        constId,
-                                 Set<IdentityConstant> setClass,
-                                 Set<IdentityConstant> setDefault) {
-        // functions are, by definition, non-virtual, so they are not affected by yanking,
-        // de-duping (they naturally de-dup by having a fixed identity), etc.
-        if (isFunction() || isCtorOrValidator()) {
-            return this;
-        }
-
-        ArrayList<MethodBody> list  = null;
-        MethodBody[]          aBody = m_aBody;
-        for (int i = 0, c = aBody.length; i < c; ++i) {
-            MethodBody       body     = aBody[i];
-            IdentityConstant constClz = constId.getClassIdentity();
-
-            boolean fRetain = switch (body.getImplementation()) {
-                // allow these duplicates to survive (ignore retain set)
-                case Implicit, SansCode, Declared, Default, Native -> true;
-                default -> setClass.contains(constClz) || setDefault.contains(constClz);
-            };
-
-            if (fRetain) {
-                if (list != null) {
-                    list.add(body);
-                }
-            } else if (list == null) {
-                list = startList(aBody, i);
-            }
-        }
-
-        if (list == null) {
-            return this;
-        }
-
-        return list.isEmpty()
-                ? null
-                : new MethodInfo(list.toArray(MethodBody.NO_BODIES), f_nRank);
-    }
-
-    /**
      * When a method on a class originates on an interface which is then implemented by (or
-     * otherwise picked up by) a native rebase class, the method isn't marked as native naturally
-     * if nothing on the rebase class overrode (or otherwise declared) the method.
+     * otherwise picked up by) a native rebase class, the method isn't marked as native naturally if
+     * nothing on the rebase class overrode (or otherwise declared) the method.
      *
      * @param fNative  true iff the type being assembled is a native rebase class
      * @param errs     the error list to log any errors to
@@ -435,8 +417,6 @@ public class MethodInfo
             case Capped:
                 return this;
 
-            case Delegating:
-            case Field:
             default:
                 // it's not that this is a problem; it's just that it's unexpected, so this
                 // acts as an assertion to flag any occurrences
@@ -472,41 +452,119 @@ public class MethodInfo
     }
 
     /**
-     * @return the "into" version of this MethodInfo
+     * @param setFromInto  the pre-calculated graph of identity nodes that form the "into" and omit
+     *                     the mixin (preventing circularity)
+     *
+     * @return the contents of this MethodInfo, but excluding bodies from classes in the passed set,
+     *         or null if all bodies are excluded
      */
-    public MethodInfo asInto() {
-        // if the method is a function, constructor or a "cap", it stays as-is (unless it's a function
-        // on the Object class); otherwise, it needs to be turned into a chain of implicit entries
-        if ((isFunction() || isCtorOrValidator() || isCapped()) &&
-                    !getIdentity().getNamespace().equals(pool().clzObject())) {
+    public MethodInfo excluding(Set<IdentityConstant> setFromInto) {
+        MethodBody[]     aBodyOld = m_aBody;
+        int              cBodies  = aBodyOld.length;
+        List<MethodBody> listNew  = null;
+        for (int iBody = 0; iBody < cBodies; iBody++) {
+            MethodBody body = aBodyOld[iBody];
+            if (setFromInto.contains(body.getIdentity().getClassIdentity())) {
+                if (listNew == null) {
+                    listNew = cBodies == 1 ? Collections.emptyList() : new ArrayList<>(cBodies - 1);
+                    for (int iCopy = 0; iCopy < iBody; ++iCopy) {
+                        listNew.add(aBodyOld[iCopy]);
+                    }
+                }
+            } else {
+                if (listNew != null) {
+                    listNew.add(body);
+                }
+            }
+        }
+
+        return listNew == null ? this
+                : listNew.isEmpty() ? null
+                : new MethodInfo(listNew.toArray(new MethodBody[0]), f_nRank);
+    }
+
+    /**
+     * @param setFromInto  the pre-calculated graph of identity nodes that form the "into" and omit
+     *                     the mixin (preventing circularity), or null to include everything
+     *
+     * @return the "into" version of this MethodInfo, or null to exclude from the "into"
+     */
+    public MethodInfo asInto(Set<IdentityConstant> setFromInto) {
+        // functions in the "into" are visible to the mixin, as-is
+        if (isFunction()) {
             return this;
         }
 
-        return markImplicit();
+        if (isCtorOrValidator()) {
+            return null;
+        }
+
+        if (m_aBody.length == 1) {
+            MethodBody head = m_aBody[0];
+            if (head.isInto()) {
+                return setFromInto == null || setFromInto.contains(m_aBody[0].getIdentity().getClassIdentity())
+                        ? this
+                        : null;
+            }
+
+            if (head.isUnion()) {
+                MethodBody into = new MethodBody(head.getIdentity(), head.getSignature(), Implementation.FromInto, this);
+                return new MethodInfo(new MethodBody[]{into}, f_nRank);
+            }
+        }
+
+        for (MethodBody body : m_aBody) {
+            MethodConstant idBody = body.getIdentity();
+            if (setFromInto == null || setFromInto.contains(idBody.getClassIdentity())) {
+
+                MethodBody into = new MethodBody(idBody, body.getSignature(), Implementation.FromInto, this);
+// TODO CP either remove or complete
+//
+//                if (isCapped()) {
+//                    getHead().g
+//                    MethodBody cap = new MethodBody()
+//                    return new MethodInfo(new MethodBody[]{into}, f_nRank);
+//                }
+                return new MethodInfo(new MethodBody[]{into}, f_nRank);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Replace the tail "into" body with an implicit body. This is used when a MethodInfo represents
+     * a method on an exploded property being layered on top of a property that never had a reason
+     * to be exploded.
+     */
+    public MethodInfo rebaseInto() {
+        MethodBody[] aBodyNew = m_aBody.clone();
+        int          cBodies  = aBodyNew.length;
+        MethodBody   tail     = aBodyNew[cBodies-1];
+        assert tail.isInto();
+        aBodyNew[cBodies-1] = new MethodBody(tail.getIdentity(), tail.getSignature(), Implementation.SansCode);
+        return new MethodInfo(aBodyNew, f_nRank);
+    }
+
+    /**
+     * @return true iff this MethodInfo comes from an "into"
+     */
+    public boolean hasInto() {
+        for (MethodBody body : m_aBody) {
+            if (body.isInto()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
      * @return the MethodInfo that marks this constructor as "implicit"
      */
     public MethodInfo markImplicitConstructor() {
-        assert getHead().getMethodStructure().isConstructor();
-
-        return markImplicit();
-    }
-
-    /**
-     * Mark all method implementations as "implicit".
-     */
-    private MethodInfo markImplicit() {
-        MethodBody[] aBodyOld = m_aBody;
-        int          cBodies  = aBodyOld.length;
-        MethodBody[] aBodyNew = new MethodBody[cBodies];
-        for (int i = 0; i < cBodies; i++) {
-            MethodBody body = aBodyOld[i];
-
-            aBodyNew[i] = new MethodBody(body.getIdentity(), body.getSignature(), Implementation.Implicit);
-        }
-        return new MethodInfo(aBodyNew, f_nRank);
+        assert getHead().isConstructor();
+        MethodBody   bodyOld  = m_aBody[0];
+        MethodBody   bodyNew  = new MethodBody(bodyOld.getIdentity(), bodyOld.getSignature(), Implementation.Implicit, this);
+        return new MethodInfo(new MethodBody[] {bodyNew}, f_nRank);
     }
 
     /**
@@ -518,7 +576,7 @@ public class MethodInfo
     }
 
     /**
-     * @return true iff any body of this info has the specified method id
+     * @return true iff any MethodBody of this info has the specified method id
      */
     public boolean containsBody(MethodConstant id) {
         for (MethodBody body : m_aBody) {
@@ -527,6 +585,55 @@ public class MethodInfo
             }
         }
         return false;
+    }
+
+    /**
+     * @return true iff any MethodBody of this MethodInfo is equal to the passed MethodBody
+     */
+    public boolean containsBody(MethodBody that) {
+        for (MethodBody body : m_aBody) {
+            if (body.equals(that)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param match  the predicate to match a MethodInfo
+     *
+     * @return true iff any MethodBody of this MethodInfo matches
+     */
+    public boolean containsBody(Predicate<MethodBody> match) {
+        for (MethodBody body : m_aBody) {
+            if (match.test(body)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param that  another MethodInfo
+     *
+     * @return true iff this MethodInfo contains any MethodBody from that MethodInfo
+     */
+    public boolean containsAnyBodies(MethodInfo that) {
+        for (MethodBody bodyThat : that.getChain()) {
+            if (containsBody(bodyThat)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param that  another MethodInfo
+     *
+     * @return true iff this MethodInfo contains every MethodBody from that MethodInfo
+     */
+    public boolean containsAllBodies(MethodInfo that) {
+        return Handy.containsAll(this.m_aBody, that.m_aBody);
     }
 
     /**
@@ -539,6 +646,51 @@ public class MethodInfo
     }
 
     /**
+     * @return the number of total parameters (including type parameters) that the method takes
+     */
+    public int getTotalParamCount() {
+        return getSignature().getParamCount();
+    }
+
+    /**
+     * @return the number of type parameters
+     */
+    public int getTypeParamCount(TypeInfo typeInfo) {
+        return getTopmostMethodStructure(typeInfo).getTypeParamCount();
+    }
+
+    /**
+     * @return the number of method parameters excluding the type parameters
+     */
+    public int getVisibleParamCount(TypeInfo typeInfo) {
+        return getTopmostMethodStructure(typeInfo).getVisibleParamCount();
+    }
+
+    /**
+     * @return the number of parameters with default values
+     */
+    public int getDefaultParamCount(TypeInfo typeInfo) {
+        return getTopmostMethodStructure(typeInfo).getDefaultParamCount();
+    }
+
+    /**
+     * @return the number of method parameters that are required to invoke the method
+     */
+    public int getRequiredParamCount(TypeInfo typeInfo) {
+        MethodStructure structure = getTopmostMethodStructure(typeInfo);
+        int cTypeParams = structure.getTypeParamCount();
+        int cDefaults   = structure.getDefaultParamCount();
+        return getTotalParamCount() - cTypeParams - cDefaults;
+    }
+
+    /**
+     * @return the number of return values from the method
+     */
+    public int getReturnCount() {
+        return getSignature().getReturnCount();
+    }
+
+    /**
      * Get the topmost MethodStructure for the call chain represented by this MethodInfo.
      * Note, that the TypeInfo is necessary to be passed only if this method can be a "capped" one.
      *
@@ -547,21 +699,56 @@ public class MethodInfo
      * @return the first non-null MethodStructure for bodies in the call chain
      */
     public MethodStructure getTopmostMethodStructure(TypeInfo infoType) {
+        MethodStructure method = getOptionalTopmostMethodStructure(infoType);
+        if (method != null) {
+            return method;
+        }
+
+        throw new IllegalStateException("no MethodStructure for MethodInfo: " + this);
+    }
+
+    /**
+     * @return the first non-null MethodStructure for bodies in the call chain, or null
+     */
+    public MethodStructure getOptionalTopmostMethodStructure(TypeInfo infoType) {
         for (MethodBody body : m_aBody) {
             if (body.getImplementation() == Implementation.Capped) {
                 MethodInfo methodNarrowing = infoType.getNarrowingMethod(this);
-                assert methodNarrowing != this;
-                return methodNarrowing.getTopmostMethodStructure(infoType);
+                return methodNarrowing == null || methodNarrowing == this
+                        ? null
+                        : methodNarrowing.getOptionalTopmostMethodStructure(infoType);
             }
 
-            MethodStructure method = body.getMethodStructure();
-            if (method != null) {
-                return method;
+            if (body.getImplementation() == Implementation.FromInto) {
+                MethodInfo infoInto = body.getIntoMethodInfo();
+                if (infoInto != null) {
+                    MethodStructure method = infoInto.getOptionalTopmostMethodStructure(infoType);
+                    if (method != null) {
+                        return method;
+                    }
+                }
+                continue;
+            }
+
+            if (body.getImplementation() == Implementation.Union) {
+                MethodStructure method = body.getUnionLeft().getOptionalTopmostMethodStructure(infoType);
+                if (method != null) {
+                    return method;
+                }
+                method = body.getUnionRight().getOptionalTopmostMethodStructure(infoType);
+                if (method != null) {
+                    return method;
+                }
+                continue;
+            }
+
+            MethodStructure structMethod = body.getMethodStructure();
+            if (structMethod != null) {
+                return structMethod;
             }
         }
 
-        // we must find something real
-        throw new IllegalStateException();
+        return null;
     }
 
     /**
@@ -622,6 +809,9 @@ public class MethodInfo
                 }
                 break;
 
+            case Union:
+                return body.getUnionLeft().isAbstract() || body.getUnionRight().isAbstract();
+
             case Declared:
                 cDeclParams  = Math.max(cDeclParams, body.getSignature().getParamCount());
                 cDeclReturns = Math.max(cDeclReturns, body.getSignature().getReturnCount());
@@ -673,11 +863,11 @@ public class MethodInfo
     }
 
     /**
-     * @return true iff this is a constructor (not a method or function)
+     * @return true iff this is a constructor
      */
-    public boolean isCtorOrValidator() {
+    public boolean isConstructor() {
         // virtual constructor could be capped
-        return getTail().isCtorOrValidator();
+        return getTail().isConstructor();
     }
 
     /**
@@ -685,6 +875,14 @@ public class MethodInfo
      */
     public boolean isValidator() {
         return getHead().isValidator();
+    }
+
+    /**
+     * @return true iff this is a constructor or validator (not a method or function)
+     */
+    public boolean isCtorOrValidator() {
+        // virtual constructor could be capped
+        return getTail().isCtorOrValidator();
     }
 
     /**
@@ -804,13 +1002,37 @@ public class MethodInfo
      * @return true iff the method chain is capped
      */
     public boolean isCapped() {
-        return getHead().getImplementation() == Implementation.Capped;
+        MethodBody     head = getHead();
+        Implementation impl = head.getImplementation();
+        if (impl == Implementation.Capped) {
+            return true;
+        }
+
+        // special handling for mixins: if the "from into" MethodInfo is capped, then this is
+        // capped, unless we find the "POV body" in the FromInto, which means there's circular
+        // recursion that we're in the process of determining and eliminating (as part of the
+        // "layer on" processing during TypeInfo creation)
+        if (impl == Implementation.FromInto) {
+            MethodInfo infoInto = head.getIntoMethodInfo();
+            return infoInto != null && infoInto.isCapped();
+        }
+
+        if (impl == Implementation.Union) {
+            return head.getUnionLeft().isCapped() || head.getUnionRight().isCapped();
+        }
+
+        return false;
     }
 
     /**
      * @return true iff the method chain is delegating
      */
     public boolean isDelegating() {
+        MethodBody     head = getHead();
+        if (head.getImplementation() == Implementation.Union) {
+            return head.getUnionLeft().isDelegating() && head.getUnionRight().isDelegating();
+        }
+
         return getHead().getImplementation() == Implementation.Delegating;
     }
 
@@ -904,10 +1126,10 @@ public class MethodInfo
                     }
                 }
                 switch (impl) {
-                case Implicit:
+                case FromInto:
                     if (fAnno || fMixin) {
                         // since annotations and mixins themselves are not concrete
-                        // (instantiatable) we cannot discard the Implicit body; it will be done
+                        // (instantiatable) we cannot discard the FromInto body; it will be done
                         // by the concrete types
                         if (listNew != null) {
                             listNew.add(body);
@@ -915,6 +1137,7 @@ public class MethodInfo
                         break;
                     }
                     // fall through
+                case Implicit:
                 case Declared:
                 case Abstract:
                 case SansCode:
@@ -931,7 +1154,7 @@ public class MethodInfo
                         // check if there's anything else below this point
                         boolean fAllDefaults = true;
                         for (int j = i + 1; j < c; j++) {
-                            if (chain[j].getImplementation() != Implementation.Default) {
+                            if (chain[j].getImplementation().EXISTS == Existence.Class) {
                                 fAllDefaults = false;
                                 break;
                             }
@@ -1033,14 +1256,8 @@ public class MethodInfo
         // the logic below is a specialized version of the ensureOptimizedMethodChain() method
         chain = getChain();
 
-        MethodBody bodyHead = chain[0];
-
-        if (bodyHead.getImplementation() == Implementation.Capped) {
-            return infoType.getMethodByNestedId(bodyHead.getNarrowingNestedIdentity()).getSuper(infoType);
-        }
-
         // an accessor for a property with a field always has super()
-        MethodStructure method    = bodyHead.getMethodStructure();
+        MethodStructure method    = getTopmostMethodStructure(infoType);
         Component       container = method.getParent().getParent();
         if (container instanceof PropertyStructure property) {
             if (method == property.getGetter() || method == property.getSetter()) {
@@ -1059,6 +1276,7 @@ public class MethodInfo
         SignatureConstant sigSuper = bodySuper.getSignature();
 
         // if the "head" is auto-narrowing, we need to adjust the "super()" signature as well
+        MethodBody bodyHead = chain[0];
         if (bodyHead.getSignature().containsAutoNarrowing(false)) {
             sigSuper = sigSuper.resolveAutoNarrowing(pool(), infoType.getType(), null);
         }
@@ -1077,12 +1295,13 @@ public class MethodInfo
         for (int i = 0, cMethods = 0, cAll = chain.length; i < cAll; ++i) {
             MethodBody body = chain[i];
             switch (body.getImplementation()) {
-            case Implicit:
+            case FromInto:
                 if (fAnno || fMixin) {
                     cMethods++;
                 }
                 break;
 
+            case Implicit:
             case Declared:
             case Abstract:
             case SansCode:
@@ -1123,13 +1342,25 @@ public class MethodInfo
     }
 
     /**
+     * TODO CP this needs to be fixed to return correct information!!!
+     *
      * @return the access of the first method in the chain; Public if there are no "real" bodies
      */
     public Access getAccess() {
         for (MethodBody body : m_aBody) {
+            if (body.isUnion()) {
+                return body.getUnionLeft().getAccess().minOf(body.getUnionRight().getAccess());
+            }
+
             MethodStructure struct = body.getMethodStructure();
             if (struct != null) {
                 return struct.getAccess();
+            } else if (body.isInto()) {
+                // this works for "into" bodies, but not for delegating
+                Access access = body.getAccess();
+                if (access != null) {
+                    return access;
+                }
             }
         }
 
@@ -1140,7 +1371,7 @@ public class MethodInfo
      * @return true iff this method is accessible in the context of the specified class
      */
     public boolean isVisible(IdentityConstant idClz) {
-        if (getHead().getAccess() == Access.PUBLIC) {
+        if (getAccess() == Access.PUBLIC) {
             return true;
         }
 
@@ -1163,7 +1394,7 @@ public class MethodInfo
      * @return true iff this MethodInfo represents an "@Op" operator method
      */
     public boolean isOp() {
-        return getHead().findAnnotation(pool().clzOp()) != null;
+        return getHead().isOp();
     }
 
     /**
@@ -1179,6 +1410,29 @@ public class MethodInfo
     public int getRank() {
         return f_nRank;
     }
+
+    public boolean isDuplicate() {
+        for (MethodBody body : m_aBody) {
+            if (body.m_fDuplicate) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+// TODO CP remove
+    public void markAsDuplicate() {
+        for (MethodBody body : m_aBody) {
+            body.m_fDuplicate = true;
+        }
+// TODO CP remove
+        String s = "*** marking " + getIdentity() + " as duplicate";
+        if (DUPS.add(s)) {
+            System.out.println(s);
+        }
+    }
+// TODO CP remove
+private static HashSet<String> DUPS = new HashSet<>();
 
     /**
      * @return the ConstantPool
@@ -1217,7 +1471,8 @@ public class MethodInfo
                     break;
                 }
                 sig = body.getSignature();
-            } else if (impl == Implementation.Implicit) {
+            } else if (body.getImplementation() == Implementation.FromInto
+                    || body.getImplementation() == Implementation.Implicit) {
                 // ignore
             } else if (isJitEquivalent(body.getSignature(), sig)) {
                 id = body.getIdentity();
@@ -1294,6 +1549,9 @@ public class MethodInfo
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
+        if (isOp()) {
+            sb.append("@Op ");
+        }
         sb.append(getSignature().getValueString());
 
         int i = 0;

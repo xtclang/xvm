@@ -344,18 +344,16 @@ public class ArrayAccessExpression
                     typeArrayReq = typeTupleTest;
                 }
             }
-        }
         // test for List<T> and Array<T> (aka T[]) etc.
-        else if (testType(ctx, exprArray, typeArray, pool.typeList()) && cIndexes == 1) {
+        } else if (testType(ctx, exprArray, typeArray, pool.typeList()) && cIndexes == 1) {
             typeArrayReq = pool.typeList();
             if (typeRequired != null) {
                 // array[index]
                 TypeConstant typeElement = null;
                 if (!isSliceOp() && aexprIndexes[0].testFit(ctx, pool.typeInt64(), false, null).isFit()) {
                     typeElement = typeRequired;
-                }
                 // array[index..index] or array[index..index)
-                else if (typeRequired.isA(pool.typeList()) && aexprIndexes[0].testFit(ctx,
+                } else if (typeRequired.isA(pool.typeList()) && aexprIndexes[0].testFit(ctx,
                         pool.ensureRangeType(pool.typeInt64()), false, null).isFit()) {
                     // REVIEW keep this in sync with testFit()
                     typeElement = typeRequired.resolveGenericType("Element");
@@ -369,9 +367,8 @@ public class ArrayAccessExpression
                     }
                 }
             }
-        }
         // test for UniformIndexed
-        else if (testType(ctx, exprArray, typeArray, pool.typeIndexed()) && cIndexes == 1) {
+        } else if (testType(ctx, exprArray, typeArray, pool.typeIndexed()) && cIndexes == 1) {
             typeArrayReq = pool.typeIndexed();
 
             // figure out the index type
@@ -404,9 +401,8 @@ public class ArrayAccessExpression
                     }
                 }
             }
-        }
         // test for Matrix<T>
-        else if (testType(ctx, expr, typeArray, pool.typeMatrix()) && cIndexes == 2) {
+        } else if (testType(ctx, expr, typeArray, pool.typeMatrix()) && cIndexes == 2) {
             typeArrayReq = pool.typeMatrix();
             if (typeRequired != null) {
                 Expression exprCol = aexprIndexes[0];
@@ -417,9 +413,8 @@ public class ArrayAccessExpression
                 if (exprCol.testFit(ctx, pool.typeInt64(), false, null).isFit() &&
                     exprRow.testFit(ctx, pool.typeInt64(), false, null).isFit()) {
                     typeElement = typeRequired;
-                }
                 // array[index..index]
-                else if (typeRequired.isA(pool.typeInterval())) {
+                } else if (typeRequired.isA(pool.typeInterval())) {
                     TypeConstant typeIntInterval = pool.ensureRangeType(pool.typeInt64());
                     if (exprCol.testFit(ctx, typeIntInterval, false, null).isFit() &&
                         exprRow.testFit(ctx, typeIntInterval, false, null).isFit()) {
