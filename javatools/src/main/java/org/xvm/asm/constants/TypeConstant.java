@@ -3783,10 +3783,9 @@ public abstract class TypeConstant
         boolean fComplete = true;
         boolean fExploded = info.isExploded();
 
-        // TODO CP implement
         // the base should already be present, although we may be (e.g.) narrowing the type or
         // some other change
-        // TODO is there anything that needs to be done to handle going from Ref -> Var
+        // TODO CP is there anything that needs to be done to handle going from Ref -> Var
         //      (e.g. add an RB for "set()"?)
 
 
@@ -3973,7 +3972,7 @@ public abstract class TypeConstant
                 MethodConstant idContrib  = (MethodConstant) idProp.appendNestedIdentity(pool, nidContrib);
                 MethodInfo     infoMethod = entry.getValue();
                 if (infoMethod.isCapped()) {
-                    infoMethod = infoMethod.nestNarrowingIdentity(pool, idProp);
+                    infoMethod = infoMethod.nestNarrowingIdentity(pool, idProp); // TODO CP what hits this?
                 }
                 mapContribMethods.put(idContrib, infoMethod);
             }
@@ -4590,6 +4589,7 @@ public abstract class TypeConstant
                 // find the best base method to layer on; use a capped base method only if nothing
                 // else matches
                 MethodInfo methodBase = mapVirtMethods.get(nidContrib);
+                Object     nidBase    = nidContrib;
                 if (methodBase == null) {
                     int cUncappedMatches = 0;
                     for (Object nidMatch : listMatches) {
@@ -4603,6 +4603,7 @@ public abstract class TypeConstant
                             if (methodBase == null) {
                                 // take a possible match, but keep looking
                                 methodBase = methodMatch;
+                                nidBase    = nidMatch;
                             } else if (methodBase.isCapped()) {
                                 // TODO handle cap -> cap -> cap ... must settle on the leftmost one
                                 log(errs, Severity.INFO, VE_UNKNOWN,
@@ -4622,6 +4623,7 @@ public abstract class TypeConstant
                                 }
                             }
                             methodBase = methodMatch;
+                            nidBase    = nidMatch;
                         }
                     }
                 } else if (methodBase.containsAllBodies(methodContrib)) {
@@ -4658,6 +4660,9 @@ public abstract class TypeConstant
                         methodResult = new MethodInfo(Handy.prepend(methodResult.getChain(),
                                 bodyDelegate), methodResult.getRank());
                     }
+                }
+                if (methodBase != null && !nidBase.equals(nidContrib)) {
+                    mapNarrowedNids = addNarrowingNid(mapNarrowedNids, nidBase, nidContrib);
                 }
                 mapVirtMods.put(nidContrib, methodResult);
             }
