@@ -520,20 +520,19 @@ public class TypeInfo {
 
         MethodConstant    id        = findMethods("get", 0, TypeInfo.MethodKind.Method).iterator().next();
         SignatureConstant sig       = id.getSignature();
+        SignatureConstant sigNew    = pool.register(sig.resolveGenericTypes(pool, resolver));
+        MethodConstant    idNew     = pool.ensureMethodConstant(getIdentity(), sigNew);
         MethodInfo        method    = getMethodById(id);
         MethodBody        body      = method.getHead();
-        MethodConstant    idNew     = pool.ensureMethodConstant(getIdentity(), sig.resolveGenericTypes(pool, resolver));
-        SignatureConstant sigNew    = idNew.getSignature();
         MethodBody        bodyNew   = new MethodBody(idNew, sigNew, body.getImplementation(), null);
         MethodInfo        methodNew = new MethodInfo(bodyNew, method.getRank());
         bodyNew.setMethodStructure(body.getMethodStructure());
 
-        Map<MethodConstant, MethodInfo> mapMethods = new HashMap<>(getMethods());
-        mapMethods.remove(id);
+        // we intentionally add absolutely nothing except the "get" method
+        Map<MethodConstant, MethodInfo> mapMethods = new HashMap<>(1);
         mapMethods.put(methodNew.getIdentity(), methodNew);
 
-        Map<Object, MethodInfo> mapVirtMethods = new HashMap<>(getVirtMethods());
-        mapVirtMethods.remove(sig);
+        Map<Object, MethodInfo> mapVirtMethods = new HashMap<>(1);
         mapVirtMethods.put(sigNew, methodNew);
 
         return new TypeInfo(
@@ -548,12 +547,12 @@ public class TypeInfo {
             null,                   // typeExtends
             null,                   // typeRebase
             null,                   // typeInto
-            Collections.emptyList(), // listProcess,
+            Collections.emptyList(),// listProcess,
             ListMap.EMPTY,          // listmapClassChain
             ListMap.EMPTY,          // listmapDefaultChain
-            Collections.emptyMap(),  // mapProps
+            Collections.emptyMap(), // mapProps
             mapMethods,
-            Collections.emptyMap(),  // mapVirtProps
+            Collections.emptyMap(), // mapVirtProps
             mapVirtMethods,
             ListMap.EMPTY,          // mapChildren
             null, Progress.Complete
