@@ -1339,8 +1339,7 @@ public class ConstantPool
                     + " is not a Module, Package, Class, Method, or Property");
         };
 
-        return register(new MethodConstant(this, constMultiMethod,
-                aconstParams, aconstReturns));
+        return register(new MethodConstant(this, constMultiMethod, aconstParams, aconstReturns));
     }
 
     /**
@@ -2891,9 +2890,14 @@ public class ConstantPool
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder  sb = new StringBuilder();
+        ModuleConstant id = getFileStructure().getModuleId();
+        if (id == null) {
+            // this can happen only during the inception
+            id = getFileStructure().moduleIds().iterator().next();
+        }
         sb.append("module=")
-          .append(getFileStructure().getModuleId().getName())
+          .append(id.getName())
           .append(", size=")
           .append(f_listConst.size());
 
