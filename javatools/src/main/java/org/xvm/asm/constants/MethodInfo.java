@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1410,29 +1409,6 @@ public class MethodInfo
     public int getRank() {
         return f_nRank;
     }
-
-    public boolean isDuplicate() {
-        for (MethodBody body : m_aBody) {
-            if (body.m_fDuplicate) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-// TODO CP remove
-    public void markAsDuplicate() {
-        for (MethodBody body : m_aBody) {
-            body.m_fDuplicate = true;
-        }
-// TODO CP remove
-        String s = "*** marking " + getIdentity() + " as duplicate";
-        if (DUPS.add(s)) {
-            System.out.println(s);
-        }
-    }
-// TODO CP remove
-private static HashSet<String> DUPS = new HashSet<>();
 
     /**
      * @return the ConstantPool

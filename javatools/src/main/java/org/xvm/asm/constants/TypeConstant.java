@@ -4573,7 +4573,6 @@ public abstract class TypeConstant
                 MethodInfo methodBase = mapVirtMethods.get(nidContrib);
                 Object     nidBase    = nidContrib;
                 if (methodBase == null) {
-                    int cUncappedMatches = 0;
                     for (Object nidMatch : listMatches) {
                         MethodInfo methodMatch = mapVirtMethods.get(nidMatch);
                         if (methodMatch == null || nidMatch.equals(nidContrib)
@@ -4586,24 +4585,13 @@ public abstract class TypeConstant
                                 // take a possible match, but keep looking
                                 methodBase = methodMatch;
                                 nidBase    = nidMatch;
-                            } else if (methodBase.isCapped()) {
-                                // TODO handle cap -> cap -> cap ... must settle on the leftmost one
-                                log(errs, Severity.INFO, VE_UNKNOWN,
-                                        "TODO: handle cap->cap (method=" + methodBase + ')');
-                            }
-                        } else {
-                            if (cUncappedMatches++ > 0) {
-                                // the signatures may be "the same" in this context, e.g. the only
-                                // difference may be two different "this:type" types for the same parameter
-                                // or return type
-                                // TODO this should handle NestedIdentity as well
-                                if (nidMatch instanceof SignatureConstant sig1
-                                        && nidContrib instanceof SignatureConstant sig2
-                                        && sig1.isSubstitutableFor(sig2, this)
-                                        && sig2.isSubstitutableFor(sig1, this)) {
-                                    methodBase.markAsDuplicate();
+                            } else {
+                                while (methodBase.isCapped()) {
+                                    methodBase = mapVirtMethods.get(methodBase.getHead().getNarrowingNestedIdentity());
+                                    assert methodBase != null;
                                 }
                             }
+                        } else {
                             methodBase = methodMatch;
                             nidBase    = nidMatch;
                         }
