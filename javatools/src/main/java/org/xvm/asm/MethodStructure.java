@@ -1427,6 +1427,8 @@ public class MethodStructure
                 Fiber        fiber      = frame.f_fiber;
                 long         ldtTimeout = fiber.getTimeoutStamp();
                 ObjectHandle hTimeout   = fiber.getTimeoutHandle();
+                Container    container  = frame.f_context.f_container;
+                long         ldtPaused  = ldtTimeout <= 0 ? 0 : container.currentTimeMillis();
 
                 // we may need to call another service to complete the initialization, but it must
                 // not be allowed to timeout; it may cause a circular initialization error
@@ -1436,7 +1438,9 @@ public class MethodStructure
 
                 return Utils.initConstants(frame, listSingletons, frameCaller -> {
                     if (ldtTimeout > 0) {
-                        fiber.setTimeoutHandle(hTimeout, ldtTimeout);
+                        // adjust the original deadline forward by the time spent in initialization
+                        long cMillisPaused = container.currentTimeMillis() - ldtPaused;
+                        fiber.setTimeoutHandle(hTimeout, ldtTimeout + Math.max(0, cMillisPaused));
                     }
                     m_fInitialized = true;
                     return frameCaller.call(frameNext);

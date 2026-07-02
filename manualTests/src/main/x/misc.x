@@ -40,6 +40,7 @@ module TestMisc {
         countdown();
 
         testEnums();
+        testCircularInitialization();
     }
 
     void testInts() {
@@ -800,5 +801,24 @@ module TestMisc {
         assert e.values.size == 3;
         assert e.values.contains(Green);
         assert e.byName["Blue"] == Blue;
+    }
+
+    void testCircularInitialization() {
+        try {
+            String value = first();
+            assert as "Failed to throw circular initialization exception";
+        } catch (IllegalState e) {
+            assert String text ?= e.text, text.indexOf("Circular initialization");
+        }
+
+        static String first() {
+            static String value = second();
+            return value;
+        }
+
+        static String second() {
+            static String value = first();
+            return value;
+        }
     }
 }

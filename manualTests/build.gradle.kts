@@ -126,6 +126,7 @@ sourceSets {
             exclude("**/dbTests/**")
             exclude("**/json/**")
             exclude("**/jsondb/**")
+            exclude("**/codex/**")
             exclude("**/multiModule/**")
             exclude("**/webTests/**")
             exclude(
@@ -490,7 +491,7 @@ val runParallel by tasks.registering(XtcRunTask::class) {
     // TODO: Re-enable TestIO here after the intermittent TypeSystem.implicitTypes initialization
     // race is fixed. It still runs through the other manual test paths, but keeping it out of the
     // parallel runner avoids a known flaky interpreter crash in CI for now.
-    val excludedModules = setOf("TestIO")
+    val excludedModules = setOf("")
     module {
         verbose = false
         moduleName = "Runner"

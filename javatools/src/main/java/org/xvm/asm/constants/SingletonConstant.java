@@ -5,11 +5,14 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.concurrent.CompletableFuture;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.runtime.Fiber;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.InitializingHandle;
 import org.xvm.util.Hash;
@@ -120,21 +123,76 @@ public class SingletonConstant
         // INITIALIZING to anything or from a struct to an immutable value
         assert handle != null;
 
-        m_handle        = handle;
-        m_fInitializing = false;
+        CompletableFuture<ObjectHandle> cfInitialized = m_cfInitialized;
+        m_handle            = handle;
+        m_fiberInitializing = null;
+        m_cfInitialized     = null;
+
+        if (cfInitialized != null) {
+            cfInitialized.complete(handle);
+        }
     }
 
     /**
      * Mark this ObjectHandle as being initialized.
      *
+     * @param fiber  the current fiber
+     *
      * @return false iff the ObjectHandle has already been marked as "initializing"
      */
-    public boolean markInitializing() {
-        if (m_fInitializing) {
-            m_handle = new InitializingHandle(this);
+    public boolean markInitializing(Fiber fiber) {
+        assert fiber != null;
+
+        // initialization is entered from the main context; record which fiber owns the attempt, so
+        // other fibers would wait without being mistaken for recursion
+        if (m_fiberInitializing != null) {
             return false;
         }
-        return m_fInitializing = true;
+
+        m_fiberInitializing = fiber;
+        return true;
+    }
+
+    /**
+     * Obtain a future to wait on if this singleton is being initialized by another fiber.
+     *
+     * @param fiber  the current fiber
+     *
+     * @return a future for the initialized handle, or null for recursive initialization
+     */
+    public CompletableFuture<ObjectHandle> getInitializationWaiter(Fiber fiber) {
+        assert fiber != null;
+        Fiber fiberInitializing = m_fiberInitializing;
+
+        assert fiberInitializing != null;
+        if (fiber == fiberInitializing) {
+            // only the initializing fiber represents true recursive initialization; all others
+            // must wait for completion
+            m_handle = new InitializingHandle(this);
+            return null;
+        }
+
+        CompletableFuture<ObjectHandle> cfInitialized = m_cfInitialized;
+        if (cfInitialized == null) {
+            m_cfInitialized = cfInitialized = new CompletableFuture<>();
+        }
+        return cfInitialized;
+    }
+
+    /**
+     * Abort the current singleton initialization.
+     *
+     * @param e  the exception that prevented initialization
+     */
+    public void abortInitialization(Throwable e) {
+        CompletableFuture<ObjectHandle> cfInitialized = m_cfInitialized;
+        m_handle            = null;
+        m_fiberInitializing = null;
+        m_cfInitialized     = null;
+
+        if (cfInitialized != null) {
+            cfInitialized.completeExceptionally(e);
+        }
     }
 
 
@@ -230,12 +288,18 @@ public class SingletonConstant
     private IdentityConstant m_constClass;
 
     /**
-     * The ObjectHandle representing this singleton's value.
+     * The ObjectHandle representing this singleton's value. Can be observed outside the
+     * main-context fiber.
      */
-    private transient ObjectHandle m_handle;
+    private transient volatile ObjectHandle m_handle;
 
     /**
-     * Set to true when the handle for this singleton is being initialized.
+     * The fiber that is initializing the handle (optional).
      */
-    private transient boolean m_fInitializing;
+    private transient Fiber m_fiberInitializing;
+
+    /**
+     * Future completed when a concurrent initialization finishes.
+     */
+    private transient CompletableFuture<ObjectHandle> m_cfInitialized;
 }

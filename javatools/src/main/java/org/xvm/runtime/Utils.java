@@ -33,6 +33,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle.WrapperException;
+import org.xvm.runtime.ObjectHandle.InitializingHandle;
 import org.xvm.runtime.ServiceContext.Synchronicity;
 
 import org.xvm.runtime.template.xBoolean;
@@ -751,6 +752,16 @@ public abstract class Utils {
         for (SingletonConstant constSingleton : listSingletons) {
             ObjectHandle hValue = constSingleton.getHandle();
             if (hValue != null) {
+                if (hValue instanceof InitializingHandle) {
+                    // another fiber may observe the placeholder created by same-fiber
+                    // recursion; wait unless this fiber is the recursive initializer
+                    CompletableFuture<ObjectHandle> cfInitialized =
+                            constSingleton.getInitializationWaiter(frame.f_fiber);
+                    if (cfInitialized != null) {
+                        return frame.waitForExternalCompletion(cfInitialized, Op.A_IGNORE,
+                            frameCaller -> initConstants(frameCaller, listSingletons, continuation));
+                    }
+                }
                 continue;
             }
 
@@ -787,9 +798,14 @@ public abstract class Utils {
             }
 
             // we are on the main context and can actually perform the initialization
-            if (!constSingleton.markInitializing()) {
-                // this can only happen if we are called recursively; the value is INITIALIZING
-                return continuation.proceed(frame);
+            if (!constSingleton.markInitializing(frame.f_fiber)) {
+                // exact same-fiber recursion is circular; unrelated concurrent fibers wait
+                CompletableFuture<ObjectHandle> cfInitialized =
+                        constSingleton.getInitializationWaiter(frame.f_fiber);
+                return cfInitialized == null
+                    ? continuation.proceed(frame)
+                    : frame.waitForExternalCompletion(cfInitialized, Op.A_IGNORE,
+                            frameCaller -> initConstants(frameCaller, listSingletons, continuation));
             }
 
             Container containerThis = ctxCurr.f_container;
@@ -840,6 +856,9 @@ public abstract class Utils {
                 return Op.R_CALL;
 
             case Op.R_EXCEPTION:
+                constSingleton.abortInitialization(frame.m_hException == null
+                        ? new IllegalStateException("Singleton initialization failed")
+                        : frame.m_hException.getException());
                 return Op.R_EXCEPTION;
 
             default:
@@ -936,6 +955,18 @@ public abstract class Utils {
             case Op.R_CALL:
                 frame.m_frameNext.addContinuation(frameCaller -> {
                     ObjectHandle hVal = frameCaller.peekStack();
+                    if (hVal instanceof InitializingHandle hInit) {
+                        try {
+                            ObjectHandle hResolved = hInit.assertInitialized();
+                            frameCaller.popStack();
+                            frameCaller.pushStack(hVal = hResolved);
+                        } catch (IllegalStateException e) {
+                            frameCaller.popStack();
+                            return frameCaller.raiseException(
+                                xException.illegalState(frameCaller, e.getMessage()));
+                        }
+                    }
+
                     if (!hVal.isPassThrough()) {
                         frameCaller.popStack();
                         if (hVal.getType().isA(frameCaller.poolContext().typeFreezable())) {

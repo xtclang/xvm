@@ -519,9 +519,18 @@ public class Frame
         return call(frameNext);
     }
 
-    // a convenience method
+    // a convenience method for futures that complete on the IO thread
     public int waitForIO(CompletableFuture cf, Continuation continuation) {
         return call(createWaitIOFrame(cf, continuation));
+    }
+
+    // a convenience method for futures that complete outside the service response queue
+    public int waitForExternalCompletion(CompletableFuture<ObjectHandle> cf, int iReturn,
+                                         Continuation continuation) {
+        // this future is completed directly; similarly to WaitIOFrame need to schedule the waiter
+        cf.whenComplete((r, x) -> f_context.ensureScheduled(true));
+
+        return wait(cf, iReturn, continuation);
     }
 
     // start the specified guard as a "current" one
