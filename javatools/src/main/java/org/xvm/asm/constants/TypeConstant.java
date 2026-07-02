@@ -3957,7 +3957,9 @@ public abstract class TypeConstant
                 MethodConstant idContrib  = (MethodConstant) idProp.appendNestedIdentity(pool, nidContrib);
                 MethodInfo     infoMethod = entry.getValue();
                 if (infoMethod.isCapped()) {
-                    infoMethod = infoMethod.nestNarrowingIdentity(pool, idProp); // TODO CP what hits this?
+                    // this gets hit extensively when compiling the core JSON library; nothing else
+                    // in the xdk libs currently triggers this
+                    infoMethod = infoMethod.nestNarrowingIdentity(pool, idProp);
                 }
                 mapContribMethods.put(idContrib, infoMethod);
             }
