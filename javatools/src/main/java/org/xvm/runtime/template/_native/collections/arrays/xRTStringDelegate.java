@@ -295,6 +295,11 @@ public class xRTStringDelegate
         }
 
         @Override
+        public boolean checkAssign(ObjectHandle hValue) {
+            return hValue instanceof StringHandle;
+        }
+
+        @Override
         public int compareTo(ObjectHandle that) {
             String[] asThis = m_asValue;
             int      cThis  = (int) m_cSize;

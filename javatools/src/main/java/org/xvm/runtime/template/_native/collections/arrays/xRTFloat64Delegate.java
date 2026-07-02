@@ -302,6 +302,11 @@ public class xRTFloat64Delegate
         }
 
         @Override
+        public boolean checkAssign(ObjectHandle hValue) {
+            return hValue.getTemplate() == xFloat64.INSTANCE;
+        }
+
+        @Override
         public int compareTo(ObjectHandle that) {
             double[] adThis = m_adValue;
             long     cThis  = m_cSize;

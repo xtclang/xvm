@@ -700,7 +700,7 @@ public class xRef
             ObjectHandle hMasked    = hGeneric.maskAs(frame.f_context.f_container, typeMasked);
 
             return hMasked == null
-                ? frame.raiseException(xException.typeMismatch(frame, typeMasked.getValueString()))
+                ? frame.raiseException(xException.typeMismatch(frame, hGeneric.getType(), typeMasked))
                 : frame.assignValue(iReturn, hMasked);
         }
 
@@ -730,7 +730,7 @@ public class xRef
             TypeConstant typeTarget = hGeneric.getType();
             if (!typeTarget.isA(typeProxy)) {
                 return frame.raiseException(
-                    xException.typeMismatch(frame, typeTarget.getValueString()));
+                    xException.typeMismatch(frame, typeTarget, typeProxy));
             }
 
             ProxyComposition clzProxy = clzTarget.ensureProxyComposition(typeProxy);

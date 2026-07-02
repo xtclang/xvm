@@ -10,6 +10,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -21,7 +22,10 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
+import org.xvm.runtime.template.numbers.xBit;
+import org.xvm.runtime.template.numbers.xInt8;
 import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xUInt8;
 
 
 /**
@@ -422,6 +426,18 @@ public abstract class ByteBasedDelegate
                 System.arraycopy(ab, 0, abNew, 0, c);
                 m_abValue = abNew;
             }
+        }
+
+        @Override
+        public boolean checkAssign(ObjectHandle hValue) {
+            ClassTemplate templateValue = hValue.getTemplate();
+            return switch (getTemplate()) {
+                case xRTBitDelegate     _ -> templateValue == xBit.ZERO.getTemplate();
+                case xRTBooleanDelegate _ -> templateValue == xBoolean.TRUE.getTemplate();
+                case xRTInt8Delegate    _ -> templateValue == xInt8.INSTANCE;
+                case xRTUInt8Delegate   _ -> templateValue == xUInt8.INSTANCE;
+                default                   -> super.checkAssign(hValue);
+            };
         }
 
         @Override

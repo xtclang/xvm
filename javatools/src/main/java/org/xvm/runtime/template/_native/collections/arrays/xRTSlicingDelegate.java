@@ -161,6 +161,11 @@ public class xRTSlicingDelegate
         }
 
         @Override
+        public boolean checkAssign(ObjectHandle hValue) {
+            return f_hSource.checkAssign(hValue);
+        }
+
+        @Override
         public String toString() {
             return super.toString() + " @" + f_ofStart;
         }

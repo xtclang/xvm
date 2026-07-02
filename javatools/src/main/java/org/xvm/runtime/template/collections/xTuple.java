@@ -360,10 +360,11 @@ public class xTuple
             return frame.raiseException(xException.outOfBounds(frame, lIndex, cValues));
         }
 
-        TypeComposition clzThis = hThis.getComposition();
-        if (!hValue.getUnsafeType().isA(clzThis.getType().getParamType((int) lIndex))) {
+        TypeComposition clzThis   = hThis.getComposition();
+        TypeConstant    typeParam = clzThis.getType().getParamType((int) lIndex);
+        if (!hValue.getUnsafeType().isA(typeParam)) {
             return frame.raiseException(
-                    xException.typeMismatch(frame, hValue.getType().getValueString()));
+                    xException.typeMismatch(frame, hValue.getType(), typeParam));
         }
 
         ahValue = ahValue.clone();

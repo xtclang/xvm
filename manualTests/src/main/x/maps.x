@@ -52,21 +52,8 @@ module TestMaps {
         testConcurrentProcess(new SafeHashMap());
         testConcurrentProcess(new ConcurrentHashMap());
 
-        // concurrency performance comparison of maps
-//        Int concurrency = 4;
-//        Int keys = 1_000;
-//        Int iterations = 1000_000;
-//        for (Int i : 0..3) {
-//            console.print("Concurrent load test of HashMap...");
-//            testConcurrentLoad(new SafeHashMap(), concurrency, iterations, keys);
-//            console.print("Concurrent load test of ConcurrentHashMap...");
-//            testConcurrentLoad(new ConcurrentHashMap(), concurrency, iterations, keys);
-//        }
-
-//        for (UInt seed : 1..500) {
-//            log.add($"iteration #{seed}");
-//            testRandomOps(new ConcurrentHashMap(), seed);
-//        }
+        testTypeMismatch(new ListMap<Int, String>(), "a", "b");
+        testTypeMismatch(new HashMap<String, Int>(), "a", "b");
     }
 
     void testBasic(Map<Int, String> map) {
@@ -542,7 +529,6 @@ module TestMaps {
 
         Duration time = timer.elapsed;
         console.print($"Elapsed {time.milliseconds} ms");
-        //console.print(map);
     }
 
     service LoadGenerator {
@@ -594,5 +580,12 @@ module TestMaps {
     static Time now() {
         @Inject Clock clock;
         return clock.now;
+    }
+
+    void testTypeMismatch(Map map, Object key, Object value) {
+        try {
+            map.put(key, value);
+            assert as "Failed to assert";
+        } catch (ecstasy.TypeMismatch ignore) {}
     }
 }

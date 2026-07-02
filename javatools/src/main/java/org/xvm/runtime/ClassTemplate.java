@@ -1027,7 +1027,7 @@ public abstract class ClassTemplate
         if (!(hValue instanceof InitializingHandle)
                 && !hValue.getUnsafeType().isA(field.getType())) {
             return frame.raiseException(
-                xException.typeMismatch(frame, hValue.getType().getValueString()));
+                xException.typeMismatch(frame, hValue.getUnsafeType(), field.getType()));
         }
 
         if (field.isInflated()) {

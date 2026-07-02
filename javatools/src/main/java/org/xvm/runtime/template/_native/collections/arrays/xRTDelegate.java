@@ -371,6 +371,11 @@ public class xRTDelegate
             break;
         }
 
+        if (!hDelegate.checkAssign(hValue)) {
+            return frame.raiseException(
+                xException.typeMismatch(frame, hValue.getType(), hDelegate.getElementType()));
+        }
+
         insertElementImpl(hDelegate, hValue, (int) hIndex.getValue());
 
         if (mutability != null) {
@@ -516,7 +521,10 @@ public class xRTDelegate
             return frame.raiseException(xException.unsupported(frame, "No default value"));
         }
 
-        return assignArrayValueImpl(frame, hDelegate, lIndex, hValue);
+        return hDelegate.checkAssign(hValue)
+            ? assignArrayValueImpl(frame, hDelegate, lIndex, hValue)
+            : frame.raiseException(
+                xException.typeMismatch(frame, hValue.getType(), hDelegate.getElementType()));
     }
 
     @Override
@@ -874,6 +882,11 @@ public class xRTDelegate
         }
 
         @Override
+        public boolean checkAssign(ObjectHandle hValue) {
+            return hValue.getType().isA(getType().getParamType(0));
+        }
+
+        @Override
         public boolean isNativeEqual() {
             return false;
         }
@@ -901,6 +914,17 @@ public class xRTDelegate
         public void setMutability(Mutability mutability) {
             assert mutability.compareTo(m_mutability) <= 0;
             m_mutability = mutability;
+        }
+
+        public TypeConstant getElementType() {
+            return getType().resolveGenericType("Element");
+        }
+
+        /**
+         * @return true iff the specified value can be assigned to this array's element
+         */
+        public boolean checkAssign(ObjectHandle hValue) {
+            return hValue.getType().isA(getElementType());
         }
 
         @Override

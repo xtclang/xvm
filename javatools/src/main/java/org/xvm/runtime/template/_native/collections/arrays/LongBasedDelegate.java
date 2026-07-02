@@ -8,6 +8,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -19,7 +20,14 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
+import org.xvm.runtime.template.numbers.xInt16;
+import org.xvm.runtime.template.numbers.xInt32;
+import org.xvm.runtime.template.numbers.xInt128;
 import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xUInt16;
+import org.xvm.runtime.template.numbers.xUInt32;
+import org.xvm.runtime.template.numbers.xUInt128;
+import org.xvm.runtime.template.numbers.xUInt64;
 
 import org.xvm.util.Handy;
 
@@ -552,6 +560,22 @@ public abstract class LongBasedDelegate
                 System.arraycopy(al, 0, alNew, 0, c);
                 m_alValue = alNew;
             }
+        }
+
+        @Override
+        public boolean checkAssign(ObjectHandle hValue) {
+            ClassTemplate templateValue = hValue.getTemplate();
+            return switch (getTemplate()) {
+                case xRTInt16Delegate   _ -> templateValue == xInt16.INSTANCE;
+                case xRTUInt16Delegate  _ -> templateValue == xUInt16.INSTANCE;
+                case xRTInt32Delegate   _ -> templateValue == xInt32.INSTANCE;
+                case xRTUInt32Delegate  _ -> templateValue == xUInt32.INSTANCE;
+                case xRTInt64Delegate   _ -> templateValue == xInt64.INSTANCE;
+                case xRTUInt64Delegate  _ -> templateValue == xUInt64.INSTANCE;
+                case xRTInt128Delegate  _ -> templateValue == xInt128.INSTANCE;
+                case xRTUInt128Delegate _ -> templateValue == xUInt128.INSTANCE;
+                default                   -> hValue.getType().isA(getElementType());
+            };
         }
 
         @Override

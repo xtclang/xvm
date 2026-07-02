@@ -144,6 +144,12 @@ public class xException
         return makeHandle(frame, s_clzTypeMismatch, sType);
     }
 
+    public static ExceptionHandle typeMismatch(Frame frame,
+                                               TypeConstant typeActual, TypeConstant typeExpected) {
+        return typeMismatch(frame, "Expected \"" + typeExpected.getValueString() +
+                                   "\", actual \"" + typeActual.getValueString() + '"');
+    }
+
     public static ExceptionHandle illegalState(Frame frame, String sMsg) {
         return makeHandle(frame, s_clzIllegalState, sMsg);
     }

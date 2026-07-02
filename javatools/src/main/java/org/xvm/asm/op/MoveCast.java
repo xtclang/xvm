@@ -94,7 +94,7 @@ public class MoveCast
         TypeConstant typeTo   = frame.resolveType(m_nToType);
 
         if (!typeFrom.isA(typeTo)) {
-            return frame.raiseException(xException.typeMismatch(frame, typeFrom.getValueString()));
+            return frame.raiseException(xException.typeMismatch(frame, typeFrom, typeTo));
         }
 
         if (frame.isNextRegister(m_nToValue)) {

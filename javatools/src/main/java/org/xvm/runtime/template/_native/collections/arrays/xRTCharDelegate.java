@@ -382,6 +382,11 @@ public class xRTCharDelegate
         }
 
         @Override
+        public boolean checkAssign(ObjectHandle hValue) {
+            return hValue.getTemplate() == xChar.INSTANCE;
+        }
+
+        @Override
         public int compareTo(ObjectHandle that) {
             char[] achThis = m_achValue;
             int    cThis   = (int) m_cSize;

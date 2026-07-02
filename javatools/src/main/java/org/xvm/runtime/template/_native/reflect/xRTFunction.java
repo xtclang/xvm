@@ -277,8 +277,7 @@ public class xRTFunction
             TypeConstant typeParam = hFunc.getParamType(i);
             TypeConstant typeArg   = ahArg[i].getUnsafeType();
             if (!typeArg.isA(typeParam)) {
-                return frame.raiseException(
-                    xException.typeMismatch(frame, typeArg.getValueString()));
+                return frame.raiseException(xException.typeMismatch(frame, typeArg, typeParam));
             }
         }
 

@@ -815,6 +815,11 @@ public class xArray
         DelegateHandle hDelegate = hArray.m_hDelegate;
         xRTDelegate    template  = (xRTDelegate) hDelegate.getTemplate();
 
+        if (!hDelegate.checkAssign(hValue)) {
+            TypeConstant typeEl = hDelegate.getElementType();
+            return frame.raiseException(xException.typeMismatch(frame, hValue.getType(), typeEl));
+        }
+
         DelegateHandle hDelegateNew = template.fill(hDelegate, cSize, hValue);
         if (hDelegateNew != hDelegate) {
             if (hDelegateNew == null) {
