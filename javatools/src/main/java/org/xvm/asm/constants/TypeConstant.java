@@ -3990,13 +3990,8 @@ public abstract class TypeConstant
             } else {
                 // check that everything matches between the current and contributed parameter
                 if (paramContrib.isActualTypeSpecified() != paramCurr.isActualTypeSpecified()) {
-                    if (paramContrib.isFormalType() &&
-                            paramContrib.getFormalTypeName().equals(paramCurr.getName())
-                        || paramContrib.isFormalTypeSequence()) {
-                        // TODO both the current and contributed parameters have a constraint type;
-                        //      if those types are different, then keep the narrower of the two; if
-                        //      there is no "narrower of the two", then keep the intersection of the two;
-                        //      if there is no intersection of the two (e.g. 2 class types), then it's an error
+                    if (paramContrib.isFormalTypeSequence() && paramCurr.isFormalTypeSequence()) {
+                        // allow various presentations of turtle types to be assumed to match
                         continue;
                     }
 
