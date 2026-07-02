@@ -2335,16 +2335,6 @@ public abstract class TypeConstant
             // this error should have already been checked for and reported, and the "into"
             // forcibly adjusted to a legal type
             assert typeInto.isA(typeSuperInto);
-
-            // this type adjustment is the same logic found in createContributionList()
-            ConstantPool pool = getConstantPool();
-            if (!typeSuperInto.isRootInterface() && !typeSuperInto.isAccessSpecified() &&
-                    typeSuperInto.isSingleUnderlyingClass(true)) {
-                Access access = structThis.isDescendant(typeSuperInto.getSingleUnderlyingClass(true))
-                        ? Access.PRIVATE
-                        : Access.PROTECTED;
-                typeSuperInto = pool.ensureAccessTypeConstant(typeSuperInto, access); // TODO CP why is this done? we don't use this?!?!?!
-            }
         }
 
         // determine if the "into" leads back to any mixins: start by collecting dependencies
@@ -3465,7 +3455,8 @@ public abstract class TypeConstant
      * @param composition  describes how the contribution is being contributed
      * @param typeContrib  the type being contributed
      * @param infoContrib  the TypeInfo (which may be null) for the type being contributed
-     * @param setDepends   TODO GG doc
+     * @param setDepends   the contribution types that don't have complete TypeInfo and prevent this
+     *                     type from completing its TypeInfo calculation; modified by this method
      *
      * @return true iff the TypeInfo for this type cannot be completed
      */
