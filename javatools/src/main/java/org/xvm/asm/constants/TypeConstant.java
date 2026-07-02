@@ -3575,11 +3575,11 @@ public abstract class TypeConstant
                     errs        = ErrorListener.BLACKHOLE;
                 }
 
-                ArrayList<PropertyConstant> listExplode = new ArrayList<>();
-                boolean                     fInterface  = struct.getFormat() == Component.Format.INTERFACE;
+                var     listExplode          = new ArrayList<PropertyConstant>();
+                boolean fInterface           = struct.getFormat() == Component.Format.INTERFACE;
                 if (!collectChildInfo(constId, fInterface, struct, mapTypeParams,
                         mapContribProps, mapContribMethods, mapContribChildren, listExplode,
-                        nBasePropRank, nBaseMethRank, errs)) {
+                        mapVirtProps, nBasePropRank, nBaseMethRank, errs)) {
                     fIncomplete = true;
                     errs        = ErrorListener.BLACKHOLE;
                 }
@@ -3773,12 +3773,6 @@ public abstract class TypeConstant
             ErrorListener                       errs) {
         boolean fComplete = true;
         boolean fExploded = info.isExploded();
-
-        // the base should already be present, although we may be (e.g.) narrowing the type or
-        // some other change
-        // TODO CP is there anything that needs to be done to handle going from Ref -> Var
-        //      (e.g. add an RB for "set()"?)
-
 
         // layer on an "into" of either "into Ref" or "into Var"
         ConstantPool pool     = getConstantPool();
@@ -5015,12 +5009,13 @@ public abstract class TypeConstant
      *
      * @param constId        the identity of the class (used for logging error information)
      * @param fInterface     if the class is an interface type
-     * @param structContrib  the class structure, property structure, or method structure or typedef
+     * @param structContrib  the class/property/method structure or typedef
      * @param mapTypeParams  the map of type parameters
      * @param mapProps       the properties of the class
      * @param mapMethods     the methods of the class
      * @param mapChildren    the child types of the class
      * @param listExplode    used to collect the list of properties that must be "exploded"
+     * @param mapVirtProps   virtual properties that already exist on the base
      * @param nBasePropRank  the base rank for any properties added by "this" class
      * @param nBaseMethRank  the base rank for any methods added by "this" class
      * @param errs           the error list to log any errors to
@@ -5036,6 +5031,7 @@ public abstract class TypeConstant
             Map<MethodConstant  , MethodInfo>   mapMethods,
             ListMap<String, ChildInfo>          mapChildren,
             List<PropertyConstant>              listExplode,
+            Map<Object, PropertyInfo>           mapVirtProps,
             int                                 nBasePropRank,
             int                                 nBaseMethRank,
             ErrorListener                       errs) {
@@ -5050,15 +5046,16 @@ public abstract class TypeConstant
                         fComplete &= method.isConstructorFinalizer()
                                 ? collectChildInfo(constId, fInterface, method, mapTypeParams,
                                         mapProps, mapMethods, mapChildren, listExplode,
-                                        nBasePropRank, nBaseMethRank, errs)
+                                mapVirtProps, nBasePropRank, nBaseMethRank, errs)
                                 : createMemberInfo(constId, fInterface, method, mapTypeParams,
                                         mapProps, mapMethods, mapChildren, listExplode,
-                                        nBasePropRank, nBaseMethRank, errs);
+                                mapVirtProps, nBasePropRank, nBaseMethRank, errs);
                     }
                 }
             } else if (child instanceof PropertyStructure) {
                 fComplete &= createMemberInfo(constId, fInterface, child, mapTypeParams, mapProps,
-                        mapMethods, mapChildren, listExplode, nBasePropRank, nBaseMethRank, errs);
+                        mapMethods, mapChildren, listExplode, mapVirtProps, nBasePropRank,
+                        nBaseMethRank, errs);
             } else if (child instanceof ClassStructure || child instanceof TypedefStructure) {
                 String sName = child.getIdentityConstant().getNestedName();
                 if (sName != null) {
@@ -5085,6 +5082,7 @@ public abstract class TypeConstant
      * @param mapMethods     the methods of the class
      * @param mapChildren    the child types of the class
      * @param listExplode    used to collect the list of properties that must be "exploded"
+     * @param mapVirtProps   virtual properties that already exist on the base
      * @param nBasePropRank  the base rank for any properties added by "this" class
      * @param nBaseMethRank  the base rank for any methods added by "this" class
      * @param errs           the error list to log any errors to
@@ -5100,6 +5098,7 @@ public abstract class TypeConstant
             Map<MethodConstant  , MethodInfo>   mapMethods,
             ListMap<String, ChildInfo>          mapChildren,
             List<PropertyConstant>              listExplode,
+            Map<Object, PropertyInfo>           mapVirtProps,
             int                                 nBasePropRank,
             int                                 nBaseMethRank,
             ErrorListener                       errs) {
@@ -5171,10 +5170,16 @@ public abstract class TypeConstant
                 PropertyInfo     propParam = new PropertyInfo(new PropertyBody(null, param), nRank + 1);
                 mapTypeParams.put(nidParam, param);
                 mapProps.put(idParam, propParam);
+            } else if (info.isOverride() && info.isVirtual()) {
+                // if the super property was exploded, then this property may need to be re-exploded
+                PropertyInfo infoBase = mapVirtProps.get(id.getNestedIdentity());
+                if (infoBase != null && infoBase.isExploded() && info.isVar() != infoBase.isVar()) {
+                    listExplode.add(id);
+                }
             }
         }
         return collectChildInfo(constId, fInterface, structContrib,
-                mapTypeParams, mapProps, mapMethods, mapChildren, listExplode,
+                mapTypeParams, mapProps, mapMethods, mapChildren, listExplode, mapVirtProps,
                 nBasePropRank, nBaseMethRank, errs);
     }
 

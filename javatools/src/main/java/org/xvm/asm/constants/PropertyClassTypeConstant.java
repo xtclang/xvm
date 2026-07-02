@@ -319,10 +319,10 @@ public class PropertyClassTypeConstant
                 mapContribChildren = new ListMap<>();
 
                 ArrayList<PropertyConstant> listExplode = new ArrayList<>();
-
-                PropertyStructure prop = infoProp.getHead().getStructure();
-                collectChildInfo(idBase, false, prop, mapTypeParams,
-                    mapContribProps, mapContribMethods, mapContribChildren, listExplode, 0, 0, errs);
+                PropertyStructure           structProp  = infoProp.getHead().getStructure();
+                collectChildInfo(idBase, false, structProp, mapTypeParams, mapContribProps,
+                        mapContribMethods, mapContribChildren, listExplode, mapVirtProps,
+                        0, 0, errs);
 
                 for (PropertyConstant idProp : listExplode) {
                     PropertyInfo propExplode = mapContribProps.remove(idProp);
@@ -382,20 +382,20 @@ public class PropertyClassTypeConstant
             }
 
             if (!mapContribProps.isEmpty()) {
-// TODO CP is there ever a ContribSource for annotations, mixins, conditional mixins, ...
+// TODO is there ever a ContribSource for annotations, mixins, conditional mixins, ...
                 layerOnProps(idBase, fSelf ? ContribSource.Self : ContribSource.Regular, null,
                         mapProps, mapVirtProps, typeContrib, mapContribProps, errs);
             }
 
             if (!mapContribMethods.isEmpty()) {
-// TODO CP is there ever a ContribSource for annotations, mixins, conditional mixins, ...
+// TODO is there ever a ContribSource for annotations, mixins, conditional mixins, ...
                 layerOnMethods(idBase, fSelf ? ContribSource.Self : ContribSource.Regular, null,
                         mapMethods, mapVirtMethods, typeContrib, mapContribMethods, errs);
             }
 
             if (!mapContribChildren.isEmpty()) {
                 // TODO process children
-// TODO CP remove
+// TODO CP log as error
 String s = "*** skipping TypeInfo generation for {" + mapContribChildren.keySet() + "} on " + idBase;
 if (SKIPPED.add(s)) {
     System.out.println(s);
