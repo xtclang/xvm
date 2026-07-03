@@ -28,9 +28,10 @@ tasks.withType<JavaCompile>().configureEach {
 
 // Ensure ktlint runs during normal development
 val ktlintCheck = tasks.named("ktlintCheck")
-val compileKotlin = tasks.named("compileKotlin") {
-    dependsOn(ktlintCheck)
-}
+val compileKotlin =
+    tasks.named("compileKotlin") {
+        dependsOn(ktlintCheck)
+    }
 
 tasks.jar {
     manifest {

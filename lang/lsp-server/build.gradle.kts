@@ -72,32 +72,33 @@ val logLevel: String =
 logger.info("[lsp] LSP Server adapter: $lspAdapter, semanticTokens: $lspSemanticTokens, logLevel: $logLevel")
 
 // Generate build info for version verification and adapter selection
-val generateBuildInfo = tasks.register("generateBuildInfo") {
-    val outputDir = layout.buildDirectory.dir("generated/resources/buildinfo")
-    val buildTime = Instant.now().toString()
-    val projectVersion = project.version.toString() // Capture at configuration time
-    val adapter = lspAdapter // Capture at configuration time
-    val semanticTokens = lspSemanticTokens // Capture at configuration time
+val generateBuildInfo =
+    tasks.register("generateBuildInfo") {
+        val outputDir = layout.buildDirectory.dir("generated/resources/buildinfo")
+        val buildTime = Instant.now().toString()
+        val projectVersion = project.version.toString() // Capture at configuration time
+        val adapter = lspAdapter // Capture at configuration time
+        val semanticTokens = lspSemanticTokens // Capture at configuration time
 
-    // Declare inputs so task re-runs when adapter or feature flags change
-    inputs.property("adapter", adapter)
-    inputs.property("semanticTokens", semanticTokens)
-    inputs.property("version", projectVersion)
-    outputs.dir(outputDir)
+        // Declare inputs so task re-runs when adapter or feature flags change
+        inputs.property("adapter", adapter)
+        inputs.property("semanticTokens", semanticTokens)
+        inputs.property("version", projectVersion)
+        outputs.dir(outputDir)
 
-    doLast {
-        val outFile = outputDir.get().file("lsp-version.properties").asFile
-        outFile.parentFile.mkdirs()
-        outFile.writeText(
-            """
-            lsp.build.time=$buildTime
-            lsp.version=$projectVersion
-            lsp.adapter=$adapter
-            lsp.semanticTokens=$semanticTokens
-            """.trimIndent() + "\n",
-        )
+        doLast {
+            val outFile = outputDir.get().file("lsp-version.properties").asFile
+            outFile.parentFile.mkdirs()
+            outFile.writeText(
+                """
+                lsp.build.time=$buildTime
+                lsp.version=$projectVersion
+                lsp.adapter=$adapter
+                lsp.semanticTokens=$semanticTokens
+                """.trimIndent() + "\n",
+            )
+        }
     }
-}
 
 sourceSets.main {
     resources.srcDir(generateBuildInfo.map { layout.buildDirectory.dir("generated/resources/buildinfo") })
@@ -116,14 +117,15 @@ repositories {
 // Consume the tree-sitter native library for the current platform.
 // This library is built on-demand using Zig cross-compilation.
 
-val treeSitterNativeLib = configurations.create("treeSitterNativeLib") {
-    isCanBeConsumed = false
-    isCanBeResolved = true
-    attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
-        attribute(Usage.USAGE_ATTRIBUTE, objects.named("native-library"))
+val treeSitterNativeLib =
+    configurations.create("treeSitterNativeLib") {
+        isCanBeConsumed = false
+        isCanBeResolved = true
+        attributes {
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named("native-library"))
+        }
     }
-}
 
 dependencies {
     // Native library from tree-sitter project
@@ -161,13 +163,14 @@ dependencies {
 // so they can be bundled in the JAR. The runtime loader will select the appropriate
 // library based on the current platform.
 
-val copyNativeLibToResources = tasks.register<Copy>("copyNativeLibToResources") {
-    group = "build"
-    description = "Copy tree-sitter native libraries for all platforms to resources"
+val copyNativeLibToResources =
+    tasks.register<Copy>("copyNativeLibToResources") {
+        group = "build"
+        description = "Copy tree-sitter native libraries for all platforms to resources"
 
-    from(treeSitterNativeLib)
-    into(layout.buildDirectory.dir("generated/resources/native"))
-}
+        from(treeSitterNativeLib)
+        into(layout.buildDirectory.dir("generated/resources/native"))
+    }
 
 // Add native library resources to source sets
 sourceSets.main {
@@ -175,9 +178,10 @@ sourceSets.main {
 }
 
 // Ensure native library is copied before processResources
-val processResources = tasks.named("processResources") {
-    dependsOn(copyNativeLibToResources)
-}
+val processResources =
+    tasks.named("processResources") {
+        dependsOn(copyNativeLibToResources)
+    }
 
 tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.add("-Xlint:deprecation")
@@ -191,9 +195,10 @@ tasks.withType<JavaCompile>().configureEach {
 // We fix this by making compileKotlin depend on ktlintCheck, so any build
 // that compiles code also verifies formatting.
 val ktlintCheck = tasks.named("ktlintCheck")
-val compileKotlin = tasks.named("compileKotlin") {
-    dependsOn(ktlintCheck)
-}
+val compileKotlin =
+    tasks.named("compileKotlin") {
+        dependsOn(ktlintCheck)
+    }
 val classes = tasks.named("classes")
 
 tasks.test {
@@ -232,30 +237,31 @@ tasks.jar {
 // Creates a self-contained JAR with all dependencies that can be launched
 // by any IDE (IntelliJ, VS Code, etc.) as a language server process.
 
-val fatJar = tasks.register<Jar>("fatJar") {
-    archiveClassifier.set("all")
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+val fatJar =
+    tasks.register<Jar>("fatJar") {
+        archiveClassifier.set("all")
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    // Explicit dependency ensures resources (logback.xml, etc.) are processed before JAR creation
-    dependsOn(classes)
+        // Explicit dependency ensures resources (logback.xml, etc.) are processed before JAR creation
+        dependsOn(classes)
 
-    from(sourceSets.main.get().output)
+        from(sourceSets.main.get().output)
 
-    dependsOn(configurations.runtimeClasspath)
-    from({
-        configurations.runtimeClasspath
-            .get()
-            .filter { it.name.endsWith("jar") }
-            .map { zipTree(it) }
-    })
+        dependsOn(configurations.runtimeClasspath)
+        from({
+            configurations.runtimeClasspath
+                .get()
+                .filter { it.name.endsWith("jar") }
+                .map { zipTree(it) }
+        })
 
-    // Exclude signature files from dependencies (they become invalid in fat JAR)
-    exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
+        // Exclude signature files from dependencies (they become invalid in fat JAR)
+        exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
 
-    manifest {
-        attributes("Main-Class" to "org.xvm.lsp.server.XtcLanguageServerLauncherKt")
+        manifest {
+            attributes("Main-Class" to "org.xvm.lsp.server.XtcLanguageServerLauncherKt")
+        }
     }
-}
 
 // =============================================================================
 // Consumable configuration for IDE plugins
@@ -263,36 +269,39 @@ val fatJar = tasks.register<Jar>("fatJar") {
 // This configuration exposes the fat JAR as an artifact that other projects
 // (like intellij-plugin) can depend on through proper Gradle configuration.
 
-val lspServerElements = configurations.register("lspServerElements") {
-    isCanBeConsumed = true
-    isCanBeResolved = false
-    attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
-        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
-        attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.SHADOWED))
+val lspServerElements =
+    configurations.register("lspServerElements") {
+        isCanBeConsumed = true
+        isCanBeResolved = false
+        attributes {
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+            attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.SHADOWED))
+        }
+        outgoing {
+            artifact(fatJar)
+        }
     }
-    outgoing {
-        artifact(fatJar)
-    }
-}
 
 // Configuration to expose version properties to IDE plugins
 // This allows the IntelliJ plugin to display version info without accessing the LSP JAR
-val lspVersionProperties = configurations.register("lspVersionProperties") {
-    isCanBeConsumed = true
-    isCanBeResolved = false
-    attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
-        attribute(Usage.USAGE_ATTRIBUTE, objects.named("lsp-version-properties"))
-    }
-    outgoing {
-        artifact(generateBuildInfo.map { layout.buildDirectory.file("generated/resources/buildinfo/lsp-version.properties") }) {
-            builtBy(generateBuildInfo)
+val lspVersionProperties =
+    configurations.register("lspVersionProperties") {
+        isCanBeConsumed = true
+        isCanBeResolved = false
+        attributes {
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named("lsp-version-properties"))
+        }
+        outgoing {
+            artifact(generateBuildInfo.map { layout.buildDirectory.file("generated/resources/buildinfo/lsp-version.properties") }) {
+                builtBy(generateBuildInfo)
+            }
         }
     }
-}
 
 // Ensure fatJar is built when assembling
-val assemble = tasks.named("assemble") {
-    dependsOn(fatJar)
-}
+val assemble =
+    tasks.named("assemble") {
+        dependsOn(fatJar)
+    }

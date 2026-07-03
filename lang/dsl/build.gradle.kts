@@ -27,9 +27,10 @@ tasks.test {
 
 // Ensure ktlint runs during normal development (not just 'check')
 val ktlintCheck = tasks.named("ktlintCheck")
-val compileKotlin = tasks.named("compileKotlin") {
-    dependsOn(ktlintCheck)
-}
+val compileKotlin =
+    tasks.named("compileKotlin") {
+        dependsOn(ktlintCheck)
+    }
 
 // =============================================================================
 // Editor Support Generation
@@ -85,118 +86,127 @@ fun JavaExec.configureGenerator(
     }
 }
 
-val generateTextMate = tasks.register<JavaExec>("generateTextMate") {
-    description = "Generate TextMate grammar from the XTC language model"
-    configureGenerator("textmate", "xtc.tmLanguage.json")
-}
+val generateTextMate =
+    tasks.register<JavaExec>("generateTextMate") {
+        description = "Generate TextMate grammar from the XTC language model"
+        configureGenerator("textmate", "xtc.tmLanguage.json")
+    }
 
-val generateLanguageConfig = tasks.register<JavaExec>("generateLanguageConfig") {
-    description = "Generate VS Code language configuration"
-    configureGenerator("vscode-config", "language-configuration.json")
-}
+val generateLanguageConfig =
+    tasks.register<JavaExec>("generateLanguageConfig") {
+        description = "Generate VS Code language configuration"
+        configureGenerator("vscode-config", "language-configuration.json")
+    }
 
-val generatePackageJson = tasks.register<JavaExec>("generatePackageJson") {
-    description = "Generate package.json for TextMate bundle"
-    configureGenerator("package-json", "package.json")
-}
+val generatePackageJson =
+    tasks.register<JavaExec>("generatePackageJson") {
+        description = "Generate package.json for TextMate bundle"
+        configureGenerator("package-json", "package.json")
+    }
 
-val generateVim = tasks.register<JavaExec>("generateVim") {
-    description = "Generate Vim syntax file"
-    configureGenerator("vim", "xtc.vim")
-}
+val generateVim =
+    tasks.register<JavaExec>("generateVim") {
+        description = "Generate Vim syntax file"
+        configureGenerator("vim", "xtc.vim")
+    }
 
-val generateEmacs = tasks.register<JavaExec>("generateEmacs") {
-    description = "Generate Emacs major mode"
-    configureGenerator("emacs", "xtc-mode.el")
-}
+val generateEmacs =
+    tasks.register<JavaExec>("generateEmacs") {
+        description = "Generate Emacs major mode"
+        configureGenerator("emacs", "xtc-mode.el")
+    }
 
-val generateTreeSitter = tasks.register<JavaExec>("generateTreeSitter") {
-    group = "generation"
-    description = "Generate Tree-sitter grammar and highlights"
-    dependsOn(tasks.compileKotlin, tasks.processResources)
-    classpath = configurations.runtimeClasspath.get() + sourceSets.main.get().output
-    mainClass.set("org.xtclang.tooling.LanguageModelCliKt")
-    val generatorLogLevel =
-        when (gradle.startParameter.logLevel) {
-            org.gradle.api.logging.LogLevel.DEBUG -> "DEBUG"
-            org.gradle.api.logging.LogLevel.INFO -> "INFO"
-            else -> "WARN"
-        }
-    // Pass project version to CLI so generated files have correct version metadata
-    val projectVersion = project.version.toString()
-    systemProperty("project.version", projectVersion)
-    systemProperty("xtc.logLevel", generatorLogLevel)
-    // Declare version as input for proper Gradle caching
-    inputs.property("projectVersion", projectVersion)
-    inputs.property("generatorLogLevel", generatorLogLevel)
-    // Tree-sitter expects a directory, not a file
-    args("tree-sitter", generatedDir.get().asFile.absolutePath)
-    inputs.files(
-        sourceSets.main
-            .get()
-            .kotlin.sourceDirectories,
-    )
-    inputs.files(
-        sourceSets.main
-            .get()
-            .resources.sourceDirectories,
-    )
-    outputs.files(
-        generatedDir.map { it.file("grammar.js") },
-        generatedDir.map { it.file("highlights.scm") },
-    )
-}
+val generateTreeSitter =
+    tasks.register<JavaExec>("generateTreeSitter") {
+        group = "generation"
+        description = "Generate Tree-sitter grammar and highlights"
+        dependsOn(tasks.compileKotlin, tasks.processResources)
+        classpath = configurations.runtimeClasspath.get() + sourceSets.main.get().output
+        mainClass.set("org.xtclang.tooling.LanguageModelCliKt")
+        val generatorLogLevel =
+            when (gradle.startParameter.logLevel) {
+                org.gradle.api.logging.LogLevel.DEBUG -> "DEBUG"
+                org.gradle.api.logging.LogLevel.INFO -> "INFO"
+                else -> "WARN"
+            }
+        // Pass project version to CLI so generated files have correct version metadata
+        val projectVersion = project.version.toString()
+        systemProperty("project.version", projectVersion)
+        systemProperty("xtc.logLevel", generatorLogLevel)
+        // Declare version as input for proper Gradle caching
+        inputs.property("projectVersion", projectVersion)
+        inputs.property("generatorLogLevel", generatorLogLevel)
+        // Tree-sitter expects a directory, not a file
+        args("tree-sitter", generatedDir.get().asFile.absolutePath)
+        inputs.files(
+            sourceSets.main
+                .get()
+                .kotlin.sourceDirectories,
+        )
+        inputs.files(
+            sourceSets.main
+                .get()
+                .resources.sourceDirectories,
+        )
+        outputs.files(
+            generatedDir.map { it.file("grammar.js") },
+            generatedDir.map { it.file("highlights.scm") },
+        )
+    }
 
 // Generate scanner.c from Kotlin ScannerSpec (single source of truth)
-val generateScannerC = tasks.register<JavaExec>("generateScannerC") {
-    group = "generation"
-    description = "Generate scanner.c from Kotlin ScannerSpec"
-    dependsOn(tasks.compileKotlin, tasks.processResources, generateTreeSitter)
-    classpath = configurations.runtimeClasspath.get() + sourceSets.main.get().output
-    mainClass.set("org.xtclang.tooling.scanner.ScannerCGeneratorDslKt")
-    val generatorLogLevel =
-        when (gradle.startParameter.logLevel) {
-            org.gradle.api.logging.LogLevel.DEBUG -> "DEBUG"
-            org.gradle.api.logging.LogLevel.INFO -> "INFO"
-            else -> "WARN"
-        }
-    systemProperty("xtc.logLevel", generatorLogLevel)
-    inputs.property("generatorLogLevel", generatorLogLevel)
-    args(
-        generatedDir
-            .map {
-                it
-                    .dir("src")
-                    .file("scanner.c")
-                    .asFile.absolutePath
-            }.get(),
-    )
-    inputs.files(
-        sourceSets.main
-            .get()
-            .kotlin.sourceDirectories,
-    )
-    outputs.file(generatedDir.map { it.dir("src").file("scanner.c") })
-}
+val generateScannerC =
+    tasks.register<JavaExec>("generateScannerC") {
+        group = "generation"
+        description = "Generate scanner.c from Kotlin ScannerSpec"
+        dependsOn(tasks.compileKotlin, tasks.processResources, generateTreeSitter)
+        classpath = configurations.runtimeClasspath.get() + sourceSets.main.get().output
+        mainClass.set("org.xtclang.tooling.scanner.ScannerCGeneratorDslKt")
+        val generatorLogLevel =
+            when (gradle.startParameter.logLevel) {
+                org.gradle.api.logging.LogLevel.DEBUG -> "DEBUG"
+                org.gradle.api.logging.LogLevel.INFO -> "INFO"
+                else -> "WARN"
+            }
+        systemProperty("xtc.logLevel", generatorLogLevel)
+        inputs.property("generatorLogLevel", generatorLogLevel)
+        args(
+            generatedDir
+                .map {
+                    it
+                        .dir("src")
+                        .file("scanner.c")
+                        .asFile.absolutePath
+                }.get(),
+        )
+        inputs.files(
+            sourceSets.main
+                .get()
+                .kotlin.sourceDirectories,
+        )
+        outputs.file(generatedDir.map { it.dir("src").file("scanner.c") })
+    }
 
-val generateSublime = tasks.register<JavaExec>("generateSublime") {
-    description = "Generate Sublime Text syntax file"
-    configureGenerator("sublime", "xtc.sublime-syntax")
-}
+val generateSublime =
+    tasks.register<JavaExec>("generateSublime") {
+        description = "Generate Sublime Text syntax file"
+        configureGenerator("sublime", "xtc.sublime-syntax")
+    }
 
-val generateEditorSupport = tasks.register("generateEditorSupport") {
-    group = "generation"
-    description = "Generate all editor support files"
-    dependsOn(
-        generateTextMate,
-        generateLanguageConfig,
-        generatePackageJson,
-        generateVim,
-        generateEmacs,
-        generateTreeSitter,
-        generateSublime,
-    )
-}
+val generateEditorSupport =
+    tasks.register("generateEditorSupport") {
+        group = "generation"
+        description = "Generate all editor support files"
+        dependsOn(
+            generateTextMate,
+            generateLanguageConfig,
+            generatePackageJson,
+            generateVim,
+            generateEmacs,
+            generateTreeSitter,
+            generateSublime,
+        )
+    }
 
 // =============================================================================
 // Tree-sitter Native Tasks
@@ -214,24 +224,25 @@ val generateEditorSupport = tasks.register("generateEditorSupport") {
 
 // TODO: Right now we only provide an export point for textMate, since IntelliJ and VS Code plugins use
 //   it until we have integrated semantic tokens in the LSP, which requires rewrite of at least the Lexer.t
-val textMateElements = configurations.register("textMateElements") {
-    isCanBeConsumed = true
-    isCanBeResolved = false
-    attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
-        attribute(Usage.USAGE_ATTRIBUTE, objects.named("textmate-grammar"))
+val textMateElements =
+    configurations.register("textMateElements") {
+        isCanBeConsumed = true
+        isCanBeResolved = false
+        attributes {
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named("textmate-grammar"))
+        }
+        outgoing {
+            // Expose individual files with their generating tasks as dependencies
+            artifact(generatedDir.map { it.file("xtc.tmLanguage.json") }) {
+                builtBy(generateTextMate)
+            }
+            artifact(generatedDir.map { it.file("language-configuration.json") }) {
+                builtBy(generateLanguageConfig)
+            }
+            // package.json is required for IntelliJ TextMate plugin to recognize the bundle
+            artifact(generatedDir.map { it.file("package.json") }) {
+                builtBy(generatePackageJson)
+            }
+        }
     }
-    outgoing {
-        // Expose individual files with their generating tasks as dependencies
-        artifact(generatedDir.map { it.file("xtc.tmLanguage.json") }) {
-            builtBy(generateTextMate)
-        }
-        artifact(generatedDir.map { it.file("language-configuration.json") }) {
-            builtBy(generateLanguageConfig)
-        }
-        // package.json is required for IntelliJ TextMate plugin to recognize the bundle
-        artifact(generatedDir.map { it.file("package.json") }) {
-            builtBy(generatePackageJson)
-        }
-    }
-}
