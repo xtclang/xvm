@@ -11,14 +11,14 @@ set -euo pipefail
 usage() {
     cat <<'EOF'
 Usage:
-  bin/gradle-update-wrapper.sh [gradle-version] [--skip-build-validation] [--allow-dirty]
-  bin/gradle-update-wrapper.sh --check
+  bin/gradle-upgrade.sh [gradle-version] [--skip-build-validation] [--allow-dirty]
+  bin/gradle-upgrade.sh --check
 
 Examples:
-  bin/gradle-update-wrapper.sh
-  bin/gradle-update-wrapper.sh 9.6.1
-  bin/gradle-update-wrapper.sh 9.6.1 --skip-build-validation
-  bin/gradle-update-wrapper.sh --check
+  bin/gradle-upgrade.sh
+  bin/gradle-upgrade.sh 9.6.1
+  bin/gradle-upgrade.sh 9.6.1 --skip-build-validation
+  bin/gradle-upgrade.sh --check
 
 When no version is provided, the script resolves the current stable Gradle
 version from https://services.gradle.org/versions/current.
