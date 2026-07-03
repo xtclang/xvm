@@ -38,7 +38,7 @@ async function safeStop(): Promise<void> {
     }
 }
 
-export async function startLanguageClient(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.OutputChannel): Promise<void> {
+export async function startLanguageClient(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.LogOutputChannel): Promise<void> {
     const javaExecutable = await findJavaExecutable(context);
     const logLevel = process.env.XTC_LOG_LEVEL?.toUpperCase() ?? 'INFO';
     const jvmArgs = buildJvmArgs(serverJar, logLevel);
@@ -146,7 +146,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
             hasEverReachedRunning = true;
         }
         
-        const status = stateMap[newState];
+        const status = stateMap[newState as keyof typeof stateMap];
         if (status) {
             updateStatusBar(status);
         }
@@ -174,7 +174,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
     });
 }
 
-export async function restartLanguageClient(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.OutputChannel): Promise<void> {
+export async function restartLanguageClient(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.LogOutputChannel): Promise<void> {
     crashCount = 0;
     hasEverReachedRunning = false;
     await safeStop();

@@ -245,7 +245,8 @@
         ]
     },
     "scripts": {
-        "vscode:prepublish": "npm run bundle",
+        "vscode:prepublish": "npm run generate:icons && npm run bundle",
+        "generate:icons": "node scripts/generate-icons.cjs ../../doc/logo/x.jpg icons",
         "bundle": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --platform=node --target=node22 --minify",
         "compile": "tsc -p ./",
         "watch": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --platform=node --target=node22 --watch",
@@ -254,27 +255,33 @@
         "test:vscode": "node ./scripts/run-vscode-tests.cjs"
     },
     "dependencies": {
-        "jdk-utils": "^0.6.0",
-        "vscode-languageclient": "^9.0.1"
+        "jdk-utils": "^0.7.0",
+        "vscode-languageclient": "^10.1.0"
     },
     "devDependencies": {
-        "@eslint/js": "^9.17.0",
+        "@eslint/js": "^10.0.1",
         "@types/glob": "^8.1.0",
         "@types/mocha": "^10.0.10",
-        "@types/node": "^22.10.0",
-        "@types/vscode": "^1.96.0",
-        "@vscode/test-electron": "^2.5.2",
-        "@vscode/vsce": "^3.2.0",
-        "esbuild": "^0.25.0",
-        "eslint": "^9.17.0",
-        "glob": "^11.0.3",
+        "@types/node": "^22.20.0",
+        "@types/vscode": "1.96.0",
+        "@vscode/test-electron": "^3.0.0",
+        "@vscode/vsce": "^3.9.2",
+        "esbuild": "^0.28.1",
+        "eslint": "^10.6.0",
+        "glob": "^13.0.6",
         "mocha": "^11.7.4",
-        "sharp": "^0.34.5",
-        "typescript": "^5.7.0",
+        "sharp": "^0.35.3",
+        "typescript": "^6.0.3",
         "typescript-eslint": "^8.19.0"
     },
     "overrides": {
         "diff": "^8.0.3",
-        "serialize-javascript": "^7.0.5"
+        "form-data": "^4.0.6",
+        "js-yaml": "^4.3.0",
+        "linkify-it": "^5.0.2",
+        "markdown-it": "^14.3.0",
+        "serialize-javascript": "^7.0.5",
+        "tmp": "^0.2.7",
+        "undici": "^7.28.0"
     }
 }
