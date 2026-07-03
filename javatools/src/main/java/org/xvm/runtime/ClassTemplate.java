@@ -843,6 +843,34 @@ public abstract class ClassTemplate
                     frame.f_context.setTransientValue(hId, hValue);
                     break Uninitialized;
                 }
+
+                MethodStructure methodInit = field.methodInit;
+                if (methodInit != null) {
+                    TransientId    hId   = (TransientId) hThis.getField(field.getIndex());
+                    ObjectHandle   hInit = methodInit.isFunction() ? null : hThis;
+                    ObjectHandle[] ahVar = new ObjectHandle[methodInit.getMaxVars()];
+
+                    switch (frame.call1(methodInit, hInit, ahVar, Op.A_STACK)) {
+                    case Op.R_NEXT:
+                        hValue = frame.popStack();
+                        frame.f_context.setTransientValue(hId, hValue);
+                        break Uninitialized;
+
+                    case Op.R_CALL:
+                        frame.m_frameNext.addContinuation(frameCaller -> {
+                            ObjectHandle hV = frameCaller.popStack();
+                            frameCaller.f_context.setTransientValue(hId, hV);
+                            return frameCaller.assignValue(iReturn, hV);
+                        });
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
             }
 
             String sErr = hThis.containsField(idProp) ?

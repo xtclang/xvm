@@ -2876,9 +2876,9 @@ public class ClassStructure
                 } else {
                     code.add(new Invoke_01(new Register(typeStruct, "this", Op.A_THIS), idInit, idField));
                 }
-
-                // TODO: transient field initializer is not currently supported
-                //  (non-static initializer would need a struct, which by that time is frozen)
+                if (field.isTransient()) {
+                    field.methodInit = methodInit;
+                }
             }
 
             if (field.isInflated()) {

@@ -853,7 +853,8 @@ public class ClassComposition
         private final boolean         f_fUnassigned;
         private final boolean         f_fLazy;
 
-        public Constant constInit;
+        public Constant        constInit;
+        public MethodStructure methodInit;
     }
 
 

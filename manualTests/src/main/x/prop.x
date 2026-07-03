@@ -10,6 +10,7 @@ module TestProps {
         testDelegation();
         testAccess();
         testImmutableVar();
+        testTransient();
     }
 
     class Standard(Int x);
@@ -272,5 +273,26 @@ module TestProps {
                 assert referent.mutability == Constant;
             }
         }
+    }
+
+    void testTransient() {
+        console.print("\n** testTransient()");
+        class Test {
+            @Inject Clock clock;
+            @Transient String s1 = "a";
+            @Transient String s2 = new String("b");
+            @Transient String s3 = this:service.toString();
+        }
+
+        service Svc {
+            void test(Test t) {
+                assert t.s1 == "a";
+                assert t.s2 == "b";
+                assert t.s3 == this.toString();
+            }
+        }
+
+        Test t = new Test().makeImmutable();
+        new Svc().test(t);
     }
 }
