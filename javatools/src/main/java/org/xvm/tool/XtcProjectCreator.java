@@ -36,7 +36,7 @@ public class XtcProjectCreator {
      * IDE/CLI builds the bundled wrapper is the single source of truth, so this constant is rarely
      * hit; keep it roughly in sync with the repo wrapper anyway.
      */
-    public static final String DEFAULT_GRADLE_VERSION = "9.5.1";
+    public static final String DEFAULT_GRADLE_VERSION = "9.6.1";
 
     /**
      * Strict pattern for a resolvable XTC version coordinate written into a generated

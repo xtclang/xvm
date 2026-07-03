@@ -63,7 +63,7 @@ Most other task combinations work fine - the restriction only applies to `clean`
 
 ## Gradle Best Practices
 
-When working with Gradle build files, always follow [Gradle Best Practices](https://docs.gradle.org/9.1.0/userguide/best_practices_general.html):
+When working with Gradle build files, always follow [Gradle Best Practices](https://docs.gradle.org/current/userguide/best_practices_general.html):
 
 - **Configuration Cache Compatibility**: Use injected services (`ExecOperations`, `FileSystemOperations`) instead of project-level methods (`project.exec`, `project.javaexec`)
 - **Task Dependencies**: Declare explicit task dependencies using `dependsOn`, `mustRunAfter`, or input/output relationships
