@@ -80,6 +80,24 @@ updates:
               applies-to: "security-updates"
               patterns:
                   - "*"
+      ignore:
+          # Major JavaScript toolchain changes need explicit compatibility
+          # review instead of an unattended grouped Dependabot PR.
+          - dependency-name: "*"
+            update-types:
+                - "version-update:semver-major"
+          # VS Code API typings must match engines.vscode. Bump this only
+          # alongside an intentional minimum VS Code version change.
+          - dependency-name: "@types/vscode"
+            update-types:
+                - "version-update:semver-major"
+                - "version-update:semver-minor"
+                - "version-update:semver-patch"
+          # Node typings must stay on the Node line used by the Gradle-pinned
+          # extension build runtime and esbuild target.
+          - dependency-name: "@types/node"
+            update-types:
+                - "version-update:semver-major"
       commit-message:
           prefix: "deps"
           include: "scope"
