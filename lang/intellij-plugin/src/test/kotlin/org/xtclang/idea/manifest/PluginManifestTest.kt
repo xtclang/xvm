@@ -78,6 +78,7 @@ class PluginManifestTest {
         val required =
             setOf(
                 "notificationGroup", // notification group "XTC Language Server" used by XtcLspServerSupportProvider
+                "fileType", // registers *.x as Ecstasy so IntelliJ does not suggest unrelated plugins
                 "newProjectWizard.generator", // wizard entry created by XtcNewProjectWizard
                 "configurationType", // run-config type created by XtcRunConfigurationType
                 "runConfigurationProducer", // auto-create run configs from .x context
@@ -131,5 +132,26 @@ class PluginManifestTest {
         assertThat(mapping!!.getAttribute("patterns"))
             .withFailMessage("LSP fileNamePatternMapping patterns must include *.x")
             .contains("*.x")
+    }
+
+    @Test
+    @DisplayName("registers .x as the Ecstasy file type")
+    fun fileTypeWiring() {
+        val fileTypes = pluginXml.getElementsByTagName("fileType")
+        val fileType =
+            (0 until fileTypes.length)
+                .map { fileTypes.item(it) as Element }
+                .firstOrNull { it.getAttribute("implementationClass") == "org.xtclang.idea.XtcFileType" }
+        assertThat(fileType)
+            .withFailMessage(
+                "plugin.xml must register org.xtclang.idea.XtcFileType. Without this, IntelliJ treats .x as " +
+                    "unclaimed and offers unrelated Marketplace plugins that also support the extension.",
+            ).isNotNull
+        assertThat(fileType!!.getAttribute("name")).isEqualTo("Ecstasy")
+        assertThat(fileType.getAttribute("language")).isEqualTo("Ecstasy")
+        assertThat(fileType.getAttribute("fieldName")).isEqualTo("INSTANCE")
+        assertThat(fileType.getAttribute("extensions").split(';'))
+            .withFailMessage("Ecstasy file type must claim the x extension.")
+            .contains("x")
     }
 }

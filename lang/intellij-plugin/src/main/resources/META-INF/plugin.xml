@@ -37,6 +37,13 @@
                            displayType="BALLOON"
                            isLogByDefault="true"/>
 
+        <!-- Claim *.x as an Ecstasy source file so IntelliJ does not suggest unrelated Marketplace plugins. -->
+        <fileType name="Ecstasy"
+                  implementationClass="org.xtclang.idea.XtcFileType"
+                  fieldName="INSTANCE"
+                  language="Ecstasy"
+                  extensions="x"/>
+
         <!-- Project Generator for New Project wizard (IntelliJ IDEA) -->
         <newProjectWizard.generator
             implementation="org.xtclang.idea.project.XtcNewProjectWizard"/>
@@ -49,7 +56,7 @@
         <runConfigurationProducer
             implementation="org.xtclang.idea.run.XtcRunConfigurationProducer"/>
 
-        <!-- IconProvider for .x files - provides icon without overriding TextMate highlighting -->
+        <!-- IconProvider for .x PSI files in contexts that do not ask the file type directly. -->
         <iconProvider implementation="org.xtclang.idea.XtcIconProvider"/>
 
         <!-- Live templates: code snippets triggered by abbreviation + Tab (e.g. cls, fori, sout) -->
