@@ -527,23 +527,26 @@ brew reinstall xdk-latest               # Alternative: always gets latest
 
 ---
 
-### dependency-updates.yml (Dependency Updates)
+### dependency-submission.yml (Dependency Graph Submission)
 
-**Trigger**: Pull requests to master (Dependabot PRs), manual
+**Trigger**: Pushes to master, manual
 
-**Purpose**: Validate dependency updates from Dependabot and auto-approve if tests pass
+**Purpose**: Submit the resolved Gradle dependency graph to GitHub so Dependabot alerts and Gradle security-update PRs can use the actual runtime dependency graph.
 
 **Key Steps**:
 1. Fetch sources and setup project
-2. Analyze dependency changes
-3. Generate dependency lock files
-4. Run validation build (without tests)
-5. Check for dependency vulnerabilities
-6. Auto-approve Dependabot PR if all checks pass
+2. Include production Gradle composite builds
+3. Resolve Gradle dependencies without running tests
+4. Submit the dependency graph through GitHub's Dependency Submission API
+
+**Notes**:
+- GitHub's Dependabot Gradle version updater can edit `build.gradle(.kts)` and `gradle/libs.versions.toml` directly.
+- Gradle security alerts require dependency graph submission; GitHub does not run Gradle from Dependabot to discover the resolved graph.
+- Test/manual-test builds are excluded from the submitted graph to keep alerts focused on production dependencies.
 
 **Manual Trigger**:
 ```bash
-gh workflow run validate-dependabot.yml
+gh workflow run dependency-submission.yml
 ```
 
 ---
