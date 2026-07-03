@@ -26,8 +26,8 @@ tasks.test {
 }
 
 // Ensure ktlint runs during normal development (not just 'check')
-val ktlintCheck by tasks.existing
-val compileKotlin by tasks.existing {
+val ktlintCheck = tasks.named("ktlintCheck")
+val compileKotlin = tasks.named("compileKotlin") {
     dependsOn(ktlintCheck)
 }
 
@@ -85,32 +85,32 @@ fun JavaExec.configureGenerator(
     }
 }
 
-val generateTextMate by tasks.registering(JavaExec::class) {
+val generateTextMate = tasks.register<JavaExec>("generateTextMate") {
     description = "Generate TextMate grammar from the XTC language model"
     configureGenerator("textmate", "xtc.tmLanguage.json")
 }
 
-val generateLanguageConfig by tasks.registering(JavaExec::class) {
+val generateLanguageConfig = tasks.register<JavaExec>("generateLanguageConfig") {
     description = "Generate VS Code language configuration"
     configureGenerator("vscode-config", "language-configuration.json")
 }
 
-val generatePackageJson by tasks.registering(JavaExec::class) {
+val generatePackageJson = tasks.register<JavaExec>("generatePackageJson") {
     description = "Generate package.json for TextMate bundle"
     configureGenerator("package-json", "package.json")
 }
 
-val generateVim by tasks.registering(JavaExec::class) {
+val generateVim = tasks.register<JavaExec>("generateVim") {
     description = "Generate Vim syntax file"
     configureGenerator("vim", "xtc.vim")
 }
 
-val generateEmacs by tasks.registering(JavaExec::class) {
+val generateEmacs = tasks.register<JavaExec>("generateEmacs") {
     description = "Generate Emacs major mode"
     configureGenerator("emacs", "xtc-mode.el")
 }
 
-val generateTreeSitter by tasks.registering(JavaExec::class) {
+val generateTreeSitter = tasks.register<JavaExec>("generateTreeSitter") {
     group = "generation"
     description = "Generate Tree-sitter grammar and highlights"
     dependsOn(tasks.compileKotlin, tasks.processResources)
@@ -148,7 +148,7 @@ val generateTreeSitter by tasks.registering(JavaExec::class) {
 }
 
 // Generate scanner.c from Kotlin ScannerSpec (single source of truth)
-val generateScannerC by tasks.registering(JavaExec::class) {
+val generateScannerC = tasks.register<JavaExec>("generateScannerC") {
     group = "generation"
     description = "Generate scanner.c from Kotlin ScannerSpec"
     dependsOn(tasks.compileKotlin, tasks.processResources, generateTreeSitter)
@@ -179,12 +179,12 @@ val generateScannerC by tasks.registering(JavaExec::class) {
     outputs.file(generatedDir.map { it.dir("src").file("scanner.c") })
 }
 
-val generateSublime by tasks.registering(JavaExec::class) {
+val generateSublime = tasks.register<JavaExec>("generateSublime") {
     description = "Generate Sublime Text syntax file"
     configureGenerator("sublime", "xtc.sublime-syntax")
 }
 
-val generateEditorSupport by tasks.registering {
+val generateEditorSupport = tasks.register("generateEditorSupport") {
     group = "generation"
     description = "Generate all editor support files"
     dependsOn(
@@ -214,7 +214,7 @@ val generateEditorSupport by tasks.registering {
 
 // TODO: Right now we only provide an export point for textMate, since IntelliJ and VS Code plugins use
 //   it until we have integrated semantic tokens in the LSP, which requires rewrite of at least the Lexer.t
-val textMateElements by configurations.registering {
+val textMateElements = configurations.register("textMateElements") {
     isCanBeConsumed = true
     isCanBeResolved = false
     attributes {

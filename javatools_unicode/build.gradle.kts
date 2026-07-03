@@ -37,12 +37,12 @@ val processedResourcesDir = tasks.processResources.get().outputs.files.singleFil
 /**
  * Type safe "jar" task accessor.
  */
-val jar by tasks.existing(Jar::class)
+val jar = tasks.named<Jar>("jar")
 
 /**
  * Download the ucd zip file from the unicode site, if it does not exist.
  */
-val downloadUcdFlatZip by tasks.registering(Download::class) {
+val downloadUcdFlatZip = tasks.register<Download>("downloadUcdFlatZip") {
     val rebuildUnicode = xdkProperties.booleanValue("org.xtclang.unicode.rebuild", false)
     onlyIf { rebuildUnicode }
 
@@ -121,7 +121,7 @@ abstract class RebuildUnicodeTablesTask : DefaultTask() {
  * its incoming resources, which means that lib_ecstasy will include them in the ecstasy.xtc
  * module. All we need to do is add the configuration as a resource for lib_ecstasy.
  */
-val rebuildUnicodeTables by tasks.registering(RebuildUnicodeTablesTask::class) {
+val rebuildUnicodeTables = tasks.register<RebuildUnicodeTablesTask>("rebuildUnicodeTables") {
     group = BUILD_GROUP
     description = "If the unicode files should be regenerated, generate them from the build tool, and place them under the build resources."
 

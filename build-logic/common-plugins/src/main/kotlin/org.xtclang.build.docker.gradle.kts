@@ -97,7 +97,7 @@ fun createDockerBuildTask(
     createDockerBuildTask("pushAll", listOf("linux/amd64", "linux/arm64"), "push")
     
     // Create the Docker cleanup taskg
-    val cleanImages by tasks.registering(DockerCleanupTask::class) {
+    val cleanImages = tasks.register<DockerCleanupTask>("cleanImages") {
         group = "docker"
         description = "Clean up old Docker package versions (default: keep 10 most recent, protect master images)"
 

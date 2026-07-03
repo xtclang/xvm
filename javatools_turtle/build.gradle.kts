@@ -8,9 +8,9 @@ plugins {
     alias(libs.plugins.xtc)
 }
 
-val processXtcResources by tasks.existing(Copy::class)
+val processXtcResources = tasks.named<Copy>("processXtcResources")
 
-val xdkTurtleProvider by configurations.registering {
+val xdkTurtleProvider = configurations.register("xdkTurtleProvider") {
     isCanBeResolved = false
     isCanBeConsumed = true
     outgoing.artifact(tasks.processResources) {
@@ -24,6 +24,6 @@ val xdkTurtleProvider by configurations.registering {
     }
 }
 
-val compileXtc by tasks.existing {
+val compileXtc = tasks.named("compileXtc") {
     enabled = false
 }

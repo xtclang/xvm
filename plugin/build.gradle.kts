@@ -17,7 +17,7 @@ private val defaultJvmArgs: Provider<List<String>> = extensions.getByName<Provid
 private val jdkVersionProvider = xdkProperties.int("org.xtclang.java.jdk")
 
 // Generate resource file with build-time configuration
-val generatePluginResources by tasks.registering {
+val generatePluginResources = tasks.register("generatePluginResources") {
     val outputDir = layout.buildDirectory.dir("generated/resources")
     val buildInfoFile = outputDir.map { it.file("org/xtclang/build/internal/plugin-build-info.properties") }
     val xdkVersionProvider = provider { version.toString() }
@@ -112,7 +112,7 @@ gradlePlugin {
     vcsUrl = vcsUrlValue
 
     plugins {
-        val xtc by registering {
+        register("xtc") {
             id = pluginIdValue
             implementationClass = pluginImplementationClassValue
             displayName = pluginDisplayNameValue

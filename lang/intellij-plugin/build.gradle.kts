@@ -212,7 +212,7 @@ repositories {
 
 val syncedJavaSourceDir: Provider<Directory> = layout.buildDirectory.dir("generated/synced-java")
 
-val syncXtcProjectCreator by tasks.registering(Copy::class) {
+val syncXtcProjectCreator = tasks.register<Copy>("syncXtcProjectCreator") {
     description = "Sync XtcProjectCreator.java from javatools for Java 25 compilation"
     from(rootProject.file("../javatools/src/main/java/org/xvm/tool/XtcProjectCreator.java"))
     into(syncedJavaSourceDir.map { it.dir("org/xvm/tool") })
@@ -223,7 +223,7 @@ val syncXtcProjectCreator by tasks.registering(Copy::class) {
 val syncedResourcesDir: Provider<Directory> = layout.buildDirectory.dir("generated/synced-resources")
 val compositeRoot: File = rootProject.projectDir.parentFile!! // /lang -> /
 
-val syncGradleWrapperResources by tasks.registering(Copy::class) {
+val syncGradleWrapperResources = tasks.register<Copy>("syncGradleWrapperResources") {
     description = "Sync gradle-wrapper resources from repo root (single source of truth)"
     from(File(compositeRoot, "gradlew"))
     from(File(compositeRoot, "gradlew.bat"))
@@ -242,21 +242,21 @@ sourceSets.main {
     kotlin.exclude("org/xtclang/idea/dap/**")
 }
 
-val compileJava by tasks.existing {
+val compileJava = tasks.named("compileJava") {
     dependsOn(syncXtcProjectCreator)
 }
 
 // Ensure ktlint runs during normal development (not just 'check')
-val ktlintCheck by tasks.existing
+val ktlintCheck = tasks.named("ktlintCheck")
 
-val compileKotlin by tasks.existing {
+val compileKotlin = tasks.named("compileKotlin") {
     dependsOn(syncXtcProjectCreator)
     dependsOn(ktlintCheck)
 }
 
 // Copy LSP version properties to plugin resources so the plugin can display version info
 // The properties file comes from lsp-server's generateBuildInfo task
-val copyLspVersionProperties by tasks.registering(Copy::class) {
+val copyLspVersionProperties = tasks.register<Copy>("copyLspVersionProperties") {
     description = "Copy LSP version properties from lsp-server for display in IDE"
     // Use the configuration directly - Gradle will resolve dependencies automatically
     from(configurations.named("lspVersionProperties"))
@@ -267,7 +267,7 @@ sourceSets.main {
     resources.srcDir(copyLspVersionProperties.map { layout.buildDirectory.dir("generated/resources/lsp") })
 }
 
-val processResources by tasks.existing {
+val processResources = tasks.named("processResources") {
     dependsOn(syncGradleWrapperResources)
     dependsOn(copyLspVersionProperties)
 }
@@ -282,7 +282,7 @@ tasks.matching { it.name.startsWith("runKtlint") }.configureEach {
 // =============================================================================
 
 // Configuration to consume TextMate grammar from dsl project
-val textMateGrammar: Configuration by configurations.creating {
+val textMateGrammar = configurations.create("textMateGrammar") {
     isCanBeConsumed = false
     isCanBeResolved = true
     attributes {
@@ -298,7 +298,7 @@ val textMateGrammar: Configuration by configurations.creating {
 // (avoids lsp4j version conflicts with LSP4IJ) and crash/memory isolation.
 // See doc/plans/PLAN_IDE_INTEGRATION.md for architecture details.
 
-val lspServerJar: Configuration by configurations.creating {
+val lspServerJar = configurations.create("lspServerJar") {
     isCanBeConsumed = false
     isCanBeResolved = true
     attributes {
@@ -309,7 +309,7 @@ val lspServerJar: Configuration by configurations.creating {
 }
 
 // Configuration to consume LSP version properties for display in IDE
-val lspVersionProperties: Configuration by configurations.creating {
+val lspVersionProperties = configurations.create("lspVersionProperties") {
     isCanBeConsumed = false
     isCanBeResolved = true
     attributes {
@@ -449,7 +449,7 @@ intellijPlatform {
     }
 }
 
-val publishCheck by tasks.registering(PublishCheckTask::class) {
+val publishCheck = tasks.register<PublishCheckTask>("publishCheck") {
     publishEnabled.set(enablePublishProvider)
     xdkVersion.set(xdkVersionProvider)
     releaseChannel.set(releaseChannelProvider)
@@ -457,16 +457,16 @@ val publishCheck by tasks.registering(PublishCheckTask::class) {
     publishVersion.set(jetbrainsPublishVersionProvider)
 }
 
-val summarizeSearchableOptions by tasks.registering(SummarizeSearchableOptionsTask::class) {
+val summarizeSearchableOptions = tasks.register<SummarizeSearchableOptionsTask>("summarizeSearchableOptions") {
     group = "verification"
     description = "Summarize the generated searchable options manifest for the IntelliJ plugin build."
     mustRunAfter(buildSearchableOptions)
     manifestFile.set(layout.buildDirectory.file("tmp/buildSearchableOptions/content.json"))
 }
 
-val verifyPlugin by tasks.existing
+val verifyPlugin = tasks.named("verifyPlugin")
 
-val publishPlugin by tasks.existing {
+val publishPlugin = tasks.named("publishPlugin") {
     enabled = enablePublish
     dependsOn(publishCheck)
     // Enforce binary-compat verification before publishing, regardless of who
@@ -489,7 +489,7 @@ val searchableOptionsStatus =
     if (buildSearchableOptionsEnabled) "enabled" else "disabled (use -Plsp.buildSearchableOptions=true to enable)"
 logger.info("[ide] Searchable options: $searchableOptionsStatus")
 
-val buildSearchableOptions by tasks.existing {
+val buildSearchableOptions = tasks.named("buildSearchableOptions") {
     enabled = buildSearchableOptionsEnabled
     inputs.property("buildSearchableOptionsEnabled", buildSearchableOptionsEnabled)
     // IntelliJ headless tasks use custom classloading that triggers harmless CDS/class-sharing
@@ -503,7 +503,7 @@ val buildSearchableOptions by tasks.existing {
 // The buildPlugin task creates a distributable ZIP archive that can be installed
 // in any IntelliJ IDE. Log the output path and installation instructions.
 
-val buildPlugin by tasks.existing {
+val buildPlugin = tasks.named("buildPlugin") {
     val distDir = layout.buildDirectory.dir("distributions")
     val rootDir = project.rootDir
     doLastTask {
@@ -534,13 +534,13 @@ val buildPlugin by tasks.existing {
 // The grammar files must be on the filesystem (not inside JAR) for TextMateBundleProvider.
 
 // Get typed reference to IntelliJ Platform tasks
-val prepareSandbox by tasks.existing(Sync::class)
+val prepareSandbox = tasks.named<Sync>("prepareSandbox")
 
 // Derive TextMate destination from prepareSandbox's output (works with any IDE version)
 // prepareSandbox.destinationDir is the plugins/ directory, we need plugins/<plugin-name>/lib/textmate
 val sandboxPluginTextMate: Provider<File> = prepareSandbox.map { it.destinationDir.resolve("intellij-plugin/lib/textmate") }
 
-val copyTextMateToSandbox by tasks.registering(Sync::class) {
+val copyTextMateToSandbox = tasks.register<Sync>("copyTextMateToSandbox") {
     group = "build"
     description = "Copy TextMate grammar into plugin sandbox lib directory"
 
@@ -565,7 +565,7 @@ val copyTextMateToSandbox by tasks.registering(Sync::class) {
 
 val sandboxPluginBin: Provider<File> = prepareSandbox.map { it.destinationDir.resolve("intellij-plugin/bin") }
 
-val copyLspServerToSandbox by tasks.registering(Copy::class) {
+val copyLspServerToSandbox = tasks.register<Copy>("copyLspServerToSandbox") {
     group = "build"
     description = "Copy LSP server fat JAR into plugin sandbox bin directory (off classpath)"
 
@@ -590,7 +590,7 @@ prepareSandbox.configure {
     finalizedBy(copyLspServerToSandbox)
 }
 
-val prepareJarSearchableOptions by tasks.existing {
+val prepareJarSearchableOptions = tasks.named("prepareJarSearchableOptions") {
     // Explicit dependencies ensure copy tasks complete before scanning the sandbox lib directory.
     // These tasks share the sandbox lib output directory, so ordering must be explicit.
     dependsOn(copyTextMateToSandbox)
@@ -615,7 +615,7 @@ val disabledSandboxPlugins =
         "com.intellij.clouds.kubernetes", // Another Kubernetes component
     )
 
-val configureDisabledPlugins by tasks.registering {
+val configureDisabledPlugins = tasks.register("configureDisabledPlugins") {
     group = "intellij platform"
     description = "Disable Ultimate-only plugins in the sandbox IDE"
 
@@ -638,7 +638,7 @@ val configureDisabledPlugins by tasks.registering {
 
 // Enable INFO-level logging for the XTC plugin in the sandbox IDE.
 // IntelliJ defaults to WARN, which hides useful JRE resolution and LSP lifecycle messages.
-val configureSandboxLogging by tasks.registering {
+val configureSandboxLogging = tasks.register("configureSandboxLogging") {
     group = "intellij platform"
     description = "Configure INFO-level logging for XTC plugin in the sandbox IDE"
 
@@ -663,7 +663,7 @@ val configureSandboxLogging by tasks.registering {
     }
 }
 
-val configureSandboxAppearance by tasks.registering {
+val configureSandboxAppearance = tasks.register("configureSandboxAppearance") {
     group = "intellij platform"
     description = "Remove broken user-derived color-scheme overrides from the sandbox IDE config"
 
@@ -710,7 +710,7 @@ val runIdeCapturedLsp4ijVersion =
 val runIdeCapturedPluginVersion = project.version.toString()
 val runIdeCapturedSemanticTokens = ideLspSemanticTokens
 
-val runIdeInfo by tasks.registering(RunIdeEnvironmentReportTask::class) {
+val runIdeInfo = tasks.register<RunIdeEnvironmentReportTask>("runIdeInfo") {
     dependsOn(
         copyTextMateToSandbox,
         copyLspServerToSandbox,
@@ -741,19 +741,19 @@ val runIdeInfo by tasks.registering(RunIdeEnvironmentReportTask::class) {
     lspLogFile.set(layout.file(providers.systemProperty("user.home").map { File(it, ".xtc/logs/lsp-server.log") }))
 }
 
-val startLspLogTail by tasks.registering(StartLogTailTask::class) {
+val startLspLogTail = tasks.register<StartLogTailTask>("startLspLogTail") {
     logFile.set(layout.file(providers.systemProperty("user.home").map { File(it, ".xtc/logs/lsp-server.log") }))
     threadName.set("lsp-log-tailer")
     linePrefix.set("[lsp-server] ")
 }
 
-val stopLspLogTail by tasks.registering(StopLogTailTask::class) {
+val stopLspLogTail = tasks.register<StopLogTailTask>("stopLspLogTail") {
     threadName.set("lsp-log-tailer")
 }
 
 // Ensure TextMate files, LSP server JAR, and mavenLocal artifacts are ready before IDE starts
 // NOTE: finalizedBy doesn't guarantee completion, so we need explicit dependsOn
-val runIde by tasks.existing {
+val runIde = tasks.named("runIde") {
     parentPublishLocal.forEach { dependsOn(it) }
     dependsOn(
         copyTextMateToSandbox,
@@ -794,7 +794,7 @@ val runIde by tasks.existing {
 // or dependency changes are picked up on the next run. The downloaded IDE distribution
 // itself is cached separately and is NOT affected by clean.
 
-val clean by tasks.existing(Delete::class) {
+val clean = tasks.named<Delete>("clean") {
     delete(layout.projectDirectory.dir("../.intellijPlatform/sandbox/intellij-plugin"))
 }
 
@@ -804,7 +804,7 @@ val clean by tasks.existing(Delete::class) {
 // CDS (Class Data Sharing) is a JVM startup optimization; IntelliJ's custom classloader is incompatible with it
 // for non-system classes, so the JVM falls back to normal class loading. This is standard for all IntelliJ plugin
 // test suites and is unrelated to the LSP server JAR (which runs in a separate JVM process at runtime).
-val test by tasks.existing(Test::class) {
+val test = tasks.named<Test>("test") {
     useJUnitPlatform()
     jvmArgs("-Xlog:cds=off")
     testLogging {

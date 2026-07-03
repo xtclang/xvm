@@ -72,7 +72,7 @@ val logLevel: String =
 logger.info("[lsp] LSP Server adapter: $lspAdapter, semanticTokens: $lspSemanticTokens, logLevel: $logLevel")
 
 // Generate build info for version verification and adapter selection
-val generateBuildInfo by tasks.registering {
+val generateBuildInfo = tasks.register("generateBuildInfo") {
     val outputDir = layout.buildDirectory.dir("generated/resources/buildinfo")
     val buildTime = Instant.now().toString()
     val projectVersion = project.version.toString() // Capture at configuration time
@@ -116,7 +116,7 @@ repositories {
 // Consume the tree-sitter native library for the current platform.
 // This library is built on-demand using Zig cross-compilation.
 
-val treeSitterNativeLib: Configuration by configurations.creating {
+val treeSitterNativeLib = configurations.create("treeSitterNativeLib") {
     isCanBeConsumed = false
     isCanBeResolved = true
     attributes {
@@ -161,7 +161,7 @@ dependencies {
 // so they can be bundled in the JAR. The runtime loader will select the appropriate
 // library based on the current platform.
 
-val copyNativeLibToResources by tasks.registering(Copy::class) {
+val copyNativeLibToResources = tasks.register<Copy>("copyNativeLibToResources") {
     group = "build"
     description = "Copy tree-sitter native libraries for all platforms to resources"
 
@@ -175,7 +175,7 @@ sourceSets.main {
 }
 
 // Ensure native library is copied before processResources
-val processResources by tasks.existing {
+val processResources = tasks.named("processResources") {
     dependsOn(copyNativeLibToResources)
 }
 
@@ -190,11 +190,11 @@ tasks.withType<JavaCompile>().configureEach {
 // This means running 'runIde', 'jar', or 'assemble' skips ktlint entirely.
 // We fix this by making compileKotlin depend on ktlintCheck, so any build
 // that compiles code also verifies formatting.
-val ktlintCheck by tasks.existing
-val compileKotlin by tasks.existing {
+val ktlintCheck = tasks.named("ktlintCheck")
+val compileKotlin = tasks.named("compileKotlin") {
     dependsOn(ktlintCheck)
 }
-val classes by tasks.existing
+val classes = tasks.named("classes")
 
 tasks.test {
     useJUnitPlatform()
@@ -232,7 +232,7 @@ tasks.jar {
 // Creates a self-contained JAR with all dependencies that can be launched
 // by any IDE (IntelliJ, VS Code, etc.) as a language server process.
 
-val fatJar by tasks.registering(Jar::class) {
+val fatJar = tasks.register<Jar>("fatJar") {
     archiveClassifier.set("all")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
@@ -263,7 +263,7 @@ val fatJar by tasks.registering(Jar::class) {
 // This configuration exposes the fat JAR as an artifact that other projects
 // (like intellij-plugin) can depend on through proper Gradle configuration.
 
-val lspServerElements by configurations.registering {
+val lspServerElements = configurations.register("lspServerElements") {
     isCanBeConsumed = true
     isCanBeResolved = false
     attributes {
@@ -278,7 +278,7 @@ val lspServerElements by configurations.registering {
 
 // Configuration to expose version properties to IDE plugins
 // This allows the IntelliJ plugin to display version info without accessing the LSP JAR
-val lspVersionProperties by configurations.registering {
+val lspVersionProperties = configurations.register("lspVersionProperties") {
     isCanBeConsumed = true
     isCanBeResolved = false
     attributes {
@@ -293,6 +293,6 @@ val lspVersionProperties by configurations.registering {
 }
 
 // Ensure fatJar is built when assembling
-val assemble by tasks.existing {
+val assemble = tasks.named("assemble") {
     dependsOn(fatJar)
 }

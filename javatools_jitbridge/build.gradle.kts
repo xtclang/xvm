@@ -15,7 +15,7 @@ plugins {
 // This JAR is NOT for classpath use - it's loaded by runtime via disk probing.
 // The XDK build consumes this via libs.javatools.jitbridge dependency with matching attributes.
 // See: xdk/build.gradle.kts:29-37 (consumer) and gradle/libs.versions.toml:73 (version catalog)
-val xdkJavaToolsJitBridgeProvider by configurations.registering {
+val xdkJavaToolsJitBridgeProvider = configurations.register("xdkJavaToolsJitBridgeProvider") {
     description = "Provides javatools-jitbridge JAR as native binary blob for XDK distribution (NOT classpath)"
     isCanBeResolved = false
     isCanBeConsumed = true

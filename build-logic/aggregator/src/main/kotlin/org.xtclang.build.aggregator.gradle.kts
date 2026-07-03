@@ -25,7 +25,7 @@ private class XdkBuildAggregator(val project: Project) : Runnable {
 
         val ignoredIncludedBuilds = gradle.includedBuilds.map { it.name }.filter {
             val attachKey = "includeBuildAttach${it.replaceFirstChar(Char::titlecase)}"
-            val attach = (properties[attachKey]?.toString() ?: "true").toBoolean()
+            val attach = providers.gradleProperty(attachKey).map(String::toBoolean).getOrElse(true)
             if (!attach) {
                 logger.info("[aggregator] Included build '$it' is explicitly configured to be outside the root lifecycle ($attachKey: false).")
             }

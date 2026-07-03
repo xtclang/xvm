@@ -394,7 +394,7 @@ xtcTest {
 // jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
 // See plugin/README.md for more information on debugging.
 //
-val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
+val runTwoTestsInSequence = tasks.register<XtcRunTask>("runTwoTestsInSequence") {
     group = "application"
     verbose = true // override a default from xtcRun
     module {
@@ -430,7 +430,7 @@ val executionModeTasks = ExecutionMode.entries.associateWith { mode ->
     }
 }
 
-val runTestAllExecutionModes by tasks.registering {
+val runTestAllExecutionModes = tasks.register("runTestAllExecutionModes") {
     group = "application"
     description = "Run EchoTest in all execution modes to verify that they work."
     dependsOn(executionModeTasks.values)
@@ -440,7 +440,7 @@ val runTestAllExecutionModes by tasks.registering {
 }
 
 // This allows running a single test, e.g.: ./gradlew manualTests:runOne -PtestName="TestArray"
-val runOne by tasks.registering(XtcRunTask::class) {
+val runOne = tasks.register<XtcRunTask>("runOne") {
     group = "application"
     description = """
         Runs one test as given by the property 'testName' (has a hardcoded default test name)
@@ -485,7 +485,7 @@ val testModuleNames = listOf(
 /**
  * Run all tests in parallel using the Runner module, which spawns all test modules concurrently.
  */
-val runParallel by tasks.registering(XtcRunTask::class) {
+val runParallel = tasks.register<XtcRunTask>("runParallel") {
     group = "application"
     description = "Run all known tests in parallel through the parallel test runner."
     // TODO: Re-enable TestIO here after the intermittent TypeSystem.implicitTypes initialization
@@ -509,7 +509,7 @@ val runParallel by tasks.registering(XtcRunTask::class) {
  * Run all tests sequentially, one after another. Each test module runs to completion before
  * the next one starts. This is useful for debugging or when parallel execution causes issues.
  */
-val runSequential by tasks.registering(XtcRunTask::class) {
+val runSequential = tasks.register<XtcRunTask>("runSequential") {
     group = "application"
     description = "Run all known tests sequentially, one after another."
     // TODO: TestAnnotations is currently failing - fix the test and remove this exclusion
@@ -519,25 +519,25 @@ val runSequential by tasks.registering(XtcRunTask::class) {
     testModuleNames.filter { it !in excludedModules }.forEach { moduleName(it) }
 }
 
-val runAllTestTasks by tasks.registering {
+val runAllTestTasks = tasks.register("runAllTestTasks") {
     group = "application"
     description = "Run all test tasks."
     dependsOn(runOne, runTwoTestsInSequence, runTestAllExecutionModes, runSequential)
 }
 
-val runAllTestTasksParallel by tasks.registering {
+val runAllTestTasksParallel = tasks.register("runAllTestTasksParallel") {
     group = "application"
     description = "Run all test tasks."
     dependsOn(runOne, runTwoTestsInSequence, runTestAllExecutionModes, runParallel)
 }
 
-val runCiTestTasks by tasks.registering {
+val runCiTestTasks = tasks.register("runCiTestTasks") {
     group = "application"
     description = "Run the CI aggregate manual-test tasks without re-running the explicit smoke tasks."
     dependsOn(runTestAllExecutionModes, runSequential)
 }
 
-val runCiTestTasksParallel by tasks.registering {
+val runCiTestTasksParallel = tasks.register("runCiTestTasksParallel") {
     group = "application"
     description = "Run the CI aggregate manual-test tasks in parallel mode without re-running the explicit smoke tasks."
     dependsOn(runTestAllExecutionModes, runParallel)
@@ -549,7 +549,7 @@ val runCiTestTasksParallel by tasks.registering {
  * This demonstrates creating a custom test task that overrides the default xtcTest configuration.
  * Test tasks inherit from XtcRunTask, so all run configuration options are available.
  */
-val runXunitTests by tasks.registering(XtcTestTask::class) {
+val runXunitTests = tasks.register<XtcTestTask>("runXunitTests") {
     group = "verification"
     description = "Run xunit tests using the xunit framework."
 
@@ -565,11 +565,11 @@ val runXunitTests by tasks.registering(XtcTestTask::class) {
 }
 
 fun resolveTestNameProperty(defaultTestName: String = "EchoTest"): String {
-    return if (hasProperty("testName")) (properties["testName"] as String) else defaultTestName
+    return providers.gradleProperty("testName").getOrElse(defaultTestName)
 }
 
 fun resolveTestArgumentsProperty(defaultTestArguments: String = ""): List<String> {
-    val argsString = if (hasProperty("testArgs")) (properties["testArgs"] as String) else defaultTestArguments
+    val argsString = providers.gradleProperty("testArgs").getOrElse(defaultTestArguments)
     return if (argsString.isEmpty()) emptyList() else argsString.split(",").map { it.trim() }
 }
 
@@ -604,7 +604,7 @@ val testModuleProvider: Provider<List<String>> = provider {
     sourceSets.main.get().output.asFileTree.filter { isValidXtcModule(it) }.map { it.absolutePath }.toList()
 }
 
-val printTestModules by tasks.registering {
+val printTestModules = tasks.register("printTestModules") {
     group = "help"
     description = "Print the output of provideTestModules."
     doLastTask {

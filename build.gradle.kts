@@ -21,7 +21,7 @@ logger.info("[xvm] Root aggregator version: $group:$name:$version")
  * The aggregator plugin creates this task and adds dependencies to all included builds.
  * We configure it here to also print the root aggregator's version.
  */
-val versions by tasks.existing {
+val versions = tasks.named("versions") {
     // Capture values during configuration for configuration cache compatibility
     val projectName = project.name
     val projectGroup = project.group
@@ -43,19 +43,19 @@ val versions by tasks.existing {
  * and similar things.
  */
 
-val distZip by tasks.registering {
+val distZip = tasks.register("distZip") {
     group = DISTRIBUTION_TASK_GROUP
     description = "Build the XDK distribution zip in the xdk/build/distributions directory."
     dependsOn(xdk.task(":$name"))
 }
 
-val installDist by tasks.registering {
+val installDist = tasks.register("installDist") {
     group = DISTRIBUTION_TASK_GROUP
     description = "Install the XDK distribution in the xdk/build/distributions and xdk/build/install directories."
     dependsOn(xdk.task(":$name"))
 }
 
-val installWithNativeLaunchersDist by tasks.registering {
+val installWithNativeLaunchersDist = tasks.register("installWithNativeLaunchersDist") {
     group = DISTRIBUTION_TASK_GROUP
     description = "Install the XDK distribution with native launchers in the xdk/build/install directory."
     dependsOn(xdk.task(":$name"))
@@ -65,7 +65,7 @@ private val xdk = gradle.includedBuild("xdk")
 private val plugin = gradle.includedBuild("plugin")
 private val publishedBuilds = listOf(xdk, plugin)
 
-val publishLocal by tasks.registering {
+val publishLocal = tasks.register("publishLocal") {
     group = PUBLISH_TASK_GROUP
     description = "Publish XDK and plugin artifacts to local Maven repository."
 
@@ -75,7 +75,7 @@ val publishLocal by tasks.registering {
     }
 }
 
-val publishSnapshotBundle by tasks.registering {
+val publishSnapshotBundle = tasks.register("publishSnapshotBundle") {
     group = PUBLISH_TASK_GROUP
     description = "Publish XDK and plugin snapshot artifacts to an isolated file-backed Maven repository."
 
@@ -112,7 +112,7 @@ val publishSnapshotBundle by tasks.registering {
  * Options:
  * - Use -Porg.xtclang.allowRelease=true to allow publishing release versions (required for non-SNAPSHOT versions)
  */
-val publish by tasks.registering {
+val publish = tasks.register("publish") {
     group = PUBLISH_TASK_GROUP
     description = "Publish XDK and plugin artifacts to both local Maven and remote repositories."
 
@@ -161,7 +161,7 @@ val publish by tasks.registering {
 /**
  * Aggregate validateCredentials task that runs validation in all publishable projects.
  */
-val validateCredentials by tasks.registering {
+val validateCredentials = tasks.register("validateCredentials") {
     group = PUBLISH_TASK_GROUP
     description = "Validate all publishing credentials across all projects without publishing"
 

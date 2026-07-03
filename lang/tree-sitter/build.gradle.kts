@@ -97,7 +97,7 @@ val nativeLibFile: Provider<RegularFile> = nativeOutputDir.map { it.file("libtre
 /**
  * Download tree-sitter CLI gzipped binary for the current platform.
  */
-val downloadTreeSitterCliGz by tasks.registering(Download::class) {
+val downloadTreeSitterCliGz = tasks.register<Download>("downloadTreeSitterCliGz") {
     group = "tree-sitter"
     description = "Download tree-sitter CLI gzipped binary"
     enabled = treeSitterPlatformSupported
@@ -124,7 +124,7 @@ val downloadTreeSitterCliGz by tasks.registering(Download::class) {
  * Extract the tree-sitter CLI from the downloaded gzip file.
  * Uses Java's built-in GZIPInputStream for platform independence.
  */
-val extractTreeSitterCli by tasks.registering {
+val extractTreeSitterCli = tasks.register("extractTreeSitterCli") {
     group = "tree-sitter"
     description = "Extract tree-sitter CLI from gzip"
     dependsOn(downloadTreeSitterCliGz)
@@ -167,7 +167,7 @@ val treeSitterSourceDir: Provider<Directory> = layout.buildDirectory.dir("tree-s
 /**
  * Download tree-sitter source code for building the runtime library.
  */
-val downloadTreeSitterSource by tasks.registering(Download::class) {
+val downloadTreeSitterSource = tasks.register<Download>("downloadTreeSitterSource") {
     group = "tree-sitter"
     description = "Download tree-sitter source for runtime library build"
 
@@ -198,7 +198,7 @@ val downloadTreeSitterSource by tasks.registering(Download::class) {
 /**
  * Extract tree-sitter source code.
  */
-val extractTreeSitterSource by tasks.registering {
+val extractTreeSitterSource = tasks.register("extractTreeSitterSource") {
     group = "tree-sitter"
     description = "Extract tree-sitter source"
     dependsOn(downloadTreeSitterSource)
@@ -269,7 +269,7 @@ val zigExeName = if (osName.contains("windows")) "zig.exe" else "zig"
  * Download Zig compiler archive for the current platform.
  * Downloads to persistent cache in ~/.gradle/caches/zig/<version>/
  */
-val downloadZig by tasks.registering(Download::class) {
+val downloadZig = tasks.register<Download>("downloadZig") {
     group = "zig"
     description = "Download Zig compiler for cross-compilation"
     enabled = zigPlatformSupported
@@ -366,7 +366,7 @@ abstract class ExtractZigTask @Inject constructor(
     }
 }
 
-val extractZig by tasks.registering(ExtractZigTask::class) {
+val extractZig = tasks.register<ExtractZigTask>("extractZig") {
     group = "zig"
     description = "Extract Zig compiler from archive (cached in ~/.gradle/caches/zig/)"
     dependsOn(downloadZig)
@@ -386,7 +386,7 @@ val zigExe: String = File(zigDir, "zig-$zigPlatform-$zigVersion/$zigExeName").ab
 /**
  * Copy generated grammar.js and scanner.c from the DSL project.
  */
-val copyGrammarFiles by tasks.registering(Copy::class) {
+val copyGrammarFiles = tasks.register<Copy>("copyGrammarFiles") {
     group = "tree-sitter"
     description = "Copy grammar files from DSL project"
     dependsOn(dslProject.tasks.named("generateTreeSitter"), dslProject.tasks.named("generateScannerC"))
@@ -403,7 +403,7 @@ val copyGrammarFiles by tasks.registering(Copy::class) {
  * Generate tree-sitter.json config file for ABI version 15 support.
  * This eliminates the warning about missing config file.
  */
-val generateTreeSitterConfig by tasks.registering {
+val generateTreeSitterConfig = tasks.register("generateTreeSitterConfig") {
     group = "tree-sitter"
     description = "Generate tree-sitter.json (grammar manifest) and tree-sitter-user-config.json (CLI parser-directories)"
     dependsOn(copyGrammarFiles)
@@ -467,7 +467,7 @@ val generateTreeSitterConfig by tasks.registering {
  * Validate that the generated tree-sitter grammar compiles.
  * This runs `tree-sitter generate` which validates grammar.js and produces parser.c
  */
-val validateTreeSitterGrammar by tasks.registering(Exec::class) {
+val validateTreeSitterGrammar = tasks.register<Exec>("validateTreeSitterGrammar") {
     group = "tree-sitter"
     description = "Validate tree-sitter grammar compiles"
     dependsOn(copyGrammarFiles, extractTreeSitterCli, generateTreeSitterConfig)
@@ -743,7 +743,7 @@ abstract class TreeSitterParseTestTask @Inject constructor(
     }
 }
 
-val testTreeSitterParse by tasks.registering(TreeSitterParseTestTask::class) {
+val testTreeSitterParse = tasks.register<TreeSitterParseTestTask>("testTreeSitterParse") {
     group = "tree-sitter"
     description = "Test tree-sitter parsing on XDK library files. Use -PtestFiles=pattern to filter. Timing shown by default; use -PshowTiming=false to disable."
     dependsOn(validateTreeSitterGrammar)
@@ -975,7 +975,7 @@ crossCompileTargets.forEach { (platform, zigTarget) ->
 /**
  * Build all native libraries (grammar + runtime) for all platforms using Zig.
  */
-val buildAllNativeLibraries by tasks.registering {
+val buildAllNativeLibraries = tasks.register("buildAllNativeLibraries") {
     group = "tree-sitter"
     description = "Build grammar and runtime libraries for all platforms using Zig"
     enabled = zigPlatformSupported
@@ -992,7 +992,7 @@ val buildAllNativeLibraries by tasks.registering {
  * This is useful for CI to warm the cache, or for developers building all platforms locally.
  * Libraries are stored in ~/.gradle/caches/tree-sitter-xtc/<hash>/<platform>/
  */
-val populateNativeLibraryCache by tasks.registering {
+val populateNativeLibraryCache = tasks.register("populateNativeLibraryCache") {
     group = "tree-sitter"
     description = "Build and cache native libraries for all platforms"
     dependsOn(buildAllNativeLibraries)
@@ -1359,7 +1359,7 @@ val nativeLibOutputDir: Provider<Directory> = layout.buildDirectory.dir("native-
  * Build native libraries for ALL platforms on-demand with caching.
  * This is the task that consumers should depend on.
  */
-val buildAllNativeLibrariesOnDemand by tasks.registering(BuildAllNativeLibrariesOnDemandTask::class) {
+val buildAllNativeLibrariesOnDemand = tasks.register<BuildAllNativeLibrariesOnDemandTask>("buildAllNativeLibrariesOnDemand") {
     group = "tree-sitter"
     description = "Build native libraries for all platforms (cached in ~/.gradle/caches/)"
     dependsOn(copyGrammarFiles, extractZig, extractTreeSitterSource, validateTreeSitterGrammar)
@@ -1386,7 +1386,7 @@ val buildAllNativeLibrariesOnDemand by tasks.registering(BuildAllNativeLibraries
  * Expose native libraries for ALL platforms for consumption by other projects.
  * Libraries are built on-demand using Zig cross-compilation and cached.
  */
-val nativeLibraryElements by configurations.registering {
+val nativeLibraryElements = configurations.register("nativeLibraryElements") {
     isCanBeConsumed = true
     isCanBeResolved = false
     attributes {

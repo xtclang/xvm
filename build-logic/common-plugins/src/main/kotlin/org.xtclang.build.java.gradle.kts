@@ -133,8 +133,8 @@ val junitJupiter = libsCatalog.findLibrary("junit.jupiter")
 
 testing {
     suites {
-        @Suppress("UnstableApiUsage", "unused")
-        val test by getting(JvmTestSuite::class) {
+        @Suppress("UnstableApiUsage")
+        getByName<JvmTestSuite>("test") {
             useJUnitJupiter()
             dependencies {
                 // Resolving catalog entries at configuration time is fine (static coords).

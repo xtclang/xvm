@@ -34,12 +34,12 @@ plugins {
     distribution
 }
 
-val xtcLauncherBinaries by configurations.registering {
+val xtcLauncherBinaries = configurations.register("xtcLauncherBinaries") {
     isCanBeResolved = true
     isCanBeConsumed = false
 }
 
-val xdkJavaToolsJitBridge by configurations.registering {
+val xdkJavaToolsJitBridge = configurations.register("xdkJavaToolsJitBridge") {
     description = "Consumes javatools-jitbridge JAR as native binary blob for distribution (NOT classpath)"
     isCanBeResolved = true
     isCanBeConsumed = false
@@ -53,7 +53,7 @@ val xdkJavaToolsJitBridge by configurations.registering {
 /**
  * Local configuration to provide an xdk-distribution, which contains versioned zip and tar.gz XDKs.
  */
-val xdkProvider by configurations.registering {
+val xdkProvider = configurations.register("xdkProvider") {
     isCanBeConsumed = true
     isCanBeResolved = false
     // TODO these are added twice to the archive configuration. We probably don't want that.
@@ -185,7 +185,7 @@ abstract class ModifyScriptsTask : DefaultTask() {
     }
 }
 
-val modifyScripts by tasks.registering(ModifyScriptsTask::class) {
+val modifyScripts = tasks.register<ModifyScriptsTask>("modifyScripts") {
     dependsOn(tasks.startScripts)
 
     artifactVersionProperty.set(artifactVersion)
@@ -198,7 +198,7 @@ val modifyScripts by tasks.registering(ModifyScriptsTask::class) {
     })
 }
 
-val prepareDistributionScripts by tasks.registering(Copy::class) {
+val prepareDistributionScripts = tasks.register<Copy>("prepareDistributionScripts") {
     dependsOn(modifyScripts)
     from(tasks.startScripts.map { it.outputDir!! }) {
         include("xtc*", "xcc*", "xec*")
@@ -373,7 +373,7 @@ tasks.distZip {
 // Let the Distribution plugin handle dependencies properly through the standard lifecycle
 // Distribution tasks should automatically depend on processResources and other build outputs
 
-val cleanXdk by tasks.registering(Delete::class) {
+val cleanXdk = tasks.register<Delete>("cleanXdk") {
     subprojects.forEach {
         delete(it.layout.buildDirectory)
     }
@@ -381,7 +381,7 @@ val cleanXdk by tasks.registering(Delete::class) {
     delete(File(XdkPropertiesService.compositeRootDirectory(projectDir), "build"))
 }
 
-val clean by tasks.existing {
+val clean = tasks.named("clean") {
     dependsOn(cleanXdk)
     doLast {
         logger.info("[xdk] WARNING: Note that running 'clean' is often unnecessary with a properly configured build cache.")
