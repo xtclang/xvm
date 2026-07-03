@@ -20,7 +20,7 @@
 # =============================================================================
 acme4j = "3.5.1"
 apache-commons-cli = "1.11.0"
-bouncycastle = "1.82"
+bouncycastle = "1.84"
 gson = "2.13.2"
 jakarta-activation = "2.1.4"
 jakarta-xml-bind-api = "4.0.5"

@@ -1,0 +1,50 @@
+name: Submit Gradle Dependency Graph
+
+on:
+    push:
+        branches: [master]
+    workflow_dispatch:
+
+permissions:
+    contents: write
+
+concurrency:
+    group: dependency-submission-${{ github.ref }}
+    cancel-in-progress: true
+
+env:
+    ORG_GRADLE_PROJECT_includeBuildManualTests: false
+    ORG_GRADLE_PROJECT_includeBuildAttachManualTests: false
+    ORG_GRADLE_PROJECT_includeBuildLang: true
+    ORG_GRADLE_PROJECT_includeBuildAttachLang: false
+
+jobs:
+    dependency-submission:
+        name: Submit Gradle dependency graph
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v7
+
+            - name: Setup XVM project
+              id: setup
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: false
+
+            - name: Setup Java
+              uses: actions/setup-java@v5
+              with:
+                  distribution: ${{ steps.setup.outputs.java-distribution }}
+                  java-version: ${{ steps.setup.outputs.java-version }}
+
+            - name: Generate and submit dependency graph
+              uses: gradle/actions/dependency-submission@v6
+              with:
+                  additional-arguments: >
+                      --no-configuration-cache
+                      ${{ steps.setup.outputs.gradle-options }}
+                  dependency-graph: generate-and-submit
+                  cache-provider: basic
+                  cache-read-only: false
+                  validate-wrappers: true

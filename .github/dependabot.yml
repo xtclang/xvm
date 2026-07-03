@@ -62,7 +62,12 @@ updates:
           prefix: "docker"
           include: "scope"
 
-    # Enable version updates for Gradle dependencies
+    # Enable version updates for Gradle dependencies.
+    #
+    # Dependabot can update Gradle manifest files and the standard version
+    # catalog, but GitHub does not run Gradle to discover security exposure.
+    # Gradle security alerts/security-update PRs need resolved dependency
+    # graph data from .github/workflows/dependency-submission.yml.
     #
     # NOTE: Ignore org.xtclang.* dependencies as they use
     # dynamic version resolution from version.properties.
@@ -75,20 +80,28 @@ updates:
           time: "06:00"
       open-pull-requests-limit: 3
       groups:
-          # Group all dependency updates into a single PR
+          # Group all version updates into a single PR.
           gradle-dependencies:
+              patterns:
+                  - "*"
+          # Group security updates separately once GitHub has dependency graph
+          # data for the resolved Gradle graph.
+          gradle-security:
+              applies-to: "security-updates"
               patterns:
                   - "*"
       commit-message:
           prefix: "deps"
           include: "scope"
       ignore:
+          # Gradle wrapper/tooling upgrades are handled manually because they
+          # require regenerating wrapper artifacts and keeping CI metadata in sync.
+          - dependency-name: "gradle"
           # Ignore XDK internal dependencies
           # (use dynamic versioning)
           - dependency-name: "org.xtclang.*"
-          # Ignore major and minor updates (too risky, require manual review)
-          # Only allow patch updates
+          # Ignore major updates (too risky, require manual review). Minor and
+          # patch updates stay enabled so security/maintenance releases like
+          # Bouncy Castle 1.82 -> 1.84 are proposed automatically.
           - dependency-name: "*"
-            update-types: ["version-update:semver-major", "version-update:semver-minor"]
-            # But allow security updates even for major/minor
-            # (GitHub automatically overrides this for security updates)
+            update-types: ["version-update:semver-major"]
