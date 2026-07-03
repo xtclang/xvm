@@ -2431,7 +2431,6 @@ public abstract class TypeConstant
                 contrib.getTypeConstant().collectContribs(setVisited, setOmit, errs);
             }
         } else if (struct instanceof PropertyStructure prop) {
-            // TODO support for properties
             log(errs, Severity.WARNING, VE_UNKNOWN,
                     "No implementation of collectContribs() for property type \"" + this + "\"");
         } else {
@@ -4222,10 +4221,6 @@ public abstract class TypeConstant
             // contained inside a method or property that is non-virtual;
             // however, the processing for property accessors is the same as for virtual methods
             if (!methodContrib.isVirtual() && !methodContrib.isPotentialPropertyOverlay()) {
-                // TODO (e.g. 2 modules, 1 introduces a virtual method in a new version that collides
-                //       with a function in the other)
-                // TODO we'll also have to check similar conditions below
-
                 boolean fKeep      = true;
                 Object  nidContrib = idContrib.resolveNestedIdentity(pool, this);
                 if (methodContrib.isCtorOrValidator()) {
@@ -4351,7 +4346,6 @@ public abstract class TypeConstant
                         // unlike the virtual methods, we don't re-resolve nested identity
                         // (via constId.appendNestedIdentity(pool, nidContrib)
                         // and instead keep all functions keyed by their "original" id
-                        // TODO CP handle mixin case    <-- what does this mean?
                         mapMethods.put(idContrib, methodContrib);
                     }
                 }
@@ -4395,7 +4389,7 @@ public abstract class TypeConstant
                     if (bodyContribTail.isNative() || bodyContribTail.isInto() && !fMixingIn) {
                         // take it as is
                         mapVirtMods.put(nidContrib, methodContrib);
-                    } else if (fSelf) { // TODO CP is this if() only temporary ???
+                    } else if (fSelf) {
                         log(errs, Severity.ERROR, VE_SUPER_MISSING,
                                 methodContrib.getIdentity().getPathString(),
                                 constId.getValueString());
@@ -4414,12 +4408,7 @@ public abstract class TypeConstant
                         // of the base -- just take it as-is instead, replacing the base
                         assert !methodBase.containsBody(MethodBody::isInto);
                         mapVirtMods.put(nidContrib, methodContrib);
-                        if (!nidBase.equals(nidContrib)) {
-                            // TODO should we remove or "hide" or some other way to "finalize" or
-                            //      "freeze" (kind of cap-like) the base if its nid is different?
-                            log(errs, Severity.INFO, VE_UNKNOWN,
-                                    "TODO: handle nidContrib=" + nidContrib + " vs. abandoned nidBase=" + nidBase + ')');
-                        }
+                        assert nidBase.equals(nidContrib);
                     } else if (methodBase.isCapped()) {
                         // it's an error if the base is present (not just an "into") and capped,
                         // and an attempt is made to put something (i.e. more than just the same or
@@ -4660,10 +4649,6 @@ public abstract class TypeConstant
                     assert !nidNarrowing.equals(nidNarrowed);
                     if (infoNarrowing.getAccess().isAsAccessibleAs(infoNarrowed.getAccess())) {
                         MethodConstant idNarrowed = (MethodConstant) constId.appendNestedIdentity(pool, nidNarrowed);
-                        if (nidNarrowed instanceof SignatureConstant sigNarrowed) {
-                            // TODO CP remove
-                            assert idNarrowed.equals(pool.ensureMethodConstant(constId, sigNarrowed));
-                        }
                         mapVirtMods.put(nidNarrowed, infoNarrowed.capWith(idNarrowed, nidNarrowing, infoNarrowing));
                     } else {
                         log(errs, Severity.ERROR, VE_METHOD_ACCESS_LESSENED,
@@ -4712,6 +4697,8 @@ public abstract class TypeConstant
      * Combine layered results from sibling nids that are all covered by the same contribution.
      */
     private MethodInfo combineCoveredMethodResult(MethodInfo methodResult, MethodInfo methodLayered) {
+//        System.err.println("*** combineCoveredMethodResult(" + methodResult.getIdentity() + ", " + methodLayered.getIdentity() + ")");
+
         if (methodResult == null || methodLayered.containsAllBodies(methodResult)) {
             return methodLayered;
         }
@@ -5241,11 +5228,6 @@ public abstract class TypeConstant
             // "into Ref" (or some sub-class of Ref, e.g. Var) annotation
             assert typeInto.isA(pool.typeRef());
 
-// TODO verify that the annotation has one and only one type parameter, and it is named Referent,
-//      i.e. "annotation M<Referent> into Var<Referent>"
-// TODO does the annotation class provide a hard-coded value for Referent? because if it does,
-//      we need to "isA()" test it against the type of the property
-
             if (scanForDups(aRefAnno, i, constAnno)) {
                 log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
                         prop.getIdentityConstant().getValueString(),
@@ -5730,7 +5712,7 @@ public abstract class TypeConstant
             if (childOld == null) {
                 mapChildren.put(entry.getKey(), entry.getValue());
             } else if (!childOld.equals(childNew)) {
-                // TODO: layer on the ChildInfo
+                // TODO layer on the ChildInfo; this gets hit by webcli:TerminalApp.Mixin
             }
         }
 
@@ -6646,7 +6628,7 @@ public abstract class TypeConstant
     }
 
     /**
-     * @return the TypeConstant that should be implemented TODO
+     * @return a TypeConstant specifying the actual implementable type
      */
     public TypeConstant asImplementable() {
         return switch (getCategory()) {

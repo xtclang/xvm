@@ -298,6 +298,11 @@ public class AccessTypeConstant
                Hash.of(m_access));
     }
 
+    @Override
+    public String toString() {
+        return m_access.KEYWORD + ' ' + m_constType.getValueString();
+    }
+
     // ----- fields --------------------------------------------------------------------------------
 
     /**
