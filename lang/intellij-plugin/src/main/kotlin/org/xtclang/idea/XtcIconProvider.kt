@@ -8,11 +8,6 @@ import javax.swing.Icon
 
 /**
  * Provides custom icons for XTC files (.x extension).
- *
- * We use IconProvider instead of FileType registration because:
- * 1. TextMate plugin handles the file type and provides syntax highlighting
- * 2. Registering our own FileType would override TextMate's highlighting
- * 3. IconProvider lets us add custom icons without interfering with TextMate
  */
 class XtcIconProvider : IconProvider() {
     override fun getIcon(
