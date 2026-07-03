@@ -596,7 +596,7 @@ refresh_daemon_jvm_properties() {
     local daemon_props="$gradle_root/gradle/gradle-daemon-jvm.properties"
     local jvm_version
 
-    [[ -f "$daemon_props" ]] || return
+    [[ -f "$daemon_props" ]] || return 0
 
     jvm_version=$(read_property_file "$daemon_props" toolchainVersion)
     [[ -n "$jvm_version" ]] || fail "Could not read toolchainVersion from $(repo_relative "$repo" "$daemon_props")"
@@ -642,7 +642,7 @@ update_project_creator_version() {
     local resolved_version="$2"
     local project_creator="$repo/javatools/src/main/java/org/xvm/tool/XtcProjectCreator.java"
 
-    [[ -f "$project_creator" ]] || return
+    [[ -f "$project_creator" ]] || return 0
 
     DEFAULT_GRADLE_VERSION="$resolved_version" perl -0pi -e \
         's/public static final String DEFAULT_GRADLE_VERSION = "[^"]+";/public static final String DEFAULT_GRADLE_VERSION = "$ENV{DEFAULT_GRADLE_VERSION}";/' \
@@ -663,7 +663,7 @@ update_embedded_kotlin_comment() {
     local settings_plugin_build="$repo/build-logic/settings-plugins/build.gradle.kts"
     local kotlin_version gradle_line
 
-    [[ -f "$settings_plugin_build" ]] || return
+    [[ -f "$settings_plugin_build" ]] || return 0
 
     kotlin_version=$(embedded_kotlin_version "$repo")
     [[ -n "$kotlin_version" ]] || fail "Could not determine embedded Kotlin version in $(repo_name "$repo")"
@@ -829,6 +829,39 @@ commit_and_push_repo() {
     git -C "$repo" push -u origin "$branch"
 }
 
+finish_existing_upgrade_changes() {
+    local repos="$1"
+    local target="$2"
+    local branch="$3"
+    local repo current status dirty_repos
+
+    dirty_repos=""
+
+    while IFS= read -r repo; do
+        [[ -n "$repo" ]] || continue
+        status=$(git -C "$repo" status --short --untracked-files=no)
+        [[ -n "$status" ]] || continue
+
+        current=$(current_branch "$repo")
+        if [[ "$current" != "$branch" ]]; then
+            echo "$status" >&2
+            fail "$(repo_name "$repo") has tracked changes but is on ${current:-detached HEAD}, not ${branch}"
+        fi
+        dirty_repos=$(append_unique_line "$dirty_repos" "$repo")
+    done <<< "$repos"
+
+    [[ -n "$dirty_repos" ]] || return 1
+
+    while IFS= read -r repo; do
+        [[ -n "$repo" ]] || continue
+        ensure_not_protected_branch "$repo"
+        run_repo_validation "$repo"
+        commit_and_push_repo "$repo" "$target" "$branch"
+    done <<< "$dirty_repos"
+
+    return 0
+}
+
 target_repos=$(discover_target_repos)
 
 case "$mode" in
@@ -862,6 +895,12 @@ case "$mode" in
                 [[ -n "$repo" ]] || continue
                 check_repo_consistency "$repo"
             done <<< "$target_repos"
+
+            if $uses_upgrade_branches && finish_existing_upgrade_changes "$target_repos" "$target_version" "$branch_name"; then
+                info "Gradle upgrade changes committed and pushed for selected repos: ${target_version}"
+                exit 0
+            fi
+
             echo "WARNING: All selected Gradle wrappers are already at ${target_version}; no upgrade performed." >&2
             exit 0
         fi
