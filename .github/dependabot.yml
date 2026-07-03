@@ -140,6 +140,12 @@ updates:
           # Ignore XDK internal dependencies
           # (use dynamic versioning)
           - dependency-name: "org.xtclang.*"
+          # JLine affects interactive terminal behavior; review minor/major
+          # bumps manually instead of taking them in grouped dependency PRs.
+          - dependency-name: "org.jline:jline"
+            update-types:
+                - "version-update:semver-major"
+                - "version-update:semver-minor"
           # Ignore major updates (too risky, require manual review). Minor and
           # patch updates stay enabled so security/maintenance releases like
           # Bouncy Castle 1.82 -> 1.84 are proposed automatically.
