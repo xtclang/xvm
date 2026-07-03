@@ -21,12 +21,12 @@
 acme4j = "3.5.1"
 apache-commons-cli = "1.11.0"
 bouncycastle = "1.84"
-gson = "2.13.2"
+gson = "2.14.0"
 jakarta-activation = "2.1.4"
 jakarta-xml-bind-api = "4.0.5"
 jaxb-runtime = "4.0.9"
 jetbrains-annotations = "26.1.0"
-jline = "4.0.16"
+jline = "4.3.1"
 slf4j = "2.0.18"
 
 # =============================================================================
@@ -36,22 +36,22 @@ download = "5.7.0"
 foojay-resolver = "1.0.0"
 gradle-portal-publish = "2.1.1"
 palantir-git-version = "5.0.0"
-vanniktech-maven-publish = "0.36.0"
+vanniktech-maven-publish = "0.37.0"
 
 # =============================================================================
 # Testing (shared across XDK and lang)
 # =============================================================================
 assertj = "3.27.7"
 awaitility = "4.3.0"
-junit = "6.0.3"
-junit-platform = "6.0.3"
+junit = "6.1.1"
+junit-platform = "6.1.1"
 mockito = "5.23.0"
 
 # =============================================================================
 # Lang tooling - Kotlin & formatting
 # =============================================================================
 # Everything below is only used when includeBuildLang=true.
-lang-kotlin = "2.3.21"
+lang-kotlin = "2.4.0"
 lang-kotlinx-serialization = "1.11.0"
 lang-ktlint = "14.2.0"
 lang-ktlint-engine = "1.8.0"
@@ -73,7 +73,7 @@ lang-node-gradle-plugin = "7.1.0"
 # Lang tooling - IntelliJ plugin
 # =============================================================================
 lang-intellij-ide = "2026.1"
-lang-intellij-platform-gradle-plugin = "2.16.0"
+lang-intellij-platform-gradle-plugin = "2.17.0"
 # JUnit 4.x is required at RUNTIME by the IntelliJ Platform test harness
 # (com.intellij.testFramework). IntelliJ's test infrastructure internally depends on JUnit 4
 # runners and rules, even when tests themselves are written with JUnit 5/Jupiter. Without this
@@ -90,7 +90,7 @@ lang-intellij-lsp4ij = "0.19.4"
 apache-commons-compress = "1.28.0"
 # jtreesitter 0.26.x requires Java 23+ (FFM API)
 # The LSP server runs OUT-OF-PROCESS for classloader isolation (avoids lsp4j conflicts with LSP4IJ).
-lang-jtreesitter = "0.26.0"
+lang-jtreesitter = "0.26.1"
 # tree-sitter-cli must match jtreesitter major.minor for ABI compatibility
 lang-tree-sitter-cli = "0.26.9"
 tukaani-xz = "1.12"
