@@ -6,8 +6,11 @@ import java.io.File;
 import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.ErrorList;
+import org.xvm.asm.ErrorListener.ErrorInfo;
 
 import org.xvm.compiler.ast.Statement;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test of the Ecstasy parser
@@ -48,6 +51,29 @@ public class ParserTest {
     @Test
     public void testSimpleDelegates() {
         parse("class DependentFutureRef delegates Ref(value) {}");
+    }
+
+    @Test
+    public void testMissingSemicolonInExpressionStatement() {
+        ErrorList errlist = new ErrorList(5);
+        Parser    parser  = new Parser(new Source("""
+                module TestSimple {
+                    @Inject Console console;
+
+                    void run() {
+                        console.print("no semicolon")
+                    }
+                }
+                """), errlist);
+
+        parser.parseSource();
+
+        assertEquals(1, errlist.getSeriousErrorCount());
+        assertEquals(1, errlist.getErrors().size());
+
+        ErrorInfo error = errlist.getErrors().get(0);
+        assertEquals(Parser.MISSING_SEMICOLON, error.getCode());
+        assertEquals("Semicolon is missing.", error.getMessageText());
     }
 
     static void parse(String value) {
