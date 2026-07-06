@@ -211,4 +211,17 @@ module TestCompilerErrors {
             }
         }
     }
+
+    package testInvalidAnnoation {
+        void test() {
+            @AutoFreezable
+            immutable Test t = new Test();
+
+            String s = t.s;
+
+            class Test {
+                String s = "Hi there";
+            }
+        }
+    }
 }
