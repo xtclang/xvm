@@ -205,10 +205,8 @@ public class AnnotatedTypeExpression
 
         type = exprTypeNew;
 
-        TypeConstant typeReferent = ensureTypeConstant(ctx, errs);
-        Annotation   anno         = annotation.ensureAnnotation(pool);
-        TypeConstant typeAnno     = anno.getAnnotationType();
-        TypeConstant typeReq;
+        Annotation   anno     = annotation.ensureAnnotation(pool);
+        TypeConstant typeAnno = anno.getAnnotationType();
 
         if (typeAnno.containsUnresolved()) {
             annotation.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE,
@@ -216,8 +214,14 @@ public class AnnotatedTypeExpression
             return null;
         }
 
+        TypeConstant typeReferent = ensureTypeConstant(ctx, errs);
+        TypeConstant typeTarget   = m_fDisassociateClass || m_fDisassociateRef
+                ? typeReferent
+                : exprTypeNew.ensureTypeConstant(ctx, errs);
+
         // the annotation must mix in to the Var (if it's disassociated), or into the underlying
-        // type otherwise
+        // target type otherwise
+        TypeConstant typeReq;
         if (m_fDisassociateRef) {
             Constant clzAnno = anno.getAnnotationClass();
             if (clzAnno.equals(pool.clzInject())) {
@@ -244,7 +248,7 @@ public class AnnotatedTypeExpression
             m_fVar  = typeAnno.getIntoVariableType().isA(pool.typeVar());
             typeReq = pool.ensureParameterizedTypeConstant(
                 m_fVar ? pool.typeVar() : pool.typeRef(), typeReferent);
-        } else if (typeReferent.isA(typeAnno.ensureTypeInfo(errs).getInto())) {
+        } else if (typeTarget.isA(typeAnno.ensureTypeInfo(errs).getInto())) {
             typeReq = typeReferent instanceof AnnotatedTypeConstant exprAnno
                     ? exprAnno.getAnnotationType()
                     : typeAnno;
