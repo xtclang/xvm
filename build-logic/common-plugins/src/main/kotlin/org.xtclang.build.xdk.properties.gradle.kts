@@ -91,7 +91,7 @@ plugins.withType<JavaBasePlugin> {
  * Only create if it doesn't already exist (aggregator may have created it in root build).
  */
 if ("versions" !in tasks.names) {
-    val versions by tasks.registering {
+    val versions = tasks.register("versions") {
         group = "help"
         description = "Print group:name:version for this project and all subprojects"
 

@@ -191,7 +191,7 @@ val allowReleaseProvider = xdkPublishingCredentials.allowRelease
 logPublishingConfiguration(logger, publicationVersion, isSnapshot)
 
 // Register validateCredentials task for credential validation
-val validateCredentials by tasks.registering(ValidateCredentialsTask::class) {
+val validateCredentials = tasks.register<ValidateCredentialsTask>("validateCredentials") {
     group = PUBLISH_TASK_GROUP
     description = "Validate all publishing credentials (GitHub, Maven Central, Plugin Portal, Signing) without publishing"
     // Set project info for output (configuration-cache safe)

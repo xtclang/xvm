@@ -14,7 +14,7 @@ plugins {
     alias(libs.plugins.xtc)
 }
 
-val xdkTurtleConsumer by configurations.registering {
+val xdkTurtleConsumer = configurations.register("xdkTurtleConsumer") {
     isCanBeResolved = true
     isCanBeConsumed = false
     attributes {
@@ -23,7 +23,7 @@ val xdkTurtleConsumer by configurations.registering {
     }
 }
 
-val xdkUnicodeConsumer by configurations.registering {
+val xdkUnicodeConsumer = configurations.register("xdkUnicodeConsumer") {
     isCanBeResolved = true
     isCanBeConsumed = false
     attributes {
@@ -32,7 +32,7 @@ val xdkUnicodeConsumer by configurations.registering {
     }
 }
 
-val xdkEcstasyResourcesProvider by configurations.registering {
+val xdkEcstasyResourcesProvider = configurations.register("xdkEcstasyResourcesProvider") {
     description = "Provider configuration for ecstasy resources (implicit.x and unicode data)"
     isCanBeResolved = false
     isCanBeConsumed = true
@@ -52,7 +52,7 @@ dependencies {
     xdkTurtleConsumer(libs.javatools.turtle) // A dependency declaration like this works equally well if we are working with an included build/project or with an artifact. This is exactly what we want.
 }
 
-val compileXtc by tasks.existing(XtcCompileTask::class) {
+val compileXtc = tasks.named<XtcCompileTask>("compileXtc") {
     outputFilename("mack.xtc" to "javatools_turtle.xtc")
 }
 

@@ -13,7 +13,7 @@ plugins {
 }
 
 // Create consumer configuration for XDK distribution zip
-val xdkDistConsumer by configurations.registering {
+val xdkDistConsumer = configurations.register("xdkDistConsumer") {
     isCanBeResolved = true
     isCanBeConsumed = false
     attributes {

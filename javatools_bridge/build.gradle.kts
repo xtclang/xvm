@@ -22,6 +22,6 @@ dependencies {
     xtcModule(libs.xdk.web)
 }
 
-val compileXtc by tasks.existing(XtcCompileTask::class) {
+val compileXtc = tasks.named<XtcCompileTask>("compileXtc") {
     outputFilename("_native.xtc" to "javatools_bridge.xtc")
 }

@@ -80,7 +80,7 @@ subprojects {
 // after modifying the language model or generators.
 // =============================================================================
 
-val updateGeneratedExamples by tasks.registering(Copy::class) {
+val updateGeneratedExamples = tasks.register<Copy>("updateGeneratedExamples") {
     group = "generation"
     description = "Update the generated-examples directory with freshly generated files"
 
@@ -129,13 +129,13 @@ taskMappings.forEach { (aggregateTask, overrides) ->
 // IDE run tasks - convenience aliases for subproject tasks
 // =============================================================================
 
-val runIntellijPlugin by tasks.registering {
+val runIntellijPlugin = tasks.register("runIntellijPlugin") {
     group = "run"
     description = "Launch IntelliJ IDEA with the XTC plugin loaded for testing"
     dependsOn(project(":intellij-plugin").tasks.named("runIde"))
 }
 
-val runVsCodeExtension by tasks.registering {
+val runVsCodeExtension = tasks.register("runVsCodeExtension") {
     group = "run"
     description = "Launch VS Code with the XTC extension loaded for testing"
     dependsOn(project(":vscode-extension").tasks.named("runCode"))

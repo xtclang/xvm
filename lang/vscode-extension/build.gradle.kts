@@ -12,7 +12,7 @@ node {
 }
 
 // Configuration to consume TextMate grammar from root project
-val textMateGrammar by configurations.creating {
+val textMateGrammar = configurations.create("textMateGrammar") {
     isCanBeConsumed = false
     isCanBeResolved = true
     attributes {
@@ -26,7 +26,7 @@ dependencies {
 }
 
 // Copy TextMate grammar files
-val copyTextMateGrammar by tasks.registering(Copy::class) {
+val copyTextMateGrammar = tasks.register<Copy>("copyTextMateGrammar") {
     description = "Copy TextMate grammar from generated output"
     from(textMateGrammar) {
         include("xtc.tmLanguage.json")
@@ -35,7 +35,7 @@ val copyTextMateGrammar by tasks.registering(Copy::class) {
 }
 
 // Copy language configuration
-val copyLanguageConfig by tasks.registering(Copy::class) {
+val copyLanguageConfig = tasks.register<Copy>("copyLanguageConfig") {
     description = "Copy language configuration from generated output"
     from(textMateGrammar) {
         include("language-configuration.json")
@@ -44,7 +44,7 @@ val copyLanguageConfig by tasks.registering(Copy::class) {
 }
 
 // Copy LSP server fat JAR (self-contained with all dependencies: LSP4J, tree-sitter, Logback)
-val copyLspServer by tasks.registering(Copy::class) {
+val copyLspServer = tasks.register<Copy>("copyLspServer") {
     description = "Copy LSP server fat JAR"
     dependsOn(project(":lsp-server").tasks.named("fatJar"))
     from(project(":lsp-server").tasks.named("fatJar"))
@@ -53,7 +53,7 @@ val copyLspServer by tasks.registering(Copy::class) {
 }
 
 // Copy DAP server JAR (bundled for debugging support)
-val copyDapServer by tasks.registering(Copy::class) {
+val copyDapServer = tasks.register<Copy>("copyDapServer") {
     description = "Copy DAP server JAR"
     dependsOn(project(":dap-server").tasks.named("jar"))
     from(project(":dap-server").tasks.named("jar")) {
@@ -64,7 +64,7 @@ val copyDapServer by tasks.registering(Copy::class) {
 }
 
 // Copy LICENSE from repository root
-val copyLicense by tasks.registering(Copy::class) {
+val copyLicense = tasks.register<Copy>("copyLicense") {
     description = "Copy LICENSE from repository root"
     val compositeRoot = XdkPropertiesService.compositeRootDirectory(projectDir)
     from(File(compositeRoot, "LICENSE.md"))
@@ -75,7 +75,7 @@ val copyLicense by tasks.registering(Copy::class) {
 // (xtc-file.png, 32x32) from doc/logo/x.jpg in the repository root. We derive
 // PNGs rather than checking them in so the single JPEG source of truth in
 // doc/logo/ stays canonical; the `sharp` devDependency handles the conversion.
-val generateIcons by tasks.registering(NodeTask::class) {
+val generateIcons = tasks.register<NodeTask>("generateIcons") {
     description = "Generate VS Code marketplace and file icons from doc/logo/x.jpg"
     dependsOn(tasks.named("npmInstall"))
     val compositeRoot = XdkPropertiesService.compositeRootDirectory(projectDir)
@@ -91,12 +91,12 @@ val generateIcons by tasks.registering(NodeTask::class) {
 }
 
 // Configure the plugin-provided npmInstall task (runs `npm install` using the pinned Node)
-val npmInstall by tasks.existing {
+val npmInstall = tasks.named("npmInstall") {
     mustRunAfter(copyLanguageConfig, copyTextMateGrammar, copyLicense)
 }
 
 // Compile TypeScript
-val npmCompile by tasks.registering(NpmTask::class) {
+val npmCompile = tasks.register<NpmTask>("npmCompile") {
     description = "Compile TypeScript"
     dependsOn(npmInstall)
     args.set(listOf("run", "compile"))
@@ -125,7 +125,7 @@ val npmCompile by tasks.registering(NpmTask::class) {
 // else in the repo.
 val vscodeVersionSuffix: Provider<String> = providers.gradleProperty("vscode.version.suffix")
 
-val stampVscodeVersion by tasks.registering {
+val stampVscodeVersion = tasks.register("stampVscodeVersion") {
     description = "Apply -Pvscode.version.suffix to lang/vscode-extension/package.json (no-op when unset)"
     val pkgJsonFile = layout.projectDirectory.file("package.json").asFile
     val backupFile = layout.projectDirectory.file("package.json.version-backup").asFile
@@ -152,7 +152,7 @@ val stampVscodeVersion by tasks.registering {
     }
 }
 
-val restoreVscodeVersion by tasks.registering {
+val restoreVscodeVersion = tasks.register("restoreVscodeVersion") {
     description = "Restore lang/vscode-extension/package.json from the backup written by stampVscodeVersion"
     val pkgJsonFile = layout.projectDirectory.file("package.json").asFile
     val backupFile = layout.projectDirectory.file("package.json.version-backup").asFile
@@ -166,7 +166,7 @@ val restoreVscodeVersion by tasks.registering {
 }
 
 // Package the extension
-val packageExtension by tasks.registering(NpmTask::class) {
+val packageExtension = tasks.register<NpmTask>("packageExtension") {
     description = "Package VS Code extension"
     dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, generateIcons, stampVscodeVersion)
     finalizedBy(restoreVscodeVersion)
@@ -189,7 +189,7 @@ val packageExtension by tasks.registering(NpmTask::class) {
 // Not wired into `check` by default because on headless Linux runners this
 // needs `xvfb-run` (or a similar virtual display). The intent is that local
 // developers run it explicitly, and CI opt-in via xvfb if/when desired.
-val testVscodeExtension by tasks.registering(NpmTask::class) {
+val testVscodeExtension = tasks.register<NpmTask>("testVscodeExtension") {
     group = "verification"
     description = "Run headless integration tests for the VS Code extension"
     dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, generateIcons)
@@ -201,17 +201,17 @@ val testVscodeExtension by tasks.registering(NpmTask::class) {
 }
 
 // Main build task - configure the existing task from base plugin
-val build by tasks.existing {
+val build = tasks.named("build") {
     dependsOn(packageExtension)
 }
 
 // Assemble prepares all resources without packaging
-val assemble by tasks.existing {
+val assemble = tasks.named("assemble") {
     dependsOn(copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, npmCompile, generateIcons)
 }
 
 // Launch VS Code with extension loaded for testing
-val runCode by tasks.registering(Exec::class) {
+val runCode = tasks.register<Exec>("runCode") {
     group = "run"
     description = "Launch VS Code with the extension loaded for testing"
     dependsOn(assemble)
@@ -254,7 +254,7 @@ val runCode by tasks.registering(Exec::class) {
     }
 }
 
-val clean by tasks.existing(Delete::class) {
+val clean = tasks.named<Delete>("clean") {
     delete(layout.projectDirectory.dir("out"))
     delete(layout.projectDirectory.dir("node_modules"))
     delete(layout.projectDirectory.dir("server"))

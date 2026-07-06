@@ -13,7 +13,7 @@ plugins {
 }
 
 // TODO: Move these to common-plugins, the XDK composite build does use them in some different places.
-val xdkJavaToolsProvider by configurations.registering {
+val xdkJavaToolsProvider = configurations.register("xdkJavaToolsProvider") {
     description = "Provider configuration of the The XVM Java Tools jar artifact: 'javatools-$version.jar'"
     isCanBeResolved = false
     isCanBeConsumed = true
@@ -52,7 +52,7 @@ val ecstasyResourcesDir = layout.projectDirectory.dir(
  * Uses direct file path references instead of configuration dependencies to avoid
  * circular dependency issues when the plugin tries to use javatools as compileOnly.
  */
-val copyEcstasyResources by tasks.registering(Copy::class) {
+val copyEcstasyResources = tasks.register<Copy>("copyEcstasyResources") {
     description = "Copy ecstasy resources from lib_ecstasy using direct file reference"
     from(ecstasyResourcesDir)
     into(layout.buildDirectory.dir("generated/resources/main"))
@@ -63,7 +63,7 @@ val copyEcstasyResources by tasks.registering(Copy::class) {
  * This allows generated XTC projects to have a working gradle wrapper out of the box.
  */
 val compositeRoot = XdkPropertiesService.compositeRootRelativeFile(projectDir, ".")
-val copyGradleWrapper by tasks.registering(Copy::class) {
+val copyGradleWrapper = tasks.register<Copy>("copyGradleWrapper") {
     description = "Copy gradle wrapper files for embedding in generated projects"
     from(File(compositeRoot, "gradlew"))
     from(File(compositeRoot, "gradlew.bat"))
@@ -122,7 +122,7 @@ abstract class GenerateBuildInfo : DefaultTask() {
     }
 }
 
-val generateBuildInfo by tasks.registering(GenerateBuildInfo::class) {
+val generateBuildInfo = tasks.register<GenerateBuildInfo>("generateBuildInfo") {
     description = "Generate build-info.properties deterministically (config-cache safe)"
     baseProps.set(versionPropsFile)
 
@@ -177,7 +177,7 @@ tasks.processResources {
 }
 
 // Make 'jar' clean: no I/O or repo reads inside actions
-val jar by tasks.existing(Jar::class) {
+val jar = tasks.named<Jar>("jar") {
     dependsOn(tasks.processResources)
 
     // Declare inputs that affect jar content
@@ -224,7 +224,7 @@ val jar by tasks.existing(Jar::class) {
     }
 }
 
-val versionOutputTest by tasks.registering(Test::class) {
+val versionOutputTest = tasks.register<Test>("versionOutputTest") {
     description = "Run tests that verify version output contains git and API information"
     group = VERIFICATION_GROUP
 
