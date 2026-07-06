@@ -1475,6 +1475,17 @@ public class ConstantPool
 
         checkElementsNonNull(constTypes);
 
+        if (constType.isAccessSpecified()) {
+            // (Bag:protected)<Element> => (Bag<Element>:protected)
+            return ensureParameterizedTypeConstant(
+                constType.removeAccess(), constTypes).ensureAccess(constType.getAccess());
+        }
+        if (constType.isImmutabilitySpecified()) {
+            // (immutable Bag)<Element> => (immutable Bag<Element>)
+            return ensureParameterizedTypeConstant(
+                constType.removeImmutable(), constTypes).freeze();
+        }
+
         return register(new ParameterizedTypeConstant(this, constType, constTypes));
     }
 
