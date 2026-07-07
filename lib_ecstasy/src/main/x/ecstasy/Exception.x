@@ -36,7 +36,7 @@ const Exception {
            .append(message)
            .append(stackTrace);
 
-        if (cause != Null) {
+        if (Exception cause ?= this.cause) {
             buf.append("\nCaused by: ")
                .append(cause.toString());
         }

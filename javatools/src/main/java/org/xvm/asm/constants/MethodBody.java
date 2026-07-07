@@ -775,7 +775,7 @@ public class MethodBody {
         JitMethodDesc jmd = m_jmd;
         if (jmd == null ||
                 isCtorOrValidator() && !typeContainer.removeAccess().equals(m_typeJmdContainer)) {
-            MethodStructure   method = getMethodStructure();
+            MethodStructure   method = getClassifyingMethodStructure();
             SignatureConstant sig    = method.resolveSignature(
                                             builder.pool(), typeContainer.getCanonicalJitType());
 

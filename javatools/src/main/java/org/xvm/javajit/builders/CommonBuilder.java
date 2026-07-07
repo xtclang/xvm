@@ -285,10 +285,7 @@ public class CommonBuilder
                     break;
             }
         }
-        if (this.isInterface) {
-            // all interfaces extend org.xtclang.ecstasy.Object
-            interfaces.add(CD_Object);
-        }
+
         if (!interfaces.isEmpty()) {
             classBuilder.withInterfaceSymbols(interfaces);
         }
@@ -299,8 +296,9 @@ public class CommonBuilder
      *         implemented/exteneded by this class
      */
     protected boolean shouldAddInterface(TypeConstant type) {
-        // ignore "implements Object" for classes
-        return this.isInterface || !type.equals(pool().typeObject());
+        // ignore "implements Object" for classes and "implements Comparable" for everyone
+        return (this.isInterface || !type.equals(pool().typeObject())) &&
+            !type.equals(pool().typeComparable());
     }
 
     /**

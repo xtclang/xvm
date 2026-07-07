@@ -265,6 +265,12 @@ public class ArrayᐸObjectᐳ
         throw $oob(ctx, upper);
     }
 
+    // TODO: remove when the "long arm" naming convention is implemented
+    @Override
+    public Array makeImmutable(Ctx ctx) {
+        return super.makeImmutable(ctx);
+    }
+
     // ----- Array internals -----------------------------------------------------------------------
 
     @Override protected ArrayᐸObjectᐳ $delegate() {

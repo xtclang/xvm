@@ -49,8 +49,8 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     public boolean assembleImplClass(String className, ClassBuilder classBuilder) {
-        // do not augment Object and
-        // since nRef is both Ref and Var, ignore "Var" interface; it causes circular initialization
+        // do not augment Object and since nRef is both Ref and Var, ignore "Var" interface; it
+        // causes circular initialization
         if (thisId.equals(pool().clzObject()) || thisId.equals(pool().clzVar())) {
             return false;
         }
@@ -85,6 +85,11 @@ public class AugmentingBuilder extends CommonBuilder {
         default:
             return true;
         }
+    }
+
+    @Override
+    protected boolean shouldAddInterface(TypeConstant type) {
+        return !jitType.equals(pool().typeComparable()) && super.shouldAddInterface(type);
     }
 
     @Override
