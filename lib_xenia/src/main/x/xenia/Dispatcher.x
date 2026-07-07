@@ -56,8 +56,16 @@ service Dispatcher {
      * Dispatch the "raw" request.
      */
     void dispatch(RequestInfo requestInfo) {
+        Uri fullUri;
+        try {
+            fullUri = requestInfo.uri;
+        } catch (Exception e) {
+            requestInfo.respond(HttpStatus.BadRequest.code, [], [], []);
+            return;
+        }
+
         Boolean tls       = requestInfo.tls;
-        String  uriString = requestInfo.uriString;
+        String  uriString = fullUri.path ?: "";
 
         // select the service to delegate request processing to; the service infos are sorted
         // with the most specific path first (so the first path match wins)
@@ -80,13 +88,10 @@ service Dispatcher {
             } else if (pathSize == 1) { // root path ("/") matches everything
                 serviceInfo = info;
                 break;
-            } else if (uriSize > pathSize && uriString.startsWith(path)) {
-                Char ch = uriString[pathSize];
-                if (ch == '/' || ch == '?' || ch == '#') {
-                    serviceInfo = info;
-                    uriString   = uriString.substring(pathSize);
-                    break;
-                }
+            } else if (uriSize > pathSize && uriString.startsWith(path) && uriString[pathSize] == '/') {
+                serviceInfo = info;
+                uriString   = uriString.substring(pathSize);
+                break;
             }
         }
 
@@ -97,32 +102,11 @@ service Dispatcher {
             handlePlainTextSecrets(tls, requestInfo, request);
             response = catalog.webApp.handleUnhandledError^(request, NotFound);
         } else {
-            // split what's left of the URI into a path, a query, and a fragment
-            String? query    = Null;
-            String? fragment = Null;
-            if (!uriString.empty) {
-                if (Int fragmentOffset := uriString.indexOf('#')) {
-                    fragment  = uriString.substring(fragmentOffset+1);
-                    uriString = uriString[0 ..< fragmentOffset];
-                }
-                if (Int queryOffset := uriString.indexOf('?')) {
-                    query     = uriString.substring(queryOffset+1);
-                    uriString = uriString[0 ..< queryOffset];
-                }
-            }
-
             EndpointInfo  endpoint;
             UriParameters uriParams = [];
             Int           wsid      = serviceInfo.id;
             FindEndpoint: {
-                Uri uri;
-                try {
-                    uri = new Uri(path=uriString, query=query, fragment=fragment);
-                } catch (Exception e) {
-                    handlePlainTextSecrets(tls, requestInfo);
-                    response = new SimpleResponse(BadRequest);
-                    break ProcessRequest;
-                }
+                Uri uri = new Uri(path=uriString, query=fullUri.query, fragment=fullUri.fragment);
 
                 // find a matching endpoint
                 String methodName = requestInfo.method.name;

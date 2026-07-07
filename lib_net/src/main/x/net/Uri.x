@@ -993,12 +993,14 @@ const Uri
     /**
      * Create a `Uri` from the passed `String`, iff the `String` contains a valid URI.
      *
-     * @param text  the text containing a URI
+     * @param text         the text containing a URI
+     * @param noAuthority  (optional) `True` indicates that the URI will not contain the authority
+     *                     section, so parsing will begin with the path section
      *
      * @return True if the text was successfully parsed into a Uri
      * @return (conditional) the Uri
      */
-    static conditional Uri fromString(String text) {
+    static conditional Uri fromString(String text, Boolean noAuthority = False) {
         if ((String?    scheme,
              String?    authority,
              String?    user,
@@ -1008,7 +1010,7 @@ const Uri
              String?    path,
              String?    query,
              String?    opaque,
-             String?    fragment) := parse(text)) {
+             String?    fragment) := parse(text, noAuthority=noAuthority)) {
             return True, new Uri(text, scheme, authority, user, host, ip, port, path, query, opaque, fragment);
         }
 
@@ -1018,8 +1020,10 @@ const Uri
     /**
      * Parse URI information from a String, without relying on an exception to report failure.
      *
-     * @param text    the String containing the URI
-     * @param report  (optional) the function to report a failure to, as a non-localized string
+     * @param text         the String containing the URI
+     * @param report       (optional) the function to report a failure to, as a non-localized string
+     * @param noAuthority  (optional) True indicates that the URI will not contain the authority
+     *                     section, so parsing will begin with the path section
      *
      * @return True iff the parsing succeeded and the URI is lexically valid
      * @return (conditional) the scheme name, or Null if none
@@ -1042,7 +1046,8 @@ const Uri
                         String?    path,
                         String?    query,
                         String?    opaque,
-                        String?    fragment) parse(String text, function void (String)? report = Null) {
+                        String?    fragment)
+            parse(String text, function void (String)? report = Null, Boolean noAuthority = False) {
         String?    scheme    = Null;
         String?    user      = Null;
         String?    authority = Null;
@@ -1059,8 +1064,12 @@ const Uri
 
         // an empty URI is not legal
         if (length == 0) {
-            report?($"Invalid URI {text.quoted()}: Empty URI");
-            return False;
+            if (noAuthority) {
+                return True, Null, Null, Null, Null, Null, Null, "", Null, Null, Null;
+            } else {
+                report?($"Invalid URI {text.quoted()}: Empty URI");
+                return False;
+            }
         }
 
         // a Uri is either an absoluteURI or a relativeURI:
@@ -1083,7 +1092,15 @@ const Uri
         //   rel_path = rel_segment [ abs_path ]
         //   rel_segment = 1*( unreserved | escaped | ";" | "@" | "&" | "=" | "+" | "$" | "," )
         String? error = Null;
-        if ((scheme, offset, error) := parseScheme(text, offset, error)) {
+        if (noAuthority) {
+            if (text[offset] == '/') {
+                (path, offset, error) := parseAbsPath(text, offset, error);
+                (query, offset, error) := parseQuery(text, offset, error);
+                (fragment, offset, error) := parseFragment(text, offset, error);
+            } else {
+                error = $"HTTP request path must begin with '/': {text.quoted()}";
+            }
+        } else if ((scheme, offset, error) := parseScheme(text, offset, error)) {
             if ((authority, user, host, ip, port, path, offset, error) := parseNetPath(text, offset)) {
                 (query, offset, error) := parseQuery(text, offset, error);
                 (fragment, offset, error) := parseFragment(text, offset, error);
