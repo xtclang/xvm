@@ -43,6 +43,7 @@ import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Object;
+import static org.xvm.javajit.Builder.MD_xvmVoid;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -244,8 +245,7 @@ public abstract class OpIndex
                 // duplicate the array on the stack and ensure that it is mutable
                 code.dup();
                 bctx.loadCtx(code);
-                code.invokevirtual(cdArray, "$ensureWriteable",
-                        MethodTypeDesc.of(CD_void, CD_Ctx));
+                code.invokevirtual(cdArray, "$ensureWriteable", MD_xvmVoid);
             }
 
             if (fPrimitive && !fNullable) {

@@ -106,7 +106,7 @@ public class AugmentingBuilder extends CommonBuilder {
     @Override
     protected void assembleInitializer(String className, ClassBuilder classBuilder,
                                        List<PropertyInfo> props) {
-        MethodModel mm = findMethod(INIT_NAME, MD_Initializer);
+        MethodModel mm = findMethod(INIT_NAME, MD_xvmVoid);
         if (mm == null) {
             super.assembleInitializer(className, classBuilder, props);
         }

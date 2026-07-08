@@ -544,7 +544,7 @@ public class CommonBuilder
         ClassDesc CD_this = ClassDesc.of(className);
 
         classBuilder.withMethodBody(INIT_NAME,
-            MD_Initializer,
+            MD_xvmVoid,
             ClassFile.ACC_PUBLIC,
             code -> {
                 Label startScope = code.newLabel();
@@ -656,7 +656,7 @@ public class CommonBuilder
         // super($ctx);
         code.aload(0)
             .aload(code.parameterSlot(0))
-            .invokespecial(getSuperCD(), INIT_NAME, MD_Initializer);
+            .invokespecial(getSuperCD(), INIT_NAME, MD_xvmVoid);
     }
 
     /**
