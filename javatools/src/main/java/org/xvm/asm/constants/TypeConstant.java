@@ -4744,7 +4744,8 @@ public abstract class TypeConstant
     }
 
     /**
-     * Collect all methods that could be the "super" of the specified method signature.
+     * Collect all methods that could be the "super" of the specified method signature. Capped
+     * methods are omitted iff the method they are capped by is also in the list.
      *
      * @param methodInfo  the method info for the method that is searching for a super
      * @param nidSub      the nested identity of the method
@@ -4760,6 +4761,7 @@ public abstract class TypeConstant
         SignatureConstant sigSub     = methodInfo.getSignature();
         int               cDefaults  = method == null ? 0 : method.getDefaultParamCount();
         List<Object>      listMatch  = null;
+        boolean           fAnyCapped = false;
         Object            nidCovers  = null;
         for (Entry<Object, MethodInfo> entry : mapSupers.entrySet()) {
             Object nidCandidate = entry.getKey();
@@ -4770,7 +4772,8 @@ public abstract class TypeConstant
                     MethodBody head = infoCandidate.getHead();
                     if (head.getSignature().equals(sigSub) ||
                             sigSub.isSubstitutableFor(sigCandidate, this)) {
-                        listMatch = lazyAdd(listMatch, nidCandidate);
+                        listMatch   = lazyAdd(listMatch, nidCandidate);
+                        fAnyCapped |= infoCandidate.isCapped();
                         continue;
                     }
 
@@ -4778,7 +4781,8 @@ public abstract class TypeConstant
                         TypeConstant typeInto = head.getIntoMethodInfo().getIdentity().getClassIdentity().getType();
                         if (sigSub.isSubstitutableFor(head.getSignature(), typeInto) ||
                                 sigSub.isSubstitutableFor(head.getIntoMethodInfo().getSignature(), typeInto)) {
-                            listMatch = lazyAdd(listMatch, nidCandidate);
+                            listMatch   = lazyAdd(listMatch, nidCandidate);
+                            fAnyCapped |= infoCandidate.isCapped();
                             continue;
                         }
                     }
@@ -4790,19 +4794,39 @@ public abstract class TypeConstant
                         if (cParamsSub > cParamsReq && cParamsSub - cDefaults <= cParamsReq) {
                             SignatureConstant sigSubReq = sigSub.truncateParams(0, cParamsReq);
                             if (sigSubReq.isSubstitutableFor(sigCandidate, this)) {
-                                listMatch = lazyAdd(listMatch, nidCandidate);
+                                listMatch   = lazyAdd(listMatch, nidCandidate);
+                                fAnyCapped |= infoCandidate.isCapped();
                             }
                         }
                     }
 
-                    if (infoCandidate.containsAllBodies(methodInfo) &&
-                            (nidCovers == null || mapSupers.get(nidCovers).isCapped())) {
+                    if (infoCandidate.containsAllBodies(methodInfo) && (nidCovers == null ||
+                            !infoCandidate.isCapped() && mapSupers.get(nidCovers).isCapped())) {
                         nidCovers = nidCandidate;
                     }
                 }
             }
         }
-        return listMatch == null ? nidCovers == null ? Collections.emptyList() : List.of(nidCovers) : listMatch;
+
+        if (listMatch != null) {
+            int cMatches = listMatch.size();
+            if (!fAnyCapped || listMatch.size() <= 1) {
+                return listMatch;
+            }
+
+            // discard any capped methods whose target is also in the list
+            List<Object> listRemain = new ArrayList<>(cMatches);
+            for (int i = 0; i < cMatches; ++i) {
+                Object     nidMatch  = listMatch.get(i);
+                MethodInfo infoMatch = mapSupers.get(nidMatch);
+                if (!(infoMatch.isCapped() && listMatch.contains(infoMatch.getHead().getNarrowingNestedIdentity()))) {
+                    listRemain.add(nidMatch);
+                }
+            }
+            return listRemain;
+        }
+
+        return nidCovers == null ? Collections.emptyList() : List.of(nidCovers);
     }
 
     /**

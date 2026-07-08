@@ -138,18 +138,18 @@ public class MethodInfo
         int          cAdd  = aAdd.length;
 
         if (fSelf) {
-            // avoid mixin circularity: class C incorporates mixin M into C
-            MethodBody bodyAdd = aAdd[0];
-            if (aBase[0].isInto() && aBase[0].getIntoMethodInfo().containsBody(bodyAdd.getIdentity())) {
-                return that;
-            }
-
             // should only have one layer (or zero layers, in which case we wouldn't have been
             // called) of method body for the "self" layer
             assert cAdd == 1;
 
             // check @Override
-            if (!bodyAdd.isOverride() && !this.containsBody(bodyAdd.getIdentity())) {
+            MethodBody bodyAdd  = aAdd[0];
+            MethodBody bodyHead = aBase[0];
+            if (!bodyAdd.isOverride()
+                    // the body to add could already be present in the chain, so layerOn is a no-op
+                    && !this.containsBody(bodyAdd.getIdentity())
+                    // avoid mixin circularity: class C incorporates mixin M into C
+                    && !(bodyHead.isInto() && bodyHead.getIntoMethodInfo().containsBody(bodyAdd.getIdentity()))) {
                 MethodConstant id = getIdentity();
                 id.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
                         that.getIdentity().getNamespace().getValueString(),
