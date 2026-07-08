@@ -207,6 +207,12 @@ public abstract class OpIndex
                 + ", " + Argument.toIdString(m_argReturn, m_nRetValue);
     }
 
+    /**
+     * @return {@code true} if this op is mutating
+     */
+    protected boolean isMutating() {
+        return getOpCode() != OP_I_GET;
+    }
 
     // ----- JIT support ---------------------------------------------------------------------------
 
@@ -232,8 +238,16 @@ public abstract class OpIndex
         boolean      fPrimitive = typeEl.isJitPrimitive();
 
         if (typeTarget.isArray()) {
-            // TODO JK: call Array.ensureWriteable() for any mutating op
             ClassDesc cdArray = bctx.builder.ensureClassDesc(typeTarget);
+
+            if (isMutating()) {
+                // duplicate the array on the stack and ensure that it is mutable
+                code.dup();
+                bctx.loadCtx(code);
+                code.invokevirtual(cdArray, "$ensureWriteable",
+                        MethodTypeDesc.of(CD_void, CD_Ctx));
+            }
+
             if (fPrimitive && !fNullable) {
                 buildPrimitiveArrayOp(bctx, code, reg, typeEl);
             } else {

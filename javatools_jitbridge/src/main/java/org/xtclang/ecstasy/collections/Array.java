@@ -2,6 +2,7 @@ package org.xtclang.ecstasy.collections;
 
 import org.xtclang.ecstasy.IterableᐸCharᐳ;
 import org.xtclang.ecstasy.Iterator;
+import org.xtclang.ecstasy.ReadOnly;
 import org.xtclang.ecstasy.nEnum;
 import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nType;
@@ -599,6 +600,16 @@ public abstract class Array
     protected void $size(int size) {
         assert size >= 0 && size <= $SIZE_MASK;
         $sizeEtc = $sizeEtc & $MUT_MASK | size;
+    }
+
+    /**
+     * Throw a {@link ReadOnly} exception if this array is not "inPlace" writable.
+     */
+    public void $ensureWriteable(Ctx ctx) {
+        if ($mut() < $FIXED) {
+            ReadOnly ro = new ReadOnly(ctx);
+            throw ro.$init(ctx, "");
+        }
     }
 
     /**
