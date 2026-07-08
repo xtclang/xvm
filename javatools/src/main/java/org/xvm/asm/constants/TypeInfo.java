@@ -2092,9 +2092,9 @@ public class TypeInfo {
      *
      * Note: this method is quite similar to {@link org.xvm.runtime.ClassTemplate#findOpChain}
      *
-     * @param sName   the default op name, such as "add" (optional)
-     * @param sOp     the operator string, such as "+" (optional)
-     * @param cParams the number of parameters for the operator method, or -1 to match any
+     * @param sName    the default op name, such as "add" (optional)
+     * @param sOp      the operator string, such as "+" (optional)
+     * @param typeArg  the type of the first operator method parameter (optional)
      *
      * @throws IllegalStateException if there is no matching or more than one matching methods
      */
@@ -2555,9 +2555,6 @@ public class TypeInfo {
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ");
-                if (method.isDuplicate()) {
-                    sb.append("***");
-                }
                 if (f_mapVirtMethods.containsKey(entry.getKey().resolveNestedIdentity(pool, null))) {
                     sb.append("(v) ");
                 }
@@ -2668,11 +2665,6 @@ public class TypeInfo {
             if (method.isCapped()) {
                 if (getNarrowingMethod(method) == null) {
                     return method;
-                }
-            } /* TODO this is temporary */ else if (id.getNestedDepth() == 2 && method.isVirtual()) {
-                MethodInfo m2 = getMethodBySignature(method.getSignature());
-                if (m2 != null && !m2.equals(method)) {
-                    method.markAsDuplicate();
                 }
             }
         }

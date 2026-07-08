@@ -2335,16 +2335,6 @@ public abstract class TypeConstant
             // this error should have already been checked for and reported, and the "into"
             // forcibly adjusted to a legal type
             assert typeInto.isA(typeSuperInto);
-
-            // this type adjustment is the same logic found in createContributionList()
-            ConstantPool pool = getConstantPool();
-            if (!typeSuperInto.isRootInterface() && !typeSuperInto.isAccessSpecified() &&
-                    typeSuperInto.isSingleUnderlyingClass(true)) {
-                Access access = structThis.isDescendant(typeSuperInto.getSingleUnderlyingClass(true))
-                        ? Access.PRIVATE
-                        : Access.PROTECTED;
-                typeSuperInto = pool.ensureAccessTypeConstant(typeSuperInto, access); // TODO CP why is this done? we don't use this?!?!?!
-            }
         }
 
         // determine if the "into" leads back to any mixins: start by collecting dependencies
@@ -2441,7 +2431,6 @@ public abstract class TypeConstant
                 contrib.getTypeConstant().collectContribs(setVisited, setOmit, errs);
             }
         } else if (struct instanceof PropertyStructure prop) {
-            // TODO support for properties
             log(errs, Severity.WARNING, VE_UNKNOWN,
                     "No implementation of collectContribs() for property type \"" + this + "\"");
         } else {
@@ -3465,7 +3454,8 @@ public abstract class TypeConstant
      * @param composition  describes how the contribution is being contributed
      * @param typeContrib  the type being contributed
      * @param infoContrib  the TypeInfo (which may be null) for the type being contributed
-     * @param setDepends   TODO GG doc
+     * @param setDepends   the contribution types that don't have complete TypeInfo and prevent this
+     *                     type from completing its TypeInfo calculation; modified by this method
      *
      * @return true iff the TypeInfo for this type cannot be completed
      */
@@ -3584,11 +3574,11 @@ public abstract class TypeConstant
                     errs        = ErrorListener.BLACKHOLE;
                 }
 
-                ArrayList<PropertyConstant> listExplode = new ArrayList<>();
-                boolean                     fInterface  = struct.getFormat() == Component.Format.INTERFACE;
+                var     listExplode          = new ArrayList<PropertyConstant>();
+                boolean fInterface           = struct.getFormat() == Component.Format.INTERFACE;
                 if (!collectChildInfo(constId, fInterface, struct, mapTypeParams,
                         mapContribProps, mapContribMethods, mapContribChildren, listExplode,
-                        nBasePropRank, nBaseMethRank, errs)) {
+                        mapVirtProps, nBasePropRank, nBaseMethRank, errs)) {
                     fIncomplete = true;
                     errs        = ErrorListener.BLACKHOLE;
                 }
@@ -3783,12 +3773,6 @@ public abstract class TypeConstant
         boolean fComplete = true;
         boolean fExploded = info.isExploded();
 
-        // the base should already be present, although we may be (e.g.) narrowing the type or
-        // some other change
-        // TODO CP is there anything that needs to be done to handle going from Ref -> Var
-        //      (e.g. add an RB for "set()"?)
-
-
         // layer on an "into" of either "into Ref" or "into Var"
         ConstantPool pool     = getConstantPool();
         TypeConstant typeProp = info.getType();
@@ -3972,7 +3956,9 @@ public abstract class TypeConstant
                 MethodConstant idContrib  = (MethodConstant) idProp.appendNestedIdentity(pool, nidContrib);
                 MethodInfo     infoMethod = entry.getValue();
                 if (infoMethod.isCapped()) {
-                    infoMethod = infoMethod.nestNarrowingIdentity(pool, idProp); // TODO CP what hits this?
+                    // this gets hit extensively when compiling the core JSON library; nothing else
+                    // in the xdk libs currently triggers this
+                    infoMethod = infoMethod.nestNarrowingIdentity(pool, idProp);
                 }
                 mapContribMethods.put(idContrib, infoMethod);
             }
@@ -4003,13 +3989,8 @@ public abstract class TypeConstant
             } else {
                 // check that everything matches between the current and contributed parameter
                 if (paramContrib.isActualTypeSpecified() != paramCurr.isActualTypeSpecified()) {
-                    if (paramContrib.isFormalType() &&
-                            paramContrib.getFormalTypeName().equals(paramCurr.getName())
-                        || paramContrib.isFormalTypeSequence()) {
-                        // TODO both the current and contributed parameters have a constraint type;
-                        //      if those types are different, then keep the narrower of the two; if
-                        //      there is no "narrower of the two", then keep the intersection of the two;
-                        //      if there is no intersection of the two (e.g. 2 class types), then it's an error
+                    if (paramContrib.isFormalTypeSequence() && paramCurr.isFormalTypeSequence()) {
+                        // allow various presentations of turtle types to be assumed to match
                         continue;
                     }
 
@@ -4240,10 +4221,6 @@ public abstract class TypeConstant
             // contained inside a method or property that is non-virtual;
             // however, the processing for property accessors is the same as for virtual methods
             if (!methodContrib.isVirtual() && !methodContrib.isPotentialPropertyOverlay()) {
-                // TODO (e.g. 2 modules, 1 introduces a virtual method in a new version that collides
-                //       with a function in the other)
-                // TODO we'll also have to check similar conditions below
-
                 boolean fKeep      = true;
                 Object  nidContrib = idContrib.resolveNestedIdentity(pool, this);
                 if (methodContrib.isCtorOrValidator()) {
@@ -4369,7 +4346,6 @@ public abstract class TypeConstant
                         // unlike the virtual methods, we don't re-resolve nested identity
                         // (via constId.appendNestedIdentity(pool, nidContrib)
                         // and instead keep all functions keyed by their "original" id
-                        // TODO CP handle mixin case    <-- what does this mean?
                         mapMethods.put(idContrib, methodContrib);
                     }
                 }
@@ -4413,7 +4389,7 @@ public abstract class TypeConstant
                     if (bodyContribTail.isNative() || bodyContribTail.isInto() && !fMixingIn) {
                         // take it as is
                         mapVirtMods.put(nidContrib, methodContrib);
-                    } else if (fSelf) { // TODO CP is this if() only temporary ???
+                    } else if (fSelf) {
                         log(errs, Severity.ERROR, VE_SUPER_MISSING,
                                 methodContrib.getIdentity().getPathString(),
                                 constId.getValueString());
@@ -4432,12 +4408,7 @@ public abstract class TypeConstant
                         // of the base -- just take it as-is instead, replacing the base
                         assert !methodBase.containsBody(MethodBody::isInto);
                         mapVirtMods.put(nidContrib, methodContrib);
-                        if (!nidBase.equals(nidContrib)) {
-                            // TODO should we remove or "hide" or some other way to "finalize" or
-                            //      "freeze" (kind of cap-like) the base if its nid is different?
-                            log(errs, Severity.INFO, VE_UNKNOWN,
-                                    "TODO: handle nidContrib=" + nidContrib + " vs. abandoned nidBase=" + nidBase + ')');
-                        }
+                        assert nidBase.equals(nidContrib);
                     } else if (methodBase.isCapped()) {
                         // it's an error if the base is present (not just an "into") and capped,
                         // and an attempt is made to put something (i.e. more than just the same or
@@ -4591,7 +4562,6 @@ public abstract class TypeConstant
                 MethodInfo methodBase = mapVirtMethods.get(nidContrib);
                 Object     nidBase    = nidContrib;
                 if (methodBase == null) {
-                    int cUncappedMatches = 0;
                     for (Object nidMatch : listMatches) {
                         MethodInfo methodMatch = mapVirtMethods.get(nidMatch);
                         if (methodMatch == null || nidMatch.equals(nidContrib)
@@ -4604,24 +4574,13 @@ public abstract class TypeConstant
                                 // take a possible match, but keep looking
                                 methodBase = methodMatch;
                                 nidBase    = nidMatch;
-                            } else if (methodBase.isCapped()) {
-                                // TODO handle cap -> cap -> cap ... must settle on the leftmost one
-                                log(errs, Severity.INFO, VE_UNKNOWN,
-                                        "TODO: handle cap->cap (method=" + methodBase + ')');
-                            }
-                        } else {
-                            if (cUncappedMatches++ > 0) {
-                                // the signatures may be "the same" in this context, e.g. the only
-                                // difference may be two different "this:type" types for the same parameter
-                                // or return type
-                                // TODO this should handle NestedIdentity as well
-                                if (nidMatch instanceof SignatureConstant sig1
-                                        && nidContrib instanceof SignatureConstant sig2
-                                        && sig1.isSubstitutableFor(sig2, this)
-                                        && sig2.isSubstitutableFor(sig1, this)) {
-                                    methodBase.markAsDuplicate();
+                            } else {
+                                while (methodBase.isCapped()) {
+                                    methodBase = mapVirtMethods.get(methodBase.getHead().getNarrowingNestedIdentity());
+                                    assert methodBase != null;
                                 }
                             }
+                        } else {
                             methodBase = methodMatch;
                             nidBase    = nidMatch;
                         }
@@ -4690,10 +4649,6 @@ public abstract class TypeConstant
                     assert !nidNarrowing.equals(nidNarrowed);
                     if (infoNarrowing.getAccess().isAsAccessibleAs(infoNarrowed.getAccess())) {
                         MethodConstant idNarrowed = (MethodConstant) constId.appendNestedIdentity(pool, nidNarrowed);
-                        if (nidNarrowed instanceof SignatureConstant sigNarrowed) {
-                            // TODO CP remove
-                            assert idNarrowed.equals(pool.ensureMethodConstant(constId, sigNarrowed));
-                        }
                         mapVirtMods.put(nidNarrowed, infoNarrowed.capWith(idNarrowed, nidNarrowing, infoNarrowing));
                     } else {
                         log(errs, Severity.ERROR, VE_METHOD_ACCESS_LESSENED,
@@ -4742,6 +4697,8 @@ public abstract class TypeConstant
      * Combine layered results from sibling nids that are all covered by the same contribution.
      */
     private MethodInfo combineCoveredMethodResult(MethodInfo methodResult, MethodInfo methodLayered) {
+//        System.err.println("*** combineCoveredMethodResult(" + methodResult.getIdentity() + ", " + methodLayered.getIdentity() + ")");
+
         if (methodResult == null || methodLayered.containsAllBodies(methodResult)) {
             return methodLayered;
         }
@@ -4787,7 +4744,8 @@ public abstract class TypeConstant
     }
 
     /**
-     * Collect all methods that could be the "super" of the specified method signature.
+     * Collect all methods that could be the "super" of the specified method signature. Capped
+     * methods are omitted iff the method they are capped by is also in the list.
      *
      * @param methodInfo  the method info for the method that is searching for a super
      * @param nidSub      the nested identity of the method
@@ -4803,6 +4761,7 @@ public abstract class TypeConstant
         SignatureConstant sigSub     = methodInfo.getSignature();
         int               cDefaults  = method == null ? 0 : method.getDefaultParamCount();
         List<Object>      listMatch  = null;
+        boolean           fAnyCapped = false;
         Object            nidCovers  = null;
         for (Entry<Object, MethodInfo> entry : mapSupers.entrySet()) {
             Object nidCandidate = entry.getKey();
@@ -4813,7 +4772,8 @@ public abstract class TypeConstant
                     MethodBody head = infoCandidate.getHead();
                     if (head.getSignature().equals(sigSub) ||
                             sigSub.isSubstitutableFor(sigCandidate, this)) {
-                        listMatch = lazyAdd(listMatch, nidCandidate);
+                        listMatch   = lazyAdd(listMatch, nidCandidate);
+                        fAnyCapped |= infoCandidate.isCapped();
                         continue;
                     }
 
@@ -4821,7 +4781,8 @@ public abstract class TypeConstant
                         TypeConstant typeInto = head.getIntoMethodInfo().getIdentity().getClassIdentity().getType();
                         if (sigSub.isSubstitutableFor(head.getSignature(), typeInto) ||
                                 sigSub.isSubstitutableFor(head.getIntoMethodInfo().getSignature(), typeInto)) {
-                            listMatch = lazyAdd(listMatch, nidCandidate);
+                            listMatch   = lazyAdd(listMatch, nidCandidate);
+                            fAnyCapped |= infoCandidate.isCapped();
                             continue;
                         }
                     }
@@ -4833,19 +4794,39 @@ public abstract class TypeConstant
                         if (cParamsSub > cParamsReq && cParamsSub - cDefaults <= cParamsReq) {
                             SignatureConstant sigSubReq = sigSub.truncateParams(0, cParamsReq);
                             if (sigSubReq.isSubstitutableFor(sigCandidate, this)) {
-                                listMatch = lazyAdd(listMatch, nidCandidate);
+                                listMatch   = lazyAdd(listMatch, nidCandidate);
+                                fAnyCapped |= infoCandidate.isCapped();
                             }
                         }
                     }
 
-                    if (infoCandidate.containsAllBodies(methodInfo) &&
-                            (nidCovers == null || mapSupers.get(nidCovers).isCapped())) {
+                    if (infoCandidate.containsAllBodies(methodInfo) && (nidCovers == null ||
+                            !infoCandidate.isCapped() && mapSupers.get(nidCovers).isCapped())) {
                         nidCovers = nidCandidate;
                     }
                 }
             }
         }
-        return listMatch == null ? nidCovers == null ? Collections.emptyList() : List.of(nidCovers) : listMatch;
+
+        if (listMatch != null) {
+            int cMatches = listMatch.size();
+            if (!fAnyCapped || listMatch.size() <= 1) {
+                return listMatch;
+            }
+
+            // discard any capped methods whose target is also in the list
+            List<Object> listRemain = new ArrayList<>(cMatches);
+            for (int i = 0; i < cMatches; ++i) {
+                Object     nidMatch  = listMatch.get(i);
+                MethodInfo infoMatch = mapSupers.get(nidMatch);
+                if (!(infoMatch.isCapped() && listMatch.contains(infoMatch.getHead().getNarrowingNestedIdentity()))) {
+                    listRemain.add(nidMatch);
+                }
+            }
+            return listRemain;
+        }
+
+        return nidCovers == null ? Collections.emptyList() : List.of(nidCovers);
     }
 
     /**
@@ -5024,12 +5005,13 @@ public abstract class TypeConstant
      *
      * @param constId        the identity of the class (used for logging error information)
      * @param fInterface     if the class is an interface type
-     * @param structContrib  the class structure, property structure, or method structure or typedef
+     * @param structContrib  the class/property/method structure or typedef
      * @param mapTypeParams  the map of type parameters
      * @param mapProps       the properties of the class
      * @param mapMethods     the methods of the class
      * @param mapChildren    the child types of the class
      * @param listExplode    used to collect the list of properties that must be "exploded"
+     * @param mapVirtProps   virtual properties that already exist on the base
      * @param nBasePropRank  the base rank for any properties added by "this" class
      * @param nBaseMethRank  the base rank for any methods added by "this" class
      * @param errs           the error list to log any errors to
@@ -5045,6 +5027,7 @@ public abstract class TypeConstant
             Map<MethodConstant  , MethodInfo>   mapMethods,
             ListMap<String, ChildInfo>          mapChildren,
             List<PropertyConstant>              listExplode,
+            Map<Object, PropertyInfo>           mapVirtProps,
             int                                 nBasePropRank,
             int                                 nBaseMethRank,
             ErrorListener                       errs) {
@@ -5059,15 +5042,16 @@ public abstract class TypeConstant
                         fComplete &= method.isConstructorFinalizer()
                                 ? collectChildInfo(constId, fInterface, method, mapTypeParams,
                                         mapProps, mapMethods, mapChildren, listExplode,
-                                        nBasePropRank, nBaseMethRank, errs)
+                                mapVirtProps, nBasePropRank, nBaseMethRank, errs)
                                 : createMemberInfo(constId, fInterface, method, mapTypeParams,
                                         mapProps, mapMethods, mapChildren, listExplode,
-                                        nBasePropRank, nBaseMethRank, errs);
+                                mapVirtProps, nBasePropRank, nBaseMethRank, errs);
                     }
                 }
             } else if (child instanceof PropertyStructure) {
                 fComplete &= createMemberInfo(constId, fInterface, child, mapTypeParams, mapProps,
-                        mapMethods, mapChildren, listExplode, nBasePropRank, nBaseMethRank, errs);
+                        mapMethods, mapChildren, listExplode, mapVirtProps, nBasePropRank,
+                        nBaseMethRank, errs);
             } else if (child instanceof ClassStructure || child instanceof TypedefStructure) {
                 String sName = child.getIdentityConstant().getNestedName();
                 if (sName != null) {
@@ -5094,6 +5078,7 @@ public abstract class TypeConstant
      * @param mapMethods     the methods of the class
      * @param mapChildren    the child types of the class
      * @param listExplode    used to collect the list of properties that must be "exploded"
+     * @param mapVirtProps   virtual properties that already exist on the base
      * @param nBasePropRank  the base rank for any properties added by "this" class
      * @param nBaseMethRank  the base rank for any methods added by "this" class
      * @param errs           the error list to log any errors to
@@ -5109,6 +5094,7 @@ public abstract class TypeConstant
             Map<MethodConstant  , MethodInfo>   mapMethods,
             ListMap<String, ChildInfo>          mapChildren,
             List<PropertyConstant>              listExplode,
+            Map<Object, PropertyInfo>           mapVirtProps,
             int                                 nBasePropRank,
             int                                 nBaseMethRank,
             ErrorListener                       errs) {
@@ -5180,10 +5166,16 @@ public abstract class TypeConstant
                 PropertyInfo     propParam = new PropertyInfo(new PropertyBody(null, param), nRank + 1);
                 mapTypeParams.put(nidParam, param);
                 mapProps.put(idParam, propParam);
+            } else if (info.isOverride() && info.isVirtual()) {
+                // if the super property was exploded, then this property may need to be re-exploded
+                PropertyInfo infoBase = mapVirtProps.get(id.getNestedIdentity());
+                if (infoBase != null && infoBase.isExploded() && info.isVar() != infoBase.isVar()) {
+                    listExplode.add(id);
+                }
             }
         }
         return collectChildInfo(constId, fInterface, structContrib,
-                mapTypeParams, mapProps, mapMethods, mapChildren, listExplode,
+                mapTypeParams, mapProps, mapMethods, mapChildren, listExplode, mapVirtProps,
                 nBasePropRank, nBaseMethRank, errs);
     }
 
@@ -5259,11 +5251,6 @@ public abstract class TypeConstant
             // we've already processed the "into Property" annotations, so this has to be an
             // "into Ref" (or some sub-class of Ref, e.g. Var) annotation
             assert typeInto.isA(pool.typeRef());
-
-// TODO verify that the annotation has one and only one type parameter, and it is named Referent,
-//      i.e. "annotation M<Referent> into Var<Referent>"
-// TODO does the annotation class provide a hard-coded value for Referent? because if it does,
-//      we need to "isA()" test it against the type of the property
 
             if (scanForDups(aRefAnno, i, constAnno)) {
                 log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
@@ -5749,7 +5736,7 @@ public abstract class TypeConstant
             if (childOld == null) {
                 mapChildren.put(entry.getKey(), entry.getValue());
             } else if (!childOld.equals(childNew)) {
-                // TODO: layer on the ChildInfo
+                // TODO layer on the ChildInfo; this gets hit by webcli:TerminalApp.Mixin
             }
         }
 
@@ -6665,7 +6652,7 @@ public abstract class TypeConstant
     }
 
     /**
-     * @return the TypeConstant that should be implemented TODO
+     * @return a TypeConstant specifying the actual implementable type
      */
     public TypeConstant asImplementable() {
         return switch (getCategory()) {

@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -144,8 +143,13 @@ public class MethodInfo
             assert cAdd == 1;
 
             // check @Override
-            MethodBody bodyAdd = aAdd[0];
-            if (!bodyAdd.isOverride() && !this.containsBody(bodyAdd.getIdentity())) {
+            MethodBody bodyAdd  = aAdd[0];
+            MethodBody bodyHead = aBase[0];
+            if (!bodyAdd.isOverride()
+                    // the body to add could already be present in the chain, so layerOn is a no-op
+                    && !this.containsBody(bodyAdd.getIdentity())
+                    // avoid mixin circularity: class C incorporates mixin M into C
+                    && !(bodyHead.isInto() && bodyHead.getIntoMethodInfo().containsBody(bodyAdd.getIdentity()))) {
                 MethodConstant id = getIdentity();
                 id.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
                         that.getIdentity().getNamespace().getValueString(),
@@ -1410,29 +1414,6 @@ public class MethodInfo
     public int getRank() {
         return f_nRank;
     }
-
-    public boolean isDuplicate() {
-        for (MethodBody body : m_aBody) {
-            if (body.m_fDuplicate) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-// TODO CP remove
-    public void markAsDuplicate() {
-        for (MethodBody body : m_aBody) {
-            body.m_fDuplicate = true;
-        }
-// TODO CP remove
-        String s = "*** marking " + getIdentity() + " as duplicate";
-        if (DUPS.add(s)) {
-            System.out.println(s);
-        }
-    }
-// TODO CP remove
-private static HashSet<String> DUPS = new HashSet<>();
 
     /**
      * @return the ConstantPool

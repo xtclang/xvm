@@ -10,6 +10,7 @@ module TestProps {
         testDelegation();
         testAccess();
         testImmutableVar();
+        testExploded();
         testTransient();
     }
 
@@ -273,6 +274,32 @@ module TestProps {
                 assert referent.mutability == Constant;
             }
         }
+    }
+
+    void testExploded() {
+        class B {
+            Int x.get() = 4;
+        }
+
+        class D1 extends B{
+            @Override Int x;
+        }
+
+        class D2 extends B{
+            @Override Int x.set(Int n) {
+                super(n);
+            }
+        }
+
+        assert new B().x == 4;
+
+        D1 d1 = new D1();
+        d1.x=5;
+        assert d1.x == 5;
+
+        D2 d2 = new D2();
+        d2.x=6;
+        assert d2.x == 6;
     }
 
     void testTransient() {
