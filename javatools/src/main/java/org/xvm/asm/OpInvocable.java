@@ -461,8 +461,8 @@ public abstract class OpInvocable extends Op {
 
         int cReturns = infoMethod.getSignature().getReturnCount();
         if (cReturns > 0) {
-            int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
-            bctx.assignReturns(code, jmd, cReturns, anVar);
+            int[] anRet = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
+            bctx.assignReturns(code, jmd, cReturns, anRet);
         }
     }
 

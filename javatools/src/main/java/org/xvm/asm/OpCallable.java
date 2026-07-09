@@ -740,8 +740,12 @@ public abstract class OpCallable extends Op {
             code.invokestatic(cdTarget, sJitName, mdCall, fInterface);
         }
 
-        int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
-        bctx.assignReturns(code, jmdCall, anVar.length, anVar);
+        int[] anRet = isMultiReturn()
+            ? m_anRetValue
+            : m_nRetValue == Op.A_IGNORE
+                ? NO_ARGS
+                : new int[] {m_nRetValue};
+        bctx.assignReturns(code, jmdCall, anRet.length, anRet);
         return -1;
     }
 
