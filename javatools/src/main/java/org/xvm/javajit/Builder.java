@@ -917,6 +917,33 @@ public abstract class Builder {
     }
 
     /**
+     * Generate stores of default Java values into all slots for the specified register.
+     */
+    public static void defaultStore(CodeBuilder code, RegisterInfo reg) {
+        if (reg instanceof ExtendedSlot ext) {
+            defaultLoad(code, ext.cd());
+            store(code, ext.cd(), ext.slot());
+            code.iconst_1() // 'true' represents 'Null'
+                .istore(ext.extSlot());
+        } else if (reg instanceof MultiSlot multi) {
+            int[]       slots = multi.slots();
+            ClassDesc[] cds   = multi.slotCds();
+            for (int i = 0; i < slots.length; i++) {
+                defaultLoad(code, cds[i]);
+                store(code, cds[i], slots[i]);
+            }
+
+            if (multi.extSlot() != MultiSlot.NO_SLOT) {
+                code.iconst_1()
+                    .istore(multi.extSlot());
+            }
+        } else {
+            defaultLoad(code, reg.cd());
+            store(code, reg.cd(), reg.slot());
+        }
+    }
+
+    /**
      * Build the byte codes to convert a primitive value on the stack into a Java {@code long}
      * value on the stack.
      *

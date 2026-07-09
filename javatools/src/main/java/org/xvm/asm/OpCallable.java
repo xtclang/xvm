@@ -647,6 +647,7 @@ public abstract class OpCallable extends Op {
         JitMethodDesc jmdCall;
         boolean       fSpecial;
         boolean       fInterface;
+        boolean       fCond;
 
         if (m_nFunctionId == A_SUPER) {
             int        nDepth    = bctx.callDepth + 1;
@@ -674,18 +675,21 @@ public abstract class OpCallable extends Op {
             }
             jmdCall  = bodySuper.getJitDesc(bctx.builder, bctx.thisType);
             fSpecial = true;
+            fCond    = bodySuper.getMethodStructure().isConditionalReturn();
             code.aload(0); // super() can only be on "this"
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
             MethodConstant   idMethod   = bctx.getConstant(m_nFunctionId, MethodConstant.class);
             IdentityConstant idTarget   = idMethod.getClassIdentity();
             TypeConstant     typeTarget = idTarget.getType();
-            MethodInfo       infoMethod = bctx.getTypeInfo(typeTarget).getMethodById(idMethod);
+            TypeInfo         infoTarget = bctx.getTypeInfo(typeTarget);
+            MethodInfo       infoMethod = infoTarget.getMethodById(idMethod);
 
             cdTarget   = bctx.builder.ensureClassDesc(idTarget.getType()); // function; no formal types applicable
             sJitName   = infoMethod.ensureJitMethodName(ts);
             jmdCall    = infoMethod.getJitDesc(bctx.builder, typeTarget);
             fSpecial   = false;
             fInterface = !typeTarget.isSingleUnderlyingClass(false);
+            fCond      = infoMethod.isConditionalReturn(infoTarget);
         } else {
             RegisterInfo regFn = bctx.loadArgument(code, m_nFunctionId);
             // call "$invoke(Ctx ctx, Object... args)" via the corresponding MethodHandle
@@ -697,6 +701,7 @@ public abstract class OpCallable extends Op {
             TypeConstant[] atypeParams  = pool.extractFunctionParams(typeFn);
             TypeConstant[] atypeReturns = pool.extractFunctionReturns(typeFn);
 
+            fCond   = pool.isConditionalReturn(typeFn);
             jmdCall = JitMethodDesc.of(bctx.builder,
                         atypeParams, atypeReturns, false, null, atypeParams.length);
 
@@ -715,7 +720,7 @@ public abstract class OpCallable extends Op {
 
             if (m_nRetValue != Op.A_IGNORE) {
                 int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
-                bctx.assignReturns(code, jmdCall, anVar.length, anVar);
+                bctx.assignReturns(code, jmdCall, anVar.length, anVar, fCond);
             }
             return -1;
         }
@@ -745,7 +750,7 @@ public abstract class OpCallable extends Op {
             : m_nRetValue == Op.A_IGNORE
                 ? NO_ARGS
                 : new int[] {m_nRetValue};
-        bctx.assignReturns(code, jmdCall, anRet.length, anRet);
+        bctx.assignReturns(code, jmdCall, anRet.length, anRet, fCond);
         return -1;
     }
 

@@ -24,9 +24,10 @@ package callTests {
         assert i1N == Null && i2N == 5;
 
         // conditional
-        if (Int i3 := testConditional(30)) {
+        if (Int i3 := testConditionalPrimitive(30)) {
             assert i3 == 33;
         }
+        assert testConditional();
 
         assert testStatic(1);
         assert !testStatic(-1);
@@ -79,10 +80,27 @@ package callTests {
 
     (Int?, Int) testNullableMultiReturns(Int i) = (Null, i/2);
 
-    conditional Int testConditional(Int i) {
+    conditional Int testConditionalPrimitive(Int i) {
         if (i > -1) {
             return True, i + 3;
         }
+        return False;
+    }
+
+    Boolean testConditional() {
+        assert Object ignored := presentObject();
+        assert !(String missing := absentString());
+
+        String value = "hello";
+        value := absentString();
+        return value == "hello";
+    }
+
+    private conditional Object presentObject() {
+        return True, console;
+    }
+
+    private conditional String absentString() {
         return False;
     }
 

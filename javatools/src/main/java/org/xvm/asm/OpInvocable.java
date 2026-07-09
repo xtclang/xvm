@@ -440,6 +440,8 @@ public abstract class OpInvocable extends Op {
         JitMethodDesc jmd        = infoMethod.getJitDesc(bctx.builder, typeInvoke);
         String        methodName = infoMethod.ensureJitMethodName(bctx.typeSystem);
         boolean       fOptimized = jmd.isOptimized;
+        int           cReturns   = infoMethod.getSignature().getReturnCount();
+        boolean       fCond      = infoMethod.isConditionalReturn(infoTarget);
 
         MethodTypeDesc md;
         if (fOptimized) {
@@ -459,10 +461,9 @@ public abstract class OpInvocable extends Op {
             code.invokevirtual(cdInvoke, methodName, md);
         }
 
-        int cReturns = infoMethod.getSignature().getReturnCount();
         if (cReturns > 0) {
             int[] anRet = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
-            bctx.assignReturns(code, jmd, cReturns, anRet);
+            bctx.assignReturns(code, jmd, cReturns, anRet, fCond);
         }
     }
 

@@ -695,6 +695,14 @@ public class MethodInfo
     }
 
     /**
+     * @return true iff this method has a conditional return
+     */
+    public boolean isConditionalReturn(TypeInfo infoType) {
+        MethodStructure method = getOptionalTopmostMethodStructure(infoType);
+        return method != null && method.isConditionalReturn();
+    }
+
+    /**
      * Get the topmost MethodStructure for the call chain represented by this MethodInfo.
      * Note, that the TypeInfo is necessary to be passed only if this method can be a "capped" one.
      *
