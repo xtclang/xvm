@@ -3463,6 +3463,11 @@ public class CommonBuilder
      *         inside this class
      */
     private boolean shouldGenerate(IdentityConstant id) {
+        // TODO GG/JK
+        if (id == null) {
+            return true;
+        }
+
         IdentityConstant containerId = id.getNamespace();
         if (containerId.equals(thisId)) {
             return true;
@@ -3481,6 +3486,8 @@ public class CommonBuilder
 
     private final static String[] CLASS_WHITE_LIST = new String[] {
         "Test*", "test*",
+        "FizzBuzz", "HelloWorld", "OneHundredPrisoners", "PackageScanner",          // doc/examples
+        "Permutations", "StringComparisons", "EightQueens",                         // doc/examples
         "Exception*",
         "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState", "Assertion",
         "Deadlock", "TimedOut", "OutOfMemory", "StackOverflow", "ReadOnly", "TypeMismatch",
