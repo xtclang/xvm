@@ -281,6 +281,22 @@ public abstract class Builder {
             break;
 
         case SingletonConstant singleton: {
+            if (singleton.getClassConstant() instanceof PropertyConstant propId) {
+                TypeConstant type = singleton.getType();
+                JitTypeDesc  jtd  = type.getJitDesc(this);
+
+                switch (jtd.flavor) {
+                case Specific, Widened, Primitive:
+                    code.getstatic(ensureClassDesc(propId.getClassIdentity().getType()),
+                        propId.ensureJitPropertyName(typeSystem), jtd.cd);
+                    return new SingleSlot(type, jtd.flavor, jtd.cd, "");
+
+                default:
+                    throw new UnsupportedOperationException("Load property singleton " +
+                        propId.getValueString());
+                }
+            }
+
             if (singleton instanceof EnumValueConstant enumConstant) {
                 ConstantPool pool = constant.getConstantPool();
                 if (enumConstant.getType().isOnlyNullable()) {

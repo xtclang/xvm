@@ -309,18 +309,26 @@ public class CommonBuilder
         List<PropertyInfo> initProps  = new ArrayList<>();
 
         for (PropertyInfo prop : structInfo.getProperties().values()) {
-            if ((prop.hasField() || prop.isInjected()) &&
-                    shouldGenerate(prop.getFieldIdentity())) {
-                assembleField(className, classBuilder, prop);
+            if (!prop.hasField() && !prop.isInjected()) {
+                // no field is necessary
+                continue;
+            }
 
-                if (prop.isConstant()) {
-                    constProps.add(prop);
-                }
-                else if (prop.isInitialized()) {
-                    initProps.add(prop);
-                }
-            } else {
+            IdentityConstant id = prop.hasField()
+                ? prop.getFieldIdentity()
+                : prop.getIdentity(); // injected
+
+            if (!shouldGenerate(id)) {
                 // not our responsibility
+                continue;
+            }
+
+            assembleField(className, classBuilder, prop);
+
+            if (prop.isConstant()) {
+                constProps.add(prop);
+            } else if (prop.isInitialized()) {
+                initProps.add(prop);
             }
         }
 
@@ -410,7 +418,12 @@ public class CommonBuilder
      */
     protected void assembleStaticInitializer(String className, ClassBuilder classBuilder) {
         List<PropertyInfo>         props = constProperties.getOrDefault(className, Collections.emptyList());
-        Map<TypeConstant, Integer> types = typeConstants.getOrDefault(className, Collections.emptyMap());
+        Map<TypeConstant, Integer> types = typeConstants.computeIfAbsent(className, _ -> new HashMap<>());
+        for (PropertyInfo prop : props) {
+            if (prop.isInjected()) {
+                types.computeIfAbsent(prop.getType(), _ -> types.size());
+            }
+        }
 
         // add synthetic TypeConstant fields
         for (int i = 0, c = types.size(); i < c; i++) {
@@ -431,14 +444,50 @@ public class CommonBuilder
                 code.localVariable(ctxSlot, "ctx", CD_Ctx, startScope, endScope);
             }
             code.invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
-                .astore(0);
+                .astore(ctxSlot);
+
+            // initialize synthetic TypeConstant fields; to make the jasm look neater
+            // generate the assignments in the lexicographical order
+            ModuleLoader loader   = typeSystem.findOwnerLoader(className);
+            boolean      nativeTS = typeSystem instanceof NativeTypeSystem;
+            ConstantPool pool     = loader.module.getConstantPool();
+            types.entrySet().stream()
+                 .sorted(Map.Entry.comparingByValue())
+                 .forEach(entry -> {
+                    TypeConstant type = entry.getKey();
+                    String       name = "$type" + entry.getValue();
+
+                    assert type.isShared(pool);
+                    type = pool.register(type);
+
+                    int index = type.getPosition();
+                    if (nativeTS) {
+                        index = -index;
+                    }
+                    code.aload(ctxSlot)
+                        .loadConstant(className)
+                        .loadConstant(index)
+                        .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
+                        .checkcast(CD_TypeConstant)                               // <- type
+                        .putstatic(CD_this, name, CD_TypeConstant);
+                 });
 
             // add static field initialization
             TypeSystem ts = typeSystem;
             for (PropertyInfo prop : props) {
-                if (prop.getInitializer() == null) {
-                    RegisterInfo reg     = loadConstant(code, prop.getInitialValue());
-                    String       jitName = prop.getIdentity().ensureJitPropertyName(ts);
+                String jitName = prop.getIdentity().ensureJitPropertyName(ts);
+                if (prop.isInjected()) {
+                    Injection injection = computeInjection(code, prop);
+                    ClassDesc cd        = ensureClassDesc(injection.resourceType);
+                    code.aload(ctxSlot);
+                    loadTypeConstant(code, className, injection.resourceType);
+                    code.ldc(injection.resourceName());
+                    injection.optsLoader.run();
+                    code.invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
+                        .checkcast(cd)
+                        .putstatic(CD_this, jitName, cd);
+                } else if (prop.getInitializer() == null) {
+                    RegisterInfo reg = loadConstant(code, prop.getInitialValue());
                     if (reg instanceof ExtendedSlot extSlot) {
                         assert extSlot.flavor() == NullablePrimitive;
                         // loadConstant() has already loaded the value and the boolean
@@ -474,36 +523,10 @@ public class CommonBuilder
                         code.putstatic(CD_this, jitName, reg.cd());
                     }
                 } else {
-                    throw new UnsupportedOperationException("Static field initializer for " +
+                    throw new UnsupportedOperationException("TODO: Static field initializer for " +
                         prop.getIdentity().getValueString());
                 }
             }
-
-            // initialize synthetic TypeConstant fields; to make the jasm look neater
-            // generate the assignments in the lexicographical order
-            ModuleLoader loader   = typeSystem.findOwnerLoader(className);
-            boolean      nativeTS = typeSystem instanceof NativeTypeSystem;
-            ConstantPool pool     = loader.module.getConstantPool();
-            types.entrySet().stream()
-                 .sorted(Map.Entry.comparingByValue())
-                 .forEach(entry -> {
-                    TypeConstant type = entry.getKey();
-                    String       name = "$type" + entry.getValue();
-
-                    assert type.isShared(pool);
-                    type = pool.register(type);
-
-                    int index = type.getPosition();
-                    if (nativeTS) {
-                        index = -index;
-                    }
-                    code.aload(ctxSlot)
-                        .loadConstant(className)
-                        .loadConstant(index)
-                        .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
-                        .checkcast(CD_TypeConstant)                               // <- type
-                        .putstatic(CD_this, name, CD_TypeConstant);
-                 });
 
             if (typeInfo.isSingleton()) {
                 // $INSTANCE = new Singleton($ctx);
@@ -956,26 +979,13 @@ public class CommonBuilder
         MethodTypeDesc md      = isOpt ? jmd.optimizedMD : jmd.standardMD;
         String         jitName = isOpt ? jitGetterName+OPT : jitGetterName;
 
-        TypeConstant resourceType = prop.getType();
-        Annotation   anno         = prop.getRefAnnotations()[0];
-        Constant[]   params       = anno.getParams();
-        int          paramCount   = params.length;
-
-        Constant nameConst = paramCount > 0 ? params[0] : null;
-        Constant optsConst = paramCount > 1 ? params[1] : null;
-        String   resourceName = nameConst instanceof StringConstant stringConst
-                        ? stringConst.getValue()
-                        : prop.getName();
-        if (optsConst != null && !(optsConst instanceof RegisterConstant regConst &&
-                                   regConst.getRegisterIndex() == Op.A_DEFAULT)) {
-            throw new UnsupportedOperationException("retrieve opts");
-        }
-
         classBuilder.withMethodBody(jitName, md, flags, code -> {
             // generate the following:
             // T value = this.prop;
             // if (value == null) { value = this.prop = $ctx.inject(type, name, opts);}
             // return value;
+
+            Injection injection = computeInjection(code, prop);
 
             if (isOpt) {
                 JitParamDesc pdOpt = jmd.optimizedReturns[0];
@@ -1009,10 +1019,10 @@ public class CommonBuilder
                     .astore(valueSlot)
                     .ifnonnull(endLbl)
                     .aload(1); // $ctx
-                loadTypeConstant(code, className, resourceType);
-                code.ldc(resourceName)
-                    .aconst_null() // opts
-                    .invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
+                loadTypeConstant(code, className, injection.resourceType());
+                code.ldc(injection.resourceName());
+                injection.optsLoader.run();
+                code.invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
                     .checkcast(pdStd.cd)
                     .dup()
                     .astore(valueSlot)
@@ -1030,6 +1040,34 @@ public class CommonBuilder
             assembleMethodWrapper(className, classBuilder, jitGetterName, jmd, false);
         }
     }
+
+    /**
+     * Compute the Injection record for the specified property.
+     */
+    protected Injection computeInjection(CodeBuilder code, PropertyInfo prop) {
+        assert prop.isInjected();
+
+        TypeConstant resourceType = prop.getType();
+        Annotation   anno         = prop.getRefAnnotations()[0];
+        Constant[]   params       = anno.getParams();
+        int          paramCount   = params.length;
+
+        Constant nameConst    = paramCount > 0 ? params[0] : null;
+        Constant optsConst    = paramCount > 1 ? params[1] : null;
+        String   resourceName = nameConst instanceof StringConstant stringConst
+                        ? stringConst.getValue()
+                        : prop.getName();
+        Runnable optsLoader;
+        if (optsConst == null || optsConst instanceof RegisterConstant regConst &&
+                regConst.getRegisterIndex() == Op.A_DEFAULT) {
+            optsLoader = code::aconst_null;
+        } else {
+            throw new UnsupportedOperationException("TODO: retrieve opts");
+        }
+        return new Injection(resourceType, resourceName, optsLoader);
+    }
+
+    protected record Injection(TypeConstant resourceType, String resourceName, Runnable optsLoader) {}
 
     /**
      * Assemble methods for the "Impl" shape.
@@ -3463,11 +3501,6 @@ public class CommonBuilder
      *         inside this class
      */
     private boolean shouldGenerate(IdentityConstant id) {
-        // TODO GG/JK
-        if (id == null) {
-            return true;
-        }
-
         IdentityConstant containerId = id.getNamespace();
         if (containerId.equals(thisId)) {
             return true;
