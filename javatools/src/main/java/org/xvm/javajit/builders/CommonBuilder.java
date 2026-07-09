@@ -419,6 +419,8 @@ public class CommonBuilder
     protected void assembleStaticInitializer(String className, ClassBuilder classBuilder) {
         List<PropertyInfo>         props = constProperties.getOrDefault(className, Collections.emptyList());
         Map<TypeConstant, Integer> types = typeConstants.computeIfAbsent(className, _ -> new HashMap<>());
+
+        // ensure all injection types are added before we generate the TypeConstant fields
         for (PropertyInfo prop : props) {
             if (prop.isInjected()) {
                 types.computeIfAbsent(prop.getType(), _ -> types.size());
@@ -477,6 +479,7 @@ public class CommonBuilder
             for (PropertyInfo prop : props) {
                 String jitName = prop.getIdentity().ensureJitPropertyName(ts);
                 if (prop.isInjected()) {
+                    // this.[jitName] = ctx.inject(type, name, opts);
                     Injection injection = computeInjection(code, prop);
                     ClassDesc cd        = ensureClassDesc(injection.resourceType);
                     code.aload(ctxSlot);
