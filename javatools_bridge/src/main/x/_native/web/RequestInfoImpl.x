@@ -45,7 +45,10 @@ service RequestInfoImpl(RTServer       server,
     private Notify[] observers = [];
 
     @Override
-    @Lazy Uri uri.calc() = new Uri(uriString);
+    @Lazy Uri uri.calc() {
+        return Uri.fromString(uriString, noAuthority=True) ?:
+            assert as $"Invalid request path: {uriString.quoted()}";
+    }
 
     @Override
     @Lazy SocketAddress receivedAtAddress.calc() {
@@ -424,8 +427,10 @@ service RequestInfoImpl(RTServer       server,
     void respond(Int status, String[] headerNames, String[] headerValues, Byte[] body) {
         notifyObservers(status);
 
-        server.setHeaders(context, status, headerNames, headerValues, body.empty ? -1 : body.size);
-        server.setBodyBytes(context, body, final=True);
+        try {
+            server.setHeaders(context, status, headerNames, headerValues, body.empty ? -1 : body.size);
+            server.setBodyBytes(context, body, final=True);
+        } catch (Exception ignore) {}
     }
 
     @Override
