@@ -690,6 +690,12 @@ public abstract class OpCallable extends Op {
             fSpecial   = false;
             fInterface = !typeTarget.isSingleUnderlyingClass(false);
             fCond      = infoMethod.isConditionalReturn(infoTarget);
+
+            MethodBody body = infoMethod.getHead();
+            if (body.getIdentity().getNestedDepth() > 2) {
+                // methods nested inside methods need to be built on-the-spot
+                bctx.buildMethod(sJitName, body);
+            }
         } else {
             RegisterInfo regFn = bctx.loadArgument(code, m_nFunctionId);
             // call "$invoke(Ctx ctx, Object... args)" via the corresponding MethodHandle

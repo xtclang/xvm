@@ -434,6 +434,7 @@ public abstract class OpInvocable extends Op {
                 cdInvoke   = bctx.builder.ensureClassDesc(typeOwner);
                 infoTarget = bctx.getTypeInfo(typeOwner);
                 infoMethod = computeMethodInfo(bctx, typeOwner);
+                bodyHead   = infoMethod.getHead();
             }
         }
 
@@ -442,6 +443,11 @@ public abstract class OpInvocable extends Op {
         boolean       fOptimized = jmd.isOptimized;
         int           cReturns   = infoMethod.getSignature().getReturnCount();
         boolean       fCond      = infoMethod.isConditionalReturn(infoTarget);
+
+        if (bodyHead.getIdentity().getNestedDepth() > 2) {
+            // methods nested inside methods need to be built on-the-spot
+            bctx.buildMethod(methodName, bodyHead);
+        }
 
         MethodTypeDesc md;
         if (fOptimized) {

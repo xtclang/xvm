@@ -94,14 +94,14 @@ package callTests {
         String value = "hello";
         value := absentString();
         return value == "hello";
-    }
 
-    private conditional Object presentObject() {
-        return True, console;
-    }
+        conditional Object presentObject() {
+            return True, console;
+        }
 
-    private conditional String absentString() {
-        return False;
+        conditional String absentString() {
+            return False;
+        }
     }
 
     static Boolean testStatic(Int i) = i > 0;
