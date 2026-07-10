@@ -460,6 +460,7 @@ public class XtcProjectDelegate {
         compileTask.configure(task -> {
             task.setDescription("Compile an XTC source set, similar to the JavaCompile task for Java.");
             task.dependsOn(XDK_EXTRACT_TASK_NAME);
+            task.dependsOn(configs.getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING));
             task.setSource(sourceSet.getExtensions().getByName(XTC_LANGUAGE_NAME)); // Register this task as an XTC language compiler. Not a Java compiler.
 
             // Test source set should depend on main source set compilation

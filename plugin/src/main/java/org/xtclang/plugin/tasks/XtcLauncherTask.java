@@ -11,7 +11,6 @@ import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
@@ -42,6 +41,7 @@ import org.gradle.work.DisableCachingByDefault;
 
 import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_VERBOSE_LOGGING_OVERRIDE;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_MODULE_FILE_EXTENSION;
 import static org.xtclang.plugin.XtcPluginUtils.argumentArrayToList;
 import static org.xtclang.plugin.internal.GradlePhaseAssertions.validateConfigurationTimeCapture;
 
@@ -205,13 +205,13 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
-    FileCollection getInputXtcJavaToolsConfig() {
+    public FileCollection getInputXtcJavaToolsConfig() {
         return javaToolsConfig.get();
     }
 
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
-    FileCollection getInputLauncherRuntimeCandidates() {
+    public FileCollection getInputLauncherRuntimeCandidates() {
         return objects.fileCollection()
             .from(javaToolsConfig.get())
             .from(xdkFileTree.get().matching(pattern -> pattern.include("**/*.jar")));
@@ -386,10 +386,10 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         ).resolveFullModulePath();
     }
 
-    @InputDirectory
+    @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
-    public Provider<@NotNull Directory> getInputXdkContents() {
-        return xdkContentsDir;
+    public FileTree getInputXdkContents() {
+        return xdkFileTree.get().matching(pattern -> pattern.include("**/*." + XTC_MODULE_FILE_EXTENSION));
     }
 
     @Optional
