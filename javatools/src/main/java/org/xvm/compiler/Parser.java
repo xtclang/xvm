@@ -993,7 +993,46 @@ public class Parser {
         }
         }
 
+        if (isMissingStatementSemicolon()) {
+            long lPos = expr.getEndPosition();
+            log(Severity.ERROR, MISSING_SEMICOLON, lPos, lPos);
+            return new ExpressionStatement(expr);
+        }
+
         return null;
+    }
+
+    /**
+     * @return true iff the current token starts a new statement or closes the current block, so the
+     *         expression that preceded it is missing its statement-terminating semicolon
+     */
+    boolean isMissingStatementSemicolon() {
+        return switch (peek().getId()) {
+            case ASSERT,
+                 ASSERT_ARG,
+                 ASSERT_BOUNDS,
+                 ASSERT_DBG,
+                 ASSERT_ONCE,
+                 ASSERT_RND,
+                 ASSERT_TEST,
+                 ASSERT_TODO,
+                 BREAK,
+                 CONTINUE,
+                 DO,
+                 FOR,
+                 IF,
+                 IMPORT,
+                 L_CURLY,
+                 R_CURLY,
+                 RETURN,
+                 SWITCH,
+                 TRY,
+                 TYPEDEF,
+                 USING,
+                 WHILE -> true;
+
+            default -> false;
+        };
     }
 
     /**
@@ -5477,6 +5516,11 @@ public class Parser {
         }
 
         long lPos = m_tokenPrev == null ? m_token.getEndPosition() : m_tokenPrev.getEndPosition();
+        if (id == Id.SEMICOLON) {
+            log(Severity.ERROR, MISSING_SEMICOLON, lPos, lPos);
+            throw new CompilerException("semicolon is missing");
+        }
+
         log(Severity.ERROR, EXPECTED_TOKEN, lPos, lPos, id, m_token.getId());
 
         throw new CompilerException("expected token: " + id + " (found: " + m_token.getId() + ")");
@@ -5722,6 +5766,10 @@ public class Parser {
      * Assertion used as an expression must not specify an assertion condition.
      */
     public static final String ASSERT_EXPR_COND  = "PARSER-28";
+    /**
+     * Semicolon is missing.
+     */
+    public static final String MISSING_SEMICOLON = "PARSER-29";
 
 
     // ----- data members --------------------------------------------------------------------------
