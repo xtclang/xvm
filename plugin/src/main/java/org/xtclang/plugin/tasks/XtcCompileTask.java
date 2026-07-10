@@ -237,10 +237,34 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         return strict;
     }
 
-    @Input
+    @Internal
     @Override
     public Property<@NotNull Boolean> getRebuild() {
         return rebuild;
+    }
+
+    @Override
+    @Optional
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    public FileCollection getInputXtcJavaToolsConfig() {
+        return shouldTrackLauncherRuntimeInputs()
+            ? super.getInputXtcJavaToolsConfig()
+            : objects.fileCollection();
+    }
+
+    @Override
+    @Optional
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    public FileCollection getInputLauncherRuntimeCandidates() {
+        return shouldTrackLauncherRuntimeInputs()
+            ? super.getInputLauncherRuntimeCandidates()
+            : objects.fileCollection();
+    }
+
+    private boolean shouldTrackLauncherRuntimeInputs() {
+        return getRebuild().get();
     }
 
     @Input
