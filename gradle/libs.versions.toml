@@ -59,7 +59,7 @@ lang-ktlint-engine = "1.8.0"
 # =============================================================================
 # Lang tooling - LSP, DAP & logging
 # =============================================================================
-lang-logback = "1.5.37"
+lang-logback = "1.5.38"
 lang-lsp4j = "1.0.0"
 lang-slf4j = "2.0.18"
 
@@ -73,7 +73,7 @@ lang-node-gradle-plugin = "7.1.0"
 # Lang tooling - IntelliJ plugin
 # =============================================================================
 lang-intellij-ide = "2026.1"
-lang-intellij-platform-gradle-plugin = "2.17.0"
+lang-intellij-platform-gradle-plugin = "2.18.1"
 # JUnit 4.x is required at RUNTIME by the IntelliJ Platform test harness
 # (com.intellij.testFramework). IntelliJ's test infrastructure internally depends on JUnit 4
 # runners and rules, even when tests themselves are written with JUnit 5/Jupiter. Without this
