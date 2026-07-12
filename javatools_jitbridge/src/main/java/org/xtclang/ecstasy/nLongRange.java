@@ -60,6 +60,19 @@ public abstract class nLongRange
         return $descending;
     }
 
+    public boolean effectiveLimits$p(Ctx ctx) {
+        long lo = $lowerExclusive ? Int64.$next(ctx, $lowerBound) : $lowerBound;
+        long hi = $upperExclusive ? Int64.$prev(ctx, $upperBound) : $upperBound;
+        if (lo > hi) {
+            return false;
+        }
+
+        // conditional payload values are returned through the Ctx integer slots
+        ctx.i0 = $descending ? hi : lo;
+        ctx.i1 = $descending ? lo : hi;
+        return true;
+    }
+
     // TODO what parts of this can be / should be implemented natively?
 
     // ----- primitive single-long encoding --------------------------------------------------------

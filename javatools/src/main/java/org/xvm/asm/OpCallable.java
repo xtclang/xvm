@@ -766,9 +766,9 @@ public abstract class OpCallable extends Op {
     protected int buildNew(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         MethodConstant idCtor     = bctx.getConstant(m_nFunctionId, MethodConstant.class);
         TypeConstant   typeTarget = idCtor.getNamespace().getType();
-        ClassDesc      cdTarget   = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
 
-        bctx.storeValue(code, bctx.ensureRegister(m_nRetValue, typeTarget, cdTarget, ""), typeTarget);
+        JitMethodDesc jmdNew = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
+        bctx.assignReturns(code, jmdNew, 1, new int[] {m_nRetValue});
         return -1;
     }
 
@@ -787,9 +787,8 @@ public abstract class OpCallable extends Op {
         }
 
         MethodConstant idCtor = (MethodConstant) bctx.getConstant(m_nFunctionId);
-        bctx.buildNew(code, typeTarget, idCtor, anArgValue);
-
-        bctx.storeValue(code, m_nRetValue, typeTarget);
+        JitMethodDesc  jmdNew = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
+        bctx.assignReturns(code, jmdNew, 1, new int[] {m_nRetValue});
         return -1;
     }
 

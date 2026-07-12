@@ -75,6 +75,15 @@ public class Int64 extends IntNumber {
         return new Int64(value);
     }
 
+    /**
+     * Native implementation of:
+     *
+     *   construct(String text)
+     */
+    public static Int64 $new(Ctx ctx, String text) {
+        return $box(Long.parseLong(text.toString()));
+    }
+
     @Override
     public BigDecimal $toBigDecimal() {
         return BigDecimal.valueOf($value);

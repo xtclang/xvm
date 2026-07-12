@@ -10,6 +10,7 @@ package int64ArrayTests {
         shouldCreateArrayInitializedWithZeroValue();
         shouldCreateArrayInitializedWithValue();
         shouldCreateConstantArray();
+        shouldRenderAsStringable();
         shouldBeEmpty();
         shouldAddElement();
         shouldAddElementUsingOperator();
@@ -60,6 +61,11 @@ package int64ArrayTests {
         Int64[] array = [10, 20, Int64.MaxValue];
         assert array.size == 3;
         assert array[0] == 10 && array[1] == 20 && array[2] == Int64.MaxValue;
+    }
+
+    void shouldRenderAsStringable() {
+        Int64[] array = [1, 2, 3];
+        assert $"array={array}" == "array=[1, 2, 3]";
     }
 
     void shouldBeEmpty() {

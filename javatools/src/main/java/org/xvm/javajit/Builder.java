@@ -1041,6 +1041,19 @@ public abstract class Builder {
     }
 
     /**
+     * Invoke the specified method with the opcode required by the property's JVM owner
+     * representation.
+     */
+   public static void invoke(CodeBuilder code, TypeConstant targetType, ClassDesc cd,
+                               String methodName, MethodTypeDesc md) {
+        if (targetType.isJitInterface()) {
+            code.invokeinterface(cd, methodName, md);
+        } else {
+            code.invokevirtual(cd, methodName, md);
+        }
+    }
+
+    /**
      * Generate a default return for the specified Java class assuming the corresponding value
      * is already on java stack.
      */

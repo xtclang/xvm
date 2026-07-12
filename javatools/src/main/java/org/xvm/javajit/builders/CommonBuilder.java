@@ -2496,11 +2496,11 @@ public class CommonBuilder
             if (propType.isA(typeStringable)) {
                 // property is Stringable, so call its estimateStringLength$p method
                 loadCtx(code);
-                code.invokevirtual(cdProp, methodName, mdEstStringLen);
+                invoke(code, propType, cdProp, methodName, mdEstStringLen);
             } else {
                 // use propValue.toString(Ctx) as the value to add the string size
                 loadCtx(code);
-                code.invokevirtual(cdProp, "toString", mdToString);
+                invoke(code, propType, cdProp, "toString", mdToString);
                 loadCtx(code);
                 code.invokevirtual(CD_String, "size$get$p", mdStringSize);
             }
@@ -2658,9 +2658,9 @@ public class CommonBuilder
                     code.checkcast(cdProp);
                 }
                 loadCtx(code);
-                code.aload(appenderSlot)
-                    .invokevirtual(cdProp, "appendTo", mdAppendTo)
-                    .pop();
+                code.aload(appenderSlot);
+                invoke(code, propType, cdProp, "appendTo", mdAppendTo);
+                code.pop();
             } else {
                 // use propValue.toString(Ctx) as the value to append
                 // load the property value (do not unbox primitives)
@@ -2670,7 +2670,7 @@ public class CommonBuilder
                     code.checkcast(cdProp);
                 }
                 loadCtx(code);
-                code.invokevirtual(cdProp, "toString", mdToString);
+                invoke(code, propType, cdProp, "toString", mdToString);
                 loadCtx(code);
                 code.aload(appenderSlot)
                     .invokevirtual(CD_String, "appendTo", mdAppendTo)
@@ -2894,7 +2894,15 @@ public class CommonBuilder
             for (int i = srcParams.length, c = dstParams.length; i < c; i++) {
                 code.aconst_null();
             }
-            code.invokevirtual(ClassDesc.of(className), dstName, jmdDst.standardMD);
+
+            ClassDesc cdThis = ClassDesc.of(className);
+            if (isInterface) {
+                // cap routing methods generated inside interfaces must call their target as an
+                // interface method
+                code.invokeinterface(cdThis, dstName, jmdDst.standardMD);
+            } else {
+                code.invokevirtual(cdThis, dstName, jmdDst.standardMD);
+            }
 
             JitParamDesc[] srcReturns = jmdSrc.standardReturns;
             int            retCount   = srcReturns.length;
@@ -2992,7 +3000,11 @@ public class CommonBuilder
                 }
             }
 
-            code.invokevirtual(ClassDesc.of(className), dstName, jmdDst.optimizedMD);
+            if (isInterface) {
+                code.invokeinterface(ClassDesc.of(className), dstName, jmdDst.optimizedMD);
+            } else {
+                code.invokevirtual(ClassDesc.of(className), dstName, jmdDst.optimizedMD);
+            }
 
             JitParamDesc[] srcReturns = jmdSrc.optimizedReturns;
             int            retCount   = srcReturns.length;

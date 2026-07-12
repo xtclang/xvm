@@ -8,8 +8,6 @@ import java.io.IOException;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
-import java.lang.constant.ClassDesc;
-
 import java.util.Arrays;
 
 import org.xvm.asm.Argument;
@@ -207,8 +205,8 @@ public class Assert
             anArgs[0] = A_STACK;
             Arrays.fill(anArgs, 1, anArgs.length, Op.A_DEFAULT);
 
-            ClassDesc cdEx = bctx.buildNew(code, typeEx, idCtor, anArgs);
-            code.getfield(cdEx, "$exception", CD_nException)
+            bctx.buildNew(code, typeEx, idCtor, anArgs);
+            code.getfield(bctx.builder.ensureClassDesc(typeEx), "$exception", CD_nException)
                 .athrow();
         }
         if (!fAlwaysFalse) {

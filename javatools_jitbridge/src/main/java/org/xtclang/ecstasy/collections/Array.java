@@ -1,5 +1,6 @@
 package org.xtclang.ecstasy.collections;
 
+import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.IterableᐸCharᐳ;
 import org.xtclang.ecstasy.Iterator;
 import org.xtclang.ecstasy.ReadOnly;
@@ -204,6 +205,17 @@ public abstract class Array
     @Override
     public void $makeImmut(Ctx ctx) {
         $mut($CONSTANT);
+    }
+
+    // ----- Stringable API ------------------------------------------------------------------------
+
+    // TODO: this is very temporary; remove when Collection.x compiles
+    public long estimateStringLength$p(Ctx ctx) {
+        return toString(ctx).size$get$p(ctx);
+    }
+
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
+        return toString(ctx).appendTo(ctx, appender);
     }
 
     // ----- Array API -----------------------------------------------------------------------------

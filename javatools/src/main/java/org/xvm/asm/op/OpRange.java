@@ -132,10 +132,10 @@ public abstract class OpRange
 
     protected void addRangeAttributes(CodeBuilder code) {
         switch (getOpCode()) {
-            case OP_GP_IRANGEI -> code.iconst_1().iconst_0().iconst_1().iconst_0();
-            case OP_GP_ERANGEI -> code.iconst_0().iconst_0().iconst_1().iconst_0();
-            case OP_GP_IRANGEE -> code.iconst_1().iconst_0().iconst_0().iconst_0();
-            case OP_GP_ERANGEE -> code.iconst_0().iconst_0().iconst_0().iconst_0();
+            case OP_GP_IRANGEI -> code.iconst_0().iconst_0().iconst_0().iconst_0();
+            case OP_GP_ERANGEI -> code.iconst_1().iconst_0().iconst_0().iconst_0();
+            case OP_GP_IRANGEE -> code.iconst_0().iconst_0().iconst_1().iconst_0();
+            case OP_GP_ERANGEE -> code.iconst_1().iconst_0().iconst_1().iconst_0();
             default            -> throw new IllegalStateException();
         }
     }

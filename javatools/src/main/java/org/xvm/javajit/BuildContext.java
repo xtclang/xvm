@@ -2456,8 +2456,8 @@ public class BuildContext {
      *
      * @param argIds  the ids for the argument values
      */
-    public ClassDesc buildNew(CodeBuilder code, TypeConstant typeTarget,
-                              MethodConstant idCtor, int[] argIds) {
+    public JitMethodDesc buildNew(CodeBuilder code, TypeConstant typeTarget,
+                                  MethodConstant idCtor, int[] argIds) {
         return buildNew(code, typeTarget, idCtor, jmdNew ->
             loadCallArguments(code, jmdNew, argIds, typeTarget));
     }
@@ -2468,8 +2468,8 @@ public class BuildContext {
      * @param argsLoader  the function (consumer) that is responsible for loading the arguments
      *                    on the Java stack
      */
-    public ClassDesc buildNew(CodeBuilder code, TypeConstant typeTarget,
-                              MethodConstant idCtor, Consumer<JitMethodDesc> argsLoader) {
+    public JitMethodDesc buildNew(CodeBuilder code, TypeConstant typeTarget,
+                                  MethodConstant idCtor, Consumer<JitMethodDesc> argsLoader) {
         TypeInfo   infoTarget = typeTarget.ensureTypeInfo();
         MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
 
@@ -2505,7 +2505,7 @@ public class BuildContext {
         argsLoader.accept(jmdNew);
 
         code.invokestatic(cdTarget, sJitNew, md);
-        return cdTarget;
+        return jmdNew;
     }
 
     /**
