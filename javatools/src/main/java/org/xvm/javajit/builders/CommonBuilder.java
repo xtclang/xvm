@@ -2895,14 +2895,7 @@ public class CommonBuilder
                 code.aconst_null();
             }
 
-            ClassDesc cdThis = ClassDesc.of(className);
-            if (isInterface) {
-                // cap routing methods generated inside interfaces must call their target as an
-                // interface method
-                code.invokeinterface(cdThis, dstName, jmdDst.standardMD);
-            } else {
-                code.invokevirtual(cdThis, dstName, jmdDst.standardMD);
-            }
+            invoke(code, thisType, ClassDesc.of(className), dstName, jmdDst.standardMD);
 
             JitParamDesc[] srcReturns = jmdSrc.standardReturns;
             int            retCount   = srcReturns.length;
@@ -3000,11 +2993,7 @@ public class CommonBuilder
                 }
             }
 
-            if (isInterface) {
-                code.invokeinterface(ClassDesc.of(className), dstName, jmdDst.optimizedMD);
-            } else {
-                code.invokevirtual(ClassDesc.of(className), dstName, jmdDst.optimizedMD);
-            }
+            invoke(code, thisType, ClassDesc.of(className), dstName, jmdDst.optimizedMD);
 
             JitParamDesc[] srcReturns = jmdSrc.optimizedReturns;
             int            retCount   = srcReturns.length;

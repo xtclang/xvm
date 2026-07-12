@@ -569,5 +569,3 @@ public class TypeSystem {
         return buf == null ? name : buf.toString();
     }
 }
-
-
