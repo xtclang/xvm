@@ -262,17 +262,17 @@
         "@eslint/js": "^10.0.1",
         "@types/glob": "^8.1.0",
         "@types/mocha": "^10.0.10",
-        "@types/node": "^22.20.0",
+        "@types/node": "^22.20.1",
         "@types/vscode": "1.96.0",
         "@vscode/test-electron": "^3.0.0",
         "@vscode/vsce": "^3.9.2",
         "esbuild": "^0.28.1",
-        "eslint": "^10.6.0",
+        "eslint": "^10.7.0",
         "glob": "^13.0.6",
         "mocha": "^11.7.4",
         "sharp": "^0.35.3",
         "typescript": "^6.0.3",
-        "typescript-eslint": "^8.19.0"
+        "typescript-eslint": "^8.63.0"
     },
     "overrides": {
         "diff": "^8.0.3",
