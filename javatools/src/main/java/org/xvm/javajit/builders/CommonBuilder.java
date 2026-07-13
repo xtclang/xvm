@@ -3483,7 +3483,7 @@ public class CommonBuilder
                 return className.endsWith(name) || moduleName.endsWith(name);
             }})) {
 
-            if (Arrays.stream(CLASS_BLACK_LIST).anyMatch(className::endsWith)) {
+            if (Arrays.stream(NO_JIT_LIST).anyMatch(className::endsWith)) {
                 break GenerateStub;
             }
 
@@ -3522,37 +3522,91 @@ public class CommonBuilder
     }
 
     private final static String[] JIT_LIST = new String[] {
-        "Test*", "test*",
-        "anon*",
-        "FizzBuzz", "HelloWorld", "OneHundredPrisoners", "PackageScanner",          // doc/examples
-        "Permutations", "StringComparisons", "EightQueens",                         // doc/examples
-        "Exception*",
-        "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState", "Assertion",
-        "Deadlock", "TimedOut", "OutOfMemory", "StackOverflow", "ReadOnly", "TypeMismatch",
-        "ConcurrentModification", "NotAssigned", "NotImplemented", "Closed", "NotShareable",
-        "Boolean", "Ordered", "Orderable",
-        "String",
-        "Stringable",
-        "StringBuffer",
-        "Float*",
-        "Array",
-        "Iterable",
-        "Iterator",
-        "List",
-        "TerminalConsole",
-        "Appender",
-        "AppenderᐸCharᐳ",
-        "StringBuffer",
-        "Const",
-        "Stringable",
-//        "Dec32", "Dec64", // need to change to SingleSlot
-//        "UInt",           // depends on GP_DIVREM
-//        "FPNumber",       // depends on Bit support
-//        "Int",            // depends on Char "switch" implementation, depends on Char
-//        "Collection"      // needs improved formal type resolution
+            "Test*", "test*",
+            "anon*",                        // covers simple tests and examples
+
+            // ecstasy
+            "org.xtclang.ecstasy.Appender",
+            "org.xtclang.ecstasy.AppenderᐸCharᐳ",
+            "org.xtclang.ecstasy.Assertion",
+            "org.xtclang.ecstasy.Boolean",
+            "org.xtclang.ecstasy.Closed",
+            "org.xtclang.ecstasy.ConcurrentModification",
+            "org.xtclang.ecstasy.Const",
+            "org.xtclang.ecstasy.Deadlock",
+            "org.xtclang.ecstasy.Duplicable",
+            "org.xtclang.ecstasy.Exception*",
+// TODO     "org.xtclang.ecstasy.Freezable",
+            "org.xtclang.ecstasy.IllegalArgument",
+            "org.xtclang.ecstasy.IllegalState",
+            "org.xtclang.ecstasy.Iterable",
+            "org.xtclang.ecstasy.IterableᐸCharᐳ",
+            "org.xtclang.ecstasy.Iterator",
+            "org.xtclang.ecstasy.IteratorᐸCharᐳ",
+            "org.xtclang.ecstasy.NotAssigned",
+            "org.xtclang.ecstasy.NotImplemented",
+            "org.xtclang.ecstasy.NotShareable",
+            "org.xtclang.ecstasy.Nullable",
+            "org.xtclang.ecstasy.Orderable",
+            "org.xtclang.ecstasy.Ordered",
+            "org.xtclang.ecstasy.OutOfBounds",
+            "org.xtclang.ecstasy.OutOfMemory",
+            "org.xtclang.ecstasy.ReadOnly",
+            "org.xtclang.ecstasy.Sequential",
+// TODO     "org.xtclang.ecstasy.Service",
+            "org.xtclang.ecstasy.Service$Aware",
+            "org.xtclang.ecstasy.Sliceable*",
+            "org.xtclang.ecstasy.StackOverflow",
+            "org.xtclang.ecstasy.TimedOut",
+            "org.xtclang.ecstasy.TypeMismatch",
+            "org.xtclang.ecstasy.Unsupported",
+
+            // collections
+            "org.xtclang.ecstasy.collections.Array",
+            "org.xtclang.ecstasy.collections.Array$Mutability",
+// TODO     "org.xtclang.ecstasy.collections.Collection"    // needs improved formal type resolution
+            "org.xtclang.ecstasy.collections.List",
+// TODO     "org.xtclang.ecstasy.collections.UniformIndexed*",
+
+            // io
+// TODO     "org.xtclang.ecstasy.io.Reader",
+// TODO     "org.xtclang.ecstasy.io.TextPosition",
+
+            // maps
+// TODO     "org.xtclang.ecstasy.maps.Map",
+            "org.xtclang.ecstasy.maps.MapAppender",
+
+            // numbers
+            "org.xtclang.ecstasy.numbers.BFloat16",
+// TODO     "org.xtclang.ecstasy.numbers.Dec32",            // need to change to SingleSlot
+// TODO     "org.xtclang.ecstasy.numbers.Dec64",            // need to change to SingleSlot
+            "org.xtclang.ecstasy.numbers.Float16",
+            "org.xtclang.ecstasy.numbers.Float32",
+            "org.xtclang.ecstasy.numbers.Float64",
+            "org.xtclang.ecstasy.numbers.Float128",
+            "org.xtclang.ecstasy.numbers.FPConvertible",
+// TODO     "org.xtclang.ecstasy.numbers.Number",
+// TODO     "org.xtclang.ecstasy.numbers.FPNumber",         // depends on Bit support
+// TODO     "org.xtclang.ecstasy.numbers.Int",              // depends on Char "switch" implementation, depends on Char
+// TODO     "org.xtclang.ecstasy.numbers.IntNumber",
+            "org.xtclang.ecstasy.numbers.IntConvertible",
+// TODO     "org.xtclang.ecstasy.numbers.UInt",             // depends on GP_DIVREM
+
+            // reflect
+            "org.xtclang.ecstasy.reflect.Module",
+// TODO     "org.xtclang.ecstasy.reflect.Package",
+// TODO     "org.xtclang.ecstasy.reflect.Type",
+
+            // text
+            "org.xtclang.ecstasy.text.String",
+            "org.xtclang.ecstasy.text.Stringable",
+            "org.xtclang.ecstasy.text.StringBuffer",
+
+            // _native.io
+            "_native.io.TerminalConsole",
     };
 
-    private final static String[] CLASS_BLACK_LIST = new String[] {
+    private final static String[] NO_JIT_LIST = new String[] {
     };
 
     private final static HashSet<String> SKIP_SET = new HashSet<>();
