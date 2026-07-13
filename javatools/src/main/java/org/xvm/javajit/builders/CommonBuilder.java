@@ -3475,7 +3475,7 @@ public class CommonBuilder
                 : bctx.className;
 
         GenerateStub:
-        if (Arrays.stream(CLASS_WHITE_LIST).anyMatch(name -> {
+        if (Arrays.stream(JIT_LIST).anyMatch(name -> {
             if (name.endsWith("*")) {
                 name = name.substring(0, name.length() - 1);
                 return className.contains(name) || moduleName.contains(name);
@@ -3521,8 +3521,9 @@ public class CommonBuilder
         return thisType.removeAccess().getValueString();
     }
 
-    private final static String[] CLASS_WHITE_LIST = new String[] {
+    private final static String[] JIT_LIST = new String[] {
         "Test*", "test*",
+        "anon*",
         "FizzBuzz", "HelloWorld", "OneHundredPrisoners", "PackageScanner",          // doc/examples
         "Permutations", "StringComparisons", "EightQueens",                         // doc/examples
         "Exception*",
