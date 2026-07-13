@@ -3534,7 +3534,7 @@ public class CommonBuilder
             "org.xtclang.ecstasy.ConcurrentModification",
             "org.xtclang.ecstasy.Const",
             "org.xtclang.ecstasy.Deadlock",
-            "org.xtclang.ecstasy.Duplicable",
+// TODO     "org.xtclang.ecstasy.Duplicable",               // requires virtual constructor support
             "org.xtclang.ecstasy.Exception*",
 // TODO     "org.xtclang.ecstasy.Freezable",
             "org.xtclang.ecstasy.IllegalArgument",
