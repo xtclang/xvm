@@ -3571,6 +3571,7 @@ public class CommonBuilder
             // io
 // TODO     "org.xtclang.ecstasy.io.Reader",
 // TODO     "org.xtclang.ecstasy.io.TextPosition",
+            "org.xtclang.ecstasy.io.IOException",
 
             // maps
 // TODO     "org.xtclang.ecstasy.maps.Map",
