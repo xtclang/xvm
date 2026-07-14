@@ -102,7 +102,8 @@ import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.JitFlavor.XvmPrimitiveWithDefault;
-import static org.xvm.javajit.TypeSystem.ID_NUM;
+
+import static org.xvm.javajit.TypeSystem.HASH;
 
 /**
  * Whatever is necessary for the method bytecode production.
@@ -1340,7 +1341,7 @@ public class BuildContext {
         if (format == Component.Format.MIXIN) {
             // we need to generate a synthetic super
             containerCD = ClassDesc.of(className);
-            jitName += ID_NUM + String.valueOf(nDepth);
+            jitName += HASH + String.valueOf(nDepth);
 
             buildSuper(jitName, nDepth);
         } else {

@@ -104,7 +104,8 @@ import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.JitFlavor.Widened;
 import static org.xvm.javajit.JitFlavor.XvmPrimitive;
-import static org.xvm.javajit.TypeSystem.ID_NUM;
+
+import static org.xvm.javajit.TypeSystem.HASH;
 
 import static org.xvm.util.Handy.lazyAdd;
 import static org.xvm.util.Handy.lazyAddAll;
@@ -7206,7 +7207,7 @@ public abstract class TypeConstant
         TypeConstant typeCanonical = getCanonicalJitType();
         if (typeCanonical.getParamsCount() > 0) {
             // TODO CP
-            sb.appendCodePoint(ID_NUM).append(typeCanonical.getPosition());
+            sb.appendCodePoint(HASH).append(typeCanonical.getPosition());
         }
         return sb.toString();
     }
@@ -7230,7 +7231,8 @@ public abstract class TypeConstant
      * @return {@code true} if this type is either a Java primitive or an Ecstasy primitive type.
      */
     public boolean isJitPrimitive() {
-        return removeNullable().isJavaPrimitive() || removeNullable().isXvmPrimitive();
+        TypeConstant sansNull = removeNullable();
+        return sansNull.isJavaPrimitive() || sansNull.isXvmPrimitive();
     }
 
     /**

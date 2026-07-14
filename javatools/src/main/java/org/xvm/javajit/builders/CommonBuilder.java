@@ -3469,7 +3469,7 @@ public class CommonBuilder
     protected void generateCode(MethodTypeDesc md, BuildContext bctx, CodeBuilder code) {
 
         String moduleName = thisId.getModuleConstant().getName();
-        int    baseIndex  = bctx.className.lastIndexOf(TypeSystem.ID_NUM);
+        int    baseIndex  = bctx.className.lastIndexOf(TypeSystem.HASH);
         String className  = baseIndex > 0
                 ? bctx.className.substring(0, baseIndex)
                 : bctx.className;

@@ -44,7 +44,8 @@ import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 
 import static org.xvm.javajit.Builder.CD_Exception;
 import static org.xvm.javajit.Builder.CD_nFunction;
-import static org.xvm.javajit.TypeSystem.ID_NUM;
+
+import static org.xvm.javajit.TypeSystem.HASH;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -662,7 +663,7 @@ public abstract class OpCallable extends Op {
             if (format == Format.MIXIN) {
                 // we need to generate a synthetic super
                 cdTarget  = ClassDesc.of(bctx.className);
-                sJitName += ID_NUM + String.valueOf(nDepth);
+                sJitName += HASH + String.valueOf(nDepth);
 
                 bctx.buildSuper(sJitName, nDepth);
                 fInterface = false;

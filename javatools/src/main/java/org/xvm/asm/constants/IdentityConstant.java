@@ -18,7 +18,7 @@ import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.Handy;
 
-import static org.xvm.javajit.TypeSystem.ID_NUM;
+import static org.xvm.javajit.TypeSystem.HASH;
 import static org.xvm.javajit.TypeSystem.escapeJitClassName;
 
 /**
@@ -726,7 +726,7 @@ public abstract class IdentityConstant
                                    .append(getName());
         if (fUsePosition) {
             assert getComponent() != null;
-            sb.append(ID_NUM).append(getPosition());
+            sb.append(HASH).append(getPosition());
         }
         return sb;
     }

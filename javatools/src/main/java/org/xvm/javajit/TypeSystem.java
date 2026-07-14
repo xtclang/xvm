@@ -151,31 +151,31 @@ public class TypeSystem {
     // special identifier characters used for encoding class/method/field names in Java ClassFiles
     public static final int  ESC      = 0x10458; // "𐑘"
     public static final char CLASS    = 'c';     // prefix
-    public static final char INTRFACE = 'i';     // prefix
+    public static final char PURE     = 'i';     // prefix
     public static final char PROXY    = 'p';     // prefix
     public static final char DUCK     = 'd';     // prefix
+    public static final char ENUM     = 'e';     // prefix - for Enumeration<Enum> i.e. Class<Enum>
     public static final char MASK     = 'm';     // prefix
     public static final char NO_MOD   = 'n';     // prefix - native / no build modification
     public static final char FUTURE   = 'f';     // prefix
-    public static final char ENUM     = 'e';     // prefix - for Enumeration<Enum> i.e. Class<Enum>
     public static final char EXCEPT   = 'x';     // prefix - gen'd RuntimeException (holds an Ecstasy Exception ref)
     public static final char RESERVED = '¤';     // prefix (0xA4)
-    public static final char ID_NUM   = 'ꖛ';     // 0xA59B
+    public static final char HASH     = 'ꖛ';     // 0xA59B
     public static final char DOT      = '۰';     // 0x06F0
-    public static final char UNION    = 'ǀ';     // 0x01C0
-    public static final char INTRSECT = 'ⵜ';     // 0x2D5C
-    public static final char DIFF     = 'ᝍ';     // 0x174D
-    public static final char NULLABLE = 'ꛫ';     // 0xA6EB
+    public static final char OR       = 'ǀ';     // 0x01C0
+    public static final char ADD      = 'ⵜ';     // 0x2D5C
+    public static final char SUB      = 'ᝍ';     // 0x174D
+    public static final char QUESTION = 'ꛫ';     // 0xA6EB
     public static final char BANG     = 'ǃ';     // 0x01C3
-    public static final char ANNO     = 'Ҩ';     // 0x04A8
+    public static final char AT       = 'Ҩ';     // 0x04A8
     public static final char SPACE    = '‿';     // 0x203F
     public static final char COMMA    = 'ܝ';     // 0x071D
     public static final char L_PAREN  = 'ꕿ';     // 0xA57F
     public static final char R_PAREN  = 'ꛑ';     // 0xA6D1
     public static final char L_ANGLE  = 'ᐸ';     // 0x1438
     public static final char R_ANGLE  = 'ᐳ';     // 0x1433
-    public static final int  MIN_ESC  = min(ESC, min(ID_NUM, min(DOT, min(UNION, min(INTRSECT,
-            min(DIFF, min(NULLABLE, min(BANG, min(ANNO, min(SPACE, min(COMMA,  min(L_PAREN,
+    public static final int  MIN_ESC  = min(ESC, min(HASH, min(DOT, min(OR, min(ADD,
+            min(SUB, min(QUESTION, min(BANG, min(AT, min(SPACE, min(COMMA,  min(L_PAREN,
             min(R_PAREN, min(L_ANGLE, R_ANGLE))))))))))))));
 
     /**
@@ -390,16 +390,16 @@ public class TypeSystem {
      * Jit class shapes.
      */
     public enum ClassfileShape {
-        Class    ("c"), // used to prefix a class name only when a collision would otherwise occur
-        Pure     ("i"), // interface
-        Proxy    ("p"),
-        Duck     ("d"),
-        Enum     ("e"),
-        Mask     ("m"),
-        NoMod    ("n"), // take ClassFile bytes "as is"
-        Future   ("f"),
-        Exception("x"), // RuntimeException "entangled" with the corresponding XTC Exception class
-        Impl     (""),  // needs to be last
+        Class    ("" + CLASS ), // used to prefix a class name only when a collision would occur
+        Pure     ("" + PURE  ), // interface
+        Proxy    ("" + PROXY ),
+        Duck     ("" + DUCK  ),
+        Enum     ("" + ENUM  ),
+        Mask     ("" + MASK  ),
+        NoMod    ("" + NO_MOD), // take ClassFile bytes "as is"
+        Future   ("" + FUTURE),
+        Exception("" + EXCEPT), // Java RuntimeException "entangled" with the Ecstasy Exception
+        Impl     (""),          // Implementation: this needs to be the last enumerated shape
         ;
 
         ClassfileShape(String prefix) {
@@ -432,7 +432,7 @@ public class TypeSystem {
         }
 
         TypeConstant type     = null;
-        int          idOffset = name.indexOf(ID_NUM);
+        int          idOffset = name.indexOf(HASH);
         if (idOffset > 0) {
             // the name represents a parameterized type with primitive actual type(s)
             // or a class constant for inner classes
@@ -502,8 +502,8 @@ public class TypeSystem {
             if (ch >= MIN_ESC || index == classStart) {
                 switch (ch) {
                 case ESC:
-                case CLASS, INTRFACE, PROXY, DUCK, MASK, NO_MOD, FUTURE, ENUM, EXCEPT, RESERVED:
-                case ID_NUM, DOT, UNION, INTRSECT, DIFF, NULLABLE, BANG, ANNO, SPACE, COMMA:
+                case CLASS, PURE, PROXY, DUCK, MASK, NO_MOD, FUTURE, ENUM, EXCEPT, RESERVED:
+                case HASH, DOT, OR, ADD, SUB, QUESTION, BANG, AT, SPACE, COMMA:
                 case L_PAREN, R_PAREN, L_ANGLE, R_ANGLE:
                     if (buf == null) {
                         buf = new StringBuilder(size + 8).append(name, 0, index);
@@ -531,7 +531,7 @@ public class TypeSystem {
             if (ch >= MIN_ESC) {
                 switch (ch) {
                 case ESC:
-                case ID_NUM, DOT, UNION, INTRSECT, DIFF, NULLABLE, BANG, ANNO, SPACE, COMMA:
+                case HASH, DOT, OR, ADD, SUB, QUESTION, BANG, AT, SPACE, COMMA:
                 case L_PAREN, R_PAREN, L_ANGLE, R_ANGLE:
                     if (buf == null) {
                         buf = new StringBuilder(size + 8).append(name, 0, index);
