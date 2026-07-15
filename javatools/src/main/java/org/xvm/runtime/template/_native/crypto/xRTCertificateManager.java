@@ -30,6 +30,7 @@ import org.shredzone.acme4j.Account;
 import org.shredzone.acme4j.AccountBuilder;
 import org.shredzone.acme4j.Authorization;
 import org.shredzone.acme4j.Order;
+import org.shredzone.acme4j.PollableResource;
 import org.shredzone.acme4j.Session;
 import org.shredzone.acme4j.Status;
 import org.shredzone.acme4j.challenge.Http01Challenge;
@@ -237,10 +238,6 @@ public class xRTCertificateManager
      * in-process ACME interaction. The domain keypair and certificate chain are stored
      * directly into the keystore without intermediate PEM/PKCS12 temp files, which is
      * both simpler and more secure (no unencrypted private key written to disk).
-     * <p>
-     * Polling uses acme4j's {@code waitForCompletion(Duration)} which respects the
-     * server's Retry-After header, rather than the old approach of blocking on
-     * {@code process.waitFor(300, SECONDS)} while certbot polled internally.
      */
     private void createCertificateWithAcme(String sStorePath, char[] achPwd, String sName, String sDName,
                                            boolean fStaging, StringHandle hStorePath)
@@ -270,7 +267,7 @@ public class xRTCertificateManager
         csrBuilder.sign(domainKeyPair);
         acmeOrder.execute(csrBuilder.getEncoded());
 
-        Status orderStatus = acmeOrder.waitForCompletion(ACME_TIMEOUT);
+        Status orderStatus = waitForCompletion(acmeOrder);
         if (orderStatus != Status.VALID) {
             throw new AcmeException("Certificate order failed for " + sDomain
                     + " (status: " + orderStatus + ")");
@@ -317,7 +314,7 @@ public class xRTCertificateManager
 
             try {
                 challenge.trigger();
-                Status authStatus = auth.waitForCompletion(ACME_TIMEOUT);
+                Status authStatus = waitForCompletion(auth);
                 if (authStatus != Status.VALID) {
                     throw new AcmeException("Challenge failed for " + sDomain
                             + " (status: " + authStatus + ")");
@@ -564,6 +561,33 @@ public class xRTCertificateManager
 
 
     // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * Wait for an ACME resource to reach a final status.
+     *
+     * This method is a compensation for a bug in acme4j's {@code waitForCompletion(Duration)},
+     * which calculates its sleep delay from the absolute Retry-After timestamp returned by the ACME
+     * server. When the local clock is slightly ahead, the calculated delay can be negative,
+     * causing {@link Thread#sleep(long)} to throw an IllegalArgumentException
+     * "timeout value is negative" instead of continuing to poll.
+     */
+    private static Status waitForCompletion(PollableResource resource)
+            throws AcmeException, InterruptedException {
+        long deadline = System.nanoTime() + ACME_TIMEOUT.toNanos();
+
+        do {
+            resource.fetch();
+
+            Status status = resource.getStatus();
+            if (status == Status.VALID || status == Status.INVALID) {
+                return status;
+            }
+
+            Thread.sleep(PollableResource.DEFAULT_RETRY_AFTER.toMillis());
+        } while (System.nanoTime() < deadline);
+
+        throw new AcmeException("Timeout has been reached");
+    }
 
     private static String acmeServerUri(boolean fStaging) {
         return fStaging ? "acme://letsencrypt.org/staging" : "acme://letsencrypt.org";
