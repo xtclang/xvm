@@ -44,32 +44,6 @@ interface Enum
         return False;
     }
 
-    // ----- Orderable and Hashable ----------------------------------------------------------------
-
-    /**
-     * Calculate a hash code for the specified Enum value.
-     */
-    @Override
-    static <CompileType extends Enum> Int64 hashCode(CompileType value) {
-        return value.enumeration.hashCode() + value.ordinal.toInt64();
-    }
-
-    /**
-     * Compare two enumerated values that belong to the same enumeration purposes of ordering.
-     */
-    @Override
-    static <CompileType extends Enum> Ordered compare(CompileType value1, CompileType value2) {
-        return value1.ordinal <=> value2.ordinal;
-    }
-
-    /**
-     * Compare two enumerated values that belong to the same enumeration for equality.
-     */
-    @Override
-    static <CompileType extends Enum> Boolean equals(CompileType value1, CompileType value2) {
-        return value1.ordinal == value2.ordinal;
-    }
-
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
