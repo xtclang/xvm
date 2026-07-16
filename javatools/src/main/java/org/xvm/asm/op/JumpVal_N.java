@@ -538,7 +538,7 @@ public class JumpVal_N
     public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo[] regArgs = new RegisterInfo[m_anArgCond.length];
         for (int i = 0; i < m_anArgCond.length; i++) {
-            regArgs[i] = bctx.getRegisterInfo(code, m_anArgCond[i]);
+            regArgs[i] = bctx.ensureRegister(code, m_anArgCond[i]);
         }
         buildIfLadder(bctx, code, regArgs);
         return -1;

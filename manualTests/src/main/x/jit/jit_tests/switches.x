@@ -10,6 +10,7 @@ package switches {
 
             Boolean passed = True;
             try {
+                passed &= runTest(() -> basicSwitchTests.run());
                 passed &= runTest(() -> int8SwitchTests.run());
                 passed &= runTest(() -> int16SwitchTests.run());
                 passed &= runTest(() -> int32SwitchTests.run());
