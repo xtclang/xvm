@@ -21,6 +21,7 @@ package ip_ops {
                 passed &= runTest(() -> new IpShrTests().run());
                 passed &= runTest(() -> new IpSubTests().run());
                 passed &= runTest(() -> new IpXorTests().run());
+                passed &= runTest(() -> new IpMiscTests().run());
             } catch (IllegalState e) {
                 console.print(e);
             }
