@@ -1553,7 +1553,6 @@ public class MethodInfo
         return sb.toString();
     }
 
-
     // ----- constants and fields ------------------------------------------------------------------
 
     /**

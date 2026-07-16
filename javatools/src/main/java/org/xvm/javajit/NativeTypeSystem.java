@@ -239,11 +239,9 @@ public class NativeTypeSystem
     protected Builder ensureBuilder(TypeConstant type, ClassModel model) {
         assert model != null;
 
-        if (type.isArray()) {
-            return new ArrayBuilder(this, type, model);
-        }
-
-        return new AugmentingBuilder(this, type, model);
+        return type.isArray()
+                ? new ArrayBuilder(this, type, model)
+                : new AugmentingBuilder(this, type, model);
     }
 
     // ----- internal ------------------------------------------------------------------------------
