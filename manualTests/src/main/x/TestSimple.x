@@ -1,8 +1,11 @@
 module TestSimple {
 
-    package xenia import xenia.xtclang.org;
-
     @Inject Console console;
+
+    package net import net.xtclang.org;
+
+    import net.Network;
+    import net.NameService.Record;
 
     void run() {
         scanClasses(xenia, "xenia.", new String[]);

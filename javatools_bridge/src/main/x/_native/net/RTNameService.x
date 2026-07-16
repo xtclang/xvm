@@ -23,6 +23,34 @@ service RTNameService(Network network)
     }
 
     @Override
+    Record[] records(String name) {
+        String[] fields  = nativeRecords(name);
+        Record[] records = new Record[];
+
+        for (Int index : 0 ..< fields.size/5) {
+            Int offset = index * 5;
+            records += new Record(fields[offset],
+                    Duration.ofSeconds(new Int64(fields[offset+1])),
+                    fields[offset+2], fields[offset+3], fields[offset+4]);
+        }
+
+        return records.toArray(Constant, inPlace=True);
+    }
+
+    @Override
+    conditional String getData(String domain, String name, String type) {
+        String recordName = name == "@" ? domain : $"{name}.{domain}";
+
+        for (Record record : records(recordName)) {
+            if (record.type == type) {
+                return True, record.data;
+            }
+        }
+
+        return False;
+    }
+
+    @Override
     String toString() {
         return "NameService";
     }
@@ -33,4 +61,6 @@ service RTNameService(Network network)
     conditional Byte[][] nativeResolve(String name) {TODO("Native");}
 
     conditional String nativeLookup(Byte[] addressBytes) {TODO("Native");}
+
+    String[] nativeRecords(String name) {TODO("Native");}
 }
