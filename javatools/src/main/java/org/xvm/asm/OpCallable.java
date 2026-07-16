@@ -41,6 +41,7 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
+import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Exception;
 import static org.xvm.javajit.Builder.CD_nFunction;
@@ -757,7 +758,14 @@ public abstract class OpCallable extends Op {
             : m_nRetValue == Op.A_IGNORE
                 ? NO_ARGS
                 : new int[] {m_nRetValue};
-        bctx.assignReturns(code, jmdCall, anRet.length, anRet, fCond);
+
+        if (anRet.length == 0 && mdCall.returnType() != CD_void) {
+            // there are no returns to be assigned, but the method has a return, so it must be
+            // popped from the stack
+            Builder.pop(code, mdCall.returnType());
+        } else{
+            bctx.assignReturns(code, jmdCall, anRet.length, anRet, fCond);
+        }
         return -1;
     }
 

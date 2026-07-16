@@ -908,6 +908,16 @@ public class BuildContext {
     }
 
     /**
+     * @return {@code true} if there is a {@link org.xvm.asm.op.Label} op associated with the
+     * specified Op address and its label has been bound.
+     */
+    public boolean isOpLabeled(int opAddress) {
+        Op[] ops = methodStruct.getOps();
+        Op   op  = ops[opAddress];
+        return op instanceof org.xvm.asm.op.Label && ((org.xvm.asm.op.Label) op).isBound();
+    }
+
+    /**
      * Ensure there is a Java label associated with the specified Op address.
      */
     public java.lang.classfile.Label ensureLabel(CodeBuilder code, int opAddress) {
@@ -2225,10 +2235,6 @@ public class BuildContext {
      * Get the property value.
      */
     public void buildGetProperty(CodeBuilder code, RegisterInfo targetReg, int propIdIndex, int retId) {
-        if (!targetReg.isSingle()) {
-            throw new UnsupportedOperationException("Multislot P_Get");
-        }
-
         PropertyConstant propId = getConstant(propIdIndex, PropertyConstant.class);
         switch (targetReg.flavor()) {
             case Primitive, XvmPrimitive -> Builder.box(code, targetReg);

@@ -3601,6 +3601,9 @@ public class CommonBuilder
             "org.xtclang.ecstasy.text.Stringable",
             "org.xtclang.ecstasy.text.StringBuffer",
 
+            // temporal
+            "org.xtclang.ecstasy.temporal.Duration",
+
             // _native.io
             "_native.io.TerminalConsole",
     };
