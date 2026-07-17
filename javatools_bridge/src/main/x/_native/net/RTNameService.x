@@ -38,19 +38,6 @@ service RTNameService(Network network)
     }
 
     @Override
-    conditional String getData(String domain, String name, String type) {
-        String recordName = name == "@" ? domain : $"{name}.{domain}";
-
-        for (Record record : records(recordName)) {
-            if (record.type == type) {
-                return True, record.data;
-            }
-        }
-
-        return False;
-    }
-
-    @Override
     String toString() {
         return "NameService";
     }
