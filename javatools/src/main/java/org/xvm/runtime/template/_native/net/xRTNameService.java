@@ -237,11 +237,13 @@ public class xRTNameService
             //       the "netClass" attribute for all practocal purposes is always "Internet"
             try {
                 while (valueEnum.hasMore()) {
+                    String sData = valueEnum.next().toString();
+
                     listFields.add(normalizeDnsName(sName));
                     listFields.add("0");
                     listFields.add("IN");
                     listFields.add(sType);
-                    listFields.add(valueEnum.next().toString());
+                    listFields.add(normalizeRecordData(sType, sData));
                 }
             } finally {
                 valueEnum.close();
@@ -263,6 +265,13 @@ public class xRTNameService
         return sName.endsWith(".")
                 ? sName.substring(0, sName.length() - 1)
                 : sName;
+    }
+
+    static String normalizeRecordData(String sType, String sData) {
+        return switch (sType) {
+            case "CNAME", "NS", "PTR" -> normalizeDnsName(sData);
+            default                   -> sData;
+        };
     }
 
 

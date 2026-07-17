@@ -46,7 +46,7 @@ interface NameService {
      * @return (conditional) the record data
      */
     conditional String getData(String zone, String name, String type) {
-        Record[] records = records($"{name}.{zone}");
+        Record[] records = records(name == "@" ? zone : $"{name}.{zone}");
 
         if (Record record := records.any(r -> r.type == type)) {
             return True, record.data;
