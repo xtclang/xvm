@@ -850,6 +850,7 @@ public abstract class Constant
         UnionType,
         DifferenceType,
         RecursiveType,
+        JitRefOnlyType,
 
         /*
          * Conditions.
