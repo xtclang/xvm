@@ -1,3 +1,5 @@
+import annotations.JsonProperty;
+
 /**
  * A reflection-based [Mapping] implementation that works for exactly one type, `Serializable`.
  */
@@ -129,15 +131,30 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
             val structType = clazz.StructType;
 
             PropertyMapping<structType.DataType>[] fields = new PropertyMapping[];
+            Set<String>                            names  = new HashSet();
             for (Property<structType.DataType> prop : structType.properties) {
                 if (prop.hasField && !prop.lazy) {
                     assert !prop.isConstant() && !prop.abstract && !prop.injected;
 
                     // TODO CP what if the referent type is the same as "type"? (linked list example)
                     if (Mapping<prop.Referent> valueMapping := schema.findMapping(prop.Referent)) {
-                        // TODO CP - name has to be unique
+                        String name = prop.name;
+                        if (prop.is(JsonProperty)) {
+                            name = prop.jsonName;
+                        }
+                        if (names.contains(name)) {
+                            for (PropertyMapping mapping : fields) {
+                                if (mapping.name == name) {
+                                    throw new IllegalJSON($|Duplicate JSON property name {name} \
+                                                           | {prop} name matches {mapping.property}
+                                                           );
+                                }
+                            }
+                        }
+                        names.add(name);
+
                         fields += new PropertyMapping<structType.DataType, prop.Referent>
-                                        (prop.name, valueMapping, prop);
+                                        (name, valueMapping, prop);
                     }
                 }
             }
