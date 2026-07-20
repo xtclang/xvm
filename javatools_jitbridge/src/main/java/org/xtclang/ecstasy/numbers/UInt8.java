@@ -31,12 +31,23 @@ public class UInt8 extends IntNumber {
         return String.of(ctx, Integer.toUnsignedString($value));
     }
 
-    public long estimateStringLength$p(Ctx ctx) {
-        return $estimateUnsignedStringLength($value);
+    public static String toString$p(int thi$, Ctx ctx) {
+        return String.of(ctx, Integer.toUnsignedString(thi$));
+    }
+
+    public static long estimateStringLength$p(int thi$, Ctx ctx) {
+        return $estimateUnsignedStringLength(thi$);
     }
 
     public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
         for (char c : Integer.toUnsignedString($value).toCharArray()) {
+            appender = appender.add$p(ctx, c);
+        }
+        return appender;
+    }
+
+    public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
+        for (char c : Integer.toUnsignedString(thi$).toCharArray()) {
             appender = appender.add$p(ctx, c);
         }
         return appender;
@@ -84,12 +95,12 @@ public class UInt8 extends IntNumber {
      *
      * @return this UInt8 value as a Java {@code int}
      */
-    public int toInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && ($value < 0 || $value > Byte.MAX_VALUE)) {
+    public static int toInt8$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && (thi$ < 0 || thi$ > Byte.MAX_VALUE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "UInt8 value " + $value + " is not a valid Int8 value");
+            throw oob.$init(ctx, "UInt8 value " + thi$ + " is not a valid Int8 value");
         }
-        return (byte) $value;
+        return (byte) thi$;
     }
 
     /**
@@ -102,8 +113,8 @@ public class UInt8 extends IntNumber {
      *
      * @return this UInt8 value as a Java {@code int}
      */
-    public int toInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toInt16$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -116,8 +127,8 @@ public class UInt8 extends IntNumber {
      *
      * @return this UInt8 value as a Java {@code int}
      */
-    public int toInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toInt32$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -130,8 +141,8 @@ public class UInt8 extends IntNumber {
      *
      * @return this UInt8 value as a Java long
      */
-    public long toInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static long toInt64$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -144,10 +155,10 @@ public class UInt8 extends IntNumber {
      *
      * @return this UInt8 value as an Int128
      */
-    public long toInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public static long toInt128$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         // load the high long value to the context and return the low value
         ctx.i0 = 0L;
-        return $value & 0xFFL;
+        return thi$ & 0xFFL;
     }
 
     /**
@@ -160,8 +171,8 @@ public class UInt8 extends IntNumber {
      *
      * @return this UInt8 value as a Java {@code int}
      */
-    public int toUInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toUInt8$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -174,8 +185,8 @@ public class UInt8 extends IntNumber {
      *
      * @return this UInt8 value as a Java {@code int}
      */
-    public int toUInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toUInt16$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -188,8 +199,8 @@ public class UInt8 extends IntNumber {
      *
      * @return this UInt8 value as a Java {@code int}
      */
-    public int toUInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toUInt32$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -202,8 +213,8 @@ public class UInt8 extends IntNumber {
      *
      * @return this UInt8 value as a Java long
      */
-    public long toUInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static long toUInt64$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -216,10 +227,10 @@ public class UInt8 extends IntNumber {
      *
      * @return this UInt8 value as a UInt128
      */
-    public long toUInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public static long toUInt128$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         // load the high long value to the context and return the low value
         ctx.i0 = 0L;
-        return $value & 0xFFL;
+        return thi$ & 0xFFL;
     }
 
     // ----- debugging support ---------------------------------------------------------------------
