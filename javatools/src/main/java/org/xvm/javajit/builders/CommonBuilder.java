@@ -707,7 +707,7 @@ public class CommonBuilder
             } else if (prop.isAbstract()) {
                 assemblePropertyGetter(className, classBuilder, prop);
             }
-        } else if (prop.getHead().hasGetter()) { // TODO GG note that there is a "default" PropertyInfo on Boolean but we don't create anything for it here
+        } else if (prop.getHead().hasGetter()) { // Note: skip properties with native getters
             switch (getterInfo.getHead().getImplementation()) {
             case Field:
                 generateTrivialGetter(className, classBuilder, prop);
@@ -2937,8 +2937,7 @@ public class CommonBuilder
             JitParamDesc[] dstParams = jmdDst.optimizedParams;
             for (int i = 0, c = srcParams.length; i < c; i++) {
                 JitParamDesc srcPd     = srcParams[i];
-                assert srcPd.index != -1; // TODO CP -1 == thi$
-                int          srcSlot   = code.parameterSlot(extraCount + srcPd.index);
+                int          srcSlot   = srcPd.index == -1 ? 0 : code.parameterSlot(extraCount + srcPd.index);
                 TypeConstant srcType   = srcPd.type;
                 JitParamDesc dstPd     = dstParams[i];
                 TypeConstant dstType   = dstPd.type;
