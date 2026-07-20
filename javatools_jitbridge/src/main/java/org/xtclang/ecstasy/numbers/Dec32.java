@@ -281,9 +281,8 @@ public class Dec32 extends DecimalFPNumber {
 
     // ----- conversion ----------------------------------------------------------------------------
 
-    @Override
-    public int toDec32$p(Ctx ctx) {
-        return $bits;
+    public static int toDec32$p(int thi$, Ctx ctx) {
+        return thi$;
     }
 
     // ----- internal JIT support ------------------------------------------------------------------

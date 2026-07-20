@@ -372,10 +372,9 @@ public class Dec128 extends DecimalFPNumber {
 
     // ----- conversion ----------------------------------------------------------------------------
 
-    @Override
-    public long toDec128$p(Ctx ctx) {
-        ctx.i0 = $highBits;
-        return $lowBits;
+    public static long toDec128$p(long thi$Lo, long thi$Hi, Ctx ctx) {
+        ctx.i0 = thi$Hi;
+        return thi$Lo;
     }
 
     // ----- internal JIT support ------------------------------------------------------------------

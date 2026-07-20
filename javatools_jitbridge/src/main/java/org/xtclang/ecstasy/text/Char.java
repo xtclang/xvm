@@ -51,8 +51,8 @@ public class Char extends nConst {
         return ch;
     }
 
-    public int codepoint$get$p(Ctx ctx) {
-        return $value;
+    public static int codepoint$get$p(int thi$, Ctx ctx) {
+        return thi$;
     }
 
     // TODO GG remove
@@ -107,7 +107,11 @@ public class Char extends nConst {
         return String.of(null, toString());
     }
 
-    public long estimateStringLength$p(Ctx ctx) {
+    public static String toString$p(int thi$, Ctx ctx) {
+        return String.of(ctx, java.lang.Character.toString(thi$));
+    }
+
+    public static long estimateStringLength$p(int thi$, Ctx ctx) {
         return 1;
     }
 
@@ -115,12 +119,16 @@ public class Char extends nConst {
         return appender.add$p(ctx, $value);
     }
 
+    public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
+        return appender.add$p(ctx, thi$);
+    }
+
     @Override
     public java.lang.String toString() {
         return java.lang.Character.toString($value);
     }
 
-    public long toInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static long toInt64$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 }

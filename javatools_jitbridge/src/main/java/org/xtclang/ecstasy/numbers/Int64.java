@@ -34,12 +34,23 @@ public class Int64 extends IntNumber {
         return String.of(ctx, Long.toString($value));
     }
 
-    public long estimateStringLength$p(Ctx ctx) {
-        return $estimateStringLength($value);
+    public static String toString$p(long thi$, Ctx ctx) {
+        return String.of(ctx, Long.toString(thi$));
+    }
+
+    public static long estimateStringLength$p(long thi$, Ctx ctx) {
+        return Long.toString(thi$).length();
     }
 
     public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
         for (char c : Long.toString($value).toCharArray()) {
+            appender = appender.add$p(ctx, c);
+        }
+        return appender;
+    }
+
+    public static AppenderᐸCharᐳ appendTo$p(long thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
+        for (char c : Long.toString(thi$).toCharArray()) {
             appender = appender.add$p(ctx, c);
         }
         return appender;
@@ -102,15 +113,15 @@ public class Int64 extends IntNumber {
     /**
      * Int64 add(Int64! n)
      */
-    public long addꖛ0$p(Ctx ctx, long n) {
-        return $value + n;
+    public static long addꖛ0$p(long thi$, Ctx ctx, long n) {
+        return thi$ + n;
     }
 
     /**
      * Int64 mul(Int64! n)
      */
-    public long mul$p(Ctx ctx, long n) {
-        return $value*n;
+    public static long mul$p(long thi$, Ctx ctx, long n) {
+        return thi$*n;
     }
 
     // ----- primitive helpers ---------------------------------------------------------------------
@@ -141,13 +152,13 @@ public class Int64 extends IntNumber {
      *
      * @return this Int64 value as a Java {@code int}
      */
-    public int toInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public static int toInt8$p(long thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         if (!dfltCheckBounds && checkBounds
-                && ($value < Byte.MIN_VALUE || $value > Byte.MAX_VALUE)) {
+                && (thi$ < Byte.MIN_VALUE || thi$ > Byte.MAX_VALUE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int64 value " + $value + " is not a valid Int8 value");
+            throw oob.$init(ctx, "Int64 value " + thi$ + " is not a valid Int8 value");
         }
-        return (byte) $value;
+        return (byte) thi$;
     }
 
     /**
@@ -160,13 +171,13 @@ public class Int64 extends IntNumber {
      *
      * @return this Int64 value as a Java {@code int}
      */
-    public int toInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public static int toInt16$p(long thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         if (!dfltCheckBounds && checkBounds
-                && ($value < Short.MIN_VALUE || $value > Short.MAX_VALUE)) {
+                && (thi$ < Short.MIN_VALUE || thi$ > Short.MAX_VALUE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int64 value " + $value + " is not a valid Int16 value");
+            throw oob.$init(ctx, "Int64 value " + thi$ + " is not a valid Int16 value");
         }
-        return (short) $value;
+        return (short) thi$;
     }
 
     /**
@@ -179,13 +190,13 @@ public class Int64 extends IntNumber {
      *
      * @return this Int64 value as a Java {@code int}
      */
-    public int toInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public static int toInt32$p(long thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         if (!dfltCheckBounds && checkBounds
-                && ($value < Integer.MIN_VALUE || $value > Integer.MAX_VALUE)) {
+                && (thi$ < Integer.MIN_VALUE || thi$ > Integer.MAX_VALUE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int64 value " + $value + " is not a valid Int32 value");
+            throw oob.$init(ctx, "Int64 value " + thi$ + " is not a valid Int32 value");
         }
-        return (int) $value;
+        return (int) thi$;
     }
 
     /**
@@ -198,8 +209,8 @@ public class Int64 extends IntNumber {
      *
      * @return this Int64 value as a Java long
      */
-    public long toInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static long toInt64$p(long thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -212,10 +223,10 @@ public class Int64 extends IntNumber {
      *
      * @return this Int64 value as an Int128
      */
-    public long toInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public static long toInt128$p(long thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         // load the high long value to the context and return the low value
-        ctx.i0 = $value < 0 ? -1L : 0L;
-        return $value;
+        ctx.i0 = thi$ < 0 ? -1L : 0L;
+        return thi$;
     }
 
     /**
@@ -228,12 +239,12 @@ public class Int64 extends IntNumber {
      *
      * @return this Int64 value as a Java {@code int}
      */
-    public int toUInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && ($value < 0L || $value > 255L)) {
+    public static int toUInt8$p(long thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && (thi$ < 0L || thi$ > 255L)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int64 value " + $value + " is not a valid UInt8 value");
+            throw oob.$init(ctx, "Int64 value " + thi$ + " is not a valid UInt8 value");
         }
-        return ((int) $value) & 0xFF;
+        return ((int) thi$) & 0xFF;
     }
 
     /**
@@ -246,12 +257,12 @@ public class Int64 extends IntNumber {
      *
      * @return this Int64 value as a Java {@code int}
      */
-    public int toUInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && ($value < 0 || $value > 65535L)) {
+    public static int toUInt16$p(long thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && (thi$ < 0 || thi$ > 65535L)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int64 value " + $value + " is not a valid UInt16 value");
+            throw oob.$init(ctx, "Int64 value " + thi$ + " is not a valid UInt16 value");
         }
-        return (int) ($value & 0xFFFFL);
+        return (int) (thi$ & 0xFFFFL);
     }
 
     /**
@@ -264,12 +275,12 @@ public class Int64 extends IntNumber {
      *
      * @return this Int64 value as a Java {@code int}
      */
-    public int toUInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && ($value < 0L || $value > 4294967295L)) {
+    public static int toUInt32$p(long thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && (thi$ < 0L || thi$ > 4294967295L)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int64 value " + $value + " is not a valid UInt32 value");
+            throw oob.$init(ctx, "Int64 value " + thi$ + " is not a valid UInt32 value");
         }
-        return (int) ($value & 0xFFFFFFFFL);
+        return (int) (thi$ & 0xFFFFFFFFL);
     }
 
     /**
@@ -282,12 +293,12 @@ public class Int64 extends IntNumber {
      *
      * @return this Int64 value as a Java long
      */
-    public long toUInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value < 0L) {
+    public static long toUInt64$p(long thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && thi$ < 0L) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int64 value " + $value + " is not a valid UInt64 value");
+            throw oob.$init(ctx, "Int64 value " + thi$ + " is not a valid UInt64 value");
         }
-        return $value;
+        return thi$;
     }
 
     /**
@@ -300,14 +311,14 @@ public class Int64 extends IntNumber {
      *
      * @return this Int64 value as a UInt128
      */
-    public long toUInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value < 0L) {
+    public static long toUInt128$p(long thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && thi$ < 0L) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int64 value " + $value + " is not a valid UInt128 value");
+            throw oob.$init(ctx, "Int64 value " + thi$ + " is not a valid UInt128 value");
         }
         // load the high long value to the context and return the low value
-        ctx.i0 = $value >= 0 ? 0L : -1L;
-        return $value;
+        ctx.i0 = thi$ >= 0 ? 0L : -1L;
+        return thi$;
     }
 
     // ----- Orderable interface -------------------------------------------------------------------

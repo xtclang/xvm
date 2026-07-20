@@ -37,12 +37,23 @@ public class Float64 extends BinaryFPNumber {
         return String.of(ctx, Double.toString($value));
     }
 
-    public long estimateStringLength$p(Ctx ctx) {
-        return Double.toString($value).length();
+    public static String toString$p(double thi$, Ctx ctx) {
+        return String.of(ctx, Double.toString(thi$));
+    }
+
+    public static long estimateStringLength$p(double thi$, Ctx ctx) {
+        return Double.toString(thi$).length();
     }
 
     public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
         for (char c : Double.toString($value).toCharArray()) {
+            appender = appender.add$p(ctx, c);
+        }
+        return appender;
+    }
+
+    public static AppenderᐸCharᐳ appendTo$p(double thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
+        for (char c : Double.toString(thi$).toCharArray()) {
             appender = appender.add$p(ctx, c);
         }
         return appender;
@@ -106,13 +117,11 @@ public class Float64 extends BinaryFPNumber {
 
     // ----- conversion ----------------------------------------------------------------------------
 
-    @Override
-    public float toFloat32$p(Ctx ctx) {
-        return super.toFloat32$p(ctx);
+    public static float toFloat32$p(double thi$, Ctx ctx) {
+        return (float) thi$;
     }
 
-    @Override
-    public double toFloat64$p(Ctx ctx) {
-        return $value;
+    public static double toFloat64$p(double thi$, Ctx ctx) {
+        return thi$;
     }
 }

@@ -38,12 +38,24 @@ public class Int128 extends IntNumber {
         return toString;
     }
 
-    public long estimateStringLength$p(Ctx ctx) {
-        return $asBigInteger().toString().length();
+    public static String toString$p(long thi$Lo, long thi$Hi, Ctx ctx) {
+        return String.of(ctx, $toBigInteger(thi$Lo, thi$Hi).toString());
+    }
+
+    public static long estimateStringLength$p(long thi$Lo, long thi$Hi, Ctx ctx) {
+        return $toBigInteger(thi$Lo, thi$Hi).toString().length();
     }
 
     public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
         for (char c : $asBigInteger().toString().toCharArray()) {
+            appender = appender.add$p(ctx, c);
+        }
+        return appender;
+    }
+
+    public static AppenderᐸCharᐳ appendTo$p(long thi$Lo, long thi$Hi, Ctx ctx,
+                                             AppenderᐸCharᐳ appender) {
+        for (char c : $toBigInteger(thi$Lo, thi$Hi).toString().toCharArray()) {
             appender = appender.add$p(ctx, c);
         }
         return appender;
@@ -167,14 +179,14 @@ public class Int128 extends IntNumber {
      *
      * @return this Int128 value as a Java {@code int}
      */
-    public int toInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $highValue != 0 && $highValue != -1
-                && ($lowValue < Byte.MIN_VALUE || $lowValue > Byte.MAX_VALUE)) {
+    public static int toInt8$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && thi$Hi != 0 && thi$Hi != -1
+                && (thi$Lo < Byte.MIN_VALUE || thi$Lo > Byte.MAX_VALUE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int128 value " + $asBigInteger()
+            throw oob.$init(ctx, "Int128 value " + $toBigInteger(thi$Lo, thi$Hi)
                     + " is not a valid Int8 value");
         }
-        return (byte) $lowValue;
+        return (byte) thi$Lo;
     }
 
     /**
@@ -187,14 +199,14 @@ public class Int128 extends IntNumber {
      *
      * @return this Int128 value as a Java {@code int}
      */
-    public int toInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $highValue != 0 && $highValue != -1
-                && ($lowValue < Short.MIN_VALUE || $lowValue > Short.MAX_VALUE)) {
+    public static int toInt16$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && thi$Hi != 0 && thi$Hi != -1
+                && (thi$Lo < Short.MIN_VALUE || thi$Lo > Short.MAX_VALUE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int128 value " + $asBigInteger()
+            throw oob.$init(ctx, "Int128 value " + $toBigInteger(thi$Lo, thi$Hi)
                     + " is not a valid Int16 value");
         }
-        return (short) $lowValue;
+        return (short) thi$Lo;
     }
 
     /**
@@ -207,14 +219,14 @@ public class Int128 extends IntNumber {
      *
      * @return this Int128 value as a Java {@code int}
      */
-    public int toInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $highValue != 0 && $highValue != -1
-                && ($lowValue < Integer.MIN_VALUE || $lowValue > Integer.MAX_VALUE)) {
+    public static int toInt32$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && thi$Hi != 0 && thi$Hi != -1
+                && (thi$Lo < Integer.MIN_VALUE || thi$Lo > Integer.MAX_VALUE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int128 value " + $asBigInteger()
+            throw oob.$init(ctx, "Int128 value " + $toBigInteger(thi$Lo, thi$Hi)
                     + " is not a valid Int32 value");
         }
-        return (int) $lowValue;
+        return (int) thi$Lo;
     }
 
     /**
@@ -227,14 +239,14 @@ public class Int128 extends IntNumber {
      *
      * @return this Int128 value as a Java long
      */
-    public long toInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $highValue != 0 && $highValue != -1
-                && ($lowValue < Integer.MIN_VALUE || $lowValue > Integer.MAX_VALUE)) {
+    public static long toInt64$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && thi$Hi != 0 && thi$Hi != -1
+                && (thi$Lo < Integer.MIN_VALUE || thi$Lo > Integer.MAX_VALUE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int128 value " + $asBigInteger()
+            throw oob.$init(ctx, "Int128 value " + $toBigInteger(thi$Lo, thi$Hi)
                     + " is not a valid Int32 value");
         }
-        return $lowValue;
+        return thi$Lo;
     }
 
     /**
@@ -247,10 +259,10 @@ public class Int128 extends IntNumber {
      *
      * @return this Int128 value as an Int128
      */
-    public long toInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public static long toInt128$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         // load the high long value to the context and return the low value
-        ctx.i0 = $highValue;
-        return $lowValue;
+        ctx.i0 = thi$Hi;
+        return thi$Lo;
     }
 
     /**
@@ -263,14 +275,14 @@ public class Int128 extends IntNumber {
      *
      * @return this Int128 value as a Java {@code int}
      */
-    public int toUInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $highValue != 0 && $highValue != -1
-                && ($lowValue < 0L || $lowValue > 255L)) {
+    public static int toUInt8$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && thi$Hi != 0 && thi$Hi != -1
+                && (thi$Lo < 0L || thi$Lo > 255L)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int128 value " + $asBigInteger()
+            throw oob.$init(ctx, "Int128 value " + $toBigInteger(thi$Lo, thi$Hi)
                     + " is not a valid UInt8 value");
         }
-        return (byte) $lowValue & 0xFF;
+        return (byte) thi$Lo & 0xFF;
     }
 
     /**
@@ -283,14 +295,14 @@ public class Int128 extends IntNumber {
      *
      * @return this Int128 value as a Java {@code int}
      */
-    public int toUInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $highValue != 0 && $highValue != -1
-                && ($lowValue < 0 || $lowValue > 65535L)) {
+    public static int toUInt16$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && thi$Hi != 0 && thi$Hi != -1
+                && (thi$Lo < 0 || thi$Lo > 65535L)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int128 value " + $asBigInteger()
+            throw oob.$init(ctx, "Int128 value " + $toBigInteger(thi$Lo, thi$Hi)
                     + " is not a valid UInt16 value");
         }
-        return (int) $lowValue & 0xFFFF;
+        return (int) thi$Lo & 0xFFFF;
     }
 
     /**
@@ -303,14 +315,14 @@ public class Int128 extends IntNumber {
      *
      * @return this Int128 value as a Java {@code int}
      */
-    public int toUInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $highValue != 0 && $highValue != -1
-                && ($lowValue < 0L || $lowValue > 4294967295L)) {
+    public static int toUInt32$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && thi$Hi != 0 && thi$Hi != -1
+                && (thi$Lo < 0L || thi$Lo > 4294967295L)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int128 value " + $asBigInteger()
+            throw oob.$init(ctx, "Int128 value " + $toBigInteger(thi$Lo, thi$Hi)
                     + " is not a valid UInt32 value");
         }
-        return (int) $lowValue;
+        return (int) thi$Lo;
     }
 
     /**
@@ -323,14 +335,14 @@ public class Int128 extends IntNumber {
      *
      * @return this Int128 value as a Java long
      */
-    public long toUInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $highValue != 0 && $highValue != -1
-                && $lowValue < 0L) {
+    public static long toUInt64$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && thi$Hi != 0 && thi$Hi != -1
+                && thi$Lo < 0L) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int128 value " + $asBigInteger()
+            throw oob.$init(ctx, "Int128 value " + $toBigInteger(thi$Lo, thi$Hi)
                     + " is not a valid UInt64 value");
         }
-        return $lowValue;
+        return thi$Lo;
     }
 
     /**
@@ -343,15 +355,15 @@ public class Int128 extends IntNumber {
      *
      * @return this Int128 value as a UInt128
      */
-    public long toUInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $highValue < 0L) {
+    public static long toUInt128$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && thi$Hi < 0L) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int128 value " + $asBigInteger()
+            throw oob.$init(ctx, "Int128 value " + $toBigInteger(thi$Lo, thi$Hi)
                     + " is not a valid UInt128 value");
         }
         // load the high long value to the context and return the low value
-        ctx.i0 = $highValue;
-        return $lowValue;
+        ctx.i0 = thi$Hi;
+        return thi$Lo;
     }
 
     // ----- internal JIT support ------------------------------------------------------------------

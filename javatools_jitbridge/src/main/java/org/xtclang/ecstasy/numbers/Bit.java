@@ -31,12 +31,21 @@ public class Bit extends nConst {
         return String.of(ctx, Integer.toString($value));
     }
 
-    public long estimateStringLength$p(Ctx ctx) {
+    public static String toString$p(int thi$, Ctx ctx) {
+        return String.of(ctx, Integer.toString(thi$));
+    }
+
+    public static long estimateStringLength$p(int thi$, Ctx ctx) {
         return 1;
     }
 
     public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
         char c = $value == 0 ? '0' : '1';
+        return appender.add$p(ctx, c);
+    }
+
+    public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
+        char c = thi$ == 0 ? '0' : '1';
         return appender.add$p(ctx, c);
     }
 
@@ -71,8 +80,8 @@ public class Bit extends nConst {
      *
      * @return this Bit value as a Java {@code int}
      */
-    public int toBit$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toBit$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -85,8 +94,8 @@ public class Bit extends nConst {
      *
      * @return this Bit value as a Java {@code int}
      */
-    public int toInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toInt8$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -99,8 +108,8 @@ public class Bit extends nConst {
      *
      * @return this Bit value as a Java {@code int}
      */
-    public int toInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toInt16$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -113,8 +122,8 @@ public class Bit extends nConst {
      *
      * @return this Bit value as a Java {@code int}
      */
-    public int toInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toInt32$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -127,8 +136,8 @@ public class Bit extends nConst {
      *
      * @return this Bit value as a Java long
      */
-    public long toInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static long toInt64$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -141,9 +150,9 @@ public class Bit extends nConst {
      *
      * @return this Bit value as an Int128
      */
-    public long toInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public static long toInt128$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         ctx.i0 = 0L;
-        return $value & 0x1L;
+        return thi$ & 0x1L;
     }
 
     /**
@@ -156,8 +165,8 @@ public class Bit extends nConst {
      *
      * @return this Bit value as a Java {@code int}
      */
-    public int toUInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toUInt8$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -170,8 +179,8 @@ public class Bit extends nConst {
      *
      * @return this Bit value as a Java {@code int}
      */
-    public int toUInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toUInt16$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -184,8 +193,8 @@ public class Bit extends nConst {
      *
      * @return this Bit value as a Java {@code int}
      */
-    public int toUInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toUInt32$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -198,8 +207,8 @@ public class Bit extends nConst {
      *
      * @return this Bit value as a Java long
      */
-    public long toUInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static long toUInt64$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -212,9 +221,9 @@ public class Bit extends nConst {
      *
      * @return this Bit value as a UInt128
      */
-    public long toUInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public static long toUInt128$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         ctx.i0 = 0L;
-        return $value & 0x1L;
+        return thi$ & 0x1L;
     }
 
     // ----- debugging support ---------------------------------------------------------------------
