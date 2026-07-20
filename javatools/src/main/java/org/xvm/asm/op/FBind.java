@@ -365,8 +365,8 @@ public class FBind
 
         ClassDesc cdFn = bctx.builder.ensureClassDesc(typeFn);
         code.new_(cdFn)
-            .dup()
-            .aload(code.parameterSlot(0)); // ctx
+            .dup();
+        bctx.loadCtx(code);
         bctx.loadTypeConstant(code, typeFn);
         code.aload(slotStd)
             .aload(slotOpt)
