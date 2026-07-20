@@ -350,6 +350,7 @@ public abstract class OpInvocable extends Op {
     }
 
     protected int buildInvoke(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
+        // load the "this" (which can be the primitive form) onto the JVM stack
         RegisterInfo regTarget  = bctx.loadArgument(code, m_nTarget);
         ClassDesc    cdTarget   = regTarget.cd();
         TypeConstant typeTarget = regTarget.type();
@@ -375,11 +376,6 @@ public abstract class OpInvocable extends Op {
                 return -1;
             }
             throw new IllegalStateException("Union method target is not a union type: " + typeTarget);
-        }
-
-        if (regTarget.flavor().isOptimized) {
-            Builder.box(code, regTarget);
-            cdTarget = bctx.builder.ensureClassDesc(typeTarget);
         }
 
         buildSingleInvoke(bctx, code, cdTarget, typeTarget, infoTarget, infoMethod, anArgValue);
@@ -419,6 +415,9 @@ public abstract class OpInvocable extends Op {
             .pop();
     }
 
+    /**
+     * The "this" (which can be the primitive form) is already on the JVM stack.
+     */
     private void buildSingleInvoke(BuildContext bctx, CodeBuilder code, ClassDesc cdTarget,
                                    TypeConstant typeTarget, TypeInfo infoTarget, MethodInfo infoMethod,
                                    int[] anArgValue) {
@@ -441,6 +440,12 @@ public abstract class OpInvocable extends Op {
         JitMethodDesc jmd        = infoMethod.getJitDesc(bctx.builder, typeInvoke);
         String        methodName = infoMethod.ensureJitMethodName(bctx.typeSystem);
         boolean       fOptimized = jmd.isOptimized;
+        boolean       fPrimitive = cdTarget.isPrimitive();
+        if (!fPrimitive && jmd.isPrimitivized()) {
+            fOptimized = false;
+            jmd = jmd.deopt();
+        }
+
         int           cReturns   = infoMethod.getSignature().getReturnCount();
         boolean       fCond      = infoMethod.isConditionalReturn(infoTarget);
 
@@ -451,7 +456,7 @@ public abstract class OpInvocable extends Op {
 
         MethodTypeDesc md;
         if (fOptimized) {
-            md         = jmd.optimizedMD;
+            md          = jmd.optimizedMD;
             methodName += Builder.OPT;
         }
         else {
@@ -461,7 +466,10 @@ public abstract class OpInvocable extends Op {
         bctx.loadCtx(code);
         bctx.loadCallArguments(code, jmd, anArgValue);
 
-        if (infoTarget.getType().isJitInterface()) {
+        if (fPrimitive) {
+            cdInvoke = typeInvoke.ensureClassDesc(bctx.typeSystem);
+            code.invokestatic(cdInvoke, methodName, md);
+        } else if (infoTarget.getType().isJitInterface()) {
             code.invokeinterface(cdInvoke, methodName, md);
         } else {
             code.invokevirtual(cdInvoke, methodName, md);

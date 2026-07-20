@@ -256,8 +256,8 @@ public abstract class OpVar
                     MethodTypeDesc.of(CD_ArrayObj, CD_Ctx, CD_TypeConstant, CD_long, CD_boolean));
 
         for (int nArg : anArgValue) {
-            code.dup()
-                    .aload(code.parameterSlot(0));
+            code.dup();
+            bctx.loadCtx(code);
             bctx.loadArgument(code, nArg);
             code.invokevirtual(CD_ArrayObj, "add", MethodTypeDesc.of(CD_ArrayObj, CD_Ctx, CD_Object))
                     .pop();

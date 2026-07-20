@@ -81,6 +81,10 @@ public abstract class Builder {
         throw new UnsupportedOperationException();
     }
 
+    public boolean isPrimitive() {
+        return false;
+    }
+
     /**
      * Generate a "load" for the specified TypeConstant.
      * Out: TypeConstant on Java stack
@@ -1143,7 +1147,7 @@ public abstract class Builder {
         TypeConstant typeSansNull = type.removeNullable();
         ClassDesc[]  primitiveCds = typeSansNull.isXvmPrimitive()
                                     ? JitTypeDesc.getXvmPrimitiveClasses(typeSansNull)
-                                    : new ClassDesc[]{JitTypeDesc.getPrimitiveClass(typeSansNull)};
+                                    : new ClassDesc[]{JitTypeDesc.getJavaPrimitive(typeSansNull)};
 
         code.dup();
         Builder.loadNull(code);
@@ -1525,21 +1529,25 @@ public abstract class Builder {
     }
 
     /**
-     * Convert the "void construct$17(...)" to "This new$17(...)"
+     * Convert the "void construct$17(...)" specified by jmdCtor to a new MethodDesc for
+     * "This new$17(...)".
      */
-    public static JitMethodDesc convertConstructToNew(TypeInfo typeInfo, ClassDesc cd,
-                                                      JitCtorDesc jmdCtor) {
+    public static JitMethodDesc convertConstructToNew(
+            TypeInfo    typeInfo,
+            ClassDesc   cd,
+            JitCtorDesc jmdCtor) {
         JitParamDesc retDesc = new JitParamDesc(typeInfo.getType(), Specific, cd, 0, -1, false);
 
         JitParamDesc[] standardReturns  = new JitParamDesc[] {retDesc};
         JitParamDesc[] optimizedReturns = jmdCtor.isOptimized ? standardReturns : null;
         return typeInfo.hasGenericTypes()
-            ? new JitCtorDesc(null, /*addCtorCtx*/ false, /*addType*/ true,
+            ? new JitCtorDesc(typeInfo.getType(),
+                    /*add implicit CD_Target arg*/ null, /*addCtorCtx*/ false, /*addType*/ true,
                     standardReturns,  jmdCtor.standardParams,
                     optimizedReturns, jmdCtor.optimizedParams)
-            : new JitMethodDesc(
-                    standardReturns,  jmdCtor.standardParams,
-                    optimizedReturns, jmdCtor.optimizedParams);
+            : new JitMethodDesc(typeInfo.getType(),
+                    standardReturns, jmdCtor.standardParams,
+                    optimizedReturns, jmdCtor.optimizedParams, true);
     }
 
     /**

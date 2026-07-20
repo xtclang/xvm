@@ -331,7 +331,11 @@ public class TypeSystem {
                 ClassFile.DeadLabelsOption.DROP_DEAD_LABELS
             );
 
-            return classFile.build(ClassDesc.of(className), handler);
+            try {
+                return classFile.build(ClassDesc.of(className), handler);
+            } catch (RuntimeException e) {
+                throw new RuntimeException("Exception while compiling " + name, e);
+            }
         }
         return null;
     }

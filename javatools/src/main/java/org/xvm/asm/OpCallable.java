@@ -642,8 +642,8 @@ public abstract class OpCallable extends Op {
      * Build support for CALL_ ops.
      */
     protected int buildCall(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
-        TypeSystem ts = bctx.typeSystem;
-
+        TypeSystem    ts = bctx.typeSystem;
+        TypeConstant  typeTarget;
         ClassDesc     cdTarget;
         String        sJitName;
         JitMethodDesc jmdCall;
@@ -663,28 +663,31 @@ public abstract class OpCallable extends Op {
 
             if (format == Format.MIXIN) {
                 // we need to generate a synthetic super
-                cdTarget  = ClassDesc.of(bctx.className);
-                sJitName += HASH + String.valueOf(nDepth);
+                typeTarget = bctx.thisType;
+                cdTarget   = ClassDesc.of(bctx.className);
+                sJitName  += HASH + String.valueOf(nDepth);
 
                 bctx.buildSuper(sJitName, nDepth);
                 fInterface = false;
             } else {
-                TypeConstant typeCallee = bctx.isSpecialized
+                typeTarget = bctx.isSpecialized
                         ? idCallee.getFormalType().resolveGenerics(bctx.pool(), bctx.thisType)
                         : idCallee.getType();
-                cdTarget   = bctx.builder.ensureClassDesc(typeCallee);
-                fInterface = typeCallee.isJitInterface();
+                cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
+                fInterface = typeTarget.isJitInterface();
             }
             jmdCall  = bodySuper.getJitDesc(bctx.builder, bctx.thisType);
             fSpecial = true;
             fCond    = bodySuper.getMethodStructure().isConditionalReturn();
             code.aload(0); // super() can only be on "this"
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
-            MethodConstant   idMethod   = bctx.getConstant(m_nFunctionId, MethodConstant.class);
-            IdentityConstant idTarget   = idMethod.getClassIdentity();
-            TypeConstant     typeTarget = idTarget.getType();
-            TypeInfo         infoTarget = bctx.getTypeInfo(typeTarget);
-            MethodInfo       infoMethod = infoTarget.getMethodById(idMethod);
+            MethodConstant   idMethod = bctx.getConstant(m_nFunctionId, MethodConstant.class);
+            IdentityConstant idTarget = idMethod.getClassIdentity();
+
+            typeTarget = idTarget.getType();
+
+            TypeInfo   infoTarget = bctx.getTypeInfo(typeTarget);
+            MethodInfo infoMethod = infoTarget.getMethodById(idMethod);
 
             cdTarget   = bctx.builder.ensureClassDesc(idTarget.getType()); // function; no formal types applicable
             sJitName   = infoMethod.ensureJitMethodName(ts);
@@ -711,7 +714,7 @@ public abstract class OpCallable extends Op {
 
             fCond   = pool.isConditionalReturn(typeFn);
             jmdCall = JitMethodDesc.of(bctx.builder,
-                        atypeParams, atypeReturns, false, null, atypeParams.length);
+                    null, true, false, atypeParams, atypeReturns, atypeParams.length);
 
             if (jmdCall.isOptimized) {
                 code.getfield(CD_nFunction, "optMethod", CD_MethodHandle);

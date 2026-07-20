@@ -245,7 +245,6 @@ public class FBind
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-
         TypeSystem   ts     = bctx.typeSystem;
         ConstantPool pool   = ts.pool();
         RegisterInfo regFn  = bctx.ensureRegister(code, m_nFunctionId);
@@ -253,10 +252,9 @@ public class FBind
 
         assert typeFn.isFunction() && regFn.cd().equals(CD_nFunction);
 
-        JitMethodDesc jmdBefore = JitMethodDesc.of(bctx.builder,
-                pool.extractFunctionParams(typeFn),
-                pool.extractFunctionReturns(typeFn),
-                false, null, Integer.MAX_VALUE);
+        JitMethodDesc jmdBefore = JitMethodDesc.of(bctx.builder, typeFn, true, false,
+                pool.extractFunctionParams(typeFn), pool.extractFunctionReturns(typeFn),
+                Integer.MAX_VALUE);
 
         boolean fOptBefore = jmdBefore.isOptimized;
 
@@ -285,9 +283,9 @@ public class FBind
             typeFn = pool.bindFunctionParam(typeFn, nArgPos);
 
             JitMethodDesc jmdAfter = JitMethodDesc.of(bctx.builder,
-                    pool.extractFunctionParams(typeFn),
+                    null, true, false, pool.extractFunctionParams(typeFn),
                     pool.extractFunctionReturns(typeFn),
-                    false, null, Integer.MAX_VALUE);
+                    Integer.MAX_VALUE);
 
             boolean fOptAfter = jmdAfter.isOptimized;
 

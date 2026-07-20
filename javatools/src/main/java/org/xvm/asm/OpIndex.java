@@ -374,9 +374,9 @@ public abstract class OpIndex
                     bctx.builder.generateCheckCast(code, typeEl);
                 }
                 JitParams     params = JitParamDesc.computeJitParams(bctx.builder, typeEl);
-                JitMethodDesc jmd    = new JitMethodDesc(
-                    params.apdStdParam(), JitParamDesc.NONE,
-                    params.apdOptParam(), params.isOptimized() ? JitParamDesc.NONE : null);
+                JitMethodDesc jmd    = new JitMethodDesc(typeTarget, params.apdStdParam(),
+                        JitParamDesc.NONE, params.apdOptParam(),
+                        params.isOptimized() ? JitParamDesc.NONE : null, false);
 
                 bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue});
             }
@@ -491,7 +491,7 @@ public abstract class OpIndex
         ClassDesc[] cds;
         ClassDesc   cdEl;
         if (javaPrimitive) {
-            cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
+            cdEl = JitTypeDesc.getJavaPrimitive(typeEl);
             cds  = new ClassDesc[]{cdEl};
         } else {
             assert xvmPrimitive;

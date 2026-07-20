@@ -13,6 +13,8 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.util.List;
 
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
@@ -107,7 +109,7 @@ public class AugmentingBuilder extends CommonBuilder {
     protected void assembleInitializer(String className, ClassBuilder classBuilder,
                                        List<PropertyInfo> props) {
         MethodModel mm = findMethod(INIT_NAME, MD_xvmVoid);
-        if (mm == null) {
+        if (mm == null) { // TODO && !ENUM ?? or !isPrimitive ??
             super.assembleInitializer(className, classBuilder, props);
         }
     }
@@ -214,6 +216,18 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     // ----- helper methods ------------------------------------------------------------------------
+
+    @Override protected boolean shouldGenerate(IdentityConstant id) {
+        // we do not generate constructors for native enums
+        if (id instanceof MethodConstant methodId && methodId.isConstructor()) {
+            TypeConstant type = getThisType();
+            if (type.isEnum() || type.isEnumValue()) {
+                return false;
+            }
+        }
+
+        return super.shouldGenerate(id);
+    }
 
     @Override
     public ClassDesc ensureClassDesc(TypeConstant type) {

@@ -96,16 +96,18 @@ public class CommonBuilder
         this.jitType       = thisType.getCanonicalJitType();
         this.isSpecialized = jitType.isParamsSpecified() &&
                             !jitType.equals(classStruct.getCanonicalType());
+        this.isPrimitive   = type.isJitPrimitive();
     }
 
-    protected final ClassStructure   classStruct;
-    protected final TypeConstant     thisType;      // PRIVATE
-    protected final TypeInfo         typeInfo;      // PRIVATE
-    protected final TypeConstant     jitType;       // PUBLIC
-    protected final TypeInfo         structInfo;
-    protected final IdentityConstant thisId;
-    protected final boolean          isInterface;
-    protected final boolean          isSpecialized;
+    public final ClassStructure   classStruct;
+    public final TypeConstant     thisType;      // PRIVATE
+    public final TypeInfo         typeInfo;      // PRIVATE
+    public final TypeConstant     jitType;       // PUBLIC
+    public final TypeInfo         structInfo;
+    public final IdentityConstant thisId;
+    public final boolean          isInterface;
+    public final boolean          isSpecialized;
+    public final boolean          isPrimitive;
 
     /**
      * The shallow size of object in bytes.
@@ -171,6 +173,11 @@ public class CommonBuilder
     }
 
     @Override
+    public boolean isPrimitive() {
+        return isPrimitive;
+    }
+
+    @Override
     protected void loadTypeConstant(CodeBuilder code, String className, TypeConstant type) {
         Map<TypeConstant, Integer> types =
             typeConstants.computeIfAbsent(className, _ -> new HashMap<>());
@@ -228,7 +235,7 @@ public class CommonBuilder
         }
         TypeConstant type = prop.getType();
         ClassDesc    cd   = type.isJavaPrimitive()
-                ? JitTypeDesc.getPrimitiveClass(type)
+                ? JitTypeDesc.getJavaPrimitive(type)
                 : null;
 
         return cd == null
@@ -622,7 +629,7 @@ public class CommonBuilder
                         // must be setting a primitive to Null
                         assert reg.type().isOnlyNullable();
                         code.pop();
-                        ClassDesc cd = JitTypeDesc.getPrimitiveClass(baseType);
+                        ClassDesc cd = JitTypeDesc.getJavaPrimitive(baseType);
                         Builder.defaultLoad(code, cd);
                         code.putfield(CD_this, jitName, cd)
                             .aload(0)
@@ -700,16 +707,16 @@ public class CommonBuilder
             } else if (prop.isAbstract()) {
                 assemblePropertyGetter(className, classBuilder, prop);
             }
-        } else if (prop.getHead().hasGetter()) {
+        } else if (prop.getHead().hasGetter()) { // TODO GG note that there is a "default" PropertyInfo on Boolean but we don't create anything for it here
             switch (getterInfo.getHead().getImplementation()) {
-                case Field:
-                    generateTrivialGetter(className, classBuilder, prop);
-                    break;
-                case Explicit, Default:
-                    assemblePropertyGetter(className, classBuilder, prop);
-                    break;
-                }
+            case Field:
+                generateTrivialGetter(className, classBuilder, prop);
+                break;
+            case Explicit, Default:
+                assemblePropertyGetter(className, classBuilder, prop);
+                break;
             }
+        }
 
         MethodInfo setterInfo = typeInfo.getMethodById(prop.getSetterId());
         if (setterInfo == null) {
@@ -832,8 +839,8 @@ public class CommonBuilder
 
         if (isOpt) {
             // generate a wrapper
-            assembleMethodWrapper(className, classBuilder, jitGetterName, jmd,
-                    prop.isConstant());
+            assembleMethodWrapper(className, classBuilder, jitGetterName, jmd
+                                 );
         }
     }
 
@@ -948,8 +955,8 @@ public class CommonBuilder
 
         if (isOpt) {
             // generate a wrapper
-            assembleMethodWrapper(className, classBuilder, jitSetterName, jmd,
-                    prop.isConstant());
+            assembleMethodWrapper(className, classBuilder, jitSetterName, jmd
+                                 );
         }
     }
 
@@ -1040,7 +1047,7 @@ public class CommonBuilder
 
         if (isOpt) {
             // generate a wrapper
-            assembleMethodWrapper(className, classBuilder, jitGetterName, jmd, false);
+            assembleMethodWrapper(className, classBuilder, jitGetterName, jmd);
         }
     }
 
@@ -1140,14 +1147,8 @@ public class CommonBuilder
             assert propDelegate != null;
             assemblePropertyDelegation(className, classBuilder, method, propDelegate);
         } else {
-            String jitName = method.ensureJitMethodName(typeSystem);
-
-            // TODO REMOVE: temporary compensation for duplicates in the TypeInfo
-            if (!methodNames.add(jitName)) {
-                return;
-            }
-
-            JitMethodDesc jmDesc = method.getJitDesc(this);
+            String        jitName = method.ensureJitMethodName(typeSystem);
+            JitMethodDesc jmDesc  = method.getJitDesc(this);
             assembleMethod(className, classBuilder, method, jitName, jmDesc);
 
             if (method.isCtorOrValidator() && !typeInfo.isAbstract()) {
@@ -1163,33 +1164,32 @@ public class CommonBuilder
      * Assemble a "standard" wrapper method for the optimized method.
      */
     protected void assembleMethodWrapper(String className, ClassBuilder classBuilder,
-                                         String jitName, JitMethodDesc jmDesc, boolean isStatic) {
+                                         String jitName, JitMethodDesc jmd) {
         ClassDesc CD_this = ClassDesc.of(className);
 
         // this method is "standard" and needs to call into the optimized one
         int flags = ClassFile.ACC_PUBLIC;
-        if (isStatic) {
+        if (jmd.isStandardStatic) {
             flags |= ClassFile.ACC_STATIC;
         }
 
-        classBuilder.withMethodBody(jitName, jmDesc.standardMD, flags, code -> {
+        classBuilder.withMethodBody(jitName, jmd.standardMD, flags, code -> {
 
-            if (!isStatic) {
+            if (!jmd.isStandardStatic) {
                 code.aload(0); // stack: this
             }
 
-            int extraCount = jmDesc.getImplicitParamCount();
+            int extraCount = jmd.getImplicitParamCount();
             for (int i = 0; i < extraCount; i++) {
                 code.aload(code.parameterSlot(i));
             }
 
-            JitParamDesc[] optParams = jmDesc.optimizedParams;
+            JitParamDesc[] optParams = jmd.optimizedParams;
             for (int i = 0, c = optParams.length; i < c; i++) {
                 JitParamDesc optParamDesc = optParams[i];
-                int          stdParamIx   = optParamDesc.index;
-                int          stdParamSlot = code.parameterSlot(extraCount + stdParamIx);
                 TypeConstant stdParamType = optParamDesc.type;
-
+                int          stdParamIx   = optParamDesc.index;
+                int          stdParamSlot = stdParamIx == -1 ? 0 : code.parameterSlot(extraCount + stdParamIx);
                 switch (optParamDesc.flavor) {
                     case Specific, Widened:
                         code.aload(stdParamSlot);
@@ -1415,15 +1415,17 @@ public class CommonBuilder
                 }
             }
 
-            if (isStatic) {
-                code.invokestatic(CD_this, jitName+OPT, jmDesc.optimizedMD);
+            // for primitive classes e.g. Int64, the "this" is actually a Java primitive, and thus
+            // the "method" is not a method at all, but a function
+            if (jmd.isOptimizedStatic) {
+                code.invokestatic(CD_this, jitName+OPT, jmd.optimizedMD);
             } else {
-                code.invokevirtual(CD_this, jitName+OPT, jmDesc.optimizedMD);
+                code.invokevirtual(CD_this, jitName+OPT, jmd.optimizedMD);
             }
 
-            JitParamDesc[] optReturns     = jmDesc.optimizedReturns;
+            JitParamDesc[] optReturns     = jmd.optimizedReturns;
             int            optReturnCount = optReturns.length;
-            JitParamDesc[] stdReturns     = jmDesc.standardReturns;
+            JitParamDesc[] stdReturns     = jmd.standardReturns;
             int            stdReturnCount = stdReturns.length;
             if (optReturnCount == 0) {
                 code.return_();
@@ -1513,7 +1515,8 @@ public class CommonBuilder
                 }
 
                 case XvmPrimitive: {
-                    int[] optIndexes = jmDesc.getAllOptimizedReturnIndexes(optDesc.index);
+                    assert optDesc.index != -1; // TODO CP -1 == thi$
+                    int[] optIndexes = jmd.getAllOptimizedReturnIndexes(optDesc.index);
                     optIx -= optIndexes.length - 1; // skip the Opt returns we will process
                     idx =  optDesc.index == 0 ? 1 : 0;
                     for (; idx < optIndexes.length; idx++) {
@@ -1536,7 +1539,8 @@ public class CommonBuilder
                     Label ifNull = code.newLabel();
                     Label endIf  = code.newLabel();
 
-                    int[] optIndexes = jmDesc.getAllOptimizedReturnIndexes(optDesc.index);
+                    assert optDesc.index != -1; // TODO CP -1 == thi$
+                    int[] optIndexes = jmd.getAllOptimizedReturnIndexes(optDesc.index);
                     optIx -= optIndexes.length - 2; // skip the Opt returns we will process
                     optExt = optReturns[optIndexes[optIndexes.length - 1]];
                     loadFromContext(code, CD_boolean, optExt.altIndex);
@@ -1781,7 +1785,7 @@ public class CommonBuilder
                 code.aload(value2Slot);
                 loadProperty(code, type, propId, true);
 
-                ClassDesc cdPrim = JitTypeDesc.getPrimitiveClass(propType);
+                ClassDesc cdPrim = JitTypeDesc.getJavaPrimitive(propType);
                 assert cdPrim != null;
                 switch (cdPrim.descriptorString()) {
                     case "I", "S", "B", "Z":
@@ -2001,7 +2005,7 @@ public class CommonBuilder
             code.labelBinding(checkProp);
             if (propType.isJavaPrimitive()) {
                 // Java primitive: load both values, compare directly, convert int to Ordered
-                ClassDesc cdPrim = JitTypeDesc.getPrimitiveClass(propType);
+                ClassDesc cdPrim = JitTypeDesc.getJavaPrimitive(propType);
                 assert cdPrim != null;
 
                 code.aload(value1Slot);
@@ -2742,7 +2746,7 @@ public class CommonBuilder
             System.arraycopy(cds, 0, cdParams, 0, cds.length);
             System.arraycopy(cds, 0, cdParams, cds.length, cds.length);
         } else {
-            ClassDesc cd = JitTypeDesc.getPrimitiveClass(type);
+            ClassDesc cd = JitTypeDesc.getJavaPrimitive(type);
             cdParams = new ClassDesc[]{cd, cd};
         }
         return cdParams;
@@ -2881,6 +2885,7 @@ public class CommonBuilder
             JitParamDesc[] dstParams = jmdDst.standardParams;
             for (int i = 0, c = srcParams.length; i < c; i++) {
                 JitParamDesc srcPd        = srcParams[i];
+                assert srcPd.index != -1; // TODO CP -1 == thi$
                 int          srcParamSlot = code.parameterSlot(extraCount + srcPd.index);
                 TypeConstant srcParamType = srcPd.type;
                 JitParamDesc dstPd        = dstParams[i];
@@ -2932,6 +2937,7 @@ public class CommonBuilder
             JitParamDesc[] dstParams = jmdDst.optimizedParams;
             for (int i = 0, c = srcParams.length; i < c; i++) {
                 JitParamDesc srcPd     = srcParams[i];
+                assert srcPd.index != -1; // TODO CP -1 == thi$
                 int          srcSlot   = code.parameterSlot(extraCount + srcPd.index);
                 TypeConstant srcType   = srcPd.type;
                 JitParamDesc dstPd     = dstParams[i];
@@ -3039,6 +3045,7 @@ public class CommonBuilder
                         int     index    = doReturn ? i + 1 : i;
                         while (index < dstReturns.length
                                && dstReturns[index].index == dstPd.index) {
+                            assert dstPd.index != -1; // TODO CP -1 == thi$
                             loadFromContext(code, dstReturns[index].cd,
                                     dstReturns[index].altIndex);
                             index++;
@@ -3109,6 +3116,7 @@ public class CommonBuilder
             code.aload(code.parameterSlot(0)); // ctx
 
             for (JitParamDesc pd : params) {
+                assert pd.index != -1; // TODO CP -1 == thi$
                 Builder.load(code, pd.cd, code.parameterSlot(extraCount + pd.index));
             }
 
@@ -3264,7 +3272,7 @@ public class CommonBuilder
 
         MethodTypeDesc md;
         if (jmd.isOptimized) {
-            assembleMethodWrapper(className, classBuilder, jitName, jmd, true);
+            assembleMethodWrapper(className, classBuilder, jitName, jmd);
             jitName += OPT;
             md = jmd.optimizedMD;
         } else {
@@ -3409,8 +3417,8 @@ public class CommonBuilder
         }
 
         MethodTypeDesc md;
-        if (jmd.isOptimized) {
-            assembleMethodWrapper(className, classBuilder, jitName, jmd, method.isFunction());
+        if (jmd.isOptimized || isPrimitive) {
+            assembleMethodWrapper(className, classBuilder, jitName, jmd);
             jitName += OPT;
             md = jmd.optimizedMD;
         } else {
@@ -3423,6 +3431,9 @@ public class CommonBuilder
                 return;
             }
 
+            flags |= ClassFile.ACC_STATIC;
+        } else if (isPrimitive) {
+            // a primitive class generates functions not methods, because "this" is primitive
             flags |= ClassFile.ACC_STATIC;
         }
 
@@ -3441,7 +3452,7 @@ public class CommonBuilder
                 MethodTypeDesc mdNext   = isOpt ? jmdNext.optimizedMD : jmdNext.standardMD;
                 String         nameNext = bctxNext.methodJitName;
                 if (isOpt) {
-                    assembleMethodWrapper(className, classBuilder, nameNext, jmdNext, fStatic);
+                    assembleMethodWrapper(className, classBuilder, nameNext, jmdNext);
                     nameNext += OPT;
                 }
 
@@ -3504,7 +3515,7 @@ public class CommonBuilder
      * @return true iff the code for the specified method or property accessors should be generated
      *         inside this class
      */
-    private boolean shouldGenerate(IdentityConstant id) {
+    protected boolean shouldGenerate(IdentityConstant id) {
         IdentityConstant containerId = id.getNamespace();
         if (containerId.equals(thisId)) {
             return true;

@@ -41,7 +41,7 @@ public class JitTypeDesc {
      */
     public static ClassDesc getJitClass(Builder builder, TypeConstant type) {
         return type.isJavaPrimitive()
-            ? JitParamDesc.getPrimitiveClass(type)
+            ? JitParamDesc.getJavaPrimitive(type)
             : type.isSingleUnderlyingClass(true)
                 ? builder.ensureClassDesc(type)
                 : CD_Object;
@@ -51,7 +51,7 @@ public class JitTypeDesc {
      * @return the primitive ClassDesc if the specified type is optimizable to a primitive Java
      *         class; null otherwise
      */
-    public static ClassDesc getPrimitiveClass(TypeConstant type) {
+    public static ClassDesc getJavaPrimitive(TypeConstant type) {
         if (type.isJavaPrimitive()) {
             return switch (type.getSingleUnderlyingClass(false).getName()) {
                 case "Bit", "Nibble", "Char", "Byte",
@@ -78,7 +78,7 @@ public class JitTypeDesc {
      */
     public static ClassDesc getNullablePrimitiveClass(TypeConstant type) {
         return type.isNullable()
-            ? getPrimitiveClass(type.removeNullable())
+            ? getJavaPrimitive(type.removeNullable())
             : null;
     }
 
@@ -123,7 +123,7 @@ public class JitTypeDesc {
                 case "Dec64" -> CDs_Long;
                 case "Dec128", "Int128", "UInt128" -> CDs_LongLong;
                 default        -> {
-                    ClassDesc cd = getPrimitiveClass(baseType);
+                    ClassDesc cd = getJavaPrimitive(baseType);
                     if (cd == null) {
                         throw new IllegalArgumentException("Unsupported primitive: " + baseType);
                     }

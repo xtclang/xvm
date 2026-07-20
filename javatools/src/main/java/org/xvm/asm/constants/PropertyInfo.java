@@ -1434,11 +1434,10 @@ public class PropertyInfo
     public JitMethodDesc getGetterJitDesc(Builder builder) {
         JitMethodDesc jmd = m_jmdGetter;
         if (jmd == null) {
-            JitParams params = JitParamDesc.computeJitParams(builder, getType());
-
-            m_jmdGetter = jmd = new JitMethodDesc(
-                    params.apdStdParam(), JitParamDesc.NONE,
-                    params.apdOptParam(), params.isOptimized() ? JitParamDesc.NONE : null);
+            JitParams    params     = JitParamDesc.computeJitParams(builder, getType());
+            TypeConstant typeTarget = getIdentity().getClassIdentity().getType();
+            m_jmdGetter = jmd = new JitMethodDesc(typeTarget, params.apdStdParam(), JitParamDesc.NONE,
+                    params.apdOptParam(), params.isOptimized() ? JitParamDesc.NONE : null, this.isConstant());
         }
         return jmd;
     }
@@ -1449,11 +1448,10 @@ public class PropertyInfo
     public JitMethodDesc getSetterJitDesc(Builder builder) {
         JitMethodDesc jmd = m_jmdSetter;
         if (jmd == null) {
-            JitParams params = JitParamDesc.computeJitParams(builder, getType());
-
-            m_jmdSetter = jmd = new JitMethodDesc(
-                JitParamDesc.NONE,                               params.apdStdParam(),
-                params.isOptimized() ? JitParamDesc.NONE : null, params.apdOptParam());
+            JitParams    params     = JitParamDesc.computeJitParams(builder, getType());
+            TypeConstant typeTarget = getIdentity().getClassIdentity().getType();
+            m_jmdSetter = jmd = new JitMethodDesc(typeTarget, JitParamDesc.NONE, params.apdStdParam(),
+                    params.isOptimized() ? JitParamDesc.NONE : null, params.apdOptParam(), this.isConstant());
         }
         return jmd;
     }

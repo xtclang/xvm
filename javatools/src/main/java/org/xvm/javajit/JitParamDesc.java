@@ -27,7 +27,8 @@ public class JitParamDesc extends JitTypeDesc {
     }
 
     public final int index;         // for both parameter and return: the corresponding index in the
-                                    // Ecstasy method signature
+                                    // Ecstasy method signature; -1 indicates a "this" parameter
+                                    // converted to one or more primitive types ("jit primitive")
     public final int altIndex;      // for parameter: the corresponding index in the Java method;
                                     // for return: an index of the "long" or "Object" return value
                                     // in the Ctx object; -1 indicates a natural return
@@ -53,7 +54,7 @@ public class JitParamDesc extends JitTypeDesc {
         JitParamDesc[] apdStdParam;
         ClassDesc      cd;
 
-        if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
+        if ((cd = JitTypeDesc.getJavaPrimitive(type)) != null) {
             ClassDesc cdStd = builder.ensureClassDesc(type);
 
             apdStdParam = new JitParamDesc[] {

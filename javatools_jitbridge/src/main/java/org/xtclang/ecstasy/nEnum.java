@@ -29,10 +29,20 @@ public abstract class nEnum
     abstract public String name$get(Ctx ctx);
     abstract public long ordinal$get$p(Ctx ctx);
 
+    /**
+     * Note: While this follows the general pattern of equals() functions, it does not exist in
+     * the "Enum.x" source file. This implementation requires that the caller is certain that the
+     * two enum values are members of the same enumeration.
+     */
     static public boolean equals$p(Ctx ctx, nType CompileType, nEnum o1, nEnum o2) {
         return o1.ordinal$get$p(ctx) == o2.ordinal$get$p(ctx);
     }
 
+    /**
+     * Note: While this follows the general pattern of compare() functions, it does not exist in
+     * the "Enum.x" source file. This implementation requires that the caller is certain that the
+     * two enum values are members of the same enumeration.
+     */
     static public long compare$p(Ctx ctx, nType CompileType, nEnum o1, nEnum o2) {
         return o1.ordinal$get$p(ctx) - o2.ordinal$get$p(ctx);
     }

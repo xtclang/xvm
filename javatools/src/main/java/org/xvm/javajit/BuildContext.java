@@ -135,8 +135,12 @@ public class BuildContext {
     /**
      * Construct {@link BuildContext} for a property accessor.
      */
-    public BuildContext(Builder builder, String className, TypeInfo typeInfo, PropertyInfo propInfo,
-                        boolean isGetter) {
+    public BuildContext(
+            Builder      builder,
+            String       className,
+            TypeInfo     typeInfo,
+            PropertyInfo propInfo,
+            boolean      isGetter) {
         this.builder       = builder;
         this.typeSystem    = builder.typeSystem;
         this.className     = className;
@@ -672,8 +676,9 @@ public class BuildContext {
             code.localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, scope.startLabel, scope.endLabel);
         }
 
-        int          extraArgs = methodDesc.getImplicitParamCount(); // account for $ctx, $cctx, thi$
-        ClassDesc    CD_this   = builder.ensureClassDesc(thisType);
+        int            extraArgs  = methodDesc.getImplicitParamCount(); // e.g. $ctx, $cctx, thi$, ...
+        ClassDesc      CD_this    = builder.ensureClassDesc(thisType);
+        JitParamDesc[] params     = isOptimized ? methodDesc.optimizedParams : methodDesc.standardParams;
         if (isConstructor) {
             TypeConstant structType = thisType.ensureAccess(Access.STRUCT);
             registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, extraArgs-1, Specific, structType,
@@ -681,20 +686,32 @@ public class BuildContext {
             typeMatrix.declare(-1, Op.A_THIS, structType);
         } else if (isFunction) {
             typeMatrix.ensureMutableView(0);
-        } else {
+        } else if (!thisType.isJitPrimitive()) {
             registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, 0, Specific, thisType,
-                CD_this, "this$"));
+                CD_this, "thi$"));
             typeMatrix.declare(-1, Op.A_THIS, thisType);
         }
 
-        JitParamDesc[] params = isOptimized ? methodDesc.optimizedParams : methodDesc.standardParams;
         for (int i = 0, c = params.length; i < c; i++) {
             JitParamDesc paramDesc = params[i];
             int          varIndex  = paramDesc.index;
-            Parameter    param     = methodStruct.getParam(varIndex);
-            String       name      = param.getName();
-            TypeConstant type      = resolveSpecialized(param.getType());
-            int          slot      = code.parameterSlot(extraArgs + i); // compensate for implicits
+            Parameter    param;
+            String       name;
+            TypeConstant type;
+            int          slot;
+            if (varIndex == -1) {
+                // primitive "thi$"
+                varIndex = Op.A_THIS;
+                param    = null;        // not used by Primitive or XvmPrimitive flavors
+                name     = "thi$";
+                type     = thisType;
+                slot     = 0;           // static method takes a first param of primitive "thi$"
+            } else {
+                param     = methodStruct.getParam(varIndex);
+                name      = param.getName();
+                type      = resolveSpecialized(param.getType());
+                slot      = code.parameterSlot(extraArgs + i); // compensate for implicits
+            }
 
             if (debugInfo) {
                 code.localVariable(slot, name, paramDesc.cd, scope.startLabel, scope.endLabel);
@@ -1762,12 +1779,16 @@ public class BuildContext {
     }
 
     /**
-     * Load arguments for a method invocation.
+     * Load arguments (not including `this` or `thi$` or any implicit parameters such as Ctx) for a
+     * method invocation.
      *
      * @param typeTarget if not null, the call represents a "new" call for the specified target
      */
-    public void loadCallArguments(CodeBuilder code, JitMethodDesc jmd, int[] anArgValue,
-                                  TypeConstant typeTarget) {
+    public void loadCallArguments(
+            CodeBuilder   code,
+            JitMethodDesc jmd,
+            int[]         anArgValue,
+            TypeConstant  typeTarget) {
         boolean isOptimized = jmd.isOptimized;
         int     argCount    = anArgValue.length;
 
@@ -1883,6 +1904,7 @@ public class BuildContext {
                  "Specific->NullableXvmPrimitiveWithDefault": {
                 assert srcReg.type().isOnlyNullable();
                 code.pop(); // throw away Null; load the default primitive values and "true"
+                assert pd.index != -1; // TODO CP -1 == thi$
                 int[] anIndexes = jmd.getAllOptimizedParams(pd.index);
                 // the last opt arg will be the boolean flag, fill the others with the default
                 for (int nIndex = 0; nIndex < anIndexes.length - 1; nIndex++) {
