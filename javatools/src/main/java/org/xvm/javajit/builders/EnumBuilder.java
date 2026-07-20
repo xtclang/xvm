@@ -101,7 +101,7 @@ public class EnumBuilder extends CommonBuilder {
      *    "public boolean equals$p(Ctx ctx, nType CompileType, [EnumType] o1, {EnumType} o2)"
      */
     private static void assembleEquals(CodeBuilder code) {
-        // all we need is to call the equivalent function on xEnum
+        // all we need is to call the equivalent function on nEnum
         code.aload(0)
             .aload(1)
             .aload(2)
