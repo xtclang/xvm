@@ -33,18 +33,73 @@ import static org.xvm.javajit.JitFlavor.XvmPrimitiveWithDefault;
  * JIT specific information for a method.
  */
 public class JitMethodDesc {
-    public JitMethodDesc(JitParamDesc[] standardReturns,  JitParamDesc[] standardParams,
-                         JitParamDesc[] optimizedReturns, JitParamDesc[] optimizedParams) {
-        this.standardReturns  = standardReturns;
-        this.standardParams   = standardParams;
-        this.optimizedReturns = optimizedReturns;
-        this.optimizedParams  = optimizedParams;
+    public JitMethodDesc(
+            TypeConstant   typeTarget,
+            JitParamDesc[] standardReturns,
+            JitParamDesc[] standardParams,
+            JitParamDesc[] optimizedReturns,
+            JitParamDesc[] optimizedParams,
+            boolean        isStatic) {
+        this.typeTarget        = typeTarget;
+        this.standardReturns   = standardReturns;
+        this.standardParams    = standardParams;
+        this.optimizedReturns  = optimizedReturns;
+        this.optimizedParams   = optimizedParams;
+        this.isOptimized       = optimizedParams != null && optimizedReturns != null;
+        this.isStandardStatic  = isStatic;
+        this.isOptimizedStatic = isOptimized && (isStatic || typeTarget != null && typeTarget.isJavaPrimitive());
+        this.standardMD        = computeMethodDesc(standardReturns, standardParams);
+        this.optimizedMD       = isOptimized
+                ? computeMethodDesc(optimizedReturns, optimizedParams)
+                : null;
+    }
 
-        isOptimized = optimizedParams != null && optimizedReturns != null;
-        standardMD  = computeMethodDesc(standardReturns, standardParams);
-        optimizedMD = isOptimized
-            ? computeMethodDesc(optimizedReturns, optimizedParams)
-            : null;
+    public final TypeConstant   typeTarget;
+    public final JitParamDesc[] standardReturns;
+    public final JitParamDesc[] standardParams;
+    public final JitParamDesc[] optimizedReturns;
+    public final JitParamDesc[] optimizedParams;
+
+    public final boolean isOptimized;
+    public final boolean isStandardStatic;
+    public final boolean isOptimizedStatic;
+    public final MethodTypeDesc standardMD;  // the generic "xObj" flavor
+    public final MethodTypeDesc optimizedMD; // (optional) optimized primitive
+
+    public boolean isPrimitivized() {
+        return !isStandardStatic && isOptimizedStatic;
+    }
+
+    public JitMethodDesc deopt() {
+        return isOptimized
+                ? new JitMethodDesc(typeTarget, standardReturns, standardParams, null, null, isStandardStatic)
+                : this;
+    }
+    /**
+     * @return the index of the Ctx in the JVM parameters for the non-optimized signature; currently
+     *         the index is always 0
+     */
+    public int standardCtx() {
+        return 0;
+    }
+
+    /**
+     * @return the index of the Ctx in the JVM parameters for the optimized signature; the index is
+     *         non-zero for "primitivized" methods, i.e. for all methods on "JitPrimitive" classes
+     */
+    public int optimizedCtx() {
+        if (!isOptimized || !isPrimitivized()) {
+            return 0;
+        }
+
+        // skip over the primitive thi$
+        var params = optimizedParams;
+        int ix     = 0;
+        int cx     = params.length;
+        while (ix < cx && params[ix].index < 0) {
+            ++ix;
+        }
+        return ix;
     }
 
     /**
@@ -124,12 +179,19 @@ public class JitMethodDesc {
         int         paramCount = params.length;
         ClassDesc[] paramCDs   = new ClassDesc[extraCount + paramCount];
 
-        fillExtraClassDesc(paramCDs);
+        int ix     = 0;
+        int iFirst = 0;
+        if (paramCount > 0 && params[0].index < 0) {
+            paramCDs[ix++] = params[0].cd;
+            iFirst = 1;
+        }
 
-        for (int i = 0; i < paramCount; i++)
-            {
-            paramCDs[extraCount + i] = params[i].cd;
-            }
+        ix = fillExtraClassDesc(paramCDs, ix);
+
+        for (int i = iFirst; i < paramCount; i++) {
+            paramCDs[ix++] = params[i].cd;
+        }
+
         return MethodTypeDesc.of(returns.length == 0 ? CD_void : returns[0].cd, paramCDs);
         }
 
@@ -137,42 +199,61 @@ public class JitMethodDesc {
      * @return the number of extra parameters
      */
     public int getImplicitParamCount() {
-        return 1;
+        return 1; // Ctx
     }
 
     /**
+     * @param ix  the index to place the next argument
      * @return the number of added arguments
      */
-    protected int fillExtraClassDesc(ClassDesc[] paramCDs) {
-        // the argument zero is **always** the Ctx
-        paramCDs[0] = CD_Ctx;
-        return 1;
+    protected int fillExtraClassDesc(ClassDesc[] paramCDs, int ix) {
+        paramCDs[ix++] = CD_Ctx;
+        return ix;
     }
 
     /**
-     * @param cdContainer the container class; used only for constructors
+     *
+     * @param builder        the Builder that is creating a call to the specified target
+     * @param typeTarget     the target type on which the method if located (may be null in the case
+     *                       of a function that exists only at runtime)
+     * @param isStatic       true iff the method is static (function, constructor, etc.)
+     * @param isConstructor  true iff the method is a constructor
+     * @param paramTypes
+     * @param returnTypes
+     * @param reqParamCount
      *
      * @return the JitMethodDesc for the method associated with this signature for the specified
      *         container
      */
-    public static JitMethodDesc of(Builder builder,
-                                   TypeConstant[] paramTypes, TypeConstant[] returnTypes,
-                                   boolean isConstructor, ClassDesc cdContainer, int reqParamCount) {
+    public static JitMethodDesc of(
+            Builder        builder,
+            TypeConstant   typeTarget,
+            boolean        isStatic,
+            boolean        isConstructor,
+            TypeConstant[] paramTypes,
+            TypeConstant[] returnTypes,
+            int            reqParamCount) {
+        assert builder != null;
+        // methods and constructors requires a target type
+        assert (!isConstructor && isStatic) || typeTarget != null;
+
         ConstantPool       pool         = builder.typeSystem.pool();
         List<JitParamDesc> stdParamList = new ArrayList<>();
         List<JitParamDesc> optParamList = new ArrayList<>();
-        boolean            isOptimized  = false;
+        boolean            isPrimitive  = !isStatic && typeTarget.isJitPrimitive();
+        boolean            isOptimized  = isPrimitive;
 
-        for (int iOrig = 0, iStd = 0, iOpt = 0, cOrig = paramTypes.length; iOrig < cOrig; iOrig++) {
-            TypeConstant type  = paramTypes[iOrig];
+        for (int iOrig = isPrimitive ? -1 : 0, iStd = 0, iOpt = 0, cOrig = paramTypes.length; iOrig < cOrig; iOrig++) {
+            TypeConstant type  = iOrig >= 0 ? paramTypes[iOrig] : typeTarget;
             boolean      fDflt = iOrig >= reqParamCount;
-            ClassDesc cd;
-
-            if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
-                JitFlavor stdFlavor = fDflt ? SpecificWithDefault : Specific;
-                ClassDesc cdStd     = builder.ensureClassDesc(type);
-
-                stdParamList.add(new JitParamDesc(type, stdFlavor, cdStd, iOrig, iStd++, false));
+            ClassDesc    cd;
+// for -1 don't add to std
+            if ((cd = JitTypeDesc.getJavaPrimitive(type)) != null) {
+                if (iOrig >= 0) {
+                    JitFlavor stdFlavor = fDflt ? SpecificWithDefault : Specific;
+                    ClassDesc cdStd     = builder.ensureClassDesc(type);
+                    stdParamList.add(new JitParamDesc(type, stdFlavor, cdStd, iOrig, iStd++, false));
+                }
 
                 isOptimized = true;
                 if (fDflt) {
@@ -186,9 +267,11 @@ public class JitMethodDesc {
             } else if ((cd = JitTypeDesc.getNullablePrimitiveClass(type)) != null) {
                 assert type.isNullable();
 
-                JitFlavor stdFlavor = fDflt ? WidenedWithDefault : Widened;
-                stdParamList.add(
-                    new JitParamDesc(type, stdFlavor, CD_nObj, iOrig, iStd++, false));
+                if (iOrig >= 0) {
+                    JitFlavor stdFlavor = fDflt ? WidenedWithDefault : Widened;
+                    stdParamList.add(
+                            new JitParamDesc(type, stdFlavor, CD_nObj, iOrig, iStd++, false));
+                }
 
                 isOptimized = true;
                 if (fDflt) {
@@ -203,17 +286,17 @@ public class JitMethodDesc {
                         new JitParamDesc(type, NullablePrimitive, CD_boolean, iOrig, iOpt++, true));
                 }
             } else if ((cd = JitTypeDesc.getXvmPrimitiveClass(type)) != null) {
-                JitFlavor stdFlavor = fDflt ? SpecificWithDefault : Specific;
-                stdParamList.add(
-                        new JitParamDesc(type, stdFlavor, cd, iOrig, iStd++, false));
+                if (iOrig >= 0) {
+                    JitFlavor stdFlavor = fDflt ? SpecificWithDefault : Specific;
+                    stdParamList.add(
+                            new JitParamDesc(type, stdFlavor, cd, iOrig, iStd++, false));
+                }
 
                 isOptimized = true;
-
                 JitFlavor optFlavor = fDflt ? XvmPrimitiveWithDefault : XvmPrimitive;
                 for (ClassDesc cdArg : JitTypeDesc.getXvmPrimitiveClasses(type)) {
                     optParamList.add(new JitParamDesc(type, optFlavor, cdArg, iOrig, iOpt++, false));
                 }
-
                 if (fDflt) {
                     optParamList.add(
                             new JitParamDesc(type, optFlavor, CD_boolean, iOrig, iOpt++, true));
@@ -221,17 +304,17 @@ public class JitMethodDesc {
             } else if ((cd = JitTypeDesc.getNullableXvmPrimitiveClass(type)) != null) {
                 assert type.isNullable();
 
-                JitFlavor stdFlavor = fDflt ? WidenedWithDefault : Widened;
-                stdParamList.add(
-                        new JitParamDesc(type, stdFlavor, CD_nObj, iOrig, iStd++, false));
+                if (iOrig >= 0) {
+                    JitFlavor stdFlavor = fDflt ? WidenedWithDefault : Widened;
+                    stdParamList.add(
+                            new JitParamDesc(type, stdFlavor, CD_nObj, iOrig, iStd++, false));
+                }
 
                 isOptimized = true;
-
                 JitFlavor optFlavor = fDflt ? NullableXvmPrimitiveWithDefault : NullableXvmPrimitive;
                 for (ClassDesc cdArg : JitTypeDesc.getXvmPrimitiveClasses(type.removeNullable())) {
                     optParamList.add(new JitParamDesc(type, optFlavor, cdArg, iOrig, iOpt++, false));
                 }
-
                 if (fDflt) {
                     optParamList.add(
                             new JitParamDesc(type, NullableXvmPrimitiveWithDefault, CD_int, iOrig, iOpt++, true));
@@ -241,16 +324,21 @@ public class JitMethodDesc {
                 }
             } else if ((cd = JitTypeDesc.getWidenedClass(builder, type)) != null) {
                 JitFlavor flavor = fDflt ? WidenedWithDefault : Widened;
-                stdParamList.add(new JitParamDesc(type, flavor, cd, iOrig, iStd++, false));
+
+                if (iOrig >= 0) {
+                    stdParamList.add(new JitParamDesc(type, flavor, cd, iOrig, iStd++, false));
+                }
+
                 optParamList.add(new JitParamDesc(type, flavor, cd, iOrig, iOpt++, false));
             } else {
                 assert type.isSingleUnderlyingClass(true);
-
                 cd = builder.ensureClassDesc(type);
-
                 JitFlavor flavor = fDflt ? SpecificWithDefault : Specific;
 
-                stdParamList.add(new JitParamDesc(type, flavor, cd, iOrig, iStd++, false));
+                if (iOrig >= 0) {
+                    stdParamList.add(new JitParamDesc(type, flavor, cd, iOrig, iStd++, false));
+                }
+
                 optParamList.add(new JitParamDesc(type, flavor, cd, iOrig, iOpt++, false));
             }
         }
@@ -271,7 +359,7 @@ public class JitMethodDesc {
             TypeConstant type = returnTypes[iOrig];
             ClassDesc    cd;
 
-            if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
+            if ((cd = JitTypeDesc.getJavaPrimitive(type)) != null) {
                 ClassDesc cdStd = builder.ensureClassDesc(type);
 
                 stdParamList.add(new JitParamDesc(type, Specific, cdStd, iOrig, ixStdObj++, false));
@@ -330,11 +418,10 @@ public class JitMethodDesc {
 
         if (isConstructor) {
             boolean fAddCtorCtx = true; // TODO: isFinalizerRequired()
-
-            return new JitCtorDesc(cdContainer, fAddCtorCtx, /*fAddType*/ false,
-                                   stdReturns, stdParams, optReturns, optParams);
+            return new JitCtorDesc(typeTarget, typeTarget.ensureClassDesc(builder.typeSystem),
+                    fAddCtorCtx, /*fAddType*/ false, stdReturns, stdParams, optReturns, optParams);
         } else {
-            return new JitMethodDesc(stdReturns, stdParams, optReturns, optParams);
+            return new JitMethodDesc(typeTarget, stdReturns, stdParams, optReturns, optParams, isStatic);
         }
     }
 
@@ -342,16 +429,4 @@ public class JitMethodDesc {
     public String toString() {
         return isOptimized ? optimizedMD.toString() : standardMD.toString();
     }
-
-
-    // ----- fields --------------------------------------------------------------------------------
-
-    public final JitParamDesc[] standardReturns;
-    public final JitParamDesc[] standardParams;
-    public final JitParamDesc[] optimizedReturns;
-    public final JitParamDesc[] optimizedParams;
-
-    public final boolean isOptimized;
-    public final MethodTypeDesc standardMD;  // the generic "xObj" flavor
-    public final MethodTypeDesc optimizedMD; // (optional) optimized primitive
 }

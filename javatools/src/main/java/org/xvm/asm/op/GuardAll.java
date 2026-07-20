@@ -175,9 +175,13 @@ public class GuardAll
      * @return the slot name
      */
     public static String returnSlotName(JitParamDesc pd) {
+        int ix = pd.index;
+        if (ix < 0) {
+            return "thi$";
+        }
         return pd.extension
-                ? RETURN_SLOT_PREFIX + pd.index + EXT
-                : RETURN_SLOT_PREFIX + pd.index + "$" + pd.altIndex;
+                ? RETURN_SLOT_PREFIX + ix + EXT
+                : RETURN_SLOT_PREFIX + ix + "$" + pd.altIndex;
     }
 
     // ----- fields --------------------------------------------------------------------------------
