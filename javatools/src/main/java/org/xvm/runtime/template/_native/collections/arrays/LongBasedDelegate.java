@@ -42,6 +42,9 @@ public abstract class LongBasedDelegate
                                 int nBitsPerValue, boolean fSigned) {
         super(container, structure, false);
 
+        // note: assumption is that all bit counts are a power of two
+        assert Integer.bitCount(nBitsPerValue) == 1;
+
         f_nBitsPerValue  = nBitsPerValue;
         f_nValuesPerLong = 64 / nBitsPerValue;
         f_nIndexShift    = f_nValuesPerLong >> 1;
@@ -128,19 +131,25 @@ public abstract class LongBasedDelegate
                                             long ofStart, long cSize, boolean fReverse) {
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
-        int    nStart = valueIndex(ofStart);
-        long[] alValue;
-
-        if (nStart == 0) {
-            alValue = Arrays.copyOfRange(hDelegate.m_alValue, nStart, nStart + storage(cSize));
+        long[] alOld  = hDelegate.m_alValue;
+        long[] alNew;
+        if ((ofStart & (f_nValuesPerLong-1)) == 0) {
+            int nStart = valueIndex(ofStart);
+            alNew = Arrays.copyOfRange(alOld, nStart, nStart + storage(cSize));
+            if (fReverse) {
+                alNew = reverse(alNew, (int) cSize);
+            }
         } else {
-            throw new UnsupportedOperationException("TODO"); // copy one by one
+            alNew = new long[storage(cSize)];
+            long iSrc  = fReverse ? ofStart + cSize - 1 : ofStart;
+            int  iStep = fReverse ? -1 : 1;
+            for (long iDest = 0; iDest < cSize; ++iDest) {
+                setValue(alNew, iDest, getValue(alOld, iSrc));
+                iSrc += iStep;
+            }
         }
 
-        if (fReverse) {
-            alValue = reverse(alValue, (int) cSize);
-        }
-        return new LongArrayHandle(hDelegate.getComposition(), alValue, cSize, mutability);
+        return new LongArrayHandle(hDelegate.getComposition(), alNew, cSize, mutability);
     }
 
     @Override

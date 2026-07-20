@@ -1,0 +1,47 @@
+/**
+ * Pretty much every programming language has some form of quoting construct to allow embedding of
+ * data in a program, be it literal strings, numeric data or some combination thereof.
+ */
+module Quoting {
+    void run() {
+        @Inject Console console;
+
+        // characters are single quoted
+        Char ch = 'x';
+
+        // the Char.quoted() method puts single quotes around the Char
+        // the $"..." is a template string, containing {expressions}
+        console.print($"ch={ch.quoted()}");
+
+        // strings are double quoted
+        String greeting = "Hello";
+
+        // the quoted() function on a String puts double quotes around the String
+        console.print($"greeting={greeting.quoted()}");
+
+        // multi-line strings use '|' as a left column;
+        // the start of the first line escapes the '|'
+        // to indicate the start of the multiline string;
+        // a trailing escape indicates that the current
+        // line continues without a linefeed
+        String lines = \|first line
+                        |second line\
+                        | continued
+        ;
+
+        // the multi-line form of the template string uses $|
+        // and can contain {expressions}
+        console.print($|lines=
+                       |{lines}
+        );
+
+        String name = "Bob";
+        String msg  = $|{greeting} {name},
+                       |Have a nice day!
+                       |{ch}{ch}{ch}
+                      ;
+        console.print($|msg=
+                       |{msg}
+        );
+    }
+}

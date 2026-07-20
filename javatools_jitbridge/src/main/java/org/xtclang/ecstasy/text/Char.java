@@ -3,6 +3,7 @@ package org.xtclang.ecstasy.text;
 import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.nConst;
+import org.xtclang.ecstasy.numbers.UInt32;
 
 import org.xvm.javajit.Ctx;
 
@@ -48,6 +49,15 @@ public class Char extends nConst {
         }
 
         return ch;
+    }
+
+    public int codepoint$get$p(Ctx ctx) {
+        return $value;
+    }
+
+    // TODO GG remove
+    public UInt32 codepoint$get(Ctx ctx) {
+        return UInt32.$box($value);
     }
 
     /**

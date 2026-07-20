@@ -64,7 +64,7 @@ public class nRangeᐸInt8ᐳ
             }
             return (int) $upperBound - 1;
         }
-        return (int) $lowerBound;
+        return (int) $upperBound;
     }
 
     public boolean empty$get$p(Ctx ctx) {

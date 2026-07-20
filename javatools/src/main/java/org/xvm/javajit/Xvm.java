@@ -18,7 +18,7 @@ import org.xvm.asm.Version;
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.NATIVE_MODULE;
 
-import static org.xvm.javajit.TypeSystem.ID_NUM;
+import static org.xvm.javajit.TypeSystem.HASH;
 
 import static org.xvm.util.Handy.checkElementsNonNull;
 import static org.xvm.util.Handy.isDigit;
@@ -285,7 +285,7 @@ public class Xvm {
      */
     public String createUniqueSuffix(String name) {
         int count = nameCounters.compute(name, (k, v) -> v == null ? -1 : v + 1);
-        return count == -1 ? "" : ID_NUM + String.valueOf(count);
+        return count == -1 ? "" : HASH + String.valueOf(count);
     }
 
     // ----- internal ------------------------------------------------------------------------------

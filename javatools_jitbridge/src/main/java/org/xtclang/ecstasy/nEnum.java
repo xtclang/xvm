@@ -9,6 +9,9 @@ import org.xvm.javajit.Ctx;
 
 /**
  * All Ecstasy `enum` types must extend this class.
+ *
+ * Some methods here are defined by hand, even though they could be generated. This is necessary
+ * because the file name implies "no modification" by the augmenting builder.
  */
 public abstract class nEnum
         extends nConst
@@ -34,10 +37,8 @@ public abstract class nEnum
         return o1.ordinal$get$p(ctx) - o2.ordinal$get$p(ctx);
     }
 
-    @Override
-    public String toString(Ctx ctx) {
-        return name$get(ctx);
-    }
+    // TODO since we're not augmenting this class (being nEnum), we need to make sure that
+    //      prev()/next() are gen'd on actual enums
 
     /**
      * Native implementation of Enum.x

@@ -281,6 +281,22 @@ public abstract class Builder {
             break;
 
         case SingletonConstant singleton: {
+            if (singleton.getClassConstant() instanceof PropertyConstant propId) {
+                TypeConstant type = singleton.getType();
+                JitTypeDesc  jtd  = type.getJitDesc(this);
+
+                switch (jtd.flavor) {
+                case Specific, Widened, Primitive:
+                    code.getstatic(ensureClassDesc(propId.getClassIdentity().getType()),
+                        propId.ensureJitPropertyName(typeSystem), jtd.cd);
+                    return new SingleSlot(type, jtd.flavor, jtd.cd, "");
+
+                default:
+                    throw new UnsupportedOperationException("Load property singleton " +
+                        propId.getValueString());
+                }
+            }
+
             if (singleton instanceof EnumValueConstant enumConstant) {
                 ConstantPool pool = constant.getConstantPool();
                 if (enumConstant.getType().isOnlyNullable()) {
@@ -676,7 +692,7 @@ public abstract class Builder {
         // array.makeImmutable();
         code.dup()
             .aload(code.parameterSlot(0))
-            .invokevirtual(cdArray, "$makeImmut", MethodTypeDesc.of(CD_void, CD_Ctx));
+            .invokevirtual(cdArray, "$makeImmut", MD_xvmVoid);
         return new SingleSlot(arrayType, Specific, ensureClassDesc(arrayType), "");
     }
 
@@ -901,6 +917,33 @@ public abstract class Builder {
     }
 
     /**
+     * Generate stores of default Java values into all slots for the specified register.
+     */
+    public static void defaultStore(CodeBuilder code, RegisterInfo reg) {
+        if (reg instanceof ExtendedSlot ext) {
+            defaultLoad(code, ext.cd());
+            store(code, ext.cd(), ext.slot());
+            code.iconst_1() // 'true' represents 'Null'
+                .istore(ext.extSlot());
+        } else if (reg instanceof MultiSlot multi) {
+            int[]       slots = multi.slots();
+            ClassDesc[] cds   = multi.slotCds();
+            for (int i = 0; i < slots.length; i++) {
+                defaultLoad(code, cds[i]);
+                store(code, cds[i], slots[i]);
+            }
+
+            if (multi.extSlot() != MultiSlot.NO_SLOT) {
+                code.iconst_1()
+                    .istore(multi.extSlot());
+            }
+        } else {
+            defaultLoad(code, reg.cd());
+            store(code, reg.cd(), reg.slot());
+        }
+    }
+
+    /**
      * Build the byte codes to convert a primitive value on the stack into a Java {@code long}
      * value on the stack.
      *
@@ -998,6 +1041,19 @@ public abstract class Builder {
     }
 
     /**
+     * Invoke the specified method with the opcode required by the property's JVM owner
+     * representation.
+     */
+   public static void invoke(CodeBuilder code, TypeConstant targetType, ClassDesc cd,
+                               String methodName, MethodTypeDesc md) {
+        if (targetType.isJitInterface()) {
+            code.invokeinterface(cd, methodName, md);
+        } else {
+            code.invokevirtual(cd, methodName, md);
+        }
+    }
+
+    /**
      * Generate a default return for the specified Java class assuming the corresponding value
      * is already on java stack.
      */
@@ -1036,7 +1092,7 @@ public abstract class Builder {
         code.new_(cd)
             .dup()
             .aload(code.parameterSlot(0)) // ctx
-            .invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx));
+            .invokespecial(cd, INIT_NAME, MD_xvmVoid);
    }
 
     /**
@@ -1561,7 +1617,6 @@ public abstract class Builder {
     public static final String N_Boolean      = "org.xtclang.ecstasy.Boolean";
     public static final String N_Char         = "org.xtclang.ecstasy.text.Char";
     public static final String N_Class        = "org.xtclang.ecstasy.reflect.Class";
-    public static final String N_Comparable   = "org.xtclang.ecstasy.Comparable";
     public static final String N_Dec32        = "org.xtclang.ecstasy.numbers.Dec32";
     public static final String N_Dec64        = "org.xtclang.ecstasy.numbers.Dec64";
     public static final String N_Dec128       = "org.xtclang.ecstasy.numbers.Dec128";
@@ -1681,7 +1736,6 @@ public abstract class Builder {
     public static final ClassDesc CD_ArrayUInt128  = ClassDesc.of(N_ArrayUInt128);
     public static final ClassDesc CD_ArrayObj      = ClassDesc.of(N_ArrayObj);
     public static final ClassDesc CD_Class         = ClassDesc.of(N_Class);
-    public static final ClassDesc CD_Comparable    = ClassDesc.of(N_Comparable);
     public static final ClassDesc CD_Enumeration   = ClassDesc.of(N_Enumeration);
     public static final ClassDesc CD_Exception     = ClassDesc.of(N_Exception);
     public static final ClassDesc CD_Hashable      = ClassDesc.of(N_Hashable);
@@ -1787,9 +1841,7 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_UInt32_box  = MethodTypeDesc.of(CD_UInt32,  CD_int);
     public static final MethodTypeDesc MD_UInt64_box  = MethodTypeDesc.of(CD_UInt64,  CD_long);
     public static final MethodTypeDesc MD_UInt128_box = MethodTypeDesc.of(CD_UInt128, CD_long, CD_long);
-    public static final MethodTypeDesc MD_Initializer = MethodTypeDesc.of(CD_void,    CD_Ctx);
     public static final MethodTypeDesc MD_StringOf    = MethodTypeDesc.of(CD_String,  CD_Ctx, CD_JavaString);
-    public static final MethodTypeDesc MD_xvmType     = MethodTypeDesc.of(CD_TypeConstant, CD_Ctx);
     public static final MethodTypeDesc MD_TypeIsA     = MethodTypeDesc.of(CD_boolean, CD_TypeConstant);
     public static final MethodTypeDesc MD_FloorModI   = MethodTypeDesc.of(CD_int, CD_int, CD_int);
     public static final MethodTypeDesc MD_FloorModJ   = MethodTypeDesc.of(CD_long, CD_long, CD_long);
@@ -1799,4 +1851,6 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_L2D         = MethodTypeDesc.of(CD_double, CD_long);
     public static final MethodTypeDesc MD_F2I         = MethodTypeDesc.of(CD_int, CD_float);
     public static final MethodTypeDesc MD_I2F         = MethodTypeDesc.of(CD_float, CD_int);
+    public static final MethodTypeDesc MD_xvmType     = MethodTypeDesc.of(CD_TypeConstant, CD_Ctx);
+    public static final MethodTypeDesc MD_xvmVoid     = MethodTypeDesc.of(CD_void, CD_Ctx);
 }

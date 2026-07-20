@@ -10,6 +10,7 @@ package arrayTests {
         testAnonArrayVar();
         testNamedArrayVar();
         shouldIterateUsingForLoop();
+        shouldBeReadOnly();
     }
 
     void testStringAsArray() {
@@ -67,6 +68,16 @@ package arrayTests {
             assert n == array[i];
             i++;
         }
+    }
+
+    void shouldBeReadOnly() {
+        Int[] array = [0, 1, 2, 4];
+        try {
+            array[1] += 100;
+            assert as "expected ReadOnly exception";
+        } catch (ReadOnly e) {
+        }
+        assert array[1] == 1;
     }
 
     class Test {

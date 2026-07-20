@@ -3,7 +3,7 @@ package propertyInitTests {
 
     typedef String|Int as StringOrInt;
 
-    @Inject Console console;
+    @Inject static Console console;
 
     void run() {
         console.print(">>>> Running PropertyInitTests >>>>");

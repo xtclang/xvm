@@ -135,6 +135,16 @@ public enum JitFlavor {
         this.baseFlavor  = baseFlavor;
     }
 
+    public  boolean isNullablePrimitive() {
+        return switch (this) {
+            case NullablePrimitive,
+                 NullableXvmPrimitive,
+                 NullablePrimitiveWithDefault,
+                 NullableXvmPrimitiveWithDefault -> true;
+            default                              ->  false;
+        };
+    }
+
     public final boolean   isOptimized;
     public final JitFlavor baseFlavor;
 }

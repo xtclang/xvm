@@ -33,7 +33,7 @@ public class Exception extends nConst {
     }
 
     /**
-     * This is a static method that will be called by the naturally constructed sub-classes.
+     * This is a static method that will be called by the naturally constructed subclasses.
      * See {@link org.xvm.javajit.builders.CommonBuilder#assembleNew}.
      *
      * The name is known to be "construct" since it's the very first constructor at Exception.x
@@ -98,19 +98,19 @@ public class Exception extends nConst {
     }
 
     public static nException $ro(Ctx ctx, java.lang.String text) {
-        return new ReadOnly(ctx).$init(ctx, text, null);
+        return new ReadOnly(ctx).$init(ctx, text);
     }
 
     public static nException $oob(Ctx ctx, java.lang.String text) {
-        return new OutOfBounds(ctx).$init(ctx, text, null);
+        return new OutOfBounds(ctx).$init(ctx, text);
     }
 
     public static nException $unsupported(Ctx ctx, java.lang.String text) {
-        return new Unsupported(ctx).$init(ctx, text, null);
+        return new Unsupported(ctx).$init(ctx, text);
     }
 
     public static nException $typeMismatch(Ctx ctx, java.lang.String text) {
-        return new TypeMismatch(ctx).$init(ctx, text, null);
+        return new TypeMismatch(ctx).$init(ctx, text);
     }
 
     /**

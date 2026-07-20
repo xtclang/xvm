@@ -92,8 +92,8 @@ public class xClass
     @Override
     public int createConstHandle(Frame frame, Constant constant) {
         if (constant instanceof ClassConstant || constant instanceof DecoratedClassConstant) {
-            IdentityConstant idClz    = (IdentityConstant) constant;
-            TypeConstant     typeClz  = idClz.getValueType(frame.poolContext(), null);
+            IdentityConstant idClz   = (IdentityConstant) constant;
+            TypeConstant     typeClz = idClz.getValueType(frame.poolContext(), null);
 
             typeClz = typeClz.resolveGenerics(frame.poolContext(),
                         frame.getGenericsResolver(typeClz.containsDynamicType()));

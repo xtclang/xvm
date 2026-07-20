@@ -8,6 +8,8 @@ package lambdaTests {
         test2();
         test3();
         test4();
+        test5();
+        test6();
     }
 
     void test1() {
@@ -177,5 +179,25 @@ package lambdaTests {
             }
             return count;
         }
+    }
+
+    void test5() {
+        function Int128(Int128) f = mul(1, _);
+        assert f(2) == 5;
+
+        f = mul(_, 1);
+        assert f(2) == 4;
+
+        static Int128 mul(Int128 x, Int128 y) = x + 2*y;
+    }
+
+    void test6() {
+        function Int128?(Int128?) f = mul(1, _);
+        assert f(2) == 5;
+
+        f = mul(_, 1);
+        assert f(2) == 4;
+
+        static Int128? mul(Int128? x, Int128? y) = x? + 2*y? : 42;
     }
 }

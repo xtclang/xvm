@@ -94,11 +94,11 @@ public class MoveType
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regFrom = bctx.loadArgument(code, m_nFromValue);
-
-        bctx.loadCtx(code);
         if (regFrom.type().isJitInterface()) {
             code.checkcast(CD_nObj);
         }
+
+        bctx.loadCtx(code);
         code.invokevirtual(CD_nObj, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx));
 
         bctx.storeValue(code, m_nToValue, regFrom.type().getType());

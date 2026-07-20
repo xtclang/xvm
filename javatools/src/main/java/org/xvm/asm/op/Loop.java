@@ -24,7 +24,11 @@ public class Loop
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        code.labelBinding(bctx.ensureLabel(code, getAddress()));
+        int address = getAddress();
+        // only bind the label if not already bound
+        if (!bctx.isOpLabeled(address)) {
+            code.labelBinding(bctx.ensureLabel(code, address));
+        }
 
         return super.build(bctx, code);
     }

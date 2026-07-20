@@ -56,12 +56,12 @@ public class JitMethodDesc {
 
     /**
      * @return all the indexes of the optimized JitParamDesc for the specified standard argument
-     * index.
+     *         index
      */
-    public int[] getAllOptimizedParams(int retIndex) {
+    public int[] getAllOptimizedParams(int argIndex) {
         List<Integer> list = new ArrayList<>(optimizedParams.length);
         for (int i = 0, c = optimizedParams.length; i < c; i++) {
-            if (optimizedParams[i].index == retIndex) {
+            if (optimizedParams[i].index == argIndex) {
                 list.add(i);
             }
         }

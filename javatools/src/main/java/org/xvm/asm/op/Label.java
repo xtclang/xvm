@@ -101,6 +101,7 @@ public class Label
         // eliminated
         if (m_label != null) {
             code.labelBinding(m_label);
+            m_fBound = true;
         }
 
         // it's important to call the action only after the label is set
@@ -111,6 +112,13 @@ public class Label
             }
         }
         return getNextOp().build(bctx, code);
+    }
+
+    /**
+     * @return {@code true} if the label for this Op has been bound
+     */
+    public boolean isBound() {
+        return m_fBound;
     }
 
     /**
@@ -145,6 +153,7 @@ public class Label
     public void clear() {
         m_label  = null;
         m_action = null;
+        m_fBound = false;
     }
 
     // ----- fields -----------------------------------------------------------------------
@@ -158,6 +167,11 @@ public class Label
      * The action associated with this Prefix.
      */
     private OpAction m_action;
+
+    /**
+     * A flag to indicate that the label for this op has been bound.
+     */
+    private boolean m_fBound = false;
 
     /**
      * A name of the label, which is typically auto-generated. This is only for debugging; it is

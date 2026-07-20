@@ -5,19 +5,24 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.Constants.Access;
 
+import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodBody;
+import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.UnionTypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
@@ -345,18 +350,103 @@ public abstract class OpInvocable extends Op {
     }
 
     protected int buildInvoke(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
-        RegisterInfo   regTarget  = bctx.loadArgument(code, m_nTarget);
-        ClassDesc      cdTarget   = regTarget.cd();
-        TypeConstant   typeTarget = regTarget.type();
-        TypeInfo       infoTarget = bctx.getTypeInfo(typeTarget);
-        MethodInfo     infoMethod = computeMethodInfo(bctx, typeTarget);
-        JitMethodDesc  jmd        = infoMethod.getJitDesc(bctx.builder, typeTarget);
-        String         methodName = infoMethod.ensureJitMethodName(bctx.typeSystem);
-        boolean        fOptimized = jmd.isOptimized;
+        RegisterInfo regTarget  = bctx.loadArgument(code, m_nTarget);
+        ClassDesc    cdTarget   = regTarget.cd();
+        TypeConstant typeTarget = regTarget.type();
+        TypeInfo     infoTarget = bctx.getTypeInfo(typeTarget);
+        MethodInfo   infoMethod = computeMethodInfo(bctx, typeTarget);
+
+        MethodBody bodyHead = infoMethod.getHead();
+        if (bodyHead.isUnion()) {
+            if (typeTarget instanceof CastTypeConstant typeCast) {
+                typeTarget = typeCast.getUnderlyingType();
+            }
+            if (typeTarget instanceof UnionTypeConstant typeUnion) {
+                int   slotTarget = bctx.storeTempValue(code, cdTarget);
+                Label labelEnd   = code.newLabel();
+
+                buildInvokeBranch(bctx, code, cdTarget, slotTarget, typeUnion.getUnderlyingType(),
+                        bodyHead.getUnionLeft(), labelEnd, anArgValue);
+                buildInvokeBranch(bctx, code, cdTarget, slotTarget, typeUnion.getUnderlyingType2(),
+                        bodyHead.getUnionRight(), labelEnd, anArgValue);
+
+                Builder.throwTypeMismatch(code, typeUnion.getValueString());
+                code.labelBinding(labelEnd);
+                return -1;
+            }
+            throw new IllegalStateException("Union method target is not a union type: " + typeTarget);
+        }
 
         if (regTarget.flavor().isOptimized) {
             Builder.box(code, regTarget);
-            cdTarget = bctx.builder.ensureClassDesc(regTarget.type());
+            cdTarget = bctx.builder.ensureClassDesc(typeTarget);
+        }
+
+        buildSingleInvoke(bctx, code, cdTarget, typeTarget, infoTarget, infoMethod, anArgValue);
+        return -1;
+    }
+
+    private void buildInvokeBranch(BuildContext bctx, CodeBuilder code, ClassDesc cdTarget,
+                                   int slotTarget, TypeConstant typeTarget, MethodInfo infoMethod,
+                                   Label labelEnd, int[] anArgValue) {
+        MethodBody bodyHead = infoMethod.getHead();
+        if (bodyHead.isUnion()) {
+            if (typeTarget instanceof CastTypeConstant typeCast) {
+                typeTarget = typeCast.getUnderlyingType();
+            }
+            if (typeTarget instanceof UnionTypeConstant typeUnion) {
+                buildInvokeBranch(bctx, code, cdTarget, slotTarget, typeUnion.getUnderlyingType(),
+                        bodyHead.getUnionLeft(), labelEnd, anArgValue);
+                buildInvokeBranch(bctx, code, cdTarget, slotTarget, typeUnion.getUnderlyingType2(),
+                        bodyHead.getUnionRight(), labelEnd, anArgValue);
+                return;
+            }
+            throw new IllegalStateException("Union method branch is not a union type: " + typeTarget);
+        }
+
+        ClassDesc cdPart    = bctx.builder.ensureClassDesc(typeTarget);
+        Label     labelNext = code.newLabel();
+
+        Builder.load(code, cdTarget, slotTarget);
+        code.dup()
+            .instanceOf(cdPart)
+            .ifeq(labelNext)
+            .checkcast(cdPart);
+
+        buildSingleInvoke(bctx, code, cdPart, typeTarget, bctx.getTypeInfo(typeTarget), infoMethod, anArgValue);
+        code.goto_(labelEnd);
+        code.labelBinding(labelNext)
+            .pop();
+    }
+
+    private void buildSingleInvoke(BuildContext bctx, CodeBuilder code, ClassDesc cdTarget,
+                                   TypeConstant typeTarget, TypeInfo infoTarget, MethodInfo infoMethod,
+                                   int[] anArgValue) {
+        MethodBody     bodyHead   = infoMethod.getHead();
+        TypeConstant   typeInvoke = typeTarget;
+        ClassDesc      cdInvoke   = cdTarget;
+
+        if (bodyHead.getImplementation() == Implementation.Implicit) {
+            TypeConstant typeOwner = bctx.getConstant(m_nMethodId, MethodConstant.class).
+                    getNamespace().getType();
+            if (!typeOwner.equals(typeTarget)) {
+                typeInvoke = typeOwner;
+                cdInvoke   = bctx.builder.ensureClassDesc(typeOwner);
+                infoTarget = bctx.getTypeInfo(typeOwner);
+                infoMethod = computeMethodInfo(bctx, typeOwner);
+                bodyHead   = infoMethod.getHead();
+            }
+        }
+
+        JitMethodDesc jmd        = infoMethod.getJitDesc(bctx.builder, typeInvoke);
+        String        methodName = infoMethod.ensureJitMethodName(bctx.typeSystem);
+        boolean       fOptimized = jmd.isOptimized;
+        int           cReturns   = infoMethod.getSignature().getReturnCount();
+        boolean       fCond      = infoMethod.isConditionalReturn(infoTarget);
+
+        if (bodyHead.getIdentity().getNestedDepth() > 2) {
+            // methods nested inside methods need to be built on-the-spot
+            bctx.buildMethod(methodName, bodyHead);
         }
 
         MethodTypeDesc md;
@@ -372,17 +462,15 @@ public abstract class OpInvocable extends Op {
         bctx.loadCallArguments(code, jmd, anArgValue);
 
         if (infoTarget.getType().isJitInterface()) {
-            code.invokeinterface(cdTarget, methodName, md);
+            code.invokeinterface(cdInvoke, methodName, md);
         } else {
-            code.invokevirtual(cdTarget, methodName, md);
+            code.invokevirtual(cdInvoke, methodName, md);
         }
 
-        int cReturns = infoMethod.getSignature().getReturnCount();
         if (cReturns > 0) {
-            int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
-            bctx.assignReturns(code, jmd, cReturns, anVar);
+            int[] anRet = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
+            bctx.assignReturns(code, jmd, cReturns, anRet, fCond);
         }
-        return -1;
     }
 
     protected MethodInfo computeMethodInfo(BuildContext bctx, TypeConstant typeTarget) {

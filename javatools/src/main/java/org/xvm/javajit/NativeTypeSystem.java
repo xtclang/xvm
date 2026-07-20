@@ -133,11 +133,6 @@ public class NativeTypeSystem
     private final Map<TypeConstant, String> nativeByType = new ConcurrentHashMap<>();
 
     /**
-     * A cache of builders for native classes keyed by type.
-     */
-    public final Map<TypeConstant, Class> nativeBuilders = new ConcurrentHashMap<>();
-
-    /**
      * @return a reserved class name for the specified type, or null if it's not reserved
      */
     public String getReservedName(TypeConstant type) {
@@ -160,59 +155,41 @@ public class NativeTypeSystem
                 if (simpleName.codePointAt(0) == NO_MOD
                         || isEnumerationClass(simpleName)
                         || className.equals(Builder.N_Function)) {
-                    // by convention the classes that start with an "n" are "no-modification"
-                    // classes that we take "as is" (they must not be augmented)
+                    // by convention the classes that start with the NO_MOD character are
+                    // "no-modification" classes that we use "as is" (they must not be augmented)
                     return classBytes;
                 }
 
-                ClassModel     model     = ClassFile.of().parse(classBytes);
-                String         path      = className.substring(moduleLoader.prefix.length()).replace('$', '.');
-                TypeConstant[] formals   = TypeConstant.NO_TYPES;
-                int            typeStart = path.indexOf('ᐸ') ;
-
-                if (typeStart > 0) {
-                    // TODO: do we need support for multiple formal types?
-                    int typeEnd = path.indexOf('ᐳ', typeStart);
-                    if (typeEnd == -1) {
-                        throw new RuntimeException("Invalid name " + path);
+                String         path       = className.substring(moduleLoader.prefix.length()).replace('$', '.');
+                TypeConstant[] params     = null;
+                int            paramStart = path.indexOf(L_ANGLE) ;     // looks like: '<'
+                if (paramStart > 0) {
+                    // assumes only a single type parameter for augmented native types
+                    int paramEnd = path.length() - 1;
+                    assert path.charAt(paramEnd) == R_ANGLE;
+                    String typeName = path.substring(paramStart + 1, paramEnd);
+                    assert typeName.indexOf('.') < 0;         // simple names only
+                    assert typeName.indexOf(COMMA) < 0;       // exactly one formal
+                    assert typeName.indexOf(L_ANGLE) < 0;     // no nesting etc.
+                    assert typeName.indexOf(R_ANGLE) < 0;     // no nesting etc.
+                    TypeConstant typeParam = pool().getImplicitlyImportedIdentity(typeName).getType();
+                    if (typeParam == null) {
+                        throw new RuntimeException("Invalid Ecstasy core type: " + typeName);
                     }
-                    String       typeString = path.substring(typeStart + 1, typeEnd);
-                    TypeConstant type = switch (typeString) {
-                        case "Bit"     -> pool().typeBit();
-                        case "Boolean" -> pool().typeBoolean();
-                        case "Char"    -> pool().typeChar();
-                        case "Dec32"   -> pool().typeDec32();
-                        case "Dec64"   -> pool().typeDec64();
-                        case "Dec128"  -> pool().typeDec128();
-                        case "Float32" -> pool().typeFloat32();
-                        case "Float64" -> pool().typeFloat64();
-                        case "Int8"    -> pool().typeInt8();
-                        case "Nibble"  -> pool().typeNibble();
-                        case "Int16"   -> pool().typeInt16();
-                        case "Int32"   -> pool().typeInt32();
-                        case "Int64"   -> pool().typeInt64();
-                        case "Int128"  -> pool().typeInt128();
-                        case "UInt8"   -> pool().typeUInt8();
-                        case "UInt16"  -> pool().typeUInt16();
-                        case "UInt32"  -> pool().typeUInt32();
-                        case "UInt64"  -> pool().typeUInt64();
-                        case "UInt128" -> pool().typeUInt128();
-                        case "Object"  -> pool().typeObject();
-                        default        -> throw new RuntimeException("Unsupported type " + typeString);
-                    };
-                    formals = new TypeConstant[] {type};
-                    path    = path.substring(0, typeStart);
+                    assert typeParam != null;
+                    params = new TypeConstant[] {typeParam};
+                    path   = path.substring(0, paramStart);
                 }
 
                 ClassStructure struct = (ClassStructure) moduleLoader.module.getChildByPath(path);
                 if (struct == null) {
-                    throw new RuntimeException("Structure is missing for " + moduleLoader.prefix + name);
+                    throw new RuntimeException("Missing Ecstasy core type: " + moduleLoader.prefix + name);
                 }
                 TypeConstant type = struct.getFormalType();
-                if (formals.length > 0) {
-                    type = type.adoptParameters(pool(), formals);
+                if (params != null) {
+                    type = type.adoptParameters(pool(), params);
                 }
-                return augmentNativeClass(model, className, type);
+                return augmentNativeClass(ClassFile.of().parse(classBytes), className, type);
             }
         } catch (IOException ignore) {}
 
@@ -262,21 +239,9 @@ public class NativeTypeSystem
     protected Builder ensureBuilder(TypeConstant type, ClassModel model) {
         assert model != null;
 
-        if (nativeBuilders.get(type) instanceof Class builderClass) {
-            try {
-                return (AugmentingBuilder) builderClass.getDeclaredConstructor(
-                    TypeSystem.class, TypeConstant.class, ClassModel.class).
-                        newInstance(this, type, model);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        if (type.isArray()) {
-            return new ArrayBuilder(this, type, model);
-        }
-
-        return new AugmentingBuilder(this, type, model);
+        return type.isArray()
+                ? new ArrayBuilder(this, type, model)
+                : new AugmentingBuilder(this, type, model);
     }
 
     // ----- internal ------------------------------------------------------------------------------
@@ -312,7 +277,7 @@ public class NativeTypeSystem
         for (TypeConstant type : primitiveTypes) {
             TypeConstant typeIter  = pool.ensureParameterizedTypeConstant(pool.typeIterator(), type);
             String       typeName  = type.getSingleUnderlyingClass(false).getName();
-            String       className = "org.xtclang.ecstasy.Iteratorᐸ" + typeName + "ᐳ";
+            String       className = "org.xtclang.ecstasy.Iterator" + L_ANGLE + typeName + R_ANGLE;
             nativeByType.put(typeIter,  className);
         }
 
@@ -320,9 +285,6 @@ public class NativeTypeSystem
         TypeConstant rangeᐸIntᐳ = pool.ensureParameterizedTypeConstant(pool.typeRange(), typeInt);
 
         nativeByType.put(rangeᐸIntᐳ, Builder.N_nRangeInt64);
-
-        // specialized builders
-        nativeBuilders.put(pool.typeInt64(),  org.xvm.javajit.builders.Int64Builder.class);
 
         // pre-register functions used by the native classes:
 

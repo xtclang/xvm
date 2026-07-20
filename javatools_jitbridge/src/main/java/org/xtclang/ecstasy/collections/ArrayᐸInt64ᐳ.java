@@ -1,11 +1,14 @@
 package org.xtclang.ecstasy.collections;
 
+import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.IteratorᐸInt64ᐳ;
 import org.xtclang.ecstasy.Object;
 
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Iterable;
+import org.xtclang.ecstasy.nException;
+import org.xtclang.ecstasy.nFunction;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.nType;
@@ -50,7 +53,7 @@ public class ArrayᐸInt64ᐳ
      * @see {@link Array#$new$1$p}
      */
     public static ArrayᐸInt64ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
-        if (supply instanceof org.xtclang.ecstasy.numbers.Int64 boxed) {
+        if (supply instanceof Int64 boxed) {
             ctx.alloc(size * 8); // REVIEW + HEADER_SIZE?
             ArrayᐸInt64ᐳ array = new ArrayᐸInt64ᐳ(ctx, type);
             array.$mut($FIXED);
@@ -65,7 +68,37 @@ public class ArrayᐸInt64ᐳ
                 throw array.$oob(ctx, size);
             }
         }
-        // TODO
+
+        if (supply instanceof nFunction fn) {
+            ctx.alloc(size * 8); // REVIEW + HEADER_SIZE?
+            ArrayᐸInt64ᐳ array = new ArrayᐸInt64ᐳ(ctx, type);
+            array.$mut($FIXED);
+
+            if (!array.$growInPlace(ctx, size)) {
+                throw array.$oob(ctx, size);
+            }
+
+            try {
+                if (fn.optMethod == null) {
+                    for (int i = 0; i < size; i++) {
+                        array.$storage[i] = ((Int64) fn.stdMethod.invoke(ctx, Int64.$box(i))).$value;
+                    }
+                } else {
+                    for (int i = 0; i < size; i++) {
+                        array.$storage[i] = (long) fn.optMethod.invoke(ctx, (long) i);
+                    }
+                }
+            } catch (nException e) {
+                throw e;
+            } catch (Throwable e) {
+                // method handles expose signature mismatches as Throwable; convert to an XTC exception
+                throw Exception.$typeMismatch(ctx, e.getMessage());
+            }
+
+            array.$size((int) size);
+            return array;
+        }
+
         throw new UnsupportedOperationException();
     }
 
