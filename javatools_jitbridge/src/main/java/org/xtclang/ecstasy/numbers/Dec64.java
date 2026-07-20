@@ -282,9 +282,8 @@ public class Dec64 extends DecimalFPNumber {
 
     // ----- conversion ----------------------------------------------------------------------------
 
-    @Override
-    public long toDec64$p(Ctx ctx) {
-        return $bits;
+    public static long toDec64$p(long thi$, Ctx ctx) {
+        return thi$;
     }
 
     // ----- internal JIT support ------------------------------------------------------------------

@@ -29,12 +29,23 @@ public class UInt32 extends IntNumber {
         return String.of(ctx, Integer.toUnsignedString($value));
     }
 
-    public long estimateStringLength$p(Ctx ctx) {
-        return $estimateUnsignedStringLength($value);
+    public static String toString$p(int thi$, Ctx ctx) {
+        return String.of(ctx, Integer.toUnsignedString(thi$));
+    }
+
+    public static long estimateStringLength$p(int thi$, Ctx ctx) {
+        return $estimateUnsignedStringLength(thi$);
     }
 
     public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
         for (char c : Integer.toUnsignedString($value).toCharArray()) {
+            appender = appender.add$p(ctx, c);
+        }
+        return appender;
+    }
+
+    public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
+        for (char c : Integer.toUnsignedString(thi$).toCharArray()) {
             appender = appender.add$p(ctx, c);
         }
         return appender;
@@ -78,12 +89,12 @@ public class UInt32 extends IntNumber {
      *
      * @return this UInt32 value as a Java {@code int}
      */
-    public int toInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && ($value < 0 || $value > Byte.MAX_VALUE)) {
+    public static int toInt8$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && (thi$ < 0 || thi$ > Byte.MAX_VALUE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "UInt32 value " + $value + " is not a valid Int8 value");
+            throw oob.$init(ctx, "UInt32 value " + thi$ + " is not a valid Int8 value");
         }
-        return (byte) $value;
+        return (byte) thi$;
     }
 
     /**
@@ -96,12 +107,12 @@ public class UInt32 extends IntNumber {
      *
      * @return this UInt32 value as a Java {@code int}
      */
-    public int toInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && ($value < 0 || $value > Short.MAX_VALUE)) {
+    public static int toInt16$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && (thi$ < 0 || thi$ > Short.MAX_VALUE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "UInt32 value " + $value + " is not a valid Int16 value");
+            throw oob.$init(ctx, "UInt32 value " + thi$ + " is not a valid Int16 value");
         }
-        return (short) $value;
+        return (short) thi$;
     }
 
     /**
@@ -114,12 +125,12 @@ public class UInt32 extends IntNumber {
      *
      * @return this UInt32 value as a Java {@code int}
      */
-    public int toInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value < 0) {
+    public static int toInt32$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && thi$ < 0) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "UInt32 value " + $value + " is not a valid Int32 value");
+            throw oob.$init(ctx, "UInt32 value " + thi$ + " is not a valid Int32 value");
         }
-        return $value;
+        return thi$;
     }
 
     /**
@@ -132,8 +143,8 @@ public class UInt32 extends IntNumber {
      *
      * @return this UInt32 value as a Java long
      */
-    public long toInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return ((long) $value) & 0xFFFFFFFFL;
+    public static long toInt64$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return ((long) thi$) & 0xFFFFFFFFL;
     }
 
     /**
@@ -146,10 +157,10 @@ public class UInt32 extends IntNumber {
      *
      * @return this UInt32 value as an Int128
      */
-    public long toInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public static long toInt128$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         // load the high long value to the context and return the low value
         ctx.i0 = 0L;
-        return ((long) $value) & 0xFFFFFFFFL;
+        return ((long) thi$) & 0xFFFFFFFFL;
     }
 
     /**
@@ -162,12 +173,12 @@ public class UInt32 extends IntNumber {
      *
      * @return this UInt32 value as a Java {@code int}
      */
-    public int toUInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && ($value < 0 || $value > 255)) {
+    public static int toUInt8$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && (thi$ < 0 || thi$ > 255)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "UInt32 value " + $value + " is not a valid UInt8 value");
+            throw oob.$init(ctx, "UInt32 value " + thi$ + " is not a valid UInt8 value");
         }
-        return $value & 0xFF;
+        return thi$ & 0xFF;
     }
 
     /**
@@ -180,12 +191,12 @@ public class UInt32 extends IntNumber {
      *
      * @return this UInt32 value as a Java {@code int}
      */
-    public int toUInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && ($value < 0 || $value > 65535)) {
+    public static int toUInt16$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && (thi$ < 0 || thi$ > 65535)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "UInt32 value " + $value + " is not a valid UInt16 value");
+            throw oob.$init(ctx, "UInt32 value " + thi$ + " is not a valid UInt16 value");
         }
-        return $value & 0xFFFF;
+        return thi$ & 0xFFFF;
     }
 
     /**
@@ -198,8 +209,8 @@ public class UInt32 extends IntNumber {
      *
      * @return this UInt32 value as a Java {@code int}
      */
-    public int toUInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toUInt32$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -212,8 +223,8 @@ public class UInt32 extends IntNumber {
      *
      * @return this UInt32 value as a Java long
      */
-    public long toUInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value & 0xFFFFFFFFL;
+    public static long toUInt64$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$ & 0xFFFFFFFFL;
     }
 
     /**
@@ -226,10 +237,10 @@ public class UInt32 extends IntNumber {
      *
      * @return this UInt32 value as a UInt128
      */
-    public long toUInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public static long toUInt128$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         // load the high long value to the context and return the low value
         ctx.i0 = 0L;
-        return $value & 0xFFFFFFFFL;
+        return thi$ & 0xFFFFFFFFL;
     }
 
     // ----- debugging support ---------------------------------------------------------------------
