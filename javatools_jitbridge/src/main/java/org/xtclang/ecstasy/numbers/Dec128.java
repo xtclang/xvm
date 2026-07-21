@@ -5,7 +5,10 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.math.RoundingMode;
 
+import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.OutOfBounds;
+
+import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
 
@@ -130,6 +133,82 @@ public class Dec128 extends DecimalFPNumber {
      */
     public static Dec128 $box(long lowBits, long highBits) {
         return new Dec128(lowBits, highBits);
+    }
+
+    public static String toString$p(long thi$Lo, long thi$Hi, Ctx ctx) {
+        return String.of(ctx, $box(thi$Lo, thi$Hi).toString());
+    }
+
+    public static long estimateStringLength$p(long thi$Lo, long thi$Hi, Ctx ctx) {
+        return $box(thi$Lo, thi$Hi).toString().length();
+    }
+
+    public static AppenderᐸCharᐳ appendTo$p(
+            long thi$Lo, long thi$Hi, Ctx ctx, AppenderᐸCharᐳ appender) {
+        for (char c : $box(thi$Lo, thi$Hi).toString().toCharArray()) {
+            appender = appender.add$p(ctx, c);
+        }
+        return appender;
+    }
+
+    public static int toInt8$FP$p(long thi$Lo, long thi$Hi, Ctx ctx,
+                                  boolean checkBounds, boolean dfltCheckBounds,
+                                  Rounding direction) {
+        return $box(thi$Lo, thi$Hi).toInt8$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+    }
+
+    public static int toInt16$FP$p(long thi$Lo, long thi$Hi, Ctx ctx,
+                                   boolean checkBounds, boolean dfltCheckBounds,
+                                   Rounding direction) {
+        return $box(thi$Lo, thi$Hi).toInt16$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+    }
+
+    public static int toInt32$FP$p(long thi$Lo, long thi$Hi, Ctx ctx,
+                                   boolean checkBounds, boolean dfltCheckBounds,
+                                   Rounding direction) {
+        return $box(thi$Lo, thi$Hi).toInt32$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+    }
+
+    public static long toInt64$FP$p(long thi$Lo, long thi$Hi, Ctx ctx,
+                                    boolean checkBounds, boolean dfltCheckBounds,
+                                    Rounding direction) {
+        return $box(thi$Lo, thi$Hi).toInt64$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+    }
+
+    public static long toInt128$FP$p(long thi$Lo, long thi$Hi, Ctx ctx,
+                                     boolean checkBounds, boolean dfltCheckBounds,
+                                     Rounding direction) {
+        return $box(thi$Lo, thi$Hi).toInt128$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+    }
+
+    public static int toUInt8$FP$p(long thi$Lo, long thi$Hi, Ctx ctx,
+                                   boolean checkBounds, boolean dfltCheckBounds,
+                                   Rounding direction) {
+        return $box(thi$Lo, thi$Hi).toUInt8$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+    }
+
+    public static int toUInt16$FP$p(long thi$Lo, long thi$Hi, Ctx ctx,
+                                    boolean checkBounds, boolean dfltCheckBounds,
+                                    Rounding direction) {
+        return $box(thi$Lo, thi$Hi).toUInt16$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+    }
+
+    public static int toUInt32$FP$p(long thi$Lo, long thi$Hi, Ctx ctx,
+                                    boolean checkBounds, boolean dfltCheckBounds,
+                                    Rounding direction) {
+        return $box(thi$Lo, thi$Hi).toUInt32$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+    }
+
+    public static long toUInt64$FP$p(long thi$Lo, long thi$Hi, Ctx ctx,
+                                     boolean checkBounds, boolean dfltCheckBounds,
+                                     Rounding direction) {
+        return $box(thi$Lo, thi$Hi).toUInt64$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+    }
+
+    public static long toUInt128$FP$p(long thi$Lo, long thi$Hi, Ctx ctx,
+                                      boolean checkBounds, boolean dfltCheckBounds,
+                                      Rounding direction) {
+        return $box(thi$Lo, thi$Hi).toUInt128$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
     }
 
     // ----- Op methods ----------------------------------------------------------------------------
@@ -371,6 +450,26 @@ public class Dec128 extends DecimalFPNumber {
     }
 
     // ----- conversion ----------------------------------------------------------------------------
+
+    public static int toDec32$p(long thi$Lo, long thi$Hi, Ctx ctx) {
+        int leftSevenBits = $leftmost7Bits(thi$Lo, thi$Hi);
+        if ($isFinite(leftSevenBits)) {
+            return Dec32.$toIntBits(ctx, $toBigDecimal(thi$Lo, thi$Hi));
+        }
+        return $isInfinite(leftSevenBits)
+                ? $isSigned(leftSevenBits) ? Dec32.$NEG_INFINITY : Dec32.$POS_INFINITY
+                : Dec32.$NaN;
+    }
+
+    public static long toDec64$p(long thi$Lo, long thi$Hi, Ctx ctx) {
+        int leftSevenBits = $leftmost7Bits(thi$Lo, thi$Hi);
+        if ($isFinite(leftSevenBits)) {
+            return Dec64.$toLongBits(ctx, $toBigDecimal(thi$Lo, thi$Hi));
+        }
+        return $isInfinite(leftSevenBits)
+                ? $isSigned(leftSevenBits) ? Dec64.$NEG_INFINITY : Dec64.$POS_INFINITY
+                : Dec64.$NaN;
+    }
 
     public static long toDec128$p(long thi$Lo, long thi$Hi, Ctx ctx) {
         ctx.i0 = thi$Hi;

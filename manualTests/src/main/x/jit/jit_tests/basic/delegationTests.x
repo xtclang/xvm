@@ -8,6 +8,11 @@ package delegationTests {
         Test t = new Test("text", 17);
         assert t.showText() == "text";
         assert t.showValue() == 17;
+
+        Char ch = 'A';
+        assert ch.toInt()    == 65;
+        assert ch.toInt128() == 65;
+
         console.print("<<<< Finished DelegationTests <<<<<");
     }
 

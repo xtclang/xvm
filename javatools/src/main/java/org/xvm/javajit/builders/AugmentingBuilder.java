@@ -124,16 +124,17 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     protected void assemblePropertyAccessor(String className, ClassBuilder classBuilder,
-                                            PropertyInfo prop, String jitName, MethodTypeDesc md,
-                                            boolean isOptimized, boolean isGetter) {
-        MethodModel mm = findMethod(jitName, md);
+                                            PropertyInfo prop, String jitName,
+                                            JitMethodDesc jmd, boolean isGetter) {
+        MethodTypeDesc md = jmd.isOptimized ? jmd.optimizedMD : jmd.standardMD;
+        MethodModel    mm = findMethod(jitName, md);
         if (mm != null && ((mm.flags().flagsMask() & ClassFile.ACC_ABSTRACT) == 0 ||
                     prop.isAbstract() || prop.isNative())) {
             // the property is already copied by the NativeTypeSystem
             return;
         }
 
-        super.assemblePropertyAccessor(className, classBuilder, prop, jitName, md, isOptimized, isGetter);
+        super.assemblePropertyAccessor(className, classBuilder, prop, jitName, jmd, isGetter);
     }
 
     @Override
