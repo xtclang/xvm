@@ -25,8 +25,7 @@ public class UInt32Test
     @Test
     public void shouldConvertToInt8() {
         for (int i : ensurePositiveIntTestData(255)) {
-            UInt32 n  = UInt32.$box(i);
-            int    n2 = n.toInt8$p(null, false, true);
+            int n2 = UInt32.toInt8$p(i, null, false, true);
             assertEquals((byte) i, n2);
         }
     }
@@ -34,15 +33,14 @@ public class UInt32Test
     @Test
     public void shouldConvertToInt8WithBoundsCheck() {
         for (int i : ensurePositiveIntTestData(255)) {
-            UInt32 n = UInt32.$box(i);
             if (i < Byte.MIN_VALUE || i > Byte.MAX_VALUE) {
                 try {
-                    n.toInt8$p(null, true, false);
+                    UInt32.toInt8$p(i, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                int n2 = n.toInt8$p(null, true, false);
+                int n2 = UInt32.toInt8$p(i, null, true, false);
                 assertEquals(i, n2);
             }
         }
@@ -51,8 +49,7 @@ public class UInt32Test
     @Test
     public void shouldConvertToUInt8() {
         for (int i : ensurePositiveIntTestData(255)) {
-            UInt32 n        = UInt32.$box(i);
-            int    n2       = n.toUInt8$p(null, false, true);
+            int    n2       = UInt32.toUInt8$p(i, null, false, true);
             int    expected = i & 0xFF;
             assertEquals(expected, n2);
         }
@@ -61,15 +58,14 @@ public class UInt32Test
     @Test
     public void shouldConvertToUInt8WithBoundsCheck() {
         for (int i : ensurePositiveIntTestData(255)) {
-            UInt32 n = UInt32.$box(i);
             if (i < 0 || i > Byte.MAX_VALUE) {
                 try {
-                    n.toUInt8$p(null, true, false);
+                    UInt32.toUInt8$p(i, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                int n2 = n.toUInt8$p(null, true, false);
+                int n2 = UInt32.toUInt8$p(i, null, true, false);
                 assertEquals(i, n2);
             }
         }
@@ -78,8 +74,7 @@ public class UInt32Test
     @Test
     public void shouldConvertToInt16() {
         for (int i : ensurePositiveIntTestData(Short.MAX_VALUE)) {
-            UInt32 n  = UInt32.$box(i);
-            int    n2 = n.toInt16$p(null, false, true);
+            int n2 = UInt32.toInt16$p(i, null, false, true);
             assertEquals((short) i, n2);
         }
     }
@@ -87,15 +82,14 @@ public class UInt32Test
     @Test
     public void shouldConvertToInt16WithBoundsCheck() {
         for (int i : ensurePositiveIntTestData(Short.MAX_VALUE)) {
-            UInt32 n = UInt32.$box(i);
             if (i < 0 || i > Short.MAX_VALUE) {
                 try {
-                    n.toInt16$p(null, true, false);
+                    UInt32.toInt16$p(i, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                int n2 = n.toInt16$p(null, true, false);
+                int n2 = UInt32.toInt16$p(i, null, true, false);
                 assertEquals(i, n2);
             }
         }
@@ -104,8 +98,7 @@ public class UInt32Test
     @Test
     public void shouldConvertToUInt16() {
         for (int i : ensurePositiveIntTestData(Short.MAX_VALUE)) {
-            UInt32 n        = UInt32.$box(i);
-            int    n2       = n.toUInt16$p(null, false, true);
+            int    n2       = UInt32.toUInt16$p(i, null, false, true);
             int    expected = i & 0xFFFF;
             assertEquals(expected, n2);
         }
@@ -114,15 +107,14 @@ public class UInt32Test
     @Test
     public void shouldConvertToUInt16WithBoundsCheck() {
         for (int i : ensurePositiveIntTestData(Short.MAX_VALUE)) {
-            UInt32 n = UInt32.$box(i);
             if (i < 0 || i > Short.MAX_VALUE) {
                 try {
-                    n.toUInt16$p(null, true, false);
+                    UInt32.toUInt16$p(i, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                int n2 = n.toUInt16$p(null, true, false);
+                int n2 = UInt32.toUInt16$p(i, null, true, false);
                 assertEquals(i, n2);
             }
         }
@@ -131,8 +123,7 @@ public class UInt32Test
     @Test
     public void shouldConvertToInt32() {
         for (int i : ensurePositiveIntTestData()) {
-            UInt32 n  = UInt32.$box(i);
-            int    n2 = n.toInt32$p(null, false, true);
+            int n2 = UInt32.toInt32$p(i, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -140,8 +131,7 @@ public class UInt32Test
     @Test
     public void shouldConvertToUInt32() {
         for (int i : ensurePositiveIntTestData()) {
-            UInt32 n  = UInt32.$box(i);
-            int    n2 = n.toUInt32$p(null, false, true);
+            int n2 = UInt32.toUInt32$p(i, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -149,15 +139,14 @@ public class UInt32Test
     @Test
     public void shouldConvertToUInt32WithBoundsCheck() {
         for (int i : ensurePositiveIntTestData()) {
-            UInt32 n = UInt32.$box(i);
             if (i < 0) {
                 try {
-                    n.toUInt32$p(null, true, false);
+                    UInt32.toUInt32$p(i, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                int n2 = n.toUInt32$p(null, true, false);
+                int n2 = UInt32.toUInt32$p(i, null, true, false);
                 assertEquals(i, n2);
             }
         }
@@ -166,8 +155,7 @@ public class UInt32Test
     @Test
     public void shouldConvertToInt64() {
         for (int i : ensurePositiveIntTestData()) {
-            UInt32 n = UInt32.$box(i);
-            long   n2 = n.toInt64$p(null, false, true);
+            long n2 = UInt32.toInt64$p(i, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -175,8 +163,7 @@ public class UInt32Test
     @Test
     public void shouldConvertToUInt64() {
         for (int i : ensurePositiveIntTestData()) {
-            UInt32 n  = UInt32.$box(i);
-            long   n2 = n.toUInt64$p(null, false, true);
+            long n2 = UInt32.toUInt64$p(i, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -184,15 +171,14 @@ public class UInt32Test
     @Test
     public void shouldConvertToUInt64WithBoundsCheck() {
         for (int i : ensurePositiveIntTestData()) {
-            UInt32 n = UInt32.$box(i);
             if (i < 0) {
                 try {
-                    n.toUInt64$p(null, true, false);
+                    UInt32.toUInt64$p(i, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                long n2 = n.toUInt64$p(null, true, false);
+                long n2 = UInt32.toUInt64$p(i, null, true, false);
                 assertEquals(i, n2);
             }
         }
@@ -201,9 +187,8 @@ public class UInt32Test
     @Test
     public void shouldConvertToInt128() {
         for (int i : ensurePositiveIntTestData()) {
-            UInt32 n   = UInt32.$box(i);
             Ctx    ctx = new Ctx(null, null);
-            long   n2  = n.toInt128$p(ctx, false, true);
+            long   n2  = UInt32.toInt128$p(i, ctx, false, true);
             assertEquals(i, n2);
             assertEquals(0L, ctx.i0);
         }
@@ -212,9 +197,8 @@ public class UInt32Test
     @Test
     public void shouldConvertToUInt128() {
         for (int i : ensurePositiveIntTestData()) {
-            UInt32 n   = UInt32.$box(i);
             Ctx    ctx = new Ctx(null, null);
-            long   n2  = n.toUInt128$p(ctx, false, true);
+            long   n2  = UInt32.toUInt128$p(i, ctx, false, true);
             assertEquals(i, n2);
             assertEquals(0L, ctx.i0);
         }
@@ -223,9 +207,8 @@ public class UInt32Test
     @Test
     public void shouldConvertToUInt128WithBoundsCheck() {
         for (int i : ensurePositiveIntTestData()) {
-            UInt32 n   = UInt32.$box(i);
             Ctx    ctx = new Ctx(null, null);
-            long   n2  = n.toUInt128$p(ctx, true, false);
+            long   n2  = UInt32.toUInt128$p(i, ctx, true, false);
             assertEquals(i, n2);
             assertEquals(0L, ctx.i0);
         }

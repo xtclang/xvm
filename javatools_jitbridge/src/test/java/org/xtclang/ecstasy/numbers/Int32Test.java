@@ -27,7 +27,7 @@ public class Int32Test
     public void shouldConvertToInt8() {
         for (int i : ensureIntTestData(Byte.MIN_VALUE, Byte.MAX_VALUE)) {
             Int32 n        = Int32.$box(i);
-            int   n2       = n.toInt8$p(null, false, true);
+            int   n2       = Int32.toInt8$p(n.$value, null, false, true);
             int   expected = (byte) i;
             assertEquals(expected, n2);
         }
@@ -39,12 +39,12 @@ public class Int32Test
             Int32 n = Int32.$box(i);
             if (i < Byte.MIN_VALUE || i > Byte.MAX_VALUE) {
                 try {
-                    n.toInt8$p(null, true, false);
+                    Int32.toInt8$p(n.$value, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                int n2 = n.toInt8$p(null, true, false);
+                int n2 = Int32.toInt8$p(n.$value, null, true, false);
                 assertEquals(i, n2);
             }
         }
@@ -54,7 +54,7 @@ public class Int32Test
     public void shouldConvertToUInt8() {
         for (int i : ensureIntTestData(Byte.MIN_VALUE, Byte.MAX_VALUE)) {
             Int32 n        = Int32.$box(i);
-            int   n2       = n.toUInt8$p(null, false, true);
+            int   n2       = Int32.toUInt8$p(n.$value, null, false, true);
             int   expected = i & 0xFF;
             assertEquals(expected, n2);
         }
@@ -66,12 +66,12 @@ public class Int32Test
             Int32 n = Int32.$box(i);
             if (i < 0 || i > Byte.MAX_VALUE) {
                 try {
-                    n.toUInt8$p(null, true, false);
+                    Int32.toUInt8$p(n.$value, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                int n2 = n.toUInt8$p(null, true, false);
+                int n2 = Int32.toUInt8$p(n.$value, null, true, false);
                 assertEquals(i, n2);
             }
         }
@@ -81,7 +81,7 @@ public class Int32Test
     public void shouldConvertToInt16() {
         for (int i : ensureIntTestData(Short.MIN_VALUE, Short.MAX_VALUE)) {
             Int32 n  = Int32.$box(i);
-            int   n2 = n.toInt16$p(null, false, true);
+            int   n2 = Int32.toInt16$p(n.$value, null, false, true);
             assertEquals((short) i, n2);
         }
     }
@@ -92,12 +92,12 @@ public class Int32Test
             Int32 n = Int32.$box(i);
             if (i < 0 || i > Short.MAX_VALUE) {
                 try {
-                    n.toInt16$p(null, true, false);
+                    Int32.toInt16$p(n.$value, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                int n2 = n.toInt16$p(null, true, false);
+                int n2 = Int32.toInt16$p(n.$value, null, true, false);
                 assertEquals(i, n2);
             }
         }
@@ -107,7 +107,7 @@ public class Int32Test
     public void shouldConvertToUInt16() {
         for (int i : ensureIntTestData(0, Short.MAX_VALUE)) {
             Int32 n        = Int32.$box(i);
-            int   n2       = n.toUInt16$p(null, false, true);
+            int   n2       = Int32.toUInt16$p(n.$value, null, false, true);
             int   expected = i & 0xFFFF;
             assertEquals(expected, n2);
         }
@@ -119,12 +119,12 @@ public class Int32Test
             Int32 n = Int32.$box(i);
             if (i < 0 || i > Short.MAX_VALUE) {
                 try {
-                    n.toUInt16$p(null, true, false);
+                    Int32.toUInt16$p(n.$value, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                int n2 = n.toUInt16$p(null, true, false);
+                int n2 = Int32.toUInt16$p(n.$value, null, true, false);
                 assertEquals(i, n2);
             }
         }
@@ -134,7 +134,7 @@ public class Int32Test
     public void shouldConvertToInt32() {
         for (int i : ensureIntTestData()) {
             Int32 n  = Int32.$box(i);
-            int   n2 = n.toInt32$p(null, false, true);
+            int   n2 = Int32.toInt32$p(n.$value, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -143,7 +143,7 @@ public class Int32Test
     public void shouldConvertToUInt32() {
         for (int i : ensureIntTestData()) {
             Int32 n  = Int32.$box(i);
-            int   n2 = n.toUInt32$p(null, false, true);
+            int   n2 = Int32.toUInt32$p(n.$value, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -154,12 +154,12 @@ public class Int32Test
             Int32 n = Int32.$box(i);
             if (i < 0) {
                 try {
-                    n.toUInt32$p(null, true, false);
+                    Int32.toUInt32$p(n.$value, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                int n2 = n.toUInt32$p(null, true, false);
+                int n2 = Int32.toUInt32$p(n.$value, null, true, false);
                 assertEquals(i, n2);
             }
         }
@@ -169,7 +169,7 @@ public class Int32Test
     public void shouldConvertToInt64() {
         for (int i : ensureIntTestData()) {
             Int32 n  = Int32.$box(i);
-            long  n2 = n.toInt64$p(null, false, true);
+            long  n2 = Int32.toInt64$p(n.$value, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -178,7 +178,7 @@ public class Int32Test
     public void shouldConvertToUInt64() {
         for (int i : ensureIntTestData()) {
             Int32 n  = Int32.$box(i);
-            long  n2 = n.toUInt64$p(null, false, true);
+            long  n2 = Int32.toUInt64$p(n.$value, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -189,12 +189,12 @@ public class Int32Test
             Int32 n = Int32.$box(i);
             if (i < 0) {
                 try {
-                    n.toUInt64$p(null, true, false);
+                    Int32.toUInt64$p(n.$value, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                long n2 = n.toUInt64$p(null, true, false);
+                long n2 = Int32.toUInt64$p(n.$value, null, true, false);
                 assertEquals(i, n2);
             }
         }
@@ -205,7 +205,7 @@ public class Int32Test
         for (int i : ensureIntTestData()) {
             Int32 n   = Int32.$box(i);
             Ctx   ctx = new Ctx(null, null);
-            long  n2  = n.toInt128$p(ctx, false, true);
+            long  n2  = Int32.toInt128$p(n.$value, ctx, false, true);
             assertEquals(i, n2);
             if (i < 0) {
                 assertEquals(-1L, ctx.i0);
@@ -220,7 +220,7 @@ public class Int32Test
         for (int i : ensureIntTestData()) {
             Int32 n   = Int32.$box(i);
             Ctx   ctx = new Ctx(null, null);
-            long  n2  = n.toUInt128$p(ctx, false, true);
+            long  n2  = Int32.toUInt128$p(n.$value, ctx, false, true);
             assertEquals(i, n2);
             if (i < 0) {
                 assertEquals(-1L, ctx.i0);
@@ -237,12 +237,12 @@ public class Int32Test
             Ctx   ctx = new Ctx(null, null);
             if (i < 0) {
                 try {
-                    n.toUInt128$p(null, true, false);
+                    Int32.toUInt128$p(n.$value, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                long n2 = n.toUInt128$p(ctx, true, false);
+                long n2 = Int32.toUInt128$p(n.$value, ctx, true, false);
                 assertEquals(i, n2);
                 assertEquals(0L, ctx.i0);
             }
