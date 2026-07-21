@@ -38,8 +38,7 @@ public class NibbleTest {
     @Test
     public void shouldConvertToNibble() {
         for (int i = 0; i <= 15; i++) {
-            Nibble n   = Nibble.$box(i);
-            int    n2  = n.toNibble$p(null, false, true);
+            int n2 = Nibble.toNibble$p(i, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -47,8 +46,7 @@ public class NibbleTest {
     @Test
     public void shouldConvertToInt8() {
         for (int i = 0; i <= 15; i++) {
-            Nibble n  = Nibble.$box(i);
-            int    n2 = n.toInt8$p(null, false, true);
+            int n2 = Nibble.toInt8$p(i, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -56,8 +54,7 @@ public class NibbleTest {
     @Test
     public void shouldConvertToInt16() {
         for (int i = 0; i <= 15; i++) {
-            Nibble n  = Nibble.$box(i);
-            int    n2 = n.toInt16$p(null, false, true);
+            int n2 = Nibble.toInt16$p(i, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -65,8 +62,7 @@ public class NibbleTest {
     @Test
     public void shouldConvertToInt32() {
         for (int i = 0; i <= 15; i++) {
-            Nibble n  = Nibble.$box(i);
-            int    n2 = n.toInt32$p(null, false, true);
+            int n2 = Nibble.toInt32$p(i, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -74,8 +70,7 @@ public class NibbleTest {
     @Test
     public void shouldConvertToInt64() {
         for (int i = 0; i <= 15; i++) {
-            Nibble n  = Nibble.$box(i);
-            long   n2 = n.toInt64$p(null, false, true);
+            long n2 = Nibble.toInt64$p(i, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -83,9 +78,8 @@ public class NibbleTest {
     @Test
     public void shouldConvertToInt128() {
         for (int i = 0; i <= 15; i++) {
-            Nibble n   = Nibble.$box(i);
             Ctx    ctx = new Ctx(null, null);
-            long   n2  = n.toInt128$p(ctx, false, true);
+            long   n2  = Nibble.toInt128$p(i, ctx, false, true);
             assertEquals(i, n2);
             assertEquals(0L, ctx.i0);
         }
@@ -94,8 +88,7 @@ public class NibbleTest {
     @Test
     public void shouldConvertToUInt8() {
         for (int i = 0; i <= 15; i++) {
-            Nibble n  = Nibble.$box(i);
-            int    n2 = n.toUInt8$p(null, false, true);
+            int n2 = Nibble.toUInt8$p(i, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -103,8 +96,7 @@ public class NibbleTest {
     @Test
     public void shouldConvertToUInt16() {
         for (int i = 0; i <= 15; i++) {
-            Nibble n  = Nibble.$box(i);
-            int    n2 = n.toUInt16$p(null, false, true);
+            int n2 = Nibble.toUInt16$p(i, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -112,8 +104,7 @@ public class NibbleTest {
     @Test
     public void shouldConvertToUInt32() {
         for (int i = 0; i <= 15; i++) {
-            Nibble n  = Nibble.$box(i);
-            int    n2 = n.toUInt32$p(null, false, true);
+            int n2 = Nibble.toUInt32$p(i, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -121,8 +112,7 @@ public class NibbleTest {
     @Test
     public void shouldConvertToUInt64() {
         for (int i = 0; i <= 15; i++) {
-            Nibble n  = Nibble.$box(i);
-            long   n2 = n.toUInt64$p(null, false, true);
+            long n2 = Nibble.toUInt64$p(i, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -130,9 +120,8 @@ public class NibbleTest {
     @Test
     public void shouldConvertToUInt128() {
         for (int i = 0; i <= 15; i++) {
-            Nibble n   = Nibble.$box(i);
             Ctx    ctx = new Ctx(null, null);
-            long   n2  = n.toUInt128$p(ctx, false, true);
+            long   n2  = Nibble.toUInt128$p(i, ctx, false, true);
             assertEquals(i, n2);
             assertEquals(0L, ctx.i0);
         }

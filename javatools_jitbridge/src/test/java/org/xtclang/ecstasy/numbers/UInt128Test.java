@@ -20,7 +20,7 @@ public class UInt128Test
     public void shouldConvertToInt8() {
         for (long i : ensureLongTestData(Byte.MIN_VALUE, Byte.MAX_VALUE)) {
             UInt128 n        = new UInt128(i, i < 0L ? -1L : 0L);
-            int     n2       = n.toInt8$p(null, false, true);
+            int     n2       = UInt128.toInt8$p(n.$lowValue, n.$highValue, null, false, true);
             int     expected = (byte) i;
             assertEquals(expected, n2);
         }
@@ -32,12 +32,12 @@ public class UInt128Test
             UInt128 n = new UInt128(i, i < 0L ? -1L : 0L);
             if (i < Byte.MIN_VALUE || i > Byte.MAX_VALUE) {
                 try {
-                    n.toInt8$p(null, true, false);
+                    UInt128.toInt8$p(n.$lowValue, n.$highValue, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                int n2 = n.toInt8$p(null, true, false);
+                int n2 = UInt128.toInt8$p(n.$lowValue, n.$highValue, null, true, false);
                 assertEquals(i, n2);
             }
         }
@@ -47,7 +47,7 @@ public class UInt128Test
     public void shouldConvertToUInt8() {
         for (long i : ensureLongTestData(Byte.MIN_VALUE, Byte.MAX_VALUE)) {
             UInt128 n        = new UInt128(i, i < 0L ? -1L : 0L);
-            int     n2       = n.toUInt8$p(null, false, true);
+            int     n2       = UInt128.toUInt8$p(n.$lowValue, n.$highValue, null, false, true);
             int     expected = (int) (i & 0xFFL);
             assertEquals(expected, n2);
         }
@@ -59,12 +59,12 @@ public class UInt128Test
             UInt128 n = new UInt128(i, i < 0L ? -1L : 0L);
             if (i < 0 || i > Byte.MAX_VALUE) {
                 try {
-                    n.toUInt8$p(null, true, false);
+                    UInt128.toUInt8$p(n.$lowValue, n.$highValue, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                int n2 = n.toUInt8$p(null, true, false);
+                int n2 = UInt128.toUInt8$p(n.$lowValue, n.$highValue, null, true, false);
                 assertEquals(i, n2);
             }
         }
@@ -74,7 +74,7 @@ public class UInt128Test
     public void shouldConvertToInt16() {
         for (long i : ensureLongTestData(Short.MIN_VALUE, Short.MAX_VALUE)) {
             UInt128 n  = new UInt128(i, i < 0L ? -1L : 0L);
-            int     n2 = n.toInt16$p(null, false, true);
+            int     n2 = UInt128.toInt16$p(n.$lowValue, n.$highValue, null, false, true);
             assertEquals((short) i, n2);
         }
     }
@@ -85,12 +85,12 @@ public class UInt128Test
             UInt128 n = new UInt128(i, i < 0L ? -1L : 0L);
             if (i < 0 || i > Short.MAX_VALUE) {
                 try {
-                    n.toInt16$p(null, true, false);
+                    UInt128.toInt16$p(n.$lowValue, n.$highValue, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                int n2 = n.toInt16$p(null, true, false);
+                int n2 = UInt128.toInt16$p(n.$lowValue, n.$highValue, null, true, false);
                 assertEquals(i, n2);
             }
         }
@@ -100,7 +100,7 @@ public class UInt128Test
     public void shouldConvertToUInt16() {
         for (long i : ensureLongTestData(0, Short.MAX_VALUE)) {
             UInt128 n        = new UInt128(i, i < 0L ? -1L : 0L);
-            int     n2       = n.toUInt16$p(null, false, true);
+            int     n2       = UInt128.toUInt16$p(n.$lowValue, n.$highValue, null, false, true);
             int     expected = (int) (i & 0xFFFFL);
             assertEquals(expected, n2);
         }
@@ -112,12 +112,12 @@ public class UInt128Test
             UInt128 n = new UInt128(i, i < 0L ? -1L : 0L);
             if (i < 0 || i > Short.MAX_VALUE) {
                 try {
-                    n.toUInt16$p(null, true, false);
+                    UInt128.toUInt16$p(n.$lowValue, n.$highValue, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                int n2 = n.toUInt16$p(null, true, false);
+                int n2 = UInt128.toUInt16$p(n.$lowValue, n.$highValue, null, true, false);
                 assertEquals(i, n2);
             }
         }
@@ -127,7 +127,7 @@ public class UInt128Test
     public void shouldConvertToInt32() {
         for (long i : ensureLongTestData()) {
             UInt128 n        = new UInt128(i, i < 0L ? -1L : 0L);
-            int     n2       = n.toInt32$p(null, false, true);
+            int     n2       = UInt128.toInt32$p(n.$lowValue, n.$highValue, null, false, true);
             int     expected = (int) (i & 0xFFFFFFFFL);
             assertEquals(expected, n2);
         }
@@ -137,7 +137,7 @@ public class UInt128Test
     public void shouldConvertToUInt32() {
         for (long i : ensureLongTestData()) {
             UInt128 n        = new UInt128(i, i < 0L ? -1L : 0L);
-            int     n2       = n.toUInt32$p(null, false, true);
+            int     n2       = UInt128.toUInt32$p(n.$lowValue, n.$highValue, null, false, true);
             int     expected = (int) (i & 0xFFFFFFFFL);
             assertEquals(expected, n2);
         }
@@ -149,12 +149,12 @@ public class UInt128Test
             UInt128 n = new UInt128(i, i < 0L ? -1L : 0L);
             if (i < 0 || i > Integer.MAX_VALUE) {
                 try {
-                    n.toUInt32$p(null, true, false);
+                    UInt128.toUInt32$p(n.$lowValue, n.$highValue, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                int n2 = n.toUInt32$p(null, true, false);
+                int n2 = UInt128.toUInt32$p(n.$lowValue, n.$highValue, null, true, false);
                 assertEquals(i, n2);
             }
         }
@@ -167,7 +167,7 @@ public class UInt128Test
             long    low  = rnd.nextLong();
             long    high = rnd.nextBoolean() ? 0L : rnd.nextLong();
             UInt128 n    = new UInt128(low, high);
-            long    n2   = n.toInt64$p(null, false, true);
+            long    n2   = UInt128.toInt64$p(n.$lowValue, n.$highValue, null, false, true);
             assertEquals(low, n2);
         }
     }
@@ -181,12 +181,12 @@ public class UInt128Test
             UInt128 n    = new UInt128(low, high);
             if (high != 0) {
                 try {
-                    n.toInt64$p(null, true, false);
+                    UInt128.toInt64$p(n.$lowValue, n.$highValue, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                long n2 = n.toInt64$p(null, true, false);
+                long n2 = UInt128.toInt64$p(n.$lowValue, n.$highValue, null, true, false);
                 assertEquals(low, n2);
             }
         }
@@ -199,7 +199,7 @@ public class UInt128Test
             long    low  = rnd.nextLong();
             long    high = rnd.nextBoolean() ? 0L : rnd.nextLong();
             UInt128 n    = new UInt128(low, high);
-            long    n2   = n.toUInt64$p(null, false, true);
+            long    n2   = UInt128.toUInt64$p(n.$lowValue, n.$highValue, null, false, true);
             assertEquals(low, n2);
         }
     }
@@ -213,12 +213,12 @@ public class UInt128Test
             UInt128 n    = new UInt128(low, high);
             if (high != 0) {
                 try {
-                    n.toUInt64$p(null, true, false);
+                    UInt128.toUInt64$p(n.$lowValue, n.$highValue, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                long n2 = n.toUInt64$p(null, true, false);
+                long n2 = UInt128.toUInt64$p(n.$lowValue, n.$highValue, null, true, false);
                 assertEquals(low, n2);
             }
         }
@@ -232,7 +232,7 @@ public class UInt128Test
             long    high = rnd.nextLong();
             UInt128 n   = new UInt128(low, high);
             Ctx     ctx = new Ctx(null, null);
-            long    n2 = n.toInt128$p(ctx, false, true);
+            long    n2 = UInt128.toInt128$p(n.$lowValue, n.$highValue, ctx, false, true);
             assertEquals(n.$lowValue, n2);
             assertEquals(n.$highValue, ctx.i0);
         }
@@ -246,7 +246,7 @@ public class UInt128Test
             long    high = rnd.nextLong();
             UInt128 n    = new UInt128(low, high);
             Ctx     ctx  = new Ctx(null, null);
-            long    n2   = n.toUInt128$p(ctx, false, true);
+            long    n2   = UInt128.toUInt128$p(n.$lowValue, n.$highValue, ctx, false, true);
             assertEquals(n.$lowValue, n2);
             assertEquals(n.$highValue, ctx.i0);
         }
@@ -259,12 +259,12 @@ public class UInt128Test
             Ctx     ctx = new Ctx(null, null);
             if (i < 0) {
                 try {
-                    n.toUInt128$p(ctx, true, false);
+                    UInt128.toUInt128$p(n.$lowValue, n.$highValue, ctx, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                long n2 = n.toUInt128$p(ctx, true, false);
+                long n2 = UInt128.toUInt128$p(n.$lowValue, n.$highValue, ctx, true, false);
                 assertEquals(n.$lowValue, n2);
                 assertEquals(n.$highValue, ctx.i0);
             }

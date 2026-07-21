@@ -43,7 +43,7 @@ public class BitTest {
     public void shouldConvertToBit() {
         for (int i = 0; i <= 1; i++) {
             Bit bit = Bit.$box(i);
-            int n   = bit.toBit$p(null, false, true);
+            int n   = Bit.toBit$p(bit.$value, null, false, true);
             assertEquals(i, n);
         }
     }
@@ -52,7 +52,7 @@ public class BitTest {
     public void shouldConvertToInt8() {
         for (int i = 0; i <= 1; i++) {
             Bit bit = Bit.$box(i);
-            int n   = bit.toInt8$p(null, false, true);
+            int n   = Bit.toInt8$p(bit.$value, null, false, true);
             assertEquals(i, n);
         }
     }
@@ -61,7 +61,7 @@ public class BitTest {
     public void shouldConvertToInt16() {
         for (int i = 0; i <= 1; i++) {
             Bit bit = Bit.$box(i);
-            int n   = bit.toInt16$p(null, false, true);
+            int n   = Bit.toInt16$p(bit.$value, null, false, true);
             assertEquals(i, n);
         }
     }
@@ -70,7 +70,7 @@ public class BitTest {
     public void shouldConvertToInt32() {
         for (int i = 0; i <= 1; i++) {
             Bit bit = Bit.$box(i);
-            int n   = bit.toInt32$p(null, false, true);
+            int n   = Bit.toInt32$p(bit.$value, null, false, true);
             assertEquals(i, n);
         }
     }
@@ -79,7 +79,7 @@ public class BitTest {
     public void shouldConvertToInt64() {
         for (int i = 0; i <= 1; i++) {
             Bit  bit = Bit.$box(i);
-            long n   = bit.toInt64$p(null, false, true);
+            long n   = Bit.toInt64$p(bit.$value, null, false, true);
             assertEquals(i, n);
         }
     }
@@ -89,7 +89,7 @@ public class BitTest {
         for (int i = 0; i <= 1; i++) {
             Bit  bit = Bit.$box(i);
             Ctx  ctx = new Ctx(null, null);
-            long n   = bit.toInt128$p(ctx, false, true);
+            long n   = Bit.toInt128$p(bit.$value, ctx, false, true);
             assertEquals(i, n);
             assertEquals(0L, ctx.i0);
         }
@@ -99,7 +99,7 @@ public class BitTest {
     public void shouldConvertToUInt8() {
         for (int i = 0; i <= 1; i++) {
             Bit bit = Bit.$box(i);
-            int n   = bit.toUInt8$p(null, false, true);
+            int n   = Bit.toUInt8$p(bit.$value, null, false, true);
             assertEquals(i, n);
         }
     }
@@ -108,7 +108,7 @@ public class BitTest {
     public void shouldConvertToUInt16() {
         for (int i = 0; i <= 1; i++) {
             Bit bit = Bit.$box(i);
-            int n   = bit.toUInt16$p(null, false, true);
+            int n   = Bit.toUInt16$p(bit.$value, null, false, true);
             assertEquals(i, n);
         }
     }
@@ -117,7 +117,7 @@ public class BitTest {
     public void shouldConvertToUInt32() {
         for (int i = 0; i <= 1; i++) {
             Bit bit = Bit.$box(i);
-            int n   = bit.toUInt32$p(null, false, true);
+            int n   = Bit.toUInt32$p(bit.$value, null, false, true);
             assertEquals(i, n);
         }
     }
@@ -126,7 +126,7 @@ public class BitTest {
     public void shouldConvertToUInt64() {
         for (int i = 0; i <= 1; i++) {
             Bit  bit = Bit.$box(i);
-            long n   = bit.toUInt64$p(null, false, true);
+            long n   = Bit.toUInt64$p(bit.$value, null, false, true);
             assertEquals(i, n);
         }
     }
@@ -136,7 +136,7 @@ public class BitTest {
         for (int i = 0; i <= 1; i++) {
             Bit  bit = Bit.$box(i);
             Ctx  ctx = new Ctx(null, null);
-            long n   = bit.toUInt128$p(ctx, false, true);
+            long n   = Bit.toUInt128$p(bit.$value, ctx, false, true);
             assertEquals(i, n);
             assertEquals(0L, ctx.i0);
         }

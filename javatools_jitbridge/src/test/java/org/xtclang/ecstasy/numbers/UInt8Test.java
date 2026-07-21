@@ -24,7 +24,7 @@ public class UInt8Test {
     public void shouldConvertToInt8() {
         for (int i = 0; i <= 255; i++) {
             UInt8 n = UInt8.$box(i);
-            int  n2 = n.toInt8$p(null, false, true);
+            int  n2 = UInt8.toInt8$p(n.$value, null, false, true);
             assertEquals((byte) i, n2);
         }
     }
@@ -35,12 +35,12 @@ public class UInt8Test {
             UInt8 n = UInt8.$box(i);
             if (i > Byte.MAX_VALUE) {
                 try {
-                    n.toUInt8$p(null, true, false);
+                    UInt8.toInt8$p(n.$value, null, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                int n2 = n.toInt8$p(null, true, false);
+                int n2 = UInt8.toInt8$p(n.$value, null, true, false);
                 assertEquals(i, n2);
             }
         }
@@ -50,7 +50,7 @@ public class UInt8Test {
     public void shouldConvertToUInt8() {
         for (int i = 0; i <= 255; i++) {
             UInt8 n  = UInt8.$box(i);
-            int   n2 = n.toUInt8$p(null, false, true);
+            int   n2 = UInt8.toUInt8$p(n.$value, null, false, true);
             assertEquals(n.$value, n2);
         }
     }
@@ -59,7 +59,7 @@ public class UInt8Test {
     public void shouldConvertToInt16() {
         for (int i = 0; i <= 255; i++) {
             UInt8 n  = UInt8.$box(i);
-            int   n2 = n.toInt16$p(null, false, true);
+            int   n2 = UInt8.toInt16$p(n.$value, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -68,7 +68,7 @@ public class UInt8Test {
     public void shouldConvertToUInt16() {
         for (int i = 0; i <= 255; i++) {
             UInt8 n  = UInt8.$box(i);
-            int   n2 = n.toUInt16$p(null, false, true);
+            int   n2 = UInt8.toUInt16$p(n.$value, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -77,7 +77,7 @@ public class UInt8Test {
     public void shouldConvertToUInt16WithBoundsCheck() {
         for (int i = 0; i <= 255; i++) {
             UInt8 n  = UInt8.$box(i);
-            int   n2 = n.toUInt16$p(null, true, false);
+            int   n2 = UInt8.toUInt16$p(n.$value, null, true, false);
             assertEquals(i, n2);
         }
     }
@@ -86,7 +86,7 @@ public class UInt8Test {
     public void shouldConvertToInt32() {
         for (int i = 0; i <= 255; i++) {
             UInt8 n  = UInt8.$box(i);
-            int   n2 = n.toInt32$p(null, false, true);
+            int   n2 = UInt8.toInt32$p(n.$value, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -95,7 +95,7 @@ public class UInt8Test {
     public void shouldConvertToUInt32() {
         for (int i = 0; i <= 255; i++) {
             UInt8 n  = UInt8.$box(i);
-            int   n2 = n.toUInt32$p(null, false, true);
+            int   n2 = UInt8.toUInt32$p(n.$value, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -104,7 +104,7 @@ public class UInt8Test {
     public void shouldConvertToUInt32WithBoundsCheck() {
         for (int i = 0; i <= 255; i++) {
             UInt8 n  = UInt8.$box(i);
-            int   n2 = n.toUInt32$p(null, true, false);
+            int   n2 = UInt8.toUInt32$p(n.$value, null, true, false);
             assertEquals(i, n2);
         }
     }
@@ -113,7 +113,7 @@ public class UInt8Test {
     public void shouldConvertToInt64() {
         for (int i = 0; i <= 255; i++) {
             UInt8 n  = UInt8.$box(i);
-            long  n2 = n.toInt64$p(null, false, true);
+            long  n2 = UInt8.toInt64$p(n.$value, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -122,7 +122,7 @@ public class UInt8Test {
     public void shouldConvertToUInt64() {
         for (int i = 0; i <= 255; i++) {
             UInt8 n  = UInt8.$box(i);
-            long  n2 = n.toUInt64$p(null, false, true);
+            long  n2 = UInt8.toUInt64$p(n.$value, null, false, true);
             assertEquals(i, n2);
         }
     }
@@ -131,7 +131,7 @@ public class UInt8Test {
     public void shouldConvertToUInt64WithBoundsCheck() {
         for (int i = 0; i <= 255; i++) {
             UInt8 n  = UInt8.$box(i);
-            long  n2 = n.toUInt64$p(null, true, false);
+            long  n2 = UInt8.toUInt64$p(n.$value, null, true, false);
             assertEquals(i, n2);
         }
     }
@@ -141,7 +141,7 @@ public class UInt8Test {
         for (int i = 0; i <= 255; i++) {
             UInt8 n   = UInt8.$box(i);
             Ctx   ctx = new Ctx(null, null);
-            long  n2  = n.toInt128$p(ctx, false, true);
+            long  n2  = UInt8.toInt128$p(n.$value, ctx, false, true);
             assertEquals(i, n2);
             assertEquals(0L, ctx.i0);
         }
@@ -152,7 +152,7 @@ public class UInt8Test {
         for (int i = 0; i <= 255; i++) {
             UInt8 n   = UInt8.$box(i);
             Ctx   ctx = new Ctx(null, null);
-            long  n2  = n.toUInt128$p(ctx, false, true);
+            long  n2  = UInt8.toUInt128$p(n.$value, ctx, false, true);
             assertEquals(i, n2);
             assertEquals(0L, ctx.i0);
         }
@@ -163,7 +163,7 @@ public class UInt8Test {
         for (int i = 0; i <= 255; i++) {
             UInt8 n  = UInt8.$box(i);
             Ctx   ctx = new Ctx(null, null);
-            long  n2 = n.toUInt128$p(ctx, true, false);
+            long  n2 = UInt8.toUInt128$p(n.$value, ctx, true, false);
             assertEquals(i, n2);
             assertEquals(0L, ctx.i0);
         }
