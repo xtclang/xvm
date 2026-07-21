@@ -50,6 +50,7 @@ package enumTests {
     Boolean testRed2(Color|Int cint) {
         if (cint.is(Color)) {
             cint = 111;
+            cint = -cint;
             cint = cint * 43;
         }
         return cint != 42;

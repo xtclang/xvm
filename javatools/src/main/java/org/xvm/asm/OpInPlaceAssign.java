@@ -158,9 +158,19 @@ public abstract class OpInPlaceAssign
         }
 
         regTarget = regTarget.load(code);
+        if (jmd.isOptimizedStatic) {
+            // the target must be a boxed primitive
+            assert typeTarget.isJitPrimitive();
+            Builder.unbox(code, typeTarget);
+        }
         bctx.loadCtx(code);
-        bctx.loadArgument(code, m_nArgValue);
-        code.invokevirtual(regTarget.cd(), sJitName, md);
+        bctx.loadCallArguments(code, jmd, new int[] {m_nArgValue});
+
+        if (jmd.isOptimizedStatic) {
+            code.invokestatic(bctx.builder.ensureClassDesc(typeTarget), sJitName, md);
+        } else {
+            code.invokevirtual(regTarget.cd(), sJitName, md);
+        }
 
         return method.getSignature().getRawReturns()[0]; // could differ from the target
     }

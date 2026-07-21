@@ -112,7 +112,8 @@ public class BuildContext {
     /**
      * Construct {@link BuildContext} for a "top" method in the call chain.
      */
-    public BuildContext(Builder builder, String className, TypeInfo typeInfo, MethodInfo methodInfo) {
+    public BuildContext(Builder builder, String className, TypeInfo typeInfo, MethodInfo methodInfo,
+                        JitMethodDesc jmd) {
         this.builder       = builder;
         this.typeSystem    = builder.typeSystem;
         this.className     = className;
@@ -122,11 +123,11 @@ public class BuildContext {
         this.callChain     = methodInfo.getChain();
         this.methodStruct  = callChain[0].getMethodStructure();
         this.callDepth     = 0;
-        this.methodDesc    = methodInfo.getJitDesc(builder);
+        this.methodDesc    = jmd;
         this.methodJitName = methodInfo.ensureJitMethodName(typeSystem);
         this.isFunction    = methodInfo.isFunction();
         this.isConstructor = methodInfo.isCtorOrValidator();
-        this.isOptimized   = methodDesc.optimizedMD != null;
+        this.isOptimized   = jmd.optimizedMD != null;
         this.isSpecialized = jitType.isParamsSpecified() &&
                             !jitType.equals(typeInfo.getClassStructure().getCanonicalType());
         this.typeMatrix    = new TypeMatrix(this);
@@ -140,7 +141,8 @@ public class BuildContext {
             String       className,
             TypeInfo     typeInfo,
             PropertyInfo propInfo,
-            boolean      isGetter) {
+            boolean      isGetter,
+            JitMethodDesc methodDesc) {
         this.builder       = builder;
         this.typeSystem    = builder.typeSystem;
         this.className     = className;
@@ -152,9 +154,7 @@ public class BuildContext {
                 ? propInfo.ensureOptimizedGetChain(typeInfo, null)
                 : propInfo.ensureOptimizedSetChain(typeInfo, null);
         this.methodStruct  = callChain[0].getMethodStructure();
-        this.methodDesc = isGetter
-                ? propInfo.getGetterJitDesc(builder)
-                : propInfo.getSetterJitDesc(builder);
+        this.methodDesc    = methodDesc;
         this.methodJitName = isGetter
                 ? propInfo.ensureGetterJitMethodName(typeSystem)
                 : propInfo.ensureSetterJitMethodName(typeSystem);
@@ -673,7 +673,9 @@ public class BuildContext {
             .labelBinding(scope.startLabel);
 
         if (debugInfo) {
-            code.localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, scope.startLabel, scope.endLabel);
+            int ctxParam = isOptimized ? methodDesc.optimizedCtx() : methodDesc.standardCtx();
+            code.localVariable(code.parameterSlot(ctxParam), "$ctx", CD_Ctx,
+                    scope.startLabel, scope.endLabel);
         }
 
         int            extraArgs  = methodDesc.getImplicitParamCount(); // e.g. $ctx, $cctx, thi$, ...
@@ -695,17 +697,18 @@ public class BuildContext {
         for (int i = 0, c = params.length; i < c; i++) {
             JitParamDesc paramDesc = params[i];
             int          varIndex  = paramDesc.index;
+            boolean      isThis    = varIndex == -1;
             Parameter    param;
             String       name;
             TypeConstant type;
             int          slot;
-            if (varIndex == -1) {
+            if (isThis) {
                 // primitive "thi$"
                 varIndex = Op.A_THIS;
                 param    = null;        // not used by Primitive or XvmPrimitive flavors
                 name     = "thi$";
                 type     = thisType;
-                slot     = 0;           // static method takes a first param of primitive "thi$"
+                slot     = code.parameterSlot(0);
             } else {
                 param     = methodStruct.getParam(varIndex);
                 name      = param.getName();
@@ -842,7 +845,7 @@ public class BuildContext {
                 int[]       slots = new int[cds.length];
 
                 for (int j = 0; j < cds.length; j++) {
-                    slots[j] = code.parameterSlot(extraArgs + i + j);
+                    slots[j] = code.parameterSlot(isThis ? j : extraArgs + i + j);
                 }
                 i += cds.length - 1; // we consumed the next params
 
@@ -978,8 +981,30 @@ public class BuildContext {
      * Build the code to load the Ctx instance on the Java stack.
      */
     public CodeBuilder loadCtx(CodeBuilder code) {
-        code.aload(code.parameterSlot(0));
+        code.aload(ctxSlot(code));
         return code;
+    }
+
+    /**
+     * @return the Java slot containing the current context
+     */
+    public int ctxSlot(CodeBuilder code) {
+        int ctxParam = isOptimized ? methodDesc.optimizedCtx() : methodDesc.standardCtx();
+        return code.parameterSlot(ctxParam);
+    }
+
+    /**
+     * Store a return value into the current context.
+     */
+    public void storeToContext(CodeBuilder code, ClassDesc cd, int returnIndex) {
+        Builder.storeToContext(code, cd, returnIndex, ctxSlot(code));
+    }
+
+    /**
+     * Load a return value from the current context.
+     */
+    public void loadFromContext(CodeBuilder code, ClassDesc cd, int returnIndex) {
+        Builder.loadFromContext(code, cd, returnIndex, ctxSlot(code));
     }
 
     /**
@@ -1612,7 +1637,7 @@ public class BuildContext {
                     // this can only be caused by a dead/unreachable code
                     ensureRegisterScope(code, regTo);
                     Builder.throwTypeMismatch(code, "Unreconcilable types " +
-                            typeFrom.getValueString() + " -> " + typeTo.getValueString());
+                            typeFrom.getValueString() + " -> " + typeTo.getValueString(), ctxSlot(code));
                     // unfortunately, if generated for any reachable code, this will throw
                     // during the verification phase without any useful information to debug
                     System.err.println("*** Unreconcilable types " +
@@ -2258,11 +2283,9 @@ public class BuildContext {
      */
     public void buildGetProperty(CodeBuilder code, RegisterInfo targetReg, int propIdIndex, int retId) {
         PropertyConstant propId = getConstant(propIdIndex, PropertyConstant.class);
-        switch (targetReg.flavor()) {
-            case Primitive, XvmPrimitive -> Builder.box(code, targetReg);
-        }
-        PropertyInfo  info   = builder.loadProperty(code, targetReg.type(), propId);
-        JitMethodDesc jmdGet = info.getGetterJitDesc(builder);
+        PropertyInfo  info   = builder.loadProperty(code, targetReg.type(), propId, true,
+                ctxSlot(code));
+        JitMethodDesc jmdGet = info.getGetterJitDesc(builder, targetReg.type());
 
         assignReturns(code, jmdGet, 1, new int[] {retId});
     }
@@ -2358,14 +2381,14 @@ public class BuildContext {
 
         TypeConstant  targetType = targetReg.type();
         PropertyInfo  propInfo   = prop.getPropertyInfo(targetType);
-        JitMethodDesc jmd        = propInfo.getSetterJitDesc(builder);
+        JitMethodDesc jmd        = propInfo.getSetterJitDesc(builder, targetType);
         String        setterName = propInfo.ensureSetterJitMethodName(typeSystem);
 
         MethodTypeDesc md;
         JitParamDesc   pd;
         if (jmd.isOptimized) {
             md         = jmd.optimizedMD;
-            pd         = jmd.optimizedParams[0];
+            pd         = jmd.getOptimizedParam(0);
             setterName += Builder.OPT;
         } else {
             md = jmd.standardMD;
@@ -2477,7 +2500,11 @@ public class BuildContext {
             }
         }
 
-        code.invokevirtual(targetReg.cd(), setterName, md);
+        if (jmd.isOptimizedStatic) {
+            code.invokestatic(builder.ensureClassDesc(jmd.typeTarget), setterName, md);
+        } else {
+            code.invokevirtual(targetReg.cd(), setterName, md);
+        }
     }
 
     /**
@@ -2637,7 +2664,7 @@ public class BuildContext {
                 JitParamDesc pdExt = jmd.optimizedReturns[iOpt + 1];
 
                 // if the value is `True`, then the return value is Ecstasy `Null`
-                Builder.loadFromContext(code, CD_boolean, pdExt.altIndex);
+                loadFromContext(code, CD_boolean, pdExt.altIndex);
             }
 
             case "NullablePrimitive->Specific",
@@ -2646,7 +2673,7 @@ public class BuildContext {
                 JitParamDesc pdExt = jmd.optimizedReturns[iOpt + 1];
 
                 // if the value is `True`, then the return value is Ecstasy `Null`
-                Builder.loadFromContext(code, CD_boolean, pdExt.altIndex);
+                loadFromContext(code, CD_boolean, pdExt.altIndex);
 
                 Label ifTrue = code.newLabel();
                 Label endIf = code.newLabel();
@@ -2666,7 +2693,7 @@ public class BuildContext {
                 int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
                 for (int j = 1, retIndex = 0; j < optIndexes.length; j++, retIndex++) {
                     JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
-                    Builder.loadFromContext(code, retDesc.cd, retIndex);
+                    loadFromContext(code, retDesc.cd, retIndex);
                 }
                 Builder.box(code, destType);
             }
@@ -2676,7 +2703,7 @@ public class BuildContext {
                 int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
                 for (int j = 1, retIndex = 0; j < optIndexes.length; j++, retIndex++) {
                     JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
-                    Builder.loadFromContext(code, retDesc.cd, retIndex);
+                    loadFromContext(code, retDesc.cd, retIndex);
                 }
             }
             case "NullableXvmPrimitive->Specific",
@@ -2684,13 +2711,13 @@ public class BuildContext {
                 assert isOptimized;
                 int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
 
-                Builder.loadFromContext(code, CD_boolean, optIndexes[optIndexes.length - 1]);
+                loadFromContext(code, CD_boolean, optIndexes[optIndexes.length - 1]);
                 Label ifTrue = code.newLabel();
                 Label endIf = code.newLabel();
                 code.ifne(ifTrue);
                 for (int j = 1, retIndex = 0; j < optIndexes.length - 1; j++, retIndex++) {
                     JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
-                    Builder.loadFromContext(code, retDesc.cd, retIndex);
+                    loadFromContext(code, retDesc.cd, retIndex);
                 }
                 Builder.box(code, destType);
                 code.goto_(endIf).labelBinding(ifTrue);
@@ -2704,7 +2731,7 @@ public class BuildContext {
                 int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
                 for (int j = 1, retIndex = 0; j < optIndexes.length; j++, retIndex++) {
                     JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
-                    Builder.loadFromContext(code, retDesc.cd, retIndex);
+                    loadFromContext(code, retDesc.cd, retIndex);
                 }
             }
 
@@ -2741,21 +2768,21 @@ public class BuildContext {
             case "Primitive->Specific",
                  "Primitive->Widened" -> {
                 assert isOptimized;
-                Builder.loadFromContext(code, tdDest.cd, pdRet.altIndex);
+                loadFromContext(code, tdDest.cd, pdRet.altIndex);
                 Builder.box(code, destType);
             }
 
             case "Primitive->Primitive" -> {
                 assert isOptimized;
-                Builder.loadFromContext(code, tdDest.cd, pdRet.altIndex);
+                loadFromContext(code, tdDest.cd, pdRet.altIndex);
             }
 
             case "NullablePrimitive->NullablePrimitive"-> {
                 assert isOptimized;
                 JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
 
-                Builder.loadFromContext(code, tdDest.cd, pdRet.altIndex);
-                Builder.loadFromContext(code, pdExt.cd, pdExt.altIndex);
+                loadFromContext(code, tdDest.cd, pdRet.altIndex);
+                loadFromContext(code, pdExt.cd, pdExt.altIndex);
                 // if the value is `True`, then the return value is Ecstasy `Null`
             }
 
@@ -2764,8 +2791,8 @@ public class BuildContext {
                 assert isOptimized;
                 JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
 
-                Builder.loadFromContext(code, tdDest.cd, pdRet.altIndex);
-                Builder.loadFromContext(code, pdExt.cd, pdExt.altIndex);
+                loadFromContext(code, tdDest.cd, pdRet.altIndex);
+                loadFromContext(code, pdExt.cd, pdExt.altIndex);
                 // if the value is `True`, then the return value is Ecstasy `Null`
 
                 Label ifTrue = code.newLabel();
@@ -2786,7 +2813,7 @@ public class BuildContext {
                 int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
                 for (int optIndex : optIndexes) {
                     JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
-                    Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
+                    loadFromContext(code, retDesc.cd, retDesc.altIndex);
                 }
                 Builder.box(code, destType);
             }
@@ -2797,7 +2824,7 @@ public class BuildContext {
                 int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
                 for (int optIndex : optIndexes) {
                     JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
-                    Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
+                    loadFromContext(code, retDesc.cd, retDesc.altIndex);
                 }
             }
 
@@ -2806,13 +2833,13 @@ public class BuildContext {
                 assert isOptimized;
                 int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
 
-                Builder.loadFromContext(code, CD_boolean, optIndexes[optIndexes.length - 1]);
+                loadFromContext(code, CD_boolean, optIndexes[optIndexes.length - 1]);
                 Label ifTrue = code.newLabel();
                 Label endIf  = code.newLabel();
                 code.iconst_0().if_icmpeq(ifTrue);
                 for (int optIndex : optIndexes) {
                     JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
-                    Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
+                    loadFromContext(code, retDesc.cd, retDesc.altIndex);
                 }
                 Builder.box(code, destType);
                 code.goto_(endIf);
@@ -2822,7 +2849,7 @@ public class BuildContext {
 
                 for (int optIndex : optIndexes) {
                     JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
-                    Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
+                    loadFromContext(code, retDesc.cd, retDesc.altIndex);
                 }
             }
 
@@ -2831,7 +2858,7 @@ public class BuildContext {
                 int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
                 for (int optIndex : optIndexes) {
                     JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
-                    Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
+                    loadFromContext(code, retDesc.cd, retDesc.altIndex);
                 }
             }
 
@@ -2839,7 +2866,7 @@ public class BuildContext {
                  "Specific->Widened",
                  "Widened->Specific",
                  "Widened->Widened" ->
-                Builder.loadFromContext(code, tdDest.cd, pdRet.altIndex);
+                loadFromContext(code, tdDest.cd, pdRet.altIndex);
 
             default ->
                 throw new UnsupportedOperationException("cannot store return flavor "
@@ -2872,9 +2899,7 @@ public class BuildContext {
      * @param text       the String template to inject values into
      * @param argsTypes  the types of the arguments to inject into the String. The array must
      */
-    public void buildString(CodeBuilder  code,
-                                   String       text,
-                                   ClassDesc... argsTypes) {
+    public void buildString(CodeBuilder code, String text, ClassDesc... argsTypes) {
         DirectMethodHandleDesc bsm = MethodHandleDesc.ofMethod(
                 DirectMethodHandleDesc.Kind.STATIC,
                 ClassDesc.of("java.lang.invoke.StringConcatFactory"),
@@ -2899,9 +2924,7 @@ public class BuildContext {
      *
      * @return the identifier of the local variable slot that the String has been stored into
      */
-    public int buildAndStoreString(CodeBuilder  code,
-                                   String       text,
-                                   ClassDesc... argsTypes) {
+    public int buildAndStoreString(CodeBuilder  code, String text, ClassDesc... argsTypes) {
         buildString(code, text, argsTypes);
         return storeTempValue(code, CD_String);
     }

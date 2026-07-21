@@ -29,8 +29,6 @@ import org.xvm.asm.constants.TypeConstant.ContribSource;
 
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
-import org.xvm.javajit.JitParamDesc;
-import org.xvm.javajit.JitParamDesc.JitParams;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.Handy;
@@ -1434,12 +1432,18 @@ public class PropertyInfo
     public JitMethodDesc getGetterJitDesc(Builder builder) {
         JitMethodDesc jmd = m_jmdGetter;
         if (jmd == null) {
-            JitParams    params     = JitParamDesc.computeJitParams(builder, getType());
             TypeConstant typeTarget = getIdentity().getClassIdentity().getType();
-            m_jmdGetter = jmd = new JitMethodDesc(typeTarget, params.apdStdParam(), JitParamDesc.NONE,
-                    params.apdOptParam(), params.isOptimized() ? JitParamDesc.NONE : null, this.isConstant());
+            m_jmdGetter = jmd = getGetterJitDesc(builder, typeTarget);
         }
         return jmd;
+    }
+
+    /**
+     * @return the JitMethodDesc for the property getter on the specified target type
+     */
+    public JitMethodDesc getGetterJitDesc(Builder builder, TypeConstant typeTarget) {
+        return JitMethodDesc.of(builder, typeTarget, this.isConstant(), false,
+                TypeConstant.NO_TYPES, new TypeConstant[] {getType()}, 0);
     }
 
     /**
@@ -1448,12 +1452,18 @@ public class PropertyInfo
     public JitMethodDesc getSetterJitDesc(Builder builder) {
         JitMethodDesc jmd = m_jmdSetter;
         if (jmd == null) {
-            JitParams    params     = JitParamDesc.computeJitParams(builder, getType());
             TypeConstant typeTarget = getIdentity().getClassIdentity().getType();
-            m_jmdSetter = jmd = new JitMethodDesc(typeTarget, JitParamDesc.NONE, params.apdStdParam(),
-                    params.isOptimized() ? JitParamDesc.NONE : null, params.apdOptParam(), this.isConstant());
+            m_jmdSetter = jmd = getSetterJitDesc(builder, typeTarget);
         }
         return jmd;
+    }
+
+    /**
+     * @return the JitMethodDesc for the property setter on the specified target type
+     */
+    public JitMethodDesc getSetterJitDesc(Builder builder, TypeConstant typeTarget) {
+        return JitMethodDesc.of(builder, typeTarget, this.isConstant(), false,
+                new TypeConstant[] {getType()}, TypeConstant.NO_TYPES, 1);
     }
 
     // ----- Object methods ------------------------------------------------------------------------

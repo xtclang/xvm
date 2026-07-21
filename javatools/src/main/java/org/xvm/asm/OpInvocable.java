@@ -371,14 +371,15 @@ public abstract class OpInvocable extends Op {
                 buildInvokeBranch(bctx, code, cdTarget, slotTarget, typeUnion.getUnderlyingType2(),
                         bodyHead.getUnionRight(), labelEnd, anArgValue);
 
-                Builder.throwTypeMismatch(code, typeUnion.getValueString());
+                Builder.throwTypeMismatch(code, typeUnion.getValueString(), bctx.ctxSlot(code));
                 code.labelBinding(labelEnd);
                 return -1;
             }
             throw new IllegalStateException("Union method target is not a union type: " + typeTarget);
         }
 
-        buildSingleInvoke(bctx, code, cdTarget, typeTarget, infoTarget, infoMethod, anArgValue);
+        buildSingleInvoke(bctx, code, cdTarget, typeTarget, infoTarget,
+                regTarget.flavor().isOptimized, infoMethod, anArgValue);
         return -1;
     }
 
@@ -409,7 +410,8 @@ public abstract class OpInvocable extends Op {
             .ifeq(labelNext)
             .checkcast(cdPart);
 
-        buildSingleInvoke(bctx, code, cdPart, typeTarget, bctx.getTypeInfo(typeTarget), infoMethod, anArgValue);
+        buildSingleInvoke(bctx, code, cdPart, typeTarget, bctx.getTypeInfo(typeTarget), false,
+            infoMethod, anArgValue);
         code.goto_(labelEnd);
         code.labelBinding(labelNext)
             .pop();
@@ -417,15 +419,17 @@ public abstract class OpInvocable extends Op {
 
     /**
      * The "this" (which can be the primitive form) is already on the JVM stack.
+     *
+     * @param fUnboxed  true iff the target value has already been unboxed (optimized)
      */
     private void buildSingleInvoke(BuildContext bctx, CodeBuilder code, ClassDesc cdTarget,
-                                   TypeConstant typeTarget, TypeInfo infoTarget, MethodInfo infoMethod,
-                                   int[] anArgValue) {
-        MethodBody     bodyHead   = infoMethod.getHead();
-        TypeConstant   typeInvoke = typeTarget;
-        ClassDesc      cdInvoke   = cdTarget;
+                                   TypeConstant typeTarget, TypeInfo infoTarget, boolean fUnboxed,
+                                   MethodInfo infoMethod, int[] anArgValue) {
+        MethodBody   bodyHead   = infoMethod.getHead();
+        TypeConstant typeInvoke = typeTarget;
+        ClassDesc    cdInvoke   = cdTarget;
 
-        if (bodyHead.getImplementation() == Implementation.Implicit) {
+        if (bodyHead.getImplementation() == Implementation.FromInto) {
             TypeConstant typeOwner = bctx.getConstant(m_nMethodId, MethodConstant.class).
                     getNamespace().getType();
             if (!typeOwner.equals(typeTarget)) {
@@ -440,14 +444,14 @@ public abstract class OpInvocable extends Op {
         JitMethodDesc jmd        = infoMethod.getJitDesc(bctx.builder, typeInvoke);
         String        methodName = infoMethod.ensureJitMethodName(bctx.typeSystem);
         boolean       fOptimized = jmd.isOptimized;
-        boolean       fPrimitive = cdTarget.isPrimitive();
-        if (!fPrimitive && jmd.isPrimitivized()) {
-            fOptimized = false;
-            jmd = jmd.deopt();
-        }
-
+        boolean       fPrimitive = jmd.isPrimitivized();
         int           cReturns   = infoMethod.getSignature().getReturnCount();
         boolean       fCond      = infoMethod.isConditionalReturn(infoTarget);
+
+        if (fPrimitive && !fUnboxed) {
+            // the register contains a boxed primitive, but the optimized method takes thi$
+            Builder.unbox(code, typeInvoke);
+        }
 
         if (bodyHead.getIdentity().getNestedDepth() > 2) {
             // methods nested inside methods need to be built on-the-spot

@@ -47,7 +47,8 @@ public class JitMethodDesc {
         this.optimizedParams   = optimizedParams;
         this.isOptimized       = optimizedParams != null && optimizedReturns != null;
         this.isStandardStatic  = isStatic;
-        this.isOptimizedStatic = isOptimized && (isStatic || typeTarget != null && typeTarget.isJavaPrimitive());
+        this.isOptimizedStatic = isOptimized &&
+                (isStatic || typeTarget != null && typeTarget.isJitPrimitive());
         this.standardMD        = computeMethodDesc(standardReturns, standardParams);
         this.optimizedMD       = isOptimized
                 ? computeMethodDesc(optimizedReturns, optimizedParams)
@@ -66,15 +67,13 @@ public class JitMethodDesc {
     public final MethodTypeDesc standardMD;  // the generic "xObj" flavor
     public final MethodTypeDesc optimizedMD; // (optional) optimized primitive
 
+    /**
+     * @return true if this an XvmPrimitive type method.
+     */
     public boolean isPrimitivized() {
         return !isStandardStatic && isOptimizedStatic;
     }
 
-    public JitMethodDesc deopt() {
-        return isOptimized
-                ? new JitMethodDesc(typeTarget, standardReturns, standardParams, null, null, isStandardStatic)
-                : this;
-    }
     /**
      * @return the index of the Ctx in the JVM parameters for the non-optimized signature; currently
      *         the index is always 0
@@ -181,9 +180,8 @@ public class JitMethodDesc {
 
         int ix     = 0;
         int iFirst = 0;
-        if (paramCount > 0 && params[0].index < 0) {
-            paramCDs[ix++] = params[0].cd;
-            iFirst = 1;
+        while (iFirst < paramCount && params[iFirst].index < 0) {
+            paramCDs[ix++] = params[iFirst++].cd;
         }
 
         ix = fillExtraClassDesc(paramCDs, ix);
@@ -218,9 +216,6 @@ public class JitMethodDesc {
      *                       of a function that exists only at runtime)
      * @param isStatic       true iff the method is static (function, constructor, etc.)
      * @param isConstructor  true iff the method is a constructor
-     * @param paramTypes
-     * @param returnTypes
-     * @param reqParamCount
      *
      * @return the JitMethodDesc for the method associated with this signature for the specified
      *         container
@@ -233,8 +228,8 @@ public class JitMethodDesc {
             TypeConstant[] paramTypes,
             TypeConstant[] returnTypes,
             int            reqParamCount) {
-        assert builder != null;
-        // methods and constructors requires a target type
+
+        // methods and constructors require a target type
         assert (!isConstructor && isStatic) || typeTarget != null;
 
         ConstantPool       pool         = builder.typeSystem.pool();
@@ -247,7 +242,7 @@ public class JitMethodDesc {
             TypeConstant type  = iOrig >= 0 ? paramTypes[iOrig] : typeTarget;
             boolean      fDflt = iOrig >= reqParamCount;
             ClassDesc    cd;
-// for -1 don't add to std
+
             if ((cd = JitTypeDesc.getJavaPrimitive(type)) != null) {
                 if (iOrig >= 0) {
                     JitFlavor stdFlavor = fDflt ? SpecificWithDefault : Specific;

@@ -227,7 +227,7 @@ public class Assert
      * Build the assert message and place it onto the Java stack.
      */
     protected void buildMessage(BuildContext bctx, CodeBuilder code) {
-        Builder.loadString(code, "Assertion failed");
+        Builder.loadString(code, "Assertion failed", bctx.ctxSlot(code));
     }
 
     // ----- fields --------------------------------------------------------------------------------

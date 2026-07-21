@@ -808,7 +808,8 @@ public abstract class OpCallable extends Op {
      * Support for NEW_C ops.
      */
     protected int buildNewC(BuildContext bctx, CodeBuilder code, int nParentArg, int[] anArgValue) {
-        Builder.throwException(code, CD_Exception, "Not implemented: " + toName(getOpCode()));
+        Builder.throwException(code, CD_Exception, "Not implemented: " + toName(getOpCode()),
+                bctx.ctxSlot(code));
         return -1;
     }
 
@@ -816,7 +817,8 @@ public abstract class OpCallable extends Op {
      * Support for NEW_V ops.
      */
     protected int buildNewV(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
-        Builder.throwException(code, CD_Exception, "Not implemented: " + toName(getOpCode()));
+        Builder.throwException(code, CD_Exception, "Not implemented: " + toName(getOpCode()),
+                bctx.ctxSlot(code));
         return -1;
     }
 

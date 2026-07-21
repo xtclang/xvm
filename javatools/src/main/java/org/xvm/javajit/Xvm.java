@@ -395,7 +395,7 @@ public class Xvm {
      * Accommodate the native method names into the name counters.
      */
     private void primeNameCounters() {
-        for (String name : NativeNames.reservedMethodSuffix.values()) {
+        for (String name : NativeNames.reservedMethodName.values()) {
             nameCounters.put(name, 0);
         }
     }

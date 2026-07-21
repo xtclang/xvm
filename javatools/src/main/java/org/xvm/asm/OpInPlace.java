@@ -312,8 +312,8 @@ public abstract class OpInPlace
     protected void buildPrimitiveProperty(BuildContext bctx, CodeBuilder code,
                                           PropertyConstant idProp) {
         PropertyInfo  infoProp = idProp.getPropertyInfo();
-        JitMethodDesc jmdGet   = infoProp.getGetterJitDesc(bctx.builder);
-        JitMethodDesc jmdSet   = infoProp.getSetterJitDesc(bctx.builder);
+        JitMethodDesc jmdGet   = infoProp.getGetterJitDesc(bctx.builder, bctx.thisType);
+        JitMethodDesc jmdSet   = infoProp.getSetterJitDesc(bctx.builder, bctx.thisType);
         JitParamDesc  pd       = jmdGet.optimizedReturns[0];
         ClassDesc     cd       = pd.cd;
 

@@ -184,7 +184,7 @@ public class FinallyEnd
                     case NullablePrimitive:
                         assert fOptimized;
                         // the extSlot boolean will be on the top of the stack
-                        Builder.storeToContext(code, CD_boolean, 0);
+                        bctx.storeToContext(code, CD_boolean, 0);
                         Builder.addReturn(code, cd);
                         break;
 
@@ -193,7 +193,7 @@ public class FinallyEnd
                         // leaving the last one on the stack
                         for (int j = optIndexes.length - 1; j >= 1 ; j--) {
                             JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
-                            Builder.storeToContext(code, retDesc.cd, retDesc.altIndex);
+                            bctx.storeToContext(code, retDesc.cd, retDesc.altIndex);
                         }
                         // set the last primitive on the stack as the return value
                         Builder.addReturn(code, cd);
@@ -208,20 +208,20 @@ public class FinallyEnd
                     case NullablePrimitive:
                         assert fOptimized;
                         // the extSlot boolean will be on the top of the stack
-                        Builder.storeToContext(code, cd, pdRet.altIndex);
-                        Builder.storeToContext(code, CD_boolean, pdExt.altIndex);
+                        bctx.storeToContext(code, cd, pdRet.altIndex);
+                        bctx.storeToContext(code, CD_boolean, pdExt.altIndex);
                         break;
 
                     case XvmPrimitive, NullableXvmPrimitive:
                         // store the return primitives (including any extensions) to the context
                         for (int j = optIndexes.length - 1; j >= 0 ; j--) {
                             JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
-                            Builder.storeToContext(code, retDesc.cd, retDesc.altIndex);
+                            bctx.storeToContext(code, retDesc.cd, retDesc.altIndex);
                         }
                         break;
 
                     default:
-                        Builder.storeToContext(code, cd, pdRet.altIndex);
+                        bctx.storeToContext(code, cd, pdRet.altIndex);
                         break;
                     }
                 }
