@@ -191,10 +191,7 @@ public abstract class Builder {
                     yield new SingleSlot(constant.getType(), Primitive, CD_int, "");
                 }
                 case UInt32 -> {
-                    code.ldc(intConstant.getValue().getLong())
-                        .ldc(0xFFFFFFFFL)
-                        .land()
-                        .l2i();
+                    code.ldc((int) (intConstant.getValue().getLong() & 0xFFFFFFFFL));
                     yield new SingleSlot(constant.getType(), Primitive, CD_int, "");
                 }
                 case Int64, UInt64 -> {
