@@ -421,13 +421,13 @@ public class TypeSystem {
         }
 
         ClassfileShape shape  = ClassfileShape.Impl;
-        int            dotIx  = name.lastIndexOf('.');
-        String         simple = name.substring(dotIx + 1);
+        int            nameIx = max(name.lastIndexOf('.'), name.lastIndexOf('$'));
+        String         simple = name.substring(nameIx + 1);
         if (simple.length() > 1) {
             for (ClassfileShape sh : ClassfileShape.values()) {
                 if (sh.prefix.isEmpty() || simple.startsWith(sh.prefix)) {
                     // all suffixes except Impl are of the length 2
-                    String pkg = dotIx < 0 ? "" : name.substring(0, dotIx + 1);
+                    String pkg = nameIx < 0 ? "" : name.substring(0, nameIx + 1);
                     name  = pkg + simple.substring(sh.prefix.length());
                     shape = sh;
                     break;
