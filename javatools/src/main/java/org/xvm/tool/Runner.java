@@ -74,8 +74,11 @@ public class Runner extends Launcher<RunnerOptions> {
     @Override
     protected int process() {
         // repository setup
-        var opts = options();
-        var repo = configureLibraryRepo(opts.getModulePath());
+        var     opts = options();
+        boolean fJit = opts.isJit();
+
+        // JIT modules use conventional file names; avoid deserializing every module on a miss
+        var repo = configureLibraryRepo(opts.getModulePath(), !fJit, !fJit);
     	checkErrors("repository setup");
 
         if (opts.showVersion()) {
@@ -178,7 +181,7 @@ public class Runner extends Launcher<RunnerOptions> {
                 info = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), outFile.orElse(null));
                 fileBin   = info.getBinaryFile();
                 binExists = fileBin != null && fileBin.exists();
-                repo      = configureLibraryRepo(opts.getModulePath());
+                repo      = configureLibraryRepo(opts.getModulePath(), !fJit, !fJit);
                 module    = repo.loadModule(info.getQualifiedModuleName());
             }
 

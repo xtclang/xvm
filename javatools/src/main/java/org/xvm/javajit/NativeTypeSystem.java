@@ -30,7 +30,6 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.builders.ArrayBuilder;
@@ -94,10 +93,15 @@ public class NativeTypeSystem
         FileStructure fs = new FileStructure(ecstasy, true);
         fs.merge(turtle, true, false);
         fs.merge(_native, true, false);
-        ModuleConstant missing = fs.linkModules(repo, true);
-        if (missing != null) {
-            throw new IllegalStateException("missing core module: " + missing.getName());
+
+        // the JIT currently generates only core Ecstasy and _native classes; linking the bridge's
+        // library imports here eagerly loads web, net, crypto, and their transitive dependencies
+        for (ModuleStructure module : new ArrayList<>(fs.children())) {
+            if (module.isFingerprint()) {
+                fs.removeChild(module);
+            }
         }
+        fs.markLinked();
 
         ConstantPool pool = fs.getConstantPool();
         try (var ignore = ConstantPool.withPool(pool)) {
@@ -292,6 +296,3 @@ public class NativeTypeSystem
         xvm.createUniqueSuffix("");
     }
 }
-
-
-

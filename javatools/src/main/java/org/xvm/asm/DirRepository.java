@@ -26,10 +26,23 @@ public class DirRepository
      * @param fReadOnly  true to make the repository "read-only"
      */
     public DirRepository(File dir, boolean fReadOnly) {
+        this(dir, fReadOnly, true);
+    }
+
+    /**
+     * Construct a File System ModuleRepository.
+     *
+     * @param dir            the directory that contains the repository contents
+     * @param fReadOnly      true to make the repository "read-only"
+     * @param fScanFallback  true to scan the directory when a module does not use its conventional
+     *                       file name
+     */
+    public DirRepository(File dir, boolean fReadOnly, boolean fScanFallback) {
         assert dir != null && dir.isDirectory();
 
-        m_dir = dir;
-        m_fRO = fReadOnly;
+        m_dir           = dir;
+        m_fRO           = fReadOnly;
+        m_fScanFallback = fScanFallback;
     }
 
 
@@ -60,9 +73,19 @@ public class DirRepository
 
     @Override
     public ModuleStructure loadModule(String sModule) {
-        ensureCache();
-        ModuleInfo info = modulesByName.get(sModule);
-        return info == null ? null : info.ensureModule();
+        ModuleInfo info = findModuleDirect(sModule);
+        if (info != null) {
+            return info.ensureModule();
+        }
+
+        if (m_fScanFallback || cacheComplete) {
+            ensureCache();
+            info = modulesByName.get(sModule);
+            if (info != null) {
+                return info.ensureModule();
+            }
+        }
+        return null;
     }
 
     @Override
@@ -109,7 +132,8 @@ public class DirRepository
         }
 
         return this.m_dir.equals(that.m_dir) &&
-               this.m_fRO     == that.m_fRO;
+               this.m_fRO           == that.m_fRO &&
+               this.m_fScanFallback == that.m_fScanFallback;
     }
 
     @Override
@@ -119,6 +143,37 @@ public class DirRepository
 
 
     // ----- internal ------------------------------------------------------------------------------
+
+    /**
+     * Look for a module using the conventional file name before scanning and deserializing every
+     * module in the repository.
+     *
+     * @param sModule  the qualified module name
+     *
+     * @return the matching module information, or null
+     */
+    private ModuleInfo findModuleDirect(String sModule) {
+        int    ofDot = sModule.indexOf('.');
+        String name  = ofDot < 0 ? sModule : sModule.substring(0, ofDot);
+        File   file  = new File(m_dir, name + ".xtc");
+
+        if (!ModulesOnly.accept(file)) {
+            return null;
+        }
+
+        ModuleInfo info = modulesByFile.get(file);
+        if (info == null || info.timestamp != file.lastModified() || info.size != file.length()) {
+            if (info != null && !info.err) {
+                modulesByName.remove(info.name, info);
+            }
+            info = new ModuleInfo(file, true);
+            modulesByFile.put(file, info);
+            if (!info.err) {
+                modulesByName.put(info.name, info);
+            }
+        }
+        return !info.err && info.name.equals(sModule) ? info : null;
+    }
 
     /**
      * Make sure that the cache is up to date.
@@ -148,7 +203,8 @@ public class DirRepository
             }
         }
 
-        lastScan = System.currentTimeMillis();
+        lastScan      = System.currentTimeMillis();
+        cacheComplete = true;
     }
 
     /**
@@ -181,11 +237,18 @@ public class DirRepository
 
     protected static class ModuleInfo {
         public ModuleInfo(File file) {
+            this(file, false);
+        }
+
+        private ModuleInfo(File file, boolean fCacheModule) {
             this.file      = file;
             this.timestamp = file.lastModified();
             this.size      = file.length();
 
             ModuleStructure module = tryLoad();
+            if (fCacheModule) {
+                this.module = module;
+            }
             if (module == null) {
                 this.name     = null;
                 this.versions = null;
@@ -246,8 +309,10 @@ public class DirRepository
 
     private final File    m_dir;
     private final boolean m_fRO;
+    private final boolean m_fScanFallback;
 
     private       Map<File  , ModuleInfo> modulesByFile = new HashMap<>();
     private final Map<String, ModuleInfo> modulesByName = new TreeMap<>();
-    private       long lastScan;
+    private       boolean                 cacheComplete;
+    private       long                    lastScan;
 }

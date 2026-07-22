@@ -684,6 +684,34 @@ public abstract class Launcher<T extends LauncherOptions>
      * @return the library repository, including a build repository at the head of the repo
      */
     protected ModuleRepository configureLibraryRepo(List<File> path) {
+        return configureLibraryRepo(path, true);
+    }
+
+    /**
+     * Configure the library repository and control whether modules loaded from the path are copied
+     * into the build repository.
+     *
+     * @param path          a previously validated path of module directories and/or files
+     * @param fReadThrough  true to copy loaded modules into the build repository
+     *
+     * @return the library repository, including a build repository at the head of the repo
+     */
+    protected ModuleRepository configureLibraryRepo(List<File> path, boolean fReadThrough) {
+        return configureLibraryRepo(path, fReadThrough, true);
+    }
+
+    /**
+     * Configure the library repository and control whether modules loaded from the path are copied
+     * into the build repository and whether directory repositories scan for nonstandard names.
+     *
+     * @param path           a previously validated path of module directories and/or files
+     * @param fReadThrough   true to copy loaded modules into the build repository
+     * @param fScanFallback  true to scan directories for modules with nonstandard file names
+     *
+     * @return the library repository, including a build repository at the head of the repo
+     */
+    protected ModuleRepository configureLibraryRepo(List<File> path, boolean fReadThrough,
+                                                     boolean fScanFallback) {
         if (path == null || path.isEmpty()) {
             // this is the easiest way to deliver an empty repository
             return makeBuildRepo();
@@ -693,10 +721,10 @@ public abstract class Launcher<T extends LauncherOptions>
         repos.add(makeBuildRepo());
         for (File file : path) {
             repos.add(file.isDirectory()
-                ? new DirRepository(file, true)
+                ? new DirRepository(file, true, fScanFallback)
                 : new FileRepository(file, true));
         }
-        return new LinkedRepository(true, repos.toArray(ModuleRepository[]::new));
+        return new LinkedRepository(fReadThrough, repos.toArray(ModuleRepository[]::new));
     }
 
     /**
