@@ -128,9 +128,12 @@ public class MoveCast
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        RegisterInfo regFrom = bctx.loadArgument(code, m_nFromValue);
-        TypeConstant typeTo  = regFrom.type().combine(bctx.pool(), bctx.getTypeConstant(m_nToType));
-        bctx.builder.generateCheckCast(code, typeTo, bctx.ctxSlot(code));
+        RegisterInfo regFrom  = bctx.loadArgument(code, m_nFromValue);
+        TypeConstant typeFrom = regFrom.type();
+        TypeConstant typeTo   = bctx.getTypeConstant(m_nToType);
+        TypeConstant typeCast = typeFrom.combine(bctx.pool(), typeTo);
+
+        bctx.builder.generateCheckCast(code, typeCast, bctx.ctxSlot(code));
         if (typeTo.isJitPrimitive() && !regFrom.flavor().isOptimized) {
             Builder.unbox(code, typeTo);
         }
