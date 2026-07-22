@@ -133,7 +133,8 @@ public class P_Get
         TypeConstant     typeTarget = bctx.getArgumentType(m_nTarget);
         PropertyConstant idProp     = bctx.getConstant(m_nPropId, PropertyConstant.class);
         PropertyInfo     propInfo   = idProp.getPropertyInfo(typeTarget);
-        TypeConstant     typeProp   = propInfo.getType();
+        TypeConstant     typeProp   = propInfo.getType().resolveAutoNarrowing(
+                bctx.pool(), false, typeTarget, null);
 
         bctx.typeMatrix.assign(getAddress(), m_nRetValue, typeProp);
     }
