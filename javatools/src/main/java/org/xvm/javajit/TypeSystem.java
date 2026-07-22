@@ -477,6 +477,22 @@ public class TypeSystem {
     }
 
     /**
+     * Build a class name for the `Class` class of the specific already-escaped class name.
+     *
+     * @param name  the JIT name of the class
+     *
+     * @return the JIT name of the `Class` class for the class
+     */
+    public static String classClass(String name) {
+        int offset = max(name.lastIndexOf('.'), name.lastIndexOf('$')) + 1;
+        return new StringBuilder(name.length() + CLASS > 0xFFFF ? 2 : 1)
+                .append(name, 0, offset)
+                .appendCodePoint(CLASS)
+                .append(name, offset, name.length())
+                .toString();
+    }
+
+    /**
      * Build a class name for the `Enumeration` class of the specific already-escaped `Enum` class
      * name.
      *
