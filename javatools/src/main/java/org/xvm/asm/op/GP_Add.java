@@ -65,14 +65,14 @@ public class GP_Add
                                                 RegisterInfo regTarget,
                                                 int          nArgValue) {
         TypeConstant type = regTarget.type();
-        if (type.getValueString().equals("Char")) {
+        if (type.isA(bctx.pool().typeChar())) {
             return buildAddToChar(bctx, code, regTarget, nArgValue);
         }
         return super.buildOptimizedBinary(bctx, code, regTarget, nArgValue);
     }
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, 
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code,
                                         RegisterInfo regTarget, RegisterInfo regArg) {
         buildPrimitiveAdd(bctx, code, regTarget);
     }
