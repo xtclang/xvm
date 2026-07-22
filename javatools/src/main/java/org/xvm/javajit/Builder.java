@@ -335,9 +335,19 @@ public abstract class Builder {
             return bctx.loadType(code, type);
 
         case ClassConstant _:
-        case DecoratedClassConstant _:
+        case DecoratedClassConstant _: {
             IdentityConstant constId = (IdentityConstant) constant;
-            throw new UnsupportedOperationException("Load class " + constId.getValueType(bctx.pool(), null));
+            ConstantPool pool = typeSystem.pool();
+            TypeConstant type = constId.getValueType(pool, null);
+            String       name = ensureJitClassName(type);
+            // TODO GG the "e" class gen functionality must be merged into the "c" class result
+            if (!type.isA(pool.typeEnumeration())) {
+                name  = TypeSystem.classClass(name);
+            }
+            ClassDesc cd = ClassDesc.of(name);
+            code.getstatic(cd, Instance, cd);
+            return new SingleSlot(type, Specific, cd, "");
+        }
 
         case PropertyConstant propId: {
             // support for the "local property" mode
