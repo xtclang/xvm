@@ -187,29 +187,6 @@ public record MultiSlot(BuildContext bctx, int regId, int[] slots, int extSlot,
     }
 
     @Override
-    public RegisterInfo storeTempValue(BuildContext bctx, CodeBuilder code, int regId) {
-        assert isJavaStack(); // constant
-
-        boolean hasExtSlot = extSlot != NO_SLOT;
-        int     slotCount  = hasExtSlot ? slots.length + 1 : slots.length;
-        int[]   javaSlots  = new int[slotCount];
-        int     lastIx     = slotCount - 1;
-
-        if (hasExtSlot) {
-            javaSlots[lastIx] = bctx.scope.allocateJavaSlot(slotCds[lastIx]);
-            Builder.store(code, slotCds[lastIx], javaSlots[lastIx]);
-            lastIx--;
-        }
-
-        // the stack will contain the value in multiple slots, they need to be stored in reverse
-        for (; lastIx >= 0; lastIx--) {
-            javaSlots[lastIx] = bctx.scope.allocateJavaSlot(slotCds[lastIx]);
-            Builder.store(code, slotCds[lastIx], javaSlots[lastIx]);
-        }
-        return new MultiSlot(bctx, regId, javaSlots, extSlot, flavor, type, cd, slotCds, name);
-    }
-
-    @Override
     public String toString() {
         return "regId="    + regId
             + ", slots="   + Arrays.toString(slots)

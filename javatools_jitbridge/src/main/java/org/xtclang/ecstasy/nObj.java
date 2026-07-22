@@ -9,7 +9,7 @@ import org.xvm.javajit.Xvm;
 public abstract class nObj implements Object {
     public nObj(Ctx ctx) {
         super();
-        $meta = ctx == null ? -1 : ctx.container.id;
+        $meta = (ctx == null ? -1 : ctx.container.id) & $ID_MASK;
     }
 
     /**
@@ -53,7 +53,8 @@ public abstract class nObj implements Object {
      * @return container ID that "pays for" this object
      */
     public long $ownerId() {
-        return $meta; // TODO: ($meta & ID_MASK)
+        long id = $meta & $ID_MASK;
+        return id == $ID_MASK ? -1 : id;
     }
 
     /**
@@ -79,11 +80,17 @@ public abstract class nObj implements Object {
         return nType.$ensureType(ctx, $xvmType(ctx).resolveGenericType(name));
     }
 
-    public abstract boolean $isImmut();
+    public boolean $isImmut() {
+        return ($meta & $IMMUTABLE) != 0;
+    }
 
     public void $makeImmut(Ctx ctx) {
-        if (!$isImmut()) {
-            throw new UnsupportedOperationException();
+        $meta |= $IMMUTABLE;
+    }
+
+    public void $checkImmut(Ctx ctx) {
+        if (($meta & $IMMUTABLE) != 0) {
+            throw Exception.$ro(ctx, null);
         }
     }
 
@@ -153,4 +160,7 @@ public abstract class nObj implements Object {
         // not an Ecstasy ref
         throw new IllegalStateException();
     }
+
+    protected static final long $ID_MASK   = -1L >>> 8;
+    protected static final long $IMMUTABLE = 1L << 56;
 }

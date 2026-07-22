@@ -7,8 +7,6 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.javajit.registers.SingleSlot;
-
 /**
  * Represents an information about XTC register.
  */
@@ -45,13 +43,6 @@ public interface RegisterInfo {
      * @return the JitFlavor for the register
      */
     JitFlavor flavor();
-
-    /**
-     * @return the jit type for XTC register
-     */
-    default TypeConstant jitType() {
-        return type().getCanonicalJitType();
-    }
 
     /**
      * @return the ClassDesc for the {@link #slot()}
@@ -139,20 +130,6 @@ public interface RegisterInfo {
             Builder.store(code, cd(), slot());
         }
         return this;
-    }
-
-    /**
-     * Store the value represented by this register currently on the stack into a temporary slot.
-     *
-     * @param regId  the value to use for the new register identifier
-     *
-     * @return the new register info
-     */
-    default RegisterInfo storeTempValue(BuildContext bctx, CodeBuilder code, int regId) {
-        assert isJavaStack(); // constant
-        ClassDesc cd   = cd();
-        int       slot = bctx.storeTempValue(code, cd);
-        return new SingleSlot(regId, slot, flavor(), type(), cd, name());
     }
 
     /**

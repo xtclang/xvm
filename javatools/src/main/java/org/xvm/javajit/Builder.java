@@ -1663,6 +1663,19 @@ public abstract class Builder {
         return true;
     }
 
+    /**
+     * Represents an operation that loads a value onto the Java stack.
+     */
+    @FunctionalInterface
+    public interface Loader {
+        /**
+         * Load a value onto the Java stack.
+         *
+         * @return the register information describing the loaded value
+         */
+        RegisterInfo load(CodeBuilder code);
+    }
+
     // ----- native class names --------------------------------------------------------------------
 
     public static final String N_Array        = "org.xtclang.ecstasy.collections.Array";
