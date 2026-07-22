@@ -1158,7 +1158,7 @@ public abstract class Builder {
     }
 
     /**
-     * Generate code to perform a null check and unbox the the JIT primitive reference that is on
+     * Generate code to perform a null check and unbox the JIT primitive reference that is on
      * the top of the stack.
      *
      * In: a boxed JIT primitive reference, or Null

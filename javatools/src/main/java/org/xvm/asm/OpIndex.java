@@ -371,7 +371,7 @@ public abstract class OpIndex
                 // is parameterized, we need to generate a cast. For example, if the container
                 // is "List<Person>", the "getElement" signature would be "nObj getElement()".
                 if (typeTarget.isParameterizedDeep()) {
-                    bctx.builder.generateCheckCast(code, typeEl);
+                    bctx.builder.generateCheckCast(code, typeEl, bctx.ctxSlot(code));
                 }
                 JitParams     params = JitParamDesc.computeJitParams(bctx.builder, typeEl);
                 JitMethodDesc jmd    = new JitMethodDesc(typeTarget, params.apdStdParam(),

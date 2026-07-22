@@ -1648,7 +1648,7 @@ public class BuildContext {
                 }
 
                 // trust the compiler
-                builder.generateCheckCast(code, typeTo);
+                generateCheckCast(code, typeTo);
             }
         }
 
@@ -2434,7 +2434,7 @@ public class BuildContext {
 
             case "Widened->Primitive",
                  "Widened->XvmPrimitive" -> {
-                builder.generateCheckCast(code, pd.type);
+                generateCheckCast(code, pd.type);
                 Builder.unbox(code, pd.type);
             }
 
@@ -2834,7 +2834,7 @@ public class BuildContext {
             case "Specific->Specific" -> {
                 TypeConstant retType = pdRet.type;
                 if (retType.isAutoNarrowing() || !retType.equals(destType)) {
-                    builder.generateCheckCast(code, destType);
+                    generateCheckCast(code, destType);
                 }
             }
 
@@ -2845,7 +2845,7 @@ public class BuildContext {
             }
 
             case "Specific->Primitive" -> {
-                builder.generateCheckCast(code, destType);
+                generateCheckCast(code, destType);
                 Builder.unbox(code, destType);
             }
 
@@ -3066,6 +3066,13 @@ public class BuildContext {
         }
         Builder.store(code, cd, slot);
         return slot;
+    }
+
+    /**
+     * Generate a "checkcast" that transforms a potential CCE into a TypeMismatch.
+     */
+    public void generateCheckCast(CodeBuilder code, TypeConstant typeTo) {
+        builder.generateCheckCast(code, typeTo, ctxSlot(code));
     }
 
     /**
