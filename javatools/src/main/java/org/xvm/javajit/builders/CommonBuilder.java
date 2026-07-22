@@ -868,17 +868,18 @@ public class CommonBuilder
             flags |= ClassFile.ACC_STATIC;
         }
         classBuilder.withMethodBody(jitName, md, flags, code -> {
-            // TODO GG: check immutable and throw ReadOnly
+            int    ctxSlot  = code.parameterSlot(isOpt ? jmd.optimizedCtx() : jmd.standardCtx());
+            String propName = getThisType().getSingleUnderlyingClass(true).getName() +
+                    '.' + prop.getName();
 
-            if (jmd.isPrimitivized()) {
-                assert !prop.isConstant();
-
-                // primitive classes are immutable
-                throwReadOnly(code,
-                        getThisType().getSingleUnderlyingClass(true).getName() + '.' + prop.getName(),
-                        code.parameterSlot(isOpt ? jmd.optimizedCtx() : jmd.standardCtx()));
+            if (getThisType().isConst() || prop.isConstant()) {
+                throwReadOnly(code, propName, ctxSlot);
                 return;
             }
+
+            code.aload(0)
+                .aload(ctxSlot)
+                .invokevirtual(CD_nObj, "$checkImmut", MD_xvmVoid);
 
             int argSlot = code.parameterSlot(isOpt ? jmd.getOptimizedParamIndex(0) + 1 : 1);
             if (isOpt) {
@@ -976,8 +977,7 @@ public class CommonBuilder
 
         if (isOpt) {
             // generate a wrapper
-            assembleMethodWrapper(className, classBuilder, jitSetterName, jmd
-                                 );
+            assembleMethodWrapper(className, classBuilder, jitSetterName, jmd);
         }
     }
 
@@ -3518,8 +3518,7 @@ public class CommonBuilder
         classBuilder.withMethod(jitName, md, flags,
             methodBuilder -> {
                 if (!isAbstract) {
-                    BuildContext bctx = new BuildContext(this, className, typeInfo, prop,
-                            isGetter, jmd);
+                    BuildContext bctx = new BuildContext(this, className, typeInfo, prop, isGetter, jmd);
                     methodBuilder.withCode(code -> generateCode(md, bctx, code));
                 }
             }

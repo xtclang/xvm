@@ -64,6 +64,8 @@ import org.xvm.asm.op.MoveRef;
 import org.xvm.asm.op.MoveVar;
 import org.xvm.asm.op.Nop;
 
+import org.xvm.javajit.Builder.Loader;
+
 import org.xvm.javajit.registers.ExtendedSlot;
 import org.xvm.javajit.registers.MultiSlot;
 import org.xvm.javajit.registers.Narrowed;
@@ -1205,7 +1207,7 @@ public class BuildContext {
                 ? loadConstant(code, argId)
                 : loadPredefineArgument(code, argId);
 
-        return reg.storeTempValue(this, code, argId);
+        return storeTempRegister(code, argId, reg);
     }
 
     /**
@@ -2315,11 +2317,12 @@ public class BuildContext {
      *                  value to set into the property
      */
     public void buildSetProperty(CodeBuilder code, int targetId, int propId, int argId) {
-        RegisterInfo regTarget = loadArgument(code, targetId);
-        loadCtx(code);
-        RegisterInfo     srcReg = loadArgument(code, argId);
-        PropertyConstant prop   = getConstant(propId, PropertyConstant.class);
-        buildSetProperty(code, regTarget, prop, srcReg.type(), srcReg.flavor());
+        PropertyConstant prop = getConstant(propId, PropertyConstant.class);
+        TypeConstant     type = getArgumentType(targetId);
+
+        buildSetProperty(code,
+                type, code_ -> loadArgument(code_, targetId),
+                prop, code_ -> loadArgument(code_, argId));
     }
 
     /**
@@ -2335,52 +2338,27 @@ public class BuildContext {
     public void buildSetPropertyFromStack(CodeBuilder code, int propId, TypeConstant srcType,
                                           JitFlavor srcFlavor) {
         PropertyConstant prop = getConstant(propId, PropertyConstant.class);
-        TypeConstant     type = prop.getType();
+        RegisterInfo     src  = storeTempRegister(code, Op.A_THIS, srcType, srcFlavor);
+        TypeConstant     type = getRegisterInfo(code, Op.A_THIS).type();
 
-        ClassDesc[] cds;
-        if (type.isXvmPrimitive()) {
-            cds = JitTypeDesc.getXvmPrimitiveClasses(type);
-        } else {
-            cds = new ClassDesc[]{JitTypeDesc.getJitClass(builder, type)};
-        }
-
-        int[] slots = new int[cds.length];
-        for (int i = 0; i < cds.length; i++) {
-            slots[i] = storeTempValue(code, cds[i]);
-        }
-
-        RegisterInfo regTarget = loadThis(code);
-        loadCtx(code);
-        for (int i = 0; i < cds.length; i++) {
-            Builder.load(code, cds[i], slots[i]);
-        }
-
-        buildSetProperty(code, regTarget, prop, srcType, srcFlavor);
+        buildSetProperty(code, type, this::loadThis, prop, src::load);
     }
 
     /**
      * Set the property value.
      * <p>
-     * Before calling this method, the stack should contain the reference to the target object
-     * containing the property to be set, followed by the current {@link Ctx context}, and
-     * finally one or more values to use to update the property.
-     *
-     * @param code       the code builder
-     * @param targetReg  the register representing the target object containing the property to
-     *                   be set
-     * @param prop       the property to set
-     * @param srcType    the type of the value on the stack
-     * @param srcFlavor  the flavor of the value on the stack
+     * @param code          the code builder
+     * @param targetType    the type of the target object containing the property to be set
+     * @param targetLoader  the loader for the target object
+     * @param prop          the property to set
+     * @param valueLoader   the loader for the new property value
      */
-    public void buildSetProperty(CodeBuilder code, RegisterInfo targetReg, PropertyConstant prop,
-                                 TypeConstant srcType, JitFlavor srcFlavor) {
+    public void buildSetProperty(CodeBuilder code,
+                                 TypeConstant targetType, Loader targetLoader,
+                                 PropertyConstant prop, Loader valueLoader) {
+        PropertyInfo propInfo = prop.getPropertyInfo(targetType);
+        assert !propInfo.isConstant();
 
-        if (!targetReg.isSingle()) {
-            throw new UnsupportedOperationException("Multislot P_Set");
-        }
-
-        TypeConstant  targetType = targetReg.type();
-        PropertyInfo  propInfo   = prop.getPropertyInfo(targetType);
         JitMethodDesc jmd        = propInfo.getSetterJitDesc(builder, targetType);
         String        setterName = propInfo.ensureSetterJitMethodName(typeSystem);
 
@@ -2395,7 +2373,18 @@ public class BuildContext {
             pd = jmd.standardParams[0];
         }
 
-        JitFlavor dstFlavor = pd.flavor;
+        RegisterInfo targetReg = targetLoader.load(code);
+        if (!targetReg.isSingle()) {
+            throw new UnsupportedOperationException("Multislot P_Set");
+        }
+        if (!isConstructor) {
+            loadCtx(code);
+        }
+
+        RegisterInfo srcReg    = valueLoader.load(code);
+        TypeConstant srcType   = srcReg.type();
+        JitFlavor    srcFlavor = srcReg.flavor();
+        JitFlavor    dstFlavor = pd.flavor;
         if (srcFlavor != dstFlavor) {
             // additional transformations are required for these scenarios:
             //  - Specific  -> Primitive          (Int n; n := o.is(Int);)
@@ -2500,10 +2489,117 @@ public class BuildContext {
             }
         }
 
-        if (jmd.isOptimizedStatic) {
+        if (isConstructor) {
+            buildSetPropertyField(code, targetReg, propInfo, jmd);
+        } else if (jmd.isOptimizedStatic) {
             code.invokestatic(builder.ensureClassDesc(jmd.typeTarget), setterName, md);
         } else {
             code.invokevirtual(targetReg.cd(), setterName, md);
+        }
+    }
+
+    /**
+     * Store a property value from the Java stack in temporary slots.
+     */
+    private RegisterInfo storeTempRegister(CodeBuilder code, int regId,
+                                           TypeConstant type, JitFlavor flavor) {
+        JitTypeDesc jtd = type.getJitDesc(builder);
+        RegisterInfo reg = switch (flavor) {
+            case Specific, Widened, Primitive, AlwaysNull ->
+                new SingleSlot(type, flavor, jtd.cd, "");
+
+            case NullablePrimitive ->
+                new ExtendedSlot(this, Op.A_STACK, RegisterInfo.JAVA_STACK,
+                    RegisterInfo.JAVA_STACK, flavor, type, jtd.cd, "");
+
+            case XvmPrimitive, NullableXvmPrimitive ->
+                new MultiSlot(this, flavor, type, jtd.cd,
+                    JitTypeDesc.getXvmPrimitiveClasses(type));
+
+            default -> throw new UnsupportedOperationException("Not implemented: " + flavor);
+        };
+        return storeTempRegister(code, regId, reg);
+    }
+
+    /**
+     * Store a value described by the specified register from the Java stack in temporary slots.
+     */
+    private RegisterInfo storeTempRegister(CodeBuilder code, int regId, RegisterInfo reg) {
+        TypeConstant type   = reg.type();
+        JitFlavor    flavor = reg.flavor();
+        String       name   = reg.name();
+
+        return switch (flavor) {
+            case Specific, Widened, Primitive, AlwaysNull -> {
+                ClassDesc cd   = reg.cd();
+                int       slot = storeTempValue(code, cd);
+                yield new SingleSlot(regId, slot, flavor, type, cd, name);
+            }
+
+            case NullablePrimitive -> {
+                int extSlot = storeTempValue(code, CD_boolean);
+                ClassDesc cd = reg.cd();
+                int slot     = storeTempValue(code, cd);
+                yield new ExtendedSlot(this, regId, slot, extSlot, flavor, type, cd, name);
+            }
+
+            case XvmPrimitive, NullableXvmPrimitive -> {
+                ClassDesc[] cds     = reg.slotCds();
+                int         extSlot = flavor == NullableXvmPrimitive
+                                    ? storeTempValue(code, CD_boolean)
+                                    : MultiSlot.NO_SLOT;
+                int[]       slots   = new int[cds.length];
+                for (int i = cds.length - 1; i >= 0; i--) {
+                    slots[i] = storeTempValue(code, cds[i]);
+                }
+                yield new MultiSlot(this, regId, slots, extSlot, flavor, type, reg.cd(), cds, name);
+            }
+
+            default -> throw new UnsupportedOperationException("Not implemented: " + flavor);
+        };
+    }
+
+    /**
+     * Set a property backing field directly from a constructor.
+     *
+     * Before calling this method, the stack contains the target followed by the converted property
+     * value. The value may occupy multiple JVM stack entries.
+     */
+    private void buildSetPropertyField(CodeBuilder code, RegisterInfo targetReg,
+                                       PropertyInfo propInfo, JitMethodDesc jmd) {
+        JitParamDesc[] params;
+        if (jmd.isOptimized) {
+            int[] indexes = jmd.getAllOptimizedParams(0);
+            params = new JitParamDesc[indexes.length];
+            for (int i = 0; i < indexes.length; i++) {
+                params[i] = jmd.optimizedParams[indexes[i]];
+            }
+        } else {
+            params = new JitParamDesc[] {jmd.standardParams[0]};
+        }
+
+        int[] slots = new int[params.length];
+        for (int i = params.length - 1; i >= 0; i--) {
+            slots[i] = storeTempValue(code, params[i].cd);
+        }
+
+        TypeConstant typeOwner = propInfo.getOwnerType(builder, targetReg.type());
+        ClassDesc    cdOwner   = builder.ensureClassDesc(typeOwner);
+        String       fieldName = propInfo.getIdentity().ensureJitPropertyName(typeSystem);
+
+        for (int i = 0; i < params.length; i++) {
+            JitParamDesc param = params[i];
+            if (i > 0) {
+                targetReg.load(code);
+            }
+            Builder.load(code, param.cd, slots[i]);
+
+            String name = param.extension
+                    ? fieldName + EXT
+                    : param.flavor == XvmPrimitive || param.flavor == NullableXvmPrimitive
+                        ? fieldName + "$" + i
+                        : fieldName;
+            code.putfield(cdOwner, name, param.cd);
         }
     }
 
