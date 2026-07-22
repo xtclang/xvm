@@ -20,7 +20,7 @@
 # =============================================================================
 acme4j = "3.5.1"
 apache-commons-cli = "1.11.0"
-bouncycastle = "1.84"
+bouncycastle = "1.85"
 gson = "2.14.0"
 jakarta-activation = "2.1.4"
 jakarta-xml-bind-api = "4.0.5"
@@ -43,15 +43,15 @@ vanniktech-maven-publish = "0.37.0"
 # =============================================================================
 assertj = "3.27.7"
 awaitility = "4.3.0"
-junit = "6.1.1"
-junit-platform = "6.1.1"
+junit = "6.1.2"
+junit-platform = "6.1.2"
 mockito = "5.23.0"
 
 # =============================================================================
 # Lang tooling - Kotlin & formatting
 # =============================================================================
 # Everything below is only used when includeBuildLang=true.
-lang-kotlin = "2.4.0"
+lang-kotlin = "2.4.10"
 lang-kotlinx-serialization = "1.11.0"
 lang-ktlint = "14.2.0"
 lang-ktlint-engine = "1.8.0"
