@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -457,7 +458,7 @@ public class JumpVal
         int   iMin    = Integer.MAX_VALUE;
         int   iMax    = Integer.MIN_VALUE;
 
-        List<SwitchCase> listCases = new ArrayList<>();
+        Map<Integer, Label> mapCases = new TreeMap<>();
         for (int iRow = 0; iRow < cRows; iRow++) {
             Constant constant = bctx.getConstant(m_anConstCase[iRow]);
             Label    label    = bctx.ensureLabel(code, nThis + aofCase[iRow]);
@@ -469,7 +470,7 @@ public class JumpVal
                 iMax = Math.max(iMax, iLast);
 
                 for (int iVal = iFirst; iVal <= iLast; iVal++) {
-                    listCases.add(SwitchCase.of(iVal, label));
+                    mapCases.putIfAbsent(iVal, label);
                 }
             } else if (constant instanceof EnumValueConstant) {
                 // must be the Null case, which we have already handled
@@ -480,13 +481,13 @@ public class JumpVal
                 iMin = Math.min(iMin, iVal);
                 iMax = Math.max(iMax, iVal);
 
-                listCases.add(SwitchCase.of(iVal, label));
+                mapCases.putIfAbsent(iVal, label);
             }
         }
 
         Label labelDflt = bctx.ensureLabel(code, nThis + m_ofDefault);
         regArg.load(code);
-        code.tableswitch(iMin, iMax, labelDflt, listCases);
+        code.tableswitch(iMin, iMax, labelDflt, toSwitchCases(mapCases));
     }
 
     private void buildCharSwitch(BuildContext bctx, CodeBuilder code, RegisterInfo regArg) {
@@ -550,7 +551,7 @@ public class JumpVal
                 .lsub()
                 .l2i(); // (int) (lArg - lMin);
 
-            List<SwitchCase> listCases = new ArrayList<>();
+            Map<Integer, Label> mapCases = new TreeMap<>();
             for (int iRow = 0; iRow < cRows; iRow++) {
                 Constant constant = aConst[iRow];
                 Label    label    = bctx.ensureLabel(code, nThis + aofCase[iRow]);
@@ -560,14 +561,15 @@ public class JumpVal
 
                     for (long lVal = lFirst; lVal <= lLast; lVal++) {
                         int ix = (int) (lVal - lMin);
-                        listCases.add(SwitchCase.of(ix, label));
+                        mapCases.putIfAbsent(ix, label);
                     }
                 } else {
                     long lVal = constant.getIntValue().getLong();
                     int  ix   = (int) (lVal - lMin);
-                    listCases.add(SwitchCase.of(ix, label));
+                    mapCases.putIfAbsent(ix, label);
                 }
             }
+            List<SwitchCase> listCases = toSwitchCases(mapCases);
             if (plan == Plan.TableSwitch) {
                 code.tableswitch(0, cSpread, labelDflt, listCases);
             } else {
@@ -652,7 +654,7 @@ public class JumpVal
         code.ldc(nMin)
             .isub(); // (lArg - lMin);
 
-        List<SwitchCase> listCases = new ArrayList<>();
+        Map<Integer, Label> mapCases = new TreeMap<>();
         for (int iRow = 0; iRow < cRows; iRow++) {
             Constant constant = aConst[iRow];
             Label    label    = bctx.ensureLabel(code, nThis + aofCase[iRow]);
@@ -662,14 +664,15 @@ public class JumpVal
 
                 for (int nVal = nFirst; nVal <= nLast; nVal++) {
                     int ix = nVal - nMin;
-                    listCases.add(SwitchCase.of(ix, label));
+                    mapCases.putIfAbsent(ix, label);
                 }
             } else {
                 int nVal = constant.getIntValue().getInt();
                 int ix   = nVal - nMin;
-                listCases.add(SwitchCase.of(ix, label));
+                mapCases.putIfAbsent(ix, label);
             }
         }
+        List<SwitchCase> listCases = toSwitchCases(mapCases);
 
         if (plan == Plan.TableSwitch) {
             code.tableswitch(0, cSpread, labelDflt, listCases);
@@ -694,10 +697,16 @@ public class JumpVal
         int   iMin    = Integer.MAX_VALUE;
         int   iMax    = Integer.MIN_VALUE;
 
-        List<SwitchCase> listCases = new ArrayList<>();
+        Map<Integer, Label> mapCases = new TreeMap<>();
         for (int iRow = 0; iRow < cRows; iRow++) {
             Constant constant = bctx.getConstant(m_anConstCase[iRow]);
             Label    label    = bctx.ensureLabel(code, nThis + aofCase[iRow]);
+
+            if (constant.getType().isOnlyNullable()) {
+                // the Null case has already been handled before narrowing the argument register
+                continue;
+            }
+
             if (constant instanceof RangeConstant range) {
                 int iFirst = ((EnumValueConstant) range.getEffectiveFirst()).getPresumedOrdinal();
                 int iLast  = ((EnumValueConstant) range.getEffectiveLast()).getPresumedOrdinal();
@@ -706,7 +715,7 @@ public class JumpVal
                 iMax = Math.max(iMax, iLast);
 
                 for (int iVal = iFirst; iVal <= iLast; iVal++) {
-                    listCases.add(SwitchCase.of(iVal, label));
+                    mapCases.putIfAbsent(iVal, label);
                 }
             } else {
                 int iVal = ((EnumValueConstant) constant).getPresumedOrdinal();
@@ -714,7 +723,7 @@ public class JumpVal
                 iMin = Math.min(iMin, iVal);
                 iMax = Math.max(iMax, iVal);
 
-                listCases.add(SwitchCase.of(iVal, label));
+                mapCases.putIfAbsent(iVal, label);
             }
         }
 
@@ -725,7 +734,19 @@ public class JumpVal
             .l2i();
 
         Label labelDflt = bctx.ensureLabel(code, nThis + m_ofDefault);
-        code.tableswitch(iMin, iMax, labelDflt, listCases);
+        code.tableswitch(iMin, iMax, labelDflt, toSwitchCases(mapCases));
+    }
+
+    /**
+     * Convert switch cases to the JVM-required key order. Ecstasy cases may overlap; the first
+     * matching case wins.
+     */
+    private static List<SwitchCase> toSwitchCases(Map<Integer, Label> mapCases) {
+        List<SwitchCase> listCases = new ArrayList<>(mapCases.size());
+        for (Map.Entry<Integer, Label> entry : mapCases.entrySet()) {
+            listCases.add(SwitchCase.of(entry.getKey(), entry.getValue()));
+        }
+        return listCases;
     }
 
     enum Plan {TableSwitch, LookupSwitch, IfLadder}
