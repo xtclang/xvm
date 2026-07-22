@@ -204,6 +204,33 @@ mixin Interval<Element extends immutable Sequential>
     }
 
     /**
+     * Apply the `matches` function to each `Element` in the `Interval` until one matches (the
+     * `matches` function returns `True` for that `Element`).
+     *
+     * @param matches  a function to apply to each `Element`; if and when the function returns
+     *                 `True`, this method will return `True` and that `Element` immediately
+     *
+     * @return `True` iff the `matches` function returned `True` for an `Element`
+     * @return (conditional) the first `Element` for which the `matches` function returned `True`
+     */
+    conditional Element any(function Boolean(Element) matches) {
+        return iterator().untilAny(matches);
+    }
+
+    /**
+     * Apply the `matches` function to each `Element` in the `Interval` until one does not match
+     * (the `matches` function returns `False` for that `Element`).
+     *
+     * @param matches  a function to apply to each `Element`; if and when the function returns
+     *                 `False`, this method will return `False` immediately
+     *
+     * @return `True` iff the `matches` function returned `True` for all `Element` values
+     */
+    Boolean all(function Boolean(Element) matches) {
+        return iterator().whileEach(matches);
+    }
+
+    /**
      * Two intervals adjoin iff the union of all of the values from both intervals forms a single
      * contiguous Interval.
      */
