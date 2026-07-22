@@ -28,9 +28,6 @@ package setPropertyTests {
 
         t.testSpecificToNullableXvmPrimitive();
         assert t.nd == Null;
-//        if (t.nd != Null) {
-//            throw new Exception("t.d != Null");
-//        }
 
         t.testSpecificToNullableXvmPrimitive(Dec64:19.5);
         assert t.nd == 19.5;
@@ -78,9 +75,6 @@ package setPropertyTests {
         t.x = 0;
         t.testNullableXvmPrimitiveElvisAssign(Null);
         assert t.x == -2;
-//        if (t.x != -2) {
-//            throw new Exception("t.x != -2");
-//        }
 
         t.testNullableXvmPrimitiveElvisAssign(2006);
         assert t.x == 2006;
