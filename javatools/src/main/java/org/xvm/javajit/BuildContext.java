@@ -1236,17 +1236,35 @@ public class BuildContext {
                 JitTypeDesc jitDesc = type.getJitDesc(builder);
                 Boolean     isVar   = refs.get(regId);
                 if (isVar == null) {
-                    if (type.isXvmPrimitive()) {
+                    JitFlavor flavor   = jitDesc.flavor;
+                    ClassDesc cdActual = jitDesc.cd;
+                    switch (flavor) {
+                    case Specific, Widened, Primitive:
+                        return new SingleSlot(regId, scope.allocateLocal(ix, cdActual), flavor,
+                                type, cdActual, name);
+
+                    case NullablePrimitive:
+                        return new ExtendedSlot(this, regId,
+                                scope.allocateLocal(regId, cdActual),
+                                scope.allocateLocal(regId, TypeKind.BOOLEAN),
+                                flavor, type, cdActual, name);
+
+                    case XvmPrimitive, NullableXvmPrimitive:
                         ClassDesc[] cds   = JitTypeDesc.getXvmPrimitiveClasses(type);
                         int[]       slots = new int[cds.length];
                         for (int i = 0; i < slots.length; i++) {
                             slots[i] = scope.allocateLocal(regId, cds[i]);
                         }
-                        return new MultiSlot(this, regId, slots, jitDesc.flavor,
-                                type, cd, cds, name);
+                        int extSlot = flavor == NullableXvmPrimitive
+                                ? scope.allocateLocal(regId, TypeKind.BOOLEAN)
+                                : MultiSlot.NO_SLOT;
+                        return new MultiSlot(this, regId, slots, extSlot,
+                                flavor, type, cdActual, cds, name);
+
+                    default:
+                        throw new UnsupportedOperationException(
+                                "Unsupported register flavor: " + flavor);
                     }
-                    return new SingleSlot(regId, scope.allocateLocal(ix, cd), jitDesc.flavor,
-                        type, cd, name);
                 } else {
                     throw new UnsupportedOperationException("buildCreateRef");
                 }
@@ -2098,13 +2116,23 @@ public class BuildContext {
             JitFlavor   narrowedFlavor = narrowedDesc.flavor;
                         narrowedCD     = narrowedDesc.cd;
             if (narrowingType.isJavaPrimitive()) {
-                narrowedSlots   = new int[] {scope.allocateJavaSlot(narrowedCD)};
-                narrowedSlotCds = new ClassDesc[] {narrowedCD};
+                if (origReg.flavor() == NullablePrimitive) {
+                    narrowedSlots   = origReg.slots();
+                    narrowedSlotCds = origReg.slotCds();
+                } else {
+                    narrowedSlots   = new int[] {scope.allocateJavaSlot(narrowedCD)};
+                    narrowedSlotCds = new ClassDesc[] {narrowedCD};
+                }
             } else if (narrowingType.isXvmPrimitive()) {
-                narrowedSlotCds = JitTypeDesc.getXvmPrimitiveClasses(narrowingType);
-                narrowedSlots   = new int[narrowedSlotCds.length];
-                for (int i = 0; i < narrowedSlotCds.length; i++) {
-                    narrowedSlots[i] = scope.allocateJavaSlot(narrowedSlotCds[i]);
+                if (origReg.flavor() == NullableXvmPrimitive) {
+                    narrowedSlots   = origReg.slots();
+                    narrowedSlotCds = origReg.slotCds();
+                } else {
+                    narrowedSlotCds = JitTypeDesc.getXvmPrimitiveClasses(narrowingType);
+                    narrowedSlots   = new int[narrowedSlotCds.length];
+                    for (int i = 0; i < narrowedSlotCds.length; i++) {
+                        narrowedSlots[i] = scope.allocateJavaSlot(narrowedSlotCds[i]);
+                    }
                 }
             } else {
                 if (narrowingType.isOnlyNullable()) {
