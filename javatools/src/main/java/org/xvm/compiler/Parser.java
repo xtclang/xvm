@@ -4997,11 +4997,18 @@ public class Parser {
                 if (allowCurrying && !fArray) {
                     switch (peek().getId()) {
                     case ANY: {
+                        // one of two cases: an unbound argument, or a lambda whose one parameter is
+                        // ignored
                         Token tokUnbound = expect(Id.ANY);
-                        expr = new NonBindingExpression(tokUnbound.getStartPosition(),
-                                tokUnbound.getEndPosition(), null);
-                    }
+                        if (peek(Id.LAMBDA)) {
+                            putBack(tokUnbound);
+                            expr = parseExpression();
+                        } else {
+                            expr = new NonBindingExpression(tokUnbound.getStartPosition(),
+                                    tokUnbound.getEndPosition(), null);
+                        }
                         break;
+                    }
 
                     case COMP_LT: {
                         Token          tokOpen    = expect(Id.COMP_LT);
@@ -5010,8 +5017,8 @@ public class Parser {
                         Token          tokUnbound = expect(Id.ANY);
                         expr = new NonBindingExpression(tokOpen.getStartPosition(),
                                 tokUnbound.getEndPosition(), type);
-                    }
                         break;
+                    }
 
                     default:
                         expr = parseExpression();
