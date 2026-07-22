@@ -130,7 +130,7 @@ public class MoveCast
     public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regFrom = bctx.loadArgument(code, m_nFromValue);
         TypeConstant typeTo  = regFrom.type().combine(bctx.pool(), bctx.getTypeConstant(m_nToType));
-        bctx.builder.generateCheckCast(code, typeTo);
+        bctx.builder.generateCheckCast(code, typeTo, bctx.ctxSlot(code));
         if (typeTo.isJitPrimitive() && !regFrom.flavor().isOptimized) {
             Builder.unbox(code, typeTo);
         }
