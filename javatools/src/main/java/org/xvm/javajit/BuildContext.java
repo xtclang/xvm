@@ -1381,6 +1381,13 @@ public class BuildContext {
         case Op.A_THIS:
             return loadThis(code);
 
+        case Op.A_STRUCT: {
+            if (!isConstructor) {
+                Builder.throwTypeMismatch(code, "\"this\" is not a structure", ctxSlot(code));
+            }
+            return loadThis(code);
+        }
+
         case Op.A_SUPER: {
             return loadSuper(code);
         }
