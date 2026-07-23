@@ -1,7 +1,12 @@
 package org.xtclang.ecstasy.collections;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.xtclang.ecstasy.AppenderᐸCharᐳ;
-import org.xtclang.ecstasy.IterableᐸCharᐳ;
 import org.xtclang.ecstasy.Iterator;
 import org.xtclang.ecstasy.ReadOnly;
 import org.xtclang.ecstasy.nEnum;
@@ -61,6 +66,8 @@ public abstract class Array
     protected static final int  $INPLACE_MASK = 0b10 << $MUT_SHIFT;    // i.e. either Fixed or Mutable
     protected static final int  $MIN_CAP      = 8;
     protected static final long $CAP_MASK     = 0x0000FFFFFFFFFFFFL;
+
+    private static final Map<java.lang.String, Method> $factories = new ConcurrentHashMap<>();
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -246,29 +253,53 @@ public abstract class Array
      */
     public static Array $new$2(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         // TODO this is temporary; review and if possible remove the overrides
-        return switch(type.getParamType(0).getSingleUnderlyingClass(true).getName()) {
-            case "Bit"     -> ArrayᐸBitᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Boolean" -> ArrayᐸBooleanᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Char"    -> ArrayᐸCharᐳ.$new$2(ctx, type, mutability, (IterableᐸCharᐳ) elements);
-            case "Dec32"   -> ArrayᐸDec32ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Dec64"   -> ArrayᐸDec64ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Dec128"  -> ArrayᐸDec128ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Float32" -> ArrayᐸFloat32ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Float64" -> ArrayᐸFloat64ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Int8"    -> ArrayᐸInt8ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Int16"   -> ArrayᐸInt16ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Int32"   -> ArrayᐸInt32ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Int64"   -> ArrayᐸInt64ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Int128"  -> ArrayᐸInt128ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Nibble"  -> ArrayᐸNibbleᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Object"  -> ArrayᐸObjectᐳ.$new$2(ctx, type, mutability, elements);
-            case "UInt8"   -> ArrayᐸUInt8ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "UInt16"  -> ArrayᐸUInt16ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "UInt32"  -> ArrayᐸUInt32ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "UInt64"  -> ArrayᐸUInt64ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "UInt128" -> ArrayᐸUInt128ᐳ.$new$2$p(ctx, type, mutability, elements);
-            default        -> throw new UnsupportedOperationException("Unsupported array type " + type);
+        java.lang.String elementName = type.getParamType(0).getSingleUnderlyingClass(true).getName();
+        Method           factory     = $factories.get(elementName);
+        if (factory == null) {
+            factory = $resolveFactory(elementName, type);
+            Method existing = $factories.putIfAbsent(elementName, factory);
+            if (existing != null) {
+                factory = existing;
+            }
+        }
+
+        try {
+            return (Array) factory.invoke(null, ctx, type, mutability, elements);
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException("Inaccessible array factory for " + elementName, e);
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException runtime) {
+                throw runtime;
+            }
+            if (cause instanceof Error error) {
+                throw error;
+            }
+            throw new RuntimeException(cause);
+        }
+    }
+
+    private static Method $resolveFactory(java.lang.String elementName, TypeConstant type) {
+        java.lang.String methodName = switch (elementName) {
+            case "Char", "Object" -> "$new$2";
+            case "Bit", "Boolean", "Dec32", "Dec64", "Dec128", "Float32", "Float64",
+                 "Int8", "Int16", "Int32", "Int64", "Int128", "Nibble", "UInt8", "UInt16",
+                 "UInt32", "UInt64", "UInt128" -> "$new$2$p";
+            default -> throw new UnsupportedOperationException("Unsupported array type " + type);
         };
+        java.lang.String className = Array.class.getPackageName() + ".Arrayᐸ" + elementName + "ᐳ";
+
+        try {
+            Class<?> arrayClass = Array.class.getClassLoader().loadClass(className);
+            for (Method method : arrayClass.getDeclaredMethods()) {
+                if (method.getName().equals(methodName) && method.getParameterCount() == 4) {
+                    return method;
+                }
+            }
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException("Missing array implementation " + className, e);
+        }
+        throw new IllegalStateException("Missing array factory " + className + '.' + methodName);
     }
 
     /**

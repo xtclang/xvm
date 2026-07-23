@@ -98,7 +98,7 @@ public abstract class Builder {
      */
     public ClassDesc getSuperCD() {
         TypeConstant thisType  = getThisType();
-        TypeInfo     typeInfo  = thisType.ensureTypeInfo();
+        TypeInfo     typeInfo  = typeSystem.ensureTypeInfo(thisType);
         TypeConstant superType = typeInfo.getExtends();
         return superType == null
             ? thisType.isConst() ? CD_nConst : CD_nObj
@@ -493,7 +493,7 @@ public abstract class Builder {
             mapType = pool.ensureParameterizedTypeConstant(
                 pool.ensureEcstasyTypeConstant("maps.ListMap"), keyType, valType);
 
-            TypeInfo       typeInfo = mapType.ensureTypeInfo();
+            TypeInfo       typeInfo = typeSystem.ensureTypeInfo(mapType);
             MethodConstant ctorId   = typeInfo.findConstructor(keysType, valsType.freeze(), pool.typeBoolean());
             MethodInfo     ctorInfo = typeInfo.getMethodById(ctorId);
             JitCtorDesc    ctorJmd  = (JitCtorDesc) ctorInfo.getJitDesc(this, mapType);
@@ -813,8 +813,9 @@ public abstract class Builder {
             typeContainer = typeContainer.resolveConstraints().ensureAccess(Constants.Access.PRIVATE);
         }
 
-        PropertyInfo  xvmInfo    = propId.getPropertyInfo(typeContainer);
-        PropertyInfo  jitInfo    = propId.getPropertyInfo(typeContainer.getCanonicalJitType());
+        PropertyInfo  xvmInfo    = typeSystem.ensurePropertyInfo(propId, typeContainer);
+        PropertyInfo  jitInfo    = typeSystem.ensurePropertyInfo(
+                propId, typeContainer.getCanonicalJitType());
         TypeConstant  typeOwner  = jitInfo.getOwnerType(this, typeContainer);
         JitMethodDesc jmdGet     = jitInfo.getGetterJitDesc(this, typeContainer);
         String        getterName = jitInfo.ensureGetterJitMethodName(typeSystem);

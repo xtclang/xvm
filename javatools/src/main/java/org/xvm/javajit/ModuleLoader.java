@@ -92,7 +92,7 @@ public class ModuleLoader
                 throw new ClassNotFoundException(name);
             }
             clz = defineClass(name, classBytes, 0, classBytes.length);
-            loadedClasses.add(ClassFile.of().parse(classBytes));
+            loadedClasses.add(classBytes);
             return clz;
         } else if (getParent() instanceof TypeSystemLoader tsLoader) {
             return tsLoader.findClass(name);
@@ -115,9 +115,10 @@ public class ModuleLoader
         // limit the number of cycles
         int iters = 2;
         do {
-            List<ClassModel> currentlyLoaded = new ArrayList<>(loadedClasses);
+            List<byte[]> currentlyLoaded = new ArrayList<>(loadedClasses);
             loadedClasses.clear();
-            for (ClassModel model : currentlyLoaded) {
+            for (byte[] classBytes : currentlyLoaded) {
+                ClassModel model = ClassFile.of().parse(classBytes);
                 String className = model.thisClass().asInternalName();
                 if (!filter.test(className)) {
                     continue;
@@ -176,5 +177,5 @@ public class ModuleLoader
         return sb == null ? s : sb.toString();
     }
 
-    private final List<ClassModel> loadedClasses = new ArrayList<>();
+    private final List<byte[]> loadedClasses = new ArrayList<>();
 }

@@ -145,7 +145,7 @@ public class ArrayBuilder extends AugmentingBuilder {
         boolean           isStatic      = bctx.methodStruct.isFunction();
         ConstantPool      pool          = pool();
         TypeConstant      baseArrayType = pool.typeArray();
-        TypeInfo          baseArrayInfo = baseArrayType.ensureTypeInfo();
+        TypeInfo          baseArrayInfo = typeSystem.ensureTypeInfo(baseArrayType);
         SignatureConstant sig           = bctx.methodStruct.resolveSignature(pool, baseArrayType);
         MethodInfo        baseMethod    = baseArrayInfo.getMethodBySignature(sig, true);
 

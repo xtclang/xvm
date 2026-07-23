@@ -89,8 +89,8 @@ public class CommonBuilder
         assert classStruct.isParameterized() == type.isParamsSpecified();
 
         this.thisType      = type.ensureAccess(Access.PRIVATE);
-        this.typeInfo      = thisType.ensureTypeInfo();
-        this.structInfo    = thisType.ensureAccess(Access.STRUCT).ensureTypeInfo();
+        this.typeInfo      = typeSystem.ensureTypeInfo(thisType);
+        this.structInfo    = typeSystem.ensureTypeInfo(thisType.ensureAccess(Access.STRUCT));
         this.thisId        = classStruct.getIdentityConstant();
         this.isInterface   = classStruct.getFormat() == Format.INTERFACE;
         this.jitType       = thisType.getCanonicalJitType();
@@ -135,6 +135,9 @@ public class CommonBuilder
      * or methods declared on the mixins or annotations that were added to the "impl" class.
      */
     protected final Set<IdentityConstant> extraMethods = new HashSet<>();
+
+    private String  codeGenClassName;
+    private boolean codeGenEnabled;
 
     @Override
     public void assembleImpl(String className, ClassBuilder classBuilder) {
@@ -1870,7 +1873,7 @@ public class CommonBuilder
                     .ifne(returnFalse);
             } else {
                 // Object type: call static equals$p(Ctx, nType, T, T) -> boolean
-                MethodInfo    eqMethod = propType.ensureTypeInfo().getMethodBySignature(eqSig);
+                MethodInfo    eqMethod = typeSystem.ensureTypeInfo(propType).getMethodBySignature(eqSig);
                 JitMethodDesc eqJmd    = eqMethod.getJitDesc(this, propType);
                 ClassDesc     cdProp   = ensureClassDesc(propType);
 
@@ -2114,7 +2117,7 @@ public class CommonBuilder
                 convertIntToOrdered(code);
             } else {
                 // Object type: call static compare(Ctx, nType, T, T) -> Ordered
-                MethodInfo    cmpMethod = propType.ensureTypeInfo().getMethodBySignature(cmpSig);
+                MethodInfo    cmpMethod = typeSystem.ensureTypeInfo(propType).getMethodBySignature(cmpSig);
                 JitMethodDesc cmpJmd    = cmpMethod.getJitDesc(this, propType);
 
                 // load the context to the stack (compare param 0)
@@ -2372,7 +2375,7 @@ public class CommonBuilder
                 code.aload(valueSlot);
                 loadProperty(code, type, propId, false);
 
-                MethodInfo    hashMethod = propType.ensureTypeInfo().getMethodBySignature(hashSig);
+                MethodInfo    hashMethod = typeSystem.ensureTypeInfo(propType).getMethodBySignature(hashSig);
                 JitMethodDesc hashJmd    = hashMethod.getJitDesc(this, propType);
 
                 IdentityConstant idTarget = hashMethod.getIdentity().getClassIdentity();
@@ -2759,7 +2762,7 @@ public class CommonBuilder
                                            ClassDesc cdProp, SignatureConstant signature,
                                            String standardName, MethodTypeDesc mdStandard) {
         if (propType.isJitPrimitive()) {
-            MethodInfo    method = propType.ensureTypeInfo().getMethodBySignature(signature);
+            MethodInfo    method = typeSystem.ensureTypeInfo(propType).getMethodBySignature(signature);
             JitMethodDesc jmd    = method.getJitDesc(this, propType);
             assert jmd.isOptimizedStatic;
             code.invokestatic(cdProp, signature.getName() + OPT, jmd.optimizedMD);
@@ -2795,7 +2798,8 @@ public class CommonBuilder
     protected boolean isConstFormingProperty(PropertyInfo prop, TypeConstant baseType,
                                              boolean allowLazy) {
         PropertyConstant propId = prop.getIdentity();
-        if (baseType != null && baseType.ensureTypeInfo().findProperty(propId, true) != null) {
+        if (baseType != null &&
+                typeSystem.ensureTypeInfo(baseType).findProperty(propId, true) != null) {
             // we are only interested in properties not known to the base class
             return false;
         }
@@ -2834,12 +2838,12 @@ public class CommonBuilder
     protected TypeConstant getImplementationBase(SignatureConstant sig) {
         TypeConstant typeExtends = typeInfo.getExtends();
         while (typeExtends != null) {
-            if (typeExtends.ensureTypeInfo().getFormat() == Format.CONST) {
+            if (typeSystem.ensureTypeInfo(typeExtends).getFormat() == Format.CONST) {
                 return typeExtends;
             }
 
             // super class is not a const, so look for an implementation of the method
-            TypeInfo   info   = typeExtends.ensureTypeInfo();
+            TypeInfo   info   = typeSystem.ensureTypeInfo(typeExtends);
             MethodInfo method = info.getMethodBySignature(sig);
             if (method != null) {
                 if (method.getIdentity().getNamespace().equals(info.getIdentity())) {
@@ -3191,7 +3195,7 @@ public class CommonBuilder
         JitMethodDesc jmd       = srcMethod.getJitDesc(this);
         PropertyInfo  propInfo  = typeInfo.findProperty(propDelegate);
         TypeConstant  dstType   = propInfo.getType();
-        TypeInfo      dstInfo   = dstType.ensureTypeInfo();
+        TypeInfo      dstInfo   = typeSystem.ensureTypeInfo(dstType);
         MethodInfo    dstMethod = dstInfo.getMethodById(srcMethod.getIdentity());
         String        dstName   = dstMethod.ensureJitMethodName(typeSystem);
 
@@ -3611,24 +3615,23 @@ public class CommonBuilder
                 ? bctx.className.substring(0, baseIndex)
                 : bctx.className;
 
-        GenerateStub:
-        if (Arrays.stream(JIT_LIST).anyMatch(name -> {
-            if (name.endsWith("*")) {
-                name = name.substring(0, name.length() - 1);
-                return className.contains(name) || moduleName.contains(name);
-            } else {
+        if (!className.equals(codeGenClassName)) {
+            codeGenClassName = className;
+            codeGenEnabled   = Arrays.stream(JIT_LIST).anyMatch(name -> {
+                if (name.endsWith("*")) {
+                    name = name.substring(0, name.length() - 1);
+                    return className.contains(name) || moduleName.contains(name);
+                }
                 return className.endsWith(name) || moduleName.endsWith(name);
-            }})) {
+            }) && Arrays.stream(NO_JIT_LIST).noneMatch(className::endsWith);
+        }
 
-            if (Arrays.stream(NO_JIT_LIST).anyMatch(className::endsWith)) {
-                break GenerateStub;
-            }
-
+        if (codeGenEnabled) {
             bctx.assembleCode(code);
             return;
         }
 
-        if (SKIP_SET.add(bctx.className)) {
+        if (TRACE_SKIPPED && SKIP_SET.add(bctx.className)) {
             System.err.println("*** Skipping code gen for " + bctx.className);
         }
         defaultLoad(code, md.returnType());
@@ -3748,5 +3751,6 @@ public class CommonBuilder
     private final static String[] NO_JIT_LIST = new String[] {
     };
 
-    private final static HashSet<String> SKIP_SET = new HashSet<>();
+    private final static boolean         TRACE_SKIPPED = Boolean.getBoolean("xvm.jit.traceSkipped");
+    private final static HashSet<String> SKIP_SET      = new HashSet<>();
 }

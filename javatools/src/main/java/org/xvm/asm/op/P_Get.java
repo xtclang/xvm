@@ -132,7 +132,7 @@ public class P_Get
     public void computeTypes(BuildContext bctx) {
         TypeConstant     typeTarget = bctx.getArgumentType(m_nTarget);
         PropertyConstant idProp     = bctx.getConstant(m_nPropId, PropertyConstant.class);
-        PropertyInfo     propInfo   = idProp.getPropertyInfo(typeTarget);
+        PropertyInfo     propInfo   = bctx.getPropertyInfo(idProp, typeTarget);
         TypeConstant     typeProp   = propInfo.getType().resolveAutoNarrowing(
                 bctx.pool(), false, typeTarget, null);
 

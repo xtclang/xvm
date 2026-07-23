@@ -12,13 +12,17 @@ import java.util.function.Consumer;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.builders.CommonBuilder;
 import org.xvm.javajit.builders.EnumBuilder;
@@ -205,6 +209,56 @@ public class TypeSystem {
         // if we can't go up, then we have to fully "know" the constant (i.e. there is no "down")
         assert sig.isShared(thisPool);
         return thisPool;
+    }
+
+    /**
+     * Find the ConstantPool that owns the specified type.
+     */
+    public ConstantPool findOwnerPool(TypeConstant type) {
+        ConstantPool thisPool = pool();
+
+        // try to go "up" towards the root Ecstasy type system to see if anyone "above" us fully
+        // knows about the specified type
+        for (ModuleLoader loader : shared) {
+            ConstantPool thatPool = loader.module.getConstantPool();
+            if (thatPool != thisPool && type.isShared(thatPool)) {
+                return loader.typeSystem.findOwnerPool(type);
+            }
+        }
+
+        // if we can't go up, then we have to fully know the type
+        assert type.isShared(thisPool);
+        return thisPool;
+    }
+
+    /**
+     * Obtain TypeInfo from the TypeSystem that owns the specified type.
+     */
+    public TypeInfo ensureTypeInfo(TypeConstant type) {
+        ConstantPool ownerPool = findOwnerPool(type);
+        TypeConstant ownerType = ownerPool == type.getConstantPool()
+                ? type
+                : ownerPool.register(type);
+        return ownerType.ensureTypeInfo();
+    }
+
+    /**
+     * Obtain property information from the TypeSystem that owns the target type.
+     */
+    public PropertyInfo ensurePropertyInfo(PropertyConstant property, TypeConstant targetType) {
+        if (targetType.isFormalType()) {
+            targetType = targetType.resolveConstraints();
+        }
+
+        Access accessProperty = property.getComponent().getAccess();
+        Access accessTarget   = targetType.getAccess();
+        if (accessTarget != Access.STRUCT && accessProperty.isLessAccessibleThan(accessTarget)) {
+            targetType = targetType.ensureAccess(accessProperty);
+        }
+
+        PropertyInfo propertyInfo = ensureTypeInfo(targetType).findProperty(property, true);
+        assert propertyInfo != null;
+        return propertyInfo;
     }
 
     /**

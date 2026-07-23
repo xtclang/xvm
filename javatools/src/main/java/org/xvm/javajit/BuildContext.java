@@ -2247,7 +2247,7 @@ public class BuildContext {
      */
     public TypeInfo getTypeInfo(TypeConstant type) {
         if (type.isFormalType()) {
-            return type.ensureTypeInfo();
+            return typeSystem.ensureTypeInfo(type);
         }
 
         TypeConstant publicType = thisType.removeAccess();
@@ -2263,13 +2263,20 @@ public class BuildContext {
             IdentityConstant thatId = type.getSingleUnderlyingClass(true);
 
             if (thatId.isNestMateOf(thisId)) {
-                return type.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+                return typeSystem.ensureTypeInfo(type.ensureAccess(Access.PRIVATE));
             }
         }
 
         return type.isEquivalent(publicType)
-                ? type.ensureAccess(Access.PROTECTED).ensureTypeInfo()
-                : type.ensureTypeInfo();
+                ? typeSystem.ensureTypeInfo(type.ensureAccess(Access.PROTECTED))
+                : typeSystem.ensureTypeInfo(type);
+    }
+
+    /**
+     * Obtain the property information for the specified target type.
+     */
+    public PropertyInfo getPropertyInfo(PropertyConstant property, TypeConstant targetType) {
+        return typeSystem.ensurePropertyInfo(property, targetType);
     }
 
     /**
@@ -2384,7 +2391,7 @@ public class BuildContext {
     public void buildSetProperty(CodeBuilder code,
                                  TypeConstant targetType, Loader targetLoader,
                                  PropertyConstant prop, Loader valueLoader) {
-        PropertyInfo propInfo = prop.getPropertyInfo(targetType);
+        PropertyInfo propInfo = getPropertyInfo(prop, targetType);
         assert !propInfo.isConstant();
 
         JitMethodDesc jmd        = propInfo.getSetterJitDesc(builder, targetType);
@@ -2650,11 +2657,11 @@ public class BuildContext {
      */
     public JitMethodDesc buildNew(CodeBuilder code, TypeConstant typeTarget,
                                   MethodConstant idCtor, Consumer<JitMethodDesc> argsLoader) {
-        TypeInfo   infoTarget = typeTarget.ensureTypeInfo();
+        TypeInfo   infoTarget = typeSystem.ensureTypeInfo(typeTarget);
         MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
 
         if (infoCtor == null) {
-            infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+            infoTarget = typeSystem.ensureTypeInfo(typeTarget.ensureAccess(Access.PRIVATE));
             infoCtor   = infoTarget.getMethodById(idCtor);
         }
 

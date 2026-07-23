@@ -155,12 +155,14 @@ public class JitConnector
         } finally {
             try {
                 // dump the generated classes
-                Predicate<String> filter = s -> dumpNames.stream().anyMatch(s::contains);
+                if (!dumpNames.isEmpty()) {
+                    Predicate<String> filter = s -> dumpNames.stream().anyMatch(s::contains);
 
-                String moduleName = loader.typeSystem.mainModule().getSimpleName();
-                loader.dump(new PrintStream(new FileOutputStream(moduleName + ".jasm")), filter);
-                xvm.nativeTypeSystem.loader
-                      .dump(new PrintStream(new FileOutputStream("ecstasy.jasm")), filter);
+                    String moduleName = loader.typeSystem.mainModule().getSimpleName();
+                    loader.dump(new PrintStream(new FileOutputStream(moduleName + ".jasm")), filter);
+                    xvm.nativeTypeSystem.loader
+                          .dump(new PrintStream(new FileOutputStream("ecstasy.jasm")), filter);
+                }
             } catch (IOException ignore) {}
         }
     }
@@ -214,7 +216,5 @@ public class JitConnector
     private long result = 1;
 
     // TEMPORARY: manually added names
-    private final static String[] CLASS_DUMP_LIST = new String[] {
-        "¤module", "Test",
-    };
+    private final static String[] CLASS_DUMP_LIST = new String[0];
 }
