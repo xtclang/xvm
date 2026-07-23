@@ -3561,7 +3561,8 @@ public class CommonBuilder
             flags |= ClassFile.ACC_STATIC;
         }
 
-        BuildContext bctx = new BuildContext(this, className, typeInfo, method, jmd);
+        BuildContext bctx = new BuildContext(this, className,
+                method.isCtorOrValidator() ? structInfo : typeInfo, method, jmd);
         doAssembleMethod(classBuilder, bctx, method, jitName, md, flags);
 
         BuildContext bctxDeferred = bctx.getDeferred();
