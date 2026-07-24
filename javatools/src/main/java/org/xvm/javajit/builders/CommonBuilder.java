@@ -1132,6 +1132,10 @@ public class CommonBuilder
 
     /**
      * Assemble the "public TypeConstant $xvmType()" method.
+     *
+     * TODO: consider using a couple of bits of $meta value to indicate the ACCESS trait
+     *       of the type (or at least a bit for STRUCT); it would be used by this method
+     *       to at least answer "is(struct)" question
      */
     protected void assembleXvmType(String className, ClassBuilder classBuilder) {
         boolean hasType = typeInfo.hasGenericTypes();
@@ -3735,6 +3739,7 @@ public class CommonBuilder
 // TODO     "org.xtclang.ecstasy.reflect.Type",
 
             // text
+//            "org.xtclang.ecstasy.text.Char",
             "org.xtclang.ecstasy.text.String",
             "org.xtclang.ecstasy.text.Stringable",
             "org.xtclang.ecstasy.text.StringBuffer",
