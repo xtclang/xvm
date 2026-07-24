@@ -2319,12 +2319,70 @@ public class BuildContext {
      * Get the property value.
      */
     public void buildGetProperty(CodeBuilder code, RegisterInfo targetReg, int propIdIndex, int retId) {
-        PropertyConstant propId = getConstant(propIdIndex, PropertyConstant.class);
-        PropertyInfo  info   = builder.loadProperty(code, targetReg.type(), propId, true,
-                ctxSlot(code));
-        JitMethodDesc jmdGet = info.getGetterJitDesc(builder, targetReg.type());
+        PropertyConstant propId     = getConstant(propIdIndex, PropertyConstant.class);
+        TypeConstant     targetType = targetReg.type();
+        PropertyInfo     propInfo   = propId.getPropertyInfo(targetType);
 
+        JitMethodDesc jmdGet;
+        if (targetType.getAccess() == Access.STRUCT && !propInfo.isFormalType()) {
+            jmdGet = propInfo.getGetterJitDesc(builder, targetType);
+            buildGetPropertyField(code, targetReg, propInfo, jmdGet);
+        } else {
+            jmdGet = propInfo.getGetterJitDesc(builder, targetType);
+            builder.loadProperty(code, targetType, propId, true, ctxSlot(code));
+        }
         assignReturns(code, jmdGet, 1, new int[] {retId});
+    }
+
+    /**
+     * Load a property value directly from its backing field.
+     *
+     * Before calling this method, the stack contains the target. The first value remains on the
+     * stack; any additional values are stored in the context using the getter return convention.
+     */
+    private void buildGetPropertyField(CodeBuilder code, RegisterInfo targetReg,
+                                       PropertyInfo propInfo, JitMethodDesc jmd) {
+        // primitive classes don't have fields; the only exception is Char,
+        // where "codepoint" is the char itself
+        if (targetReg.flavor().isOptimized) {
+            assert targetReg.type().equals(pool().typeChar()) &&
+                    propInfo.getName().equals("codepoint");
+            // the value is already on Java stack
+            return;
+        }
+
+        JitParamDesc[] returns;
+        if (jmd.isOptimized) {
+            int[] indexes = jmd.getAllOptimizedReturnIndexes(0);
+            returns = new JitParamDesc[indexes.length];
+            for (int i = 0; i < indexes.length; i++) {
+                returns[i] = jmd.optimizedReturns[indexes[i]];
+            }
+        } else {
+            returns = new JitParamDesc[] {jmd.standardReturns[0]};
+        }
+
+        TypeConstant typeOwner = propInfo.getOwnerType(builder, targetReg.type());
+        ClassDesc    cdOwner   = builder.ensureClassDesc(typeOwner);
+        String       fieldName = propInfo.getIdentity().ensureJitPropertyName(typeSystem);
+
+        for (int i = 0; i < returns.length; i++) {
+            JitParamDesc ret = returns[i];
+            if (i > 0) {
+                targetReg.load(code);
+            }
+
+            String name = ret.extension
+                    ? fieldName + EXT
+                    : ret.flavor == XvmPrimitive || ret.flavor == NullableXvmPrimitive
+                        ? fieldName + "$" + i
+                        : fieldName;
+            code.getfield(cdOwner, name, ret.cd);
+
+            if (i > 0) {
+                storeToContext(code, ret.cd, ret.altIndex);
+            }
+        }
     }
 
     /**
@@ -2412,7 +2470,8 @@ public class BuildContext {
         if (!targetReg.isSingle()) {
             throw new UnsupportedOperationException("Multislot P_Set");
         }
-        if (!isConstructor) {
+        boolean useField = targetType.getAccess() == Access.STRUCT;
+        if (!useField) {
             loadCtx(code);
         }
 
@@ -2524,12 +2583,56 @@ public class BuildContext {
             }
         }
 
-        if (isConstructor) {
+        if (useField) {
             buildSetPropertyField(code, targetReg, propInfo, jmd);
         } else if (jmd.isOptimizedStatic) {
             code.invokestatic(builder.ensureClassDesc(jmd.typeTarget), setterName, md);
         } else {
             code.invokevirtual(targetReg.cd(), setterName, md);
+        }
+    }
+
+    /**
+     * Set a property backing field.
+     *
+     * Before calling this method, the stack contains the target followed by the converted property
+     * value. The value may occupy multiple JVM stack entries.
+     */
+    private void buildSetPropertyField(CodeBuilder code, RegisterInfo targetReg,
+                                       PropertyInfo propInfo, JitMethodDesc jmd) {
+        JitParamDesc[] params;
+        if (jmd.isOptimized) {
+            int[] indexes = jmd.getAllOptimizedParams(0);
+            params = new JitParamDesc[indexes.length];
+            for (int i = 0; i < indexes.length; i++) {
+                params[i] = jmd.optimizedParams[indexes[i]];
+            }
+        } else {
+            params = new JitParamDesc[] {jmd.standardParams[0]};
+        }
+
+        int[] slots = new int[params.length];
+        for (int i = params.length - 1; i >= 0; i--) {
+            slots[i] = storeTempValue(code, params[i].cd);
+        }
+
+        TypeConstant typeOwner = propInfo.getOwnerType(builder, targetReg.type());
+        ClassDesc    cdOwner   = builder.ensureClassDesc(typeOwner);
+        String       fieldName = propInfo.getIdentity().ensureJitPropertyName(typeSystem);
+
+        for (int i = 0; i < params.length; i++) {
+            JitParamDesc param = params[i];
+            if (i > 0) {
+                targetReg.load(code);
+            }
+            Builder.load(code, param.cd, slots[i]);
+
+            String name = param.extension
+                    ? fieldName + EXT
+                    : param.flavor == XvmPrimitive || param.flavor == NullableXvmPrimitive
+                        ? fieldName + "$" + i
+                        : fieldName;
+            code.putfield(cdOwner, name, param.cd);
         }
     }
 
@@ -2592,50 +2695,6 @@ public class BuildContext {
 
             default -> throw new UnsupportedOperationException("Not implemented: " + flavor);
         };
-    }
-
-    /**
-     * Set a property backing field directly from a constructor.
-     *
-     * Before calling this method, the stack contains the target followed by the converted property
-     * value. The value may occupy multiple JVM stack entries.
-     */
-    private void buildSetPropertyField(CodeBuilder code, RegisterInfo targetReg,
-                                       PropertyInfo propInfo, JitMethodDesc jmd) {
-        JitParamDesc[] params;
-        if (jmd.isOptimized) {
-            int[] indexes = jmd.getAllOptimizedParams(0);
-            params = new JitParamDesc[indexes.length];
-            for (int i = 0; i < indexes.length; i++) {
-                params[i] = jmd.optimizedParams[indexes[i]];
-            }
-        } else {
-            params = new JitParamDesc[] {jmd.standardParams[0]};
-        }
-
-        int[] slots = new int[params.length];
-        for (int i = params.length - 1; i >= 0; i--) {
-            slots[i] = storeTempValue(code, params[i].cd);
-        }
-
-        TypeConstant typeOwner = propInfo.getOwnerType(builder, targetReg.type());
-        ClassDesc    cdOwner   = builder.ensureClassDesc(typeOwner);
-        String       fieldName = propInfo.getIdentity().ensureJitPropertyName(typeSystem);
-
-        for (int i = 0; i < params.length; i++) {
-            JitParamDesc param = params[i];
-            if (i > 0) {
-                targetReg.load(code);
-            }
-            Builder.load(code, param.cd, slots[i]);
-
-            String name = param.extension
-                    ? fieldName + EXT
-                    : param.flavor == XvmPrimitive || param.flavor == NullableXvmPrimitive
-                        ? fieldName + "$" + i
-                        : fieldName;
-            code.putfield(cdOwner, name, param.cd);
-        }
     }
 
     /**
