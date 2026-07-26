@@ -1910,6 +1910,9 @@ public class TerminalTypeConstant
         if (isAutoNarrowing()) {
             return removeAutoNarrowing().isJavaPrimitive();
         }
+        if (isFormalType()) {
+            return resolveConstraints().isJavaPrimitive();
+        }
         if (isSingleDefiningConstant() && getDefiningConstant() instanceof ClassConstant id
                 && id.getModuleConstant().isEcstasyModule()) {
             return switch (id.getName()) {
@@ -1929,6 +1932,9 @@ public class TerminalTypeConstant
     public boolean isXvmPrimitive() {
         if (isAutoNarrowing()) {
             return removeAutoNarrowing().isXvmPrimitive();
+        }
+        if (isFormalType()) {
+            return resolveConstraints().isXvmPrimitive();
         }
         if (isSingleDefiningConstant() && getDefiningConstant() instanceof ClassConstant id
                 && id.getModuleConstant().isEcstasyModule()) {
