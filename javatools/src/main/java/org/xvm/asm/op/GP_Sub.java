@@ -61,24 +61,21 @@ public class GP_Sub
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected TypeConstant buildOptimizedBinary(BuildContext bctx,
-                                                CodeBuilder  code,
-                                                RegisterInfo regTarget,
-                                                int          nArgValue) {
-        if (regTarget.type().getValueString().equals("Char")) {
-            return buildSubFromChar(bctx, code, regTarget, nArgValue);
-        }
-        return super.buildOptimizedBinary(bctx, code, regTarget, nArgValue);
+    protected TypeConstant buildOptimizedBinary(BuildContext bctx, CodeBuilder code,
+                                                RegisterInfo regTarget, int nArgValue) {
+        return regTarget.type().isA(bctx.pool().typeChar())
+                ? buildSubFromChar(bctx, code, regTarget, nArgValue)
+                : super.buildOptimizedBinary(bctx, code, regTarget, nArgValue);
     }
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, 
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code,
                                         RegisterInfo regTarget, RegisterInfo regArg) {
         buildPrimitiveSub(bctx, code, regTarget);
     }
 
     @Override
-    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder code, 
+    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder code,
                                                    RegisterInfo regTarget, int nArgValue) {
         buildXvmPrimitiveSub(bctx, code, regTarget, nArgValue);
         return regTarget.type();

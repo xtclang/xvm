@@ -1910,8 +1910,8 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_Bit_box     = MethodTypeDesc.of(CD_Bit,     CD_int);
     public static final MethodTypeDesc MD_Boolean_box = MethodTypeDesc.of(CD_Boolean, CD_boolean);
     public static final MethodTypeDesc MD_Char_box    = MethodTypeDesc.of(CD_Char,    CD_int);
-    public static final MethodTypeDesc MD_Char_addInt = MethodTypeDesc.of(CD_int,     CD_Ctx, CD_int, CD_long);
-    public static final MethodTypeDesc MD_Char_subInt = MethodTypeDesc.of(CD_int,     CD_Ctx, CD_int, CD_long);
+    public static final MethodTypeDesc MD_Char_addInt = MethodTypeDesc.of(CD_int,     CD_int, CD_Ctx, CD_long);
+    public static final MethodTypeDesc MD_Char_subInt = MethodTypeDesc.of(CD_int,     CD_int, CD_Ctx, CD_long);
     public static final MethodTypeDesc MD_Dec32_box   = MethodTypeDesc.of(CD_Dec32,   CD_int);
     public static final MethodTypeDesc MD_Dec64_box   = MethodTypeDesc.of(CD_Dec64,   CD_long);
     public static final MethodTypeDesc MD_Dec128_box  = MethodTypeDesc.of(CD_Dec128,  CD_long, CD_long);

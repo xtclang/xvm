@@ -59,8 +59,8 @@ public interface TextSupport {
      */
     default TypeConstant buildAddIntToChar(BuildContext bctx, CodeBuilder code,
                                            RegisterInfo regTarget, int nArgId) {
-        bctx.loadCtx(code);
         RegisterInfo regLoaded = regTarget.load(code);
+        bctx.loadCtx(code);
         bctx.loadArgument(code, nArgId);
         code.invokestatic(CD_Char, "add$p", MD_Char_addInt);
         return regLoaded.type();
@@ -129,7 +129,7 @@ public interface TextSupport {
      */
     default TypeConstant buildSubFromChar(BuildContext bctx, CodeBuilder code,
                                           RegisterInfo regTarget, int nArgId) {
-        TypeConstant typeArg   = bctx.getArgumentType(nArgId);
+        TypeConstant typeArg   = bctx.getArgumentType(nArgId).removeAccess();
         String       typeName  = typeArg.getValueString();
         return switch (typeName) {
             case "Int"    -> buildSubIntFromChar(bctx, code, regTarget, nArgId);
@@ -156,8 +156,8 @@ public interface TextSupport {
      */
     default TypeConstant buildSubIntFromChar(BuildContext bctx, CodeBuilder code,
                                              RegisterInfo regTarget, int nArgId) {
-        bctx.loadCtx(code);
         RegisterInfo regLoaded = regTarget.load(code);
+        bctx.loadCtx(code);
         bctx.loadArgument(code, nArgId);
         code.invokestatic(CD_Char, "sub$p", MD_Char_subInt);
         return regLoaded.type();
