@@ -19,9 +19,16 @@ package enumTests {
         assert !testRedOrNull(c);
         assert !testRed(c);
 
-        Boolean b = True;
-        assert !b.not();
-        console.print(b.toInt64()); // this won't work correctly until we compile Boolean
+        Boolean f = False;
+        Boolean t = True;
+        assert !t.not();
+        console.print(t.toInt64()); // this won't work correctly until we compile Boolean
+
+        assert f == f;
+        assert f != t;
+        assert f <=> t == Lesser;
+        assert t <=> f == Greater;
+        assert t <=> t == Equal;
 
         Color|Int cint = Red;
         assert testRed1(cint);

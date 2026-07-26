@@ -76,24 +76,33 @@ public class EnumBuilder extends CommonBuilder {
     }
 
     public static void generateOrderable(ClassBuilder classBuilder, CommonBuilder builder) {
-        TypeInfo          typeInfo = builder.typeInfo;
-        SignatureConstant eqSig    = builder.pool().sigEquals();
-        MethodInfo        eqMethod = typeInfo.getMethodBySignature(eqSig);
-        JitMethodDesc     eqJmd    = eqMethod.getJitDesc(builder);
+        boolean           isBoolean = builder.jitType.equals(builder.pool().typeBoolean());
+        TypeInfo          typeInfo  = builder.typeInfo;
+        SignatureConstant eqSig     = builder.pool().sigEquals();
+        MethodInfo        eqMethod  = typeInfo.getMethodBySignature(eqSig);
+        JitMethodDesc     eqJmd     = eqMethod.getJitDesc(builder);
 
-        assert eqMethod != null;
-
+        // Boolean is **the only** optimized type that is an Enum; treat is separately
         classBuilder.withMethodBody(eqSig.getName()+OPT, eqJmd.optimizedMD,
-            ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, EnumBuilder::assembleEquals);
+                ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
+                isBoolean ? EnumBuilder::assembleBooleanEquals : EnumBuilder::assembleEquals);
 
         SignatureConstant cmpSig    = builder.pool().sigCompare();
         MethodInfo        cmpMethod = typeInfo.getMethodBySignature(cmpSig);
         JitMethodDesc     cmpJmd    = cmpMethod.getJitDesc(builder);
+        String            cmpName   = cmpSig.getName();
 
-        assert cmpMethod != null;
-
-        classBuilder.withMethodBody(cmpSig.getName(), cmpJmd.standardMD,
-            ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, code -> assembleCompare(builder, code));
+        if (isBoolean) {
+            assert cmpJmd.isOptimized;
+            classBuilder.withMethodBody(cmpName+OPT, cmpJmd.optimizedMD,
+                    ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
+                    code -> assembleBooleanCompare(builder, code));
+        } else {
+            assert !cmpJmd.isOptimized;
+            classBuilder.withMethodBody(cmpName, cmpJmd.standardMD,
+                    ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
+                    code -> assembleCompare(builder, code));
+        }
     }
 
     /**
@@ -108,6 +117,21 @@ public class EnumBuilder extends CommonBuilder {
             .aload(3)
             .invokestatic(CD_nEnum, "equals$p",
                 MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_nType, CD_nEnum, CD_nEnum))
+            .ireturn();
+    }
+
+    /**
+     * Generate primitive Boolean equality.
+     */
+    private static void assembleBooleanEquals(CodeBuilder code) {
+        Label notEqual = code.newLabel();
+        code.iload(2)
+            .iload(3)
+            .if_icmpne(notEqual)
+            .iconst_1()
+            .ireturn()
+            .labelBinding(notEqual)
+            .iconst_0()
             .ireturn();
     }
 
@@ -159,6 +183,18 @@ public class EnumBuilder extends CommonBuilder {
         // else return Equal;
         code.labelBinding(labelEq);
         builder.loadConstant(code, pool.valEqual());
+        code.areturn();
+    }
+
+    /**
+     * Generate primitive Boolean comparison.
+     */
+    private static void assembleBooleanCompare(CommonBuilder builder, CodeBuilder code) {
+        code.iload(2)
+            .iload(3)
+            .isub();
+        builder.convertIntToOrdered(code);
+        builder.loadConstant(code, builder.pool().valEqual());
         code.areturn();
     }
 }
