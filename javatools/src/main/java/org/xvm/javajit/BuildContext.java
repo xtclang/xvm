@@ -15,9 +15,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import java.util.function.Consumer;
 
@@ -264,6 +266,11 @@ public class BuildContext {
      * The Map of not-yet-assigned registers.
      */
     private final Map<RegisterInfo, Label> unassignedRegisters = new IdentityHashMap<>();
+
+    /**
+     * The registers used for conditional return payloads.
+     */
+    private final Set<Integer> conditionalRegisters = new HashSet<>();
 
     /**
      * The stack of synthetic {@link RegisterInfo}s that are used internally.
@@ -1619,7 +1626,26 @@ public class BuildContext {
 
         registerInfos.put(regId, reg);
         unassignedRegisters.put(reg, varStart);
+        if (conditionalRegisters.contains(regId)) {
+            // a conditional return payload is undefined when the condition is `False`, but its Java
+            // slots must still have verifier-visible values
+            Builder.defaultStore(code, reg);
+        }
         return reg;
+    }
+
+    /**
+     * Register the arguments of a conditional return.
+     */
+    public void registerConditionalReturn(int[] retArgs) {
+        assert methodStruct.isConditionalReturn() && retArgs.length > 1;
+
+        for (int i = 1; i < retArgs.length; i++) {
+            int regId = retArgs[i];
+            if (regId >= 0) {
+                conditionalRegisters.add(regId);
+            }
+        }
     }
 
     /**
@@ -1652,12 +1678,12 @@ public class BuildContext {
         TypeConstant typeTo   = regTo.type();
         ClassDesc    cdFrom   = regFrom.cd();
 
-        if (!typeFrom.isA(typeTo)) {
-            if (regTo instanceof Narrowed narrowedReg) {
-                regTo  = resetRegister(narrowedReg);
-                typeTo = regTo.type();
-            }
+        if (regTo instanceof Narrowed narrowedReg) {
+            regTo  = resetRegister(narrowedReg);
+            typeTo = regTo.type();
+        }
 
+        if (!typeFrom.isA(typeTo)) {
             if (!Builder.isJitAssignable(typeFrom, typeTo) && regFrom.flavor() != NullablePrimitive) {
                 assert allowUpcast;
                 if (cdFrom.isPrimitive()) {
