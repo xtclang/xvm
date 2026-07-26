@@ -24,6 +24,18 @@ public record SingleSlot(int regId, int slot, JitFlavor flavor, TypeConstant typ
         implements RegisterInfo {
 
     /**
+     * The canonical constructor.
+     */
+    public SingleSlot(int regId, int slot, JitFlavor flavor, TypeConstant type, ClassDesc cd, String name) {
+        this.regId  = regId;
+        this.slot   = slot;
+        this.flavor = flavor;
+        this.type   = type.removeAutoNarrowing();
+        this.cd     = cd;
+        this.name   = name;
+    }
+
+    /**
      * Construct the SingleSlot representing a value placed on the Java stack.
      */
     public SingleSlot(TypeConstant type, JitFlavor flavor, ClassDesc cd, String name) {
