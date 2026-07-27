@@ -254,7 +254,7 @@ public abstract class OpGeneral
                     code.invokevirtual(regTarget.cd(), sJitName, md);
                 }
 
-                TypeConstant typeReturn   = method.getSignature().getRawReturns()[0]; // could differ from target
+                TypeConstant typeReturn = method.getSignature().getRawReturns()[0]; // could differ from target
                 typeResult = typeReturn.resolveAutoNarrowing(bctx.pool(), false, typeTarget, null);
                 if (!typeReturn.isA(typeResult)) {
                     code.checkcast(bctx.builder.ensureClassDesc(typeResult));

@@ -360,9 +360,17 @@ public abstract class Builder {
 
         case PropertyConstant propId: {
             // support for the "local property" mode
-            bctx.loadThis(code);
-            int          ctxSlot = bctx.ctxSlot(code);
-            PropertyInfo info    = loadProperty(code, bctx.thisType, propId, true, ctxSlot);
+            RegisterInfo targetReg = bctx.loadThis(code);
+            int          ctxSlot   = bctx.ctxSlot(code);
+            PropertyInfo info;
+            if (isPrimitivePseudoField(targetReg.type(), propId)) {
+                if (!targetReg.flavor().isOptimized) {
+                    unbox(code, targetReg.type());
+                }
+                info = propId.getPropertyInfo(targetReg.type());
+            } else {
+                info = loadProperty(code, targetReg.type(), propId, true, ctxSlot);
+            }
             TypeConstant type = info.getType();
             JitTypeDesc  jtd  = type.getJitDesc(this);
             switch (jtd.flavor) {
@@ -812,7 +820,8 @@ public abstract class Builder {
      *
      * This method assumes the "owner" ref is loaded on Java stack.
      *
-     * @param ctxSlot  the Java slot containing the current context
+     * @param allowUnboxing  if true, allow property access optimization
+     * @param ctxSlot        the Java slot containing the current context
      *
      * @return the PropertyInfo for the property
      */
@@ -1650,6 +1659,16 @@ public abstract class Builder {
      */
     public static boolean isJitAssignable(TypeConstant srcType, TypeConstant dstType) {
         return srcType.getCanonicalJitType().isA(dstType.getCanonicalJitType());
+    }
+
+    /**
+     * Primitive classes don't have fields; the only exception is Char, where "codepoint" is the
+     * char itself.
+     */
+    public boolean isPrimitivePseudoField(TypeConstant typeContainer, PropertyConstant propId) {
+        return typeContainer.getAccess() == Constants.Access.STRUCT &&
+                typeContainer.removeAccess().equals(pool().typeChar()) &&
+                propId.getName().equals("codepoint");
     }
 
     // ----- TEMPORARY: debugging support ----------------------------------------------------------
