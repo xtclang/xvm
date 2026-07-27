@@ -214,21 +214,14 @@ public abstract class Builder {
                             ? new MultiSlot(bctx, XvmPrimitive, type, CD_Int128, CDs_LongLong)
                             : new MultiSlot(bctx, XvmPrimitive, type, CD_UInt128, CDs_LongLong);
                 }
-                case IntN -> {
+                case IntN, UIntN -> {
                     TypeConstant   type  = intConstant.getType();
+                    ClassDesc      cd    = ensureClassDesc(type);
                     String         value = intConstant.getValueString();
-                    MethodTypeDesc md    = MethodTypeDesc.of(CD_IntN, CD_JavaString);
+                    MethodTypeDesc md    = MethodTypeDesc.of(cd, CD_JavaString);
                     code.ldc(value);
-                    code.invokestatic(CD_IntN, "$new", md);
-                    yield new SingleSlot(type, Specific, CD_IntN, "");
-                }
-                case UIntN -> {
-                    TypeConstant   type  = intConstant.getType();
-                    String         value = intConstant.getValueString();
-                    MethodTypeDesc md    = MethodTypeDesc.of(CD_UIntN, CD_JavaString);
-                    code.ldc(value);
-                    code.invokestatic(CD_UIntN, "$new", md);
-                    yield new SingleSlot(type, Specific, CD_UIntN, "");
+                    code.invokestatic(cd, "$new", md);
+                    yield new SingleSlot(type, Specific, cd, "");
                 }
                 default ->
                     throw new IllegalStateException("Unsupported IntConstant type "
