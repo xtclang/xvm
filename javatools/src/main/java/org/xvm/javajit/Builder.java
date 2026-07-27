@@ -21,6 +21,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.*;
 
+import org.xvm.javajit.TypeSystem.Artifact;
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
 import org.xvm.javajit.registers.ExtendedSlot;
@@ -54,35 +55,32 @@ import static org.xvm.javajit.JitFlavor.Specific;
  * Base class for JIT class builders.
  */
 public abstract class Builder {
-    public Builder(TypeSystem typeSystem) {
+    public Builder(TypeSystem typeSystem, Artifact art) {
         this.typeSystem = typeSystem;
+        this.art        = art;
     }
 
     public final TypeSystem typeSystem;
+    public final Artifact   art;
 
     /**
      * Assemble the java class for the "impl" shape.
      */
     public void assembleImpl(String className, ClassBuilder classBuilder) {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
-     * Assemble the java class for the "pure" shape.
-     */
-    public void assemblePure(String className, ClassBuilder classBuilder) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("assemble: " + art);
     }
 
     /**
      * @return TypeConstant for "this" type
      */
     public TypeConstant getThisType() {
+        // in theory, we could provide this info from art, or cache it as in CommonBuilder
         throw new UnsupportedOperationException();
     }
 
     public boolean isPrimitive() {
-        return false;
+        // in theory, this could be cached as it is in CommonBuilder
+        return getThisType().isJitPrimitive();
     }
 
     /**

@@ -7,9 +7,8 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.javajit.TypeSystem;
+import org.xvm.javajit.TypeSystem.Artifact;
 
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
@@ -20,8 +19,8 @@ import static java.lang.constant.ConstantDescs.INIT_NAME;
 public class PackageBuilder
         extends CommonBuilder {
 
-    public PackageBuilder(TypeSystem typeSystem, TypeConstant type) {
-        super(typeSystem, type);
+    public PackageBuilder(TypeSystem typeSystem, Artifact art) {
+        super(typeSystem, art);
     }
 
     @Override

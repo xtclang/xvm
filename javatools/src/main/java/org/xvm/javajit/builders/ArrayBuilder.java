@@ -18,17 +18,18 @@ import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.TypeSystem;
+import org.xvm.javajit.TypeSystem.Artifact;
 
 /**
  * The builder for Array types.
  */
 public class ArrayBuilder extends AugmentingBuilder {
 
-    public ArrayBuilder(TypeSystem typeSystem, TypeConstant type, ClassModel model) {
-        super(typeSystem, type, model);
+    public ArrayBuilder(TypeSystem typeSystem, Artifact art, ClassModel model) {
+        super(typeSystem, art, model);
 
         DELEGATE_TYPE = pool().ensureEcstasyTypeConstant("collections.Array.ArrayDelegate");
-        isObjectArray = type.getParamType(0).equals(typeSystem.pool().typeObject());
+        isObjectArray = art.type().getParamType(0).equals(typeSystem.pool().typeObject());
     }
 
     protected final TypeConstant DELEGATE_TYPE;

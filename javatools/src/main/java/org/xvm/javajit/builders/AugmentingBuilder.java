@@ -23,6 +23,7 @@ import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitCtorDesc;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.TypeSystem;
+import org.xvm.javajit.TypeSystem.Artifact;
 
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 import static java.lang.constant.ConstantDescs.MTD_void;
@@ -33,8 +34,8 @@ import static java.lang.constant.ConstantDescs.MTD_void;
  */
 public class AugmentingBuilder extends CommonBuilder {
 
-    public AugmentingBuilder(TypeSystem typeSystem, TypeConstant type, ClassModel model) {
-        super(typeSystem, type);
+    public AugmentingBuilder(TypeSystem typeSystem, Artifact art, ClassModel model) {
+        super(typeSystem, art);
 
         this.model = model;
     }
@@ -72,7 +73,7 @@ public class AugmentingBuilder extends CommonBuilder {
         TypeConstant type        = thisType.removeAccess();
         TypeConstant T_EXCEPTION = type.getConstantPool().typeException();
         if (type.isA(T_EXCEPTION) && !type.equals(T_EXCEPTION)) {
-            new ExceptionBuilder(typeSystem, type).assembleCreateException(className, classBuilder);
+            new ExceptionBuilder(typeSystem, art).assembleCreateException(className, classBuilder);
         }
 
         switch (typeInfo.getFormat()) {

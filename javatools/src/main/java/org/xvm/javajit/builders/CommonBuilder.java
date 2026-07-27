@@ -55,6 +55,7 @@ import org.xvm.javajit.ModuleLoader;
 import org.xvm.javajit.NativeTypeSystem;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
+import org.xvm.javajit.TypeSystem.Artifact;
 
 import org.xvm.javajit.registers.ExtendedSlot;
 import org.xvm.javajit.registers.MultiSlot;
@@ -77,9 +78,10 @@ import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
  */
 public class CommonBuilder
         extends Builder {
-    public CommonBuilder(TypeSystem typeSystem, TypeConstant type) {
-        super(typeSystem);
+    public CommonBuilder(TypeSystem typeSystem, Artifact art) {
+        super(typeSystem, art);
 
+        TypeConstant type = art.type();
         assert type.isSingleUnderlyingClass(true) && !type.isAccessSpecified();
 
         this.classStruct = (ClassStructure) type.getSingleUnderlyingClass(true).getComponent();
@@ -153,13 +155,6 @@ public class CommonBuilder
             // TypeConstants have been collected
             assembleStaticInitializer(className, classBuilder);
         }
-    }
-
-    @Override
-    public void assemblePure(String className, ClassBuilder classBuilder) {
-        // assemblePureClass(className, classBuilder);
-        // assemblePureProperties(className, classBuilder);
-        // assemblePureMethods(className, classBuilder);
     }
 
     @Override
