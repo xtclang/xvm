@@ -162,6 +162,16 @@ public class Int32 extends IntNumber {
     }
 
     /**
+     * The primitive implementation of:
+     * <pre>
+     *     IntN toIntN()
+     * </pre>
+     */
+    public static IntN toIntN$p(int thi$, Ctx ctx) {
+        return IntN.$box(thi$);
+    }
+
+    /**
      * The primitive implementation of UInt8 toUInt8(Boolean checkBounds = False)
      *
      * @param ctx              the build context
@@ -251,6 +261,20 @@ public class Int32 extends IntNumber {
         // load the high long value to the context and return the low value
         ctx.i0 = thi$ >= 0 ? 0L : -1L;
         return thi$;
+    }
+
+    /**
+     * The primitive implementation of:
+     * <pre>
+     *     UIntN toUIntN()
+     * </pre>
+     */
+    public static UIntN toUIntN$p(int thi$, Ctx ctx) {
+        if (thi$ < 0) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "Int32 value " + thi$ + " is not a valid UIntN value");
+        }
+        return UIntN.$box(thi$);
     }
 
     // ----- debugging support ---------------------------------------------------------------------

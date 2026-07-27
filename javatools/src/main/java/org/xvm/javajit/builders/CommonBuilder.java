@@ -3629,6 +3629,12 @@ public class CommonBuilder
                 break GenerateStub;
             }
 
+            if (NO_JIT_METHODS.getOrDefault(className, Set.of()).contains(bctx.methodJitName)) {
+                System.err.println("*** Skipping code gen for " + bctx.className + "." + bctx.methodJitName);
+                SKIP_SET.add(bctx.className); // stops the skipping class log message
+                break GenerateStub;
+            }
+
             bctx.assembleCode(code);
             return;
         }
@@ -3726,12 +3732,15 @@ public class CommonBuilder
             "org.xtclang.ecstasy.numbers.Float64",
             "org.xtclang.ecstasy.numbers.Float128",
             "org.xtclang.ecstasy.numbers.FPConvertible",
-// TODO     "org.xtclang.ecstasy.numbers.Number",
+            "org.xtclang.ecstasy.numbers.Number",
 // TODO     "org.xtclang.ecstasy.numbers.FPNumber",         // depends on Bit support
 // TODO     "org.xtclang.ecstasy.numbers.Int",              // depends on Char "switch" implementation, depends on Char
-// TODO     "org.xtclang.ecstasy.numbers.IntNumber",
+            "org.xtclang.ecstasy.numbers.IntNumber",
             "org.xtclang.ecstasy.numbers.IntConvertible",
 // TODO     "org.xtclang.ecstasy.numbers.UInt",             // depends on GP_DIVREM
+            "org.xtclang.ecstasy.numbers.IntN",
+            "org.xtclang.ecstasy.numbers.UIntN",
+            "org.xtclang.ecstasy.numbers.UIntNumber",
 
             // reflect
             "org.xtclang.ecstasy.reflect.Module",
@@ -3753,6 +3762,18 @@ public class CommonBuilder
 
     private final static String[] NO_JIT_LIST = new String[] {
     };
+
+    private final static Map<String, Set<String>> NO_JIT_METHODS = Map.of(
+    "org.xtclang.ecstasy.numbers.Number",
+            Set.of("compare",
+                   "converterFor",
+                   "converterTo"),
+    "org.xtclang.ecstasy.numbers.IntNumber",
+            Set.of("not"),
+    "org.xtclang.ecstasy.numbers.UIntNumber",
+            Set.of("compare",
+                   "converterFor")
+    );
 
     private final static HashSet<String> SKIP_SET = new HashSet<>();
 }

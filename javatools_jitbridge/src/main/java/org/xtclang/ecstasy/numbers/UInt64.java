@@ -12,7 +12,7 @@ import org.xvm.javajit.Ctx;
 /**
  * Native UInt64 wrapper.
  */
-public class UInt64 extends IntNumber {
+public class UInt64 extends UIntNumber {
     /**
      * Construct an Ecstasy UInt64 object.
      *
@@ -168,6 +168,16 @@ public class UInt64 extends IntNumber {
     }
 
     /**
+     * The primitive implementation of:
+     * <pre>
+     *     IntN toIntN()
+     * </pre>
+     */
+    public static IntN toIntN$p(long thi$, Ctx ctx) {
+        return IntN.$box(thi$);
+    }
+
+    /**
      * The primitive implementation of UInt8 toUInt8(Boolean checkBounds = False)
      *
      * @param ctx              the build context
@@ -249,6 +259,16 @@ public class UInt64 extends IntNumber {
         // load the high long value to the context and return the low value
         ctx.i0 = 0L;
         return thi$;
+    }
+
+    /**
+     * The primitive implementation of:
+     * <pre>
+     *     UIntN toUIntN()
+     * </pre>
+     */
+    public static UIntN toUIntN$p(long thi$, Ctx ctx) {
+        return UIntN.$box(thi$);
     }
 
     // ----- debugging support ---------------------------------------------------------------------

@@ -254,7 +254,11 @@ public abstract class OpGeneral
                     code.invokevirtual(regTarget.cd(), sJitName, md);
                 }
 
-                typeResult = method.getSignature().getRawReturns()[0]; // could differ from target
+                TypeConstant typeReturn   = method.getSignature().getRawReturns()[0]; // could differ from target
+                typeResult = typeReturn.resolveAutoNarrowing(bctx.pool(), false, typeTarget, null);
+                if (!typeReturn.isA(typeResult)) {
+                    code.checkcast(bctx.builder.ensureClassDesc(typeResult));
+                }
             }
             bctx.storeValue(code, m_nRetValue, typeResult);
         } else { // unary op
@@ -293,6 +297,12 @@ public abstract class OpGeneral
                 } else {
                     code.invokevirtual(regTarget.cd(), sJitName, md);
                 }
+
+                TypeConstant typeReturn = method.getSignature().getRawReturns()[0]; // could differ from target
+                TypeConstant typeResult = typeReturn.resolveAutoNarrowing(bctx.pool(), false, typeTarget, null);
+                if (!typeReturn.isA(typeResult)) {
+                    code.checkcast(bctx.builder.ensureClassDesc(typeResult));
+                }
             }
             bctx.storeValue(code, m_nRetValue, typeTarget);
         }
@@ -313,7 +323,7 @@ public abstract class OpGeneral
             case OP_GP_MOD     -> {sName = "mod";           sOp = "%";   }
             case OP_GP_SHL     -> {sName = "shiftLeft";     sOp = "<<";  }
             case OP_GP_SHR     -> {sName = "shiftRight";    sOp = ">>";  }
-            case OP_GP_USHR    -> {sName = "shiftAllRight"; sOp = ">>";  }
+            case OP_GP_USHR    -> {sName = "shiftAllRight"; sOp = ">>>"; }
             case OP_GP_AND     -> {sName = "and";           sOp = "&";   }
             case OP_GP_OR      -> {sName = "or";            sOp = "|";   }
             case OP_GP_XOR     -> {sName = "xor";           sOp = "^";   }

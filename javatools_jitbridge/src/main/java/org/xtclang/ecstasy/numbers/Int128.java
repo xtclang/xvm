@@ -266,6 +266,16 @@ public class Int128 extends IntNumber {
     }
 
     /**
+     * The primitive implementation of:
+     * <pre>
+     *     IntN toIntN()
+     * </pre>
+     */
+    public static IntN toIntN$p(long thi$Lo, long thi$Hi, Ctx ctx) {
+        return IntN.$box(thi$Lo, thi$Hi);
+    }
+
+    /**
      * The primitive implementation of UInt8 toUInt8(Boolean checkBounds = False)
      *
      * @param ctx              the build context
@@ -364,6 +374,21 @@ public class Int128 extends IntNumber {
         // load the high long value to the context and return the low value
         ctx.i0 = thi$Hi;
         return thi$Lo;
+    }
+
+    /**
+     * The primitive implementation of:
+     * <pre>
+     *     UIntN toUIntN()
+     * </pre>
+     */
+    public static UIntN toUIntN$p(long thi$Lo, long thi$Hi, Ctx ctx) {
+        if (thi$Hi < 0) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "Int128 value " + $toBigInteger(thi$Lo, thi$Hi)
+                    + " is not a valid UIntN value");
+        }
+        return UIntN.$box(thi$Lo, thi$Hi);
     }
 
     // ----- internal JIT support ------------------------------------------------------------------

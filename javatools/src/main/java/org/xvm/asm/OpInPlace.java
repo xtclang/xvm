@@ -244,6 +244,14 @@ public abstract class OpInPlace
                 } else {
                     reg.markChanged();
                 }
+            } else if (reg.type().isA(bctx.pool().typeSequential())) {
+                // this can only be non-primitive Sequential, i.e. IntNumber, IntN or UIntN
+                buildSequentialLocal(bctx, code, reg);
+                if (isAssignOp()) {
+                    bctx.storeValue(code, m_nRetValue, reg.type());
+                } else {
+                    reg.markChanged();
+                }
             } else {
                 // call the corresponding op method
                 JitMethodDesc jmd = buildOpCallLocal(bctx, code, reg);

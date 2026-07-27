@@ -172,7 +172,12 @@ public abstract class OpInPlaceAssign
             code.invokevirtual(regTarget.cd(), sJitName, md);
         }
 
-        return method.getSignature().getRawReturns()[0]; // could differ from the target
+        TypeConstant typeResult   = method.getSignature().getRawReturns()[0]; // could differ from
+        TypeConstant typeResolved = typeResult.resolveAutoNarrowing(bctx.pool(), false, typeTarget, null);
+        if (!typeResult.isA(typeResolved)) {
+            code.checkcast(bctx.builder.ensureClassDesc(typeResolved));
+        }
+        return typeResult;
     }
 
     /**
@@ -211,7 +216,7 @@ public abstract class OpInPlaceAssign
             case OP_IP_MOD  -> {sName = "mod";           sOp = "%";   }
             case OP_IP_SHL  -> {sName = "shiftLeft";     sOp = "<<";  }
             case OP_IP_SHR  -> {sName = "shiftRight";    sOp = ">>";  }
-            case OP_IP_USHR -> {sName = "shiftAllRight"; sOp = ">>";  }
+            case OP_IP_USHR -> {sName = "shiftAllRight"; sOp = ">>>"; }
             case OP_IP_AND  -> {sName = "and";           sOp = "&";   }
             case OP_IP_OR   -> {sName = "or";            sOp = "|";   }
             case OP_IP_XOR  -> {sName = "xor";           sOp = "^";   }

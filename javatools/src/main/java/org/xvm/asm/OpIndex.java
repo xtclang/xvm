@@ -427,6 +427,9 @@ public abstract class OpIndex
             buildPrimitiveLocal(bctx, code, regElement);
         } else if (typeEl.isXvmPrimitive()) {
             buildXvmPrimitiveLocal(bctx, code, regElement);
+        } else if (typeEl.isA(bctx.pool().typeSequential())) {
+            // this can only be non-primitive Sequential, i.e. IntNumber, IntN or UIntN
+            buildSequentialLocal(bctx, code, regElement);
         }
         // regElement now has the result stored in it, so store it back to the array
         storeArrayElement(bctx, code, regArray, regElement);

@@ -20,7 +20,12 @@ public class NativeNames {
     static {
         reservedMethodName.put("Appender/add/1", "add");
 
-        reservedMethodName.put("Boolean/not/0", "not");
+        reservedMethodName.put("Iterator/next/0", "next");
+
+        reservedMethodName.put("Boolean/not/0",    "not");
+        reservedMethodName.put("Boolean/and/1",    "and");
+        reservedMethodName.put("Boolean/or/1",     "or");
+        reservedMethodName.put("Boolean/xor/1",    "xor");
         reservedMethodName.put("Boolean/toByte/0", "toByte");
 
         reservedMethodName.put("collections.Array/add/1",                 "add");
@@ -32,6 +37,12 @@ public class NativeNames {
         reservedMethodName.put("collections.Array/removeAll/1",           "removeAll");
         reservedMethodName.put("collections.Array.ArrayDelegate/reify/1", "reify");
         reservedMethodName.put("collections.Collection/reify/0",          "reify");
+
+        reservedMethodName.put("numbers.IntConvertible/toIntN/0",  "toIntN");
+        reservedMethodName.put("numbers.IntConvertible/toUIntN/0", "toUIntN");
+
+        reservedMethodName.put("numbers.FPnumber/toIntN/1",  "toIntN$FP");
+        reservedMethodName.put("numbers.FPnumber/toUIntN/1", "toUIntN$FP");
 
         reservedMethodName.put("numbers.Number/toInt8/1",    "toInt8");
         reservedMethodName.put("numbers.Number/toInt16/1",   "toInt16");
@@ -65,6 +76,54 @@ public class NativeNames {
         reservedMethodName.put("numbers.Number/toUInt64/2",  "toUInt64$FP");
         reservedMethodName.put("numbers.Number/toUInt128/2", "toUInt128$FP");
         reservedMethodName.put("numbers.Number/toUIntN/1",   "toUIntN$FP");
+
+        reservedMethodName.put("numbers.IntNumber/add/1",           "add");
+        reservedMethodName.put("numbers.IntNumber/and/1",           "and");
+        reservedMethodName.put("numbers.IntNumber/not/0",           "not");
+        reservedMethodName.put("numbers.IntNumber/or/1",            "or");
+        reservedMethodName.put("numbers.IntNumber/nextValue/0",     "nextValue");
+        reservedMethodName.put("numbers.IntNumber/prevValue/0",     "prevValue");
+        reservedMethodName.put("numbers.IntNumber/shiftAllRight/1", "shiftAllRight");
+        reservedMethodName.put("numbers.IntNumber/shiftLeft/1",     "shiftLeft");
+        reservedMethodName.put("numbers.IntNumber/shiftRight/1",    "shiftRight");
+        reservedMethodName.put("numbers.IntNumber/skip/1",          "skip");
+        reservedMethodName.put("numbers.IntNumber/stepsTo/1",       "stepsTo");
+        reservedMethodName.put("numbers.IntNumber/sub/1",           "sub");
+        reservedMethodName.put("numbers.IntNumber/toIntN/0",        "toIntN");
+        reservedMethodName.put("numbers.IntNumber/xor/1",           "xor");
+
+        reservedMethodName.put("numbers.IntN/abs/0",       "abs");
+        reservedMethodName.put("numbers.IntN/add/1",       "add");
+        reservedMethodName.put("numbers.IntN/div/1",       "div");
+        reservedMethodName.put("numbers.IntN/divrem/1",    "divrem");
+        reservedMethodName.put("numbers.IntN/mod/1",       "mod");
+        reservedMethodName.put("numbers.IntN/mul/1",       "mul");
+        reservedMethodName.put("numbers.IntN/neg/0",       "neg");
+        reservedMethodName.put("numbers.IntN/pow/1",       "pow");
+        reservedMethodName.put("numbers.IntN/remainder/1", "remainder");
+        reservedMethodName.put("numbers.IntN/sub/1",       "sub");
+        reservedMethodName.put("numbers.IntN/next/0",      "next");
+        reservedMethodName.put("numbers.IntN/nextValue/0", "nextValue");
+        reservedMethodName.put("numbers.IntN/prev/0",      "prev");
+        reservedMethodName.put("numbers.IntN/prevValue/0", "prevValue");
+        reservedMethodName.put("numbers.IntN/skip/1",      "skip");
+        reservedMethodName.put("numbers.IntN/stepsTo/1",   "stepsTo");
+
+        reservedMethodName.put("numbers.UIntN/abs/0",       "abs");
+        reservedMethodName.put("numbers.UIntN/add/1",       "add");
+        reservedMethodName.put("numbers.UIntN/div/1",       "div");
+        reservedMethodName.put("numbers.UIntN/divrem/1",    "divrem");
+        reservedMethodName.put("numbers.UIntN/mod/1",       "mod");
+        reservedMethodName.put("numbers.UIntN/mul/1",       "mul");
+        reservedMethodName.put("numbers.UIntN/pow/1",       "pow");
+        reservedMethodName.put("numbers.UIntN/remainder/1", "remainder");
+        reservedMethodName.put("numbers.UIntN/sub/1",       "sub");
+        reservedMethodName.put("numbers.UIntN/next/0",      "next");
+        reservedMethodName.put("numbers.UIntN/nextValue/0", "nextValue");
+        reservedMethodName.put("numbers.UIntN/prev/0",      "prev");
+        reservedMethodName.put("numbers.UIntN/prevValue/0", "prevValue");
+        reservedMethodName.put("numbers.UIntN/skip/1",      "skip");
+        reservedMethodName.put("numbers.UIntN/stepsTo/1",   "stepsTo");
     }
 
     /**
@@ -73,20 +132,29 @@ public class NativeNames {
     public static String findReservedJitName(MethodConstant methodId) {
         IdentityConstant classId   = methodId.getNamespace();
         TypeConstant     classType = classId.getType();
-        String           className;
+        String           className = classId.getPathString();
+        String           key       = createKey(className, methodId);
+        String           jitName   = reservedMethodName.get(key);
 
-        ConstantPool pool = classId.getConstantPool();
-        if (classType.isA(pool.typeNumber()) ||
-                classType.isA(pool.ensureEcstasyTypeConstant("numbers.FPNumber")) ||
-                classType.isA(pool.ensureEcstasyTypeConstant("numbers.FPConvertible"))) {
-            className = "numbers.Number";
-        } else {
-            className = classId.getPathString();
+        if (jitName == null) {
+            // there was no match for the exact type and method, try to match on super types
+
+            ConstantPool pool = classId.getConstantPool();
+            if (classType.isA(pool.typeNumber()) ||
+                    classType.isA(pool.ensureEcstasyTypeConstant("numbers.FPNumber")) ||
+                    classType.isA(pool.ensureEcstasyTypeConstant("numbers.FPConvertible"))) {
+                // the type is a Number
+                key     = createKey("numbers.Number", methodId);
+                jitName = reservedMethodName.get(key);
+            }
         }
 
-        String key = className + "/" +
-                     methodId.getName() + "/" +
-                     methodId.getSignature().getParamCount();
-        return reservedMethodName.get(key);
+        return jitName;
+    }
+
+    private static String createKey(String className, MethodConstant methodId) {
+        return className + "/" +
+               methodId.getName() + "/" +
+               methodId.getSignature().getParamCount();
     }
 }
