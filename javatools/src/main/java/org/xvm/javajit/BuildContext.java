@@ -2368,14 +2368,14 @@ public class BuildContext {
      */
     private void buildGetPropertyField(CodeBuilder code, RegisterInfo targetReg,
                                        PropertyInfo propInfo, JitMethodDesc jmd) {
-        // primitive classes don't have fields; the only exception is Char,
-        // where "codepoint" is the char itself
-        if (targetReg.flavor().isOptimized) {
-            assert targetReg.type().equals(pool().typeChar()) &&
-                    propInfo.getName().equals("codepoint");
-            // the value is already on Java stack
+        if (builder.isPrimitivePseudoField(targetReg.type(), propInfo.getIdentity())) {
+            // primitive classes don't have fields; the target itself is the property value
+            if (!targetReg.flavor().isOptimized) {
+                Builder.unbox(code, targetReg.type());
+            }
             return;
         }
+        assert !targetReg.flavor().isOptimized;
 
         JitParamDesc[] returns;
         if (jmd.isOptimized) {

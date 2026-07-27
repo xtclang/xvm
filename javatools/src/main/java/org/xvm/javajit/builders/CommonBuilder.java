@@ -3748,7 +3748,7 @@ public class CommonBuilder
 // TODO     "org.xtclang.ecstasy.reflect.Type",
 
             // text
-//            "org.xtclang.ecstasy.text.Char",
+            "org.xtclang.ecstasy.text.Char*",
             "org.xtclang.ecstasy.text.String",
             "org.xtclang.ecstasy.text.Stringable",
             "org.xtclang.ecstasy.text.StringBuffer",
