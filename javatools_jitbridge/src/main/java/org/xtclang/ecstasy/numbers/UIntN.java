@@ -861,9 +861,9 @@ public class UIntN extends UIntNumber {
 
     public static Ordered compare(Ctx ctx, nType type, UIntN value1, UIntN value2) {
         int r = value1.$value.compareTo(value2.$value);
-        return r < 0 ? Ordered.Lesser.$INSTANCE
-                : r == 0 ? Ordered.Equal.$INSTANCE
-                  : Ordered.Greater.$INSTANCE;
+        return r < 0  ? Ordered.Lesser.$INSTANCE :
+               r == 0 ? Ordered.Equal.$INSTANCE :
+                        Ordered.Greater.$INSTANCE;
     }
 
     public static boolean equals$p(Ctx ctx, nType type, UIntN value1, UIntN value2) {
