@@ -20,6 +20,7 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.TypeSystem;
+import org.xvm.javajit.TypeSystem.Artifact;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_long;
@@ -32,8 +33,8 @@ import static java.lang.constant.ConstantDescs.CD_long;
  *   - implement the "enumeration" property
  */
 public class EnumBuilder extends CommonBuilder {
-    public EnumBuilder(TypeSystem typeSystem, TypeConstant type) {
-        super(typeSystem, type);
+    public EnumBuilder(TypeSystem typeSystem, Artifact art) {
+        super(typeSystem, art);
     }
 
     @Override

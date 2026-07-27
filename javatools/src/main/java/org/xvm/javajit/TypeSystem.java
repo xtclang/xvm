@@ -350,44 +350,44 @@ public class TypeSystem {
         if (type.isA(pool.typeModule())) {
             // it's definitely not Module.x, since this is not the native TypeSystem
             assert !type.equals(pool.typeModule());
-            return new ModuleBuilder(this, type);
+            return new ModuleBuilder(this, art);
         }
 
         if (type.isA(pool.typePackage())) {
             // it's definitely not Package.x, since this is not the native TypeSystem
             assert !type.equals(pool.typeModule());
-            return new PackageBuilder(this, type);
+            return new PackageBuilder(this, art);
         }
 
         if (art.shape == ClassfileShape.Enum) {
             TypeConstant enumerationType = art.clz.getIdentityConstant().getValueType(pool(), null);
-            return new EnumerationBuilder(this, enumerationType);
+            return new EnumerationBuilder(this, art);
         }
 
         if (type.isEnum()) {
-            return new EnumBuilder(this, type);
+            return new EnumBuilder(this, art);
         }
 
         if (type.isEnumValue()) {
-            return new EnumValueBuilder(this, type);
+            return new EnumValueBuilder(this, art);
         }
 
         if (type.isA(pool.typeException())) {
             // the root Exception class is handled by the NativeTypeSystem
             assert !type.equals(pool.typeException());
-            return new ExceptionBuilder(this, type);
+            return new ExceptionBuilder(this, art);
         }
 
         if (type.isA(pool.typeClass())) {
             TypeConstant publicType = type.getParamType(0);
             if (publicType.isEnumValue()) {
-                return new EnumerationBuilder(this, type);
+                return new EnumerationBuilder(this, art);
             } else {
                 System.err.println("Missing class builder " + type.getValueString());
             }
         }
 
-        return new CommonBuilder(this, type);
+        return new CommonBuilder(this, art);
     }
 
     /**
@@ -413,22 +413,42 @@ public class TypeSystem {
         public final String prefix;
     }
 
-    public record Artifact(TypeConstant type, ClassStructure clz, ClassfileShape shape) {}
+    public String ensureJitClassName(TypeConstant type, ClassfileShape shape) {
+        String classname = type.ensureJitClassName(this);
+        if (shape == ClassfileShape.Impl) {
+            return classname;
+        }
+        throw new UnsupportedOperationException("TODO implement shape " + shape);
+    }
 
-    public Artifact deduceArtifact(ModuleStructure module, String name) {
-        if (name.equals(MODULE)) {
-            return new Artifact(module.getCanonicalType(), module, ClassfileShape.Impl);
+    public record Artifact(
+            TypeConstant   type,
+            ClassStructure clz,
+            ClassfileShape shape,
+            String         className) {
+        public Artifact(
+                TypeSystem     ts,
+                TypeConstant   type,
+                ClassStructure clz,
+                ClassfileShape shape) {
+            this(type, clz, shape, ts.ensureJitClassName(type, shape));
+        }
+    }
+
+    public Artifact deduceArtifact(ModuleStructure module, String className) {
+        if (className.equals(MODULE)) {
+            return new Artifact(module.getCanonicalType(), module, ClassfileShape.Impl, className);
         }
 
         ClassfileShape shape  = ClassfileShape.Impl;
-        int            nameIx = max(name.lastIndexOf('.'), name.lastIndexOf('$'));
-        String         simple = name.substring(nameIx + 1);
+        int            nameIx = max(className.lastIndexOf('.'), className.lastIndexOf('$'));
+        String         simple = className.substring(nameIx + 1);
         if (simple.length() > 1) {
             for (ClassfileShape sh : ClassfileShape.values()) {
                 if (sh.prefix.isEmpty() || simple.startsWith(sh.prefix)) {
                     // all suffixes except Impl are of the length 2
-                    String pkg = nameIx < 0 ? "" : name.substring(0, nameIx + 1);
-                    name  = pkg + simple.substring(sh.prefix.length());
+                    String pkg = nameIx < 0 ? "" : className.substring(0, nameIx + 1);
+                    className  = pkg + simple.substring(sh.prefix.length());
                     shape = sh;
                     break;
                 }
@@ -436,28 +456,28 @@ public class TypeSystem {
         }
 
         TypeConstant type     = null;
-        int          idOffset = name.indexOf(HASH);
+        int          idOffset = className.indexOf(HASH);
         if (idOffset > 0) {
             // the name represents a parameterized type with primitive actual type(s)
             // or a class constant for inner classes
-            Constant constant = pool().getConstant(Integer.valueOf(name.substring(idOffset+1)));
+            Constant constant = pool().getConstant(Integer.valueOf(className.substring(idOffset+1)));
             if (constant instanceof TypeConstant constType) {
                 type = constType;
             } else if (constant instanceof ClassConstant constClass) {
                 return new Artifact(constClass.getType(),
-                    (ClassStructure) constClass.getComponent(), shape);
+                    (ClassStructure) constClass.getComponent(), shape, className);
             } else {
                 throw new IllegalArgumentException("Unsupported suffix: " + constant.toString());
             }
-            name = name.substring(0, idOffset);
+            className = className.substring(0, idOffset);
         }
 
-        String xvmName = unescapeJitName(name).replace('$', '.');
+        String xvmName = unescapeJitName(className).replace('$', '.');
         if (module.getChildByPath(xvmName) instanceof ClassStructure struct) {
             if (type == null) {
                 type = struct.getFormalType();
             }
-            return new Artifact(type, struct, shape);
+            return new Artifact(type, struct, shape, className);
         }
         return null;
     }
