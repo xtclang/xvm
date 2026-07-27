@@ -201,7 +201,7 @@ public class NativeTypeSystem
      * Augment the existing native class with the Ecstasy methods.
      */
     private byte[] augmentNativeClass(ClassModel model, String className, TypeConstant type) {
-        Builder   builder   = ensureBuilder(type, model);
+        Builder   builder   = ensureBuilder(type, ClassfileShape.Impl, model);
         ClassFile classFile = ClassFile.of(
                 ClassFile.ClassHierarchyResolverOption
                          .of(builder.createClassHierarchyResolver(className)),
@@ -236,12 +236,15 @@ public class NativeTypeSystem
         });
     }
 
-    protected Builder ensureBuilder(TypeConstant type, ClassModel model) {
+    protected Builder ensureBuilder(TypeConstant type, ClassfileShape shape, ClassModel model) {
         assert model != null;
 
+        IdentityConstant id     = type.getSingleUnderlyingClass(true);
+        ClassStructure   struct = (ClassStructure) id.getComponent();
+        Artifact         art    = new Artifact(this, type, struct, shape);
         return type.isArray()
-                ? new ArrayBuilder(this, type, model)
-                : new AugmentingBuilder(this, type, model);
+                ? new ArrayBuilder(this, art, model)
+                : new AugmentingBuilder(this, art, model);
     }
 
     // ----- internal ------------------------------------------------------------------------------

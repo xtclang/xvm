@@ -5,9 +5,8 @@ import java.lang.classfile.ClassFile;
 
 import java.lang.constant.ClassDesc;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.javajit.TypeSystem;
+import org.xvm.javajit.TypeSystem.Artifact;
 
 /**
  * The builder for Module types.
@@ -15,8 +14,8 @@ import org.xvm.javajit.TypeSystem;
 public class ModuleBuilder
         extends CommonBuilder {
 
-    public ModuleBuilder(TypeSystem typeSystem, TypeConstant type) {
-        super(typeSystem, type);
+    public ModuleBuilder(TypeSystem typeSystem, Artifact art) {
+        super(typeSystem, art);
     }
 
     @Override

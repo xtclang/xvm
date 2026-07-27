@@ -10,10 +10,10 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 
 import org.xvm.asm.constants.PropertyInfo;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.TypeSystem;
+import org.xvm.javajit.TypeSystem.Artifact;
 
 /**
  * The builder for Enum value types.
@@ -24,8 +24,8 @@ import org.xvm.javajit.TypeSystem;
  */
 public class EnumValueBuilder extends CommonBuilder {
 
-    public EnumValueBuilder(TypeSystem typeSystem, TypeConstant type) {
-        super(typeSystem, type);
+    public EnumValueBuilder(TypeSystem typeSystem, Artifact art) {
+        super(typeSystem, art);
     }
 
     @Override
