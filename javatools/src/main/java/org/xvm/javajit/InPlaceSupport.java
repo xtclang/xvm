@@ -3,6 +3,9 @@ package org.xvm.javajit;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
+import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.asm.Op.OP_IIP_DEC;
@@ -17,6 +20,8 @@ import static org.xvm.asm.Op.OP_IP_DECB;
 import static org.xvm.asm.Op.OP_IP_INC;
 import static org.xvm.asm.Op.OP_IP_INCA;
 import static org.xvm.asm.Op.OP_IP_INCB;
+
+import static org.xvm.javajit.Builder.CD_Ctx;
 
 /**
  * An interface of default utility methods for implementing in-place operations.
@@ -306,6 +311,76 @@ public interface InPlaceSupport
 
             default:
                 throw new IllegalStateException("Unsupported XVM primitive type: " + typeName);
+        }
+    }
+
+    /**
+     * Build the non-primitive Sequential local ops.
+     * <p>
+     * Nothing is on the Java stack before this method executes. The result will be on the Java
+     * stack when the method completes.
+     *
+     * @param bctx  the current BuildContext
+     * @param code  the CodeBuilder to use to generate the operation byte codes
+     * @param reg   the register containing the XVM primitive value the operation is performed on
+     */
+    default void buildSequentialLocal(BuildContext bctx, CodeBuilder code, RegisterInfo reg) {
+        TypeConstant   baseType = reg.type().removeNullable();
+        String         typeName = baseType.getSingleUnderlyingClass(false).getName();
+        int            op       = getOpCode();
+        int            slot     = reg.slot();
+        ClassDesc      cd       = bctx.builder.ensureClassDesc(baseType);
+        MethodTypeDesc md       = MethodTypeDesc.of(cd, CD_Ctx);
+        switch (getOpCode()) {
+            case OP_IP_DEC, OP_IIP_DEC:
+                code.aload(slot);
+                bctx.loadCtx(code);
+                code.invokevirtual(cd, "prevValue", md)
+                    .astore(slot);
+                break;
+
+            case OP_IP_INC, OP_IIP_INC:
+                code.aload(slot);
+                bctx.loadCtx(code);
+                code.invokevirtual(cd, "nextValue", md)
+                    .astore(slot);
+                break;
+
+            case OP_IP_DECA, OP_IIP_DECA:
+                code.aload(slot)
+                    .dup();
+                bctx.loadCtx(code);
+                code.invokevirtual(cd, "prevValue", md)
+                    .astore(slot);
+                break;
+
+            case OP_IP_INCA, OP_IIP_INCA:
+                code.aload(slot)
+                    .dup();
+                bctx.loadCtx(code);
+                code.invokevirtual(cd, "nextValue", md)
+                    .astore(slot);
+                break;
+
+            case OP_IP_DECB, OP_IIP_DECB:
+                code.aload(slot);
+                bctx.loadCtx(code);
+                code.invokevirtual(cd, "prevValue", md)
+                    .dup()
+                    .astore(slot);
+                break;
+
+            case OP_IP_INCB, OP_IIP_INCB:
+                code.aload(slot);
+                bctx.loadCtx(code);
+                code.invokevirtual(cd, "nextValue", md)
+                    .dup()
+                    .astore(slot);
+                break;
+
+            default:
+                throw new IllegalStateException("Unsupported Sequential op " + op
+                        + " on type: " + typeName);
         }
     }
 }

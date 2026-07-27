@@ -33,6 +33,9 @@ package numbers {
                 passed &= runTest(() -> new Float64Tests().run());
                 passed &= runTest(() -> new Float32ConvertTests().run());
                 passed &= runTest(() -> new Float64ConvertTests().run());
+
+                passed &= runTest(() -> new IntNTests().run());
+                passed &= runTest(() -> new UIntNTests().run());
             } catch (IllegalState e) {
                 console.print(e);
             }
