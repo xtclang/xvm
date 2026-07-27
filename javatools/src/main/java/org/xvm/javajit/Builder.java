@@ -214,6 +214,22 @@ public abstract class Builder {
                             ? new MultiSlot(bctx, XvmPrimitive, type, CD_Int128, CDs_LongLong)
                             : new MultiSlot(bctx, XvmPrimitive, type, CD_UInt128, CDs_LongLong);
                 }
+                case IntN -> {
+                    TypeConstant   type  = intConstant.getType();
+                    String         value = intConstant.getValueString();
+                    MethodTypeDesc md    = MethodTypeDesc.of(CD_IntN, CD_JavaString);
+                    code.ldc(value);
+                    code.invokestatic(CD_IntN, "$new", md);
+                    yield new SingleSlot(type, Specific, CD_IntN, "");
+                }
+                case UIntN -> {
+                    TypeConstant   type  = intConstant.getType();
+                    String         value = intConstant.getValueString();
+                    MethodTypeDesc md    = MethodTypeDesc.of(CD_UIntN, CD_JavaString);
+                    code.ldc(value);
+                    code.invokestatic(CD_UIntN, "$new", md);
+                    yield new SingleSlot(type, Specific, CD_UIntN, "");
+                }
                 default ->
                     throw new IllegalStateException("Unsupported IntConstant type "
                             + intConstant.getFormat());
@@ -1719,6 +1735,7 @@ public abstract class Builder {
     public static final String N_Int32        = "org.xtclang.ecstasy.numbers.Int32";
     public static final String N_Int64        = "org.xtclang.ecstasy.numbers.Int64";
     public static final String N_Int128       = "org.xtclang.ecstasy.numbers.Int128";
+    public static final String N_IntN         = "org.xtclang.ecstasy.numbers.IntN";
     public static final String N_IllegalState = "org.xtclang.ecstasy.IllegalState";
     public static final String N_IterableChar = "org.xtclang.ecstasy.IterableᐸCharᐳ";
     public static final String N_IteratorChar = "org.xtclang.ecstasy.IteratorᐸCharᐳ";
@@ -1736,6 +1753,7 @@ public abstract class Builder {
     public static final String N_UInt32       = "org.xtclang.ecstasy.numbers.UInt32";
     public static final String N_UInt64       = "org.xtclang.ecstasy.numbers.UInt64";
     public static final String N_UInt128      = "org.xtclang.ecstasy.numbers.UInt128";
+    public static final String N_UIntN        = "org.xtclang.ecstasy.numbers.UIntN";
     public static final String N_AppenderChar = "org.xtclang.ecstasy.AppenderᐸCharᐳ";
 
     public static final String N_nConst       = "org.xtclang.ecstasy.nConst";
@@ -1859,6 +1877,7 @@ public abstract class Builder {
     public static final ClassDesc CD_Int32         = ClassDesc.of(N_Int32);
     public static final ClassDesc CD_Int64         = ClassDesc.of(N_Int64);
     public static final ClassDesc CD_Int128        = ClassDesc.of(N_Int128);
+    public static final ClassDesc CD_IntN          = ClassDesc.of(N_IntN);
     public static final ClassDesc CD_Nibble        = ClassDesc.of(N_Nibble);
     public static final ClassDesc CD_Nullable      = ClassDesc.of(N_Nullable);
     public static final ClassDesc CD_Object        = ClassDesc.of(N_Object);
@@ -1870,6 +1889,7 @@ public abstract class Builder {
     public static final ClassDesc CD_UInt32        = ClassDesc.of(N_UInt32);
     public static final ClassDesc CD_UInt64        = ClassDesc.of(N_UInt64);
     public static final ClassDesc CD_UInt128       = ClassDesc.of(N_UInt128);
+    public static final ClassDesc CD_UIntN         = ClassDesc.of(N_UIntN);
     public static final ClassDesc CD_AppenderChar  = ClassDesc.of(N_AppenderChar);
 
     public static final ClassDesc CD_Container     = ClassDesc.of(Container.class.getName());

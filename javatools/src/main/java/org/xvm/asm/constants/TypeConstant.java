@@ -7358,7 +7358,7 @@ public abstract class TypeConstant
     public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
                              RegisterInfo reg1, Loader argLoader, Label lblTrue) {
         TypeConstant type1 = reg1.type();
-        assert type1.isA(this) || this.containsFormalType(false);
+        assert type1.isA(this.removeImmutable()) || this.containsFormalType(false);
 
         boolean fLocalTrue = lblTrue == null;
         if (fLocalTrue) {

@@ -107,6 +107,20 @@ class Int8ConvertTests {
         testInt8ToUInt128WithBoundsCheck(100, 100, False);
         testInt8ToUInt128WithBoundsCheck(Int8.MaxValue, 127, False);
 
+        testInt8ToIntN(Int8.MinValue, -128);
+        testInt8ToIntN(-1, -1);
+        testInt8ToIntN(-100, -100);
+        testInt8ToIntN(0, 0);
+        testInt8ToIntN(100, 100);
+        testInt8ToIntN(Int8.MaxValue, 127);
+
+        testInt8ToUIntN(Int8.MinValue, 0, True);
+        testInt8ToUIntN(-1, 0, True);
+        testInt8ToUIntN(-100, 0, True);
+        testInt8ToUIntN(0, 0);
+        testInt8ToUIntN(100, 100);
+        testInt8ToUIntN(Int8.MaxValue, 127);
+
         console.print("<<<<< Finished Int8 Conversion tests >>>>>");
     }
 
@@ -226,6 +240,25 @@ class Int8ConvertTests {
             }
         } else {
             UInt128 b = a.toUInt128(True);
+            assert b == expected;
+        }
+    }
+
+    void testInt8ToIntN(Int8 a, IntN expected) {
+        IntN b = a.toIntN();
+        assert b == expected;
+    }
+
+    void testInt8ToUIntN(Int8 a, UIntN expected, Boolean oob = False) {
+        if (oob) {
+            try {
+                a.toUIntN();
+                assert as "Expected OutOfBounds to be thrown";
+            } catch (OutOfBounds e) {
+                // expected
+            }
+        } else {
+            UIntN b = a.toUIntN();
             assert b == expected;
         }
     }

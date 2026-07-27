@@ -180,4 +180,14 @@ class UInt16ConvertTests {
         UInt128 b = a.toUInt128();
         assert b == expected;
     }
+
+    void testInt8ToIntN(UInt8 a, IntN expected) {
+        IntN b = a.toIntN();
+        assert b == expected;
+    }
+
+    void testInt8ToUIntN(UInt8 a, UIntN expected) {
+        UIntN b = a.toUIntN();
+        assert b == expected;
+    }
 }

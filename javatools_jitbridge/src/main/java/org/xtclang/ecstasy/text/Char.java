@@ -162,8 +162,8 @@ public class Char extends nConst {
         return thi$;
     }
 
-    public static IntN toIntNꖛ1$d$p(int thi$, Ctx ctx) {
-        return null;
+    public static IntN toIntN$d$p(int thi$, Ctx ctx) {
+        return IntN.$box(thi$);
     }
 
     public static long toUInt$d$p(int thi$, Ctx ctx) {
@@ -191,8 +191,8 @@ public class Char extends nConst {
         return thi$;
     }
 
-    public static UIntN toUIntNꖛ1$d$p(int thi$, Ctx ctx) {
-        return null;
+    public static UIntN toUIntN$d$p(int thi$, Ctx ctx) {
+        return UIntN.$box(thi$);
     }
 
     public static IntLiteral toIntLiteral$d$p(int thi$, Ctx ctx) {

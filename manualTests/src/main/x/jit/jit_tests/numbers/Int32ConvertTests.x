@@ -144,6 +144,19 @@ class Int32ConvertTests {
         testInt32ToUInt128WithBoundsCheck(100, 100, False);
         testInt32ToUInt128WithBoundsCheck(Int32.MaxValue, 2147483647, False);
 
+        testInt32ToIntN(Int32.MinValue, -0x80000000);
+        testInt32ToIntN(-100, -100);
+        testInt32ToIntN(0, 0);
+        testInt32ToIntN(100, 100);
+        testInt32ToIntN(Int32.MaxValue, 0x7FFFFFFF);
+
+        testInt32ToUIntN(Int32.MinValue, 0, True);
+        testInt32ToUIntN(-1, 0, True);
+        testInt32ToUIntN(-100, 0, True);
+        testInt32ToUIntN(0, 0, False);
+        testInt32ToUIntN(100, 100, False);
+        testInt32ToUIntN(Int32.MaxValue, 2147483647, False);
+
         console.print("<<<<< Finished Int32 Conversion tests >>><<");
     }
 
@@ -291,6 +304,25 @@ class Int32ConvertTests {
             }
         } else {
             UInt128 b = a.toUInt128(True);
+            assert b == expected;
+        }
+    }
+
+    void testInt32ToIntN(Int32 a, IntN expected) {
+        IntN b = a.toIntN();
+        assert b == expected;
+    }
+
+    void testInt32ToUIntN(Int32 a, UIntN expected, Boolean oob = False) {
+        if (oob) {
+            try {
+                a.toUIntN();
+                assert as "Expected OutOfBounds to be thrown";
+            } catch (OutOfBounds e) {
+                // expected
+            }
+        } else {
+            UIntN b = a.toUIntN();
             assert b == expected;
         }
     }

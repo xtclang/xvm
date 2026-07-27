@@ -2219,6 +2219,7 @@ public class ConstantPool
     public TypeConstant      typeStringBuffer()  {TypeConstant      c = m_typeStringBuffer;  if (c == null) {m_typeStringBuffer  = c = ensureTerminalTypeConstant(clzStringBuffer()                    );} return c;}
     public TypeConstant      typeBit()           {TypeConstant      c = m_typeBit;           if (c == null) {m_typeBit           = c = ensureTerminalTypeConstant(clzBit()                             );} return c;}
     public TypeConstant      typeNibble()        {TypeConstant      c = m_typeNibble;        if (c == null) {m_typeNibble        = c = ensureTerminalTypeConstant(clzNibble()                          );} return c;}
+    public TypeConstant      typeIntNumber()     {TypeConstant      c = m_typeIntNumber;     if (c == null) {m_typeIntNumber     = c = ensureTerminalTypeConstant(clzIntNumber()                            );} return c;}
     public TypeConstant      typeInt8()          {TypeConstant      c = m_typeInt8;          if (c == null) {m_typeInt8          = c = ensureTerminalTypeConstant(clzInt8()                            );} return c;}
     public TypeConstant      typeInt16()         {TypeConstant      c = m_typeInt16;         if (c == null) {m_typeInt16         = c = ensureTerminalTypeConstant(clzInt16()                           );} return c;}
     public TypeConstant      typeInt32()         {TypeConstant      c = m_typeInt32;         if (c == null) {m_typeInt32         = c = ensureTerminalTypeConstant(clzInt32()                           );} return c;}
@@ -2324,6 +2325,7 @@ public class ConstantPool
     protected ClassConstant  clzFPLiteral()     {return (ClassConstant) getImplicitlyImportedIdentity("FPLiteral"                );}
     protected ClassConstant  clzBit()           {return (ClassConstant) getImplicitlyImportedIdentity("Bit"                      );}
     protected ClassConstant  clzNibble()        {return (ClassConstant) getImplicitlyImportedIdentity("Nibble"                   );}
+    protected ClassConstant  clzIntNumber()     {return                 ensureEcstasyClassConstant   ("numbers.IntNumber"        );}
     protected ClassConstant  clzInt8()          {return (ClassConstant) getImplicitlyImportedIdentity("Int8"                     );}
     protected ClassConstant  clzInt16()         {return (ClassConstant) getImplicitlyImportedIdentity("Int16"                    );}
     protected ClassConstant  clzInt32()         {return (ClassConstant) getImplicitlyImportedIdentity("Int32"                    );}
@@ -4070,6 +4072,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeBitArray;
     private transient TypeConstant      m_typeByteArray;
     private transient TypeConstant      m_typeBinary;
+    private transient TypeConstant      m_typeIntNumber;
     private transient TypeConstant      m_typeInt8;
     private transient TypeConstant      m_typeInt16;
     private transient TypeConstant      m_typeInt32;
