@@ -14,6 +14,7 @@ package gp_ops {
                 passed &= runTest(() -> new GpAndTests().run());
                 passed &= runTest(() -> new GpComplTests().run());
                 passed &= runTest(() -> new GpDivTests().run());
+                passed &= runTest(() -> new GpDivremTests().run());
                 passed &= runTest(() -> new GpModTests().run());
                 passed &= runTest(() -> new GpMulTests().run());
                 passed &= runTest(() -> new GpNegTests().run());
