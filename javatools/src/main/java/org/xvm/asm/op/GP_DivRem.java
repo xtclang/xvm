@@ -5,10 +5,25 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
+import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
+
+import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitMethodDesc;
+import org.xvm.javajit.NumberSupport;
+import org.xvm.javajit.RegisterInfo;
+import org.xvm.javajit.TypeMatrix;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -23,7 +38,8 @@ import static org.xvm.util.Handy.writePackedLong;
  * GP_DIVREM rvalue1, rvalue2, lvalue1-quotient, lvalue2-remainder ; T /% T -> T, T
  */
 public class GP_DivRem
-        extends Op {
+        extends Op
+        implements NumberSupport {
     /**
      * Construct a GP_DIVREM op for the passed arguments.
      *
@@ -131,6 +147,114 @@ public class GP_DivRem
                 + ", " + Argument.toIdString(argRet0    , nRet0)
                 + ", " + Argument.toIdString(argRet1    , nRet1);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        TypeMatrix tmx = bctx.typeMatrix;
+
+        TypeConstant   typeTarget = bctx.getArgumentType(m_nTarget);
+        MethodInfo     method     = findOpMethod(bctx, typeTarget);
+        TypeConstant[] rawReturns = method.getSignature().getRawReturns();
+
+        for (int i = 0; i < rawReturns.length; i++) {
+            TypeConstant typeResult = rawReturns[0];
+            if (!typeResult.equals(typeTarget)) {
+                tmx.assign(getAddress(), m_anRetValue[i],
+                        typeResult.resolveAutoNarrowing(bctx.pool(), false, typeTarget, null));
+                return;
+            }
+        }
+
+        // for all other ops/scenarios the types do not change
+        tmx.follow(getAddress());
+    }
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        RegisterInfo regTarget  = bctx.ensureRegister(code, m_nTarget);
+        ClassDesc    cdTarget   = regTarget.cd();
+        TypeConstant typeTarget = regTarget.type();
+
+        if (cdTarget.isPrimitive()) {
+            if (!regTarget.isSingle()) {
+                throw new UnsupportedOperationException(toName(getOpCode())
+                        + " operation on multi-slot");
+            }
+            // perform a div, resulting quotient will be on the stack
+            regTarget.load(code);
+            bctx.loadArgument(code, m_nArgValue);
+            buildPrimitiveDiv(bctx, code, regTarget);
+            // store quotient
+            bctx.storeValue(code, m_anRetValue[0], typeTarget);
+            // calculate the remainder (leaving the result on the stack)
+            buildPrimitiveRemainder(bctx, code, regTarget, m_nArgValue, m_anRetValue[0]);
+            // store the remainder
+            bctx.storeValue(code, m_anRetValue[1], typeTarget);
+        } else if (typeTarget.isXvmPrimitive()) {
+            // perform a div, quotient will be on the stack
+            buildXvmPrimitiveDiv(bctx, code, regTarget, m_nArgValue);
+            // store quotient
+            bctx.storeValue(code, m_anRetValue[0], typeTarget);
+            // calculate the remainder (leaving the result on the stack)
+            buildXvmPrimitiveRemainder(bctx, code, regTarget, m_nArgValue, m_anRetValue[0]);
+            // store the remainder
+            bctx.storeValue(code, m_anRetValue[1], typeTarget);
+        } else {
+            MethodInfo    method   = findOpMethod(bctx, typeTarget);
+            String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
+            JitMethodDesc jmd      = method.getJitDesc(bctx.builder, typeTarget);
+
+            MethodTypeDesc md;
+            if (jmd.isOptimized) {
+                md        = jmd.optimizedMD;
+                sJitName += Builder.OPT;
+            } else {
+                md = jmd.standardMD;
+            }
+
+            regTarget.load(code);
+            if (jmd.isOptimizedStatic) {
+                // the target must be a boxed primitive
+                assert typeTarget.isJitPrimitive();
+                Builder.unbox(code, typeTarget);
+            }
+            bctx.loadCtx(code);
+            bctx.loadCallArguments(code, jmd, new int[] {m_nArgValue});
+            if (jmd.isOptimizedStatic) {
+                code.invokestatic(bctx.builder.ensureClassDesc(typeTarget), sJitName, md);
+            } else {
+                code.invokevirtual(regTarget.cd(), sJitName, md);
+            }
+
+            TypeConstant typeReturn = method.getSignature().getRawReturns()[0]; // could differ from target
+            TypeConstant typeResult = typeReturn.resolveAutoNarrowing(bctx.pool(), false, typeTarget, null);
+
+            // the quotient is on the stack
+            if (!typeReturn.isA(typeResult)) {
+                code.checkcast(bctx.builder.ensureClassDesc(typeResult));
+            }
+            bctx.storeValue(code, m_anRetValue[0], typeTarget);
+            // the remainder is in the context
+            bctx.loadFromContext(code, cdTarget, 0);
+            if (!typeReturn.isA(typeResult)) {
+                code.checkcast(bctx.builder.ensureClassDesc(typeResult));
+            }
+            bctx.storeValue(code, m_anRetValue[1], typeTarget);
+        }
+        return -1;
+    }
+
+    /**
+     * Find the op method.
+     */
+    private MethodInfo findOpMethod(BuildContext bctx, TypeConstant typeTarget) {
+        return bctx.getTypeInfo(typeTarget)
+                .findOpMethod("divrem", "/%", bctx.getArgumentType(m_nArgValue));
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     protected int   m_nTarget;
     protected int   m_nArgValue;
