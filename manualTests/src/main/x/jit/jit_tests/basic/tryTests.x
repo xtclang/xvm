@@ -12,6 +12,7 @@ package tryTests {
         testAssert1(False);
         testAssert2(False);
         testUsing();
+        testTryWithIntResource();
     }
 
     void testTry1() {
@@ -102,5 +103,15 @@ package tryTests {
         void close(Exception? cause = Null) {
             value = -1;
         }
+    }
+
+    void testTryWithIntResource() {
+        Int n1 = 100;
+        try (Int n2 = n1) {
+            n1++;
+        } finally {
+            n1 = n2;
+        }
+        assert n1 == 100;
     }
 }
