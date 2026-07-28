@@ -22,7 +22,8 @@ package enumTests {
         Boolean f = False;
         Boolean t = True;
         assert !t.not();
-        console.print(t.toInt64()); // this won't work correctly until we compile Boolean
+        assert f.toInt64() == 0;
+        assert t.toInt64() == 1;
 
         assert f == f;
         assert f != t;
