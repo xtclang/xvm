@@ -66,7 +66,7 @@ public abstract class Builder {
     /**
      * Assemble the java class for the "impl" shape.
      */
-    public void assembleImpl(String className, ClassBuilder classBuilder) {
+    public void build(ClassBuilder classBuilder) {
         throw new UnsupportedOperationException("assemble: " + art);
     }
 
@@ -87,7 +87,7 @@ public abstract class Builder {
      * Generate a "load" for the specified TypeConstant.
      * Out: TypeConstant on Java stack
      */
-    protected void loadTypeConstant(CodeBuilder code, String className, TypeConstant type) {
+    protected void loadTypeConstant(CodeBuilder code, TypeConstant type) {
         throw new UnsupportedOperationException();
     }
 
@@ -327,7 +327,7 @@ public abstract class Builder {
             JitTypeDesc  jtd  = type.getJitDesc(this);
             assert jtd.flavor == Specific;
 
-            // retrieve from Singleton.$INSTANCE (see CommonBuilder.assembleStaticInitializer)
+            // retrieve from Singleton.$INSTANCE (see CommonBuilder.assembleCLInit)
             ClassDesc cd = jtd.cd;
             code.getstatic(cd, Instance, cd);
             return new SingleSlot(type, Specific, cd, "");
@@ -521,7 +521,7 @@ public abstract class Builder {
 
             // call construct(Key[] keys, Value[]? vals, Boolean inPlace = False)
             loadCtx(bctx, code);
-            loadTypeConstant(code, clzName, mapType);
+            loadTypeConstant(code, mapType);
             loadArray(bctx, code, keysType, constMap.keySet().toArray(Constant.NO_CONSTS));
             loadArray(bctx, code, valsType, constMap.values().toArray(Constant.NO_CONSTS));
 
@@ -702,7 +702,7 @@ public abstract class Builder {
 
         // Note: we remove the immutability here; it will be added back upon "$makeImmut"
         loadCtx(bctx, code);
-        loadTypeConstant(code, className, arrayType.removeImmutable());
+        loadTypeConstant(code, arrayType.removeImmutable());
         code.loadConstant((long) values.length)
             .iconst_0()
             .invokestatic(cdArray, "$new$p",
@@ -777,7 +777,7 @@ public abstract class Builder {
                 cdPrimitive, CD_boolean, CD_boolean, CD_boolean, CD_boolean);
 
         loadCtx(bctx, code);
-        loadTypeConstant(code, className, rangeType);
+        loadTypeConstant(code, rangeType);
         loadConstant(bctx, code, values[0]);
         loadConstant(bctx, code, values[1]);
         code.loadConstant(rangeConst.isFirstExcluded() ? 1 : 0);

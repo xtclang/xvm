@@ -294,7 +294,7 @@ public class TypeSystem {
      */
     public byte[] genClass(ModuleLoader moduleLoader, String name) {
         ModuleStructure module = moduleLoader.module;
-        Artifact        art    = deduceArtifact(module, name);
+        Artifact        art    = deduceArtifact(module, moduleLoader.prefix, name);
         if (art != null) {
             String  className = moduleLoader.prefix + name;
             Builder builder   = ensureBuilder(art);
@@ -302,11 +302,11 @@ public class TypeSystem {
                 switch (art.shape) {
                 case Impl:
                     classBuilder.with(SourceFileAttribute.of(art.clz.getSourceFileName()));
-                    builder.assembleImpl(className, classBuilder);
+                    builder.build(classBuilder);
                     break;
 
                 case Enum:
-                    builder.assembleImpl(className, classBuilder);
+                    builder.build(classBuilder);
                     break;
 
                 case Exception:
@@ -425,30 +425,39 @@ public class TypeSystem {
             TypeConstant   type,
             ClassStructure clz,
             ClassfileShape shape,
-            String         className) {
+            String         className,
+            ClassDesc      CD) {
         public Artifact(
-                TypeSystem     ts,
                 TypeConstant   type,
                 ClassStructure clz,
-                ClassfileShape shape) {
-            this(type, clz, shape, ts.ensureJitClassName(type, shape));
+                ClassfileShape shape,
+                String         className) {
+            this(type, clz, shape, className, ClassDesc.of(className));
         }
     }
 
-    public Artifact deduceArtifact(ModuleStructure module, String className) {
-        if (className.equals(MODULE)) {
+    /**
+     * @param module  the Ecstasy ModuleStructure that will contain the class
+     * @param prefix  the module portion of the Java classname, e.g. "org.xtclang.ecstasy."
+     * @param suffix  the name of the Java class within the module, e.g. "Freezable"
+     *
+     * @return the corresponding Artifact
+     */
+    public Artifact deduceArtifact(ModuleStructure module, String prefix, String suffix) {
+        String className = prefix + suffix;
+        if (suffix.equals(MODULE)) {
             return new Artifact(module.getCanonicalType(), module, ClassfileShape.Impl, className);
         }
 
-        ClassfileShape shape  = ClassfileShape.Impl;
-        int            nameIx = max(className.lastIndexOf('.'), className.lastIndexOf('$'));
-        String         simple = className.substring(nameIx + 1);
+        ClassfileShape shape    = ClassfileShape.Impl;
+        int            simpleIx = max(suffix.lastIndexOf('.'), suffix.lastIndexOf('$'));
+        String         simple   = suffix.substring(simpleIx + 1);
         if (simple.length() > 1) {
             for (ClassfileShape sh : ClassfileShape.values()) {
                 if (sh.prefix.isEmpty() || simple.startsWith(sh.prefix)) {
                     // all suffixes except Impl are of the length 2
-                    String pkg = nameIx < 0 ? "" : className.substring(0, nameIx + 1);
-                    className  = pkg + simple.substring(sh.prefix.length());
+                    String pkg = simpleIx < 0 ? "" : suffix.substring(0, simpleIx + 1);
+                    suffix  = pkg + simple.substring(sh.prefix.length());
                     shape = sh;
                     break;
                 }
@@ -456,11 +465,11 @@ public class TypeSystem {
         }
 
         TypeConstant type     = null;
-        int          idOffset = className.indexOf(HASH);
+        int          idOffset = suffix.indexOf(HASH);
         if (idOffset > 0) {
             // the name represents a parameterized type with primitive actual type(s)
             // or a class constant for inner classes
-            Constant constant = pool().getConstant(Integer.valueOf(className.substring(idOffset+1)));
+            Constant constant = pool().getConstant(Integer.valueOf(suffix.substring(idOffset+1)));
             if (constant instanceof TypeConstant constType) {
                 type = constType;
             } else if (constant instanceof ClassConstant constClass) {
@@ -469,10 +478,10 @@ public class TypeSystem {
             } else {
                 throw new IllegalArgumentException("Unsupported suffix: " + constant.toString());
             }
-            className = className.substring(0, idOffset);
+            suffix = suffix.substring(0, idOffset);
         }
 
-        String xvmName = unescapeJitName(className).replace('$', '.');
+        String xvmName = unescapeJitName(suffix).replace('$', '.');
         if (module.getChildByPath(xvmName) instanceof ClassStructure struct) {
             if (type == null) {
                 type = struct.getFormalType();
