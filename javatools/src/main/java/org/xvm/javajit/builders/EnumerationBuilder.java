@@ -49,7 +49,7 @@ public class EnumerationBuilder extends CommonBuilder {
     }
 
     @Override
-    protected void assembleImplProperties(String className, ClassBuilder classBuilder) {
+    protected void assembleProperties(ClassBuilder classBuilder) {
         assembleNamesProp(classBuilder);
         // TODO: assembleValuesProp()
         // don't call super!
@@ -67,7 +67,7 @@ public class EnumerationBuilder extends CommonBuilder {
     }
 
     @Override
-    protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
+    protected void assembleMethods(ClassBuilder classBuilder) {
         // don't call super!
     }
 

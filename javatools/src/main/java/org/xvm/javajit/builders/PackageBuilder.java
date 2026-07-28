@@ -29,7 +29,7 @@ public class PackageBuilder
     }
 
     @Override
-    public boolean assembleImplClass(String className, ClassBuilder classBuilder) {
+    public boolean assembleClass(ClassBuilder classBuilder) {
         classBuilder
             .withFlags(ClassFile.ACC_PUBLIC)
             .withSuperclass(CD_nPackage);
@@ -37,11 +37,11 @@ public class PackageBuilder
     }
 
     @Override
-    protected void callSuperInitializer(CodeBuilder code, String className) {
+    protected void callSuperInitializer(CodeBuilder code) {
         // super($ctx, type);
         code.aload(0)
             .aload(code.parameterSlot(0));
-        loadTypeConstant(code, className, thisType);
+        loadTypeConstant(code, thisType);
         code.invokespecial(getSuperCD(), INIT_NAME,
                 MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant));
     }

@@ -24,7 +24,7 @@ public class ModuleBuilder
     }
 
     @Override
-    public boolean assembleImplClass(String className, ClassBuilder classBuilder) {
+    public boolean assembleClass(ClassBuilder classBuilder) {
         classBuilder
             .withFlags(ClassFile.ACC_PUBLIC)
             .withSuperclass(CD_nModule)

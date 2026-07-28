@@ -23,12 +23,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -2096,6 +2099,77 @@ public final class Handy {
         }
         set.add(value);
         return set;
+    }
+
+    /**
+     * Add the specified value to the specified map. If the list is passed as null, then first
+     * create a new HashMap to hold the specified value.
+     *
+     * @param map    a map, or null
+     * @param key    a key to add to the map
+     * @param value  a value to add to the map
+     *
+     * @return a map containing the specified value; never null
+     */
+    public static <K, V> Map<K, V> lazyAdd(Map<K,V> map, K key, V value) {
+        if (map == null) {
+            map = new HashMap<>();
+        }
+        map.put(key, value);
+        return map;
+    }
+
+    /**
+     * Add the specified value to the specified map. If the list is passed as null, then first
+     * create a new HashMap to hold the specified value.
+     *
+     * @param map  a map, or null
+     * @param key  a key to add to the map iff it is not already present
+     * @param fn   a function that computes the value to add to the map
+     *
+     * @return the resulting map
+     */
+    public static <K, V> Map<K, V> lazyComputeIfAbsent(Map<K,V> map, K key, Function<? super K, ? extends V> fn) {
+        if (map == null) {
+            map = new HashMap<>();
+            map.put(key, fn.apply(key));
+        } else {
+            map.computeIfAbsent(key, fn);
+        }
+        return map;
+    }
+
+    /**
+     * Obtain a List object.
+     *
+     * @param list  a List, or null
+     *
+     * @return a List, never null
+     */
+    public static <T> List<T> lazyList(List<T> list) {
+        return list == null ? Collections.emptyList() : list;
+    }
+
+    /**
+     * Obtain a Set object.
+     *
+     * @param set  a Set, or null
+     *
+     * @return a Set, never null
+     */
+    public static <T> Set<T> lazySet(Set<T> set) {
+        return set == null ? Collections.emptySet() : set;
+    }
+
+    /**
+     * Obtain a Set object.
+     *
+     * @param map  a Set, or null
+     *
+     * @return a Set, never null
+     */
+    public static <K, V> Map<K, V> lazyMap(Map<K,V> map) {
+        return map == null ? Collections.emptyMap() : map;
     }
 
     // ----- hashing & equality --------------------------------------------------------------------
