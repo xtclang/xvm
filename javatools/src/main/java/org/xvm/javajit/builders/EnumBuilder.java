@@ -38,7 +38,7 @@ public class EnumBuilder extends CommonBuilder {
     }
 
     @Override
-    protected boolean assembleImplClass(String className, ClassBuilder classBuilder) {
+    protected boolean assembleClass(ClassBuilder classBuilder) {
         classBuilder.withSuperclass(getSuperCD())
                     .withFlags(ClassFile.ACC_PUBLIC | ClassFile.ACC_ABSTRACT);
         return true;
@@ -50,10 +50,10 @@ public class EnumBuilder extends CommonBuilder {
     }
 
     @Override
-    protected void assembleImplProperties(String className, ClassBuilder classBuilder) {
+    protected void assembleProperties(ClassBuilder classBuilder) {
         assembleEnumerationProp(classBuilder);
 
-        super.assembleImplProperties(className, classBuilder);
+        super.assembleProperties(classBuilder);
     }
 
     private void assembleEnumerationProp(ClassBuilder classBuilder) {
@@ -69,11 +69,11 @@ public class EnumBuilder extends CommonBuilder {
     }
 
     @Override
-    protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
+    protected void assembleMethods(ClassBuilder classBuilder) {
         // generate "equals" and "compare" functions
         generateOrderable(classBuilder, this);
 
-        super.assembleImplMethods(className, classBuilder);
+        super.assembleMethods(classBuilder);
     }
 
     public static void generateOrderable(ClassBuilder classBuilder, CommonBuilder builder) {

@@ -116,11 +116,10 @@ public class BuildContext {
     /**
      * Construct {@link BuildContext} for a "top" method in the call chain.
      */
-    public BuildContext(Builder builder, String className, TypeInfo typeInfo, MethodInfo methodInfo,
-                        JitMethodDesc jmd) {
+    public BuildContext(Builder builder, TypeInfo typeInfo, MethodInfo methodInfo, JitMethodDesc jmd) {
         this.builder       = builder;
         this.typeSystem    = builder.typeSystem;
-        this.className     = className;
+        this.className     = builder.art.className();
         this.typeInfo      = typeInfo;
         this.thisType      = typeInfo.getType();
         this.jitType       = thisType.getCanonicalJitType();
@@ -142,14 +141,13 @@ public class BuildContext {
      */
     public BuildContext(
             Builder      builder,
-            String       className,
             TypeInfo     typeInfo,
             PropertyInfo propInfo,
             boolean      isGetter,
             JitMethodDesc methodDesc) {
         this.builder       = builder;
         this.typeSystem    = builder.typeSystem;
-        this.className     = className;
+        this.className     = builder.art.className();
         this.typeInfo      = typeInfo;
         this.thisType      = typeInfo.getType();
         this.jitType       = thisType.getCanonicalJitType();
@@ -1323,7 +1321,7 @@ public class BuildContext {
      * Out: TypeConstant on Java stack
      */
     public void loadTypeConstant(CodeBuilder code, TypeConstant type) {
-        builder.loadTypeConstant(code, className, type);
+        builder.loadTypeConstant(code, type);
     }
 
     /**
