@@ -5,6 +5,8 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import org.xvm.asm.Op;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.registers.MultiSlot;
@@ -200,6 +202,32 @@ public interface NumberSupport
     }
 
     /**
+     * Build the optimized binary operation that will calculate the remainder from dividing two
+     * primitive types.
+     * <pre>
+     *     remainder = a - (b * quotient)
+     * </pre>
+     * Nothing should be on the stack, the remainder result wil be on the stack after execution.
+     *
+     * @param bctx       the current build context
+     * @param code       the code builder to add the op codes to
+     * @param regTarget  the register containing the target of the operation
+     */
+    default void buildPrimitiveRemainder(BuildContext bctx, CodeBuilder code,
+                                         RegisterInfo regTarget, int nArgId, int nQuotientId) {
+        regTarget.load(code);
+        bctx.loadArgument(code, nArgId);
+        bctx.loadArgument(code, nQuotientId);
+        // a, b and quotient will be on the stack in that order
+        // perform (b * quotient)
+        buildPrimitiveMul(bctx, code, regTarget);
+        // stack is now a followed by the result of (b * quotient)
+        // perform the subtraction
+        buildPrimitiveSub(bctx, code, regTarget);
+        // remainder is on the stack
+    }
+
+    /**
      * Build the optimized binary operation that will divide two XVM primitive types
      * (T / T -> T).
      * <p>
@@ -229,6 +257,34 @@ public interface NumberSupport
                     throw new IllegalStateException("Unsupported type: "
                             + regTarget.type().getValueString());
         }
+    }
+
+    /**
+     * Build the optimized binary operation that will calculate the remainder from dividing two
+     * XVM primitive types.
+     * <pre>
+     *     remainder = a - (b * quotient)
+     * </pre>
+     * Nothing should be on the stack, the remainder result wil be on the stack after execution.
+     *
+     * @param bctx       the current build context
+     * @param code       the code builder to add the op codes to
+     * @param regTarget  the register containing the target of the operation
+     */
+    default void buildXvmPrimitiveRemainder(BuildContext bctx, CodeBuilder code,
+            RegisterInfo regTarget, int nArgId, int nQuotientId) {
+        // perform (b * quotient)
+        RegisterInfo regArg  = bctx.ensureRegister(code, nArgId);
+        buildXvmPrimitiveMul(bctx, code, regArg, nQuotientId);
+        // multiply result is on the stack
+        TypeConstant type = regTarget.type();
+        ClassDesc[]  cds  = JitTypeDesc.getXvmPrimitiveClasses(type);
+        // store the result in a temporary register (Op.A_STACK)
+        RegisterInfo temp = bctx.pushTempMultiRegister(type, cds);
+        temp.store(bctx, code, type);
+        // perform the subtraction
+        buildXvmPrimitiveSub(bctx, code, regTarget, Op.A_STACK);
+        // remainder is on the stack
     }
 
     /**

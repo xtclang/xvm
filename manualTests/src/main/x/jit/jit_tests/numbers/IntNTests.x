@@ -661,12 +661,11 @@ class IntNTests {
     // ----- Op tests (div/rem) --------------------------------------------------------------------
 
     void testIntNOpDivRem() {
-// TODO JIT DivRem support
-//        IntN   n1 = 123;
-//        IntN   n2 = 10;
-//        (IntN quotient, IntN remainder) = n1/% n2;
-//        assert quotient == 12;
-//        assert remainder == 3;
+        IntN   n1 = 123;
+        IntN   n2 = 10;
+        (IntN quotient, IntN remainder) = n1/% n2;
+        assert quotient == 12;
+        assert remainder == 3;
     }
 
     // ----- Op tests (modulus) --------------------------------------------------------------------
@@ -1141,20 +1140,18 @@ class IntNTests {
     }
 
     void testDivRemAsNumber() {
-// TODO JIT DivRem support
-//        IntN   n1 = 123;
-//        IntN   n2 = 10;
-//        (Number quotient, Number remainder) = divRemNumber(n1, n2);
-//        assert quotient.is(IntN);
-//        assert quotient == 12;
-//        assert remainder.is(IntN);
-//        assert remainder == 3;
+        IntN   n1 = 123;
+        IntN   n2 = 10;
+        (Number quotient, Number remainder) = divRemNumber(n1, n2);
+        assert quotient.is(IntN);
+        assert quotient == 12;
+        assert remainder.is(IntN);
+        assert remainder == 3;
     }
 
-//    (Number quotient, Number remainder) divRemNumber(Number n1, Number n2) {
-// TODO JIT DivRem support
-//        return n1 /% n2;
-//    }
+    (Number quotient, Number remainder) divRemNumber(Number n1, Number n2) {
+        return n1 /% n2;
+    }
 
     void testModAsNumber() {
         IntN   n1 = 123;
@@ -1442,20 +1439,18 @@ class IntNTests {
     }
 
     void testDivRemAsIntNumber() {
-// TODO JIT DivRem support
-//        IntN   n1 = 123;
-//        IntN   n2 = 10;
-//        (IntNumber quotient, IntNumber remainder) = divRemIntNumber(n1, n2);
-//        assert quotient.is(IntN);
-//        assert quotient == 12;
-//        assert remainder.is(IntN);
-//        assert remainder == 3;
+        IntN   n1 = 123;
+        IntN   n2 = 10;
+        (IntNumber quotient, IntNumber remainder) = divRemIntNumber(n1, n2);
+        assert quotient.is(IntN);
+        assert quotient == 12;
+        assert remainder.is(IntN);
+        assert remainder == 3;
     }
 
-//    (IntNumber quotient, IntNumber remainder) divRemIntNumber(IntNumber n1, IntNumber n2) {
-// TODO JIT DivRem support
-//        return n1 /% n2;
-//    }
+    (IntNumber quotient, IntNumber remainder) divRemIntNumber(IntNumber n1, IntNumber n2) {
+        return n1 /% n2;
+    }
 
     void testIncAsIntNumber() {
         IntN      n1 = 1234;

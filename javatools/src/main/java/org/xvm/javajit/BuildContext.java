@@ -3177,6 +3177,23 @@ public class BuildContext {
     }
 
     /**
+     * Create a temporary {@link RegisterInfo} for internal "use once within a scope" scenarios.
+     * This register can only be addressed via the synthetic register -1, at which point it will be
+     * "popped".
+     */
+    public RegisterInfo pushTempMultiRegister(TypeConstant type, ClassDesc[] cds) {
+        int[] tempSlots = new int[cds.length];
+        for (int i = 0; i < cds.length; i++) {
+            tempSlots[i] = scope.allocateJavaSlot(cds[i]);
+        }
+        ClassDesc    cd      = builder.ensureClassDesc(type);
+        JitFlavor    flavor  = type.getJitDesc(builder).flavor;
+        RegisterInfo tempReg = new MultiSlot(this, Op.A_STACK, tempSlots, flavor, type, cd, cds, "");
+        tempRegStack.push(tempReg);
+        return tempReg;
+    }
+
+    /**
      * Store a value for the specified ClassDesc on Java stack onto a temporary slot.
      */
     public int storeTempValue(CodeBuilder code, ClassDesc cd) {
