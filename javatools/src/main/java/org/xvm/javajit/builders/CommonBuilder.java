@@ -3775,8 +3775,7 @@ public class CommonBuilder
     "org.xtclang.ecstasy.numbers.IntNumber",
             Set.of("not"),
     "org.xtclang.ecstasy.numbers.UIntNumber",
-            Set.of("compare",
-                   "converterFor")
+            Set.of("converterFor")
     );
 
     private final static HashSet<String> SKIP_SET = new HashSet<>();

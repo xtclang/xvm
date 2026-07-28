@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.constants.TypeConstant;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
@@ -327,6 +328,12 @@ public class JitMethodDesc {
                 optParamList.add(new JitParamDesc(type, flavor, cd, iOrig, iOpt++, false));
             } else {
                 assert type.isSingleUnderlyingClass(true);
+
+                if (typeTarget != null && type.containsAutoNarrowing(false) &&
+                        type.getExplicitClassFormat() == Format.MIXIN) {
+                    type = type.resolveAutoNarrowing(pool, false, typeTarget, null);
+                }
+
                 cd = builder.ensureClassDesc(type);
                 JitFlavor flavor = fDflt ? SpecificWithDefault : Specific;
 
