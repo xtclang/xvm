@@ -440,7 +440,7 @@ public class BuildContext {
                         : jumpAddrStack.pop();
                 }
 
-                if (finAddr != -1) {
+                if (finAddr != -1 && doReturn) {
                     // the previous "FinallyEnd" needs to jump here upon a return
                     ((FinallyEnd) ops[finAddr]).registerJump(iPC);
                 }
