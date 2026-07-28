@@ -246,7 +246,12 @@ public abstract class Array
      */
     public static Array $new$2(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         // TODO this is temporary; review and if possible remove the overrides
-        return switch(type.getParamType(0).getSingleUnderlyingClass(true).getName()) {
+        TypeConstant elementType = type.getParamType(0);
+        if (!elementType.isJitPrimitive()) {
+            return ArrayᐸObjectᐳ.$new$2(ctx, type, mutability, elements);
+        }
+
+        return switch(elementType.getSingleUnderlyingClass(true).getName()) {
             case "Bit"     -> ArrayᐸBitᐳ.$new$2$p(ctx, type, mutability, elements);
             case "Boolean" -> ArrayᐸBooleanᐳ.$new$2$p(ctx, type, mutability, elements);
             case "Char"    -> ArrayᐸCharᐳ.$new$2(ctx, type, mutability, (IterableᐸCharᐳ) elements);
@@ -261,7 +266,6 @@ public abstract class Array
             case "Int64"   -> ArrayᐸInt64ᐳ.$new$2$p(ctx, type, mutability, elements);
             case "Int128"  -> ArrayᐸInt128ᐳ.$new$2$p(ctx, type, mutability, elements);
             case "Nibble"  -> ArrayᐸNibbleᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Object"  -> ArrayᐸObjectᐳ.$new$2(ctx, type, mutability, elements);
             case "UInt8"   -> ArrayᐸUInt8ᐳ.$new$2$p(ctx, type, mutability, elements);
             case "UInt16"  -> ArrayᐸUInt16ᐳ.$new$2$p(ctx, type, mutability, elements);
             case "UInt32"  -> ArrayᐸUInt32ᐳ.$new$2$p(ctx, type, mutability, elements);
