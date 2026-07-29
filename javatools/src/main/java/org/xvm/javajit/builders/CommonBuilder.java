@@ -3719,7 +3719,7 @@ public class CommonBuilder
 // TODO     "org.xtclang.ecstasy.collections.UniformIndexed*",
 
             // io
-// TODO     "org.xtclang.ecstasy.io.Reader",
+            "org.xtclang.ecstasy.io.Reader",
 // TODO     "org.xtclang.ecstasy.io.TextPosition",
             "org.xtclang.ecstasy.io.IOException",
 
