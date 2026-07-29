@@ -3729,15 +3729,15 @@ public class CommonBuilder
 
             // numbers
             "org.xtclang.ecstasy.numbers.BFloat16",
-// TODO     "org.xtclang.ecstasy.numbers.Dec32",            // need to change to SingleSlot
-// TODO     "org.xtclang.ecstasy.numbers.Dec64",            // need to change to SingleSlot
+            "org.xtclang.ecstasy.numbers.BinaryFPNumber",
+            "org.xtclang.ecstasy.numbers.Dec*",
             "org.xtclang.ecstasy.numbers.Float16",
             "org.xtclang.ecstasy.numbers.Float32",
             "org.xtclang.ecstasy.numbers.Float64",
             "org.xtclang.ecstasy.numbers.Float128",
             "org.xtclang.ecstasy.numbers.FPConvertible",
             "org.xtclang.ecstasy.numbers.Number",
-// TODO     "org.xtclang.ecstasy.numbers.FPNumber",         // depends on Bit support
+            "org.xtclang.ecstasy.numbers.FPNumber",
 // TODO     "org.xtclang.ecstasy.numbers.Int",              // depends on Char "switch" implementation, depends on Char
             "org.xtclang.ecstasy.numbers.IntNumber",
             "org.xtclang.ecstasy.numbers.IntConvertible",

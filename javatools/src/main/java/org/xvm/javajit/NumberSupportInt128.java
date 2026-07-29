@@ -275,7 +275,7 @@ public interface NumberSupportInt128 {
             .invokestatic(regTarget.cd(), METHOD_NAME_DIV, MD_LongLong_Divide);
         // Int128.divide() returns the low long which will now be on the stack
         // now load the high long from the context
-        Builder.loadFromContext(code, CD_long, 0);
+        bctx.loadFromContext(code, CD_long, 0);
     }
 
     /**
@@ -308,7 +308,7 @@ public interface NumberSupportInt128 {
                 .invokestatic(CD_Int128, METHOD_NAME_MOD, MD_Int128_Mod);
         // Int128.mod() returns the low long which will now be on the stack
         // now load the high long from the context
-        Builder.loadFromContext(code, CD_long, 0);
+        bctx.loadFromContext(code, CD_long, 0);
     }
 
     /**
