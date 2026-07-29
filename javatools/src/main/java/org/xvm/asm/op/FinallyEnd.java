@@ -162,17 +162,26 @@ public class FinallyEnd
             }
 
             for (int i = cRets - 1; i >= 0; i--) {
-                int[]        optIndexes = jmd.getAllOptimizedReturnIndexes(i);
-                int          iOpt       = fOptimized ? optIndexes[0] : -1;
-                JitParamDesc pdRet      = fOptimized ? jmd.optimizedReturns[iOpt]
-                                                     : jmd.standardReturns[i];
-                ClassDesc    cd         = pdRet.cd;
-                int          iExt       = fOptimized ? optIndexes[optIndexes.length - 1] : -1;
-                JitParamDesc pdExt      = fOptimized ? jmd.optimizedReturns[iExt] : null;
+                int[]        retIndexes;
+                JitParamDesc pdRet;
+                JitParamDesc pdExt;
+
+                if (fOptimized) {
+                    retIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                    pdRet      = jmd.optimizedReturns[retIndexes[0]];
+                    pdExt      = jmd.optimizedReturns[retIndexes[retIndexes.length - 1]];
+                } else {
+                    retIndexes = new int[]{jmd.standardReturns[i].index};
+                    pdRet      = jmd.standardReturns[i];
+                    pdExt      = null;
+                }
+
+                ClassDesc cd = pdRet.cd;
 
                 // load the return values (including any extension slots) to the stack
-                for (int optIndex : optIndexes) {
-                    JitParamDesc pd   = jmd.optimizedReturns[optIndex];
+                for (int idx : retIndexes) {
+                    JitParamDesc pd   = fOptimized ? jmd.optimizedReturns[idx]
+                                                   : jmd.standardReturns[idx];
                     String       name = GuardAll.returnSlotName(pd);
                     int          slot = scopeGuard.getSynthetic(name, false);
                     Builder.load(code, pd.cd, slot);
@@ -191,8 +200,8 @@ public class FinallyEnd
                     case XvmPrimitive, NullableXvmPrimitive:
                         // store the return primitives (including any extensions) to the context,
                         // leaving the last one on the stack
-                        for (int j = optIndexes.length - 1; j >= 1 ; j--) {
-                            JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
+                        for (int j = retIndexes.length - 1; j >= 1 ; j--) {
+                            JitParamDesc retDesc = jmd.optimizedReturns[retIndexes[j]];
                             bctx.storeToContext(code, retDesc.cd, retDesc.altIndex);
                         }
                         // set the last primitive on the stack as the return value
@@ -214,8 +223,8 @@ public class FinallyEnd
 
                     case XvmPrimitive, NullableXvmPrimitive:
                         // store the return primitives (including any extensions) to the context
-                        for (int j = optIndexes.length - 1; j >= 0 ; j--) {
-                            JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
+                        for (int j = retIndexes.length - 1; j >= 0 ; j--) {
+                            JitParamDesc retDesc = jmd.optimizedReturns[retIndexes[j]];
                             bctx.storeToContext(code, retDesc.cd, retDesc.altIndex);
                         }
                         break;
