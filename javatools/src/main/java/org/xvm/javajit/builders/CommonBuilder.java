@@ -268,6 +268,11 @@ public class CommonBuilder
      */
     protected void assembleInterfaces(ClassBuilder classBuilder) {
         List<ClassDesc> interfaces  = new ArrayList<>();
+        if (isInterface && isSpecialized) {
+            // make the specialized interface to extend the canonical interface
+            interfaces.add(ensureClassDesc(classStruct.getCanonicalType()));
+        }
+
         for (Contribution contrib : typeInfo.getContributionList()) {
             switch (contrib.getComposition()) {
                 case Implements:
