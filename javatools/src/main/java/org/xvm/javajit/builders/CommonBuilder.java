@@ -12,7 +12,6 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -74,9 +73,7 @@ import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
 
 import static org.xvm.util.Handy.lazyAdd;
-import static org.xvm.util.Handy.lazyComputeIfAbsent;
 import static org.xvm.util.Handy.lazyList;
-import static org.xvm.util.Handy.lazyMap;
 
 /**
  * Generic Java class builder.
@@ -1651,7 +1648,7 @@ public class CommonBuilder
      * If this builder is an {@link AugmentingBuilder}, determine whether the specified field
      * exists in a native class.
      *
-     * @return {@code true} if the specified fieid exists for the native (augmented) class
+     * @return {@code true} if the specified field exists for the native (augmented) class
      */
     protected boolean isNativeField(String jitName, ClassDesc cd) {
         return false;
@@ -3201,7 +3198,7 @@ public class CommonBuilder
         assert !isPrimitive;
 
         // TODO: add support for delegation to a property of a primitive type
-        assert !jmd.isStandardStatic && !jmd.isOptimizedStatic;;
+        assert !jmd.isStandardStatic && !jmd.isOptimizedStatic;
 
         int extraCount = jmd.getImplicitParamCount();
 
@@ -3737,11 +3734,11 @@ public class CommonBuilder
             "org.xtclang.ecstasy.numbers.Float128",
             "org.xtclang.ecstasy.numbers.FPConvertible",
             "org.xtclang.ecstasy.numbers.Number",
-            "org.xtclang.ecstasy.numbers.FPNumber",
-// TODO     "org.xtclang.ecstasy.numbers.Int",              // depends on Char "switch" implementation, depends on Char
+             "org.xtclang.ecstasy.numbers.FPNumber",
+// TODO     "org.xtclang.ecstasy.numbers.Int*",             // depends on IntLiteral
             "org.xtclang.ecstasy.numbers.IntNumber",
             "org.xtclang.ecstasy.numbers.IntConvertible",
-// TODO     "org.xtclang.ecstasy.numbers.UInt",             // depends on GP_DIVREM
+//            "org.xtclang.ecstasy.numbers.UInt*",          // need Range support
             "org.xtclang.ecstasy.numbers.IntN",
             "org.xtclang.ecstasy.numbers.UIntN",
             "org.xtclang.ecstasy.numbers.UIntNumber",
@@ -3773,9 +3770,7 @@ public class CommonBuilder
                    "converterFor",
                    "converterTo"),
     "org.xtclang.ecstasy.numbers.IntNumber",
-            Set.of("not"),
-    "org.xtclang.ecstasy.numbers.UIntNumber",
-            Set.of("converterFor")
+            Set.of("not")           // TODO: depends on virtual constructor
     );
 
     private final static HashSet<String> SKIP_SET = new HashSet<>();
