@@ -51,6 +51,7 @@ import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.ModuleLoader;
+import org.xvm.javajit.NativeNames;
 import org.xvm.javajit.NativeTypeSystem;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
@@ -2909,12 +2910,8 @@ public class CommonBuilder
         String dstName = dstMethod.ensureJitMethodName(typeSystem);
 
         if (srcName.equals(dstName)) {
-            // it must be a covariant cap for a virtual constructor or a method manually
-            // implemented natively
-// TODO GG there is definitely a bug in ensureJitMethodName() for capped methods; the generated
-//  code will produce an infinite recursion, but we will let it compile for now
-//            assert srcMethod.containsVirtualConstructor() ||
-//                NativeNames.findReservedJitName(srcMethod.getIdentity()) != null;
+            // it must be a covariant cap for a natively implemented method
+            assert NativeNames.findReservedJitName(srcMethod.getIdentity()) != null;
             return;
         }
 

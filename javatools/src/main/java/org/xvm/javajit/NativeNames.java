@@ -28,15 +28,14 @@ public class NativeNames {
         reservedMethodName.put("Boolean/xor/1",    "xor");
         reservedMethodName.put("Boolean/toByte/0", "toByte");
 
-        reservedMethodName.put("collections.Array/add/1",                 "add");
-        reservedMethodName.put("collections.Array/addAll/1",              "addAll");
-        reservedMethodName.put("collections.Array/delete/1",              "delete");
-        reservedMethodName.put("collections.Array/insert/2",              "insert");
-        reservedMethodName.put("collections.Array/insertAll/2",           "insertAll");
-        reservedMethodName.put("collections.Array/reify/1",               "reify");
-        reservedMethodName.put("collections.Array/removeAll/1",           "removeAll");
-        reservedMethodName.put("collections.Array.ArrayDelegate/reify/1", "reify");
-        reservedMethodName.put("collections.Collection/reify/0",          "reify");
+        reservedMethodName.put("collections.Array/add/1",        "add");
+        reservedMethodName.put("collections.Array/addAll/1",     "addAll");
+        reservedMethodName.put("collections.Array/delete/1",     "delete");
+        reservedMethodName.put("collections.Array/insert/2",     "insert");
+        reservedMethodName.put("collections.Array/insertAll/2",  "insertAll");
+        reservedMethodName.put("collections.Array/reify/1",      "reify");
+        reservedMethodName.put("collections.Array/removeAll/1",  "removeAll");
+        reservedMethodName.put("collections.Collection/reify/0", "reify");
 
         reservedMethodName.put("numbers.IntConvertible/toIntN/0",  "toIntN");
         reservedMethodName.put("numbers.IntConvertible/toUIntN/0", "toUIntN");
