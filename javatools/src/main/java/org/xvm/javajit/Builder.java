@@ -431,13 +431,16 @@ public abstract class Builder {
             }
 
             // 2) create the MethodHandle(s)
-            ClassDesc     containerCD  = ClassDesc.of(bctx.className);
-            JitMethodDesc jmd          = body.getJitDesc(this, containerType);
-            boolean       isFunction   = body.getMethodStructure().isFunction();
+            ClassDesc     containerCD = ClassDesc.of(bctx.className);
+            JitMethodDesc jmd         = body.getJitDesc(this, containerType);
+            boolean       isFunction  = body.getMethodStructure().isFunction();
+            boolean       isInterface = containerType.isJitInterface();
 
             DirectMethodHandleDesc.Kind kind = isFunction
-                    ? DirectMethodHandleDesc.Kind.STATIC
-                    : DirectMethodHandleDesc.Kind.VIRTUAL;
+                    ? isInterface ? DirectMethodHandleDesc.Kind.INTERFACE_STATIC
+                                  : DirectMethodHandleDesc.Kind.STATIC
+                    : isInterface ? DirectMethodHandleDesc.Kind.INTERFACE_VIRTUAL
+                                  : DirectMethodHandleDesc.Kind.VIRTUAL;
 
             DirectMethodHandleDesc stdMD = MethodHandleDesc.ofMethod(kind,
                     containerCD, jitName, jmd.standardMD);

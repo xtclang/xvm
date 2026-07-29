@@ -11,6 +11,7 @@ package lambdaTests {
         test5();
         test6();
         test7();
+        test8();
     }
 
     void test1() {
@@ -205,5 +206,20 @@ package lambdaTests {
     void test7() {
         function Int() value = () -> 42;
         value();
+    }
+
+    void test8() {
+        assert new CalculatorImpl().calculate() == 42;
+
+        interface Calculator {
+            Int calculate() {
+                function Int() value = () -> 42;
+                return value();
+            }
+        }
+
+        class CalculatorImpl()
+                implements Calculator {
+        }
     }
 }
