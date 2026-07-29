@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
@@ -41,6 +42,8 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
+import static java.lang.constant.ConstantDescs.CD_MethodType;
+import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Exception;
@@ -643,7 +646,6 @@ public abstract class OpCallable extends Op {
      */
     protected int buildCall(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         TypeSystem    ts = bctx.typeSystem;
-        TypeConstant  typeTarget;
         ClassDesc     cdTarget;
         String        sJitName;
         JitMethodDesc jmdCall;
@@ -663,14 +665,13 @@ public abstract class OpCallable extends Op {
 
             if (format == Format.MIXIN) {
                 // we need to generate a synthetic super
-                typeTarget = bctx.thisType;
                 cdTarget   = ClassDesc.of(bctx.className);
                 sJitName  += HASH + String.valueOf(nDepth);
 
                 bctx.buildSuper(sJitName, nDepth);
                 fInterface = false;
             } else {
-                typeTarget = bctx.isSpecialized
+                TypeConstant typeTarget = bctx.isSpecialized
                         ? idCallee.getFormalType().resolveGenerics(bctx.pool(), bctx.thisType)
                         : idCallee.getType();
                 cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
@@ -681,13 +682,11 @@ public abstract class OpCallable extends Op {
             fCond    = bodySuper.getMethodStructure().isConditionalReturn();
             code.aload(0); // super() can only be on "this"
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
-            MethodConstant   idMethod = bctx.getConstant(m_nFunctionId, MethodConstant.class);
-            IdentityConstant idTarget = idMethod.getClassIdentity();
-
-            typeTarget = idTarget.getType();
-
-            TypeInfo   infoTarget = bctx.getTypeInfo(typeTarget);
-            MethodInfo infoMethod = infoTarget.getMethodById(idMethod);
+            MethodConstant   idMethod   = bctx.getConstant(m_nFunctionId, MethodConstant.class);
+            IdentityConstant idTarget   = idMethod.getClassIdentity();
+            TypeConstant     typeTarget = idTarget.getType();
+            TypeInfo         infoTarget = bctx.getTypeInfo(typeTarget);
+            MethodInfo       infoMethod = infoTarget.getMethodById(idMethod);
 
             cdTarget   = bctx.builder.ensureClassDesc(idTarget.getType()); // function; no formal types applicable
             sJitName   = infoMethod.ensureJitMethodName(ts);
@@ -704,6 +703,7 @@ public abstract class OpCallable extends Op {
         } else {
             RegisterInfo regFn = bctx.loadArgument(code, m_nFunctionId);
             // call "$invoke(Ctx ctx, Object... args)" via the corresponding MethodHandle
+            int slotFn = bctx.storeTempValue(code, CD_nFunction);
 
             TypeConstant typeFn = regFn.type();
             assert typeFn.isFunction();
@@ -716,22 +716,49 @@ public abstract class OpCallable extends Op {
             jmdCall = JitMethodDesc.of(bctx.builder,
                     null, true, false, atypeParams, atypeReturns, atypeParams.length);
 
+            Label lblEnd = null;
             if (jmdCall.isOptimized) {
-                code.getfield(CD_nFunction, "optMethod", CD_MethodHandle);
-            } else {
-                code.getfield(CD_nFunction, "stdMethod", CD_MethodHandle);
+                Label lblStd = code.newLabel();
+                lblEnd = code.newLabel();
+
+                // function parameter contravariance can place "function Int(Object)" in a
+                // "function Int(Int)" register; the boxed signatures are compatible, but the
+                // optimized MethodHandle signatures are not
+                code.aload(slotFn)
+                    .ldc(jmdCall.optimizedMD)
+                    .invokevirtual(CD_nFunction, "$hasOptMethod",
+                        MethodTypeDesc.of(CD_boolean, CD_MethodType))
+                    .ifeq(lblStd)
+                    .aload(slotFn)
+                    .getfield(CD_nFunction, "optMethod", CD_MethodHandle);
+                bctx.loadCtx(code);
+                bctx.loadCallArguments(code, jmdCall, anArgValue);
+                code.invokevirtual(CD_MethodHandle, "invoke", jmdCall.optimizedMD);
+
+                if (m_nRetValue != Op.A_IGNORE) {
+                    int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
+                    bctx.assignReturns(code, jmdCall, anVar.length, anVar, fCond);
+                }
+
+                code.goto_(lblEnd)
+                    .labelBinding(lblStd);
+                jmdCall = new JitMethodDesc(null,
+                        jmdCall.standardReturns, jmdCall.standardParams, null, null, true);
             }
 
+            code.aload(slotFn)
+                .getfield(CD_nFunction, "stdMethod", CD_MethodHandle);
             bctx.loadCtx(code);
             bctx.loadCallArguments(code, jmdCall, anArgValue);
-
-            // TODO JK - work out when and how we can call invokeExact
-            code.invokevirtual(CD_MethodHandle, "invoke",
-                jmdCall.isOptimized ? jmdCall.optimizedMD : jmdCall.standardMD);
+            code.invokevirtual(CD_MethodHandle, "invoke", jmdCall.standardMD);
 
             if (m_nRetValue != Op.A_IGNORE) {
                 int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
                 bctx.assignReturns(code, jmdCall, anVar.length, anVar, fCond);
+            }
+
+            if (lblEnd != null) {
+                code.labelBinding(lblEnd);
             }
             return -1;
         }

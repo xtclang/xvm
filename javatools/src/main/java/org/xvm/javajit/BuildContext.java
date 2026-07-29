@@ -2962,13 +2962,18 @@ public class BuildContext {
                 // nothing to do
             }
 
-            case "Specific->Primitive" -> {
+            case "Specific->Primitive",
+                 "Specific->XvmPrimitive",
+                 "Widened->Primitive",
+                 "Widened->XvmPrimitive" -> {
                 generateCheckCast(code, destType);
                 Builder.unbox(code, destType);
             }
 
             case "Specific->NullablePrimitive",
-                 "Specific->NullableXvmPrimitive" -> {
+                 "Specific->NullableXvmPrimitive",
+                 "Widened->NullablePrimitive",
+                 "Widened->NullableXvmPrimitive" -> {
                 TypeConstant typeSansNull = destType.removeNullable();
                 Builder.unboxNullable(code, destType, builder.ensureClassDesc(typeSansNull));
             }
@@ -3081,6 +3086,24 @@ public class BuildContext {
                  "Widened->Specific",
                  "Widened->Widened" ->
                 loadFromContext(code, tdDest.cd, pdRet.altIndex);
+
+            case "Specific->Primitive",
+                 "Specific->XvmPrimitive",
+                 "Widened->Primitive",
+                 "Widened->XvmPrimitive" -> {
+                loadFromContext(code, pdRet.cd, pdRet.altIndex);
+                generateCheckCast(code, destType);
+                Builder.unbox(code, destType);
+            }
+
+            case "Specific->NullablePrimitive",
+                 "Specific->NullableXvmPrimitive",
+                 "Widened->NullablePrimitive",
+                 "Widened->NullableXvmPrimitive" -> {
+                loadFromContext(code, pdRet.cd, pdRet.altIndex);
+                TypeConstant typeSansNull = destType.removeNullable();
+                Builder.unboxNullable(code, destType, builder.ensureClassDesc(typeSansNull));
+            }
 
             default ->
                 throw new UnsupportedOperationException("cannot store return flavor "

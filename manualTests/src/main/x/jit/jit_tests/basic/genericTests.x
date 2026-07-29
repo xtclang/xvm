@@ -26,6 +26,21 @@ package genericTests {
 
         TestFormal<TestBase> to = new TestFormal(t1);
         console.print(to.value);
+
+        function Int128(Boolean) transform = value -> value ? 42 : 0;
+        Int128 result = apply(transform, True);
+        assert result == 42;
+
+        function Int(Object) broadTransform = value -> 42;
+        GenericFunction<Int> intApply       = new GenericFunction();
+        assert intApply.applyInt(broadTransform, 7) == 42;
+    }
+
+    static <Element, Result> Result apply(
+            function Result(Element) transform, Element value) = transform(value);
+
+    class GenericFunction<Element> {
+        Int applyInt(function Int(Element) transform, Element value) = transform(value);
     }
 
     class TestBase(Int x) {
