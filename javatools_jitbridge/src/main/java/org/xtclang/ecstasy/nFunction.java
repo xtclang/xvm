@@ -1,6 +1,7 @@
 package org.xtclang.ecstasy;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodType;
 
 import org.xtclang.ecstasy.collections.Tuple;
 
@@ -30,6 +31,13 @@ public class nFunction extends nObj implements Function {
     public final MethodHandle stdMethod;
     public final MethodHandle optMethod;
     public final boolean      immutable;
+
+    /**
+     * @return true iff the optimized method has the specified type
+     */
+    public boolean $hasOptMethod(MethodType type) {
+        return optMethod != null && optMethod.type().equals(type);
+    }
 
     @Override
     public TypeConstant $xvmType(Ctx ctx) {
