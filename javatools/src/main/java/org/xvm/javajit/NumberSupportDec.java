@@ -128,7 +128,7 @@ public interface NumberSupportDec {
     default void buildDec128Add(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
                                 int nArgValue) {
         buildDecimalAdd(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec128);
-        Builder.loadFromContext(code, CD_long, 0);
+        bctx.loadFromContext(code, CD_long, 0);
     }
 
     /**
@@ -206,7 +206,7 @@ public interface NumberSupportDec {
     default void buildDec128Div(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
                                 int nArgValue) {
         buildDecimalDiv(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec128);
-        Builder.loadFromContext(code, CD_long, 0);
+        bctx.loadFromContext(code, CD_long, 0);
     }
 
     /**
@@ -283,7 +283,7 @@ public interface NumberSupportDec {
     default void buildDec128Mod(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
                                 int nArgValue) {
         buildDecimalMod(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec128);
-        Builder.loadFromContext(code, CD_long, 0);
+        bctx.loadFromContext(code, CD_long, 0);
     }
 
     /**
@@ -361,7 +361,7 @@ public interface NumberSupportDec {
     default void buildDec128Mul(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
                                 int nArgValue) {
         buildDecimalMul(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec128);
-        Builder.loadFromContext(code, CD_long, 0);
+        bctx.loadFromContext(code, CD_long, 0);
     }
 
     /**
@@ -426,7 +426,7 @@ public interface NumberSupportDec {
      */
     default void buildDec128Neg(BuildContext bctx, CodeBuilder code, MultiSlot regTarget) {
         buildDecNeg(bctx, code, regTarget, MD_UnaryOp_Dec128);
-        Builder.loadFromContext(code, CD_long, 0);
+        bctx.loadFromContext(code, CD_long, 0);
     }
 
     /**
@@ -499,7 +499,7 @@ public interface NumberSupportDec {
     default void buildDec128Sub(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
                                 int nArgValue) {
         buildDecimalSub(bctx, code, regTarget, nArgValue, MD_BinaryOp_Dec128);
-        Builder.loadFromContext(code, CD_long, 0);
+        bctx.loadFromContext(code, CD_long, 0);
     }
 
     /**
