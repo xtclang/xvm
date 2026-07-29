@@ -716,6 +716,12 @@ public abstract class OpCallable extends Op {
             jmdCall = JitMethodDesc.of(bctx.builder,
                     null, true, false, atypeParams, atypeReturns, atypeParams.length);
 
+            int[] anRet = isMultiReturn()
+                    ? m_anRetValue
+                    : m_nRetValue == Op.A_IGNORE
+                        ? NO_ARGS
+                        : new int[] {m_nRetValue};
+
             Label lblEnd = null;
             if (jmdCall.isOptimized) {
                 Label lblStd = code.newLabel();
@@ -735,9 +741,12 @@ public abstract class OpCallable extends Op {
                 bctx.loadCallArguments(code, jmdCall, anArgValue);
                 code.invokevirtual(CD_MethodHandle, "invoke", jmdCall.optimizedMD);
 
-                if (m_nRetValue != Op.A_IGNORE) {
-                    int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
-                    bctx.assignReturns(code, jmdCall, anVar.length, anVar, fCond);
+                if (anRet.length == 0) {
+                    if (jmdCall.optimizedMD.returnType() != CD_void) {
+                        Builder.pop(code, jmdCall.optimizedMD.returnType());
+                    }
+                } else {
+                    bctx.assignReturns(code, jmdCall, anRet.length, anRet, fCond);
                 }
 
                 code.goto_(lblEnd)
@@ -752,9 +761,12 @@ public abstract class OpCallable extends Op {
             bctx.loadCallArguments(code, jmdCall, anArgValue);
             code.invokevirtual(CD_MethodHandle, "invoke", jmdCall.standardMD);
 
-            if (m_nRetValue != Op.A_IGNORE) {
-                int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
-                bctx.assignReturns(code, jmdCall, anVar.length, anVar, fCond);
+            if (anRet.length == 0) {
+                if (jmdCall.standardMD.returnType() != CD_void) {
+                    Builder.pop(code, jmdCall.standardMD.returnType());
+                }
+            } else {
+                bctx.assignReturns(code, jmdCall, anRet.length, anRet, fCond);
             }
 
             if (lblEnd != null) {
