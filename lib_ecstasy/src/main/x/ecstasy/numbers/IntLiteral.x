@@ -162,7 +162,7 @@ const IntLiteral(String text)
         }
 
         assert:arg offset == length as $|Illegal character {text[offset].toSourceString()} at offset\
-                                        | {offset} in radix {radix}} integer literal {text.quoted()}
+                                        | {offset} in radix {radix} integer literal {text.quoted()}
                                        ;
 
         assert:arg digits > 0 as $|Illegal radix {radix} integer literal; literal contains\
