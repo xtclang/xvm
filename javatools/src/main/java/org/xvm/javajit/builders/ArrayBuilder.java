@@ -81,20 +81,6 @@ public class ArrayBuilder extends AugmentingBuilder {
     }
 
     @Override
-    protected void loadTypeConstant(CodeBuilder code, TypeConstant type) {
-        if (type.isArray()) {
-            // call $xvmType() on the this Array instance
-            ClassDesc CD_this = art.CD();
-            code.aload(0) // load this
-                .checkcast(CD_this)
-                .aload(1) // load Ctx
-                .invokevirtual(CD_this, "$xvmType", MethodTypeDesc.of(CD_TypeConstant, CD_Ctx));
-        } else {
-            super.loadTypeConstant(code, type);
-        }
-    }
-
-    @Override
     protected boolean shouldAddInterface(TypeConstant type) {
         if (type.isA(DELEGATE_TYPE)) {
             // skip the ArrayDelegate

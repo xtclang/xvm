@@ -38,6 +38,12 @@ package enumTests {
 
         Ordered lesser = Lesser;
         assert lesser.reversed.ordinal == Greater.ordinal;
+
+        assert Signum.Negative.factor.toString() == "-1";
+        assert Signum.Zero.factor.toString()     == "0";
+        assert Signum.Positive.factor.toString() == "+1";
+        assert Signum.Negative < Signum.Zero < Signum.Positive;
+        assert Signum.Positive > Signum.Zero > Signum.Negative;
     }
 
     Boolean testRedOrNull(Color? c) {

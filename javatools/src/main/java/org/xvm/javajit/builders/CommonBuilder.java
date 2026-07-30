@@ -30,6 +30,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -59,6 +60,7 @@ import org.xvm.javajit.TypeSystem.Artifact;
 
 import org.xvm.javajit.registers.ExtendedSlot;
 import org.xvm.javajit.registers.MultiSlot;
+import org.xvm.javajit.registers.SingleSlot;
 
 import org.xvm.util.ByteHashCollector;
 import org.xvm.util.ShallowSizeOf;
@@ -169,10 +171,30 @@ public class CommonBuilder
     }
 
     @Override
-    protected void loadTypeConstant(CodeBuilder code, TypeConstant type) {
+    public void loadTypeConstant(CodeBuilder code, TypeConstant type) {
         // see assembleCLInit()
         Integer index = constants.computeIfAbsent(type, _ -> constants.size());
         code.getstatic(art.CD(), CONST_PROP + index, CD_TypeConstant);
+    }
+
+    @Override
+    public RegisterInfo loadConstant(BuildContext bctx, CodeBuilder code, Constant constant) {
+        // with the separation of CommonBuilder from Builder, this code has to exist on
+        // CommonBuilder because the knowledge of creating static fields to hold Ecstasy constants
+        // is not present on Builder; TODO address this in a subsequent change
+        switch (constant) {
+        case LiteralConstant literal
+                when literal.getFormat() == Constant.Format.IntLiteral: {
+            Integer      index = constants.computeIfAbsent(literal, _ -> constants.size());
+            TypeConstant type  = literal.getType();
+            ClassDesc    cd    = ensureClassDesc(type);
+            code.getstatic(art.CD(), CONST_PROP + index, cd);
+            return new SingleSlot(type, JitFlavor.Specific, cd, "");
+        }
+
+        default:
+            return super.loadConstant(bctx, code, constant);
+        }
     }
 
     /**
@@ -420,12 +442,6 @@ public class CommonBuilder
             }
         }
 
-        // add synthetic TypeConstant fields
-        for (int i = 0, c = constants.size(); i < c; i++) {
-            classBuilder.withField(CONST_PROP + i, CD_TypeConstant,
-                ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL);
-        }
-
         ClassDesc CD_this = art.CD();
         classBuilder.withMethodBody(ConstantDescs.CLASS_INIT_NAME, MTD_void,
                 ClassFile.ACC_STATIC | ClassFile.ACC_PUBLIC, code -> {
@@ -440,18 +456,26 @@ public class CommonBuilder
             code.invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
                 .astore(ctxSlot);
 
-            // initialize synthetic TypeConstant fields; to make the jasm look neater
-            // generate the assignments in the lexicographical order
+            // initialize synthetic "TypeConstant" and other static "Constant" fields; to make the
+            // jasm look neater generate the assignments in the lexicographical order; additionally,
+            // handle the case where new constants keep getting added as a side-effect of doing this
+            // work
             String       className = art.className();
             ModuleLoader loader    = typeSystem.findOwnerLoader(className);
             boolean      nativeTS  = typeSystem instanceof NativeTypeSystem;
             ConstantPool pool      = loader.module.getConstantPool();
-            constants.entrySet().stream()
-                 .sorted(Map.Entry.comparingByValue())
-                 .forEach(entry -> {
+            int          emitted   = 0;
+            while (emitted < constants.size()) {
+                // create a snapshot of the work to do RIGHT AT THIS MOMENT IN TIME so that if other
+                // things get appended to the map in the process, we don't accidentally trigger a
+                // CME etc.
+                Map.Entry<Constant, Integer>[] entries =
+                        constants.entrySet().stream().sorted(Map.Entry.comparingByValue())
+                                                     .toArray(Map.Entry[]::new);
+                for (int size = entries.length; emitted < size; ++emitted) {
+                    Map.Entry<Constant, Integer> entry = entries[emitted];
                     Constant constant = entry.getKey();
                     String   name     = CONST_PROP + entry.getValue();
-
                     if (constant instanceof TypeConstant type) {
                         assert type.isShared(pool);
                         type = pool.register(type);
@@ -466,10 +490,20 @@ public class CommonBuilder
                             .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
                             .checkcast(CD_TypeConstant)                               // <- type
                             .putstatic(CD_this, name, CD_TypeConstant);
+                    } else if (constant instanceof LiteralConstant literal &&
+                            literal.getFormat() == Constant.Format.IntLiteral) {
+                        // instantiate an IntLiteral using a String generated from a Java string from
+                        // the LiteralConstant, and store the IntLiteral into the static field
+                        MethodConstant ctorId = pool.ensureEcstasyClassConstant("numbers.IntLiteral")
+                                                    .findConstructor(pool.typeString());
+                        buildNew(null, code, literal.getType(), ctorId,
+                                (_) -> loadString(code, literal.getValue(), ctxSlot), ctxSlot);
+                        code.putstatic(CD_this, name, CD_IntLiteral);
                     } else {
                         throw new UnsupportedOperationException("unsupported constant: " + constant);
                     }
-                 });
+                }
+            }
 
             // add static field initialization
             TypeSystem ts = typeSystem;
@@ -551,6 +585,23 @@ public class CommonBuilder
             code.labelBinding(endScope)
                 .return_();
         });
+
+        // add synthetic constant fields (filled in by the above code); this comes last because
+        // additional constants may have been requested as a side-effect from the clinit code
+        // creation
+        for (Map.Entry<Constant, Integer> entry : constants.entrySet()) {
+            classBuilder.withField(CONST_PROP + entry.getValue(), constantClassDesc(entry.getKey()),
+                    ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL);
+        }
+    }
+
+    private ClassDesc constantClassDesc(Constant constant) {
+        return switch (constant) {
+            case TypeConstant _ -> CD_TypeConstant;
+            case LiteralConstant literal
+                    when literal.getFormat() == Constant.Format.IntLiteral -> CD_IntLiteral;
+            default -> throw new UnsupportedOperationException("unsupported constant: " + constant);
+        };
     }
 
     /**
@@ -575,98 +626,105 @@ public class CommonBuilder
                 }
 
                 callSuperInitializer(code);
-
-                // add field initialization
-                for (PropertyInfo prop : props) {
-                    if (prop.getInitializer() != null) {
-                        throw new UnsupportedOperationException("Field initializer");
-                    }
-
-                    code.aload(0); // Stack: { this }
-
-                    TypeConstant type       = prop.getType();
-                    TypeConstant baseType   = type.removeNullable();
-                    ClassDesc    cdProp     = type.ensureClassDesc(typeSystem);
-                    RegisterInfo reg        = loadConstant(code, prop.getInitialValue());
-                    String       jitName    = prop.getIdentity()
-                                                  .ensureJitPropertyName(typeSystem);
-                    JitFlavor    regFlavor  = reg.flavor();
-                    JitFlavor    propFlavor = baseType.isJavaPrimitive()
-                                                ? JitFlavor.Primitive
-                                                : baseType.isXvmPrimitive()
-                                                    ? JitFlavor.XvmPrimitive
-                                                    : JitFlavor.Specific;
-
-                    // Switch on the register flavor (the value being set into the property)
-                    // and then switch on the property flavor
-                    //
-                    // Specific     -> Specific     e.g. String s = "Foo" or String? s = Null
-                    // Specific     -> Primitive    must be setting primitive property to Null
-                    // Specific     -> XvmPrimitive must be setting primitive property to Null
-                    // Primitive    -> Primitive    e.g. Int = 100
-                    // Primitive    -> Specific     e.g. Int | String is = 100
-                    // XvmPrimitive -> XvmPrimitive e.g. Int128 = 100
-                    // XvmPrimitive -> Specific     e.g. Int128 | String is = 100
-
-                    switch (regFlavor.name() + "->" + propFlavor.name()) {
-                    case "Specific->Specific" ->
-                        code.putfield(CD_this, jitName, cdProp);
-
-                    case "Specific->Primitive" -> {
-                        // must be setting a primitive to Null
-                        assert reg.type().isOnlyNullable();
-                        code.pop();
-                        ClassDesc cd = JitTypeDesc.getJavaPrimitive(baseType);
-                        Builder.defaultLoad(code, cd);
-                        code.putfield(CD_this, jitName, cd)
-                            .aload(0)
-                            .iconst_1()
-                            .putfield(CD_this, jitName + EXT, CD_boolean);
-                    }
-
-                    case "Specific->XvmPrimitive" -> {
-                        // must be setting a XVM primitive to Null
-                        assert reg.type().isOnlyNullable();
-                        code.pop();
-                        ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(baseType);
-                        for (int i = 0; i < cds.length; i++) {
-                            Builder.defaultLoad(code, cds[i]);
-                            code.putfield(CD_this, jitName + "$" + i, cds[i])
-                                .aload(0);
-                        }
-                        code.iconst_1()
-                            .putfield(CD_this, jitName + EXT, CD_boolean);
-                    }
-
-                    case "Primitive->Primitive" ->
-                        code.putfield(CD_this, jitName, reg.cd());
-
-                    case "Primitive->Specific", "XvmPrimitive->Specific" -> {
-                        Builder.box(code, reg);
-                        code.putfield(CD_this, jitName, cdProp);
-                    }
-
-                    case "XvmPrimitive->XvmPrimitive" -> {
-                        ClassDesc[] cds = reg.slotCds();
-                        for (int i = cds.length - 1; i >= 0; i--) {
-                            code.aload(0) // Stack: { this }
-                                .dup_x2()
-                                .pop()
-                                .putfield(CD_this, jitName + "$" + i, cds[i]);
-                        }
-                        code.pop(); // pop the extra "aload(0)" from the stack
-                    }
-
-                    default ->
-                        throw new IllegalStateException("Invalid register flavor: " + regFlavor +
-                            " for property: " + propFlavor);
-                    }
-                }
+                initializeFields(code, props);
 
                 code.labelBinding(endScope)
                     .return_();
             }
         );
+    }
+
+    /**
+     * Add the initial values for the specified instance properties.
+     */
+    protected void initializeFields(CodeBuilder code, List<PropertyInfo> props) {
+        ClassDesc CD_this = art.CD();
+
+        for (PropertyInfo prop : props) {
+            if (prop.getInitializer() != null) {
+                throw new UnsupportedOperationException("Field initializer");
+            }
+
+            code.aload(0); // Stack: { this }
+
+            TypeConstant type       = prop.getType();
+            TypeConstant baseType   = type.removeNullable();
+            ClassDesc    cdProp     = type.ensureClassDesc(typeSystem);
+            RegisterInfo reg        = loadConstant(code, prop.getInitialValue());
+            String       jitName    = prop.getIdentity()
+                                          .ensureJitPropertyName(typeSystem);
+            JitFlavor    regFlavor  = reg.flavor();
+            JitFlavor    propFlavor = baseType.isJavaPrimitive()
+                                        ? JitFlavor.Primitive
+                                        : baseType.isXvmPrimitive()
+                                            ? JitFlavor.XvmPrimitive
+                                            : JitFlavor.Specific;
+
+            // Switch on the register flavor (the value being set into the property)
+            // and then switch on the property flavor
+            //
+            // Specific     -> Specific     e.g. String s = "Foo" or String? s = Null
+            // Specific     -> Primitive    must be setting primitive property to Null
+            // Specific     -> XvmPrimitive must be setting primitive property to Null
+            // Primitive    -> Primitive    e.g. Int = 100
+            // Primitive    -> Specific     e.g. Int | String is = 100
+            // XvmPrimitive -> XvmPrimitive e.g. Int128 = 100
+            // XvmPrimitive -> Specific     e.g. Int128 | String is = 100
+
+            switch (regFlavor.name() + "->" + propFlavor.name()) {
+            case "Specific->Specific" ->
+                code.putfield(CD_this, jitName, cdProp);
+
+            case "Specific->Primitive" -> {
+                // must be setting a primitive to Null
+                assert reg.type().isOnlyNullable();
+                code.pop();
+                ClassDesc cd = JitTypeDesc.getJavaPrimitive(baseType);
+                Builder.defaultLoad(code, cd);
+                code.putfield(CD_this, jitName, cd)
+                    .aload(0)
+                    .iconst_1()
+                    .putfield(CD_this, jitName + EXT, CD_boolean);
+            }
+
+            case "Specific->XvmPrimitive" -> {
+                // must be setting a XVM primitive to Null
+                assert reg.type().isOnlyNullable();
+                code.pop();
+                ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(baseType);
+                for (int i = 0; i < cds.length; i++) {
+                    Builder.defaultLoad(code, cds[i]);
+                    code.putfield(CD_this, jitName + "$" + i, cds[i])
+                        .aload(0);
+                }
+                code.iconst_1()
+                    .putfield(CD_this, jitName + EXT, CD_boolean);
+            }
+
+            case "Primitive->Primitive" ->
+                code.putfield(CD_this, jitName, reg.cd());
+
+            case "Primitive->Specific", "XvmPrimitive->Specific" -> {
+                Builder.box(code, reg);
+                code.putfield(CD_this, jitName, cdProp);
+            }
+
+            case "XvmPrimitive->XvmPrimitive" -> {
+                ClassDesc[] cds = reg.slotCds();
+                for (int i = cds.length - 1; i >= 0; i--) {
+                    code.aload(0) // Stack: { this }
+                        .dup_x2()
+                        .pop()
+                        .putfield(CD_this, jitName + "$" + i, cds[i]);
+                }
+                code.pop(); // pop the extra "aload(0)" from the stack
+            }
+
+            default ->
+                throw new IllegalStateException("Invalid register flavor: " + regFlavor +
+                    " for property: " + propFlavor);
+            }
+        }
     }
 
     /**
@@ -3740,7 +3798,9 @@ public class CommonBuilder
 // TODO     "org.xtclang.ecstasy.numbers.Int*",             // depends on IntLiteral
             "org.xtclang.ecstasy.numbers.IntNumber",
             "org.xtclang.ecstasy.numbers.IntConvertible",
-//            "org.xtclang.ecstasy.numbers.UInt*",          // need Range support
+            "org.xtclang.ecstasy.numbers.IntLiteral",
+            "org.xtclang.ecstasy.numbers.Number$Signum*",
+// TODO     "org.xtclang.ecstasy.numbers.UInt*",            // need Range support
             "org.xtclang.ecstasy.numbers.IntN",
             "org.xtclang.ecstasy.numbers.UIntN",
             "org.xtclang.ecstasy.numbers.UIntNumber",
