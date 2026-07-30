@@ -68,16 +68,16 @@ const RestrictedClient(Client underlying)
     @Override
     String toString() {
         return $|RestrictedClient {mode} \
-                |  {{
-                |  if (!(hostPorts.is(HostPort[]) && hostPorts.empty))
-                |     {
-                |     $.addAll("hosts={hostPorts}");
-                |     }
-                |  if (!(protocols.is(Protocol[]) && protocols.empty))
-                |    {
-                |    $.addAll("protocols={protocols}");
-                |    }
-                |  }}
+                |{{
+                |if (!(hostPorts.is(HostPort[]) && hostPorts.empty))
+                |   {
+                |   $.addAll("hosts={hostPorts}");
+                |   }
+                |if (!(protocols.is(Protocol[]) && protocols.empty))
+                |  {
+                |  $.addAll("protocols={protocols}");
+                |  }
+                |}}
                 ;
     }
 }
