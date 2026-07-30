@@ -13,6 +13,7 @@ package tryTests {
         testAssert2(False);
         testUsing();
         testTryWithIntResource();
+        testBreakScope();
     }
 
     void testTry1() {
@@ -113,5 +114,20 @@ package tryTests {
             n1 = n2;
         }
         assert n1 == 100;
+    }
+
+    void testBreakScope() {
+        Int loopCount = 0;
+
+        while (loopCount < 1) {
+            Byte   scoped1 = 1;
+            String scoped2 = "";
+            if (scoped1 > 0) {
+                break;
+            }
+            ++loopCount;
+        }
+
+        assert loopCount == 0 as $"loopCount={loopCount}";
     }
 }
