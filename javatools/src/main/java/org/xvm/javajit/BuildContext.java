@@ -1309,7 +1309,7 @@ public class BuildContext {
 
     /**
      * Build the code to load a value for a constant on the Java stack.
-     *
+     * <p/>
      * We **always** load a primitive value if possible.
      */
     public RegisterInfo loadConstant(CodeBuilder code, Constant constant) {
@@ -1317,18 +1317,20 @@ public class BuildContext {
     }
 
     /**
-     * Generate a "load" for the specified TypeConstant.
+     * Generate a load of the specified TypeConstant, resolving formal types against this build
+     * context when possible.
+     * <p/>
      * Out: TypeConstant on Java stack
      */
     public void loadTypeConstant(CodeBuilder code, TypeConstant type) {
-        builder.loadTypeConstant(code, type);
+        builder.loadTypeConstant(this, code, type);
     }
 
     /**
      * Generate a "load" for an nType object for the specified TypeConstant.
-     *
+     * <p/>
      * Note: the specified type must be {@link TypeConstant#isTypeOfType() type-of-type}.
-     *
+     * <p/>
      * Out: nType object instance
      */
     public RegisterInfo loadType(CodeBuilder code, TypeConstant type) {
@@ -2740,42 +2742,7 @@ public class BuildContext {
      */
     public JitMethodDesc buildNew(CodeBuilder code, TypeConstant typeTarget,
                                   MethodConstant idCtor, Consumer<JitMethodDesc> argsLoader) {
-        TypeInfo   infoTarget = typeTarget.ensureTypeInfo();
-        MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
-
-        if (infoCtor == null) {
-            infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();
-            infoCtor   = infoTarget.getMethodById(idCtor);
-        }
-
-        if (infoCtor == null) {
-            throw new RuntimeException("Unresolvable constructor \"" +
-                idCtor.getValueString() + "\" for " + typeTarget.getValueString());
-        }
-
-        ClassDesc     cdTarget = builder.ensureClassDesc(typeTarget);
-        JitMethodDesc jmdNew   = Builder.convertConstructToNew(infoTarget, cdTarget,
-                                    (JitCtorDesc) infoCtor.getJitDesc(builder, typeTarget));
-
-        boolean fOptimized = jmdNew.isOptimized;
-        String  sJitNew    = infoCtor.ensureJitMethodName(typeSystem).replace("construct", Builder.NEW);
-        MethodTypeDesc md;
-        if (fOptimized) {
-            md       = jmdNew.optimizedMD;
-            sJitNew += Builder.OPT;
-        }
-        else {
-            md = jmdNew.standardMD;
-        }
-
-        loadCtx(code);
-        if (infoTarget.hasGenericTypes()) {
-            loadTypeConstant(code, typeTarget);
-        }
-        argsLoader.accept(jmdNew);
-
-        code.invokestatic(cdTarget, sJitNew, md);
-        return jmdNew;
+        return builder.buildNew(this, code, typeTarget, idCtor, argsLoader, ctxSlot(code));
     }
 
     /**

@@ -12,10 +12,12 @@ import java.lang.constant.MethodHandleDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import java.math.BigInteger;
+import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -81,14 +83,6 @@ public abstract class Builder {
     public boolean isPrimitive() {
         // in theory, this could be cached as it is in CommonBuilder
         return getThisType().isJitPrimitive();
-    }
-
-    /**
-     * Generate a "load" for the specified TypeConstant.
-     * Out: TypeConstant on Java stack
-     */
-    protected void loadTypeConstant(CodeBuilder code, TypeConstant type) {
-        throw new UnsupportedOperationException();
     }
 
     /**
@@ -160,8 +154,52 @@ public abstract class Builder {
     }
 
     /**
+     * Generate a load of the specified TypeConstant, without performing any formal type resolution.
+     * In other words, if this Builder is building {@code List<Int>} and this method is told to load
+     * the TypeConstant for {@code Array<Element>}, then it will load the TypeConstant
+     * {@code Array<Element>}.
+     * <p/>
+     * This method never resolves formal types.
+     * <p/>
+     * Out: TypeConstant on Java stack
+     */
+    public void loadTypeConstant(CodeBuilder code, TypeConstant type) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Generate a load of the specified TypeConstant, resolving formal types if possible when the
+     * build context indicates that resolution is applicable. In other words, if a method on
+     * {@code List<Int>} is being compiled, and it loads the TypeConstant for
+     * {@code Array<Element>}, then the TypeConstant {@code Array<Int>} will be loaded.
+     * <p/>
+     * If no build context is supplied, the TypeConstant is loaded without performing any formal
+     * type resolution.
+     * <p/>
+     * Out: TypeConstant on Java stack
+     */
+    protected void loadTypeConstant(BuildContext bctx, CodeBuilder code, TypeConstant type) {
+        loadTypeConstant(code, type);
+
+        if (bctx != null && !bctx.isFunction && type.containsFormalType(true)) {
+            code.dup()
+                .invokevirtual(CD_TypeConstant, "getConstantPool",
+                        MethodTypeDesc.of(CD_ConstantPool));
+
+            RegisterInfo regThis = bctx.loadThis(code);
+            if (regThis.type().isJitInterface()) {
+                code.checkcast(CD_nObj);
+            }
+            bctx.loadCtx(code);
+            code.invokevirtual(CD_nObj, "$xvmType", MD_xvmType)
+                .invokevirtual(CD_TypeConstant, "resolveGenerics",
+                        MethodTypeDesc.of(CD_TypeConstant, CD_ConstantPool, CD_GenericTypeResolver));
+        }
+    }
+
+    /**
      * Build the code to load a value for a constant on the Java stack.
-     *
+     * <p/>
      * We **always** load a primitive value if possible.
      */
     public RegisterInfo loadConstant(CodeBuilder code, Constant constant) {
@@ -170,7 +208,7 @@ public abstract class Builder {
 
     /**
      * Build the code to load a value for a constant on the Java stack.
-     *
+     * <p/>
      * We **always** load a primitive value if possible.
      */
     public RegisterInfo loadConstant(BuildContext bctx, CodeBuilder code, Constant constant) {
@@ -278,17 +316,6 @@ public abstract class Builder {
             code.ldc(byteConstant.getValue());
             return new SingleSlot(constant.getType(), Primitive, CD_int, "");
 
-        case LiteralConstant litConstant:
-            switch (litConstant.getFormat()) {
-            case IntLiteral:
-                // TODO: delegate to IntN
-                break;
-            case FPLiteral:
-                // TODO: delegate to FloatN
-                break;
-            }
-            break;
-
         case SingletonConstant singleton: {
             if (singleton.getClassConstant() instanceof PropertyConstant propId) {
                 TypeConstant type = singleton.getType();
@@ -339,7 +366,7 @@ public abstract class Builder {
 
         case TypeConstant type:
             assert type.isTypeOfType();
-            return bctx.loadType(code, type);
+            return bctx.loadType(code, type); // TODO move loadType here?
 
         case ClassConstant _:
         case DecoratedClassConstant _: {
@@ -524,7 +551,7 @@ public abstract class Builder {
 
             // call construct(Key[] keys, Value[]? vals, Boolean inPlace = False)
             loadCtx(bctx, code);
-            loadTypeConstant(code, mapType);
+            loadTypeConstant(bctx, code, mapType);
             loadArray(bctx, code, keysType, constMap.keySet().toArray(Constant.NO_CONSTS));
             loadArray(bctx, code, valsType, constMap.values().toArray(Constant.NO_CONSTS));
 
@@ -705,7 +732,7 @@ public abstract class Builder {
 
         // Note: we remove the immutability here; it will be added back upon "$makeImmut"
         loadCtx(bctx, code);
-        loadTypeConstant(code, arrayType.removeImmutable());
+        loadTypeConstant(bctx, code, arrayType.removeImmutable());
         code.loadConstant((long) values.length)
             .iconst_0()
             .invokestatic(cdArray, "$new$p",
@@ -780,7 +807,7 @@ public abstract class Builder {
                 cdPrimitive, CD_boolean, CD_boolean, CD_boolean, CD_boolean);
 
         loadCtx(bctx, code);
-        loadTypeConstant(code, rangeType);
+        loadTypeConstant(bctx, code, rangeType);
         loadConstant(bctx, code, values[0]);
         loadConstant(bctx, code, values[1]);
         code.loadConstant(rangeConst.isFirstExcluded() ? 1 : 0);
@@ -832,8 +859,11 @@ public abstract class Builder {
             typeContainer = typeContainer.resolveConstraints().ensureAccess(Constants.Access.PRIVATE);
         }
 
-        PropertyInfo  xvmInfo    = propId.getPropertyInfo(typeContainer);
-        PropertyInfo  jitInfo    = propId.getPropertyInfo(typeContainer.getCanonicalJitType());
+        PropertyInfo xvmInfo      = propId.getPropertyInfo(typeContainer);
+        TypeConstant typeJit      = typeContainer.getCanonicalJitType();
+        PropertyInfo jitInfo      = typeJit.equals(pool().typeObject()) // REVIEW GG
+                ? xvmInfo
+                : propId.getPropertyInfo(typeJit);
         TypeConstant  typeOwner  = jitInfo.getOwnerType(this, typeContainer);
         JitMethodDesc jmdGet     = jitInfo.getGetterJitDesc(this, typeContainer);
         String        getterName = jitInfo.ensureGetterJitMethodName(typeSystem);
@@ -1636,6 +1666,58 @@ public abstract class Builder {
     }
 
     /**
+     * Call the "new$" [static] method.
+     *
+     * @param bctx       optional BuildContext
+     * @param argsLoader the function (consumer) that is responsible for loading the arguments
+     *                   on the Java stack
+     */
+    public JitMethodDesc buildNew(
+            BuildContext            bctx,
+            CodeBuilder             code,
+            TypeConstant            typeTarget,
+            MethodConstant          idCtor,
+            Consumer<JitMethodDesc> argsLoader,
+            int                     ctxSlot) {
+        TypeInfo   infoTarget = typeTarget.ensureTypeInfo();
+        MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
+
+        if (infoCtor == null) {
+            infoTarget = typeTarget.ensureAccess(Constants.Access.PRIVATE).ensureTypeInfo();
+            infoCtor   = infoTarget.getMethodById(idCtor);
+        }
+
+        if (infoCtor == null) {
+            throw new RuntimeException("Unresolvable constructor \"" +
+                    idCtor.getValueString() + "\" for " + typeTarget.getValueString());
+        }
+
+        ClassDesc     cdTarget = ensureClassDesc(typeTarget);
+        JitMethodDesc jmdNew   = convertConstructToNew(infoTarget, cdTarget,
+                (JitCtorDesc) infoCtor.getJitDesc(this, typeTarget));
+
+        boolean fOptimized = jmdNew.isOptimized;
+        String  sJitNew    = infoCtor.ensureJitMethodName(typeSystem).replace("construct", NEW);
+        MethodTypeDesc md;
+        if (fOptimized) {
+            md       = jmdNew.optimizedMD;
+            sJitNew += Builder.OPT;
+        }
+        else {
+            md = jmdNew.standardMD;
+        }
+
+        code.aload(ctxSlot);
+        if (infoTarget.hasGenericTypes()) {
+            loadTypeConstant(bctx, code, typeTarget); // TODO Chet - is "bctx" required here?
+        }
+        argsLoader.accept(jmdNew);
+
+        code.invokestatic(cdTarget, sJitNew, md);
+        return jmdNew;
+    }
+
+    /**
      * For a given class name create a name for an associated class of the specified shape.
      */
     public static String getShapeName(String className, ClassfileShape shape) {
@@ -1740,9 +1822,11 @@ public abstract class Builder {
     public static final String N_Enumeration  = "org.xtclang.ecstasy.reflect.Enumeration";
     public static final String N_Exception    = "org.xtclang.ecstasy.Exception";
     public static final String N_Hashable     = "org.xtclang.ecstasy.collections.Hashable";
+    public static final String N_FPLiteral    = "org.xtclang.ecstasy.numbers.FPLiteral";
     public static final String N_Float16      = "org.xtclang.ecstasy.numbers.Float16";
     public static final String N_Float32      = "org.xtclang.ecstasy.numbers.Float32";
     public static final String N_Float64      = "org.xtclang.ecstasy.numbers.Float64";
+    public static final String N_IntLiteral   = "org.xtclang.ecstasy.numbers.IntLiteral";
     public static final String N_Int8         = "org.xtclang.ecstasy.numbers.Int8";
     public static final String N_Int16        = "org.xtclang.ecstasy.numbers.Int16";
     public static final String N_Int32        = "org.xtclang.ecstasy.numbers.Int32";
@@ -1833,99 +1917,103 @@ public abstract class Builder {
 
     // ----- well-known class descriptors ----------------------------------------------------------
 
-    public static final ClassDesc CD_Array         = ClassDesc.of(N_Array);
-    public static final ClassDesc CD_ArrayBit      = ClassDesc.of(N_ArrayBit);
-    public static final ClassDesc CD_ArrayBoolean  = ClassDesc.of(N_ArrayBoolean);
-    public static final ClassDesc CD_ArrayChar     = ClassDesc.of(N_ArrayChar);
-    public static final ClassDesc CD_ArrayDec32    = ClassDesc.of(N_ArrayDec32);
-    public static final ClassDesc CD_ArrayDec64    = ClassDesc.of(N_ArrayDec64);
-    public static final ClassDesc CD_ArrayDec128   = ClassDesc.of(N_ArrayDec128);
-    public static final ClassDesc CD_ArrayFloat32  = ClassDesc.of(N_ArrayFloat32);
-    public static final ClassDesc CD_ArrayFloat64  = ClassDesc.of(N_ArrayFloat64);
-    public static final ClassDesc CD_ArrayInt8     = ClassDesc.of(N_ArrayInt8);
-    public static final ClassDesc CD_ArrayInt16    = ClassDesc.of(N_ArrayInt16);
-    public static final ClassDesc CD_ArrayInt32    = ClassDesc.of(N_ArrayInt32);
-    public static final ClassDesc CD_ArrayInt64    = ClassDesc.of(N_ArrayInt64);
-    public static final ClassDesc CD_ArrayInt128   = ClassDesc.of(N_ArrayInt128);
-    public static final ClassDesc CD_ArrayNibble   = ClassDesc.of(N_ArrayNibble);
-    public static final ClassDesc CD_ArrayUInt8    = ClassDesc.of(N_ArrayUInt8);
-    public static final ClassDesc CD_ArrayUInt16   = ClassDesc.of(N_ArrayUInt16);
-    public static final ClassDesc CD_ArrayUInt32   = ClassDesc.of(N_ArrayUInt32);
-    public static final ClassDesc CD_ArrayUInt64   = ClassDesc.of(N_ArrayUInt64);
-    public static final ClassDesc CD_ArrayUInt128  = ClassDesc.of(N_ArrayUInt128);
-    public static final ClassDesc CD_ArrayObj      = ClassDesc.of(N_ArrayObj);
-    public static final ClassDesc CD_Class         = ClassDesc.of(N_Class);
-    public static final ClassDesc CD_Enumeration   = ClassDesc.of(N_Enumeration);
-    public static final ClassDesc CD_Exception     = ClassDesc.of(N_Exception);
-    public static final ClassDesc CD_Hashable      = ClassDesc.of(N_Hashable);
-    public static final ClassDesc CD_nFunction     = ClassDesc.of(N_nFunction);
-    public static final ClassDesc CD_nMethod       = ClassDesc.of(N_nMethod);
-    public static final ClassDesc CD_nModule       = ClassDesc.of(N_nModule);
-    public static final ClassDesc CD_nPackage      = ClassDesc.of(N_nPackage);
-    public static final ClassDesc CD_nRangeBoolean = ClassDesc.of(N_nRangeBoolean);
-    public static final ClassDesc CD_nRangeFloat32 = ClassDesc.of(N_nRangeFloat32);
-    public static final ClassDesc CD_nRangeFloat64 = ClassDesc.of(N_nRangeFloat64);
-    public static final ClassDesc CD_nRangeInt8    = ClassDesc.of(N_nRangeInt8);
-    public static final ClassDesc CD_nRangeInt64   = ClassDesc.of(N_nRangeInt64);
+    public static final ClassDesc CD_Array               = ClassDesc.of(N_Array);
+    public static final ClassDesc CD_ArrayBit            = ClassDesc.of(N_ArrayBit);
+    public static final ClassDesc CD_ArrayBoolean        = ClassDesc.of(N_ArrayBoolean);
+    public static final ClassDesc CD_ArrayChar           = ClassDesc.of(N_ArrayChar);
+    public static final ClassDesc CD_ArrayDec32          = ClassDesc.of(N_ArrayDec32);
+    public static final ClassDesc CD_ArrayDec64          = ClassDesc.of(N_ArrayDec64);
+    public static final ClassDesc CD_ArrayDec128         = ClassDesc.of(N_ArrayDec128);
+    public static final ClassDesc CD_ArrayFloat32        = ClassDesc.of(N_ArrayFloat32);
+    public static final ClassDesc CD_ArrayFloat64        = ClassDesc.of(N_ArrayFloat64);
+    public static final ClassDesc CD_ArrayInt8           = ClassDesc.of(N_ArrayInt8);
+    public static final ClassDesc CD_ArrayInt16          = ClassDesc.of(N_ArrayInt16);
+    public static final ClassDesc CD_ArrayInt32          = ClassDesc.of(N_ArrayInt32);
+    public static final ClassDesc CD_ArrayInt64          = ClassDesc.of(N_ArrayInt64);
+    public static final ClassDesc CD_ArrayInt128         = ClassDesc.of(N_ArrayInt128);
+    public static final ClassDesc CD_ArrayNibble         = ClassDesc.of(N_ArrayNibble);
+    public static final ClassDesc CD_ArrayUInt8          = ClassDesc.of(N_ArrayUInt8);
+    public static final ClassDesc CD_ArrayUInt16         = ClassDesc.of(N_ArrayUInt16);
+    public static final ClassDesc CD_ArrayUInt32         = ClassDesc.of(N_ArrayUInt32);
+    public static final ClassDesc CD_ArrayUInt64         = ClassDesc.of(N_ArrayUInt64);
+    public static final ClassDesc CD_ArrayUInt128        = ClassDesc.of(N_ArrayUInt128);
+    public static final ClassDesc CD_ArrayObj            = ClassDesc.of(N_ArrayObj);
+    public static final ClassDesc CD_Class               = ClassDesc.of(N_Class);
+    public static final ClassDesc CD_Enumeration         = ClassDesc.of(N_Enumeration);
+    public static final ClassDesc CD_Exception           = ClassDesc.of(N_Exception);
+    public static final ClassDesc CD_Hashable            = ClassDesc.of(N_Hashable);
+    public static final ClassDesc CD_nFunction           = ClassDesc.of(N_nFunction);
+    public static final ClassDesc CD_nMethod             = ClassDesc.of(N_nMethod);
+    public static final ClassDesc CD_nModule             = ClassDesc.of(N_nModule);
+    public static final ClassDesc CD_nPackage            = ClassDesc.of(N_nPackage);
+    public static final ClassDesc CD_nRangeBoolean       = ClassDesc.of(N_nRangeBoolean);
+    public static final ClassDesc CD_nRangeFloat32       = ClassDesc.of(N_nRangeFloat32);
+    public static final ClassDesc CD_nRangeFloat64       = ClassDesc.of(N_nRangeFloat64);
+    public static final ClassDesc CD_nRangeInt8          = ClassDesc.of(N_nRangeInt8);
+    public static final ClassDesc CD_nRangeInt64         = ClassDesc.of(N_nRangeInt64);
 
-    public static final ClassDesc CD_nConst        = ClassDesc.of(N_nConst);
-    public static final ClassDesc CD_nEnum         = ClassDesc.of(N_nEnum);
-    public static final ClassDesc CD_nException    = ClassDesc.of(N_nException);
-    public static final ClassDesc CD_nObj          = ClassDesc.of(N_nObj);
-    public static final ClassDesc CD_nRef          = ClassDesc.of(N_nRef);
-    public static final ClassDesc CD_nType         = ClassDesc.of(N_nType);
-    public static final ClassDesc CD_nUtil         = ClassDesc.of(N_nUtil);
+    public static final ClassDesc CD_nConst              = ClassDesc.of(N_nConst);
+    public static final ClassDesc CD_nEnum               = ClassDesc.of(N_nEnum);
+    public static final ClassDesc CD_nException          = ClassDesc.of(N_nException);
+    public static final ClassDesc CD_nObj                = ClassDesc.of(N_nObj);
+    public static final ClassDesc CD_nRef                = ClassDesc.of(N_nRef);
+    public static final ClassDesc CD_nType               = ClassDesc.of(N_nType);
+    public static final ClassDesc CD_nUtil               = ClassDesc.of(N_nUtil);
 
-    public static final ClassDesc CD_Bit           = ClassDesc.of(N_Bit);
-    public static final ClassDesc CD_Boolean       = ClassDesc.of(N_Boolean);
-    public static final ClassDesc CD_Char          = ClassDesc.of(N_Char);
-    public static final ClassDesc CD_Dec32         = ClassDesc.of(N_Dec32);
-    public static final ClassDesc CD_Dec64         = ClassDesc.of(N_Dec64);
-    public static final ClassDesc CD_Dec128        = ClassDesc.of(N_Dec128);
-    public static final ClassDesc CD_Float16       = ClassDesc.of(N_Float16);
-    public static final ClassDesc CD_Float32       = ClassDesc.of(N_Float32);
-    public static final ClassDesc CD_Float64       = ClassDesc.of(N_Float64);
-    public static final ClassDesc CD_Int8          = ClassDesc.of(N_Int8);
-    public static final ClassDesc CD_Int16         = ClassDesc.of(N_Int16);
-    public static final ClassDesc CD_Int32         = ClassDesc.of(N_Int32);
-    public static final ClassDesc CD_Int64         = ClassDesc.of(N_Int64);
-    public static final ClassDesc CD_Int128        = ClassDesc.of(N_Int128);
-    public static final ClassDesc CD_IntN          = ClassDesc.of(N_IntN);
-    public static final ClassDesc CD_Nibble        = ClassDesc.of(N_Nibble);
-    public static final ClassDesc CD_Nullable      = ClassDesc.of(N_Nullable);
-    public static final ClassDesc CD_Object        = ClassDesc.of(N_Object);
-    public static final ClassDesc CD_Orderable     = ClassDesc.of(N_Orderable);
-    public static final ClassDesc CD_Ordered       = ClassDesc.of(N_Ordered);
-    public static final ClassDesc CD_String        = ClassDesc.of(N_String);
-    public static final ClassDesc CD_UInt8         = ClassDesc.of(N_UInt8);
-    public static final ClassDesc CD_UInt16        = ClassDesc.of(N_UInt16);
-    public static final ClassDesc CD_UInt32        = ClassDesc.of(N_UInt32);
-    public static final ClassDesc CD_UInt64        = ClassDesc.of(N_UInt64);
-    public static final ClassDesc CD_UInt128       = ClassDesc.of(N_UInt128);
-    public static final ClassDesc CD_UIntN         = ClassDesc.of(N_UIntN);
-    public static final ClassDesc CD_AppenderChar  = ClassDesc.of(N_AppenderChar);
+    public static final ClassDesc CD_Bit                 = ClassDesc.of(N_Bit);
+    public static final ClassDesc CD_Boolean             = ClassDesc.of(N_Boolean);
+    public static final ClassDesc CD_Char                = ClassDesc.of(N_Char);
+    public static final ClassDesc CD_Dec32               = ClassDesc.of(N_Dec32);
+    public static final ClassDesc CD_Dec64               = ClassDesc.of(N_Dec64);
+    public static final ClassDesc CD_Dec128              = ClassDesc.of(N_Dec128);
+    public static final ClassDesc CD_Float16             = ClassDesc.of(N_Float16);
+    public static final ClassDesc CD_Float32             = ClassDesc.of(N_Float32);
+    public static final ClassDesc CD_Float64             = ClassDesc.of(N_Float64);
+    public static final ClassDesc CD_FPLiteral           = ClassDesc.of(N_FPLiteral);
+    public static final ClassDesc CD_Int8                = ClassDesc.of(N_Int8);
+    public static final ClassDesc CD_Int16               = ClassDesc.of(N_Int16);
+    public static final ClassDesc CD_Int32               = ClassDesc.of(N_Int32);
+    public static final ClassDesc CD_Int64               = ClassDesc.of(N_Int64);
+    public static final ClassDesc CD_Int128              = ClassDesc.of(N_Int128);
+    public static final ClassDesc CD_IntN                = ClassDesc.of(N_IntN);
+    public static final ClassDesc CD_IntLiteral          = ClassDesc.of(N_IntLiteral);
+    public static final ClassDesc CD_Nibble              = ClassDesc.of(N_Nibble);
+    public static final ClassDesc CD_Nullable            = ClassDesc.of(N_Nullable);
+    public static final ClassDesc CD_Object              = ClassDesc.of(N_Object);
+    public static final ClassDesc CD_Orderable           = ClassDesc.of(N_Orderable);
+    public static final ClassDesc CD_Ordered             = ClassDesc.of(N_Ordered);
+    public static final ClassDesc CD_String              = ClassDesc.of(N_String);
+    public static final ClassDesc CD_UInt8               = ClassDesc.of(N_UInt8);
+    public static final ClassDesc CD_UInt16              = ClassDesc.of(N_UInt16);
+    public static final ClassDesc CD_UInt32              = ClassDesc.of(N_UInt32);
+    public static final ClassDesc CD_UInt64              = ClassDesc.of(N_UInt64);
+    public static final ClassDesc CD_UInt128             = ClassDesc.of(N_UInt128);
+    public static final ClassDesc CD_UIntN               = ClassDesc.of(N_UIntN);
+    public static final ClassDesc CD_AppenderChar        = ClassDesc.of(N_AppenderChar);
 
-    public static final ClassDesc CD_Container     = ClassDesc.of(Container.class.getName());
-    public static final ClassDesc CD_Ctx           = ClassDesc.of(Ctx.class.getName());
-    public static final ClassDesc CD_CtorCtx       = ClassDesc.of(Ctx.CtorCtx.class.getName());
-    public static final ClassDesc CD_TypeConstant  = ClassDesc.of(TypeConstant.class.getName());
-    public static final ClassDesc CD_TypeSystem    = ClassDesc.of(TypeSystem.class.getName());
+    public static final ClassDesc CD_Container           = ClassDesc.of(Container.class.getName());
+    public static final ClassDesc CD_ConstantPool        = ClassDesc.of(ConstantPool.class.getName());
+    public static final ClassDesc CD_Ctx                 = ClassDesc.of(Ctx.class.getName());
+    public static final ClassDesc CD_CtorCtx             = ClassDesc.of(Ctx.CtorCtx.class.getName());
+    public static final ClassDesc CD_GenericTypeResolver = ClassDesc.of(GenericTypeResolver.class.getName());
+    public static final ClassDesc CD_TypeConstant        = ClassDesc.of(TypeConstant.class.getName());
+    public static final ClassDesc CD_TypeSystem          = ClassDesc.of(TypeSystem.class.getName());
 
-    public static final ClassDesc CD_JavaSystem    = ClassDesc.of(java.lang.System.class.getName());
-    public static final ClassDesc CD_JavaBoolean   = ClassDesc.of(java.lang.Boolean.class.getName());
-    public static final ClassDesc CD_JavaDouble    = ClassDesc.of(java.lang.Double.class.getName());
-    public static final ClassDesc CD_JavaFloat    = ClassDesc.of(java.lang.Float.class.getName());
-    public static final ClassDesc CD_JavaInteger   = ClassDesc.of(java.lang.Integer.class.getName());
-    public static final ClassDesc CD_JavaLong      = ClassDesc.of(java.lang.Long.class.getName());
-    public static final ClassDesc CD_JavaMath      = ClassDesc.of(java.lang.Math.class.getName());
-    public static final ClassDesc CD_JavaObject    = ClassDesc.of(java.lang.Object.class.getName());
-    public static final ClassDesc CD_JavaString    = ClassDesc.of(java.lang.String.class.getName());
+    public static final ClassDesc CD_JavaSystem          = ClassDesc.of(java.lang.System.class.getName());
+    public static final ClassDesc CD_JavaBoolean         = ClassDesc.of(java.lang.Boolean.class.getName());
+    public static final ClassDesc CD_JavaDouble          = ClassDesc.of(java.lang.Double.class.getName());
+    public static final ClassDesc CD_JavaFloat           = ClassDesc.of(java.lang.Float.class.getName());
+    public static final ClassDesc CD_JavaInteger         = ClassDesc.of(java.lang.Integer.class.getName());
+    public static final ClassDesc CD_JavaLong            = ClassDesc.of(java.lang.Long.class.getName());
+    public static final ClassDesc CD_JavaMath            = ClassDesc.of(java.lang.Math.class.getName());
+    public static final ClassDesc CD_JavaObject          = ClassDesc.of(java.lang.Object.class.getName());
+    public static final ClassDesc CD_JavaString          = ClassDesc.of(java.lang.String.class.getName());
 
     // ----- well-known custom primitives ----------------------------------------------------------
 
-    public static final ClassDesc[] CDs_Int      = new ClassDesc[]{CD_int};
-    public static final ClassDesc[] CDs_Long     = new ClassDesc[]{CD_long};
-    public static final ClassDesc[] CDs_LongLong = new ClassDesc[]{CD_long, CD_long};
+    public static final ClassDesc[] CDs_Int              = new ClassDesc[]{CD_int};
+    public static final ClassDesc[] CDs_Long             = new ClassDesc[]{CD_long};
+    public static final ClassDesc[] CDs_LongLong         = new ClassDesc[]{CD_long, CD_long};
 
     // ----- well-known methods --------------------------------------------------------------------
 
