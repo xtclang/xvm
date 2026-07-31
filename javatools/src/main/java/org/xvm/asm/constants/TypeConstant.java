@@ -5270,7 +5270,7 @@ public abstract class TypeConstant
         // functions and constants cannot have properties; methods cannot have constants
         IdentityConstant constParent = prop.getIdentityConstant().getParentConstant();
         boolean          fConstant   = prop.isStatic();
-        boolean          fLazyConst  = fConstant && prop.containsRefAnnotation(pool.clzLazy());
+        boolean          fLazyConst  = fConstant && prop.isLazy();
         switch (constParent.getFormat()) {
         case Property:
             if (!fConstant && prop.getParent().isStatic()) {
