@@ -47,6 +47,7 @@ import org.xvm.runtime.template.annotations.xFuture.FutureHandle;
 import org.xvm.runtime.template.annotations.xFuture.FutureTupleHandle;
 import org.xvm.runtime.template.annotations.xInject;
 import org.xvm.runtime.template.annotations.xInject.InjectedHandle;
+import org.xvm.runtime.template.annotations.xLazy;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
@@ -939,6 +940,13 @@ public abstract class Utils {
             default:
                 throw new IllegalStateException();
             }
+        }
+
+        if (prop.isLazy()) {
+            // create an unassigned LazyHandle
+            TypeComposition clzRef   = idProp.getRefType(null).ensureClass(frame);
+            xLazy           template = (xLazy) frame.ensureTemplate(frame.poolContext().clzLazy());
+            return template.introduceRef(frame, clzRef, idProp.getName(), Op.A_STACK);
         }
 
         Constant constVal = prop.getInitialValue();

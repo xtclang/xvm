@@ -17,6 +17,7 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.DeferredPropertyHandle;
 import org.xvm.runtime.ObjectHandle.DeferredSingletonHandle;
 import org.xvm.runtime.ObjectHandle.InitializingHandle;
+import org.xvm.runtime.template.annotations.xLazy;
 
 
 /**
@@ -52,6 +53,29 @@ public class ConstHeap {
         if (constValue instanceof SingletonConstant constSingle) {
             hValue = constSingle.getHandle();
             if (hValue != null) {
+                if (hValue instanceof xLazy.LazyHandle hLazy && !hLazy.isAssigned()) {
+                    // compute the lazy value now
+                    switch (hLazy.getVarSupport().getReferent(frame, hLazy, Op.A_STACK)) {
+                    case Op.R_NEXT:
+                        hValue = frame.popStack();
+                        break;
+
+                    case Op.R_CALL: {
+                        Frame frameNext = frame.m_frameNext;
+                        frameNext.addContinuation(frameCaller -> {
+                            saveConstHandle(constValue, frameCaller.peekStack());
+                            return Op.R_NEXT;
+                        });
+                        return new DeferredCallHandle(frameNext);
+                    }
+
+                    case Op.R_EXCEPTION:
+                        return new DeferredCallHandle(frame.clearException());
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
                 return saveConstHandle(constValue, hValue);
             }
 

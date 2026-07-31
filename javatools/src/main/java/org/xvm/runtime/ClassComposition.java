@@ -670,7 +670,8 @@ public class ClassComposition
                     cRegular++;
                 }
             } else {
-                assert clzRef == null;
+                // lazy constants are handled by the runtime
+                assert clzRef == null || (infoProp.isLazy() && infoProp.isConstant());
             }
         }
 

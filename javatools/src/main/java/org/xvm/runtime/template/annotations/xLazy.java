@@ -123,8 +123,9 @@ public class xLazy
          * @return true iff this handle represents a lazy property on an immutable object
          */
         public boolean isPropertyOnImmutable() {
+            // absence of the OUTER indicates a static Lazy property
             ObjectHandle hOuter = getField(null, GenericHandle.OUTER);
-            return hOuter != null && !hOuter.isMutable();
+            return hOuter == null || !hOuter.isMutable();
         }
 
         /**

@@ -784,6 +784,10 @@ public class PropertyInfo
      * @return true iff the property is a Var (or false if the property is only a Ref)
      */
     public boolean isVar() {
+        if (isLazy()) {
+            return true;
+        }
+
         if (m_fSuppressVar || isConstant() || isFormalType() || isInjected()) {
             return false;
         }
