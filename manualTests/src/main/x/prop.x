@@ -99,10 +99,17 @@ module TestProps {
     }
 
     void testLazyProperty() {
-        assert lazy == 42;
+        assert !&lazyInstance.assigned;
+        assert lazyInstance == 42;
+        assert &lazyInstance.assigned;
+
+        assert !&lazyStatic.assigned;
+        assert lazyStatic == 42;
+        assert &lazyStatic.assigned;
     }
 
-    @Lazy Int lazy.calc() = 42;
+    @Lazy Int lazyInstance.calc() = 42;
+    static @Lazy Int lazyStatic.calc() = 42;
 
     static void testModuleProperty() {
         this:module.console.print("\n** testModuleProperty()");

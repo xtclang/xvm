@@ -236,6 +236,13 @@ public class PropertyStructure
     }
 
     /**
+     * @return true iff the property has the Lazy annotation
+     */
+    public boolean isLazy() {
+        return containsRefAnnotation(getConstantPool().clzLazy());
+    }
+
+    /**
      * @return true iff the property has a Future annotation
      */
     public boolean isFuture() {

@@ -5270,6 +5270,7 @@ public abstract class TypeConstant
         // functions and constants cannot have properties; methods cannot have constants
         IdentityConstant constParent = prop.getIdentityConstant().getParentConstant();
         boolean          fConstant   = prop.isStatic();
+        boolean          fLazyConst  = fConstant && prop.isLazy();
         switch (constParent.getFormat()) {
         case Property:
             if (!fConstant && prop.getParent().isStatic()) {
@@ -5324,7 +5325,7 @@ public abstract class TypeConstant
                         continue;
                     }
 
-                    if (fConstant) {
+                    if (fConstant && !fLazyConst) {
                         // the only method allowed under a static property is the initializer
                         log(errs, Severity.ERROR, VE_CONST_CODE_ILLEGAL,
                                 getValueString(),
@@ -5396,7 +5397,7 @@ public abstract class TypeConstant
             impl = Implementation.Native;
 
             // static properties of a type are language-level constant values, e.g. "Int KB = 1024;"
-            if (!fHasInject && !prop.hasInitialValue() &&
+            if (!fLazyConst && !fHasInject && !prop.hasInitialValue() &&
                     (prop.getInitialValue() == null) == (methodInit == null)) {
                 if (methodInit == null) {
                     // it is an error for a static property to not have an initial value
@@ -5426,7 +5427,7 @@ public abstract class TypeConstant
                         sName);
             }
 
-            if (fHasRefAnno) {
+            if (fHasRefAnno && !fLazyConst) {
                 // it is an error for a constant to be annotated in a manner that affects the Ref
                 log(errs, Severity.ERROR, VE_CONST_ANNOTATION_ILLEGAL,
                         getValueString(),

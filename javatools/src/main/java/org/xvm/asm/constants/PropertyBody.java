@@ -66,17 +66,22 @@ public class PropertyBody
                 || impl == Implementation.SansCode
                 || impl == Implementation.Explicit;
         assert (impl == Implementation.Delegating) ^ (constDelegate == null);
-        if (constInitVal != null && constInitFunc != null) {
-            // this can happen when the initial value is a constant function (lambda)
-            // or any other constant that refers to the initializer (see
-            // PropertyDeclarationStatement,validateContent);
-            // in that case we simply disregard the initializer
-            constInitFunc = null;
-        } else if (fConstant && constInitVal == null && constInitFunc == null && !struct.isInjected()) {
-            // this can only happen when we're building the TypeInfo for a partially compiled class,
-            // so we will need to invalidate the TypeInfo afterward;
-            // mark the implementation as "Implicit" just to assert it gets replaced later
-            impl = Implementation.Implicit;
+        if (fConstant) {
+            if (constInitVal != null && constInitFunc != null) {
+                // this can happen when the initial value is a constant function (lambda)
+                // or any other constant that refers to the initializer (see
+                // PropertyDeclarationStatement,validateContent);
+                // in that case we simply disregard the initializer
+                constInitFunc = null;
+            } else if (struct.isLazy()) {
+                // a static lazy property must have an explicit implementation
+                impl = Implementation.Explicit;
+            } else if (constInitVal == null && constInitFunc == null && !struct.isInjected()) {
+                // this can only happen when we're building the TypeInfo for a partially compiled class,
+                // so we will need to invalidate the TypeInfo afterward;
+                // mark the implementation as "Implicit" just to assert it gets replaced later
+                impl = Implementation.Implicit;
+            }
         }
         assert effectGet != null && effectSet != null;
 

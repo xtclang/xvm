@@ -2500,7 +2500,7 @@ public class NameExpression
 
             PropertyStructure prop = (PropertyStructure) idProp.getComponent();
             if (prop.isConstant() && !fSuppressDeref) {
-                assert !m_fAssignable;
+                assert !m_fAssignable || prop.isLazy();
                 m_plan = prop.hasInitialValue() ? Plan.PropertyDeref : Plan.Singleton;
                 return typeProp;
             }

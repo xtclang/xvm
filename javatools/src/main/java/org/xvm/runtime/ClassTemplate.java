@@ -31,6 +31,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -1476,6 +1477,15 @@ public abstract class ClassTemplate
         if (infoProp == null) {
             return frame.raiseException(
                 xException.unknownProperty(frame, idProp.getName(), hThis.getType()));
+        }
+
+        if (infoProp.isConstant() && infoProp.isLazy()) {
+            SingletonConstant constLazy =
+                    idProp.getConstantPool().ensureSingletonConstConstant(idProp);
+            // we need to avoid to kick the computation logic; they only asked for a ref
+            ObjectHandle hLazy = constLazy.getHandle();
+            assert hLazy != null; // it must be there - assigned or not
+            return frame.assignDeferredValue(iReturn, hLazy);
         }
 
         TypeComposition clzRef = clzThis.ensurePropertyComposition(infoProp);
