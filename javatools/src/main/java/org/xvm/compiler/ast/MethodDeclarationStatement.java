@@ -318,7 +318,8 @@ public class MethodDeclarationStatement
                 boolean fFinally     = isConstructorFinally();
                 boolean fValidator   = isValidator();
                 boolean fFunction    = isStatic(modifiers) || fConstructor ||
-                        container.isStatic() && !(container instanceof ClassStructure);
+                        container.isStatic() && !(container instanceof ClassStructure)
+                                             && !(container instanceof PropertyStructure);
 
                 // build array of annotations
                 ConstantPool pool         = container.getConstantPool();
