@@ -780,7 +780,6 @@ public class MethodBody {
         return JitMethodDesc.of(builder, typeTarget, isFunction() || isCtorOrValidator(),
                 isCtorOrValidator(), sig.getRawParams(), sig.getRawReturns(),
                                 method.getTypeParamCount() + method.getRequiredParamCount());
-                method.getTypeParamCount() + method.getRequiredParamCount());
     }
 
     /**
