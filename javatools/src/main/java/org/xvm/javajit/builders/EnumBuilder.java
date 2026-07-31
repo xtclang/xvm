@@ -20,6 +20,7 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.TypeSystem;
+import org.xvm.javajit.TypeSystem.Artifact;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_long;
@@ -32,12 +33,12 @@ import static java.lang.constant.ConstantDescs.CD_long;
  *   - implement the "enumeration" property
  */
 public class EnumBuilder extends CommonBuilder {
-    public EnumBuilder(TypeSystem typeSystem, TypeConstant type) {
-        super(typeSystem, type);
+    public EnumBuilder(TypeSystem typeSystem, Artifact art) {
+        super(typeSystem, art);
     }
 
     @Override
-    protected boolean assembleImplClass(String className, ClassBuilder classBuilder) {
+    protected boolean assembleClass(ClassBuilder classBuilder) {
         classBuilder.withSuperclass(getSuperCD())
                     .withFlags(ClassFile.ACC_PUBLIC | ClassFile.ACC_ABSTRACT);
         return true;
@@ -49,10 +50,10 @@ public class EnumBuilder extends CommonBuilder {
     }
 
     @Override
-    protected void assembleImplProperties(String className, ClassBuilder classBuilder) {
+    protected void assembleProperties(ClassBuilder classBuilder) {
         assembleEnumerationProp(classBuilder);
 
-        super.assembleImplProperties(className, classBuilder);
+        super.assembleProperties(classBuilder);
     }
 
     private void assembleEnumerationProp(ClassBuilder classBuilder) {
@@ -68,32 +69,41 @@ public class EnumBuilder extends CommonBuilder {
     }
 
     @Override
-    protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
+    protected void assembleMethods(ClassBuilder classBuilder) {
         // generate "equals" and "compare" functions
         generateOrderable(classBuilder, this);
 
-        super.assembleImplMethods(className, classBuilder);
+        super.assembleMethods(classBuilder);
     }
 
     public static void generateOrderable(ClassBuilder classBuilder, CommonBuilder builder) {
-        TypeInfo          typeInfo = builder.typeInfo;
-        SignatureConstant eqSig    = builder.pool().sigEquals();
-        MethodInfo        eqMethod = typeInfo.getMethodBySignature(eqSig);
-        JitMethodDesc     eqJmd    = eqMethod.getJitDesc(builder);
+        boolean           isBoolean = builder.jitType.equals(builder.pool().typeBoolean());
+        TypeInfo          typeInfo  = builder.typeInfo;
+        SignatureConstant eqSig     = builder.pool().sigEquals();
+        MethodInfo        eqMethod  = typeInfo.getMethodBySignature(eqSig);
+        JitMethodDesc     eqJmd     = eqMethod.getJitDesc(builder);
 
-        assert eqMethod != null;
-
+        // Boolean is **the only** optimized type that is an Enum; treat is separately
         classBuilder.withMethodBody(eqSig.getName()+OPT, eqJmd.optimizedMD,
-            ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, EnumBuilder::assembleEquals);
+                ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
+                isBoolean ? EnumBuilder::assembleBooleanEquals : EnumBuilder::assembleEquals);
 
         SignatureConstant cmpSig    = builder.pool().sigCompare();
         MethodInfo        cmpMethod = typeInfo.getMethodBySignature(cmpSig);
         JitMethodDesc     cmpJmd    = cmpMethod.getJitDesc(builder);
+        String            cmpName   = cmpSig.getName();
 
-        assert cmpMethod != null;
-
-        classBuilder.withMethodBody(cmpSig.getName(), cmpJmd.standardMD,
-            ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, code -> assembleCompare(builder, code));
+        if (isBoolean) {
+            assert cmpJmd.isOptimized;
+            classBuilder.withMethodBody(cmpName+OPT, cmpJmd.optimizedMD,
+                    ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
+                    code -> assembleBooleanCompare(builder, code));
+        } else {
+            assert !cmpJmd.isOptimized;
+            classBuilder.withMethodBody(cmpName, cmpJmd.standardMD,
+                    ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
+                    code -> assembleCompare(builder, code));
+        }
     }
 
     /**
@@ -101,13 +111,28 @@ public class EnumBuilder extends CommonBuilder {
      *    "public boolean equals$p(Ctx ctx, nType CompileType, [EnumType] o1, {EnumType} o2)"
      */
     private static void assembleEquals(CodeBuilder code) {
-        // all we need is to call the equivalent function on xEnum
+        // all we need is to call the equivalent function on nEnum
         code.aload(0)
             .aload(1)
             .aload(2)
             .aload(3)
             .invokestatic(CD_nEnum, "equals$p",
                 MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_nType, CD_nEnum, CD_nEnum))
+            .ireturn();
+    }
+
+    /**
+     * Generate primitive Boolean equality.
+     */
+    private static void assembleBooleanEquals(CodeBuilder code) {
+        Label notEqual = code.newLabel();
+        code.iload(2)
+            .iload(3)
+            .if_icmpne(notEqual)
+            .iconst_1()
+            .ireturn()
+            .labelBinding(notEqual)
+            .iconst_0()
             .ireturn();
     }
 
@@ -159,6 +184,18 @@ public class EnumBuilder extends CommonBuilder {
         // else return Equal;
         code.labelBinding(labelEq);
         builder.loadConstant(code, pool.valEqual());
+        code.areturn();
+    }
+
+    /**
+     * Generate primitive Boolean comparison.
+     */
+    private static void assembleBooleanCompare(CommonBuilder builder, CodeBuilder code) {
+        code.iload(2)
+            .iload(3)
+            .isub();
+        builder.convertIntToOrdered(code);
+        builder.loadConstant(code, builder.pool().valEqual());
         code.areturn();
     }
 }

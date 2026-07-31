@@ -60,6 +60,7 @@ import org.xvm.compiler.Compiler;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.Builder.Loader;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.ModuleLoader;
@@ -7252,7 +7253,7 @@ public abstract class TypeConstant
      */
     public JitTypeDesc getJitDesc(Builder builder) {
         ClassDesc cd;
-        if ((cd = JitTypeDesc.getPrimitiveClass(this)) != null) {
+        if ((cd = JitTypeDesc.getJavaPrimitive(this)) != null) {
             return new JitTypeDesc(getCanonicalJitType(), Primitive, cd);
         }
         if ((cd = JitTypeDesc.getNullablePrimitiveClass(this)) != null) {
@@ -7320,7 +7321,7 @@ public abstract class TypeConstant
      */
     public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
                              RegisterInfo reg1, RegisterInfo reg2, Label lblTrue) {
-        buildCompare(bctx, code, nOp, reg1, reg2.type(), reg2.cd(), () -> reg2.load(code), lblTrue);
+        buildCompare(bctx, code, nOp, reg1, reg2::load, lblTrue);
     }
 
     /**
@@ -7338,10 +7339,8 @@ public abstract class TypeConstant
      */
     public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
                              RegisterInfo reg1, Constant constant, Label lblTrue) {
-        TypeConstant argType = constant.getType();
-        ClassDesc    argCd   = JitTypeDesc.getJitClass(bctx.builder, argType);
-        Runnable     loader  = () -> bctx.loadConstant(code, constant);
-        buildCompare(bctx, code, nOp, reg1, argType, argCd, loader, lblTrue);
+        buildCompare(bctx, code, nOp, reg1,
+                loaderCode -> bctx.loadConstant(loaderCode, constant), lblTrue);
     }
 
     /**
@@ -7352,18 +7351,15 @@ public abstract class TypeConstant
      * @param code       the {@link CodeBuilder} to use to generate byte-codes
      * @param nOp        the compare op to generate
      * @param reg1       the first register to compare
-     * @param argType    the type of the compare argument
-     * @param cdArg      the {@link ClassDesc} of the compare argument
-     * @param argLoader  the {@link Runnable} to load the compare argument onto the stack
+     * @param argLoader  the {@link Loader} for the compare argument
      * @param lblTrue    (optional) the label to go to in the case the positive result has been
      *                   computed and the jump needs be generated; otherwise the result of the
      *                   comparison should be placed on the Java stack
      */
     public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
-                             RegisterInfo reg1, TypeConstant argType, ClassDesc cdArg,
-                             Runnable argLoader, Label lblTrue) {
+                             RegisterInfo reg1, Loader argLoader, Label lblTrue) {
         TypeConstant type1 = reg1.type();
-        assert type1.isA(this) && argType.isA(this) || this.containsFormalType(false);
+        assert type1.isA(this.removeImmutable()) || this.containsFormalType(false);
 
         boolean fLocalTrue = lblTrue == null;
         if (fLocalTrue) {
@@ -7371,7 +7367,7 @@ public abstract class TypeConstant
         }
 
         if (isJavaPrimitive()) {
-            ClassDesc cdCommon = JitTypeDesc.getPrimitiveClass(this);
+            ClassDesc cdCommon = JitTypeDesc.getJavaPrimitive(this);
             String    desc     = cdCommon.descriptorString();
 
             reg1.load(code);
@@ -7379,8 +7375,9 @@ public abstract class TypeConstant
                 Builder.unbox(code, this);
             }
             convertIfUnsignedPrimitive(code);
-            argLoader.run();
-            if (!cdArg.isPrimitive()) {
+
+            RegisterInfo argReg = argLoader.load(code);
+            if (!argReg.cd().isPrimitive()) {
                 Builder.unbox(code, this);
             }
             convertIfUnsignedPrimitive(code);
@@ -7457,7 +7454,7 @@ public abstract class TypeConstant
             }
 
             reg1.load(code);
-            argLoader.run();
+            argLoader.load(code);
 
             switch (nOp) {
             case Op.OP_CMP:
@@ -7550,7 +7547,7 @@ public abstract class TypeConstant
                 bctx.loadType(code, getType()); // type of this type
             }
             reg1.load(code);
-            argLoader.run();
+            argLoader.load(code);
 
             switch (nOp) {
             case Op.OP_IS_EQ,  Op.OP_JMP_EQ,

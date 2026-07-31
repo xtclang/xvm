@@ -7,8 +7,9 @@ import java.lang.classfile.ClassModel;
 
 import java.lang.classfile.constantpool.ClassEntry;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import java.util.function.Predicate;
 
@@ -92,7 +93,7 @@ public class ModuleLoader
                 throw new ClassNotFoundException(name);
             }
             clz = defineClass(name, classBytes, 0, classBytes.length);
-            loadedClasses.add(ClassFile.of().parse(classBytes));
+            loadedClasses.put(name, classBytes);
             return clz;
         } else if (getParent() instanceof TypeSystemLoader tsLoader) {
             return tsLoader.findClass(name);
@@ -115,15 +116,16 @@ public class ModuleLoader
         // limit the number of cycles
         int iters = 2;
         do {
-            List<ClassModel> currentlyLoaded = new ArrayList<>(loadedClasses);
-            loadedClasses.clear();
-            for (ClassModel model : currentlyLoaded) {
-                String className = model.thisClass().asInternalName();
+            Map<String, byte[]> currentlyLoaded = loadedClasses;
+            loadedClasses = new HashMap<>();
+            for (Map.Entry<String, byte[]> entry : currentlyLoaded.entrySet()) {
+                String className = entry.getKey();
                 if (!filter.test(className)) {
                     continue;
                 }
 
-                boolean isInterface = (model.flags().flagsMask() & ClassFile.ACC_INTERFACE) != 0;
+                ClassModel model       = ClassFile.of().parse(entry.getValue());
+                boolean    isInterface = (model.flags().flagsMask() & ClassFile.ACC_INTERFACE) != 0;
                 out.println("\n**** " + (isInterface ? "interface " : "class ") +
                         className.replace('/', '.'));
 
@@ -176,5 +178,5 @@ public class ModuleLoader
         return sb == null ? s : sb.toString();
     }
 
-    private final List<ClassModel> loadedClasses = new ArrayList<>();
+    private Map<String, byte[]> loadedClasses = new HashMap<>();
 }

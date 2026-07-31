@@ -11,6 +11,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.OpJump;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.TypeMatrix;
 
 import org.xvm.runtime.Frame;
 
@@ -138,8 +139,12 @@ public class Jump
 
     @Override
     public void computeTypes(BuildContext bctx) {
-        int nAddr = getAddress();
-        bctx.typeMatrix.follow(nAddr, nAddr + m_ofJmp, -1);
+        int        nAddr    = getAddress();
+        TypeMatrix tmx      = bctx.typeMatrix;
+        int        nAddrJmp = nAddr + m_ofJmp;
+
+        tmx.follow(nAddr, nAddrJmp, -1);
+        tmx.cleanupJump(nAddrJmp, m_cExits);
     }
 
     @Override

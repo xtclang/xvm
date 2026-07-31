@@ -167,6 +167,24 @@ public class TypeMatrix {
         }
     }
 
+    /**
+     * Remove type information at the jump destination for registers that belong to scopes
+     * implicitly exited by the jump.
+     *
+     * @param jumpAddr  the jump destination
+     * @param cExits    the number of scopes exited by the jump
+     */
+    public void cleanupJump(int jumpAddr, int cExits) {
+        if (cExits > 0 && isReached(jumpAddr)) {
+            Scope scope = bctx.scope;
+            while (cExits-- > 0) {
+                scope = scope.parent;
+                assert scope != null;
+            }
+            removeRegisters(jumpAddr, scope.topReg);
+        }
+    }
+
     // ----- collection phase helpers --------------------------------------------------------------
 
     /**

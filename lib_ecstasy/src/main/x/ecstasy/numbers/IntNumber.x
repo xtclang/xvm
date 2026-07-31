@@ -213,6 +213,17 @@
     @Override
     IntNumber skip(Int steps) = this + steps;
 
+    @Op
+    @Override
+    IntNumber prevValue() {
+        return skip(-1);
+    }
+
+    @Op
+    @Override
+    IntNumber nextValue() {
+        return skip(1);
+    }
 
     // ----- conversions ---------------------------------------------------------------------------
 

@@ -18,17 +18,18 @@ import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.TypeSystem;
+import org.xvm.javajit.TypeSystem.Artifact;
 
 /**
  * The builder for Array types.
  */
 public class ArrayBuilder extends AugmentingBuilder {
 
-    public ArrayBuilder(TypeSystem typeSystem, TypeConstant type, ClassModel model) {
-        super(typeSystem, type, model);
+    public ArrayBuilder(TypeSystem typeSystem, Artifact art, ClassModel model) {
+        super(typeSystem, art, model);
 
         DELEGATE_TYPE = pool().ensureEcstasyTypeConstant("collections.Array.ArrayDelegate");
-        isObjectArray = type.getParamType(0).equals(typeSystem.pool().typeObject());
+        isObjectArray = art.type().getParamType(0).equals(typeSystem.pool().typeObject());
     }
 
     protected final TypeConstant DELEGATE_TYPE;
@@ -80,20 +81,6 @@ public class ArrayBuilder extends AugmentingBuilder {
     }
 
     @Override
-    protected void loadTypeConstant(CodeBuilder code, String className, TypeConstant type) {
-        if (type.isArray()) {
-            // call $xvmType() on the this Array instance
-            ClassDesc CD_this = ClassDesc.of(className);
-            code.aload(0) // load this
-                .checkcast(CD_this)
-                .aload(1) // load Ctx
-                .invokevirtual(CD_this, "$xvmType", MethodTypeDesc.of(CD_TypeConstant, CD_Ctx));
-        } else {
-            super.loadTypeConstant(code, className, type);
-        }
-    }
-
-    @Override
     protected boolean shouldAddInterface(TypeConstant type) {
         if (type.isA(DELEGATE_TYPE)) {
             // skip the ArrayDelegate
@@ -103,21 +90,22 @@ public class ArrayBuilder extends AugmentingBuilder {
     }
 
     @Override
-    protected void assembleImplProperties(String className, ClassBuilder classBuilder) {
+    protected void assembleProperties(ClassBuilder classBuilder) {
         // don't create any properties for array specializations
         if (!isSpecialized && !isObjectArray) {
-            super.assembleImplProperties(className, classBuilder);
+            super.assembleProperties(classBuilder);
         }
     }
 
     @Override
-    protected void assembleMethod(String className, ClassBuilder classBuilder, MethodInfo method,
-                                  String jitName, JitMethodDesc jmd) {
+    protected void assembleMethod(
+            ClassBuilder classBuilder, MethodInfo method,
+            String jitName, JitMethodDesc jmd) {
         if (method.isCtorOrValidator()) {
             // all constructors are native
             return;
         }
-        super.assembleMethod(className, classBuilder, method, jitName, jmd);
+        super.assembleMethod(classBuilder, method, jitName, jmd);
     }
 
     @Override
@@ -211,13 +199,14 @@ public class ArrayBuilder extends AugmentingBuilder {
     }
 
     @Override
-    protected void assembleNew(String className, ClassBuilder classBuilder,
-                               MethodInfo constructor, String jitName, JitMethodDesc jmd) {
+    protected void assembleNew(
+            ClassBuilder classBuilder,
+            MethodInfo constructor, String jitName, JitMethodDesc jmd) {
         // all constructors are native
     }
 
     @Override
-    protected void assembleXvmType(String className, ClassBuilder classBuilder) {
+    protected void assembleXvmType(ClassBuilder classBuilder) {
         // Array.java implements "$xvmType(Ctx ctx)"
     }
 }

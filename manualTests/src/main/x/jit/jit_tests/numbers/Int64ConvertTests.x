@@ -162,6 +162,21 @@ class Int64ConvertTests {
         testInt64ToUInt128WithBoundsCheck(100, 100, False);
         testInt64ToUInt128WithBoundsCheck(Int64.MaxValue, 0x7FFF_FFFF_FFFF_FFFF, False);
 
+        testInt64ToIntN(Int64.MinValue, Int64.MinValue);
+        testInt64ToIntN(-0x80000000, -0x80000000);
+        testInt64ToIntN(-100, -100);
+        testInt64ToIntN(0, 0);
+        testInt64ToIntN(100, 100);
+        testInt64ToIntN(0x7FFFFFFF, 0x7FFFFFFF);
+        testInt64ToIntN(Int64.MaxValue, Int64.MaxValue);
+
+        testInt64ToUIntN(Int64.MinValue, 0, True);
+        testInt64ToUIntN(-1, 0, True);
+        testInt64ToUIntN(-100, 0, True);
+        testInt64ToUIntN(0, 0, False);
+        testInt64ToUIntN(100, 100, False);
+        testInt64ToUIntN(Int64.MaxValue, 0x7FFF_FFFF_FFFF_FFFF, False);
+
         console.print("<<<<< Finished Int64 Conversion tests >>><<");
     }
 
@@ -323,6 +338,25 @@ class Int64ConvertTests {
             }
         } else {
             UInt128 b = a.toUInt128(True);
+            assert b == expected;
+        }
+    }
+
+    void testInt64ToIntN(Int64 a, IntN expected) {
+        IntN b = a.toIntN();
+        assert b == expected;
+    }
+
+    void testInt64ToUIntN(Int64 a, UIntN expected, Boolean oob = False) {
+        if (oob) {
+            try {
+                a.toUIntN();
+                assert as "Expected OutOfBounds to be thrown";
+            } catch (OutOfBounds e) {
+                // expected
+            }
+        } else {
+            UIntN b = a.toUIntN();
             assert b == expected;
         }
     }

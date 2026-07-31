@@ -13,6 +13,8 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.util.List;
 
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
@@ -21,6 +23,7 @@ import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitCtorDesc;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.TypeSystem;
+import org.xvm.javajit.TypeSystem.Artifact;
 
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 import static java.lang.constant.ConstantDescs.MTD_void;
@@ -31,8 +34,8 @@ import static java.lang.constant.ConstantDescs.MTD_void;
  */
 public class AugmentingBuilder extends CommonBuilder {
 
-    public AugmentingBuilder(TypeSystem typeSystem, TypeConstant type, ClassModel model) {
-        super(typeSystem, type);
+    public AugmentingBuilder(TypeSystem typeSystem, Artifact art, ClassModel model) {
+        super(typeSystem, art);
 
         this.model = model;
     }
@@ -48,7 +51,7 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     @Override
-    public boolean assembleImplClass(String className, ClassBuilder classBuilder) {
+    public boolean assembleClass(ClassBuilder classBuilder) {
         // do not augment Object and since nRef is both Ref and Var, ignore "Var" interface; it
         // causes circular initialization
         if (thisId.equals(pool().clzObject()) || thisId.equals(pool().clzVar())) {
@@ -64,13 +67,13 @@ public class AugmentingBuilder extends CommonBuilder {
         classBuilder.withFlags(flags);
 
         // implemented interfaces may not be native; add them if necessary
-        assembleImplInterfaces(classBuilder);
+        assembleInterfaces(classBuilder);
 
         // if there is any native Exception, we need to generate the "$createJavaException" method
         TypeConstant type        = thisType.removeAccess();
         TypeConstant T_EXCEPTION = type.getConstantPool().typeException();
         if (type.isA(T_EXCEPTION) && !type.equals(T_EXCEPTION)) {
-            new ExceptionBuilder(typeSystem, type).assembleCreateException(className, classBuilder);
+            new ExceptionBuilder(typeSystem, art).assembleCreateException(classBuilder);
         }
 
         switch (typeInfo.getFormat()) {
@@ -93,7 +96,7 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     @Override
-    protected void augmentStaticInitializer(String className, CodeBuilder code) {
+    protected void augmentCLInit(CodeBuilder code) {
         MethodModel model = findMethod(ConstantDescs.CLASS_INIT_NAME, MTD_void);
 
         if (model != null) {
@@ -104,47 +107,50 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     @Override
-    protected void assembleInitializer(String className, ClassBuilder classBuilder,
-                                       List<PropertyInfo> props) {
+    protected void assembleInit(
+            ClassBuilder classBuilder,
+            List<PropertyInfo> props) {
         MethodModel mm = findMethod(INIT_NAME, MD_xvmVoid);
-        if (mm == null) {
-            super.assembleInitializer(className, classBuilder, props);
+        if (mm == null) { // TODO && !ENUM ?? or !isPrimitive ??
+            super.assembleInit(classBuilder, props);
         }
     }
 
     @Override
-    protected void assembleField(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+    protected void assembleField(ClassBuilder classBuilder, PropertyInfo prop) {
         String jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
         if (findField(jitName) == null) {
-            super.assembleField(className, classBuilder, prop);
+            super.assembleField(classBuilder, prop);
         }
     }
 
     @Override
-    protected void assemblePropertyAccessor(String className, ClassBuilder classBuilder,
-                                            PropertyInfo prop, String jitName, MethodTypeDesc md,
-                                            boolean isOptimized, boolean isGetter) {
-        MethodModel mm = findMethod(jitName, md);
+    protected void assemblePropertyAccessor(
+            ClassBuilder classBuilder,
+            PropertyInfo prop, String jitName,
+            JitMethodDesc jmd, boolean isGetter) {
+        MethodTypeDesc md = jmd.isOptimized ? jmd.optimizedMD : jmd.standardMD;
+        MethodModel    mm = findMethod(jitName, md);
         if (mm != null && ((mm.flags().flagsMask() & ClassFile.ACC_ABSTRACT) == 0 ||
                     prop.isAbstract() || prop.isNative())) {
             // the property is already copied by the NativeTypeSystem
             return;
         }
 
-        super.assemblePropertyAccessor(className, classBuilder, prop, jitName, md, isOptimized, isGetter);
+        super.assemblePropertyAccessor(classBuilder, prop, jitName, jmd, isGetter);
     }
 
     @Override
-    protected void generateTrivialGetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+    protected void generateTrivialGetter(ClassBuilder classBuilder, PropertyInfo prop) {
         if (findMethod(prop.ensureGetterJitMethodName(typeSystem), null) == null) {
-            super.generateTrivialGetter(className, classBuilder, prop);
+            super.generateTrivialGetter(classBuilder, prop);
         }
     }
 
     @Override
-    protected void generateTrivialSetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+    protected void generateTrivialSetter(ClassBuilder classBuilder, PropertyInfo prop) {
         if (findMethod(prop.ensureSetterJitMethodName(typeSystem), null) == null) {
-            super.generateTrivialSetter(className, classBuilder, prop);
+            super.generateTrivialSetter(classBuilder, prop);
         }
     }
 
@@ -156,11 +162,12 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     @Override
-    protected void assembleMethod(String className, ClassBuilder classBuilder, MethodInfo method,
-                                  String jitName, JitMethodDesc jmd) {
+    protected void assembleMethod(
+            ClassBuilder classBuilder, MethodInfo method,
+            String jitName, JitMethodDesc jmd) {
         if (method.isCtorOrValidator()) {
             String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
-            JitMethodDesc newJmd  = Builder.convertConstructToNew(typeInfo, ClassDesc.of(className), (JitCtorDesc) jmd);
+            JitMethodDesc newJmd  = Builder.convertConstructToNew(typeInfo, art.CD(), (JitCtorDesc) jmd);
             MethodModel   newMM   = newJmd.isOptimized
                     ? findMethod(newName+OPT, newJmd.optimizedMD)
                     : findMethod(newName, newJmd.standardMD);
@@ -184,25 +191,26 @@ public class AugmentingBuilder extends CommonBuilder {
 
         if (method.getHead().isNative()) {
             // throw new IllegalStateException(...);
-            System.err.println("*** Native implementation is missing " + className + "#" + jitName +
+            System.err.println("*** Native implementation is missing " + art.className() + "#" + jitName +
                 " for " + method.getSignature().getValueString());
             return;
         }
 
-        super.assembleMethod(className, classBuilder, method, jitName, jmd);
+        super.assembleMethod(classBuilder, method, jitName, jmd);
     }
 
     @Override
-    protected void assembleXvmType(String className, ClassBuilder classBuilder) {
+    protected void assembleXvmType(ClassBuilder classBuilder) {
         MethodModel mm = findMethod("$xvmType", MD_xvmType);
         if (mm == null) {
-            super.assembleXvmType(className, classBuilder);
+            super.assembleXvmType(classBuilder);
         }
     }
 
     @Override
-    protected void assembleNew(String className, ClassBuilder classBuilder, MethodInfo constructor,
-                               String jitName, JitMethodDesc jmd) {
+    protected void assembleNew(
+            ClassBuilder classBuilder, MethodInfo constructor,
+            String jitName, JitMethodDesc jmd) {
         MethodModel mm = jmd.isOptimized
                 ? findMethod(jitName+OPT, jmd.optimizedMD)
                 : findMethod(jitName, jmd.standardMD);
@@ -210,10 +218,22 @@ public class AugmentingBuilder extends CommonBuilder {
         if (mm != null) {
             return;
         }
-        super.assembleNew(className, classBuilder, constructor, jitName, jmd);
+        super.assembleNew(classBuilder, constructor, jitName, jmd);
     }
 
     // ----- helper methods ------------------------------------------------------------------------
+
+    @Override protected boolean shouldGenerate(IdentityConstant id) {
+        // we do not generate constructors for native enums
+        if (id instanceof MethodConstant methodId && methodId.isConstructor()) {
+            TypeConstant type = getThisType();
+            if (type.isEnum() || type.isEnumValue()) {
+                return false;
+            }
+        }
+
+        return super.shouldGenerate(id);
+    }
 
     @Override
     public ClassDesc ensureClassDesc(TypeConstant type) {

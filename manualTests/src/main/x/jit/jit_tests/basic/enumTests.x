@@ -19,9 +19,17 @@ package enumTests {
         assert !testRedOrNull(c);
         assert !testRed(c);
 
-        Boolean b = True;
-        assert !b.not();
-        console.print(b.toInt64()); // this won't work correctly until we compile Boolean
+        Boolean f = False;
+        Boolean t = True;
+        assert !t.not();
+        assert f.toInt64() == 0;
+        assert t.toInt64() == 1;
+
+        assert f == f;
+        assert f != t;
+        assert f <=> t == Lesser;
+        assert t <=> f == Greater;
+        assert t <=> t == Equal;
 
         Color|Int cint = Red;
         assert testRed1(cint);
@@ -30,6 +38,12 @@ package enumTests {
 
         Ordered lesser = Lesser;
         assert lesser.reversed.ordinal == Greater.ordinal;
+
+        assert Signum.Negative.factor.toString() == "-1";
+        assert Signum.Zero.factor.toString()     == "0";
+        assert Signum.Positive.factor.toString() == "+1";
+        assert Signum.Negative < Signum.Zero < Signum.Positive;
+        assert Signum.Positive > Signum.Zero > Signum.Negative;
     }
 
     Boolean testRedOrNull(Color? c) {
@@ -50,6 +64,7 @@ package enumTests {
     Boolean testRed2(Color|Int cint) {
         if (cint.is(Color)) {
             cint = 111;
+            cint = -cint;
             cint = cint * 43;
         }
         return cint != 42;

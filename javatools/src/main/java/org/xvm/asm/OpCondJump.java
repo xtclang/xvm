@@ -603,6 +603,8 @@ public abstract class OpCondJump
                 boolean isA = typeTarget.isA(typeTest);
                 if ((getOpCode() == OP_JMP_TYPE) == isA) {
                     bctx.markDeadCode(nAddrThis + 1, nAddrJump);
+                    // if the eliminated code is a "guarded" body make sure it's not empty
+                    code.goto_(lblJump);
                 } else {
                     bctx.markDeadCode(nAddrJump, -1);
                 }

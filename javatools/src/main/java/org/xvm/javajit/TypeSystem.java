@@ -294,7 +294,7 @@ public class TypeSystem {
      */
     public byte[] genClass(ModuleLoader moduleLoader, String name) {
         ModuleStructure module = moduleLoader.module;
-        Artifact        art    = deduceArtifact(module, name);
+        Artifact        art    = deduceArtifact(module, moduleLoader.prefix, name);
         if (art != null) {
             String  className = moduleLoader.prefix + name;
             Builder builder   = ensureBuilder(art);
@@ -302,11 +302,11 @@ public class TypeSystem {
                 switch (art.shape) {
                 case Impl:
                     classBuilder.with(SourceFileAttribute.of(art.clz.getSourceFileName()));
-                    builder.assembleImpl(className, classBuilder);
+                    builder.build(classBuilder);
                     break;
 
                 case Enum:
-                    builder.assembleImpl(className, classBuilder);
+                    builder.build(classBuilder);
                     break;
 
                 case Exception:
@@ -331,7 +331,11 @@ public class TypeSystem {
                 ClassFile.DeadLabelsOption.DROP_DEAD_LABELS
             );
 
-            return classFile.build(ClassDesc.of(className), handler);
+            try {
+                return classFile.build(ClassDesc.of(className), handler);
+            } catch (RuntimeException e) {
+                throw new RuntimeException("Exception while compiling " + name, e);
+            }
         }
         return null;
     }
@@ -346,44 +350,44 @@ public class TypeSystem {
         if (type.isA(pool.typeModule())) {
             // it's definitely not Module.x, since this is not the native TypeSystem
             assert !type.equals(pool.typeModule());
-            return new ModuleBuilder(this, type);
+            return new ModuleBuilder(this, art);
         }
 
         if (type.isA(pool.typePackage())) {
             // it's definitely not Package.x, since this is not the native TypeSystem
             assert !type.equals(pool.typeModule());
-            return new PackageBuilder(this, type);
+            return new PackageBuilder(this, art);
         }
 
         if (art.shape == ClassfileShape.Enum) {
             TypeConstant enumerationType = art.clz.getIdentityConstant().getValueType(pool(), null);
-            return new EnumerationBuilder(this, enumerationType);
+            return new EnumerationBuilder(this, art);
         }
 
         if (type.isEnum()) {
-            return new EnumBuilder(this, type);
+            return new EnumBuilder(this, art);
         }
 
         if (type.isEnumValue()) {
-            return new EnumValueBuilder(this, type);
+            return new EnumValueBuilder(this, art);
         }
 
         if (type.isA(pool.typeException())) {
             // the root Exception class is handled by the NativeTypeSystem
             assert !type.equals(pool.typeException());
-            return new ExceptionBuilder(this, type);
+            return new ExceptionBuilder(this, art);
         }
 
         if (type.isA(pool.typeClass())) {
             TypeConstant publicType = type.getParamType(0);
             if (publicType.isEnumValue()) {
-                return new EnumerationBuilder(this, type);
+                return new EnumerationBuilder(this, art);
             } else {
                 System.err.println("Missing class builder " + type.getValueString());
             }
         }
 
-        return new CommonBuilder(this, type);
+        return new CommonBuilder(this, art);
     }
 
     /**
@@ -409,22 +413,51 @@ public class TypeSystem {
         public final String prefix;
     }
 
-    public record Artifact(TypeConstant type, ClassStructure clz, ClassfileShape shape) {}
+    public String ensureJitClassName(TypeConstant type, ClassfileShape shape) {
+        String classname = type.ensureJitClassName(this);
+        if (shape == ClassfileShape.Impl) {
+            return classname;
+        }
+        throw new UnsupportedOperationException("TODO implement shape " + shape);
+    }
 
-    public Artifact deduceArtifact(ModuleStructure module, String name) {
-        if (name.equals(MODULE)) {
-            return new Artifact(module.getCanonicalType(), module, ClassfileShape.Impl);
+    public record Artifact(
+            TypeConstant   type,
+            ClassStructure clz,
+            ClassfileShape shape,
+            String         className,
+            ClassDesc      CD) {
+        public Artifact(
+                TypeConstant   type,
+                ClassStructure clz,
+                ClassfileShape shape,
+                String         className) {
+            this(type, clz, shape, className, ClassDesc.of(className));
+        }
+    }
+
+    /**
+     * @param module  the Ecstasy ModuleStructure that will contain the class
+     * @param prefix  the module portion of the Java classname, e.g. "org.xtclang.ecstasy."
+     * @param suffix  the name of the Java class within the module, e.g. "Freezable"
+     *
+     * @return the corresponding Artifact
+     */
+    public Artifact deduceArtifact(ModuleStructure module, String prefix, String suffix) {
+        String className = prefix + suffix;
+        if (suffix.equals(MODULE)) {
+            return new Artifact(module.getCanonicalType(), module, ClassfileShape.Impl, className);
         }
 
-        ClassfileShape shape  = ClassfileShape.Impl;
-        int            dotIx  = name.lastIndexOf('.');
-        String         simple = name.substring(dotIx + 1);
+        ClassfileShape shape    = ClassfileShape.Impl;
+        int            simpleIx = max(suffix.lastIndexOf('.'), suffix.lastIndexOf('$'));
+        String         simple   = suffix.substring(simpleIx + 1);
         if (simple.length() > 1) {
             for (ClassfileShape sh : ClassfileShape.values()) {
                 if (sh.prefix.isEmpty() || simple.startsWith(sh.prefix)) {
                     // all suffixes except Impl are of the length 2
-                    String pkg = dotIx < 0 ? "" : name.substring(0, dotIx + 1);
-                    name  = pkg + simple.substring(sh.prefix.length());
+                    String pkg = simpleIx < 0 ? "" : suffix.substring(0, simpleIx + 1);
+                    suffix  = pkg + simple.substring(sh.prefix.length());
                     shape = sh;
                     break;
                 }
@@ -432,28 +465,28 @@ public class TypeSystem {
         }
 
         TypeConstant type     = null;
-        int          idOffset = name.indexOf(HASH);
+        int          idOffset = suffix.indexOf(HASH);
         if (idOffset > 0) {
             // the name represents a parameterized type with primitive actual type(s)
             // or a class constant for inner classes
-            Constant constant = pool().getConstant(Integer.valueOf(name.substring(idOffset+1)));
+            Constant constant = pool().getConstant(Integer.valueOf(suffix.substring(idOffset+1)));
             if (constant instanceof TypeConstant constType) {
                 type = constType;
             } else if (constant instanceof ClassConstant constClass) {
                 return new Artifact(constClass.getType(),
-                    (ClassStructure) constClass.getComponent(), shape);
+                    (ClassStructure) constClass.getComponent(), shape, className);
             } else {
                 throw new IllegalArgumentException("Unsupported suffix: " + constant.toString());
             }
-            name = name.substring(0, idOffset);
+            suffix = suffix.substring(0, idOffset);
         }
 
-        String xvmName = unescapeJitName(name).replace('$', '.');
+        String xvmName = unescapeJitName(suffix).replace('$', '.');
         if (module.getChildByPath(xvmName) instanceof ClassStructure struct) {
             if (type == null) {
                 type = struct.getFormalType();
             }
-            return new Artifact(type, struct, shape);
+            return new Artifact(type, struct, shape, className);
         }
         return null;
     }
@@ -470,6 +503,22 @@ public class TypeSystem {
 
         // enumeration class could be an inner class
         return name.codePointAt(name.lastIndexOf('$') + 1) == ENUM || name.equals("Enumeration");
+    }
+
+    /**
+     * Build a class name for the `Class` class of the specific already-escaped class name.
+     *
+     * @param name  the JIT name of the class
+     *
+     * @return the JIT name of the `Class` class for the class
+     */
+    public static String classClass(String name) {
+        int offset = max(name.lastIndexOf('.'), name.lastIndexOf('$')) + 1;
+        return new StringBuilder(name.length() + CLASS > 0xFFFF ? 2 : 1)
+                .append(name, 0, offset)
+                .appendCodePoint(CLASS)
+                .append(name, offset, name.length())
+                .toString();
     }
 
     /**

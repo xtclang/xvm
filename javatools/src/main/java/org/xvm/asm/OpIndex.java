@@ -371,12 +371,12 @@ public abstract class OpIndex
                 // is parameterized, we need to generate a cast. For example, if the container
                 // is "List<Person>", the "getElement" signature would be "nObj getElement()".
                 if (typeTarget.isParameterizedDeep()) {
-                    bctx.builder.generateCheckCast(code, typeEl);
+                    bctx.builder.generateCheckCast(code, typeEl, bctx.ctxSlot(code));
                 }
                 JitParams     params = JitParamDesc.computeJitParams(bctx.builder, typeEl);
-                JitMethodDesc jmd    = new JitMethodDesc(
-                    params.apdStdParam(), JitParamDesc.NONE,
-                    params.apdOptParam(), params.isOptimized() ? JitParamDesc.NONE : null);
+                JitMethodDesc jmd    = new JitMethodDesc(typeTarget, params.apdStdParam(),
+                        JitParamDesc.NONE, params.apdOptParam(),
+                        params.isOptimized() ? JitParamDesc.NONE : null, false);
 
                 bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue});
             }
@@ -427,6 +427,9 @@ public abstract class OpIndex
             buildPrimitiveLocal(bctx, code, regElement);
         } else if (typeEl.isXvmPrimitive()) {
             buildXvmPrimitiveLocal(bctx, code, regElement);
+        } else if (typeEl.isA(bctx.pool().typeSequential())) {
+            // this can only be non-primitive Sequential, i.e. IntNumber, IntN or UIntN
+            buildSequentialLocal(bctx, code, regElement);
         }
         // regElement now has the result stored in it, so store it back to the array
         storeArrayElement(bctx, code, regArray, regElement);
@@ -491,7 +494,7 @@ public abstract class OpIndex
         ClassDesc[] cds;
         ClassDesc   cdEl;
         if (javaPrimitive) {
-            cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
+            cdEl = JitTypeDesc.getJavaPrimitive(typeEl);
             cds  = new ClassDesc[]{cdEl};
         } else {
             assert xvmPrimitive;

@@ -12,15 +12,18 @@ import java.lang.constant.MethodHandleDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import java.math.BigInteger;
+import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.*;
 
+import org.xvm.javajit.TypeSystem.Artifact;
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
 import org.xvm.javajit.registers.ExtendedSlot;
@@ -54,39 +57,32 @@ import static org.xvm.javajit.JitFlavor.Specific;
  * Base class for JIT class builders.
  */
 public abstract class Builder {
-    public Builder(TypeSystem typeSystem) {
+    public Builder(TypeSystem typeSystem, Artifact art) {
         this.typeSystem = typeSystem;
+        this.art        = art;
     }
 
     public final TypeSystem typeSystem;
+    public final Artifact   art;
 
     /**
      * Assemble the java class for the "impl" shape.
      */
-    public void assembleImpl(String className, ClassBuilder classBuilder) {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
-     * Assemble the java class for the "pure" shape.
-     */
-    public void assemblePure(String className, ClassBuilder classBuilder) {
-        throw new UnsupportedOperationException();
+    public void build(ClassBuilder classBuilder) {
+        throw new UnsupportedOperationException("assemble: " + art);
     }
 
     /**
      * @return TypeConstant for "this" type
      */
     public TypeConstant getThisType() {
+        // in theory, we could provide this info from art, or cache it as in CommonBuilder
         throw new UnsupportedOperationException();
     }
 
-    /**
-     * Generate a "load" for the specified TypeConstant.
-     * Out: TypeConstant on Java stack
-     */
-    protected void loadTypeConstant(CodeBuilder code, String className, TypeConstant type) {
-        throw new UnsupportedOperationException();
+    public boolean isPrimitive() {
+        // in theory, this could be cached as it is in CommonBuilder
+        return getThisType().isJitPrimitive();
     }
 
     /**
@@ -158,8 +154,52 @@ public abstract class Builder {
     }
 
     /**
+     * Generate a load of the specified TypeConstant, without performing any formal type resolution.
+     * In other words, if this Builder is building {@code List<Int>} and this method is told to load
+     * the TypeConstant for {@code Array<Element>}, then it will load the TypeConstant
+     * {@code Array<Element>}.
+     * <p/>
+     * This method never resolves formal types.
+     * <p/>
+     * Out: TypeConstant on Java stack
+     */
+    public void loadTypeConstant(CodeBuilder code, TypeConstant type) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Generate a load of the specified TypeConstant, resolving formal types if possible when the
+     * build context indicates that resolution is applicable. In other words, if a method on
+     * {@code List<Int>} is being compiled, and it loads the TypeConstant for
+     * {@code Array<Element>}, then the TypeConstant {@code Array<Int>} will be loaded.
+     * <p/>
+     * If no build context is supplied, the TypeConstant is loaded without performing any formal
+     * type resolution.
+     * <p/>
+     * Out: TypeConstant on Java stack
+     */
+    protected void loadTypeConstant(BuildContext bctx, CodeBuilder code, TypeConstant type) {
+        loadTypeConstant(code, type);
+
+        if (bctx != null && !bctx.isFunction && type.containsFormalType(true)) {
+            code.dup()
+                .invokevirtual(CD_TypeConstant, "getConstantPool",
+                        MethodTypeDesc.of(CD_ConstantPool));
+
+            RegisterInfo regThis = bctx.loadThis(code);
+            if (regThis.type().isJitInterface()) {
+                code.checkcast(CD_nObj);
+            }
+            bctx.loadCtx(code);
+            code.invokevirtual(CD_nObj, "$xvmType", MD_xvmType)
+                .invokevirtual(CD_TypeConstant, "resolveGenerics",
+                        MethodTypeDesc.of(CD_TypeConstant, CD_ConstantPool, CD_GenericTypeResolver));
+        }
+    }
+
+    /**
      * Build the code to load a value for a constant on the Java stack.
-     *
+     * <p/>
      * We **always** load a primitive value if possible.
      */
     public RegisterInfo loadConstant(CodeBuilder code, Constant constant) {
@@ -168,7 +208,7 @@ public abstract class Builder {
 
     /**
      * Build the code to load a value for a constant on the Java stack.
-     *
+     * <p/>
      * We **always** load a primitive value if possible.
      */
     public RegisterInfo loadConstant(BuildContext bctx, CodeBuilder code, Constant constant) {
@@ -176,7 +216,8 @@ public abstract class Builder {
 
         switch (constant) {
         case StringConstant stringConst:
-            loadString(code, stringConst.getValue());
+            loadString(code, stringConst.getValue(),
+                    bctx == null ? code.parameterSlot(0) : bctx.ctxSlot(code));
             return new SingleSlot(stringConst.getType(), Specific, CD_String, "");
 
         case IntConstant intConstant:
@@ -186,10 +227,7 @@ public abstract class Builder {
                     yield new SingleSlot(constant.getType(), Primitive, CD_int, "");
                 }
                 case UInt32 -> {
-                    code.ldc(intConstant.getValue().getLong())
-                        .ldc(0xFFFFFFFFL)
-                        .land()
-                        .l2i();
+                    code.ldc((int) (intConstant.getValue().getLong() & 0xFFFFFFFFL));
                     yield new SingleSlot(constant.getType(), Primitive, CD_int, "");
                 }
                 case Int64, UInt64 -> {
@@ -211,6 +249,15 @@ public abstract class Builder {
                     yield intConstant.getFormat() == Int128
                             ? new MultiSlot(bctx, XvmPrimitive, type, CD_Int128, CDs_LongLong)
                             : new MultiSlot(bctx, XvmPrimitive, type, CD_UInt128, CDs_LongLong);
+                }
+                case IntN, UIntN -> {
+                    TypeConstant   type  = intConstant.getType();
+                    ClassDesc      cd    = ensureClassDesc(type);
+                    String         value = intConstant.getValueString();
+                    MethodTypeDesc md    = MethodTypeDesc.of(cd, CD_JavaString);
+                    code.ldc(value);
+                    code.invokestatic(cd, "$new", md);
+                    yield new SingleSlot(type, Specific, cd, "");
                 }
                 default ->
                     throw new IllegalStateException("Unsupported IntConstant type "
@@ -269,17 +316,6 @@ public abstract class Builder {
             code.ldc(byteConstant.getValue());
             return new SingleSlot(constant.getType(), Primitive, CD_int, "");
 
-        case LiteralConstant litConstant:
-            switch (litConstant.getFormat()) {
-            case IntLiteral:
-                // TODO: delegate to IntN
-                break;
-            case FPLiteral:
-                // TODO: delegate to FloatN
-                break;
-            }
-            break;
-
         case SingletonConstant singleton: {
             if (singleton.getClassConstant() instanceof PropertyConstant propId) {
                 TypeConstant type = singleton.getType();
@@ -300,7 +336,7 @@ public abstract class Builder {
             if (singleton instanceof EnumValueConstant enumConstant) {
                 ConstantPool pool = constant.getConstantPool();
                 if (enumConstant.getType().isOnlyNullable()) {
-                    Builder.loadNull(code);
+                    loadNull(code);
                     return new SingleSlot(pool.typeNullable(), Specific, CD_Nullable, "");
                 }
                 else if (enumConstant.getType().isA(pool.typeBoolean())) {
@@ -318,7 +354,7 @@ public abstract class Builder {
             JitTypeDesc  jtd  = type.getJitDesc(this);
             assert jtd.flavor == Specific;
 
-            // retrieve from Singleton.$INSTANCE (see CommonBuilder.assembleStaticInitializer)
+            // retrieve from Singleton.$INSTANCE (see CommonBuilder.assembleCLInit)
             ClassDesc cd = jtd.cd;
             code.getstatic(cd, Instance, cd);
             return new SingleSlot(type, Specific, cd, "");
@@ -330,23 +366,42 @@ public abstract class Builder {
 
         case TypeConstant type:
             assert type.isTypeOfType();
-            return bctx.loadType(code, type);
+            return bctx.loadType(code, type); // TODO move loadType here?
 
         case ClassConstant _:
-        case DecoratedClassConstant _:
+        case DecoratedClassConstant _: {
             IdentityConstant constId = (IdentityConstant) constant;
-            throw new UnsupportedOperationException("Load class " + constId.getValueType(bctx.pool(), null));
+            ConstantPool pool = typeSystem.pool();
+            TypeConstant type = constId.getValueType(pool, null);
+            String       name = ensureJitClassName(type);
+            // TODO GG the "e" class gen functionality must be merged into the "c" class result
+            if (!type.isA(pool.typeEnumeration())) {
+                name  = TypeSystem.classClass(name);
+            }
+            ClassDesc cd = ClassDesc.of(name);
+            code.getstatic(cd, Instance, cd);
+            return new SingleSlot(type, Specific, cd, "");
+        }
 
         case PropertyConstant propId: {
             // support for the "local property" mode
-            code.aload(0);
-            PropertyInfo info = loadProperty(code, getThisType(), propId);
+            RegisterInfo targetReg = bctx.loadThis(code);
+            int          ctxSlot   = bctx.ctxSlot(code);
+            PropertyInfo info;
+            if (isPrimitivePseudoField(targetReg.type(), propId)) {
+                if (!targetReg.flavor().isOptimized) {
+                    unbox(code, targetReg.type());
+                }
+                info = propId.getPropertyInfo(targetReg.type());
+            } else {
+                info = loadProperty(code, targetReg.type(), propId, true, ctxSlot);
+            }
             TypeConstant type = info.getType();
             JitTypeDesc  jtd  = type.getJitDesc(this);
             switch (jtd.flavor) {
                 case NullablePrimitive:
                     // load the null flag value from the context to the stack
-                    loadFromContext(code, CD_boolean, 0);
+                    loadFromContext(code, CD_boolean, 0, ctxSlot);
                     return new ExtendedSlot(bctx, Op.A_STACK, 0, 0, jtd.flavor, type,
                             jtd.cd, "");
 
@@ -357,11 +412,11 @@ public abstract class Builder {
                     ClassDesc[] cds  = JitTypeDesc.getXvmPrimitiveClasses(type);
                     int         slot = 0;
                     for (int i = 1; i < cds.length; i++) {
-                        Builder.loadFromContext(code, cds[i], slot++);
+                        loadFromContext(code, cds[i], slot++, ctxSlot);
                     }
                     if (jtd.flavor == NullableXvmPrimitive) {
                         // load the boolean Null flag from the context
-                        loadFromContext(code, CD_boolean, slot);
+                        loadFromContext(code, CD_boolean, slot, ctxSlot);
                     }
                     return new MultiSlot(bctx, jtd.flavor, type, jtd.cd, cds);
                 case Specific, Primitive, Widened:
@@ -403,13 +458,16 @@ public abstract class Builder {
             }
 
             // 2) create the MethodHandle(s)
-            ClassDesc     containerCD  = ClassDesc.of(bctx.className);
-            JitMethodDesc jmd          = body.getJitDesc(this, containerType);
-            boolean       isFunction   = body.getMethodStructure().isFunction();
+            ClassDesc     containerCD = ClassDesc.of(bctx.className);
+            JitMethodDesc jmd         = body.getJitDesc(this, containerType);
+            boolean       isFunction  = body.getMethodStructure().isFunction();
+            boolean       isInterface = containerType.isJitInterface();
 
             DirectMethodHandleDesc.Kind kind = isFunction
-                    ? DirectMethodHandleDesc.Kind.STATIC
-                    : DirectMethodHandleDesc.Kind.VIRTUAL;
+                    ? isInterface ? DirectMethodHandleDesc.Kind.INTERFACE_STATIC
+                                  : DirectMethodHandleDesc.Kind.STATIC
+                    : isInterface ? DirectMethodHandleDesc.Kind.INTERFACE_VIRTUAL
+                                  : DirectMethodHandleDesc.Kind.VIRTUAL;
 
             DirectMethodHandleDesc stdMD = MethodHandleDesc.ofMethod(kind,
                     containerCD, jitName, jmd.standardMD);
@@ -425,8 +483,8 @@ public abstract class Builder {
 
                 ClassDesc cd = CD_nFunction;
                 code.new_(cd)
-                    .dup()
-                    .aload(code.parameterSlot(0)); // ctx
+                    .dup();
+                loadCtx(bctx, code);
                 bctx.loadTypeConstant(code, sigType);
                 code.ldc(stdMD);
                 if (optMD == null) {
@@ -446,8 +504,8 @@ public abstract class Builder {
 
                 ClassDesc cd = CD_nMethod;
                 code.new_(cd)
-                    .dup()
-                    .aload(code.parameterSlot(0)); // ctx
+                    .dup();
+                loadCtx(bctx, code);
                 bctx.loadTypeConstant(code, sigType);
                 code.ldc(stdMD);
                 if (optMD == null) {
@@ -492,8 +550,8 @@ public abstract class Builder {
             assert newJmd.isOptimized;
 
             // call construct(Key[] keys, Value[]? vals, Boolean inPlace = False)
-            loadCtx(code);
-            loadTypeConstant(code, clzName, mapType);
+            loadCtx(bctx, code);
+            loadTypeConstant(bctx, code, mapType);
             loadArray(bctx, code, keysType, constMap.keySet().toArray(Constant.NO_CONSTS));
             loadArray(bctx, code, valsType, constMap.values().toArray(Constant.NO_CONSTS));
 
@@ -673,8 +731,8 @@ public abstract class Builder {
         }
 
         // Note: we remove the immutability here; it will be added back upon "$makeImmut"
-        loadCtx(code);
-        loadTypeConstant(code, className, arrayType.removeImmutable());
+        loadCtx(bctx, code);
+        loadTypeConstant(bctx, code, arrayType.removeImmutable());
         code.loadConstant((long) values.length)
             .iconst_0()
             .invokestatic(cdArray, "$new$p",
@@ -682,17 +740,17 @@ public abstract class Builder {
 
         for (Constant value : values) {
             // array.add(ctx, loadConstant(constValue));
-            code.dup()
-                .aload(code.parameterSlot(0));
+            code.dup();
+            loadCtx(bctx, code);
             loadConstant(bctx, code, value);
             code.invokevirtual(cdArray, addMethod, mdAdd)
                 .pop();
         }
 
         // array.makeImmutable();
-        code.dup()
-            .aload(code.parameterSlot(0))
-            .invokevirtual(cdArray, "$makeImmut", MD_xvmVoid);
+        code.dup();
+        loadCtx(bctx, code);
+        code.invokevirtual(cdArray, "$makeImmut", MD_xvmVoid);
         return new SingleSlot(arrayType, Specific, ensureClassDesc(arrayType), "");
     }
 
@@ -748,8 +806,8 @@ public abstract class Builder {
         MethodTypeDesc mdNew = MethodTypeDesc.of(cdRange, CD_Ctx, CD_TypeConstant, cdPrimitive,
                 cdPrimitive, CD_boolean, CD_boolean, CD_boolean, CD_boolean);
 
-        loadCtx(code);
-        loadTypeConstant(code, className, rangeType);
+        loadCtx(bctx, code);
+        loadTypeConstant(bctx, code, rangeType);
         loadConstant(bctx, code, values[0]);
         loadConstant(bctx, code, values[1]);
         code.loadConstant(rangeConst.isFirstExcluded() ? 1 : 0);
@@ -764,8 +822,8 @@ public abstract class Builder {
     /**
      * Build the code to load an XTC String value on the Java stack.
      */
-    public static void loadString(CodeBuilder code, String value) {
-        loadCtx(code);
+    public static void loadString(CodeBuilder code, String value, int ctxSlot) {
+        code.aload(ctxSlot);
         code.ldc(value)
             .invokestatic(CD_String, "of", MD_StringOf);
     }
@@ -773,13 +831,16 @@ public abstract class Builder {
     /**
      * Build the code to load a local property on the Java stack.
      *
-     * This method assumes the "owner" ref is loaded on Java stack.
+     * This method assumes the "owner" ref is loaded on Java stack and the owner is not primitive,
+     * which means that the Ctx is always the parameter 0.
+     *
+     * @param allowUnboxing  if true, allow property access optimization
      *
      * @return the PropertyInfo for the property
      */
     public PropertyInfo loadProperty(CodeBuilder code, TypeConstant typeContainer,
-                                      PropertyConstant propId) {
-        return loadProperty(code, typeContainer, propId, true);
+                                     PropertyConstant propId, boolean allowUnboxing) {
+        return loadProperty(code, typeContainer, propId, allowUnboxing, code.parameterSlot(0));
     }
 
     /**
@@ -788,31 +849,37 @@ public abstract class Builder {
      * This method assumes the "owner" ref is loaded on Java stack.
      *
      * @param allowUnboxing  if true, allow property access optimization
+     * @param ctxSlot        the Java slot containing the current context
      *
      * @return the PropertyInfo for the property
      */
     public PropertyInfo loadProperty(CodeBuilder code, TypeConstant typeContainer,
-                                      PropertyConstant propId, boolean allowUnboxing) {
+                                     PropertyConstant propId, boolean allowUnboxing, int ctxSlot) {
         if (typeContainer.containsFormalType(true)) {
             typeContainer = typeContainer.resolveConstraints().ensureAccess(Constants.Access.PRIVATE);
         }
 
-        PropertyInfo  xvmInfo    = propId.getPropertyInfo(typeContainer);
-        PropertyInfo  jitInfo    = propId.getPropertyInfo(typeContainer.getCanonicalJitType());
+        PropertyInfo xvmInfo      = propId.getPropertyInfo(typeContainer);
+        TypeConstant typeJit      = typeContainer.getCanonicalJitType();
+        PropertyInfo jitInfo      = typeJit.equals(pool().typeObject()) // REVIEW GG
+                ? xvmInfo
+                : propId.getPropertyInfo(typeJit);
         TypeConstant  typeOwner  = jitInfo.getOwnerType(this, typeContainer);
-        JitMethodDesc jmdGet     = jitInfo.getGetterJitDesc(this);
+        JitMethodDesc jmdGet     = jitInfo.getGetterJitDesc(this, typeContainer);
         String        getterName = jitInfo.ensureGetterJitMethodName(typeSystem);
 
         MethodTypeDesc md;
         if (jmdGet.isOptimized && allowUnboxing) {
             md         = jmdGet.optimizedMD;
-            getterName += Builder.OPT;
+            getterName += OPT;
         } else {
             md = jmdGet.standardMD;
         }
 
-        loadCtx(code);
-        if (!jitInfo.isNative() && typeOwner.isJitInterface()) {
+        code.aload(ctxSlot);
+        if (jmdGet.isOptimizedStatic && allowUnboxing) {
+            code.invokestatic(ensureClassDesc(typeContainer), getterName, md);
+        } else if (!jitInfo.isNative() && typeOwner.isJitInterface()) {
             code.invokeinterface(ensureClassDesc(typeOwner), getterName, md);
         } else {
             code.invokevirtual(ensureClassDesc(typeOwner), getterName, md);
@@ -826,15 +893,19 @@ public abstract class Builder {
         return xvmInfo;
     }
 
-    public void loadOptimizedReturnsToStack(CodeBuilder code, JitMethodDesc md) {
-        // if the return type is nullable, the caller should have already have processed the
-        // extension flag
+    public static void loadOptimizedReturnsToStack(CodeBuilder code, JitMethodDesc md) {
+        loadOptimizedReturnsToStack(code, md, code.parameterSlot(0));
+    }
+
+    public static void loadOptimizedReturnsToStack(CodeBuilder code, JitMethodDesc md, int ctxSlot) {
+        // if the return type is Nullable, the caller should have already processed the extension
+        // flag
         JitParamDesc[] params = md.optimizedReturns;
         int            count  = md.standardReturns[0].type.isNullable()
                                         ? params.length - 1 : params.length;
         // the first return should be on the stack, so we need to load the remainder
         for (int i = 1; i < count; i++) {
-            loadFromContext(code, params[i].cd, params[i].altIndex);
+            loadFromContext(code, params[i].cd, params[i].altIndex, ctxSlot);
         }
     }
 
@@ -1089,9 +1160,16 @@ public abstract class Builder {
      * @param cd the target ClassDesc
      */
     public static void invokeDefaultConstructor(CodeBuilder code, ClassDesc cd) {
+        invokeDefaultConstructor(code, cd, code.parameterSlot(0));
+    }
+
+    /**
+     * Call the default constructor for the target class using the Ctx in the specified slot.
+     */
+    public static void invokeDefaultConstructor(CodeBuilder code, ClassDesc cd, int ctxSlot) {
         code.new_(cd)
             .dup()
-            .aload(code.parameterSlot(0)) // ctx
+            .aload(ctxSlot)
             .invokespecial(cd, INIT_NAME, MD_xvmVoid);
    }
 
@@ -1129,7 +1207,7 @@ public abstract class Builder {
     }
 
     /**
-     * Generate code to perform a null check and unbox the the JIT primitive reference that is on
+     * Generate code to perform a null check and unbox the JIT primitive reference that is on
      * the top of the stack.
      *
      * In: a boxed JIT primitive reference, or Null
@@ -1143,20 +1221,20 @@ public abstract class Builder {
         TypeConstant typeSansNull = type.removeNullable();
         ClassDesc[]  primitiveCds = typeSansNull.isXvmPrimitive()
                                     ? JitTypeDesc.getXvmPrimitiveClasses(typeSansNull)
-                                    : new ClassDesc[]{JitTypeDesc.getPrimitiveClass(typeSansNull)};
+                                    : new ClassDesc[]{JitTypeDesc.getJavaPrimitive(typeSansNull)};
 
         code.dup();
-        Builder.loadNull(code);
+        loadNull(code);
         code.if_acmpne(lblNotNull)
             .pop();
         for (ClassDesc primitiveCd : primitiveCds) {
-            Builder.defaultLoad(code, primitiveCd);
+            defaultLoad(code, primitiveCd);
         }
         code.iconst_1()
             .goto_(lblDone)
             .labelBinding(lblNotNull)
             .checkcast(cd);
-        Builder.unbox(code, type);
+        unbox(code, type);
         code.iconst_0()
             .labelBinding(lblDone);
     }
@@ -1355,6 +1433,12 @@ public abstract class Builder {
         return code;
     }
 
+    private static CodeBuilder loadCtx(BuildContext bctx, CodeBuilder code) {
+        return bctx == null
+                ? loadCtx(code)
+                : bctx.loadCtx(code);
+    }
+
     /**
      * Generate a "load the return value from the context" for the specified Java class. Out: The
      * loaded value is at the java stack top.
@@ -1362,9 +1446,16 @@ public abstract class Builder {
      * @param returnIndex the index of the value in the Ctx object
      */
     public static void loadFromContext(CodeBuilder code, ClassDesc cd, int returnIndex) {
+        loadFromContext(code, cd, returnIndex, code.parameterSlot(0));
+    }
+
+    /**
+     * Generate a load of a return value from the specified context slot.
+     */
+    public static void loadFromContext(CodeBuilder code, ClassDesc cd, int returnIndex, int ctxSlot) {
         assert returnIndex >= 0;
 
-        loadCtx(code);
+        code.aload(ctxSlot);
         if (cd.isPrimitive()) {
             if (returnIndex < 8) {
                 code // r = $ctx.i"returnIndex"
@@ -1413,9 +1504,16 @@ public abstract class Builder {
      * In: The value to store is at the java stack top.
      */
     public static void storeToContext(CodeBuilder code, ClassDesc cd, int returnIndex) {
+        storeToContext(code, cd, returnIndex, code.parameterSlot(0));
+    }
+
+    /**
+     * Generate a store of a return value into the specified context slot.
+     */
+    public static void storeToContext(CodeBuilder code, ClassDesc cd, int returnIndex, int ctxSlot) {
         assert returnIndex >= 0;
 
-        loadCtx(code);
+        code.aload(ctxSlot);
 
         String descriptor = cd.descriptorString();
         if (cd.isPrimitive() && (descriptor.equals("J") || descriptor.equals("D"))) {
@@ -1473,6 +1571,13 @@ public abstract class Builder {
      * Generate a "checkcast" that transforms a potential CCE into a TypeMismatch.
      */
     public void generateCheckCast(CodeBuilder code, TypeConstant typeTo) {
+        generateCheckCast(code, typeTo, code.parameterSlot(0));
+    }
+
+    /**
+     * Generate a "checkcast" using the Ctx in the specified slot for a potential TypeMismatch.
+     */
+    public void generateCheckCast(CodeBuilder code, TypeConstant typeTo, int ctxSlot) {
         Label startLabel   = code.newLabel();
         Label endLabel     = code.newLabel();
         Label successLabel = code.newLabel();
@@ -1482,7 +1587,7 @@ public abstract class Builder {
             .checkcast(cd)
             .goto_(successLabel)
             .labelBinding(endLabel);
-        Builder.throwTypeMismatch(code, cd.descriptorString());
+        throwTypeMismatch(code, cd.descriptorString(), ctxSlot);
 
         code.labelBinding(successLabel)
             .exceptionCatch(startLabel, endLabel, endLabel,
@@ -1494,8 +1599,15 @@ public abstract class Builder {
      * {@code throw new Exception(ctx).$init(ctx, text, null);}
      */
     public static void throwException(CodeBuilder code, ClassDesc exCD, String text) {
-        invokeDefaultConstructor(code, exCD);
-        loadCtx(code);
+        throwException(code, exCD, text, code.parameterSlot(0));
+    }
+
+    /**
+     * Add the code to throw an Ecstasy exception using the Ctx in the specified slot.
+     */
+    public static void throwException(CodeBuilder code, ClassDesc exCD, String text, int ctxSlot) {
+        invokeDefaultConstructor(code, exCD, ctxSlot);
+        code.aload(ctxSlot);
         code.loadConstant(text)
             .aconst_null()
             .invokevirtual(exCD, "$init", MethodTypeDesc.of(
@@ -1506,40 +1618,103 @@ public abstract class Builder {
     /**
      * Add the code to throw a "TypeMismatch" exception.
      */
-    public static void throwTypeMismatch(CodeBuilder code, String text) {
-        throwException(code, ClassDesc.of(N_TypeMismatch), text);
+    public static void throwTypeMismatch(CodeBuilder code, String text, int ctxSlot) {
+        throwException(code, ClassDesc.of(N_TypeMismatch), text, ctxSlot);
     }
 
     /**
      * Add the code to throw an "OutOfBounds" exception.
      */
-    public static void throwOutOfBounds(CodeBuilder code, String text) {
-        throwException(code, ClassDesc.of(N_OutOfBounds), text);
+    public static void throwOutOfBounds(CodeBuilder code, String text, int ctxSlot) {
+        throwException(code, ClassDesc.of(N_OutOfBounds), text, ctxSlot);
     }
 
     /**
      * Add the code to throw an "IllegalState" exception.
      */
-    public static void throwIllegalState(CodeBuilder code, String text) {
-        throwException(code, ClassDesc.of(N_IllegalState), text);
+    public static void throwIllegalState(CodeBuilder code, String text, int ctxSlot) {
+        throwException(code, ClassDesc.of(N_IllegalState), text, ctxSlot);
     }
 
     /**
-     * Convert the "void construct$17(...)" to "This new$17(...)"
+     * Add the code to throw an "ReadOnly" exception.
      */
-    public static JitMethodDesc convertConstructToNew(TypeInfo typeInfo, ClassDesc cd,
-                                                      JitCtorDesc jmdCtor) {
+    public static void throwReadOnly(CodeBuilder code, String text, int ctxSlot) {
+        throwException(code, ClassDesc.of(N_ReadOnly), text, ctxSlot);
+    }
+
+    /**
+     * Convert the "void construct$17(...)" specified by jmdCtor to a new MethodDesc for
+     * "This new$17(...)".
+     */
+    public static JitMethodDesc convertConstructToNew(
+            TypeInfo    typeInfo,
+            ClassDesc   cd,
+            JitCtorDesc jmdCtor) {
         JitParamDesc retDesc = new JitParamDesc(typeInfo.getType(), Specific, cd, 0, -1, false);
 
         JitParamDesc[] standardReturns  = new JitParamDesc[] {retDesc};
         JitParamDesc[] optimizedReturns = jmdCtor.isOptimized ? standardReturns : null;
         return typeInfo.hasGenericTypes()
-            ? new JitCtorDesc(null, /*addCtorCtx*/ false, /*addType*/ true,
+            ? new JitCtorDesc(typeInfo.getType(),
+                    /*add implicit CD_Target arg*/ null, /*addCtorCtx*/ false, /*addType*/ true,
                     standardReturns,  jmdCtor.standardParams,
                     optimizedReturns, jmdCtor.optimizedParams)
-            : new JitMethodDesc(
-                    standardReturns,  jmdCtor.standardParams,
-                    optimizedReturns, jmdCtor.optimizedParams);
+            : new JitMethodDesc(typeInfo.getType(),
+                    standardReturns, jmdCtor.standardParams,
+                    optimizedReturns, jmdCtor.optimizedParams, true);
+    }
+
+    /**
+     * Call the "new$" [static] method.
+     *
+     * @param bctx       optional BuildContext
+     * @param argsLoader the function (consumer) that is responsible for loading the arguments
+     *                   on the Java stack
+     */
+    public JitMethodDesc buildNew(
+            BuildContext            bctx,
+            CodeBuilder             code,
+            TypeConstant            typeTarget,
+            MethodConstant          idCtor,
+            Consumer<JitMethodDesc> argsLoader,
+            int                     ctxSlot) {
+        TypeInfo   infoTarget = typeTarget.ensureTypeInfo();
+        MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
+
+        if (infoCtor == null) {
+            infoTarget = typeTarget.ensureAccess(Constants.Access.PRIVATE).ensureTypeInfo();
+            infoCtor   = infoTarget.getMethodById(idCtor);
+        }
+
+        if (infoCtor == null) {
+            throw new RuntimeException("Unresolvable constructor \"" +
+                    idCtor.getValueString() + "\" for " + typeTarget.getValueString());
+        }
+
+        ClassDesc     cdTarget = ensureClassDesc(typeTarget);
+        JitMethodDesc jmdNew   = convertConstructToNew(infoTarget, cdTarget,
+                (JitCtorDesc) infoCtor.getJitDesc(this, typeTarget));
+
+        boolean fOptimized = jmdNew.isOptimized;
+        String  sJitNew    = infoCtor.ensureJitMethodName(typeSystem).replace("construct", NEW);
+        MethodTypeDesc md;
+        if (fOptimized) {
+            md       = jmdNew.optimizedMD;
+            sJitNew += Builder.OPT;
+        }
+        else {
+            md = jmdNew.standardMD;
+        }
+
+        code.aload(ctxSlot);
+        if (infoTarget.hasGenericTypes()) {
+            loadTypeConstant(bctx, code, typeTarget); // TODO Chet - is "bctx" required here?
+        }
+        argsLoader.accept(jmdNew);
+
+        code.invokestatic(cdTarget, sJitNew, md);
+        return jmdNew;
     }
 
     /**
@@ -1569,6 +1744,16 @@ public abstract class Builder {
         return srcType.getCanonicalJitType().isA(dstType.getCanonicalJitType());
     }
 
+    /**
+     * Primitive classes don't have fields; the only exception is Char, where "codepoint" is the
+     * char itself.
+     */
+    public boolean isPrimitivePseudoField(TypeConstant typeContainer, PropertyConstant propId) {
+        return typeContainer.getAccess() == Constants.Access.STRUCT &&
+                typeContainer.removeAccess().equals(pool().typeChar()) &&
+                propId.getName().equals("codepoint");
+    }
+
     // ----- TEMPORARY: debugging support ----------------------------------------------------------
 
     /**
@@ -1577,7 +1762,7 @@ public abstract class Builder {
     public static void addLog(CodeBuilder code, String message) {
         code.invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
             .loadConstant(message)
-            .invokevirtual(Builder.CD_Ctx, "log", MethodTypeDesc.of(CD_void, CD_JavaString));
+            .invokevirtual(CD_Ctx, "log", MethodTypeDesc.of(CD_void, CD_JavaString));
     }
 
     /**
@@ -1587,6 +1772,19 @@ public abstract class Builder {
      */
     public boolean isDebugInfo() {
         return true;
+    }
+
+    /**
+     * Represents an operation that loads a value onto the Java stack.
+     */
+    @FunctionalInterface
+    public interface Loader {
+        /**
+         * Load a value onto the Java stack.
+         *
+         * @return the register information describing the loaded value
+         */
+        RegisterInfo load(CodeBuilder code);
     }
 
     // ----- native class names --------------------------------------------------------------------
@@ -1624,14 +1822,17 @@ public abstract class Builder {
     public static final String N_Enumeration  = "org.xtclang.ecstasy.reflect.Enumeration";
     public static final String N_Exception    = "org.xtclang.ecstasy.Exception";
     public static final String N_Hashable     = "org.xtclang.ecstasy.collections.Hashable";
+    public static final String N_FPLiteral    = "org.xtclang.ecstasy.numbers.FPLiteral";
     public static final String N_Float16      = "org.xtclang.ecstasy.numbers.Float16";
     public static final String N_Float32      = "org.xtclang.ecstasy.numbers.Float32";
     public static final String N_Float64      = "org.xtclang.ecstasy.numbers.Float64";
+    public static final String N_IntLiteral   = "org.xtclang.ecstasy.numbers.IntLiteral";
     public static final String N_Int8         = "org.xtclang.ecstasy.numbers.Int8";
     public static final String N_Int16        = "org.xtclang.ecstasy.numbers.Int16";
     public static final String N_Int32        = "org.xtclang.ecstasy.numbers.Int32";
     public static final String N_Int64        = "org.xtclang.ecstasy.numbers.Int64";
     public static final String N_Int128       = "org.xtclang.ecstasy.numbers.Int128";
+    public static final String N_IntN         = "org.xtclang.ecstasy.numbers.IntN";
     public static final String N_IllegalState = "org.xtclang.ecstasy.IllegalState";
     public static final String N_IterableChar = "org.xtclang.ecstasy.IterableᐸCharᐳ";
     public static final String N_IteratorChar = "org.xtclang.ecstasy.IteratorᐸCharᐳ";
@@ -1641,6 +1842,7 @@ public abstract class Builder {
     public static final String N_Orderable    = "org.xtclang.ecstasy.Orderable";
     public static final String N_Ordered      = "org.xtclang.ecstasy.Ordered";
     public static final String N_OutOfBounds  = "org.xtclang.ecstasy.OutOfBounds";
+    public static final String N_ReadOnly     = "org.xtclang.ecstasy.ReadOnly";
     public static final String N_String       = "org.xtclang.ecstasy.text.String";
     public static final String N_TypeMismatch = "org.xtclang.ecstasy.TypeMismatch";
     public static final String N_UInt8        = "org.xtclang.ecstasy.numbers.UInt8";
@@ -1648,6 +1850,7 @@ public abstract class Builder {
     public static final String N_UInt32       = "org.xtclang.ecstasy.numbers.UInt32";
     public static final String N_UInt64       = "org.xtclang.ecstasy.numbers.UInt64";
     public static final String N_UInt128      = "org.xtclang.ecstasy.numbers.UInt128";
+    public static final String N_UIntN        = "org.xtclang.ecstasy.numbers.UIntN";
     public static final String N_AppenderChar = "org.xtclang.ecstasy.AppenderᐸCharᐳ";
 
     public static final String N_nConst       = "org.xtclang.ecstasy.nConst";
@@ -1714,97 +1917,103 @@ public abstract class Builder {
 
     // ----- well-known class descriptors ----------------------------------------------------------
 
-    public static final ClassDesc CD_Array         = ClassDesc.of(N_Array);
-    public static final ClassDesc CD_ArrayBit      = ClassDesc.of(N_ArrayBit);
-    public static final ClassDesc CD_ArrayBoolean  = ClassDesc.of(N_ArrayBoolean);
-    public static final ClassDesc CD_ArrayChar     = ClassDesc.of(N_ArrayChar);
-    public static final ClassDesc CD_ArrayDec32    = ClassDesc.of(N_ArrayDec32);
-    public static final ClassDesc CD_ArrayDec64    = ClassDesc.of(N_ArrayDec64);
-    public static final ClassDesc CD_ArrayDec128   = ClassDesc.of(N_ArrayDec128);
-    public static final ClassDesc CD_ArrayFloat32  = ClassDesc.of(N_ArrayFloat32);
-    public static final ClassDesc CD_ArrayFloat64  = ClassDesc.of(N_ArrayFloat64);
-    public static final ClassDesc CD_ArrayInt8     = ClassDesc.of(N_ArrayInt8);
-    public static final ClassDesc CD_ArrayInt16    = ClassDesc.of(N_ArrayInt16);
-    public static final ClassDesc CD_ArrayInt32    = ClassDesc.of(N_ArrayInt32);
-    public static final ClassDesc CD_ArrayInt64    = ClassDesc.of(N_ArrayInt64);
-    public static final ClassDesc CD_ArrayInt128   = ClassDesc.of(N_ArrayInt128);
-    public static final ClassDesc CD_ArrayNibble   = ClassDesc.of(N_ArrayNibble);
-    public static final ClassDesc CD_ArrayUInt8    = ClassDesc.of(N_ArrayUInt8);
-    public static final ClassDesc CD_ArrayUInt16   = ClassDesc.of(N_ArrayUInt16);
-    public static final ClassDesc CD_ArrayUInt32   = ClassDesc.of(N_ArrayUInt32);
-    public static final ClassDesc CD_ArrayUInt64   = ClassDesc.of(N_ArrayUInt64);
-    public static final ClassDesc CD_ArrayUInt128  = ClassDesc.of(N_ArrayUInt128);
-    public static final ClassDesc CD_ArrayObj      = ClassDesc.of(N_ArrayObj);
-    public static final ClassDesc CD_Class         = ClassDesc.of(N_Class);
-    public static final ClassDesc CD_Enumeration   = ClassDesc.of(N_Enumeration);
-    public static final ClassDesc CD_Exception     = ClassDesc.of(N_Exception);
-    public static final ClassDesc CD_Hashable      = ClassDesc.of(N_Hashable);
-    public static final ClassDesc CD_nFunction     = ClassDesc.of(N_nFunction);
-    public static final ClassDesc CD_nMethod       = ClassDesc.of(N_nMethod);
-    public static final ClassDesc CD_nModule       = ClassDesc.of(N_nModule);
-    public static final ClassDesc CD_nPackage      = ClassDesc.of(N_nPackage);
-    public static final ClassDesc CD_nRangeBoolean = ClassDesc.of(N_nRangeBoolean);
-    public static final ClassDesc CD_nRangeFloat32 = ClassDesc.of(N_nRangeFloat32);
-    public static final ClassDesc CD_nRangeFloat64 = ClassDesc.of(N_nRangeFloat64);
-    public static final ClassDesc CD_nRangeInt8    = ClassDesc.of(N_nRangeInt8);
-    public static final ClassDesc CD_nRangeInt64   = ClassDesc.of(N_nRangeInt64);
+    public static final ClassDesc CD_Array               = ClassDesc.of(N_Array);
+    public static final ClassDesc CD_ArrayBit            = ClassDesc.of(N_ArrayBit);
+    public static final ClassDesc CD_ArrayBoolean        = ClassDesc.of(N_ArrayBoolean);
+    public static final ClassDesc CD_ArrayChar           = ClassDesc.of(N_ArrayChar);
+    public static final ClassDesc CD_ArrayDec32          = ClassDesc.of(N_ArrayDec32);
+    public static final ClassDesc CD_ArrayDec64          = ClassDesc.of(N_ArrayDec64);
+    public static final ClassDesc CD_ArrayDec128         = ClassDesc.of(N_ArrayDec128);
+    public static final ClassDesc CD_ArrayFloat32        = ClassDesc.of(N_ArrayFloat32);
+    public static final ClassDesc CD_ArrayFloat64        = ClassDesc.of(N_ArrayFloat64);
+    public static final ClassDesc CD_ArrayInt8           = ClassDesc.of(N_ArrayInt8);
+    public static final ClassDesc CD_ArrayInt16          = ClassDesc.of(N_ArrayInt16);
+    public static final ClassDesc CD_ArrayInt32          = ClassDesc.of(N_ArrayInt32);
+    public static final ClassDesc CD_ArrayInt64          = ClassDesc.of(N_ArrayInt64);
+    public static final ClassDesc CD_ArrayInt128         = ClassDesc.of(N_ArrayInt128);
+    public static final ClassDesc CD_ArrayNibble         = ClassDesc.of(N_ArrayNibble);
+    public static final ClassDesc CD_ArrayUInt8          = ClassDesc.of(N_ArrayUInt8);
+    public static final ClassDesc CD_ArrayUInt16         = ClassDesc.of(N_ArrayUInt16);
+    public static final ClassDesc CD_ArrayUInt32         = ClassDesc.of(N_ArrayUInt32);
+    public static final ClassDesc CD_ArrayUInt64         = ClassDesc.of(N_ArrayUInt64);
+    public static final ClassDesc CD_ArrayUInt128        = ClassDesc.of(N_ArrayUInt128);
+    public static final ClassDesc CD_ArrayObj            = ClassDesc.of(N_ArrayObj);
+    public static final ClassDesc CD_Class               = ClassDesc.of(N_Class);
+    public static final ClassDesc CD_Enumeration         = ClassDesc.of(N_Enumeration);
+    public static final ClassDesc CD_Exception           = ClassDesc.of(N_Exception);
+    public static final ClassDesc CD_Hashable            = ClassDesc.of(N_Hashable);
+    public static final ClassDesc CD_nFunction           = ClassDesc.of(N_nFunction);
+    public static final ClassDesc CD_nMethod             = ClassDesc.of(N_nMethod);
+    public static final ClassDesc CD_nModule             = ClassDesc.of(N_nModule);
+    public static final ClassDesc CD_nPackage            = ClassDesc.of(N_nPackage);
+    public static final ClassDesc CD_nRangeBoolean       = ClassDesc.of(N_nRangeBoolean);
+    public static final ClassDesc CD_nRangeFloat32       = ClassDesc.of(N_nRangeFloat32);
+    public static final ClassDesc CD_nRangeFloat64       = ClassDesc.of(N_nRangeFloat64);
+    public static final ClassDesc CD_nRangeInt8          = ClassDesc.of(N_nRangeInt8);
+    public static final ClassDesc CD_nRangeInt64         = ClassDesc.of(N_nRangeInt64);
 
-    public static final ClassDesc CD_nConst        = ClassDesc.of(N_nConst);
-    public static final ClassDesc CD_nEnum         = ClassDesc.of(N_nEnum);
-    public static final ClassDesc CD_nException    = ClassDesc.of(N_nException);
-    public static final ClassDesc CD_nObj          = ClassDesc.of(N_nObj);
-    public static final ClassDesc CD_nRef          = ClassDesc.of(N_nRef);
-    public static final ClassDesc CD_nType         = ClassDesc.of(N_nType);
-    public static final ClassDesc CD_nUtil         = ClassDesc.of(N_nUtil);
+    public static final ClassDesc CD_nConst              = ClassDesc.of(N_nConst);
+    public static final ClassDesc CD_nEnum               = ClassDesc.of(N_nEnum);
+    public static final ClassDesc CD_nException          = ClassDesc.of(N_nException);
+    public static final ClassDesc CD_nObj                = ClassDesc.of(N_nObj);
+    public static final ClassDesc CD_nRef                = ClassDesc.of(N_nRef);
+    public static final ClassDesc CD_nType               = ClassDesc.of(N_nType);
+    public static final ClassDesc CD_nUtil               = ClassDesc.of(N_nUtil);
 
-    public static final ClassDesc CD_Bit           = ClassDesc.of(N_Bit);
-    public static final ClassDesc CD_Boolean       = ClassDesc.of(N_Boolean);
-    public static final ClassDesc CD_Char          = ClassDesc.of(N_Char);
-    public static final ClassDesc CD_Dec32         = ClassDesc.of(N_Dec32);
-    public static final ClassDesc CD_Dec64         = ClassDesc.of(N_Dec64);
-    public static final ClassDesc CD_Dec128        = ClassDesc.of(N_Dec128);
-    public static final ClassDesc CD_Float16       = ClassDesc.of(N_Float16);
-    public static final ClassDesc CD_Float32       = ClassDesc.of(N_Float32);
-    public static final ClassDesc CD_Float64       = ClassDesc.of(N_Float64);
-    public static final ClassDesc CD_Int8          = ClassDesc.of(N_Int8);
-    public static final ClassDesc CD_Int16         = ClassDesc.of(N_Int16);
-    public static final ClassDesc CD_Int32         = ClassDesc.of(N_Int32);
-    public static final ClassDesc CD_Int64         = ClassDesc.of(N_Int64);
-    public static final ClassDesc CD_Int128        = ClassDesc.of(N_Int128);
-    public static final ClassDesc CD_Nibble        = ClassDesc.of(N_Nibble);
-    public static final ClassDesc CD_Nullable      = ClassDesc.of(N_Nullable);
-    public static final ClassDesc CD_Object        = ClassDesc.of(N_Object);
-    public static final ClassDesc CD_Orderable     = ClassDesc.of(N_Orderable);
-    public static final ClassDesc CD_Ordered       = ClassDesc.of(N_Ordered);
-    public static final ClassDesc CD_String        = ClassDesc.of(N_String);
-    public static final ClassDesc CD_UInt8         = ClassDesc.of(N_UInt8);
-    public static final ClassDesc CD_UInt16        = ClassDesc.of(N_UInt16);
-    public static final ClassDesc CD_UInt32        = ClassDesc.of(N_UInt32);
-    public static final ClassDesc CD_UInt64        = ClassDesc.of(N_UInt64);
-    public static final ClassDesc CD_UInt128       = ClassDesc.of(N_UInt128);
-    public static final ClassDesc CD_AppenderChar  = ClassDesc.of(N_AppenderChar);
+    public static final ClassDesc CD_Bit                 = ClassDesc.of(N_Bit);
+    public static final ClassDesc CD_Boolean             = ClassDesc.of(N_Boolean);
+    public static final ClassDesc CD_Char                = ClassDesc.of(N_Char);
+    public static final ClassDesc CD_Dec32               = ClassDesc.of(N_Dec32);
+    public static final ClassDesc CD_Dec64               = ClassDesc.of(N_Dec64);
+    public static final ClassDesc CD_Dec128              = ClassDesc.of(N_Dec128);
+    public static final ClassDesc CD_Float16             = ClassDesc.of(N_Float16);
+    public static final ClassDesc CD_Float32             = ClassDesc.of(N_Float32);
+    public static final ClassDesc CD_Float64             = ClassDesc.of(N_Float64);
+    public static final ClassDesc CD_FPLiteral           = ClassDesc.of(N_FPLiteral);
+    public static final ClassDesc CD_Int8                = ClassDesc.of(N_Int8);
+    public static final ClassDesc CD_Int16               = ClassDesc.of(N_Int16);
+    public static final ClassDesc CD_Int32               = ClassDesc.of(N_Int32);
+    public static final ClassDesc CD_Int64               = ClassDesc.of(N_Int64);
+    public static final ClassDesc CD_Int128              = ClassDesc.of(N_Int128);
+    public static final ClassDesc CD_IntN                = ClassDesc.of(N_IntN);
+    public static final ClassDesc CD_IntLiteral          = ClassDesc.of(N_IntLiteral);
+    public static final ClassDesc CD_Nibble              = ClassDesc.of(N_Nibble);
+    public static final ClassDesc CD_Nullable            = ClassDesc.of(N_Nullable);
+    public static final ClassDesc CD_Object              = ClassDesc.of(N_Object);
+    public static final ClassDesc CD_Orderable           = ClassDesc.of(N_Orderable);
+    public static final ClassDesc CD_Ordered             = ClassDesc.of(N_Ordered);
+    public static final ClassDesc CD_String              = ClassDesc.of(N_String);
+    public static final ClassDesc CD_UInt8               = ClassDesc.of(N_UInt8);
+    public static final ClassDesc CD_UInt16              = ClassDesc.of(N_UInt16);
+    public static final ClassDesc CD_UInt32              = ClassDesc.of(N_UInt32);
+    public static final ClassDesc CD_UInt64              = ClassDesc.of(N_UInt64);
+    public static final ClassDesc CD_UInt128             = ClassDesc.of(N_UInt128);
+    public static final ClassDesc CD_UIntN               = ClassDesc.of(N_UIntN);
+    public static final ClassDesc CD_AppenderChar        = ClassDesc.of(N_AppenderChar);
 
-    public static final ClassDesc CD_Container     = ClassDesc.of(Container.class.getName());
-    public static final ClassDesc CD_Ctx           = ClassDesc.of(Ctx.class.getName());
-    public static final ClassDesc CD_CtorCtx       = ClassDesc.of(Ctx.CtorCtx.class.getName());
-    public static final ClassDesc CD_TypeConstant  = ClassDesc.of(TypeConstant.class.getName());
-    public static final ClassDesc CD_TypeSystem    = ClassDesc.of(TypeSystem.class.getName());
+    public static final ClassDesc CD_Container           = ClassDesc.of(Container.class.getName());
+    public static final ClassDesc CD_ConstantPool        = ClassDesc.of(ConstantPool.class.getName());
+    public static final ClassDesc CD_Ctx                 = ClassDesc.of(Ctx.class.getName());
+    public static final ClassDesc CD_CtorCtx             = ClassDesc.of(Ctx.CtorCtx.class.getName());
+    public static final ClassDesc CD_GenericTypeResolver = ClassDesc.of(GenericTypeResolver.class.getName());
+    public static final ClassDesc CD_TypeConstant        = ClassDesc.of(TypeConstant.class.getName());
+    public static final ClassDesc CD_TypeSystem          = ClassDesc.of(TypeSystem.class.getName());
 
-    public static final ClassDesc CD_JavaSystem    = ClassDesc.of(java.lang.System.class.getName());
-    public static final ClassDesc CD_JavaBoolean   = ClassDesc.of(java.lang.Boolean.class.getName());
-    public static final ClassDesc CD_JavaDouble    = ClassDesc.of(java.lang.Double.class.getName());
-    public static final ClassDesc CD_JavaFloat    = ClassDesc.of(java.lang.Float.class.getName());
-    public static final ClassDesc CD_JavaInteger   = ClassDesc.of(java.lang.Integer.class.getName());
-    public static final ClassDesc CD_JavaLong      = ClassDesc.of(java.lang.Long.class.getName());
-    public static final ClassDesc CD_JavaMath      = ClassDesc.of(java.lang.Math.class.getName());
-    public static final ClassDesc CD_JavaObject    = ClassDesc.of(java.lang.Object.class.getName());
-    public static final ClassDesc CD_JavaString    = ClassDesc.of(java.lang.String.class.getName());
+    public static final ClassDesc CD_JavaSystem          = ClassDesc.of(java.lang.System.class.getName());
+    public static final ClassDesc CD_JavaBoolean         = ClassDesc.of(java.lang.Boolean.class.getName());
+    public static final ClassDesc CD_JavaDouble          = ClassDesc.of(java.lang.Double.class.getName());
+    public static final ClassDesc CD_JavaFloat           = ClassDesc.of(java.lang.Float.class.getName());
+    public static final ClassDesc CD_JavaInteger         = ClassDesc.of(java.lang.Integer.class.getName());
+    public static final ClassDesc CD_JavaLong            = ClassDesc.of(java.lang.Long.class.getName());
+    public static final ClassDesc CD_JavaMath            = ClassDesc.of(java.lang.Math.class.getName());
+    public static final ClassDesc CD_JavaObject          = ClassDesc.of(java.lang.Object.class.getName());
+    public static final ClassDesc CD_JavaString          = ClassDesc.of(java.lang.String.class.getName());
 
     // ----- well-known custom primitives ----------------------------------------------------------
 
-    public static final ClassDesc[] CDs_Int      = new ClassDesc[]{CD_int};
-    public static final ClassDesc[] CDs_Long     = new ClassDesc[]{CD_long};
-    public static final ClassDesc[] CDs_LongLong = new ClassDesc[]{CD_long, CD_long};
+    public static final ClassDesc[] CDs_Int              = new ClassDesc[]{CD_int};
+    public static final ClassDesc[] CDs_Long             = new ClassDesc[]{CD_long};
+    public static final ClassDesc[] CDs_LongLong         = new ClassDesc[]{CD_long, CD_long};
 
     // ----- well-known methods --------------------------------------------------------------------
 
@@ -1822,8 +2031,8 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_Bit_box     = MethodTypeDesc.of(CD_Bit,     CD_int);
     public static final MethodTypeDesc MD_Boolean_box = MethodTypeDesc.of(CD_Boolean, CD_boolean);
     public static final MethodTypeDesc MD_Char_box    = MethodTypeDesc.of(CD_Char,    CD_int);
-    public static final MethodTypeDesc MD_Char_addInt = MethodTypeDesc.of(CD_int,     CD_Ctx, CD_int, CD_long);
-    public static final MethodTypeDesc MD_Char_subInt = MethodTypeDesc.of(CD_int,     CD_Ctx, CD_int, CD_long);
+    public static final MethodTypeDesc MD_Char_addInt = MethodTypeDesc.of(CD_int,     CD_int, CD_Ctx, CD_long);
+    public static final MethodTypeDesc MD_Char_subInt = MethodTypeDesc.of(CD_int,     CD_int, CD_Ctx, CD_long);
     public static final MethodTypeDesc MD_Dec32_box   = MethodTypeDesc.of(CD_Dec32,   CD_int);
     public static final MethodTypeDesc MD_Dec64_box   = MethodTypeDesc.of(CD_Dec64,   CD_long);
     public static final MethodTypeDesc MD_Dec128_box  = MethodTypeDesc.of(CD_Dec128,  CD_long, CD_long);

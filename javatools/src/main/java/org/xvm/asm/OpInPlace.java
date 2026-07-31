@@ -244,6 +244,14 @@ public abstract class OpInPlace
                 } else {
                     reg.markChanged();
                 }
+            } else if (reg.type().isA(bctx.pool().typeSequential())) {
+                // this can only be non-primitive Sequential, i.e. IntNumber, IntN or UIntN
+                buildSequentialLocal(bctx, code, reg);
+                if (isAssignOp()) {
+                    bctx.storeValue(code, m_nRetValue, reg.type());
+                } else {
+                    reg.markChanged();
+                }
             } else {
                 // call the corresponding op method
                 JitMethodDesc jmd = buildOpCallLocal(bctx, code, reg);
@@ -312,8 +320,8 @@ public abstract class OpInPlace
     protected void buildPrimitiveProperty(BuildContext bctx, CodeBuilder code,
                                           PropertyConstant idProp) {
         PropertyInfo  infoProp = idProp.getPropertyInfo();
-        JitMethodDesc jmdGet   = infoProp.getGetterJitDesc(bctx.builder);
-        JitMethodDesc jmdSet   = infoProp.getSetterJitDesc(bctx.builder);
+        JitMethodDesc jmdGet   = infoProp.getGetterJitDesc(bctx.builder, bctx.thisType);
+        JitMethodDesc jmdSet   = infoProp.getSetterJitDesc(bctx.builder, bctx.thisType);
         JitParamDesc  pd       = jmdGet.optimizedReturns[0];
         ClassDesc     cd       = pd.cd;
 

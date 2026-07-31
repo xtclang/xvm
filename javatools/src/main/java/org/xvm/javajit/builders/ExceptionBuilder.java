@@ -11,6 +11,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.TypeSystem;
+import org.xvm.javajit.TypeSystem.Artifact;
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
 import static java.lang.constant.ConstantDescs.CD_Throwable;
@@ -28,15 +29,15 @@ import static java.lang.constant.ConstantDescs.INIT_NAME;
  * {@link ClassfileShape#Exception Exception shape} via {@link #assembleJavaException} method.
  */
 public class ExceptionBuilder extends CommonBuilder {
-    public ExceptionBuilder(TypeSystem typeSystem, TypeConstant type) {
-        super(typeSystem, type);
+    public ExceptionBuilder(TypeSystem typeSystem, Artifact art) {
+        super(typeSystem, art);
     }
 
     @Override
-    protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
-        super.assembleImplMethods(className, classBuilder);
+    protected void assembleMethods(ClassBuilder classBuilder) {
+        super.assembleMethods(classBuilder);
 
-        assembleCreateException(className, classBuilder);
+        assembleCreateException(classBuilder);
     }
 
     /**
@@ -47,12 +48,13 @@ public class ExceptionBuilder extends CommonBuilder {
      *  }}
      * </pre>
      */
-    public void assembleCreateException(String className, ClassBuilder classBuilder) {
-        String         jitName  = "$createJavaException";
-        MethodTypeDesc createMD = MethodTypeDesc.of(CD_nException, CD_Throwable);
-        ClassDesc      javaExCD = getShapeDesc(className, ClassfileShape.Exception);
-        ClassDesc      thisCD   = ClassDesc.of(className);
-        MethodTypeDesc initMD   = MethodTypeDesc.of(CD_void, CD_Throwable, thisCD);
+    public void assembleCreateException(ClassBuilder classBuilder) {
+        String         className = art.className();
+        String         jitName   = "$createJavaException";
+        MethodTypeDesc createMD  = MethodTypeDesc.of(CD_nException, CD_Throwable);
+        ClassDesc      javaExCD  = getShapeDesc(className, ClassfileShape.Exception);
+        ClassDesc      thisCD    = ClassDesc.of(className);
+        MethodTypeDesc initMD    = MethodTypeDesc.of(CD_void, CD_Throwable, thisCD);
 
         classBuilder.withMethodBody(jitName, createMD, ClassFile.ACC_PUBLIC, code ->
             code.new_(javaExCD)

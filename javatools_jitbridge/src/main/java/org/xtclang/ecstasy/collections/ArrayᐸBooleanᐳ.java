@@ -169,6 +169,10 @@ public class ArrayᐸBooleanᐳ
         $set1bitElement(index, value);
     }
 
+    public void setElement$pi(Ctx ctx, long index, boolean value) {
+        $set1bitElement(index, value ? 1 : 0);
+    }
+
     @Override
     protected long $cap2len(long cap) {
         return $cap2len1bit(cap);

@@ -158,11 +158,26 @@ public abstract class OpInPlaceAssign
         }
 
         regTarget = regTarget.load(code);
+        if (jmd.isOptimizedStatic) {
+            // the target must be a boxed primitive
+            assert typeTarget.isJitPrimitive();
+            Builder.unbox(code, typeTarget);
+        }
         bctx.loadCtx(code);
-        bctx.loadArgument(code, m_nArgValue);
-        code.invokevirtual(regTarget.cd(), sJitName, md);
+        bctx.loadCallArguments(code, jmd, new int[] {m_nArgValue});
 
-        return method.getSignature().getRawReturns()[0]; // could differ from the target
+        if (jmd.isOptimizedStatic) {
+            code.invokestatic(bctx.builder.ensureClassDesc(typeTarget), sJitName, md);
+        } else {
+            code.invokevirtual(regTarget.cd(), sJitName, md);
+        }
+
+        TypeConstant typeResult   = method.getSignature().getRawReturns()[0]; // could differ from
+        TypeConstant typeResolved = typeResult.resolveAutoNarrowing(bctx.pool(), false, typeTarget, null);
+        if (!typeResult.isA(typeResolved)) {
+            code.checkcast(bctx.builder.ensureClassDesc(typeResolved));
+        }
+        return typeResult;
     }
 
     /**
@@ -201,7 +216,7 @@ public abstract class OpInPlaceAssign
             case OP_IP_MOD  -> {sName = "mod";           sOp = "%";   }
             case OP_IP_SHL  -> {sName = "shiftLeft";     sOp = "<<";  }
             case OP_IP_SHR  -> {sName = "shiftRight";    sOp = ">>";  }
-            case OP_IP_USHR -> {sName = "shiftAllRight"; sOp = ">>";  }
+            case OP_IP_USHR -> {sName = "shiftAllRight"; sOp = ">>>"; }
             case OP_IP_AND  -> {sName = "and";           sOp = "&";   }
             case OP_IP_OR   -> {sName = "or";            sOp = "|";   }
             case OP_IP_XOR  -> {sName = "xor";           sOp = "^";   }

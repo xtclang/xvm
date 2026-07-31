@@ -14,6 +14,8 @@ package booleanArrayTests {
         shouldAddElement();
         shouldAddElementUsingOperator();
         shouldAddMultipleElement();
+        shouldSetElement();
+        shouldCallListDefault();
         shouldIterateUsingForLoop();
         shouldIterateUsingIterator();
         shouldDeleteSpecificIndexFromArray();
@@ -83,6 +85,21 @@ package booleanArrayTests {
         assert array[0] == True  && array[1] == False && array[2] == True && array[3] == True;
         assert array[4] == False && array[5] == False && array[6] == True && array[7] == False;
         assert array[8] == True  && array[9] == True;
+    }
+
+    void shouldSetElement() {
+        Boolean[] array = new Boolean[2];
+        array[0] = True;
+        assert array[0];
+
+        array[0] = False;
+        assert !array[0];
+    }
+
+    void shouldCallListDefault() {
+        Boolean[] array = [False, True, False];
+        assert Boolean first := array.first();
+        assert !first;
     }
 
     void shouldIterateUsingForLoop() {

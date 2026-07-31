@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
@@ -41,6 +42,8 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
+import static java.lang.constant.ConstantDescs.CD_MethodType;
+import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Exception;
@@ -642,8 +645,7 @@ public abstract class OpCallable extends Op {
      * Build support for CALL_ ops.
      */
     protected int buildCall(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
-        TypeSystem ts = bctx.typeSystem;
-
+        TypeSystem    ts = bctx.typeSystem;
         ClassDesc     cdTarget;
         String        sJitName;
         JitMethodDesc jmdCall;
@@ -663,17 +665,17 @@ public abstract class OpCallable extends Op {
 
             if (format == Format.MIXIN) {
                 // we need to generate a synthetic super
-                cdTarget  = ClassDesc.of(bctx.className);
-                sJitName += HASH + String.valueOf(nDepth);
+                cdTarget   = ClassDesc.of(bctx.className);
+                sJitName  += HASH + String.valueOf(nDepth);
 
                 bctx.buildSuper(sJitName, nDepth);
                 fInterface = false;
             } else {
-                TypeConstant typeCallee = bctx.isSpecialized
+                TypeConstant typeTarget = bctx.isSpecialized
                         ? idCallee.getFormalType().resolveGenerics(bctx.pool(), bctx.thisType)
                         : idCallee.getType();
-                cdTarget   = bctx.builder.ensureClassDesc(typeCallee);
-                fInterface = typeCallee.isJitInterface();
+                cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
+                fInterface = typeTarget.isJitInterface();
             }
             jmdCall  = bodySuper.getJitDesc(bctx.builder, bctx.thisType);
             fSpecial = true;
@@ -701,6 +703,7 @@ public abstract class OpCallable extends Op {
         } else {
             RegisterInfo regFn = bctx.loadArgument(code, m_nFunctionId);
             // call "$invoke(Ctx ctx, Object... args)" via the corresponding MethodHandle
+            int slotFn = bctx.storeTempValue(code, CD_nFunction);
 
             TypeConstant typeFn = regFn.type();
             assert typeFn.isFunction();
@@ -711,24 +714,63 @@ public abstract class OpCallable extends Op {
 
             fCond   = pool.isConditionalReturn(typeFn);
             jmdCall = JitMethodDesc.of(bctx.builder,
-                        atypeParams, atypeReturns, false, null, atypeParams.length);
+                    null, true, false, atypeParams, atypeReturns, atypeParams.length);
 
+            int[] anRet = isMultiReturn()
+                    ? m_anRetValue
+                    : m_nRetValue == Op.A_IGNORE
+                        ? NO_ARGS
+                        : new int[] {m_nRetValue};
+
+            Label lblEnd = null;
             if (jmdCall.isOptimized) {
-                code.getfield(CD_nFunction, "optMethod", CD_MethodHandle);
-            } else {
-                code.getfield(CD_nFunction, "stdMethod", CD_MethodHandle);
+                Label lblStd = code.newLabel();
+                lblEnd = code.newLabel();
+
+                // function parameter contravariance can place "function Int(Object)" in a
+                // "function Int(Int)" register; the boxed signatures are compatible, but the
+                // optimized MethodHandle signatures are not
+                code.aload(slotFn)
+                    .ldc(jmdCall.optimizedMD)
+                    .invokevirtual(CD_nFunction, "$hasOptMethod",
+                        MethodTypeDesc.of(CD_boolean, CD_MethodType))
+                    .ifeq(lblStd)
+                    .aload(slotFn)
+                    .getfield(CD_nFunction, "optMethod", CD_MethodHandle);
+                bctx.loadCtx(code);
+                bctx.loadCallArguments(code, jmdCall, anArgValue);
+                code.invokevirtual(CD_MethodHandle, "invoke", jmdCall.optimizedMD);
+
+                if (anRet.length == 0) {
+                    if (jmdCall.optimizedMD.returnType() != CD_void) {
+                        Builder.pop(code, jmdCall.optimizedMD.returnType());
+                    }
+                } else {
+                    bctx.assignReturns(code, jmdCall, anRet.length, anRet, fCond);
+                }
+
+                code.goto_(lblEnd)
+                    .labelBinding(lblStd);
+                jmdCall = new JitMethodDesc(null,
+                        jmdCall.standardReturns, jmdCall.standardParams, null, null, true);
             }
 
+            code.aload(slotFn)
+                .getfield(CD_nFunction, "stdMethod", CD_MethodHandle);
             bctx.loadCtx(code);
             bctx.loadCallArguments(code, jmdCall, anArgValue);
+            code.invokevirtual(CD_MethodHandle, "invoke", jmdCall.standardMD);
 
-            // TODO JK - work out when and how we can call invokeExact
-            code.invokevirtual(CD_MethodHandle, "invoke",
-                jmdCall.isOptimized ? jmdCall.optimizedMD : jmdCall.standardMD);
+            if (anRet.length == 0) {
+                if (jmdCall.standardMD.returnType() != CD_void) {
+                    Builder.pop(code, jmdCall.standardMD.returnType());
+                }
+            } else {
+                bctx.assignReturns(code, jmdCall, anRet.length, anRet, fCond);
+            }
 
-            if (m_nRetValue != Op.A_IGNORE) {
-                int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
-                bctx.assignReturns(code, jmdCall, anVar.length, anVar, fCond);
+            if (lblEnd != null) {
+                code.labelBinding(lblEnd);
             }
             return -1;
         }
@@ -805,7 +847,8 @@ public abstract class OpCallable extends Op {
      * Support for NEW_C ops.
      */
     protected int buildNewC(BuildContext bctx, CodeBuilder code, int nParentArg, int[] anArgValue) {
-        Builder.throwException(code, CD_Exception, "Not implemented: " + toName(getOpCode()));
+        Builder.throwException(code, CD_Exception, "Not implemented: " + toName(getOpCode()),
+                bctx.ctxSlot(code));
         return -1;
     }
 
@@ -813,7 +856,8 @@ public abstract class OpCallable extends Op {
      * Support for NEW_V ops.
      */
     protected int buildNewV(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
-        Builder.throwException(code, CD_Exception, "Not implemented: " + toName(getOpCode()));
+        Builder.throwException(code, CD_Exception, "Not implemented: " + toName(getOpCode()),
+                bctx.ctxSlot(code));
         return -1;
     }
 

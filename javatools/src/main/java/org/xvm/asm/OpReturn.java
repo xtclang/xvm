@@ -94,18 +94,28 @@ public abstract class OpReturn
 
             // $retN = ...
             for (int i = 0; i < cRets; i++) {
-                int[]        optIndexes = jmd.getAllOptimizedReturnIndexes(i);
-                int          iOpt       = fOptimized ? optIndexes[0] : -1;
-                JitParamDesc pdRet      = fOptimized ? jmd.optimizedReturns[iOpt]
-                                                     : jmd.standardReturns[i];
-                int          iExt       = fOptimized ? optIndexes[optIndexes.length - 1] : -1;
-                JitParamDesc pdExt      = fOptimized ? jmd.optimizedReturns[iExt] : null;
-                RegisterInfo regRet     = bctx.loadArgument(code, anRet[i]);
-                ClassDesc    cd         = regRet.cd();
-                String       slotName   = GuardAll.returnSlotName(pdRet);
-                int          slotR      = bctx.scope.getSynthetic(slotName, true);
-                String       extName    = fOptimized ? GuardAll.returnSlotName(pdExt) : "";
-                int          slotValEx  = fOptimized ? bctx.scope.getSynthetic(extName, true) : -1;
+                int[]        retIndexes;
+                JitParamDesc pdRet;
+                int          slotValEx;
+
+                if (fOptimized) {
+                    retIndexes = jmd.getAllOptimizedReturnIndexes(i);
+
+                    int          iExt    = retIndexes[retIndexes.length - 1];
+                    JitParamDesc pdExt   = jmd.optimizedReturns[iExt];
+                    String       extName = GuardAll.returnSlotName(pdExt);
+                    slotValEx = bctx.scope.getSynthetic(extName, true);
+                    pdRet     = jmd.optimizedReturns[retIndexes[0]];
+                } else {
+                    retIndexes = new int[]{jmd.standardReturns[i].index};
+                    slotValEx  = -1;
+                    pdRet      = jmd.standardReturns[i];
+                }
+
+                String       slotName = GuardAll.returnSlotName(pdRet);
+                int          slotR    = bctx.scope.getSynthetic(slotName, true);
+                RegisterInfo regRet   = bctx.loadArgument(code, anRet[i]);
+                ClassDesc    cd       = regRet.cd();
                 JitParamDesc retDesc;
 
                 switch (pdRet.flavor) {
@@ -129,8 +139,8 @@ public abstract class OpReturn
 
                 case XvmPrimitive:
                     // iSynth - the primitive values into slots in reverse order
-                    for (int j = optIndexes.length - 1; j >= 0; j--) {
-                        retDesc  = jmd.optimizedReturns[optIndexes[j]];
+                    for (int j = retIndexes.length - 1; j >= 0; j--) {
+                        retDesc  = jmd.optimizedReturns[retIndexes[j]];
                         slotName = GuardAll.returnSlotName(retDesc);
                         slotR    = bctx.scope.getSynthetic(slotName, true);
                         Builder.store(code, retDesc.cd, slotR);
@@ -141,8 +151,8 @@ public abstract class OpReturn
                     assert fOptimized;
                     if (regRet.type().removeNullable().isXvmPrimitive()) {
                         // iSynth - `false` at iSynth+n and the primitive values in reverse
-                        for (int j = optIndexes.length - 1; j >= 0; j--) {
-                            retDesc  = jmd.optimizedReturns[optIndexes[j]];
+                        for (int j = retIndexes.length - 1; j >= 0; j--) {
+                            retDesc  = jmd.optimizedReturns[retIndexes[j]];
                             slotName = GuardAll.returnSlotName(retDesc);
                             slotR    = bctx.scope.getSynthetic(slotName, true);
                             Builder.store(code, retDesc.cd, slotR);
@@ -150,11 +160,11 @@ public abstract class OpReturn
                     } else { // return is Null
                         assert regRet.type().isOnlyNullable();
                         // iSynth - `true` at iSynth+n and the default primitive values in reverse
-                        int j = optIndexes.length - 1;
+                        int j = retIndexes.length - 1;
                         code.iconst_1();
                         Builder.store(code, CD_boolean, slotValEx);
                         for (; j >= 0; j--) {
-                            retDesc  = jmd.optimizedReturns[optIndexes[j]];
+                            retDesc  = jmd.optimizedReturns[retIndexes[j]];
                             slotName = GuardAll.returnSlotName(retDesc);
                             slotR    = bctx.scope.getSynthetic(slotName, true);
                             Builder.defaultLoad(code, retDesc.cd);
@@ -173,12 +183,20 @@ public abstract class OpReturn
             code.goto_(bctx.ensureLabel(code, m_nFinallyAddr));
         } else {
             for (int i = cRets - 1; i >= 0; i--) {
-                int[]        optIndexes = fOptimized ? jmd.getAllOptimizedReturnIndexes(i) : null;
-                int          iOpt       = fOptimized ? optIndexes[0] : -1;
-                JitParamDesc pdRet      = fOptimized ? jmd.optimizedReturns[iOpt]
-                                                     : jmd.standardReturns[i];
-                int          iExt       = fOptimized ? optIndexes[optIndexes.length - 1] : -1;
-                JitParamDesc pdExt      = fOptimized ? jmd.optimizedReturns[iExt] : null;
+                int[]        optIndexes;
+                JitParamDesc pdRet;
+                JitParamDesc pdExt;
+
+                if (fOptimized) {
+                    optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                    pdRet      = jmd.optimizedReturns[optIndexes[0]];
+                    pdExt      = jmd.optimizedReturns[optIndexes[optIndexes.length - 1]];
+                } else {
+                    optIndexes = null;
+                    pdRet      = jmd.standardReturns[i];
+                    pdExt      = null;
+                }
+
                 RegisterInfo regRet     = bctx.loadArgument(code, anRet[i]);
                 ClassDesc    cd         = regRet.cd();
                 boolean      fValid     = true;
@@ -189,7 +207,7 @@ public abstract class OpReturn
                     case NullablePrimitive:
                         assert fOptimized;
                         // e.g.: Int? f(Int? i) = i;
-                        Builder.storeToContext(code, CD_boolean, pdExt.altIndex);
+                        bctx.storeToContext(code, CD_boolean, pdExt.altIndex);
                         break;
 
                     case Primitive:
@@ -211,7 +229,7 @@ public abstract class OpReturn
 
                         // pass `false` at Ctx
                         code.iconst_0();
-                        Builder.storeToContext(code, CD_boolean, pdExt.altIndex);
+                        bctx.storeToContext(code, CD_boolean, pdExt.altIndex);
                         break;
 
                     case Primitive:
@@ -237,7 +255,7 @@ public abstract class OpReturn
 
                         // throw away Null; `true` at Ctx and return the default value
                         code.pop().iconst_1();
-                        Builder.storeToContext(code, CD_boolean, pdExt.altIndex);
+                        bctx.storeToContext(code, CD_boolean, pdExt.altIndex);
                         cd = pdRet.cd;
                         Builder.defaultLoad(code, cd);
                         break;
@@ -250,7 +268,7 @@ public abstract class OpReturn
                         // since Null is being returned, there is no need to load default values
                         // to the context
                         code.pop().iconst_1();
-                        Builder.storeToContext(code, CD_boolean, pdExt.altIndex);
+                        bctx.storeToContext(code, CD_boolean, pdExt.altIndex);
                         cd = pdRet.cd;
                         Builder.defaultLoad(code, cd);
                         break;
@@ -286,7 +304,7 @@ public abstract class OpReturn
                         // e.g.: Int128? f(Int128? i) = i;
                         for (int j = optIndexes.length - 1; j >= 1 ; j--) {
                             JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
-                            Builder.storeToContext(code, retDesc.cd, retDesc.altIndex);
+                            bctx.storeToContext(code, retDesc.cd, retDesc.altIndex);
                         }
                         cd = pdRet.cd;
                         break;
@@ -299,7 +317,7 @@ public abstract class OpReturn
                         // store the remaining primitives to the context
                         for (int j = optIndexes.length - 1; j >= 1 ; j--) {
                             JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
-                            Builder.storeToContext(code, retDesc.cd, retDesc.altIndex);
+                            bctx.storeToContext(code, retDesc.cd, retDesc.altIndex);
                         }
                         cd = pdRet.cd;
                         break;
@@ -316,7 +334,7 @@ public abstract class OpReturn
                     case XvmPrimitive:
                         for (int j = optIndexes.length - 1; j >= 1 ; j--) {
                             JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
-                            Builder.storeToContext(code, retDesc.cd, retDesc.altIndex);
+                            bctx.storeToContext(code, retDesc.cd, retDesc.altIndex);
                         }
                         cd = pdRet.cd;
                         break;
@@ -326,11 +344,11 @@ public abstract class OpReturn
                         // store the remaining primitives to the context
                         for (int j = optIndexes.length - 2; j >= 1 ; j--) {
                             JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
-                            Builder.storeToContext(code, retDesc.cd, retDesc.altIndex);
+                            bctx.storeToContext(code, retDesc.cd, retDesc.altIndex);
                         }
                         // pass `false` in the Ctx slot for the boolean nullable flag
                         code.iconst_0();
-                        Builder.storeToContext(code, CD_boolean, pdExt.altIndex);
+                        bctx.storeToContext(code, CD_boolean, pdExt.altIndex);
                         cd = pdRet.cd;
                         break;
 
@@ -348,7 +366,7 @@ public abstract class OpReturn
                         Builder.addReturn(code, cd);
                     } else {
                         // pass the actual primitive value at Ctx
-                        Builder.storeToContext(code, pdRet.cd, pdRet.altIndex);
+                        bctx.storeToContext(code, pdRet.cd, pdRet.altIndex);
                     }
                 } else {
                     throw new UnsupportedOperationException(

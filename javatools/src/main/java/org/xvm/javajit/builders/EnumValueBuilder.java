@@ -10,10 +10,10 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 
 import org.xvm.asm.constants.PropertyInfo;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.TypeSystem;
+import org.xvm.javajit.TypeSystem.Artifact;
 
 /**
  * The builder for Enum value types.
@@ -24,29 +24,29 @@ import org.xvm.javajit.TypeSystem;
  */
 public class EnumValueBuilder extends CommonBuilder {
 
-    public EnumValueBuilder(TypeSystem typeSystem, TypeConstant type) {
-        super(typeSystem, type);
+    public EnumValueBuilder(TypeSystem typeSystem, Artifact art) {
+        super(typeSystem, art);
     }
 
     @Override
-    protected void augmentStaticInitializer(String className, CodeBuilder code) {
+    protected void augmentCLInit(CodeBuilder code) {
         code.aconst_null()
             .loadConstant(classStruct.getName())
             .invokestatic(CD_String, "of", MD_StringOf)
-            .putstatic(ClassDesc.of(className), NAME, CD_String);
+            .putstatic(art.CD(), NAME, CD_String);
     }
 
     @Override
-    protected void assembleImplProperties(String className, ClassBuilder classBuilder) {
+    protected void assembleProperties(ClassBuilder classBuilder) {
 
         // public static final String $name;
         classBuilder.withField(NAME, CD_String,
             ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL);
 
         assembleOrdinalProp(classBuilder);
-        assembleNameProp(className, classBuilder);
+        assembleNameProp(classBuilder);
 
-        super.assembleImplProperties(className, classBuilder);
+        super.assembleProperties(classBuilder);
     }
 
     private void assembleOrdinalProp(ClassBuilder classBuilder) {
@@ -74,13 +74,13 @@ public class EnumValueBuilder extends CommonBuilder {
                 .lreturn());
     }
 
-    private void assembleNameProp(String className, ClassBuilder classBuilder) {
+    private void assembleNameProp(ClassBuilder classBuilder) {
         PropertyInfo  prop       = typeInfo.findProperty("name");
         String        getterName = prop.ensureGetterJitMethodName(typeSystem);
         JitMethodDesc jmDesc     = prop.getGetterJitDesc(this);
 
         classBuilder.withMethodBody(getterName, jmDesc.standardMD, ClassFile.ACC_PUBLIC, code ->
-            code.getstatic(ClassDesc.of(className), NAME, CD_String)
+            code.getstatic(art.CD(), NAME, CD_String)
                 .areturn());
     }
 

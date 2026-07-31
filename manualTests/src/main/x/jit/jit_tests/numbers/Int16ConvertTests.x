@@ -126,6 +126,19 @@ class Int16ConvertTests {
         testInt16ToUInt128WithBoundsCheck(100, 100, False);
         testInt16ToUInt128WithBoundsCheck(Int16.MaxValue, 32767, False);
 
+        testInt16ToIntN(Int16.MinValue, -32768);
+        testInt16ToIntN(-100, -100);
+        testInt16ToIntN(0, 0);
+        testInt16ToIntN(100, 100);
+        testInt16ToIntN(Int16.MaxValue, 32767);
+
+        testInt16ToUIntN(Int16.MinValue, 0, True);
+        testInt16ToUIntN(-1, 0, True);
+        testInt16ToUIntN(-100, 0, True);
+        testInt16ToUIntN(0, 0, False);
+        testInt16ToUIntN(100, 100, False);
+        testInt16ToUIntN(Int16.MaxValue, 32767, False);
+
         console.print("<<<<< Finished Int16 Conversion tests >>><<");
     }
 
@@ -259,6 +272,25 @@ class Int16ConvertTests {
             }
         } else {
             UInt128 b = a.toUInt128(True);
+            assert b == expected;
+        }
+    }
+
+    void testInt16ToIntN(Int16 a, IntN expected) {
+        IntN b = a.toIntN();
+        assert b == expected;
+    }
+
+    void testInt16ToUIntN(Int16 a, UIntN expected, Boolean oob = False) {
+        if (oob) {
+            try {
+                a.toUIntN();
+                assert as "Expected OutOfBounds to be thrown";
+            } catch (OutOfBounds e) {
+                // expected
+            }
+        } else {
+            UIntN b = a.toUIntN();
             assert b == expected;
         }
     }

@@ -7,9 +7,8 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.javajit.TypeSystem;
+import org.xvm.javajit.TypeSystem.Artifact;
 
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
@@ -20,8 +19,8 @@ import static java.lang.constant.ConstantDescs.INIT_NAME;
 public class PackageBuilder
         extends CommonBuilder {
 
-    public PackageBuilder(TypeSystem typeSystem, TypeConstant type) {
-        super(typeSystem, type);
+    public PackageBuilder(TypeSystem typeSystem, Artifact art) {
+        super(typeSystem, art);
     }
 
     @Override
@@ -30,7 +29,7 @@ public class PackageBuilder
     }
 
     @Override
-    public boolean assembleImplClass(String className, ClassBuilder classBuilder) {
+    public boolean assembleClass(ClassBuilder classBuilder) {
         classBuilder
             .withFlags(ClassFile.ACC_PUBLIC)
             .withSuperclass(CD_nPackage);
@@ -38,11 +37,11 @@ public class PackageBuilder
     }
 
     @Override
-    protected void callSuperInitializer(CodeBuilder code, String className) {
+    protected void callSuperInitializer(CodeBuilder code) {
         // super($ctx, type);
         code.aload(0)
             .aload(code.parameterSlot(0));
-        loadTypeConstant(code, className, thisType);
+        loadTypeConstant(code, thisType);
         code.invokespecial(getSuperCD(), INIT_NAME,
                 MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant));
     }

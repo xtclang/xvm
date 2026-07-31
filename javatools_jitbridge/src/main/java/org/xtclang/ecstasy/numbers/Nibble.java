@@ -31,12 +31,23 @@ public class Nibble extends nConst {
         return String.of(ctx, Integer.toUnsignedString($value));
     }
 
-    public long estimateStringLength$p(Ctx ctx) {
-        return (int) Math.log10($value) + 1;
+    public static String toString$p(int thi$, Ctx ctx) {
+        return String.of(ctx, Integer.toUnsignedString(thi$));
+    }
+
+    public static long estimateStringLength$p(int thi$, Ctx ctx) {
+        return (int) Math.log10(thi$) + 1;
     }
 
     public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
         for (char c : Integer.toUnsignedString($value).toCharArray()) {
+            appender = appender.add$p(ctx, c);
+        }
+        return appender;
+    }
+
+    public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
+        for (char c : Integer.toUnsignedString(thi$).toCharArray()) {
             appender = appender.add$p(ctx, c);
         }
         return appender;
@@ -73,8 +84,8 @@ public class Nibble extends nConst {
      *
      * @return this Nibble value as a Java {@code int}
      */
-    public int toNibble$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toNibble$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -87,8 +98,8 @@ public class Nibble extends nConst {
      *
      * @return this Nibble value as a Java {@code int}
      */
-    public int toInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toInt8$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -101,8 +112,8 @@ public class Nibble extends nConst {
      *
      * @return this Nibble value as a Java {@code int}
      */
-    public int toInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toInt16$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -115,8 +126,8 @@ public class Nibble extends nConst {
      *
      * @return this Nibble value as a Java {@code int}
      */
-    public int toInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toInt32$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -129,8 +140,8 @@ public class Nibble extends nConst {
      *
      * @return this Nibble value as a Java long
      */
-    public long toInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static long toInt64$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -143,9 +154,9 @@ public class Nibble extends nConst {
      *
      * @return this Nibble value as an Int128
      */
-    public long toInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public static long toInt128$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         ctx.i0 = 0L;
-        return $value & 0xFL;
+        return thi$ & 0xFL;
     }
 
     /**
@@ -158,8 +169,8 @@ public class Nibble extends nConst {
      *
      * @return this Nibble value as a Java {@code int}
      */
-    public int toUInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toUInt8$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -172,8 +183,8 @@ public class Nibble extends nConst {
      *
      * @return this Nibble value as a Java {@code int}
      */
-    public int toUInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toUInt16$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -186,8 +197,8 @@ public class Nibble extends nConst {
      *
      * @return this Nibble value as a Java {@code int}
      */
-    public int toUInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static int toUInt32$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -200,8 +211,8 @@ public class Nibble extends nConst {
      *
      * @return this Nibble value as a Java long
      */
-    public long toUInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+    public static long toUInt64$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
     }
 
     /**
@@ -214,9 +225,9 @@ public class Nibble extends nConst {
      *
      * @return this Nibble value as a UInt128
      */
-    public long toUInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public static long toUInt128$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         ctx.i0 = 0L;
-        return $value & 0xFL;
+        return thi$ & 0xFL;
     }
 
     // ----- debugging support ---------------------------------------------------------------------

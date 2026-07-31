@@ -10,6 +10,8 @@ package lambdaTests {
         test4();
         test5();
         test6();
+        test7();
+        test8();
     }
 
     void test1() {
@@ -199,5 +201,25 @@ package lambdaTests {
         assert f(2) == 4;
 
         static Int128? mul(Int128? x, Int128? y) = x? + 2*y? : 42;
+    }
+
+    void test7() {
+        function Int() value = () -> 42;
+        value();
+    }
+
+    void test8() {
+        assert new CalculatorImpl().calculate() == 42;
+
+        interface Calculator {
+            Int calculate() {
+                function Int() value = () -> 42;
+                return value();
+            }
+        }
+
+        class CalculatorImpl()
+                implements Calculator {
+        }
     }
 }

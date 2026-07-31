@@ -12,7 +12,6 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -31,6 +30,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -52,12 +52,15 @@ import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.ModuleLoader;
+import org.xvm.javajit.NativeNames;
 import org.xvm.javajit.NativeTypeSystem;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
+import org.xvm.javajit.TypeSystem.Artifact;
 
 import org.xvm.javajit.registers.ExtendedSlot;
 import org.xvm.javajit.registers.MultiSlot;
+import org.xvm.javajit.registers.SingleSlot;
 
 import org.xvm.util.ByteHashCollector;
 import org.xvm.util.ShallowSizeOf;
@@ -72,14 +75,18 @@ import static java.lang.constant.ConstantDescs.MTD_void;
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
 
+import static org.xvm.util.Handy.lazyAdd;
+import static org.xvm.util.Handy.lazyList;
+
 /**
  * Generic Java class builder.
  */
 public class CommonBuilder
         extends Builder {
-    public CommonBuilder(TypeSystem typeSystem, TypeConstant type) {
-        super(typeSystem);
+    public CommonBuilder(TypeSystem typeSystem, Artifact art) {
+        super(typeSystem, art);
 
+        TypeConstant type = art.type();
         assert type.isSingleUnderlyingClass(true) && !type.isAccessSpecified();
 
         this.classStruct = (ClassStructure) type.getSingleUnderlyingClass(true).getComponent();
@@ -96,16 +103,18 @@ public class CommonBuilder
         this.jitType       = thisType.getCanonicalJitType();
         this.isSpecialized = jitType.isParamsSpecified() &&
                             !jitType.equals(classStruct.getCanonicalType());
+        this.isPrimitive   = type.isJitPrimitive();
     }
 
-    protected final ClassStructure   classStruct;
-    protected final TypeConstant     thisType;      // PRIVATE
-    protected final TypeInfo         typeInfo;      // PRIVATE
-    protected final TypeConstant     jitType;       // PUBLIC
-    protected final TypeInfo         structInfo;
-    protected final IdentityConstant thisId;
-    protected final boolean          isInterface;
-    protected final boolean          isSpecialized;
+    public final ClassStructure   classStruct;
+    public final TypeConstant     thisType;      // PRIVATE
+    public final TypeInfo         typeInfo;      // PRIVATE
+    public final TypeConstant     jitType;       // PUBLIC
+    public final TypeInfo         structInfo;
+    public final IdentityConstant thisId;
+    public final boolean          isInterface;
+    public final boolean          isSpecialized;
+    public final boolean          isPrimitive;
 
     /**
      * The shallow size of object in bytes.
@@ -117,16 +126,16 @@ public class CommonBuilder
      *
      * Note: a vast majority of builders assemble one and only one class.
      */
-    protected Map<String, List<PropertyInfo>> constProperties = new HashMap<>(1);
+    protected List<PropertyInfo> constProperties;
 
     /**
-     * Registry of TypeConstant objects used by the code generator; for each class name this
-     * builder assembles, the (TypeConstant, Integer) entry represents the suffix ("$typeN") of a
-     * synthetic static property holding the corresponding TypeConstant object.
-     *
-     * Note: a vast majority of builders assemble one and only one class.
+     * Registry of Constant objects used by the code generator. For each, the key represents the
+     * Constant whose Java value will be initialized by "<clinit>()", and the Integer is the suffix
+     * that will be added to "$sc" (static constant prefix).
      */
-    protected Map<String, Map<TypeConstant, Integer>> typeConstants = new HashMap<>(1);
+    protected Map<Constant, Integer> constants = new HashMap<>();
+
+    protected static final String CONST_PROP = "$sc";
 
     /**
      * Methods that were added during the compilation. They are either nested in properties/methods
@@ -134,35 +143,21 @@ public class CommonBuilder
      */
     protected final Set<IdentityConstant> extraMethods = new HashSet<>();
 
-    /**
-     * TEMPORARY: compensation for TypeInfo dupes.
-     */
-    protected final Set<String> methodNames = new HashSet<>();
-
     @Override
-    public void assembleImpl(String className, ClassBuilder classBuilder) {
+    public void build(ClassBuilder classBuilder) {
         implSize = ShallowSizeOf.align(computeInstanceSize());
 
         // prime the type registry with "this" type
-        Map<TypeConstant, Integer> types = new HashMap<>();
-        types.put(jitType, 0);
-        typeConstants.put(className, types);
+        constants.put(jitType, 0);
 
-        if (assembleImplClass(className, classBuilder)) {
-            assembleImplProperties(className, classBuilder);
-            assembleImplMethods(className, classBuilder);
+        if (assembleClass(classBuilder)) {
+            assembleProperties(classBuilder);
+            assembleMethods(classBuilder);
 
             // static initializer must be assembled at the very end, after all potentially used
             // TypeConstants have been collected
-            assembleStaticInitializer(className, classBuilder);
+            assembleCLInit(classBuilder);
         }
-    }
-
-    @Override
-    public void assemblePure(String className, ClassBuilder classBuilder) {
-        // assemblePureClass(className, classBuilder);
-        // assemblePureProperties(className, classBuilder);
-        // assemblePureMethods(className, classBuilder);
     }
 
     @Override
@@ -171,15 +166,35 @@ public class CommonBuilder
     }
 
     @Override
-    protected void loadTypeConstant(CodeBuilder code, String className, TypeConstant type) {
-        Map<TypeConstant, Integer> types =
-            typeConstants.computeIfAbsent(className, _ -> new HashMap<>());
+    public boolean isPrimitive() {
+        return isPrimitive;
+    }
 
-        Integer index = types.computeIfAbsent(type, _ -> types.size());
+    @Override
+    public void loadTypeConstant(CodeBuilder code, TypeConstant type) {
+        // see assembleCLInit()
+        Integer index = constants.computeIfAbsent(type, _ -> constants.size());
+        code.getstatic(art.CD(), CONST_PROP + index, CD_TypeConstant);
+    }
 
-        // see assembleStaticInitializer()
-        ClassDesc CD_this = ClassDesc.of(className);
-        code.getstatic(CD_this, "$type" + index, CD_TypeConstant);
+    @Override
+    public RegisterInfo loadConstant(BuildContext bctx, CodeBuilder code, Constant constant) {
+        // with the separation of CommonBuilder from Builder, this code has to exist on
+        // CommonBuilder because the knowledge of creating static fields to hold Ecstasy constants
+        // is not present on Builder; TODO address this in a subsequent change
+        switch (constant) {
+        case LiteralConstant literal
+                when literal.getFormat() == Constant.Format.IntLiteral: {
+            Integer      index = constants.computeIfAbsent(literal, _ -> constants.size());
+            TypeConstant type  = literal.getType();
+            ClassDesc    cd    = ensureClassDesc(type);
+            code.getstatic(art.CD(), CONST_PROP + index, cd);
+            return new SingleSlot(type, JitFlavor.Specific, cd, "");
+        }
+
+        default:
+            return super.loadConstant(bctx, code, constant);
+        }
     }
 
     /**
@@ -228,7 +243,7 @@ public class CommonBuilder
         }
         TypeConstant type = prop.getType();
         ClassDesc    cd   = type.isJavaPrimitive()
-                ? JitTypeDesc.getPrimitiveClass(type)
+                ? JitTypeDesc.getJavaPrimitive(type)
                 : null;
 
         return cd == null
@@ -242,7 +257,7 @@ public class CommonBuilder
      *
      * @return false iff no more assembly required for this class
      */
-    protected boolean assembleImplClass(String className, ClassBuilder classBuilder) {
+    protected boolean assembleClass(ClassBuilder classBuilder) {
         int flags = ClassFile.ACC_PUBLIC;
 
         switch (classStruct.getFormat()) {
@@ -266,15 +281,20 @@ public class CommonBuilder
         }
         classBuilder.withFlags(flags);
 
-        assembleImplInterfaces(classBuilder);
+        assembleInterfaces(classBuilder);
         return true;
     }
 
     /**
      * Assemble interfaces for the "Impl" shape.
      */
-    protected void assembleImplInterfaces(ClassBuilder classBuilder) {
+    protected void assembleInterfaces(ClassBuilder classBuilder) {
         List<ClassDesc> interfaces  = new ArrayList<>();
+        if (isInterface && isSpecialized) {
+            // make the specialized interface to extend the canonical interface
+            interfaces.add(ensureClassDesc(classStruct.getCanonicalType()));
+        }
+
         for (Contribution contrib : typeInfo.getContributionList()) {
             switch (contrib.getComposition()) {
                 case Implements:
@@ -304,9 +324,8 @@ public class CommonBuilder
     /**
      * Assemble properties for the "Impl" shape.
      */
-    protected void assembleImplProperties(String className, ClassBuilder classBuilder) {
-        List<PropertyInfo> constProps = new ArrayList<>();
-        List<PropertyInfo> initProps  = new ArrayList<>();
+    protected void assembleProperties(ClassBuilder classBuilder) {
+        List<PropertyInfo> initProps = null;
 
         for (PropertyInfo prop : structInfo.getProperties().values()) {
             if (!prop.hasField() && !prop.isInjected()) {
@@ -323,25 +342,25 @@ public class CommonBuilder
                 continue;
             }
 
-            assembleField(className, classBuilder, prop);
+            assembleField(classBuilder, prop);
 
             if (prop.isConstant()) {
-                constProps.add(prop);
+                constProperties = lazyAdd(constProperties, prop);
             } else if (prop.isInitialized()) {
-                initProps.add(prop);
+                initProps = lazyAdd(initProps, prop);
             }
         }
 
         if (typeInfo.isSingleton()) {
             // public static final $INSTANCE;
-            classBuilder.withField(Instance, ClassDesc.of(className),
+            classBuilder.withField(Instance, art.CD(),
                 ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL);
         }
 
         Format format = classStruct.getFormat();
         switch (format) {
         case CLASS, CONST, SERVICE, MODULE, PACKAGE, ENUM, ENUMVALUE:
-            assembleInitializer(className, classBuilder, initProps);
+            assembleInit(classBuilder, lazyList(initProps));
             break;
         }
 
@@ -353,11 +372,11 @@ public class CommonBuilder
 
             IdentityConstant ownerId = prop.getIdentity().getNamespace();
             if (prop.getIdentity().getNamespace().equals(thisId)) {
-                assembleImplProperty(className, classBuilder, prop);
+                assembleProperty(classBuilder, prop);
             } else {
                 Format ownerFormat = ownerId.getComponent().getFormat();
                 if (ownerFormat == Format.ANNOTATION || ownerFormat == Format.MIXIN) {
-                    assembleImplProperty(className, classBuilder, prop);
+                    assembleProperty(classBuilder, prop);
                 }
             }
         }
@@ -369,15 +388,12 @@ public class CommonBuilder
                 }
             }
         }
-
-        // save off the constant properties list to be added to the static initializer
-        constProperties.put(className, constProps);
     }
 
     /**
      * Assemble the field(s) for the specified Ecstasy property.
      */
-    protected void assembleField(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+    protected void assembleField(ClassBuilder classBuilder, PropertyInfo prop) {
         String      jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
         JitTypeDesc jtd     = prop.getType().getJitDesc(this);
 
@@ -416,25 +432,17 @@ public class CommonBuilder
      * Add constant fields (including synthetic TypeConstant fields) initialization to the static
      * initializer.
      */
-    protected void assembleStaticInitializer(String className, ClassBuilder classBuilder) {
-        List<PropertyInfo>         props = constProperties.getOrDefault(className, Collections.emptyList());
-        Map<TypeConstant, Integer> types = typeConstants.computeIfAbsent(className, _ -> new HashMap<>());
-
+    protected void assembleCLInit(ClassBuilder classBuilder) {
         // ensure all injection types are added before we generate the TypeConstant fields
+        List<PropertyInfo>     props     = lazyList(constProperties);
+        Map<Constant, Integer> constants = this.constants;
         for (PropertyInfo prop : props) {
             if (prop.isInjected()) {
-                types.computeIfAbsent(prop.getType(), _ -> types.size());
+                constants.computeIfAbsent(prop.getType(), _ -> constants.size());
             }
         }
 
-        // add synthetic TypeConstant fields
-        for (int i = 0, c = types.size(); i < c; i++) {
-            classBuilder.withField("$type" + i, CD_TypeConstant,
-                ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL);
-        }
-
-        ClassDesc CD_this = ClassDesc.of(className);
-
+        ClassDesc CD_this = art.CD();
         classBuilder.withMethodBody(ConstantDescs.CLASS_INIT_NAME, MTD_void,
                 ClassFile.ACC_STATIC | ClassFile.ACC_PUBLIC, code -> {
             Label startScope = code.newLabel();
@@ -448,31 +456,54 @@ public class CommonBuilder
             code.invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
                 .astore(ctxSlot);
 
-            // initialize synthetic TypeConstant fields; to make the jasm look neater
-            // generate the assignments in the lexicographical order
-            ModuleLoader loader   = typeSystem.findOwnerLoader(className);
-            boolean      nativeTS = typeSystem instanceof NativeTypeSystem;
-            ConstantPool pool     = loader.module.getConstantPool();
-            types.entrySet().stream()
-                 .sorted(Map.Entry.comparingByValue())
-                 .forEach(entry -> {
-                    TypeConstant type = entry.getKey();
-                    String       name = "$type" + entry.getValue();
+            // initialize synthetic "TypeConstant" and other static "Constant" fields; to make the
+            // jasm look neater generate the assignments in the lexicographical order; additionally,
+            // handle the case where new constants keep getting added as a side-effect of doing this
+            // work
+            String       className = art.className();
+            ModuleLoader loader    = typeSystem.findOwnerLoader(className);
+            boolean      nativeTS  = typeSystem instanceof NativeTypeSystem;
+            ConstantPool pool      = loader.module.getConstantPool();
+            int          emitted   = 0;
+            while (emitted < constants.size()) {
+                // create a snapshot of the work to do RIGHT AT THIS MOMENT IN TIME so that if other
+                // things get appended to the map in the process, we don't accidentally trigger a
+                // CME etc.
+                Map.Entry<Constant, Integer>[] entries =
+                        constants.entrySet().stream().sorted(Map.Entry.comparingByValue())
+                                                     .toArray(Map.Entry[]::new);
+                for (int size = entries.length; emitted < size; ++emitted) {
+                    Map.Entry<Constant, Integer> entry = entries[emitted];
+                    Constant constant = entry.getKey();
+                    String   name     = CONST_PROP + entry.getValue();
+                    if (constant instanceof TypeConstant type) {
+                        assert type.isShared(pool);
+                        type = pool.register(type);
 
-                    assert type.isShared(pool);
-                    type = pool.register(type);
-
-                    int index = type.getPosition();
-                    if (nativeTS) {
-                        index = -index;
+                        int index = type.getPosition();
+                        if (nativeTS) {
+                            index = -index;
+                        }
+                        code.aload(ctxSlot)
+                            .loadConstant(className)
+                            .loadConstant(index)
+                            .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
+                            .checkcast(CD_TypeConstant)                               // <- type
+                            .putstatic(CD_this, name, CD_TypeConstant);
+                    } else if (constant instanceof LiteralConstant literal &&
+                            literal.getFormat() == Constant.Format.IntLiteral) {
+                        // instantiate an IntLiteral using a String generated from a Java string from
+                        // the LiteralConstant, and store the IntLiteral into the static field
+                        MethodConstant ctorId = pool.ensureEcstasyClassConstant("numbers.IntLiteral")
+                                                    .findConstructor(pool.typeString());
+                        buildNew(null, code, literal.getType(), ctorId,
+                                (_) -> loadString(code, literal.getValue(), ctxSlot), ctxSlot);
+                        code.putstatic(CD_this, name, CD_IntLiteral);
+                    } else {
+                        throw new UnsupportedOperationException("unsupported constant: " + constant);
                     }
-                    code.aload(ctxSlot)
-                        .loadConstant(className)
-                        .loadConstant(index)
-                        .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
-                        .checkcast(CD_TypeConstant)                               // <- type
-                        .putstatic(CD_this, name, CD_TypeConstant);
-                 });
+                }
+            }
 
             // add static field initialization
             TypeSystem ts = typeSystem;
@@ -483,7 +514,7 @@ public class CommonBuilder
                     Injection injection = computeInjection(code, prop);
                     ClassDesc cd        = ensureClassDesc(injection.resourceType);
                     code.aload(ctxSlot);
-                    loadTypeConstant(code, className, injection.resourceType);
+                    loadTypeConstant(code, injection.resourceType);
                     code.ldc(injection.resourceName());
                     injection.optsLoader.run();
                     code.invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
@@ -549,26 +580,40 @@ public class CommonBuilder
                 ;
             }
 
-            augmentStaticInitializer(className, code);
+            augmentCLInit(code);
 
             code.labelBinding(endScope)
                 .return_();
         });
+
+        // add synthetic constant fields (filled in by the above code); this comes last because
+        // additional constants may have been requested as a side-effect from the clinit code
+        // creation
+        for (Map.Entry<Constant, Integer> entry : constants.entrySet()) {
+            classBuilder.withField(CONST_PROP + entry.getValue(), constantClassDesc(entry.getKey()),
+                    ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL);
+        }
+    }
+
+    private ClassDesc constantClassDesc(Constant constant) {
+        return switch (constant) {
+            case TypeConstant _ -> CD_TypeConstant;
+            case LiteralConstant literal
+                    when literal.getFormat() == Constant.Format.IntLiteral -> CD_IntLiteral;
+            default -> throw new UnsupportedOperationException("unsupported constant: " + constant);
+        };
     }
 
     /**
      * Allow subclasses to augment the <clinit> assembly.
      */
-    protected void augmentStaticInitializer(String className, CodeBuilder code) {
-    }
+    protected void augmentCLInit(CodeBuilder code) {}
 
     /**
      * Add fields initialization to the Java constructor {@code void <init>(Ctx ctx)}.
      */
-    protected void assembleInitializer(String className, ClassBuilder classBuilder,
-                                       List<PropertyInfo> props) {
-        ClassDesc CD_this = ClassDesc.of(className);
-
+    protected void assembleInit(ClassBuilder classBuilder, List<PropertyInfo> props) {
+        ClassDesc CD_this = art.CD();
         classBuilder.withMethodBody(INIT_NAME,
             MD_xvmVoid,
             ClassFile.ACC_PUBLIC,
@@ -580,94 +625,8 @@ public class CommonBuilder
                     code.localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, startScope, endScope);
                 }
 
-                callSuperInitializer(code, className);
-
-                // add field initialization
-                for (PropertyInfo prop : props) {
-                    if (prop.getInitializer() != null) {
-                        throw new UnsupportedOperationException("Field initializer");
-                    }
-
-                    code.aload(0); // Stack: { this }
-
-                    TypeConstant type       = prop.getType();
-                    TypeConstant baseType   = type.removeNullable();
-                    ClassDesc    cdProp     = type.ensureClassDesc(typeSystem);
-                    RegisterInfo reg        = loadConstant(code, prop.getInitialValue());
-                    String       jitName    = prop.getIdentity()
-                                                  .ensureJitPropertyName(typeSystem);
-                    JitFlavor    regFlavor  = reg.flavor();
-                    JitFlavor    propFlavor = baseType.isJavaPrimitive()
-                                                ? JitFlavor.Primitive
-                                                : baseType.isXvmPrimitive()
-                                                    ? JitFlavor.XvmPrimitive
-                                                    : JitFlavor.Specific;
-
-                    // Switch on the register flavor (the value being set into the property)
-                    // and then switch on the property flavor
-                    //
-                    // Specific     -> Specific     e.g. String s = "Foo" or String? s = Null
-                    // Specific     -> Primitive    must be setting primitive property to Null
-                    // Specific     -> XvmPrimitive must be setting primitive property to Null
-                    // Primitive    -> Primitive    e.g. Int = 100
-                    // Primitive    -> Specific     e.g. Int | String is = 100
-                    // XvmPrimitive -> XvmPrimitive e.g. Int128 = 100
-                    // XvmPrimitive -> Specific     e.g. Int128 | String is = 100
-
-                    switch (regFlavor.name() + "->" + propFlavor.name()) {
-                    case "Specific->Specific" ->
-                        code.putfield(CD_this, jitName, cdProp);
-
-                    case "Specific->Primitive" -> {
-                        // must be setting a primitive to Null
-                        assert reg.type().isOnlyNullable();
-                        code.pop();
-                        ClassDesc cd = JitTypeDesc.getPrimitiveClass(baseType);
-                        Builder.defaultLoad(code, cd);
-                        code.putfield(CD_this, jitName, cd)
-                            .aload(0)
-                            .iconst_1()
-                            .putfield(CD_this, jitName + EXT, CD_boolean);
-                    }
-
-                    case "Specific->XvmPrimitive" -> {
-                        // must be setting a XVM primitive to Null
-                        assert reg.type().isOnlyNullable();
-                        code.pop();
-                        ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(baseType);
-                        for (int i = 0; i < cds.length; i++) {
-                            Builder.defaultLoad(code, cds[i]);
-                            code.putfield(CD_this, jitName + "$" + i, cds[i])
-                                .aload(0);
-                        }
-                        code.iconst_1()
-                            .putfield(CD_this, jitName + EXT, CD_boolean);
-                    }
-
-                    case "Primitive->Primitive" ->
-                        code.putfield(CD_this, jitName, reg.cd());
-
-                    case "Primitive->Specific", "XvmPrimitive->Specific" -> {
-                        Builder.box(code, reg);
-                        code.putfield(CD_this, jitName, cdProp);
-                    }
-
-                    case "XvmPrimitive->XvmPrimitive" -> {
-                        ClassDesc[] cds = reg.slotCds();
-                        for (int i = cds.length - 1; i >= 0; i--) {
-                            code.aload(0) // Stack: { this }
-                                .dup_x2()
-                                .pop()
-                                .putfield(CD_this, jitName + "$" + i, cds[i]);
-                        }
-                        code.pop(); // pop the extra "aload(0)" from the stack
-                    }
-
-                    default ->
-                        throw new IllegalStateException("Invalid register flavor: " + regFlavor +
-                            " for property: " + propFlavor);
-                    }
-                }
+                callSuperInitializer(code);
+                initializeFields(code, props);
 
                 code.labelBinding(endScope)
                     .return_();
@@ -676,9 +635,102 @@ public class CommonBuilder
     }
 
     /**
+     * Add the initial values for the specified instance properties.
+     */
+    protected void initializeFields(CodeBuilder code, List<PropertyInfo> props) {
+        ClassDesc CD_this = art.CD();
+
+        for (PropertyInfo prop : props) {
+            if (prop.getInitializer() != null) {
+                throw new UnsupportedOperationException("Field initializer");
+            }
+
+            code.aload(0); // Stack: { this }
+
+            TypeConstant type       = prop.getType();
+            TypeConstant baseType   = type.removeNullable();
+            ClassDesc    cdProp     = type.ensureClassDesc(typeSystem);
+            RegisterInfo reg        = loadConstant(code, prop.getInitialValue());
+            String       jitName    = prop.getIdentity()
+                                          .ensureJitPropertyName(typeSystem);
+            JitFlavor    regFlavor  = reg.flavor();
+            JitFlavor    propFlavor = baseType.isJavaPrimitive()
+                                        ? JitFlavor.Primitive
+                                        : baseType.isXvmPrimitive()
+                                            ? JitFlavor.XvmPrimitive
+                                            : JitFlavor.Specific;
+
+            // Switch on the register flavor (the value being set into the property)
+            // and then switch on the property flavor
+            //
+            // Specific     -> Specific     e.g. String s = "Foo" or String? s = Null
+            // Specific     -> Primitive    must be setting primitive property to Null
+            // Specific     -> XvmPrimitive must be setting primitive property to Null
+            // Primitive    -> Primitive    e.g. Int = 100
+            // Primitive    -> Specific     e.g. Int | String is = 100
+            // XvmPrimitive -> XvmPrimitive e.g. Int128 = 100
+            // XvmPrimitive -> Specific     e.g. Int128 | String is = 100
+
+            switch (regFlavor.name() + "->" + propFlavor.name()) {
+            case "Specific->Specific" ->
+                code.putfield(CD_this, jitName, cdProp);
+
+            case "Specific->Primitive" -> {
+                // must be setting a primitive to Null
+                assert reg.type().isOnlyNullable();
+                code.pop();
+                ClassDesc cd = JitTypeDesc.getJavaPrimitive(baseType);
+                Builder.defaultLoad(code, cd);
+                code.putfield(CD_this, jitName, cd)
+                    .aload(0)
+                    .iconst_1()
+                    .putfield(CD_this, jitName + EXT, CD_boolean);
+            }
+
+            case "Specific->XvmPrimitive" -> {
+                // must be setting a XVM primitive to Null
+                assert reg.type().isOnlyNullable();
+                code.pop();
+                ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(baseType);
+                for (int i = 0; i < cds.length; i++) {
+                    Builder.defaultLoad(code, cds[i]);
+                    code.putfield(CD_this, jitName + "$" + i, cds[i])
+                        .aload(0);
+                }
+                code.iconst_1()
+                    .putfield(CD_this, jitName + EXT, CD_boolean);
+            }
+
+            case "Primitive->Primitive" ->
+                code.putfield(CD_this, jitName, reg.cd());
+
+            case "Primitive->Specific", "XvmPrimitive->Specific" -> {
+                Builder.box(code, reg);
+                code.putfield(CD_this, jitName, cdProp);
+            }
+
+            case "XvmPrimitive->XvmPrimitive" -> {
+                ClassDesc[] cds = reg.slotCds();
+                for (int i = cds.length - 1; i >= 0; i--) {
+                    code.aload(0) // Stack: { this }
+                        .dup_x2()
+                        .pop()
+                        .putfield(CD_this, jitName + "$" + i, cds[i]);
+                }
+                code.pop(); // pop the extra "aload(0)" from the stack
+            }
+
+            default ->
+                throw new IllegalStateException("Invalid register flavor: " + regFlavor +
+                    " for property: " + propFlavor);
+            }
+        }
+    }
+
+    /**
      * Assemble the super class constructor call.
      */
-    protected void callSuperInitializer(CodeBuilder code, String className) {
+    protected void callSuperInitializer(CodeBuilder code) {
         // super($ctx);
         code.aload(0)
             .aload(code.parameterSlot(0))
@@ -688,87 +740,83 @@ public class CommonBuilder
     /**
      * Assemble the property accessors for the "Impl" shape.
      */
-    protected void assembleImplProperty(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+    protected void assembleProperty(ClassBuilder classBuilder, PropertyInfo prop) {
         MethodInfo getterInfo = typeInfo.getMethodById(prop.getGetterId());
         if (getterInfo == null) {
             if (prop.hasField() && shouldGenerate(prop.getFieldIdentity())) {
                 if (prop.isInjected()) {
-                    generateInjected(className, classBuilder, prop);
+                    generateInjected(classBuilder, prop);
                 } else {
-                    generateTrivialGetter(className, classBuilder, prop);
+                    generateTrivialGetter(classBuilder, prop);
                 }
             } else if (prop.isAbstract()) {
-                assemblePropertyGetter(className, classBuilder, prop);
+                assemblePropertyGetter(classBuilder, prop);
             }
-        } else if (prop.getHead().hasGetter()) {
+        } else if (prop.getHead().hasGetter()) { // Note: skip properties with native getters
             switch (getterInfo.getHead().getImplementation()) {
-                case Field:
-                    generateTrivialGetter(className, classBuilder, prop);
-                    break;
-                case Explicit, Default:
-                    assemblePropertyGetter(className, classBuilder, prop);
-                    break;
-                }
+            case Field:
+                generateTrivialGetter(classBuilder, prop);
+                break;
+            case Explicit, Default:
+                assemblePropertyGetter(classBuilder, prop);
+                break;
             }
+        }
 
         MethodInfo setterInfo = typeInfo.getMethodById(prop.getSetterId());
         if (setterInfo == null) {
             if (prop.hasField() && shouldGenerate(prop.getFieldIdentity())) {
-                generateTrivialSetter(className, classBuilder, prop);
+                generateTrivialSetter(classBuilder, prop);
             } else if (prop.isAbstract()) {
-                assemblePropertySetter(className, classBuilder, prop);
+                assemblePropertySetter(classBuilder, prop);
             }
         } else {
             switch (getterInfo.getHead().getImplementation()) {
             case Field:
-                generateTrivialSetter(className, classBuilder, prop);
+                generateTrivialSetter(classBuilder, prop);
                 break;
 
             case Explicit, Default:
-                assemblePropertySetter(className, classBuilder, prop);
+                assemblePropertySetter(classBuilder, prop);
                 break;
             }
         }
     }
 
-    private void assemblePropertyGetter(String className, ClassBuilder classBuilder,
-                                        PropertyInfo prop) {
-        String         jitName = prop.ensureGetterJitMethodName(typeSystem);
-        JitMethodDesc  jmDesc  = prop.getGetterJitDesc(this);
-        boolean        isOpt   = jmDesc.isOptimized;
-        MethodTypeDesc md      = isOpt ? jmDesc.optimizedMD : jmDesc.standardMD;
-        if (isOpt) {
+    private void assemblePropertyGetter(ClassBuilder classBuilder, PropertyInfo prop) {
+        String        jitName = prop.ensureGetterJitMethodName(typeSystem);
+        JitMethodDesc jmDesc  = prop.getGetterJitDesc(this, thisType);
+        if (jmDesc.isOptimized) {
             jitName += OPT;
         }
-        assemblePropertyAccessor(className, classBuilder, prop, jitName, md, isOpt, true);
+        assemblePropertyAccessor(classBuilder, prop, jitName, jmDesc, true);
     }
 
-    private void assemblePropertySetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+    private void assemblePropertySetter(ClassBuilder classBuilder, PropertyInfo prop) {
         String         jitName = prop.ensureSetterJitMethodName(typeSystem);
-        JitMethodDesc  jmDesc  = prop.getSetterJitDesc(this);
-        boolean        isOpt   = jmDesc.isOptimized;
-        MethodTypeDesc md      = isOpt ? jmDesc.optimizedMD : jmDesc.standardMD;
-        if (isOpt) {
+        JitMethodDesc  jmDesc  = prop.getSetterJitDesc(this, thisType);
+        if (jmDesc.isOptimized) {
             jitName += OPT;
         }
-        assemblePropertyAccessor(className, classBuilder, prop, jitName, md, isOpt, false);
+        assemblePropertyAccessor(classBuilder, prop, jitName, jmDesc, false);
     }
 
-    protected void generateTrivialGetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+    protected void generateTrivialGetter(ClassBuilder classBuilder, PropertyInfo prop) {
         String jitGetterName = prop.ensureGetterJitMethodName(typeSystem);
         String jitFieldName  = prop.getIdentity().ensureJitPropertyName(typeSystem);
 
-        ClassDesc CD_this = ClassDesc.of(className);
+        ClassDesc CD_this = art.CD();
         int       flags   = ClassFile.ACC_PUBLIC;
-        if (prop.isConstant()) {
+        JitMethodDesc jmd = prop.getGetterJitDesc(this, thisType);
+        if (jmd.isOptimizedStatic) {
             flags |= ClassFile.ACC_STATIC;
         }
-        JitMethodDesc  jmd     = prop.getGetterJitDesc(this);
         boolean        isOpt   = jmd.isOptimized;
         MethodTypeDesc md      = isOpt ? jmd.optimizedMD : jmd.standardMD;
         String         jitName = isOpt ? jitGetterName+OPT : jitGetterName;
 
         classBuilder.withMethodBody(jitName, md, flags, code -> {
+            int ctxSlot = code.parameterSlot(isOpt ? jmd.optimizedCtx() : jmd.standardCtx());
             if (isOpt) {
                 JitParamDesc pdOpt = jmd.optimizedReturns[0];
                 ClassDesc    cdOpt = pdOpt.cd;
@@ -777,8 +825,8 @@ public class CommonBuilder
                     if (prop.isConstant()) {
                         code.getstatic(CD_this, jitFieldName, cdOpt);
                     } else {
-                        code.aload(0)
-                            .getfield(CD_this, jitFieldName, cdOpt);
+                        loadPropertyOwner(code, jmd);
+                        code.getfield(CD_this, jitFieldName, cdOpt);
                     }
                     addReturn(code, cdOpt);
                     break;
@@ -788,12 +836,12 @@ public class CommonBuilder
                         code.getstatic(CD_this, jitFieldName, cdOpt)
                             .getstatic(CD_this, jitFieldName+EXT, CD_boolean);
                     } else {
-                        code.aload(0)
-                            .getfield(CD_this, jitFieldName, cdOpt)
-                            .aload(0)
-                            .getfield(CD_this, jitFieldName+EXT, CD_boolean);
+                        loadPropertyOwner(code, jmd);
+                        code.getfield(CD_this, jitFieldName, cdOpt);
+                        loadPropertyOwner(code, jmd);
+                        code.getfield(CD_this, jitFieldName+EXT, CD_boolean);
                     }
-                    storeToContext(code, CD_boolean, jmd.optimizedReturns[1].altIndex);
+                    storeToContext(code, CD_boolean, jmd.optimizedReturns[1].altIndex, ctxSlot);
                     addReturn(code, cdOpt);
                     break;
 
@@ -805,11 +853,12 @@ public class CommonBuilder
                         if (prop.isConstant()) {
                             code.getstatic(CD_this, name, optRets[i].cd);
                         } else {
-                            code.aload(0).getfield(CD_this, name, optRets[i].cd);
+                            loadPropertyOwner(code, jmd);
+                            code.getfield(CD_this, name, optRets[i].cd);
                         }
 
                         if (i > 0) {
-                            storeToContext(code, optRets[i].cd, optRets[i].altIndex);
+                            storeToContext(code, optRets[i].cd, optRets[i].altIndex, ctxSlot);
                         }
                     }
                     addReturn(code, optRets[0].cd);
@@ -823,8 +872,8 @@ public class CommonBuilder
                 if (prop.isConstant()) {
                     code.getstatic(CD_this, jitFieldName, pdStd.cd);
                 } else {
-                    code.aload(0)
-                        .getfield(CD_this, jitFieldName, pdStd.cd);
+                    loadPropertyOwner(code, jmd);
+                    code.getfield(CD_this, jitFieldName, pdStd.cd);
                 }
                 code.areturn();
             }
@@ -832,27 +881,55 @@ public class CommonBuilder
 
         if (isOpt) {
             // generate a wrapper
-            assembleMethodWrapper(className, classBuilder, jitGetterName, jmd,
-                    prop.isConstant());
+            assembleMethodWrapper(classBuilder, jitGetterName, jmd);
         }
     }
 
-    protected void generateTrivialSetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+    /**
+     * Load the property owner, boxing an optimized primitive receiver when necessary.
+     */
+    private void loadPropertyOwner(CodeBuilder code, JitMethodDesc jmd) {
+        if (jmd.isPrimitivized()) {
+            int ctxIndex = jmd.optimizedCtx();
+            for (int i = 0; i < ctxIndex; i++) {
+                JitParamDesc pd = jmd.optimizedParams[i];
+                load(code, pd.cd, code.parameterSlot(i));
+            }
+            box(code, thisType);
+        } else {
+            code.aload(0);
+        }
+    }
+
+    protected void generateTrivialSetter(ClassBuilder classBuilder, PropertyInfo prop) {
         String jitSetterName = prop.ensureSetterJitMethodName(typeSystem);
         String jitFieldName  = prop.getIdentity().ensureJitPropertyName(typeSystem);
 
-        ClassDesc CD_this = ClassDesc.of(className);
-        int       flags   = ClassFile.ACC_PUBLIC;
-        if (prop.isConstant()) {
-            flags |= ClassFile.ACC_STATIC;
-        }
-        JitMethodDesc  jmd     = prop.getSetterJitDesc(this);
+        ClassDesc      CD_this = art.CD();
+        JitMethodDesc  jmd     = prop.getSetterJitDesc(this, thisType);
         boolean        isOpt   = jmd.isOptimized;
         MethodTypeDesc md      = isOpt ? jmd.optimizedMD : jmd.standardMD;
         String         jitName = isOpt ? jitSetterName+OPT : jitSetterName;
+        int            flags   = ClassFile.ACC_PUBLIC;
 
+        if (jmd.isOptimizedStatic) {
+            flags |= ClassFile.ACC_STATIC;
+        }
         classBuilder.withMethodBody(jitName, md, flags, code -> {
-            int argSlot = code.parameterSlot(1); // compensate for $ctx
+            int    ctxSlot  = code.parameterSlot(isOpt ? jmd.optimizedCtx() : jmd.standardCtx());
+            String propName = getThisType().getSingleUnderlyingClass(true).getName() +
+                    '.' + prop.getName();
+
+            if (getThisType().isConst() || prop.isConstant()) {
+                throwReadOnly(code, propName, ctxSlot);
+                return;
+            }
+
+            code.aload(0)
+                .aload(ctxSlot)
+                .invokevirtual(CD_nObj, "$checkImmut", MD_xvmVoid);
+
+            int argSlot = code.parameterSlot(isOpt ? jmd.getOptimizedParamIndex(0) + 1 : 1);
             if (isOpt) {
                 JitParamDesc pdOpt   = jmd.optimizedParams[0];
                 ClassDesc    cdOpt   = pdOpt.cd;
@@ -948,8 +1025,7 @@ public class CommonBuilder
 
         if (isOpt) {
             // generate a wrapper
-            assembleMethodWrapper(className, classBuilder, jitSetterName, jmd,
-                    prop.isConstant());
+            assembleMethodWrapper(classBuilder, jitSetterName, jmd);
         }
     }
 
@@ -968,16 +1044,16 @@ public class CommonBuilder
         );
     }
 
-    private void generateInjected(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+    private void generateInjected(ClassBuilder classBuilder, PropertyInfo prop) {
         assert !prop.isConstant();
 
         String jitGetterName = prop.ensureGetterJitMethodName(typeSystem);
         String jitFieldName  = prop.getIdentity().ensureJitPropertyName(typeSystem);
 
-        ClassDesc CD_this = ClassDesc.of(className);
+        ClassDesc CD_this = art.CD();
         int       flags   = ClassFile.ACC_PUBLIC;
 
-        JitMethodDesc  jmd     = prop.getGetterJitDesc(this);
+        JitMethodDesc  jmd     = prop.getGetterJitDesc(this, thisType);
         boolean        isOpt   = jmd.isOptimized;
         MethodTypeDesc md      = isOpt ? jmd.optimizedMD : jmd.standardMD;
         String         jitName = isOpt ? jitGetterName+OPT : jitGetterName;
@@ -1022,7 +1098,7 @@ public class CommonBuilder
                     .astore(valueSlot)
                     .ifnonnull(endLbl)
                     .aload(1); // $ctx
-                loadTypeConstant(code, className, injection.resourceType());
+                loadTypeConstant(code, injection.resourceType());
                 code.ldc(injection.resourceName());
                 injection.optsLoader.run();
                 code.invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
@@ -1040,7 +1116,7 @@ public class CommonBuilder
 
         if (isOpt) {
             // generate a wrapper
-            assembleMethodWrapper(className, classBuilder, jitGetterName, jmd, false);
+            assembleMethodWrapper(classBuilder, jitGetterName, jmd);
         }
     }
 
@@ -1075,7 +1151,7 @@ public class CommonBuilder
     /**
      * Assemble methods for the "Impl" shape.
      */
-    protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
+    protected void assembleMethods(ClassBuilder classBuilder) {
         boolean assembleDeclared = !typeInfo.isAbstract();
 
         for (MethodInfo method : typeInfo.getMethods().values()) {
@@ -1085,34 +1161,38 @@ public class CommonBuilder
 
             if (assembleDeclared &&
                     method.getHead().getImplementation() == Implementation.Declared) {
-                assembleImplMethod(className, classBuilder, method);
+                assembleMethod(classBuilder, method);
             }
 
             if (shouldGenerate(method.getIdentity())) {
-                assembleImplMethod(className, classBuilder, method);
+                assembleMethod(classBuilder, method);
             }
         }
 
         if (!isInterface) {
-            assembleXvmType(className, classBuilder);
+            assembleXvmType(classBuilder);
         }
 
         if (typeInfo.getFormat() == Format.CONST) {
-            assembleConstMethods(className, classBuilder);
+            assembleConstMethods(classBuilder);
         }
     }
 
     /**
      * Assemble the "public TypeConstant $xvmType()" method.
+     *
+     * TODO: consider using a couple of bits of $meta value to indicate the ACCESS trait
+     *       of the type (or at least a bit for STRUCT); it would be used by this method
+     *       to at least answer "is(struct)" question
      */
-    protected void assembleXvmType(String className, ClassBuilder classBuilder) {
+    protected void assembleXvmType(ClassBuilder classBuilder) {
         boolean hasType = typeInfo.hasGenericTypes();
 
         if (hasType && !isNativeField("$type", CD_TypeConstant)) {
             classBuilder.withField("$type", CD_TypeConstant, ClassFile.ACC_PUBLIC);
         }
 
-        ClassDesc CD_this = ClassDesc.of(className);
+        ClassDesc CD_this = art.CD();
         classBuilder.withMethodBody("$xvmType", MD_xvmType,
                 ClassFile.ACC_PUBLIC, code -> {
             if (hasType) {
@@ -1120,8 +1200,8 @@ public class CommonBuilder
                 code.aload(0)
                     .getfield(CD_this, "$type", CD_TypeConstant);
             } else {
-                // the static field is initialized in assembleStaticInitializer()
-                code.getstatic(CD_this, "$type0", CD_TypeConstant);
+                // the static field is initialized in assembleCLInit()
+                code.getstatic(CD_this, CONST_PROP + '0', CD_TypeConstant);
             }
             code.areturn();
         });
@@ -1130,31 +1210,33 @@ public class CommonBuilder
     /**
      * Assemble the method(s) for the "Impl" shape of the specified Ecstasy method.
      */
-    protected void assembleImplMethod(String className, ClassBuilder classBuilder, MethodInfo method) {
+    protected void assembleMethod(ClassBuilder classBuilder, MethodInfo method) {
         if (method.isCapped()) {
             MethodInfo targetMethod = typeInfo.getNarrowingMethod(method);
             assert targetMethod != null;
-            assembleCapRouting(className, classBuilder, method, targetMethod);
+            assembleCapRouting(classBuilder, method, targetMethod);
         } else if (method.isDelegating()) {
-            PropertyConstant propDelegate = method.getHead().getPropertyConstant();
-            assert propDelegate != null;
-            assemblePropertyDelegation(className, classBuilder, method, propDelegate);
-        } else {
-            String jitName = method.ensureJitMethodName(typeSystem);
-
-            // TODO REMOVE: temporary compensation for duplicates in the TypeInfo
-            if (!methodNames.add(jitName)) {
+            String        jitName = method.ensureJitMethodName(typeSystem);
+            JitMethodDesc jmd     = method.getJitDesc(this);
+            if (jmd.isOptimized) {
+                jitName += OPT;
+            }
+            if (isNativeMethod(jitName, jmd.isOptimized ? jmd.optimizedMD : jmd.standardMD)) {
                 return;
             }
 
-            JitMethodDesc jmDesc = method.getJitDesc(this);
-            assembleMethod(className, classBuilder, method, jitName, jmDesc);
+            PropertyConstant propDelegate = method.getHead().getPropertyConstant();
+            assert propDelegate != null;
+            assemblePropertyDelegation(classBuilder, method, propDelegate);
+        } else {
+            String        jitName = method.ensureJitMethodName(typeSystem);
+            JitMethodDesc jmDesc  = method.getJitDesc(this);
+            assembleMethod(classBuilder, method, jitName, jmDesc);
 
             if (method.isCtorOrValidator() && !typeInfo.isAbstract()) {
                 String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
-                JitMethodDesc newDesc = Builder.convertConstructToNew(typeInfo,
-                                            ClassDesc.of(className), (JitCtorDesc) jmDesc);
-                assembleNew(className, classBuilder, method, newName, newDesc);
+                JitMethodDesc newDesc = Builder.convertConstructToNew(typeInfo, art.CD(), (JitCtorDesc) jmDesc);
+                assembleNew(classBuilder, method, newName, newDesc);
             }
         }
     }
@@ -1162,34 +1244,45 @@ public class CommonBuilder
     /**
      * Assemble a "standard" wrapper method for the optimized method.
      */
-    protected void assembleMethodWrapper(String className, ClassBuilder classBuilder,
-                                         String jitName, JitMethodDesc jmDesc, boolean isStatic) {
-        ClassDesc CD_this = ClassDesc.of(className);
+    protected void assembleMethodWrapper(ClassBuilder  classBuilder, String jitName, JitMethodDesc jmd) {
+        ClassDesc CD_this = art.CD();
 
         // this method is "standard" and needs to call into the optimized one
         int flags = ClassFile.ACC_PUBLIC;
-        if (isStatic) {
+        if (jmd.isStandardStatic) {
             flags |= ClassFile.ACC_STATIC;
         }
 
-        classBuilder.withMethodBody(jitName, jmDesc.standardMD, flags, code -> {
+        classBuilder.withMethodBody(jitName, jmd.standardMD, flags, code -> {
 
-            if (!isStatic) {
-                code.aload(0); // stack: this
+            int extraCount = jmd.getImplicitParamCount();
+            JitParamDesc[] optParams = jmd.optimizedParams;
+            int            firstParam;
+
+            if (jmd.isPrimitivized()) {
+                // load the optimized thi$ before the implicit parameters
+                JitParamDesc thiDesc = optParams[0];
+                assert thiDesc.index == -1;
+
+                code.aload(0);
+                unbox(code, thiDesc.type);
+                firstParam = JitTypeDesc.getXvmPrimitiveSlotCount(thiDesc.type);
+            } else {
+                if (!jmd.isOptimizedStatic) {
+                    code.aload(0); // stack: this
+                }
+                firstParam = 0;
             }
 
-            int extraCount = jmDesc.getImplicitParamCount();
             for (int i = 0; i < extraCount; i++) {
                 code.aload(code.parameterSlot(i));
             }
 
-            JitParamDesc[] optParams = jmDesc.optimizedParams;
-            for (int i = 0, c = optParams.length; i < c; i++) {
+            for (int i = firstParam, c = optParams.length; i < c; i++) {
                 JitParamDesc optParamDesc = optParams[i];
-                int          stdParamIx   = optParamDesc.index;
-                int          stdParamSlot = code.parameterSlot(extraCount + stdParamIx);
                 TypeConstant stdParamType = optParamDesc.type;
-
+                int          stdParamIx   = optParamDesc.index;
+                int          stdParamSlot = stdParamIx == -1 ? 0 : code.parameterSlot(extraCount + stdParamIx);
                 switch (optParamDesc.flavor) {
                     case Specific, Widened:
                         code.aload(stdParamSlot);
@@ -1415,15 +1508,17 @@ public class CommonBuilder
                 }
             }
 
-            if (isStatic) {
-                code.invokestatic(CD_this, jitName+OPT, jmDesc.optimizedMD);
+            // for primitive classes e.g. Int64, the "this" is actually a Java primitive, and thus
+            // the "method" is not a method at all, but a function
+            if (jmd.isOptimizedStatic) {
+                code.invokestatic(CD_this, jitName+OPT, jmd.optimizedMD);
             } else {
-                code.invokevirtual(CD_this, jitName+OPT, jmDesc.optimizedMD);
+                code.invokevirtual(CD_this, jitName+OPT, jmd.optimizedMD);
             }
 
-            JitParamDesc[] optReturns     = jmDesc.optimizedReturns;
+            JitParamDesc[] optReturns     = jmd.optimizedReturns;
             int            optReturnCount = optReturns.length;
-            JitParamDesc[] stdReturns     = jmDesc.standardReturns;
+            JitParamDesc[] stdReturns     = jmd.standardReturns;
             int            stdReturnCount = stdReturns.length;
             if (optReturnCount == 0) {
                 code.return_();
@@ -1513,7 +1608,8 @@ public class CommonBuilder
                 }
 
                 case XvmPrimitive: {
-                    int[] optIndexes = jmDesc.getAllOptimizedReturnIndexes(optDesc.index);
+                    assert optDesc.index != -1; // TODO CP -1 == thi$
+                    int[] optIndexes = jmd.getAllOptimizedReturnIndexes(optDesc.index);
                     optIx -= optIndexes.length - 1; // skip the Opt returns we will process
                     idx =  optDesc.index == 0 ? 1 : 0;
                     for (; idx < optIndexes.length; idx++) {
@@ -1536,7 +1632,8 @@ public class CommonBuilder
                     Label ifNull = code.newLabel();
                     Label endIf  = code.newLabel();
 
-                    int[] optIndexes = jmDesc.getAllOptimizedReturnIndexes(optDesc.index);
+                    assert optDesc.index != -1; // TODO CP -1 == thi$
+                    int[] optIndexes = jmd.getAllOptimizedReturnIndexes(optDesc.index);
                     optIx -= optIndexes.length - 2; // skip the Opt returns we will process
                     optExt = optReturns[optIndexes[optIndexes.length - 1]];
                     loadFromContext(code, CD_boolean, optExt.altIndex);
@@ -1581,25 +1678,24 @@ public class CommonBuilder
     /**
      * Assemble the necessary methods for a constant type in the provided class builder.
      *
-     * @param className     the name of the class being built
-     * @param classBuilder  the class builder to which methods will be added
+     * @param classBuilder the class builder to which methods will be added
      */
-    protected void assembleConstMethods(String className, ClassBuilder classBuilder) {
+    protected void assembleConstMethods(ClassBuilder classBuilder) {
         if (!thisType.isA(pool().typeNumber()) && !thisType.isJitPrimitive()) {
             // we only generate equals and compare for non-primitive types
-            assembleConstEquals(className, classBuilder);
-            assembleConstCompare(className, classBuilder);
+            assembleConstEquals(classBuilder);
+            assembleConstCompare(classBuilder);
 
             // despite the fact IntNumber and subclasses have natural implementations of these
             // methods, for now we use native implementations
             assembleConstAppendTo(classBuilder);
-            assembleConstEstimateStringLength(className, classBuilder);
+            assembleConstEstimateStringLength(classBuilder);
         }
         // the reason we need to generate "hashCode" for primitive types is to produce
         // non-predictable implementations
         // TODO JK: consider implementing them natively via a Ctx-based facility, in which
         //  case we can simplify the code production
-        assembleConstHashCode(className, classBuilder);
+        assembleConstHashCode(classBuilder);
     }
 
     /**
@@ -1616,7 +1712,7 @@ public class CommonBuilder
      * If this builder is an {@link AugmentingBuilder}, determine whether the specified field
      * exists in a native class.
      *
-     * @return {@code true} if the specified fieid exists for the native (augmented) class
+     * @return {@code true} if the specified field exists for the native (augmented) class
      */
     protected boolean isNativeField(String jitName, ClassDesc cd) {
         return false;
@@ -1630,7 +1726,7 @@ public class CommonBuilder
      * Generate the "equals", "equals$p" and possibly "$equals" methods for a const type if the
      * methods do not already exist.
      */
-    protected void assembleConstEquals(String className, ClassBuilder classBuilder) {
+    protected void assembleConstEquals(ClassBuilder classBuilder) {
         SignatureConstant eqSig    = pool().sigEquals();
         MethodInfo        eqMethod = typeInfo.getMethodBySignature(eqSig);
         Implementation    impl     = eqMethod.getHead().getImplementation();
@@ -1639,7 +1735,7 @@ public class CommonBuilder
         // If the method is not explicitly implemented or the declaring type does not match the
         // current type (i.e. the method is declared on a super class), then we can build the method
         if (impl != Implementation.Explicit || !thisId.equals(targetId)) {
-            ClassDesc      cdThis      = ClassDesc.of(className);
+            ClassDesc      cdThis      = art.CD();
             String         eqName      = eqSig.getName();
             String         eqOptName   = eqName + OPT;
             MethodTypeDesc mdWrapper   = MethodTypeDesc.of(CD_Boolean, CD_Ctx, CD_nType, cdThis, cdThis);
@@ -1662,7 +1758,7 @@ public class CommonBuilder
                 if (!isNativeMethod(eqOptName, mdPrimitive)) {
                     classBuilder.withMethodBody(eqOptName, mdPrimitive,
                         ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
-                        code -> assembleConstEquals(className, code, thisType, eqSig));
+                        code -> assembleConstEquals(code, thisType, eqSig));
                 }
             }
         }
@@ -1679,8 +1775,7 @@ public class CommonBuilder
      * <p>
      * Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value1, Slot 3 = value2
      */
-    private void assembleConstEquals(String className, CodeBuilder code, TypeConstant type,
-                                     SignatureConstant eqSig) {
+    private void assembleConstEquals(CodeBuilder code, TypeConstant type, SignatureConstant eqSig) {
         // all primitives must have a manually coded native implementation
         assert !type.isJitPrimitive();
 
@@ -1781,7 +1876,7 @@ public class CommonBuilder
                 code.aload(value2Slot);
                 loadProperty(code, type, propId, true);
 
-                ClassDesc cdPrim = JitTypeDesc.getPrimitiveClass(propType);
+                ClassDesc cdPrim = JitTypeDesc.getJavaPrimitive(propType);
                 assert cdPrim != null;
                 switch (cdPrim.descriptorString()) {
                     case "I", "S", "B", "Z":
@@ -1808,7 +1903,7 @@ public class CommonBuilder
                 // load both property values as unboxed primitives onto the stack
                 code.aload(value1Slot);
                 PropertyInfo  info = loadProperty(code, type, propId, true);
-                JitMethodDesc jmd  = info.getGetterJitDesc(this);
+                JitMethodDesc jmd  = info.getGetterJitDesc(this, type);
                 loadOptimizedReturnsToStack(code, jmd);
                 code.aload(value2Slot);
                 loadProperty(code, type, propId, true);
@@ -1831,7 +1926,7 @@ public class CommonBuilder
 
                 // load nType for the property type: nType.$ensureType(Ctx, TypeConstant)
                 loadCtx(code);
-                loadTypeConstant(code, className, propType);
+                loadTypeConstant(code, propType);
                 code.invokestatic(CD_nType, "$ensureType",
                         MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
 
@@ -1870,7 +1965,7 @@ public class CommonBuilder
      *     static <CompileType extends T> Ordered compare(T value1, T value2)
      * </pre>
      */
-    protected void assembleConstCompare(String className, ClassBuilder classBuilder) {
+    protected void assembleConstCompare(ClassBuilder classBuilder) {
         SignatureConstant cmpSig    = pool().sigCompare();
         MethodInfo        cmpMethod = typeInfo.getMethodBySignature(cmpSig);
         Implementation    impl      = cmpMethod.getHead().getImplementation();
@@ -1879,7 +1974,7 @@ public class CommonBuilder
         // If the method is not explicitly implemented or the declaring type does not match the
         // current type (i.e., the method is declared on a supe class), then we can build the method
         if (impl != Implementation.Explicit || !thisId.equals(targetId)) {
-            ClassDesc      cdThis  = ClassDesc.of(className);
+            ClassDesc      cdThis  = art.CD();
             String         cmpName = cmpSig.getName();
             MethodTypeDesc md      = MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_nType, cdThis, cdThis);
 
@@ -1887,7 +1982,7 @@ public class CommonBuilder
                 // generate the standard "compare" method
                 classBuilder.withMethodBody(cmpName, md,
                         ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
-                        code -> assembleConstCompare(className, code, thisType, cmpSig));
+                        code -> assembleConstCompare(code, thisType, cmpSig));
             }
         }
     }
@@ -1903,8 +1998,7 @@ public class CommonBuilder
      * <p>
      * Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value1, Slot 3 = value2
      */
-    private void assembleConstCompare(String className, CodeBuilder code, TypeConstant type,
-                                      SignatureConstant cmpSig) {
+    private void assembleConstCompare(CodeBuilder code, TypeConstant type, SignatureConstant cmpSig) {
         // all primitives must have a manually coded native implementation
         assert !type.isJitPrimitive();
 
@@ -2001,7 +2095,7 @@ public class CommonBuilder
             code.labelBinding(checkProp);
             if (propType.isJavaPrimitive()) {
                 // Java primitive: load both values, compare directly, convert int to Ordered
-                ClassDesc cdPrim = JitTypeDesc.getPrimitiveClass(propType);
+                ClassDesc cdPrim = JitTypeDesc.getJavaPrimitive(propType);
                 assert cdPrim != null;
 
                 code.aload(value1Slot);
@@ -2037,7 +2131,7 @@ public class CommonBuilder
 
                 code.aload(value1Slot);
                 PropertyInfo  info = loadProperty(code, type, propId, true);
-                JitMethodDesc jmd  = info.getGetterJitDesc(this);
+                JitMethodDesc jmd  = info.getGetterJitDesc(this, type);
                 loadOptimizedReturnsToStack(code, jmd);
                 code.aload(value2Slot);
                 loadProperty(code, type, propId, true);
@@ -2075,7 +2169,7 @@ public class CommonBuilder
 
                 // get and load the nType to the stack (compare param 1)
                 loadCtx(code);
-                loadTypeConstant(code, className, propType);
+                loadTypeConstant(code, propType);
                 code.invokestatic(CD_nType, "$ensureType",
                         MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
 
@@ -2119,7 +2213,7 @@ public class CommonBuilder
      *     static <CompileType extends T> Int hashCode(T value)
      * </pre>
      */
-    protected void assembleConstHashCode(String className, ClassBuilder classBuilder) {
+    protected void assembleConstHashCode(ClassBuilder classBuilder) {
         SignatureConstant hashSig    = pool().sigHashCode();
         MethodInfo        hashMethod = typeInfo.getMethodBySignature(hashSig);
         Implementation    impl       = hashMethod.getHead().getImplementation();
@@ -2137,7 +2231,7 @@ public class CommonBuilder
                 classBuilder.withField("$savedHashCode", CD_long, ClassFile.ACC_PRIVATE);
             }
 
-            ClassDesc      cdThis      = ClassDesc.of(className);
+            ClassDesc      cdThis      = art.CD();
             String         hashName    = hashSig.getName();
             String         hashOptName = hashName + OPT;
             MethodTypeDesc mdWrapper   = MethodTypeDesc.of(CD_Int64, CD_Ctx, CD_nType, cdThis);
@@ -2159,8 +2253,8 @@ public class CommonBuilder
                 // generate the optimized "hashCode$p" with the actual implementation
                 if (!isNativeMethod(hashOptName, mdPrimitive)) {
                     classBuilder.withMethodBody(hashOptName, mdPrimitive,
-                        ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, code ->
-                            assembleConstHashCode(className, code, thisType, hashSig, isCaching));
+                            ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
+                            code -> assembleConstHashCode(code, thisType, hashSig, isCaching));
                 }
             }
         }
@@ -2175,8 +2269,11 @@ public class CommonBuilder
      * </pre>
      * Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value
      */
-    private void assembleConstHashCode(String className, CodeBuilder code, TypeConstant type,
-                                             SignatureConstant hashSig, boolean isCaching) {
+    private void assembleConstHashCode(
+            CodeBuilder       code,
+            TypeConstant      type,
+            SignatureConstant hashSig,
+            boolean           isCaching) {
 
         ConstantPool pool         = pool();
         TypeConstant typeHashable = pool.typeHashable();
@@ -2189,7 +2286,7 @@ public class CommonBuilder
             // we call nType.hashCode$p(ctx, value) to get the hash code (where nType) is the
             // type of the primitive
             Builder.loadCtx(code);
-            loadTypeConstant(code, className, type);
+            loadTypeConstant(code, type);
             code.invokestatic(CD_nType, "$ensureType",
                     MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
             Builder.loadCtx(code);
@@ -2298,7 +2395,7 @@ public class CommonBuilder
             if (propType.isJitPrimitive()) {
                 // generate the same code that used for primitive constant hashCode$p
                 Builder.loadCtx(code);
-                loadTypeConstant(code, ensureJitClassName(propType), propType);
+                loadTypeConstant(code, propType);
                 code.invokestatic(CD_nType, "$ensureType",
                         MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
                 Builder.loadCtx(code);
@@ -2319,7 +2416,7 @@ public class CommonBuilder
 
                 // nType for the property type: nType.$ensureType(Ctx, TypeConstant)
                 loadCtx(code);
-                loadTypeConstant(code, className, propType);
+                loadTypeConstant(code, propType);
                 code.invokestatic(CD_nType, "$ensureType",
                         MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
                 code.aload(valueSlot);
@@ -2364,7 +2461,7 @@ public class CommonBuilder
      *     Int estimateStringLength();
      * </pre>
      */
-    protected void assembleConstEstimateStringLength(String className, ClassBuilder classBuilder) {
+    protected void assembleConstEstimateStringLength(ClassBuilder classBuilder) {
         SignatureConstant signature = pool().sigEstimateStrLen();
         MethodInfo        method    = typeInfo.getMethodBySignature(signature);
         Implementation    impl      = method.getHead().getImplementation();
@@ -2376,7 +2473,7 @@ public class CommonBuilder
         if ((impl != Implementation.Explicit && impl != Implementation.Capped)
             || !thisId.equals(targetId)) {
 
-            ClassDesc      cdThis        = ClassDesc.of(className);
+            ClassDesc      cdThis        = art.CD();
             String         methodName    = signature.getName();
             String         methodOptName = methodName + OPT;
             MethodTypeDesc mdWrapper     = MethodTypeDesc.of(CD_Int64, CD_Ctx);
@@ -2410,14 +2507,15 @@ public class CommonBuilder
      * </pre>
      */
     protected void assembleConstEstimateStringLength(CodeBuilder code, TypeConstant type) {
-        ConstantPool   pool           = pool();
-        TypeConstant   typeStringable = pool.typeStringable();
-        MethodTypeDesc mdEstStringLen = MethodTypeDesc.of(CD_long, CD_Ctx);
-        MethodTypeDesc mdToString     = MethodTypeDesc.of(CD_String, CD_Ctx);
-        MethodTypeDesc mdStringSize   = MethodTypeDesc.of(CD_long, CD_Ctx);
-        String         methodName     = "estimateStringLength$p";
-        int            thisSlot       = 0;
-        int            resultSlot     = 2;
+        ConstantPool      pool            = pool();
+        TypeConstant      typeStringable  = pool.typeStringable();
+        SignatureConstant sigEstStringLen = pool.sigEstimateStrLen();
+        SignatureConstant sigToString     = pool.sigToString();
+        MethodTypeDesc    mdEstStringLen  = MethodTypeDesc.of(CD_long, CD_Ctx);
+        MethodTypeDesc    mdToString      = MethodTypeDesc.of(CD_String, CD_Ctx);
+        MethodTypeDesc    mdStringSize    = MethodTypeDesc.of(CD_long, CD_Ctx);
+        int               thisSlot        = 0;
+        int               resultSlot      = 2;
 
 
         // create the list of properties to be compared so we can sort them
@@ -2488,19 +2586,18 @@ public class CommonBuilder
             ClassDesc cdProp = ensureClassDesc(propType);
 
             code.labelBinding(checkProp);
-            code.aload(thisSlot);
-            loadProperty(code, type, propId, false);
-            if (isNullable) {
-                code.checkcast(cdProp);
-            }
             if (propType.isA(typeStringable)) {
                 // property is Stringable, so call its estimateStringLength$p method
+                loadConstPropertyValue(code, type, propId, propType, isNullable, thisSlot);
                 loadCtx(code);
-                invoke(code, propType, cdProp, methodName, mdEstStringLen);
+                invokeConstPropertyMethod(code, propType, cdProp, sigEstStringLen,
+                        "estimateStringLength$p", mdEstStringLen);
             } else {
                 // use propValue.toString(Ctx) as the value to add the string size
+                loadConstPropertyValue(code, type, propId, propType, isNullable, thisSlot);
                 loadCtx(code);
-                invoke(code, propType, cdProp, "toString", mdToString);
+                invokeConstPropertyMethod(code, propType, cdProp, sigToString,
+                        "toString", mdToString);
                 loadCtx(code);
                 code.invokevirtual(CD_String, "size$get$p", mdStringSize);
             }
@@ -2555,13 +2652,15 @@ public class CommonBuilder
      * </pre>
      */
     private void assembleConstAppendTo(CodeBuilder code, TypeConstant type) {
-        ConstantPool   pool           = pool();
-        TypeConstant   typeStringable = pool.typeStringable();
-        MethodTypeDesc mdAppendTo     = MethodTypeDesc.of(CD_AppenderChar, CD_Ctx, CD_AppenderChar);
-        MethodTypeDesc mdAdd          = MethodTypeDesc.of(CD_AppenderChar, CD_Ctx, CD_int);
-        MethodTypeDesc mdToString     = MethodTypeDesc.of(CD_String, CD_Ctx);
-        int            thisSlot       = 0;
-        int            appenderSlot   = 2;
+        ConstantPool      pool           = pool();
+        TypeConstant      typeStringable = pool.typeStringable();
+        SignatureConstant sigAppendTo    = pool.sigAppendTo();
+        SignatureConstant sigToString    = pool.sigToString();
+        MethodTypeDesc    mdAppendTo     = MethodTypeDesc.of(CD_AppenderChar, CD_Ctx, CD_AppenderChar);
+        MethodTypeDesc    mdAdd          = MethodTypeDesc.of(CD_AppenderChar, CD_Ctx, CD_int);
+        MethodTypeDesc    mdToString     = MethodTypeDesc.of(CD_String, CD_Ctx);
+        int               thisSlot       = 0;
+        int               appenderSlot   = 2;
 
         // create the list of properties to be compared so we can sort them
         List<PropertyInfo> props = new ArrayList<>();
@@ -2651,26 +2750,18 @@ public class CommonBuilder
             code.labelBinding(checkProp);
             if (propType.isA(typeStringable)) {
                 // property is Stringable, so call appendTo
-                // load the property value (do not unbox primitives)
-                code.aload(thisSlot);
-                loadProperty(code, type, propId, false);
-                if (isNullable) {
-                    code.checkcast(cdProp);
-                }
+                loadConstPropertyValue(code, type, propId, propType, isNullable, thisSlot);
                 loadCtx(code);
                 code.aload(appenderSlot);
-                invoke(code, propType, cdProp, "appendTo", mdAppendTo);
+                invokeConstPropertyMethod(code, propType, cdProp, sigAppendTo,
+                        "appendTo", mdAppendTo);
                 code.pop();
             } else {
                 // use propValue.toString(Ctx) as the value to append
-                // load the property value (do not unbox primitives)
-                code.aload(thisSlot);
-                loadProperty(code, type, propId, false);
-                if (isNullable) {
-                    code.checkcast(cdProp);
-                }
+                loadConstPropertyValue(code, type, propId, propType, isNullable, thisSlot);
                 loadCtx(code);
-                invoke(code, propType, cdProp, "toString", mdToString);
+                invokeConstPropertyMethod(code, propType, cdProp, sigToString,
+                        "toString", mdToString);
                 loadCtx(code);
                 code.aload(appenderSlot)
                     .invokevirtual(CD_String, "appendTo", mdAppendTo)
@@ -2688,6 +2779,43 @@ public class CommonBuilder
         code.loadConstant(')')
             .invokeinterface(CD_AppenderChar, "add$p", mdAdd)
             .areturn();
+    }
+
+    /**
+     * Load a const-forming property value, using its optimized representation when the property's
+     * compile-time type is a JIT primitive.
+     */
+    private void loadConstPropertyValue(CodeBuilder code, TypeConstant type,
+                                        PropertyConstant propId, TypeConstant propType,
+                                        boolean isNullable, int ownerSlot) {
+        code.aload(ownerSlot);
+        if (propType.isJitPrimitive()) {
+            PropertyInfo  info = loadProperty(code, type, propId, true);
+            JitMethodDesc jmd  = info.getGetterJitDesc(this, type);
+            loadOptimizedReturnsToStack(code, jmd);
+        } else {
+            loadProperty(code, type, propId, false);
+            if (isNullable) {
+                code.checkcast(ensureClassDesc(propType));
+            }
+        }
+    }
+
+    /**
+     * Invoke a method on a const-forming property value, using the receiver-first optimized static
+     * method when the property's compile-time type is a JIT primitive.
+     */
+    private void invokeConstPropertyMethod(CodeBuilder code, TypeConstant propType,
+                                           ClassDesc cdProp, SignatureConstant signature,
+                                           String standardName, MethodTypeDesc mdStandard) {
+        if (propType.isJitPrimitive()) {
+            MethodInfo    method = propType.ensureTypeInfo().getMethodBySignature(signature);
+            JitMethodDesc jmd    = method.getJitDesc(this, propType);
+            assert jmd.isOptimizedStatic;
+            code.invokestatic(cdProp, signature.getName() + OPT, jmd.optimizedMD);
+        } else {
+            invoke(code, propType, cdProp, standardName, mdStandard);
+        }
     }
 
     /**
@@ -2742,7 +2870,7 @@ public class CommonBuilder
             System.arraycopy(cds, 0, cdParams, 0, cds.length);
             System.arraycopy(cds, 0, cdParams, cds.length, cds.length);
         } else {
-            ClassDesc cd = JitTypeDesc.getPrimitiveClass(type);
+            ClassDesc cd = JitTypeDesc.getJavaPrimitive(type);
             cdParams = new ClassDesc[]{cd, cd};
         }
         return cdParams;
@@ -2834,21 +2962,19 @@ public class CommonBuilder
     /**
      * Assemble the "routing" method for a capped method.
      */
-    protected void assembleCapRouting(String className, ClassBuilder classBuilder,
-                                      MethodInfo srcMethod, MethodInfo dstMethod) {
-        JitMethodDesc jmdSrc = srcMethod.getJitDesc(this);
-        JitMethodDesc jmdDst = dstMethod.getJitDesc(this);
+    protected void assembleCapRouting(
+            ClassBuilder classBuilder,
+            MethodInfo   srcMethod,
+            MethodInfo   dstMethod) {
+        JitMethodDesc jmdSrc = srcMethod.getJitDesc(this, thisType);
+        JitMethodDesc jmdDst = dstMethod.getJitDesc(this, thisType);
 
         String srcName = srcMethod.ensureJitMethodName(typeSystem);
         String dstName = dstMethod.ensureJitMethodName(typeSystem);
 
         if (srcName.equals(dstName)) {
-            // it must be a covariant cap for a virtual constructor or a method manually
-            // implemented natively
-// TODO GG there is definitely a bug in ensureJitMethodName() for capped methods; the generated
-//  code will produce an infinite recursion, but we will let it compile for now
-//            assert srcMethod.containsVirtualConstructor() ||
-//                NativeNames.findReservedJitName(srcMethod.getIdentity()) != null;
+            // it must be a covariant cap for a natively implemented method
+            assert NativeNames.findReservedJitName(srcMethod.getIdentity()) != null;
             return;
         }
 
@@ -2856,19 +2982,22 @@ public class CommonBuilder
         assert !srcMethod.isFunction() && !srcMethod.isCtorOrValidator() ||
                 srcMethod.containsVirtualConstructor();
 
-        assembleStandardCap(className, classBuilder, srcName, dstName, jmdSrc, jmdDst);
+        assembleStandardCap(classBuilder, srcName, dstName, jmdSrc, jmdDst);
         if (jmdSrc.isOptimized) {
             assert jmdDst.isOptimized;
-            assembleOptimizedCap(className, classBuilder, srcName+OPT, dstName+OPT, jmdSrc, jmdDst);
+            assembleOptimizedCap(classBuilder, srcName+OPT, dstName+OPT, jmdSrc, jmdDst);
         }
     }
 
     /**
      * Assemble a "standard" routing call from a cap to its target method.
      */
-    private void assembleStandardCap(String className, ClassBuilder classBuilder,
-                                     String srcName, String dstName,
-                                     JitMethodDesc jmdSrc, JitMethodDesc jmdDst) {
+    private void assembleStandardCap(
+            ClassBuilder  classBuilder,
+            String        srcName,
+            String        dstName,
+            JitMethodDesc jmdSrc,
+            JitMethodDesc jmdDst) {
         classBuilder.withMethodBody(srcName, jmdSrc.standardMD, ClassFile.ACC_PUBLIC, code -> {
             code.aload(0); // this
 
@@ -2881,6 +3010,7 @@ public class CommonBuilder
             JitParamDesc[] dstParams = jmdDst.standardParams;
             for (int i = 0, c = srcParams.length; i < c; i++) {
                 JitParamDesc srcPd        = srcParams[i];
+                assert srcPd.index != -1; // TODO CP -1 == thi$
                 int          srcParamSlot = code.parameterSlot(extraCount + srcPd.index);
                 TypeConstant srcParamType = srcPd.type;
                 JitParamDesc dstPd        = dstParams[i];
@@ -2895,7 +3025,7 @@ public class CommonBuilder
                 code.aconst_null();
             }
 
-            invoke(code, thisType, ClassDesc.of(className), dstName, jmdDst.standardMD);
+            invoke(code, thisType, art.CD(), dstName, jmdDst.standardMD);
 
             JitParamDesc[] srcReturns = jmdSrc.standardReturns;
             int            retCount   = srcReturns.length;
@@ -2917,24 +3047,44 @@ public class CommonBuilder
     /**
      * Assemble an "optimized" routing call from a cap to its target method.
      */
-    private void assembleOptimizedCap(String className, ClassBuilder classBuilder,
-                                      String srcName, String dstName,
-                                      JitMethodDesc jmdSrc, JitMethodDesc jmdDst) {
-        classBuilder.withMethodBody(srcName, jmdSrc.optimizedMD, ClassFile.ACC_PUBLIC, code -> {
-            code.aload(0); // this
+    private void assembleOptimizedCap(
+            ClassBuilder  classBuilder,
+            String        srcName,
+            String        dstName,
+            JitMethodDesc jmdSrc,
+            JitMethodDesc jmdDst) {
+        int flags = ClassFile.ACC_PUBLIC;
+        if (jmdSrc.isOptimizedStatic) {
+            flags |= ClassFile.ACC_STATIC;
+        }
+
+        classBuilder.withMethodBody(srcName, jmdSrc.optimizedMD, flags, code -> {
+            int ctxSlot    = code.parameterSlot(jmdSrc.optimizedCtx());
+            int firstParam = 0;
+            if (jmdSrc.isPrimitivized()) {
+                int ctxParam = jmdSrc.optimizedCtx();
+                for (; firstParam < ctxParam; firstParam++) {
+                    JitParamDesc thiPd = jmdSrc.optimizedParams[firstParam];
+                    load(code, thiPd.cd, code.parameterSlot(firstParam));
+                }
+            } else if (!jmdSrc.isOptimizedStatic) {
+                code.aload(0); // this
+            }
 
             int extraCount = jmdSrc.getImplicitParamCount();
             for (int i = 0; i < extraCount; i++) {
-                code.aload(code.parameterSlot(i));
+                code.aload(ctxSlot);
             }
 
             JitParamDesc[] srcParams = jmdSrc.optimizedParams;
             JitParamDesc[] dstParams = jmdDst.optimizedParams;
-            for (int i = 0, c = srcParams.length; i < c; i++) {
-                JitParamDesc srcPd     = srcParams[i];
-                int          srcSlot   = code.parameterSlot(extraCount + srcPd.index);
+            int srcIndex = firstParam;
+            int dstIndex = jmdDst.optimizedCtx();
+            while (srcIndex < srcParams.length) {
+                JitParamDesc srcPd     = srcParams[srcIndex];
+                int          srcSlot   = code.parameterSlot(extraCount + srcIndex);
                 TypeConstant srcType   = srcPd.type;
-                JitParamDesc dstPd     = dstParams[i];
+                JitParamDesc dstPd     = dstParams[dstIndex];
                 TypeConstant dstType   = dstPd.type;
                 JitFlavor    srcFlavor = srcPd.flavor;
                 JitFlavor    dstFlavor = dstPd.flavor;
@@ -2943,22 +3093,35 @@ public class CommonBuilder
                     load(code, srcPd.cd, srcSlot);
 
                     if (!srcType.isJitPrimitive() && !srcType.equals(dstType)) {
-                        generateCheckCast(code, dstType);
+                        generateCheckCast(code, dstType, ctxSlot);
                     }
+                    srcIndex++;
+                    dstIndex++;
                 } else {
                     switch (srcFlavor.name() + "->" + dstFlavor.name()) {
                     case "Specific->Primitive",
                          "Specific->XvmPrimitive":
                         code.aload(srcSlot);
                         if (!srcType.equals(dstType)) {
-                            generateCheckCast(code, dstType);
+                            generateCheckCast(code, dstType, ctxSlot);
                         }
                         Builder.unbox(code, dstType);
+                        int paramIndex = srcPd.index;
+                        while (srcIndex < srcParams.length &&
+                                srcParams[srcIndex].index == paramIndex) {
+                            srcIndex++;
+                        }
+                        while (dstIndex < dstParams.length &&
+                                dstParams[dstIndex].index == paramIndex) {
+                            dstIndex++;
+                        }
                         break;
 
                     case "Primitive->PrimitiveWithDefault":
-                        code.aload(srcSlot)
-                            .iconst_0(); // false
+                        load(code, srcPd.cd, srcSlot);
+                        code.iconst_0(); // false
+                        srcIndex++;
+                        dstIndex += 2;
                         break;
 
                     default:
@@ -2968,32 +3131,40 @@ public class CommonBuilder
                 }
             }
 
-            for (int i = srcParams.length, c = dstParams.length; i < c; i++) {
-                JitParamDesc dstPd = dstParams[i];
+            while (dstIndex < dstParams.length) {
+                JitParamDesc dstPd = dstParams[dstIndex];
 
                 switch (dstPd.flavor) {
                 case PrimitiveWithDefault:
                     defaultLoad(code, dstPd.cd);
                     code.iconst_1(); // default = true
-                    i++;             // consume the extension
+                    dstIndex += 2;   // consume the extension
                     break;
 
                 case NullablePrimitiveWithDefault:
                     defaultLoad(code, dstPd.cd);
                     code.iconst_m1(); // default = true
-                    i++;              // consume the extension
+                    dstIndex += 2;    // consume the extension
                     break;
 
                 case SpecificWithDefault, WidenedWithDefault:
                     code.aconst_null();
+                    dstIndex++;
                     break;
 
                 default:
-                    throw new UnsupportedOperationException("Not implemented: dst=" + dstPd.flavor);
+                    throw new UnsupportedOperationException("Not implemented: dst=" + dstPd.flavor
+                            + "; src=" + srcName + jmdSrc.optimizedMD
+                            + "; target=" + dstName + jmdDst.optimizedMD
+                            + "; index=" + dstIndex);
                 }
             }
 
-            invoke(code, thisType, ClassDesc.of(className), dstName, jmdDst.optimizedMD);
+            if (jmdDst.isOptimizedStatic) {
+                code.invokestatic(art.CD(), dstName, jmdDst.optimizedMD);
+            } else {
+                invoke(code, thisType, art.CD(), dstName, jmdDst.optimizedMD);
+            }
 
             JitParamDesc[] srcReturns = jmdSrc.optimizedReturns;
             int            retCount   = srcReturns.length;
@@ -3026,9 +3197,9 @@ public class CommonBuilder
                             box(code, dstPd.type);
                             addReturn(code, srcPd.cd);
                         } else {
-                            loadFromContext(code, dstPd.cd, dstPd.altIndex);
+                            loadFromContext(code, dstPd.cd, dstPd.altIndex, ctxSlot);
                             box(code, dstPd.type);
-                            storeToContext(code, srcPd.cd, srcPd.altIndex);
+                            storeToContext(code, srcPd.cd, srcPd.altIndex, ctxSlot);
                         }
                         break;
 
@@ -3039,8 +3210,9 @@ public class CommonBuilder
                         int     index    = doReturn ? i + 1 : i;
                         while (index < dstReturns.length
                                && dstReturns[index].index == dstPd.index) {
+                            assert dstPd.index != -1; // TODO CP -1 == thi$
                             loadFromContext(code, dstReturns[index].cd,
-                                    dstReturns[index].altIndex);
+                                    dstReturns[index].altIndex, ctxSlot);
                             index++;
                         }
                         // skip over the returns we have processed from the context
@@ -3050,7 +3222,7 @@ public class CommonBuilder
                         if (doReturn) {
                             addReturn(code, srcPd.cd);
                         } else {
-                            storeToContext(code, srcPd.cd, srcPd.altIndex);
+                            storeToContext(code, srcPd.cd, srcPd.altIndex, ctxSlot);
                         }
                         break;
                     }
@@ -3067,8 +3239,10 @@ public class CommonBuilder
     /**
      * Assemble the "routing" method for a capped method.
      */
-    protected void assemblePropertyDelegation(String className, ClassBuilder classBuilder,
-                                              MethodInfo srcMethod, PropertyConstant propDelegate) {
+    protected void assemblePropertyDelegation(
+            ClassBuilder     classBuilder,
+            MethodInfo       srcMethod,
+            PropertyConstant propDelegate) {
         String        srcName   = srcMethod.ensureJitMethodName(typeSystem);
         JitMethodDesc jmd       = srcMethod.getJitDesc(this);
         PropertyInfo  propInfo  = typeInfo.findProperty(propDelegate);
@@ -3079,19 +3253,29 @@ public class CommonBuilder
 
         assert !srcName.equals(dstName);
 
+        // except Char, no other primitive Ecstasy classes use delegation and Char implements all
+        // of them natively
+        assert !isPrimitive;
+
+        // TODO: add support for delegation to a property of a primitive type
+        assert !jmd.isStandardStatic && !jmd.isOptimizedStatic;
+
         int extraCount = jmd.getImplicitParamCount();
 
-        assembleDelegation(classBuilder, propDelegate, srcName, dstMethod, dstName,
+        assembleDelegation(classBuilder, propDelegate, srcName, dstName, dstMethod,
             jmd.standardMD, extraCount, jmd.standardParams, jmd.standardReturns);
 
         if (jmd.isOptimized) {
-            assembleDelegation(classBuilder, propDelegate, srcName+OPT, dstMethod, dstName+OPT,
+            assembleDelegation(classBuilder, propDelegate, srcName+OPT, dstName+OPT, dstMethod,
                 jmd.optimizedMD, extraCount, jmd.optimizedParams, jmd.optimizedReturns);
         }
     }
 
+    /**
+     * At this point we know this class is not primitive and the Ctx argument is always at zero.
+     */
     private void assembleDelegation(ClassBuilder classBuilder, PropertyConstant propDelegate,
-                                    String srcName, MethodInfo dstMethod, String dstName,
+                                    String srcName, String dstName, MethodInfo dstMethod,
                                     MethodTypeDesc md, int extraCount,
                                     JitParamDesc[] params, JitParamDesc[] returns) {
         classBuilder.withMethodBody(srcName, md, ClassFile.ACC_PUBLIC, code -> {
@@ -3106,7 +3290,7 @@ public class CommonBuilder
                 code.checkcast(CD_nObj);
             }
 
-            code.aload(code.parameterSlot(0)); // ctx
+            loadCtx(code);
 
             for (JitParamDesc pd : params) {
                 Builder.load(code, pd.cd, code.parameterSlot(extraCount + pd.index));
@@ -3175,8 +3359,8 @@ public class CommonBuilder
      *    // note: singletons move this step to the Java static initializer
      *    C thi$ = new C(ctx);
      *
-     *    // step 3a (optional) if the type is specified, assign the "$type" field
-     *    thi$.$type = $type;
+     *    // step 3a (optional) if the type is specified, assign the "$sc0" field
+     *    thi$.$sc0 = $type;
      *
      *    // step 4: a constructor context is required if a “finally” chain will exist
      *    CtorCtx cctx = ctx.ctorCtx();
@@ -3249,14 +3433,17 @@ public class CommonBuilder
      * }
      * </pre></code>
      */
-    protected void assembleNew(String className, ClassBuilder classBuilder, MethodInfo constructor,
-                               String jitName, JitMethodDesc jmd) {
+    protected void assembleNew(
+            ClassBuilder  classBuilder,
+            MethodInfo    constructor,
+            String        jitName,
+            JitMethodDesc jmd) {
         boolean   isSingleton = typeInfo.isSingleton();
         boolean   hasType     = typeInfo.hasGenericTypes();
-        ClassDesc CD_this     = ClassDesc.of(className);
+        ClassDesc CD_this     = art.CD();
 
         // Note: the "$init" is a virtual method for singletons and "$new" is static otherwise;
-        //       see assembleStaticInitializer()
+        //       see assembleCLInit()
         int flags = ClassFile.ACC_PUBLIC;
         if (!isSingleton) {
             flags |= ClassFile.ACC_STATIC;
@@ -3264,7 +3451,7 @@ public class CommonBuilder
 
         MethodTypeDesc md;
         if (jmd.isOptimized) {
-            assembleMethodWrapper(className, classBuilder, jitName, jmd, true);
+            assembleMethodWrapper(classBuilder, jitName, jmd);
             jitName += OPT;
             md = jmd.optimizedMD;
         } else {
@@ -3292,7 +3479,7 @@ public class CommonBuilder
             }
 
             // for singleton classes the steps 0-2 are performed by the static initializer;
-            // see assembleStaticInitializer()
+            // see assembleCLInit()
             int thisSlot;
             if (isSingleton) {
                 thisSlot = 0;
@@ -3373,20 +3560,27 @@ public class CommonBuilder
     /**
      * Assemble the property accessor (optimized if possible, standard otherwise).
      */
-    protected void assemblePropertyAccessor(String className, ClassBuilder classBuilder,
-                                            PropertyInfo prop, String jitName, MethodTypeDesc md,
-                                            boolean isOptimized, boolean isGetter) {
-        int     flags      = ClassFile.ACC_PUBLIC;
+    protected void assemblePropertyAccessor(
+            ClassBuilder  classBuilder,
+            PropertyInfo  prop,
+            String        jitName,
+            JitMethodDesc jmd,
+            boolean       isGetter) {
+        int flags = ClassFile.ACC_PUBLIC;
+        if (jmd.isOptimizedStatic) {
+            flags |= ClassFile.ACC_STATIC;
+        }
         boolean isAbstract = prop.isAbstract() &&
                                 !(isGetter ? prop.getHead().hasGetter() : prop.getHead().hasSetter());
         if (isAbstract) {
             flags |= ClassFile.ACC_ABSTRACT;
         }
+        MethodTypeDesc md = jmd.isOptimized ? jmd.optimizedMD : jmd.standardMD;
 
         classBuilder.withMethod(jitName, md, flags,
             methodBuilder -> {
                 if (!isAbstract) {
-                    BuildContext bctx = new BuildContext(this, className, typeInfo, prop, isGetter);
+                    BuildContext bctx = new BuildContext(this, typeInfo, prop, isGetter, jmd);
                     methodBuilder.withCode(code -> generateCode(md, bctx, code));
                 }
             }
@@ -3396,8 +3590,11 @@ public class CommonBuilder
     /**
      * Assemble the method and any deferred methods.
      */
-    protected void assembleMethod(String className, ClassBuilder classBuilder, MethodInfo method,
-                                  String jitName, JitMethodDesc jmd) {
+    protected void assembleMethod(
+            ClassBuilder  classBuilder,
+            MethodInfo    method,
+            String        jitName,
+            JitMethodDesc jmd) {
         int flags = ClassFile.ACC_PUBLIC;
         if (!method.getHead().getMethodStructure().hasCode()) {
             if (method.isAbstract()) {
@@ -3410,7 +3607,7 @@ public class CommonBuilder
 
         MethodTypeDesc md;
         if (jmd.isOptimized) {
-            assembleMethodWrapper(className, classBuilder, jitName, jmd, method.isFunction());
+            assembleMethodWrapper(classBuilder, jitName, jmd);
             jitName += OPT;
             md = jmd.optimizedMD;
         } else {
@@ -3424,9 +3621,13 @@ public class CommonBuilder
             }
 
             flags |= ClassFile.ACC_STATIC;
+        } else if (jmd.isOptimizedStatic) {
+            // a primitive class generates functions not methods, because "this" is primitive
+            flags |= ClassFile.ACC_STATIC;
         }
 
-        BuildContext bctx = new BuildContext(this, className, typeInfo, method);
+        BuildContext bctx = new BuildContext(this,
+                method.isCtorOrValidator() ? structInfo : typeInfo, method, jmd);
         doAssembleMethod(classBuilder, bctx, method, jitName, md, flags);
 
         BuildContext bctxDeferred = bctx.getDeferred();
@@ -3441,11 +3642,13 @@ public class CommonBuilder
                 MethodTypeDesc mdNext   = isOpt ? jmdNext.optimizedMD : jmdNext.standardMD;
                 String         nameNext = bctxNext.methodJitName;
                 if (isOpt) {
-                    assembleMethodWrapper(className, classBuilder, nameNext, jmdNext, fStatic);
+                    assembleMethodWrapper(classBuilder, nameNext, jmdNext);
                     nameNext += OPT;
                 }
 
-                int flagsNext =  fStatic ? flags | ClassFile.ACC_STATIC : flags;
+                int flagsNext = fStatic || jmdNext.isOptimizedStatic
+                        ? flags | ClassFile.ACC_STATIC
+                        : flags;
 
                 classBuilder.withMethodBody(nameNext, mdNext, flagsNext,
                         code -> generateCode(mdNext, bctxNext, code));
@@ -3487,6 +3690,12 @@ public class CommonBuilder
                 break GenerateStub;
             }
 
+            if (NO_JIT_METHODS.getOrDefault(className, Set.of()).contains(bctx.methodJitName)) {
+                System.err.println("*** Skipping code gen for " + bctx.className + "." + bctx.methodJitName);
+                SKIP_SET.add(bctx.className); // stops the skipping class log message
+                break GenerateStub;
+            }
+
             bctx.assembleCode(code);
             return;
         }
@@ -3504,7 +3713,7 @@ public class CommonBuilder
      * @return true iff the code for the specified method or property accessors should be generated
      *         inside this class
      */
-    private boolean shouldGenerate(IdentityConstant id) {
+    protected boolean shouldGenerate(IdentityConstant id) {
         IdentityConstant containerId = id.getNamespace();
         if (containerId.equals(thisId)) {
             return true;
@@ -3567,7 +3776,7 @@ public class CommonBuilder
 // TODO     "org.xtclang.ecstasy.collections.UniformIndexed*",
 
             // io
-// TODO     "org.xtclang.ecstasy.io.Reader",
+            "org.xtclang.ecstasy.io.Reader",
 // TODO     "org.xtclang.ecstasy.io.TextPosition",
             "org.xtclang.ecstasy.io.IOException",
 
@@ -3577,19 +3786,24 @@ public class CommonBuilder
 
             // numbers
             "org.xtclang.ecstasy.numbers.BFloat16",
-// TODO     "org.xtclang.ecstasy.numbers.Dec32",            // need to change to SingleSlot
-// TODO     "org.xtclang.ecstasy.numbers.Dec64",            // need to change to SingleSlot
+            "org.xtclang.ecstasy.numbers.BinaryFPNumber",
+            "org.xtclang.ecstasy.numbers.Dec*",
             "org.xtclang.ecstasy.numbers.Float16",
             "org.xtclang.ecstasy.numbers.Float32",
             "org.xtclang.ecstasy.numbers.Float64",
             "org.xtclang.ecstasy.numbers.Float128",
             "org.xtclang.ecstasy.numbers.FPConvertible",
-// TODO     "org.xtclang.ecstasy.numbers.Number",
-// TODO     "org.xtclang.ecstasy.numbers.FPNumber",         // depends on Bit support
-// TODO     "org.xtclang.ecstasy.numbers.Int",              // depends on Char "switch" implementation, depends on Char
-// TODO     "org.xtclang.ecstasy.numbers.IntNumber",
+            "org.xtclang.ecstasy.numbers.Number",
+             "org.xtclang.ecstasy.numbers.FPNumber",
+// TODO     "org.xtclang.ecstasy.numbers.Int*",             // depends on IntLiteral
+            "org.xtclang.ecstasy.numbers.IntNumber",
             "org.xtclang.ecstasy.numbers.IntConvertible",
-// TODO     "org.xtclang.ecstasy.numbers.UInt",             // depends on GP_DIVREM
+            "org.xtclang.ecstasy.numbers.IntLiteral",
+            "org.xtclang.ecstasy.numbers.Number$Signum*",
+// TODO     "org.xtclang.ecstasy.numbers.UInt*",            // need Range support
+            "org.xtclang.ecstasy.numbers.IntN",
+            "org.xtclang.ecstasy.numbers.UIntN",
+            "org.xtclang.ecstasy.numbers.UIntNumber",
 
             // reflect
             "org.xtclang.ecstasy.reflect.Module",
@@ -3597,6 +3811,7 @@ public class CommonBuilder
 // TODO     "org.xtclang.ecstasy.reflect.Type",
 
             // text
+            "org.xtclang.ecstasy.text.Char*",
             "org.xtclang.ecstasy.text.String",
             "org.xtclang.ecstasy.text.Stringable",
             "org.xtclang.ecstasy.text.StringBuffer",
@@ -3610,6 +3825,17 @@ public class CommonBuilder
 
     private final static String[] NO_JIT_LIST = new String[] {
     };
+
+    private final static Map<String, Set<String>> NO_JIT_METHODS = Map.of(
+    "org.xtclang.ecstasy.numbers.Number",
+            Set.of("compare",
+                   "converterFor",
+                   "converterTo"),
+    "org.xtclang.ecstasy.numbers.IntNumber",
+            Set.of("not"),          // TODO: depends on virtual constructor
+    "org.xtclang.ecstasy.numbers.UIntNumber",
+            Set.of("compare")
+    );
 
     private final static HashSet<String> SKIP_SET = new HashSet<>();
 }

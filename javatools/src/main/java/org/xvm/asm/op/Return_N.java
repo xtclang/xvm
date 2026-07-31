@@ -159,6 +159,15 @@ public class Return_N
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        super.computeTypes(bctx);
+
+        if (bctx.methodStruct.isConditionalReturn()) {
+            bctx.registerConditionalReturn(m_anArg);
+        }
+    }
+
+    @Override
     public int build(BuildContext bctx, CodeBuilder code) {
         return buildReturn(bctx, code, m_anArg);
     }
