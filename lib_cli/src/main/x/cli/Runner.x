@@ -421,4 +421,3 @@ static service Runner {
     @Command("quit", "Exit the tool")
     void quit() {}
 }
-

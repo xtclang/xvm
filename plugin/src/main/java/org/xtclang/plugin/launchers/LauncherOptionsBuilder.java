@@ -132,4 +132,3 @@ public final class LauncherOptionsBuilder {
         return builder.build();
     }
 }
-

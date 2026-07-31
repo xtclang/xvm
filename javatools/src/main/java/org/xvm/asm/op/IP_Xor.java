@@ -73,7 +73,7 @@ public class IP_Xor
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, 
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code,
                                         RegisterInfo regTarget, RegisterInfo regArg) {
         buildPrimitiveXor(bctx, code, regTarget);
     }

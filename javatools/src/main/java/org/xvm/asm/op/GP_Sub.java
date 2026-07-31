@@ -72,13 +72,13 @@ public class GP_Sub
     }
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, 
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code,
                                         RegisterInfo regTarget, RegisterInfo regArg) {
         buildPrimitiveSub(bctx, code, regTarget);
     }
 
     @Override
-    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder code, 
+    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx, CodeBuilder code,
                                                    RegisterInfo regTarget, int nArgValue) {
         buildXvmPrimitiveSub(bctx, code, regTarget, nArgValue);
         return regTarget.type();

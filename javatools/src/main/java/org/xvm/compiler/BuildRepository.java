@@ -85,4 +85,3 @@ public class BuildRepository
 
     private final Map<ModuleConstant, ModuleStructure> modulesById = new TreeMap<>();
 }
-

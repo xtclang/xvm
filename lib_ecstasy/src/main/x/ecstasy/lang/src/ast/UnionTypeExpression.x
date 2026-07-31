@@ -28,4 +28,3 @@ const UnionTypeExpression(TypeExpression left, Token operator, TypeExpression ri
         return False;
     }
 }
-

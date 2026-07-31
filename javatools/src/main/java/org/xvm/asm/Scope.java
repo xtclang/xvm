@@ -280,5 +280,3 @@ public class Scope {
      */
     private int   m_cGuardAllDepth;
 }
-
-

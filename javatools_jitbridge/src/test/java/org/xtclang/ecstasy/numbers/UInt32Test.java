@@ -11,7 +11,7 @@ import org.xvm.javajit.Ctx;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-public class UInt32Test 
+public class UInt32Test
         extends BaseNumberTest {
 
     @Test

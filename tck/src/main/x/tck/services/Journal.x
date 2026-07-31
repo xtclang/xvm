@@ -2,7 +2,7 @@ service Journal {
     private String[] messages = new String[];
 
     private void foo(String msg) = messages.add(msg);
-    
+
     void add(String msg) = foo(msg);
 
     String[] collect(Boolean clear = True) {
@@ -14,4 +14,3 @@ service Journal {
     }
     @Override String toString() { return messages.toString(); }
 }
-

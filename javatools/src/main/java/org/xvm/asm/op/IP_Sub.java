@@ -84,7 +84,7 @@ public class IP_Sub
     }
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, 
+    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code,
                                         RegisterInfo regTarget, RegisterInfo regArg) {
         buildPrimitiveSub(bctx, code, regTarget);
     }

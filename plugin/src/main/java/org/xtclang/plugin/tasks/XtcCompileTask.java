@@ -55,7 +55,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
     // Per-task configuration properties only.
     private final ListProperty<@NotNull String> outputFilenames;
-    
+
     // Configuration-time captured data to avoid Project references during execution
     //private final Provider<@NotNull Directory> projectDir;
     private final String sourceSetName;
@@ -292,7 +292,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
      * This ensures Gradle detects changes in subdirectory .x files that are part of the module
      * compilation unit, even though only top-level module files are passed to the XTC compiler.
      * <p>
-     * This method fixes the incremental build issue where changes to subdirectory .x files 
+     * This method fixes the incremental build issue where changes to subdirectory .x files
      * (like xenia/BundlePool.x) were not triggering recompilation of the parent module.
      */
     @InputFiles
@@ -373,7 +373,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         }
         return false;
     }
-    
+
     private Set<File> getSourceDirectoriesInternal() {
         return sourceSetDirs;
     }

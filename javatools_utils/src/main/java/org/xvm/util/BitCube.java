@@ -100,4 +100,3 @@ public class BitCube {
     private final int[]  f_acSize;
     private final BitSet f_bs;
 }
-

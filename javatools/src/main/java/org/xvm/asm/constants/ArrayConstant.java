@@ -340,4 +340,3 @@ public class ArrayConstant
      */
     private Constant[] m_aconstVal;
 }
-

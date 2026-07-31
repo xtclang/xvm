@@ -11,7 +11,7 @@ interface TestEngine {
      * @param listener       the execution listener
      */
     construct (TestConfiguration configuration, ExecutionListener listener);
-    
+
     /**
      * Discover and execute tests.
      */

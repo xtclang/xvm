@@ -106,7 +106,7 @@ interface ResourceRegistry
      * Registers a resource with this `ResourceRegistry` using the specified `RegistrationBehavior`
      * to handle duplicate registrations.
      *
-     * * Multiple resources for the same `Type` can be registered if each resource is registered 
+     * * Multiple resources for the same `Type` can be registered if each resource is registered
      *   with a unique name.
      *
      * * Resources that implement `Closeable` will be closed when (or if) the registry is closed.
@@ -120,7 +120,7 @@ interface ResourceRegistry
      * @return  `True` iff the resource was registered, or `False` if registration failed
      * @return  the name used to register the resource, which may be different from the name
      *          parameter if the specified `RegistrationBehavior` is `Always`.
-     */    
+     */
     <RegisterAs, ResourceType extends RegisterAs> conditional String register(
             Type<RegisterAs>      type,
             ResourceType          resource,

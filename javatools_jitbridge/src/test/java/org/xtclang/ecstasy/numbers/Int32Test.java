@@ -12,7 +12,7 @@ import org.xvm.javajit.Ctx;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-public class Int32Test 
+public class Int32Test
         extends BaseNumberTest {
 
     @Test

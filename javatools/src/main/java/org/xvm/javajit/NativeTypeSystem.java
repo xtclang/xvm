@@ -292,6 +292,3 @@ public class NativeTypeSystem
         xvm.createUniqueSuffix("");
     }
 }
-
-
-

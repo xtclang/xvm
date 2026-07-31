@@ -38,7 +38,7 @@ class ConfigurationCacheCompatibilityTest {
     void setUp() throws IOException {
         buildFile = testProjectDir.resolve("build.gradle.kts").toFile();
         settingsFile = testProjectDir.resolve("settings.gradle.kts").toFile();
-        
+
         // Create a minimal XTC project setup
         setupTestProject();
     }
@@ -52,8 +52,8 @@ class ConfigurationCacheCompatibilityTest {
         BuildResult baselineResult = createGradleRunner()
             .withArguments("tasks", "--no-configuration-cache", "--stacktrace")
             .build();
-            
-        assertTrue(baselineResult.getOutput().contains("XTC plugin tasks"), 
+
+        assertTrue(baselineResult.getOutput().contains("XTC plugin tasks"),
             "Baseline run should show XTC tasks");
 
         // Second run with configuration cache enabled
@@ -61,9 +61,9 @@ class ConfigurationCacheCompatibilityTest {
             .withArguments("tasks", "--configuration-cache", "--stacktrace")
             .build();
 
-        assertTrue(configCacheResult.getOutput().contains("XTC plugin tasks"), 
+        assertTrue(configCacheResult.getOutput().contains("XTC plugin tasks"),
             "Configuration cache run should show XTC tasks");
-        assertTrue(configCacheResult.getOutput().contains("Configuration cache entry stored"), 
+        assertTrue(configCacheResult.getOutput().contains("Configuration cache entry stored"),
             "Should store configuration cache entry");
 
         // Third run should reuse configuration cache
@@ -71,7 +71,7 @@ class ConfigurationCacheCompatibilityTest {
             .withArguments("tasks", "--configuration-cache", "--stacktrace")
             .build();
 
-        assertTrue(reuseResult.getOutput().contains("Configuration cache entry reused"), 
+        assertTrue(reuseResult.getOutput().contains("Configuration cache entry reused"),
             "Should reuse configuration cache entry");
     }
 
@@ -81,18 +81,18 @@ class ConfigurationCacheCompatibilityTest {
     @Test
     void testXtcRunTaskWithConfigurationCache() throws IOException {
         createSimpleXtcModule();
-        
+
         // Test without configuration cache
         BuildResult baselineResult = runBuildWithArgs("runXtc", "--no-configuration-cache", "--stacktrace");
         assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(baselineResult.task(":runXtc")).getOutcome());
-        
+
         // Test with configuration cache
         BuildResult configCacheResult = runBuildWithArgs("runXtc", "--configuration-cache", "--stacktrace");
         assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(configCacheResult.task(":runXtc")).getOutcome());
-        
+
         // Verify configuration cache was stored
         assertTrue(configCacheResult.getOutput().contains("Configuration cache entry stored"));
-        
+
         // Test reuse of configuration cache
         BuildResult reuseResult = runBuildWithArgs("runXtc", "--configuration-cache", "--stacktrace");
         assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(reuseResult.task(":runXtc")).getOutcome());
@@ -102,18 +102,18 @@ class ConfigurationCacheCompatibilityTest {
     /**
      * Test that XTC compile tasks work correctly with configuration cache
      */
-    @Test 
+    @Test
     void testXtcCompileTaskWithConfigurationCache() throws IOException {
         createSimpleXtcModule();
-        
-        // Test without configuration cache  
+
+        // Test without configuration cache
         BuildResult baselineResult = runBuildWithArgs("compileXtc", "--no-configuration-cache", "--stacktrace");
         assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(baselineResult.task(":compileXtc")).getOutcome());
-        
+
         // Test with configuration cache
         BuildResult configCacheResult = runBuildWithArgs("compileXtc", "--configuration-cache", "--stacktrace");
         assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(configCacheResult.task(":compileXtc")).getOutcome());
-        
+
         // Verify outputs are equivalent
         verifyEquivalentTaskOutputs(baselineResult, configCacheResult, ":compileXtc");
     }
@@ -124,15 +124,15 @@ class ConfigurationCacheCompatibilityTest {
     @Test
     void testTaskInputsProperlyDeclared() throws IOException {
         createSimpleXtcModule();
-        
+
         // Run with input change detection
         BuildResult firstRun = runBuildWithArgs("compileXtc", "--configuration-cache", "--stacktrace");
         assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(firstRun.task(":compileXtc")).getOutcome());
-        
+
         // Modify source file to trigger input change
-        Files.writeString(testProjectDir.resolve("src/main/x/TestModule.x"), 
+        Files.writeString(testProjectDir.resolve("src/main/x/TestModule.x"),
             "module TestModule { void run() { console.println(\"Modified!\"); } }");
-        
+
         // Run again - task should not be UP-TO-DATE due to input change
         BuildResult secondRun = runBuildWithArgs("compileXtc", "--configuration-cache", "--stacktrace");
         // Should recompile due to input change (not UP-TO-DATE)
@@ -146,16 +146,16 @@ class ConfigurationCacheCompatibilityTest {
     @Test
     void testMultipleXtcTasksWithConfigurationCache() throws IOException {
         createSimpleXtcModule();
-        
+
         // Test task chain with configuration cache
         BuildResult result = runBuildWithArgs("build", "runXtc", "--configuration-cache", "--stacktrace");
-        
+
         // Verify all tasks completed successfully
         assertNotNull(result.task(":compileXtc"));
         assertNotNull(result.task(":runXtc"));
         assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(result.task(":compileXtc")).getOutcome());
         assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(result.task(":runXtc")).getOutcome());
-        
+
         // Verify configuration cache was used
         assertTrue(result.getOutput().contains("Configuration cache entry stored") ||
                   result.getOutput().contains("Configuration cache entry reused"));
@@ -167,14 +167,14 @@ class ConfigurationCacheCompatibilityTest {
     @Test
     void testConfigurationCacheConsistency() throws IOException {
         createSimpleXtcModule();
-        
+
         // First run - should store configuration cache
         BuildResult firstResult = createGradleRunner()
             .withArguments("tasks", "--configuration-cache", "--stacktrace")
             .build();
         assertTrue(firstResult.getOutput().contains("Configuration cache entry"));
-        
-        // Second run - should reuse configuration cache  
+
+        // Second run - should reuse configuration cache
         BuildResult secondResult = createGradleRunner()
             .withArguments("tasks", "--configuration-cache", "--stacktrace")
             .build();
@@ -187,17 +187,17 @@ class ConfigurationCacheCompatibilityTest {
     @Test
     void testBuildCacheWithConfigurationCache() throws IOException {
         createSimpleXtcModule();
-        
+
         // Clean build with both caches
-        BuildResult result = runBuildWithArgs("clean", "compileXtc", 
+        BuildResult result = runBuildWithArgs("clean", "compileXtc",
             "--configuration-cache", "--build-cache", "--stacktrace");
-            
+
         assertEquals(TaskOutcome.SUCCESS, Objects.requireNonNull(result.task(":compileXtc")).getOutcome());
-        
+
         // Second run should use both caches
         BuildResult cachedResult = runBuildWithArgs("clean", "compileXtc",
             "--configuration-cache", "--build-cache", "--stacktrace");
-            
+
         // Configuration cache should be reused
         assertTrue(cachedResult.getOutput().contains("Configuration cache entry reused"));
     }
@@ -209,15 +209,15 @@ class ConfigurationCacheCompatibilityTest {
         Files.writeString(gradleDir.resolve("libs.versions.toml"), """
             [versions]
             xvm = "0.4.4-SNAPSHOT"
-            
+
             [plugins]
             xtc = { id = "org.xtclang.xtc-plugin", version.ref = "xvm" }
             xdk-build-versioning = { id = "org.xtclang.build.versioning", version.ref = "xvm" }
-            
+
             [libraries]
             xdk = { group = "org.xtclang", name = "xdk", version.ref = "xvm" }
             """);
-        
+
         // Create settings.gradle.kts - for now disable included build until we can provide dependencies
         Files.writeString(settingsFile.toPath(), """
             rootProject.name = "config-cache-test"
@@ -257,7 +257,7 @@ class ConfigurationCacheCompatibilityTest {
         // Create source directory structure
         Path srcDir = testProjectDir.resolve("src/main/x");
         Files.createDirectories(srcDir);
-        
+
         // Create a simple XTC module
         Files.writeString(srcDir.resolve("TestModule.x"), """
             module TestModule {

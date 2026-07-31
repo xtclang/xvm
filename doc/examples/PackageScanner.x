@@ -41,4 +41,3 @@ module PackageScanner {
         return counter;
     }
 }
-

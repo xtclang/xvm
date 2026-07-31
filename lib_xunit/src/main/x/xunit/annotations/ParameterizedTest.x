@@ -56,7 +56,7 @@ annotation ParameterizedTest(Function<Tuple, Tuple> parameters, String group=Tes
             }
             return templateContexts;
         }
-    
+
         /**
          * Create the arguments array for a given result from the arguments provider function.
          *

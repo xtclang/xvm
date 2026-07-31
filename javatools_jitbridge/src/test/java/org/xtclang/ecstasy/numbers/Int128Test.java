@@ -12,7 +12,7 @@ import org.xvm.javajit.Ctx;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-public class Int128Test 
+public class Int128Test
         extends BaseNumberTest {
 
     @Test

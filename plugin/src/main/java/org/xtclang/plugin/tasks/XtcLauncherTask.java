@@ -124,9 +124,9 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
         // Assert that required configurations exist - they should always be created by this plugin
         final var configurations = project.getConfigurations();
-        assert configurations.findByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING) != null : 
+        assert configurations.findByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING) != null :
             "Configuration '" + XDK_CONFIG_NAME_JAVATOOLS_INCOMING + "' must exist - it should be created by XTC plugin during project configuration";
-        
+
         this.javaToolsConfig = project.provider(() -> objects.fileCollection().from(configurations.getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING)));
 
         // Build XTC module dependencies from all source sets - assert they exist too
@@ -141,7 +141,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
                 .forEach(result::from);
             return result;
         });
-        
+
         // Capture JavaExecLauncher configuration at configuration time
         this.toolchainExecutable = project.provider(() -> {
             final var exts = project.getExtensions();

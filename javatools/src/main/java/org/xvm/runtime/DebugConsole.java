@@ -2522,7 +2522,7 @@ public final class DebugConsole
 
     private String renderHelp() {
         return """
-            
+
              Command                  Description
              -------------------      ---------------------------------------------
              F <frame#>               Switch to the specified Frame number
@@ -2537,7 +2537,7 @@ public final class DebugConsole
              D <var#>                 Display the structure view of the specified variable number
              DS <var#>                Display the "toString()" value of the specified variable number
              DI <var#>                Display an identity code for the specified variable number
-             
+
              S  (or N)                Step over ("proceed to next line")
              S  (or N) <count>        Repeatedly step over ("proceed to next line") <count> times
              S+ (or I)                Step in
@@ -2547,7 +2547,7 @@ public final class DebugConsole
              SL <name> <line>         Step (run) to specified line
              R                        Run to next breakpoint
              T                        Reset (return to) a previous stack frame
-             
+
              B+                       Add breakpoint for the current line
              B-                       Remove breakpoint for the current line
              BT                       Toggle breakpoint for the current line
@@ -2567,7 +2567,7 @@ public final class DebugConsole
              B                        List current breakpoints
              B- <breakpoint#>         Remove specified breakpoint (from the breakpoint list)
              BT <breakpoint#>         Toggle specified breakpoint (from the breakpoint list)
-            
+
              VC                       View Console
              VD                       View Debugger
              VF                       View Services and Fibers
@@ -2577,7 +2577,7 @@ public final class DebugConsole
              H <count>                Purge command history
              .                        Repeat the last command
              . <number>               Repeat the specified command from the history list
-             
+
              ?  (or HELP)             Display this help message
              """;
     }

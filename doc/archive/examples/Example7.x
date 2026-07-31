@@ -172,4 +172,3 @@ FutureRef<Int> fi = &i;                 // this is OK
 @future Int i = svc.foo();
 
 @future Int j = i;
-

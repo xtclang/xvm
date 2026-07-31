@@ -152,7 +152,7 @@ public final class XtcPluginUtils {
         public static boolean isValidJavaToolsArtifact(final File file, final String artifactVersion) {
             final String name = file.getName();
             final String expectedVersionedName = "javatools-" + artifactVersion + ".jar";
-            
+
             // Check for exact name (XDK distribution) or exact versioned name (configuration resolution)
             return (XDK_JAVATOOLS_NAME_JAR.equals(name) || expectedVersionedName.equals(name))
                 && hasJarExtension(file) && readXdkVersionFromJar(file) != null;
@@ -169,11 +169,11 @@ public final class XtcPluginUtils {
         public static boolean isValidXtcModule(final File file) {
             return isValidXtcModule(file, true);
         }
-        
+
         /**
          * Safe version of isValidXtcModule for use in filters and streams.
          * Logs I/O exceptions and returns false instead of throwing.
-         * 
+         *
          * @param file file to check
          * @param logger Gradle logger for error reporting
          * @return true if the file seems to be a valid XTC module, false otherwise (including I/O errors)

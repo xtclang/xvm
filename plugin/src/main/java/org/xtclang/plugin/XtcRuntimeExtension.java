@@ -74,4 +74,3 @@ public interface XtcRuntimeExtension extends XtcLauncherTaskExtension {
         return size() == 0;
     }
 }
-

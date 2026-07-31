@@ -55,7 +55,7 @@ public class SimpleXtcPluginTest {
         // Apply Java base plugin first (required dependency)
         final var pluginManager = project.getPluginManager();
         pluginManager.apply(org.gradle.api.plugins.JavaBasePlugin.class);
-        
+
         // Apply only the XtcProjectPlugin which doesn't depend on build-logic plugins
         pluginManager.apply(XtcPlugin.XtcProjectPlugin.class);
 
