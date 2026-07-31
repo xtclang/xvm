@@ -3832,7 +3832,9 @@ public class CommonBuilder
                    "converterFor",
                    "converterTo"),
     "org.xtclang.ecstasy.numbers.IntNumber",
-            Set.of("not")           // TODO: depends on virtual constructor
+            Set.of("not"),          // TODO: depends on virtual constructor
+    "org.xtclang.ecstasy.numbers.UIntNumber",
+            Set.of("compare")
     );
 
     private final static HashSet<String> SKIP_SET = new HashSet<>();

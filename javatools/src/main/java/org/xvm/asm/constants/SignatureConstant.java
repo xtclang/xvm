@@ -260,14 +260,7 @@ public class SignatureConstant
         boolean        fDiff               = false;
         for (int i = 0, c = aconstParamOriginal.length; i < c; ++i) {
             TypeConstant constOriginal = aconstParamOriginal[i];
-            TypeConstant constResolved;
-            if (constOriginal.isTypeParameter()) {
-                TypeParameterConstant constParam =
-                        (TypeParameterConstant) constOriginal.getDefiningConstant();
-                constResolved = aconstParamResolved[constParam.getRegister()].getParamType(0);
-            } else {
-                constResolved = constOriginal.resolveGenerics(pool, resolver);
-            }
+            TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
             if (constOriginal != constResolved) {
                 if (aconstParamResolved == aconstParamOriginal) {
                     aconstParamResolved = aconstParamOriginal.clone();
