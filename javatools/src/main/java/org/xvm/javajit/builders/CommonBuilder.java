@@ -3758,6 +3758,7 @@ public class CommonBuilder
             "org.xtclang.ecstasy.Ordered",
             "org.xtclang.ecstasy.OutOfBounds",
             "org.xtclang.ecstasy.OutOfMemory",
+            "org.xtclang.ecstasy.Range",
             "org.xtclang.ecstasy.ReadOnly",
             "org.xtclang.ecstasy.Sequential",
 // TODO     "org.xtclang.ecstasy.Service",
@@ -3779,6 +3780,7 @@ public class CommonBuilder
             "org.xtclang.ecstasy.io.Reader",
 // TODO     "org.xtclang.ecstasy.io.TextPosition",
             "org.xtclang.ecstasy.io.IOException",
+            "org.xtclang.ecstasy.io.IllegalUTF",
 
             // maps
 // TODO     "org.xtclang.ecstasy.maps.Map",
@@ -3827,6 +3829,8 @@ public class CommonBuilder
     };
 
     private final static Map<String, Set<String>> NO_JIT_METHODS = Map.of(
+    "org.xtclang.ecstasy.Range",
+            Set.of("appendTo", "estimateStringLength"), // TODO: if (Element.is(Type<Stringable>)) does not cast
     "org.xtclang.ecstasy.numbers.Number",
             Set.of("compare",
                    "converterFor",
