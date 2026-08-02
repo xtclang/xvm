@@ -613,7 +613,6 @@ public class CommonBuilder
      * Add fields initialization to the Java constructor {@code void <init>(Ctx ctx)}.
      */
     protected void assembleInit(ClassBuilder classBuilder, List<PropertyInfo> props) {
-        ClassDesc CD_this = art.CD();
         classBuilder.withMethodBody(INIT_NAME,
             MD_xvmVoid,
             ClassFile.ACC_PUBLIC,
@@ -3836,9 +3835,7 @@ public class CommonBuilder
                    "converterFor",
                    "converterTo"),
     "org.xtclang.ecstasy.numbers.IntNumber",
-            Set.of("not"),          // TODO: depends on virtual constructor
-    "org.xtclang.ecstasy.numbers.UIntNumber",
-            Set.of("compare")
+            Set.of("not")          // TODO: depends on virtual constructor
     );
 
     private final static HashSet<String> SKIP_SET = new HashSet<>();

@@ -232,6 +232,6 @@ public class JitConnector
 
     // TEMPORARY: manually added names
     private final static String[] CLASS_DUMP_LIST = new String[] {
-        "¤module", "Test",
+        "¤module",
     };
 }
