@@ -9,7 +9,7 @@ import org.xvm.javajit.Ctx;
 /**
  * Native "Method" support.
  */
-public class nMethod extends nObj {
+public class nMethod extends nObject {
     public nMethod(Ctx ctx, TypeConstant type, MethodHandle stdMethod, MethodHandle optMethod) {
         super(ctx);
 

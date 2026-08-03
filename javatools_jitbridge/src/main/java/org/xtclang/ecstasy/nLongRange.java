@@ -135,7 +135,7 @@ public abstract class nLongRange
         return true;
     }
 
-    // TODO how to do the opposite, i.e. return an nObj reference to an Ecstasy Range+Sequence object from 1 long value
+    // TODO how to do the opposite, i.e. return an nObject reference to an Ecstasy Range+Sequence object from 1 long value
 
     public static long $lowerBound(long n) {
         return n >> 34;
@@ -291,7 +291,7 @@ public abstract class nLongRange
         return ($lowerBound(n) << 1) | ($lowerExclusive(n) ? E128 : 0) | ($descending(n) ? D128 : 0);
     }
 
-    // TODO how to do the opposite, i.e. return an nObj reference to an Ecstasy Range+Sequence object from 2 long values
+    // TODO how to do the opposite, i.e. return an nObject reference to an Ecstasy Range+Sequence object from 2 long values
 
     public static long $lowerBound(long n1, long n2) {
         return n1 >> 2;

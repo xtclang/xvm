@@ -7233,7 +7233,7 @@ public abstract class TypeConstant
 
     /**
      * @return true iff the specified type is represented by the Java interface and needs to be
-     *         cast explicitly to {@code nObj} class to invoke its methods
+     *         cast explicitly to {@code nObject} class to invoke its methods
      */
     public boolean isJitInterface() {
         // Ref/Var and Type are always represented by native classes

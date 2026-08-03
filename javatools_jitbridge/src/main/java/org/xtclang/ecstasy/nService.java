@@ -6,7 +6,7 @@ import org.xvm.javajit.Ctx;
  * All Ecstasy `service` types must extend this class.
  */
 public abstract class nService
-        extends nObj
+        extends nObject
         implements Service {
 
     public nService(Ctx ctx) {
@@ -44,7 +44,7 @@ public abstract class nService
     }
 
     @Override
-    public nObj findContextToken(Ctx ctx, nType t$Value, SharedContext sharedContext) {
+    public nObject findContextToken(Ctx ctx, nType t$Value, SharedContext sharedContext) {
         throw new UnsupportedOperationException();
     }
 

@@ -6,7 +6,7 @@ import org.xtclang.ecstasy.IteratorᐸCharᐳ;
 import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.nConst;
-import org.xtclang.ecstasy.nObj;
+import org.xtclang.ecstasy.nObject;
 import org.xtclang.ecstasy.nType;
 
 import org.xtclang.ecstasy.collections.ArrayᐸCharᐳ;
@@ -320,7 +320,7 @@ public class String
         return new nIterator(ctx);
     }
 
-    private class nIterator extends nObj implements IteratorᐸCharᐳ {
+    private class nIterator extends nObject implements IteratorᐸCharᐳ {
         public nIterator(Ctx ctx) {
             super(ctx);
         }

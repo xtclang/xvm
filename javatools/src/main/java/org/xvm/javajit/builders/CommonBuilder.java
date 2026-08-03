@@ -920,7 +920,7 @@ public class CommonBuilder
 
             code.aload(0)
                 .aload(ctxSlot)
-                .invokevirtual(CD_nObj, "$checkImmut", MD_xvmVoid);
+                .invokevirtual(CD_nObject, "$checkImmut", MD_xvmVoid);
 
             int argSlot = code.parameterSlot(isOpt ? jmd.getOptimizedParamIndex(0) + 1 : 1);
             if (isOpt) {
@@ -1028,11 +1028,11 @@ public class CommonBuilder
     protected void assembleGenericProperty(ClassBuilder classBuilder, String name) {
         classBuilder.withMethodBody(name + "$get", MethodTypeDesc.of(CD_nType, CD_Ctx),
             ClassFile.ACC_PUBLIC, code ->
-                // return nObj.$type(ctx, name);
+                // return nObject.$type(ctx, name);
                 code.aload(0)                     // this
                     .aload(code.parameterSlot(0)) // ctx
                     .ldc(name)
-                    .invokevirtual(CD_nObj, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString))
+                    .invokevirtual(CD_nObject, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString))
                     .areturn()
         );
     }
@@ -3279,8 +3279,8 @@ public class CommonBuilder
 
             boolean objectDelegation = dstType.isJitInterface() && dstType.equals(pool().typeObject());
             if (objectDelegation) {
-                // we are delegating an nObj method for an interface; need a cast
-                code.checkcast(CD_nObj);
+                // we are delegating an nObject method for an interface; need a cast
+                code.checkcast(CD_nObject);
             }
 
             loadCtx(code);

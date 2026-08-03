@@ -140,10 +140,10 @@ public class Exception extends nConst {
      *  static <CompileType extends Exception> Boolean equals(CompileType value1, CompileType value2)
      */
     public static boolean equals$p(Ctx ctx, nType type, Exception value1, Exception value2) {
-        if (!nObj.equals$p(ctx, ((nObj) value1.text).$type(ctx), value1.text, value2.text)) {
+        if (!nObject.equals$p(ctx, ((nObject) value1.text).$type(ctx), value1.text, value2.text)) {
             return false;
         }
-        if (!nObj.equals$p(ctx, ((nObj) value1.cause).$type(ctx), value1.cause, value2.cause)) {
+        if (!nObject.equals$p(ctx, ((nObject) value1.cause).$type(ctx), value1.cause, value2.cause)) {
             return false;
         }
         return value1.$exception.equals(value2.$exception);

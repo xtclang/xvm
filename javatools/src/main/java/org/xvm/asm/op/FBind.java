@@ -47,7 +47,7 @@ import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_JavaObject;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nFunction;
-import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.CD_nObject;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -454,15 +454,15 @@ public class FBind
      * for the MethodHandle accordingly.
      */
     private static void computeImmutable(CodeBuilder code, int slotImm, RegisterInfo regArg) {
-        // this.immutable &= ((nObj) value).$isImmut();
+        // this.immutable &= ((nObject) value).$isImmut();
         Label labelEnd = code.newLabel();
         code.iload(slotImm)
             .ifeq(labelEnd);
         regArg.load(code);
         if (regArg.type().isJitInterface()) {
-            code.checkcast(CD_nObj);
+            code.checkcast(CD_nObject);
         }
-        code.invokevirtual(CD_nObj, "$isImmut", MethodTypeDesc.of(CD_boolean))
+        code.invokevirtual(CD_nObject, "$isImmut", MethodTypeDesc.of(CD_boolean))
             .istore(slotImm)
             .labelBinding(labelEnd);
     }

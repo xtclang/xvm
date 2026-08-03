@@ -44,7 +44,7 @@ import org.xvm.runtime.template.xOrdered;
 import org.xvm.util.ListMap;
 
 import static org.xvm.javajit.Builder.CD_TypeConstant;
-import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
 import static org.xvm.javajit.Builder.MD_xvmType;
 
@@ -1004,10 +1004,10 @@ public class UnionTypeConstant
         // o1.$xvmType(ctx).isA(typeCompare)
         regTest.load(code);
         if (regTest.type().isJitInterface()) {
-            code.checkcast(CD_nObj);
+            code.checkcast(CD_nObject);
         }
         bctx.loadCtx(code);
-        code.invokevirtual(CD_nObj, "$xvmType", MD_xvmType);
+        code.invokevirtual(CD_nObject, "$xvmType", MD_xvmType);
         bctx.loadTypeConstant(code, typeTest);
         code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
     }

@@ -369,7 +369,7 @@ public abstract class OpIndex
                 // the generated code was a method invocation, so process the return values the
                 // same we would for an Invoke Op; the only difference is that if the container type
                 // is parameterized, we need to generate a cast. For example, if the container
-                // is "List<Person>", the "getElement" signature would be "nObj getElement()".
+                // is "List<Person>", the "getElement" signature would be "nObject getElement()".
                 if (typeTarget.isParameterizedDeep()) {
                     bctx.builder.generateCheckCast(code, typeEl, bctx.ctxSlot(code));
                 }

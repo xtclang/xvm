@@ -92,7 +92,7 @@ import static org.xvm.javajit.Builder.CD_JavaString;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nException;
 import static org.xvm.javajit.Builder.CD_nFunction;
-import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.CD_nRef;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.EXT;
@@ -1370,7 +1370,7 @@ public class BuildContext {
             loadFormalType(code, child.getParentConstant());
             loadCtx(code);
             code.ldc(child.getName())
-                .invokevirtual(CD_nObj, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString));
+                .invokevirtual(CD_nObject, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString));
             return new SingleSlot(child.getType(), Specific, CD_nType, "");
         }
         throw new UnsupportedOperationException("FormalConstant=" + formalConst);
@@ -1967,7 +1967,7 @@ public class BuildContext {
             case "Specific->Widened",
                  "Specific->WidenedWithDefault":
                 if (srcReg.type().isJitInterface()) {
-                    code.checkcast(CD_nObj);
+                    code.checkcast(CD_nObject);
                 }
                 continue;
 
@@ -3389,12 +3389,12 @@ public class BuildContext {
         loadCtx(code);
         referentLoader.run();
         if (referentType.isJitInterface()) {
-            code.checkcast(CD_nObj);
+            code.checkcast(CD_nObject);
         }
         loadTypeConstant(code, referentType);
         Builder.loadBoolean(code, isVar);
         code.invokespecial(cd, INIT_NAME,
-            MethodTypeDesc.of(CD_void, CD_Ctx, CD_nObj, CD_TypeConstant, CD_boolean));
+            MethodTypeDesc.of(CD_void, CD_Ctx, CD_nObject, CD_TypeConstant, CD_boolean));
     }
 
     /**

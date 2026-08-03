@@ -4,7 +4,7 @@ import java.lang.invoke.MethodHandle;
 
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Object;
-import org.xtclang.ecstasy.nObj;
+import org.xtclang.ecstasy.nObject;
 import org.xtclang.ecstasy.nException;
 import org.xtclang.ecstasy.nType;
 
@@ -18,7 +18,7 @@ import org.xvm.javajit.Ctx;
  * A simple native Ref/Var implementation.
  */
 public class nRef
-        extends nObj
+        extends nObject
         implements Var {
     /**
      * Construct a value-backed Ref or Var.
@@ -28,7 +28,7 @@ public class nRef
      * @param referentType  the referent type
      * @param isVar         true for a Var; false for a Ref
      */
-    public nRef(Ctx ctx, nObj referent, TypeConstant referentType, boolean isVar) {
+    public nRef(Ctx ctx, nObject referent, TypeConstant referentType, boolean isVar) {
         super(ctx);
 
         $referent     = referent;
@@ -61,7 +61,7 @@ public class nRef
         $setter       = setter;
     }
 
-    public nObj               $referent;
+    public nObject $referent;
     public final TypeConstant $referentType;
     public final boolean      $isVar;
     public final MethodHandle $getter;
@@ -111,7 +111,7 @@ public class nRef
 
         if ($setter == null) {
             // value-backed Var
-            $referent = (nObj) value;
+            $referent = (nObject) value;
             return;
         }
 

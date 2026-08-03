@@ -54,7 +54,7 @@ public class nType
     private Method compareMethod;
     private Method hashCodeMethod;
 
-    public nObj alloc(Ctx ctx) {
+    public nObject alloc(Ctx ctx) {
         throw Exception.$unsupported(ctx, "Type " + $dataType);
     }
 
@@ -128,8 +128,8 @@ public class nType
             return Ordered.Equal.$INSTANCE;
         }
 
-        nType type1 = ((nObj) value1).$type(ctx);
-        nType type2 = ((nObj) value2).$type(ctx);
+        nType type1 = ((nObject) value1).$type(ctx);
+        nType type2 = ((nObject) value2).$type(ctx);
         if ($dataType.isJitPrimitive() && type1.$dataType.equals(type2.$dataType)) {
             int result = switch (value1) {
                 case Bit n1    -> n1.$value - ((Bit)    value2).$value;

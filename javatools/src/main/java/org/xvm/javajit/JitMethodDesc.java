@@ -15,7 +15,7 @@ import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.CD_nObject;
 
 import static org.xvm.javajit.JitFlavor.NullablePrimitiveWithDefault;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
@@ -266,7 +266,7 @@ public class JitMethodDesc {
                 if (iOrig >= 0) {
                     JitFlavor stdFlavor = fDflt ? WidenedWithDefault : Widened;
                     stdParamList.add(
-                            new JitParamDesc(type, stdFlavor, CD_nObj, iOrig, iStd++, false));
+                            new JitParamDesc(type, stdFlavor, CD_nObject, iOrig, iStd++, false));
                 }
 
                 isOptimized = true;
@@ -303,7 +303,7 @@ public class JitMethodDesc {
                 if (iOrig >= 0) {
                     JitFlavor stdFlavor = fDflt ? WidenedWithDefault : Widened;
                     stdParamList.add(
-                            new JitParamDesc(type, stdFlavor, CD_nObj, iOrig, iStd++, false));
+                            new JitParamDesc(type, stdFlavor, CD_nObject, iOrig, iStd++, false));
                 }
 
                 isOptimized = true;
@@ -373,7 +373,7 @@ public class JitMethodDesc {
             } else if ((cd = JitTypeDesc.getNullablePrimitiveClass(type)) != null) {
                 TypeConstant typePrimitive = type.removeNullable();
 
-                stdParamList.add(new JitParamDesc(type, Widened, CD_nObj, iOrig, ixStdObj++, false));
+                stdParamList.add(new JitParamDesc(type, Widened, CD_nObject, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(typePrimitive,
                     NullablePrimitive, cd,         iOrig, ixLong++, false));
                 optParamList.add(new JitParamDesc(pool.typeBoolean(),
@@ -388,7 +388,7 @@ public class JitMethodDesc {
                 }
             } else if ((cd = JitTypeDesc.getNullableXvmPrimitiveClass(type)) != null) {
                 isOptimized = true;
-                stdParamList.add(new JitParamDesc(type, Widened, CD_nObj, iOrig, ixStdObj++, false));
+                stdParamList.add(new JitParamDesc(type, Widened, CD_nObject, iOrig, ixStdObj++, false));
 
                 for (ClassDesc cdArg : JitTypeDesc.getXvmPrimitiveClasses(type)) {
                     optParamList.add(new JitParamDesc(type, NullableXvmPrimitive, cdArg, iOrig, ixLong++, false));

@@ -22,7 +22,7 @@ import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 import org.xtclang.ecstasy.nException;
-import org.xtclang.ecstasy.nObj;
+import org.xtclang.ecstasy.nObject;
 
 import org.xtclang.ecstasy.reflect.Var;
 
@@ -41,7 +41,7 @@ import org.xtclang.ecstasy.reflect.Var;
  * calls involved in either of those two operations is the goal.
  */
 public abstract class Array
-    extends nObj {
+        extends nObject {
 
     protected Array(Ctx ctx, TypeConstant type) {
         super(ctx);
@@ -189,7 +189,7 @@ public abstract class Array
         }
     }
 
-    // ----- nObj API ------------------------------------------------------------------------------
+    // ----- nObject API ------------------------------------------------------------------------------
 
     @Override public TypeConstant $xvmType(Ctx ctx) {
         return $isImmut() ? $type.freeze() : $type;

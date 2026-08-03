@@ -6,8 +6,14 @@ import org.xvm.javajit.Container;
 import org.xvm.javajit.Ctx;
 import org.xvm.javajit.Xvm;
 
-public abstract class nObj implements Object {
-    public nObj(Ctx ctx) {
+/**
+ * In Ecstasy, there is a root interface (Object, which extends Comparable), but not root class. The
+ * JIT introduces a root class nObject as an implementation detail, such that all generated classes
+ * will extend (directly or indirectly) nObject, which itself implements the root interface.
+ */
+public abstract class nObject
+        implements Object {
+    public nObject(Ctx ctx) {
         super();
         $meta = (ctx == null ? -1 : ctx.container.id) & $ID_MASK;
     }
@@ -111,7 +117,7 @@ public abstract class nObj implements Object {
     // ----- static helpers for when references may be non-xObj classes ----------------------------
 
     public static java.lang.Object $makeImmut(Ctx ctx, java.lang.Object ref) {
-        if (ref instanceof nObj xRef) {
+        if (ref instanceof nObject xRef) {
             xRef.$makeImmut(ctx);
             return xRef;
         }
@@ -124,7 +130,7 @@ public abstract class nObj implements Object {
     }
 
     public static boolean $isA(Ctx ctx, java.lang.Object ref, nType t) {
-        if (ref instanceof nObj xRef) {
+        if (ref instanceof nObject xRef) {
             return xRef.$isA(ctx, t);
         }
 
@@ -139,7 +145,7 @@ public abstract class nObj implements Object {
     }
 
     public static boolean $isImmut(java.lang.Object ref) {
-        if (ref instanceof nObj xRef) {
+        if (ref instanceof nObject xRef) {
             return xRef.$isImmut();
         }
 
@@ -150,7 +156,7 @@ public abstract class nObj implements Object {
     }
 
     public static nType $type(Ctx ctx, java.lang.Object ref) {
-        if (ref instanceof nObj xRef) {
+        if (ref instanceof nObject xRef) {
             return xRef.$type(ctx);
         }
 

@@ -101,7 +101,7 @@ public abstract class Builder {
         TypeInfo     typeInfo  = thisType.ensureTypeInfo();
         TypeConstant superType = typeInfo.getExtends();
         return superType == null
-            ? thisType.isConst() ? CD_nConst : CD_nObj
+            ? thisType.isConst() ? CD_nConst : CD_nObject
             : ensureClassDesc(superType);
     }
 
@@ -211,10 +211,10 @@ public abstract class Builder {
 
             RegisterInfo regThis = bctx.loadThis(code);
             if (regThis.type().isJitInterface()) {
-                code.checkcast(CD_nObj);
+                code.checkcast(CD_nObject);
             }
             bctx.loadCtx(code);
-            code.invokevirtual(CD_nObj, "$xvmType", MD_xvmType)
+            code.invokevirtual(CD_nObject, "$xvmType", MD_xvmType)
                 .invokevirtual(CD_TypeConstant, "resolveGenerics",
                         MethodTypeDesc.of(CD_TypeConstant, CD_ConstantPool, CD_GenericTypeResolver));
         }
@@ -1863,7 +1863,7 @@ public abstract class Builder {
     public static final String N_nFunction    = "org.xtclang.ecstasy.nFunction";
     public static final String N_nMethod      = "org.xtclang.ecstasy.nMethod";
     public static final String N_nModule      = "org.xtclang.ecstasy.nModule";
-    public static final String N_nObj         = "org.xtclang.ecstasy.nObj";
+    public static final String N_nObj         = "org.xtclang.ecstasy.nObject";
     public static final String N_nPackage     = "org.xtclang.ecstasy.nPackage";
     public static final String N_nRef         = "org.xtclang.ecstasy.reflect.nRef";
     public static final String N_nRangeBoolean = "org.xtclang.ecstasy.nRangeᐸBooleanᐳ";
@@ -1959,7 +1959,7 @@ public abstract class Builder {
     public static final ClassDesc CD_nConst              = ClassDesc.of(N_nConst);
     public static final ClassDesc CD_nEnum               = ClassDesc.of(N_nEnum);
     public static final ClassDesc CD_nException          = ClassDesc.of(N_nException);
-    public static final ClassDesc CD_nObj                = ClassDesc.of(N_nObj);
+    public static final ClassDesc CD_nObject             = ClassDesc.of(N_nObj);
     public static final ClassDesc CD_nRef                = ClassDesc.of(N_nRef);
     public static final ClassDesc CD_nType               = ClassDesc.of(N_nType);
     public static final ClassDesc CD_nUtil               = ClassDesc.of(N_nUtil);

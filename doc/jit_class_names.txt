@@ -1,7 +1,7 @@
 Ecstasy to Java Classfile compiler (JIT) class naming conventions:
 
 1. All Java interfaces produced by the JIT compiler extend "org.xtclang.ecstasy.Object"; all
-   produced Java classes extend (directly or indirectly) "org.xtclang.ecstasy.nObj", which
+   produced Java classes extend (directly or indirectly) "org.xtclang.ecstasy.nObject", which
    implements "org.xtclang.ecstasy.Object"".
 
 2. An Ecstasy type is called a "Java-Primitive" type iff we choose to implement it using a Java
@@ -16,8 +16,8 @@ Ecstasy to Java Classfile compiler (JIT) class naming conventions:
 5. For every Ecstasy type T there is a "JIT Call Class Name" CC(T), such that:
     a) for any Ecstasy method with a parameter or return type of T the corresponding Java signature
        uses the Java class or interface name of CC(T);
-    b) the "nObj.$xvmType()" method of CC(T) returns a TypeConstant that must be an "isA()" of T;
-       (if CC(T) is a Java interface, it can always be cast to "nObj")
+    b) the "nObject.$xvmType()" method of CC(T) returns a TypeConstant that must be an "isA()" of T;
+       (if CC(T) is a Java interface, it can always be cast to "nObject")
 
 6. For every Ecstasy type T that represents a non-abstract instantiatable class there is a
    "JIT Instance Class Name" IC(T), such that:

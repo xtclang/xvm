@@ -22,7 +22,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.CD_nType;
 
 
@@ -95,11 +95,11 @@ public class MoveType
     public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regFrom = bctx.loadArgument(code, m_nFromValue);
         if (regFrom.type().isJitInterface()) {
-            code.checkcast(CD_nObj);
+            code.checkcast(CD_nObject);
         }
 
         bctx.loadCtx(code);
-        code.invokevirtual(CD_nObj, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx));
+        code.invokevirtual(CD_nObject, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx));
 
         bctx.storeValue(code, m_nToValue, regFrom.type().getType());
         return -1;
