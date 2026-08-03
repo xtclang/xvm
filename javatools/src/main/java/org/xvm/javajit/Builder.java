@@ -143,13 +143,28 @@ public abstract class Builder {
      * Ensure a unique ClassDesc for the specified type.
      */
     public ClassDesc ensureClassDesc(TypeConstant type) {
-        return type.ensureClassDesc(typeSystem);
+        return type.getCallableClassDesc(typeSystem);
     }
 
     /**
-     * Ensure a unique Java class name for the specified type.
+     * Ensure a unique Java class that represents a "JIT Call Class Name" for the specified type in
+     * this builder's TypeSystem.
+     *
+     * @see doc/jit_class_names.txt
      */
     public String ensureJitClassName(TypeConstant type) {
+        return type.ensureJitClassName(typeSystem);
+    }
+
+    /**
+     * Ensure a unique Java class that represents a "JIT Instance Class Name" for the specified type
+     * in this builder's TypeSystem.
+     *
+     * @see doc/jit_class_names.txt
+     */
+    public String ensureJitInstanceClassName(TypeConstant type) {
+        assert type.isSingleUnderlyingClass(false);
+        // TODO
         return type.ensureJitClassName(typeSystem);
     }
 
@@ -860,7 +875,7 @@ public abstract class Builder {
         }
 
         PropertyInfo xvmInfo      = propId.getPropertyInfo(typeContainer);
-        TypeConstant typeJit      = typeContainer.getCanonicalJitType();
+        TypeConstant typeJit      = typeContainer.getCallableJitType();
         PropertyInfo jitInfo      = typeJit.equals(pool().typeObject()) // REVIEW GG
                 ? xvmInfo
                 : propId.getPropertyInfo(typeJit);
@@ -1741,7 +1756,7 @@ public abstract class Builder {
      * @return true iff the assignment is JIT-valid, false if the "checkcast" opcode is necessary
      */
     public static boolean isJitAssignable(TypeConstant srcType, TypeConstant dstType) {
-        return srcType.getCanonicalJitType().isA(dstType.getCanonicalJitType());
+        return srcType.getCallableJitType().isA(dstType.getCallableJitType());
     }
 
     /**

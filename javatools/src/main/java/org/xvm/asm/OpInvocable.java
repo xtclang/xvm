@@ -471,7 +471,7 @@ public abstract class OpInvocable extends Op {
         bctx.loadCallArguments(code, jmd, anArgValue);
 
         if (fPrimitive) {
-            cdInvoke = typeInvoke.ensureClassDesc(bctx.typeSystem);
+            cdInvoke = typeInvoke.getCallableClassDesc(bctx.typeSystem);
             code.invokestatic(cdInvoke, methodName, md);
         } else if (infoTarget.getType().isJitInterface()) {
             code.invokeinterface(cdInvoke, methodName, md);

@@ -423,7 +423,7 @@ public class JitMethodDesc {
 
         if (isConstructor) {
             boolean fAddCtorCtx = true; // TODO: isFinalizerRequired()
-            return new JitCtorDesc(targetType, targetType.ensureClassDesc(builder.typeSystem),
+            return new JitCtorDesc(targetType, targetType.getCallableClassDesc(builder.typeSystem),
                     fAddCtorCtx, /*fAddType*/ false, stdReturns, stdParams, optReturns, optParams);
         } else {
             return new JitMethodDesc(targetType, stdReturns, stdParams, optReturns, optParams, isStatic);

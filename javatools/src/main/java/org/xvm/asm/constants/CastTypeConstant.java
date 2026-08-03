@@ -80,13 +80,13 @@ public class CastTypeConstant
 
     @Override
     public String ensureJitClassName(TypeSystem ts) {
-        return getCanonicalJitType().ensureJitClassName(ts);
+        return this.getCallableJitType().ensureJitClassName(ts);
     }
 
     @Override
-    public TypeConstant getCanonicalJitType() {
-        TypeConstant typeBase = getBaseType().getCanonicalJitType();
-        TypeConstant typeCast = getUnderlyingType2().getCanonicalJitType();
+    public TypeConstant getCallableJitType() {
+        TypeConstant typeBase = getBaseType().getCallableJitType();
+        TypeConstant typeCast = getUnderlyingType2().getCallableJitType();
 
         // the code below could be written mush simpler, but first, we want to isolate the
         // simplest paths and there is a possibility we need to do something special the

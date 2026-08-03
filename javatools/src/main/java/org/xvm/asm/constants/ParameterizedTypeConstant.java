@@ -798,12 +798,12 @@ public class ParameterizedTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getCanonicalJitType() {
+    public TypeConstant getCallableJitType() {
         assert isSingleUnderlyingClass(true);
 
-        TypeConstant typeCanonical = m_typeCanonical;
-        if (typeCanonical != null) {
-            return typeCanonical;
+        TypeConstant typeJit = m_typeJitCallable;
+        if (typeJit != null) {
+            return typeJit;
         }
 
         ConstantPool    pool           = getConstantPool();
@@ -825,12 +825,12 @@ public class ParameterizedTypeConstant
             TypeConstant[] atypeReturns = pool.extractFunctionReturns(this);
             boolean        fDiff        = false;
 
-            TypeConstant[] atypeCanon = toCanonicalTypes(atypeParams);
+            TypeConstant[] atypeCanon = toCallableTypes(atypeParams);
             if (atypeCanon != null) {
                 atypeParams = atypeCanon;
                 fDiff       = true;
             }
-            atypeCanon = toCanonicalTypes(atypeReturns);
+            atypeCanon = toCallableTypes(atypeReturns);
             if (atypeCanon != null) {
                 atypeReturns = atypeCanon;
                 fDiff        = true;
@@ -843,7 +843,7 @@ public class ParameterizedTypeConstant
                     : this;
         }
 
-        TypeConstant typeResolved = typeOrig.getCanonicalJitType();
+        TypeConstant typeResolved = typeOrig.getCallableJitType();
         boolean      fTrivial     = true;
 
         TypeConstant[] aconstOriginal  = m_atypeParams;
@@ -852,7 +852,7 @@ public class ParameterizedTypeConstant
             TypeConstant typeParamOriginal = aconstOriginal[i];
             if (typeParamOriginal.isJitPrimitive()) {
                 aconstCanonical = cow(aconstOriginal, aconstCanonical, i,
-                        aconstOriginal[i].getCanonicalJitType());
+                        aconstOriginal[i].getCallableJitType());
                 fTrivial = false;
             } else {
                 var            entryParam     = listTypeParams.get(i);
@@ -890,7 +890,7 @@ public class ParameterizedTypeConstant
             }
         }
 
-        return m_typeCanonical = fTrivial
+        return m_typeJitCallable = fTrivial
                 ? typeResolved // TerminalTypeConstant
                 : typeResolved == typeOrig && aconstCanonical == aconstOriginal
                     ? this
@@ -898,12 +898,12 @@ public class ParameterizedTypeConstant
     }
 
     /**
-     * @return an array of converted canonical types; null if no changes were made
+     * @return an array of converted callable JIT types; null if no changes were made
      */
-    private TypeConstant[] toCanonicalTypes(TypeConstant[] atype) {
+    private TypeConstant[] toCallableTypes(TypeConstant[] atype) {
         TypeConstant[] atypeCanonical = atype;
         for (int i = 0, c = atype.length; i < c; ++i) {
-            atypeCanonical = cow(atype, atypeCanonical, i, atype[i].getCanonicalJitType());
+            atypeCanonical = cow(atype, atypeCanonical, i, atype[i].getCallableJitType());
         }
         return atypeCanonical;
     }
@@ -1128,8 +1128,7 @@ public class ParameterizedTypeConstant
     private transient TypeConstant m_typeResolvedPrev;
 
     /**
-     * Cached Jit canonical type.
+     * Cached callable JIT type.
      */
-    private transient TypeConstant m_typeCanonical;
-
+    private transient TypeConstant m_typeJitCallable;
 }

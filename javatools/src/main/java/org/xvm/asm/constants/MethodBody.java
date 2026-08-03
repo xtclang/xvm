@@ -774,7 +774,7 @@ public class MethodBody {
     public synchronized JitMethodDesc getJitDesc(Builder builder, TypeConstant typeTarget) {
         MethodStructure   method = getClassifyingMethodStructure();
         SignatureConstant sig    = method.resolveSignature(
-                builder.pool(), typeTarget.getCanonicalJitType());
+                builder.pool(), typeTarget.getCallableJitType());
 
         // TODO consider caching this
         return JitMethodDesc.of(builder, typeTarget, isFunction() || isCtorOrValidator(),

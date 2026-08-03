@@ -100,7 +100,7 @@ public class CommonBuilder
         this.structInfo    = thisType.ensureAccess(Access.STRUCT).ensureTypeInfo();
         this.thisId        = classStruct.getIdentityConstant();
         this.isInterface   = classStruct.getFormat() == Format.INTERFACE;
-        this.jitType       = thisType.getCanonicalJitType();
+        this.jitType       = thisType.getCallableJitType();
         this.isSpecialized = jitType.isParamsSpecified() &&
                             !jitType.equals(classStruct.getCanonicalType());
         this.isPrimitive   = type.isJitPrimitive();
@@ -642,7 +642,7 @@ public class CommonBuilder
 
             TypeConstant type       = prop.getType();
             TypeConstant baseType   = type.removeNullable();
-            ClassDesc    cdProp     = type.ensureClassDesc(typeSystem);
+            ClassDesc    cdProp     = type.getCallableClassDesc(typeSystem);
             RegisterInfo reg        = loadConstant(code, prop.getInitialValue());
             String       jitName    = prop.getIdentity()
                                           .ensureJitPropertyName(typeSystem);

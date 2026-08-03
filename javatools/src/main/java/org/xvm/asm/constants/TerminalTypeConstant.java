@@ -1947,10 +1947,10 @@ public class TerminalTypeConstant
     }
 
     @Override
-    public TypeConstant getCanonicalJitType() {
+    public TypeConstant getCallableJitType() {
         return isFormalType()
-                ? resolveConstraints().getCanonicalJitType()
-                : super.getCanonicalJitType();
+                ? resolveConstraints().getCallableJitType()
+                : super.getCallableJitType();
     }
 
 
