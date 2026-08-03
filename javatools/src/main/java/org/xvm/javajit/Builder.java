@@ -12,6 +12,7 @@ import java.lang.constant.MethodHandleDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import java.math.BigInteger;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
@@ -70,6 +71,13 @@ public abstract class Builder {
      */
     public void build(ClassBuilder classBuilder) {
         throw new UnsupportedOperationException("assemble: " + art);
+    }
+
+    /**
+     * Assemble the java class for the "class" shape.
+     */
+    public void buildClassOfClass(ClassBuilder classBuilder) {
+        throw new UnsupportedOperationException();
     }
 
     /**
@@ -391,7 +399,7 @@ public abstract class Builder {
             String       name = ensureJitClassName(type);
             // TODO GG the "e" class gen functionality must be merged into the "c" class result
             if (!type.isA(pool.typeEnumeration())) {
-                name  = TypeSystem.classClass(name);
+                name  = TypeSystem.classOfClass(name);
             }
             ClassDesc cd = ClassDesc.of(name);
             code.getstatic(cd, Instance, cd);
