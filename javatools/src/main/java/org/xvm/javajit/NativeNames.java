@@ -22,6 +22,10 @@ public class NativeNames {
 
         reservedMethodName.put("Iterator/next/0", "next");
 
+        reservedMethodName.put("reflect.Ref/get/0", "get");
+        reservedMethodName.put("reflect.Ref/peek/0", "peek");
+        reservedMethodName.put("reflect.Var/set/1", "set");
+
         reservedMethodName.put("Boolean/not/0",    "not");
         reservedMethodName.put("Boolean/and/1",    "and");
         reservedMethodName.put("Boolean/or/1",     "or");

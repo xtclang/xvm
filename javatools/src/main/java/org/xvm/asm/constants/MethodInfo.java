@@ -22,9 +22,11 @@ import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodBody.Existence;
 import org.xvm.asm.constants.MethodBody.Implementation;
+import org.xvm.asm.constants.TypeInfo.MethodKind;
 
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
+import org.xvm.javajit.NativeNames;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.Handy;
@@ -1497,6 +1499,25 @@ public class MethodInfo
      * @return the JitMethodDesc for this method within the specified container type
      */
     public JitMethodDesc getJitDesc(Builder builder, TypeConstant typeContainer) {
+        ConstantPool pool = typeContainer.getConstantPool();
+        if (typeContainer.isA(pool.typeRef()) &&
+                NativeNames.findReservedJitName(getJitIdentity()) != null) {
+            // all Ref and Var specializations share nRef, whose native methods use erased signatures
+            TypeConstant typeBase = typeContainer.isA(pool.typeVar())
+                    ? pool.typeVar()
+                    : pool.typeRef();
+            TypeInfo   infoBase     = typeBase.ensureTypeInfo();
+            MethodInfo methodNative = infoBase.getMethodById(infoBase.findMethods(
+                    getJitIdentity().getName(), getSignature().getParamCount(), MethodKind.Method).
+                    iterator().next());
+
+            return methodNative.computeJitDesc(builder, typeBase);
+        }
+
+        return computeJitDesc(builder, typeContainer);
+    }
+
+    private JitMethodDesc computeJitDesc(Builder builder, TypeConstant typeContainer) {
         MethodBody head = getHead();
         return switch (head.getImplementation()) {
             case Capped -> getChain()[1].getJitDesc(builder, typeContainer);

@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -24,11 +23,14 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.runtime.ClassTemplate;
+import org.xvm.compiler.Compiler;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
+
 import org.xvm.util.Hash;
 import org.xvm.util.ListMap;
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writeMagnitude;
@@ -264,6 +266,14 @@ public class PropertyClassTypeConstant
     }
 
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public TypeConstant getCanonicalJitType() {
+        return getRefType().getCanonicalJitType();
+    }
+
+
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
@@ -395,11 +405,8 @@ public class PropertyClassTypeConstant
 
             if (!mapContribChildren.isEmpty()) {
                 // TODO process children
-// TODO CP log as error
-String s = "*** skipping TypeInfo generation for {" + mapContribChildren.keySet() + "} on " + idBase;
-if (SKIPPED.add(s)) {
-    System.out.println(s);
-}
+                log(errs, Severity.WARNING, Compiler.NOT_IMPLEMENTED,
+                        "TypeInfo generation for {\"" + mapContribChildren.keySet() + "\"} on " + idBase);
             }
         }
 
@@ -410,8 +417,6 @@ if (SKIPPED.add(s)) {
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
                 null, TypeInfo.Progress.Complete);
     }
-// TODO CP remove
-private static HashSet<String> SKIPPED = new HashSet<>();
 
     // ----- run-time support ----------------------------------------------------------------------
 

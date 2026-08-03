@@ -1,8 +1,11 @@
 package org.xtclang.ecstasy.reflect;
 
+import java.lang.invoke.MethodHandle;
+
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nObj;
+import org.xtclang.ecstasy.nException;
 import org.xtclang.ecstasy.nType;
 
 import org.xtclang.ecstasy.numbers.*;
@@ -12,38 +15,113 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.Ctx;
 
 /**
- * A simple native Ref implementation.
+ * A simple native Ref/Var implementation.
  */
 public class nRef
         extends nObj
         implements Var {
+    /**
+     * Construct a value-backed Ref or Var.
+     *
+     * @param ctx           the current context
+     * @param referent      the initial referent
+     * @param referentType  the referent type
+     * @param isVar         true for a Var; false for a Ref
+     */
     public nRef(Ctx ctx, nObj referent, TypeConstant referentType, boolean isVar) {
         super(ctx);
 
         $referent     = referent;
         $referentType = referentType;
         $isVar        = isVar;
+        $getter       = null;
+        $setter       = null;
+    }
+
+    /**
+     * Construct a property-backed Ref or Var.
+     *
+     * @param ctx           the current context
+     * @param referentType  the referent type
+     * @param isVar         true for a Var; false for a Ref
+     * @param getter        the property getter
+     * @param setter        the property setter for a Var, or null for a Ref
+     */
+    public nRef(Ctx ctx, TypeConstant referentType, boolean isVar,
+                MethodHandle getter, MethodHandle setter) {
+        super(ctx);
+
+        assert getter != null;
+        assert isVar == (setter != null);
+
+        $referent     = null;
+        $referentType = referentType;
+        $isVar        = isVar;
+        $getter       = getter;
+        $setter       = setter;
     }
 
     public nObj               $referent;
     public final TypeConstant $referentType;
     public final boolean      $isVar;
+    public final MethodHandle $getter;
+    public final MethodHandle $setter;
 
     public nType Referent$get(Ctx ctx) {
         return nType.$ensureType(ctx, $referentType);
     }
 
     @Override
-    public Object get(Ctx ctx) {
-        return $referent;
+    public boolean assigned$get$p(Ctx ctx) {
+        return $getter == null
+                ? $referent != null
+                : get(ctx) != null;
     }
 
     @Override
-    public void set(Ctx ctx, Object referent) {
-        if ($isVar) {
-            $referent = (nObj) referent;
-        } else {
+    public Object get(Ctx ctx) {
+        if ($getter == null) {
+            // value-backed Ref
+            return $referent;
+        }
+
+        try {
+            return (Object) $getter.invoke(ctx);
+        } catch (nException nEx) {
+            throw nEx;
+        } catch (Throwable e) {
+            throw Exception.$typeMismatch(ctx, e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean peek$p(Ctx ctx) {
+        if (assigned$get$p(ctx)) {
+            ctx.o0 = get(ctx);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public void set(Ctx ctx, Object value) {
+        if (!$isVar) {
             throw Exception.$ro(ctx, "Ref is read-only");
+        }
+
+        if ($setter == null) {
+            // value-backed Var
+            $referent = (nObj) value;
+            return;
+        }
+
+        // property-backed Var
+        try {
+            $setter.invoke(ctx, value);
+        } catch (nException nEx) {
+            throw nEx;
+        } catch (Throwable e) {
+            throw Exception.$typeMismatch(ctx, e.getMessage());
         }
     }
 

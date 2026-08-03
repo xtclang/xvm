@@ -1105,8 +1105,9 @@ public class BuildContext {
         }
 
         return switch (argId) {
-            case Op.A_THIS  -> typeMatrix.getType(argId, currOpAddr);
-            case Op.A_SUPER -> {
+            case Op.A_THIS,
+                 Op.A_STRUCT -> typeMatrix.getType(Op.A_THIS, currOpAddr);
+            case Op.A_SUPER  -> {
                 TypeConstant typeSuper = callChain[callDepth + 1].getIdentity().getType();
                 assert typeSuper.isMethod();
                 yield pool().bindMethodTarget(typeSuper);
@@ -2361,6 +2362,83 @@ public class BuildContext {
     }
 
     /**
+     * Create a Ref or Var for a property.
+     */
+    public void buildPropertyRef(CodeBuilder code, int targetId, int propIdIndex, int retId,
+                                 boolean isVar) {
+        TypeConstant     targetType  = getArgumentType(targetId);
+        PropertyConstant propId      = getConstant(propIdIndex, PropertyConstant.class);
+        PropertyInfo     propInfo    = propId.getPropertyInfo(targetType);
+        TypeConstant     referentType = propInfo.getType().resolveAutoNarrowing(
+                pool(), false, targetType, null);
+        RegisterInfo     refReg      = realizeRef(code, retId, referentType, isVar);
+
+        if (propInfo.isConstant()) {
+            assert !isVar;
+
+            Constant initial  = propInfo.getInitialValue();
+            Constant referent = initial == null
+                    ? pool().ensureSingletonConstConstant(propInfo.getIdentity())
+                    : initial;
+            buildCreateRef(code, referentType, false, () -> {
+                RegisterInfo valueReg = loadConstant(code, referent);
+                if (valueReg.flavor().isOptimized) {
+                    Builder.box(code, valueReg);
+                }
+            });
+            code.astore(refReg.slot());
+            return;
+        }
+
+        RegisterInfo     targetReg   = ensureRegister(code, targetId);
+        JitMethodDesc    getterJmd   = propInfo.getGetterJitDesc(builder, targetType);
+
+        code.new_(CD_nRef)
+            .dup();
+        loadCtx(code);
+        loadTypeConstant(code, referentType);
+        Builder.loadBoolean(code, isVar);
+        loadPropertyAccessor(code, targetReg, propInfo,
+                propInfo.ensureGetterJitMethodName(typeSystem), getterJmd);
+
+        if (isVar) {
+            JitMethodDesc setterJmd = propInfo.getSetterJitDesc(builder, targetType);
+            loadPropertyAccessor(code, targetReg, propInfo,
+                    propInfo.ensureSetterJitMethodName(typeSystem), setterJmd);
+        } else {
+            code.aconst_null();
+        }
+
+        code.invokespecial(CD_nRef, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx,
+                CD_TypeConstant, CD_boolean, CD_MethodHandle, CD_MethodHandle))
+            .astore(refReg.slot());
+    }
+
+    /**
+     * Load a property accessor MethodHandle, bound to the target for an instance property.
+     */
+    private void loadPropertyAccessor(CodeBuilder code, RegisterInfo targetReg,
+                                      PropertyInfo propInfo, String methodName, JitMethodDesc jmd) {
+        TypeConstant ownerType   = propInfo.getOwnerType(builder, targetReg.type());
+        boolean      isInterface = !propInfo.isNative() && ownerType.isJitInterface();
+
+        assert !jmd.isStandardStatic;
+        DirectMethodHandleDesc.Kind kind = isInterface
+                ? DirectMethodHandleDesc.Kind.INTERFACE_VIRTUAL
+                : DirectMethodHandleDesc.Kind.VIRTUAL;
+
+        code.ldc(MethodHandleDesc.ofMethod(kind, builder.ensureClassDesc(ownerType),
+                methodName, jmd.standardMD));
+
+        RegisterInfo loadedTarget = targetReg.load(code);
+        if (loadedTarget.flavor().isOptimized) {
+            Builder.box(code, loadedTarget);
+        }
+        code.invokevirtual(CD_MethodHandle, "bindTo",
+                MethodTypeDesc.of(CD_MethodHandle, CD_JavaObject));
+    }
+
+    /**
      * Load a property value directly from its backing field.
      *
      * Before calling this method, the stack contains the target. The first value remains on the
@@ -2388,8 +2466,8 @@ public class BuildContext {
             returns = new JitParamDesc[] {jmd.standardReturns[0]};
         }
 
-        TypeConstant typeOwner = propInfo.getOwnerType(builder, targetReg.type());
-        ClassDesc    cdOwner   = builder.ensureClassDesc(typeOwner);
+        TypeConstant ownerType = propInfo.getOwnerType(builder, targetReg.type());
+        ClassDesc    cdOwner   = builder.ensureClassDesc(ownerType);
         String       fieldName = propInfo.getIdentity().ensureJitPropertyName(typeSystem);
 
         for (int i = 0; i < returns.length; i++) {
@@ -2786,12 +2864,11 @@ public class BuildContext {
             TypeConstant destType = getReturnType(regId);
             assert destType != null;
 
-            RegisterInfo reg = registerInfos.get(regId);
-            if (reg == null || !isAssigned(reg)) {
-                // Builder.defaultStore initializes verifier-visible slots only; it's our
-                // responsibility to adjust the local variable scope
+            RegisterInfo reg = ensureRegister(regId, destType);
+            if (!isAssigned(reg)) {
+                // the payload is undefined when the condition is False, but its Java slots must
+                // still have verifier-visible values
                 Builder.defaultStore(code, reg);
-                ensureRegisterScope(code, reg);
             }
         }
 
