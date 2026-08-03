@@ -67,6 +67,8 @@ import org.xvm.javajit.ModuleLoader;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 
+import org.xvm.javajit.builders.ArrayBuilder;
+
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
@@ -7159,31 +7161,7 @@ public abstract class TypeConstant
             if (typeEl.isFormalType() || typeEl.equals(pool.typeObject())) {
                 return Builder.N_ArrayObj;
             } else if (typeEl.isJitPrimitive()) {
-                IdentityConstant idEl = typeEl.getSingleUnderlyingClass(false);
-
-                return switch (idEl.getName()) {
-                    case "Bit"     -> Builder.N_ArrayBit;
-                    case "Boolean" -> Builder.N_ArrayBoolean;
-                    case "Char"    -> Builder.N_ArrayChar;
-                    case "Dec32"   -> Builder.N_ArrayDec32;
-                    case "Dec64"   -> Builder.N_ArrayDec64;
-                    case "Dec128"  -> Builder.N_ArrayDec128;
-                    case "Float16" -> Builder.N_ArrayFloat16;
-                    case "Float32" -> Builder.N_ArrayFloat32;
-                    case "Float64" -> Builder.N_ArrayFloat64;
-                    case "Nibble"  -> Builder.N_ArrayNibble;
-                    case "Int8"    -> Builder.N_ArrayInt8;
-                    case "Int16"   -> Builder.N_ArrayInt16;
-                    case "Int32"   -> Builder.N_ArrayInt32;
-                    case "Int64"   -> Builder.N_ArrayInt64;
-                    case "Int128"  -> Builder.N_ArrayInt128;
-                    case "UInt8"   -> Builder.N_ArrayUInt8;
-                    case "UInt16"  -> Builder.N_ArrayUInt16;
-                    case "UInt32"  -> Builder.N_ArrayUInt32;
-                    case "UInt64"  -> Builder.N_ArrayUInt64;
-                    case "UInt128" -> Builder.N_ArrayUInt128;
-                    default        -> throw new UnsupportedOperationException();
-                };
+                return ArrayBuilder.getArrayName(typeEl);
             } else {
                 // REVIEW CP: this is wrong
                 return Builder.N_ArrayObj;
