@@ -530,10 +530,14 @@ public class TypeSystem {
      * @return the JIT name of the `Enumeration` class
      */
     public static String enumerationClass(String name) {
+        return flavorClassName(name, ENUM);
+    }
+
+    private static String flavorClassName(String name, char flavor) {
         int offset = max(name.lastIndexOf('.'), name.lastIndexOf('$')) + 1;
         return new StringBuilder(name.length() + ENUM > 0xFFFF ? 2 : 1)
                 .append(name, 0, offset)
-                .appendCodePoint(ENUM)
+                .appendCodePoint(flavor)
                 .append(name, offset, name.length())
                 .toString();
     }
