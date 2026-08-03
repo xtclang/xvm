@@ -1408,11 +1408,15 @@ public class PropertyInfo
         // note that we do not create classes for annotations and mixins
         IdentityConstant idOwner  = id.getNamespace();
         Component.Format format   = idOwner.getComponent().getFormat();
-        return format == Format.MIXIN || format == Format.ANNOTATION ||
-                (typeOwner.isSingleUnderlyingClass(true) &&
-                    idOwner.equals(typeOwner.getSingleUnderlyingClass(true)))
-            ? typeOwner
-            : idOwner.getFormalType().resolveGenerics(builder.pool(), typeOwner);
+        return switch (format) {
+            case MIXIN, ANNOTATION, METHOD, PROPERTY
+                    -> typeOwner;
+
+            default -> typeOwner.isSingleUnderlyingClass(true) &&
+                    idOwner.equals(typeOwner.getSingleUnderlyingClass(true))
+                ? typeOwner
+                : idOwner.getFormalType().resolveGenerics(builder.pool(), typeOwner);
+        };
     }
 
     /**

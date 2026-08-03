@@ -30,6 +30,10 @@ package propertyInitTests {
         ConstructorTest withValues =
                 new ConstructorTest(601, 602, 703, 704, new Derived("hello"));
 
+        MethodPropertyTest counter = new MethodPropertyTest();
+        assert counter.first();
+        assert !counter.first();
+
         console.print("<<<< Finished PropertyInitTests <<<<<");
     }
 
@@ -95,6 +99,17 @@ package propertyInitTests {
             void set(String value) {
                 setterCalled = True;
             }
+        }
+    }
+
+    class MethodPropertyTest {
+        Boolean first() {
+            private Boolean called = False;
+            if (!called) {
+                called = True;
+                return True;
+            }
+            return False;
         }
     }
 }

@@ -370,14 +370,8 @@ public class CommonBuilder
                 continue;
             }
 
-            IdentityConstant ownerId = prop.getIdentity().getNamespace();
-            if (prop.getIdentity().getNamespace().equals(thisId)) {
+            if (shouldGenerate(prop.getIdentity())) {
                 assembleProperty(classBuilder, prop);
-            } else {
-                Format ownerFormat = ownerId.getComponent().getFormat();
-                if (ownerFormat == Format.ANNOTATION || ownerFormat == Format.MIXIN) {
-                    assembleProperty(classBuilder, prop);
-                }
             }
         }
 
@@ -3713,7 +3707,9 @@ public class CommonBuilder
      *         inside this class
      */
     protected boolean shouldGenerate(IdentityConstant id) {
-        IdentityConstant containerId = id.getNamespace();
+        IdentityConstant containerId = id instanceof PropertyConstant
+                ? id.getClassIdentity()
+                : id.getNamespace();
         if (containerId.equals(thisId)) {
             return true;
         }
