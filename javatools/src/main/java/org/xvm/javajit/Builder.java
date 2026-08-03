@@ -600,7 +600,6 @@ public abstract class Builder {
                                  Constant[] values) {
         TypeConstant   elType = arrayType.getParamType(0);
         ClassDesc      cdArray;
-        String         className;
         String         addMethod;
         MethodTypeDesc mdAdd;
 
@@ -611,135 +610,116 @@ public abstract class Builder {
             switch (elType.getSingleUnderlyingClass(false).getName()) {
             case "Bit":
                 // ArrayᐸBitᐳ array = ArrayᐸBitᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayBit;
-                className = N_ArrayBit;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayBit;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "Boolean":
                 // ArrayᐸBooleanᐳ array = ArrayᐸBooleanᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayBoolean;
-                className = N_ArrayBoolean;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_boolean);
+                cdArray = CD_ArrayBoolean;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_boolean);
                 break;
 
             case "Char":
                 // ArrayᐸCharᐳ array = ArrayᐸCharᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayChar;
-                className = N_ArrayChar;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayChar;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "Dec32":
                 // ArrayᐸDec32ᐳ array = ArrayᐸDec32ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayDec32;
-                className = N_ArrayDec32;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayDec32;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "Dec64":
                 // ArrayᐸDec64ᐳ array = ArrayᐸDec64ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayDec64;
-                className = N_ArrayDec64;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
+                cdArray = CD_ArrayDec64;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
                 break;
 
             case "Dec128":
                 // ArrayᐸDec128ᐳ array = ArrayᐸDec128ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayDec128;
-                className = N_ArrayDec128;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
+                cdArray = CD_ArrayDec128;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
                 break;
 
             case "Float32":
                 // ArrayᐸFloat32ᐳ array = ArrayᐸFloat32ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayFloat32;
-                className = N_ArrayFloat32;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_float);
+                cdArray = CD_ArrayFloat32;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_float);
                 break;
 
             case "Float64":
                 // ArrayᐸFloat64ᐳ array = ArrayᐸFloat64ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayFloat64;
-                className = N_ArrayFloat64;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_double);
+                cdArray = CD_ArrayFloat64;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_double);
                 break;
 
             case "Int8":
                 // ArrayᐸInt8ᐳ array = ArrayᐸInt8ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayInt8;
-                className = N_ArrayInt8;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayInt8;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "Int16":
                 // ArrayᐸInt16ᐳ array = ArrayᐸInt16ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayInt16;
-                className = N_ArrayInt16;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayInt16;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "Int32":
                 // ArrayᐸInt32ᐳ array = ArrayᐸInt32ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayInt32;
-                className = N_ArrayInt32;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayInt32;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "Int64":
                 // ArrayᐸIntᐳ array = ArrayᐸIntᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayInt64;
-                className = N_ArrayInt64;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
+                cdArray = CD_ArrayInt64;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
                 break;
 
             case "Int128":
                 // ArrayᐸInt128ᐳ array = ArrayᐸInt128ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayInt128;
-                className = N_ArrayInt128;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
+                cdArray = CD_ArrayInt128;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
                 break;
 
             case "Nibble":
                 // ArrayᐸNibbleᐳ array = ArrayᐸNibbleᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayNibble;
-                className = N_ArrayNibble;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayNibble;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "UInt8":
                 // ArrayᐸUInt8ᐳ array = ArrayᐸUInt8ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayUInt8;
-                className = N_ArrayUInt8;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayUInt8;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "UInt16":
                 // ArrayᐸUInt16ᐳ array = ArrayᐸUInt16ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayUInt16;
-                className = N_ArrayUInt16;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayUInt16;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "UInt32":
                 // ArrayᐸUInt32ᐳ array = ArrayᐸUInt32ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayUInt32;
-                className = N_ArrayUInt32;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayUInt32;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "UInt64":
                 // ArrayᐸUIntᐳ array = ArrayᐸUIntᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayUInt64;
-                className = N_ArrayUInt64;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
+                cdArray = CD_ArrayUInt64;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
                 break;
 
             case "UInt128":
                 // ArrayᐸUInt128ᐳ array = ArrayᐸUInt128ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayUInt128;
-                className = N_ArrayUInt128;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
+                cdArray = CD_ArrayUInt128;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
                 break;
 
             default:
@@ -748,7 +728,6 @@ public abstract class Builder {
         } else {
             // ArrayᐸObjectᐳ array = ArrayᐸObjectᐳ.$new$p(ctx, type, capacity, false);
             cdArray   = CD_ArrayObj;
-            className = N_ArrayObj;
             addMethod = "add";
             mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_Object);
         }
@@ -887,6 +866,8 @@ public abstract class Builder {
         PropertyInfo jitInfo      = typeJit.equals(pool().typeObject()) // REVIEW GG
                 ? xvmInfo
                 : propId.getPropertyInfo(typeJit);
+// TODO JIT-names branch had this alternative definition for jitInfo:
+//      PropertyInfo  jitInfo    = propId.getPropertyInfo(typeContainer.getCallableJitType());
         TypeConstant  typeOwner  = jitInfo.getOwnerType(this, typeContainer);
         JitMethodDesc jmdGet     = jitInfo.getGetterJitDesc(this, typeContainer);
         String        getterName = jitInfo.ensureGetterJitMethodName(typeSystem);
