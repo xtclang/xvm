@@ -3913,7 +3913,7 @@ public class CommonBuilder
             // collections
             "org.xtclang.ecstasy.collections.Array",
             "org.xtclang.ecstasy.collections.Array$Mutability",
-// TODO     "org.xtclang.ecstasy.collections.Collection"    // needs improved formal type resolution
+// TODO     "org.xtclang.ecstasy.collections.Collection",   // needs improved formal type resolution
             "org.xtclang.ecstasy.collections.List",
 // TODO     "org.xtclang.ecstasy.collections.UniformIndexed*",
 
@@ -3973,8 +3973,7 @@ public class CommonBuilder
     "org.xtclang.ecstasy.Range",
             Set.of("appendTo", "estimateStringLength"), // TODO: if (Element.is(Type<Stringable>)) does not cast
     "org.xtclang.ecstasy.numbers.Number",
-            Set.of("compare",
-                   "converterFor",
+            Set.of("converterFor",
                    "converterTo"),
     "org.xtclang.ecstasy.numbers.IntNumber",
             Set.of("not")          // TODO: depends on virtual constructor

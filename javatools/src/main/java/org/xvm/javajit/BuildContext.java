@@ -39,6 +39,7 @@ import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DecoratedClassConstant;
+import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -1373,6 +1374,11 @@ public class BuildContext {
                 .invokevirtual(CD_nObject, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString));
             return new SingleSlot(child.getType(), Specific, CD_nType, "");
         }
+
+        if (formalConst instanceof DynamicFormalConstant dynamic) {
+            return loadArgument(code, dynamic.getRegisterIndex());
+        }
+
         throw new UnsupportedOperationException("FormalConstant=" + formalConst);
     }
 

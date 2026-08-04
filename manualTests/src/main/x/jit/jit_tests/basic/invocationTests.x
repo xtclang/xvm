@@ -46,6 +46,9 @@ package invocationTests {
         assert order(asBase(d1), asBase(d2)) == Equal;
         assert order(d1, d2) == Lesser;
 
+        assert asBase(d1).maxOf(asBase(d2)) == asBase(d1);
+        assert d1.maxOf(d2) == d2;
+
         Base asBase(Base base) = base;
 
         <CompileType extends Base> Boolean comp(CompileType b1, CompileType b2) {

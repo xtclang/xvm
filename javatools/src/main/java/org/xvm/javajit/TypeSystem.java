@@ -471,14 +471,28 @@ public class TypeSystem {
         TypeConstant type     = null;
         int          idOffset = suffix.indexOf(HASH);
         if (idOffset > 0) {
-            // the name represents a parameterized type with primitive actual type(s)
-            // or a class constant for inner classes
-            Constant constant = pool().getConstant(Integer.valueOf(suffix.substring(idOffset+1)));
+            // the name represents a parameterized type with primitive actual type(s),
+            // a class constant for inner classes or a combination of the two, for example:
+            // org.xtclang.ecstasy.numbers.Number$compare$Familyꖛ7503$UInteger
+            int idEnd = suffix.indexOf('$', idOffset);
+            if (idEnd < 0) {
+                idEnd = suffix.length();
+            }
+            Constant constant = pool().getConstant(
+                    Integer.valueOf(suffix.substring(idOffset + 1, idEnd)));
             if (constant instanceof TypeConstant constType) {
                 type = constType;
             } else if (constant instanceof ClassConstant constClass) {
-                return new Artifact(constClass.getType(),
-                    (ClassStructure) constClass.getComponent(), shape, className);
+                ClassStructure struct = (ClassStructure) constClass.getComponent();
+                if (idEnd < suffix.length()) {
+                    String childName = unescapeJitName(suffix.substring(idEnd + 1))
+                            .replace('$', '.');
+                    if (!(struct.getChildByPath(childName) instanceof ClassStructure child)) {
+                        return null;
+                    }
+                    struct = child;
+                }
+                return new Artifact(struct.getFormalType(), struct, shape, className);
             } else {
                 throw new IllegalArgumentException("Unsupported suffix: " + constant.toString());
             }
