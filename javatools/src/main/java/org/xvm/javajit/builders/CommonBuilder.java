@@ -208,8 +208,13 @@ public class CommonBuilder
         TypeConstant targetType = typeInfo.getType();
         ClassDesc    targetCD   = ensureClassDesc(targetType);
         for (MethodInfo method : funkyImpls) {
-            MethodBody funkyBody = method.getAbstractFunction();
-            // TODO: generate a call to the class of class
+            String        jitName = method.ensureJitMethodName(typeSystem);
+            JitMethodDesc jmd     = method.getJitDesc(this, targetType);
+
+            assembleFunkyRouting(classBuilder, targetCD, jitName, jmd.standardMD);
+            if (jmd.isOptimized) {
+                assembleFunkyRouting(classBuilder, targetCD, jitName + OPT, jmd.optimizedMD);
+            }
         }
 
         for (MethodInfo method : virtCtors) {
@@ -252,6 +257,24 @@ public class CommonBuilder
                     .areturn();
             });
         }
+    }
+
+    /**
+     * Assemble an instance method on the class-of-class that routes to the corresponding funky
+     * method on the target class.
+     */
+    private void assembleFunkyRouting(
+            ClassBuilder   classBuilder,
+            ClassDesc      targetCD,
+            String         jitName,
+            MethodTypeDesc md) {
+        classBuilder.withMethodBody(jitName, md, ClassFile.ACC_PUBLIC, code -> {
+            for (int i = 0, count = md.parameterCount(); i < count; i++) {
+                load(code, md.parameterType(i), code.parameterSlot(i));
+            }
+            code.invokestatic(targetCD, jitName, md);
+            addReturn(code, md.returnType());
+        });
     }
 
     @Override
@@ -3805,6 +3828,7 @@ public class CommonBuilder
                 break GenerateStub;
             }
 
+            String baseName = bctx.methodJitName;
             if (NO_JIT_METHODS.getOrDefault(className, Set.of()).contains(bctx.methodJitName)) {
                 System.err.println("*** Skipping code gen for " + bctx.className + "." + bctx.methodJitName);
                 SKIP_SET.add(bctx.className); // stops the skipping class log message

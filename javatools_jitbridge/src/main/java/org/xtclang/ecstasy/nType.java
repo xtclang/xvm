@@ -120,12 +120,12 @@ public class nType
         }
 
         if (equalsMethod == null) {
-            equalsMethod = ensureMethod("equals$p", $xvmClass(ctx).getClass());
+            equalsMethod = ensureMethod("equals$p", 2);
         }
 
         try {
             java.lang.Boolean result = (java.lang.Boolean)
-                    equalsMethod.invoke(null, ctx, this, value1, value2);
+                    equalsMethod.invoke($xvmClass(ctx), ctx, this, value1, value2);
             return result.booleanValue();
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw Exception.$unsupported($ctx,
@@ -179,11 +179,11 @@ public class nType
         }
 
         if (compareMethod == null) {
-            compareMethod = ensureMethod("compare", Orderable.class);
+            compareMethod = ensureMethod("compare", 2);
         }
 
         try {
-            return (Ordered) compareMethod.invoke(null, ctx, this, value1, value2);
+            return (Ordered) compareMethod.invoke($xvmClass(ctx), ctx, this, value1, value2);
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw Exception.$unsupported($ctx,
                 "Failed to invoke 'compare()` on class " + $dataType.getValueString());
@@ -223,11 +223,11 @@ public class nType
         }
 
         if (hashCodeMethod == null) {
-            hashCodeMethod = ensureMethod("hashCode$p", Hashable.class);
+            hashCodeMethod = ensureMethod("hashCode$p", 1);
         }
 
         try {
-            return (long) hashCodeMethod.invoke(null, ctx, this, value);
+            return (long) hashCodeMethod.invoke($xvmClass(ctx), ctx, this, value);
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw Exception.$unsupported($ctx,
                     "Failed to invoke 'hashCode$p()` on class " + $dataType.getValueString());
@@ -235,19 +235,27 @@ public class nType
 
     }
 
-    private Method ensureMethod(java.lang.String methodName, java.lang.Class paramClass) {
-        java.lang.String clzName = $dataType.ensureJitClassName($ctx.container.typeSystem);
-        java.lang.Class  clz;
+    private Method ensureMethod(java.lang.String methodName, int valueCount) {
+        TypeSystem       typeSystem = $ctx.container.typeSystem;
+        java.lang.String clzName    = $dataType.ensureJitClassName(typeSystem);
+        java.lang.Class  clz        = $xvmClass($ctx).getClass();
+        java.lang.Class  valueClass;
         try {
-            clz = java.lang.Class.forName(clzName);
+            valueClass = typeSystem.loader.loadClass(clzName);
         } catch (ClassNotFoundException e) {
             throw Exception.$unsupported($ctx, "No such class " + clzName);
         }
 
+        java.lang.Class[] paramClasses = new java.lang.Class[2 + valueCount];
+        paramClasses[0] = Ctx.class;
+        paramClasses[1] = nType.class;
+        for (int i = 2; i < paramClasses.length; i++) {
+            paramClasses[i] = valueClass;
+        }
+
         while (true) {
             try {
-                return clz.getDeclaredMethod(methodName,
-                        Ctx.class, nType.class, paramClass, paramClass);
+                return clz.getDeclaredMethod(methodName, paramClasses);
             } catch (NoSuchMethodException e) {
                 clz = clz.getSuperclass();
                 if (clz == null) {
