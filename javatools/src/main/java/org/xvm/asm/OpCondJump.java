@@ -331,6 +331,7 @@ public abstract class OpCondJump
                     tmx.assign(nAddrThis, m_nArg, bctx.pool().typeNullable());
                     tmx.assign(nAddrThis, nAddrJump, m_nArg, type.removeNullable());
                 }
+                tmx.cleanupJump(nAddrJump, m_cExits);
                 return;
             }
 
@@ -349,6 +350,7 @@ public abstract class OpCondJump
                     boolean isA = typeTarget.isA(typeTest);
                     if ((getOpCode() == OP_JMP_TYPE) == isA) {
                         tmx.follow(nAddrThis, nAddrJump, -1);
+                        tmx.cleanupJump(nAddrJump, m_cExits);
                     } else {
                         tmx.follow(nAddrThis);
                     }
@@ -365,12 +367,14 @@ public abstract class OpCondJump
                     tmx.assign(nAddrThis, m_nArg, typeIs);
                     tmx.assign(nAddrThis, nAddrJump, m_nArg, typeIsNot);
                 }
+                tmx.cleanupJump(nAddrJump, m_cExits);
                 return;
             }
         }
 
         tmx.follow(nAddrThis);
         tmx.follow(nAddrThis, nAddrJump, -1);
+        tmx.cleanupJump(nAddrJump, m_cExits);
     }
 
     @Override

@@ -69,7 +69,8 @@ public class ArrayBuilder extends AugmentingBuilder {
             // parameter type is a JIT primitive, sp array is specialized
             return false;
         }
-        if (isObjectArray && type.equals(this.thisType.removeAccess())) {
+        if (isObjectArray &&
+                type.removeAutoNarrowing().removeAccess().equals(thisType.removeAccess())) {
             // this builder is for Array<Object> and the type matches, so not base array
             return false;
         }

@@ -3828,10 +3828,18 @@ public class CommonBuilder
                 break GenerateStub;
             }
 
-            String baseName = bctx.methodJitName;
-            if (NO_JIT_METHODS.getOrDefault(className, Set.of()).contains(bctx.methodJitName)) {
-                System.err.println("*** Skipping code gen for " + bctx.className + "." + bctx.methodJitName);
-                SKIP_SET.add(bctx.className); // stops the skipping class log message
+            // use the enclosing Ecstasy method name to cover all overloads and nested lambdas
+            MethodConstant methodId = bctx.methodStruct.getIdentityConstant();
+            while (methodId.isLambda() &&
+                    methodId.getNamespace() instanceof MethodConstant enclosingId) {
+                methodId = enclosingId;
+            }
+
+            if (NO_JIT_METHODS.getOrDefault(className, Set.of()).contains(methodId.getName())) {
+                if (METHOD_SKIP_SET.add(className)) {
+                    System.err.println("*** Skipping some methods for " + className);
+                }
+                SKIP_SET.add(className); // stops the skipping class log message
                 break GenerateStub;
             }
 
@@ -3839,8 +3847,8 @@ public class CommonBuilder
             return;
         }
 
-        if (SKIP_SET.add(bctx.className)) {
-            System.err.println("*** Skipping code gen for " + bctx.className);
+        if (SKIP_SET.add(className)) {
+            System.err.println("*** Skipping code gen for " + className);
         }
         defaultLoad(code, md.returnType());
         addReturn(code, md.returnType());
@@ -3913,7 +3921,7 @@ public class CommonBuilder
             // collections
             "org.xtclang.ecstasy.collections.Array",
             "org.xtclang.ecstasy.collections.Array$Mutability",
-// TODO     "org.xtclang.ecstasy.collections.Collection",   // needs improved formal type resolution
+            "org.xtclang.ecstasy.collections.Collection",
             "org.xtclang.ecstasy.collections.List",
 // TODO     "org.xtclang.ecstasy.collections.UniformIndexed*",
 
@@ -3970,6 +3978,39 @@ public class CommonBuilder
     };
 
     private final static Map<String, Set<String>> NO_JIT_METHODS = Map.of(
+    "org.xtclang.ecstasy.collections.Collection",
+            Set.of(
+                   // TODO: preserve formal Element narrowing through Stringable tests and lambdas
+                   "appendTo",
+                   "estimateStringLength",
+
+                   // TODO: resolve generic call signatures in the caller's formal-type context
+                   "associate",
+                   "associateBy",
+                   "associateWith",
+                   "filter",
+                   "flatMap",
+                   "groupBy",
+                   "groupWith",
+                   "map",
+                   "partition",
+                   "reduce",
+
+                   // TODO: discard conditional call results whose destinations have left scope
+                   "distinct",
+
+                   // TODO: support Type property access for formal child types
+                   "equals",
+
+                   // TODO: resolve formal Element types in nested lambda signatures
+                   "any",
+                   "clear",
+
+                   // TODO: narrow Ref-backed registers before loading their values
+                   "removeAll",
+
+                   // TODO: resolve generated interface hierarchy without class loading
+                   "sorted"),
     "org.xtclang.ecstasy.Range",
             Set.of("appendTo", "estimateStringLength"), // TODO: if (Element.is(Type<Stringable>)) does not cast
     "org.xtclang.ecstasy.numbers.Number",
@@ -3980,4 +4021,5 @@ public class CommonBuilder
     );
 
     private final static HashSet<String> SKIP_SET = new HashSet<>();
+    private final static HashSet<String> METHOD_SKIP_SET = new HashSet<>();
 }

@@ -505,8 +505,8 @@ public class BuildContext {
                 op.computeTypes(this);
             } else {
                 // TODO: remove
-                System.err.println("Dead code: " + Op.toName(op.getOpCode()) + " at " + this +
-                    " for " + thisType.removeAccess().getValueString());
+                // System.err.println("Dead code: " + Op.toName(op.getOpCode()) + " at " + this +
+                //    " for " + thisType.removeAccess().getValueString());
             }
         }
 
