@@ -42,6 +42,7 @@ public class NativeNames {
         reservedMethodName.put("collections.Collection/reify/0", "reify");
 
         reservedMethodName.put("numbers.IntConvertible/toIntN/0",  "toIntN");
+        reservedMethodName.put("numbers.IntConvertible/toUInt/0",  "toUInt");
         reservedMethodName.put("numbers.IntConvertible/toUIntN/0", "toUIntN");
 
         reservedMethodName.put("numbers.FPnumber/toIntN/1",  "toIntN$FP");

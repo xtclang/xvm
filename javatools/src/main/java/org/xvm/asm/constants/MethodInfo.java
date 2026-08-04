@@ -486,7 +486,7 @@ public class MethodInfo
 
         return listNew == null ? this
                 : listNew.isEmpty() ? null
-                : new MethodInfo(listNew.toArray(new MethodBody[0]), f_nRank);
+                : new MethodInfo(listNew.toArray(MethodBody.NO_BODIES), f_nRank);
     }
 
     /**
@@ -1445,12 +1445,21 @@ public class MethodInfo
      * @return the identity of the method to be used by the JIT compiler
      */
     public static MethodConstant getJitIdentity(MethodBody[] aBody) {
-        // for methods   -  get the lowest in the chain with the same signature; ignore implicits
-        //                  (unless it's the obly body) and caps
-        // for functions -  get the highest in the chain
+        return getJitIdentity(aBody, 0);
+    }
+
+    /**
+     * @return the identity of the method to be used by the JIT compiler, starting at the specified
+     *         position in the method chain
+     */
+    public static MethodConstant getJitIdentity(MethodBody[] aBody, int iBody) {
+        // for methods   -  get the body which is the closest to the tail with the same signature;
+        //                  ignore implicits (unless it's the only body) and caps
+        // for functions -  get the body which is the closest to the head
         MethodConstant    id  = null;
         SignatureConstant sig = null;
-        for (MethodBody body : aBody) {
+        for (int cBodies = aBody.length; iBody < cBodies; iBody++) {
+            MethodBody     body = aBody[iBody];
             Implementation impl = body.getImplementation();
             if (impl == Implementation.Capped) {
                 // the cap is never the JIT identity; go lower
