@@ -1,4 +1,4 @@
-Ecstasy composition specialization:
+I. Ecstasy composition specialization:
 
 1. Composition specialization refers to the ability for an Ecstasy type that declares one or more
    type parameters and is composed with one or more conditional incorporations to be specialized in
@@ -28,7 +28,7 @@ Ecstasy composition specialization:
 4. It is worth stating: the resulting set of layer one specialized compositions is enumerable at
    Ecstasy compile-time, and thus is also enumerable at JIT time.
 
-Ecstasy to Java Classfile compiler (JIT) class naming conventions:
+II. Ecstasy to Java Classfile compiler (JIT) class naming conventions:
 
 1. All Java interfaces produced by the JIT compiler extend "org.xtclang.ecstasy.Object"; all
    produced Java classes extend (directly or indirectly) "org.xtclang.ecstasy.nObject", which
@@ -45,54 +45,105 @@ Ecstasy to Java Classfile compiler (JIT) class naming conventions:
 4. An Ecstasy type is a "JIT-Primitive" type iff it is a Java-Primitive type, an XVM-Primitive type,
    or the "Nullable" form of either.
 
-5. For every Ecstasy type T there is a "JIT Call Class" CC(T), such that:
+5. For every Ecstasy type T there is a "JIT Call Class" JCC(T), such that:
     a) the JIT Call Class indicates the Java name of the classfile;
     b) the JIT Call Class indicates whether the classfile is a Java interface or a Java class;
     c) for any Ecstasy method with a parameter or return of type T, the corresponding Java signature
-       will use the Java class or interface name provided by CC(T);
-    d) the "nObject.$xvmType()" method of the classfile specified by CC(T) will return a
+       will use the Java class or interface name provided by JCC(T);
+    d) the "nObject.$xvmType()" method of the classfile specified by JCC(T) will return a
        TypeConstant that will evaluate as "isA()" of the TypeConstant for type T;
-    e) if CC(T) indicates a Java class, then instances of that Java classfile can be cast to
-       "org.xtclang.ecstasy.nObject";
-    f) all classfiles indicated by CC(T) can be cast to the "org.xtclang.ecstasy.Object" interface.
+    e) if JCC(T) indicates a Java class, then instances of that Java classfile can be cast to
+       "org.xtclang.ecstasy.nObject" (even though the Ecstasy Object is technically an interface);
+    f) all classfiles indicated by JCC(T) can be cast to the "org.xtclang.ecstasy.Object" interface.
 
-6. For every Ecstasy type T that represents an instantiatable class there is a "JIT Instance Class"
-   IC(T), such that:
+6. For every Ecstasy type T that represents an instantiatable class (TypeInfo.isNewable method)
+   there is a "JIT Instance Class" JIC(T), such that:
     a) the JIT Instance Class indicates the Java name of the instantiable classfile;
-    b) a "NEW" op for type T produces an instance of Java class IC(T), or a subclass thereof;
-    c) IC(T) and CC(T) are not neccessarily the same, in which case
-        1) CC(T) is either an abstract Java class or an interface;
-        2) IC(T) either extends or implements CC(T).
-    d) if CC(T) is an abstract class, then JIT generates an equivalent interface by prefixing "i$"
-       to the class name, which CC(T) naturally implements;
-    e) if T contains a formal type, the IC(T) is not known at the compile time and will be computed
-       at the run time instead.
+    b) "NEW*" ops for type T produce an instance of the Java class JIC(T) by invoking a "$new"
+       static method on the JIC(T);
+    c) when dealing with parameterized types, JIC(T) and JCC(T) may differ; when they differ:
+        1) JCC(T) is non-instantiable i.e. abstract, and is either a Java class or interface;
+        2) JIC(T) extends or implements the JCC(T).
+    d) if JCC(T) is an abstract class, then the JIT additionally generates an equivalent interface
+       by prefixing "i" to the class name, and the JCC(T) implements that interface;
+    e) if T has a formal type parameter, then JIC(T) is not resolvable at compile or JIT time and
+       will be resolved at run time instead; for example, within a Map implementation where the Key
+       type is not known at compile time, the code `new Key[]` will (typically) still be unresolved
+       at JIT time, and the JIT must produce code that will use the runtime value of the type Key in
+       order to calculate the JIC(Key[]); additional examples include the expression "new U[]" where
+       U is a formal type provided to a method, or "new V()" where V is a formal type with the type
+       constraint of Replicable; in these cases, the implementation will behave as if the the formal
+       types are resolved first, then the above steps (a-d) are followed.
 
-7. For an Ecstasy type T that is an interface, mixin, annotation or a pure type, there is no IC(T)
-   and only CC(T) is generated, which in that case is a Java interface. For an Ecstasy abstract
-   class, there is no IC(T) and CC(T) is an abstract Java class.
+7. For every instantiable-but-unresolved Ecstasy type T (as described in 6e above) that the JIT may
+   need to implement "NEW*" ops for, the plan-of-record is as follows:
+    a) The JIT uses the JCC(T) to determine the approximate class to instantiate, which could in
+       theory be the same as the JIC(T), but is likely to point to a super-class (or interface) of
+       the JIC(T) as it would be resolved at runtime;
+    b) To implement the "NEW*" ops, the JIT will produce code that invokes a virtual method on the
+       "class of class" for the JIC(T) (a class of the same name but prefixed with "c"), with a
+       method name "$dnew" that corresponds to the JIC's "$new" static method, passing the same set
+       of arguments that will be passed to the JIC's "$new" described in section 6 above; see also
+       the doc on the CommonBuilder.assembleNew method;
+    c) the "$dnew" method on the class-of-class for the JCC(T) receives a fully resolved T that is
+       used to dynamically (hence the "d" in "$dnew") determine the JIC(T);
+    d) the "$dnew" method on the class-of-class for the JCC(T) invokes the "$new" static method on
+       JIC(T);
+    e) ideally, the resolution of T (in step b), the runtime JIC(T) calculation (in step c), and the
+       indirect call to the JIC's "$new" static method (in step d) are emitted by this JIT in a
+       manner that optimizes for repeated use of the same resolved T, via caching or other means.
 
-8. An Ecstasy type is called "Specializable" iff:
-    a) it is parameterized (has generic types);
-    b) at least one of the generic type is constrained by a type that can be assigned from a
-       JIT-Primitive type.
+8. For an Ecstasy type T that is an interface, mixin, annotation or a pure type, there is no JIC(T)
+   (since the type cannot be instantiated), and only a JCC(T) is generated, which is a Java
+   interface. For an Ecstasy abstract class, (i) there is no JIC(T) and (ii) JCC(T) is an abstract
+   Java class -- and an "i" interface thereof in the case of parameterized types subject to
+   specialization.
 
-9. Java classes generated for a Specializable type fall into three categories:
-   a) When at least one generic type parameter is a JIT-Primitive type, the corresponding produced
-      Java class is called a "Specialized" class.
-   b) If no generic type parameter is a JIT-Primitive type, the produced Java class is called a
-      "Generalized" class.
-   c) If the Specializable type is not an interface, then in addition to the "Generalized" and
-      "Specialized" classes that the JIT may generate, it will:
-      1) if the Specializable type does not extend a Specializable type then:
-        i) generate an abstract Java class (Specialized Base Class [SBC]) that implements the
-           Generalized interface and is extended by each of the "Generalized" and "Specialized"
-           classes, and
-        ii) generate a synthetic interface (Specialized base interface [SBI]) that contains all the
-            methods of the SBC
-      2) if the Specializable type extends a Specializable type, generate a "Generalized interface"
-         that is implemented by all of the "Generalized" and "Specialized" classes and which
-         implements SBI for the super class
+9. In addition to the layer one specialization (see section I above), the JIT will use that same
+   approach (generating those additional classes and interfaces, what we refer to internally as
+   the "long arms" model) for two additional layers of specialization:
+    a) each Ecstasy Object reference at runtime is implemented and represented by the JIT using a
+       sequence of zero or more Java types, which can be expressed using Java type signature
+       notation; for example, almost all Ecstasy types use (i.e. will be stored in, will be passed
+       as) a single Java reference (e.g. "Lorg/xtclang/ecstasy/nObject;" or a sub-type thereof),
+       while a few types are JIT-Primitive types that (mostly) use some combination of Java
+       primitives, for example the Ecstasy "Int" using a Java long ("J"), and "UInt128?" using two
+       Java longs and a boolean ("JJZ)"; we call this the JIT-Shape (see the JitFlavor class);
+    b) "layer two specialization" is produced by the JIT when any formal type parameter of a
+       parameterized Ecstasy type can be resolved to different Ecstasy types that do not all have
+       the same JIT-Shape; the specialization applies to fields and optimized ("$p") methods;
+    c) "layer three specialization" refers to any additional explicit support necessary to map
+       between the JIT-Shape and any more-specific representation of the Ecstasy type by the JIT;
+       specifically, the "$box" and "$unbox" methods;
+    d) layer two and three specialization are used whenever both of the following are true:
+        1) the Ecstasy type is parameterized (has generic types);
+        2) at least one of the generic types can be assigned from a JIT-Primitive type;
+    e) as implied by point "b" above, the "long arms" overhead (generating additional classes and
+       interfaces) may be completely avoided in cases where, for each type parameter, it is provable
+       that all possible types for that type parameter will share the same exact single JIT-Shape.
+
+10. With respect to specialization, the JIT will generate the following Java classes:
+   a) when at least one generic type parameter is a JIT-Primitive type, the corresponding Java class
+      or interface is called a "Specialized class" or "Specialized interface"; each Specialized
+      class also has a corresponding "i"-prefixed Specialized interface that it implements;
+   b) when no generic type parameter is a JIT-Primitive type, the produced Java class or interface
+      is called a "Generalized class" or "Generalized interface";  each Generalized class also has a
+      corresponding "i"-prefixed Generalized interface that it implements;
+   c) with respect to one or more type parameters introduced by an Ecstasy class (etc.), we refer to
+      the initial specialization level in the class hierarchy as "initial specialization", and
+      subsequent inheritance from that level as "continued specialization";
+   d) for all combinations of "a" and "b" above, a corresponding Java class or interface is created
+      called the "Central class" or "Central interface"; a Central class is only created as part of
+      the initial specialization, and is abstract; every Specialized and Generalized class at the
+      initial specialization level extends the Central class; every Specialized and Generalized
+      interface at each specialization level extends the Central interface of that level; every
+      Central interface of a continued specialization level extends the Central interface of the
+      level above it;
+   e) in a JIT continued specialization level, each generalization, specialization, and central
+      class or interface that occurs in the continued specialization level and also exists in the
+      level above or below it is referred to as a "JIT-Column"; a JIT-Column extends vertically as
+      far as there are specialization levels containing that specialization; in "long-arms" jargon,
+      the central column is referred to as the "spine" or "trunk".
 
    Note: Specializable Ecstasy types always have a single underlying class (as defined by the
          TypeConstant.isSingleUnderlyingClass() API)
@@ -104,7 +155,7 @@ Ecstasy to Java Classfile compiler (JIT) class naming conventions:
      If a Specializable Ecstasy type D<T1, T2, T3> extends a non-Specializable Ecstasy type
      B<T1, T2>, the Specialized Java class J(D<T1, T2, T3>) extends the Generalized J(D).
 
-10. Below are some examples of canonical types and corresponding Java class names (note: we are using
+11. Below are some examples of canonical types and corresponding Java class names (note: we are using
    special characters for '<' and '>' etc.)
 
      Ecstasy type           JIT-Instance Class Name       JIT-Call class names    Notes
@@ -137,9 +188,9 @@ Ecstasy to Java Classfile compiler (JIT) class naming conventions:
         - HashMap is an interface that extends i$HasherMap
         - all HashMap<*,*> are classes that implement HashMap
 
-11. Every mixin and annotation produces an interface of the corresponding name.
+12. Every mixin and annotation produces an interface of the corresponding name.
 
-12. If the class has conditional incorporates, the situation becomes a bit more complicated. Let's
+13. If the class has conditional incorporates, the situation becomes a bit more complicated. Let's
    say that the class has the following structure:
 
        class C<T0, T1>
@@ -160,7 +211,7 @@ Ecstasy to Java Classfile compiler (JIT) class naming conventions:
         - C<Int,Person>    implements M<Hashable>
         - C<Int,Int>       implements M<Int>
 
-13. All functions only generated on the SBC.
+14. All functions only generated on the SBC.
 
 
 ===== Work pad =====
@@ -171,18 +222,27 @@ assume 3x Ecstasy types
  - some D<T> : B<T> where D for "Derived" class
 
  JIT produces:
-                         A (whatever it is)
 
-                                 ^
-                                 |
 
-                         interface i$B
-class B<Object> -->      abstract B implements i$B     <--  class B<Int>      "the shoulders"
+                                              class A
 
-        ^                        ^                             ^
-        |                        |                             |              "long arms"
+                                                 ^
+                                                 |
 
-class D<Object> ~~>      interface i$D extends i$B     <~~  class D<Int>
+interface iB<Object>                     ~~> interface iB             <~~ interface iB<Int>
+class B<Object> implements iB<Object>    --> abstract B implements iB <-- class B<Int>        "the shoulders"
+
+        ^                                        ^                             ^
+        |                                        |                             |              "long arms"
+
+interface iD<Object>                     ~~> interface iD extends IB  <~~ interface iB<Int>
+class D<Object> implements iB<Object>,iD<Object>                          class D<Int> implements iB<Int>,iD<Int>
+
+-------------------------------------        -----------------------      --------------------------
+Genericized Column                           Central Column               Specialized Column
+
+
+===
 
 // Ecstasy
 class C {
@@ -196,7 +256,7 @@ class C {
 // Java
 class C {
     void foo(Ctx ctx, Range<Orderable> range) {...} // or (Ctx ctx, Range#0 range)
-    void bar(Ctx ctx, Range range) {...}            // or (Ctx ctx, i$Range range) if Range extended Specializable
+    void bar(Ctx ctx, Range range) {...}            // or (Ctx ctx, iRange range) if Range extended Specializable
     Range baz(Ctx ctx, nType type, Orderable t1, Orderable t2) {
         return Range.new$(ctx, type, t1, t2);
     }
