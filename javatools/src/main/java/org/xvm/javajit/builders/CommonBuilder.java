@@ -102,8 +102,7 @@ public class CommonBuilder
         this.thisId        = classStruct.getIdentityConstant();
         this.isInterface   = classStruct.getFormat() == Format.INTERFACE;
         this.jitType       = thisType.getCallableJitType();
-        this.isSpecialized = jitType.isParamsSpecified() &&
-                            !jitType.equals(classStruct.getCanonicalType());
+        this.isSpecialized = jitType.isJitL2Specialized();
         this.isPrimitive   = type.isJitPrimitive();
     }
 
@@ -3934,6 +3933,7 @@ public class CommonBuilder
             // maps
 // TODO     "org.xtclang.ecstasy.maps.Map",
             "org.xtclang.ecstasy.maps.MapAppender",
+            "org.xtclang.ecstasy.maps.MapCollector",
 
             // numbers
             "org.xtclang.ecstasy.numbers.BFloat16",
@@ -3995,9 +3995,6 @@ public class CommonBuilder
                    "map",
                    "partition",
                    "reduce",
-
-                   // TODO: support Type property access for formal child types
-                   "equals",
 
                    // TODO: resolve formal Element types in nested lambda signatures
                    "any",

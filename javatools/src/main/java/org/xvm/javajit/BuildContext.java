@@ -132,8 +132,7 @@ public class BuildContext {
         this.isFunction    = methodInfo.isFunction();
         this.isConstructor = methodInfo.isCtorOrValidator();
         this.isOptimized   = jmd.optimizedMD != null;
-        this.isSpecialized = jitType.isParamsSpecified() &&
-                            !jitType.equals(typeInfo.getClassStructure().getCanonicalType());
+        this.isSpecialized = jitType.isJitL2Specialized();
         this.typeMatrix    = new TypeMatrix(this);
     }
 
@@ -164,8 +163,7 @@ public class BuildContext {
         this.isFunction    = propInfo.isConstant();
         this.isConstructor = false;
         this.isOptimized   = methodDesc.optimizedMD != null;
-        this.isSpecialized = jitType.isParamsSpecified() &&
-                            !jitType.equals(typeInfo.getClassStructure().getCanonicalType());
+        this.isSpecialized = jitType.isJitL2Specialized();
         this.typeMatrix    = new TypeMatrix(this);
     }
 
@@ -1366,6 +1364,11 @@ public class BuildContext {
     }
 
 
+    /**
+     * Load the {@link nType} represented by the specified formal constant.
+     *
+     * @return the register information for the loaded {@link nType}
+     */
     private RegisterInfo loadFormalType(CodeBuilder code, FormalConstant formalConst) {
         if (formalConst instanceof TypeParameterConstant typeParam) {
             return loadArgument(code, typeParam.getRegister());
@@ -1373,10 +1376,7 @@ public class BuildContext {
 
         if (formalConst instanceof FormalTypeChildConstant child) {
             loadFormalType(code, child.getParentConstant());
-            loadCtx(code);
-            code.ldc(child.getName())
-                .invokevirtual(CD_nObject, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString));
-            return new SingleSlot(child.getType(), Specific, CD_nType, "");
+            return loadFormalTypeChild(code, child);
         }
 
         if (formalConst instanceof DynamicFormalConstant dynamic) {
@@ -1384,6 +1384,16 @@ public class BuildContext {
         }
 
         throw new UnsupportedOperationException("FormalConstant=" + formalConst);
+    }
+
+    /**
+     * Complete loading a formal child type. The parent's nType is already on the Java stack.
+     */
+    private RegisterInfo loadFormalTypeChild(CodeBuilder code, FormalTypeChildConstant child) {
+        loadCtx(code);
+        code.ldc(child.getName())
+            .invokevirtual(CD_nObject, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString));
+        return new SingleSlot(child.getType(), Specific, CD_nType, "");
     }
 
     /**
@@ -1955,7 +1965,11 @@ public class BuildContext {
 
             RegisterInfo srcReg    = loadArgument(code, iArg);
             JitFlavor    srcFlavor = srcReg.flavor();
-            if (srcReg.flavor() == dstFlavor) {
+            if (srcFlavor == dstFlavor) {
+                if (srcFlavor == Specific && !srcReg.cd().equals(pd.cd) &&
+                        !Builder.isJitAssignable(srcReg.type(), pd.type)) {
+                    generateCheckCast(code, pd.type);
+                }
                 continue;
             }
 
@@ -2353,14 +2367,23 @@ public class BuildContext {
     }
 
     /**
-     * Get the property value.
+     * Get the property value. The target register value is already on Java stack.
      */
     public void buildGetProperty(CodeBuilder code, RegisterInfo targetReg, int propIdIndex, int retId) {
         PropertyConstant propId     = getConstant(propIdIndex, PropertyConstant.class);
         TypeConstant     targetType = targetReg.type();
-        PropertyInfo     propInfo   = propId.getPropertyInfo(targetType);
 
+        if (propId instanceof FormalTypeChildConstant child) {
+            assert targetType.isTypeOfType();
+
+            loadFormalTypeChild(code, child);
+            storeValue(code, retId, child.getType().getType());
+            return;
+        }
+
+        PropertyInfo  propInfo = propId.getPropertyInfo(targetType);
         JitMethodDesc jmdGet;
+
         if (targetType.getAccess() == Access.STRUCT && !propInfo.isFormalType()) {
             jmdGet = propInfo.getGetterJitDesc(builder, targetType);
             buildGetPropertyField(code, targetReg, propInfo, jmdGet);

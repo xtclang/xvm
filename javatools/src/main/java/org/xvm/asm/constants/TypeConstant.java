@@ -7232,6 +7232,55 @@ public abstract class TypeConstant
     }
 
     /**
+     * An Ecstasy type is called "layer two specializable" iff:
+     * <ul>
+     *   <li>it is parameterized (has generic types); and</li>
+     *   <li>at least one of the generic types is constrained by a type that can be assigned from a
+     *       JIT-Primitive type.</li>
+     * </ul>
+     *
+     * @return {@code true} iff this type is Specializable
+     *
+     * @see doc/jit_class_names.txt
+     */
+    public boolean isJitL2Specializable() {
+        if (!isSingleUnderlyingClass(true)) {
+            return false;
+        }
+
+        ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
+        if (!clz.isParameterized()) {
+            return false;
+        }
+
+        // the class is parameterized; it must be generic for this question to make any sense
+        assert containsGenericType(true);
+
+        for (TypeConstant typeConstraint : clz.getCanonicalType().getParamTypes()) {
+            for (TypeConstant typePrimitive : getConstantPool().getJitPrimitiveTypes()) {
+                if (typePrimitive.isA(typeConstraint)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @return {@code true} iff this type's callable JIT type is a non-canonical parameterization of
+     *         a {@link #isJitL2Specializable() specializable} type
+     *
+     * @see doc/jit_class_names.txt
+     */
+    public boolean isJitL2Specialized() {
+        TypeConstant   jitType     = getCallableJitType();
+        ClassStructure classStruct = (ClassStructure)
+                jitType.getSingleUnderlyingClass(true).getComponent();
+
+        return jitType.isParamsSpecified() && !jitType.equals(classStruct.getCanonicalType());
+    }
+
+    /**
      * @return true iff the specified type is represented by the Java interface and needs to be
      *         cast explicitly to {@code nObject} class to invoke its methods
      */

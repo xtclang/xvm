@@ -82,8 +82,9 @@ public abstract class nObject
      *
      * @see {@link org.xvm.javajit.builders.CommonBuilder#assembleGenericProperty}
      */
-    public nType $type(Ctx ctx, String name) {
-        return nType.$ensureType(ctx, $xvmType(ctx).resolveGenericType(name));
+    public nType $type(Ctx ctx, java.lang.String name) {
+        TypeConstant type = $xvmType(ctx).resolveGenericType(name);
+        return type == null ? null : nType.$ensureType(ctx, type);
     }
 
     public boolean $isImmut() {

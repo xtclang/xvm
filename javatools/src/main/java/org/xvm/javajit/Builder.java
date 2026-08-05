@@ -1711,7 +1711,9 @@ public abstract class Builder {
      * @return true iff the assignment is JIT-valid, false if the "checkcast" opcode is necessary
      */
     public static boolean isJitAssignable(TypeConstant srcType, TypeConstant dstType) {
-        return srcType.getCallableJitType().isA(dstType.getCallableJitType());
+        return srcType.isA(dstType) ||
+                !srcType.isJitL2Specialized() &&
+                srcType.getCallableJitType().isA(dstType.getCallableJitType());
     }
 
     /**

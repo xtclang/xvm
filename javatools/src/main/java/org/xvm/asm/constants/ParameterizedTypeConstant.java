@@ -857,7 +857,8 @@ public class ParameterizedTypeConstant
             } else {
                 var            entryParam     = listTypeParams.get(i);
                 StringConstant constName      = entryParam.getKey();
-                TypeConstant   typeConstraint = entryParam.getValue();
+                TypeConstant   typeConstraint = entryParam.getValue().resolveGenerics(pool,
+                        clz.new SimpleTypeResolver(pool, Arrays.asList(aconstCanonical)));
 
                 // drop the actual type down to the constraint
                 if (typeConstraint.isFormalTypeSequence()) {
