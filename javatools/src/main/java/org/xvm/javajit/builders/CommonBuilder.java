@@ -3982,29 +3982,15 @@ public class CommonBuilder
             Set.of(
                    // TODO: preserve formal Element narrowing through Stringable tests and lambdas
                    "appendTo",
-                   "estimateStringLength",
 
                    // TODO: resolve generic call signatures in the caller's formal-type context
-                   "associate",
-                   "associateBy",
-                   "associateWith",
-                   "filter",
                    "flatMap",
                    "groupBy",
                    "groupWith",
-                   "map",
-                   "partition",
-                   "reduce",
 
                    // TODO: resolve formal Element types in nested lambda signatures
                    "any",
-                   "clear",
-
-                   // TODO: narrow Ref-backed registers before loading their values
-                   "removeAll",
-
-                   // TODO: resolve generated interface hierarchy without class loading
-                   "sorted"),
+                   "clear"),
     "org.xtclang.ecstasy.Range",
             Set.of("appendTo", "estimateStringLength"), // TODO: if (Element.is(Type<Stringable>)) does not cast
     "org.xtclang.ecstasy.numbers.Number",

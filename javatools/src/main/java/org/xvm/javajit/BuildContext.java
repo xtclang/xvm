@@ -1128,7 +1128,7 @@ public class BuildContext {
      * */
     public RegisterInfo loadArgument(CodeBuilder code, int argId) {
         return argId >= 0
-            ? adjustRegister(code, getRegisterInfo(code, argId).load(code), true)
+            ? ensureRegister(code, argId).load(code)
             : argId <= Op.CONSTANT_OFFSET
                 ? loadConstant(code, argId)
                 : loadPredefineArgument(code, argId);
@@ -1137,10 +1137,8 @@ public class BuildContext {
     /**
      * Adjust the register type based on the type matrix type. This only appies to non-primitive
      * or boxed registers.
-     *
-     * @param loaded  if true, the register value has been loaded on the Java stack
      */
-    protected RegisterInfo adjustRegister(CodeBuilder code, RegisterInfo reg, boolean loaded) {
+    protected RegisterInfo adjustRegister(RegisterInfo reg) {
         if (reg.isJavaStack()) {
             return reg;
         }
@@ -1185,10 +1183,6 @@ public class BuildContext {
                 reg = new Narrowed(regId, reg.slots(), mtxType, flavor, narrowedCD, reg.slotCds(),
                         reg.name(), depth, reg);
                 registerInfos.put(regId, reg);
-                if (loaded) {
-                    // if already loaded, then add a cast
-                    code.checkcast(narrowedCD);
-                }
             }
         }
         return reg;
@@ -1205,7 +1199,7 @@ public class BuildContext {
         if (argId >= 0) {
             RegisterInfo reg = registerInfos.get(argId);
             assert reg != null;
-            return adjustRegister(code, reg, false);
+            return adjustRegister(reg);
         }
 
         if (argId == Op.A_THIS) {
