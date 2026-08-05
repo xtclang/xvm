@@ -596,9 +596,7 @@ public abstract class OpCondJump
         // this logic is almost identical to OpTest.buildTypeCheck();
         TypeConstant typeTarget = bctx.getArgumentType(m_nArg);
         if (m_nArg2 <= CONSTANT_OFFSET) {
-            TypeConstant typeTest = bctx.getArgumentType(m_nArg2);
-            assert typeTest.isTypeOfType();
-            typeTest = typeTest.getParamType(0);
+            TypeConstant typeTest = bctx.getTypeConstant(m_nArg2);
 
             if (typeTarget.isJavaPrimitive() || typeTarget.isXvmPrimitive()) {
                 // we can statically compute the result, which most probably means that a formal

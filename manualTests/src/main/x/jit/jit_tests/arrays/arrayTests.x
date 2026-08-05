@@ -1,3 +1,5 @@
+import ecstasy.collections.Aggregator;
+
 package arrayTests {
     @Inject Console console;
 
@@ -9,6 +11,7 @@ package arrayTests {
         testConstStringArray();
         testAnonArrayVar();
         testNamedArrayVar();
+//        testDistinct(); // TODO: depends on the compilation of Collections.reduce()
         shouldIterateUsingForLoop();
         shouldBeReadOnly();
     }
@@ -58,6 +61,16 @@ package arrayTests {
         assert c.size == 2;
         assert c[0] == 'a';
         assert c[1] == 'b';
+    }
+
+    void testDistinct() {
+        Int[] values = [1, 2, 1, 3, 2];
+        Int[] result = values.distinct().toArray();
+
+        assert result.size == 3;
+        assert result[0] == 1;
+        assert result[1] == 2;
+        assert result[2] == 3;
     }
 
     void shouldIterateUsingForLoop() {

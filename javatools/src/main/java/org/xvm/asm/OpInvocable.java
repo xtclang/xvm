@@ -495,7 +495,7 @@ public abstract class OpInvocable extends Op {
         if (infoMethod == null) {
             SignatureConstant sig = idMethod.getSignature();
             if (bctx.isSpecialized) {
-                sig = sig.resolveGenericTypes(bctx.pool(), bctx.jitType);
+                sig = sig.resolveGenericTypes(bctx.pool(), bctx::resolveFormalType);
             }
             infoMethod = infoTarget.getMethodBySignature(sig);
             assert infoMethod != null;

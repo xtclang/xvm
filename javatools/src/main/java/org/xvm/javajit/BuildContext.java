@@ -1065,6 +1065,10 @@ public class BuildContext {
 
     /**
      * Obtain the type of the specified argument or return value.
+     *
+     * @return the argument type, or {@code null} if {@code argId} identifies a register for which
+     *         the type matrix has no entry at the current op, for example because the op is
+     *         unreachable or the register has gone out of scope
      */
     private TypeConstant getArgumentType(int argId, boolean isReturn) {
         if (argId >= 0) {
@@ -2889,21 +2893,19 @@ public class BuildContext {
 
     private void assignReturn(CodeBuilder code, JitMethodDesc jmd, boolean isOptimized,
                               int i, int regId) {
-        int          iOpt  = isOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
-        JitParamDesc pdRet = isOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
+        int          iOpt     = isOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
+        JitParamDesc pdRet    = isOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
+        TypeConstant destType = regId == Op.A_IGNORE ? null : getReturnType(regId);
 
-        if (regId == Op.A_IGNORE) {
-            // the return is ignored, e.g just calling foo() instead of x = foo();
-            // if i == 0 then we need to pop the value from the stack, otherwise the return
-            // value is in the context, so we can just ignore it
+        if (destType == null) {
+            // the return is explicitly ignored or its destination has gone out of scope;
+            // if i == 0, we need to pop the value from the stack, otherwise the return value
+            // is in the context, so we can just ignore it
             if (i == 0) {
                 Builder.pop(code, pdRet.cd);
             }
             return;
         }
-
-        TypeConstant destType = getReturnType(regId);
-        assert destType != null;
 
         JitTypeDesc tdDest     = destType.getJitDesc(builder);
         JitFlavor   destFlavor = tdDest.flavor;
@@ -3445,7 +3447,7 @@ public class BuildContext {
         return jitType.resolveGenericType(sFormalName);
     }
 
-    protected TypeConstant resolveFormalType(FormalConstant formalConst) {
+    public TypeConstant resolveFormalType(FormalConstant formalConst) {
         int regId;
 
         FindRegister:

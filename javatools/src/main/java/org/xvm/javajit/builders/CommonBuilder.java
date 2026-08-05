@@ -3996,9 +3996,6 @@ public class CommonBuilder
                    "partition",
                    "reduce",
 
-                   // TODO: discard conditional call results whose destinations have left scope
-                   "distinct",
-
                    // TODO: support Type property access for formal child types
                    "equals",
 
