@@ -2,6 +2,8 @@ package org.xvm.javajit;
 
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassHierarchyResolver;
+import java.lang.classfile.ClassHierarchyResolver.ClassHierarchyInfo;
 
 import java.lang.classfile.attribute.SourceFileAttribute;
 
@@ -28,6 +30,7 @@ import org.xvm.javajit.builders.ExceptionBuilder;
 import org.xvm.javajit.builders.ModuleBuilder;
 import org.xvm.javajit.builders.PackageBuilder;
 
+import static org.xvm.javajit.Builder.CD_Class;
 import static org.xvm.javajit.Builder.MODULE;
 
 import static org.xvm.util.Handy.require;
@@ -328,8 +331,7 @@ public class TypeSystem {
             //     LineNumbersOption.DROP_LINE_NUMBERS
             // TODO: force some of them or make configurable
             ClassFile classFile = ClassFile.of(
-                ClassFile.ClassHierarchyResolverOption
-                         .of(builder.createClassHierarchyResolver(className)),
+                ClassFile.ClassHierarchyResolverOption.of(createClassHierarchyResolver()),
                 ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
                 ClassFile.StackMapsOption.GENERATE_STACK_MAPS,
                 ClassFile.DeadLabelsOption.DROP_DEAD_LABELS
@@ -342,6 +344,67 @@ public class TypeSystem {
             }
         }
         return null;
+    }
+
+    /**
+     * Create a resolver that obtains hierarchy information without loading a class whenever the
+     * information is available from an XVM artifact or an existing Java class file.
+     */
+    public ClassHierarchyResolver createClassHierarchyResolver() {
+        ClassHierarchyResolver resolver = this::resolveClassInfo;
+        return resolver
+                .orElse(ClassHierarchyResolver.ofResourceParsing(loader))
+                .orElse(ClassHierarchyResolver.ofClassLoading(loader))
+                .cached();
+    }
+
+    /**
+     * Resolve hierarchy information for an XVM-owned class without loading it.
+     */
+    private ClassHierarchyInfo resolveClassInfo(ClassDesc classDesc) {
+        if (!classDesc.isClassOrInterface()) {
+            return null;
+        }
+
+        String className = classDesc.descriptorString();
+        assert className.charAt(0) == 'L' && className.charAt(className.length() - 1) == ';';
+        className = className.replace('/', '.').substring(1, className.length() - 1);
+
+        ModuleLoader owner = findOwnerLoader(className);
+        return owner == null
+                ? null
+                : owner.typeSystem.resolveOwnedClassInfo(
+                        owner, className.substring(owner.prefix.length()), classDesc);
+    }
+
+    /**
+     * Resolve hierarchy information for a class owned by the specified module loader.
+     *
+     * @param owner      the loader of the owning module
+     * @param suffix     the Java class name without the module prefix
+     * @param classDesc  the Java class descriptor
+     */
+    protected ClassHierarchyInfo resolveOwnedClassInfo(ModuleLoader owner, String suffix,
+                                                       ClassDesc classDesc) {
+        Artifact art = deduceArtifact(owner.module, owner.prefix, suffix);
+        if (art == null) {
+            return null;
+        }
+
+        return switch (art.shape()) {
+            case Impl -> art.type().isJitInterface()
+                    ? ClassHierarchyInfo.ofInterface()
+                    : ClassHierarchyInfo.ofClass(ensureBuilder(art).getSuperCD());
+
+            case Enum -> ClassHierarchyInfo.ofClass(ensureBuilder(art).getSuperCD());
+
+            case Class -> ClassHierarchyInfo.ofClass(CD_Class);
+
+            case Exception -> ClassHierarchyInfo.ofClass(
+                    ((ExceptionBuilder) ensureBuilder(art)).getJavaExceptionSuperCD());
+
+            default -> null;
+            };
     }
 
     /**

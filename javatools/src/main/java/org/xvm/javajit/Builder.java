@@ -1,7 +1,6 @@
 package org.xvm.javajit;
 
 import java.lang.classfile.ClassBuilder;
-import java.lang.classfile.ClassHierarchyResolver;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 import java.lang.classfile.TypeKind;
@@ -103,39 +102,6 @@ public abstract class Builder {
         return superType == null
             ? thisType.isConst() ? CD_nConst : CD_nObject
             : ensureClassDesc(superType);
-    }
-
-    /**
-     * Create a ClassHierarchyResolver to compensate for what seems to be a weakness in the
-     * ClassFile builder. Despite the fact that at the start of building a class we provide
-     * all relevant information (e.g. class attributes, the super class), the builder may fire a
-     * {@link ClassHierarchyResolver#getClassInfo} request regarding the info about the class itself.
-     */
-    public ClassHierarchyResolver createClassHierarchyResolver(String className) {
-        TypeConstant thisType = getThisType();
-        if (thisType.isA(pool().typeModule()) || thisType.isA(pool().typeException())) {
-            return ClassHierarchyResolver.ofClassLoading(typeSystem.loader);
-        }
-
-        return classDesc -> {
-            String clzName = classDesc.descriptorString();
-            assert clzName.charAt(0) == 'L' && clzName.charAt(clzName.length() - 1) == ';';
-            clzName = clzName.replace('/', '.').substring(1, clzName.length() - 1);
-
-            if (clzName.equals(className)) {
-                return thisType.isJitInterface()
-                    ? ClassHierarchyResolver.ClassHierarchyInfo.ofInterface()
-                    : ClassHierarchyResolver.ClassHierarchyInfo.ofClass(getSuperCD());
-            }
-            // TODO: the problem is that the natural code for "removeAll" uses an Array<Int>;
-            //       to compile it we need to have to load Array<Int>, which extends Array
-            //       resulting in the CircularClassInitialization error
-            // The upcoming name work should remove this
-            if (clzName.equals(N_ArrayInt64)) {
-                return ClassHierarchyResolver.ClassHierarchyInfo.ofClass(CD_Array);
-            }
-            return ClassHierarchyResolver.ofClassLoading(typeSystem.loader).getClassInfo(classDesc);
-        };
     }
 
     // ----- helper methods ------------------------------------------------------------------------
