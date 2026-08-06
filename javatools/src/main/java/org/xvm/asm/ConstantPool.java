@@ -1933,14 +1933,7 @@ public class ConstantPool
      * @return the RegisterTypeConstant for the specified register number
      */
     public TypeParameterConstant ensureRegisterConstant(MethodConstant constMethod, int iReg, String sName) {
-        TypeParameterConstant constReg = null;
-        if (iReg == 0) {
-            constReg = (TypeParameterConstant) ensureLocatorLookup(Format.TypeParameter).get(constMethod);
-        }
-        if (constReg == null) {
-            constReg = register(new TypeParameterConstant(this, constMethod, sName, iReg));
-        }
-        return constReg;
+        return register(new TypeParameterConstant(this, constMethod, sName, iReg));
     }
 
     /**

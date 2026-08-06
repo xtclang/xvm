@@ -961,20 +961,33 @@ public class MethodStructure
 
         // generic types are passed to "static" lambdas as type parameters
         if (isLambda() && getTypeParamCount() > 0) {
-            SignatureConstant sigOrig = sigResolved;
+            SignatureConstant sigOrig     = sigResolved;
+            MethodConstant    idMethod    = getIdentityConstant();
+            int               cTypeParams = getTypeParamCount();
 
             sigResolved = sigResolved.resolveGenericTypes(pool, formalConst -> {
-                MethodConstant methodId = getIdentityConstant();
-                for (Parameter param : getParamArray()) {
-                    if (param.isTypeParameter() &&
-                            formalConst.equals(param.asTypeParameterConstant(methodId))) {
-                        TypeConstant typeOfType = sigOrig.getRawParams()[param.getIndex()];
-                        assert typeOfType.isTypeOfType();
-                        TypeConstant type = typeOfType.getParamType(0);
-                        return type.isJitPrimitive() ? type : null;
-                    }
+                if (!(formalConst instanceof TypeParameterConstant formalParam)) {
+                    return null;
                 }
-                return null;
+
+                // the formal type parameter already identifies its method and register; avoid
+                // recreating and registering a TypeParameterConstant, which can require a recursive
+                // comparison
+                MethodConstant idMethodP = formalParam.getMethod();
+                if (idMethodP != idMethod && idMethodP.getComponent() != this &&
+                        !idMethodP.equals(idMethod)) {
+                    return null;
+                }
+
+                int iParam = formalParam.getRegister();
+                if (iParam >= cTypeParams) {
+                    return null;
+                }
+
+                TypeConstant typeOfType = sigOrig.getRawParams()[iParam];
+                assert typeOfType.isTypeOfType();
+                TypeConstant type = typeOfType.getParamType(0);
+                return type.isJitPrimitive() ? type : null;
             });
         }
         return sigResolved;
