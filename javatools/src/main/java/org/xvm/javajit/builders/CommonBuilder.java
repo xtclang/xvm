@@ -3893,12 +3893,13 @@ public class CommonBuilder
             "org.xtclang.ecstasy.Assertion",
             "org.xtclang.ecstasy.Boolean",
             "org.xtclang.ecstasy.Closed",
+            "org.xtclang.ecstasy.Comparable",
             "org.xtclang.ecstasy.ConcurrentModification",
             "org.xtclang.ecstasy.Const",
             "org.xtclang.ecstasy.Deadlock",
-// TODO     "org.xtclang.ecstasy.Duplicable",               // requires virtual constructor support
+            "org.xtclang.ecstasy.Duplicable",
             "org.xtclang.ecstasy.Exception*",
-// TODO     "org.xtclang.ecstasy.Freezable",
+            "org.xtclang.ecstasy.Freezable",
             "org.xtclang.ecstasy.IllegalArgument",
             "org.xtclang.ecstasy.IllegalState",
             "org.xtclang.ecstasy.Iterable*",
@@ -3914,7 +3915,7 @@ public class CommonBuilder
             "org.xtclang.ecstasy.Range",
             "org.xtclang.ecstasy.ReadOnly",
             "org.xtclang.ecstasy.Sequential",
-// TODO     "org.xtclang.ecstasy.Service",
+            "org.xtclang.ecstasy.Service",
             "org.xtclang.ecstasy.Service$Aware",
             "org.xtclang.ecstasy.Sliceable*",
             "org.xtclang.ecstasy.StackOverflow",
@@ -3927,44 +3928,41 @@ public class CommonBuilder
             "org.xtclang.ecstasy.collections.Array$Mutability",
             "org.xtclang.ecstasy.collections.Collection",
             "org.xtclang.ecstasy.collections.List",
-// TODO     "org.xtclang.ecstasy.collections.UniformIndexed*",
+            "org.xtclang.ecstasy.collections.Set",
+            "org.xtclang.ecstasy.collections.UniformIndexed*",
 
             // io
             "org.xtclang.ecstasy.io.Reader",
-// TODO     "org.xtclang.ecstasy.io.TextPosition",
+            "org.xtclang.ecstasy.io.TextPosition",
             "org.xtclang.ecstasy.io.IOException",
             "org.xtclang.ecstasy.io.IllegalUTF",
 
             // maps
-// TODO     "org.xtclang.ecstasy.maps.Map",
+            "org.xtclang.ecstasy.maps.Map$Entry",
             "org.xtclang.ecstasy.maps.MapAppender",
             "org.xtclang.ecstasy.maps.MapCollector",
 
             // numbers
             "org.xtclang.ecstasy.numbers.BFloat16",
             "org.xtclang.ecstasy.numbers.BinaryFPNumber",
+            "org.xtclang.ecstasy.numbers.Bit",
             "org.xtclang.ecstasy.numbers.Dec*",
             "org.xtclang.ecstasy.numbers.Float16",
             "org.xtclang.ecstasy.numbers.Float32",
             "org.xtclang.ecstasy.numbers.Float64",
             "org.xtclang.ecstasy.numbers.Float128",
             "org.xtclang.ecstasy.numbers.FPConvertible",
+            "org.xtclang.ecstasy.numbers.Int*",
             "org.xtclang.ecstasy.numbers.Number",
-             "org.xtclang.ecstasy.numbers.FPNumber",
-// TODO     "org.xtclang.ecstasy.numbers.Int*",             // depends on IntLiteral
-            "org.xtclang.ecstasy.numbers.IntNumber",
-            "org.xtclang.ecstasy.numbers.IntConvertible",
-            "org.xtclang.ecstasy.numbers.IntLiteral",
+            "org.xtclang.ecstasy.numbers.FPNumber",
+            "org.xtclang.ecstasy.numbers.Nibble",
+            "org.xtclang.ecstasy.numbers.Number$compare$Family*",
             "org.xtclang.ecstasy.numbers.Number$Signum*",
-// TODO     "org.xtclang.ecstasy.numbers.UInt*",            // need Range support
-            "org.xtclang.ecstasy.numbers.IntN",
-            "org.xtclang.ecstasy.numbers.UIntN",
-            "org.xtclang.ecstasy.numbers.UIntNumber",
+            "org.xtclang.ecstasy.numbers.UInt*",
 
             // reflect
             "org.xtclang.ecstasy.reflect.Module",
-// TODO     "org.xtclang.ecstasy.reflect.Package",
-// TODO     "org.xtclang.ecstasy.reflect.Type",
+            "org.xtclang.ecstasy.reflect.Package",
 
             // text
             "org.xtclang.ecstasy.text.Char*",
@@ -3980,16 +3978,42 @@ public class CommonBuilder
     };
 
     private final static String[] NO_JIT_LIST = new String[] {
+            "org.xtclang.ecstasy.numbers.Int128",
+            "org.xtclang.ecstasy.numbers.UInt128",
     };
 
-    private final static Map<String, Set<String>> NO_JIT_METHODS = Map.of(
-    "org.xtclang.ecstasy.Range",
-            Set.of("appendTo", "estimateStringLength"), // TODO: if (Element.is(Type<Stringable>)) does not cast
-    "org.xtclang.ecstasy.numbers.Number",
+    private final static Map<String, Set<String>> NO_JIT_METHODS = Map.ofEntries(
+        Map.entry("org.xtclang.ecstasy.Service",
+            Set.of("passableAs")), // TODO: register narrowing for a formal return type
+        Map.entry("org.xtclang.ecstasy.collections.UniformIndexed",
+            Set.of("elementAt")), // TODO: NEWCG_N is not implemented
+        Map.entry("org.xtclang.ecstasy.collections.Set",
+            Set.of("symmetricDifference")), // TODO: MOV_TYPE for the Replicable virtual constructor
+        Map.entry("org.xtclang.ecstasy.Range",
+            Set.of("appendTo", "estimateStringLength")), // TODO: if (Element.is(Type<Stringable>)) does not cast
+        Map.entry("org.xtclang.ecstasy.numbers.Number",
             Set.of("converterFor",
-                   "converterTo"),
-    "org.xtclang.ecstasy.numbers.IntNumber",
-            Set.of("not")          // TODO: depends on virtual constructor
+                   "converterTo")),
+        Map.entry("org.xtclang.ecstasy.numbers.IntNumber",
+            Set.of("not")),         // TODO: depends on virtual constructor
+        Map.entry("org.xtclang.ecstasy.numbers.Bit",
+            Set.of("assert")),      // TODO: boxed Bit passed to an optimized invocation
+        Map.entry("org.xtclang.ecstasy.numbers.Int16",
+            Set.of("range")),       // TODO: RETURN_N with a formal range result
+        Map.entry("org.xtclang.ecstasy.numbers.Int32",
+            Set.of("range")),       // TODO: RETURN_N with a formal range result
+        Map.entry("org.xtclang.ecstasy.numbers.Int64",
+            Set.of("equals",       // TODO: Array<Bit> passed to Array<Object>
+                   "parse")),       // TODO: verifier stack mismatch
+        Map.entry("org.xtclang.ecstasy.numbers.UInt8",
+            Set.of("range")),       // TODO: RETURN_N with a formal range result
+        Map.entry("org.xtclang.ecstasy.numbers.UInt16",
+            Set.of("parse",         // TODO: GP_SUB for a formal value
+                   "range")),       // TODO: RETURN_N with a formal range result
+        Map.entry("org.xtclang.ecstasy.numbers.UInt32",
+            Set.of("range")),       // TODO: RETURN_N with a formal range result
+        Map.entry("org.xtclang.ecstasy.numbers.UInt64",
+            Set.of("range"))        // TODO: RETURN_N with a formal range result
     );
 
     private final static HashSet<String> SKIP_SET = new HashSet<>();

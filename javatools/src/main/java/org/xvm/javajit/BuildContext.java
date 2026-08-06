@@ -2318,7 +2318,7 @@ public class BuildContext {
             IdentityConstant thatId = type.getSingleUnderlyingClass(true);
 
             if (thatId.isNestMateOf(thisId)) {
-                return type.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+                return type.adjustAccess(thisId).ensureTypeInfo();
             }
         }
 
