@@ -209,6 +209,16 @@ public class xRTAlgorithms
             byte[]          abRaw  = xRTUInt8Delegate.getBytes(hBytes);
 
             switch (sAlgorithm) {
+            case "AES", "AES/CBC/PKCS5Padding", "AES/ECB/PKCS5Padding":
+                return switch (keyForm) {
+                    case PublicOrSecret, PrivateOrSecret ->
+                        new SecretKeySpec(abRaw, "AES");
+
+                    default ->
+                        throw new GeneralSecurityException(
+                            sAlgorithm + " algorithm only supports secret keys");
+                };
+
             case "DES":
                 return switch (keyForm) {
                     case PublicOrSecret, PrivateOrSecret ->
