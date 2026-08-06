@@ -153,7 +153,7 @@ II. Ecstasy to Java Classfile compiler (JIT) class naming conventions:
       reference);
    h) the absence of an abstract class representing ranges of all Orderable types and an abstract
       class representing ranges of all Sequential types is a conscious decision; similarly, the
-      absence of a distince layer two Speciailization based solely on JIT Shapes is also a conscious
+      absence of a distinct layer two Speciailization based solely on JIT Shapes is also a conscious
       decision; in both cases, we accept additional unnecessary replication of code, and if we later
       realize that we dislike the resulting trade-offs, the design should be easily modifiable.
 
