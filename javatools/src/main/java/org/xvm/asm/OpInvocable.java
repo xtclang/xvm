@@ -493,11 +493,22 @@ public abstract class OpInvocable extends Op {
         MethodConstant  idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
         MethodInfo      infoMethod = infoTarget.getMethodById(idMethod, true); // runtime hack
         if (infoMethod == null) {
-            SignatureConstant sig = idMethod.getSignature();
+            SignatureConstant sig    = idMethod.getSignature();
+            boolean           fForce = false;
+
             if (bctx.isSpecialized) {
-                sig = sig.resolveGenericTypes(bctx.pool(), bctx::resolveFormalType);
+                fForce = sig.containsTypeParameters();
+                sig    = sig.resolveGenericTypes(bctx.pool(), bctx::resolveFormalType);
             }
+
             infoMethod = infoTarget.getMethodBySignature(sig);
+            if (infoMethod == null && fForce) {
+                // a cast from a specialized receiver to a method-formal parameterized type can
+                // retain the actual specialized type; for example, in Collection<Char>.flatMap,
+                // clear().as(Collection<Value>) remains Collection<Char>, while Value resolves to
+                // its Object constraint; allow addAll(Iterable<Char>) to match Iterable<Object>
+                infoMethod = infoTarget.getMethodBySignature(sig, true);
+            }
             assert infoMethod != null;
         }
         return infoMethod;

@@ -730,10 +730,12 @@ public class BuildContext {
             JitFlavor flavor      = paramDesc.flavor;
             boolean   withDefault = false;
             switch (flavor) {
-            case Primitive, Specific, Widened:
+            case Primitive, Specific, Widened: {
+                TypeConstant regType = flavor == Primitive ? paramDesc.type : type;
                 registerInfos.put(varIndex,
-                    new SingleSlot(varIndex, slot, flavor, type, paramDesc.cd, name));
+                    new SingleSlot(varIndex, slot, flavor, regType, paramDesc.cd, name));
                 break;
+            }
 
             case PrimitiveWithDefault, SpecificWithDefault, WidenedWithDefault: {
                 assert param.hasDefaultValue();
@@ -759,8 +761,9 @@ public class BuildContext {
                 Builder.store(code, paramDesc.cd, slot);
                 code.labelBinding(ifNotDefault);
 
-                registerInfos.put(varIndex,
-                    new SingleSlot(varIndex, slot, flavor.baseFlavor, type, paramDesc.cd, name));
+                TypeConstant regType = flavor == PrimitiveWithDefault ? paramDesc.type : type;
+                registerInfos.put(varIndex, new SingleSlot(varIndex, slot, flavor.baseFlavor,
+                        regType, paramDesc.cd, name));
                 break;
             }
 
@@ -799,15 +802,15 @@ public class BuildContext {
                 i++; // we consumed the next param
 
                 registerInfos.put(varIndex,
-                    new ExtendedSlot(this, varIndex, slot, extSlot, NullablePrimitive, type,
-                        paramDesc.cd, name));
+                    new ExtendedSlot(this, varIndex, slot, extSlot, NullablePrimitive,
+                        paramDesc.type, paramDesc.cd, name));
                 break;
             }
 
             case XvmPrimitiveWithDefault, NullableXvmPrimitiveWithDefault: {
                 assert param.hasDefaultValue();
 
-                ClassDesc[] cds          = JitTypeDesc.getXvmPrimitiveClasses(type);
+                ClassDesc[] cds          = JitTypeDesc.getXvmPrimitiveClasses(paramDesc.type);
                 Label       ifNotDefault = code.newLabel();
                 int         extSlot      = code.parameterSlot(extraArgs + i + cds.length);
 
@@ -847,7 +850,7 @@ public class BuildContext {
             }
 
             case XvmPrimitive, NullableXvmPrimitive: {
-                ClassDesc[] cds   = JitTypeDesc.getXvmPrimitiveClasses(type);
+                ClassDesc[] cds   = JitTypeDesc.getXvmPrimitiveClasses(paramDesc.type);
                 int[]       slots = new int[cds.length];
 
                 for (int j = 0; j < cds.length; j++) {
@@ -871,7 +874,7 @@ public class BuildContext {
                         : JitTypeDesc.getXvmPrimitiveClass(paramDesc.type);
 
                 registerInfos.put(varIndex, new MultiSlot(this, varIndex, slots, extSlot,
-                        flavor, type, cd, cds, name));
+                        flavor, paramDesc.type, cd, cds, name));
                 break;
             }
             }
