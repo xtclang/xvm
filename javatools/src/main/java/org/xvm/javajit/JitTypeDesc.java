@@ -5,10 +5,12 @@ import java.lang.constant.ClassDesc;
 import org.xvm.asm.constants.TypeConstant;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_byte;
 import static java.lang.constant.ConstantDescs.CD_double;
 import static java.lang.constant.ConstantDescs.CD_float;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
+import static java.lang.constant.ConstantDescs.CD_short;
 
 import static org.xvm.javajit.Builder.CD_Dec128;
 import static org.xvm.javajit.Builder.CD_Dec32;
@@ -132,5 +134,34 @@ public class JitTypeDesc {
             };
         }
         throw new IllegalArgumentException("Unsupported primitive: " + baseType);
+    }
+
+    /**
+     * @return the ClassDesc to use for a primitive field if the specified type is optimizable to a
+     * single Java primitive ClassDesc; null otherwise
+     */
+    public static ClassDesc getPrimitiveFieldClass(TypeConstant type) {
+        TypeConstant sansNullable = type.removeNullable();
+        if (sansNullable.isJavaPrimitive()) {
+            return switch (sansNullable.getSingleUnderlyingClass(false).getName()) {
+                case "Bit", "Byte", "Nibble", "Int8", "UInt8"
+                        -> CD_byte;
+                case "Int16", "UInt16"
+                        -> CD_short;
+                case "Char", "Int32", "UInt32"
+                        -> CD_int;
+                case "Int64", "UInt64"
+                        -> CD_long;
+                case "Float16", "Float32"
+                        -> CD_float;
+                case "Float64"
+                        -> CD_double;
+                case "Boolean"
+                        -> CD_boolean;
+                default
+                        -> null;
+            };
+        }
+        return null;
     }
 }

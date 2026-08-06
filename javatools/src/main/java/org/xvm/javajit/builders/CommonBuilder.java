@@ -358,9 +358,7 @@ public class CommonBuilder
             return ShallowSizeOf.fieldOf(Object.class);
         }
         TypeConstant type = prop.getType();
-        ClassDesc    cd   = type.isJavaPrimitive()
-                ? JitTypeDesc.getJavaPrimitive(type)
-                : null;
+        ClassDesc    cd   = JitTypeDesc.getPrimitiveFieldClass(type);
 
         return cd == null
             ? ShallowSizeOf.fieldOf(Object.class)
@@ -521,12 +519,16 @@ public class CommonBuilder
             flags |= ClassFile.ACC_STATIC;
         }
         switch (jtd.flavor) {
-        case Specific, Widened, Primitive:
+        case Specific, Widened:
             classBuilder.withField(jitName, jtd.cd, flags);
             break;
 
+        case Primitive:
+            classBuilder.withField(jitName, JitTypeDesc.getPrimitiveFieldClass(prop.getType()), flags);
+            break;
+
         case NullablePrimitive:
-            classBuilder.withField(jitName, jtd.cd, flags);
+            classBuilder.withField(jitName, JitTypeDesc.getPrimitiveFieldClass(prop.getType()), flags);
             classBuilder.withField(jitName+EXT, CD_boolean, flags);
             break;
 
@@ -797,7 +799,7 @@ public class CommonBuilder
                 // must be setting a primitive to Null
                 assert reg.type().isOnlyNullable();
                 code.pop();
-                ClassDesc cd = JitTypeDesc.getJavaPrimitive(baseType);
+                ClassDesc cd = JitTypeDesc.getPrimitiveFieldClass(baseType);
                 Builder.defaultLoad(code, cd);
                 code.putfield(CD_this, jitName, cd)
                     .aload(0)
@@ -820,7 +822,7 @@ public class CommonBuilder
             }
 
             case "Primitive->Primitive" ->
-                code.putfield(CD_this, jitName, reg.cd());
+                code.putfield(CD_this, jitName, JitTypeDesc.getPrimitiveFieldClass(baseType));
 
             case "Primitive->Specific", "XvmPrimitive->Specific" -> {
                 Builder.box(code, reg);
@@ -937,7 +939,10 @@ public class CommonBuilder
             int ctxSlot = code.parameterSlot(isOpt ? jmd.optimizedCtx() : jmd.standardCtx());
             if (isOpt) {
                 JitParamDesc pdOpt = jmd.optimizedReturns[0];
-                ClassDesc    cdOpt = pdOpt.cd;
+                TypeConstant type  = prop.getType();
+                ClassDesc    cdOpt = type.removeNullable().isJavaPrimitive()
+                                        ? JitTypeDesc.getPrimitiveFieldClass(type)
+                                        : pdOpt.cd;
                 switch (pdOpt.flavor) {
                 case Specific, Widened, Primitive:
                     if (prop.isConstant()) {

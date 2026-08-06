@@ -39,10 +39,12 @@ import org.xvm.util.PackedInteger;
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 import static java.lang.constant.ConstantDescs.CD_Throwable;
 import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_byte;
 import static java.lang.constant.ConstantDescs.CD_double;
 import static java.lang.constant.ConstantDescs.CD_float;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
+import static java.lang.constant.ConstantDescs.CD_short;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
@@ -1352,6 +1354,10 @@ public abstract class Builder {
         assert cd.isPrimitive();
 
         switch (cd.descriptorString()) {
+        case "B": // byte
+            code.invokestatic(CD_JavaByte, "valueOf", MethodTypeDesc.of(CD_JavaByte, CD_byte));
+            break;
+
         case "Z": // boolean
             code.invokestatic(CD_JavaBoolean, "valueOf", MethodTypeDesc.of(CD_JavaBoolean, CD_boolean));
             break;
@@ -1370,6 +1376,10 @@ public abstract class Builder {
 
         case "D": // double
             code.invokestatic(CD_JavaDouble, "valueOf", MethodTypeDesc.of(CD_JavaDouble, CD_double));
+            break;
+
+        case "S": // short
+            code.invokestatic(CD_JavaShort, "valueOf", MethodTypeDesc.of(CD_JavaShort, CD_short));
             break;
 
         default:
@@ -1972,11 +1982,13 @@ public abstract class Builder {
     public static final ClassDesc CD_TypeSystem          = ClassDesc.of(TypeSystem.class.getName());
 
     public static final ClassDesc CD_JavaSystem          = ClassDesc.of(java.lang.System.class.getName());
+    public static final ClassDesc CD_JavaByte            = ClassDesc.of(java.lang.Byte.class.getName());
     public static final ClassDesc CD_JavaBoolean         = ClassDesc.of(java.lang.Boolean.class.getName());
     public static final ClassDesc CD_JavaDouble          = ClassDesc.of(java.lang.Double.class.getName());
     public static final ClassDesc CD_JavaFloat           = ClassDesc.of(java.lang.Float.class.getName());
     public static final ClassDesc CD_JavaInteger         = ClassDesc.of(java.lang.Integer.class.getName());
     public static final ClassDesc CD_JavaLong            = ClassDesc.of(java.lang.Long.class.getName());
+    public static final ClassDesc CD_JavaShort           = ClassDesc.of(java.lang.Short.class.getName());
     public static final ClassDesc CD_JavaMath            = ClassDesc.of(java.lang.Math.class.getName());
     public static final ClassDesc CD_JavaObject          = ClassDesc.of(java.lang.Object.class.getName());
     public static final ClassDesc CD_JavaString          = ClassDesc.of(java.lang.String.class.getName());
