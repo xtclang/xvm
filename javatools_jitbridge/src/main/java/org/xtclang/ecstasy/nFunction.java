@@ -14,7 +14,7 @@ import org.xvm.javajit.Ctx;
 /**
  * Native "Function" support.
  */
-public class nFunction extends nObj implements Function {
+public class nFunction extends nObject implements Function {
     public nFunction(Ctx ctx, TypeConstant type,
                      MethodHandle stdMethod, MethodHandle optMethod, boolean immmutable) {
         super(ctx);

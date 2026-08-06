@@ -1,20 +1,25 @@
 package org.xvm.javajit;
 
-import java.io.FileOutputStream;
+import java.io.File;
 import java.io.IOException;
-import java.io.PrintStream;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import java.util.function.Predicate;
+
+import java.util.stream.Stream;
 
 import org.xvm.api.Connector;
 
@@ -153,15 +158,27 @@ public class JitConnector
                 throw new RuntimeException(cause);
             }
         } finally {
-            try {
-                // dump the generated classes
-                Predicate<String> filter = s -> dumpNames.stream().anyMatch(s::contains);
+            // dump the generated classes.
+            // each class will be dumped to a separate file under a directory
+            // ./jasm/<module-name>/<class-name>.jasm
+            Predicate<String> filter     = s -> dumpNames.stream().anyMatch(s::contains);
+            File              curDir     = new File(".").getAbsoluteFile();
+            File              jasmDir    = new File(curDir, "jasm");
+            String            moduleName = loader.typeSystem.mainModule().getSimpleName();
+            File              moduleDir  = new File(jasmDir, moduleName);
+            File              ecstasyDir = new File(jasmDir, "ecstasy");
 
-                String moduleName = loader.typeSystem.mainModule().getSimpleName();
-                loader.dump(new PrintStream(new FileOutputStream(moduleName + ".jasm")), filter);
-                xvm.nativeTypeSystem.loader
-                      .dump(new PrintStream(new FileOutputStream("ecstasy.jasm")), filter);
-            } catch (IOException ignore) {}
+            // delete the existing jasm directory
+            try (Stream<Path> paths = Files.walk(jasmDir.toPath())) {
+                paths.sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
+            } catch (IOException e) {
+                System.err.println(e.getMessage());
+            }
+
+            moduleDir.mkdirs();
+            loader.dump(moduleDir, filter);
+            ecstasyDir.mkdirs();
+            xvm.nativeTypeSystem.loader.dump(ecstasyDir, filter);
         }
     }
 
@@ -215,6 +232,6 @@ public class JitConnector
 
     // TEMPORARY: manually added names
     private final static String[] CLASS_DUMP_LIST = new String[] {
-        "¤module", "Test",
+        "¤module",
     };
 }

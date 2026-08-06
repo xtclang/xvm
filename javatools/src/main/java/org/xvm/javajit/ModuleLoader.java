@@ -1,5 +1,9 @@
 package org.xvm.javajit;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 
 import java.lang.classfile.ClassFile;
@@ -109,7 +113,7 @@ public class ModuleLoader
 
     // ----- debugging -----------------------------------------------------------------------------
 
-    public void dump(PrintStream out, Predicate<String> filter) {
+    public void dump(File dir, Predicate<String> filter) {
         // TODO: REMOVE
 
         // the "dumping" itself causes the classes to be transitively loaded;
@@ -126,29 +130,38 @@ public class ModuleLoader
 
                 ClassModel model       = ClassFile.of().parse(entry.getValue());
                 boolean    isInterface = (model.flags().flagsMask() & ClassFile.ACC_INTERFACE) != 0;
-                out.println("\n**** " + (isInterface ? "interface " : "class ") +
-                        className.replace('/', '.'));
+                String     fileName    = className.replace('/', '.');
+                File       file        = new File(dir, fileName + ".jasm");
 
-                model.superclass().ifPresent(ce ->
-                    out.println("Extends: " + ce.asInternalName().replace('/', '.')));
+                try (PrintStream out = new PrintStream(new FileOutputStream(file))) {
+                    out.println("\n**** " + (isInterface ? "interface " : "class ") +
+                            className.replace('/', '.'));
 
-                List<ClassEntry> interfaces = model.interfaces();
-                if (!interfaces.isEmpty()) {
-                    out.println("Implements:");
-                    interfaces.stream().map(iface -> "  " + iface.asInternalName().replace('/', '.')).
-                        forEach(out::println);
+                    model.superclass().ifPresent(ce ->
+                            out.println("Extends: " + ce.asInternalName().replace('/', '.')));
+
+                    List<ClassEntry> interfaces = model.interfaces();
+                    if (!interfaces.isEmpty()) {
+                        out.println("Implements:");
+                        interfaces.stream()
+                                .map(iface -> "  " + iface.asInternalName().replace('/', '.'))
+                                .forEach(out::println);
+                    }
+
+                    out.println("Fields:");
+                    model.fields()
+                            .stream()
+                            .map(f -> "  " + f.fieldName() + " " + f.fieldTypeSymbol().descriptorString())
+                            .forEach(out::println);
+
+                    out.println("Methods:");
+                    model.methods().stream().map(m -> "  " + m.methodName() +
+                                    m.methodTypeSymbol().displayDescriptor() +
+                                    (m.code().isPresent() ? "\n" + render(m.code().get().toDebugString()) : "")).
+                            forEach(out::println);
+                } catch (FileNotFoundException e) {
+                    System.err.println(e.getMessage());
                 }
-
-                out.println("Fields:");
-                model.fields().stream().map(f ->
-                        "  " + f.fieldName() + " " + f.fieldTypeSymbol().descriptorString()).
-                    forEach(out::println);
-
-                out.println("Methods:");
-                model.methods().stream().map(m -> "  " + m.methodName() +
-                    m.methodTypeSymbol().displayDescriptor() +
-                        (m.code().isPresent() ? "\n" + render(m.code().get().toDebugString()) : "")).
-                    forEach(out::println);
             }
         } while (!loadedClasses.isEmpty() && --iters > 0);
     }

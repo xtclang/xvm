@@ -23,7 +23,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 import static org.xvm.javajit.Builder.CD_TypeConstant;
-import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.DataType;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
@@ -88,10 +88,10 @@ public class JumpIsA
         // load the argument and get its type
         RegisterInfo reg = bctx.loadArgument(code, m_nArgCond);
         if (reg.type().isJitInterface()) {
-            code.checkcast(CD_nObj);
+            code.checkcast(CD_nObject);
         }
         bctx.loadCtx(code);
-        code.invokevirtual(CD_nObj, "$xvmType", MD_xvmType);
+        code.invokevirtual(CD_nObject, "$xvmType", MD_xvmType);
         // argument TypeConstant is on the stack, store in a slot so we can reload for
         // each case test
         int slot = bctx.storeTempValue(code, CD_TypeConstant);

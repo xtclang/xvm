@@ -22,6 +22,10 @@ public class NativeNames {
 
         reservedMethodName.put("Iterator/next/0", "next");
 
+        reservedMethodName.put("reflect.Ref/get/0", "get");
+        reservedMethodName.put("reflect.Ref/peek/0", "peek");
+        reservedMethodName.put("reflect.Var/set/1", "set");
+
         reservedMethodName.put("Boolean/not/0",    "not");
         reservedMethodName.put("Boolean/and/1",    "and");
         reservedMethodName.put("Boolean/or/1",     "or");
@@ -38,6 +42,7 @@ public class NativeNames {
         reservedMethodName.put("collections.Collection/reify/0", "reify");
 
         reservedMethodName.put("numbers.IntConvertible/toIntN/0",  "toIntN");
+        reservedMethodName.put("numbers.IntConvertible/toUInt/0",  "toUInt");
         reservedMethodName.put("numbers.IntConvertible/toUIntN/0", "toUIntN");
 
         reservedMethodName.put("numbers.FPnumber/toIntN/1",  "toIntN$FP");

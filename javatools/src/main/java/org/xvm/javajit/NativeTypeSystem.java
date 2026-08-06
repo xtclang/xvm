@@ -4,11 +4,14 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassHierarchyResolver;
+import java.lang.classfile.ClassHierarchyResolver.ClassHierarchyInfo;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.Interfaces;
 import java.lang.classfile.MethodModel;
 import java.lang.classfile.Superclass;
 
+import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 
 import java.net.MalformedURLException;
@@ -64,6 +67,7 @@ public class NativeTypeSystem
         } catch (MalformedURLException e) {
             throw new IllegalStateException("Invalid path: " + bridgePath);
         }
+        bridgeHierarchyResolver = ClassHierarchyResolver.ofResourceParsing(bridgeLoader);
 
         registerNativeClasses();
     }
@@ -121,6 +125,11 @@ public class NativeTypeSystem
      * {@link ClassLoader#getResourceAsStream(String)}" API.
      */
     private final ClassLoader bridgeLoader;
+
+    /**
+     * The hierarchy resolver for existing JIT bridge classes.
+     */
+    private final ClassHierarchyResolver bridgeHierarchyResolver;
 
     /**
      * A cache of native class names keyed by class id.
@@ -201,10 +210,15 @@ public class NativeTypeSystem
      * Augment the existing native class with the Ecstasy methods.
      */
     private byte[] augmentNativeClass(ClassModel model, String className, TypeConstant type) {
-        Builder   builder   = ensureBuilder(type, ClassfileShape.Impl, className, model);
+        IdentityConstant id      = type.getSingleUnderlyingClass(true);
+        ClassStructure   struct  = (ClassStructure) id.getComponent();
+        Artifact         art     = new Artifact(type, struct, ClassfileShape.Impl, className);
+        Builder          builder = type.isArray()
+                                    ? new ArrayBuilder(this, art, model)
+                                    : new AugmentingBuilder(this, art, model);
+
         ClassFile classFile = ClassFile.of(
-                ClassFile.ClassHierarchyResolverOption
-                         .of(builder.createClassHierarchyResolver(className)),
+                ClassFile.ClassHierarchyResolverOption.of(createClassHierarchyResolver()),
                 ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
                 ClassFile.StackMapsOption.GENERATE_STACK_MAPS,
                 ClassFile.DeadLabelsOption.DROP_DEAD_LABELS);
@@ -236,19 +250,13 @@ public class NativeTypeSystem
         });
     }
 
-    protected Builder ensureBuilder(
-            TypeConstant   type,
-            ClassfileShape shape,
-            String         className,
-            ClassModel     model) {
-        assert model != null;
-
-        IdentityConstant id     = type.getSingleUnderlyingClass(true);
-        ClassStructure   struct = (ClassStructure) id.getComponent();
-        Artifact         art    = new Artifact(type, struct, shape, className);
-        return type.isArray()
-                ? new ArrayBuilder(this, art, model)
-                : new AugmentingBuilder(this, art, model);
+    @Override
+    protected ClassHierarchyInfo resolveOwnedClassInfo(ModuleLoader owner, String suffix,
+                                                       ClassDesc classDesc) {
+        ClassHierarchyInfo info = bridgeHierarchyResolver.getClassInfo(classDesc);
+        return info == null
+                ? super.resolveOwnedClassInfo(owner, suffix, classDesc)
+                : info;
     }
 
     // ----- internal ------------------------------------------------------------------------------

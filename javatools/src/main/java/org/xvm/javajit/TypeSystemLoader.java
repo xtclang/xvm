@@ -1,9 +1,11 @@
 package org.xvm.javajit;
 
+import java.io.File;
 import java.io.PrintStream;
 
 import java.util.Arrays;
 
+import java.util.Set;
 import java.util.function.Predicate;
 
 import org.xvm.asm.ModuleStructure;
@@ -82,8 +84,9 @@ public class TypeSystemLoader
 
     // ----- debugging -----------------------------------------------------------------------------
 
-    public void dump(PrintStream out, Predicate<String> filter) {
+    public void dump(File dir, Predicate<String> filter) {
         // Arrays.stream(shared).forEach(loader -> loader.dump(out));
-        Arrays.stream(owned).forEach(loader -> loader.dump(out, filter));
+        // Arrays.stream(shared).forEach(loader -> loader.dump(out));
+        Arrays.stream(owned).forEach(loader -> loader.dump(dir, filter));
     }
 }

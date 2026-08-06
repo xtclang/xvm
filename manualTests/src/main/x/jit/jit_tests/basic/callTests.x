@@ -72,6 +72,7 @@ package callTests {
         assert testNullableXvmPrimitiveWithDefault()  == 42;
 
         testSuperCall();
+        testCovariantSuperCall();
     }
 
     Int testStandardWithDefault(Int i, Int j = 2) = i + j;
@@ -149,5 +150,22 @@ package callTests {
         }
 
         assert new Test().f() == 11;
+    }
+
+    void testCovariantSuperCall() {
+        interface Base {
+            Base! self() = this;
+        }
+
+        interface Derived extends Base {
+            @Override
+            Derived self() = super().as(Derived);
+        }
+
+        class Test(Int value) implements Derived {
+        }
+
+        Test result = new Test(42).self();
+        assert result.value == 42;
     }
 }

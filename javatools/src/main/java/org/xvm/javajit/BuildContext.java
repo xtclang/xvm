@@ -39,6 +39,7 @@ import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DecoratedClassConstant;
+import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -92,7 +93,7 @@ import static org.xvm.javajit.Builder.CD_JavaString;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nException;
 import static org.xvm.javajit.Builder.CD_nFunction;
-import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.CD_nRef;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.EXT;
@@ -122,7 +123,7 @@ public class BuildContext {
         this.className     = builder.art.className();
         this.typeInfo      = typeInfo;
         this.thisType      = typeInfo.getType();
-        this.jitType       = thisType.getCanonicalJitType();
+        this.jitType       = thisType.getCallableJitType();
         this.callChain     = methodInfo.getChain();
         this.methodStruct  = callChain[0].getMethodStructure();
         this.callDepth     = 0;
@@ -131,8 +132,7 @@ public class BuildContext {
         this.isFunction    = methodInfo.isFunction();
         this.isConstructor = methodInfo.isCtorOrValidator();
         this.isOptimized   = jmd.optimizedMD != null;
-        this.isSpecialized = jitType.isParamsSpecified() &&
-                            !jitType.equals(typeInfo.getClassStructure().getCanonicalType());
+        this.isSpecialized = jitType.isJitL2Specialized();
         this.typeMatrix    = new TypeMatrix(this);
     }
 
@@ -150,7 +150,7 @@ public class BuildContext {
         this.className     = builder.art.className();
         this.typeInfo      = typeInfo;
         this.thisType      = typeInfo.getType();
-        this.jitType       = thisType.getCanonicalJitType();
+        this.jitType       = thisType.getCallableJitType();
         this.callDepth     = 0;
         this.callChain     = isGetter
                 ? propInfo.ensureOptimizedGetChain(typeInfo, null)
@@ -163,8 +163,7 @@ public class BuildContext {
         this.isFunction    = propInfo.isConstant();
         this.isConstructor = false;
         this.isOptimized   = methodDesc.optimizedMD != null;
-        this.isSpecialized = jitType.isParamsSpecified() &&
-                            !jitType.equals(typeInfo.getClassStructure().getCanonicalType());
+        this.isSpecialized = jitType.isJitL2Specialized();
         this.typeMatrix    = new TypeMatrix(this);
     }
 
@@ -504,8 +503,8 @@ public class BuildContext {
                 op.computeTypes(this);
             } else {
                 // TODO: remove
-                System.err.println("Dead code: " + Op.toName(op.getOpCode()) + " at " + this +
-                    " for " + thisType.removeAccess().getValueString());
+                // System.err.println("Dead code: " + Op.toName(op.getOpCode()) + " at " + this +
+                //    " for " + thisType.removeAccess().getValueString());
             }
         }
 
@@ -1064,6 +1063,10 @@ public class BuildContext {
 
     /**
      * Obtain the type of the specified argument or return value.
+     *
+     * @return the argument type, or {@code null} if {@code argId} identifies a register for which
+     *         the type matrix has no entry at the current op, for example because the op is
+     *         unreachable or the register has gone out of scope
      */
     private TypeConstant getArgumentType(int argId, boolean isReturn) {
         if (argId >= 0) {
@@ -1105,8 +1108,9 @@ public class BuildContext {
         }
 
         return switch (argId) {
-            case Op.A_THIS  -> typeMatrix.getType(argId, currOpAddr);
-            case Op.A_SUPER -> {
+            case Op.A_THIS,
+                 Op.A_STRUCT -> typeMatrix.getType(Op.A_THIS, currOpAddr);
+            case Op.A_SUPER  -> {
                 TypeConstant typeSuper = callChain[callDepth + 1].getIdentity().getType();
                 assert typeSuper.isMethod();
                 yield pool().bindMethodTarget(typeSuper);
@@ -1124,7 +1128,7 @@ public class BuildContext {
      * */
     public RegisterInfo loadArgument(CodeBuilder code, int argId) {
         return argId >= 0
-            ? adjustRegister(code, getRegisterInfo(code, argId).load(code), true)
+            ? ensureRegister(code, argId).load(code)
             : argId <= Op.CONSTANT_OFFSET
                 ? loadConstant(code, argId)
                 : loadPredefineArgument(code, argId);
@@ -1133,10 +1137,8 @@ public class BuildContext {
     /**
      * Adjust the register type based on the type matrix type. This only appies to non-primitive
      * or boxed registers.
-     *
-     * @param loaded  if true, the register value has been loaded on the Java stack
      */
-    protected RegisterInfo adjustRegister(CodeBuilder code, RegisterInfo reg, boolean loaded) {
+    protected RegisterInfo adjustRegister(RegisterInfo reg) {
         if (reg.isJavaStack()) {
             return reg;
         }
@@ -1181,10 +1183,6 @@ public class BuildContext {
                 reg = new Narrowed(regId, reg.slots(), mtxType, flavor, narrowedCD, reg.slotCds(),
                         reg.name(), depth, reg);
                 registerInfos.put(regId, reg);
-                if (loaded) {
-                    // if already loaded, then add a cast
-                    code.checkcast(narrowedCD);
-                }
             }
         }
         return reg;
@@ -1201,7 +1199,7 @@ public class BuildContext {
         if (argId >= 0) {
             RegisterInfo reg = registerInfos.get(argId);
             assert reg != null;
-            return adjustRegister(code, reg, false);
+            return adjustRegister(reg);
         }
 
         if (argId == Op.A_THIS) {
@@ -1360,6 +1358,11 @@ public class BuildContext {
     }
 
 
+    /**
+     * Load the {@link nType} represented by the specified formal constant.
+     *
+     * @return the register information for the loaded {@link nType}
+     */
     private RegisterInfo loadFormalType(CodeBuilder code, FormalConstant formalConst) {
         if (formalConst instanceof TypeParameterConstant typeParam) {
             return loadArgument(code, typeParam.getRegister());
@@ -1367,12 +1370,24 @@ public class BuildContext {
 
         if (formalConst instanceof FormalTypeChildConstant child) {
             loadFormalType(code, child.getParentConstant());
-            loadCtx(code);
-            code.ldc(child.getName())
-                .invokevirtual(CD_nObj, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString));
-            return new SingleSlot(child.getType(), Specific, CD_nType, "");
+            return loadFormalTypeChild(code, child);
         }
+
+        if (formalConst instanceof DynamicFormalConstant dynamic) {
+            return loadArgument(code, dynamic.getRegisterIndex());
+        }
+
         throw new UnsupportedOperationException("FormalConstant=" + formalConst);
+    }
+
+    /**
+     * Complete loading a formal child type. The parent's nType is already on the Java stack.
+     */
+    private RegisterInfo loadFormalTypeChild(CodeBuilder code, FormalTypeChildConstant child) {
+        loadCtx(code);
+        code.ldc(child.getName())
+            .invokevirtual(CD_nObject, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString));
+        return new SingleSlot(child.getType(), Specific, CD_nType, "");
     }
 
     /**
@@ -1944,7 +1959,11 @@ public class BuildContext {
 
             RegisterInfo srcReg    = loadArgument(code, iArg);
             JitFlavor    srcFlavor = srcReg.flavor();
-            if (srcReg.flavor() == dstFlavor) {
+            if (srcFlavor == dstFlavor) {
+                if (srcFlavor == Specific && !srcReg.cd().equals(pd.cd) &&
+                        !Builder.isJitAssignable(srcReg.type(), pd.type)) {
+                    generateCheckCast(code, pd.type);
+                }
                 continue;
             }
 
@@ -1966,7 +1985,7 @@ public class BuildContext {
             case "Specific->Widened",
                  "Specific->WidenedWithDefault":
                 if (srcReg.type().isJitInterface()) {
-                    code.checkcast(CD_nObj);
+                    code.checkcast(CD_nObject);
                 }
                 continue;
 
@@ -2342,14 +2361,23 @@ public class BuildContext {
     }
 
     /**
-     * Get the property value.
+     * Get the property value. The target register value is already on Java stack.
      */
     public void buildGetProperty(CodeBuilder code, RegisterInfo targetReg, int propIdIndex, int retId) {
         PropertyConstant propId     = getConstant(propIdIndex, PropertyConstant.class);
         TypeConstant     targetType = targetReg.type();
-        PropertyInfo     propInfo   = propId.getPropertyInfo(targetType);
 
+        if (propId instanceof FormalTypeChildConstant child) {
+            assert targetType.isTypeOfType();
+
+            loadFormalTypeChild(code, child);
+            storeValue(code, retId, child.getType().getType());
+            return;
+        }
+
+        PropertyInfo  propInfo = propId.getPropertyInfo(targetType);
         JitMethodDesc jmdGet;
+
         if (targetType.getAccess() == Access.STRUCT && !propInfo.isFormalType()) {
             jmdGet = propInfo.getGetterJitDesc(builder, targetType);
             buildGetPropertyField(code, targetReg, propInfo, jmdGet);
@@ -2358,6 +2386,83 @@ public class BuildContext {
             builder.loadProperty(code, targetType, propId, true, ctxSlot(code));
         }
         assignReturns(code, jmdGet, 1, new int[] {retId});
+    }
+
+    /**
+     * Create a Ref or Var for a property.
+     */
+    public void buildPropertyRef(CodeBuilder code, int targetId, int propIdIndex, int retId,
+                                 boolean isVar) {
+        TypeConstant     targetType  = getArgumentType(targetId);
+        PropertyConstant propId      = getConstant(propIdIndex, PropertyConstant.class);
+        PropertyInfo     propInfo    = propId.getPropertyInfo(targetType);
+        TypeConstant     referentType = propInfo.getType().resolveAutoNarrowing(
+                pool(), false, targetType, null);
+        RegisterInfo     refReg      = realizeRef(code, retId, referentType, isVar);
+
+        if (propInfo.isConstant()) {
+            assert !isVar;
+
+            Constant initial  = propInfo.getInitialValue();
+            Constant referent = initial == null
+                    ? pool().ensureSingletonConstConstant(propInfo.getIdentity())
+                    : initial;
+            buildCreateRef(code, referentType, false, () -> {
+                RegisterInfo valueReg = loadConstant(code, referent);
+                if (valueReg.flavor().isOptimized) {
+                    Builder.box(code, valueReg);
+                }
+            });
+            code.astore(refReg.slot());
+            return;
+        }
+
+        RegisterInfo     targetReg   = ensureRegister(code, targetId);
+        JitMethodDesc    getterJmd   = propInfo.getGetterJitDesc(builder, targetType);
+
+        code.new_(CD_nRef)
+            .dup();
+        loadCtx(code);
+        loadTypeConstant(code, referentType);
+        Builder.loadBoolean(code, isVar);
+        loadPropertyAccessor(code, targetReg, propInfo,
+                propInfo.ensureGetterJitMethodName(typeSystem), getterJmd);
+
+        if (isVar) {
+            JitMethodDesc setterJmd = propInfo.getSetterJitDesc(builder, targetType);
+            loadPropertyAccessor(code, targetReg, propInfo,
+                    propInfo.ensureSetterJitMethodName(typeSystem), setterJmd);
+        } else {
+            code.aconst_null();
+        }
+
+        code.invokespecial(CD_nRef, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx,
+                CD_TypeConstant, CD_boolean, CD_MethodHandle, CD_MethodHandle))
+            .astore(refReg.slot());
+    }
+
+    /**
+     * Load a property accessor MethodHandle, bound to the target for an instance property.
+     */
+    private void loadPropertyAccessor(CodeBuilder code, RegisterInfo targetReg,
+                                      PropertyInfo propInfo, String methodName, JitMethodDesc jmd) {
+        TypeConstant ownerType   = propInfo.getOwnerType(builder, targetReg.type());
+        boolean      isInterface = !propInfo.isNative() && ownerType.isJitInterface();
+
+        assert !jmd.isStandardStatic;
+        DirectMethodHandleDesc.Kind kind = isInterface
+                ? DirectMethodHandleDesc.Kind.INTERFACE_VIRTUAL
+                : DirectMethodHandleDesc.Kind.VIRTUAL;
+
+        code.ldc(MethodHandleDesc.ofMethod(kind, builder.ensureClassDesc(ownerType),
+                methodName, jmd.standardMD));
+
+        RegisterInfo loadedTarget = targetReg.load(code);
+        if (loadedTarget.flavor().isOptimized) {
+            Builder.box(code, loadedTarget);
+        }
+        code.invokevirtual(CD_MethodHandle, "bindTo",
+                MethodTypeDesc.of(CD_MethodHandle, CD_JavaObject));
     }
 
     /**
@@ -2378,18 +2483,24 @@ public class BuildContext {
         assert !targetReg.flavor().isOptimized;
 
         JitParamDesc[] returns;
+        ClassDesc      cdField;
         if (jmd.isOptimized) {
             int[] indexes = jmd.getAllOptimizedReturnIndexes(0);
             returns = new JitParamDesc[indexes.length];
             for (int i = 0; i < indexes.length; i++) {
                 returns[i] = jmd.optimizedReturns[indexes[i]];
             }
+            TypeConstant type = propInfo.getType().removeNullable();
+            cdField = type.isJavaPrimitive()
+                            ? JitTypeDesc.getPrimitiveFieldClass(type)
+                            : returns[0].cd;
         } else {
             returns = new JitParamDesc[] {jmd.standardReturns[0]};
+            cdField = jmd.standardReturns[0].cd;
         }
 
-        TypeConstant typeOwner = propInfo.getOwnerType(builder, targetReg.type());
-        ClassDesc    cdOwner   = builder.ensureClassDesc(typeOwner);
+        TypeConstant ownerType = propInfo.getOwnerType(builder, targetReg.type());
+        ClassDesc    cdOwner   = builder.ensureClassDesc(ownerType);
         String       fieldName = propInfo.getIdentity().ensureJitPropertyName(typeSystem);
 
         for (int i = 0; i < returns.length; i++) {
@@ -2403,7 +2514,8 @@ public class BuildContext {
                     : ret.flavor == XvmPrimitive || ret.flavor == NullableXvmPrimitive
                         ? fieldName + "$" + i
                         : fieldName;
-            code.getfield(cdOwner, name, ret.cd);
+            ClassDesc cd = i == 0 ? cdField : ret.cd;
+            code.getfield(cdOwner, name, cd);
 
             if (i > 0) {
                 storeToContext(code, ret.cd, ret.altIndex);
@@ -2627,14 +2739,20 @@ public class BuildContext {
     private void buildSetPropertyField(CodeBuilder code, RegisterInfo targetReg,
                                        PropertyInfo propInfo, JitMethodDesc jmd) {
         JitParamDesc[] params;
+        ClassDesc      cdField;
         if (jmd.isOptimized) {
             int[] indexes = jmd.getAllOptimizedParams(0);
             params = new JitParamDesc[indexes.length];
             for (int i = 0; i < indexes.length; i++) {
                 params[i] = jmd.optimizedParams[indexes[i]];
             }
+            TypeConstant type = propInfo.getType().removeNullable();
+            cdField = type.isJavaPrimitive()
+                            ? JitTypeDesc.getPrimitiveFieldClass(type)
+                            : params[0].cd;
         } else {
-            params = new JitParamDesc[] {jmd.standardParams[0]};
+            params  = new JitParamDesc[] {jmd.standardParams[0]};
+            cdField = jmd.standardParams[0].cd;
         }
 
         int[] slots = new int[params.length];
@@ -2658,7 +2776,8 @@ public class BuildContext {
                     : param.flavor == XvmPrimitive || param.flavor == NullableXvmPrimitive
                         ? fieldName + "$" + i
                         : fieldName;
-            code.putfield(cdOwner, name, param.cd);
+            ClassDesc cd = i == 0 ? cdField : param.cd;
+            code.putfield(cdOwner, name, cd);
         }
     }
 
@@ -2786,12 +2905,11 @@ public class BuildContext {
             TypeConstant destType = getReturnType(regId);
             assert destType != null;
 
-            RegisterInfo reg = registerInfos.get(regId);
-            if (reg == null || !isAssigned(reg)) {
-                // Builder.defaultStore initializes verifier-visible slots only; it's our
-                // responsibility to adjust the local variable scope
+            RegisterInfo reg = ensureRegister(regId, destType);
+            if (!isAssigned(reg)) {
+                // the payload is undefined when the condition is False, but its Java slots must
+                // still have verifier-visible values
                 Builder.defaultStore(code, reg);
-                ensureRegisterScope(code, reg);
             }
         }
 
@@ -2806,21 +2924,19 @@ public class BuildContext {
 
     private void assignReturn(CodeBuilder code, JitMethodDesc jmd, boolean isOptimized,
                               int i, int regId) {
-        int          iOpt  = isOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
-        JitParamDesc pdRet = isOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
+        int          iOpt     = isOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
+        JitParamDesc pdRet    = isOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
+        TypeConstant destType = regId == Op.A_IGNORE ? null : getReturnType(regId);
 
-        if (regId == Op.A_IGNORE) {
-            // the return is ignored, e.g just calling foo() instead of x = foo();
-            // if i == 0 then we need to pop the value from the stack, otherwise the return
-            // value is in the context, so we can just ignore it
+        if (destType == null) {
+            // the return is explicitly ignored or its destination has gone out of scope;
+            // if i == 0, we need to pop the value from the stack, otherwise the return value
+            // is in the context, so we can just ignore it
             if (i == 0) {
                 Builder.pop(code, pdRet.cd);
             }
             return;
         }
-
-        TypeConstant destType = getReturnType(regId);
-        assert destType != null;
 
         JitTypeDesc tdDest     = destType.getJitDesc(builder);
         JitFlavor   destFlavor = tdDest.flavor;
@@ -3312,12 +3428,12 @@ public class BuildContext {
         loadCtx(code);
         referentLoader.run();
         if (referentType.isJitInterface()) {
-            code.checkcast(CD_nObj);
+            code.checkcast(CD_nObject);
         }
         loadTypeConstant(code, referentType);
         Builder.loadBoolean(code, isVar);
         code.invokespecial(cd, INIT_NAME,
-            MethodTypeDesc.of(CD_void, CD_Ctx, CD_nObj, CD_TypeConstant, CD_boolean));
+            MethodTypeDesc.of(CD_void, CD_Ctx, CD_nObject, CD_TypeConstant, CD_boolean));
     }
 
     /**
@@ -3325,19 +3441,17 @@ public class BuildContext {
      */
     public GenericTypeResolver createTypeResolver(MethodStructure method, int[] argIds) {
         return constFormal -> {
-            MethodConstant methodId = method.getIdentityConstant();
-            for (Parameter param : method.getParamArray()) {
-                if (param.isTypeParameter() &&
-                        constFormal.equals(param.asTypeParameterConstant(methodId))) {
-                    TypeConstant type = getArgumentType(argIds[param.getIndex()]);
-
-                    // the register the type parameter points to must be an nType instance;
-                    // its type is a type-of-type-of-type
-                    assert type.getParamType(0).isTypeOfType();
-                    return type.getParamType(0).getParamType(0);
-                }
+            int iParam = method.indexOfTypeParameter(constFormal);
+            if (iParam < 0) {
+                return null;
             }
-            return null;
+
+            TypeConstant type = getArgumentType(argIds[iParam]);
+
+            // the register the type parameter points to must be an nType instance;
+            // its type is a type-of-type-of-type
+            assert type.getParamType(0).isTypeOfType();
+            return type.getParamType(0).getParamType(0);
         };
     }
 
@@ -3362,7 +3476,7 @@ public class BuildContext {
         return jitType.resolveGenericType(sFormalName);
     }
 
-    protected TypeConstant resolveFormalType(FormalConstant formalConst) {
+    public TypeConstant resolveFormalType(FormalConstant formalConst) {
         int regId;
 
         FindRegister:
@@ -3380,7 +3494,7 @@ public class BuildContext {
                         break FindRegister;
                     }
                 }
-                return null;
+                // an unmatched formal belongs to the enclosing specialized class
             }
             return resolveGenericType(formalName);
         }

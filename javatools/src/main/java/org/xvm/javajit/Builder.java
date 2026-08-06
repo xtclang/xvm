@@ -1,7 +1,6 @@
 package org.xvm.javajit;
 
 import java.lang.classfile.ClassBuilder;
-import java.lang.classfile.ClassHierarchyResolver;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 import java.lang.classfile.TypeKind;
@@ -12,6 +11,7 @@ import java.lang.constant.MethodHandleDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import java.math.BigInteger;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
@@ -39,10 +39,12 @@ import org.xvm.util.PackedInteger;
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 import static java.lang.constant.ConstantDescs.CD_Throwable;
 import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_byte;
 import static java.lang.constant.ConstantDescs.CD_double;
 import static java.lang.constant.ConstantDescs.CD_float;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
+import static java.lang.constant.ConstantDescs.CD_short;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
@@ -73,6 +75,13 @@ public abstract class Builder {
     }
 
     /**
+     * Assemble the java class for the "class" shape.
+     */
+    public void buildClassOfClass(ClassBuilder classBuilder) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
      * @return TypeConstant for "this" type
      */
     public TypeConstant getThisType() {
@@ -93,41 +102,8 @@ public abstract class Builder {
         TypeInfo     typeInfo  = thisType.ensureTypeInfo();
         TypeConstant superType = typeInfo.getExtends();
         return superType == null
-            ? thisType.isConst() ? CD_nConst : CD_nObj
+            ? thisType.isConst() ? CD_nConst : CD_nObject
             : ensureClassDesc(superType);
-    }
-
-    /**
-     * Create a ClassHierarchyResolver to compensate for what seems to be a weakness in the
-     * ClassFile builder. Despite the fact that at the start of building a class we provide
-     * all relevant information (e.g. class attributes, the super class), the builder may fire a
-     * {@link ClassHierarchyResolver#getClassInfo} request regarding the info about the class itself.
-     */
-    public ClassHierarchyResolver createClassHierarchyResolver(String className) {
-        TypeConstant thisType = getThisType();
-        if (thisType.isA(pool().typeModule()) || thisType.isA(pool().typeException())) {
-            return ClassHierarchyResolver.ofClassLoading(typeSystem.loader);
-        }
-
-        return classDesc -> {
-            String clzName = classDesc.descriptorString();
-            assert clzName.charAt(0) == 'L' && clzName.charAt(clzName.length() - 1) == ';';
-            clzName = clzName.replace('/', '.').substring(1, clzName.length() - 1);
-
-            if (clzName.equals(className)) {
-                return thisType.isJitInterface()
-                    ? ClassHierarchyResolver.ClassHierarchyInfo.ofInterface()
-                    : ClassHierarchyResolver.ClassHierarchyInfo.ofClass(getSuperCD());
-            }
-            // TODO: the problem is that the natural code for "removeAll" uses an Array<Int>;
-            //       to compile it we need to have to load Array<Int>, which extends Array
-            //       resulting in the CircularClassInitialization error
-            // The upcoming name work should remove this
-            if (clzName.equals(N_ArrayInt64)) {
-                return ClassHierarchyResolver.ClassHierarchyInfo.ofClass(CD_Array);
-            }
-            return ClassHierarchyResolver.ofClassLoading(typeSystem.loader).getClassInfo(classDesc);
-        };
     }
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -143,13 +119,28 @@ public abstract class Builder {
      * Ensure a unique ClassDesc for the specified type.
      */
     public ClassDesc ensureClassDesc(TypeConstant type) {
-        return type.ensureClassDesc(typeSystem);
+        return type.getCallableClassDesc(typeSystem);
     }
 
     /**
-     * Ensure a unique Java class name for the specified type.
+     * Ensure a unique Java class that represents a "JIT Call Class Name" for the specified type in
+     * this builder's TypeSystem.
+     *
+     * @see doc/jit_class_names.txt
      */
     public String ensureJitClassName(TypeConstant type) {
+        return type.ensureJitClassName(typeSystem);
+    }
+
+    /**
+     * Ensure a unique Java class that represents a "JIT Instance Class Name" for the specified type
+     * in this builder's TypeSystem.
+     *
+     * @see doc/jit_class_names.txt
+     */
+    public String ensureJitInstanceClassName(TypeConstant type) {
+        assert type.isSingleUnderlyingClass(false);
+        // TODO
         return type.ensureJitClassName(typeSystem);
     }
 
@@ -188,10 +179,10 @@ public abstract class Builder {
 
             RegisterInfo regThis = bctx.loadThis(code);
             if (regThis.type().isJitInterface()) {
-                code.checkcast(CD_nObj);
+                code.checkcast(CD_nObject);
             }
             bctx.loadCtx(code);
-            code.invokevirtual(CD_nObj, "$xvmType", MD_xvmType)
+            code.invokevirtual(CD_nObject, "$xvmType", MD_xvmType)
                 .invokevirtual(CD_TypeConstant, "resolveGenerics",
                         MethodTypeDesc.of(CD_TypeConstant, CD_ConstantPool, CD_GenericTypeResolver));
         }
@@ -376,7 +367,7 @@ public abstract class Builder {
             String       name = ensureJitClassName(type);
             // TODO GG the "e" class gen functionality must be merged into the "c" class result
             if (!type.isA(pool.typeEnumeration())) {
-                name  = TypeSystem.classClass(name);
+                name  = TypeSystem.classOfClass(name);
             }
             ClassDesc cd = ClassDesc.of(name);
             code.getstatic(cd, Instance, cd);
@@ -577,7 +568,6 @@ public abstract class Builder {
                                  Constant[] values) {
         TypeConstant   elType = arrayType.getParamType(0);
         ClassDesc      cdArray;
-        String         className;
         String         addMethod;
         MethodTypeDesc mdAdd;
 
@@ -588,135 +578,116 @@ public abstract class Builder {
             switch (elType.getSingleUnderlyingClass(false).getName()) {
             case "Bit":
                 // ArrayᐸBitᐳ array = ArrayᐸBitᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayBit;
-                className = N_ArrayBit;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayBit;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "Boolean":
                 // ArrayᐸBooleanᐳ array = ArrayᐸBooleanᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayBoolean;
-                className = N_ArrayBoolean;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_boolean);
+                cdArray = CD_ArrayBoolean;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_boolean);
                 break;
 
             case "Char":
                 // ArrayᐸCharᐳ array = ArrayᐸCharᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayChar;
-                className = N_ArrayChar;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayChar;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "Dec32":
                 // ArrayᐸDec32ᐳ array = ArrayᐸDec32ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayDec32;
-                className = N_ArrayDec32;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayDec32;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "Dec64":
                 // ArrayᐸDec64ᐳ array = ArrayᐸDec64ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayDec64;
-                className = N_ArrayDec64;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
+                cdArray = CD_ArrayDec64;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
                 break;
 
             case "Dec128":
                 // ArrayᐸDec128ᐳ array = ArrayᐸDec128ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayDec128;
-                className = N_ArrayDec128;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
+                cdArray = CD_ArrayDec128;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
                 break;
 
             case "Float32":
                 // ArrayᐸFloat32ᐳ array = ArrayᐸFloat32ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayFloat32;
-                className = N_ArrayFloat32;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_float);
+                cdArray = CD_ArrayFloat32;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_float);
                 break;
 
             case "Float64":
                 // ArrayᐸFloat64ᐳ array = ArrayᐸFloat64ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayFloat64;
-                className = N_ArrayFloat64;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_double);
+                cdArray = CD_ArrayFloat64;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_double);
                 break;
 
             case "Int8":
                 // ArrayᐸInt8ᐳ array = ArrayᐸInt8ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayInt8;
-                className = N_ArrayInt8;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayInt8;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "Int16":
                 // ArrayᐸInt16ᐳ array = ArrayᐸInt16ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayInt16;
-                className = N_ArrayInt16;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayInt16;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "Int32":
                 // ArrayᐸInt32ᐳ array = ArrayᐸInt32ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayInt32;
-                className = N_ArrayInt32;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayInt32;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "Int64":
                 // ArrayᐸIntᐳ array = ArrayᐸIntᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayInt64;
-                className = N_ArrayInt64;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
+                cdArray = CD_ArrayInt64;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
                 break;
 
             case "Int128":
                 // ArrayᐸInt128ᐳ array = ArrayᐸInt128ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayInt128;
-                className = N_ArrayInt128;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
+                cdArray = CD_ArrayInt128;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
                 break;
 
             case "Nibble":
                 // ArrayᐸNibbleᐳ array = ArrayᐸNibbleᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayNibble;
-                className = N_ArrayNibble;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayNibble;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "UInt8":
                 // ArrayᐸUInt8ᐳ array = ArrayᐸUInt8ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayUInt8;
-                className = N_ArrayUInt8;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayUInt8;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "UInt16":
                 // ArrayᐸUInt16ᐳ array = ArrayᐸUInt16ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayUInt16;
-                className = N_ArrayUInt16;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayUInt16;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "UInt32":
                 // ArrayᐸUInt32ᐳ array = ArrayᐸUInt32ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayUInt32;
-                className = N_ArrayUInt32;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
+                cdArray = CD_ArrayUInt32;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                 break;
 
             case "UInt64":
                 // ArrayᐸUIntᐳ array = ArrayᐸUIntᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayUInt64;
-                className = N_ArrayUInt64;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
+                cdArray = CD_ArrayUInt64;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
                 break;
 
             case "UInt128":
                 // ArrayᐸUInt128ᐳ array = ArrayᐸUInt128ᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_ArrayUInt128;
-                className = N_ArrayUInt128;
-                mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
+                cdArray = CD_ArrayUInt128;
+                mdAdd   = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
                 break;
 
             default:
@@ -725,7 +696,6 @@ public abstract class Builder {
         } else {
             // ArrayᐸObjectᐳ array = ArrayᐸObjectᐳ.$new$p(ctx, type, capacity, false);
             cdArray   = CD_ArrayObj;
-            className = N_ArrayObj;
             addMethod = "add";
             mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_Object);
         }
@@ -860,10 +830,12 @@ public abstract class Builder {
         }
 
         PropertyInfo xvmInfo      = propId.getPropertyInfo(typeContainer);
-        TypeConstant typeJit      = typeContainer.getCanonicalJitType();
+        TypeConstant typeJit      = typeContainer.getCallableJitType();
         PropertyInfo jitInfo      = typeJit.equals(pool().typeObject()) // REVIEW GG
                 ? xvmInfo
                 : propId.getPropertyInfo(typeJit);
+// TODO JIT-names branch had this alternative definition for jitInfo:
+//      PropertyInfo  jitInfo    = propId.getPropertyInfo(typeContainer.getCallableJitType());
         TypeConstant  typeOwner  = jitInfo.getOwnerType(this, typeContainer);
         JitMethodDesc jmdGet     = jitInfo.getGetterJitDesc(this, typeContainer);
         String        getterName = jitInfo.ensureGetterJitMethodName(typeSystem);
@@ -1382,6 +1354,10 @@ public abstract class Builder {
         assert cd.isPrimitive();
 
         switch (cd.descriptorString()) {
+        case "B": // byte
+            code.invokestatic(CD_JavaByte, "valueOf", MethodTypeDesc.of(CD_JavaByte, CD_byte));
+            break;
+
         case "Z": // boolean
             code.invokestatic(CD_JavaBoolean, "valueOf", MethodTypeDesc.of(CD_JavaBoolean, CD_boolean));
             break;
@@ -1400,6 +1376,10 @@ public abstract class Builder {
 
         case "D": // double
             code.invokestatic(CD_JavaDouble, "valueOf", MethodTypeDesc.of(CD_JavaDouble, CD_double));
+            break;
+
+        case "S": // short
+            code.invokestatic(CD_JavaShort, "valueOf", MethodTypeDesc.of(CD_JavaShort, CD_short));
             break;
 
         default:
@@ -1741,7 +1721,9 @@ public abstract class Builder {
      * @return true iff the assignment is JIT-valid, false if the "checkcast" opcode is necessary
      */
     public static boolean isJitAssignable(TypeConstant srcType, TypeConstant dstType) {
-        return srcType.getCanonicalJitType().isA(dstType.getCanonicalJitType());
+        return srcType.isA(dstType) ||
+                !srcType.isJitL2Specialized() &&
+                srcType.getCallableJitType().isA(dstType.getCallableJitType());
     }
 
     /**
@@ -1859,7 +1841,7 @@ public abstract class Builder {
     public static final String N_nFunction    = "org.xtclang.ecstasy.nFunction";
     public static final String N_nMethod      = "org.xtclang.ecstasy.nMethod";
     public static final String N_nModule      = "org.xtclang.ecstasy.nModule";
-    public static final String N_nObj         = "org.xtclang.ecstasy.nObj";
+    public static final String N_nObj         = "org.xtclang.ecstasy.nObject";
     public static final String N_nPackage     = "org.xtclang.ecstasy.nPackage";
     public static final String N_nRef         = "org.xtclang.ecstasy.reflect.nRef";
     public static final String N_nRangeBoolean = "org.xtclang.ecstasy.nRangeᐸBooleanᐳ";
@@ -1955,7 +1937,7 @@ public abstract class Builder {
     public static final ClassDesc CD_nConst              = ClassDesc.of(N_nConst);
     public static final ClassDesc CD_nEnum               = ClassDesc.of(N_nEnum);
     public static final ClassDesc CD_nException          = ClassDesc.of(N_nException);
-    public static final ClassDesc CD_nObj                = ClassDesc.of(N_nObj);
+    public static final ClassDesc CD_nObject             = ClassDesc.of(N_nObj);
     public static final ClassDesc CD_nRef                = ClassDesc.of(N_nRef);
     public static final ClassDesc CD_nType               = ClassDesc.of(N_nType);
     public static final ClassDesc CD_nUtil               = ClassDesc.of(N_nUtil);
@@ -2000,11 +1982,13 @@ public abstract class Builder {
     public static final ClassDesc CD_TypeSystem          = ClassDesc.of(TypeSystem.class.getName());
 
     public static final ClassDesc CD_JavaSystem          = ClassDesc.of(java.lang.System.class.getName());
+    public static final ClassDesc CD_JavaByte            = ClassDesc.of(java.lang.Byte.class.getName());
     public static final ClassDesc CD_JavaBoolean         = ClassDesc.of(java.lang.Boolean.class.getName());
     public static final ClassDesc CD_JavaDouble          = ClassDesc.of(java.lang.Double.class.getName());
     public static final ClassDesc CD_JavaFloat           = ClassDesc.of(java.lang.Float.class.getName());
     public static final ClassDesc CD_JavaInteger         = ClassDesc.of(java.lang.Integer.class.getName());
     public static final ClassDesc CD_JavaLong            = ClassDesc.of(java.lang.Long.class.getName());
+    public static final ClassDesc CD_JavaShort           = ClassDesc.of(java.lang.Short.class.getName());
     public static final ClassDesc CD_JavaMath            = ClassDesc.of(java.lang.Math.class.getName());
     public static final ClassDesc CD_JavaObject          = ClassDesc.of(java.lang.Object.class.getName());
     public static final ClassDesc CD_JavaString          = ClassDesc.of(java.lang.String.class.getName());

@@ -5,12 +5,18 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpProperty;
 import org.xvm.asm.Scope;
 
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -120,6 +126,25 @@ public class P_Ref
         return super.toString()
                 + ", " + Argument.toIdString(m_argTarget, m_nTarget)
                 + ", " + Argument.toIdString(m_argReturn, m_nRetValue);
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        TypeConstant     typeTarget = bctx.getArgumentType(m_nTarget);
+        PropertyConstant idProp     = bctx.getConstant(m_nPropId, PropertyConstant.class);
+        PropertyInfo     propInfo   = idProp.getPropertyInfo(typeTarget);
+        TypeConstant     typeProp   = propInfo.getType().resolveAutoNarrowing(
+                bctx.pool(), false, typeTarget, null);
+
+        bctx.typeMatrix.assign(getAddress(), m_nRetValue, bctx.pool().ensureRefType(typeProp));
+    }
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        bctx.buildPropertyRef(code, m_nTarget, m_nPropId, m_nRetValue, false);
+        return -1;
     }
 
     private int m_nTarget;

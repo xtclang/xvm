@@ -6,7 +6,7 @@ import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.Iterator;
 import org.xtclang.ecstasy.nException;
-import org.xtclang.ecstasy.nObj;
+import org.xtclang.ecstasy.nObject;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.text.String;
@@ -1131,7 +1131,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
      */
     // TODO potentially we may not need this (and subclasses) when we generate the iterator()
     //  method on List
-    protected abstract class nBaseIterator extends nObj implements Iterator {
+    protected abstract class nBaseIterator extends nObject implements Iterator {
         public nBaseIterator(Ctx ctx) {
             super(ctx);
         }

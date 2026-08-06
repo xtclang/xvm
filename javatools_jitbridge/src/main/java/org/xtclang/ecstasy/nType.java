@@ -5,31 +5,18 @@ import java.lang.reflect.Method;
 
 import org.xtclang.ecstasy.collections.Hashable;
 
-import org.xtclang.ecstasy.numbers.Bit;
-import org.xtclang.ecstasy.numbers.Dec128;
-import org.xtclang.ecstasy.numbers.Dec32;
-import org.xtclang.ecstasy.numbers.Dec64;
-import org.xtclang.ecstasy.numbers.Float16;
-import org.xtclang.ecstasy.numbers.Float32;
-import org.xtclang.ecstasy.numbers.Float64;
-import org.xtclang.ecstasy.numbers.Int128;
-import org.xtclang.ecstasy.numbers.Int16;
-import org.xtclang.ecstasy.numbers.Int32;
-import org.xtclang.ecstasy.numbers.Int64;
-import org.xtclang.ecstasy.numbers.Int8;
-import org.xtclang.ecstasy.numbers.Nibble;
-import org.xtclang.ecstasy.numbers.UInt128;
-import org.xtclang.ecstasy.numbers.UInt16;
-import org.xtclang.ecstasy.numbers.UInt32;
-import org.xtclang.ecstasy.numbers.UInt64;
-import org.xtclang.ecstasy.numbers.UInt8;
+import org.xtclang.ecstasy.numbers.*;
+
+import org.xtclang.ecstasy.reflect.Class;
 import org.xtclang.ecstasy.reflect.Type;
+
 import org.xtclang.ecstasy.text.Char;
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
+import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.ByteHashCollector;
 
@@ -37,11 +24,13 @@ import org.xvm.util.ByteHashCollector;
  * All Ecstasy `Type` types must extend this class.
  */
 public class nType
-    extends nConst
+        extends nConst
         implements Type {
 
     private nType(Ctx ctx, TypeConstant type) {
         super(ctx);
+
+        assert !type.containsFormalType(true);
 
         $ctx      = ctx;
         $dataType = type;
@@ -53,9 +42,35 @@ public class nType
     private Method equalsMethod;
     private Method compareMethod;
     private Method hashCodeMethod;
+    private Class  xvmClass;
 
-    public nObj alloc(Ctx ctx) {
+    public nObject alloc(Ctx ctx) {
         throw Exception.$unsupported(ctx, "Type " + $dataType);
+    }
+
+    /**
+     * @return  an instance of the {@link Class class of class} for this type
+     */
+    public Class $xvmClass(Ctx ctx) {
+        if (xvmClass == null) {
+            TypeSystem       typeSystem  = ctx.container.typeSystem;
+            java.lang.String className   = $dataType.ensureJitClassName(typeSystem);
+            java.lang.String classOfType = TypeSystem.classOfClass(className);
+            try {
+                java.lang.Class clz;
+                try {
+                    clz = typeSystem.loader.loadClass(classOfType);
+                } catch (ClassNotFoundException cnfe) {
+                    return xvmClass = new Class(ctx, $dataType);
+                }
+                xvmClass = (Class) clz.getDeclaredConstructor(Ctx.class, TypeConstant.class).
+                            newInstance(ctx, $dataType);
+
+            } catch (java.lang.Exception e) {
+                throw new Exception(ctx).$init(ctx, "Failed to load a class for: " + className, e);
+            }
+        }
+        return xvmClass;
     }
 
     @Override public TypeConstant $xvmType(Ctx ctx) {
@@ -104,14 +119,13 @@ public class nType
             return true;
         }
 
-        // TODO: replace the reflection with a virtual call to $class().equals(this, v1, v2)
         if (equalsMethod == null) {
-            equalsMethod = ensureMethod("equals$p", Object.class);
+            equalsMethod = ensureMethod("equals$p", 2);
         }
 
         try {
             java.lang.Boolean result = (java.lang.Boolean)
-                    equalsMethod.invoke(null, ctx, this, value1, value2);
+                    equalsMethod.invoke($xvmClass(ctx), ctx, this, value1, value2);
             return result.booleanValue();
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw Exception.$unsupported($ctx,
@@ -128,8 +142,8 @@ public class nType
             return Ordered.Equal.$INSTANCE;
         }
 
-        nType type1 = ((nObj) value1).$type(ctx);
-        nType type2 = ((nObj) value2).$type(ctx);
+        nType type1 = ((nObject) value1).$type(ctx);
+        nType type2 = ((nObject) value2).$type(ctx);
         if ($dataType.isJitPrimitive() && type1.$dataType.equals(type2.$dataType)) {
             int result = switch (value1) {
                 case Bit n1    -> n1.$value - ((Bit)    value2).$value;
@@ -165,11 +179,11 @@ public class nType
         }
 
         if (compareMethod == null) {
-            compareMethod = ensureMethod("compare", Orderable.class);
+            compareMethod = ensureMethod("compare", 2);
         }
 
         try {
-            return (Ordered) compareMethod.invoke(null, ctx, this, value1, value2);
+            return (Ordered) compareMethod.invoke($xvmClass(ctx), ctx, this, value1, value2);
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw Exception.$unsupported($ctx,
                 "Failed to invoke 'compare()` on class " + $dataType.getValueString());
@@ -209,11 +223,11 @@ public class nType
         }
 
         if (hashCodeMethod == null) {
-            hashCodeMethod = ensureMethod("hashCode$p", Hashable.class);
+            hashCodeMethod = ensureMethod("hashCode$p", 1);
         }
 
         try {
-            return (long) hashCodeMethod.invoke(null, ctx, this, value);
+            return (long) hashCodeMethod.invoke($xvmClass(ctx), ctx, this, value);
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw Exception.$unsupported($ctx,
                     "Failed to invoke 'hashCode$p()` on class " + $dataType.getValueString());
@@ -221,19 +235,27 @@ public class nType
 
     }
 
-    private Method ensureMethod(java.lang.String methodName, java.lang.Class paramClass) {
-        java.lang.String clzName = $dataType.ensureJitClassName($ctx.container.typeSystem);
-        java.lang.Class  clz;
+    private Method ensureMethod(java.lang.String methodName, int valueCount) {
+        TypeSystem       typeSystem = $ctx.container.typeSystem;
+        java.lang.String clzName    = $dataType.ensureJitClassName(typeSystem);
+        java.lang.Class  clz        = $xvmClass($ctx).getClass();
+        java.lang.Class  valueClass;
         try {
-            clz = java.lang.Class.forName(clzName);
+            valueClass = typeSystem.loader.loadClass(clzName);
         } catch (ClassNotFoundException e) {
             throw Exception.$unsupported($ctx, "No such class " + clzName);
         }
 
+        java.lang.Class[] paramClasses = new java.lang.Class[2 + valueCount];
+        paramClasses[0] = Ctx.class;
+        paramClasses[1] = nType.class;
+        for (int i = 2; i < paramClasses.length; i++) {
+            paramClasses[i] = valueClass;
+        }
+
         while (true) {
             try {
-                return clz.getDeclaredMethod(methodName,
-                        Ctx.class, nType.class, paramClass, paramClass);
+                return clz.getDeclaredMethod(methodName, paramClasses);
             } catch (NoSuchMethodException e) {
                 clz = clz.getSuperclass();
                 if (clz == null) {

@@ -527,6 +527,29 @@ public class MethodStructure
     }
 
     /**
+     * Determine the index of the specified formal type parameter for this method.
+     *
+     * @param constFormal  the formal constant
+     *
+     * @return the type parameter index, or -1 if the formal is not a type parameter of this method
+     */
+    public int indexOfTypeParameter(FormalConstant constFormal) {
+        if (!(constFormal instanceof TypeParameterConstant constParam)) {
+            return -1;
+        }
+
+        MethodConstant idMethod  = getIdentityConstant();
+        MethodConstant idMethodP = constParam.getMethod();
+        if (idMethodP != idMethod && idMethodP.getComponent() != this &&
+                !idMethodP.equals(idMethod)) {
+            return -1;
+        }
+
+        int iParam = constParam.getRegister();
+        return isTypeParameter(iParam) ? iParam : -1;
+    }
+
+    /**
      * @return a list of Parameter structures that represent all parameters of the method
      */
     public List<Parameter> getParams() {
@@ -964,17 +987,15 @@ public class MethodStructure
             SignatureConstant sigOrig = sigResolved;
 
             sigResolved = sigResolved.resolveGenericTypes(pool, formalConst -> {
-                MethodConstant methodId = getIdentityConstant();
-                for (Parameter param : getParamArray()) {
-                    if (param.isTypeParameter() &&
-                            formalConst.equals(param.asTypeParameterConstant(methodId))) {
-                        TypeConstant typeOfType = sigOrig.getRawParams()[param.getIndex()];
-                        assert typeOfType.isTypeOfType();
-                        TypeConstant type = typeOfType.getParamType(0);
-                        return type.isJitPrimitive() ? type : null;
-                    }
+                int iParam = indexOfTypeParameter(formalConst);
+                if (iParam < 0) {
+                    return null;
                 }
-                return null;
+
+                TypeConstant typeOfType = sigOrig.getRawParams()[iParam];
+                assert typeOfType.isTypeOfType();
+                TypeConstant type = typeOfType.getParamType(0);
+                return type.isJitPrimitive() ? type : null;
             });
         }
         return sigResolved;

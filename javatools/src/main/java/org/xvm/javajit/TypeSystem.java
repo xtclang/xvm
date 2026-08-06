@@ -2,6 +2,8 @@ package org.xvm.javajit;
 
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassHierarchyResolver;
+import java.lang.classfile.ClassHierarchyResolver.ClassHierarchyInfo;
 
 import java.lang.classfile.attribute.SourceFileAttribute;
 
@@ -28,6 +30,7 @@ import org.xvm.javajit.builders.ExceptionBuilder;
 import org.xvm.javajit.builders.ModuleBuilder;
 import org.xvm.javajit.builders.PackageBuilder;
 
+import static org.xvm.javajit.Builder.CD_Class;
 import static org.xvm.javajit.Builder.MODULE;
 
 import static org.xvm.util.Handy.require;
@@ -309,12 +312,16 @@ public class TypeSystem {
                     builder.build(classBuilder);
                     break;
 
+                case Class:
+                    builder.buildClassOfClass(classBuilder);
+                    break;
+
                 case Exception:
                     ((ExceptionBuilder) builder).assembleJavaException(className, classBuilder);
                     break;
 
                 default:
-                    throw new UnsupportedOperationException();
+                    throw new UnsupportedOperationException("Unsupported shape " + art.shape);
                 }
             };
 
@@ -324,8 +331,7 @@ public class TypeSystem {
             //     LineNumbersOption.DROP_LINE_NUMBERS
             // TODO: force some of them or make configurable
             ClassFile classFile = ClassFile.of(
-                ClassFile.ClassHierarchyResolverOption
-                         .of(builder.createClassHierarchyResolver(className)),
+                ClassFile.ClassHierarchyResolverOption.of(createClassHierarchyResolver()),
                 ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
                 ClassFile.StackMapsOption.GENERATE_STACK_MAPS,
                 ClassFile.DeadLabelsOption.DROP_DEAD_LABELS
@@ -338,6 +344,67 @@ public class TypeSystem {
             }
         }
         return null;
+    }
+
+    /**
+     * Create a resolver that obtains hierarchy information without loading a class whenever the
+     * information is available from an XVM artifact or an existing Java class file.
+     */
+    public ClassHierarchyResolver createClassHierarchyResolver() {
+        ClassHierarchyResolver resolver = this::resolveClassInfo;
+        return resolver
+                .orElse(ClassHierarchyResolver.ofResourceParsing(loader))
+                .orElse(ClassHierarchyResolver.ofClassLoading(loader))
+                .cached();
+    }
+
+    /**
+     * Resolve hierarchy information for an XVM-owned class without loading it.
+     */
+    private ClassHierarchyInfo resolveClassInfo(ClassDesc classDesc) {
+        if (!classDesc.isClassOrInterface()) {
+            return null;
+        }
+
+        String className = classDesc.descriptorString();
+        assert className.charAt(0) == 'L' && className.charAt(className.length() - 1) == ';';
+        className = className.replace('/', '.').substring(1, className.length() - 1);
+
+        ModuleLoader owner = findOwnerLoader(className);
+        return owner == null
+                ? null
+                : owner.typeSystem.resolveOwnedClassInfo(
+                        owner, className.substring(owner.prefix.length()), classDesc);
+    }
+
+    /**
+     * Resolve hierarchy information for a class owned by the specified module loader.
+     *
+     * @param owner      the loader of the owning module
+     * @param suffix     the Java class name without the module prefix
+     * @param classDesc  the Java class descriptor
+     */
+    protected ClassHierarchyInfo resolveOwnedClassInfo(ModuleLoader owner, String suffix,
+                                                       ClassDesc classDesc) {
+        Artifact art = deduceArtifact(owner.module, owner.prefix, suffix);
+        if (art == null) {
+            return null;
+        }
+
+        return switch (art.shape()) {
+            case Impl -> art.type().isJitInterface()
+                    ? ClassHierarchyInfo.ofInterface()
+                    : ClassHierarchyInfo.ofClass(ensureBuilder(art).getSuperCD());
+
+            case Enum -> ClassHierarchyInfo.ofClass(ensureBuilder(art).getSuperCD());
+
+            case Class -> ClassHierarchyInfo.ofClass(CD_Class);
+
+            case Exception -> ClassHierarchyInfo.ofClass(
+                    ((ExceptionBuilder) ensureBuilder(art)).getJavaExceptionSuperCD());
+
+            default -> null;
+            };
     }
 
     /**
@@ -467,14 +534,28 @@ public class TypeSystem {
         TypeConstant type     = null;
         int          idOffset = suffix.indexOf(HASH);
         if (idOffset > 0) {
-            // the name represents a parameterized type with primitive actual type(s)
-            // or a class constant for inner classes
-            Constant constant = pool().getConstant(Integer.valueOf(suffix.substring(idOffset+1)));
+            // the name represents a parameterized type with primitive actual type(s),
+            // a class constant for inner classes or a combination of the two, for example:
+            // org.xtclang.ecstasy.numbers.Number$compare$Familyꖛ7503$UInteger
+            int idEnd = suffix.indexOf('$', idOffset);
+            if (idEnd < 0) {
+                idEnd = suffix.length();
+            }
+            Constant constant = pool().getConstant(
+                    Integer.valueOf(suffix.substring(idOffset + 1, idEnd)));
             if (constant instanceof TypeConstant constType) {
                 type = constType;
             } else if (constant instanceof ClassConstant constClass) {
-                return new Artifact(constClass.getType(),
-                    (ClassStructure) constClass.getComponent(), shape, className);
+                ClassStructure struct = (ClassStructure) constClass.getComponent();
+                if (idEnd < suffix.length()) {
+                    String childName = unescapeJitName(suffix.substring(idEnd + 1))
+                            .replace('$', '.');
+                    if (!(struct.getChildByPath(childName) instanceof ClassStructure child)) {
+                        return null;
+                    }
+                    struct = child;
+                }
+                return new Artifact(struct.getFormalType(), struct, shape, className);
             } else {
                 throw new IllegalArgumentException("Unsupported suffix: " + constant.toString());
             }
@@ -506,22 +587,6 @@ public class TypeSystem {
     }
 
     /**
-     * Build a class name for the `Class` class of the specific already-escaped class name.
-     *
-     * @param name  the JIT name of the class
-     *
-     * @return the JIT name of the `Class` class for the class
-     */
-    public static String classClass(String name) {
-        int offset = max(name.lastIndexOf('.'), name.lastIndexOf('$')) + 1;
-        return new StringBuilder(name.length() + CLASS > 0xFFFF ? 2 : 1)
-                .append(name, 0, offset)
-                .appendCodePoint(CLASS)
-                .append(name, offset, name.length())
-                .toString();
-    }
-
-    /**
      * Build a class name for the `Enumeration` class of the specific already-escaped `Enum` class
      * name.
      *
@@ -530,10 +595,25 @@ public class TypeSystem {
      * @return the JIT name of the `Enumeration` class
      */
     public static String enumerationClass(String name) {
+        return flavorClassName(name, ENUM);
+    }
+
+    /**
+     * Build a class name for the `Class` class of the specific already-escaped class name.
+     *
+     * @param name  the JIT name of the class of Class
+     *
+     * @return the JIT name of the `Class` class
+     */
+    public static String classOfClass(String name) {
+        return flavorClassName(name, CLASS);
+    }
+
+    private static String flavorClassName(String name, char flavor) {
         int offset = max(name.lastIndexOf('.'), name.lastIndexOf('$')) + 1;
         return new StringBuilder(name.length() + ENUM > 0xFFFF ? 2 : 1)
                 .append(name, 0, offset)
-                .appendCodePoint(ENUM)
+                .appendCodePoint(flavor)
                 .append(name, offset, name.length())
                 .toString();
     }

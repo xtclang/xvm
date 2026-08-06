@@ -20,7 +20,7 @@ public interface Service extends Object {
     /**
      * {@code <Value> SharedContext<Value>.Token? findContextToken(SharedContext<Value> ctx)}
      */
-    nObj findContextToken(Ctx ctx, nType t$Value, SharedContext sharedContext);
+    nObject findContextToken(Ctx ctx, nType t$Value, SharedContext sharedContext);
 
     /**
      * {@code void registerContextToken(SharedContext.Token token)}

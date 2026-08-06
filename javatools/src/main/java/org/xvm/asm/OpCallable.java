@@ -657,8 +657,6 @@ public abstract class OpCallable extends Op {
             int        nDepth    = bctx.callDepth + 1;
             MethodBody bodySuper = bctx.callChain[nDepth];
 
-            sJitName = MethodInfo.getJitIdentity(bctx.callChain).ensureJitMethodName(ts);
-
             MethodConstant   idSuper  = bodySuper.getIdentity();
             IdentityConstant idCallee = idSuper.getNamespace();
             Format           format   = idCallee.getComponent().getFormat();
@@ -666,7 +664,8 @@ public abstract class OpCallable extends Op {
             if (format == Format.MIXIN) {
                 // we need to generate a synthetic super
                 cdTarget   = ClassDesc.of(bctx.className);
-                sJitName  += HASH + String.valueOf(nDepth);
+                sJitName   = MethodInfo.getJitIdentity(bctx.callChain).ensureJitMethodName(ts)
+                           + HASH + nDepth;
 
                 bctx.buildSuper(sJitName, nDepth);
                 fInterface = false;
@@ -675,6 +674,8 @@ public abstract class OpCallable extends Op {
                         ? idCallee.getFormalType().resolveGenerics(bctx.pool(), bctx.thisType)
                         : idCallee.getType();
                 cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
+                sJitName   = MethodInfo.getJitIdentity(bctx.callChain, nDepth).
+                        ensureJitMethodName(ts);
                 fInterface = typeTarget.isJitInterface();
             }
             jmdCall  = bodySuper.getJitDesc(bctx.builder, bctx.thisType);

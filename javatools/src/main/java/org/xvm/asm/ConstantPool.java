@@ -1907,7 +1907,7 @@ public class ConstantPool
     }
 
     /**
-     * Obtain an "pure type" IdentityConstant for a TypeConstant.
+     * Obtain a "pure type" IdentityConstant for a TypeConstant.
      *
      * @param type  the pure type
      *
@@ -1933,14 +1933,7 @@ public class ConstantPool
      * @return the RegisterTypeConstant for the specified register number
      */
     public TypeParameterConstant ensureRegisterConstant(MethodConstant constMethod, int iReg, String sName) {
-        TypeParameterConstant constReg = null;
-        if (iReg == 0) {
-            constReg = (TypeParameterConstant) ensureLocatorLookup(Format.TypeParameter).get(constMethod);
-        }
-        if (constReg == null) {
-            constReg = register(new TypeParameterConstant(this, constMethod, sName, iReg));
-        }
-        return constReg;
+        return register(new TypeParameterConstant(this, constMethod, sName, iReg));
     }
 
     /**
@@ -2121,6 +2114,47 @@ public class ConstantPool
         return register(new DifferenceTypeConstant(this, constType1, constType2));
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    /**
+     * @return the immutable set of all JIT-Primitive types for this ConstantPool
+     */
+    public Set<TypeConstant> getJitPrimitiveTypes() {
+        Set<TypeConstant> setTypes = m_setJitPrimitives;
+        if (setTypes == null) {
+            TypeConstant[] atype = new TypeConstant[] {
+                typeBit(),
+                typeNibble(),
+                typeBoolean(),
+                typeChar(),
+                typeInt8(),
+                typeInt16(),
+                typeInt32(),
+                typeInt64(),
+                typeInt128(),
+                typeUInt8(),
+                typeUInt16(),
+                typeUInt32(),
+                typeUInt64(),
+                typeUInt128(),
+                typeFloat16(),
+                typeFloat32(),
+                typeFloat64(),
+                typeDec32(),
+                typeDec64(),
+                typeDec128()
+            };
+
+            setTypes = new HashSet<>(atype.length*2);
+            for (TypeConstant type : atype) {
+                assert type.isJitPrimitive();
+                setTypes.add(type);
+                setTypes.add(type.ensureNullable());
+            }
+            m_setJitPrimitives = setTypes = Collections.unmodifiableSet(setTypes);
+        }
+        return setTypes;
+    }
 
     // ----- caching helpers -----------------------------------------------------------------------
 
@@ -2236,6 +2270,7 @@ public class ConstantPool
     public TypeConstant      typeDec32()         {TypeConstant      c = m_typeDec32;         if (c == null) {m_typeDec32         = c = ensureTerminalTypeConstant(clzDec32()                           );} return c;}
     public TypeConstant      typeDec64()         {TypeConstant      c = m_typeDec64;         if (c == null) {m_typeDec64         = c = ensureTerminalTypeConstant(clzDec64()                           );} return c;}
     public TypeConstant      typeDec128()        {TypeConstant      c = m_typeDec128;        if (c == null) {m_typeDec128        = c = ensureTerminalTypeConstant(clzDec128()                          );} return c;}
+    public TypeConstant      typeFloat16()       {TypeConstant      c = m_typeFloat16;       if (c == null) {m_typeFloat16       = c = ensureTerminalTypeConstant(clzFloat16()                         );} return c;}
     public TypeConstant      typeFloat32()       {TypeConstant      c = m_typeFloat32;       if (c == null) {m_typeFloat32       = c = ensureTerminalTypeConstant(clzFloat32()                         );} return c;}
     public TypeConstant      typeFloat64()       {TypeConstant      c = m_typeFloat64;       if (c == null) {m_typeFloat64       = c = ensureTerminalTypeConstant(clzFloat64()                         );} return c;}
     public TypeConstant      typeIndexed()       {TypeConstant      c = m_typeIndexed;       if (c == null) {m_typeIndexed       = c = ensureTerminalTypeConstant(clzIndexed()                         );} return c;}
@@ -2341,6 +2376,7 @@ public class ConstantPool
     protected ClassConstant  clzDec32()         {return (ClassConstant) getImplicitlyImportedIdentity("Dec32"                    );}
     protected ClassConstant  clzDec64()         {return (ClassConstant) getImplicitlyImportedIdentity("Dec64"                    );}
     protected ClassConstant  clzDec128()        {return (ClassConstant) getImplicitlyImportedIdentity("Dec128"                   );}
+    protected ClassConstant  clzFloat16()       {return (ClassConstant) getImplicitlyImportedIdentity("Float16"                  );}
     protected ClassConstant  clzFloat32()       {return (ClassConstant) getImplicitlyImportedIdentity("Float32"                  );}
     protected ClassConstant  clzFloat64()       {return (ClassConstant) getImplicitlyImportedIdentity("Float64"                  );}
     protected ClassConstant  clzIndexed()       {return (ClassConstant) getImplicitlyImportedIdentity("UniformIndexed"           );}
@@ -3399,7 +3435,7 @@ public class ConstantPool
     /**
      * Build a TypeConstant for a Method.
      *
-     * @param typeTarget    the targete type
+     * @param typeTarget    the target type
      * @param atypeParams   the parameter types of the method
      * @param atypeReturns  the return types of the method
      *
@@ -3778,8 +3814,10 @@ public class ConstantPool
         m_typeDec32         = null;
         m_typeDec64         = null;
         m_typeDec128        = null;
+        m_typeFloat16       = null;
         m_typeFloat32       = null;
         m_typeFloat64       = null;
+        m_setJitPrimitives  = null;
         m_typeIndexed       = null;
         m_typeArray         = null;
         m_typeMatrix        = null;
@@ -4088,8 +4126,10 @@ public class ConstantPool
     private transient TypeConstant      m_typeDec32;
     private transient TypeConstant      m_typeDec64;
     private transient TypeConstant      m_typeDec128;
+    private transient TypeConstant      m_typeFloat16;
     private transient TypeConstant      m_typeFloat32;
     private transient TypeConstant      m_typeFloat64;
+    private transient Set<TypeConstant> m_setJitPrimitives;
     private transient TypeConstant      m_typeIndexed;
     private transient TypeConstant      m_typeArray;
     private transient TypeConstant      m_typeMatrix;

@@ -31,7 +31,7 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
 import static org.xvm.javajit.Builder.CD_TypeConstant;
-import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.DataType;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
@@ -331,6 +331,7 @@ public abstract class OpCondJump
                     tmx.assign(nAddrThis, m_nArg, bctx.pool().typeNullable());
                     tmx.assign(nAddrThis, nAddrJump, m_nArg, type.removeNullable());
                 }
+                tmx.cleanupJump(nAddrJump, m_cExits);
                 return;
             }
 
@@ -349,6 +350,7 @@ public abstract class OpCondJump
                     boolean isA = typeTarget.isA(typeTest);
                     if ((getOpCode() == OP_JMP_TYPE) == isA) {
                         tmx.follow(nAddrThis, nAddrJump, -1);
+                        tmx.cleanupJump(nAddrJump, m_cExits);
                     } else {
                         tmx.follow(nAddrThis);
                     }
@@ -365,12 +367,14 @@ public abstract class OpCondJump
                     tmx.assign(nAddrThis, m_nArg, typeIs);
                     tmx.assign(nAddrThis, nAddrJump, m_nArg, typeIsNot);
                 }
+                tmx.cleanupJump(nAddrJump, m_cExits);
                 return;
             }
         }
 
         tmx.follow(nAddrThis);
         tmx.follow(nAddrThis, nAddrJump, -1);
+        tmx.cleanupJump(nAddrJump, m_cExits);
     }
 
     @Override
@@ -592,9 +596,7 @@ public abstract class OpCondJump
         // this logic is almost identical to OpTest.buildTypeCheck();
         TypeConstant typeTarget = bctx.getArgumentType(m_nArg);
         if (m_nArg2 <= CONSTANT_OFFSET) {
-            TypeConstant typeTest = bctx.getArgumentType(m_nArg2);
-            assert typeTest.isTypeOfType();
-            typeTest = typeTest.getParamType(0);
+            TypeConstant typeTest = bctx.getTypeConstant(m_nArg2);
 
             if (typeTarget.isJavaPrimitive() || typeTarget.isXvmPrimitive()) {
                 // we can statically compute the result, which most probably means that a formal
@@ -649,14 +651,14 @@ public abstract class OpCondJump
                 }
             } else {
                 regTarget.load(code);
-                // cast to nObj because the target type may be an interface that will not have
-                // the $xvmType method, but that is fine because everything is nObj and nObj does
+                // cast to nObject because the target type may be an interface that will not have
+                // the $xvmType method, but that is fine because everything is nObject and nObject does
                 // have the $xvmType method
                 if (regTarget.type().isJitInterface()) {
-                    code.checkcast(CD_nObj);
+                    code.checkcast(CD_nObject);
                 }
                 bctx.loadCtx(code);
-                code.invokevirtual(CD_nObj, "$xvmType", MD_xvmType); // target type
+                code.invokevirtual(CD_nObject, "$xvmType", MD_xvmType); // target type
                 bctx.loadTypeConstant(code, typeTest);               // test type
                 code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
             }
