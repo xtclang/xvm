@@ -11,7 +11,8 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.PropertyStructure;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
@@ -20,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class SignatureConstantTest {
     @Test
-    public void resolvingGenericPropertySignatureDoesNotPolluteConstantPool() {
+    public void resolvingGenericPropertySignaturePreservesCanonicalInstances() {
         FileStructure  file   = new FileStructure("test");
         ConstantPool   pool   = file.getConstantPool();
         ModuleStructure module = file.getModule();
@@ -38,12 +39,16 @@ public class SignatureConstantTest {
         SignatureConstant propertySignature = value.getIdentityConstant().getSignature();
         SignatureConstant resolved = propertySignature.resolveGenericTypes(
                 pool, ignored -> actual.getCanonicalType());
+        SignatureConstant resolvedAgain = propertySignature.resolveGenericTypes(
+                pool, ignored -> actual.getCanonicalType());
 
         assertTrue(resolved.isProperty());
-        assertNull(pool.getConstant(resolved));
+        assertSame(resolved, pool.getConstant(resolved));
+        assertSame(resolved, resolvedAgain);
 
         SignatureConstant methodSignature = pool.ensureSignatureConstant(
                 "value", ConstantPool.NO_TYPES, new TypeConstant[] {actual.getCanonicalType()});
         assertFalse(methodSignature.isProperty());
+        assertNotSame(resolved, methodSignature);
     }
 }

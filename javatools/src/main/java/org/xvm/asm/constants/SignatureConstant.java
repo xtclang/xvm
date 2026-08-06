@@ -285,15 +285,12 @@ public class SignatureConstant
         }
 
         if (fDiff) {
-            // Property signatures are transient (never serialized). Do not register one into the
-            // ConstantPool and then flip m_fProperty on a pooled method signature — SignatureConstant
-            // is used as a ConcurrentHashMap key, so mutating m_fProperty after registration corrupts
-            // the pool.
+            // don't register the constant until its state is changed
             if (m_fProperty) {
                 SignatureConstant that = new SignatureConstant(
                         pool, getName(), aconstParamResolved, aconstReturnResolved);
                 that.m_fProperty = true;
-                return that;
+                return pool.register(that);
             }
             return pool.ensureSignatureConstant(
                     getName(), aconstParamResolved, aconstReturnResolved);
