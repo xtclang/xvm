@@ -2236,7 +2236,7 @@ public abstract class TypeConstant
                 ? collectMixinAnnotations(listProcess)
                 : Annotation.NO_ANNOTATIONS;
 
-        TypeInfo info = new TypeInfo(this, cInvalidations, struct, 0, false, mapTypeParams,
+        TypeInfo info = new TypeInfoReal(this, cInvalidations, struct, 0, false, mapTypeParams,
                 aAnnoClass, aAnnoMixin, typeExtends, typeRebase, typeInto,
                 listProcess, listmapClassChain, listmapDefaultChain,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
@@ -2634,7 +2634,7 @@ public abstract class TypeConstant
                 getMethodBySignature(pool.sigToString());
         mapMethods.putIfAbsent(infoToString.getIdentity(), infoToString);
 
-        return new TypeInfo(this, cInvals, struct, 0,
+        return new TypeInfoReal(this, cInvals, struct, 0,
                 false, infoPri.getTypeParams(), infoPri.getClassAnnotations(), infoPri.getMixinAnnotations(),
                 infoPri.getExtends(), infoPri.getRebases(), infoPri.getInto(),
                 infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
@@ -5654,7 +5654,8 @@ public abstract class TypeConstant
             TypeInfo     infoMixin   = typePrivate.ensureTypeInfoInternal(errs);
             if (infoMixin == null) {
                 // return the incomplete info for whatever we've got so far
-                return new TypeInfo(this, cInvalidations, infoBase.getClassStructure(), 0, false,
+                return new TypeInfoReal(this, cInvalidations,
+                        infoBase.getClassStructure(), 0, false,
                         info.getTypeParams(), Annotation.NO_ANNOTATIONS, Annotation.NO_ANNOTATIONS,
                         info.getExtends(), info.getRebases(), info.getInto(),
                         info.getContributionList(), info.getClassChain(), info.getDefaultChain(),
@@ -5761,7 +5762,7 @@ public abstract class TypeConstant
 
         Annotation[] aAnnoMixin = collectMixinAnnotations(listProcess);
 
-        return new TypeInfo(typeTarget, cInvalidations, structBase, 0, false, mapTypeParams,
+        return new TypeInfoReal(typeTarget, cInvalidations, structBase, 0, false, mapTypeParams,
                 aAnnoClass, aAnnoMixin,
                 infoSource.getExtends(), infoSource.getRebases(), infoSource.getInto(),
                 listProcess, infoSource.getClassChain(), infoSource.getDefaultChain(),

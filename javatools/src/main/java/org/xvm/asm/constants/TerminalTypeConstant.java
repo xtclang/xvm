@@ -1431,7 +1431,7 @@ public class TerminalTypeConstant
                 if (typeR != this) {
                     TypeInfo infoR = typeR.ensureTypeInfo(idClass, errs);
                     assert isComplete(infoR);
-                    return new TypeInfo(this, infoR, cInvals);
+                    return new TypeInfoReal(this, infoR, cInvals);
                 }
             }
 
@@ -1441,7 +1441,7 @@ public class TerminalTypeConstant
             }
             TypeInfo infoConstraint = typeConstraint.ensureTypeInfo(idClass, errs);
             assert isComplete(infoConstraint);
-            return new TypeInfo(this, infoConstraint, cInvals);
+            return new TypeInfoReal(this, infoConstraint, cInvals);
         }
 
         return super.ensureTypeInfo(idClass, errs);
@@ -1482,7 +1482,7 @@ public class TerminalTypeConstant
             }
             TypeInfo infoConstraint = typeConstraint.ensureTypeInfoInternal(errs);
             return isComplete(infoConstraint)
-                    ? new TypeInfo(this, infoConstraint, cInvalidations)
+                    ? new TypeInfoReal(this, infoConstraint, cInvalidations)
                     : null;
         }
 

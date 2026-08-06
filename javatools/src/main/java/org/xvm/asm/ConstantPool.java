@@ -2414,7 +2414,7 @@ public class ConstantPool
     public TypeInfo infoPlaceholder() {
         TypeInfo info = m_infoPlaceholder;
         if (info == null) {
-            m_infoPlaceholder = info = new TypeInfo(
+            m_infoPlaceholder = info = new TypeInfoReal(
                 typeObject(), 0, null, 0, true, Collections.emptyMap(),
                 Annotation.NO_ANNOTATIONS, Annotation.NO_ANNOTATIONS,
                 typeObject(), null, typeObject(),
