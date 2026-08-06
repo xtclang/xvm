@@ -143,7 +143,19 @@ II. Ecstasy to Java Classfile compiler (JIT) class naming conventions:
       class or interface that occurs in the continued specialization level and also exists in the
       level above or below it is referred to as a "JIT-Column"; a JIT-Column extends vertically as
       far as there are specialization levels containing that specialization; in "long-arms" jargon,
-      the central column is referred to as the "spine" or "trunk".
+      the central column is referred to as the "spine" or "trunk";
+   f) for layer one specialization, the JIT emits Generalized interfaces for each variant; for
+      example, iRange<Orderable> and iRange<Sequential>;
+   g) layer two and three specialization are combined into a single set of emitted classes and
+      interfaces; for example, the Central interface iRange, the Specialized interfaces
+      iRange<Int32> and iRange<Int64>, the Specialized classes Range<Int32> and Range<Int64>, and
+      the Generalized classes Range<Orderable> and Range<Sequential> (i.e. the JIT Shape is a Java
+      reference);
+   h) the absence of an abstract class representing ranges of all Orderable types and an abstract
+      class representing ranges of all Sequential types is a conscious decision; similarly, the
+      absence of a distince layer two Speciailization based solely on JIT Shapes is also a conscious
+      decision; in both cases, we accept additional unnecessary replication of code, and if we later
+      realize that we dislike the resulting trade-offs, the design should be easily modifiable.
 
    Note: Specializable Ecstasy types always have a single underlying class (as defined by the
          TypeConstant.isSingleUnderlyingClass() API)
