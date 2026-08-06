@@ -136,6 +136,22 @@ module TestMisc {
         assert "abcde"[2>..<1] == "";
         assert "abcde"[1>..2] == "c";
         assert "abcde"[2>..1] == "b";
+
+        assert "".left(0) == "";
+        assert "".left(1) == "";
+        assert "".left(-1) == "";
+        assert "".right(0) == "";
+        assert "".right(1) == "";
+        assert "".right(-1) == "";
+
+        assert "hello".left(0) == "";
+        assert "hello".left(1) == "h";
+        assert "hello".left(7) == "hello";
+        assert "hello".left(-1) == "";
+        assert "hello".right(0) == "";
+        assert "hello".right(1) == "o";
+        assert "hello".right(23) == "hello";
+        assert "hello".right(-1) == "";
     }
 
     void testCast() {

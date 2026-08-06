@@ -121,6 +121,43 @@ const String
     }
 
     /**
+     * Obtain the leading portion of this String, up to the specified size. If the specified
+     * size exceeds the size of this String, then this String is returned.
+     *
+     * @param size  the maximum number of leading characters to return in the result
+     *
+     * @return the leading sub-string of at most `size` characters
+     */
+    String! left(Int size) {
+        if (size <= 0) {
+            return "";
+        }
+        if (size >= this.size) {
+            return this;
+        }
+        return this[0 ..< size];
+    }
+
+    /**
+     * Obtain the trailing portion of this String, up to the specified size. If the specified
+     * size exceeds the size of this String, then this String is returned.
+     *
+     * @param size  the maximum number of trailing characters to return in the result
+     *
+     * @return the trailing sub-string of at most `size` characters
+     */
+    String! right(Int size) {
+        if (size <= 0) {
+            return "";
+        }
+        Int length = this.size;
+        if (size >= length) {
+            return this;
+        }
+        return this[length-size ..< length];
+    }
+
+    /**
      * Obtain this String, but with its contents reversed.
      *
      * @return the reversed form of this String
