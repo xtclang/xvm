@@ -108,6 +108,38 @@ public class MethodBody {
     }
 
     /**
+     * Internal: Copy a MethodBody for a new containing MethodInfo.
+     *
+     * @param method  the containing MethodInfo
+     * @param body    the MethodBody to copy
+     */
+    private MethodBody(MethodInfo method, MethodBody body) {
+        m_infoMethod   = method;
+        m_id           = body.m_id;
+        m_sig          = body.m_sig;
+        m_target       = body.m_target == body.m_infoMethod ? method : body.m_target;
+        m_impl         = body.m_impl;
+        m_structMethod = body.m_structMethod;
+    }
+
+    /**
+     * Internal: Associate this MethodBody with the specified MethodInfo, copying it if it already
+     * belongs to a different MethodInfo.
+     */
+    synchronized MethodBody forMethod(MethodInfo method) {
+        assert method != null;
+
+        if (m_infoMethod == null) {
+            m_infoMethod = method;
+            return this;
+        }
+
+        return m_infoMethod == method
+                ? this
+                : new MethodBody(method, this);
+    }
+
+    /**
      * Create a MethodBody based on this body, but with resolved method.
      *
      * @param pool      the ConstantPool to create the resolved constants at
@@ -130,6 +162,13 @@ public class MethodBody {
      */
     public MethodConstant getIdentity() {
         return m_id;
+    }
+
+    /**
+     * @return the containing MethodInfo, or null if this is a standalone MethodBody
+     */
+    public MethodInfo getMethodInfo() {
+        return m_infoMethod;
     }
 
     /**
@@ -839,6 +878,11 @@ public class MethodBody {
      * </ul>
      */
     private final Object m_target;
+
+    /**
+     * The MethodInfo that contains this MethodBody, or null for a standalone MethodBody.
+     */
+    private MethodInfo m_infoMethod;
 
     /**
      * Cached method structure.

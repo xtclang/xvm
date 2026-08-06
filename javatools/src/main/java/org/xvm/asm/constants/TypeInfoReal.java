@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -114,18 +115,19 @@ public class TypeInfoReal
         f_listProcess         = listProcess;
         f_listmapClassChain   = listmapClassChain;
         f_listmapDefaultChain = listmapDefaultChain;
+        IdentityHashMap<MethodInfo, MethodInfo> mapMethodCopies = new IdentityHashMap<>();
         f_mapProps            = mapProps;
         f_mapVirtProps        = mapVirtProps;
-        f_mapMethods          = mapMethods;
-        f_mapVirtMethods      = mapVirtMethods;
+        f_mapMethods          = ensureMethodOwnership(mapMethods, mapMethodCopies);
+        f_mapVirtMethods      = ensureMethodOwnership(mapVirtMethods, mapMethodCopies);
         f_mapChildren         = mapChildren;
         f_setDepends          = setDepends;
         f_progress            = progress;
 
         // pre-populate the method lookup caches
         // and determine if this type is implicitly abstract
-        f_cacheById  = new ConcurrentHashMap<>(mapMethods);
-        f_cacheByNid = new ConcurrentHashMap<>(mapVirtMethods);
+        f_cacheById  = new ConcurrentHashMap<>(f_mapMethods);
+        f_cacheByNid = new ConcurrentHashMap<>(f_mapVirtMethods);
 
         // mapTypeParams has two types of entries:
         //  - actual generic types keyed by the generic type name
@@ -168,16 +170,19 @@ public class TypeInfoReal
         f_listProcess         = infoReal.f_listProcess;
         f_listmapClassChain   = infoReal.f_listmapClassChain;
         f_listmapDefaultChain = infoReal.f_listmapDefaultChain;
+        IdentityHashMap<MethodInfo, MethodInfo> mapMethodCopies = new IdentityHashMap<>();
         f_mapProps            = infoReal.f_mapProps;
         f_mapVirtProps        = infoReal.f_mapVirtProps;
-        f_mapMethods          = infoReal.f_mapMethods;
-        f_mapVirtMethods      = infoReal.f_mapVirtMethods;
+        f_mapMethods          = ensureMethodOwnership(infoReal.f_mapMethods, mapMethodCopies);
+        f_mapVirtMethods      = ensureMethodOwnership(infoReal.f_mapVirtMethods, mapMethodCopies);
         f_mapChildren         = infoReal.f_mapChildren;
         f_setDepends          = null;
         f_progress            = Progress.Complete;
 
-        f_cacheById    = infoReal.f_cacheById;
-        f_cacheByNid   = infoReal.f_cacheByNid;
+        f_cacheById = new ConcurrentHashMap<>(
+                ensureMethodOwnership(infoReal.f_cacheById, mapMethodCopies));
+        f_cacheByNid = new ConcurrentHashMap<>(
+                ensureMethodOwnership(infoReal.f_cacheByNid, mapMethodCopies));
         f_fHasGenerics = infoReal.f_fHasGenerics;
 
         m_fExplicitAbstract = true;
@@ -202,6 +207,7 @@ public class TypeInfoReal
                 throw new AssertionError("TypeInfo for " + f_type
                         + " contains null value in f_mapVirtMethods for key=" + key);
             }
+            validateMethodOwnership(val);
             if (key instanceof NestedIdentity) {
                 // TODO
             } else if (key instanceof SignatureConstant) {
@@ -224,8 +230,49 @@ public class TypeInfoReal
                 throw new AssertionError("TypeInfo for " + f_type
                                              + " contains null value in f_mapMethods for key=" + key);
             }
+            validateMethodOwnership(val);
 
             // TODO find the MethodInfo in the f_mapVirtMethods map
+        }
+    }
+
+    /**
+     * Ensure that every MethodInfo in the specified map belongs exclusively to this TypeInfo,
+     * retaining aliases when the same MethodInfo occurs under multiple keys or in multiple maps.
+     */
+    private <K> Map<K, MethodInfo> ensureMethodOwnership(
+            Map<K, MethodInfo>                       mapMethods,
+            IdentityHashMap<MethodInfo, MethodInfo> mapMethodCopies) {
+        Map<K, MethodInfo> mapOwned = new HashMap<>(mapMethods.size());
+        for (Entry<K, MethodInfo> entry : mapMethods.entrySet()) {
+            MethodInfo method = entry.getValue();
+            if (method != null) {
+                MethodInfo methodOwned = mapMethodCopies.get(method);
+                if (methodOwned == null) {
+                    methodOwned = method.forType(this);
+                    mapMethodCopies.put(method, methodOwned);
+                }
+                method = methodOwned;
+            }
+            mapOwned.put(entry.getKey(), method);
+        }
+        return mapOwned;
+    }
+
+    /**
+     * Validate the MethodInfo and MethodBody ownership for this TypeInfo.
+     */
+    private void validateMethodOwnership(MethodInfo method) {
+        if (method.getTypeInfo() != this) {
+            throw new AssertionError("MethodInfo for " + method.getIdentity()
+                    + " belongs to a different TypeInfo");
+        }
+
+        for (MethodBody body : method.getChain()) {
+            if (body.getMethodInfo() != method) {
+                throw new AssertionError("MethodBody for " + body.getIdentity()
+                        + " belongs to a different MethodInfo");
+            }
         }
     }
 
@@ -504,8 +551,8 @@ public class TypeInfoReal
         MethodInfo        method    = getMethodById(id);
         MethodBody        body      = method.getHead();
         MethodBody        bodyNew   = new MethodBody(idNew, sigNew, body.getImplementation(), null);
-        MethodInfo        methodNew = new MethodInfo(bodyNew, method.getRank());
         bodyNew.setMethodStructure(body.getMethodStructure());
+        MethodInfo        methodNew = new MethodInfo(bodyNew, method.getRank());
 
         // we intentionally add absolutely nothing except the "get" method
         Map<MethodConstant, MethodInfo> mapMethods = new HashMap<>(1);
