@@ -527,6 +527,29 @@ public class MethodStructure
     }
 
     /**
+     * Determine the index of the specified formal type parameter for this method.
+     *
+     * @param constFormal  the formal constant
+     *
+     * @return the type parameter index, or -1 if the formal is not a type parameter of this method
+     */
+    public int indexOfTypeParameter(FormalConstant constFormal) {
+        if (!(constFormal instanceof TypeParameterConstant constParam)) {
+            return -1;
+        }
+
+        MethodConstant idMethod  = getIdentityConstant();
+        MethodConstant idMethodP = constParam.getMethod();
+        if (idMethodP != idMethod && idMethodP.getComponent() != this &&
+                !idMethodP.equals(idMethod)) {
+            return -1;
+        }
+
+        int iParam = constParam.getRegister();
+        return isTypeParameter(iParam) ? iParam : -1;
+    }
+
+    /**
      * @return a list of Parameter structures that represent all parameters of the method
      */
     public List<Parameter> getParams() {
@@ -961,26 +984,11 @@ public class MethodStructure
 
         // generic types are passed to "static" lambdas as type parameters
         if (isLambda() && getTypeParamCount() > 0) {
-            SignatureConstant sigOrig     = sigResolved;
-            MethodConstant    idMethod    = getIdentityConstant();
-            int               cTypeParams = getTypeParamCount();
+            SignatureConstant sigOrig = sigResolved;
 
             sigResolved = sigResolved.resolveGenericTypes(pool, formalConst -> {
-                if (!(formalConst instanceof TypeParameterConstant formalParam)) {
-                    return null;
-                }
-
-                // the formal type parameter already identifies its method and register; avoid
-                // recreating and registering a TypeParameterConstant, which can require a recursive
-                // comparison
-                MethodConstant idMethodP = formalParam.getMethod();
-                if (idMethodP != idMethod && idMethodP.getComponent() != this &&
-                        !idMethodP.equals(idMethod)) {
-                    return null;
-                }
-
-                int iParam = formalParam.getRegister();
-                if (iParam >= cTypeParams) {
+                int iParam = indexOfTypeParameter(formalConst);
+                if (iParam < 0) {
                     return null;
                 }
 

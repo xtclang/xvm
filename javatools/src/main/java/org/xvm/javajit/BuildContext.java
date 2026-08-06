@@ -3441,19 +3441,17 @@ public class BuildContext {
      */
     public GenericTypeResolver createTypeResolver(MethodStructure method, int[] argIds) {
         return constFormal -> {
-            MethodConstant methodId = method.getIdentityConstant();
-            for (Parameter param : method.getParamArray()) {
-                if (param.isTypeParameter() &&
-                        constFormal.equals(param.asTypeParameterConstant(methodId))) {
-                    TypeConstant type = getArgumentType(argIds[param.getIndex()]);
-
-                    // the register the type parameter points to must be an nType instance;
-                    // its type is a type-of-type-of-type
-                    assert type.getParamType(0).isTypeOfType();
-                    return type.getParamType(0).getParamType(0);
-                }
+            int iParam = method.indexOfTypeParameter(constFormal);
+            if (iParam < 0) {
+                return null;
             }
-            return null;
+
+            TypeConstant type = getArgumentType(argIds[iParam]);
+
+            // the register the type parameter points to must be an nType instance;
+            // its type is a type-of-type-of-type
+            assert type.getParamType(0).isTypeOfType();
+            return type.getParamType(0).getParamType(0);
         };
     }
 
