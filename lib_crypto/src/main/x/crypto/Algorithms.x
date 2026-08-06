@@ -120,6 +120,84 @@ const Algorithms {
     }
 
     /**
+     * Obtain an [AuthenticatedEncryptor] for the authenticated-encryption algorithm of the
+     * specified name.
+     *
+     * @param specifier  the algorithm name, or the [Algorithm] object itself
+     * @param key        the key used to encrypt and authenticate
+     *
+     * @return `True` iff the `Algorithms` is configured with the specified algorithm, and the key
+     *         is acceptable
+     * @return (conditional) the [AuthenticatedEncryptor] for the specified algorithm
+     */
+    conditional AuthenticatedEncryptor authenticatedEncryptorFor(
+            Specifier specifier, CryptoKey key) {
+        if (Algorithm algorithm := findAlgorithm(specifier, AuthenticatedEncryption, key, False),
+                validSecretKeyFor(algorithm, key)) {
+            return True, algorithm.allocate(key).as(AuthenticatedEncryptor);
+        }
+
+        return False;
+    }
+
+    /**
+     * Obtain an [AuthenticatedDecryptor] for the authenticated-encryption algorithm of the
+     * specified name.
+     *
+     * @param specifier  the algorithm name, or the [Algorithm] object itself
+     * @param key        the private or symmetric key used to authenticate and decrypt
+     *
+     * @return `True` iff the `Algorithms` is configured with the specified algorithm, and the key
+     *         is acceptable
+     * @return (conditional) the [AuthenticatedDecryptor] for the specified algorithm
+     */
+    conditional AuthenticatedDecryptor authenticatedDecryptorFor(
+            Specifier specifier, CryptoKey key) {
+        if (Algorithm algorithm := findAlgorithm(specifier, AuthenticatedEncryption, key, True),
+                validSecretKeyFor(algorithm, key)) {
+            return True, algorithm.allocate(key).as(AuthenticatedDecryptor);
+        }
+
+        return False;
+    }
+
+    /**
+     * Obtain a [KeyWrapper] for the specified key-wrapping algorithm.
+     *
+     * @param specifier  the algorithm name, or the [Algorithm] object itself
+     * @param key        the secret key-encryption key used to wrap keys
+     *
+     * @return `True` iff the algorithm is configured and accepts the key-encryption key
+     * @return (conditional) the [KeyWrapper] for the specified algorithm
+     */
+    conditional KeyWrapper keyWrapperFor(Specifier specifier, CryptoKey key) {
+        if (Algorithm algorithm := findAlgorithm(specifier, KeyWrapping, key, False),
+                validSecretKeyFor(algorithm, key)) {
+            return True, algorithm.allocate(key).as(KeyWrapper);
+        }
+
+        return False;
+    }
+
+    /**
+     * Obtain a [KeyUnwrapper] for the specified key-wrapping algorithm.
+     *
+     * @param specifier  the algorithm name, or the [Algorithm] object itself
+     * @param key        the secret key-encryption key used to unwrap keys
+     *
+     * @return `True` iff the algorithm is configured and accepts the key-encryption key
+     * @return (conditional) the [KeyUnwrapper] for the specified algorithm
+     */
+    conditional KeyUnwrapper keyUnwrapperFor(Specifier specifier, CryptoKey key) {
+        if (Algorithm algorithm := findAlgorithm(specifier, KeyWrapping, key, True),
+                validSecretKeyFor(algorithm, key)) {
+            return True, algorithm.allocate(key).as(KeyUnwrapper);
+        }
+
+        return False;
+    }
+
+    /**
      * Obtain a [KeyGenerator] for the key generation algorithm of the specified name.
      *
      * @param specifier  the algorithm name, or the [Algorithm] object itself
@@ -175,7 +253,9 @@ const Algorithms {
 
         if (Algorithm algorithm := byName.get(name), algorithm.category == category) {
             if (Int|Int[] keySize := algorithm.keyRequired()) {
-                return key != Null && validSize(keySize, key.size)
+                return key != Null
+                        && (!privateRequired || key.form != Public)
+                        && validSize(keySize, key.size)
                         ? (True, algorithm)
                         : False;
             } else {
@@ -185,5 +265,13 @@ const Algorithms {
             }
         }
         return False;
+    }
+
+    /**
+     * Verify the additional key constraints shared by authenticated-encryption algorithms.
+     */
+    private Boolean validSecretKeyFor(Algorithm algorithm, CryptoKey key) {
+        String keyAlgorithm = algorithm.name.split('/')[0];
+        return key.form == Secret && key.algorithm == keyAlgorithm;
     }
 }
