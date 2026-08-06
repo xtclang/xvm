@@ -208,63 +208,81 @@ public class xRTAlgorithms
             ByteArrayHandle hBytes = (ByteArrayHandle) ((ArrayHandle) hKey).m_hDelegate;
             byte[]          abRaw  = xRTUInt8Delegate.getBytes(hBytes);
 
-            switch (sAlgorithm) {
-            case "DES":
-                return switch (keyForm) {
-                    case PublicOrSecret, PrivateOrSecret ->
-                        SecretKeyFactory.getInstance(sAlgorithm).
-                            generateSecret(new DESKeySpec(abRaw));
+            return extractKey(abRaw, sAlgorithm, keyForm);
+        }
+    }
 
-                    default ->
-                        throw new GeneralSecurityException(
-                            sAlgorithm + " algorithm only supports secret keys");
-                };
+    /**
+     * Extract a key from its raw encoding.
+     */
+    static Key extractKey(byte[] abRaw, String sAlgorithm, KeyForm keyForm)
+            throws GeneralSecurityException {
+        switch (sAlgorithm) {
+        case "AES", "AES/CBC/PKCS5Padding", "AES/ECB/PKCS5Padding":
+            return switch (keyForm) {
+                case PublicOrSecret, PrivateOrSecret ->
+                    new SecretKeySpec(abRaw, "AES");
 
-            case "DESede":
-                return switch (keyForm) {
-                    case PublicOrSecret, PrivateOrSecret ->
-                        SecretKeyFactory.getInstance(sAlgorithm).
-                            generateSecret(new DESedeKeySpec(abRaw));
+                default ->
+                    throw new GeneralSecurityException(
+                        sAlgorithm + " algorithm only supports secret keys");
+            };
 
-                    default ->
-                        throw new GeneralSecurityException(
-                            sAlgorithm + " algorithm only supports secret keys");
-                };
+        case "DES":
+            return switch (keyForm) {
+                case PublicOrSecret, PrivateOrSecret ->
+                    SecretKeyFactory.getInstance(sAlgorithm).
+                        generateSecret(new DESKeySpec(abRaw));
 
-            case "RSA":
-                return switch (keyForm) {
-                    case Public, PublicOrSecret ->
-                        KeyFactory.getInstance("RSA").
-                            generatePublic(new X509EncodedKeySpec(abRaw));
+                default ->
+                    throw new GeneralSecurityException(
+                        sAlgorithm + " algorithm only supports secret keys");
+            };
 
-                    case Private, PrivateOrSecret ->
-                        KeyFactory.getInstance("RSA").
-                            generatePrivate(new X509EncodedKeySpec(abRaw));
-                };
+        case "DESede":
+            return switch (keyForm) {
+                case PublicOrSecret, PrivateOrSecret ->
+                    SecretKeyFactory.getInstance(sAlgorithm).
+                        generateSecret(new DESedeKeySpec(abRaw));
 
-            case "HmacSHA1", "HmacSHA256", "HmacSHA512":
-                return switch (keyForm) {
-                    case PublicOrSecret, PrivateOrSecret ->
-                        new SecretKeySpec(abRaw, sAlgorithm);
+                default ->
+                    throw new GeneralSecurityException(
+                        sAlgorithm + " algorithm only supports secret keys");
+            };
 
-                    default ->
-                        throw new GeneralSecurityException(
-                            sAlgorithm + " algorithm only supports secret keys");
-                };
+        case "RSA":
+            return switch (keyForm) {
+                case Public, PublicOrSecret ->
+                    KeyFactory.getInstance("RSA").
+                        generatePublic(new X509EncodedKeySpec(abRaw));
 
-            default:
-                // unlike specific cases above, default implementation uses generic "SecretKeySpec"
-                return switch (keyForm) {
-                    case PublicOrSecret, PrivateOrSecret ->
-                        SecretKeyFactory.getInstance(sAlgorithm).
-                            generateSecret(new SecretKeySpec(abRaw, sAlgorithm));
+                case Private, PrivateOrSecret ->
+                    KeyFactory.getInstance("RSA").
+                        generatePrivate(new X509EncodedKeySpec(abRaw));
+            };
 
-                    default ->
-                        throw new GeneralSecurityException(
-                            sAlgorithm + " algorithm only supports secret keys");
-                };
+        case "HmacSHA1", "HmacSHA256", "HmacSHA512":
+            return switch (keyForm) {
+                case PublicOrSecret, PrivateOrSecret ->
+                    new SecretKeySpec(abRaw, sAlgorithm);
 
-            }
+                default ->
+                    throw new GeneralSecurityException(
+                        sAlgorithm + " algorithm only supports secret keys");
+            };
+
+        default:
+            // unlike specific cases above, default implementation uses generic "SecretKeySpec"
+            return switch (keyForm) {
+                case PublicOrSecret, PrivateOrSecret ->
+                    SecretKeyFactory.getInstance(sAlgorithm).
+                        generateSecret(new SecretKeySpec(abRaw, sAlgorithm));
+
+                default ->
+                    throw new GeneralSecurityException(
+                        sAlgorithm + " algorithm only supports secret keys");
+            };
+
         }
     }
 
