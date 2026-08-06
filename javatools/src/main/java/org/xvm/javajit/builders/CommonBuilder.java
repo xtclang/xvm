@@ -3998,22 +3998,13 @@ public class CommonBuilder
             Set.of("not")),         // TODO: depends on virtual constructor
         Map.entry("org.xtclang.ecstasy.numbers.Bit",
             Set.of("assert")),      // TODO: boxed Bit passed to an optimized invocation
-        Map.entry("org.xtclang.ecstasy.numbers.Int16",
-            Set.of("range")),       // TODO: RETURN_N with a formal range result
-        Map.entry("org.xtclang.ecstasy.numbers.Int32",
-            Set.of("range")),       // TODO: RETURN_N with a formal range result
         Map.entry("org.xtclang.ecstasy.numbers.Int64",
             Set.of("equals",       // TODO: Array<Bit> passed to Array<Object>
                    "parse")),       // TODO: verifier stack mismatch
-        Map.entry("org.xtclang.ecstasy.numbers.UInt8",
-            Set.of("range")),       // TODO: RETURN_N with a formal range result
         Map.entry("org.xtclang.ecstasy.numbers.UInt16",
-            Set.of("parse",         // TODO: GP_SUB for a formal value
-                   "range")),       // TODO: RETURN_N with a formal range result
-        Map.entry("org.xtclang.ecstasy.numbers.UInt32",
-            Set.of("range")),       // TODO: RETURN_N with a formal range result
+            Set.of("parse")),       // TODO: GP_SUB for a formal value
         Map.entry("org.xtclang.ecstasy.numbers.UInt64",
-            Set.of("range"))        // TODO: RETURN_N with a formal range result
+            Set.of("range"))        // TODO: native range with unsigned 64-bit bounds
     );
 
     private final static HashSet<String> SKIP_SET = new HashSet<>();

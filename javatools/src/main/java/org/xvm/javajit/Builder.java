@@ -730,38 +730,57 @@ public abstract class Builder {
         Constant[]     values    = rangeConst.getValue();
         ClassDesc      cdRange;
         ClassDesc      cdPrimitive;
-        String         className;
 
         // TODO: how/where to cache the result ??
         if (elType.isJitPrimitive()) {
             switch (elType.getSingleUnderlyingClass(false).getName()) {
                 case "Boolean":
                     cdRange     = CD_nRangeBoolean;
-                    className   = N_nRangeBoolean;
                     cdPrimitive = CD_int;
                     break;
 
                 case "Int8":
                     cdRange     = CD_nRangeInt8;
-                    className   = N_nRangeInt8;
+                    cdPrimitive = CD_int;
+                    break;
+
+                case "Int16":
+                    cdRange     = CD_nRangeInt16;
+                    cdPrimitive = CD_int;
+                    break;
+
+                case "Int32":
+                    cdRange     = CD_nRangeInt32;
                     cdPrimitive = CD_int;
                     break;
 
                 case "Int64":
                     cdRange     = CD_nRangeInt64;
-                    className   = N_nRangeInt64;
                     cdPrimitive = CD_long;
+                    break;
+
+                case "UInt8":
+                    cdRange     = CD_nRangeUInt8;
+                    cdPrimitive = CD_int;
+                    break;
+
+                case "UInt16":
+                    cdRange     = CD_nRangeUInt16;
+                    cdPrimitive = CD_int;
+                    break;
+
+                case "UInt32":
+                    cdRange     = CD_nRangeUInt32;
+                    cdPrimitive = CD_int;
                     break;
 
                 case "Float32":
                     cdRange     = CD_nRangeFloat32;
-                    className   = N_nRangeFloat32;
                     cdPrimitive = CD_float;
                     break;
 
                 case "Float64":
                     cdRange     = CD_nRangeFloat64;
-                    className   = N_nRangeFloat64;
                     cdPrimitive = CD_double;
                     break;
 
@@ -1848,7 +1867,12 @@ public abstract class Builder {
     public static final String N_nRangeFloat32 = "org.xtclang.ecstasy.nRangeᐸFloat32ᐳ";
     public static final String N_nRangeFloat64 = "org.xtclang.ecstasy.nRangeᐸFloat64ᐳ";
     public static final String N_nRangeInt8   = "org.xtclang.ecstasy.nRangeᐸInt8ᐳ";
+    public static final String N_nRangeInt16  = "org.xtclang.ecstasy.nRangeᐸInt16ᐳ";
+    public static final String N_nRangeInt32  = "org.xtclang.ecstasy.nRangeᐸInt32ᐳ";
     public static final String N_nRangeInt64  = "org.xtclang.ecstasy.nRangeᐸInt64ᐳ";
+    public static final String N_nRangeUInt8  = "org.xtclang.ecstasy.nRangeᐸUInt8ᐳ";
+    public static final String N_nRangeUInt16 = "org.xtclang.ecstasy.nRangeᐸUInt16ᐳ";
+    public static final String N_nRangeUInt32 = "org.xtclang.ecstasy.nRangeᐸUInt32ᐳ";
     public static final String N_nService     = "org.xtclang.ecstasy.nService";
     public static final String N_nType        = "org.xtclang.ecstasy.nType";
     public static final String N_nUtil        = "org.xtclang.ecstasy.nUtil";
@@ -1932,7 +1956,12 @@ public abstract class Builder {
     public static final ClassDesc CD_nRangeFloat32       = ClassDesc.of(N_nRangeFloat32);
     public static final ClassDesc CD_nRangeFloat64       = ClassDesc.of(N_nRangeFloat64);
     public static final ClassDesc CD_nRangeInt8          = ClassDesc.of(N_nRangeInt8);
+    public static final ClassDesc CD_nRangeInt16         = ClassDesc.of(N_nRangeInt16);
+    public static final ClassDesc CD_nRangeInt32         = ClassDesc.of(N_nRangeInt32);
     public static final ClassDesc CD_nRangeInt64         = ClassDesc.of(N_nRangeInt64);
+    public static final ClassDesc CD_nRangeUInt8         = ClassDesc.of(N_nRangeUInt8);
+    public static final ClassDesc CD_nRangeUInt16        = ClassDesc.of(N_nRangeUInt16);
+    public static final ClassDesc CD_nRangeUInt32        = ClassDesc.of(N_nRangeUInt32);
 
     public static final ClassDesc CD_nConst              = ClassDesc.of(N_nConst);
     public static final ClassDesc CD_nEnum               = ClassDesc.of(N_nEnum);
