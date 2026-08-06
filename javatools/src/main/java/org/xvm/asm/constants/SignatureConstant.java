@@ -285,10 +285,15 @@ public class SignatureConstant
         }
 
         if (fDiff) {
-            SignatureConstant that = pool.ensureSignatureConstant(
+            // don't register the constant until its state is changed
+            if (m_fProperty) {
+                SignatureConstant that = new SignatureConstant(
+                        pool, getName(), aconstParamResolved, aconstReturnResolved);
+                that.m_fProperty = true;
+                return pool.register(that);
+            }
+            return pool.ensureSignatureConstant(
                     getName(), aconstParamResolved, aconstReturnResolved);
-            that.m_fProperty = this.m_fProperty;
-            return that;
         }
 
         return this;
