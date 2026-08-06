@@ -3496,7 +3496,7 @@ public class BuildContext {
                         break FindRegister;
                     }
                 }
-                return null;
+                // an unmatched formal belongs to the enclosing specialized class
             }
             return resolveGenericType(formalName);
         }

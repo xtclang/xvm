@@ -3985,17 +3985,13 @@ public class CommonBuilder
     private final static Map<String, Set<String>> NO_JIT_METHODS = Map.of(
     "org.xtclang.ecstasy.collections.Collection",
             Set.of(
-                   // TODO: preserve formal Element narrowing through Stringable tests and lambdas
-                   "appendTo",
-
                    // TODO: resolve generic call signatures in the caller's formal-type context
                    "flatMap",
                    "groupBy",
                    "groupWith",
 
                    // TODO: resolve formal Element types in nested lambda signatures
-                   "any",
-                   "clear"),
+                   "any"),
     "org.xtclang.ecstasy.Range",
             Set.of("appendTo", "estimateStringLength"), // TODO: if (Element.is(Type<Stringable>)) does not cast
     "org.xtclang.ecstasy.numbers.Number",

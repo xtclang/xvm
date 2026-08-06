@@ -161,7 +161,7 @@ public class TypeMatrix {
      * the specified register id.
      */
     public void removeRegisters(int currAddr, int topRegId) {
-        if (currAddr < views.length) {
+        if (currAddr < views.length && views[currAddr] != null) {
             ensureMutableView(currAddr).types.entrySet().
                 removeIf(entry -> entry.getKey() >= topRegId);
         }
