@@ -128,7 +128,10 @@ class TimeSeries<Value> {
             Int lo = hi - valuesPerEntry + 1;
             data[i] = foldRange(lo, hi, folder);
         }
-        return data.makeImmutable(), new Time(resolution.picoseconds * (newestIndex - count));
+        Int oldestIndex = count == 0
+                ? endIndex
+                : endIndex - (count - 1) * valuesPerEntry;
+        return data.makeImmutable(), new Time(resolution.picoseconds * oldestIndex);
     }
 
     /**
