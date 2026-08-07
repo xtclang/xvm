@@ -1,7 +1,5 @@
 package org.xtclang.ecstasy.numbers;
 
-import java.math.BigDecimal;
-
 import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.nConst;
 
@@ -66,10 +64,6 @@ public class Nibble extends nConst {
             CACHE[value] = ref = new Nibble(value);
         }
         return ref;
-    }
-
-    public BigDecimal $toBigDecimal() {
-        return BigDecimal.valueOf($value);
     }
 
     // ----- conversion ----------------------------------------------------------------------------

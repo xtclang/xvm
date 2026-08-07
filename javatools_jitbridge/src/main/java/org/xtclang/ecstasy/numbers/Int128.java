@@ -17,7 +17,7 @@ public class Int128 extends IntNumber {
     /**
      * Construct an Ecstasy Int128 object.
      */
-    Int128(long lowValue, long highValue) {
+    private Int128(long lowValue, long highValue) {
         $lowValue  = lowValue;
         $highValue = highValue;
     }

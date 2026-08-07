@@ -1,7 +1,5 @@
 package org.xtclang.ecstasy.numbers;
 
-import java.math.BigDecimal;
-
 import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.nConst;
 
@@ -128,10 +126,6 @@ public class Bit extends nConst {
             CACHE[value] = ref = new Bit(value);
         }
         return ref;
-    }
-
-    public BigDecimal $toBigDecimal() {
-        return BigDecimal.valueOf($value);
     }
 
     // ----- conversion ----------------------------------------------------------------------------

@@ -20,7 +20,7 @@ public class UInt128 extends UIntNumber {
     /**
      * Construct an Ecstasy UInt128 object.
      */
-    UInt128(long lowValue, long highValue) {
+    private UInt128(long lowValue, long highValue) {
         $lowValue  = lowValue;
         $highValue = highValue;
     }
@@ -166,7 +166,7 @@ public class UInt128 extends UIntNumber {
     /**
      * @return  a {@code long} value converted to an unsigned {@link BigInteger}
      */
-    public static BigInteger toUnsignedBigInteger(long value) {
+    private static BigInteger toUnsignedBigInteger(long value) {
         if (value >= 0L) {
             return BigInteger.valueOf(value);
         }
