@@ -2477,10 +2477,7 @@ public class BuildContext {
     private void buildGetPropertyField(CodeBuilder code, RegisterInfo targetReg,
                                        PropertyInfo propInfo, JitMethodDesc jmd) {
         if (builder.isPrimitivePseudoField(targetReg.type(), propInfo.getIdentity())) {
-            // primitive classes don't have fields; the target itself is the property value
-            if (!targetReg.flavor().isOptimized) {
-                Builder.unbox(code, targetReg.type());
-            }
+            builder.loadPrimitivePseudoField(code, targetReg, propInfo.getIdentity(), ctxSlot(code));
             return;
         }
         assert !targetReg.flavor().isOptimized;

@@ -378,15 +378,10 @@ public abstract class Builder {
             // support for the "local property" mode
             RegisterInfo targetReg = bctx.loadThis(code);
             int          ctxSlot   = bctx.ctxSlot(code);
-            PropertyInfo info;
-            if (isPrimitivePseudoField(targetReg.type(), propId)) {
-                if (!targetReg.flavor().isOptimized) {
-                    unbox(code, targetReg.type());
-                }
-                info = propId.getPropertyInfo(targetReg.type());
-            } else {
-                info = loadProperty(code, targetReg.type(), propId, true, ctxSlot);
-            }
+            PropertyInfo info      = isPrimitivePseudoField(targetReg.type(), propId)
+                    ? loadPrimitivePseudoField(code, targetReg, propId, ctxSlot)
+                    : loadProperty(code, targetReg.type(), propId, true, ctxSlot);
+
             TypeConstant type = info.getType();
             JitTypeDesc  jtd  = type.getJitDesc(this);
             switch (jtd.flavor) {
@@ -1683,13 +1678,35 @@ public abstract class Builder {
     }
 
     /**
-     * Primitive classes don't have fields; the only exception is Char, where "codepoint" is the
-     * char itself.
+     * Primitive classes don't have fields; Char#codepoint and Bit#literal are represented by
+     * pseudo-fields.
      */
     public boolean isPrimitivePseudoField(TypeConstant typeContainer, PropertyConstant propId) {
-        return typeContainer.getAccess() == Constants.Access.STRUCT &&
-                typeContainer.removeAccess().equals(pool().typeChar()) &&
-                propId.getName().equals("codepoint");
+        if (typeContainer.getAccess() != Constants.Access.STRUCT) {
+            return false;
+        }
+
+        TypeConstant type = typeContainer.removeAccess();
+        String       name = propId.getName();
+        return type.equals(pool().typeChar()) && name.equals("codepoint") ||
+               type.equals(pool().typeBit())  && name.equals("literal");
+    }
+
+    /**
+     * Load a primitive pseudo-field. The primitive target is already on the Java stack.
+     */
+    public PropertyInfo loadPrimitivePseudoField(CodeBuilder code, RegisterInfo targetReg,
+                                                 PropertyConstant propId, int ctxSlot) {
+        TypeConstant typeContainer = targetReg.type();
+        assert isPrimitivePseudoField(typeContainer, propId);
+
+        if (!targetReg.flavor().isOptimized) {
+            unbox(code, typeContainer);
+        }
+
+        return typeContainer.removeAccess().equals(pool().typeBit())
+            ? loadProperty(code, typeContainer, propId, true, ctxSlot) // "literal"
+            : propId.getPropertyInfo(targetReg.type());                // "codepoint"
     }
 
     // ----- TEMPORARY: debugging support ----------------------------------------------------------

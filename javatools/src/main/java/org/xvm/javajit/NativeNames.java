@@ -32,6 +32,11 @@ public class NativeNames {
         reservedMethodName.put("Boolean/xor/1",    "xor");
         reservedMethodName.put("Boolean/toByte/0", "toByte");
 
+        reservedMethodName.put("numbers.Bit/not/0", "not");
+        reservedMethodName.put("numbers.Bit/and/1", "and");
+        reservedMethodName.put("numbers.Bit/or/1",  "or");
+        reservedMethodName.put("numbers.Bit/xor/1", "xor");
+
         reservedMethodName.put("collections.Array/add/1",        "add");
         reservedMethodName.put("collections.Array/addAll/1",     "addAll");
         reservedMethodName.put("collections.Array/delete/1",     "delete");

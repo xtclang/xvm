@@ -39,11 +39,81 @@ public class Bit extends nConst {
         return 1;
     }
 
+    /**
+     * The standard native implementation of the "private IntLiteral literal" property getter.
+     */
+    public IntLiteral literal$get(Ctx ctx) {
+        return literal$get$p($value, ctx);
+    }
+
+    /**
+     * The optimized native implementation of the "private IntLiteral literal" property getter.
+     */
+    public static IntLiteral literal$get$p(int thi$, Ctx ctx) {
+        // TODO: implement the explicit IntLiteral conversion and reflection based access
+        return null;
+    }
+
+    /**
+     * The standard native implementation of "IntLiteral toIntLiteral()".
+     */
+    public IntLiteral toIntLiteral(Ctx ctx) {
+        return literal$get(ctx);
+    }
+
+    /**
+     * The optimized native implementation of "IntLiteral toIntLiteral()".
+     */
+    public static IntLiteral toIntLiteral$p(int thi$, Ctx ctx) {
+        return literal$get$p(thi$, ctx);
+    }
+
+    /**
+     * The optimized native implementation of "Boolean toBoolean()".
+     */
+    public static boolean toBoolean$p(int thi$, Ctx ctx) {
+        return thi$ != 0;
+    }
+
+    /**
+     * The optimized native implementation of "Bit and(Bit! that)".
+     */
+    public static int and$p(int thi$, Ctx ctx, int that) {
+        return thi$ & that;
+    }
+
+    /**
+     * The optimized native implementation of "Bit or(Bit! that)".
+     */
+    public static int or$p(int thi$, Ctx ctx, int that) {
+        return thi$ | that;
+    }
+
+    /**
+     * The optimized native implementation of "Bit xor(Bit! that)".
+     */
+    public static int xor$p(int thi$, Ctx ctx, int that) {
+        return thi$ ^ that;
+    }
+
+    /**
+     * The optimized native implementation of "Bit not()".
+     */
+    public static int not$p(int thi$, Ctx ctx) {
+        return thi$ == 0 ? 1 : 0;
+    }
+
+    /**
+     * The standard native implementation of "Appender<Char> appendTo(Appender<Char> buf)".
+     */
     public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
         char c = $value == 0 ? '0' : '1';
         return appender.add$p(ctx, c);
     }
 
+    /**
+     * The optimized native implementation of "Appender<Char> appendTo(Appender<Char> buf)".
+     */
     public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
         char c = thi$ == 0 ? '0' : '1';
         return appender.add$p(ctx, c);
@@ -51,10 +121,6 @@ public class Bit extends nConst {
 
     /**
      * Obtain a Bit for a 1-bit "primitive" int (a Java "int" value).
-     *
-     * @param value  a 1-bit "primitive" int
-     *
-     * @return a Bit reference
      */
     public static Bit $box(int value) {
         Bit ref = CACHE[value = value & 0x1];
