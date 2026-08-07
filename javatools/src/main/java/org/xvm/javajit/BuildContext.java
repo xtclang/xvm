@@ -1118,8 +1118,9 @@ public class BuildContext {
                 assert typeSuper.isMethod();
                 yield pool().bindMethodTarget(typeSuper);
             }
-            case Op.A_CLASS -> typeInfo.getIdentity().getValueType(pool(), null);
-            default         -> throw new UnsupportedOperationException("id=" + argId);
+            case Op.A_CLASS   -> typeInfo.getIdentity().getValueType(pool(), null);
+            case Op.A_SERVICE -> pool().typeService();
+            default           -> throw new UnsupportedOperationException("id=" + argId);
         };
     }
 
@@ -1421,6 +1422,13 @@ public class BuildContext {
             // TODO: this:class will NPE for now
             code.aconst_null();
             return new SingleSlot(typeInfo.getIdentity().getValueType(pool(), null), Specific, CD_Class, "");
+        }
+
+        case Op.A_SERVICE: {
+            // TODO: track the current service in Ctx; this:service will NPE for now
+            TypeConstant type = pool().typeService();
+            code.aconst_null();
+            return new SingleSlot(type, Specific, builder.ensureClassDesc(type), "");
         }
 
         default:

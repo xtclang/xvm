@@ -3920,6 +3920,7 @@ public class CommonBuilder
             "org.xtclang.ecstasy.Sliceable*",
             "org.xtclang.ecstasy.StackOverflow",
             "org.xtclang.ecstasy.TimedOut",
+            "org.xtclang.ecstasy.Timeout",
             "org.xtclang.ecstasy.TypeMismatch",
             "org.xtclang.ecstasy.Unsupported",
 
@@ -3989,6 +3990,8 @@ public class CommonBuilder
             Set.of("symmetricDifference")), // TODO: MOV_TYPE for the Replicable virtual constructor
         Map.entry("org.xtclang.ecstasy.Range",
             Set.of("appendTo", "estimateStringLength")), // TODO: if (Element.is(Type<Stringable>)) does not cast
+        Map.entry("org.xtclang.ecstasy.Timeout",
+            Set.of("construct")),   // TODO: loading a Duration constant
         Map.entry("org.xtclang.ecstasy.numbers.Number",
             Set.of("converterFor",
                    "converterTo")),
