@@ -6,7 +6,6 @@ class UInt32ConvertTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running UInt32 Conversion tests >>>>");
 
         testUInt32ToInt8(0, 0);
         testUInt32ToInt8(100, 100);
@@ -88,7 +87,6 @@ class UInt32ConvertTests {
         testUInt32ToUInt128WithBoundsCheck(100, 100, False);
         testUInt32ToUInt128WithBoundsCheck(UInt32.MaxValue, 0xFFFFFFFF, False);
 
-        console.print("<<<<< Finished UInt32 Conversion tests >>><<");
     }
 
     void testUInt32ToInt8(UInt32 a, Int8 expected) {

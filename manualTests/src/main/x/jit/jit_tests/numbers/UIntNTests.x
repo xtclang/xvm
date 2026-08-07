@@ -3,7 +3,6 @@ class UIntNTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running UIntN Tests >>>>");
 
         // Comparison tests
         testUIntNCompareEq();
@@ -195,7 +194,6 @@ class UIntNTests {
         testIncAsSequential();
         testDecAsSequential();
 
-        console.print("<<<<< Finished UIntN Tests tests >>>>>");
     }
 
     // ----- comparison tests ----------------------------------------------------------------------

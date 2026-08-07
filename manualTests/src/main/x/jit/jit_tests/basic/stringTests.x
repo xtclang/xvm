@@ -3,14 +3,12 @@ package stringTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running String tests >>>>");
 
         shouldGetCharArrayForEmptyString();
         shouldGetCharArrayString();
         createStringFromEmptyArray();
         createStringFromArray();
 
-        console.print("<<<< Finished String tests <<<<");
     }
 
     void shouldGetCharArrayForEmptyString() {

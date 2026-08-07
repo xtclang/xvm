@@ -3,7 +3,6 @@ package constTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Const Tests >>>>");
 
         testEmptyConstShouldBeEqual();
         testEmptyConstShouldBeOrderable();
@@ -142,7 +141,6 @@ package constTests {
         testConstWithServiceIsStringable();
         testConstWithNullablePropIsStringable();
 
-        console.print("<<<< Finished Const Tests <<<<<");
     }
 
     void testEmptyConstShouldBeEqual() {

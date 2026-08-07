@@ -5,7 +5,6 @@ package tryTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running TryTests >>>>");
 
         testTry1();
         console.print(testTry2());

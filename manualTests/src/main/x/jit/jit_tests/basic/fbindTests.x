@@ -2,7 +2,6 @@ package fbindTests {
         @Inject Console console;
 
         void run() {
-            console.print(">>>> Running FBind Tests >>>>");
 
             testBindPrimitive();
             testBindNullablePrimitive();
@@ -31,7 +30,6 @@ package fbindTests {
             testBindChar();
             testBindBoolean();
 
-            console.print("<<<< Finished FBind Tests >>>>");
         }
 
     void testBindPrimitive() {

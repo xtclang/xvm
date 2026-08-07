@@ -6,7 +6,6 @@ class IpXorTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running IpXorTests >>>>");
         testIpXorInt();
         testIpXorUInt();
         testIpXorInt8();
@@ -17,7 +16,6 @@ class IpXorTests {
         testIpXorUInt32();
         testIpXorInt128();
         testIpXorUInt128();
-        console.print("<<<< Finished IpXorTests <<<<<");
     }
 
     void testIpXorInt() {

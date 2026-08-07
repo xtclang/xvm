@@ -6,7 +6,6 @@ class UInt8ConvertTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running UInt8 Conversion tests >>>>");
         testUInt8ToInt8(0, 0);
         testUInt8ToInt8(100, 100);
         testUInt8ToInt8(127, 127);
@@ -55,7 +54,6 @@ class UInt8ConvertTests {
         testUInt8ToUInt128(100, 100);
         testUInt8ToUInt128(Int8.MaxValue, 127);
 
-        console.print("<<<<< Finished UInt8 Conversion tests >>>>>");
     }
 
     void testUInt8ToInt8(UInt8 a, Int8 expected) {

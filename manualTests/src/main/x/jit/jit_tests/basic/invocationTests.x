@@ -3,12 +3,10 @@ package invocationTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running InvocationTests >>>>");
 
         testInvokePrivateMethodAfterInterfaceCast();
         testOrderable();
 
-        console.print("<<<< Finished InvocationTests <<<<<");
     }
 
     void testInvokePrivateMethodAfterInterfaceCast() {

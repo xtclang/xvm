@@ -3,7 +3,6 @@ class Float64Tests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Float64Tests >>>>");
         // Comparison tests
         testFloat64CompareEq();
         testFloat64CompareGe();
@@ -43,7 +42,6 @@ class Float64Tests {
         testAppendTo();
         testEstimateStringLength();
 
-        console.print("<<<<< Finished Float64Tests tests >>>>>");
     }
 
     // ----- comparison tests ----------------------------------------------------------------------

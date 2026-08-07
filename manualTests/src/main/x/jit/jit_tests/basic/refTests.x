@@ -3,7 +3,6 @@ package refTests {
     void run() {
         @Inject Console console;
 
-        console.print(">>>> Running RefTests >>>>");
 
         test1();
         test2();

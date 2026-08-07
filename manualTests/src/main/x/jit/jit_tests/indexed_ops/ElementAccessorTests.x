@@ -6,7 +6,6 @@ class ElementAccessorTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running ElementAccessorTests >>>>");
         testAccessPrimitiveElement();
         testAccessNullablePrimitiveElement();
         testNullablePrimitiveArrayGetElement();
@@ -19,7 +18,6 @@ class ElementAccessorTests {
         testAccessNullableNonPrimitiveElement();
         testNullableArrayGetElement();
 
-        console.print("<<<< Finished ElementAccessorTests <<<<<");
     }
 
     void testAccessPrimitiveElement() {

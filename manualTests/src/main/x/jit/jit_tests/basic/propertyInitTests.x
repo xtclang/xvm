@@ -6,7 +6,6 @@ package propertyInitTests {
     @Inject static Console console;
 
     void run() {
-        console.print(">>>> Running PropertyInitTests >>>>");
 
         Test t = new Test();
 
@@ -34,7 +33,6 @@ package propertyInitTests {
         assert counter.first();
         assert !counter.first();
 
-        console.print("<<<< Finished PropertyInitTests <<<<<");
     }
 
     class Test() {

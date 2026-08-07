@@ -3,7 +3,6 @@ class Dec32Tests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Dec32Tests >>>>");
         // Comparison tests
         testDec32CompareEq();
         testDec32CompareGe();
@@ -45,7 +44,6 @@ class Dec32Tests {
 
         // Op tests
 
-        console.print("<<<<< Finished Dec32Tests tests >>>>>");
     }
 
     // ----- comparison tests ----------------------------------------------------------------------

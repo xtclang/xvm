@@ -6,7 +6,6 @@ class Dec32ConvertTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Dec32 Conversion tests >>>>");
 
         testDec32ToDec32(-1000.456, -1000.456);
         testDec32ToDec32(1000.456, 1000.456);
@@ -248,7 +247,6 @@ class Dec32ConvertTests {
         testDec32ToUInt128WithBoundsCheck(0, 0, False);
         testDec32ToUInt128WithBoundsCheck(100, 100, False);
 
-        console.print(">>>> Finished Dec32 Conversion tests >>>>");
     }
 
 

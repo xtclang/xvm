@@ -4,7 +4,6 @@ package stringArrayTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running String Array Tests >>>>");
 
         shouldCreateWithCapacity();
         shouldCreateArrayInitializedWithZeroValue();
@@ -19,7 +18,6 @@ package stringArrayTests {
         shouldDeleteSpecificIndexFromArray();
         shouldInsertValueIntoArray();
 
-        console.print(">>>> Running String Array Tests >>>>");
     }
 
     void shouldCreateWithCapacity() {

@@ -6,7 +6,6 @@ class Int16ConvertTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Int16 Conversion tests >>>>");
         // Int16.MinValue is 0x8000 the lowest byte is zero
         testInt16ToInt8(Int16.MinValue, 0);
         testInt16ToInt8(-128, Int8.MinValue);
@@ -139,7 +138,6 @@ class Int16ConvertTests {
         testInt16ToUIntN(100, 100, False);
         testInt16ToUIntN(Int16.MaxValue, 32767, False);
 
-        console.print("<<<<< Finished Int16 Conversion tests >>><<");
     }
 
     void testInt16ToInt8(Int16 a, Int8 expected) {

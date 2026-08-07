@@ -4,7 +4,6 @@ package int64RangeTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Int64 Range Tests >>>>");
 
         newRange();
         newRangeLowerExclusive();
@@ -17,7 +16,6 @@ package int64RangeTests {
         dynamicRangeOperators();
         descendingRange();
 
-        console.print("<<<< Finished Int64 Range Tests <<<<<");
     }
 
     void newRange() {

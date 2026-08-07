@@ -6,7 +6,6 @@ class GpAndTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running GpAndTests >>>>");
         testGpAndInt();
         testGpAndIntConstants();
         testGpAndUInt();
@@ -19,7 +18,6 @@ class GpAndTests {
         testGpAndInt128();
         testGpAndUInt128();
         testGpAndBit();
-        console.print("<<<< Finished GpAndTests <<<<<");
     }
 
     void testGpAndInt() {

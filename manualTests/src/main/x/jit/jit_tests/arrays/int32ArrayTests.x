@@ -4,7 +4,6 @@ package int32ArrayTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Int32 Array Tests >>>>");
 
         shouldCreateWithCapacity();
         shouldCreateArrayInitializedWithZeroValue();
@@ -33,7 +32,6 @@ package int32ArrayTests {
         shouldDeleteSpecificIndexFromArray();
         shouldInsertValueIntoArray();
 
-        console.print(">>>> Running Int32 Array Tests >>>>");
     }
 
     void shouldCreateWithCapacity() {

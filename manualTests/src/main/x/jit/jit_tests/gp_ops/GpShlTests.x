@@ -6,7 +6,6 @@ class GpShlTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running GpShlTests >>>>");
         testGpShlInt();
         testGpShlIntConstants();
         testGpShlUInt();
@@ -18,7 +17,6 @@ class GpShlTests {
         testGpShlUInt32();
         testGpShlInt128();
         testGpShlUInt128();
-        console.print("<<<< Finished GpShlTests <<<<<");
     }
 
     void testGpShlInt() {

@@ -4,7 +4,6 @@ package bitArrayTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Bit Array Tests >>>>");
 
         shouldCreateWithCapacity();
         shouldCreateArrayInitializedWithZeroValue();
@@ -19,7 +18,6 @@ package bitArrayTests {
         shouldDeleteSpecificIndexFromArray();
         shouldInsertValueIntoArray();
 
-        console.print(">>>> Running Bit Array Tests >>>>");
     }
 
     void shouldCreateWithCapacity() {

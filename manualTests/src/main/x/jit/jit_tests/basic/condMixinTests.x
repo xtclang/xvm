@@ -2,7 +2,6 @@ package condMixinTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running CondMixinTests >>>>");
 
         test1();
         test2();

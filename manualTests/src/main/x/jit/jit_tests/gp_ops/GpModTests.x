@@ -6,7 +6,6 @@ class GpModTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running GpModTests >>>>");
         testGpModInt();
         testGpModIntConstants();
         testGpModUInt();
@@ -23,7 +22,6 @@ class GpModTests {
         testGpModDec128();
         testGpModFloat32();
         testGpModFloat64();
-        console.print("<<<< Finished GpModTests <<<<<");
     }
 
     void testGpModInt() {

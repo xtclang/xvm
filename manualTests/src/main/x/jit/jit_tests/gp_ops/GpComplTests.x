@@ -6,7 +6,6 @@ class GpComplTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running GpComplTests >>>>");
         testGpComplInt();
         testGpComplUInt();
         testGpComplInt8();
@@ -16,7 +15,6 @@ class GpComplTests {
         testGpComplInt32();
         testGpComplUInt32();
         testGpComplBit();
-        console.print("<<<< Finished GpComplTests <<<<<");
     }
 
     void testGpComplInt() {

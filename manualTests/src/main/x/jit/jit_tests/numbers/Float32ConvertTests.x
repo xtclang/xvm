@@ -6,7 +6,6 @@ class Float32ConvertTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Float32 Conversion tests >>>>");
 
         testFloat32ToFloat32(-1000.456, -1000.456);
         testFloat32ToFloat32(1000.456, 1000.456);
@@ -253,7 +252,6 @@ class Float32ConvertTests {
         testFloat32ToUInt128WithBoundsCheck(0, 0, False);
         testFloat32ToUInt128WithBoundsCheck(100, 100, False);
 
-        console.print(">>>> Finished Float32 Conversion tests >>>>");
     }
 
     void testFloat32ToFloat32(Float32 a, Float32 expected){

@@ -5,13 +5,11 @@ package typeSwitchTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Type switch tests >>>>");
 
         testSimpleSwitch();
         testMultiSwitch();
         testMultiCaseSwitchWithMatchAnyCase();
 
-        console.print(">>>> Finished Type switch tests >>>>");
     }
 
     enum Color {Red, Orange, Yellow, Green, Blue, Indigo, Violet}

@@ -8,7 +8,6 @@ package exceptionTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Exception Tests >>>>");
 
         testException();
         testExceptionWithMessage();
@@ -78,7 +77,6 @@ package exceptionTests {
         testTimedOutWithMessage();
         testTimedOutWithCause();
 
-        console.print("<<<< Running Exception Tests <<<<");
     }
 
     void testException() {

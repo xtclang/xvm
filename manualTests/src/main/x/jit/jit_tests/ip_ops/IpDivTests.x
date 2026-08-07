@@ -6,7 +6,6 @@ class IpDivTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running IpDivTests >>>>");
         testIpDivInt();
         testIpDivUInt();
         testIpDivInt8();
@@ -22,7 +21,6 @@ class IpDivTests {
         testIpDivDec128();
         testIpDivFloat32();
         testIpDivFloat64();
-        console.print("<<<< Finished IpDivTests <<<<<");
     }
 
     void testIpDivInt() {

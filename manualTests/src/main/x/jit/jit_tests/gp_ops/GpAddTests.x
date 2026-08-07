@@ -6,7 +6,6 @@ class GpAddTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running GpAddTests >>>>");
         testGpAddInt();
         testGpAddIntConstants();
         testGpAddUInt();
@@ -28,7 +27,6 @@ class GpAddTests {
         testGpAddCharToChar();
         testGpAddStringToChar();
         testGpAddNibble();
-        console.print("<<<< Finished GpAddTests <<<<<");
     }
 
     void testGpAddInt() {

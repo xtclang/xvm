@@ -4,7 +4,6 @@ package delegationTests {
     typedef String|Int as StringOrInt;
 
     void run() {
-        console.print(">>>> Running DelegationTests >>>>");
         Test t = new Test("text", 17);
         assert t.showText() == "text";
         assert t.showValue() == 17;
@@ -13,7 +12,6 @@ package delegationTests {
         assert ch.toInt()    == 65;
         assert ch.toInt128() == 65;
 
-        console.print("<<<< Finished DelegationTests <<<<<");
     }
 
     service Test

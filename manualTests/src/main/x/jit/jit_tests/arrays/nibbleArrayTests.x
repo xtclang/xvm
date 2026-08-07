@@ -4,7 +4,6 @@ package nibbleArrayTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Nibble Array Tests >>>>");
 
         shouldCreateWithCapacity();
         shouldCreateArrayInitializedWithZeroValue();
@@ -19,7 +18,6 @@ package nibbleArrayTests {
         shouldDeleteSpecificIndexFromArray();
         shouldInsertValueIntoArray();
 
-        console.print(">>>> Running Nibble Array Tests >>>>");
     }
 
     void shouldCreateWithCapacity() {

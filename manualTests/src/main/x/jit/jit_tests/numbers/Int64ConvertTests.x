@@ -6,7 +6,6 @@ class Int64ConvertTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Int64 Conversion tests >>>>");
 
         // Int64.MinValue is -0x8000_0000_0000_0000 the lowest byte is 0x0000 == 0
         testInt64ToInt8(Int64.MinValue, 0);
@@ -177,7 +176,6 @@ class Int64ConvertTests {
         testInt64ToUIntN(100, 100, False);
         testInt64ToUIntN(Int64.MaxValue, 0x7FFF_FFFF_FFFF_FFFF, False);
 
-        console.print("<<<<< Finished Int64 Conversion tests >>><<");
     }
 
     void testInt64ToInt8(Int64 a, Int8 expected) {

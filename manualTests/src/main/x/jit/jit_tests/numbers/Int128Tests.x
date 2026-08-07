@@ -5,7 +5,6 @@ class Int128Tests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Int128Tests >>>>");
 
         // Comparison tests
         testInt128CompareEqLowOnly();
@@ -148,7 +147,6 @@ class Int128Tests {
         testAppendTo();
         testEstimateStringLength();
 
-        console.print("<<<<< Finished Int128Tests tests >>>>>");
     }
 
     // ----- comparison tests ----------------------------------------------------------------------

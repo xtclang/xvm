@@ -6,7 +6,6 @@ class IpModTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running IpModTests >>>>");
         testIpModInt();
         testIpModUInt();
         testIpModInt8();
@@ -22,7 +21,6 @@ class IpModTests {
         testIpModDec128();
         testIpModFloat32();
         testIpModFloat64();
-        console.print("<<<< Finished IpModTests <<<<<");
     }
 
     void testIpModInt() {

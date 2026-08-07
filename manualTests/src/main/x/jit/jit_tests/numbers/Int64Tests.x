@@ -5,7 +5,6 @@ class Int64Tests {
 // 2 ^ 64 = 709551616
 
     void run() {
-        console.print(">>>> Running Int64Tests >>>>");
         // Comparison tests
         testInt64CompareEq();
         testInt64CompareGe();
@@ -115,7 +114,6 @@ class Int64Tests {
         testAppendTo();
         testEstimateStringLength();
 
-        console.print("<<<<< Finished Int64Tests tests >>>>>");
     }
 
     // ----- comparison tests ----------------------------------------------------------------------

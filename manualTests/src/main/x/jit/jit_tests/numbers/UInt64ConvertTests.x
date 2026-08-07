@@ -6,7 +6,6 @@ class UInt64ConvertTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running UInt64 Conversion tests >>>>");
 
         testUInt64ToInt8(0, 0);
         testUInt64ToInt8(100, 100);
@@ -105,7 +104,6 @@ class UInt64ConvertTests {
         testUInt64ToUInt128WithBoundsCheck(0x7FFFFFFF, 0x7FFFFFFF, False);
         testUInt64ToUInt128WithBoundsCheck(UInt64.MaxValue, UInt64.MaxValue, False);
 
-        console.print("<<<<< Finished UInt64 Conversion tests >>><<");
     }
 
     void testUInt64ToInt8(UInt64 a, Int8 expected) {

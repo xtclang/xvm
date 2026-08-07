@@ -3,7 +3,6 @@ class Float32Tests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Float32Tests >>>>");
         // Comparison tests
         testFloat32CompareEq();
         testFloat32CompareGe();
@@ -43,7 +42,6 @@ class Float32Tests {
         testAppendTo();
         testEstimateStringLength();
 
-        console.print("<<<<< Finished Float32Tests tests >>>>>");
     }
 
     // ----- comparison tests ----------------------------------------------------------------------
