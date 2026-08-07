@@ -9,6 +9,7 @@ package primitiveRangeTests {
         testFloat32Range();
         testFloat64Range();
         testInt128Range();
+        testUInt64Range();
     }
 
     void testBooleanRange() {
@@ -65,5 +66,14 @@ package primitiveRangeTests {
 
         assert range.first == first;
         assert range.last  == last;
+    }
+
+    void testUInt64Range() {
+        assert Range<UInt64> range := UInt64.range();
+        assert range.first      == UInt64.MinValue;
+        assert range.last       == UInt64.MaxValue;
+        assert range.lowerBound == UInt64.MinValue;
+        assert range.upperBound == UInt64.MaxValue;
+        assert !range.descending;
     }
 }

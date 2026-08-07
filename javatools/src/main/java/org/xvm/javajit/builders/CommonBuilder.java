@@ -3998,9 +3998,7 @@ public class CommonBuilder
             Set.of("equals",       // TODO: Array<Bit> passed to Array<Object>
                    "parse")),       // TODO: verifier stack mismatch
         Map.entry("org.xtclang.ecstasy.numbers.UInt16",
-            Set.of("parse")),       // TODO: GP_SUB for a formal value
-        Map.entry("org.xtclang.ecstasy.numbers.UInt64",
-            Set.of("range"))        // TODO: native range with unsigned 64-bit bounds
+            Set.of("parse"))        // TODO: GP_SUB for a formal value
     );
 
     private final static HashSet<String> SKIP_SET = new HashSet<>();
