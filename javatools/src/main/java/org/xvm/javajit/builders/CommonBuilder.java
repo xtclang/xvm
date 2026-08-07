@@ -3978,7 +3978,6 @@ public class CommonBuilder
     };
 
     private final static String[] NO_JIT_LIST = new String[] {
-            "org.xtclang.ecstasy.numbers.UInt128",
     };
 
     private final static Map<String, Set<String>> NO_JIT_METHODS = Map.ofEntries(
