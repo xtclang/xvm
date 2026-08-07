@@ -85,10 +85,14 @@ public class GuardEnd
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
         bctx.exitScope(code);
-        if (m_ofJmp > 1) {
-            code.goto_(bctx.ensureLabel(code, getAddress() + m_ofJmp));
-        } else {
-            assert m_ofJmp == 1;
+
+        // a dead guarded path can end after a return, leaving no bytecode to jump to
+        if (bctx.typeMatrix.isReached(getAddress())) {
+            if (m_ofJmp > 1) {
+                code.goto_(bctx.ensureLabel(code, getAddress() + m_ofJmp));
+            } else {
+                assert m_ofJmp == 1;
+            }
         }
         return -1;
     }

@@ -296,10 +296,13 @@ public class NativeTypeSystem
             nativeByType.put(typeIter,  className);
         }
 
-        TypeConstant typeInt     = pool.typeInt64();
-        TypeConstant rangeᐸIntᐳ = pool.ensureParameterizedTypeConstant(pool.typeRange(), typeInt);
+        TypeConstant typeInt        = pool.typeInt64();
+        TypeConstant rangeᐸIntᐳ    = pool.ensureParameterizedTypeConstant(pool.typeRange(), typeInt);
+        TypeConstant intervalᐸIntᐳ = pool.ensureParameterizedTypeConstant(pool.typeInterval(), typeInt);
 
-        nativeByType.put(rangeᐸIntᐳ, Builder.N_nRangeInt64);
+        // a Range<Int64> is conditionally an Interval<Int64>; both views use the native class
+        nativeByType.put(rangeᐸIntᐳ,    Builder.N_nRangeInt64);
+        nativeByType.put(intervalᐸIntᐳ, Builder.N_nRangeInt64);
 
         // pre-register functions used by the native classes:
 

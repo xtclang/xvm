@@ -96,7 +96,6 @@ import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.CD_Orderable;
 import static org.xvm.javajit.Builder.CD_Ordered;
 import static org.xvm.javajit.Builder.CD_nType;
-import static org.xvm.javajit.Builder.N_nRangeInt64;
 import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.Builder.XVM_PRIMITIVE_COMPARE;
 import static org.xvm.javajit.Builder.XVM_PRIMITIVE_EQUALS;
@@ -7167,10 +7166,6 @@ public abstract class TypeConstant
                 // REVIEW CP: this is wrong
                 return Builder.N_ArrayObj;
             }
-        }
-
-        if (this.isA(pool.ensureRangeType(pool.typeInt64()))) {
-            return N_nRangeInt64;
         }
 
         if (id.equals(pool.clzClass())) {

@@ -725,85 +725,22 @@ public abstract class Builder {
     }
 
     private SingleSlot loadRange(BuildContext bctx, CodeBuilder code, RangeConstant rangeConst) {
-        TypeConstant   rangeType = rangeConst.getType();
-        TypeConstant   elType    = rangeType.getParamType(0);
-        Constant[]     values    = rangeConst.getValue();
-        ClassDesc      cdRange;
-        ClassDesc      cdPrimitive;
+        TypeConstant rangeType = rangeConst.getType();
+        TypeConstant elType    = rangeType.getParamType(0);
+        Constant[]   values    = rangeConst.getValue();
+        MethodConstant idCtor  = rangeType.ensureTypeInfo().findConstructor(
+                elType, elType, pool().typeBoolean(), pool().typeBoolean());
 
-        // TODO: how/where to cache the result ??
-        if (elType.isJitPrimitive()) {
-            switch (elType.getSingleUnderlyingClass(false).getName()) {
-                case "Boolean":
-                    cdRange     = CD_nRangeBoolean;
-                    cdPrimitive = CD_int;
-                    break;
+        bctx.buildNew(code, rangeType, idCtor, jmdNew -> {
+            assert jmdNew.isOptimized;
 
-                case "Int8":
-                    cdRange     = CD_nRangeInt8;
-                    cdPrimitive = CD_int;
-                    break;
-
-                case "Int16":
-                    cdRange     = CD_nRangeInt16;
-                    cdPrimitive = CD_int;
-                    break;
-
-                case "Int32":
-                    cdRange     = CD_nRangeInt32;
-                    cdPrimitive = CD_int;
-                    break;
-
-                case "Int64":
-                    cdRange     = CD_nRangeInt64;
-                    cdPrimitive = CD_long;
-                    break;
-
-                case "UInt8":
-                    cdRange     = CD_nRangeUInt8;
-                    cdPrimitive = CD_int;
-                    break;
-
-                case "UInt16":
-                    cdRange     = CD_nRangeUInt16;
-                    cdPrimitive = CD_int;
-                    break;
-
-                case "UInt32":
-                    cdRange     = CD_nRangeUInt32;
-                    cdPrimitive = CD_int;
-                    break;
-
-                case "Float32":
-                    cdRange     = CD_nRangeFloat32;
-                    cdPrimitive = CD_float;
-                    break;
-
-                case "Float64":
-                    cdRange     = CD_nRangeFloat64;
-                    cdPrimitive = CD_double;
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException("TODO");
-            }
-        } else {
-            // non-primitive range - must be Orderable and also maybe Sequential
-            throw new UnsupportedOperationException("TODO");
-        }
-
-        MethodTypeDesc mdNew = MethodTypeDesc.of(cdRange, CD_Ctx, CD_TypeConstant, cdPrimitive,
-                cdPrimitive, CD_boolean, CD_boolean, CD_boolean, CD_boolean);
-
-        loadCtx(bctx, code);
-        loadTypeConstant(bctx, code, rangeType);
-        loadConstant(bctx, code, values[0]);
-        loadConstant(bctx, code, values[1]);
-        code.loadConstant(rangeConst.isFirstExcluded() ? 1 : 0);
-        code.iconst_0();
-        code.loadConstant(rangeConst.isLastExcluded() ? 1 : 0);
-        code.iconst_0();
-        code.invokestatic(cdRange, "$new$p", mdNew);
+            loadConstant(bctx, code, values[0]);
+            loadConstant(bctx, code, values[1]);
+            code.loadConstant(rangeConst.isFirstExcluded() ? 1 : 0);
+            code.iconst_0();
+            code.loadConstant(rangeConst.isLastExcluded() ? 1 : 0);
+            code.iconst_0();
+        });
 
         return new SingleSlot(rangeType, Specific, ensureClassDesc(rangeType), "");
     }
@@ -1863,16 +1800,7 @@ public abstract class Builder {
     public static final String N_nObj         = "org.xtclang.ecstasy.nObject";
     public static final String N_nPackage     = "org.xtclang.ecstasy.nPackage";
     public static final String N_nRef         = "org.xtclang.ecstasy.reflect.nRef";
-    public static final String N_nRangeBoolean = "org.xtclang.ecstasy.nRangeᐸBooleanᐳ";
-    public static final String N_nRangeFloat32 = "org.xtclang.ecstasy.nRangeᐸFloat32ᐳ";
-    public static final String N_nRangeFloat64 = "org.xtclang.ecstasy.nRangeᐸFloat64ᐳ";
-    public static final String N_nRangeInt8   = "org.xtclang.ecstasy.nRangeᐸInt8ᐳ";
-    public static final String N_nRangeInt16  = "org.xtclang.ecstasy.nRangeᐸInt16ᐳ";
-    public static final String N_nRangeInt32  = "org.xtclang.ecstasy.nRangeᐸInt32ᐳ";
     public static final String N_nRangeInt64  = "org.xtclang.ecstasy.nRangeᐸInt64ᐳ";
-    public static final String N_nRangeUInt8  = "org.xtclang.ecstasy.nRangeᐸUInt8ᐳ";
-    public static final String N_nRangeUInt16 = "org.xtclang.ecstasy.nRangeᐸUInt16ᐳ";
-    public static final String N_nRangeUInt32 = "org.xtclang.ecstasy.nRangeᐸUInt32ᐳ";
     public static final String N_nService     = "org.xtclang.ecstasy.nService";
     public static final String N_nType        = "org.xtclang.ecstasy.nType";
     public static final String N_nUtil        = "org.xtclang.ecstasy.nUtil";
@@ -1952,16 +1880,6 @@ public abstract class Builder {
     public static final ClassDesc CD_nMethod             = ClassDesc.of(N_nMethod);
     public static final ClassDesc CD_nModule             = ClassDesc.of(N_nModule);
     public static final ClassDesc CD_nPackage            = ClassDesc.of(N_nPackage);
-    public static final ClassDesc CD_nRangeBoolean       = ClassDesc.of(N_nRangeBoolean);
-    public static final ClassDesc CD_nRangeFloat32       = ClassDesc.of(N_nRangeFloat32);
-    public static final ClassDesc CD_nRangeFloat64       = ClassDesc.of(N_nRangeFloat64);
-    public static final ClassDesc CD_nRangeInt8          = ClassDesc.of(N_nRangeInt8);
-    public static final ClassDesc CD_nRangeInt16         = ClassDesc.of(N_nRangeInt16);
-    public static final ClassDesc CD_nRangeInt32         = ClassDesc.of(N_nRangeInt32);
-    public static final ClassDesc CD_nRangeInt64         = ClassDesc.of(N_nRangeInt64);
-    public static final ClassDesc CD_nRangeUInt8         = ClassDesc.of(N_nRangeUInt8);
-    public static final ClassDesc CD_nRangeUInt16        = ClassDesc.of(N_nRangeUInt16);
-    public static final ClassDesc CD_nRangeUInt32        = ClassDesc.of(N_nRangeUInt32);
 
     public static final ClassDesc CD_nConst              = ClassDesc.of(N_nConst);
     public static final ClassDesc CD_nEnum               = ClassDesc.of(N_nEnum);

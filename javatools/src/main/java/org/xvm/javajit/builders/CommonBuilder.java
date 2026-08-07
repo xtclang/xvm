@@ -3978,7 +3978,6 @@ public class CommonBuilder
     };
 
     private final static String[] NO_JIT_LIST = new String[] {
-            "org.xtclang.ecstasy.numbers.Int128",
             "org.xtclang.ecstasy.numbers.UInt128",
     };
 
@@ -4001,6 +4000,9 @@ public class CommonBuilder
         Map.entry("org.xtclang.ecstasy.numbers.Int64",
             Set.of("equals",       // TODO: Array<Bit> passed to Array<Object>
                    "parse")),       // TODO: verifier stack mismatch
+        Map.entry("org.xtclang.ecstasy.numbers.Int128",
+            Set.of("abs", "add", "div", "mod", "mul", "neg", "next", "pow", "prev", "sub")),
+                // TODO: generic primitive ops for two-slot values
         Map.entry("org.xtclang.ecstasy.numbers.UInt16",
             Set.of("parse")),       // TODO: GP_SUB for a formal value
         Map.entry("org.xtclang.ecstasy.numbers.UInt64",
