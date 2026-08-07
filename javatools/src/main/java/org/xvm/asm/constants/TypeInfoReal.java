@@ -115,12 +115,13 @@ public class TypeInfoReal
         f_listProcess         = listProcess;
         f_listmapClassChain   = listmapClassChain;
         f_listmapDefaultChain = listmapDefaultChain;
-        IdentityHashMap<MethodInfo, MethodInfo> mapMethodCopies = new IdentityHashMap<>();
-        f_mapProps            = mapProps;
-        f_mapVirtProps        = mapVirtProps;
+        IdentityHashMap<PropertyInfo, PropertyInfo> mapPropertyCopies = new IdentityHashMap<>();
+        IdentityHashMap<MethodInfo, MethodInfo>     mapMethodCopies   = new IdentityHashMap<>();
+        f_mapProps            = ensurePropertyOwnership(mapProps, mapPropertyCopies);
+        f_mapVirtProps        = ensurePropertyOwnership(mapVirtProps, mapPropertyCopies);
         f_mapMethods          = ensureMethodOwnership(mapMethods, mapMethodCopies);
         f_mapVirtMethods      = ensureMethodOwnership(mapVirtMethods, mapMethodCopies);
-        f_mapChildren         = mapChildren;
+        f_mapChildren         = ensureChildOwnership(mapChildren);
         f_setDepends          = setDepends;
         f_progress            = progress;
 
@@ -170,12 +171,13 @@ public class TypeInfoReal
         f_listProcess         = infoReal.f_listProcess;
         f_listmapClassChain   = infoReal.f_listmapClassChain;
         f_listmapDefaultChain = infoReal.f_listmapDefaultChain;
-        IdentityHashMap<MethodInfo, MethodInfo> mapMethodCopies = new IdentityHashMap<>();
-        f_mapProps            = infoReal.f_mapProps;
-        f_mapVirtProps        = infoReal.f_mapVirtProps;
+        IdentityHashMap<PropertyInfo, PropertyInfo> mapPropertyCopies = new IdentityHashMap<>();
+        IdentityHashMap<MethodInfo, MethodInfo>     mapMethodCopies   = new IdentityHashMap<>();
+        f_mapProps            = ensurePropertyOwnership(infoReal.f_mapProps, mapPropertyCopies);
+        f_mapVirtProps        = ensurePropertyOwnership(infoReal.f_mapVirtProps, mapPropertyCopies);
         f_mapMethods          = ensureMethodOwnership(infoReal.f_mapMethods, mapMethodCopies);
         f_mapVirtMethods      = ensureMethodOwnership(infoReal.f_mapVirtMethods, mapMethodCopies);
-        f_mapChildren         = infoReal.f_mapChildren;
+        f_mapChildren         = ensureChildOwnership(infoReal.f_mapChildren);
         f_setDepends          = null;
         f_progress            = Progress.Complete;
 
@@ -195,6 +197,14 @@ public class TypeInfoReal
 
     // TODO remove?
     private void validate() {
+        for (PropertyInfo property : f_mapVirtProps.values()) {
+            validatePropertyOwnership(property);
+        }
+
+        for (PropertyInfo property : f_mapProps.values()) {
+            validatePropertyOwnership(property);
+        }
+
         // find each virtual method from f_mapVirtMethods in f_mapMethods
         for (var entry : f_mapVirtMethods.entrySet()) {
             Object     key = entry.getKey();
@@ -234,6 +244,58 @@ public class TypeInfoReal
 
             // TODO find the MethodInfo in the f_mapVirtMethods map
         }
+
+        for (ChildInfo child : f_mapChildren.values()) {
+            if (child != null && child.getTypeInfo() != this) {
+                throw new AssertionError("ChildInfo for " + child.getIdentity()
+                        + " belongs to a different TypeInfo");
+            }
+        }
+    }
+
+    /**
+     * Ensure that every PropertyInfo in the specified map belongs exclusively to this TypeInfo,
+     * retaining aliases when the same PropertyInfo occurs under multiple keys or in multiple maps.
+     */
+    private <K> Map<K, PropertyInfo> ensurePropertyOwnership(
+            Map<K, PropertyInfo>                       mapProperties,
+            IdentityHashMap<PropertyInfo, PropertyInfo> mapPropertyCopies) {
+        Map<K, PropertyInfo> mapOwned = new HashMap<>(mapProperties.size());
+        for (Entry<K, PropertyInfo> entry : mapProperties.entrySet()) {
+            PropertyInfo property = entry.getValue();
+            if (property != null) {
+                PropertyInfo propertyOwned = mapPropertyCopies.get(property);
+                if (propertyOwned == null) {
+                    propertyOwned = property.forType(this);
+                    mapPropertyCopies.put(property, propertyOwned);
+                }
+                property = propertyOwned;
+            }
+            mapOwned.put(entry.getKey(), property);
+        }
+        return mapOwned;
+    }
+
+    /**
+     * Ensure that every ChildInfo in the specified map belongs exclusively to this TypeInfo.
+     */
+    private ListMap<String, ChildInfo> ensureChildOwnership(
+            ListMap<String, ChildInfo> mapChildren) {
+        IdentityHashMap<ChildInfo, ChildInfo> mapChildCopies = new IdentityHashMap<>();
+        ListMap<String, ChildInfo>             mapOwned       = new ListMap<>(mapChildren.size());
+        for (Entry<String, ChildInfo> entry : mapChildren.entrySet()) {
+            ChildInfo child = entry.getValue();
+            if (child != null) {
+                ChildInfo childOwned = mapChildCopies.get(child);
+                if (childOwned == null) {
+                    childOwned = child.forType(this);
+                    mapChildCopies.put(child, childOwned);
+                }
+                child = childOwned;
+            }
+            mapOwned.put(entry.getKey(), child);
+        }
+        return mapOwned;
     }
 
     /**
@@ -272,6 +334,23 @@ public class TypeInfoReal
             if (body.getMethodInfo() != method) {
                 throw new AssertionError("MethodBody for " + body.getIdentity()
                         + " belongs to a different MethodInfo");
+            }
+        }
+    }
+
+    /**
+     * Validate the PropertyInfo and PropertyBody ownership for this TypeInfo.
+     */
+    private void validatePropertyOwnership(PropertyInfo property) {
+        if (property.getTypeInfo() != this) {
+            throw new AssertionError("PropertyInfo for " + property.getIdentity()
+                    + " belongs to a different TypeInfo");
+        }
+
+        for (PropertyBody body : property.getPropertyBodies()) {
+            if (body.getPropertyInfo() != property) {
+                throw new AssertionError("PropertyBody for " + body.getIdentity()
+                        + " belongs to a different PropertyInfo");
             }
         }
     }

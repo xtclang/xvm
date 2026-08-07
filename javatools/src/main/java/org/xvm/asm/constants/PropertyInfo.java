@@ -68,11 +68,61 @@ public class PropertyInfo
             boolean        fRequireField,
             boolean        fSuppressVar,
             int            nRank) {
-        m_aBody          = aBody;
+        this(null, aBody, type, fRequireField, fSuppressVar, nRank);
+    }
+
+    /**
+     * Internal: Construct a PropertyInfo owned by the specified TypeInfo.
+     *
+     * @param infoType       the containing TypeInfo, or null while the PropertyInfo is being
+     *                       assembled
+     * @param aBody          the array of property bodies that make up the property
+     * @param type           the type of the property
+     * @param fRequireField  true iff the property requires a field
+     * @param fSuppressVar   true iff the property does not expose Var access
+     * @param nRank          the rank of the property
+     */
+    private PropertyInfo(
+            TypeInfo       infoType,
+            PropertyBody[] aBody,
+            TypeConstant   type,
+            boolean        fRequireField,
+            boolean        fSuppressVar,
+            int            nRank) {
+        assert aBody != null && aBody.length >= 1;
+
+        int            cBodies = aBody.length;
+        PropertyBody[] aOwned  = new PropertyBody[cBodies];
+        for (int i = 0; i < cBodies; ++i) {
+            PropertyBody body = aBody[i];
+            assert body != null;
+            aOwned[i] = body.forProperty(this);
+        }
+
+        m_infoType       = infoType;
+        m_aBody          = aOwned;
         m_type           = type;
         m_fRequireField  = fRequireField;
         m_fSuppressVar   = fSuppressVar;
         f_nRank          = nRank;
+    }
+
+    /**
+     * Internal: Associate this PropertyInfo with the specified TypeInfo, copying it if it already
+     * belongs to a different TypeInfo.
+     */
+    synchronized PropertyInfo forType(TypeInfo infoType) {
+        assert infoType != null;
+
+        if (m_infoType == null) {
+            m_infoType = infoType;
+            return this;
+        }
+
+        return m_infoType == infoType
+                ? this
+                : new PropertyInfo(infoType, m_aBody, m_type, m_fRequireField, m_fSuppressVar,
+                        f_nRank);
     }
 
     /**
@@ -553,6 +603,13 @@ public class PropertyInfo
      */
     public PropertyConstant getIdentity() {
         return getHead().getIdentity();
+    }
+
+    /**
+     * @return the containing TypeInfo, or null while this PropertyInfo is being assembled
+     */
+    public TypeInfo getTypeInfo() {
+        return m_infoType;
     }
 
     /**
@@ -1535,6 +1592,11 @@ public class PropertyInfo
      * The PropertyBody objects that provide the data represented by this PropertyInfo.
      */
     private final PropertyBody[] m_aBody;
+
+    /**
+     * The TypeInfo that contains this PropertyInfo, or null while it is being assembled.
+     */
+    private TypeInfo m_infoType;
 
     /**
      * The type of this Property.

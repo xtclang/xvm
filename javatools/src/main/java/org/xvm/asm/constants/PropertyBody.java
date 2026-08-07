@@ -134,6 +134,48 @@ public class PropertyBody
     }
 
     /**
+     * Internal: Copy a PropertyBody for a new containing PropertyInfo.
+     *
+     * @param property  the containing PropertyInfo
+     * @param body      the PropertyBody to copy
+     */
+    private PropertyBody(PropertyInfo property, PropertyBody body) {
+        m_infoProperty  = property;
+        m_structProp    = body.m_structProp;
+        m_impl          = body.m_impl;
+        m_constDelegate = body.m_constDelegate;
+        m_infoFormal    = body.m_infoFormal;
+        m_type          = body.m_type;
+        m_fRO           = body.m_fRO;
+        m_fRW           = body.m_fRW;
+        m_fCustom       = body.m_fCustom;
+        m_fExploded     = body.m_fExploded;
+        m_effectGet     = body.m_effectGet;
+        m_effectSet     = body.m_effectSet;
+        m_fField        = body.m_fField;
+        m_fConstant     = body.m_fConstant;
+        m_constInitVal  = body.m_constInitVal;
+        m_constInitFunc = body.m_constInitFunc;
+    }
+
+    /**
+     * Internal: Associate this PropertyBody with the specified PropertyInfo, copying it if it
+     * already belongs to a different PropertyInfo.
+     */
+    synchronized PropertyBody forProperty(PropertyInfo property) {
+        assert property != null;
+
+        if (m_infoProperty == null) {
+            m_infoProperty = property;
+            return this;
+        }
+
+        return m_infoProperty == property
+                ? this
+                : new PropertyBody(property, this);
+    }
+
+    /**
      * @return a new PropertyBody that is identical to this one in all aspects, except with the
      *         specified initial value
      */
@@ -156,6 +198,13 @@ public class PropertyBody
         return m_structProp == null
                 ? (PropertyConstant) ((NestedIdentity) m_infoFormal.getNestedIdentity()).getIdentityConstant()
                 : m_structProp.getIdentityConstant();
+    }
+
+    /**
+     * @return the containing PropertyInfo, or null if this is a standalone PropertyBody
+     */
+    public PropertyInfo getPropertyInfo() {
+        return m_infoProperty;
     }
 
     /**
@@ -532,6 +581,11 @@ public class PropertyBody
      * The property's underlying structure.
      */
     private final PropertyStructure m_structProp;
+
+    /**
+     * The PropertyInfo that contains this PropertyBody, or null for a standalone PropertyBody.
+     */
+    private PropertyInfo m_infoProperty;
 
     /**
      * The implementation type for the property body.
