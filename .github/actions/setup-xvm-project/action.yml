@@ -183,7 +183,7 @@ runs:
 
         - name: Setup Java for Kotlin toolchain
           if: ${{ inputs.setup-build == 'true' && steps.get-versions.outputs.kotlin-java-version != steps.get-versions.outputs.java-version }}
-          uses: actions/setup-java@v5.6.0
+          uses: actions/setup-java@v5.7.0
           with:
               distribution: ${{ steps.get-versions.outputs.java-distribution }}
               java-version: ${{ steps.get-versions.outputs.kotlin-java-version }}
@@ -191,7 +191,7 @@ runs:
         - name: Setup Java (main)
           if: ${{ inputs.setup-build == 'true' }}
           id: setup-java
-          uses: actions/setup-java@v5.6.0
+          uses: actions/setup-java@v5.7.0
           with:
               distribution: ${{ steps.get-versions.outputs.java-distribution }}
               java-version: ${{ steps.get-versions.outputs.java-version }}
