@@ -106,6 +106,11 @@ module.exports = grammar({
         [$._expression, $.qualified_type_name],
         [$._expression, $.type_name, $.qualified_type_name],
         [$.non_null_type, $.conditional_type],
+        // `protected Foo` as an access-qualified type vs `protected` as a
+        // declaration modifier followed by a type — GLR forks, and
+        // access_qualified_type's prec.dynamic(-1) drops the type reading
+        // whenever the declaration reading also succeeds.
+        [$.type_expression, $.access_qualified_type],
 
         // Declaration keyword conflicts
         [$.module_declaration, $.keyword_type],
@@ -623,6 +628,7 @@ module.exports = grammar({
             $.function_type,
             $.tuple_type,
             $.immutable_type,
+            $.access_qualified_type,
             $.parenthesized_type,
             $.keyword_type,
             $.qualified_keyword_type,
@@ -637,6 +643,15 @@ module.exports = grammar({
         qualified_keyword_type: $ => prec(3, seq(choice('struct', 'service', 'class', 'const', 'enum'), $.type_name)),
         // immutable can be standalone or with a type. prec.right makes it greedy.
         immutable_type: $ => prec.right(seq('immutable', optional($._non_bi_type))),
+        // Access-qualified type: `protected TxManager<TestSchema>` — per BNF
+        // ExtendedPrefixTypeExpression, the access modifier is a type prefix in
+        // the same slot as `immutable` (TypeAccessModifier). Used in cast
+        // contexts like `.as(protected Foo<K, V>)` / `.revealAs((protected Foo))`.
+        // prec.dynamic(-1): when GLR keeps both the `visibility_modifier type name`
+        // declaration reading and this type-prefix reading alive (e.g. `protected
+        // Int x;`), prefer the declaration; in cast/argument contexts there is no
+        // competing reading so this rule still wins.
+        access_qualified_type: $ => prec.dynamic(-1, prec.right(seq($.visibility_modifier, $._non_bi_type))),
         // Parenthesized type may carry annotations on the inner type, e.g.
         // `(@AutoFreezable Freezable)? o = Null` -- the annotation applies
         // to `Freezable`, the parens scope it under the `?` nullable wrap.

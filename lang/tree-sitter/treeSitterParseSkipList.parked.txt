@@ -74,6 +74,14 @@
 #    breaks ~16 files with `TODO foo bar` text. Sweep 876/876.
 #
 # Sweep is at 880/880 with 13 parked entries (newly uncovered, see below).
+#
+# 5. Access-qualified types (issue #459): `.as(protected Foo<K, V>)` and
+#    `.revealAs((protected Foo))` closed by adding `access_qualified_type`
+#    (`visibility_modifier _non_bi_type` with prec.dynamic(-1) so the
+#    `protected Int x;` declaration reading still wins the GLR fork).
+#    Un-parked the 5 jsondb storage/tx_manager/test_db files. The
+#    remaining jsondb_test.x entry needs module-level `incorporates`,
+#    which is a separate gap.
 
 # === Newly-uncovered grammar gaps (formerly hidden in intentional.txt) ===
 #
@@ -100,10 +108,5 @@ manualTests/src/main/x/archive/addressDB_json/module.x                      # 3 
 manualTests/src/main/x/archive/sock-shop/socks-cart.x                       # 2 errors
 manualTests/src/main/x/dbTests/PeopleTest.x                                 # 3 errors
 manualTests/src/main/x/jsondb/jsondb_test.x                                 # 2 errors
-manualTests/src/main/x/jsondb/jsondb_test/storage/JsonMapStoreConfigTest.x  # 12 errors
-manualTests/src/main/x/jsondb/jsondb_test/storage/JsonMapStoreTest.x        # 16 errors
-manualTests/src/main/x/jsondb/jsondb_test/test_db/TestClient.x              # 19 errors
-manualTests/src/main/x/jsondb/jsondb_test/tx_manager/TxManagerConfigTest.x  # 3 errors
-manualTests/src/main/x/jsondb/jsondb_test/tx_manager/TxManagerLogTest.x     # 7 errors
 manualTests/src/main/x/webTests/oauth.x                                     # 2 errors
 manualTests/src/main/x/errors.x                                             # 4 errors
