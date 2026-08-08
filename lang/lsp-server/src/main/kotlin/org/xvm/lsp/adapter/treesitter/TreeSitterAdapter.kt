@@ -843,15 +843,31 @@ class TreeSitterAdapter : AbstractAdapter() {
         op: String,
     ): Pair<XtcTree, String>? {
         val tree = parsedTrees[uri] ?: return null
-        val node =
-            tree.nodeAt(line, column) ?: return null.also {
-                logger.info("{}: no node at {}:{}:{}", op, uri.substringAfterLast('/'), line, column)
-            }
         val id =
-            findIdentifierNode(node) ?: return null.also {
-                logger.info("{}: not an identifier at {}:{}:{} ({})", op, uri.substringAfterLast('/'), line, column, node.type)
+            identifierNodeAt(tree, line, column) ?: return null.also {
+                logger.info("{}: no identifier at {}:{}:{}", op, uri.substringAfterLast('/'), line, column)
             }
         return tree to id.text
+    }
+
+    /**
+     * Finds the identifier node at the given position, tolerating a caret that sits at the
+     * exclusive end of the word. When the user selects a whole identifier and invokes
+     * go-to-declaration (issue #459), the editor reports the caret at selection end -- one
+     * past the last character -- where [XtcTree.nodeAt] returns the *following* node.
+     * Retry one column to the left so the lookup still lands on the identifier.
+     */
+    private fun identifierNodeAt(
+        tree: XtcTree,
+        line: Int,
+        column: Int,
+    ): XtcNode? {
+        val direct = tree.nodeAt(line, column)?.let { findIdentifierNode(it) }
+        if (direct != null) return direct
+        if (column > 0) {
+            return tree.nodeAt(line, column - 1)?.let { findIdentifierNode(it) }
+        }
+        return null
     }
 
     // ========================================================================
@@ -1072,8 +1088,7 @@ class TreeSitterAdapter : AbstractAdapter() {
         column: Int,
     ): PrepareRenameResult? {
         val tree = parsedTrees[uri] ?: return null
-        val node = tree.nodeAt(line, column) ?: return null
-        val id = findIdentifierNode(node) ?: return null
+        val id = identifierNodeAt(tree, line, column) ?: return null
 
         logger.info("prepareRename '{}' at {}:{}", id.text, line, column)
         return PrepareRenameResult(
@@ -1083,8 +1098,11 @@ class TreeSitterAdapter : AbstractAdapter() {
     }
 
     /**
-     * TODO: Same-file rename via text matching. Finds all identifier nodes with the same name
-     * and produces edit operations. Cannot handle cross-file renames or validate naming conflicts.
+     * Scope-aware same-file rename. Resolves the declaration the cursor's identifier refers
+     * to, then renames only the occurrences that resolve to that same declaration -- so
+     * renaming a local variable no longer sweeps up every same-named variable and property
+     * in the file (issue #459). Falls back to whole-file text matching only when the name
+     * cannot be resolved to any in-scope declaration (e.g. an unresolved member access).
      * A compiler adapter would rename across the workspace and update import paths.
      */
     override fun rename(
@@ -1093,18 +1111,78 @@ class TreeSitterAdapter : AbstractAdapter() {
         column: Int,
         newName: String,
     ): WorkspaceEdit? {
-        val (tree, name) = getIdentifierAt(uri, line, column, "rename") ?: return null
-        val locations = queryEngine.findAllIdentifiers(tree, name, uri)
+        val tree = parsedTrees[uri] ?: return null
+        val id = identifierNodeAt(tree, line, column) ?: return null
+        val name = id.text
+        val allOccurrences = queryEngine.findAllIdentifiers(tree, name, uri)
 
-        if (locations.isEmpty()) return null
+        if (allOccurrences.isEmpty()) return null
 
-        logger.info("rename '{}' -> '{}' ({} occurrences)", name, newName, locations.size)
+        // The rename target: if the cursor is already on a declaration's name identifier,
+        // that IS the declaration; otherwise resolve the reference through the scope chain.
+        val cursorLocation = Location(uri, id.startLine, id.startColumn, id.endLine, id.endColumn)
+        val declaration =
+            if (isDeclarationName(id)) {
+                cursorLocation
+            } else {
+                queryEngine.resolveByNameInScope(tree, id.startLine, id.startColumn, name, uri)
+            }
+
+        val locations =
+            if (declaration == null) {
+                logger.info("rename '{}': no in-scope declaration, falling back to text match", name)
+                allOccurrences
+            } else {
+                allOccurrences.filter { loc ->
+                    when {
+                        loc == declaration -> {
+                            true
+                        }
+
+                        // The name identifier of a DIFFERENT declaration (e.g. an inner
+                        // variable shadowing the rename target) must not be touched, even
+                        // though resolving from its position reaches the outer target.
+                        isDeclarationNameAt(tree, loc) -> {
+                            false
+                        }
+
+                        else -> {
+                            queryEngine.resolveByNameInScope(tree, loc.startLine, loc.startColumn, name, uri) == declaration
+                        }
+                    }
+                }
+            }
+
+        logger.info("rename '{}' -> '{}' ({} of {} occurrences)", name, newName, locations.size, allOccurrences.size)
         val edits =
             locations.map { loc ->
                 val range = Range(Position(loc.startLine, loc.startColumn), Position(loc.endLine, loc.endColumn))
                 TextEdit(range, newName)
             }
         return WorkspaceEdit(mapOf(uri to edits))
+    }
+
+    /**
+     * True when [id] is the name identifier of a declaration node (variable, parameter,
+     * property, method, class, ...) rather than a reference to one -- detected by the parent
+     * declaring a `name` field that spans exactly this node.
+     */
+    private fun isDeclarationName(id: XtcNode): Boolean {
+        val nameNode = id.parent?.childByFieldName("name") ?: return false
+        return nameNode.startLine == id.startLine &&
+            nameNode.startColumn == id.startColumn &&
+            nameNode.endLine == id.endLine &&
+            nameNode.endColumn == id.endColumn
+    }
+
+    /** [isDeclarationName] for the identifier node at a known occurrence location. */
+    private fun isDeclarationNameAt(
+        tree: XtcTree,
+        loc: Location,
+    ): Boolean {
+        val node = tree.nodeAt(loc.startLine, loc.startColumn) ?: return false
+        val id = findIdentifierNode(node) ?: return false
+        return isDeclarationName(id)
     }
 
     override fun getSignatureHelp(

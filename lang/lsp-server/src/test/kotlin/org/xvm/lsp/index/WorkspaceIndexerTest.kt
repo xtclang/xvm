@@ -92,6 +92,44 @@ class WorkspaceIndexerTest {
             indexer.close()
         }
 
+        /**
+         * Issue #459: cmd-click on `JsonArray` (a typedef in json.x, used from
+         * JsonArrayBuilder.x) found nothing because typedef declarations never
+         * reached the workspace index. Shorthand constructor parameters
+         * (`const Point(Int x, Int y)`) declare properties and must be indexed
+         * too -- `structure.y` navigated to an unrelated file without this.
+         */
+        @Test
+        @DisplayName("should index typedefs and shorthand constructor properties")
+        fun shouldIndexTypedefsAndShorthandProperties(
+            @TempDir tempDir: Path,
+        ) {
+            Files.writeString(
+                tempDir.resolve("json.x"),
+                """
+                module json {
+                    typedef Doc as JsonArray;
+                    const Point(Int x, Int y);
+                }
+                """.trimIndent(),
+            )
+
+            val index = WorkspaceIndex()
+            val indexer = WorkspaceIndexer(index, parser!!.getLanguage())
+
+            indexer.scanWorkspace(listOf(tempDir.toString())).join()
+
+            assertThat(index.findByName("JsonArray"))
+                .isNotEmpty
+                .allMatch { it.kind == SymbolKind.CLASS }
+            assertThat(index.findByName("x")).isNotEmpty
+            assertThat(index.findByName("y"))
+                .isNotEmpty
+                .allMatch { it.kind == SymbolKind.PROPERTY }
+
+            indexer.close()
+        }
+
         @Test
         @DisplayName("should index nested directories")
         fun shouldIndexNestedDirs(
