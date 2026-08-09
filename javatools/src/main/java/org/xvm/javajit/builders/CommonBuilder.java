@@ -3993,8 +3993,6 @@ public class CommonBuilder
     };
 
     private final static Map<String, Set<String>> NO_JIT_METHODS = Map.ofEntries(
-        Map.entry("org.xtclang.ecstasy.Service",
-            Set.of("passableAs")), // TODO: register narrowing for a formal return type
         Map.entry("org.xtclang.ecstasy.collections.UniformIndexed",
             Set.of("elementAt")), // TODO: NEWCG_N is not implemented
         Map.entry("org.xtclang.ecstasy.collections.Set",

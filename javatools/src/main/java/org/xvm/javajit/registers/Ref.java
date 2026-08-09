@@ -31,10 +31,11 @@ import static org.xvm.javajit.Builder.CD_nRef;
  * @param isVar           true for a Var; false for a Ref
  * @param referentType    the {@link TypeConstant} for the referent
  * @param referentFlavor  the flavor of the referent type
+ * @param scopeDepth      the scope depth this narrowed Ref was introduced at
  * @param origRef         if not null, the original Ref this Ref is narrowing
  */
 public record Ref(BuildContext bctx, int regId, int slot, String name, boolean isVar,
-                  TypeConstant referentType, JitFlavor referentFlavor, Ref origRef)
+                  TypeConstant referentType, JitFlavor referentFlavor, int scopeDepth, Ref origRef)
         implements RegisterInfo {
 
     /**
@@ -42,22 +43,14 @@ public record Ref(BuildContext bctx, int regId, int slot, String name, boolean i
      */
     public Ref(BuildContext bctx, int regId, int slot, String name, boolean isVar,
                   TypeConstant referentType, JitFlavor referentFlavor) {
-        this(bctx, regId, slot, name, isVar, referentType, referentFlavor, null);
-    }
-
-    /**
-     * Create a narrowing Ref.
-     */
-    private Ref(Ref origRef, TypeConstant narrowedType) {
-        this(origRef.bctx, origRef.regId, origRef.slot, origRef.name, origRef.isVar,
-            narrowedType, origRef.referentFlavor, origRef);
+        this(bctx, regId, slot, name, isVar, referentType, referentFlavor, 0, null);
     }
 
     /**
      * Narrow this Ref to the specified referent type.
      */
-    public Ref narrow(TypeConstant narrowedType) {
-        return new Ref(this, narrowedType);
+    public Ref narrow(TypeConstant narrowedType, int scopeDepth) {
+        return new Ref(bctx, regId, slot, name, isVar, narrowedType, referentFlavor, scopeDepth, this);
     }
 
     /**
@@ -153,6 +146,7 @@ public record Ref(BuildContext bctx, int regId, int slot, String name, boolean i
             + ", name="      + name
             + ", refFlavor=" + referentFlavor
             + ", refType="   + referentType.getValueString()
+            + ", scopeDepth=" + scopeDepth
             + (origRef == null ? "" : ", origRefType=" + origRef.referentType.getValueString()
         );
     }

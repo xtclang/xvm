@@ -929,6 +929,9 @@ public class BuildContext {
                         moveRegister(code, narrowedReg.load(code), origReg, false);
                     }
                     entry.setValue(origReg);
+                } else if (entry.getValue() instanceof Ref narrowedRef &&
+                        narrowedRef.origRef() != null && narrowedRef.scopeDepth() > scope.depth) {
+                    entry.setValue(narrowedRef.origRef());
                 }
             }
         }
@@ -1153,7 +1156,7 @@ public class BuildContext {
 
             return mtxType.isEquivalent(regType)
                     ? ref
-                    : ref.narrow(mtxType);
+                    : ref.narrow(mtxType, scope.depth);
         }
 
         TypeConstant regType  = reg.type();
@@ -2168,12 +2171,13 @@ public class BuildContext {
         ClassDesc    narrowedCD;
         ClassDesc[]  narrowedSlotCds;
         int[]        narrowedSlots;
+        int          scopeDepth = isNewScope ? scope.depth + 1 : scope.depth;
         RegisterInfo narrowedReg;
         if (origReg instanceof Ref ref) {
             narrowedCD      = origReg.cd();
             narrowedSlots   = origReg.slots();
             narrowedSlotCds = origReg.slotCds();
-            narrowedReg     = ref.narrow(narrowingType);
+            narrowedReg     = ref.narrow(narrowingType, scopeDepth);
         } else {
             JitTypeDesc narrowedDesc   = narrowingType.getJitDesc(builder);
             JitFlavor   narrowedFlavor = narrowedDesc.flavor;
@@ -2205,7 +2209,6 @@ public class BuildContext {
                 narrowedSlotCds = new ClassDesc[] {narrowedCD};
             }
 
-            int scopeDepth = isNewScope ? scope.depth + 1 : scope.depth;
             narrowedReg = new Narrowed(origReg.regId(), narrowedSlots, narrowingType,
                 narrowedFlavor, narrowedCD, narrowedSlotCds, origReg.name(), scopeDepth, origReg);
         }
