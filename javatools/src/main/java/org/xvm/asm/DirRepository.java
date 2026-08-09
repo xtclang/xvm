@@ -9,8 +9,6 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 
-import java.nio.charset.StandardCharsets;
-
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,7 +19,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.UUID;
 
 
 /**
@@ -304,7 +301,7 @@ public class DirRepository
 
         try {
             String path = m_dir.getCanonicalPath();
-            String key  = UUID.nameUUIDFromBytes(path.getBytes(StandardCharsets.UTF_8)).toString();
+            String key  = Integer.toUnsignedString(path.hashCode(), 16);
             return new File(new File(tempDir, CACHE_DIRECTORY), key + CACHE_SUFFIX);
         } catch (IOException | RuntimeException e) {
             return null;
