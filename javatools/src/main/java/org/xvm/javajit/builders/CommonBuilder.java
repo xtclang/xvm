@@ -3929,8 +3929,10 @@ public class CommonBuilder
             "org.xtclang.ecstasy.collections.Array$Mutability",
             "org.xtclang.ecstasy.collections.Collection",
             "org.xtclang.ecstasy.collections.List",
+            "org.xtclang.ecstasy.collections.NaturalHasher",
             "org.xtclang.ecstasy.collections.Set",
             "org.xtclang.ecstasy.collections.UniformIndexed*",
+            "org.xtclang.ecstasy.collections.VirtualHasher",
 
             // io
             "org.xtclang.ecstasy.io.Reader",
@@ -3939,9 +3941,18 @@ public class CommonBuilder
             "org.xtclang.ecstasy.io.IllegalUTF",
 
             // maps
+            "org.xtclang.ecstasy.maps.CollectImmutableMap",
+            "org.xtclang.ecstasy.maps.CopyableMap",
+            "org.xtclang.ecstasy.maps.CursorEntry",
+            "org.xtclang.ecstasy.maps.DiscreteEntry*",
+            "org.xtclang.ecstasy.maps.KeyEntry",
+            "org.xtclang.ecstasy.maps.ListMapCollector",
+            "org.xtclang.ecstasy.maps.Map",
             "org.xtclang.ecstasy.maps.Map$Entry",
             "org.xtclang.ecstasy.maps.MapAppender",
             "org.xtclang.ecstasy.maps.MapCollector",
+            "org.xtclang.ecstasy.maps.StringableEntry",
+            "org.xtclang.ecstasy.maps.deferred.DeferredMap",
 
             // numbers
             "org.xtclang.ecstasy.numbers.BFloat16",
@@ -3988,6 +3999,24 @@ public class CommonBuilder
             Set.of("elementAt")), // TODO: NEWCG_N is not implemented
         Map.entry("org.xtclang.ecstasy.collections.Set",
             Set.of("symmetricDifference")), // TODO: MOV_TYPE for the Replicable virtual constructor
+        Map.entry("org.xtclang.ecstasy.collections.NaturalHasher",
+            Set.of("hashOf")), // TODO: formal static call has no enclosing MethodStructure
+        Map.entry("org.xtclang.ecstasy.collections.VirtualHasher",
+            Set.of("hashOf")), // TODO: nested method formal has no enclosing MethodStructure
+        Map.entry("org.xtclang.ecstasy.maps.CollectImmutableMap",
+            Set.of("reduce")), // TODO: conditional local is missing from one stack-map path
+        Map.entry("org.xtclang.ecstasy.maps.DiscreteEntry",
+            Set.of("construct", // TODO: specialized constructor chains to unspecialized class
+                   "freeze")),  // TODO: specialized return is incompatible with a conditional mixin
+        Map.entry("org.xtclang.ecstasy.maps.Map",
+            Set.of("computeIfAbsent",  // TODO: RETURN_T is not implemented
+                   "defaultCollector", // TODO: virtual constructor method constant
+                   "estimateStringLength", // TODO: incompatible formal iterator result types
+                   "map",              // TODO: incompatible formal result types in TypeMatrix
+                   "removeAll")),      // TODO: key's formal type is tracked as Object
+        Map.entry("org.xtclang.ecstasy.maps.deferred.DeferredMap",
+            Set.of("defaultCollector", // TODO: unresolved method formal in specialized class
+                   "fromEntry")),      // TODO: A_SUPER argument for a virtual construction
         Map.entry("org.xtclang.ecstasy.Range",
             Set.of("appendTo", "estimateStringLength")), // TODO: if (Element.is(Type<Stringable>)) does not cast
         Map.entry("org.xtclang.ecstasy.Timeout",
