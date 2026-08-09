@@ -1,9 +1,18 @@
 package org.xvm.asm;
 
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
+
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -85,13 +94,15 @@ public class DirRepository
         module.getFileStructure().writeTo(file);
 
         if (file.exists()) {
-            info = new ModuleInfo(file);
+            info = createModuleInfo(file);
             modulesByName.put(name, info);
             modulesByFile.put(file, info);
         } else {
             modulesByName.remove(name);
             modulesByFile.remove(file);
         }
+
+        writeCache();
     }
 
 
@@ -129,17 +140,29 @@ public class DirRepository
         }
 
         Map<File, ModuleInfo> oldModulesByFile = modulesByFile;
+        boolean               fWriteCache      = false;
+        if (oldModulesByFile.isEmpty()) {
+            Map<File, ModuleInfo> cachedModulesByFile = readCache();
+            if (cachedModulesByFile == null) {
+                fWriteCache = true;
+            } else {
+                oldModulesByFile = cachedModulesByFile;
+            }
+        }
+
         Map<File, ModuleInfo> newModulesByFile = new HashMap<>();
 
         modulesByFile = newModulesByFile;
         modulesByName.clear();
 
         File[] files = m_dir.listFiles(ModulesOnly);
+        fWriteCache |= files.length != oldModulesByFile.size();
         for (File file : files) {
             ModuleInfo info = oldModulesByFile.get(file);
             if (info == null || info.timestamp != file.lastModified() || info.size != file.length()) {
                 // build a new one to cache
-                info = new ModuleInfo(file);
+                info = createModuleInfo(file);
+                fWriteCache = true;
             }
 
             newModulesByFile.put(file, info);
@@ -149,6 +172,140 @@ public class DirRepository
         }
 
         lastScan = System.currentTimeMillis();
+        if (fWriteCache) {
+            writeCache();
+        }
+    }
+
+    /**
+     * Create the information cached for a module file.
+     *
+     * @param file  the module file
+     *
+     * @return the module information
+     */
+    protected ModuleInfo createModuleInfo(File file) {
+        return new ModuleInfo(file);
+    }
+
+    /**
+     * Read the module information saved by a previous instance of this repository.
+     *
+     * @return the cached module information, or null if no valid cache exists
+     */
+    private Map<File, ModuleInfo> readCache() {
+        File fileCache = getCacheFile();
+        if (fileCache == null || !fileCache.isFile()) {
+            return null;
+        }
+
+        try (DataInputStream in = new DataInputStream(
+                new BufferedInputStream(Files.newInputStream(fileCache.toPath())))) {
+            if (in.readInt() != CACHE_MAGIC || in.readInt() != CACHE_VERSION ||
+                    !in.readUTF().equals(m_dir.getCanonicalPath())) {
+                return null;
+            }
+
+            int  cModules  = in.readInt();
+            long cbEntries = fileCache.length() - MIN_CACHE_HEADER_SIZE;
+            if (cModules < 0 || cbEntries < (long) cModules * MIN_CACHE_ENTRY_SIZE) {
+                // probably a corrupted file
+                return null;
+            }
+
+            Map<File, ModuleInfo> modulesByFile = new HashMap<>(cModules);
+            for (int i = 0; i < cModules; ++i) {
+                String fileName = in.readUTF();
+                if (!fileName.equals(new File(fileName).getName())) {
+                    return null;
+                }
+
+                File   file      = new File(m_dir, fileName);
+                long   timestamp = in.readLong();
+                long   size      = in.readLong();
+                boolean err      = in.readBoolean();
+                String name      = err ? null : in.readUTF();
+
+                if (modulesByFile.put(file,
+                        new ModuleInfo(file, name, timestamp, size, err)) != null) {
+                    return null;
+                }
+            }
+            return in.read() < 0 ? modulesByFile : null;
+        } catch (IOException | RuntimeException e) {
+            // a persistent cache is only a performance aid
+            return null;
+        }
+    }
+
+    /**
+     * Save enough module information to avoid deserializing unchanged files in the next process.
+     */
+    private void writeCache() {
+        File fileCache = getCacheFile();
+        if (fileCache == null) {
+            return;
+        }
+
+        Path pathCache = fileCache.toPath();
+        Path pathTemp  = null;
+        try {
+            Path pathDir = pathCache.getParent();
+            Files.createDirectories(pathDir);
+            pathTemp = Files.createTempFile(pathDir, fileCache.getName(), ".tmp");
+
+            try (DataOutputStream out = new DataOutputStream(
+                    new BufferedOutputStream(Files.newOutputStream(pathTemp)))) {
+                out.writeInt(CACHE_MAGIC);
+                out.writeInt(CACHE_VERSION);
+                out.writeUTF(m_dir.getCanonicalPath());
+                out.writeInt(modulesByFile.size());
+
+                for (ModuleInfo info : modulesByFile.values()) {
+                    out.writeUTF(info.file.getName());
+                    out.writeLong(info.timestamp);
+                    out.writeLong(info.size);
+                    out.writeBoolean(info.err);
+                    if (!info.err) {
+                        out.writeUTF(info.name);
+                    }
+                }
+            }
+
+            try {
+                Files.move(pathTemp, pathCache,
+                        StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(pathTemp, pathCache, StandardCopyOption.REPLACE_EXISTING);
+            }
+            pathTemp = null;
+        } catch (IOException | RuntimeException ignore) {
+            // a persistent cache is only a performance aid
+        } finally {
+            if (pathTemp != null) {
+                try {
+                    Files.deleteIfExists(pathTemp);
+                } catch (IOException ignore) {}
+            }
+        }
+    }
+
+    /**
+     * @return the persistent cache file for this repository, or null if it cannot be determined
+     */
+    private File getCacheFile() {
+        String tempDir = System.getProperty("java.io.tmpdir");
+        if (tempDir == null) {
+            return null;
+        }
+
+        try {
+            String path = m_dir.getCanonicalPath();
+            String key  = Integer.toUnsignedString(path.hashCode(), 16);
+            return new File(new File(tempDir, CACHE_DIRECTORY), key + CACHE_SUFFIX);
+        } catch (IOException | RuntimeException e) {
+            return null;
+        }
     }
 
     /**
@@ -197,6 +354,15 @@ public class DirRepository
             }
         }
 
+        private ModuleInfo(File file, String name, long timestamp, long size, boolean err) {
+            this.file      = file;
+            this.name      = name;
+            this.versions  = null;
+            this.timestamp = timestamp;
+            this.size      = size;
+            this.err       = err;
+        }
+
         ModuleStructure tryLoad() {
             try {
                 FileStructure struct = new FileStructure(file);
@@ -240,6 +406,13 @@ public class DirRepository
     public static final FileFilter ModulesOnly = file ->
             file.getName().length() > 4 && file.getName().endsWith(".xtc") &&
             file.exists() && file.isFile() && file.canRead() && file.length() > 0;
+
+    private static final int    CACHE_MAGIC           = 0xEC57CA11;
+    private static final int    CACHE_VERSION         = 1;
+    private static final int    MIN_CACHE_HEADER_SIZE = Integer.BYTES * 3 + Short.BYTES;
+    private static final int    MIN_CACHE_ENTRY_SIZE  = Long.BYTES * 2 + Short.BYTES + Byte.BYTES;
+    private static final String CACHE_DIRECTORY       = "xvm-dir-repository";
+    private static final String CACHE_SUFFIX          = ".cache";
 
 
     // ----- fields --------------------------------------------------------------------------------
