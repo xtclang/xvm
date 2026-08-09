@@ -521,10 +521,14 @@ module.exports = grammar({
 
         // Property accessor syntax: `Type propName.get() { ... }` or `Type propName.calc() = expr;`
         // Supports any accessor method name (get, set, calc, add, etc.)
+        // Modifiers can appear in either order: "static protected" or "protected static"
         property_getter_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
-            optional(seq($.visibility_modifier, repeat($.annotation))),
+            optional(choice(
+                seq($.visibility_modifier, repeat($.annotation), optional(seq('static', repeat($.annotation)))),
+                seq('static', repeat($.annotation), optional(seq($.visibility_modifier, repeat($.annotation)))),
+            )),
             $.type_expression,
             $.identifier,
             '.',
