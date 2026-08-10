@@ -7153,7 +7153,7 @@ public abstract class TypeConstant
             return name;
         }
 
-        ConstantPool     pool = getConstantPool();
+        ConstantPool     pool = ts.pool();
         IdentityConstant id   = getSingleUnderlyingClass(true);
         if (id.equals(pool.clzArray())) {
             // see ParameterizedTypeConstant#buildJitClassName
@@ -7198,8 +7198,7 @@ public abstract class TypeConstant
 
         TypeConstant typeCanonical = getCallableJitType();
         if (typeCanonical.getParamsCount() > 0) {
-            // TODO CP
-            sb.appendCodePoint(HASH).append(typeCanonical.getPosition());
+            sb.appendCodePoint(HASH).append(pool.register(typeCanonical).getPosition());
         }
         return sb.toString();
     }
