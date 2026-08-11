@@ -275,6 +275,110 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * Access-qualified type expressions (issue #459): a visibility modifier
+         * is a legal type prefix per the BNF's ExtendedPrefixTypeExpression, in
+         * the same slot as `immutable`. Used in cast contexts:
+         * `.as(protected JsonMapStore<String, String>)` and the parenthesized
+         * `.revealAs((protected TxManager<TestSchema>))` from the jsondb tests.
+         * The `access_qualified_type` rule carries prec.dynamic(-1) so that
+         * `protected Int x;` still parses as modifier + property declaration.
+         */
+        @Test
+        @DisplayName("should parse access-qualified type in cast expressions")
+        fun shouldParseAccessQualifiedTypeInCast() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        val store = schema.getMapStore().as(protected JsonMapStore<String, String>);
+                        assert TxManager<TestSchema> mgr := client.&txManager.revealAs((protected TxManager<TestSchema>));
+                        protected Int x = 1;
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * Parameterized virtual child types (issue #459): `Base<Int>.Child2<String>`
+         * in value position must parse as a single `member_type`, not as a
+         * `member_expression` followed by an unparseable `<String>`. From
+         * `manualTests/src/main/x/generics.x`.
+         */
+        @Test
+        @DisplayName("should parse parameterized virtual child type in value position")
+        fun shouldParseParameterizedVirtualChildType() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        Type t1 = Base<Int>.Child;
+                        Type t2 = Base<Int>.Child2<String>;
+                        Base<Int>.Child2<String> c2 = bi.new Child2<String>();
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * The exact shape of `manualTests/annos.x#testAnnotations3()` reported
+         * as a false negative in issue #459: a local `annotation ... into ...`
+         * declaration inside a method body, followed by annotated local classes
+         * that use it. Must produce no ERROR diagnostics.
+         */
+        @Test
+        @DisplayName("should parse local annotation declaration with annotated local classes")
+        fun shouldParseLocalAnnotationDeclarationWithAnnotatedLocalClasses() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void testAnnotations3() {
+                        interface Predicate {
+                            Boolean eval();
+                        }
+
+                        annotation PreComputed(Boolean value = False) into Predicate {
+                            @Override Boolean eval() = value;
+                        }
+
+                        @PreComputed(True)
+                        class ClassA implements Predicate {
+                            ClassB b = new ClassB();
+
+                            @Override
+                            Boolean eval() = b.eval();
+                        }
+
+                        @PreComputed(True)
+                        class ClassB implements Predicate {}
+
+                        assert new ClassA().eval() == True;
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
          * Stacked switch labels: `default: case 0..39: ...` (or any combination
          * of `case ...:` and `default:` labels for the same arm). The grammar's
          * `case_clause` and `expression_case_clause` rules previously allowed a

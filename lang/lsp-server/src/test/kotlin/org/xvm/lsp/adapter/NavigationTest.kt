@@ -312,6 +312,92 @@ class NavigationTest : TreeSitterTestBase() {
             assertThat(definition).isNotNull
             assertThat(definition!!.startLine).isEqualTo(1)
         }
+
+        /**
+         * Issue #459: `structure.y` in reflect.x navigated to an unrelated `y` in
+         * doc/archive/examples because `y`, declared only as a shorthand constructor
+         * parameter of `const Point(Int x, Int y)`, was invisible to the same-file
+         * declaration lookup and fell through to the workspace-wide name grep.
+         * Shorthand constructor parameters declare properties, so the same-file
+         * lookup must find them.
+         */
+        @Test
+        @DisplayName("should resolve const shorthand property in same file")
+        fun shouldResolveConstShorthandPropertyInSameFile() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    const Point(Int x, Int y);
+                    void run() {
+                        structure.y = 2;
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on `y` in `structure.y` -- line 3, col 18
+            val definition = logged("shouldResolveConstShorthandPropertyInSameFile", ts.findDefinition(uri, 3, 18))
+
+            assertThat(definition).isNotNull
+            assertThat(definition!!.uri).isEqualTo(uri)
+            // The `y` parameter of `const Point(Int x, Int y)` on line 1
+            assertThat(definition.startLine).isEqualTo(1)
+        }
+
+        /**
+         * Issue #459: with the whole word selected, the editor reports the caret at
+         * the exclusive end of the identifier, where nodeAt() returns the following
+         * token. The definition lookup must tolerate that by retrying one column left.
+         */
+        @Test
+        @DisplayName("should find definition when caret is at the end of the word")
+        fun shouldFindDefinitionAtWordEnd() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    @Inject Console console;
+                    void run() {
+                        console.print("hi");
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // `console` on line 3 spans cols 8..15; col 15 is the exclusive end
+            // (caret position when the whole word is selected)
+            val definition = logged("shouldFindDefinitionAtWordEnd", ts.findDefinition(uri, 3, 15))
+
+            assertThat(definition).isNotNull
+            assertThat(definition!!.startLine).isEqualTo(1)
+        }
+
+        /**
+         * Issue #459: cmd-click on a typedef name found nothing. Same-file case:
+         * the scope walk must treat a typedef_declaration as a body member.
+         */
+        @Test
+        @DisplayName("should navigate to typedef declaration in same file")
+        fun shouldNavigateToTypedefInSameFile() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    typedef String as Name;
+                    void run() {
+                        Name n = "x";
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on `Name` usage -- line 3, col 8
+            val definition = logged("shouldNavigateToTypedefInSameFile", ts.findDefinition(uri, 3, 8))
+
+            assertThat(definition).isNotNull
+            assertThat(definition!!.startLine).isEqualTo(1)
+        }
     }
 
     // ========================================================================

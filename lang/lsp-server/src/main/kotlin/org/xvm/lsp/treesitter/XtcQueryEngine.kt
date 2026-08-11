@@ -173,6 +173,14 @@ class XtcQueryEngine(
                         findMemberInBody(current, name)
                     }
 
+                    "class_declaration", "const_declaration", "service_declaration",
+                    "mixin_declaration", "enum_declaration", "annotation_declaration",
+                    -> {
+                        // Shorthand constructor parameters (`const Point(Int x, Int y)`)
+                        // declare properties, visible throughout the class body.
+                        findShorthandProperty(current, name)
+                    }
+
                     else -> {
                         null
                     }
@@ -228,6 +236,12 @@ class XtcQueryEngine(
                     "enum_body", "mixin_body", "service_body", "const_body",
                     -> {
                         enumerateMembers(current, uri)
+                    }
+
+                    "class_declaration", "const_declaration", "service_declaration",
+                    "mixin_declaration", "enum_declaration", "annotation_declaration",
+                    -> {
+                        enumerateShorthandProperties(current, uri)
                     }
 
                     else -> {
@@ -318,6 +332,42 @@ class XtcQueryEngine(
     }
 
     /**
+     * Find a shorthand constructor parameter (`const Point(Int x, Int y)`) of a class-like
+     * declaration. These declare properties in Ecstasy, visible throughout the class body.
+     */
+    private fun findShorthandProperty(
+        declaration: XtcNode,
+        name: String,
+    ): XtcNode? =
+        declaration
+            .childByType("constructor_parameters")
+            ?.childByType("parameters")
+            ?.children
+            ?.asSequence()
+            ?.filter { it.type == "parameter" }
+            ?.mapNotNull { it.childByFieldName("name") }
+            ?.firstOrNull { it.text == name }
+
+    /**
+     * Enumerate every shorthand constructor parameter of a class-like declaration as a
+     * PROPERTY symbol.
+     */
+    private fun enumerateShorthandProperties(
+        declaration: XtcNode,
+        uri: String,
+    ): List<SymbolInfo> =
+        declaration
+            .childByType("constructor_parameters")
+            ?.childByType("parameters")
+            ?.children
+            ?.asSequence()
+            ?.filter { it.type == "parameter" }
+            ?.mapNotNull { it.childByFieldName("name") }
+            ?.map { name -> name.toSymbolInfo(name.text, SymbolKind.PROPERTY, uri) }
+            ?.toList()
+            .orEmpty()
+
+    /**
      * Search a class/module/package/interface/enum/mixin/service/const body for a declared
      * member (property, method, getter, nested type) whose name matches. Members are visible
      * throughout the body, so position is not constrained.
@@ -380,6 +430,9 @@ class XtcQueryEngine(
                 "method" to SymbolKind.METHOD,
                 "constructor" to SymbolKind.CONSTRUCTOR,
                 "property" to SymbolKind.PROPERTY,
+                // Typedefs surface as CLASS, matching memberNodeKinds' mapping
+                // for typedef_declaration.
+                "typedef" to SymbolKind.CLASS,
             )
 
         // Used by findDeclarationAt for the upward AST walk from the cursor.
