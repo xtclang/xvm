@@ -7140,7 +7140,7 @@ public abstract class TypeConstant
         if (sJitName == null) {
             // get the master instance of the type constant
             ModuleLoader loader = ts.findOwnerLoader(this);
-            TypeConstant that = loader.module.getConstantPool().register(this);
+            TypeConstant that   = loader.module.getConstantPool().register(this);
             sJitName   = this == that ? buildJitClassName(ts, loader) : that.ensureJitClassName(ts);
             m_sJitName = sJitName;
         }
@@ -7153,7 +7153,7 @@ public abstract class TypeConstant
             return name;
         }
 
-        ConstantPool     pool = ts.pool();
+        ConstantPool     pool = loader.module.getConstantPool();
         IdentityConstant id   = getSingleUnderlyingClass(true);
         if (id.equals(pool.clzArray())) {
             // see ParameterizedTypeConstant#buildJitClassName
@@ -7198,6 +7198,7 @@ public abstract class TypeConstant
 
         TypeConstant typeCanonical = getCallableJitType();
         if (typeCanonical.getParamsCount() > 0) {
+            // it's critical here to use the class module loader's pool
             sb.appendCodePoint(HASH).append(pool.register(typeCanonical).getPosition());
         }
         return sb.toString();
