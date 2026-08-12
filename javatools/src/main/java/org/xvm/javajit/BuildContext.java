@@ -1339,26 +1339,38 @@ public class BuildContext {
      * Out: nType object instance
      */
     public RegisterInfo loadType(CodeBuilder code, TypeConstant type) {
-        TypeConstant typeData;
+        TypeConstant dataType;
         if (type.isFormalType()) {
             if (type.isGenericType()) {
-                typeData = type.resolveConstraints();
-                assert !typeData.isGenericType();
+                dataType = type.resolveConstraints();
+                assert !dataType.isGenericType();
             } else {
                 return loadFormalType(code, (FormalConstant) type.getDefiningConstant());
             }
         } else {
             assert type.isTypeOfType();
-            typeData = type.getParamType(0);
+            dataType = type.getParamType(0);
         }
 
-        if (typeData.isTypeParameter()) {
-            int iReg = ((TypeParameterConstant) typeData.getDefiningConstant()).getRegister();
+        if (dataType.isGenericType()) {
+            RegisterInfo regThis = loadThis(code);
+            if (regThis.type().isJitInterface()) {
+                code.checkcast(CD_nObject);
+            }
+            loadCtx(code);
+            code.ldc(((FormalConstant) dataType.getDefiningConstant()).getName())
+                .invokevirtual(CD_nObject, "$type",
+                        MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString));
+            return new SingleSlot(type, Specific, CD_nType, "");
+        }
+
+        if (dataType.isTypeParameter()) {
+            int iReg = ((TypeParameterConstant) dataType.getDefiningConstant()).getRegister();
             return loadArgument(code, iReg);
         }
 
         loadCtx(code);
-        loadTypeConstant(code, typeData);
+        loadTypeConstant(code, dataType);
         code.invokestatic(CD_nType, "$ensureType",
                           MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
         return new SingleSlot(type, Specific, CD_nType, "");

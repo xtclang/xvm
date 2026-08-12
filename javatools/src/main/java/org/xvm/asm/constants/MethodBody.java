@@ -811,6 +811,10 @@ public class MethodBody {
      * @return the JitMethodDesc for the method associated with this body
      */
     public synchronized JitMethodDesc getJitDesc(Builder builder, TypeConstant typeTarget) {
+        if (typeTarget == null) {
+            typeTarget = getIdentity().getNamespace().getType();
+        }
+
         MethodStructure   method = getClassifyingMethodStructure();
         SignatureConstant sig    = method.resolveSignature(
                 builder.pool(), typeTarget.getCallableJitType());

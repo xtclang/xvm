@@ -58,7 +58,6 @@ import org.xvm.javajit.NativeTypeSystem;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
-
 import org.xvm.javajit.registers.ExtendedSlot;
 import org.xvm.javajit.registers.MultiSlot;
 import org.xvm.javajit.registers.SingleSlot;
@@ -163,9 +162,10 @@ public class CommonBuilder
     @Override
     public void buildClassOfClass(ClassBuilder classBuilder) {
         // generated code example:
-        //      class cPerson extends Class implements Replicable {
+        //      class cPerson extends Class implements sReplicable {
         //          public cPerson(Ctx ctx, TypeConstant publicType) {
         //              super(ctx, publicType);
+        //          }
         //      }
         //
         classBuilder.withSuperclass(CD_Class);
@@ -177,17 +177,16 @@ public class CommonBuilder
         List<MethodInfo> virtCtors  = new ArrayList<>();
         List<MethodInfo> funkyImpls = new ArrayList<>();
         for (MethodInfo method : typeInfo.getMethods().values()) {
-            IdentityConstant ifaceId;
             if (method.getVirtualConstructor() instanceof MethodBody virtCtor) {
-                ifaceId = virtCtor.getIdentity().getNamespace();
+                IdentityConstant ifaceId = virtCtor.getIdentity().getNamespace();
+                interfaces.add(ensureClassDesc(ifaceId.getType()));
                 virtCtors.add(method);
             } else if (method.getAbstractFunction() instanceof MethodBody funkyBody) {
-                ifaceId = funkyBody.getIdentity().getNamespace();
+                IdentityConstant ifaceId   = funkyBody.getIdentity().getNamespace();
+                interfaces.add(ClassDesc.of(
+                    TypeSystem.funkyInterface(ensureJitClassName(ifaceId.getType()))));
                 funkyImpls.add(method);
-            } else {
-                continue;
             }
-            interfaces.add(ensureClassDesc(ifaceId.getType()));
         }
 
         if (interfaces.isEmpty()) {
@@ -207,12 +206,19 @@ public class CommonBuilder
         TypeConstant targetType = typeInfo.getType();
         ClassDesc    targetCD   = ensureClassDesc(targetType);
         for (MethodInfo method : funkyImpls) {
-            String        jitName = method.ensureJitMethodName(typeSystem);
-            JitMethodDesc jmd     = method.getJitDesc(this, targetType);
+            // method contains an implementation of an abstract static (funky) declaration;
+            // the class of class needs to create a method with that declaration signature
+            // and route it to the "head" of the call chain
+            MethodBody    funkyBody = method.getAbstractFunction();
+            JitMethodDesc funkyJmd  = funkyBody.getJitDesc(this, null);
+            JitMethodDesc targetJmd = method.getJitDesc(this, targetType);
+            String        jitName   = method.ensureJitMethodName(typeSystem);
 
-            assembleFunkyRouting(classBuilder, targetCD, jitName, jmd.standardMD);
-            if (jmd.isOptimized) {
-                assembleFunkyRouting(classBuilder, targetCD, jitName + OPT, jmd.optimizedMD);
+            assembleFunkyRouting(classBuilder, jitName, funkyJmd, targetCD, targetJmd, false);
+            if (funkyJmd.isOptimized) {
+                assert targetJmd.isOptimized;
+                assembleFunkyRouting(
+                        classBuilder, jitName + OPT, funkyJmd, targetCD, targetJmd, true);
             }
         }
 
@@ -229,7 +235,7 @@ public class CommonBuilder
                 MethodInfo method2 = typeInfo.getNarrowingMethod(method);
                 String     name2   = method2.ensureJitMethodName(typeSystem);
 
-                int q = 0;
+                System.err.println("TODO: capped virtual constructor");
             }
             String jitName = virtCtor.getIdentity().
                     ensureJitMethodName(typeSystem).replace("construct", NEW);
@@ -260,20 +266,114 @@ public class CommonBuilder
 
     /**
      * Assemble an instance method on the class-of-class that routes to the corresponding funky
-     * method on the target class.
+     * method on the target class. Note that the target signature could be different from the
+     * funky signature. For example String has a concrete implementation for Hashable:
+     *      hashCode$p(Ctx, nType, String) -> long
+     * while the class of class cString has:
+     *      hashCode$p(Ctx, nType, Hashable) -> long
      */
-    private void assembleFunkyRouting(
-            ClassBuilder   classBuilder,
-            ClassDesc      targetCD,
-            String         jitName,
-            MethodTypeDesc md) {
-        classBuilder.withMethodBody(jitName, md, ClassFile.ACC_PUBLIC, code -> {
-            for (int i = 0, count = md.parameterCount(); i < count; i++) {
-                load(code, md.parameterType(i), code.parameterSlot(i));
+    private void assembleFunkyRouting(ClassBuilder classBuilder, String jitName,
+                                      JitMethodDesc funkyJmd,
+                                      ClassDesc targetCD, JitMethodDesc targetJmd,
+                                      boolean isOptimized) {
+        MethodTypeDesc funkyMd  = isOptimized ? funkyJmd.optimizedMD  : funkyJmd.standardMD;
+        MethodTypeDesc targetMd = isOptimized ? targetJmd.optimizedMD : targetJmd.standardMD;
+        JitParamDesc[] funkyParams = isOptimized
+                ? funkyJmd.optimizedParams
+                : funkyJmd.standardParams;
+        JitParamDesc[] targetParams = isOptimized
+                ? targetJmd.optimizedParams
+                : targetJmd.standardParams;
+
+        classBuilder.withMethodBody(jitName, funkyMd, ClassFile.ACC_PUBLIC, code -> {
+            int extraCount = funkyJmd.getImplicitParamCount();
+            assert extraCount == targetJmd.getImplicitParamCount();
+            for (int i = 0; i < extraCount; i++) {
+                load(code, funkyMd.parameterType(i), code.parameterSlot(i));
             }
-            code.invokestatic(targetCD, jitName, md);
-            addReturn(code, md.returnType());
+
+            int funkyIndex  = isOptimized ? funkyJmd.optimizedCtx()  : 0;
+            int targetIndex = isOptimized ? targetJmd.optimizedCtx() : 0;
+            while (funkyIndex < funkyParams.length) {
+                JitParamDesc funkyParam  = funkyParams[funkyIndex];
+                JitParamDesc targetParam = targetParams[targetIndex];
+                int          funkySlot   = code.parameterSlot(extraCount + funkyIndex);
+
+                if (funkyParam.flavor == targetParam.flavor) {
+                    load(code, funkyParam.cd, funkySlot);
+                    if (!funkyParam.type.equals(targetParam.type) &&
+                            !targetParam.cd.isPrimitive()) {
+                        generateCheckCast(code, targetParam.type,
+                                code.parameterSlot(funkyJmd.standardCtx()));
+                    }
+                    funkyIndex++;
+                    targetIndex++;
+                } else {
+                    switch (funkyParam.flavor.name() + "->" + targetParam.flavor.name()) {
+                    case "Specific->Primitive",
+                         "Specific->XvmPrimitive":
+                        code.aload(funkySlot);
+                        generateCheckCast(code, targetParam.type,
+                                code.parameterSlot(funkyJmd.standardCtx()));
+                        unbox(code, targetParam.type);
+
+                        int paramIndex = funkyParam.index;
+                        while (funkyIndex < funkyParams.length &&
+                                funkyParams[funkyIndex].index == paramIndex) {
+                            funkyIndex++;
+                        }
+                        while (targetIndex < targetParams.length &&
+                                targetParams[targetIndex].index == paramIndex) {
+                            targetIndex++;
+                        }
+                        break;
+
+                    default:
+                        throw new UnsupportedOperationException(
+                                "Unsupported funky parameter conversion: " +
+                                funkyParam.flavor + "->" + targetParam.flavor);
+                    }
+                }
+            }
+
+            code.invokestatic(targetCD, jitName, targetMd);
+
+            ClassDesc funkyRetCD  = funkyMd.returnType();
+            ClassDesc targetRetCD = targetMd.returnType();
+            if (funkyRetCD.equals(targetRetCD)) {
+                addReturn(code, funkyRetCD);
+            } else if (!funkyRetCD.isPrimitive()) {
+                // the concrete implementation may have a covariant return type
+                if (targetRetCD.isPrimitive()) {
+                    box(code, targetJmd.optimizedReturns[0].type);
+                }
+                code.areturn();
+            } else {
+                throw new UnsupportedOperationException(
+                        "Unsupported funky return conversion: " + targetRetCD + "->" + funkyRetCD);
+            }
         });
+    }
+
+    @Override
+    public void buildFunkyInterface(ClassBuilder classBuilder) {
+        assert isInterface;
+
+        classBuilder.withFlags(ClassFile.ACC_PUBLIC | ClassFile.ACC_INTERFACE |
+                ClassFile.ACC_ABSTRACT);
+
+        for (MethodInfo method : typeInfo.getMethods().values()) {
+            if (method.getAbstractFunction() instanceof MethodBody funkyBody) {
+                String        jitName = funkyBody.getIdentity().ensureJitMethodName(typeSystem);
+                JitMethodDesc jmd     = funkyBody.getJitDesc(this, null);
+                int           flags   = ClassFile.ACC_PUBLIC | ClassFile.ACC_ABSTRACT;
+
+                classBuilder.withMethod(jitName, jmd.standardMD, flags, _ -> {});
+                if (jmd.isOptimized) {
+                    classBuilder.withMethod(jitName + OPT, jmd.optimizedMD, flags, _ -> {});
+                }
+            }
+        }
     }
 
     @Override
@@ -3742,6 +3842,11 @@ public class CommonBuilder
             }
         }
 
+        if (isInterface && method.isAbstractFunction()) {
+            // static abstract functions are represented by the separate funky interface
+            return;
+        }
+
         MethodTypeDesc md;
         if (jmd.isOptimized) {
             assembleMethodWrapper(classBuilder, jitName, jmd);
@@ -3751,16 +3856,10 @@ public class CommonBuilder
             md = jmd.standardMD;
         }
 
-        MakeStatic:
         if (method.isFunction() || method.isCtorOrValidator()) {
-            if (isInterface) {
-                if (method.isAbstractFunction()) {
-                    // this is a funky interface method; create a virtual method declaration
-                    break MakeStatic;
-                } else if (method.isVirtualConstructor()) {
-                    // virtual constructors only generate the "new$" virtual method declarations
-                    return;
-                }
+            if (isInterface && method.isVirtualConstructor()) {
+                // virtual constructors only generate the "new$" virtual method declarations
+                return;
             }
             flags |= ClassFile.ACC_STATIC;
         } else if (jmd.isOptimizedStatic) {
@@ -3997,8 +4096,6 @@ public class CommonBuilder
             Set.of("elementAt")), // TODO: NEWCG_N is not implemented
         Map.entry("org.xtclang.ecstasy.collections.Set",
             Set.of("symmetricDifference")), // TODO: MOV_TYPE for the Replicable virtual constructor
-        Map.entry("org.xtclang.ecstasy.collections.NaturalHasher",
-            Set.of("hashOf")), // TODO: formal static call has no enclosing MethodStructure
         Map.entry("org.xtclang.ecstasy.collections.VirtualHasher",
             Set.of("hashOf")), // TODO: nested method formal has no enclosing MethodStructure
         Map.entry("org.xtclang.ecstasy.maps.CollectImmutableMap",

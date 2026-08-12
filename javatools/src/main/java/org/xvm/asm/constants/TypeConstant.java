@@ -91,9 +91,8 @@ import org.xvm.util.TransientThreadLocal;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
 
+import static org.xvm.javajit.Builder.CD_Class;
 import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_Object;
-import static org.xvm.javajit.Builder.CD_Orderable;
 import static org.xvm.javajit.Builder.CD_Ordered;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.OPT;
@@ -7565,41 +7564,54 @@ public abstract class TypeConstant
 
             boolean        isFormal = isFormalType();
             ClassDesc      cd;
-            MethodTypeDesc md;
+            JitMethodDesc  jmd;
             String         sJitName;
 
             if (isFormal) {
-                cd = CD_nType;
-                switch (nOp) {
-                case Op.OP_IS_EQ,  Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> {
-                    md       = MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_Object, CD_Object);
-                    sJitName = "equals$p";
-                }
-                default -> {
-                    md       = MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_Orderable, CD_Orderable);
-                    sJitName ="compare";
-                }
-                }
+                // while the method is either "equals" or "compare", its parameter types depend
+                // on the interface that declares the abstract function; derive its exact signature
+                MethodInfo method = bctx.getTypeInfo(resolveConstraints()).getMethodBySignature(sig);
+                assert method.containsAbstractFunction();
+
+                MethodBody     bodyFunky = method.getAbstractFunction();
+                MethodConstant idFunky   = bodyFunky.getIdentity();
+                TypeConstant   typeFunky = idFunky.getNamespace().getType();
+
+                cd       = ClassDesc.of(TypeSystem.funkyInterface(
+                            bctx.builder.ensureJitClassName(typeFunky)));
+                sJitName = idFunky.ensureJitMethodName(ts);
+                jmd      = bodyFunky.getJitDesc(bctx.builder, typeFunky);
             } else {
-                MethodInfo    method = bctx.getTypeInfo(this).getMethodBySignature(sig);
-                JitMethodDesc jmd    = method.getJitDesc(bctx.builder, this);
+                MethodInfo method = bctx.getTypeInfo(this).getMethodBySignature(sig);
+
                 cd       = bctx.builder.ensureClassDesc(method.getJitIdentity().getNamespace().getType());
                 sJitName = method.ensureJitMethodName(ts);
+                jmd      = method.getJitDesc(bctx.builder, this);
+            }
 
-                switch (nOp) {
-                case Op.OP_IS_EQ,  Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> {
-                    assert jmd.isOptimized;
-                    sJitName += OPT;
-                    md        = jmd.optimizedMD;
-                }
-                default ->
-                    md = jmd.standardMD;
-                }
+            MethodTypeDesc md;
+            switch (nOp) {
+            case Op.OP_IS_EQ,  Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> {
+                assert jmd.isOptimized;
+                sJitName += OPT;
+                md        = jmd.optimizedMD;
+            }
+            default ->
+                md = jmd.standardMD;
             }
 
             if (isFormal) {
-                bctx.loadType(code, this);
+                RegisterInfo regType  = bctx.loadType(code, this);
+                int          slotType = bctx.storeTempValue(code, regType.cd());
+
+                // generated class-of-class extends Class and implements "sComparable" and "sOrderable"
+                Builder.load(code, regType.cd(), slotType);
                 bctx.loadCtx(code);
+                code.invokevirtual(CD_nType, "$xvmClass", MethodTypeDesc.of(CD_Class, CD_Ctx))
+                    .checkcast(cd);
+
+                bctx.loadCtx(code);
+                Builder.load(code, regType.cd(), slotType);
             } else {
                 bctx.loadCtx(code);
                 bctx.loadType(code, getType()); // type of this type
@@ -7611,10 +7623,8 @@ public abstract class TypeConstant
             case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
                  Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
                 if (isFormal) {
-                    // boolean equals$p(Ctx,Object,Object)
-                    code.invokevirtual(cd, sJitName, md);
+                    code.invokeinterface(cd, sJitName, md);
                 } else {
-                    // static boolean equals$p(Ctx,nType,Object,Object)
                     code.invokestatic(cd, sJitName, md);
                 }
 
@@ -7632,8 +7642,7 @@ public abstract class TypeConstant
                  Op.OP_IS_LTE, Op.OP_JMP_LTE :
 
                 if (isFormal) {
-                    // Ordered compare(Ctx,Object,Object)
-                    code.invokevirtual(cd, sJitName, md);
+                    code.invokeinterface(cd, sJitName, md);
                 } else {
                     // static Ordered compare(Ctx,nType,Object,Object)
                     code.invokestatic(cd, sJitName, md);

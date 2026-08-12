@@ -3,9 +3,7 @@ package org.xtclang.ecstasy.numbers;
 import java.math.BigDecimal;
 
 import org.xtclang.ecstasy.AppenderᐸCharᐳ;
-import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.Exception;
-import org.xtclang.ecstasy.Orderable;
 import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.nType;
@@ -352,12 +350,21 @@ public class Int64 extends IntNumber {
      *
      * static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
      */
-    public static Ordered compare(Ctx ctx, nType type, Orderable value1, Orderable value2) {
-        long l1 = ((Int64) value1).$value;
-        long l2 = ((Int64) value2).$value;
-        return l1 < l2    ? Ordered.Lesser.$INSTANCE
-               : l1 == l2 ? Ordered.Equal.$INSTANCE
-                          : Ordered.Greater.$INSTANCE;
+    public static Ordered compare(Ctx ctx, nType type, Int64 value1, Int64 value2) {
+        long l1 = value1.$value;
+        long l2 = value2.$value;
+        return l1 < l2  ? Ordered.Lesser.$INSTANCE
+             : l1 == l2 ? Ordered.Equal.$INSTANCE
+                        : Ordered.Greater.$INSTANCE;
+    }
+
+    /**
+     * The primitive implementation of:
+     *
+    *  static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
+     */
+    public static Boolean equals(Ctx ctx, nType type, Int64 value1, Int64 value2) {
+        return value1.$value == value2.$value ? Boolean.TRUE : Boolean.FALSE;
     }
 
     /**
@@ -365,10 +372,8 @@ public class Int64 extends IntNumber {
      *
      *  static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
      */
-    public static Boolean equals(Ctx ctx, nType type, Object value1, Object value2) {
-        long l1 = ((Int64) value1).$value;
-        long l2 = ((Int64) value2).$value;
-        return l1 == l2 ? Boolean.TRUE : Boolean.FALSE;
+    public static boolean equals$p(Ctx ctx, nType type, long value1, long value2) {
+        return value1 == value2;
     }
 
     // ----- debugging support ---------------------------------------------------------------------

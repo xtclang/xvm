@@ -82,6 +82,14 @@ public abstract class Builder {
     }
 
     /**
+     * Assemble the Java interface that represents the static abstract functions of an Ecstasy
+     * interface as instance methods.
+     */
+    public void buildFunkyInterface(ClassBuilder classBuilder) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
      * @return TypeConstant for "this" type
      */
     public TypeConstant getThisType() {

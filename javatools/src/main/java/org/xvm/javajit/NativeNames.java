@@ -45,6 +45,7 @@ public class NativeNames {
         reservedMethodName.put("collections.Array/reify/1",      "reify");
         reservedMethodName.put("collections.Array/removeAll/1",  "removeAll");
         reservedMethodName.put("collections.Collection/reify/0", "reify");
+        reservedMethodName.put("collections.Hashable/hashCode/2", "hashCode");
 
         reservedMethodName.put("numbers.IntConvertible/toIntN/0",  "toIntN");
         reservedMethodName.put("numbers.IntConvertible/toUInt/0",  "toUInt");

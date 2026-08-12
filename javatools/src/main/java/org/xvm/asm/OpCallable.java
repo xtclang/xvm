@@ -20,6 +20,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -46,8 +47,11 @@ import static java.lang.constant.ConstantDescs.CD_MethodType;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
 
+import static org.xvm.javajit.Builder.CD_Class;
+import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Exception;
 import static org.xvm.javajit.Builder.CD_nFunction;
+import static org.xvm.javajit.Builder.CD_nType;
 
 import static org.xvm.javajit.TypeSystem.HASH;
 
@@ -599,12 +603,7 @@ public abstract class OpCallable extends Op {
                 tmx.assign(getAddress(), m_nRetValue, idMethod.getNamespace().getType());
                 return;
             }
-            SignatureConstant sig = idMethod.getSignature();
-            if (sig.containsTypeParameters()) {
-                sig = sig.resolveGenericTypes(bctx.pool(),
-                    bctx.createTypeResolver((MethodStructure) idMethod.getComponent(), anArgValue));
-            }
-            atypeResult = sig.getRawReturns();
+            atypeResult = resolveReturnTypes(bctx, idMethod, anArgValue);
         } else {
             TypeConstant typeFn = bctx.getArgumentType(m_nFunctionId);
             assert typeFn.isFunction();
@@ -622,6 +621,25 @@ public abstract class OpCallable extends Op {
         } else if (m_nRetValue != A_IGNORE) {
             tmx.assign(getAddress(), m_nRetValue, atypeResult[0]);
         }
+    }
+
+    protected TypeConstant[] resolveReturnTypes(BuildContext bctx, MethodConstant idMethod,
+                                                int[] anArgValue) {
+        SignatureConstant   sig         = idMethod.getSignature();
+        TypeConstant[]      atypeResult = sig.getRawReturns();
+        GenericTypeResolver resolver = null;
+        for (int i = 0, c = atypeResult.length; i < c; i++) {
+            TypeConstant type = atypeResult[i];
+            if (type.containsTypeParameter(true)) {
+                if (resolver == null) {
+                    resolver = bctx.createTypeResolver(
+                            (MethodStructure) idMethod.getComponent(), anArgValue);
+                    atypeResult = atypeResult.clone();
+                }
+                atypeResult[i] = type.resolveGenerics(bctx.pool(), resolver);
+            }
+        }
+        return atypeResult;
     }
 
     /**
@@ -652,6 +670,7 @@ public abstract class OpCallable extends Op {
         boolean       fSpecial;
         boolean       fInterface;
         boolean       fCond;
+        boolean       fFunky;
 
         if (m_nFunctionId == A_SUPER) {
             int        nDepth    = bctx.callDepth + 1;
@@ -681,25 +700,82 @@ public abstract class OpCallable extends Op {
             jmdCall  = bodySuper.getJitDesc(bctx.builder, bctx.thisType);
             fSpecial = true;
             fCond    = bodySuper.getMethodStructure().isConditionalReturn();
+            fFunky   = false;
             code.aload(0); // super() can only be on "this"
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
-            MethodConstant   idMethod   = bctx.getConstant(m_nFunctionId, MethodConstant.class);
-            IdentityConstant idTarget   = idMethod.getClassIdentity();
-            TypeConstant     typeTarget = idTarget.getType();
-            TypeInfo         infoTarget = bctx.getTypeInfo(typeTarget);
-            MethodInfo       infoMethod = infoTarget.getMethodById(idMethod);
+            MethodConstant   idMethod = bctx.getConstant(m_nFunctionId, MethodConstant.class);
+            IdentityConstant idCallee = idMethod.getNamespace();
 
-            cdTarget   = bctx.builder.ensureClassDesc(idTarget.getType()); // function; no formal types applicable
-            sJitName   = infoMethod.ensureJitMethodName(ts);
-            jmdCall    = infoMethod.getJitDesc(bctx.builder, typeTarget);
-            fSpecial   = false;
-            fInterface = !typeTarget.isSingleUnderlyingClass(false);
-            fCond      = infoMethod.isConditionalReturn(infoTarget);
+            FormalConstant idFormal = idCallee instanceof FormalConstant
+                    ? (FormalConstant) idCallee
+                    : null;
+
+            TypeConstant typeTarget = idFormal == null
+                    ? idMethod.getClassIdentity().getType()
+                    : idFormal.getConstraintType();
+
+            TypeInfo   infoTarget = bctx.getTypeInfo(typeTarget);
+            MethodInfo infoMethod = idFormal == null
+                    ? infoTarget.getMethodById(idMethod)
+                    : infoTarget.getMethodBySignature(idMethod.getSignature());
+
+            // a Bjarne call to an abstract function may carry the concrete target as a method type
+            // argument; for example, String.hashCode() carries CompileType=String
+            if (idFormal == null && infoMethod.containsAbstractFunction()) {
+                MethodStructure method = infoMethod.getAbstractFunction().getMethodStructure();
+                if (method.getTypeParamCount() == 1) {
+                    GenericTypeResolver resolver = bctx.createTypeResolver(method, anArgValue);
+                    Parameter           param    = method.getParam(0);
+                    TypeConstant        type     = resolver.resolveFormalType(
+                            param.asTypeParameterConstant(method.getIdentityConstant()));
+                    if (type != null && !type.containsFormalType(true) && type.isA(typeTarget)) {
+                        typeTarget = type;
+                        infoTarget = bctx.getTypeInfo(typeTarget);
+                        infoMethod = infoTarget.getMethodById(idMethod);
+                    }
+                }
+            }
+
+            sJitName = infoMethod.ensureJitMethodName(ts);
 
             MethodBody body = infoMethod.getHead();
             if (body.getIdentity().getNestedDepth() > 2) {
                 // methods nested inside methods need to be built on-the-spot
                 bctx.buildMethod(sJitName, body);
+            }
+
+            Builder builder = bctx.builder;
+
+            cdTarget   = builder.ensureClassDesc(typeTarget);
+            jmdCall    = infoMethod.getJitDesc(builder, typeTarget);
+            fSpecial   = false;
+            fInterface = !typeTarget.isSingleUnderlyingClass(false);
+            fCond      = infoMethod.isConditionalReturn(infoTarget);
+            fFunky     = idFormal != null && infoMethod.containsAbstractFunction();
+
+            if (fFunky) {
+                MethodBody     bodyFunky = infoMethod.getAbstractFunction();
+                MethodConstant idFunky   = bodyFunky.getIdentity();
+                TypeConstant   typeFunky = idFunky.getNamespace().getType();
+
+                assert typeFunky.isInterfaceType();
+
+                cdTarget   = ClassDesc.of(TypeSystem.funkyInterface(
+                                builder.ensureJitClassName(typeFunky)));
+                sJitName   = idFunky.ensureJitMethodName(ts);
+                jmdCall    = bodyFunky.getJitDesc(builder, typeFunky);
+                fInterface = true;
+
+                // abstract constraint functions are virtual methods on the runtime class-of-class
+                if (idFormal instanceof PropertyConstant) {
+                    bctx.loadConstant(code, idFormal);
+                } else {
+                    bctx.loadType(code, idFormal.getType());
+                }
+                // generated class-of-class extends Class and implements the funky interface
+                bctx.loadCtx(code);
+                code.invokevirtual(CD_nType, "$xvmClass", MethodTypeDesc.of(CD_Class, CD_Ctx))
+                    .checkcast(cdTarget);
             }
         } else {
             RegisterInfo regFn = bctx.loadArgument(code, m_nFunctionId);
@@ -792,6 +868,8 @@ public abstract class OpCallable extends Op {
             // to use invokespecial on an interface method, which is only legal if we don't
             // skip levels in the hierarchy
             code.invokespecial(cdTarget, sJitName, mdCall, fInterface);
+        } else if (fFunky) {
+            code.invokeinterface(cdTarget, sJitName, mdCall);
         } else {
             code.invokestatic(cdTarget, sJitName, mdCall, fInterface);
         }
