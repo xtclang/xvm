@@ -1,12 +1,15 @@
 package invocationTests {
 
+    import ecstasy.collections.NaturalHasher;
+
     @Inject Console console;
 
     void run() {
 
         testInvokePrivateMethodAfterInterfaceCast();
+        testNaturalHasher();
+        testNaturalHasherPrimitive();
         testOrderable();
-
     }
 
     void testInvokePrivateMethodAfterInterfaceCast() {
@@ -32,6 +35,17 @@ package invocationTests {
                 i = 19;
             }
         }
+    }
+
+    void testNaturalHasher() {
+        NaturalHasher<String> hasher = new NaturalHasher();
+        assert hasher.hashOf("test") == "test".hashCode();
+    }
+
+    void testNaturalHasherPrimitive() {
+        NaturalHasher<Int> hasher = new NaturalHasher();
+        Int value = 42;
+        assert hasher.hashOf(value) == value.hashCode();
     }
 
     void testOrderable() {

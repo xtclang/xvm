@@ -2459,7 +2459,9 @@ public class CommonBuilder
             String         hashName    = hashSig.getName();
             String         hashOptName = hashName + OPT;
             MethodTypeDesc mdWrapper   = MethodTypeDesc.of(CD_Int64, CD_Ctx, CD_nType, cdThis);
-            MethodTypeDesc mdPrimitive = MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cdThis);
+            MethodTypeDesc mdOptimized = thisType.isJitPrimitive()
+                    ? hashMethod.getJitDesc(this, thisType).optimizedMD
+                    : MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cdThis);
 
             if (!isNativeMethod(hashName, mdWrapper)) {
                 // generate the standard "hashCode" wrapper that delegates to the optimized
@@ -2468,17 +2470,21 @@ public class CommonBuilder
                         ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, code -> {
                     loadCtx(code);
                     code.aload(1)
-                        .aload(2)
-                        .invokestatic(cdThis, hashOptName, mdPrimitive);
+                        .aload(2);
+                    if (thisType.isJitPrimitive()) {
+                        Builder.unbox(code, thisType);
+                    }
+                    code.invokestatic(cdThis, hashOptName, mdOptimized);
                     Builder.box(code, pool().typeInt64());
                     code.areturn();
                 });
 
                 // generate the optimized "hashCode$p" with the actual implementation
-                if (!isNativeMethod(hashOptName, mdPrimitive)) {
-                    classBuilder.withMethodBody(hashOptName, mdPrimitive,
+                if (!isNativeMethod(hashOptName, mdOptimized)) {
+                    classBuilder.withMethodBody(hashOptName, mdOptimized,
                             ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
-                            code -> assembleConstHashCode(code, thisType, hashSig, isCaching));
+                            code -> assembleConstHashCode(code, thisType,
+                                    hashSig, mdOptimized, isCaching));
                 }
             }
         }
@@ -2491,16 +2497,16 @@ public class CommonBuilder
      * <pre>
      *     public static long hashCode$p(Ctx ctx, nType CompileType, T value)
      * </pre>
-     * Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value
+     * Slot 0 = Ctx, Slot 1 = nType, Slot 2+ = value
      */
     private void assembleConstHashCode(
             CodeBuilder       code,
             TypeConstant      type,
             SignatureConstant hashSig,
+            MethodTypeDesc    mdOptimized,
             boolean           isCaching) {
 
-        ConstantPool pool         = pool();
-        TypeConstant typeHashable = pool.typeHashable();
+        TypeConstant typeHashable = pool().typeHashable();
         ClassDesc    cdThis       = ensureClassDesc(type);
         int          valueSlot    = 2;
         int          resultSlot   = 3;
@@ -2508,13 +2514,16 @@ public class CommonBuilder
         if (type.isJitPrimitive()) {
             // when the const type itself is a JIT primitive (Java primitive or XVM primitive),
             // we call nType.hashCode$p(ctx, value) to get the hash code (where nType) is the
-            // type of the primitive
+            // type of the primitive and the value can take more than one slot
             Builder.loadCtx(code);
             loadTypeConstant(code, type);
             code.invokestatic(CD_nType, "$ensureType",
                     MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
             Builder.loadCtx(code);
-            Builder.load(code, cdThis, valueSlot);
+            for (int i = 2, count = mdOptimized.parameterCount(); i < count; i++) {
+                Builder.load(code, mdOptimized.parameterType(i), code.parameterSlot(i));
+            }
+            Builder.box(code, type);
             code.invokevirtual(CD_nType, "hashCode$p",
                     MethodTypeDesc.of(CD_long, CD_Ctx, CD_Hashable));
             code.lreturn();
@@ -2628,7 +2637,7 @@ public class CommonBuilder
                 code.invokevirtual(CD_nType, "hashCode$p",
                         MethodTypeDesc.of(CD_long, CD_Ctx, CD_Hashable));
                 // long primitive hashCode on the stack
-            } else if (propType.isA(pool.typeService())) {
+            } else if (propType.isA(pool().typeService())) {
                 buildGetIdentityHashCode(code, prop, valueSlot);
                 // long primitive service identity hashCode on the stack
             } else if (!propType.isA(typeHashable)) {
