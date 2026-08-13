@@ -67,29 +67,29 @@ public class FileRepository
     @Override
     public Set<String> getModuleNames() {
         checkCache();
-        return names;
+        return cache.names();
     }
 
     @Override
     public VersionTree<Boolean> getAvailableVersions(String sModule) {
         checkCache();
-        return err ? null : versionsByName.get(sModule);
+        return err ? null : cache.versionsByName().get(sModule);
     }
 
     @Override
     public ModuleStructure loadModule(String sModule) {
         checkCache();
-        if (!names.contains(sModule) || !ensureModulesLoaded()) {
+        if (!cache.names().contains(sModule) || !ensureModulesLoaded()) {
             return null;
         }
 
-        var module = modulesByName.get(sModule);
-        if (module != null && !module.isMainModule() && module.getFileStructure() == struct) {
+        var module = cache.modulesByName().get(sModule);
+        if (module != null && !module.isMainModule() && module.getFileStructure() == cache.struct()) {
             // a non-main module of a multi-module container ("bundle") is served as a detached
             // copy (memoized), so that every consumer - the linker, the runtime compiler's
             // fingerprint hoisting, reflection - sees the single-module-file shape it expects
             module = module.detachedCopy();
-            modulesByName.put(sModule, module);
+            cache.modulesByName().put(sModule, module);
         }
         return module;
     }
@@ -184,23 +184,13 @@ public class FileRepository
 
         var structLoaded = tryLoad();
         if (structLoaded == null) {
-            clearCache();
-            this.err = true;
+            this.cache = Cache.EMPTY;
+            this.err   = true;
         } else {
             cacheFrom(structLoaded);
         }
 
         this.lastScan = System.currentTimeMillis();
-    }
-
-    /**
-     * Reset the cache to the empty (nothing servable) state.
-     */
-    private void clearCache() {
-        names          = Set.of();
-        versionsByName = Map.of();
-        modulesByName  = Map.of();
-        struct         = null;
     }
 
     /**
@@ -223,10 +213,9 @@ public class FileRepository
         // hash-ordered (randomized per JVM run), so an unmodifiable view over a LinkedHashSet is
         // the only stdlib form that keeps insertion order; wrapped once here, handed out for
         // free by getModuleNames()
-        this.names          = Collections.unmodifiableSet(new LinkedHashSet<>(mapModules.keySet()));
-        this.versionsByName = mapVersions;
-        this.modulesByName  = mapModules;
-        this.struct         = struct;
+        this.cache = new Cache(
+                Collections.unmodifiableSet(new LinkedHashSet<>(mapModules.keySet())),
+                mapVersions, mapModules, struct);
     }
 
     /**
@@ -241,11 +230,11 @@ public class FileRepository
         }
 
         if (!file.exists()) {
-            clearCache();
+            cache = Cache.EMPTY;
             return true;
         }
 
-        if (struct == null || timestamp != file.lastModified() || size != file.length()) {
+        if (cache.struct() == null || timestamp != file.lastModified() || size != file.length()) {
             return false;
         }
 
@@ -264,6 +253,7 @@ public class FileRepository
 
         // detached copies handed out by loadModule() are freshly cloned (and thus "modified"), so
         // staleness is judged by the container's own (attached) main module only
+        var struct = cache.struct();
         if (struct == null || struct.getModule().isModified()) {
             var structLoaded = tryLoad();
             if (structLoaded == null) {
@@ -290,17 +280,26 @@ public class FileRepository
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private final File file;
+    /**
+     * An atomically swapped snapshot of the cached container state: the servable module names
+     * (insertion-ordered, primary module first, immutable and safe to hand out), the per-name
+     * version trees, the loaded modules by name (non-main members are memoized detached copies),
+     * and the loaded container itself — null when the file is absent, unreadable, or not yet
+     * scanned, which is also what marks the snapshot as needing a rebuild.
+     */
+    private record Cache(Set<String>                       names,
+                         Map<String, VersionTree<Boolean>> versionsByName,
+                         Map<String, ModuleStructure>      modulesByName,
+                         FileStructure                     struct) {
+        private static final Cache EMPTY = new Cache(Set.of(), Map.of(), Map.of(), null);
+    }
+
+    private final File    file;
     private final boolean fRO;
 
-    // never null: empty when the file is absent, unreadable, or not yet scanned; the loaded
-    // state is signified by a non-null struct; names is always immutable and safe to hand out
-    private Set<String>                       names          = Set.of();
-    private Map<String, VersionTree<Boolean>> versionsByName = Map.of();
-    private Map<String, ModuleStructure>      modulesByName  = Map.of();
-    private FileStructure                     struct;
-    private long                              timestamp;
-    private long                              size;
-    private long                              lastScan;
-    private boolean                           err;
+    private Cache   cache = Cache.EMPTY;
+    private long    timestamp;
+    private long    size;
+    private long    lastScan;
+    private boolean err;
 }
