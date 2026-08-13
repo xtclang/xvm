@@ -340,12 +340,14 @@ public class MethodBody {
     }
 
     /**
-     * @return true iff this is a constructor or validator, and not a method or function
+     * @return true iff this is a constructor or validator, and not a method, function or
+     *         property initializer
      */
     public boolean isCtorOrValidator() {
         MethodStructure structMethod = getClassifyingMethodStructure();
         return structMethod != null &&
-            (structMethod.isConstructor() || structMethod.isValidator());
+                (structMethod.isConstructor() || structMethod.isValidator()) &&
+                !structMethod.isPropertyInitializer();
     }
 
     /**
