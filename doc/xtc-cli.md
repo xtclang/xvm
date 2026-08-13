@@ -322,7 +322,11 @@ module from it by name, so one file can replace a `lib/` directory full of `.xtc
 
 With no explicit module selection, every non-system module found on the module path is bundled.
 System (`xtclang.org`) modules are never bundled implicitly; they remain external dependencies,
-resolved from the XDK at run time, exactly as with a lib directory.
+resolved from the XDK at run time, exactly as with a lib directory. Pass `--include-system` to
+lift that exclusion when building a fully self-contained artifact (this is how
+`./gradlew xdk:bundleXdk` produces the single-file XDK, `xdk.xtc`).
+
+For the concepts, internal mechanics, and limitations, see [XTC Bundles](xtc-bundle.md).
 
 ### Usage
 
@@ -350,6 +354,12 @@ xtc bundle -L lib --main kernel.xqiz.it -o myapp.xtc
 
 # Run an application directly from its bundle
 xec -L ./myapp.xtc ./myapp.xtc
+
+# Build the single-file XDK, then use it as the entire system library:
+# compile, run, or even boot a fully bundled deployment with no lib directories at all
+./gradlew xdk:bundleXdk
+java -jar javatools.jar build -L xdk.xtc MyApp.x
+java -jar javatools.jar run -L xdk.xtc -L myapp.xtc myapp.xtc
 ```
 
 ## IntelliJ IDEA Integration

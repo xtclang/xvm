@@ -438,6 +438,12 @@ reference, so no copies are made where none are needed.
 > more of the XDK. **Decision: option (a) — accept absorb-all for the opt-in artifact.** Revisit
 > lazier loading only if/when the single file becomes the default distribution form.
 >
+> **Strongest seamlessness proof**: the entire xqiz.it platform boots and serves with
+> `java -jar javatools.jar run -L xdk.xtc -L platform.xtc platform.xtc <pw>` — a complete
+> production-shaped deployment as *two bundle files and a jar*, zero lib directories, with full
+> boot parity including the runtime jsondb module generation-and-compile path (i.e. the runtime
+> *compiler* also operates against the bundled XDK).
+>
 > Remaining follow-ups (deliberately not done): switching the generated launcher scripts to
 > `-L xdk.xtc` (XdkDistribution.kt), docker image, publishing xdk.xtc as a distribution artifact,
 > and making the single file the default.
