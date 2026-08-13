@@ -343,6 +343,10 @@ xtc bundle [options] [<module_name_or_file> ...]
 | `--main <module>` | Qualified name of the module to use as the bundle's main module; defaults to the only selected module that no other selected module imports |
 | `--include-system` | Also bundle system (`xtclang.org`) modules when selecting from the module path (used to build a fully self-contained single-file XDK) |
 
+Like the other verbs, `bundle` is quiet on success; add `-v` to see the bundled module list, the
+remaining external (run-time-resolved) dependencies, and warnings about modules that are present
+on the module path but not included in the bundle.
+
 ### Examples
 
 ```bash

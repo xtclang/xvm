@@ -142,6 +142,81 @@ directories anywhere:
 java -jar javatools.jar run -L xdk.xtc -L platform.xtc platform.xtc <password>
 ```
 
+## Design notes
+
+Decisions worth remembering, and why they went the way they did:
+
+- **`FileRepository` was generalized, not subclassed.** The "single file, single module"
+  restriction lived only in `FileRepository`'s implementation — the on-disk format is already a
+  container. A `MultiFileRepository` subclass would have overridden every method while reusing
+  none of the single-module-shaped private state, and `Launcher.configureLibraryRepo` maps
+  *file → `FileRepository`* unconditionally, so a distinct class would also have needed
+  content-sniffing dispatch. Generalizing means `xec -L bundle.xtc` works with zero changes to
+  the Runner, the linker, or consumer projects. The version-aware
+  `loadModule(name, version, exact)` override is mandatory: the interface default funnels into
+  `ModuleStructure.extractVersion`, which asserts the module is its file's main module.
+- **Non-main members are handed out as detached copies at the repository boundaries**
+  (`FileRepository.loadModule`, memoized; `xCoreRepository.getModule` for Ecstasy-visible
+  reflection). Several consumers assume "a module's file structure is its own single-module
+  file" — Ecstasy's `getResolvedModule` takes `template.parent.resolve(repo).mainModule`, and
+  the runtime compiler hoists transitive dependency fingerprints out of downstream files;
+  against a raw container both silently misbehave. The detached copy makes a bundle member
+  indistinguishable from a module loaded from its own file, and the merge fingerprint synthesis
+  is what makes those copies complete. The `-L` chain's *main* module deliberately stays
+  container-attached — the explicit-file launch path reads the `FileStructure` directly and no
+  copy is needed.
+- **`merge` supersedes fingerprints instead of silently keeping them.** Historically,
+  `FileStructure.merge` ignored `addChild()`'s `false` return on an id collision, so merging a
+  real module over its own fingerprint silently kept the stub — the "merge order is critical"
+  trap. Fingerprint-vs-real is a genuine key collision (`f_moduleById` is keyed by
+  `ModuleConstant`, and a versionless fingerprint id equals the versionless real id), so the
+  real module now replaces the fingerprint. One subtlety lives in the code: the primary module
+  id is established *provisionally* before fingerprint synthesis (the `ModuleStructure`
+  constructor auto-marks new modules as fingerprints only when the file already has a different
+  primary id) and re-established *after* constant registration, because registration replaces
+  the clone's identity constant with the pool-owned one.
+- **`ModuleType.Embedded` was unreachable before bundles.** No setter existed; merged modules
+  persisted as `Primary`, which trips `isEmbeddedModule()`'s assert under `-ea` (the shipped
+  launcher scripts enable assertions). `markEmbedded()` closes that gap; the type serializes as
+  a plain ordinal byte, so it round-trips.
+- **Runtime link tolerance.** The runtime linker absorbs every module id of a multi-module file
+  once any member is loaded from it; absorbed ids with no fingerprint in the app structure are
+  skipped rather than failed — nothing imports them.
+- **Constraints inherited from the format** (unchanged by this work): conditional *sibling*
+  modules are unsupported at the container level; multi-version modules in one file are not
+  separable (`purgeVersion`/`purgeVersionsExcept` are no-ops), hence the same-name rejection;
+  `validateConstants()` asserts a runtime-only precondition (`NakedRefType`), so offline
+  bundling validates with `validateModuleConstants()`.
+
+## Implementation map
+
+| Piece | Where |
+|---|---|
+| `bundle` verb, selection, main-module inference, warnings | `javatools/.../org/xvm/tool/Bundler.java` |
+| Options, builder, JSON round-trip | `LauncherOptions.BundlerOptions` in `javatools/.../org/xvm/tool/LauncherOptions.java` |
+| Verb registration, help, dispatch | `javatools/.../org/xvm/tool/Launcher.java` (`CMD_BUNDLE`) |
+| Merge collision upgrade + sibling-dep fingerprint synthesis | `FileStructure.merge` in `javatools/.../org/xvm/asm/FileStructure.java` |
+| Runtime link tolerance | `FileStructure.linkModules` (runtime branch) |
+| Multi-module repository read path, detached serving | `javatools/.../org/xvm/asm/FileRepository.java` |
+| Embedded marking | `ModuleStructure.markEmbedded()` |
+| Ecstasy-visible detached serving | `javatools/.../org/xvm/runtime/template/_native/mgmt/xCoreRepository.java` |
+| Single-file XDK build task | `bundleXdk` in `xdk/build.gradle.kts` (opt-in, incremental, configuration-cache compatible) |
+| Tests | `javatools/.../org/xvm/tool/BundlerTest.java`, `LauncherOptionsJsonTest`, `XdkIntegrationTest` |
+
+## Validation record
+
+- **xqiz.it platform** (11 modules, incl. a 2.2 MB embedded web UI): bundles to a single
+  2.48 MB `platform.xtc` (separate files ~4.9 MB) and boots with full parity — identical log
+  sequence, identical HTTPS behavior, dynamic by-name module resolution
+  (`host`/`platformUI`/`proxy_manager`), and the runtime jsondb module generation-and-compile
+  path all working from the single file.
+- **Single-file XDK**: `xdk:bundleXdk` → all 22 XDK modules (ecstasy as main, mack, `_native`,
+  every lib) in one fully self-contained 4.36 MB `xdk.xtc`, zero remaining fingerprints.
+  Compiling and running applications works with `-L xdk.xtc` as the only system reference.
+- **The two-bundle extreme**: the platform boots and serves from
+  `java -jar javatools.jar run -L xdk.xtc -L platform.xtc platform.xtc <pw>` — a complete
+  deployment as two bundle files and a jar, zero lib directories.
+
 ## Costs and limitations
 
 - **Absorb-all footprint.** Loading a module out of a bundle materializes the container. For a
@@ -154,3 +229,17 @@ java -jar javatools.jar run -L xdk.xtc -L platform.xtc platform.xtc <password>
 - **Format version lock.** Like any `.xtc`, a bundle is readable only by the exact binary format
   version that wrote it — with a larger blast radius, since one file carries many modules.
 - **Regenerate-only.** Adding or updating a member means re-running `xtc bundle`.
+
+## Future work
+
+Deliberately not done yet, in rough order of likely value:
+
+- Switch the generated `xtc`/`xcc`/`xec` launcher scripts to `-L xdk.xtc`
+  (`XdkDistribution.kt`), update the docker image, and publish `xdk.xtc` as a distribution
+  artifact — the steps toward making the single file the XDK's default form. Gate the default
+  switch on footprint measurements for realistic applications (see costs above).
+- A Gradle plugin `xtcBundle` task, so consumer projects can bundle as part of their build
+  instead of shelling out to `xtc bundle`.
+- Fully self-contained application blobs (`--include-system` for apps), and a dedicated
+  launcher executable if bundling becomes a first-class distribution flow.
+- Lazier bundle loading, if the absorb-all footprint ever matters for the default XDK form.
