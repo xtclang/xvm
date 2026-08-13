@@ -173,20 +173,49 @@ public class FileStructure
         ModuleStructure moduleClone = module.cloneBody();
         moduleClone.setContaining(this);
 
+        // a fingerprint with the same id (e.g. cloned in by an earlier merge) is superseded by the
+        // real module; without this, addChild() would refuse the clone and keep the stub
+        ModuleStructure moduleExist = getModule(moduleClone.getIdentityConstant());
+        if (moduleExist != null && moduleExist.isFingerprint()) {
+            removeChild(moduleExist);
+        }
+
         addChild(moduleClone);
         moduleClone.cloneChildren(module.children());
 
-        ConstantPool pool = m_pool;
+        if (fTakeFile) {
+            // provisionally establish the primary module id before any fingerprint synthesis:
+            // modules created in a file that already has a (different) primary module id are
+            // automatically constructed as fingerprints; the id is re-established below once the
+            // clone's constants have been registered against this file's pool
+            m_idModule = moduleClone.getIdentityConstant();
+        }
+
+        ConstantPool  pool       = m_pool;
+        FileStructure fileSource = module.getFileStructure();
 
         try (var ignore = ConstantPool.withPool(pool)) {
             // add fingerprints
-            for (ModuleStructure moduleChild : module.getFileStructure().children()) {
+            for (ModuleStructure moduleChild : fileSource.children()) {
                 if (moduleChild.isFingerprint() && getModule(moduleChild.getIdentityConstant()) == null) {
                     ModuleStructure moduleChildClone = moduleChild.cloneBody();
                     moduleChildClone.setContaining(this);
                     addChild(moduleChildClone);
                     moduleChildClone.registerConstants(pool);
                 }
+            }
+
+            // if the source is a multi-module container, dependencies of the merged module may be
+            // present there as real (embedded) sibling modules rather than fingerprints; those
+            // dependencies must still be represented here, or the merged clone's constants cannot
+            // be re-registered against this pool and the module is unlinkable when detached
+            if (fileSource.hasMultipleChildren()) {
+                module.collectDependencies().keySet().stream()
+                        .filter(id -> !id.equals(module.getIdentityConstant()) && getModule(id) == null)
+                        .map(fileSource::getModule)
+                        .filter(sibling -> sibling != null && !sibling.isFingerprint())
+                        .forEach(sibling ->
+                                ensureModule(sibling.getIdentityConstant().getName()).fingerprintRequired());
             }
 
             moduleClone.registerConstants(pool);
@@ -202,6 +231,8 @@ public class FileStructure
         }
 
         if (fTakeFile) {
+            // re-establish the primary module id: registration above replaced the clone's
+            // source-pool identity constant with the one owned by this file's pool
             m_idModule = moduleClone.getIdentityConstant();
             m_file     = module.getFileStructure().m_file;
         }
@@ -469,6 +500,12 @@ public class FileStructure
 
             ModuleStructure moduleFingerprint = getModule(idModule);
             if (moduleFingerprint == null) {
+                if (fRuntime) {
+                    // the id was absorbed from a multi-module file (see the addAll below) but this
+                    // structure has no fingerprint for it, i.e. nothing here imports it; a module
+                    // that merely shares a container with a dependency is not itself a dependency
+                    continue;
+                }
                 return idModule;
             }
 
@@ -828,6 +865,14 @@ public class FileStructure
         return getChildrenCount() > 0;
     }
 
+    /**
+     * @return true iff this FileStructure contains more than one module, i.e. it is a
+     *         multi-module container rather than a plain single-module file
+     */
+    public boolean hasMultipleChildren() {
+        return getChildrenCount() > 1;
+    }
+
     @Override
     public Collection<? extends ModuleStructure> children() {
         return f_moduleById.values();
@@ -974,11 +1019,20 @@ public class FileStructure
     }
 
     /**
-     * For debugging only: ensure that all constants for all children belong to the same pool.
+     * For debugging only: ensure that all constants for all children belong to the same pool, and
+     * that the pool has been primed with the NakedRef type (which only holds at run time).
      */
     public boolean validateConstants() {
         assert m_pool.getNakedRefType() != null;
+        return validateModuleConstants();
+    }
 
+    /**
+     * For debugging only: ensure that all constants for all children belong to the same pool.
+     * Unlike {@link #validateConstants()}, this is also usable outside a running container, e.g.
+     * when bundling compiled modules offline, where no NakedRef type exists in the pool.
+     */
+    public boolean validateModuleConstants() {
         Consumer<Component> visitor = component -> {
             if (component instanceof ClassStructure) {
                 component.getContributionsAsList().forEach(contrib -> {

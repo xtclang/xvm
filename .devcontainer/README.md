@@ -18,7 +18,7 @@ This devcontainer provides a complete development environment for the Ecstasy pr
 
 ## Available Tools
 
-- `xtc` - Ecstasy unified CLI (`xtc init`, `xtc build`, `xtc run`, `xtc test`, `xtc disass`); see [doc/xtc-cli.md](../doc/xtc-cli.md) for the full reference
+- `xtc` - Ecstasy unified CLI (`xtc init`, `xtc build`, `xtc run`, `xtc test`, `xtc disass`, `xtc bundle`); see [doc/xtc-cli.md](../doc/xtc-cli.md) for the full reference
 - `xcc` - Ecstasy compiler (equivalent to `xtc build`)
 - `xec` - Ecstasy module runner (equivalent to `xtc run`)
 - `git` - Version control
