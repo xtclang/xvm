@@ -85,7 +85,7 @@ public class FileRepository
             return null;
         }
 
-        ModuleStructure module = modulesByName.get(sModule);
+        var module = modulesByName.get(sModule);
         if (module != null && !module.isMainModule() && module.getFileStructure() == struct) {
             // a non-main module of a multi-module container ("bundle") is served as a detached
             // copy (memoized), so that every consumer - the linker, the runtime compiler's
@@ -106,12 +106,12 @@ public class FileRepository
             return loadModule(sModule);
         }
 
-        ModuleStructure module = loadModule(sModule);
+        var module = loadModule(sModule);
         if (module == null) {
             return null;
         }
 
-        Version ver = module.getVersion();
+        var ver = module.getVersion();
         if (ver == null) {
             return null;
         }
@@ -184,7 +184,7 @@ public class FileRepository
         this.size      = file.length();
         this.err       = false;
 
-        FileStructure structLoaded = tryLoad();
+        var structLoaded = tryLoad();
         if (structLoaded == null) {
             this.names          = null;
             this.versionsByName = null;
@@ -259,7 +259,7 @@ public class FileRepository
         // detached copies handed out by loadModule() are freshly cloned (and thus "modified"), so
         // staleness is judged by the container's own (attached) main module only
         if (struct == null || struct.getModule().isModified()) {
-            FileStructure structLoaded = tryLoad();
+            var structLoaded = tryLoad();
             if (structLoaded == null) {
                 err = true;
                 return false;

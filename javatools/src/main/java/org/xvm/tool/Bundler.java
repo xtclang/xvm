@@ -135,8 +135,8 @@ public class Bundler extends Launcher<BundlerOptions> {
             return selection;
         }
 
-        for (String spec : explicit) {
-            ModuleStructure module = ModuleInfo.isExplicitCompiledFile(spec)
+        for (var spec : explicit) {
+            var module = ModuleInfo.isExplicitCompiledFile(spec)
                     ? loadModuleFile(new File(spec))
                     : repo.loadModule(spec);
             if (module == null) {
@@ -178,13 +178,13 @@ public class Bundler extends Launcher<BundlerOptions> {
 
         // a root is a selected module that no OTHER selected module imports; dependency name
         // sets are collected once per module up front (collectDependencies walks structures)
-        Map<String, Set<String>> depNamesByModule = selection.entrySet().stream()
+        var depNamesByModule = selection.entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue()
                         .collectDependencies().keySet().stream()
                         .map(ModuleConstant::getName)
                         .collect(Collectors.toSet())));
 
-        List<ModuleStructure> roots = selection.entrySet().stream()
+        var roots = selection.entrySet().stream()
                 .filter(entry -> depNamesByModule.entrySet().stream()
                         .noneMatch(other -> !other.getKey().equals(entry.getKey())
                                 && other.getValue().contains(entry.getKey())))

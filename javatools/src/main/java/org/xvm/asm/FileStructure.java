@@ -183,7 +183,7 @@ public class FileStructure
 
         // a fingerprint with the same id (e.g. cloned in by an earlier merge) is superseded by the
         // real module; without this, addChild() would refuse the clone and keep the stub
-        ModuleStructure moduleExist = getModule(moduleClone.getIdentityConstant());
+        var moduleExist = getModule(moduleClone.getIdentityConstant());
         if (moduleExist != null && moduleExist.isFingerprint()) {
             removeChild(moduleExist);
         }
@@ -199,8 +199,9 @@ public class FileStructure
             m_idModule = moduleClone.getIdentityConstant();
         }
 
-        ConstantPool  pool       = m_pool;
-        FileStructure fileSource = module.getFileStructure();
+        ConstantPool pool = m_pool;
+
+        var fileSource = module.getFileStructure();
 
         try (var ignore = ConstantPool.withPool(pool)) {
             // add fingerprints
