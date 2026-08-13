@@ -180,7 +180,7 @@ public abstract class Builder {
     protected void loadTypeConstant(BuildContext bctx, CodeBuilder code, TypeConstant type) {
         loadTypeConstant(code, type);
 
-        if (bctx != null && !bctx.isFunction && type.containsFormalType(true)) {
+        if (bctx != null && !bctx.isStatic && type.containsFormalType(true)) {
             code.dup()
                 .invokevirtual(CD_TypeConstant, "getConstantPool",
                         MethodTypeDesc.of(CD_ConstantPool));

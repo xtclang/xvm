@@ -129,8 +129,8 @@ public class BuildContext {
         this.callDepth     = 0;
         this.methodDesc    = jmd;
         this.methodJitName = methodInfo.ensureJitMethodName(typeSystem);
-        this.isFunction    = methodInfo.isFunction();
         this.isConstructor = methodInfo.isCtorOrValidator();
+        this.isStatic      = jmd.isStandardStatic && !isConstructor;
         this.isOptimized   = jmd.optimizedMD != null;
         this.isSpecialized = jitType.isJitL2Specialized();
         this.typeMatrix    = new TypeMatrix(this);
@@ -160,7 +160,7 @@ public class BuildContext {
         this.methodJitName = isGetter
                 ? propInfo.ensureGetterJitMethodName(typeSystem)
                 : propInfo.ensureSetterJitMethodName(typeSystem);
-        this.isFunction    = propInfo.isConstant();
+        this.isStatic      = propInfo.isConstant();
         this.isConstructor = false;
         this.isOptimized   = methodDesc.optimizedMD != null;
         this.isSpecialized = jitType.isJitL2Specialized();
@@ -184,7 +184,7 @@ public class BuildContext {
         this.callDepth     = callDepth;
         this.methodDesc    = body.getJitDesc(builder, thisType);
         this.methodJitName = jitName;
-        this.isFunction    = bctx.isFunction;
+        this.isStatic      = bctx.isStatic;
         this.isConstructor = bctx.isConstructor;
         this.isOptimized   = methodDesc.optimizedMD != null;
         this.isSpecialized = bctx.isSpecialized;
@@ -206,7 +206,7 @@ public class BuildContext {
         this.callDepth     = 0;
         this.methodDesc    = body.getJitDesc(builder, thisType);
         this.methodJitName = jitName;
-        this.isFunction    = bctx.isFunction;
+        this.isStatic      = bctx.isStatic;
         this.isConstructor = bctx.isConstructor;
         this.isOptimized   = methodDesc.optimizedMD != null;
         this.isSpecialized = bctx.isSpecialized;
@@ -226,7 +226,7 @@ public class BuildContext {
     public final String          methodJitName; // standard name
     public final boolean         isOptimized;
     public final boolean         isSpecialized; // parameterized by primitive type (e.g. List<Int>)
-    public final boolean         isFunction;
+    public final boolean         isStatic;      // no "this" register; constructors are tracked below
     public final boolean         isConstructor;
 
     /**
@@ -692,7 +692,7 @@ public class BuildContext {
             registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, extraArgs-1, Specific, structType,
                 CD_this, "thi$"));
             typeMatrix.declare(-1, Op.A_THIS, structType);
-        } else if (isFunction) {
+        } else if (isStatic) {
             typeMatrix.ensureMutableView(0);
         } else if (!thisType.isJitPrimitive()) {
             registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, 0, Specific, thisType,
@@ -1032,7 +1032,7 @@ public class BuildContext {
      * Build the code to load "this" instance on the Java stack.
      */
     public RegisterInfo loadThis(CodeBuilder code) {
-        assert isConstructor || !isFunction;
+        assert isConstructor || !isStatic;
 
         RegisterInfo reg = getRegisterInfo(code, Op.A_THIS);
         return reg.load(code);
