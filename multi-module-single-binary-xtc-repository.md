@@ -1,5 +1,16 @@
 # Plan: Multi-Module Single-Binary XTC Repository (`xtc bundle`)
 
+> **Status (2026-08-13): phases 0-3 implemented and validated on this branch.**
+> The spike answered the runtime-consumption question (both launch forms work; the merge
+> fingerprint-synthesis fix doubles as the detach helper). The platform's 11 modules bundle into
+> one 2.48 MB `platform.xtc` (vs ~4.9 MB of separate files — the shared constant pool halves the
+> size) and the platform boots from the single file with full parity, including dynamic by-name
+> module resolution and runtime jsondb module generation. Two consumers needed detached-copy
+> serving of non-main bundle members: `xCoreRepository.getModule` (the
+> `getResolvedModule(...).mainModule` assumption) and `FileRepository.loadModule` (the runtime
+> compiler's fingerprint hoisting). Unit tests and docs are in. Phase 4 (single-file XDK) is the
+> remaining work.
+
 ## Goal
 
 Add a `bundle` verb to the XTC launcher (`xtc bundle`, alongside `init`/`build`/`run`/`test`/`disass`)
