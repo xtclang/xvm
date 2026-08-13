@@ -1,0 +1,248 @@
+# LLVM JIT Study for XVM / Ecstasy
+
+Investigation date: 2026-08-13
+
+This study covers the current XVM Java runtime and the in-progress Ecstasy-to-JVM-bytecode JIT, then evaluates whether an LLVM-based JIT or compiler can be added. The short answer is yes, but the practical route is a staged backend and runtime-ABI effort, not a direct replacement of the current Java classfile builder.
+
+Related notes:
+
+- Current implementation map: [jit-current-anatomy.md](jit-current-anatomy.md)
+- LLVM and runtime-interop appendix: [llvm-jit-appendix.md](llvm-jit-appendix.md)
+- LLVM compiler scope plan: [llvm-compiler-scope-plan.md](llvm-compiler-scope-plan.md)
+- AST-vs-XTC feasibility analysis: [ast-vs-xtc-feasibility.md](ast-vs-xtc-feasibility.md)
+- Runtime port and self-hosting study: [RUNTIME_PORT_SELF_HOSTING_STUDY.md](RUNTIME_PORT_SELF_HOSTING_STUDY.md)
+
+## Executive Conclusion
+
+XTC can support LLVM-based JIT code generation. The repository already treats the portable XVM binary as the deployable execution artifact, and the XVM design documentation explicitly says that the portable binary was designed as input for JIT and AOT compilation, while efficient interpretation was a non-requirement (`doc/x.md:600`). That makes bytecode-to-native a legitimate direction even though the current bytecode is not a pleasant compiler IR.
+
+The current JIT is not AST-based. It is a lazy Ecstasy-to-Java-classfile compiler selected by `xtc run -J`, routed through `JitConnector`, and triggered by Java class loading. Method bodies are lowered from `MethodStructure.getOps()` through `BuildContext`; individual `Op` classes expose JIT hooks through `computeTypes(BuildContext)` and `build(BuildContext, CodeBuilder)`. This is a direct XTC-bytecode lowering model.
+
+LLVM should not be bolted directly onto those `Op.build` methods as another per-op code emission path. That would duplicate the current backend entanglement. The right shape is:
+
+1. Preserve XTC bytecode as the first LLVM input.
+2. Introduce a backend-neutral XTC lowering layer that converts `Op[]`, type-flow information, call chains, register shapes, guards, and constants into a small compiler IR or structured lowering API.
+3. Keep the existing JVM-classfile JIT as one backend.
+4. Add an LLVM ORC backend through a native sidecar library with a stable C ABI, invoked from Java through the JDK Foreign Function & Memory API or JNI.
+5. Start with whitelisted leaf methods and expand only after object layout, exceptions, services, safepoints, and deoptimization have real runtime contracts.
+
+The fastest useful prototype is a leaf-function LLVM accelerator. It would compile selected bytecode methods using primitive and simple reference signatures, call back to Java for unsupported operations, and run under a new `LlvmConnector` or under the Java-JIT connector as a delegated backend. The long-term architecture can evolve into a full native runtime, but that is a much larger project than adding LLVM code generation.
+
+## Current JIT Model
+
+The present JIT is selected at the command line with `-J` / `--jit`, described as "Enable the JIT-to-Java back-end" in `javatools/src/main/java/org/xvm/tool/LauncherOptions.java:75`. `Runner` chooses either `JitConnector` or `InterpreterConnector` in `javatools/src/main/java/org/xvm/tool/Runner.java:346`.
+
+The JIT connector builds a separate Java-JIT XVM:
+
+- `JitConnector` constructs `Xvm` (`javatools/src/main/java/org/xvm/javajit/JitConnector.java:35`).
+- Module load links a `TypeSystem` through `xvm.createLinker().addModule(module).link()` (`JitConnector.java:42`).
+- Startup loads `_native.mgmt.nMainInjector`, invokes native resource setup, and creates a Java-JIT container (`JitConnector.java:58`).
+- Invocation installs a `Ctx` scoped value and reflectively invokes a generated module class (`JitConnector.java:81`).
+- Generated classes are dumped under `./jasm/...` on every invocation (`JitConnector.java:160`), which is useful for development but not a production lifecycle.
+
+The generated class path is lazy:
+
+- `ModuleLoader.findClass` asks `TypeSystem.genClass` for class bytes when a class name in the module package is requested (`javatools/src/main/java/org/xvm/javajit/ModuleLoader.java:84`).
+- `TypeSystem.genClass` deduces the XVM artifact from the generated Java class name, asks the appropriate builder to assemble a class, and emits a JVM classfile using the JDK Class-File API (`javatools/src/main/java/org/xvm/javajit/TypeSystem.java:298`).
+- `CommonBuilder.generateCode` only compiles bodies for a hardcoded allowlist (`JIT_LIST`), with additional per-method exclusions (`javatools/src/main/java/org/xvm/javajit/builders/CommonBuilder.java:3814`).
+
+Method code generation is bytecode-driven:
+
+- `BuildContext.assembleCode` starts from `Op[] ops = methodStruct.getOps()` (`javatools/src/main/java/org/xvm/javajit/BuildContext.java:304`).
+- `preprocess` walks op addresses, computes type flow, handles guard/finally metadata, and boxes refs when needed (`BuildContext.java:377`).
+- `process` iterates the same op array and calls `op.build(this, code)` (`BuildContext.java:553`).
+- The base `Op` type defaults `computeTypes` to a type-matrix follow and defaults `build` to `UnsupportedOperationException` (`javatools/src/main/java/org/xvm/asm/Op.java:419`).
+
+This is not an AST compiler. It is closer to an XTC-bytecode-to-JVM backend with a lot of semantic recovery at lowering time.
+
+## Current Runtime Boundary
+
+The Java interpreter and the Java-JIT runtime are related but separate execution models.
+
+The interpreter path builds a `Runtime`, `NativeContainer`, and `MainContainer`, then invokes methods through `m_containerMain.invoke0` (`javatools/src/main/java/org/xvm/api/InterpreterConnector.java:32`). The main interpreter loop in `ServiceContext.execute` repeatedly calls `aOp[iPC].process(frame, iPCLast)`, handles negative control codes such as `R_CALL`, `R_RETURN`, `R_EXCEPTION`, `R_BLOCK`, and yields after `MAX_OPS_PER_RUN` (`javatools/src/main/java/org/xvm/runtime/ServiceContext.java:507`). Interpreter frames carry Java `ObjectHandle` registers, guard state, continuations, call chains, and fiber state (`javatools/src/main/java/org/xvm/runtime/Frame.java:63`).
+
+The Java-JIT path instead uses `org.xvm.javajit.Ctx` and the classes in `javatools_jitbridge`. `Ctx` carries container access, constant lookup, injection, and multi-return slots (`javatools/src/main/java/org/xvm/javajit/Ctx.java:20`). `nObject` is the root helper for generated objects and encodes owner/container, immutability, construction, and native bits in `$meta` (`javatools_jitbridge/src/main/java/org/xtclang/ecstasy/nObject.java:40`). The native type system maps core Ecstasy types to reserved Java bridge classes (`javatools/src/main/java/org/xvm/javajit/NativeTypeSystem.java:264`).
+
+That split matters. LLVM integration should reuse and formalize the Java-JIT runtime ABI concepts where possible, not try to make native code impersonate the interpreter's `Frame` and `ObjectHandle` machinery from day one.
+
+## Why XTC Bytecode Is Still the Right First Input
+
+The unorthodox choice to JIT bytecode rather than ASTs is awkward but defensible for this project:
+
+- `.xtc` modules are the persistent executable artifact. ASTs may not exist when a deployed module is loaded.
+- The current linker, type system, call-chain logic, constants, and method bodies already operate on `MethodStructure`, `TypeConstant`, `TypeInfo`, and `Op[]`.
+- The runtime semantics that matter to execution are present in bytecode plus type metadata.
+- The current JIT investment is already in bytecode-level type recovery, register representation, call signatures, and guard/finally lowering.
+- The project documentation says the portable binary was designed for native compilation and AOT (`doc/x.md:605`).
+
+The caveat is important: XTC bytecode is not a great optimizing IR. An LLVM backend should not translate it one op at a time forever. It should reconstruct a control-flow graph, typed virtual registers, exception edges, and call/return shapes, then emit LLVM IR from that normalized representation.
+
+AST-to-LLVM can be considered later for AOT builds when source is available, but it should not be the first implementation path. It would bypass deployed `.xtc` modules, duplicate semantic analysis, and produce a second behavior source to keep consistent with the bytecode runtime.
+
+## LLVM Fit
+
+LLVM ORC is the appropriate LLVM JIT infrastructure. LLVM's ORC documentation describes a modular JIT API with JIT-linking, LLVM IR compilation layers, eager and lazy compilation, custom compilers and program representations, concurrent compilation, and removable code. LLJIT is the ready-made ORC stack for LLVM IR modules, while lower layers allow more custom materialization.
+
+For XVM, ORC gives useful building blocks:
+
+- Lazy materialization by symbol maps well to lazy generated module/class/method loading.
+- JITDylibs map reasonably to XVM modules, containers, or type systems.
+- ORC can accept LLVM IR modules, object files, or custom materialization units.
+- JITLink's object-linking layer supports runtime linking of relocatable objects and runtime registration needs such as exception handling metadata.
+- LLVM IR can represent primitive arithmetic, structured control flow, calls, object pointers, and exceptions.
+
+LLVM does not solve the hard XVM runtime problems by itself. The hard work is the XVM ABI:
+
+- object representation and metadata
+- generic specialization and JIT shape
+- constant pool access
+- multi-return values
+- virtual dispatch and call-chain semantics
+- `Ref` / `Var`
+- guards, finally blocks, and exception propagation
+- service/fiber suspension points
+- allocation, immutability, memory accounting, and garbage collection
+- deoptimization and stack reconstruction if optimized native frames can call back into interpreted execution
+
+## Recommended Architecture
+
+### Phase 1: sidecar LLVM accelerator
+
+Add a native library, for example `libxvmllvmjit`, owned by the Java process. Java remains the host for module loading, linking, metadata, and unsupported execution. The native library owns an ORC `LLJIT` or custom ORC session.
+
+Java-facing API:
+
+- `create_engine(target, options) -> engine_handle`
+- `define_module(engine, serialized_metadata) -> module_handle`
+- `compile_method(engine, method_key, method_ir_or_metadata) -> compiled_handle`
+- `lookup(engine, method_key) -> function_pointer`
+- `release(engine, compiled_handle)`
+
+The Java side should hide this behind an `LlvmRuntime` service. If the project is on JDK 22 or later, the Foreign Function & Memory API is a better default than hand-written JNI glue for ordinary calls into the sidecar. JNI may still be needed where native code must call deeply into the JVM or hold Java object handles.
+
+Initial compiled function contract:
+
+- Input: `Ctx*` or opaque context handle, followed by primitive/reference arguments in the same conceptual order used by `JitMethodDesc`.
+- Return: first scalar result directly when possible; additional results through `Ctx` slots or an out-parameter result area.
+- Failure: return a status code or throw only through a documented exception bridge. Early leaf functions should avoid exceptions and use status returns for bailout.
+- References: opaque stable handles or native object pointers, never unmanaged raw Java object pointers with arbitrary lifetime.
+
+The first whitelist should be smaller than the current JVM JIT allowlist: arithmetic, comparisons, branches, simple local register movement, simple calls to already-compiled leaf functions, and immutable string/array primitives only after their representation is fixed.
+
+### Phase 2: backend-neutral lowering
+
+Create a neutral lowering layer between `Op[]` and backend emitters:
+
+- method CFG with explicit normal and exceptional edges
+- typed virtual registers and stack/local slots
+- `JitFlavor`-like representation shapes independent of Java `ClassDesc`
+- explicit `Ref` boxing/unboxing operations
+- explicit call descriptors and return descriptors
+- explicit guard/finally regions
+- metadata references to type constants and constant-pool entries
+
+The current Java backend can continue emitting classfiles from this layer, or the neutral layer can initially be used only by LLVM while the Java backend remains as-is. The long-term maintenance win comes from making both backends share the same type-flow and semantic lowering decisions.
+
+### Phase 3: LLVM backend as peer to Java JIT
+
+Introduce an execution connector or backend selector:
+
+- `InterpreterConnector`: compatibility and debugger-friendly execution.
+- `JitConnector`: existing JVM classfile backend.
+- `LlvmConnector`: new native backend, initially delegating unsupported functions to interpreter or JVM JIT.
+
+The connector should compile at method granularity. Direct class-level generation is natural for the JVM but not necessary for LLVM; LLVM can materialize functions and type metadata separately.
+
+### Phase 4: full native runtime pieces
+
+Only after leaf methods work should the project expand into:
+
+- native object layout or stable object-handle tables
+- native allocation and memory accounting
+- native service/fiber scheduling safepoints
+- exception personality or status-return unwinding
+- stack maps, patchpoints, and deoptimization metadata
+- cross-module invalidation/unloading
+- AOT object emission
+
+## Interpreter Integration
+
+The interpreter should not be rewritten before LLVM proves useful. It is valuable as an oracle and compatibility path, but it is a poor host ABI for native compiled frames.
+
+Recommended interpreter modifications are narrow:
+
+- Add a `CompiledMethod` or `MethodExecutor` abstraction attached to `MethodStructure` or call-chain resolution.
+- Let call ops ask a backend registry whether a callee has a compiled entry.
+- Marshal only supported argument and return shapes for early prototypes.
+- If the compiled method returns a bailout/unsupported status, fall back to the existing `Frame` path.
+- Add counters in call dispatch or `ServiceContext.execute` to identify hot methods if adaptive compilation is desired.
+
+Avoid trying to map every interpreter `Frame` into an LLVM stack frame. The interpreter frame has `ObjectHandle[]` registers, guard state, continuations, futures, debug state, and fiber scheduling assumptions. A native frame needs a smaller and more explicit contract.
+
+The Java-JIT runtime is the better integration target. `Ctx`, `JitFlavor`, `JitTypeDesc`, `JitMethodDesc`, `nObject`, and the native bridge classes are already close to a compiled-code ABI. The LLVM backend should either share those definitions or replace them with backend-neutral equivalents.
+
+## Key Design Decisions
+
+### Backend API
+
+Do not add `buildLlvm(...)` to every `Op` as the end state. It may be acceptable for a short prototype, but it will grow into the same backend coupling already present in `Op.build(BuildContext, CodeBuilder)`. Prefer one of these:
+
+- a neutral `XtcLoweringContext` that op-specific code populates
+- a separate bytecode-to-CFG builder that pattern-matches existing `Op` subclasses
+- an MLIR dialect or custom small IR if the project wants a durable multi-backend compiler layer
+
+The simplest maintainable first step is a custom small IR. MLIR is plausible later but would add more toolchain surface area than necessary for proving LLVM viability.
+
+### Exceptions
+
+The current Java JIT preprocesses `GuardAll`, jumps, returns, and finally blocks into JVM bytecode control flow. LLVM can model exception edges with `invoke`, landing pads, and personality functions, but Ecstasy exceptions are language-level objects and Java exceptions are currently involved in the JVM backend. Early LLVM code should avoid native exception unwinding across Java frames. Use status returns for bailouts and map exceptions at the runtime boundary until a real personality/landing-pad story exists.
+
+### Garbage Collection and Safepoints
+
+There are two viable memory strategies:
+
+- JVM-owned objects through handles, with native code treating references as opaque. This is safest initially but limits optimization and can make FFM/JNI transitions expensive.
+- Native XVM heap with explicit object layout and safepoints. This enables real native performance but requires stack maps, root reporting, barriers, and object lifetime rules.
+
+LLVM has statepoint and stack map infrastructure that can help describe live roots and patch/deopt metadata, but those facilities do not replace the runtime design.
+
+### Services and Fibers
+
+Compiled code must not block the XVM scheduler invisibly. The early whitelist should exclude operations that can suspend, wait on futures, perform service sends, or need debugger interaction. Later phases need explicit poll/safepoint operations in lowered IR and a convention for returning to the scheduler.
+
+### AOT
+
+An LLVM JIT path can later support AOT by sharing the bytecode-to-IR lowering and changing the final ORC/object emission path. The runtime ABI must be designed with relocation, symbol lookup, module identity, and versioning in mind from the start.
+
+## Feasibility Verdict
+
+Feasible: yes.
+
+Recommended first implementation: LLVM sidecar JIT for whitelisted bytecode methods, hosted by Java, using a narrow runtime ABI and fallback to existing execution.
+
+Not recommended as first implementation:
+
+- direct AST-to-LLVM
+- replacing the interpreter wholesale
+- native object heap and GC as phase one
+- adding a second backend hook directly to all `Op` classes without a neutral lowering layer
+
+Primary success criteria for a prototype:
+
+- Compile and execute a small method subset from `MethodStructure.getOps()`.
+- Produce results identical to interpreter/JVM JIT for selected unit tests.
+- Support primitive `JitFlavor` shapes, nullable primitive shape, and multi-return through a documented result area.
+- Fall back cleanly on unsupported ops.
+- Keep generated native code unloadable by module or test run.
+
+## External Sources Consulted
+
+- LLVM ORC design and implementation: https://llvm.org/docs/ORCv2.html
+- LLVM JITLink and ORC ObjectLinkingLayer: https://llvm.org/docs/JITLink.html
+- LLVM Kaleidoscope IR generation tutorial: https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl03.html
+- LLVM Kaleidoscope JIT/optimizer tutorial: https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl04.html
+- LLVM exception handling: https://llvm.org/docs/ExceptionHandling.html
+- LLVM garbage collection safepoints: https://llvm.org/docs/Statepoints.html
+- LLVM stack maps and patch points: https://llvm.org/docs/StackMaps.html
+- LLVM LLJIT C API reference: https://llvm.org/docs/doxygen/group__LLVMCExecutionEngineLLJIT.html
+- OpenJDK JEP 454, Foreign Function & Memory API: https://openjdk.org/jeps/454
