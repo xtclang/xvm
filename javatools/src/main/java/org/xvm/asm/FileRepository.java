@@ -67,21 +67,19 @@ public class FileRepository
     @Override
     public Set<String> getModuleNames() {
         checkCache();
-        return file.exists() && names != null
-                ? Collections.unmodifiableSet(names)
-                : Collections.emptySet();
+        return Collections.unmodifiableSet(names);
     }
 
     @Override
     public VersionTree<Boolean> getAvailableVersions(String sModule) {
         checkCache();
-        return !err && versionsByName != null ? versionsByName.get(sModule) : null;
+        return err ? null : versionsByName.get(sModule);
     }
 
     @Override
     public ModuleStructure loadModule(String sModule) {
         checkCache();
-        if (names == null || !names.contains(sModule) || !ensureModulesLoaded()) {
+        if (!names.contains(sModule) || !ensureModulesLoaded()) {
             return null;
         }
 
@@ -186,16 +184,23 @@ public class FileRepository
 
         var structLoaded = tryLoad();
         if (structLoaded == null) {
-            this.names          = null;
-            this.versionsByName = null;
-            this.modulesByName  = null;
-            this.struct         = null;
-            this.err            = true;
+            clearCache();
+            this.err = true;
         } else {
             cacheFrom(structLoaded);
         }
 
         this.lastScan = System.currentTimeMillis();
+    }
+
+    /**
+     * Reset the cache to the empty (nothing servable) state.
+     */
+    private void clearCache() {
+        names          = Set.of();
+        versionsByName = Map.of();
+        modulesByName  = Map.of();
+        struct         = null;
     }
 
     /**
@@ -232,14 +237,11 @@ public class FileRepository
         }
 
         if (!file.exists()) {
-            names          = null;
-            versionsByName = null;
-            modulesByName  = null;
-            struct         = null;
+            clearCache();
             return true;
         }
 
-        if (names == null || timestamp != file.lastModified() || size != file.length()) {
+        if (struct == null || timestamp != file.lastModified() || size != file.length()) {
             return false;
         }
 
@@ -287,9 +289,11 @@ public class FileRepository
     private final File file;
     private final boolean fRO;
 
-    private Set<String>                       names;
-    private Map<String, VersionTree<Boolean>> versionsByName;
-    private Map<String, ModuleStructure>      modulesByName;
+    // never null: empty when the file is absent, unreadable, or not yet scanned; the loaded
+    // state is signified by a non-null struct
+    private Set<String>                       names          = Set.of();
+    private Map<String, VersionTree<Boolean>> versionsByName = Map.of();
+    private Map<String, ModuleStructure>      modulesByName  = Map.of();
     private FileStructure                     struct;
     private long                              timestamp;
     private long                              size;
