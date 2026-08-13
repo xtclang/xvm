@@ -2,7 +2,7 @@
 
 Investigation date: 2026-08-13
 
-This is a scope document and tentative task list for an LLVM-based compiler/JIT path. It assumes the current Java-JIT anatomy in [jit-current-anatomy.md](jit-current-anatomy.md), the LLVM study in [LLVM_JIT_STUDY.md](LLVM_JIT_STUDY.md), and the longer runtime direction in [RUNTIME_PORT_SELF_HOSTING_STUDY.md](RUNTIME_PORT_SELF_HOSTING_STUDY.md).
+This is a scope document and tentative task list for an LLVM-based compiler/JIT path. It assumes the current Java-JIT anatomy in [jit-current-anatomy.md](jit-current-anatomy.md), the LLVM study in [llvm-jit-study.md](llvm-jit-study.md), and the longer runtime direction in [runtime-port-self-hosting-study.md](runtime-port-self-hosting-study.md).
 
 ## Scope Boundary
 

@@ -10,7 +10,7 @@ Related notes:
 - LLVM and runtime-interop appendix: [llvm-jit-appendix.md](llvm-jit-appendix.md)
 - LLVM compiler scope plan: [llvm-compiler-scope-plan.md](llvm-compiler-scope-plan.md)
 - AST-vs-XTC feasibility analysis: [ast-vs-xtc-feasibility.md](ast-vs-xtc-feasibility.md)
-- Runtime port and self-hosting study: [RUNTIME_PORT_SELF_HOSTING_STUDY.md](RUNTIME_PORT_SELF_HOSTING_STUDY.md)
+- Runtime port and self-hosting study: [runtime-port-self-hosting-study.md](runtime-port-self-hosting-study.md)
 
 ## Executive Conclusion
 

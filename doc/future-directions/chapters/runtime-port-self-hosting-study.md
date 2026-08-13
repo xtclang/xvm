@@ -8,7 +8,7 @@ The referenced Kotlin compiler work is assumed to be `../research-fork-orig`; th
 
 Related documents:
 
-- LLVM study: [LLVM_JIT_STUDY.md](LLVM_JIT_STUDY.md)
+- LLVM study: [llvm-jit-study.md](llvm-jit-study.md)
 - LLVM scope plan: [llvm-compiler-scope-plan.md](llvm-compiler-scope-plan.md)
 - Runtime port plan: [runtime-port-scope-plan.md](runtime-port-scope-plan.md)
 - Kotlin compiler/runtime boundary: [kotlin-compiler-runtime-boundary.md](kotlin-compiler-runtime-boundary.md)
