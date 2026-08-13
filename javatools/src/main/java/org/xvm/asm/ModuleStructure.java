@@ -384,6 +384,19 @@ public class ModuleStructure
     }
 
     /**
+     * Create a detached copy of this module: a clone contained by its own single-module
+     * FileStructure, with fingerprints for every dependency of this module — including
+     * dependencies that are real (embedded) sibling modules in this module's container. The copy
+     * is indistinguishable from a module loaded from its own single-module file, which is what
+     * consumers of a module served out of a multi-module container ("bundle") generally expect.
+     *
+     * @return the detached module copy, owned by a new FileStructure
+     */
+    public ModuleStructure detachedCopy() {
+        return new FileStructure(this, /*fSynthesize*/ false).getModule();
+    }
+
+    /**
      * Mark this module as an {@link ModuleType#Embedded embedded} module of its container. A real
      * (non-fingerprint) module that is merged into a multi-module container ("bundle") as a
      * non-main module must not remain {@link ModuleType#Primary}, which is reserved for the main

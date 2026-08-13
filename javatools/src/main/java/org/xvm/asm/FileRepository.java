@@ -81,23 +81,17 @@ public class FileRepository
     @Override
     public ModuleStructure loadModule(String sModule) {
         checkCache();
-        if (names == null || !names.contains(sModule)) {
+        if (names == null || !names.contains(sModule) || !ensureModulesLoaded()) {
             return null;
         }
 
-        Map<String, ModuleStructure> modules = ensureModules();
-        if (modules == null) {
-            return null;
-        }
-
-        ModuleStructure module = modules.get(sModule);
+        ModuleStructure module = modulesByName.get(sModule);
         if (module != null && !module.isMainModule() && module.getFileStructure() == struct) {
             // a non-main module of a multi-module container ("bundle") is served as a detached
             // copy (memoized), so that every consumer - the linker, the runtime compiler's
-            // fingerprint hoisting, reflection - sees the single-module-file shape it expects;
-            // the copy carries synthesized fingerprints for its sibling dependencies
-            module = new FileStructure(module, false).getModule();
-            modules.put(sModule, module);
+            // fingerprint hoisting, reflection - sees the single-module-file shape it expects
+            module = module.detachedCopy();
+            modulesByName.put(sModule, module);
         }
         return module;
     }
@@ -252,9 +246,14 @@ public class FileRepository
         return true;
     }
 
-    private Map<String, ModuleStructure> ensureModules() {
+    /**
+     * Make sure the fully loaded module cache is present and current.
+     *
+     * @return true iff the modules are loaded and servable
+     */
+    private boolean ensureModulesLoaded() {
         if (err) {
-            return null;
+            return false;
         }
 
         // detached copies handed out by loadModule() are freshly cloned (and thus "modified"), so
@@ -263,12 +262,12 @@ public class FileRepository
             FileStructure structLoaded = tryLoad();
             if (structLoaded == null) {
                 err = true;
-                return null;
+                return false;
             }
             cacheFrom(structLoaded);
         }
 
-        return modulesByName;
+        return true;
     }
 
     private FileStructure tryLoad() {
