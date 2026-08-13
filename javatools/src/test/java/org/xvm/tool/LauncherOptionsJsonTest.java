@@ -112,6 +112,32 @@ class LauncherOptionsJsonTest {
     }
 
     @Test
+    void testBundlerOptionsJsonRoundTrip() {
+        // Create bundler options
+        final var original = LauncherOptions.BundlerOptions.builder()
+                .enableVerbose()
+                .addModulePath(new File("/lib"))
+                .setOutputFile(new File("/out/app.xtc"))
+                .setMainModule("app.example.org")
+                .addModule("extra.example.org")
+                .build();
+
+        // Serialize to JSON
+        final String json = original.toJson();
+        assertNotNull(json);
+
+        // Deserialize from JSON
+        final var restored = LauncherOptions.BundlerOptions.fromJson(json);
+
+        // Verify all options match
+        assertEquals(original.isVerbose(), restored.isVerbose());
+        assertEquals(original.getModulePath(), restored.getModulePath());
+        assertEquals(original.getOutputFile(), restored.getOutputFile());
+        assertEquals(original.getMainModule(), restored.getMainModule());
+        assertEquals(original.getModuleSelection(), restored.getModuleSelection());
+    }
+
+    @Test
     void testJsonPrettyPrinting() {
         final var options = LauncherOptions.CompilerOptions.builder()
                 .enableVerbose()
