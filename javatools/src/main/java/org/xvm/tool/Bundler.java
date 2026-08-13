@@ -91,7 +91,12 @@ public class Bundler extends Launcher<BundlerOptions> {
         reportExternalDependencies(bundle, repo, selection.keySet());
         assert bundle.validateModuleConstants();
 
-        var fileOut = resolveOutputFile(moduleMain);
+        var fileOut   = resolveOutputFile(moduleMain);
+        var dirParent = fileOut.getAbsoluteFile().getParentFile();
+        if (dirParent != null && !dirParent.exists() && !dirParent.mkdirs()) {
+            log(ERROR, "Unable to create the output directory {}", dirParent);
+            return checkErrors("bundle output");
+        }
         try {
             bundle.writeTo(fileOut);
         } catch (IOException e) {
@@ -117,8 +122,9 @@ public class Bundler extends Launcher<BundlerOptions> {
         var explicit  = options().getModuleSelection();
 
         if (explicit.isEmpty()) {
+            var includeSystem = options().isIncludeSystem();
             repo.getModuleNames().stream()
-                    .filter(name -> !name.endsWith(SYSTEM_DOMAIN_SUFFIX))
+                    .filter(name -> includeSystem || !name.endsWith(SYSTEM_DOMAIN_SUFFIX))
                     .sorted()
                     .forEach(name -> selection.put(name, repo.loadModule(name)));
             if (selection.isEmpty()) {
