@@ -12,6 +12,10 @@ class Int64Tests {
         testInt64CompareLe();
         testInt64CompareLt();
 
+        // Native alias tests
+        testToIntAliases();
+        testToUIntAliases();
+
         // Field tests
         testInt64AsField();
         testInt64AsNullableField();
@@ -143,6 +147,56 @@ class Int64Tests {
     void testInt64CompareLt() {
         Int n = 1234;
         assert n < 1235;
+    }
+
+    // ----- native alias tests --------------------------------------------------------------------
+
+    void testToIntAliases() {
+        Int8    int8    = 1;
+        Int16   int16   = 1;
+        Int32   int32   = 1;
+        Int64   int64   = 1;
+        Int128  int128  = 1;
+        UInt8   uint8   = 1;
+        UInt16  uint16  = 1;
+        UInt32  uint32  = 1;
+        UInt64  uint64  = 1;
+        UInt128 uint128 = 1;
+
+        assert int8.toInt()    == 1 && int8.toInt(True)    == 1;
+        assert int16.toInt()   == 1 && int16.toInt(True)   == 1;
+        assert int32.toInt()   == 1 && int32.toInt(True)   == 1;
+        assert int64.toInt()   == 1 && int64.toInt(True)   == 1;
+        assert int128.toInt()  == 1 && int128.toInt(True)  == 1;
+        assert uint8.toInt()   == 1 && uint8.toInt(True)   == 1;
+        assert uint16.toInt()  == 1 && uint16.toInt(True)  == 1;
+        assert uint32.toInt()  == 1 && uint32.toInt(True)  == 1;
+        assert uint64.toInt()  == 1 && uint64.toInt(True)  == 1;
+        assert uint128.toInt() == 1 && uint128.toInt(True) == 1;
+    }
+
+    void testToUIntAliases() {
+        Int8    int8    = 1;
+        Int16   int16   = 1;
+        Int32   int32   = 1;
+        Int64   int64   = 1;
+        Int128  int128  = 1;
+        UInt8   uint8   = 1;
+        UInt16  uint16  = 1;
+        UInt32  uint32  = 1;
+        UInt64  uint64  = 1;
+        UInt128 uint128 = 1;
+
+        assert int8.toUInt()    == 1 && int8.toUInt(True)    == 1;
+        assert int16.toUInt()   == 1 && int16.toUInt(True)   == 1;
+        assert int32.toUInt()   == 1 && int32.toUInt(True)   == 1;
+        assert int64.toUInt()   == 1 && int64.toUInt(True)   == 1;
+        assert int128.toUInt()  == 1 && int128.toUInt(True)  == 1;
+        assert uint8.toUInt()   == 1 && uint8.toUInt(True)   == 1;
+        assert uint16.toUInt()  == 1 && uint16.toUInt(True)  == 1;
+        assert uint32.toUInt()  == 1 && uint32.toUInt(True)  == 1;
+        assert uint64.toUInt()  == 1 && uint64.toUInt(True)  == 1;
+        assert uint128.toUInt() == 1 && uint128.toUInt(True) == 1;
     }
 
     // ----- field tests ---------------------------------------------------------------------------

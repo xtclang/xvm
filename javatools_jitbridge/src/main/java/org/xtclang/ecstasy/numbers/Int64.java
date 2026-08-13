@@ -198,6 +198,16 @@ public class Int64 extends IntNumber {
     }
 
     /**
+     * Native implementation of: "Int toInt(Boolean checkBounds = False)"
+     *
+     * This bridge is required because a primitive invocation bypasses the natural toInt()
+     * implementation that delegates to toInt64().
+     */
+    public static long toInt$p(long thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return toInt64$p(thi$, ctx, checkBounds, dfltCheckBounds);
+    }
+
+    /**
      * Implementation of Int64 toInt64(Boolean checkBounds = False)
      *
      * @param ctx              the build context
@@ -289,6 +299,16 @@ public class Int64 extends IntNumber {
             throw oob.$init(ctx, "Int64 value " + thi$ + " is not a valid UInt32 value");
         }
         return (int) (thi$ & 0xFFFFFFFFL);
+    }
+
+    /**
+     * Native implementation of: "UInt toUInt(Boolean checkBounds = False)"
+     *
+     * This bridge is required because a primitive invocation bypasses the natural toUInt()
+     * implementation that delegates to toUInt64().
+     */
+    public static long toUInt$p(long thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return toUInt64$p(thi$, ctx, checkBounds, dfltCheckBounds);
     }
 
     /**

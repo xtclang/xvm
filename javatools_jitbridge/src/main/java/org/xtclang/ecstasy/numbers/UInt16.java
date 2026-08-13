@@ -130,6 +130,16 @@ public class UInt16 extends UIntNumber {
     }
 
     /**
+     * Native implementation of: "Int toInt(Boolean checkBounds = False)"
+     *
+     * This bridge is required because a primitive invocation bypasses the natural toInt()
+     * implementation that delegates to toInt64().
+     */
+    public static long toInt$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return toInt64$p(thi$, ctx, checkBounds, dfltCheckBounds);
+    }
+
+    /**
      * Implementation of Int64 toInt64(Boolean checkBounds = False)
      *
      * @param ctx              the build context
@@ -213,6 +223,16 @@ public class UInt16 extends UIntNumber {
      */
     public static int toUInt32$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         return thi$;
+    }
+
+    /**
+     * Native implementation of: "UInt toUInt(Boolean checkBounds = False)"
+     *
+     * This bridge is required because a primitive invocation bypasses the natural toUInt()
+     * implementation that delegates to toUInt64().
+     */
+    public static long toUInt$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return toUInt64$p(thi$, ctx, checkBounds, dfltCheckBounds);
     }
 
     /**
