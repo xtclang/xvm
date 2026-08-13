@@ -400,7 +400,8 @@ public class CommonBuilder
         // is not present on Builder; TODO address this in a subsequent change
         switch (constant) {
         case LiteralConstant literal
-                when literal.getFormat() == Constant.Format.IntLiteral: {
+                when literal.getFormat() == Constant.Format.IntLiteral ||
+                     literal.getFormat() == Constant.Format.Duration: {
             Integer      index = constants.computeIfAbsent(literal, _ -> constants.size());
             TypeConstant type  = literal.getType();
             ClassDesc    cd    = ensureClassDesc(type);
@@ -712,14 +713,17 @@ public class CommonBuilder
                             .checkcast(CD_TypeConstant)                               // <- type
                             .putstatic(CD_this, name, CD_TypeConstant);
                     } else if (constant instanceof LiteralConstant literal &&
-                            literal.getFormat() == Constant.Format.IntLiteral) {
-                        // instantiate an IntLiteral using a String generated from a Java string from
-                        // the LiteralConstant, and store the IntLiteral into the static field
-                        MethodConstant ctorId = pool.ensureEcstasyClassConstant("numbers.IntLiteral")
-                                                    .findConstructor(pool.typeString());
-                        buildNew(null, code, literal.getType(), ctorId,
+                            (literal.getFormat() == Constant.Format.IntLiteral ||
+                             literal.getFormat() == Constant.Format.Duration)) {
+                        // instantiate an IntLiteral or Duration using a String generated from a
+                        // Java string from the LiteralConstant, and store into the static field
+                        TypeConstant   type   = literal.getType();
+                        ClassDesc      cd     = ensureClassDesc(type);
+                        MethodConstant ctorId = type.ensureTypeInfo().findConstructor(pool.typeString());
+
+                        buildNew(null, code, type, ctorId,
                                 (_) -> loadString(code, literal.getValue(), ctxSlot), ctxSlot);
-                        code.putstatic(CD_this, name, CD_IntLiteral);
+                        code.putstatic(CD_this, name, cd);
                     } else {
                         throw new UnsupportedOperationException("unsupported constant: " + constant);
                     }
@@ -820,7 +824,9 @@ public class CommonBuilder
         return switch (constant) {
             case TypeConstant _ -> CD_TypeConstant;
             case LiteralConstant literal
-                    when literal.getFormat() == Constant.Format.IntLiteral -> CD_IntLiteral;
+                    when literal.getFormat() == Constant.Format.IntLiteral ||
+                         literal.getFormat() == Constant.Format.Duration ->
+                    ensureClassDesc(literal.getType());
             default -> throw new UnsupportedOperationException("unsupported constant: " + constant);
         };
     }
