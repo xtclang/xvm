@@ -2,6 +2,10 @@
 
 This directory collects exploratory design notes for the long-term XVM runtime, compiler, LLVM backend, XTC format, and Ecstasy self-hosting direction.
 
+Agent/human handoff:
+
+- [For agents](for-agents.md) - continuation prompt and research summary for another agent or reviewer to challenge and extend these notes.
+
 Start here:
 
 1. [LLVM JIT study](chapters/llvm-jit-study.md) - current JVM-bytecode JIT anatomy, LLVM feasibility, and the recommended backend-neutral method IR path.
