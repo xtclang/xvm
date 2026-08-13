@@ -196,14 +196,14 @@ public class FileStructure
 
         try (var ignore = ConstantPool.withPool(pool)) {
             // add fingerprints
-            for (ModuleStructure moduleChild : fileSource.children()) {
-                if (moduleChild.isFingerprint() && getModule(moduleChild.getIdentityConstant()) == null) {
-                    ModuleStructure moduleChildClone = moduleChild.cloneBody();
-                    moduleChildClone.setContaining(this);
-                    addChild(moduleChildClone);
-                    moduleChildClone.registerConstants(pool);
-                }
-            }
+            fileSource.children().stream()
+                    .filter(child -> child.isFingerprint() && getModule(child.getIdentityConstant()) == null)
+                    .map(ModuleStructure::cloneBody)
+                    .forEach(clone -> {
+                        clone.setContaining(this);
+                        addChild(clone);
+                        clone.registerConstants(pool);
+                    });
 
             // if the source is a multi-module container, dependencies of the merged module may be
             // present there as real (embedded) sibling modules rather than fingerprints; those
