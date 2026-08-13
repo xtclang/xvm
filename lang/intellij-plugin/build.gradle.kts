@@ -12,6 +12,21 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
+// Build-classpath security constraints: the IntelliJ Platform Gradle Plugin drags vulnerable
+// transitive dependencies onto this project's build classpath. Force known-patched versions
+// until the plugin itself updates (tracked by Dependabot alerts on this repo).
+buildscript {
+    configurations.classpath {
+        resolutionStrategy {
+            force(
+                "com.fasterxml.jackson.core:jackson-databind:2.21.5",
+                "com.fasterxml.jackson.core:jackson-core:2.21.5",
+                "org.jsoup:jsoup:1.23.1",
+            )
+        }
+    }
+}
+
 plugins {
     alias(libs.plugins.xdk.build.properties)
     alias(libs.plugins.lang.kotlin.jvm)
