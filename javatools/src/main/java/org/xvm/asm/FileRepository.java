@@ -86,7 +86,20 @@ public class FileRepository
         }
 
         Map<String, ModuleStructure> modules = ensureModules();
-        return modules == null ? null : modules.get(sModule);
+        if (modules == null) {
+            return null;
+        }
+
+        ModuleStructure module = modules.get(sModule);
+        if (module != null && !module.isMainModule() && module.getFileStructure() == struct) {
+            // a non-main module of a multi-module container ("bundle") is served as a detached
+            // copy (memoized), so that every consumer - the linker, the runtime compiler's
+            // fingerprint hoisting, reflection - sees the single-module-file shape it expects;
+            // the copy carries synthesized fingerprints for its sibling dependencies
+            module = new FileStructure(module, false).getModule();
+            modules.put(sModule, module);
+        }
+        return module;
     }
 
     @Override
@@ -177,14 +190,15 @@ public class FileRepository
         this.size      = file.length();
         this.err       = false;
 
-        FileStructure struct = tryLoad();
-        if (struct == null) {
+        FileStructure structLoaded = tryLoad();
+        if (structLoaded == null) {
             this.names          = null;
             this.versionsByName = null;
             this.modulesByName  = null;
+            this.struct         = null;
             this.err            = true;
         } else {
-            cacheFrom(struct);
+            cacheFrom(structLoaded);
         }
 
         this.lastScan = System.currentTimeMillis();
@@ -209,6 +223,7 @@ public class FileRepository
         this.names          = new LinkedHashSet<>(mapModules.keySet());
         this.versionsByName = mapVersions;
         this.modulesByName  = mapModules;
+        this.struct         = struct;
     }
 
     /**
@@ -226,6 +241,7 @@ public class FileRepository
             names          = null;
             versionsByName = null;
             modulesByName  = null;
+            struct         = null;
             return true;
         }
 
@@ -241,14 +257,15 @@ public class FileRepository
             return null;
         }
 
-        if (modulesByName == null
-                || modulesByName.values().stream().anyMatch(ModuleStructure::isModified)) {
-            FileStructure struct = tryLoad();
-            if (struct == null) {
+        // detached copies handed out by loadModule() are freshly cloned (and thus "modified"), so
+        // staleness is judged by the container's own (attached) main module only
+        if (struct == null || struct.getModule().isModified()) {
+            FileStructure structLoaded = tryLoad();
+            if (structLoaded == null) {
                 err = true;
                 return null;
             }
-            cacheFrom(struct);
+            cacheFrom(structLoaded);
         }
 
         return modulesByName;
@@ -274,6 +291,7 @@ public class FileRepository
     private Set<String>                       names;
     private Map<String, VersionTree<Boolean>> versionsByName;
     private Map<String, ModuleStructure>      modulesByName;
+    private FileStructure                     struct;
     private long                              timestamp;
     private long                              size;
     private long                              lastScan;

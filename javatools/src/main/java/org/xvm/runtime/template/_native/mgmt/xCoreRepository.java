@@ -4,6 +4,7 @@ package org.xvm.runtime.template._native.mgmt;
 import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
@@ -83,6 +84,15 @@ public class xCoreRepository
             String           sName  = ((StringHandle) ahArg[0]).getStringValue();
             ModuleRepository repo   = f_container.getModuleRepository();
             ModuleStructure  module = repo.loadModule(sName);
+
+            if (module != null && !module.isMainModule()
+                    && module.getFileStructure().hasMultipleChildren()) {
+                // a non-main module served out of a multi-module container ("bundle") is handed
+                // out as a detached copy, so that reflection anchored on its file structure (such
+                // as "template.parent.resolve(repo).mainModule" in getResolvedModule) behaves
+                // exactly as if the module had been loaded from its own single-module file
+                module = new FileStructure(module, false).getModule();
+            }
 
             return module == null
                 ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
