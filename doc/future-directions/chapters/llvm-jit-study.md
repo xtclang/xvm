@@ -8,6 +8,7 @@ Related notes:
 
 - Current implementation map: [jit-current-anatomy.md](jit-current-anatomy.md)
 - LLVM and runtime-interop appendix: [llvm-jit-appendix.md](llvm-jit-appendix.md)
+- LLVM object ABI notes: [llvm-object-abi-notes.md](llvm-object-abi-notes.md)
 - LLVM compiler scope plan: [llvm-compiler-scope-plan.md](llvm-compiler-scope-plan.md)
 - AST-vs-XTC feasibility analysis: [ast-vs-xtc-feasibility.md](ast-vs-xtc-feasibility.md)
 - Runtime port and self-hosting study: [runtime-port-self-hosting-study.md](runtime-port-self-hosting-study.md)
@@ -27,6 +28,8 @@ LLVM should not be bolted directly onto those `Op.build` methods as another per-
 5. Start with whitelisted leaf methods and expand only after object layout, exceptions, services, safepoints, and deoptimization have real runtime contracts.
 
 The fastest useful prototype is a leaf-function LLVM accelerator. It would compile selected bytecode methods using primitive and simple reference signatures, call back to Java for unsupported operations, and run under a new `LlvmConnector` or under the Java-JIT connector as a delegated backend. The long-term architecture can evolve into a full native runtime, but that is a much larger project than adding LLVM code generation.
+
+The largest hidden risk is compiled code touching XTC objects. LLVM does not make this problem go away. Early LLVM code should manipulate non-primitive XTC values only through an opaque `xvm_ref` / helper-call ABI owned by the runtime. Direct native loads and stores into object fields become viable only after the runtime defines object layout, type metadata, write barriers, safepoints, root reporting, and identity rules. In other words: the compiler decides when an operation is eligible for direct lowering, but object semantics belong in the runtime ABI.
 
 ## Current JIT Model
 
@@ -65,6 +68,58 @@ The Java-JIT path instead uses `org.xvm.javajit.Ctx` and the classes in `javatoo
 
 That split matters. LLVM integration should reuse and formalize the Java-JIT runtime ABI concepts where possible, not try to make native code impersonate the interpreter's `Frame` and `ObjectHandle` machinery from day one.
 
+## Compiled Code and XTC Object Manipulation
+
+This is the central runtime boundary for LLVM.
+
+The current project has at least two object worlds:
+
+- The interpreter uses Java `ObjectHandle` subclasses. A `Frame` stores registers as `ObjectHandle[]`, and handles carry `TypeComposition`, mutability, service/pass-through behavior, and template-specific Java fields.
+- The Java JIT bridge uses generated Java classes rooted at `nObject`, with `$meta` bits for owner/container id, immutability, construction state, and native-class private flags. `Ctx` carries additional object return slots (`o0`, `o1`, ...), and bridge classes such as `nRef`, `Array`, and `String` encode Java-specific layouts.
+
+Those worlds are already not the same ABI. LLVM cannot safely treat either as a native object layout:
+
+- Java object layout is not a stable language ABI.
+- HotSpot can move objects, and JNI/FFM references have scoped lifetimes.
+- Interpreter `ObjectHandle` values contain runtime/template state, not user-object fields in a layout LLVM can reason about.
+- Java-JIT bridge objects expose fields, but those are Java fields managed by the JVM, not portable native offsets.
+- `Ref`, `Var`, arrays, strings, services, immutability, and type tests all have language semantics beyond "load from pointer plus offset".
+
+The first LLVM backend should therefore use this rule:
+
+> Native code may pass, compare, and return XTC references as opaque handles, but any semantic operation on an object goes through a runtime helper unless the ABI explicitly marks that object representation as native-direct.
+
+For an early Java-hosted sidecar, that implies:
+
+- Primitive `JitFlavor` values can be unboxed into LLVM scalars.
+- Opaque references should be represented as `xvm_ref` tokens, not raw Java object addresses.
+- Object identity, type tests, field/property access, `Ref`/`Var` get/set, array/string access, allocation, freezing, boxing, unboxing, dispatch, exception creation, and service interaction are helper calls or bailouts.
+- Helper calls are part of the runtime ABI and must have status returns for exception, block, suspend, and bailout states.
+- Any helper returning a reference must define rooting/lifetime for the native frame.
+
+This is not just an implementation detail. It decides what code can be compiled:
+
+| Operation kind | Early LLVM with opaque references | Later native runtime |
+| --- | --- | --- |
+| Primitive arithmetic | Direct LLVM scalar ops | Direct LLVM scalar ops |
+| Reference pass-through | Pass `xvm_ref` token | Pass pointer or compressed ref |
+| Identity compare | Helper or token compare if ABI guarantees uniqueness | Direct compare if layout guarantees identity |
+| Type test | Helper | Inline fast path plus helper slow path |
+| Field read/write | Helper | Direct offset access plus barriers/checks |
+| Array/string element access | Helper for first prototype | Direct for native-layout arrays/strings |
+| `Ref`/`Var` get/set | Helper | Direct only for native-layout ref boxes |
+| Allocation | Helper | Runtime allocator plus safepoint/accounting |
+| Service/fiber interaction | Excluded or helper status return | Scheduler ABI and safepoints |
+
+The likely migration path is:
+
+1. **Opaque Java-hosted handles**: LLVM manipulates `xvm_ref` tokens and calls Java/Kotlin runtime helpers. This is safest and good enough for leaf methods with mostly primitive work.
+2. **Selective native containers**: specific immutable data types, arrays, strings, or numeric boxes gain runtime-defined native layouts. LLVM can inline operations only for those representations.
+3. **Native object heap**: ordinary objects move to a runtime-owned heap with headers, type descriptors, field tables, write barriers, safepoints, and root maps.
+4. **Legacy adapters**: Java `ObjectHandle` / Java-JIT bridge objects remain behind adapters until retired.
+
+The design pressure is therefore to name object operations in the neutral method IR. The IR should not say "load Java field `$referent`" or "read `ObjectHandle.m_clazz`". It should say `ref.get`, `field.load`, `type.is_a`, `array.load`, or `object.freeze`, and let the backend/runtime choose direct lowering, helper call, or bailout.
+
 ## Why XTC Bytecode Is Still the Right First Input
 
 The unorthodox choice to JIT bytecode rather than ASTs is awkward but defensible for this project:
@@ -94,6 +149,8 @@ For XVM, ORC gives useful building blocks:
 LLVM does not solve the hard XVM runtime problems by itself. The hard work is the XVM ABI:
 
 - object representation and metadata
+- object handle rooting and lifetime
+- object field access, mutation, and write barriers
 - generic specialization and JIT shape
 - constant pool access
 - multi-return values
@@ -125,7 +182,7 @@ Initial compiled function contract:
 - Input: `Ctx*` or opaque context handle, followed by primitive/reference arguments in the same conceptual order used by `JitMethodDesc`.
 - Return: first scalar result directly when possible; additional results through `Ctx` slots or an out-parameter result area.
 - Failure: return a status code or throw only through a documented exception bridge. Early leaf functions should avoid exceptions and use status returns for bailout.
-- References: opaque stable handles or native object pointers, never unmanaged raw Java object pointers with arbitrary lifetime.
+- References: opaque stable handles at first, or runtime-owned native object pointers later; never unmanaged raw Java object pointers with arbitrary lifetime.
 
 The first whitelist should be smaller than the current JVM JIT allowlist: arithmetic, comparisons, branches, simple local register movement, simple calls to already-compiled leaf functions, and immutable string/array primitives only after their representation is fixed.
 
@@ -192,6 +249,23 @@ Do not add `buildLlvm(...)` to every `Op` as the end state. It may be acceptable
 - an MLIR dialect or custom small IR if the project wants a durable multi-backend compiler layer
 
 The simplest maintainable first step is a custom small IR. MLIR is plausible later but would add more toolchain surface area than necessary for proving LLVM viability.
+
+### Object Access ABI
+
+LLVM should not get a private object model. It should consume an object model supplied by the runtime:
+
+- `xvm_ref` identity and lifetime
+- type descriptor lookup
+- field layout lookup or helper dispatch
+- mutability and construction-state checks
+- owner/container accounting
+- reference rooting for native frames
+- write barriers and safepoint rules
+- bailout metadata for live references
+
+For the Java-hosted prototype, direct object access should be forbidden. The backend may only pass references through, compare references where the ABI says token equality is identity equality, and call helpers. This keeps the first prototype honest: LLVM acceleration is useful for primitive-heavy methods and small call chains, while object-heavy code stays interpreted or helper-bound.
+
+For a native runtime, the same helper names can become inlineable ABI operations. A generated field load can then lower to "load from offset after type/layout guard" rather than "call helper", but only because the runtime owns the layout and GC contract.
 
 ### Exceptions
 

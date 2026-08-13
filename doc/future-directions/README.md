@@ -19,6 +19,7 @@ Appendices:
 
 - [Current JIT anatomy](chapters/jit-current-anatomy.md)
 - [LLVM JIT appendix](chapters/llvm-jit-appendix.md)
+- [LLVM object ABI notes](chapters/llvm-object-abi-notes.md)
 
 Naming convention:
 

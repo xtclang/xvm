@@ -36,6 +36,7 @@ The runtime exports:
 
 - object allocation and identity
 - type metadata/reflection lookup
+- opaque object references for compiled code
 - method dispatch
 - service/fiber scheduling
 - exception/failure propagation
@@ -79,6 +80,7 @@ Tasks:
 
 - [ ] Implement a simple interpreter over normalized body IR.
 - [ ] Implement opaque object handles and primitive value carriers.
+- [ ] Specify which handle operations are semantic helpers rather than direct field access.
 - [ ] Implement method calls, returns, multi-returns, exceptions, and simple properties.
 - [ ] Add a runtime context equivalent to the useful parts of `Ctx`.
 - [ ] Add conformance tests comparing Java interpreter, Java-JIT where possible, and Kotlin reference runtime.
@@ -111,6 +113,7 @@ Tasks:
 - [ ] Define allocation API and memory accounting.
 - [ ] Define service scheduler ABI.
 - [ ] Define native helper table used by LLVM code.
+- [ ] Define `xvm_ref` representation, root ownership, and helper-call lifetime rules.
 - [ ] Define stack/root reporting strategy.
 
 Acceptance:
@@ -124,6 +127,7 @@ Tasks:
 - [ ] Allow Kotlin/Java host to call native compiled methods.
 - [ ] Keep arbitrary objects opaque while primitives are unboxed.
 - [ ] Add helper calls for type tests, property access, and allocation.
+- [ ] Prevent native code from dereferencing Java `ObjectHandle` or Java-JIT bridge object fields.
 - [ ] Add fallback to Kotlin reference runtime or Java runtime.
 - [ ] Add unload/invalidation.
 
@@ -140,6 +144,7 @@ Tasks:
 - [ ] Add arrays and strings with stable layout.
 - [ ] Add root reporting or handle-table rooting.
 - [ ] Add moving/non-moving GC decision.
+- [ ] Add write barriers, safepoints, and direct-access eligibility checks before LLVM inlines object field access.
 
 Acceptance:
 
@@ -186,3 +191,4 @@ Acceptance:
 3. What is the native kernel language?
 4. Is XTC v2 a required predecessor for native runtime, or can the v1 adapter cover enough?
 5. Which tests are the runtime conformance source of truth?
+6. When does `xvm_ref` become a direct native pointer rather than an opaque handle-table token?

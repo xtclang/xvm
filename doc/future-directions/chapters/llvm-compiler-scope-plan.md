@@ -4,6 +4,8 @@ Investigation date: 2026-08-13
 
 This is a scope document and tentative task list for an LLVM-based compiler/JIT path. It assumes the current Java-JIT anatomy in [jit-current-anatomy.md](jit-current-anatomy.md), the LLVM study in [llvm-jit-study.md](llvm-jit-study.md), and the longer runtime direction in [runtime-port-self-hosting-study.md](runtime-port-self-hosting-study.md).
 
+Object manipulation details are expanded in [llvm-object-abi-notes.md](llvm-object-abi-notes.md).
+
 ## Scope Boundary
 
 LLVM work should compile a normalized XVM method body representation to native code. It should not initially:
@@ -33,6 +35,8 @@ Tasks:
 
 - [ ] Define `CompiledMethodKey`: module id, type id, method id, specialization id, signature, and invalidation version.
 - [ ] Define `RuntimeAbi`: context pointer, object handle, result area, status code, exception state, and helper-call table.
+- [ ] Define `xvm_ref`: opaque Java-hosted handle first, runtime-owned native pointer later.
+- [ ] Define reference rooting/lifetime rules for native frames and helper calls.
 - [ ] Define native representation for current `JitFlavor` categories.
 - [ ] Define fallback contract to Java interpreter or Java-JIT.
 - [ ] Define unload unit and resource tracker.
@@ -42,6 +46,7 @@ Acceptance:
 
 - A design doc has one C ABI table and one Java/Kotlin facade API.
 - No ABI field depends on Java object layout unless it is explicitly an opaque Java handle.
+- LLVM-generated code does not dereference Java objects directly.
 
 ## Phase 1: ORC Sidecar Skeleton
 
@@ -94,6 +99,7 @@ Acceptance:
 Tasks:
 
 - [ ] Add helpers for type constant lookup, object type test, boxing/unboxing, array access, string primitives, and constant literals.
+- [ ] Add helpers for field/property read and write, immutability check, `Ref`/`Var` get/set, object identity, and object freezing.
 - [ ] Define result-area layout for multiple returns.
 - [ ] Define nullable primitive and XVM primitive ABI.
 - [ ] Define bailout-to-interpreter metadata for live registers.
@@ -103,6 +109,23 @@ Acceptance:
 
 - LLVM can compile methods that call helper functions and return multi-slot results.
 - Bailout reports a specific method/op/register state.
+- Reference-returning helpers document whether results are rooted by the call frame, handle table, or runtime context.
+
+## Phase 4a: Opaque Object Access
+
+Tasks:
+
+- [ ] Classify object operations in neutral IR: identity, type test, field/property access, ref/var access, array/string access, allocation, freeze, and dispatch.
+- [ ] Lower each operation either to a runtime helper or to an unsupported-method bailout.
+- [ ] Keep all object references in opaque `xvm_ref` carriers.
+- [ ] Add tests where compiled primitive code passes objects through without observing their layout.
+- [ ] Add tests where compiled code calls helpers for type tests and property access.
+
+Acceptance:
+
+- Compiled code can pass and return arbitrary XTC references without knowing whether they are Java `ObjectHandle`, Java-JIT bridge objects, Kotlin reference-runtime handles, or future native objects.
+- No generated LLVM IR contains hardcoded offsets for Java object fields or Java-JIT bridge object fields.
+- Helper failure can return exception, suspend/block, unsupported, or deopt status without corrupting reference lifetimes.
 
 ## Phase 5: Calls and Dispatch
 
@@ -158,10 +181,12 @@ Tasks:
 - [ ] Add stack maps or explicit shadow-stack root reporting.
 - [ ] Add code invalidation and module unload.
 - [ ] Add debug metadata.
+- [ ] Define direct-access eligibility for native objects: header layout, field offsets, type guards, barriers, and safepoints.
 
 Acceptance:
 
 - Native code can allocate and call without depending on Java `ObjectHandle` internals.
+- Direct field access is enabled only for runtime-owned native layouts with documented GC/barrier behavior.
 
 ## Phase 9: AOT
 
@@ -187,6 +212,7 @@ Acceptance:
 | Current `.xtc` format forces late graph repair | compiler/runtime complexity | consume adapter-built method IR, pursue XTC v2 |
 | Services/fibers hidden in runtime calls | scheduler bugs | classify safepoints and exclude suspending ops early |
 | Native GC attempted too early | project stalls | opaque handles first, native heap later |
+| LLVM code dereferences Java/JVM objects | VM crashes or GC unsafety | represent references as opaque `xvm_ref` and route object semantics through runtime helpers |
 
 ## Near-Term Candidate Tests
 
@@ -195,6 +221,8 @@ Acceptance:
 - nullable primitive return
 - multi-return scalar method
 - direct call chain of two compiled methods
+- opaque object pass-through method
+- helper-backed field/property access method
 - unsupported op fallback
 - thrown Ecstasy exception converted to status
 - finally-on-return behavior
