@@ -164,10 +164,18 @@ public class FileStructure
 
     /**
      * Merge the specified module into this FileStructure.
+     * <p>
+     * A fingerprint child with the merged module's id is superseded by the real module. The
+     * merged module's external dependencies are represented here as fingerprints: fingerprints
+     * of the source file are cloned in, and dependencies that exist in the source file as real
+     * (embedded) sibling modules — as in a multi-module container ("bundle") — are synthesized
+     * as required fingerprints, so the merged module remains linkable when detached from its
+     * source container.
      *
      * @param module       the module to merge
      * @param fSynthesize  if true, synthesize all necessary structures
-     * @param fTakeFile    if true, merge the os-file info as well
+     * @param fTakeFile    if true, this FileStructure takes on the merged module's os-file info,
+     *                     and the merged module becomes this FileStructure's main module
      */
     public void merge(ModuleStructure module, boolean fSynthesize, boolean fTakeFile) {
         ModuleStructure moduleClone = module.cloneBody();
@@ -312,13 +320,10 @@ public class FileStructure
     }
 
     /**
-     * @return a set of module ids contained within this FileStructure; the caller must
-     *         treat the set as a read-only object
+     * @return an unmodifiable set of the module ids contained within this FileStructure
      */
     public Set<ModuleConstant> moduleIds() {
-        Set<ModuleConstant> setIds = f_moduleById.keySet();
-        assert (setIds = Collections.unmodifiableSet(setIds)) != null;
-        return setIds;
+        return Collections.unmodifiableSet(f_moduleById.keySet());
     }
 
     /**

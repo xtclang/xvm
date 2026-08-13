@@ -15,6 +15,8 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
+import org.xvm.asm.constants.ModuleConstant;
+
 import org.xvm.tool.LauncherOptions.BundlerOptions;
 
 import static org.xvm.util.Handy.quoted;
@@ -174,13 +176,19 @@ public class Bundler extends Launcher<BundlerOptions> {
             return module;
         }
 
-        // a root is a selected module that no OTHER selected module imports
-        List<ModuleStructure> roots = selection.values().stream()
-                .filter(candidate -> selection.values().stream()
-                        .filter(other -> other != candidate)
-                        .noneMatch(other -> other.collectDependencies().keySet().stream()
-                                .anyMatch(id -> id.getName()
-                                        .equals(candidate.getIdentityConstant().getName()))))
+        // a root is a selected module that no OTHER selected module imports; dependency name
+        // sets are collected once per module up front (collectDependencies walks structures)
+        Map<String, Set<String>> depNamesByModule = selection.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue()
+                        .collectDependencies().keySet().stream()
+                        .map(ModuleConstant::getName)
+                        .collect(Collectors.toSet())));
+
+        List<ModuleStructure> roots = selection.entrySet().stream()
+                .filter(entry -> depNamesByModule.entrySet().stream()
+                        .noneMatch(other -> !other.getKey().equals(entry.getKey())
+                                && other.getValue().contains(entry.getKey())))
+                .map(Map.Entry::getValue)
                 .toList();
 
         if (roots.size() == 1) {

@@ -4,7 +4,6 @@ package org.xvm.runtime.template._native.mgmt;
 import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
@@ -91,7 +90,7 @@ public class xCoreRepository
                 // out as a detached copy, so that reflection anchored on its file structure (such
                 // as "template.parent.resolve(repo).mainModule" in getResolvedModule) behaves
                 // exactly as if the module had been loaded from its own single-module file
-                module = new FileStructure(module, false).getModule();
+                module = module.detachedCopy();
             }
 
             return module == null
