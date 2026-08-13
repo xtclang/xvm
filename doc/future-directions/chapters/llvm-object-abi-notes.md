@@ -11,6 +11,7 @@ Related notes:
 - Main LLVM study: [llvm-jit-study.md](llvm-jit-study.md)
 - LLVM compiler scope plan: [llvm-compiler-scope-plan.md](llvm-compiler-scope-plan.md)
 - Runtime port scope plan: [runtime-port-scope-plan.md](runtime-port-scope-plan.md)
+- Performance and fiber runtime strategy: [performance-runtime-strategy.md](performance-runtime-strategy.md)
 
 ## Current Object Representations
 
@@ -51,6 +52,19 @@ Raw Java object pointers are not an acceptable ABI:
 - JNI local/global references are handles with lifetime rules, not arbitrary pointers
 - FFM does not allow native code to freely dereference Java object internals
 - Java object identity and Ecstasy object identity may not remain identical during migration
+
+## Memory Management Modes
+
+The object ABI has to name who owns memory.
+
+| Mode | Owner of XTC object memory | LLVM reference form | GC/rooting model | Performance ceiling |
+| --- | --- | --- | --- | --- |
+| Java-hosted | JVM heap | opaque handle-table token | Java GC plus JNI/FFM handles | good for primitive leaf code, poor for object-heavy code |
+| Kotlin/JVM reference runtime | JVM heap | opaque handle-table token | Java GC plus runtime slots | good for correctness/LSP/eval, not production speed |
+| Hybrid | JVM plus native XVM heap | tagged `xvm_ref` or discriminated handle | dual roots/adapters | useful transition, risky long-term |
+| Native XVM heap | XVM runtime | native pointer, compressed ref, or tagged ref | exact XVM GC roots and barriers | required for fastest object code and tight accounting |
+
+Java-hosted execution can count requested allocations through hooks such as `Ctx.alloc`, but it cannot cheaply and exactly manage XTC object lifetime because Java owns the real objects. Native XVM execution can make allocation, accounting, and GC part of the runtime ABI.
 
 ## Early ABI: Opaque Handles
 
@@ -106,6 +120,17 @@ Handle lifetime must also be explicit:
 
 This design is slower for object-heavy methods, but it is correct and incremental. It allows LLVM to accelerate primitive-heavy code, branches, loops, and small direct calls without pretending the Java runtime has a native object ABI.
 
+The handle table must not become the permanent performance model. It is acceptable only while the Java/Kotlin host owns objects. Every high-frequency helper should have a planned inline replacement:
+
+- `xvm_is_a` becomes a type-id or layout-version guard plus slow helper
+- `xvm_get_field` becomes a guarded offset load
+- `xvm_set_field` becomes a guarded offset store plus write barrier
+- `xvm_array_get_i64` becomes bounds check plus direct element load
+- `xvm_ref_get` becomes direct ref-box load only for native-layout boxes
+- `xvm_call` becomes direct call, inline cache, or devirtualized inlined body
+
+The mature rule is: helper calls remain for slow paths and semantic boundaries; hot layout-proven operations are direct native code.
+
 ## Later ABI: Native Object Layout
 
 Direct object manipulation requires a runtime-owned heap or a constrained native object arena. The minimum object header probably needs:
@@ -144,6 +169,82 @@ Arrays and strings should be treated as special native layouts because they domi
 
 Only after these contracts exist should LLVM emit direct loads/stores for object data.
 
+## Native GC Contract
+
+For direct native object access, the runtime must publish a GC contract as part of the ABI:
+
+- `xvm_ref` encoding: pointer, compressed pointer, handle-table index, or tagged value
+- object header shape and alignment
+- layout id and layout-version invalidation rules
+- allocation fast path and slow path
+- exact root reporting for compiled frames
+- continuation-frame root layout for suspended fibers
+- write-barrier sequence for reference stores
+- optional read-barrier sequence if the GC needs it
+- large-object and external-memory handling
+- weak-reference and finalization queues
+- container/service memory accounting
+
+The compiler must then emit GC-aware code:
+
+- keep references in known LLVM values
+- spill live references at safepoints or describe them in stack maps
+- call the allocation slow path when the nursery is exhausted
+- run write barriers after reference stores
+- avoid holding unreported references across helper calls
+- record deopt metadata for live primitive and reference values
+
+The current Java `runtime/gc` package contains an experimental `GcSpace` / `MarkAndSweepGcSpace` model with long addresses, roots, weak refs, and byte limits. It is useful precedent for an XVM-owned address space, but it still stores resources on the Java heap. The production native runtime needs the same kind of explicit root/address discipline backed by native storage and compiled-code metadata.
+
+## Fast-Path Lowering Model
+
+Object operations should be lowered in tiers:
+
+```text
+semantic operation
+  -> helper call
+  -> helper with primitive specialization
+  -> layout guard plus direct fast path plus helper slow path
+  -> devirtualized or inlined operation when specialization proves the shape
+```
+
+Example field read:
+
+```text
+field.load receiver, field_id
+  if unknown layout:
+      call xvm_get_field(ctx, receiver, field_id, out)
+  if known native layout:
+      guard receiver.layout_version == expected
+      value = load receiver + field_offset
+      if guard fails:
+          call xvm_get_field(...)
+```
+
+Example virtual call:
+
+```text
+call.dynamic receiver, method_id
+  if monomorphic:
+      guard receiver.type_id == expected
+      direct call compiled_method
+  if polymorphic but small:
+      inline cache over receiver.type_id/layout_id
+  otherwise:
+      call xvm_call(...)
+```
+
+The compiler can only emit these fast paths if the runtime publishes:
+
+- stable type/layout ids
+- invalidation/version rules
+- field offsets and representation kinds
+- barrier requirements
+- safepoint and root-map requirements
+- deoptimization entry metadata
+
+This is why object performance is a runtime design issue, not an LLVM codegen issue alone.
+
 ## Migration Guidance
 
 The project should avoid creating a third incompatible object world by accident. The migration should be explicit:
@@ -180,3 +281,5 @@ Object manipulation is not a reason to reject LLVM, but it does change the scope
 - A native runtime can make LLVM much more valuable because the compiler and runtime can share object layout, GC maps, and barriers.
 
 The recommended project order remains: opaque handles first, helper-backed object semantics second, selected native layouts third, full native heap last.
+
+The expected performance order is the reverse: full speed appears only as the runtime moves from opaque handles toward native layouts. The prototype is supposed to prove lowering and fallback. The product-grade runtime must make object operations inlineable.

@@ -9,6 +9,7 @@ Related notes:
 - Current implementation map: [jit-current-anatomy.md](jit-current-anatomy.md)
 - LLVM and runtime-interop appendix: [llvm-jit-appendix.md](llvm-jit-appendix.md)
 - LLVM object ABI notes: [llvm-object-abi-notes.md](llvm-object-abi-notes.md)
+- Performance and fiber runtime strategy: [performance-runtime-strategy.md](performance-runtime-strategy.md)
 - LLVM compiler scope plan: [llvm-compiler-scope-plan.md](llvm-compiler-scope-plan.md)
 - AST-vs-XTC feasibility analysis: [ast-vs-xtc-feasibility.md](ast-vs-xtc-feasibility.md)
 - Runtime port and self-hosting study: [runtime-port-self-hosting-study.md](runtime-port-self-hosting-study.md)
@@ -30,6 +31,8 @@ LLVM should not be bolted directly onto those `Op.build` methods as another per-
 The fastest useful prototype is a leaf-function LLVM accelerator. It would compile selected bytecode methods using primitive and simple reference signatures, call back to Java for unsupported operations, and run under a new `LlvmConnector` or under the Java-JIT connector as a delegated backend. The long-term architecture can evolve into a full native runtime, but that is a much larger project than adding LLVM code generation.
 
 The largest hidden risk is compiled code touching XTC objects. LLVM does not make this problem go away. Early LLVM code should manipulate non-primitive XTC values only through an opaque `xvm_ref` / helper-call ABI owned by the runtime. Direct native loads and stores into object fields become viable only after the runtime defines object layout, type metadata, write barriers, safepoints, root reporting, and identity rules. In other words: the compiler decides when an operation is eligible for direct lowering, but object semantics belong in the runtime ABI.
+
+The performance story depends on treating the opaque-handle bridge as a migration tool, not as the end state. Fast execution comes from native code over a typed method IR, unboxed values, runtime-owned object layouts, compact fiber continuation frames, and a scheduler/GC contract that compiled code can cooperate with cheaply.
 
 ## Current JIT Model
 
@@ -119,6 +122,32 @@ The likely migration path is:
 4. **Legacy adapters**: Java `ObjectHandle` / Java-JIT bridge objects remain behind adapters until retired.
 
 The design pressure is therefore to name object operations in the neutral method IR. The IR should not say "load Java field `$referent`" or "read `ObjectHandle.m_clazz`". It should say `ref.get`, `field.load`, `type.is_a`, `array.load`, or `object.freeze`, and let the backend/runtime choose direct lowering, helper call, or bailout.
+
+## How This Can Become Fast
+
+Opaque references and helper calls are not the desired steady state. They are a correctness bridge that lets LLVM enter the system before a native runtime is complete. The fast path has to move through several gates:
+
+1. **Typed method IR**: the backend receives normalized control flow, precise types, representation choices, safepoints, and call descriptors. It should not rediscover all semantics from raw ops in hot code.
+2. **Unboxed values**: booleans, integers, floats, nullable primitives, small tuples, and XVM primitives stay in registers or fixed result areas. Boxing is a boundary operation, not the default representation.
+3. **Helper-call elimination**: object operations begin as helpers, then graduate to guarded inline sequences when the runtime publishes a native layout and barrier contract.
+4. **Direct hot layouts**: arrays, strings, numeric boxes, refs/vars, and ordinary objects get compact runtime-owned layouts. LLVM can emit offset loads/stores only for those layouts.
+5. **Specialization**: generic, relational, nullable, and virtual-call-heavy code needs method specializations keyed by type/layout/version facts. Invalidations go through the runtime code cache.
+6. **Compact fibers**: compiled code runs as ordinary native code inside non-suspending regions, but loop headers, calls, allocation, and service operations are explicit safepoints. If a safepoint blocks, live values are spilled into a compact runtime continuation frame.
+7. **Small runtime kernel**: production execution should not load the Kotlin compiler, Java interpreter, or AST machinery. It should load typed metadata, native/AOT code cache, runtime libraries, scheduler, allocator, and intrinsic table.
+
+The mature execution shape should look like this:
+
+```text
+typed method IR
+  -> representation planning
+  -> native code with safepoint maps and layout guards
+  -> direct native object/array/string access on proven layouts
+  -> runtime helpers only for slow paths, uncommon traps, services, allocation, and deopt
+```
+
+For fiber-style execution, the key is to avoid giving every Ecstasy fiber a large native stack. A future XVM fiber should be mostly heap/runtime metadata: current method, state, mailbox/waits, timeout/context tokens, and a compact stack of continuation frames. Native compiled functions can use the machine stack while they are running, but they must not suspend at arbitrary instructions. Suspension happens only at safepoints where the compiler has emitted enough metadata to spill live values into the fiber frame.
+
+That model allows very fast straight-line and loop code because the common path is not an interpreter dispatch loop and not a helper call per operation. It also keeps footprint low because suspended fibers retain compact value arrays/frames rather than OS-thread stacks.
 
 ## Why XTC Bytecode Is Still the Right First Input
 
@@ -280,9 +309,29 @@ There are two viable memory strategies:
 
 LLVM has statepoint and stack map infrastructure that can help describe live roots and patch/deopt metadata, but those facilities do not replace the runtime design.
 
+The distinction is decisive:
+
+- In Java-hosted mode, the JVM decides object movement and reclamation. XVM can account requested bytes through hooks, but it cannot make object layout compact, guarantee exact object size, or let LLVM directly update fields.
+- In hybrid mode, some `xvm_ref` values point to native objects and some wrap Java objects. This is useful for migration but creates cross-heap rooting and cycle problems.
+- In native mode, the XVM runtime owns allocation, headers, roots, barriers, and GC. This is the only mode that can combine low footprint, exact container accounting, high fiber counts, and fast object-heavy native code.
+
+The recommended native memory design is exact GC, not conservative native-stack scanning. Roots should come from fiber records, compiled safepoint maps or shadow stacks, module constants, service queues, native handle scopes, and code-cache metadata. Allocation should use per-service or per-worker nurseries with a bump-pointer fast path and a slow path for quota checks, GC, large objects, and hard-limit behavior.
+
+Early native GC can be simple stop-the-world mark/sweep or copying collection, but the ABI should leave room for a generational collector. Direct field stores require write barriers from the first moment object references can cross generations or service/container ownership boundaries.
+
 ### Services and Fibers
 
 Compiled code must not block the XVM scheduler invisibly. The early whitelist should exclude operations that can suspend, wait on futures, perform service sends, or need debugger interaction. Later phases need explicit poll/safepoint operations in lowered IR and a convention for returning to the scheduler.
+
+For performance, the long-term scheduler contract should be stackless at suspension points:
+
+- non-suspending compiled regions run on the native stack
+- safepoints have spill maps for live primitive/reference values
+- blocking helpers return a status that materializes a compact continuation frame
+- resumes jump back through a generated resume stub or re-enter the method IR at a safepoint
+- service sends and waits never park an OS thread per Ecstasy fiber
+
+This is more compiler/runtime work than mapping Ecstasy fibers to host threads, but it is the route to high fiber counts and low memory use.
 
 ### AOT
 
@@ -293,6 +342,8 @@ An LLVM JIT path can later support AOT by sharing the bytecode-to-IR lowering an
 Feasible: yes.
 
 Recommended first implementation: LLVM sidecar JIT for whitelisted bytecode methods, hosted by Java, using a narrow runtime ABI and fallback to existing execution.
+
+Recommended performance direction: do not stop at the sidecar. Use it to validate lowering, then move hot execution to a native runtime ABI with compact fibers, direct layouts for hot objects, AOT/JIT code caching, and helper calls only on slow paths.
 
 Not recommended as first implementation:
 
@@ -308,6 +359,15 @@ Primary success criteria for a prototype:
 - Support primitive `JitFlavor` shapes, nullable primitive shape, and multi-return through a documented result area.
 - Fall back cleanly on unsupported ops.
 - Keep generated native code unloadable by module or test run.
+
+Primary success criteria for the fast runtime:
+
+- no per-op dispatch in hot compiled code
+- no mandatory helper call for primitive arithmetic, local control flow, or proven-layout field/array access
+- no OS stack allocated per suspended Ecstasy fiber
+- bounded metadata footprint for modules and specializations
+- code cache can unload cold module/specialization code
+- GC/root maps cover native frames at every safepoint
 
 ## External Sources Consulted
 

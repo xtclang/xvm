@@ -9,6 +9,7 @@ The referenced Kotlin compiler work is assumed to be `../research-fork-orig`; th
 Related documents:
 
 - LLVM study: [llvm-jit-study.md](llvm-jit-study.md)
+- Performance and fiber runtime strategy: [performance-runtime-strategy.md](performance-runtime-strategy.md)
 - LLVM scope plan: [llvm-compiler-scope-plan.md](llvm-compiler-scope-plan.md)
 - Runtime port plan: [runtime-port-scope-plan.md](runtime-port-scope-plan.md)
 - Kotlin compiler/runtime boundary: [kotlin-compiler-runtime-boundary.md](kotlin-compiler-runtime-boundary.md)
@@ -26,6 +27,8 @@ The project should stop thinking of "the runtime" as one monolithic Java thing t
 5. **Execution backends**: interpreter/reference execution, JVM classfile JIT while it exists, LLVM/native JIT/AOT, and test harnesses.
 
 The first serious cleanup should be boundary work, not native code. Define what a compiled method sees, what a runtime object is, what a module exports, what a service can do, and what metadata is available without reaching into Java compiler internals.
+
+Performance is a first-class requirement for that boundary work. The architecture should not accidentally preserve Java interpreter costs behind new names. The target production runtime is small and native-oriented: compact module tables, compact fibers, direct layouts for hot objects, AOT/JIT code cache, and Ecstasy libraries above a small host kernel.
 
 ## What Should Move Out of Java
 
@@ -101,12 +104,47 @@ Purpose:
 - execute hot/full programs without the Java interpreter
 - provide native object layout, allocation, service scheduling, and code cache
 - support LLVM JIT first and AOT later
+- keep suspended fibers as compact runtime records rather than parked host-thread stacks
+- make hot code run as direct native code with helper calls only for slow paths
 
 Non-goal:
 
 - reuse the interpreter `Frame`/`ObjectHandle` structure directly
 
 This runtime should use the same module model and ABI as the Kotlin reference runtime.
+
+## Performance Thesis
+
+The conservative LLVM sidecar is not the performance destination. It is a way to validate lowering, ABI boundaries, and fallback while the runtime is still Java-hosted.
+
+The fast runtime requires these properties:
+
+- method bodies execute from typed IR compiled to native code, not from per-op interpreter dispatch
+- primitive and nullable primitive values remain unboxed through calls where signatures allow it
+- hot object operations become direct loads/stores guarded by type/layout/version checks
+- arrays, strings, refs/vars, and numeric boxes have stable native layouts early
+- memory management is owned by the runtime in production, not delegated to Java object lifetime
+- safepoints are explicit in method IR and compiled code
+- suspension spills live values to compact continuation frames
+- blocked fibers do not keep native stacks or OS threads alive
+- runtime metadata can be loaded without source ASTs or compiler state
+- core runtime libraries can be AOT compiled and application code can be lazily JIT compiled
+
+This implies a staged performance arc:
+
+1. Java-hosted LLVM proves primitive-heavy methods and fallback.
+2. Kotlin reference runtime proves compact state and snapshot semantics.
+3. Native kernel defines object layout, fiber frames, allocator, and safepoints.
+4. LLVM backend graduates object operations from helpers to guarded direct access.
+5. AOT/JIT cache keeps startup and footprint controlled.
+
+Memory management has the same staged shape:
+
+- **Java-hosted**: useful for migration; JVM GC owns object lifetime, so XVM memory accounting and native object access are limited.
+- **Hybrid**: selected arrays/strings/boxes move to native storage behind `xvm_ref`; useful but must avoid becoming a permanent dual-GC architecture.
+- **Native XVM heap**: production target; XVM owns allocation, headers, roots, barriers, container accounting, and GC.
+
+The native heap is what makes the long-term performance goal credible. It lets the compiler emit allocation fast paths, stack/root maps, write barriers, direct array/string access, and compact suspended fiber roots without Java `ObjectHandle` overhead.
 
 ## Self-Hosting Strategy
 

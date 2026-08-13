@@ -13,6 +13,7 @@ Create a runtime architecture where:
 - A Kotlin reference runtime can validate semantics.
 - An LLVM/native runtime can evolve behind the same ABI.
 - Ecstasy owns the language-level runtime libraries above a small host kernel.
+- Production execution can use low-footprint fibers and fast native code without an OS thread or Java frame per Ecstasy fiber.
 
 ## Non-Goals
 
@@ -44,6 +45,16 @@ The runtime exports:
 - compiled-code ABI helpers
 
 The compiler may produce the module model; it must not be required at execution time unless running an LSP/eval/compiler-service mode.
+
+## Performance Targets
+
+The runtime port should be judged against three long-term constraints:
+
+- **Minimum footprint**: production runtime does not load ASTs, compiler mutable state, Java interpreter frames, or large per-fiber stacks. Metadata is table-backed and lazily loaded where possible.
+- **Fiber scale**: suspended Ecstasy fibers are compact runtime records plus continuation frames, not parked OS threads.
+- **Fast execution**: hot code is native code over typed method IR, unboxed values, direct native layouts, and helper calls only for slow paths.
+
+Opaque object handles are acceptable during migration, but they are not sufficient for final performance. The native runtime must eventually publish object layouts, barriers, root maps, safepoints, and invalidation rules so LLVM can inline object operations safely.
 
 ## Phase 0: Stabilize Current Java Runtime as Oracle
 
@@ -99,10 +110,13 @@ Tasks:
 - [ ] Implement scheduler loop in Kotlin reference runtime.
 - [ ] Add resource and future handling for a restricted subset.
 - [ ] Add debugger-safe snapshots.
+- [ ] Define compact continuation-frame format for suspended fibers.
+- [ ] Separate non-suspending native stack execution from safepoint suspension.
 
 Acceptance:
 
 - A compiled/interpreted function can return blocked/paused/repeat status without corrupting execution state.
+- A waiting fiber can be represented without retaining an OS thread stack.
 
 ## Phase 4: Native Runtime Kernel Design
 
@@ -111,14 +125,19 @@ Tasks:
 - [ ] Choose implementation language for kernel components.
 - [ ] Define object header, type metadata pointer/handle, immutability bits, owner/container id, and construction state.
 - [ ] Define allocation API and memory accounting.
+- [ ] Define memory ownership modes: JVM-owned handles, hybrid native objects, and fully native XVM heap.
 - [ ] Define service scheduler ABI.
 - [ ] Define native helper table used by LLVM code.
 - [ ] Define `xvm_ref` representation, root ownership, and helper-call lifetime rules.
 - [ ] Define stack/root reporting strategy.
+- [ ] Define per-service/per-thread allocation fast path and nursery ownership.
+- [ ] Define compact fiber record: status, mailbox/waits, timeout/tokens, frame stack, roots, and debug id.
+- [ ] Define container quota semantics: reserve, commit, promote/share, free, and hard-limit behavior.
 
 Acceptance:
 
 - A written ABI is detailed enough for LLVM compiled code and Kotlin reference runtime to share tests.
+- The ABI describes what compiled code must spill at safepoints and what the scheduler owns after suspension.
 
 ## Phase 5: Hybrid Native Execution
 
@@ -145,10 +164,50 @@ Tasks:
 - [ ] Add root reporting or handle-table rooting.
 - [ ] Add moving/non-moving GC decision.
 - [ ] Add write barriers, safepoints, and direct-access eligibility checks before LLVM inlines object field access.
+- [ ] Add compact layout ids and layout versions for specialization guards.
+- [ ] Add direct-access fast paths for primitive arrays, strings, refs/vars, and simple objects.
+- [ ] Implement native allocation slow path: nursery refill, quota check, GC trigger, large-object path, and exception/block status.
 
 Acceptance:
 
 - Selected objects no longer require Java object handles.
+- LLVM can inline proven-layout object operations with helper slow paths.
+
+## Phase 6b: Native GC
+
+Tasks:
+
+- [ ] Choose first native collector: stop-the-world mark/sweep, semi-space young collection, or simple generational collector.
+- [ ] Define exact root sources: compact fiber frames, running compiled frames, runtime globals, service queues, module constants, FFI handle scopes, and code-cache embedded refs.
+- [ ] Implement shadow-stack roots or LLVM stack-map/statepoint roots for compiled code.
+- [ ] Implement weak refs, finalization/notification queues, and large-object space.
+- [ ] Implement write barriers for reference stores.
+- [ ] Add optional read barrier only if the chosen collector requires it.
+- [ ] Add per-container/service memory accounting and GC pressure policy.
+- [ ] Add diagnostics for heap size, live bytes, allocation rate, promotion rate, roots, and pause time.
+
+Acceptance:
+
+- Native object code can allocate, store references, suspend, and collect without Java object handles.
+- GC can reclaim unreachable native objects using exact roots from fibers and compiled frames.
+- Container hard limits can fail or terminate deterministically through runtime status, not host OOM.
+
+## Phase 6a: Footprint and Throughput Work
+
+Tasks:
+
+- [ ] Measure per-fiber memory in Java runtime, Kotlin reference runtime, and native prototype.
+- [ ] Measure per-module metadata footprint and code-cache footprint.
+- [ ] Add code-cache eviction/unload by module and specialization.
+- [ ] AOT-compile the minimum runtime/kernel libraries needed for startup.
+- [ ] Lazy-load reflection/debug/source metadata outside normal execution.
+- [ ] Add benchmarks for fiber creation, suspend/resume, service send, primitive loop, array loop, allocation, and dispatch.
+
+Acceptance:
+
+- Runtime footprint can be reported as base runtime, per-module metadata, per-fiber state, per-object overhead, and code-cache size.
+- A suspended fiber's steady-state memory is a compact frame/root record, not a native stack.
+- Hot loops run through compiled code paths without interpreter dispatch.
 
 ## Phase 7: Ecstasy Runtime Libraries
 
@@ -192,3 +251,5 @@ Acceptance:
 4. Is XTC v2 a required predecessor for native runtime, or can the v1 adapter cover enough?
 5. Which tests are the runtime conformance source of truth?
 6. When does `xvm_ref` become a direct native pointer rather than an opaque handle-table token?
+7. What minimum per-fiber memory target is acceptable for production?
+8. Should the native runtime use stackless continuations only, or allow stacklets for selected non-blocking regions?

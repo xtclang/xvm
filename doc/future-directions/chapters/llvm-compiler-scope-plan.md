@@ -5,6 +5,7 @@ Investigation date: 2026-08-13
 This is a scope document and tentative task list for an LLVM-based compiler/JIT path. It assumes the current Java-JIT anatomy in [jit-current-anatomy.md](jit-current-anatomy.md), the LLVM study in [llvm-jit-study.md](llvm-jit-study.md), and the longer runtime direction in [runtime-port-self-hosting-study.md](runtime-port-self-hosting-study.md).
 
 Object manipulation details are expanded in [llvm-object-abi-notes.md](llvm-object-abi-notes.md).
+Performance and fiber-runtime direction is expanded in [performance-runtime-strategy.md](performance-runtime-strategy.md).
 
 ## Scope Boundary
 
@@ -166,11 +167,14 @@ Tasks:
 - [ ] Add poll/safepoint at loop headers and calls.
 - [ ] Define status returns for blocked, paused, repeated, and exception states.
 - [ ] Integrate with future runtime scheduler API.
+- [ ] Define compiled continuation-frame spill maps for every safepoint.
+- [ ] Define resume stubs or re-entry protocol for suspended compiled methods.
 
 Acceptance:
 
 - Compiled code cannot block the scheduler invisibly.
 - Long loops can yield at runtime-defined safepoints.
+- A blocked compiled frame can be represented without keeping an OS thread stack alive.
 
 ## Phase 8: Native Runtime Expansion
 
@@ -182,11 +186,52 @@ Tasks:
 - [ ] Add code invalidation and module unload.
 - [ ] Add debug metadata.
 - [ ] Define direct-access eligibility for native objects: header layout, field offsets, type guards, barriers, and safepoints.
+- [ ] Add layout-version guards and slow-path helper fallback for direct object operations.
+- [ ] Add compact metadata tables for type/layout/field ids.
+- [ ] Define Java-hosted, hybrid, and native-heap ownership modes for `xvm_ref`.
 
 Acceptance:
 
 - Native code can allocate and call without depending on Java `ObjectHandle` internals.
 - Direct field access is enabled only for runtime-owned native layouts with documented GC/barrier behavior.
+
+## Phase 8a: Performance Graduation
+
+Tasks:
+
+- [ ] Add representation planner over method IR: scalar registers, nullable primitive pairs, small tuple/result areas, and flattened fields.
+- [ ] Add direct fast paths for proven-layout field loads/stores.
+- [ ] Add direct fast paths for primitive arrays, byte arrays, and string indexing.
+- [ ] Add monomorphic and small-polymorphic inline caches for method dispatch.
+- [ ] Add allocation fast path for per-service or per-thread nurseries.
+- [ ] Add code-cache policy: lazy compile, AOT core libraries, unload cold specializations.
+- [ ] Add counters for helper-call frequency, safepoint frequency, allocation rate, and deopt rate.
+
+Acceptance:
+
+- A hot primitive loop runs as native code without helper calls.
+- A hot array loop runs with direct element access after layout/type guards.
+- Suspended fibers retain compact runtime continuation frames instead of native stacks.
+- Code and metadata footprint are measurable per module and per specialization.
+
+## Phase 8b: Native Memory Management
+
+Tasks:
+
+- [ ] Implement allocation fast path in generated code for native heap layouts.
+- [ ] Implement allocation slow path for nursery refill, quota check, GC trigger, and large objects.
+- [ ] Emit write barriers for reference stores.
+- [ ] Emit root metadata through shadow stack or LLVM stack maps/statepoints.
+- [ ] Spill compiled-frame roots into compact fiber continuation frames at suspending safepoints.
+- [ ] Add GC-safe deoptimization metadata for live primitive and reference values.
+- [ ] Add tests where GC runs while compiled frames and suspended fibers hold references.
+- [ ] Add memory-accounting tests for container soft/hard limits.
+
+Acceptance:
+
+- Native compiled code can allocate and survive a collection without Java handles.
+- The collector can find all roots from running compiled frames, suspended fibers, services, module constants, and FFI handle scopes.
+- A hard memory limit returns a structured runtime status or terminates the container, not the host process.
 
 ## Phase 9: AOT
 
@@ -213,6 +258,11 @@ Acceptance:
 | Services/fibers hidden in runtime calls | scheduler bugs | classify safepoints and exclude suspending ops early |
 | Native GC attempted too early | project stalls | opaque handles first, native heap later |
 | LLVM code dereferences Java/JVM objects | VM crashes or GC unsafety | represent references as opaque `xvm_ref` and route object semantics through runtime helpers |
+| Opaque helper ABI becomes permanent | object-heavy code stays slow | require direct-layout graduation criteria and measure helper-call density |
+| Fiber suspension keeps native stacks alive | memory footprint explodes | use safepoint spill maps and compact continuation frames |
+| Over-specialization bloats code cache | footprint and startup regress | versioned specialization budget, lazy compile, AOT core only, unload cold code |
+| Hybrid Java/native heap becomes permanent | leaks, pinned objects, poor GC behavior | use hybrid only for named migration layouts and require native-heap exit criteria |
+| GC root maps are incomplete | memory corruption | make exact root reporting a gate before direct native object access |
 
 ## Near-Term Candidate Tests
 
@@ -223,6 +273,9 @@ Acceptance:
 - direct call chain of two compiled methods
 - opaque object pass-through method
 - helper-backed field/property access method
+- direct native-layout array loop
+- compact continuation spill/resume at safepoint
+- GC during compiled frame and suspended fiber roots
 - unsupported op fallback
 - thrown Ecstasy exception converted to status
 - finally-on-return behavior
