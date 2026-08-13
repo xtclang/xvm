@@ -182,6 +182,11 @@ fingerprints" result deterministically.
 
 ### Runtime consumption — the one open design risk (spike first)
 
+> **RESOLVED** — see [Implementation findings](#implementation-findings-phases-0-3). Both launch
+> forms work; outcome 2(b) happened, but the merge fingerprint-synthesis fix *is* the detach
+> helper, so no separate mechanism was needed. Two additional consumers of the single-module-file
+> assumption were found and fixed at the repository boundaries.
+
 How the Runner gets the main module out of the bundle matters more than the bundle itself:
 
 - The `-L` chain is a read-through `LinkedRepository` (Launcher.java:699): `loadModule()` clones a
@@ -329,9 +334,115 @@ Steps:
   drive-by, but don't trip it either (the `FileRepository` override should return null-consistent
   results the same way).
 
+## Implementation findings (phases 0-3)
+
+Everything below was learned by building it; branch `multi-module-single-binary-xtc-repository`.
+
+### Spike results (task 0)
+
+- The two-module hand-bundle proved the format round-trips and exposed the real failure mode
+  immediately: running the bundle crashed with a `validateConstants` assert inside
+  `NativeContainer.createFileStructure`. Root cause: merging a module out of a container whose
+  sibling dependencies are *real modules* (not fingerprints) leaves the target pool ignorant of
+  those modules, so `ConstantPool.register` **silently refuses** the clone's constants (research
+  gotcha #8 verified in the wild) and the clone keeps source-pool references.
+- Fix: `merge()` synthesizes `Required` fingerprints for every real-sibling module in the merged
+  module's transitive `collectDependencies()` closure (only when the source file
+  `hasMultipleChildren()`). This one fix is what makes *detached copies* of bundle members
+  self-describing — the planned "detach helper" fell out for free.
+- `merge()` also now supersedes a same-id *fingerprint* child with the real module instead of
+  silently keeping the stub (`addChild()`'s ignored `false` return, research gotcha #1). Real-vs-
+  real collisions still no-op; the Bundler guards duplicates upstream.
+- Subtle timing bug worth remembering: the primary module id must be established *provisionally
+  before* fingerprint synthesis (the `ModuleStructure` ctor auto-marks new modules as fingerprints
+  only if the file already has a different primary id), then **re-established after**
+  `registerConstants` — the clone's identity constant is replaced by the pool-owned one during
+  registration, and serializing the pre-registration constant writes a garbage position (this
+  produced corrupt, unreadable bundles until fixed).
+- `linkModules` (runtime phase) needed the predicted tolerance: ids absorbed from a multi-module
+  file (`listModulesTodo.addAll(fileUnlinked.moduleIds())`) that have no fingerprint child in the
+  app structure are now skipped — sharing a container with a dependency does not make a module a
+  dependency.
+- `validateConstants()` asserts a runtime-only precondition (`NakedRefType` present), so offline
+  bundling uses the split-out `validateModuleConstants()`.
+- Verified end-to-end: `xec -L bundle.xtc bundle.xtc` (explicit-file path) AND
+  `xec -L bundle.xtc ModB` (repository/by-name path incl. the read-through clone) both run.
+
+### Two more "a module's file is its own file" consumers (found in platform validation)
+
+The codebase-wide assumption that a module's `FileStructure` is a single-module file surfaced in
+exactly two more places, both fixed by serving non-main bundle members as **detached copies** at
+the repository boundaries (the copies are correct thanks to the merge fingerprint synthesis):
+
+1. **`ModuleRepository.getResolvedModule`** (lib_ecstasy mgmt/ModuleRepository.x:39) returns
+   `template.parent.resolve(this).mainModule` — for a bundle-attached module, `parent` is the
+   bundle and `mainModule` is the *bundle's* main. Symptom: jsondb's `ModuleGenerator.findSchema`
+   scanned **kernel's** classes while reporting "Schema is not found in module
+   'platformDB.xqiz.it'". Fix: `xCoreRepository.getModule` (native) hands out a detached copy for
+   non-main container members.
+2. **Runtime-compiler fingerprint hoisting**: compile-time `linkModules` hoists transitive
+   fingerprints into the compiled file (`fileTop.addChild(moduleFingerprint)`), assuming
+   downstream repo modules resolve to fingerprint-shaped files. Against a raw bundle the
+   downstream "fingerprint" is a real embedded module and hoisting silently degrades — the
+   platform's runtime-generated `platformDB_jsondb` module compiled *without* its transitive
+   fingerprints, exploding later at `invokeReplace` with `Missing module "common.xqiz.it"`. Fix:
+   `FileRepository.loadModule` serves non-main members as detached copies (memoized in the cache;
+   the container's main module stays attached, and staleness is judged by the main module only,
+   since fresh clones always read as "modified").
+
+The Java `-L` chain (Runner/linker) deliberately still sees the container-attached main module —
+the explicit-file launch path reads the `FileStructure` directly and `BuildRepository` stores by
+reference, so no copies are made where none are needed.
+
+### Platform validation results (task 3)
+
+- `xtc bundle -v -L build/install/platform/lib --main kernel.xqiz.it -o platform.xtc`:
+  all **11 modules** bundled (selection is by *declared* name — `proxy.xtc` correctly enters as
+  `proxy_manager.xqiz.it`), externals correctly limited to 16 `xtclang.org` fingerprints.
+- **Size: 2,479,766 bytes vs ~4.9 MB** of separate files — the shared constant pool roughly
+  halves the footprint.
+- `xec -L platform.xtc platform.xtc password` boots with **full parity**: identical log sequence
+  (AccountManager → HostManager → UI controller → certificate → "Started the XtcPlatform"),
+  HTTPS endpoint answers identically. Dynamic by-name resolution (`host.xqiz.it`,
+  `platformUI.xqiz.it`, `proxy_manager.xqiz.it`) and the runtime jsondb module
+  generation-and-compile path both work against the bundle.
+- Negative test: omitting a *statically imported* module (`common.xqiz.it`) from the selection
+  produces the bundle-time warning naming it. **Documented limitation**: modules resolved only
+  *dynamically by name* (host/platformUI/proxy_manager style) are invisible to static analysis and
+  cannot be warned about — bundling "everything on the module path" (the default) is the safe
+  mode for such applications.
+
+### Test coverage
+
+- `BundlerTest` (javatools): options parse + command-line round-trip, launcher dispatch (help,
+  invalid args), multi-module container round-trip through `FileStructure` + generalized
+  `FileRepository` (detached serving, memoization, version-aware lookup), single-module
+  regression.
+- `LauncherOptionsJsonTest`: `BundlerOptions` JSON round-trip.
+- `XdkIntegrationTest`: bundler dispatch coverage.
+- Full `javatools:test` and `xdk:test` suites green with all core changes.
+
 ## Can the XDK itself ship as a single `.xtc`?
 
-**Yes — and it is now planned as a phase, not a maybe.** The evidence:
+> **Status (2026-08-13): DONE as an opt-in artifact.** `./gradlew xdk:bundleXdk` (JavaExec over the
+> installed dist, configuration-cache compatible, incremental) produces `xdk/build/bundle/xdk.xtc`:
+> **all 22 XDK modules** — ecstasy (main), mack, `_native`, and every lib — in one **4,355,750-byte
+> fully self-contained file with zero remaining fingerprints** (separate files: ~4.6 MB). A new
+> `--include-system` bundler flag lifts the implicit xtclang.org exclusion. Validated by compiling
+> AND running the two-module spike app with `-L xdk.xtc` as the *only* system library reference
+> (`java -jar javatools.jar build/run`, bypassing the launcher scripts' -L injection).
+>
+> **Footprint measurement (the phase-4 decision point)**: trivial-app run, lib-dir XDK 255 MB max
+> RSS / 2.74 s vs bundle XDK 320 MB / 3.03 s — the absorb-all cost of materializing all 22 modules
+> is **+25% RSS, +11% startup** for an app that needs three of them; the delta shrinks as apps use
+> more of the XDK. **Decision: option (a) — accept absorb-all for the opt-in artifact.** Revisit
+> lazier loading only if/when the single file becomes the default distribution form.
+>
+> Remaining follow-ups (deliberately not done): switching the generated launcher scripts to
+> `-L xdk.xtc` (XdkDistribution.kt), docker image, publishing xdk.xtc as a distribution artifact,
+> and making the single file the default.
+
+**Yes — and it is now planned as a phase, not a maybe.** The original evidence:
 
 - The runtime *already does this in memory on every startup*: `NativeContainer` merges ecstasy +
   turtle + `_native` into one `FileStructure` (NativeContainer.java:137-141) and per-app containers

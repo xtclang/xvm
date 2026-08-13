@@ -337,6 +337,7 @@ xtc bundle [options] [<module_name_or_file> ...]
 | `-L <path>` | Module path to select modules from and resolve dependencies against |
 | `-o, --output <file>` | File (or directory) to write the bundle to; defaults to `<main>.bundle.xtc` |
 | `--main <module>` | Qualified name of the module to use as the bundle's main module; defaults to the only selected module that no other selected module imports |
+| `--include-system` | Also bundle system (`xtclang.org`) modules when selecting from the module path (used to build a fully self-contained single-file XDK) |
 
 ### Examples
 

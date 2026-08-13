@@ -119,7 +119,9 @@ public abstract class LauncherOptions {
         .addOption(builder("o").longOpt("output").argName("file").hasArg()
             .desc("File (or directory) to write the bundle to; defaults to <main>.bundle.xtc").get())
         .addOption(builder().longOpt("main").argName("module").hasArg()
-            .desc("Qualified name of the module to use as the bundle's main module").get());
+            .desc("Qualified name of the module to use as the bundle's main module").get())
+        .addOption(builder().longOpt("include-system")
+            .desc("Also bundle system (xtclang.org) modules when selecting from the module path").get());
 
     /**
      * Apache Commons CLI Options schema for the initializer.
@@ -1712,12 +1714,23 @@ public abstract class LauncherOptions {
             return getTrailingArgs();
         }
 
+        /**
+         * @return true iff system (xtclang.org) modules should also be bundled when selecting
+         *         implicitly from the module path
+         */
+        public boolean isIncludeSystem() {
+            return hasOption("include-system");
+        }
+
         @Override
         public String[] toCommandLine() {
             final List<String> args = new ArrayList<>();
             Collections.addAll(args, super.toCommandLine());
             getOutputFile().ifPresent(file -> args.addAll(List.of("-o", file.getPath())));
             getMainModule().ifPresent(main -> args.addAll(List.of("--main", main)));
+            if (isIncludeSystem()) {
+                args.add("--include-system");
+            }
             args.addAll(getModuleSelection());
             return args.toArray(String[]::new);
         }
@@ -1765,6 +1778,14 @@ public abstract class LauncherOptions {
              */
             public Builder addModule(final String nameOrFile) {
                 args.add(nameOrFile);
+                return this;
+            }
+
+            /**
+             * Also bundle system (xtclang.org) modules when selecting from the module path.
+             */
+            public Builder includeSystem() {
+                args.add("--include-system");
                 return this;
             }
 

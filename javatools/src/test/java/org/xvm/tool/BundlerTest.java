@@ -34,12 +34,13 @@ class BundlerTest {
     void testBundlerOptionsParse() {
         var opts = BundlerOptions.parse(new String[] {
                 "-v", "-L", "/lib", "-o", "/out/app.xtc", "--main", "app.example.org",
-                "extra.example.org"});
+                "--include-system", "extra.example.org"});
 
         assertTrue(opts.isVerbose());
         assertEquals(1, opts.getModulePath().size());
         assertEquals(new File("/out/app.xtc"), opts.getOutputFile().orElseThrow());
         assertEquals("app.example.org", opts.getMainModule().orElseThrow());
+        assertTrue(opts.isIncludeSystem());
         assertEquals(1, opts.getModuleSelection().size());
         assertEquals("extra.example.org", opts.getModuleSelection().getFirst());
     }
@@ -51,6 +52,7 @@ class BundlerTest {
                 .addModulePath(new File("/lib"))
                 .setOutputFile(new File("/out/app.xtc"))
                 .setMainModule("app.example.org")
+                .includeSystem()
                 .addModule("extra.example.org")
                 .build();
 
@@ -60,6 +62,7 @@ class BundlerTest {
         assertEquals(original.getModulePath(), restored.getModulePath());
         assertEquals(original.getOutputFile(), restored.getOutputFile());
         assertEquals(original.getMainModule(), restored.getMainModule());
+        assertEquals(original.isIncludeSystem(), restored.isIncludeSystem());
         assertEquals(original.getModuleSelection(), restored.getModuleSelection());
     }
 
