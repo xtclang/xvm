@@ -13,6 +13,8 @@ Related notes:
 - LLVM compiler scope plan: [llvm-compiler-scope-plan.md](llvm-compiler-scope-plan.md)
 - Runtime port scope plan: [runtime-port-scope-plan.md](runtime-port-scope-plan.md)
 
+Second-pass review (2026-08-13): several recommendations in this note are sharpened or superseded by [memory-fibers-gc-alternatives.md](memory-fibers-gc-alternatives.md) (conservative-first root reporting, MMTk-first collector, three fiber models with mmap-stacks-first sequencing, deopt within one object world) and [alternative-backends-and-precedents.md](alternative-backends-and-precedents.md) (the "small host kernel" goal contradicts in-process LLVM — resolutions there; OSR/deopt/suspend unified as one frame-externalization mechanism). Numeric targets replacing this note's adjectives live in [risk-matrix-and-decision-gates.md](risk-matrix-and-decision-gates.md).
+
 ## Target Runtime Shape
 
 The production target should be:
@@ -281,12 +283,11 @@ The collector must never conservatively scan arbitrary native stacks as the main
 - native/FFI handle scopes
 - code-cache embedded references
 
-Two implementation options:
+Implementation options, in second-pass recommended order (see [memory-fibers-gc-alternatives.md](memory-fibers-gc-alternatives.md)):
 
-- **Shadow stack**: compiled code registers live references in explicit root slots around calls/safepoints. Simpler and good for a first native runtime, with some overhead.
-- **Stack maps/statepoints**: compiled code emits metadata describing live references at safepoints. Lower steady-state overhead, more backend/runtime complexity.
-
-The runtime can start with a shadow stack for correctness, then move hot compiled paths to stack maps once deoptimization and frame metadata are reliable.
+- **Conservative stack scan + exact heap + pinning collector**: the cheapest correct start (V8 and Ruby precedent); requires only pinnable collection (Immix) and no interior-pointer refs. Recommended first.
+- **Shadow stack**: compiled code registers live references in explicit root slots around calls/safepoints. Use only if a non-pinning collector is forced.
+- **Stack maps/statepoints**: lowest steady-state overhead, highest backend/runtime complexity, and the LLVM statepoint machinery has a weak maintenance record. Arrives last, and only on paths that need compaction or compact continuation frames.
 
 ### Barriers
 

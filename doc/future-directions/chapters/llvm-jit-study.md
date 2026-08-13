@@ -14,6 +14,8 @@ Related notes:
 - AST-vs-XTC feasibility analysis: [ast-vs-xtc-feasibility.md](ast-vs-xtc-feasibility.md)
 - Runtime port and self-hosting study: [runtime-port-self-hosting-study.md](runtime-port-self-hosting-study.md)
 
+Second-pass review (2026-08-13): this study's conclusions are challenged, corrected, and extended in [second-opinion-review.md](second-opinion-review.md), [alternative-backends-and-precedents.md](alternative-backends-and-precedents.md) (LLVM-as-JIT precedents, tiering, OSR, footprint contradiction), and [memory-fibers-gc-alternatives.md](memory-fibers-gc-alternatives.md) (roots, fibers, deopt). Note in particular: the "fall back to existing execution" language below is phase-dependent — no interpreter fallback exists today, and once a native heap exists the fallback tier must be a native-world method-IR interpreter, not the Java interpreter.
+
 ## Executive Conclusion
 
 XTC can support LLVM-based JIT code generation. The repository already treats the portable XVM binary as the deployable execution artifact, and the XVM design documentation explicitly says that the portable binary was designed as input for JIT and AOT compilation, while efficient interpretation was a non-requirement (`doc/x.md:600`). That makes bytecode-to-native a legitimate direction even though the current bytecode is not a pleasant compiler IR.
@@ -204,7 +206,7 @@ Java-facing API:
 - `lookup(engine, method_key) -> function_pointer`
 - `release(engine, compiled_handle)`
 
-The Java side should hide this behind an `LlvmRuntime` service. If the project is on JDK 22 or later, the Foreign Function & Memory API is a better default than hand-written JNI glue for ordinary calls into the sidecar. JNI may still be needed where native code must call deeply into the JVM or hold Java object handles.
+The Java side should hide this behind an `LlvmRuntime` service. The repo baseline is JDK 25 (second-pass verification), so the Foreign Function & Memory API is unconditionally available and is the default; JNI is only relevant where native code must call deeply into the JVM or hold Java object handles. Note the measurement caveat in [second-opinion-review.md](second-opinion-review.md): helper calls from native code back into Java are FFM *upcalls*, the most expensive boundary crossing — object-heavy sidecar benchmarks measure that boundary, not the architecture.
 
 Initial compiled function contract:
 

@@ -16,7 +16,7 @@ LLVM exception handling uses explicit exceptional control flow, typically `invok
 
 LLVM statepoints and stack maps can support runtime root reporting, safepoints, patching, and deoptimization metadata. They are tools for a runtime, not a runtime by themselves.
 
-OpenJDK JEP 454 finalized the Foreign Function & Memory API in JDK 22. FFM provides `Linker`, `SymbolLookup`, `FunctionDescriptor`, `MemorySegment`, `Arena`, and related APIs for Java-to-native calls and off-heap memory access. It is the cleanest default path for Java invoking a native LLVM sidecar when the project baseline permits JDK 22 or later.
+OpenJDK JEP 454 finalized the Foreign Function & Memory API in JDK 22. FFM provides `Linker`, `SymbolLookup`, `FunctionDescriptor`, `MemorySegment`, `Arena`, and related APIs for Java-to-native calls and off-heap memory access. Second-pass resolution: the repo baseline is already JDK 25 (`version.properties`), so FFM is unconditionally available — the FFM-vs-JNI decision point discussed below is settled in FFM's favor, and the JNI notes remain only for the deep-JVM-interaction cases.
 
 ## Candidate LLVM Lowering Pipeline
 

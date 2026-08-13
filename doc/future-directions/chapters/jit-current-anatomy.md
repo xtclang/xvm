@@ -4,6 +4,8 @@ Investigation date: 2026-08-13
 
 This appendix records how the current in-repository JIT works and which details matter for a possible LLVM backend.
 
+Second-pass verification (2026-08-13): the claims below were re-verified against source; corrections and additions are marked inline and consolidated in [second-opinion-review.md](second-opinion-review.md).
+
 ## High-Level Shape
 
 The current JIT is an Ecstasy-to-Java-classfile compiler. It is not an AST compiler and it is not a native-code compiler. It compiles XTC bytecode ops from `MethodStructure.getOps()` into JVM bytecode using the JDK Class-File API.
@@ -115,11 +117,15 @@ The base op API is in `javatools/src/main/java/org/xvm/asm/Op.java:419`:
 
 - `computeTypes(BuildContext)` defaults to following the type matrix
 - `build(BuildContext, CodeBuilder)` defaults to throwing unsupported
+- note that `build` returns an `int` control directive, not `void`: `-1` means continue, and a positive op address means "skip/eliminate all ops up to that address" — the lowering hook has peephole/dead-range elision built in
 
-Local count from this worktree:
+Coverage count from this worktree (second pass):
 
-- 420 Java files under `javatools/src/main/java/org/xvm/asm`
-- 88 files with `public int build(BuildContext`, meaning only a subset of ops has Java-JIT lowering hooks
+- 215 op classes under `javatools/src/main/java/org/xvm/asm/op`
+- 81 define `build` directly; six shared base classes (`OpGeneral`, `OpCondJump`, `OpIndex`, `OpInPlace`, `OpInPlaceAssign`, `OpTest`) cover another ~86, for roughly 78% effective coverage
+- uncovered as whole families: all tuple-form calls/invokes (20 classes), all property in-place ops (17), tuple/multi var ops, and `Return_T`
+- an unimplemented op does not fall back: the `UnsupportedOperationException` from `Op.build` aborts generation of the entire class, and there is no interpreter fallback or mixed-mode execution anywhere in the process
+- methods outside the `JIT_LIST` allowlist are silently stubbed to emit a default return — a correctness hazard for anything run outside the allowlist
 
 LLVM implication: the current backend knows too much at the per-op Java-code-emission layer. A second backend needs a neutral lowering layer, not another copy of the same coupling.
 
@@ -192,17 +198,25 @@ LLVM implication: a native backend needs equivalent context, object metadata, mu
 
 LLVM implication: the interpreter is too Java-object-heavy to be the primary native execution frame. It should remain a compatibility path and a correctness oracle. Native compiled methods should integrate at call boundaries with clear marshal/fallback rules.
 
+## Body Double-Encoding: Ops and BAST
+
+A fact this appendix originally omitted: every compiled method body is serialized twice in the `.xtc` file — as the `Op[]` stream this JIT consumes, and as a BinaryAST (53 node classes under `javatools/src/main/java/org/xvm/asm/ast/`, lazily read by `MethodStructure.getAst()`). The only execution-stack consumer of the BAST is debugger eval (`org.xvm.compiler.EvalCompiler`); the JIT reconstructs control flow and type facts from the op stream while a higher-level typed encoding of the same body sits unread in the same file. The BAST section carries no independent version/magic. Implications for the neutral method IR are developed in [xtc-v2-format-and-method-ir.md](xtc-v2-format-and-method-ir.md).
+
+## Toolchain Baseline
+
+The repo pins JDK 25 (`version.properties`, `org.xtclang.java.jdk=25`). The Class-File API used by the JIT is final (JEP 484, JDK 24); the real JDK floor is `ScopedValue` (`Ctx.Current`), final in JDK 25. FFM is therefore unconditionally available for any native sidecar work. The `Ctx` memory-accounting TODOs explicitly plan to "park this virtual thread and schedule a different fiber" — the Java-JIT runtime design already assumes Loom virtual threads for fibers.
+
 ## Current Limitations Relevant to LLVM
 
 Observed from source:
 
-- JIT method support is partial and allowlisted.
-- Many Java-JIT builder paths throw `UnsupportedOperationException`.
-- Memory accounting in `Ctx` is TODO.
-- Service support is not in the main JIT allowlist.
+- JIT method support is partial and allowlisted; non-allowlisted methods are silently stubbed to return defaults.
+- Many Java-JIT builder paths throw `UnsupportedOperationException`, and any such throw aborts the whole generated class — there is no fallback path.
+- Memory accounting in `Ctx` is TODO (all four methods are empty).
+- Service support is not in the main JIT allowlist; the bridge `nService` is a stub whose async operations throw.
 - Virtual constructors, union types, generic formal resolution, and several property/call cases remain incomplete.
 - Generated class dumping is hardwired in `JitConnector.invoke0Impl`.
-- The current Java-JIT runtime and interpreter runtime are not the same ABI.
+- The current Java-JIT runtime and interpreter runtime are not the same ABI, and they share no object model at all (zero cross-imports; Ecstasy exceptions are detected by class-name-prefix string matching plus a reflective field read at the connector boundary).
 
 These limitations are not arguments against LLVM. They are arguments for making LLVM a staged backend behind a narrow, tested ABI.
 

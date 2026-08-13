@@ -13,6 +13,15 @@ Start here:
 3. [AST vs XTC bytecode feasibility](chapters/ast-vs-xtc-feasibility.md) - whether a future compiler/runtime should keep current XTC bytecode central, move to ASTs, or introduce typed module tables plus method IR.
 4. [Performance and fiber runtime strategy](chapters/performance-runtime-strategy.md) - how the conservative LLVM bridge can evolve into low-footprint fibers and fast native execution.
 
+Second pass (2026-08-13) — verification, challenges, and new directions:
+
+- [Second-opinion review](chapters/second-opinion-review.md) - claim-by-claim verification of the first pass against the repo and the research fork; corrections, contradictions, and resolutions. Read this after the first-pass studies.
+- [Alternative backends and precedents](chapters/alternative-backends-and-precedents.md) - what JSC/HHVM/Azul/Julia learned about LLVM as a JIT; Cranelift, Truffle, MLIR, Wasm/WasmGC; the JVM-max (Loom/Valhalla/ZGC) Plan B; revised tiering and OSR.
+- [Memory, fibers, and GC alternatives](chapters/memory-fibers-gc-alternatives.md) - MMTk vs custom collector, conservative-first roots, three fiber models, deopt across object worlds, Erlang/Pony precedents for per-service heaps, the (identity, type-view) reference problem.
+- [XTC v2 format and method IR](chapters/xtc-v2-format-and-method-ir.md) - the ops+BAST double-encoding fact, ECMA-335 as deliberate precedent, identity/content-hash design, the "one IR, two producers" invariant.
+- [Minimal cleanroom runtime study](chapters/minimal-cleanroom-runtime-study.md) - how big the runtime is today (measured), and the smallest complete interpreter-only cleanroom runtime: component budget, schedule, language choice.
+- [Risk matrix and decision gates](chapters/risk-matrix-and-decision-gates.md) - the risk register, numeric targets replacing adjectives, and go/no-go gates G0-G6.
+
 Planning chapters:
 
 - [LLVM compiler scope plan](chapters/llvm-compiler-scope-plan.md)

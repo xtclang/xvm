@@ -18,6 +18,16 @@ The fork already points the right way:
 
 This is a good basis for both LSP and a future main compiler. It is not by itself a runtime architecture.
 
+## Second-Pass Reality Check (2026-08-13)
+
+Verification against the fork (branch `symbols-and-types`, 2026-08-11) corrects the picture above in both directions; details in [second-opinion-review.md](second-opinion-review.md):
+
+- **Stronger than stated**: the compiler is complete through a full XTC v1 *backend*, with method-for-method bytecode equivalence against the Java compiler across the entire XDK (10,587/10,587 methods, zero unmapped semantic differences). It reads and writes `.xtc` and already sits on both sides of the module boundary.
+- **Weaker than stated**: "Roslyn-style incremental" is aspiration — the pipeline is batch; `FrozenSymbolInterner.derive()` has three call sites; there is no query graph, no invalidation, no memoization across edits. The phase products listed above (`SourceIndex`, `TypeFacts`, `CallFacts`, `FlowFacts`, `EmitPlan`, `ConstantPlan`, `BytecodeModule`) come from the fork's planning documents, not implemented code; the implemented artifact is a batch `SemanticModel` whose facts live in ~20 side-channel maps keyed by AST object identity — with five fallback lookup modes because identity already leaks.
+- **Missing**: no abstract module model exists; the only module artifact is the v1 binary format itself. The frozen module model proposed here must therefore be designed and built, and it is the same artifact as XTC v2 — see [xtc-v2-format-and-method-ir.md](xtc-v2-format-and-method-ir.md).
+- **Not green**: the runtime lane (Kotlin-compiled modules executing on the Java runtime) has known unexplained failures; bytecode convergence has not yet been shown to imply correct execution.
+- **Governance**: the work lives on a personal fork, alpha, gated out of the default build. "Semantic owner for the language" requires upstreaming and a second maintainer before any architecture in this note can be treated as load-bearing.
+
 ## Boundary Rule
 
 The runtime must not depend on:

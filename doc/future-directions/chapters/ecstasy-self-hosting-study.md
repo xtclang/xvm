@@ -96,6 +96,8 @@ Acceptance:
 
 Write method-IR verification and safe local optimizations in Ecstasy. These operate on frozen module/model records, not on Java/Kotlin AST internals.
 
+Second-pass note: the verifier is more than a self-hosting candidate — once native codegen exists, it is the security gate that preserves Ecstasy's container guarantees for loaded modules, so it must exist regardless ([xtc-v2-format-and-method-ir.md](xtc-v2-format-and-method-ir.md)). That makes it the highest-leverage first self-hosted compiler component: it is needed anyway, it is pure, and it runs against frozen records.
+
 Candidates:
 
 - control-flow graph verifier

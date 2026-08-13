@@ -2,6 +2,8 @@
 
 Investigation date: 2026-08-13
 
+Second-pass review (2026-08-13): the recommendation below (typed module tables + method IR) is developed into a concrete format/identity/verifier design in [xtc-v2-format-and-method-ir.md](xtc-v2-format-and-method-ir.md), which also records two facts that change the sequencing: `.xtc` already double-encodes bodies (ops + BinaryAST, with execution using the lower encoding), and the Kotlin compiler's only module artifact today is the v1 format itself — so the frozen module model and XTC v2 are one design task, and the schema work should be pulled forward.
+
 This document answers three feasibility questions:
 
 1. If starting from the Kotlin compiler today, how much simpler would it be to use ASTs/semantic IR and remove major parts of the current XTC bytecode/constant-pool format?

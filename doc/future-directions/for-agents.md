@@ -1,6 +1,6 @@
 # For Agents
 
-Investigation date: 2026-08-13
+Investigation date: 2026-08-13 (first pass); second pass completed later the same day — see the "Second Pass" section at the end of this file before repeating any verification work.
 
 This file is a continuation prompt for another agent or human reviewer. It summarizes the conversation that produced the future-direction documents, the research conclusions so far, and the questions that still deserve independent challenge.
 
@@ -291,3 +291,39 @@ b0cd25d18 Document native runtime performance strategy
 ```
 
 No PR was opened, per user request.
+
+## Second Pass (2026-08-13, Claude)
+
+A second agent pass verified every load-bearing claim against the repo and against `../research-fork-orig`, challenged the first-pass conclusions, and added new chapters. Do not re-verify from scratch; start from [chapters/second-opinion-review.md](chapters/second-opinion-review.md).
+
+What the second pass did:
+
+- Verified the JIT anatomy claims (mostly CONFIRMED; corrections: `Op.build` returns an `int` skip directive; ~78% effective op coverage with whole families missing; unsupported ops abort class generation with no fallback of any kind; non-allowlisted methods are silently stubbed to return defaults — a standing correctness hazard).
+- Verified the runtime claims (fibers are stackless heap frame chains — confirmed; boxing-heavy allocation — confirmed with mitigations; the `runtime/gc` package is a dead 2023 experiment — confirmed; memory accounting is not "approximate" but absent; `doc/x.md` explicitly specifies per-service allocation/GC and real-time metering, so per-service heaps are documented design intent, not speculation).
+- Surveyed the research fork in depth: the Kotlin compiler is a complete second implementation (~230k lines) with a full XTC v1 backend at method-for-method bytecode equivalence across the whole XDK — far beyond what the first pass credited — but "Roslyn-style incremental" is aspiration (batch pipeline, identity-keyed side-channel maps, no query engine), no abstract module model exists (the v1 binary is the only module artifact), and the runtime lane has unexplained failures.
+- Surfaced facts the first pass missed: `.xtc` double-encodes every body (ops + BinaryAST; execution uses the lower encoding, BAST is unversioned and read only by debugger eval); the repo is pinned to JDK 25 (FFM-vs-JNI question is moot); the Java-JIT `Ctx` design already assumes Loom virtual threads; Ecstasy references are (identity, type-view) pairs, so a bare-pointer `xvm_ref` is semantically insufficient.
+- Added the missing industry precedents: JSC abandoned LLVM as a JIT tier (B3), HHVM declined it, Azul made it work with permanent specialist staffing, Julia's latency tax; Erlang/BEAM and Pony/ORCA as the closest precedents for per-service heaps; .NET/ECMA-335 as the proven instance of "typed tables + method IR"; Loom/Valhalla/ZGC/Leyden as the rising JVM-max baseline.
+- Resolved contradictions: small-kernel vs in-process LLVM (AOT-first kernel / out-of-process compile service / Cranelift); interpreter-fallback vs native heap (fallback tier must share the object world — the native runtime carries its own method-IR interpreter); one-IR-two-producers stated as an invariant; sidecar benchmarks measure FFM upcall costs, not architecture.
+- Unified suspend/deopt/OSR/GC-poll as one frame-externalization mechanism (no OSR story existed in the first pass).
+- Added, at user request, a minimal-cleanroom-runtime study: the interpreter runtime is ~63k lines of Java (+ the read-only half of the 114k-line `asm` layer); a complete interpreter-only cleanroom runtime in a GC'd language is estimated at 45-75k lines, ~2-4 weeks to hello-world, 3-6 months to XDK/TCK-mostly-green, 6-10 months to full conformance; recommended language Kotlin (reusing fork loader/type code), Go as the independent-oracle option.
+- Added, at user request, a measured compiler-vs-runtime decomposition (same chapter): effective compiler ≈95-105k lines vs effective interpreter runtime ≈100-110k (~1:1), with the 229 mixed op classes split method-by-method — compiler/format ~3.8k, interpreter `process` ~3.5k, JIT `build`/`computeTypes` ~2.0k, shared helpers ~7.9k, scaffolding ~15.7k — and the ~47k-line constant/type algebra identified as the genuinely shared core.
+- Recommended sequencing changes: measure first (baseline corpus G0, Loom fiber experiment G1), build the v1-consuming reference runtime now (G2), merge module-model + XTC v2 into one schema task, demote the LLVM sidecar to post-XIR ABI rehearsal, and hold the JVM-max vs native decision (G3) on data.
+
+New chapters:
+
+- [chapters/second-opinion-review.md](chapters/second-opinion-review.md)
+- [chapters/alternative-backends-and-precedents.md](chapters/alternative-backends-and-precedents.md)
+- [chapters/memory-fibers-gc-alternatives.md](chapters/memory-fibers-gc-alternatives.md)
+- [chapters/xtc-v2-format-and-method-ir.md](chapters/xtc-v2-format-and-method-ir.md)
+- [chapters/minimal-cleanroom-runtime-study.md](chapters/minimal-cleanroom-runtime-study.md)
+- [chapters/risk-matrix-and-decision-gates.md](chapters/risk-matrix-and-decision-gates.md)
+
+Existing chapters were edited in place where claims were wrong (JIT anatomy coverage/fallback/JDK facts, Kotlin-boundary reality check, root-reporting order, open-decision answers); each edited section links back to the review chapter.
+
+What a third pass should challenge next:
+
+- The numeric targets in the gates chapter are proposals with no product sign-off; pressure-test them against actual deployment goals (server / embedded / browser).
+- The MMTk-first and Cranelift-tier-1 recommendations are argued from public evidence, not from spikes; both deserve timeboxed prototypes.
+- BAST fidelity as an XIR seed is asserted plausible but unaudited: measure BAST coverage/expressiveness against the op stream on the XDK corpus.
+- The cleanroom-runtime schedule calibration leans on one data point (the fork's velocity); a two-week Tier-A spike would validate or correct it.
+- Nobody has root-caused the fork's runtime-lane failures; that investigation is cheap and blocks the "Kotlin compiler as semantic owner" decision.

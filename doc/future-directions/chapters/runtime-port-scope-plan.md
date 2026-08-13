@@ -245,11 +245,13 @@ Acceptance:
 
 ## Open Decisions
 
-1. Should the Kotlin reference runtime live in `research-fork-orig` first or be ported into this repo after the compiler branch lands?
-2. What is the minimum JDK baseline for FFM support?
-3. What is the native kernel language?
-4. Is XTC v2 a required predecessor for native runtime, or can the v1 adapter cover enough?
-5. Which tests are the runtime conformance source of truth?
-6. When does `xvm_ref` become a direct native pointer rather than an opaque handle-table token?
-7. What minimum per-fiber memory target is acceptable for production?
-8. Should the native runtime use stackless continuations only, or allow stacklets for selected non-blocking regions?
+Second-pass status (2026-08-13) is noted inline; several are now answered or reframed — see [second-opinion-review.md](second-opinion-review.md) and [risk-matrix-and-decision-gates.md](risk-matrix-and-decision-gates.md).
+
+1. Should the Kotlin reference runtime live in `research-fork-orig` first or be ported into this repo after the compiler branch lands? — *Reframed:* build it now against v1 `.xtc` rather than waiting for the frozen model; see [minimal-cleanroom-runtime-study.md](minimal-cleanroom-runtime-study.md).
+2. What is the minimum JDK baseline for FFM support? — **Answered:** the repo is pinned to JDK 25; FFM is unconditionally available.
+3. What is the native kernel language? — *Open;* an MMTk-based GC strategy weighs toward Rust ([memory-fibers-gc-alternatives.md](memory-fibers-gc-alternatives.md)).
+4. Is XTC v2 a required predecessor for native runtime, or can the v1 adapter cover enough? — *Reframed:* the frozen module model and XTC v2 are one artifact; the *schema* must come early, the serialization can come late ([xtc-v2-format-and-method-ir.md](xtc-v2-format-and-method-ir.md)).
+5. Which tests are the runtime conformance source of truth? — *Proposed:* TCK + `manualTests` + a differential harness against the Java interpreter, run on every backend (gate G0).
+6. When does `xvm_ref` become a direct native pointer rather than an opaque handle-table token? — *Extended:* also decide how the (identity, type-view) reference model is represented; a bare pointer is insufficient for `maskAs`/`revealAs` semantics.
+7. What minimum per-fiber memory target is acceptable for production? — *Proposed numbers* in [risk-matrix-and-decision-gates.md](risk-matrix-and-decision-gates.md); needs product sign-off.
+8. Should the native runtime use stackless continuations only, or allow stacklets for selected non-blocking regions? — **Answered (recommended):** per-fiber lazy-commit stacks first, stackless continuation frames as a graduation tier for hot services; copy-on-suspend only on the JVM host via Loom ([memory-fibers-gc-alternatives.md](memory-fibers-gc-alternatives.md)).
