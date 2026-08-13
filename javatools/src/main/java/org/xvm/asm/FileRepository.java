@@ -4,7 +4,9 @@ package org.xvm.asm;
 import java.io.File;
 import java.io.IOException;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -217,7 +219,11 @@ public class FileRepository
         var mapVersions = new LinkedHashMap<String, VersionTree<Boolean>>();
         mapModules.forEach((sName, module) -> mapVersions.put(sName, module.getVersions()));
 
-        this.names          = Set.copyOf(mapModules.keySet());
+        // deterministic (primary module first) AND immutable: the JDK's Set.of/Set.copyOf are
+        // hash-ordered (randomized per JVM run), so an unmodifiable view over a LinkedHashSet is
+        // the only stdlib form that keeps insertion order; wrapped once here, handed out for
+        // free by getModuleNames()
+        this.names          = Collections.unmodifiableSet(new LinkedHashSet<>(mapModules.keySet()));
         this.versionsByName = mapVersions;
         this.modulesByName  = mapModules;
         this.struct         = struct;
