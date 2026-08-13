@@ -4,9 +4,7 @@ package org.xvm.asm;
 import java.io.File;
 import java.io.IOException;
 
-import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -67,7 +65,7 @@ public class FileRepository
     @Override
     public Set<String> getModuleNames() {
         checkCache();
-        return Collections.unmodifiableSet(names);
+        return names;
     }
 
     @Override
@@ -219,7 +217,7 @@ public class FileRepository
         var mapVersions = new LinkedHashMap<String, VersionTree<Boolean>>();
         mapModules.forEach((sName, module) -> mapVersions.put(sName, module.getVersions()));
 
-        this.names          = new LinkedHashSet<>(mapModules.keySet());
+        this.names          = Set.copyOf(mapModules.keySet());
         this.versionsByName = mapVersions;
         this.modulesByName  = mapModules;
         this.struct         = struct;
@@ -290,7 +288,7 @@ public class FileRepository
     private final boolean fRO;
 
     // never null: empty when the file is absent, unreadable, or not yet scanned; the loaded
-    // state is signified by a non-null struct
+    // state is signified by a non-null struct; names is always immutable and safe to hand out
     private Set<String>                       names          = Set.of();
     private Map<String, VersionTree<Boolean>> versionsByName = Map.of();
     private Map<String, ModuleStructure>      modulesByName  = Map.of();
