@@ -5,11 +5,18 @@ import java.io.File;
 import java.io.IOException;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
+
+import java.util.stream.Stream;
 
 
 /**
- * A simple ModuleRepository for a single file with a single module.
+ * A simple ModuleRepository for a single file. The file is most commonly a single-module .xtc, but
+ * an .xtc file is a module container and may hold multiple modules (a "bundle"), in which case
+ * every real (non-fingerprint) module in the container is exposed by this repository.
  */
 public class FileRepository
         implements ModuleRepository {
@@ -18,7 +25,7 @@ public class FileRepository
     /**
      * Construct a single-file ModuleRepository.
      *
-     * @param file       the file that contains the single module
+     * @param file       the file that contains the module(s)
      * @param fReadOnly  true to make the repository "read-only"
      */
     public FileRepository(File file, boolean fReadOnly) {
@@ -60,22 +67,49 @@ public class FileRepository
     @Override
     public Set<String> getModuleNames() {
         checkCache();
-        return file.exists() && name != null ? Collections.singleton(name) : Collections.emptySet();
+        return file.exists() && names != null
+                ? Collections.unmodifiableSet(names)
+                : Collections.emptySet();
     }
 
     @Override
     public VersionTree<Boolean> getAvailableVersions(String sModule) {
         checkCache();
-        return !err && name.equals(sModule) ? versions : null;
+        return !err && versionsByName != null ? versionsByName.get(sModule) : null;
     }
 
     @Override
     public ModuleStructure loadModule(String sModule) {
-        ModuleStructure module = checkCache();
-        if (sModule.equals(name)) {
-            return module == null ? ensureModule() : module;
+        checkCache();
+        if (names == null || !names.contains(sModule)) {
+            return null;
         }
-        return null;
+
+        Map<String, ModuleStructure> modules = ensureModules();
+        return modules == null ? null : modules.get(sModule);
+    }
+
+    @Override
+    public ModuleStructure loadModule(String sModule, Version version, boolean fExact) {
+        // the default implementation narrows a module to a version via ModuleStructure
+        // .extractVersion(), which asserts that the module is the main module of its file
+        // structure; that does not hold for the non-main modules of a multi-module container,
+        // so version matching is done in place here instead
+        if (version == null) {
+            return loadModule(sModule);
+        }
+
+        ModuleStructure module = loadModule(sModule);
+        if (module == null) {
+            return null;
+        }
+
+        Version ver = module.getVersion();
+        if (ver == null) {
+            return null;
+        }
+
+        return (fExact ? ver.equals(version) : ver.isSubstitutableFor(version)) ? module : null;
     }
 
     @Override
@@ -99,11 +133,9 @@ public class FileRepository
             throw new IOException("Error writing module to file: " + file, e);
         }
 
-        this.name      = module.getIdentityConstant().getName();
-        this.versions  = module.getVersions();
+        cacheFrom(module.getFileStructure());
         this.timestamp = file.lastModified();
         this.size      = file.length();
-        this.module    = module;
         this.lastScan  = System.currentTimeMillis();
     }
 
@@ -135,31 +167,48 @@ public class FileRepository
 
     /**
      * Make sure that the cache is up to date.
-     *
-     * @return the module, if it is handy, or null if it is not handy
      */
-    ModuleStructure checkCache() {
+    void checkCache() {
         if (isCacheValid()) {
-            return module;  // might be null, or might not be
+            return;
         }
 
         this.timestamp = file.lastModified();
         this.size      = file.length();
         this.err       = false;
 
-        ModuleStructure module = tryLoad();
-        if (module == null) {
-            this.name     = null;
-            this.versions = null;
-            this.err      = true;
+        FileStructure struct = tryLoad();
+        if (struct == null) {
+            this.names          = null;
+            this.versionsByName = null;
+            this.modulesByName  = null;
+            this.err            = true;
         } else {
-            this.name     = module.getIdentityConstant().getName();
-            this.versions = module.getVersions();
+            cacheFrom(struct);
         }
 
-        this.module   = null;
         this.lastScan = System.currentTimeMillis();
-        return module;
+    }
+
+    /**
+     * Populate the cache from the passed file structure.
+     *
+     * @param struct  the FileStructure to cache the contained module information from
+     */
+    private void cacheFrom(FileStructure struct) {
+        // the primary module comes first; fingerprints represent external dependencies of the
+        // contained modules and are not modules that this repository can provide
+        var mapModules = new LinkedHashMap<String, ModuleStructure>();
+        Stream.concat(Stream.of(struct.getModule()), struct.children().stream())
+                .filter(module -> !module.isFingerprint())
+                .forEach(module -> mapModules.putIfAbsent(module.getIdentityConstant().getName(), module));
+
+        var mapVersions = new LinkedHashMap<String, VersionTree<Boolean>>();
+        mapModules.forEach((sName, module) -> mapVersions.put(sName, module.getVersions()));
+
+        this.names          = new LinkedHashSet<>(mapModules.keySet());
+        this.versionsByName = mapVersions;
+        this.modulesByName  = mapModules;
     }
 
     /**
@@ -174,36 +223,42 @@ public class FileRepository
         }
 
         if (!file.exists()) {
-            name   = null;
-            module = null;
+            names          = null;
+            versionsByName = null;
+            modulesByName  = null;
             return true;
         }
 
-        if (name == null || timestamp != file.lastModified() || size != file.length()) {
+        if (names == null || timestamp != file.lastModified() || size != file.length()) {
             return false;
         }
 
         return true;
     }
 
-    private ModuleStructure ensureModule() {
+    private Map<String, ModuleStructure> ensureModules() {
         if (err) {
             return null;
         }
 
-        if (module == null || module.isModified()) {
-            module = tryLoad();
+        if (modulesByName == null
+                || modulesByName.values().stream().anyMatch(ModuleStructure::isModified)) {
+            FileStructure struct = tryLoad();
+            if (struct == null) {
+                err = true;
+                return null;
+            }
+            cacheFrom(struct);
         }
 
-        return module;
+        return modulesByName;
     }
 
-    private ModuleStructure tryLoad() {
+    private FileStructure tryLoad() {
         try {
-            FileStructure struct = new FileStructure(file);
-            return struct.getModule();
+            return new FileStructure(file);
         } catch (Exception e) {
-            System.out.println("Error loading module from file: " + file + "; " + e.getMessage());
+            System.out.println("Error loading module(s) from file: " + file + "; " + e.getMessage());
         }
 
         err = true;
@@ -213,14 +268,14 @@ public class FileRepository
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private final File           file;
-    private final boolean        fRO;
+    private final File file;
+    private final boolean fRO;
 
-    private String               name;
-    private VersionTree<Boolean> versions;
-    private long                 timestamp;
-    private long                 size;
-    private ModuleStructure      module;
-    private long                 lastScan;
-    private boolean              err;
+    private Set<String>                       names;
+    private Map<String, VersionTree<Boolean>> versionsByName;
+    private Map<String, ModuleStructure>      modulesByName;
+    private long                              timestamp;
+    private long                              size;
+    private long                              lastScan;
+    private boolean                           err;
 }

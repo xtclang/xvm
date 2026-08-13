@@ -384,6 +384,23 @@ public class ModuleStructure
     }
 
     /**
+     * Mark this module as an {@link ModuleType#Embedded embedded} module of its container. A real
+     * (non-fingerprint) module that is merged into a multi-module container ("bundle") as a
+     * non-main module must not remain {@link ModuleType#Primary}, which is reserved for the main
+     * module of a file structure.
+     *
+     * @return this ModuleStructure, for call chaining
+     */
+    public ModuleStructure markEmbedded() {
+        assert !isMainModule() && !isFingerprint();
+        if (m_moduletype != ModuleType.Embedded) {
+            m_moduletype = ModuleType.Embedded;
+            markModified();
+        }
+        return this;
+    }
+
+    /**
      * Specify the ModuleStructure that corresponds to the fingerprint.
      *
      * @param moduleActual  the actual ModuleStructure that the fingerprint is based on
