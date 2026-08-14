@@ -280,12 +280,14 @@ interface Ref<Referent> {
     @RO Annotation[] annotations;
 
     /**
-     * The reference uses a number of bytes for its own storage; while the size of the reference is
+     * The reference uses a number of bits for its own storage; while the size of the reference is
      * not expected to dynamically change, reference sizes may vary from one reference to another.
      * References may be larger than expected, because references may include additional information
-     * -- and potentially even the entire `Referent` -- within the reference itself.
+     * -- and potentially even the entire `Referent` -- within the reference itself. In some cases,
+     * storage could also be smaller; for example, a [Bit] value could use as little as one bit of
+     * storage when it is in an array.
      */
-    @RO Int size;
+    @RO Int bitLength;
 
     /**
      * `True` iff the reference is completely self-contained, in that the `Referent` (the [Object],
