@@ -189,18 +189,17 @@ public class NumberBuilder extends AugmentingBuilder {
     /**
      * Assemble the static primitive accessor "bits$get$p" method, for example:
      * <pre>
-     *     ArrayᐸBitᐳ bits$get$p(int thi$, Ctx ctx)
+     *     ArrayᐸBitᐳ bits$get$p(T thi$, Ctx ctx)
      * </pre>
      */
     protected void generateBitsGet(CodeBuilder code, JitMethodDesc jmd) {
         long bitLength = getBitLength();
-        int  ctxSlot   = jmd.optimizedMD.parameterCount() - 1;
 
         // we will create an instance of ArrayᐸBitᐳ by calling the static helper method
         // $fromLongs the signature is ArrayᐸBitᐳ $fromLongs(Ctx ctx, long bitLength, long[] bits)
 
         // load the Ctx and bitLength parameters
-        code.aload(code.parameterSlot(ctxSlot))
+        code.aload(code.parameterSlot(jmd.optimizedCtx()))
             .loadConstant(bitLength);
 
         // create an array of longs to hold each of the method parameters passed to

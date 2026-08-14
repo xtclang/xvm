@@ -306,7 +306,7 @@ public class FPNumberBuilder extends NumberBuilder {
                     case 64  -> 11;
                     case 128 -> 15;
                     case 256 -> 19;
-                    default -> throw new UnsupportedOperationException("Unsupported bitLength "
+                    default  -> throw new UnsupportedOperationException("Unsupported bitLength "
                             + bitLength);
                 };
             };

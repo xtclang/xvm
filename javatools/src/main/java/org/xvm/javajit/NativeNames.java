@@ -125,9 +125,8 @@ public class NativeNames {
             // there was no match for the exact type and method, try to match on super types
 
             ConstantPool pool = classId.getConstantPool();
-            if (classType.isA(pool.typeNumber()) ||
+            if (classType.isA(pool.typeNumber()) || classType.isA(pool.typeFPNumber()) ||
                     classType.isA(pool.ensureEcstasyTypeConstant("numbers.IntConvertible")) ||
-                    classType.isA(pool.ensureEcstasyTypeConstant("numbers.FPNumber")) ||
                     classType.isA(pool.ensureEcstasyTypeConstant("numbers.FPConvertible"))) {
                 // the type is a Number or IntConvertible
                 key     = createKey("numbers.Number", methodId);
