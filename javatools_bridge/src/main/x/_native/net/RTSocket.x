@@ -1,5 +1,6 @@
 import ecstasy.io.EndOfFile;
 import ecstasy.io.IOClosed;
+import ecstasy.io.Channel;
 
 import libnet.IPAddress;
 import libnet.Socket;
@@ -35,6 +36,11 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
      */
     private IO mode = None;
 
+    /**
+     * TODO async channel backing
+     */
+    protected/private Channel? rawChannel = Null;
+
     @Override
     public/private SocketAddress localAddress;
 
@@ -42,8 +48,22 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
     public/private SocketAddress remoteAddress;
 
     @Override
-    @Lazy public/private Socket.Channel channel.calc() {
-        throw new Unsupported("Socket channel I/O is not implemented");
+    @Lazy public/private Channel channel.calc() {
+        switch (mode) {
+        case None:
+        case Async:
+            mode = Async;
+            // Unused until a native Channel is assigned; construct must not leave this unassigned.
+            val raw = rawChannel ?: TODO("Native");
+            val channel = new SocketChannel(raw);
+            return &channel.maskAs(Socket.Channel);
+
+        case Sync:
+            throw new IllegalState("The Socket is already in synchronous I/O mode");
+
+        case Closed:
+            throw new IOClosed();
+        }
     }
 
     @Override
@@ -101,6 +121,16 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
         return "Socket";
     }
 
+
+    // ----- SocketChannel class -------------------------------------------------------------------
+
+    /**
+     * TODO
+     */
+    class SocketChannel(Channel rawChannel)
+            delegates Channel(rawChannel) {
+        // TODO
+    }
 
     // ----- SocketInput class ---------------------------------------------------------------------
 
