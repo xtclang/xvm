@@ -152,6 +152,22 @@ module TestMisc {
         assert "hello".right(1) == "o";
         assert "hello".right(23) == "hello";
         assert "hello".right(-1) == "";
+
+        assert "world".leftJustify(3, '*') == "wor";
+        assert "world".leftJustify(4, '*') == "worl";
+        assert "world".leftJustify(5, '*') == "world";
+        assert "world".leftJustify(6, '*') == "world*";
+        assert "world".leftJustify(11, '*') == "world******";
+        assert "world".rightJustify(3, '*') == "rld";
+        assert "world".rightJustify(4, '*') == "orld";
+        assert "world".rightJustify(5, '*') == "world";
+        assert "world".rightJustify(6, '*') == "*world";
+        assert "world".rightJustify(11, '*') == "******world";
+        assert "world".center(3, '*') == "wor";
+        assert "world".center(4, '*') == "worl";
+        assert "world".center(5, '*') == "world";
+        assert "world".center(6, '*') == "world*";
+        assert "world".center(11, '*') == "***world***";
     }
 
     void testCast() {

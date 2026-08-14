@@ -805,88 +805,88 @@ const String
     }
 
     /**
-     * Format this String into a left-justified String of the specified length, with the remainder
-     * of the new String filled with the specified character. If the specified length is shorter
+     * Format this String into a left-justified String of the specified size, with the remainder
+     * of the new String filled with the specified character. If the specified size is shorter
      * than the size of this String, then the result will be a truncated copy of this String,
-     * containing only the first _length_ characters of this String.
+     * containing only the first `size` characters of this String.
      *
-     * @param length  the size of the resulting String
-     * @param fill    an optional fill character to use
+     * @param size  the size of the resulting String
+     * @param fill  an optional fill character to use
      *
      * @return this String formatted into a left-justified String filled with the specified
      *         character
      */
-    String! leftJustify(Int length, Char fill = ' ') {
-        if (length <= 0) {
+    String! leftJustify(Int size, Char fill = ' ') {
+        if (size <= 0) {
             return "";
         }
 
-        Int append = length - size;
+        Int append = size - this.size;
         return switch (append.sign) {
-            case Negative: this[0 ..< length];
+            case Negative: this[0 ..< size];
             case Zero    : this;
-            case Positive: new StringBuffer(length)
-                                .addAll(chars)
-                                .addDup(fill, append)
-                                .toString();
+            case Positive: new StringBuffer(size)
+                    .addAll(chars)
+                    .addDup(fill, append)
+                    .toString();
         };
     }
 
     /**
-     * Format this String into a right-justified String of the specified length, with the remainder
-     * of the new String left-filled with the specified `fill` character. If the specified length is
+     * Format this String into a right-justified String of the specified size, with the remainder
+     * of the new String left-filled with the specified `fill` character. If the specified size is
      * shorter than the size of this String, then the result will be a truncated copy of this
-     * String, containing only the last _length_ characters of this String.
+     * String, containing only the last `size` characters of this String.
      *
-     * @param length  the size of the resulting String
-     * @param fill    an optional fill character to use
+     * @param size  the size of the resulting String
+     * @param fill  an optional fill character to use
      *
      * @return this String formatted into a left-justified String filled with the specified
      *         character
      */
-    String! rightJustify(Int length, Char fill = ' ') {
-        if (length <= 0) {
+    String! rightJustify(Int size, Char fill = ' ') {
+        if (size <= 0) {
             return "";
         }
 
-        Int append = length - size;
+        Int append = size - this.size;
         return switch (append.sign) {
             case Negative: this.substring(-append);
             case Zero    : this;
-            case Positive: new StringBuffer(length)
-                                .addDup(fill, append)
-                                .addAll(chars)
-                                .toString();
+            case Positive: new StringBuffer(size)
+                    .addDup(fill, append)
+                    .addAll(chars)
+                    .toString();
         };
     }
 
     /**
-     * Format this String into the center of a String with the specified length, with the remainder
+     * Format this String into the center of a String with the specified size, with the remainder
      * of the new String left- and right-filled with the specified `fill` character. If the
-     * specified length is shorter than the size of this String, then the result will be a truncated copy of this
-     * String, containing only the first _length_ characters of this String.
+     * specified size is shorter than the size of this String, then the result will be a truncated copy of this
+     * String, containing only the first `size` characters of this String.
      *
-     * @param length  the size of the resulting String
-     * @param fill    an optional fill character to use
+     * @param size  the size of the resulting String
+     * @param fill  an optional fill character to use
      *
      * @return this String formatted into a center-justified String filled with the specified
      *         character
      */
-    String! center(Int length, Char fill = ' ') {
-        if (length <= 0) {
+    String! center(Int size, Char fill = ' ') {
+        if (size <= 0) {
             return "";
         }
 
-        Int append  = length - size;
+        Int append  = size - this.size;
         Int appendL = append >> 1;
         return switch (append.sign) {
-            case Negative: this[0 ..< length];
+            case Negative: this[0 ..< size];
             case Zero    : this;
-            case Positive: new StringBuffer(length)
-                                .addDup(fill, appendL)
-                                .addAll(chars)
-                                .addDup(fill, append-appendL)
-                                .toString();
+            case Positive: new StringBuffer(size)
+                    .addDup(fill, appendL)
+                    .addAll(chars)
+                    .addDup(fill, append-appendL)
+                    .toString();
         };
     }
 
