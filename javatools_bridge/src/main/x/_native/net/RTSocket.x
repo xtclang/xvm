@@ -42,9 +42,7 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
     /**
      * TODO
      */
-    protected/private Channel rawChannel.get() {
-        TODO("Native");
-    }
+    protected/private Channel? rawChannel = Null;
 
 
     // ----- Socket methods ------------------------------------------------------------------------
@@ -61,7 +59,7 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
         case None:
         case Async:
             mode = Async;
-            val channel = new SocketChannel(rawChannel);
+            val channel = new SocketChannel(rawChannel ?: TODO("Native"));
             return &channel.maskAs(Socket.Channel);
 
         case Sync:
