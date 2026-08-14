@@ -144,8 +144,8 @@ public class xRef
             return actOnReferent(frame, hRef,
                 h -> frame.assignValue(iReturn, Identity.ensureIdentity(h)));
 
-        case "size":
-            return frame.assignValue(iReturn, xInt64.makeHandle(8)); // TODO
+        case "bitLength":
+            return frame.assignValue(iReturn, xInt64.makeHandle(64)); // TODO
 
         case "selfContained":
             return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isSelfContained()));
