@@ -84,17 +84,11 @@ public class xRTNetworkInterface
         switch (method.getName()) {
         case "nativeConnect": { // conditional Socket nativeConnect(Byte[] remoteAddressBytes,
                                 // UInt16 remotePort, Byte[] localAddressBytes, UInt16 localPort)
-            // TODO conditional ServerSocket nativeListen(Byte[] localAddressBytes, UInt16 localPort)
             byte[] abRemoteIP  = xByteArray.getBytes((ArrayHandle) ahArg[0]);
             int    nRemotePort = (int) ((JavaLong) ahArg[1]).getValue();
             byte[] abLocalIP   = xByteArray.getBytes((ArrayHandle) ahArg[2]);   // [] == null
             int    nLocalPort  = (int) ((JavaLong) ahArg[3]).getValue();
-            try {
-                // TODO
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
-            } catch (Exception e) {
-                return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
-            }
+            return xRTSocket.connect(frame, abRemoteIP, nRemotePort, abLocalIP, nLocalPort, aiReturn);
         }
 
         case "nativeListen": { // conditional ServerSocket nativeListen(Byte[] localAddressBytes, UInt16 localPort)

@@ -1,5 +1,5 @@
+import ecstasy.io.EndOfFile;
 import ecstasy.io.IOClosed;
-import ecstasy.io.Channel;
 
 import libnet.IPAddress;
 import libnet.Socket;
@@ -13,9 +13,6 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
         implements Socket {
     /**
      * Constructor from native land.
-     *
-     * @param name            the name of this network interface
-     * @param addressesBytes  the byte array for each address of this network interface
      */
     construct(Byte[] localAddressBytes, UInt16 localPort, Byte[] remoteAddressBytes, UInt16 remotePort) {
         construct RTSocket((new IPAddress(localAddressBytes), localPort),
@@ -36,15 +33,7 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
      * The "IO mode" of the socket. Once the socket goes into sync or async mode, it's not supposed
      * switch to the other.
      */
-    private IO mode;
-
-    /**
-     * TODO
-     */
-    protected/private Channel rawChannel;
-
-
-    // ----- Socket methods ------------------------------------------------------------------------
+    private IO mode = None;
 
     @Override
     public/private SocketAddress localAddress;
@@ -53,24 +42,12 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
     public/private SocketAddress remoteAddress;
 
     @Override
-    @Lazy public/private Channel channel.calc() {
-        switch (mode) {
-        case None:
-        case Async:
-            mode = Async;
-            val channel = new SocketChannel(rawChannel);
-            return &channel.maskAs(Socket.Channel);
-
-        case Sync:
-            throw new IllegalState("The Socket is already in synchronous I/O mode");
-
-        case Closed:
-            throw new IOClosed();
-        }
+    @Lazy public/private Socket.Channel channel.calc() {
+        throw new Unsupported("Socket channel I/O is not implemented");
     }
 
     @Override
-    @Lazy BinaryInput in.calc() {
+    @Lazy public/private BinaryInput in.calc() {
         switch (mode) {
         case None:
         case Sync:
@@ -87,7 +64,7 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
     }
 
     @Override
-    @Lazy BinaryOutput out.calc() {
+    @Lazy public/private BinaryOutput out.calc() {
         switch (mode) {
         case None:
         case Sync:
@@ -104,13 +81,20 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
     }
 
     @Override
-    void shutdownInput() {TODO("Native");}
+    void shutdownInput() {
+        nativeShutdownInput();
+    }
 
     @Override
-    void shutdownOutput() {TODO("Native");}
+    void shutdownOutput() {
+        nativeShutdownOutput();
+    }
 
     @Override
-    void close(Exception? cause = Null) {TODO("Native");}
+    void close(Exception? cause = Null) {
+        mode = Closed;
+        nativeClose();
+    }
 
     @Override
     String toString() {
@@ -118,39 +102,80 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
     }
 
 
-    // ----- SocketChannel class -------------------------------------------------------------------
-
-    /**
-     * TODO
-     */
-    class SocketChannel(Channel rawChannel)
-            delegates Channel(rawChannel) {
-        // TODO
-    }
-
     // ----- SocketInput class ---------------------------------------------------------------------
 
     /**
-     * TODO
+     * Blocking [BinaryInput] over the native TCP socket.
      */
     class SocketInput
             implements BinaryInput {
-        // TODO
+        private Boolean reachedEof = False;
+
+        @Override
+        @RO Boolean eof.get() {
+            return reachedEof;
+        }
+
+        @Override
+        @RO Int available.get() {
+            return nativeAvailable();
+        }
+
+        @Override
+        Byte readByte() {
+            Byte[] got = nativeReadBytes(1);
+            if (got.size == 0) {
+                reachedEof = True;
+                throw new EndOfFile();
+            }
+            return got[0];
+        }
+
+        @Override
+        immutable Byte[] readBytes(Int count) {
+            if (count <= 0) {
+                return [];
+            }
+            Byte[] got = nativeReadBytes(count);
+            if (got.size < count) {
+                reachedEof = True;
+            }
+            return got.freeze(inPlace=True);
+        }
     }
 
 
-    // ----- SocketInput class ---------------------------------------------------------------------
+    // ----- SocketOutput class --------------------------------------------------------------------
 
     /**
-     * TODO
+     * Blocking [BinaryOutput] over the native TCP socket.
      */
     class SocketOutput
             implements BinaryOutput {
-        // TODO
+        @Override
+        void writeByte(Byte value) {
+            nativeWriteBytes([value].freeze(inPlace=True), 0, 1);
+        }
+
+        @Override
+        void writeBytes(Byte[] bytes, Int offset, Int count) {
+            // Service calls cannot take a mutable array; copy if needed.
+            nativeWriteBytes(bytes.freeze(inPlace=False), offset, count);
+        }
     }
 
 
-    // ----- internal ------------------------------------------------------------------------------
+    // ----- native --------------------------------------------------------------------------------
 
-    // TODO
+    Byte[] nativeReadBytes(Int count) {TODO("Native");}
+
+    void nativeWriteBytes(Byte[] bytes, Int offset, Int count) {TODO("Native");}
+
+    Int nativeAvailable() {TODO("Native");}
+
+    void nativeShutdownInput() {TODO("Native");}
+
+    void nativeShutdownOutput() {TODO("Native");}
+
+    void nativeClose() {TODO("Native");}
 }
