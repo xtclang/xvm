@@ -14,6 +14,9 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
         implements Socket {
     /**
      * Constructor from native land.
+     *
+     * @param name            the name of this network interface
+     * @param addressesBytes  the byte array for each address of this network interface
      */
     construct(Byte[] localAddressBytes, UInt16 localPort, Byte[] remoteAddressBytes, UInt16 remotePort) {
         construct RTSocket((new IPAddress(localAddressBytes), localPort),
@@ -37,9 +40,14 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
     private IO mode = None;
 
     /**
-     * TODO async channel backing
+     * TODO
      */
-    protected/private Channel? rawChannel = Null;
+    protected/private Channel rawChannel.get() {
+        TODO("Native");
+    }
+
+
+    // ----- Socket methods ------------------------------------------------------------------------
 
     @Override
     public/private SocketAddress localAddress;
@@ -53,9 +61,7 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
         case None:
         case Async:
             mode = Async;
-            // Unused until a native Channel is assigned; construct must not leave this unassigned.
-            val raw = rawChannel ?: TODO("Native");
-            val channel = new SocketChannel(raw);
+            val channel = new SocketChannel(rawChannel);
             return &channel.maskAs(Socket.Channel);
 
         case Sync:
@@ -67,7 +73,7 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
     }
 
     @Override
-    @Lazy public/private BinaryInput in.calc() {
+    @Lazy BinaryInput in.calc() {
         switch (mode) {
         case None:
         case Sync:
@@ -84,7 +90,7 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
     }
 
     @Override
-    @Lazy public/private BinaryOutput out.calc() {
+    @Lazy BinaryOutput out.calc() {
         switch (mode) {
         case None:
         case Sync:
@@ -175,7 +181,7 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
     }
 
 
-    // ----- SocketOutput class --------------------------------------------------------------------
+    // ----- SocketInput class ---------------------------------------------------------------------
 
     /**
      * Blocking [BinaryOutput] over the native TCP socket.
@@ -195,7 +201,7 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
     }
 
 
-    // ----- native --------------------------------------------------------------------------------
+    // ----- internal ------------------------------------------------------------------------------
 
     Byte[] nativeReadBytes(Int count) {TODO("Native");}
 
