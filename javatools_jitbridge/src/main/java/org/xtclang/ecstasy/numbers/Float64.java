@@ -147,6 +147,12 @@ public class Float64 extends BinaryFPNumber {
         return $box(thi$).toInt128$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
     }
 
+    public static int toNibble$FP$p(double thi$, Ctx ctx,
+                                    boolean checkBounds, boolean dfltCheckBounds,
+                                   Rounding direction) {
+        return $box(thi$).toNibble$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+    }
+
     public static int toUInt8$FP$p(double thi$, Ctx ctx,
                                    boolean checkBounds, boolean dfltCheckBounds,
                                    Rounding direction) {

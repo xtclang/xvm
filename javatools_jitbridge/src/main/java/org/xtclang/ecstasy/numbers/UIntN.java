@@ -361,6 +361,16 @@ public class UIntN extends UIntNumber {
     /**
      * The native implementation of:
      * <pre>
+     *     IntNumber bitCount.get()
+     * </pre>
+     */
+    public UIntN magnitude$get$p(Ctx ctx) {
+        return this;
+    }
+
+    /**
+     * The native implementation of:
+     * <pre>
      *    IntNumber and(UIntN n);
      * </pre>
      */
@@ -783,6 +793,24 @@ public class UIntN extends UIntNumber {
             throw oob.$init(ctx, "UIntN value " + $value + " is not a valid UInt32 value");
         }
         return $value.intValue();
+    }
+
+    /**
+     * The primitive implementation of Nibble toNibble(Boolean checkBounds = False)
+     *
+     * @param ctx              the build context
+     * @param checkBounds      the check bounds flag
+     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
+     *                         default value (in this case False)
+     *
+     * @return this IntN value as a Java {@code int}
+     */
+    public int toNibble$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && $value.bitLength() > 4) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "UIntN value " + $value + " is not a valid Nibble value");
+        }
+        return $value.byteValue() & 0x0F;
     }
 
     /**

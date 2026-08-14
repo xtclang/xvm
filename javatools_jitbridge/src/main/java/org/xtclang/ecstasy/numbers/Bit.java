@@ -216,6 +216,20 @@ public class Bit extends nConst {
     }
 
     /**
+     * The primitive implementation of Nibble toNibble(Boolean checkBounds = False)
+     *
+     * @param ctx              the build context
+     * @param checkBounds      the check bounds flag
+     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
+     *                         default value (in this case False)
+     *
+     * @return this Bit value as a Java {@code int}
+     */
+    public static int toNibble$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return thi$;
+    }
+
+    /**
      * The primitive implementation of UInt8 toUInt8(Boolean checkBounds = False)
      *
      * @param ctx              the build context

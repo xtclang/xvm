@@ -175,6 +175,15 @@ public class ArrayᐸBitᐳ
     }
 
     /**
+     * Internal method to create a constant bit array from a long array.
+     * <p>
+     * This is called by various number types to return a bit array representation of the number.
+     */
+    public static ArrayᐸBitᐳ $fromLongs(Ctx ctx, long bits, long... values) {
+        return $fromLongs(ctx, Mutability.Constant.$INSTANCE, bits, values);
+    }
+
+    /**
      * Internal method to create a bit array from a long array.
      * <p>
      * This is called by various number types to return a bit array representation of the number.

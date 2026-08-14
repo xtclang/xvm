@@ -349,6 +349,18 @@
      *                     if additional bits are required
      *
      * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
+     *                      unsigned 4-bit integer range
+     */
+    @Override
+    Nibble toNibble(Boolean checkBounds = False) = toUInt64(checkBounds).toNibble(checkBounds);
+
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then zero extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
      *                      unsigned 8-bit integer range
      */
     @Override

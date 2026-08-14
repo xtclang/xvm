@@ -99,6 +99,7 @@ import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.OPT;
 
+import static org.xvm.javajit.Builder.unbox;
 import static org.xvm.javajit.JitFlavor.AlwaysNull;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
@@ -3278,7 +3279,7 @@ public class BuildContext {
     public void adjustIntValue(CodeBuilder code, TypeConstant type) {
         switch (type.getSingleUnderlyingClass(false).getName()) {
             case "Bit"    -> code.i2b().ldc(0x01).iand();
-            case "Nibble" -> code.i2b().ldc(0x0F).iand();
+            case "Nibble" -> code.ldc(0x0F).iand();
             case "Int8"   -> code.i2b();
             case "UInt8"  -> code.ldc(0xFF).iand();
             case "Int16"  -> code.i2s();

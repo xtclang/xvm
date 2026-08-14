@@ -80,7 +80,7 @@ public abstract class DecimalFPNumber
         if ((i & ~0x3) != 0) {
             throw new IllegalArgumentException("index out of range: " + i);
         }
-        return (bits >>> (i*8)) & 0xFF;
+        return (bits >>> ((3 - i)*8)) & 0xFF;
     }
 
     /**
@@ -96,7 +96,7 @@ public abstract class DecimalFPNumber
         if ((i & ~0x7) != 0) {
             throw new IllegalArgumentException("index out of range: " + i);
         }
-        return ((int) (bits >>> (i*8))) & 0xFF;
+        return ((int) (bits >>> ((7 - i)*8))) & 0xFF;
     }
 
     /**
@@ -160,6 +160,30 @@ public abstract class DecimalFPNumber
      */
     protected static int $leftmost7Bits(long lowBits, long highBits) {
         return (int) (highBits >>> 57);
+    }
+
+    /**
+     * @return the sign of the decimal represented by the bits, -1 for negative or +1 for positive
+     */
+    public static int $signum(int bits) {
+        int leftBits = $leftmost7Bits(bits);
+        return $isSigned(leftBits) ? -1 : 1;
+    }
+
+    /**
+     * @return the sign of the decimal represented by the bits, -1 for negative or +1 for positive
+     */
+    public static int $signum(long bits) {
+        int leftBits = $leftmost7Bits(bits);
+        return $isSigned(leftBits) ? -1 : 1;
+    }
+
+    /**
+     * @return the sign of the decimal represented by the bits, -1 for negative or +1 for positive
+     */
+    public static int $signum(long lowBits, long highBits) {
+        int leftBits = $leftmost7Bits(lowBits, highBits);
+        return $isSigned(leftBits) ? -1 : 1;
     }
 
     /**

@@ -38,6 +38,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.builders.ArrayBuilder;
 import org.xvm.javajit.builders.AugmentingBuilder;
+import org.xvm.javajit.builders.NumberBuilder;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.NATIVE_MODULE;
@@ -215,7 +216,9 @@ public class NativeTypeSystem
         Artifact         art     = new Artifact(type, struct, ClassfileShape.Impl, className);
         Builder          builder = type.isArray()
                                     ? new ArrayBuilder(this, art, model)
-                                    : new AugmentingBuilder(this, art, model);
+                                    : type.isA(pool().typeNumber())
+                                        ? NumberBuilder.builderFor(this, art, model)
+                                        : new AugmentingBuilder(this, art, model);
 
         ClassFile classFile = ClassFile.of(
                 ClassFile.ClassHierarchyResolverOption.of(createClassHierarchyResolver()),

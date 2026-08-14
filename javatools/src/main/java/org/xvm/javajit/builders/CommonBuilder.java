@@ -1161,7 +1161,10 @@ public class CommonBuilder
             int argSlot = code.parameterSlot(isOpt ? jmd.getOptimizedParamIndex(0) + 1 : 1);
             if (isOpt) {
                 JitParamDesc pdOpt   = jmd.optimizedParams[0];
-                ClassDesc    cdOpt   = pdOpt.cd;
+                TypeConstant type    = prop.getType();
+                ClassDesc    cdOpt   = type.isJavaPrimitive()
+                                            ? JitTypeDesc.getPrimitiveFieldClass(type)
+                                            : pdOpt.cd;
                 int          extSlot = argSlot + toTypeKind(cdOpt).slotSize();
 
                 switch (pdOpt.flavor) {
@@ -4078,6 +4081,7 @@ public class CommonBuilder
             "org.xtclang.ecstasy.numbers.Float64",
             "org.xtclang.ecstasy.numbers.Float128",
             "org.xtclang.ecstasy.numbers.FPConvertible",
+            "org.xtclang.ecstasy.numbers.FPLiteral",
             "org.xtclang.ecstasy.numbers.Int*",
             "org.xtclang.ecstasy.numbers.Number",
             "org.xtclang.ecstasy.numbers.FPNumber",

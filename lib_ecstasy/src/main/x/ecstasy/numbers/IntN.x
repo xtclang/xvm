@@ -206,6 +206,12 @@ const IntN
     }
 
     @Override
+    Nibble toNibble(Boolean checkBounds = False) {
+        assert:bounds !checkBounds || this >= Nibble.MinValue && this <= Nibble.MaxValue;
+        return new Nibble(unsignedLSBs(4));
+    }
+
+    @Override
     UInt8 toUInt8(Boolean checkBounds = False) {
         assert:bounds !checkBounds || this >= UInt8.MinValue && this <= UInt8.MaxValue;
         return new UInt8(unsignedLSBs(8));

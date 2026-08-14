@@ -299,6 +299,26 @@ public class UInt128 extends UIntNumber {
     }
 
     /**
+     * The primitive implementation of Nibble toNibble(Boolean checkBounds = False)
+     *
+     * @param ctx              the build context
+     * @param checkBounds      the check bounds flag
+     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
+     *                         default value (in this case False)
+     *
+     * @return this value as the least significant four bits of a Java {@code int}
+     */
+    public static int toNibble$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && thi$Hi != 0 && thi$Hi != -1
+                && (thi$Lo < 0L || thi$Lo > 255L)) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "UInt128 value " + $toBigInteger(thi$Lo, thi$Hi)
+                    + " is not a valid Nibble value");
+        }
+        return (byte) thi$Lo & 0x0F;
+    }
+
+    /**
      * The primitive implementation of UInt8 toUInt8(Boolean checkBounds = False)
      *
      * @param ctx              the build context

@@ -1,5 +1,8 @@
 package org.xtclang.ecstasy.numbers;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+
 import org.xtclang.ecstasy.Exception;
 
 import org.xtclang.ecstasy.collections.Array;

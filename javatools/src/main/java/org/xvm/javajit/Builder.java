@@ -326,6 +326,14 @@ public abstract class Builder {
                         propId.ensureJitPropertyName(typeSystem), jtd.cd);
                     return new SingleSlot(type, jtd.flavor, jtd.cd, "");
 
+                case XvmPrimitive:
+                    ClassDesc[] cds   = JitTypeDesc.getXvmPrimitiveClasses(type);
+                    String      name  = propId.ensureJitPropertyName(typeSystem) + "$";
+                    for (int i = 0; i < cds.length; i++) {
+                        code.getstatic(jtd.cd, name + i, cds[i]);
+                    }
+                    return new MultiSlot(bctx, jtd.flavor, type, jtd.cd, cds);
+
                 default:
                     throw new UnsupportedOperationException("Load property singleton " +
                         propId.getValueString());

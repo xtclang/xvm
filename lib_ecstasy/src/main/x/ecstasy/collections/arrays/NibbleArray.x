@@ -7,8 +7,7 @@ import numbers.FPConvertible;
  */
 mixin NibbleArray<Element extends Nibble>
         into Array<Element>
-        implements IntConvertible
-        implements FPConvertible {
+        extends IntNumberArray<Element> {
     // ----- view support --------------------------------------------------------------------------
 
     /**
@@ -20,6 +19,7 @@ mixin NibbleArray<Element extends Nibble>
      *
      * @return an array of bits that acts as a read/write view of the contents of this nibble array
      */
+    @Override
     Bit[] asBitArray() {
         static class Translator(Nibble[] nibbles)
                 implements ArrayDelegate<Bit> {
@@ -104,6 +104,7 @@ mixin NibbleArray<Element extends Nibble>
      *
      * @throws OutOfBounds  if the nibble array size is not evenly divisible by 2
      */
+    @Override
     Byte[] asByteArray() {
         assert:bounds size % 2 == 0;
 
@@ -202,6 +203,7 @@ mixin NibbleArray<Element extends Nibble>
      *
      * @return an array of bits corresponding to the nibbles in this array
      */
+    @Override
     Bit[] toBitArray(Mutability mutability = Constant) = asBitArray().reify(mutability);
 
     /**
@@ -214,202 +216,8 @@ mixin NibbleArray<Element extends Nibble>
      *
      * @throws OutOfBounds  if the nibble array size is not evenly divisible by 2
      */
+    @Override
     Byte[] toByteArray(Mutability mutability = Constant) = asByteArray().reify(mutability);
-
-    /**
-     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
-     *                     blindly retain only the necessary number of least significant bits, which
-     *                     may lose magnitude or change the sign of the result, and then sign extend
-     *                     if additional bits are required
-     *
-     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
-     *                      8-bit integer range
-     */
-    @Override
-    Int8 toInt8(Boolean checkBounds = False) = asBitArray().toInt8(checkBounds);
-
-    /**
-     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
-     *                     blindly retain only the necessary number of least significant bits, which
-     *                     may lose magnitude or change the sign of the result, and then sign extend
-     *                     if additional bits are required
-     *
-     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
-     *                      16-bit integer range
-     */
-    @Override
-    Int16 toInt16(Boolean checkBounds = False) = asBitArray().toInt16(checkBounds);
-
-    /**
-     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
-     *                     blindly retain only the necessary number of least significant bits, which
-     *                     may lose magnitude or change the sign of the result, and then sign extend
-     *                     if additional bits are required
-     *
-     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
-     *                      32-bit integer range
-     */
-    @Override
-    Int32 toInt32(Boolean checkBounds = False) = asBitArray().toInt32(checkBounds);
-
-    /**
-     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
-     *                     blindly retain only the necessary number of least significant bits, which
-     *                     may lose magnitude or change the sign of the result, and then sign extend
-     *                     if additional bits are required
-     *
-     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
-     *                      64-bit integer range
-     */
-    @Override
-    Int64 toInt64(Boolean checkBounds = False) = asBitArray().toInt64(checkBounds);
-
-    /**
-     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
-     *                     blindly retain only the necessary number of least significant bits, which
-     *                     may lose magnitude or change the sign of the result, and then sign extend
-     *                     if additional bits are required
-     *
-     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
-     *                      128-bit integer range
-     */
-    @Override
-    Int128 toInt128(Boolean checkBounds = False) = asBitArray().toInt128(checkBounds);
-
-    @Override
-    IntN toIntN() = asBitArray().toIntN();
-
-    /**
-     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
-     *                     blindly retain only the necessary number of least significant bits, which
-     *                     may lose magnitude or change the sign of the result, and then sign extend
-     *                     if additional bits are required
-     *
-     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
-     *                      unsigned 8-bit integer range
-     */
-    @Override
-    UInt8 toUInt8(Boolean checkBounds = False) = asBitArray().toUInt8(checkBounds);
-
-    /**
-     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
-     *                     blindly retain only the necessary number of least significant bits, which
-     *                     may lose magnitude or change the sign of the result, and then sign extend
-     *                     if additional bits are required
-     *
-     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
-     *                      unsigned 16-bit integer range
-     */
-    @Override
-    UInt16 toUInt16(Boolean checkBounds = False) = asBitArray().toUInt16(checkBounds);
-
-    /**
-     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
-     *                     blindly retain only the necessary number of least significant bits, which
-     *                     may lose magnitude or change the sign of the result, and then sign extend
-     *                     if additional bits are required
-     *
-     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
-     *                      unsigned 32-bit integer range
-     */
-    @Override
-    UInt32 toUInt32(Boolean checkBounds = False) = asBitArray().toUInt32(checkBounds);
-
-    /**
-     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
-     *                     blindly retain only the necessary number of least significant bits, which
-     *                     may lose magnitude or change the sign of the result, and then sign extend
-     *                     if additional bits are required
-     *
-     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
-     *                      unsigned 64-bit integer range
-     */
-    @Override
-    UInt64 toUInt64(Boolean checkBounds = False) = asBitArray().toUInt64(checkBounds);
-
-    /**
-     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
-     *                     blindly retain only the necessary number of least significant bits, which
-     *                     may lose magnitude or change the sign of the result, and then sign extend
-     *                     if additional bits are required
-     *
-     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
-     *                      unsigned 128-bit integer range
-     */
-    @Override
-    UInt128 toUInt128(Boolean checkBounds = False) = asBitArray().toUInt128(checkBounds);
-
-    @Override
-    UIntN toUIntN() = asBitArray().toUIntN();
-
-    /**
-     * @param checkBounds  pass `True` to bounds-check, or `False` to blindly retain only the
-     *                     necessary number of least significant integer bits, which may lose
-     *                     magnitude or change the sign of the result
-     *
-     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
-     *                      unsigned 8-bit integer range
-     */
-    @Override
-    Byte toByte(Boolean checkBounds = False) = toUInt8(checkBounds);
-
-    /**
-     * @param checkBounds  pass `True` to bounds-check, or `False` to blindly retain only the
-     *                     necessary number of least significant integer bits, which may lose
-     *                     magnitude or change the sign of the result
-     *
-     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the signed
-     *                      64-bit integer range
-     */
-    @Override
-    Int toInt(Boolean checkBounds = False) = toInt64(checkBounds);
-
-    /**
-     * @param checkBounds  pass `True` to bounds-check, or `False` to blindly retain only the
-     *                     necessary number of least significant integer bits, which may lose
-     *                     magnitude or change the sign of the result
-     *
-     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
-     *                      unsigned 8-bit integer range
-     */
-    @Override
-    UInt toUInt(Boolean checkBounds = False) = toUInt64(checkBounds);
-
-    @Override
-    Dec32 toDec32() = asBitArray().toDec32();
-
-    @Override
-    Dec64 toDec64() = asBitArray().toDec64();
-
-    @Override
-    Dec128 toDec128() = asBitArray().toDec128();
-
-    @Override
-    DecN toDecN() = asBitArray().toDecN();
-
-    @Override
-    Float8e4 toFloat8e4() = asBitArray().toFloat8e4();
-
-    @Override
-    Float8e5 toFloat8e5() = asBitArray().toFloat8e5();
-
-    @Override
-    BFloat16 toBFloat16() = asBitArray().toBFloat16();
-
-    @Override
-    Float16 toFloat16() = asBitArray().toFloat16();
-
-    @Override
-    Float32 toFloat32() = asBitArray().toFloat32();
-
-    @Override
-    Float64 toFloat64() = asBitArray().toFloat64();
-
-    @Override
-    Float128 toFloat128() = asBitArray().toFloat128();
-
-    @Override
-    FloatN toFloatN() = asBitArray().toFloatN();
 
 
     // ----- Stringable methods --------------------------------------------------------------------

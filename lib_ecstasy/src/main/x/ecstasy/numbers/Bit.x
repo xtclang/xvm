@@ -103,6 +103,15 @@ const Bit(IntLiteral literal)
     }
 
     /**
+     * @return the [Nibble] value of either 0 or 1 that corresponds to this bit's value
+     */
+    @Auto
+    @Override
+    Nibble toNibble() {
+        return toBoolean() ? 1 : 0;
+    }
+
+    /**
      * @return the [UInt8] value of either 0 or 1 that corresponds to this bit's value
      */
     @Auto

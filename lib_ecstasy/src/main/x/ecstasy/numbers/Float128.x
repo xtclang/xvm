@@ -1,6 +1,28 @@
 const Float128
         extends BinaryFPNumber {
         // TODO default(0.0)
+    // ----- constants -----------------------------------------------------------------------------
+
+    /**
+     * The value for a positive infinity Float128.
+     */
+    static Float128 PositiveInfinity = new Float128(#7FFF_0000_0000_0000_0000_0000_0000_0000);
+
+    /**
+     * The value for a negative infinity Float128.
+     */
+    static Float128 NegativeInfinity = new Float128(#FFFF_0000_0000_0000_0000_0000_0000_0000);
+
+    /**
+     * The value for a positive NaN Float128.
+     */
+    static Float128 PositiveNaN = new Float128(#7FFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF);
+
+    /**
+     * The value for a negative NaN Float128.
+     */
+    static Float128 NegativeNaN = new Float128(#FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF);
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -123,6 +145,16 @@ const Float128
     @Override
     Int bias.get() {
         return emax;
+    }
+
+    @Override
+    Int significandBitLength.get() {
+        return 112;
+    }
+
+    @Override
+    Int exponentBitLength.get() {
+        return 15;
     }
 
 
@@ -290,6 +322,9 @@ const Float128
     IntN toIntN(Rounding direction = TowardZero) {
         return round(direction).toIntN();
     }
+
+    @Override
+    Nibble toNibble(Boolean checkBounds = False, Rounding direction = TowardZero);
 
     @Override
     UInt8 toUInt8(Boolean checkBounds = False, Rounding direction = TowardZero);

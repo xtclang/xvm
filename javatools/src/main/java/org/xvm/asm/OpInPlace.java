@@ -347,6 +347,7 @@ public abstract class OpInPlace
                 } else {
                     code.iadd();
                 }
+                bctx.adjustIntValue(code, regTarget.type());
                 buildSetProperty(bctx, code, regTarget, cd, sSetName, mdSet);
                 break;
 
@@ -361,6 +362,7 @@ public abstract class OpInPlace
                 } else {
                     code.iadd();
                 }
+                bctx.adjustIntValue(code, regTarget.type());
                 buildSetProperty(bctx, code, regTarget, cd, sSetName, mdSet);
                 code.iload(slotTmp); // load the original value on Java stack
                 break;
@@ -373,6 +375,7 @@ public abstract class OpInPlace
                     code.iadd();
                 }
                 code.dup();
+                bctx.adjustIntValue(code, regTarget.type());
                 buildSetProperty(bctx, code, regTarget, cd, sSetName, mdSet);
                 break;
 

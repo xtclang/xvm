@@ -250,6 +250,7 @@
      * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
      *                      Nibble range
      */
+    @Override
     Nibble toNibble(Boolean checkBounds = False) {
         Byte byte = toByte(checkBounds);
         assert:bounds !checkBounds || byte <= 0xF;

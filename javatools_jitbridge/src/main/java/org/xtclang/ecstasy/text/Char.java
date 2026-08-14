@@ -194,4 +194,8 @@ public class Char extends nConst {
     public static IntLiteral toIntLiteral$d$p(int thi$, Ctx ctx) {
         return null;
     }
+
+    public static int toNibble$d$p(int thi$, Ctx ctx) {
+        return thi$ & 0xF;
+    }
 }

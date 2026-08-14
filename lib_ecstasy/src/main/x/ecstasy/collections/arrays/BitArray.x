@@ -735,6 +735,7 @@ mixin BitArray<Element extends Bit>
      * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the 4-bit
      *                      nibble range
      */
+    @Override
     Nibble toNibble(Boolean checkBounds = False) {
         switch (size <=> 4) {
         case Lesser:

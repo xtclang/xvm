@@ -61,6 +61,7 @@ public class NativeNames {
         reservedMethodName.put("numbers.Number/toUInt64/2",  "toUInt64$FP");
         reservedMethodName.put("numbers.Number/toUInt128/2", "toUInt128$FP");
         reservedMethodName.put("numbers.Number/toUIntN/1",   "toUIntN$FP");
+        reservedMethodName.put("numbers.Number/toNibble/2",  "toNibble$FP");
 
         reservedMethodName.put("numbers.IntNumber/add/1",           "add");
         reservedMethodName.put("numbers.IntNumber/and/1",           "and");
@@ -135,7 +136,8 @@ public class NativeNames {
                 String methodName = methodId.getName();
                 if (jitName == null &&
                         (methodName.startsWith("toInt") || methodName.startsWith("toUInt") ||
-                         methodName.startsWith("toDec") || methodName.startsWith("toFloat"))) {
+                         methodName.startsWith("toDec") || methodName.startsWith("toFloat") ||
+                         methodName.startsWith("toNibble"))) {
                     jitName = methodName;
                 }
             }
@@ -157,6 +159,7 @@ public class NativeNames {
         Set<String> names = new HashSet<>(reservedMethodName.values());
         addConversionNames(names, "toInt",   "", "8", "16", "32", "64", "128", "N", "Literal");
         addConversionNames(names, "toUInt",  "", "8", "16", "32", "64", "128", "N");
+        addConversionNames(names, "toNibble", "");
         addConversionNames(names, "toDec",   "", "32", "64", "128", "N");
         addConversionNames(names, "toFloat", "8e4", "8e5", "16", "32", "64", "128", "N");
         return names;

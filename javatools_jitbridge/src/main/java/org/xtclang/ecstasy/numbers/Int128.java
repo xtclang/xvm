@@ -156,7 +156,7 @@ public class Int128 extends IntNumber {
      *
      * @return a {@link BigInteger} created from the two long values
      */
-    private static BigInteger $toBigInteger(long lowValue, long highValue) {
+    public static BigInteger $toBigInteger(long lowValue, long highValue) {
         BigInteger low = BigInteger.valueOf(lowValue & Long.MAX_VALUE);
         if (lowValue < 0) {
             low = low.setBit(63);
@@ -284,6 +284,26 @@ public class Int128 extends IntNumber {
      */
     public static IntN toIntN$p(long thi$Lo, long thi$Hi, Ctx ctx) {
         return IntN.$box(thi$Lo, thi$Hi);
+    }
+
+    /**
+     * The primitive implementation of Nibble toNibble(Boolean checkBounds = False)
+     *
+     * @param ctx              the build context
+     * @param checkBounds      the check bounds flag
+     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
+     *                         default value (in this case False)
+     *
+     * @return this value as the least significant four bits of a Java {@code int}
+     */
+    public static int toNibble$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && thi$Hi != 0 && thi$Hi != -1
+                && (thi$Lo < 0L || thi$Lo > 255L)) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "Int128 value " + $toBigInteger(thi$Lo, thi$Hi)
+                    + " is not a valid Nibble value");
+        }
+        return (byte) thi$Lo & 0x0F;
     }
 
     /**

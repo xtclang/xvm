@@ -188,6 +188,24 @@ public class UInt64 extends UIntNumber {
     }
 
     /**
+     * The primitive implementation of Nibble toNibble(Boolean checkBounds = False)
+     *
+     * @param ctx              the build context
+     * @param checkBounds      the check bounds flag
+     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
+     *                         default value (in this case False)
+     *
+     * @return this value as the least significant four bits of a Java {@code int}
+     */
+    public static int toNibble$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && (thi$ < 0 || thi$ > 15)) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "UInt64 value " + thi$ + " is not a valid Nibble value");
+        }
+        return thi$ & 0x0F;
+    }
+
+    /**
      * The primitive implementation of UInt8 toUInt8(Boolean checkBounds = False)
      *
      * @param ctx              the build context

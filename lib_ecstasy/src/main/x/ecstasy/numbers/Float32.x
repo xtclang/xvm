@@ -1,6 +1,28 @@
 const Float32
         extends BinaryFPNumber
         default(0.0) {
+    // ----- constants -----------------------------------------------------------------------------
+
+    /**
+     * The value for a positive infinity Float32.
+     */
+    static Float32 PositiveInfinity = new Float32(#7F80_0000);
+
+    /**
+     * The value for a negative infinity Float32.
+     */
+    static Float32 NegativeInfinity = new Float32(#FF80_0000);
+
+    /**
+     * The value for a positive NaN Float32.
+     */
+    static Float32 PositiveNaN = new Float32(#7FFF_FFFF);
+
+    /**
+     * The value for a negative NaN Float32.
+     */
+    static Float32 NegativeNaN = new Float32(#FFFF_FFFF);
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -61,7 +83,9 @@ const Float32
 
     @Override
     Signum sign.get() {
-        TODO need to think this through carefully because there is a sign bit and both +/-0
+//        TODO need to think this through carefully because there is a sign bit and both +/-0
+        UInt32 n = bits.toUInt32();
+        return n & 0x80000000 == 0 ? Positive : Negative;
     }
 
 
@@ -123,6 +147,16 @@ const Float32
     @Override
     Int bias.get() {
         return emax;
+    }
+
+    @Override
+    Int significandBitLength.get() {
+        return 23;
+    }
+
+    @Override
+    Int exponentBitLength.get() {
+        return 8;
     }
 
 
@@ -290,6 +324,9 @@ const Float32
     IntN toIntN(Rounding direction = TowardZero) {
         return round(direction).toIntN();
     }
+
+    @Override
+    Nibble toNibble(Boolean checkBounds = False, Rounding direction = TowardZero);
 
     @Override
     UInt8 toUInt8(Boolean checkBounds = False, Rounding direction = TowardZero);

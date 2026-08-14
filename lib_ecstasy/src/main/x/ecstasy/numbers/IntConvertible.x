@@ -115,6 +115,15 @@ interface IntConvertible {
     UIntN toUIntN() = toIntN().toUIntN();
 
     /**
+     * Convert the value to a Nibble (an unsigned 4-bit integer).
+     *
+     * @return a Nibble
+     *
+     * @throws OutOfBounds  iff the resulting value is out of the unsigned 4-bit integer range
+     */
+    Nibble toNibble() = toIntN().toNibble(True);
+
+    /**
      * Convert the value to an unsigned 8-bit integer.
      *
      * This is a second name for the [toUInt8] method, to assist with readability.

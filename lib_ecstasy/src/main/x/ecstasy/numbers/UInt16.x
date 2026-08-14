@@ -22,12 +22,12 @@ const UInt16
     }
 
     @Override
-    static Int16 zero() {
+    static UInt16 zero() {
         return 0;
     }
 
     @Override
-    static Int16 one() {
+    static UInt16 one() {
         return 1;
     }
 
@@ -388,6 +388,24 @@ const UInt16
     @Auto
     @Override
     Int128 toInt128(Boolean checkBounds = False) = new Int128(new Bit[128](i -> (i < 128-bitLength ? 0 : bits[i])));
+
+    /**
+     * Convert this UInt16 to an Nibble.
+     *
+     * Conversion is performed after optionally checking the bounds, by preserving the low-order
+     * 4 bits bits of this UInt16.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of a Nibble
+     *
+     * @return  a Nibble that has the same bit pattern as the low order 4 bits of this UInt16
+     *
+     * @throws OutOfBounds if checkBounds is True and this UInt16 is higher then Nibble.MaxValue
+     */
+    @Override
+    Nibble toNibble(Boolean checkBounds = False) {
+        assert:bounds !checkBounds || this <= Nibble.MaxValue;
+        return new Nibble(bits[bitLength-4 ..< bitLength]);
+    }
 
     /**
      * Convert this UInt16 to an UInt8.

@@ -14,6 +14,28 @@
 const BFloat16
         extends BinaryFPNumber
         default(0.0) {
+    // ----- constants -----------------------------------------------------------------------------
+
+    /**
+     * The value for a positive infinity BFloat16.
+     */
+    static BFloat16 PositiveInfinity = new BFloat16(#7F80);
+
+    /**
+     * The value for a negative infinity BFloat16.
+     */
+    static BFloat16 NegativeInfinity = new BFloat16(#FF80);
+
+    /**
+     * The value for a positive NaN BFloat16.
+     */
+    static BFloat16 PositiveNaN = new BFloat16(#7FFF);
+
+    /**
+     * The value for a negative NaN BFloat16.
+     */
+    static BFloat16 NegativeNaN = new BFloat16(#FFFF);
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -366,6 +388,9 @@ const BFloat16
     IntN toIntN(Rounding direction = TowardZero) {
         return round(direction).toIntN();
     }
+
+    @Override
+    Nibble toNibble(Boolean checkBounds = False, Rounding direction = TowardZero);
 
     @Override
     UInt8 toUInt8(Boolean checkBounds = False, Rounding direction = TowardZero);

@@ -247,6 +247,24 @@ const UInt8
     Int128 toInt128(Boolean checkBounds = False) = new Int128(new Bit[128](i -> i < 128-bitLength ? 0 : bits[i]));
 
     /**
+     * Convert this UInt8 to an Nibble.
+     *
+     * Conversion is performed after optionally checking the bounds, by preserving the low-order
+     * 4 bits bits of this UInt8.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of a Nibble
+     *
+     * @return  an Nibble that has the same bit pattern as the low order 4 bits of this UInt16
+     *
+     * @throws OutOfBounds if checkBounds is True and this UInt8 is higher then Nibble.MaxValue
+     */
+    @Override
+    Nibble toNibble(Boolean checkBounds = False) {
+        assert:bounds !checkBounds || this <= Nibble.MaxValue;
+        return new Nibble(bits[bitLength-4 ..< bitLength]);
+    }
+
+    /**
      * Convert this UInt8 to an UInt8, which is effectively a no-op and returns this UInt8.
      *
      * @param checkBounds  this parameter will be ignored

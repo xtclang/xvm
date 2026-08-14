@@ -153,6 +153,16 @@ public class IntN extends IntNumber {
     }
 
     /**
+     * The native implementation of:
+     * <pre>
+     *     IntNumber bitCount.get()
+     * </pre>
+     */
+    public UIntN magnitude$get$p(Ctx ctx) {
+        return abs(ctx).toUIntN(ctx);
+    }
+
+    /**
      * The primitive implementation of:
      * <pre>
      *     Int byteLength.get()
@@ -716,6 +726,24 @@ public class IntN extends IntNumber {
         long[] longs = $longValues();
         ctx.i0 = longs.length > 1 ? longs[1] : 0;
         return longs.length > 0 ? longs[0] : 0;
+    }
+
+    /**
+     * The primitive implementation of Nibble toNibble(Boolean checkBounds = False)
+     *
+     * @param ctx              the build context
+     * @param checkBounds      the check bounds flag
+     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
+     *                         default value (in this case False)
+     *
+     * @return this IntN value as a Java {@code int}
+     */
+    public int toNibble$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && $value.bitLength() > 4) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "IntN value " + $value + " is not a valid Nibble value");
+        }
+        return $value.byteValue() & 0x0F;
     }
 
     /**
