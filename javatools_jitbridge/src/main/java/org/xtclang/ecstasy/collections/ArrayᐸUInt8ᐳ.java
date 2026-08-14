@@ -178,16 +178,24 @@ public class ArrayᐸUInt8ᐳ
 
     /**
      * Internal method to create a UInt8 array from a long array.
-     * <p>
-     * This is called by various number types to return a byte array representation of the number.
+     *
+     * @param bytes  the size of the array in bytes
      */
-    public static ArrayᐸUInt8ᐳ $fromLongs(Ctx ctx, Mutability mutability, long bits, long... values) {
+    public static ArrayᐸUInt8ᐳ $fromLongs(Ctx ctx, long bytes, long... values) {
+        return $fromLongs(ctx, null, bytes, values);
+    }
+
+    /**
+     * Internal method to create a UInt8 array from a long array.
+     *
+     * @param bytes  the size of the array in bytes
+     */
+    public static ArrayᐸUInt8ᐳ $fromLongs(Ctx ctx, Mutability mutability, long bytes, long... values) {
         TypeConstant type  = ctx.container.typeSystem.pool().typeByteArray();
-        long         size  = bits / 8;
-        ArrayᐸUInt8ᐳ array = $new$p(ctx, type, size, false);
+        ArrayᐸUInt8ᐳ array = $new$p(ctx, type, bytes, false);
         array.$mut(mutability == null ? $CONSTANT : (int) mutability.$ordinal);
         array.$storage = values;
-        array.$size((int) size);
+        array.$size((int) bytes);
         return array;
     }
 

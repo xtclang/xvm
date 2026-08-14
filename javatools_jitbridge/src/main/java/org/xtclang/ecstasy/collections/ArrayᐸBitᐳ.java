@@ -176,21 +176,21 @@ public class ArrayᐸBitᐳ
 
     /**
      * Internal method to create a constant bit array from a long array.
-     * <p>
-     * This is called by various number types to return a bit array representation of the number.
+     *
+     * @param bits  the size of the array in bits
      */
     public static ArrayᐸBitᐳ $fromLongs(Ctx ctx, long bits, long... values) {
-        return $fromLongs(ctx, Mutability.Constant.$INSTANCE, bits, values);
+        return $fromLongs(ctx, null, bits, values);
     }
 
     /**
      * Internal method to create a bit array from a long array.
-     * <p>
-     * This is called by various number types to return a bit array representation of the number.
+     *
+     * @param bits  the size of the array in bits
      */
     public static ArrayᐸBitᐳ $fromLongs(Ctx ctx, Mutability mutability, long bits, long... values) {
         TypeConstant type  = ctx.container.typeSystem.pool().typeBitArray();
-        ArrayᐸBitᐳ   array = $new$p(ctx, type, bits , false);
+        ArrayᐸBitᐳ   array = $new$p(ctx, type, bits, false);
         array.$mut(mutability == null ? $CONSTANT : (int) mutability.$ordinal);
         array.$storage = values;
         array.$size((int) bits);

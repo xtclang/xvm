@@ -1,8 +1,5 @@
 package org.xtclang.ecstasy.numbers;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-
 import org.xtclang.ecstasy.Exception;
 
 import org.xtclang.ecstasy.collections.Array;
@@ -63,7 +60,7 @@ public abstract class Number
      */
     public ArrayᐸUInt8ᐳ toByteArray(Ctx ctx, Array.Mutability mutability) {
         long bits = bitLength$get$p();
-        return ArrayᐸUInt8ᐳ.$fromLongs(ctx, mutability, bits, $longValues());
+        return ArrayᐸUInt8ᐳ.$fromLongs(ctx, mutability, bits >> 3, $longValues());
     }
 
     /**

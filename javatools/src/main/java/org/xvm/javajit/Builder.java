@@ -521,6 +521,9 @@ public abstract class Builder {
             }
         }
 
+        case UInt8ArrayConstant bytesConstant:
+            return loadUInt8Array(bctx, code, bytesConstant);
+
         case ArrayConstant arrayConst: {
             TypeConstant arrayType = arrayConst.getType();
             Constant[]   values    = arrayConst.getValue();
@@ -573,6 +576,31 @@ public abstract class Builder {
         }
 
         throw new UnsupportedOperationException(constant.toString());
+    }
+
+    private SingleSlot loadUInt8Array(BuildContext bctx, CodeBuilder code,
+                                      UInt8ArrayConstant bytesConstant) {
+        byte[] bytes  = bytesConstant.getValue();
+        long[] values = new long[(bytes.length + 7) >>> 3];
+        for (int i = 0; i < bytes.length; i++) {
+            values[i >>> 3] |= (long) (bytes[i] & 0xFF) << ((7 - (i & 7)) << 3);
+        }
+
+        loadCtx(bctx, code);
+        code.loadConstant((long) bytes.length) // size in bytes
+            .loadConstant(values.length)
+            .newarray(TypeKind.LONG);
+
+        for (int i = 0; i < values.length; i++) {
+            code.dup()
+                .loadConstant(i)
+                .loadConstant(values[i])
+                .lastore();
+        }
+
+        code.invokestatic(CD_ArrayUInt8, "$fromLongs",
+                MethodTypeDesc.of(CD_ArrayUInt8, CD_Ctx, CD_long, CD_long.arrayType()));
+        return new SingleSlot(bytesConstant.getType(), Specific, CD_ArrayUInt8, "");
     }
 
     private SingleSlot loadArray(BuildContext bctx, CodeBuilder code, TypeConstant arrayType,
