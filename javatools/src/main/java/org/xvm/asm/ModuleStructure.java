@@ -414,6 +414,20 @@ public class ModuleStructure
     }
 
     /**
+     * Mark this module as the primary module of its container.
+     *
+     * @return this ModuleStructure, for call chaining
+     */
+    ModuleStructure markPrimary() {
+        assert getIdentityConstant().equals(getFileStructure().getModuleId());
+        if (m_moduletype != ModuleType.Primary) {
+            m_moduletype = ModuleType.Primary;
+            markModified();
+        }
+        return this;
+    }
+
+    /**
      * Specify the ModuleStructure that corresponds to the fingerprint.
      *
      * @param moduleActual  the actual ModuleStructure that the fingerprint is based on

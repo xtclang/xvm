@@ -3,6 +3,8 @@ package org.xvm.tool;
 import java.io.File;
 import java.nio.file.Path;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -10,6 +12,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import org.xvm.asm.FileRepository;
 import org.xvm.asm.FileStructure;
+import org.xvm.asm.Version;
 import org.xvm.asm.ModuleStructure.ModuleType;
 
 import org.xvm.tool.LauncherOptions.BundlerOptions;
@@ -88,6 +91,8 @@ class BundlerTest {
     void testBundleRoundTripThroughFileRepository(@TempDir Path tempDir) throws Exception {
         var fileA = new FileStructure("ModA");
         var fileB = new FileStructure("ModB");
+        var verA  = new Version("1.0");
+        fileA.getModule().setVersion(verA);
 
         // merge ModA into ModB's container, per the Bundler recipe
         var bundle = new FileStructure(fileB.getModule(), false);
@@ -121,12 +126,19 @@ class BundlerTest {
         assertNotNull(moduleA);
         assertNotSame(moduleMain.getFileStructure(), moduleA.getFileStructure());
         assertEquals("ModA", moduleA.getFileStructure().getModuleId().getName());
+        assertTrue(moduleA.isMainModule());
+        assertEquals(ModuleType.Primary, moduleA.getModuleType());
 
         // the detached copy is memoized
         assertSame(moduleA, repo.loadModule("ModA"));
 
         // version-aware lookup routes around the main-module-only default implementation
         assertSame(moduleA, repo.loadModule("ModA", null, false));
+        var moduleAVersioned = repo.loadModule("ModA", verA, true);
+        assertNotNull(moduleAVersioned);
+        assertTrue(moduleAVersioned.isMainModule());
+        assertEquals(verA, moduleAVersioned.getIdentityConstant().getVersion());
+        assertEquals(verA, moduleAVersioned.getVersion());
 
         assertNull(repo.loadModule("NoSuchModule"));
     }
@@ -134,6 +146,8 @@ class BundlerTest {
     @Test
     void testSingleModuleFileRepositoryUnchanged(@TempDir Path tempDir) throws Exception {
         var file    = new FileStructure("Solo");
+        var version = new Version("2.1");
+        file.getModule().setVersion(version);
         var fileOut = tempDir.resolve("solo.xtc").toFile();
         file.writeTo(fileOut);
 
@@ -144,5 +158,47 @@ class BundlerTest {
         assertNotNull(module);
         assertTrue(module.isMainModule());
         assertNull(repo.loadModule("Other"));
+
+        var moduleVersioned = repo.loadModule("Solo", version, true);
+        assertNotNull(moduleVersioned);
+        assertTrue(moduleVersioned.isMainModule());
+        assertEquals(version, moduleVersioned.getIdentityConstant().getVersion());
+        assertEquals(version, moduleVersioned.getVersion());
+    }
+
+    @Test
+    void testDuplicateExplicitModuleSelectionsAreRejected(@TempDir Path tempDir) throws Exception {
+        var fileFirst  = tempDir.resolve("first.xtc").toFile();
+        var fileSecond = tempDir.resolve("second.xtc").toFile();
+        new FileStructure("Dup").writeTo(fileFirst);
+        new FileStructure("Dup").writeTo(fileSecond);
+
+        var console = new CaptureConsole();
+        int result = Launcher.launch(Launcher.CMD_BUNDLE, new String[] {
+                "-o", tempDir.resolve("out.xtc").toString(),
+                fileFirst.getPath(),
+                fileSecond.getPath()}, console, null);
+
+        assertEquals(1, result);
+        var output = console.getAllOutput();
+        assertTrue(output.contains("Duplicate explicit module selection"));
+        assertTrue(output.contains("Dup"));
+        assertTrue(output.contains(fileSecond.getPath()));
+    }
+
+    private static final class CaptureConsole implements Console {
+        private final List<String> lines = new ArrayList<>();
+
+        @Override
+        public String out(Object o) {
+            if (o != null) {
+                lines.add(o.toString());
+            }
+            return "";
+        }
+
+        String getAllOutput() {
+            return String.join("\n", lines);
+        }
     }
 }

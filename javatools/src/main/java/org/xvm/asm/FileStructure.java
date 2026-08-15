@@ -244,6 +244,7 @@ public class FileStructure
             // source-pool identity constant with the one owned by this file's pool
             m_idModule = moduleClone.getIdentityConstant();
             m_file     = module.getFileStructure().m_file;
+            moduleClone.markPrimary();
         }
     }
 
