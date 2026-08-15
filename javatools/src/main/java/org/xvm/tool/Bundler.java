@@ -142,7 +142,11 @@ public class Bundler extends Launcher<BundlerOptions> {
             if (module == null) {
                 log(ERROR, "Unable to load module {} from the module path or file system", quoted(spec));
             } else {
-                selection.put(module.getIdentityConstant().getName(), module);
+                var name = module.getIdentityConstant().getName();
+                if (selection.putIfAbsent(name, module) != null) {
+                    log(ERROR, "Duplicate explicit module selection for {} from {}",
+                            quoted(name), quoted(spec));
+                }
             }
         }
         return selection;

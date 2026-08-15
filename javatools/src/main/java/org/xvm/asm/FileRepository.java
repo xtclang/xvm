@@ -96,25 +96,7 @@ public class FileRepository
 
     @Override
     public ModuleStructure loadModule(String sModule, Version version, boolean fExact) {
-        // the default implementation narrows a module to a version via ModuleStructure
-        // .extractVersion(), which asserts that the module is the main module of its file
-        // structure; that does not hold for the non-main modules of a multi-module container,
-        // so version matching is done in place here instead
-        if (version == null) {
-            return loadModule(sModule);
-        }
-
-        var module = loadModule(sModule);
-        if (module == null) {
-            return null;
-        }
-
-        var ver = module.getVersion();
-        if (ver == null) {
-            return null;
-        }
-
-        return (fExact ? ver.equals(version) : ver.isSubstitutableFor(version)) ? module : null;
+        return ModuleRepository.super.loadModule(sModule, version, fExact);
     }
 
     @Override
