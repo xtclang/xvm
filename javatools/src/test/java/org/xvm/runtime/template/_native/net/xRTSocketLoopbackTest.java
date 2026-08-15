@@ -2,7 +2,6 @@ package org.xvm.runtime.template._native.net;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -12,11 +11,13 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Loopback TCP using the same {@link java.net.Socket} setup as {@link xRTSocket#connect}.
- * The Ecstasy {@code TestTcpClient} module exercises the native through {@code Network.connect}.
+ * Unit checks for the helpers {@link xRTSocket#connect} / read / write actually call.
+ * Full {@code Network.connect} coverage is the Ecstasy {@code TestTcpClient} module.
  */
 class xRTSocketLoopbackTest {
 
@@ -36,11 +37,10 @@ class xRTSocketLoopbackTest {
             });
 
             byte[] ping = {'p', 'i', 'n', 'g'};
-            try (Socket sock = openLikeNative(new byte[] {127, 0, 0, 1}, port)) {
-                sock.getOutputStream().write(ping);
-                sock.getOutputStream().flush();
-                byte[] got = sock.getInputStream().readNBytes(4);
-                assertArrayEquals(ping, got);
+            try (Socket sock = xRTSocket.openConnectedSocket(
+                    new byte[] {127, 0, 0, 1}, port, null, 0)) {
+                xRTSocket.writeBytes(sock, ping, 0, ping.length);
+                assertArrayEquals(ping, xRTSocket.readBytes(sock, 4));
             }
             assertArrayEquals(ping, echoed.get(5, TimeUnit.SECONDS));
         }
@@ -52,19 +52,33 @@ class xRTSocketLoopbackTest {
         try (ServerSocket probe = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"))) {
             port = probe.getLocalPort();
         }
-        assertThrows(IOException.class,
-                () -> openLikeNative(new byte[] {127, 0, 0, 1}, port).close());
+        assertThrows(IOException.class, () ->
+                xRTSocket.openConnectedSocket(new byte[] {127, 0, 0, 1}, port, null, 0));
     }
 
-    /**
-     * Same bind/connect flags as {@link xRTSocket#connect}; IOException is what native maps to False.
-     */
-    private static Socket openLikeNative(byte[] remoteIp, int remotePort) throws IOException {
-        Socket sock = new Socket();
-        sock.setTcpNoDelay(true);
-        sock.setKeepAlive(true);
-        sock.connect(new InetSocketAddress(InetAddress.getByAddress(remoteIp), remotePort),
-                xRTSocket.CONNECT_TIMEOUT_MS);
-        return sock;
+    @Test
+    void bindFailureClosesBeforeConnect() throws Exception {
+        try (ServerSocket taken = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"))) {
+            int port = taken.getLocalPort();
+            assertThrows(IOException.class, () ->
+                    xRTSocket.openConnectedSocket(
+                            new byte[] {127, 0, 0, 1}, 1,
+                            new byte[] {127, 0, 0, 1}, port));
+        }
+    }
+
+    @Test
+    void writeRangeRejectsBadOffsetAndCount() {
+        int nLength = 3;
+        assertNull(xRTSocket.invalidWriteRange(nLength, 0, 0));
+        assertNull(xRTSocket.invalidWriteRange(nLength, 0, 3));
+        assertNull(xRTSocket.invalidWriteRange(nLength, 2, 1));
+
+        assertTrue(xRTSocket.invalidWriteRange(nLength, -1, 1) != null);
+        assertTrue(xRTSocket.invalidWriteRange(nLength, 0, -1) != null);
+        assertTrue(xRTSocket.invalidWriteRange(nLength, 0, 4) != null);
+        assertTrue(xRTSocket.invalidWriteRange(nLength, 3, 1) != null);
+        assertTrue(xRTSocket.invalidWriteRange(nLength, Integer.MAX_VALUE + 1L, 1) != null);
+        assertTrue(xRTSocket.invalidWriteRange(nLength, 0, Integer.MAX_VALUE + 1L) != null);
     }
 }

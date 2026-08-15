@@ -3,12 +3,15 @@ package org.xvm.runtime.template._native.net;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
+
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
@@ -111,9 +114,6 @@ public class xRTSocket
         switch (method.getName()) {
         case "nativeReadBytes":
             return nativeReadBytes(frame, hSocket, (int) ((JavaLong) hArg).getValue(), iReturn);
-
-        case "nativeAvailable":
-            return nativeAvailable(frame, hSocket, iReturn);
         }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -164,9 +164,41 @@ public class xRTSocket
      */
     public static int connect(Frame frame, byte[] abRemoteIP, int nRemotePort,
                               byte[] abLocalIP, int nLocalPort, int[] aiReturn) {
-        Socket sock;
+        Callable<Socket> task = () ->
+                openConnectedSocket(abRemoteIP, nRemotePort, abLocalIP, nLocalPort);
+
+        CompletableFuture<Socket> cf = frame.f_context.f_container.scheduleIO(task);
+        Frame.Continuation continuation = frameCaller -> {
+            try {
+                Socket      sock    = cf.get();
+                InetAddress local   = sock.getLocalAddress();
+                byte[]      abLocal = local == null ? new byte[0] : local.getAddress();
+                int         nLocal  = sock.getLocalPort();
+                return INSTANCE.constructSocket(frameCaller, sock, abLocal, nLocal,
+                        abRemoteIP, nRemotePort, aiReturn);
+            } catch (Throwable e) {
+                Throwable cause = unwrap(e);
+                if (cause instanceof IOException) {
+                    return frameCaller.assignValue(aiReturn[0], xBoolean.FALSE);
+                }
+                return frameCaller.raiseException(
+                        xException.makeHandle(frameCaller, cause.getMessage()));
+            }
+        };
+
+        return frame.waitForIO(cf, continuation);
+    }
+
+    /**
+     * Open a client TCP socket with the same options {@link #connect} uses.
+     * On bind, option, or connect failure the Java socket is closed before this returns.
+     */
+    static Socket openConnectedSocket(byte[] abRemoteIP, int nRemotePort,
+                                      byte[] abLocalIP, int nLocalPort)
+            throws IOException {
+        Socket  sock  = new Socket();
+        boolean owned = false;
         try {
-            sock = new Socket();
             sock.setTcpNoDelay(true);
             sock.setKeepAlive(true);
             if (abLocalIP != null && abLocalIP.length > 0) {
@@ -176,17 +208,13 @@ public class xRTSocket
             }
             sock.connect(new InetSocketAddress(InetAddress.getByAddress(abRemoteIP), nRemotePort),
                     CONNECT_TIMEOUT_MS);
-        } catch (IOException e) {
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
-        } catch (Exception e) {
-            return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
+            owned = true;
+            return sock;
+        } finally {
+            if (!owned) {
+                closeQuietly(sock);
+            }
         }
-
-        InetAddress local = sock.getLocalAddress();
-        byte[] abLocal = local == null ? new byte[0] : local.getAddress();
-        int    nLocal  = sock.getLocalPort();
-
-        return INSTANCE.constructSocket(frame, sock, abLocal, nLocal, abRemoteIP, nRemotePort, aiReturn);
     }
 
     protected int constructSocket(Frame frame, Socket sock, byte[] abLocal, int nLocalPort,
@@ -257,26 +285,19 @@ public class xRTSocket
         if (cBytes <= 0) {
             return frame.assignValue(iReturn, xArray.makeByteArrayHandle(new byte[0], Mutability.Constant));
         }
-        try {
-            InputStream in  = sock.getInputStream();
-            byte[]      buf = new byte[cBytes];
-            int         off = 0;
-            while (off < cBytes) {
-                int n = in.read(buf, off, cBytes - off);
-                if (n < 0) {
-                    break;
-                }
-                off += n;
+
+        Callable<byte[]> task = () -> readBytes(sock, cBytes);
+        CompletableFuture<byte[]> cf = frame.f_context.f_container.scheduleIO(task);
+        Frame.Continuation continuation = frameCaller -> {
+            try {
+                return frameCaller.assignValue(iReturn,
+                        xArray.makeByteArrayHandle(cf.get(), Mutability.Constant));
+            } catch (Throwable e) {
+                return frameCaller.raiseException(
+                        xException.ioException(frameCaller, unwrap(e).getMessage()));
             }
-            if (off == cBytes) {
-                return frame.assignValue(iReturn, xArray.makeByteArrayHandle(buf, Mutability.Constant));
-            }
-            byte[] actual = new byte[off];
-            System.arraycopy(buf, 0, actual, 0, off);
-            return frame.assignValue(iReturn, xArray.makeByteArrayHandle(actual, Mutability.Constant));
-        } catch (IOException e) {
-            return frame.raiseException(xException.ioException(frame, e.getMessage()));
-        }
+        };
+        return frame.waitForIO(cf, continuation);
     }
 
     private static int nativeWriteBytes(Frame frame, SocketHandle hSocket, ObjectHandle[] ahArg) {
@@ -285,19 +306,85 @@ public class xRTSocket
             return frame.raiseException(xException.ioException(frame, "socket closed"));
         }
         byte[] ab = xByteArray.getBytes((ArrayHandle) ahArg[0]);
-        int    of = (int) ((JavaLong) ahArg[1]).getValue();
-        int    n  = (int) ((JavaLong) ahArg[2]).getValue();
+        long   of = ((JavaLong) ahArg[1]).getValue();
+        long   n  = ((JavaLong) ahArg[2]).getValue();
+
+        String sInvalid = invalidWriteRange(ab.length, of, n);
+        if (sInvalid != null) {
+            return frame.raiseException(xException.outOfBounds(frame, sInvalid));
+        }
         if (n <= 0) {
             return Op.R_NEXT;
         }
-        try {
-            OutputStream out = sock.getOutputStream();
-            out.write(ab, of, n);
-            out.flush();
-            return Op.R_NEXT;
-        } catch (IOException e) {
-            return frame.raiseException(xException.ioException(frame, e.getMessage()));
+
+        int ofWrite = (int) of;
+        int nWrite  = (int) n;
+        Callable<Void> task = () -> {
+            writeBytes(sock, ab, ofWrite, nWrite);
+            return null;
+        };
+        CompletableFuture<Void> cf = frame.f_context.f_container.scheduleIO(task);
+        Frame.Continuation continuation = frameCaller -> {
+            try {
+                cf.get();
+                return Op.R_NEXT;
+            } catch (Throwable e) {
+                return frameCaller.raiseException(
+                        xException.ioException(frameCaller, unwrap(e).getMessage()));
+            }
+        };
+        return frame.waitForIO(cf, continuation);
+    }
+
+    /**
+     * Validate a write {@code offset}/{@code count} coming from Ecstasy {@code Int}.
+     *
+     * @return {@code null} if the range is valid (including a zero-length no-op);
+     *         otherwise a message for an XVM {@code OutOfBounds}
+     */
+    static String invalidWriteRange(int nLength, long lOffset, long lCount) {
+        if (lCount == 0) {
+            return null;
         }
+        if (lOffset < 0 || lCount < 0
+                || lOffset > Integer.MAX_VALUE || lCount > Integer.MAX_VALUE
+                || lOffset + lCount > nLength) {
+            return "write offset " + lOffset + " count " + lCount + " length " + nLength;
+        }
+        return null;
+    }
+
+    static byte[] readBytes(Socket sock, int cBytes)
+            throws IOException {
+        if (cBytes <= 0) {
+            return new byte[0];
+        }
+        InputStream in  = sock.getInputStream();
+        byte[]      buf = new byte[cBytes];
+        int         off = 0;
+        while (off < cBytes) {
+            int n = in.read(buf, off, cBytes - off);
+            if (n < 0) {
+                break;
+            }
+            off += n;
+        }
+        if (off == cBytes) {
+            return buf;
+        }
+        byte[] actual = new byte[off];
+        System.arraycopy(buf, 0, actual, 0, off);
+        return actual;
+    }
+
+    static void writeBytes(Socket sock, byte[] ab, int of, int n)
+            throws IOException {
+        if (n <= 0) {
+            return;
+        }
+        var out = sock.getOutputStream();
+        out.write(ab, of, n);
+        out.flush();
     }
 
     private static int nativeAvailable(Frame frame, SocketHandle hSocket, int iReturn) {
@@ -348,6 +435,12 @@ public class xRTSocket
             } catch (IOException ignore) {
             }
         }
+    }
+
+    private static Throwable unwrap(Throwable e) {
+        return e instanceof ExecutionException && e.getCause() != null
+                ? e.getCause()
+                : e;
     }
 
     private static SocketHandle requireSocketHandle(ObjectHandle h) {
