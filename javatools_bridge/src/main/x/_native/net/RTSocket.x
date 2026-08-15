@@ -179,7 +179,7 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
     }
 
 
-    // ----- SocketInput class ---------------------------------------------------------------------
+    // ----- SocketOutput class --------------------------------------------------------------------
 
     /**
      * Blocking [BinaryOutput] over the native TCP socket.
