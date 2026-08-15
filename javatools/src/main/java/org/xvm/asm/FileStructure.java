@@ -877,7 +877,11 @@ public class FileStructure
      *         multi-module container rather than a plain single-module file
      */
     public boolean hasMultipleChildren() {
-        return getChildrenCount() > 1;
+        ensureChildren();
+        return f_moduleById.values().stream()
+                .filter(module -> !module.isFingerprint())
+                .limit(2)
+                .count() > 1;
     }
 
     @Override

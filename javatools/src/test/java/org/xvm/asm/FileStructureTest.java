@@ -25,6 +25,7 @@ import org.xvm.util.Severity;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.xvm.util.Handy.byteArrayToHexDump;
@@ -33,6 +34,15 @@ import static org.xvm.util.Handy.byteArrayToHexDump;
  * Tests of XVM FileStructure.
  */
 public class FileStructureTest {
+    @Test
+    public void testHasMultipleChildrenIgnoresFingerprints() {
+        FileStructure file = new FileStructure("Test");
+        file.ensureModule("Dependency").fingerprintRequired();
+
+        assertEquals(2, file.getChildrenCount());
+        assertFalse(file.hasMultipleChildren());
+    }
+
     @Test @Disabled("TODO: Re-enable test")
     public void testEmptyModule()
             throws IOException {
