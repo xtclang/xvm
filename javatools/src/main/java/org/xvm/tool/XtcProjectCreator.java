@@ -36,7 +36,7 @@ public class XtcProjectCreator {
      * IDE/CLI builds the bundled wrapper is the single source of truth, so this constant is rarely
      * hit; keep it roughly in sync with the repo wrapper anyway.
      */
-    public static final String DEFAULT_GRADLE_VERSION = "9.6.1";
+    public static final String DEFAULT_GRADLE_VERSION = "9.7.0";
 
     /**
      * Strict pattern for a resolvable XTC version coordinate written into a generated
@@ -424,9 +424,6 @@ public class XtcProjectCreator {
             # Project configuration
             group=%s
             version=0.1.0-SNAPSHOT
-
-            # Enable native access for Java 24+
-            org.gradle.jvmargs=--enable-native-access=ALL-UNNAMED
 
             # Gradle performance
             org.gradle.parallel=true
