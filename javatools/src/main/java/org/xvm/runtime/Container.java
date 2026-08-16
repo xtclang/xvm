@@ -262,6 +262,13 @@ public abstract class Container
     }
 
     /**
+     * @return a ClassTemplate of the expected type for the specified type
+     */
+    public <T extends ClassTemplate> T getTemplate(TypeConstant type, Class<T> clzTemplate) {
+        return clzTemplate.cast(getTemplate(type));
+    }
+
+    /**
      * @return a ClassTemplate for the specified class identity
      */
     public ClassTemplate getTemplate(IdentityConstant idClass) {
@@ -323,10 +330,24 @@ public abstract class Container
     }
 
     /**
+     * @return a ClassTemplate of the expected type for the specified class identity
+     */
+    public <T extends ClassTemplate> T getTemplate(IdentityConstant idClass, Class<T> clzTemplate) {
+        return clzTemplate.cast(getTemplate(idClass));
+    }
+
+    /**
      * @return a ClassTemplate for a type associated with the specified constant
      */
     public ClassTemplate getTemplate(Constant constValue) {
         return getTemplate(getType(constValue)); // the type must exist
+    }
+
+    /**
+     * @return a ClassTemplate of the expected type for a type associated with the specified constant
+     */
+    public <T extends ClassTemplate> T getTemplate(Constant constValue, Class<T> clzTemplate) {
+        return clzTemplate.cast(getTemplate(constValue));
     }
 
     /**
@@ -404,6 +425,13 @@ public abstract class Container
      */
     public ClassTemplate getTemplate(String sName) {
         return getNativeContainer().getTemplate(sName);
+    }
+
+    /**
+     * @return a ClassTemplate of the expected type for the specified name (core classes only)
+     */
+    public <T extends ClassTemplate> T getTemplate(String sName, Class<T> clzTemplate) {
+        return clzTemplate.cast(getTemplate(sName));
     }
 
     /**

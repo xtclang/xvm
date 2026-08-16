@@ -598,7 +598,7 @@ public class xRTTypeTemplate
      * @return the handle to the appropriate Ecstasy {@code Access} enum value
      */
     public EnumHandle makeAccessHandle(Frame frame, Constants.Access access) {
-        xEnum enumAccess = (xEnum) frame.f_context.f_container.getTemplate("reflect.Access");
+        var enumAccess = frame.f_context.f_container.getTemplate("reflect.Access", xEnum.class);
         switch (access) {
         case PUBLIC:
             return enumAccess.getEnumByName("Public");
@@ -626,7 +626,7 @@ public class xRTTypeTemplate
      * @return the handle to the appropriate Ecstasy {@code TypeTemplate.Form} enum value
      */
     protected EnumHandle makeFormHandle(Frame frame, TypeConstant type) {
-        xEnum enumForm = (xEnum) frame.f_context.f_container.getTemplate("reflect.TypeTemplate.Form");
+        var enumForm = frame.f_context.f_container.getTemplate("reflect.TypeTemplate.Form", xEnum.class);
 
         switch (type.getFormat()) {
         case ParameterizedType:

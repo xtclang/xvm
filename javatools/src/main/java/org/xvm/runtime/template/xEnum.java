@@ -428,7 +428,7 @@ public class xEnum
 
         @Override
         public xEnum getTemplate() {
-            return (xEnum) super.getTemplate();
+            return super.getTemplate(xEnum.class);
         }
 
         @Override

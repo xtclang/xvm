@@ -37,6 +37,13 @@ public interface TypeComposition {
     ClassTemplate getTemplate();
 
     /**
+     * @return the template for the defining class as the expected type
+     */
+    default <T extends ClassTemplate> T getTemplate(Class<T> clzTemplate) {
+        return clzTemplate.cast(getTemplate());
+    }
+
+    /**
      * @return the current (revealed) type of this TypeComposition
      */
     TypeConstant getType();

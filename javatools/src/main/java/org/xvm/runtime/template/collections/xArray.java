@@ -127,7 +127,7 @@ public class xArray
         CREATE_LIST_SET    = Utils.CONST_HELPER.findMethod("createListSet", 2);
 
         // cache Mutability template
-        MUTABILITY = (xEnum) f_container.getTemplate("collections.Array.Mutability");
+        MUTABILITY = f_container.getTemplate("collections.Array.Mutability", xEnum.class);
 
         OBJECT_ARRAY_CLZ  = f_container.resolveClass(pool.ensureArrayType(pool.typeObject()));
         STRING_ARRAY_CLZ  = f_container.resolveClass(pool.ensureArrayType(pool.typeString()));

@@ -64,7 +64,8 @@ public class xRTClassTemplate
         if (this == INSTANCE) {
             ConstantPool pool = f_container.getConstantPool();
 
-            ACTION_TEMPLATE = (xEnum) f_container.getTemplate("reflect.ClassTemplate.Composition.Action");
+            ACTION_TEMPLATE = f_container.getTemplate(
+                    "reflect.ClassTemplate.Composition.Action", xEnum.class);
 
             CLASS_TEMPLATE_TYPE       = pool.ensureEcstasyTypeConstant("reflect.ClassTemplate");
             CLASS_TEMPLATE_ARRAY_TYPE = pool.ensureArrayType(CLASS_TEMPLATE_TYPE);

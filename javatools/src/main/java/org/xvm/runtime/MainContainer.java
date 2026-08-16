@@ -71,7 +71,7 @@ public class MainContainer
             }
             if (typeRequired.isEnum()) {
                 TypeComposition clz    = typeRequired.ensureClass(frame);
-                xEnum           en     = (xEnum) clz.getTemplate();
+                var             en     = clz.getTemplate(xEnum.class);
                 String          sValue = listValue.getLast();
                 ObjectHandle    handle = en.ensureEnumByName(frame, sValue);
                 if (handle == null) {
