@@ -123,10 +123,13 @@ public class SingletonConstant
         // INITIALIZING to anything or from a struct to an immutable value
         assert handle != null;
 
-        CompletableFuture<ObjectHandle> cfInitialized = m_cfInitialized;
-        m_handle            = handle;
-        m_fiberInitializing = null;
-        m_cfInitialized     = null;
+        CompletableFuture<ObjectHandle> cfInitialized;
+        synchronized (this) {
+            cfInitialized       = m_cfInitialized;
+            m_handle            = handle;
+            m_fiberInitializing = null;
+            m_cfInitialized     = null;
+        }
 
         if (cfInitialized != null) {
             cfInitialized.complete(handle);
@@ -145,12 +148,14 @@ public class SingletonConstant
 
         // initialization is entered from the main context; record which fiber owns the attempt, so
         // other fibers would wait without being mistaken for recursion
-        if (m_fiberInitializing != null) {
-            return false;
-        }
+        synchronized (this) {
+            if (m_handle != null || m_fiberInitializing != null) {
+                return false;
+            }
 
-        m_fiberInitializing = fiber;
-        return true;
+            m_fiberInitializing = fiber;
+            return true;
+        }
     }
 
     /**
@@ -162,21 +167,30 @@ public class SingletonConstant
      */
     public CompletableFuture<ObjectHandle> getInitializationWaiter(Fiber fiber) {
         assert fiber != null;
-        Fiber fiberInitializing = m_fiberInitializing;
+        synchronized (this) {
+            ObjectHandle hHandle = m_handle;
+            if (hHandle != null && !(hHandle instanceof InitializingHandle)) {
+                return CompletableFuture.completedFuture(hHandle);
+            }
 
-        assert fiberInitializing != null;
-        if (fiber == fiberInitializing) {
-            // only the initializing fiber represents true recursive initialization; all others
-            // must wait for completion
-            m_handle = new InitializingHandle(this);
-            return null;
-        }
+            Fiber fiberInitializing = m_fiberInitializing;
+            if (fiberInitializing == null) {
+                return CompletableFuture.completedFuture(null);
+            }
 
-        CompletableFuture<ObjectHandle> cfInitialized = m_cfInitialized;
-        if (cfInitialized == null) {
-            m_cfInitialized = cfInitialized = new CompletableFuture<>();
+            if (fiber == fiberInitializing) {
+                // only the initializing fiber represents true recursive initialization; all others
+                // must wait for completion
+                m_handle = new InitializingHandle(this);
+                return null;
+            }
+
+            CompletableFuture<ObjectHandle> cfInitialized = m_cfInitialized;
+            if (cfInitialized == null) {
+                m_cfInitialized = cfInitialized = new CompletableFuture<>();
+            }
+            return cfInitialized;
         }
-        return cfInitialized;
     }
 
     /**
@@ -185,10 +199,13 @@ public class SingletonConstant
      * @param e  the exception that prevented initialization
      */
     public void abortInitialization(Throwable e) {
-        CompletableFuture<ObjectHandle> cfInitialized = m_cfInitialized;
-        m_handle            = null;
-        m_fiberInitializing = null;
-        m_cfInitialized     = null;
+        CompletableFuture<ObjectHandle> cfInitialized;
+        synchronized (this) {
+            cfInitialized       = m_cfInitialized;
+            m_handle            = null;
+            m_fiberInitializing = null;
+            m_cfInitialized     = null;
+        }
 
         if (cfInitialized != null) {
             cfInitialized.completeExceptionally(e);

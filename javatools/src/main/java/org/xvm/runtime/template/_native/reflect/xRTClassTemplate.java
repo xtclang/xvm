@@ -371,7 +371,11 @@ public class xRTClassTemplate
         ahVar[4] = haNames;
         ahVar[5] = haTypes;
 
-        return frame.call1(CREATE_CONTRIB_METHOD, hComponent, ahVar, Op.A_STACK);
+        Frame.Continuation stepNext = frameCaller ->
+                frameCaller.call1(CREATE_CONTRIB_METHOD, hComponent, ahVar, Op.A_STACK);
+        return Op.anyDeferred(ahVar)
+                ? new Utils.GetArguments(ahVar, stepNext).doNext(frame)
+                : stepNext.proceed(frame);
     }
 
     /**

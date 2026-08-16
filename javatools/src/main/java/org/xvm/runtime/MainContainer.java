@@ -73,7 +73,7 @@ public class MainContainer
                 TypeComposition clz    = typeRequired.ensureClass(frame);
                 xEnum           en     = (xEnum) clz.getTemplate();
                 String          sValue = listValue.getLast();
-                ObjectHandle    handle = en.getEnumByName(sValue);
+                ObjectHandle    handle = en.ensureEnumByName(frame, sValue);
                 if (handle == null) {
                     // a value was injected that does not match any of the enum values
                     String msg = "Injectable " + sName + "=\"" + sValue

@@ -365,16 +365,24 @@ public class xArray
 
         if (hThat.isMutable() && (mutability == Mutability.Mutable || mutability == Mutability.Fixed)) {
             ObjectHandle[] ahArg = new ObjectHandle[] {
-                MUTABILITY.getEnumByOrdinal(mutability.ordinal()),
+                MUTABILITY.ensureEnumByOrdinal(frame, mutability.ordinal()),
                 hThat
             };
-            return construct2(frame, clzArray, ahArg, iReturn);
+            Frame.Continuation stepNext = frameCaller ->
+                    construct2(frameCaller, clzArray, ahArg, iReturn);
+            return Op.anyDeferred(ahArg)
+                    ? new Utils.GetArguments(ahArg, stepNext).doNext(frame)
+                    : construct2(frame, clzArray, ahArg, iReturn);
         } else {
             ObjectHandle[] ahArg = new ObjectHandle[] {
                 hThat.m_hDelegate,
-                MUTABILITY.getEnumByOrdinal(mutability.ordinal())
+                MUTABILITY.ensureEnumByOrdinal(frame, mutability.ordinal())
             };
-            return construct4(frame, clzArray, ahArg, iReturn);
+            Frame.Continuation stepNext = frameCaller ->
+                    construct4(frameCaller, clzArray, ahArg, iReturn);
+            return Op.anyDeferred(ahArg)
+                    ? new Utils.GetArguments(ahArg, stepNext).doNext(frame)
+                    : construct4(frame, clzArray, ahArg, iReturn);
         }
     }
 

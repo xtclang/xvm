@@ -97,7 +97,8 @@ public class xEnum
             xEnum templateEnum = (xEnum) getSuper();
 
             EnumHandle hEnum = templateEnum.getEnumByConstant(constValue.getClassConstant());
-            constValue.setHandle(hEnum);
+            // For natural enums, hEnum is the mutable struct until completeConstruction() returns.
+            // Utils.initConstants() publishes the finalized singleton handle after construction.
 
             return hEnum.isStruct()
                     ? completeConstruction(frame, hEnum)
@@ -285,8 +286,32 @@ public class xEnum
         return ix >= 0 ? m_listHandles.get(ix) : null;
     }
 
+    /**
+     * Obtain an initialized enum value handle by name.
+     *
+     * @return the initialized enum value handle, a deferred handle, or null
+     */
+    public ObjectHandle ensureEnumByName(Frame frame, String sName) {
+        EnumHandle hEnum = getEnumByName(sName);
+        return hEnum == null
+                ? null
+                : Utils.ensureInitializedEnum(frame, hEnum);
+    }
+
     public EnumHandle getEnumByOrdinal(int ix) {
         return ix >= 0 ? m_listHandles.get(ix) : null;
+    }
+
+    /**
+     * Obtain an initialized enum value handle by ordinal.
+     *
+     * @return the initialized enum value handle, a deferred handle, or null
+     */
+    public ObjectHandle ensureEnumByOrdinal(Frame frame, int ix) {
+        EnumHandle hEnum = getEnumByOrdinal(ix);
+        return hEnum == null
+                ? null
+                : Utils.ensureInitializedEnum(frame, hEnum);
     }
 
     /**

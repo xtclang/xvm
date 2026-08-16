@@ -176,7 +176,11 @@ public class xRTPropertyClassTemplate
             ahVar[3] = haNames;
             ahVar[4] = haTypes;
 
-            return frameCaller.call1(methodCreateContrib, null, ahVar, Op.A_STACK);
+            Frame.Continuation stepNext = frameCaller2 ->
+                    frameCaller2.call1(methodCreateContrib, null, ahVar, Op.A_STACK);
+            return Op.anyDeferred(ahVar)
+                    ? new Utils.GetArguments(ahVar, stepNext).doNext(frameCaller)
+                    : stepNext.proceed(frameCaller);
         };
 
         return xArray.createAndFill(frame,

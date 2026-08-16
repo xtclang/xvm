@@ -182,9 +182,8 @@ public class xRTMethod
      * Implements property: access.get()
      */
     public int getPropertyAccess(Frame frame, MethodHandle hMethod, int iReturn) {
-        Access       access  = hMethod.getMethodInfo().getAccess();
-        ObjectHandle hAccess = xRTType.makeAccessHandle(frame, access);
-        return frame.assignValue(iReturn, hAccess);
+        Access access = hMethod.getMethodInfo().getAccess();
+        return Utils.assignInitializedEnum(frame, xRTType.makeAccessHandle(frame, access), iReturn);
     }
 
 
