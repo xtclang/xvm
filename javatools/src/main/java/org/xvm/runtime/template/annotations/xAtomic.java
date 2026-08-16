@@ -60,6 +60,7 @@ public class xAtomic
         mapTemplates.put(pool.typeInt32(),   new xAtomicIntNumber(xInt32.INSTANCE));
         mapTemplates.put(pool.typeInt64(),   new xAtomicIntNumber(xInt64.INSTANCE));
 
+        mapTemplates.put(pool.typeNibble(),  new xAtomicIntNumber(xNibble.INSTANCE));
         mapTemplates.put(pool.typeUInt8(),   new xAtomicIntNumber(xUInt8.INSTANCE));
         mapTemplates.put(pool.typeUInt16(),  new xAtomicIntNumber(xUInt16.INSTANCE));
         mapTemplates.put(pool.typeUInt32(),  new xAtomicIntNumber(xUInt32.INSTANCE));

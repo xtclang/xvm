@@ -18,6 +18,7 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.template.numbers.xNibble;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
 
@@ -148,6 +149,9 @@ public class xRTRandom
         switch (method.getName()) {
         case "bit":
             return frame.assignValue(iReturn, xBit.makeHandle(rnd(hTarget).nextBoolean()));
+
+        case "nibble":
+            return frame.assignValue(iReturn, xNibble.makeHandle(rnd(hTarget).nextInt()));
 
         case "int8":
             return frame.assignValue(iReturn, xInt8.INSTANCE.makeJavaLong(rnd(hTarget).nextInt()));
