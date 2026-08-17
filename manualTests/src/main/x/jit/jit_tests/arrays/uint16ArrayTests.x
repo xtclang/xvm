@@ -4,7 +4,6 @@ package uint16ArrayTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running UInt16 Array Tests >>>>");
 
         shouldCreateWithCapacity();
         shouldCreateArrayInitializedWithZeroValue();
@@ -33,7 +32,6 @@ package uint16ArrayTests {
         shouldDeleteSpecificIndexFromArray();
         shouldInsertValueIntoArray();
 
-        console.print(">>>> Running UInt16 Array Tests >>>>");
     }
 
     void shouldCreateWithCapacity() {

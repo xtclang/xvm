@@ -15,6 +15,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.template.numbers.xNibble;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 
@@ -583,6 +584,7 @@ public abstract class LongBasedDelegate
                 case xRTUInt64Delegate  _ -> templateValue == xUInt64.INSTANCE;
                 case xRTInt128Delegate  _ -> templateValue == xInt128.INSTANCE;
                 case xRTUInt128Delegate _ -> templateValue == xUInt128.INSTANCE;
+                case xRTNibbleDelegate _  -> templateValue == xNibble.INSTANCE;
                 default                   -> hValue.getType().isA(getElementType());
             };
         }

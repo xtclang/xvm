@@ -6,9 +6,7 @@ class IpMiscTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running IpMiscTests >>>>");
         testInPlaceAddAssign();
-        console.print("<<<< Finished IpMiscTests <<<<<");
     }
 
     void testInPlaceAddAssign() {

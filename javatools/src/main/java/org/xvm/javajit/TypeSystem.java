@@ -155,6 +155,7 @@ public class TypeSystem {
     public static final int  ESC      = 0x10458; // "𐑘"
     public static final char CLASS    = 'c';     // prefix
     public static final char PURE     = 'i';     // prefix
+    public static final char FUNKY    = 's';     // prefix
     public static final char PROXY    = 'p';     // prefix
     public static final char DUCK     = 'd';     // prefix
     public static final char ENUM     = 'e';     // prefix - for Enumeration<Enum> i.e. Class<Enum>
@@ -316,6 +317,10 @@ public class TypeSystem {
                     builder.buildClassOfClass(classBuilder);
                     break;
 
+                case Funky:
+                    builder.buildFunkyInterface(classBuilder);
+                    break;
+
                 case Exception:
                     ((ExceptionBuilder) builder).assembleJavaException(className, classBuilder);
                     break;
@@ -400,6 +405,8 @@ public class TypeSystem {
 
             case Class -> ClassHierarchyInfo.ofClass(CD_Class);
 
+            case Funky -> ClassHierarchyInfo.ofInterface();
+
             case Exception -> ClassHierarchyInfo.ofClass(
                     ((ExceptionBuilder) ensureBuilder(art)).getJavaExceptionSuperCD());
 
@@ -461,8 +468,9 @@ public class TypeSystem {
      * Jit class shapes.
      */
     public enum ClassfileShape {
-        Class    ("" + CLASS ), // used to prefix a class name only when a collision would occur
+        Class    ("" + CLASS ), // class of class
         Pure     ("" + PURE  ), // interface
+        Funky    ("" + FUNKY ), // the funky (static) part of an interface
         Proxy    ("" + PROXY ),
         Duck     ("" + DUCK  ),
         Enum     ("" + ENUM  ),
@@ -485,7 +493,7 @@ public class TypeSystem {
         if (shape == ClassfileShape.Impl) {
             return classname;
         }
-        throw new UnsupportedOperationException("TODO implement shape " + shape);
+        return flavorClassName(classname, shape.prefix.charAt(0));
     }
 
     public record Artifact(
@@ -601,12 +609,24 @@ public class TypeSystem {
     /**
      * Build a class name for the `Class` class of the specific already-escaped class name.
      *
-     * @param name  the JIT name of the class of Class
+     * @param name  the JIT name of the class
      *
      * @return the JIT name of the `Class` class
      */
     public static String classOfClass(String name) {
         return flavorClassName(name, CLASS);
+    }
+
+    /**
+     * Build a name for the interface that holds only the static abstract functions of an Ecstasy
+     * funky interface as instance methods.
+     *
+     * @param name  the JIT name of the interface
+     *
+     * @return the JIT name of the `Funky` interface
+     */
+    public static String funkyInterface(String name) {
+        return flavorClassName(name, FUNKY);
     }
 
     private static String flavorClassName(String name, char flavor) {
@@ -631,7 +651,7 @@ public class TypeSystem {
             if (ch >= MIN_ESC || index == classStart) {
                 switch (ch) {
                 case ESC:
-                case CLASS, PURE, PROXY, DUCK, MASK, NO_MOD, FUTURE, ENUM, EXCEPT, RESERVED:
+                case CLASS, PURE, FUNKY, PROXY, DUCK, MASK, NO_MOD, FUTURE, ENUM, EXCEPT, RESERVED:
                 case HASH, DOT, OR, ADD, SUB, QUESTION, BANG, AT, SPACE, COMMA:
                 case L_PAREN, R_PAREN, L_ANGLE, R_ANGLE:
                     if (buf == null) {

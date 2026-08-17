@@ -503,7 +503,7 @@ public abstract class RelationalTypeConstant
      * @return merged TypeInfo
      */
     TypeInfo mergeTypeInfo(TypeInfo info1, TypeInfo info2, int cInvals, ErrorListener errs) {
-        return new TypeInfo(
+        return new TypeInfoReal(
                 this,
                 cInvals,
                 null,                                   // struct

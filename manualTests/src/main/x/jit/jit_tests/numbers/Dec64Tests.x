@@ -3,7 +3,6 @@ class Dec64Tests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Dec64Tests >>>>");
         // Comparison tests
         testDec64CompareEq();
         testDec64CompareGe();
@@ -43,7 +42,6 @@ class Dec64Tests {
         testAppendTo();
         testEstimateStringLength();
 
-        console.print("<<<<< Finished Dec64Tests tests >>>>>");
     }
 
     // ----- comparison tests ----------------------------------------------------------------------

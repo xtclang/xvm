@@ -3,12 +3,8 @@
  * hexadecimal value (a _hexit_, akin to a digit).
  */
 const Nibble(Bit[] bits)
-        implements Sequential
-        implements IntConvertible
+        extends UIntNumber
         default(0) {
-    assert() {
-        assert bits.size == 4;
-    }
 
     // ----- constants -----------------------------------------------------------------------------
 
@@ -27,32 +23,83 @@ const Nibble(Bit[] bits)
      */
     private static Nibble[] values =
         [
-        new Nibble([0, 0, 0, 0]),
-        new Nibble([0, 0, 0, 1]),
-        new Nibble([0, 0, 1, 0]),
-        new Nibble([0, 0, 1, 1]),
-        new Nibble([0, 1, 0, 0]),
-        new Nibble([0, 1, 0, 1]),
-        new Nibble([0, 1, 1, 0]),
-        new Nibble([0, 1, 1, 1]),
-        new Nibble([1, 0, 0, 0]),
-        new Nibble([1, 0, 0, 1]),
-        new Nibble([1, 0, 1, 0]),
-        new Nibble([1, 0, 1, 1]),
-        new Nibble([1, 1, 0, 0]),
-        new Nibble([1, 1, 0, 1]),
-        new Nibble([1, 1, 1, 0]),
-        new Nibble([1, 1, 1, 1]),
+        new Nibble(Array<Bit>:[0, 0, 0, 0]),
+        new Nibble(Array<Bit>:[0, 0, 0, 1]),
+        new Nibble(Array<Bit>:[0, 0, 1, 0]),
+        new Nibble(Array<Bit>:[0, 0, 1, 1]),
+        new Nibble(Array<Bit>:[0, 1, 0, 0]),
+        new Nibble(Array<Bit>:[0, 1, 0, 1]),
+        new Nibble(Array<Bit>:[0, 1, 1, 0]),
+        new Nibble(Array<Bit>:[0, 1, 1, 1]),
+        new Nibble(Array<Bit>:[1, 0, 0, 0]),
+        new Nibble(Array<Bit>:[1, 0, 0, 1]),
+        new Nibble(Array<Bit>:[1, 0, 1, 0]),
+        new Nibble(Array<Bit>:[1, 0, 1, 1]),
+        new Nibble(Array<Bit>:[1, 1, 0, 0]),
+        new Nibble(Array<Bit>:[1, 1, 0, 1]),
+        new Nibble(Array<Bit>:[1, 1, 1, 0]),
+        new Nibble(Array<Bit>:[1, 1, 1, 1]),
         ];
 
+    // ----- Numeric funky interface ---------------------------------------------------------------
+
+    @Override
+    static conditional Int fixedBitLength() {
+        return True, 4;
+    }
+
+    @Override
+    static Nibble zero() = 0;
+
+    @Override
+    static Nibble one() = 1;
+
+    @Override
+    static conditional Range<Nibble> range() {
+        return True, MinValue..MaxValue;
+    }
+
+
+    // ----- constructors --------------------------------------------------------------------------
+
+    /**
+     * Construct a 4-bit unsigned integer number from its bitwise machine representation.
+     *
+     * @param bits  an array of bit values that represent this number, ordered from left-to-right,
+     *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
+     */
+    @Override
+    construct(Bit[] bits) {
+        assert bits.size == 4;
+        super(bits);
+    }
+
+    /**
+     * Construct an 4-bit unsigned integer number from its network-portable representation.
+     *
+     * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
+     *               as they would appear on the wire or in a file
+     */
+    @Override
+    construct(Byte[] bytes) {
+        assert bytes.size == 1;
+        super(bytes);
+    }
+
+    /**
+     * Construct an 4-bit unsigned integer number from its `String` representation.
+     *
+     * @param text  an integer number, in text format
+     */
+    @Override
+    construct(String text) {
+        construct Nibble(new IntLiteral(text).toNibble().bits);
+    }
 
     // ----- properties ----------------------------------------------------------------------------
 
-    /**
-     * The actual array of bits representing this nibble, ordered from left-to-right, Most
-     * Significant Bit (MSB) to Least Significant Bit (LSB).
-     */
-    private Bit[] bits;
+    @Override
+    Signum sign.get() = this == 0 ? Zero : Positive;
 
 
     // ----- obtaining a Nibble --------------------------------------------------------------------
@@ -109,162 +156,89 @@ const Nibble(Bit[] bits)
         return False;
     }
 
-    @Override
-    Int stepsTo(Nibble that) {
-        return that - this;
-    }
+    // ----- operations ----------------------------------------------------------------------------
 
     @Override
-    Nibble skip(Int steps) {
-        return values[toInt64() + steps];
-    }
-
-
-    // ----- math operations -----------------------------------------------------------------------
-
-    /**
-     * Addition: Add another Nibble to this Nibble, and return the result.
-     *
-     * @param n  the Nibble to add to this number (the addend)
-     *
-     * @return the resulting sum
-     *
-     * @throws OutOfBounds  if the resulting value is out of range for this type
-     */
     @Op("+")
-    Nibble add(Nibble n) {
-        return add(n.toInt64());
-    }
+    Nibble add(Nibble! n) = this + n;
 
-    /**
-     * Subtraction: Subtract another Nibble from this Nibble, and return the result.
-     *
-     * @param n  the Nibble to subtract from this Nibble (the subtrahend)
-     *
-     * @return the resulting difference
-     *
-     * @throws OutOfBounds  if the resulting value is out of range for this type
-     */
+    @Override
     @Op("-")
-    Nibble sub(Nibble n) {
-        return sub(n.toInt64());
-    }
+    Nibble sub(Nibble! n)= this - n;
 
-    /**
-     * Addition: Add another number to this Nibble, and return the result.
-     *
-     * @param n  the number to add to this number (the addend)
-     *
-     * @return the resulting sum
-     *
-     * @throws OutOfBounds  if the resulting value is out of range for this type
-     */
-    @Op("+")
-    Nibble add(IntNumber n) {
-        Int sum = this.toInt64() + n.toInt64();
-        assert:bounds 0 <= sum < 16;
-        return values[sum];
-    }
+    @Override
+    @Op("*")
+    Nibble mul(Nibble! n) = this * n;
 
-    /**
-     * Subtraction: Subtract another number from this Nibble, and return the result.
-     *
-     * @param n  the number to subtract from this number (the subtrahend)
-     *
-     * @return the resulting difference
-     *
-     * @throws OutOfBounds  if the resulting value is out of range for this type
-     */
-    @Op("-")
-    Nibble sub(IntNumber n) {
-        Int dif = this.toInt64() - n.toInt64();
-        assert:bounds 0 <= dif < 16;
-        return values[dif];
-    }
+    @Override
+    @Op("/")
+    Nibble div(Nibble! n) = this / n;
 
+    @Override
+    @Op("%")
+    Nibble mod(Nibble! n) =  this % n;
+
+    @Override
+    Nibble pow(Nibble! n) {
+        Nibble result = 1;
+
+        while (n-- > 0) {
+            result *= this;
+        }
+
+        return result;
+    }
 
     // ----- conversions ---------------------------------------------------------------------------
-
-    /**
-     * Obtain the nibble as an array of bits, in left-to-right order.
-     *
-     * @param mutability  the mutability of the resulting array
-     *
-     * @return the nibble as an array of bits
-     */
-    Bit[] toBitArray(Array.Mutability mutability = Constant) {
-        return bits.toArray(mutability, True);
-    }
 
     /**
      * @return the character representation of the nibble, which is the digit `0..9` or the alpha
      *         letter `A..F`
      */
     @Auto
+    @Override
     Char toChar() {
         UInt32 n = toUInt32();
         return n <= 9 ? '0' + n : 'A' + n - 0xA;
     }
 
-    @Auto
     @Override
-    IntLiteral toIntLiteral() {
-        return new IntLiteral(toChar().toString());
-    }
+    Nibble toNibble(Boolean checkBounds = False) = this;
 
     /**
      * @return the Int8 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
     @Override
-    Int8 toInt8() {
-        return toUInt8().toInt8();
-    }
+    Int8 toInt8(Boolean checkBounds = False) = new Int8(new Bit[8](i -> i < 8-bitLength ? 0 : bits[i]));
 
     /**
      * @return the Int16 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
     @Override
-    Int16 toInt16() {
-        return toUInt8().toInt16();
-    }
+    Int16 toInt16(Boolean checkBounds = False) = new Int16(new Bit[16](i -> i < 16-bitLength ? 0 : bits[i]));
 
     /**
      * @return the Int32 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
     @Override
-    Int32 toInt32() {
-        return toUInt8().toInt32();
-    }
+    Int32 toInt32(Boolean checkBounds = False)  = new Int32(new Bit[32](i -> i < 32-bitLength ? 0 : bits[i]));
 
     /**
      * @return the Int64 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
     @Override
-    Int64 toInt64() {
-        return toUInt8().toInt64();
-    }
+    Int64 toInt64(Boolean checkBounds = False) = new Int64(new Bit[64](i -> i < 64-bitLength ? 0 : bits[i]));
 
     /**
      * @return the Int128 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
     @Override
-    Int128 toInt128() {
-        return toUInt8().toInt128();
-    }
-
-    /**
-     * @return the IntN value corresponding to the magnitude of the nibble, in the range `[0..F]`
-     */
-    @Auto
-    @Override
-    IntN toIntN() {
-        return toUInt8().toIntN();
-    }
+    Int128 toInt128(Boolean checkBounds = False) = new Int128(new Bit[128](i -> i < 128-bitLength ? 0 : bits[i]));
 
     /**
      * @return the Int8 (Byte) value corresponding to the magnitude of the nibble, in the range
@@ -272,92 +246,42 @@ const Nibble(Bit[] bits)
      */
     @Auto
     @Override
-    UInt8 toUInt8() {
-        return bits.toUInt8();
-    }
+    UInt8 toUInt8(Boolean checkBounds = False) = new UInt8(new Bit[8](i -> i < 8-bitLength ? 0 : bits[i]));
 
     /**
      * @return the UInt16 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
     @Override
-    UInt16 toUInt16() {
-        return toUInt8().toUInt16();
-    }
+    UInt16 toUInt16(Boolean checkBounds = False) = new UInt16(new Bit[16](i -> i < 16-bitLength ? 0 : bits[i]));
 
     /**
      * @return the UInt32 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
     @Override
-    UInt32 toUInt32() {
-        return toUInt8().toUInt32();
-    }
+    UInt32 toUInt32(Boolean checkBounds = False) =  new UInt32(new Bit[32](i -> i < 32-bitLength ? 0 : bits[i]));
 
     /**
      * @return the UInt64 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
     @Override
-    UInt64 toUInt64() {
-        return toUInt8().toUInt64();
-    }
+    UInt64 toUInt64(Boolean checkBounds = False)  = new UInt64(new Bit[64](i -> i < 64-bitLength ? 0 : bits[i]));
 
     /**
      * @return the UInt128 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
     @Auto
     @Override
-    UInt128 toUInt128() {
-        return toUInt8().toUInt128();
-    }
-
-    /**
-     * @return the UIntN value corresponding to the magnitude of the nibble, in the range `[0..F]`
-     */
-    @Auto
-    @Override
-    UIntN toUIntN() {
-        return toUInt8().toUIntN();
-    }
-
-
-    // ----- Orderable and Hashable ----------------------------------------------------------------
-
-    /**
-     * Calculate a hash code for the specified Enum value.
-     */
-    @Override
-    static <CompileType extends Nibble> Int64 hashCode(CompileType value) {
-        return value.toInt64();
-    }
-
-    /**
-     * Compare two enumerated values that belong to the same enumeration purposes of ordering.
-     */
-    @Override
-    static <CompileType extends Nibble> Ordered compare(CompileType value1, CompileType value2) {
-        return value1.toUInt8() <=> value2.toUInt8();
-    }
-
-    /**
-     * Compare two enumerated values that belong to the same enumeration for equality.
-     */
-    @Override
-    static <CompileType extends Nibble> Boolean equals(CompileType value1, CompileType value2) {
-        return value1.toUInt8() == value2.toUInt8();
-    }
+    UInt128 toUInt128(Boolean checkBounds = False) = new UInt128(new Bit[128](i -> i < 128-bitLength ? 0 : bits[i]));
 
 
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength() {
-        return 1;
-    }
+    Int estimateStringLength() = 1;
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf) {
-        return buf.add(toChar());
-    }
+    Appender<Char> appendTo(Appender<Char> buf) = buf.add(toChar());
 }

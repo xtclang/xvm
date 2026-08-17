@@ -254,12 +254,32 @@ public abstract class BaseBinaryFP
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn) {
         switch (method.getName()) {
         case "split": {
-            double d = ((FloatHandle) hTarget).getValue();
-            long   l = Double.doubleToRawLongBits(d);
+            boolean fSign;
+            int     iExp;
+            long    lMantissa;
 
-            boolean fSign     = (l & SIGN_MASK) != 0;
-            int     iExp      = Math.getExponent(d);
-            long    lMantissa = l & MANTISSA_MASK;
+            double d = ((FloatHandle) hTarget).getValue();
+            switch (this.f_cBits) {
+                case 16:
+                    short s = Float.floatToFloat16((float) d);
+                    fSign     = (s & 0x8000) != 0;
+                    iExp      = (s & 0x7C00) >>> 10;
+                    lMantissa = s & 0x03FF;
+                    break;
+                case 32:
+                    int i = Float.floatToRawIntBits((float) d);
+                    fSign     = (i & 0x80000000) != 0;
+                    iExp      = (i & 0x7F800000) >>> 23;
+                    lMantissa = i & 0x007FFFFF;
+                    break;
+                default:
+                    // TODO this only works for Float64, other FP types have different size exponent and
+                    //  mantissa parts
+                    long l = Double.doubleToRawLongBits(d);
+                    fSign     = (l & SIGN_MASK) != 0;
+                    iExp      = (int) (l & EXP_MASK >>> 52);
+                    lMantissa = l & MANTISSA_MASK;
+            }
             return frame.assignValues(aiReturn, xBoolean.makeHandle(fSign),
                                       xInt64.makeHandle(lMantissa), xInt64.makeHandle(iExp));
         }

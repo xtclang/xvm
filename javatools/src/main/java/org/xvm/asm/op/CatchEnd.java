@@ -87,7 +87,8 @@ public class CatchEnd
         if (m_ofJmp > 1) {
             code.goto_(bctx.ensureLabel(code, getAddress() + m_ofJmp));
         } else {
-            assert m_ofJmp == 1;
+            // an unreachable CATCH_END can be retained solely to balance scopes
+            assert m_ofJmp == 1 || m_ofJmp == 0 && !bctx.typeMatrix.isReached(getAddress());
         }
         return -1;
     }

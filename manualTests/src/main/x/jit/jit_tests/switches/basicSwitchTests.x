@@ -3,11 +3,9 @@ package basicSwitchTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running basic switch tests >>>>");
 
         testSwitchOnProperties();
 
-        console.print(">>>> Finished basic switch tests >>>>");
     }
 
     void testSwitchOnProperties() {

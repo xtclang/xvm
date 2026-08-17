@@ -5,7 +5,6 @@ package int32SwitchTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Int32 switch tests >>>>");
 
         testSimpleSwitch();
         testSimpleSwitchWithNullable();
@@ -25,7 +24,6 @@ package int32SwitchTests {
 
         testRangeSwitch();
 
-        console.print(">>>> Finished Int32 switch tests >>>>");
     }
 
     void testSimpleSwitch() {

@@ -1,7 +1,9 @@
 package org.xvm.javajit;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.IdentityConstant;
@@ -32,6 +34,11 @@ public class NativeNames {
         reservedMethodName.put("Boolean/xor/1",    "xor");
         reservedMethodName.put("Boolean/toByte/0", "toByte");
 
+        reservedMethodName.put("numbers.Bit/not/0", "not");
+        reservedMethodName.put("numbers.Bit/and/1", "and");
+        reservedMethodName.put("numbers.Bit/or/1",  "or");
+        reservedMethodName.put("numbers.Bit/xor/1", "xor");
+
         reservedMethodName.put("collections.Array/add/1",        "add");
         reservedMethodName.put("collections.Array/addAll/1",     "addAll");
         reservedMethodName.put("collections.Array/delete/1",     "delete");
@@ -40,33 +47,7 @@ public class NativeNames {
         reservedMethodName.put("collections.Array/reify/1",      "reify");
         reservedMethodName.put("collections.Array/removeAll/1",  "removeAll");
         reservedMethodName.put("collections.Collection/reify/0", "reify");
-
-        reservedMethodName.put("numbers.IntConvertible/toIntN/0",  "toIntN");
-        reservedMethodName.put("numbers.IntConvertible/toUInt/0",  "toUInt");
-        reservedMethodName.put("numbers.IntConvertible/toUIntN/0", "toUIntN");
-
-        reservedMethodName.put("numbers.FPnumber/toIntN/1",  "toIntN$FP");
-        reservedMethodName.put("numbers.FPnumber/toUIntN/1", "toUIntN$FP");
-
-        reservedMethodName.put("numbers.Number/toInt8/1",    "toInt8");
-        reservedMethodName.put("numbers.Number/toInt16/1",   "toInt16");
-        reservedMethodName.put("numbers.Number/toInt32/1",   "toInt32");
-        reservedMethodName.put("numbers.Number/toInt64/1",   "toInt64");
-        reservedMethodName.put("numbers.Number/toInt128/1",  "toInt128");
-        reservedMethodName.put("numbers.Number/toIntN/0",    "toIntN");
-        reservedMethodName.put("numbers.Number/toUInt8/1",   "toUInt8");
-        reservedMethodName.put("numbers.Number/toUInt16/1",  "toUInt16");
-        reservedMethodName.put("numbers.Number/toUInt32/1",  "toUInt32");
-        reservedMethodName.put("numbers.Number/toUInt64/1",  "toUInt64");
-        reservedMethodName.put("numbers.Number/toUInt128/1", "toUInt128");
-        reservedMethodName.put("numbers.Number/toUIntN/0",   "toUIntN");
-
-        reservedMethodName.put("numbers.Number/toDec32/0",   "toDec32");
-        reservedMethodName.put("numbers.Number/toDec64/0",   "toDec64");
-        reservedMethodName.put("numbers.Number/toDec128/0",  "toDec128");
-        reservedMethodName.put("numbers.Number/toFloat16/0", "toFloat16");
-        reservedMethodName.put("numbers.Number/toFloat32/0", "toFloat32");
-        reservedMethodName.put("numbers.Number/toFloat64/0", "toFloat64");
+        reservedMethodName.put("collections.Hashable/hashCode/2", "hashCode");
 
         reservedMethodName.put("numbers.Number/toInt8/2",    "toInt8$FP");
         reservedMethodName.put("numbers.Number/toInt16/2",   "toInt16$FP");
@@ -80,6 +61,7 @@ public class NativeNames {
         reservedMethodName.put("numbers.Number/toUInt64/2",  "toUInt64$FP");
         reservedMethodName.put("numbers.Number/toUInt128/2", "toUInt128$FP");
         reservedMethodName.put("numbers.Number/toUIntN/1",   "toUIntN$FP");
+        reservedMethodName.put("numbers.Number/toNibble/2",  "toNibble$FP");
 
         reservedMethodName.put("numbers.IntNumber/add/1",           "add");
         reservedMethodName.put("numbers.IntNumber/and/1",           "and");
@@ -93,7 +75,6 @@ public class NativeNames {
         reservedMethodName.put("numbers.IntNumber/skip/1",          "skip");
         reservedMethodName.put("numbers.IntNumber/stepsTo/1",       "stepsTo");
         reservedMethodName.put("numbers.IntNumber/sub/1",           "sub");
-        reservedMethodName.put("numbers.IntNumber/toIntN/0",        "toIntN");
         reservedMethodName.put("numbers.IntNumber/xor/1",           "xor");
 
         reservedMethodName.put("numbers.IntN/abs/0",       "abs");
@@ -144,12 +125,20 @@ public class NativeNames {
             // there was no match for the exact type and method, try to match on super types
 
             ConstantPool pool = classId.getConstantPool();
-            if (classType.isA(pool.typeNumber()) ||
-                    classType.isA(pool.ensureEcstasyTypeConstant("numbers.FPNumber")) ||
+            if (classType.isA(pool.typeNumber()) || classType.isA(pool.typeFPNumber()) ||
+                    classType.isA(pool.ensureEcstasyTypeConstant("numbers.IntConvertible")) ||
                     classType.isA(pool.ensureEcstasyTypeConstant("numbers.FPConvertible"))) {
-                // the type is a Number
+                // the type is a Number or IntConvertible
                 key     = createKey("numbers.Number", methodId);
                 jitName = reservedMethodName.get(key);
+
+                String methodName = methodId.getName();
+                if (jitName == null &&
+                        (methodName.startsWith("toInt") || methodName.startsWith("toUInt") ||
+                         methodName.startsWith("toDec") || methodName.startsWith("toFloat") ||
+                         methodName.startsWith("toNibble"))) {
+                    jitName = methodName;
+                }
             }
         }
 
@@ -160,5 +149,24 @@ public class NativeNames {
         return className + "/" +
                methodId.getName() + "/" +
                methodId.getSignature().getParamCount();
+    }
+
+    /**
+     * @return all method names that must be reserved before JIT name generation starts
+     */
+    public static Set<String> reservedJitNames() {
+        Set<String> names = new HashSet<>(reservedMethodName.values());
+        addConversionNames(names, "toInt",   "", "8", "16", "32", "64", "128", "N", "Literal");
+        addConversionNames(names, "toUInt",  "", "8", "16", "32", "64", "128", "N");
+        addConversionNames(names, "toNibble", "");
+        addConversionNames(names, "toDec",   "", "32", "64", "128", "N");
+        addConversionNames(names, "toFloat", "8e4", "8e5", "16", "32", "64", "128", "N");
+        return names;
+    }
+
+    private static void addConversionNames(Set<String> names, String prefix, String... suffixes) {
+        for (String suffix : suffixes) {
+            names.add(prefix + suffix);
+        }
     }
 }

@@ -6,7 +6,6 @@ package charSwitchTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Char switch tests >>>>");
 
         testSimpleSwitch();
         testSimpleSwitchWithNullable();
@@ -26,7 +25,6 @@ package charSwitchTests {
 
         testRangeSwitch();
 
-        console.print(">>>> Finished Char switch tests >>>>");
     }
 
     void testSimpleSwitch() {

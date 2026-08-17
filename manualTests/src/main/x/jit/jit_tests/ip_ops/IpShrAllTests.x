@@ -6,7 +6,6 @@ class IpShrAllTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running IpShrAllTests >>>>");
         testIpShrAllInt();
         testIpShrAllUInt();
         testIpShrAllInt8();
@@ -17,7 +16,6 @@ class IpShrAllTests {
         testIpShrAllUInt32();
         testIpShrAllInt128();
         testIpShrAllUInt128();
-        console.print("<<<< Finished IpShrAllTests <<<<<");
     }
 
     void testIpShrAllInt() {

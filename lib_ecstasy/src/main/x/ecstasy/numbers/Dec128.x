@@ -1,6 +1,28 @@
 const Dec128
         extends DecimalFPNumber
         default(0.0) {
+    // ----- constants -----------------------------------------------------------------------------
+
+    /**
+     * The value for a positive infinity Dec128.
+     */
+    static Dec128 PositiveInfinity = new Dec128(#7800_0000_0000_0000_0000_0000_0000_0000);
+
+    /**
+     * The value for a negative infinity Dec128.
+     */
+    static Dec128 NegativeInfinity = new Dec128(#F800_0000_0000_0000_0000_0000_0000_0000);
+
+    /**
+     * The value for a positive NaN Dec128.
+     */
+    static Dec128 PositiveNaN = new Dec128(#7C00_0000_0000_0000_0000_0000_0000_0000);
+
+    /**
+     * The value for a negative NaN Dec128.
+     */
+    static Dec128 NegativeNaN = new Dec128(#FC00_0000_0000_0000_0000_0000_0000_0000);
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**

@@ -3,7 +3,6 @@ package assertTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Assert Message Tests >>>>");
 
         testPrimitiveValues(7, 8);
         testNullNullablePrimitive(Null, False);
@@ -11,7 +10,6 @@ package assertTests {
         testNullNullableXvmPrimitive(Null, False);
         testStringValue("world", 7);
 
-        console.print("<<<< Finished Assert Message Tests <<<<");
     }
 
     void testPrimitiveValues(Int value, Int? value2) {

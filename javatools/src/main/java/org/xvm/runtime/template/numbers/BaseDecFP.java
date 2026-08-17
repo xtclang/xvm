@@ -85,7 +85,7 @@ public abstract class BaseDecFP
                 xArray.makeBitArrayHandle(dec.toByteArray(), f_cBits, Mutability.Constant));
 
         case "infinity":
-            return frame.assignValue(iReturn, xBoolean.makeHandle(!dec.isFinite()));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(dec.isInfinite()));
 
         case "NaN":
             return frame.assignValue(iReturn, xBoolean.makeHandle(dec.isNaN()));
@@ -285,12 +285,29 @@ public abstract class BaseDecFP
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn) {
         switch (method.getName()) {
         case "split": {
-            Decimal dec = ((DecimalHandle) hTarget).getValue();
-
-            // TODO CP
+            Decimal dec       = ((DecimalHandle) hTarget).getValue();
             boolean fSign     = dec.isSigned();
-            int     iExp      = 0;
-            long    lMantissa = 0;
+            int     iExp;
+            long    lMantissa;
+
+            switch (f_cBits) {
+                case 32:
+                    iExp      = ((Decimal32) dec).getExponent();
+                    lMantissa = ((Decimal32) dec).getSignificand();
+                    break;
+                case 64:
+                    iExp      = ((Decimal64) dec).getExponent();
+                    lMantissa = ((Decimal64) dec).getSignificand();
+                    break;
+                case 128:
+                    iExp      = ((Decimal128) dec).getExponent();
+                    lMantissa = ((Decimal128) dec).getSignificand().longValue();
+                    break;
+                default:
+                    // TODO other bit sizes not supported yet
+                    iExp      = 0;
+                    lMantissa = 0;
+            }
             return frame.assignValues(aiReturn, xBoolean.makeHandle(fSign),
                                       xInt64.makeHandle(lMantissa), xInt64.makeHandle(iExp));
         }

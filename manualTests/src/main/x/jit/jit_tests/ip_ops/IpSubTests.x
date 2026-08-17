@@ -6,7 +6,6 @@ class IpSubTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running IpSubTests >>>>");
         testIpSubInt();
         testIpSubUInt();
         testIpSubInt8();
@@ -23,7 +22,6 @@ class IpSubTests {
         testIpSubFloat32();
         testIpSubFloat64();
         testIpSubIntFromChar();
-        console.print("<<<< Finished IpSubTests <<<<<");
     }
 
     void testIpSubInt() {

@@ -410,7 +410,7 @@ public class PropertyClassTypeConstant
             }
         }
 
-        return new TypeInfo(this, cInvals, infoBase.getClassStructure(),
+        return new TypeInfoReal(this, cInvals, infoBase.getClassStructure(),
                 idBase.getNestedDepth() + 1, false, mapTypeParams,
                 Annotation.NO_ANNOTATIONS, infoBase.getMixinAnnotations(), typeBase, null, null,
                 Collections.emptyList(), ListMap.EMPTY, ListMap.EMPTY,

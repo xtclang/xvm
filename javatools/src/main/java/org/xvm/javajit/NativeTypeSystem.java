@@ -38,6 +38,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.builders.ArrayBuilder;
 import org.xvm.javajit.builders.AugmentingBuilder;
+import org.xvm.javajit.builders.NumberBuilder;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.NATIVE_MODULE;
@@ -215,7 +216,9 @@ public class NativeTypeSystem
         Artifact         art     = new Artifact(type, struct, ClassfileShape.Impl, className);
         Builder          builder = type.isArray()
                                     ? new ArrayBuilder(this, art, model)
-                                    : new AugmentingBuilder(this, art, model);
+                                    : type.isA(pool().typeNumber())
+                                        ? NumberBuilder.builderFor(this, art, model)
+                                        : new AugmentingBuilder(this, art, model);
 
         ClassFile classFile = ClassFile.of(
                 ClassFile.ClassHierarchyResolverOption.of(createClassHierarchyResolver()),
@@ -296,10 +299,13 @@ public class NativeTypeSystem
             nativeByType.put(typeIter,  className);
         }
 
-        TypeConstant typeInt     = pool.typeInt64();
-        TypeConstant rangeᐸIntᐳ = pool.ensureParameterizedTypeConstant(pool.typeRange(), typeInt);
+        TypeConstant typeInt        = pool.typeInt64();
+        TypeConstant rangeᐸIntᐳ    = pool.ensureParameterizedTypeConstant(pool.typeRange(), typeInt);
+        TypeConstant intervalᐸIntᐳ = pool.ensureParameterizedTypeConstant(pool.typeInterval(), typeInt);
 
-        nativeByType.put(rangeᐸIntᐳ, Builder.N_nRangeInt64);
+        // a Range<Int64> is conditionally an Interval<Int64>; both views use the native class
+        nativeByType.put(rangeᐸIntᐳ,    Builder.N_nRangeInt64);
+        nativeByType.put(intervalᐸIntᐳ, Builder.N_nRangeInt64);
 
         // pre-register functions used by the native classes:
 

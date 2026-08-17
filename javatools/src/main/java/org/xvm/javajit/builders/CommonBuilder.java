@@ -58,7 +58,6 @@ import org.xvm.javajit.NativeTypeSystem;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
-
 import org.xvm.javajit.registers.ExtendedSlot;
 import org.xvm.javajit.registers.MultiSlot;
 import org.xvm.javajit.registers.SingleSlot;
@@ -163,9 +162,10 @@ public class CommonBuilder
     @Override
     public void buildClassOfClass(ClassBuilder classBuilder) {
         // generated code example:
-        //      class cPerson extends Class implements Replicable {
+        //      class cPerson extends Class implements sReplicable {
         //          public cPerson(Ctx ctx, TypeConstant publicType) {
         //              super(ctx, publicType);
+        //          }
         //      }
         //
         classBuilder.withSuperclass(CD_Class);
@@ -177,17 +177,16 @@ public class CommonBuilder
         List<MethodInfo> virtCtors  = new ArrayList<>();
         List<MethodInfo> funkyImpls = new ArrayList<>();
         for (MethodInfo method : typeInfo.getMethods().values()) {
-            IdentityConstant ifaceId;
             if (method.getVirtualConstructor() instanceof MethodBody virtCtor) {
-                ifaceId = virtCtor.getIdentity().getNamespace();
+                IdentityConstant ifaceId = virtCtor.getIdentity().getNamespace();
+                interfaces.add(ensureClassDesc(ifaceId.getType()));
                 virtCtors.add(method);
             } else if (method.getAbstractFunction() instanceof MethodBody funkyBody) {
-                ifaceId = funkyBody.getIdentity().getNamespace();
+                IdentityConstant ifaceId   = funkyBody.getIdentity().getNamespace();
+                interfaces.add(ClassDesc.of(
+                    TypeSystem.funkyInterface(ensureJitClassName(ifaceId.getType()))));
                 funkyImpls.add(method);
-            } else {
-                continue;
             }
-            interfaces.add(ensureClassDesc(ifaceId.getType()));
         }
 
         if (interfaces.isEmpty()) {
@@ -207,12 +206,19 @@ public class CommonBuilder
         TypeConstant targetType = typeInfo.getType();
         ClassDesc    targetCD   = ensureClassDesc(targetType);
         for (MethodInfo method : funkyImpls) {
-            String        jitName = method.ensureJitMethodName(typeSystem);
-            JitMethodDesc jmd     = method.getJitDesc(this, targetType);
+            // method contains an implementation of an abstract static (funky) declaration;
+            // the class of class needs to create a method with that declaration signature
+            // and route it to the "head" of the call chain
+            MethodBody    funkyBody = method.getAbstractFunction();
+            JitMethodDesc funkyJmd  = funkyBody.getJitDesc(this, null);
+            JitMethodDesc targetJmd = method.getJitDesc(this, targetType);
+            String        jitName   = method.ensureJitMethodName(typeSystem);
 
-            assembleFunkyRouting(classBuilder, targetCD, jitName, jmd.standardMD);
-            if (jmd.isOptimized) {
-                assembleFunkyRouting(classBuilder, targetCD, jitName + OPT, jmd.optimizedMD);
+            assembleFunkyRouting(classBuilder, jitName, funkyJmd, targetCD, targetJmd, false);
+            if (funkyJmd.isOptimized) {
+                assert targetJmd.isOptimized;
+                assembleFunkyRouting(
+                        classBuilder, jitName + OPT, funkyJmd, targetCD, targetJmd, true);
             }
         }
 
@@ -229,7 +235,7 @@ public class CommonBuilder
                 MethodInfo method2 = typeInfo.getNarrowingMethod(method);
                 String     name2   = method2.ensureJitMethodName(typeSystem);
 
-                int q = 0;
+                System.err.println("TODO: capped virtual constructor");
             }
             String jitName = virtCtor.getIdentity().
                     ensureJitMethodName(typeSystem).replace("construct", NEW);
@@ -260,20 +266,114 @@ public class CommonBuilder
 
     /**
      * Assemble an instance method on the class-of-class that routes to the corresponding funky
-     * method on the target class.
+     * method on the target class. Note that the target signature could be different from the
+     * funky signature. For example String has a concrete implementation for Hashable:
+     *      hashCode$p(Ctx, nType, String) -> long
+     * while the class of class cString has:
+     *      hashCode$p(Ctx, nType, Hashable) -> long
      */
-    private void assembleFunkyRouting(
-            ClassBuilder   classBuilder,
-            ClassDesc      targetCD,
-            String         jitName,
-            MethodTypeDesc md) {
-        classBuilder.withMethodBody(jitName, md, ClassFile.ACC_PUBLIC, code -> {
-            for (int i = 0, count = md.parameterCount(); i < count; i++) {
-                load(code, md.parameterType(i), code.parameterSlot(i));
+    private void assembleFunkyRouting(ClassBuilder classBuilder, String jitName,
+                                      JitMethodDesc funkyJmd,
+                                      ClassDesc targetCD, JitMethodDesc targetJmd,
+                                      boolean isOptimized) {
+        MethodTypeDesc funkyMd  = isOptimized ? funkyJmd.optimizedMD  : funkyJmd.standardMD;
+        MethodTypeDesc targetMd = isOptimized ? targetJmd.optimizedMD : targetJmd.standardMD;
+        JitParamDesc[] funkyParams = isOptimized
+                ? funkyJmd.optimizedParams
+                : funkyJmd.standardParams;
+        JitParamDesc[] targetParams = isOptimized
+                ? targetJmd.optimizedParams
+                : targetJmd.standardParams;
+
+        classBuilder.withMethodBody(jitName, funkyMd, ClassFile.ACC_PUBLIC, code -> {
+            int extraCount = funkyJmd.getImplicitParamCount();
+            assert extraCount == targetJmd.getImplicitParamCount();
+            for (int i = 0; i < extraCount; i++) {
+                load(code, funkyMd.parameterType(i), code.parameterSlot(i));
             }
-            code.invokestatic(targetCD, jitName, md);
-            addReturn(code, md.returnType());
+
+            int funkyIndex  = isOptimized ? funkyJmd.optimizedCtx()  : 0;
+            int targetIndex = isOptimized ? targetJmd.optimizedCtx() : 0;
+            while (funkyIndex < funkyParams.length) {
+                JitParamDesc funkyParam  = funkyParams[funkyIndex];
+                JitParamDesc targetParam = targetParams[targetIndex];
+                int          funkySlot   = code.parameterSlot(extraCount + funkyIndex);
+
+                if (funkyParam.flavor == targetParam.flavor) {
+                    load(code, funkyParam.cd, funkySlot);
+                    if (!funkyParam.type.equals(targetParam.type) &&
+                            !targetParam.cd.isPrimitive()) {
+                        generateCheckCast(code, targetParam.type,
+                                code.parameterSlot(funkyJmd.standardCtx()));
+                    }
+                    funkyIndex++;
+                    targetIndex++;
+                } else {
+                    switch (funkyParam.flavor.name() + "->" + targetParam.flavor.name()) {
+                    case "Specific->Primitive",
+                         "Specific->XvmPrimitive":
+                        code.aload(funkySlot);
+                        generateCheckCast(code, targetParam.type,
+                                code.parameterSlot(funkyJmd.standardCtx()));
+                        unbox(code, targetParam.type);
+
+                        int paramIndex = funkyParam.index;
+                        while (funkyIndex < funkyParams.length &&
+                                funkyParams[funkyIndex].index == paramIndex) {
+                            funkyIndex++;
+                        }
+                        while (targetIndex < targetParams.length &&
+                                targetParams[targetIndex].index == paramIndex) {
+                            targetIndex++;
+                        }
+                        break;
+
+                    default:
+                        throw new UnsupportedOperationException(
+                                "Unsupported funky parameter conversion: " +
+                                funkyParam.flavor + "->" + targetParam.flavor);
+                    }
+                }
+            }
+
+            code.invokestatic(targetCD, jitName, targetMd);
+
+            ClassDesc funkyRetCD  = funkyMd.returnType();
+            ClassDesc targetRetCD = targetMd.returnType();
+            if (funkyRetCD.equals(targetRetCD)) {
+                addReturn(code, funkyRetCD);
+            } else if (!funkyRetCD.isPrimitive()) {
+                // the concrete implementation may have a covariant return type
+                if (targetRetCD.isPrimitive()) {
+                    box(code, targetJmd.optimizedReturns[0].type);
+                }
+                code.areturn();
+            } else {
+                throw new UnsupportedOperationException(
+                        "Unsupported funky return conversion: " + targetRetCD + "->" + funkyRetCD);
+            }
         });
+    }
+
+    @Override
+    public void buildFunkyInterface(ClassBuilder classBuilder) {
+        assert isInterface;
+
+        classBuilder.withFlags(ClassFile.ACC_PUBLIC | ClassFile.ACC_INTERFACE |
+                ClassFile.ACC_ABSTRACT);
+
+        for (MethodInfo method : typeInfo.getMethods().values()) {
+            if (method.getAbstractFunction() instanceof MethodBody funkyBody) {
+                String        jitName = funkyBody.getIdentity().ensureJitMethodName(typeSystem);
+                JitMethodDesc jmd     = funkyBody.getJitDesc(this, null);
+                int           flags   = ClassFile.ACC_PUBLIC | ClassFile.ACC_ABSTRACT;
+
+                classBuilder.withMethod(jitName, jmd.standardMD, flags, _ -> {});
+                if (jmd.isOptimized) {
+                    classBuilder.withMethod(jitName + OPT, jmd.optimizedMD, flags, _ -> {});
+                }
+            }
+        }
     }
 
     @Override
@@ -300,7 +400,8 @@ public class CommonBuilder
         // is not present on Builder; TODO address this in a subsequent change
         switch (constant) {
         case LiteralConstant literal
-                when literal.getFormat() == Constant.Format.IntLiteral: {
+                when literal.getFormat() == Constant.Format.IntLiteral ||
+                     literal.getFormat() == Constant.Format.Duration: {
             Integer      index = constants.computeIfAbsent(literal, _ -> constants.size());
             TypeConstant type  = literal.getType();
             ClassDesc    cd    = ensureClassDesc(type);
@@ -612,14 +713,17 @@ public class CommonBuilder
                             .checkcast(CD_TypeConstant)                               // <- type
                             .putstatic(CD_this, name, CD_TypeConstant);
                     } else if (constant instanceof LiteralConstant literal &&
-                            literal.getFormat() == Constant.Format.IntLiteral) {
-                        // instantiate an IntLiteral using a String generated from a Java string from
-                        // the LiteralConstant, and store the IntLiteral into the static field
-                        MethodConstant ctorId = pool.ensureEcstasyClassConstant("numbers.IntLiteral")
-                                                    .findConstructor(pool.typeString());
-                        buildNew(null, code, literal.getType(), ctorId,
+                            (literal.getFormat() == Constant.Format.IntLiteral ||
+                             literal.getFormat() == Constant.Format.Duration)) {
+                        // instantiate an IntLiteral or Duration using a String generated from a
+                        // Java string from the LiteralConstant, and store into the static field
+                        TypeConstant   type   = literal.getType();
+                        ClassDesc      cd     = ensureClassDesc(type);
+                        MethodConstant ctorId = type.ensureTypeInfo().findConstructor(pool.typeString());
+
+                        buildNew(null, code, type, ctorId,
                                 (_) -> loadString(code, literal.getValue(), ctxSlot), ctxSlot);
-                        code.putstatic(CD_this, name, CD_IntLiteral);
+                        code.putstatic(CD_this, name, cd);
                     } else {
                         throw new UnsupportedOperationException("unsupported constant: " + constant);
                     }
@@ -720,7 +824,9 @@ public class CommonBuilder
         return switch (constant) {
             case TypeConstant _ -> CD_TypeConstant;
             case LiteralConstant literal
-                    when literal.getFormat() == Constant.Format.IntLiteral -> CD_IntLiteral;
+                    when literal.getFormat() == Constant.Format.IntLiteral ||
+                         literal.getFormat() == Constant.Format.Duration ->
+                    ensureClassDesc(literal.getType());
             default -> throw new UnsupportedOperationException("unsupported constant: " + constant);
         };
     }
@@ -1055,7 +1161,10 @@ public class CommonBuilder
             int argSlot = code.parameterSlot(isOpt ? jmd.getOptimizedParamIndex(0) + 1 : 1);
             if (isOpt) {
                 JitParamDesc pdOpt   = jmd.optimizedParams[0];
-                ClassDesc    cdOpt   = pdOpt.cd;
+                TypeConstant type    = prop.getType();
+                ClassDesc    cdOpt   = type.isJavaPrimitive()
+                                            ? JitTypeDesc.getPrimitiveFieldClass(type)
+                                            : pdOpt.cd;
                 int          extSlot = argSlot + toTypeKind(cdOpt).slotSize();
 
                 switch (pdOpt.flavor) {
@@ -2359,7 +2468,9 @@ public class CommonBuilder
             String         hashName    = hashSig.getName();
             String         hashOptName = hashName + OPT;
             MethodTypeDesc mdWrapper   = MethodTypeDesc.of(CD_Int64, CD_Ctx, CD_nType, cdThis);
-            MethodTypeDesc mdPrimitive = MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cdThis);
+            MethodTypeDesc mdOptimized = thisType.isJitPrimitive()
+                    ? hashMethod.getJitDesc(this, thisType).optimizedMD
+                    : MethodTypeDesc.of(CD_long, CD_Ctx, CD_nType, cdThis);
 
             if (!isNativeMethod(hashName, mdWrapper)) {
                 // generate the standard "hashCode" wrapper that delegates to the optimized
@@ -2368,17 +2479,21 @@ public class CommonBuilder
                         ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, code -> {
                     loadCtx(code);
                     code.aload(1)
-                        .aload(2)
-                        .invokestatic(cdThis, hashOptName, mdPrimitive);
+                        .aload(2);
+                    if (thisType.isJitPrimitive()) {
+                        Builder.unbox(code, thisType);
+                    }
+                    code.invokestatic(cdThis, hashOptName, mdOptimized);
                     Builder.box(code, pool().typeInt64());
                     code.areturn();
                 });
 
                 // generate the optimized "hashCode$p" with the actual implementation
-                if (!isNativeMethod(hashOptName, mdPrimitive)) {
-                    classBuilder.withMethodBody(hashOptName, mdPrimitive,
+                if (!isNativeMethod(hashOptName, mdOptimized)) {
+                    classBuilder.withMethodBody(hashOptName, mdOptimized,
                             ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
-                            code -> assembleConstHashCode(code, thisType, hashSig, isCaching));
+                            code -> assembleConstHashCode(code, thisType,
+                                    hashSig, mdOptimized, isCaching));
                 }
             }
         }
@@ -2391,16 +2506,16 @@ public class CommonBuilder
      * <pre>
      *     public static long hashCode$p(Ctx ctx, nType CompileType, T value)
      * </pre>
-     * Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value
+     * Slot 0 = Ctx, Slot 1 = nType, Slot 2+ = value
      */
     private void assembleConstHashCode(
             CodeBuilder       code,
             TypeConstant      type,
             SignatureConstant hashSig,
+            MethodTypeDesc    mdOptimized,
             boolean           isCaching) {
 
-        ConstantPool pool         = pool();
-        TypeConstant typeHashable = pool.typeHashable();
+        TypeConstant typeHashable = pool().typeHashable();
         ClassDesc    cdThis       = ensureClassDesc(type);
         int          valueSlot    = 2;
         int          resultSlot   = 3;
@@ -2408,13 +2523,16 @@ public class CommonBuilder
         if (type.isJitPrimitive()) {
             // when the const type itself is a JIT primitive (Java primitive or XVM primitive),
             // we call nType.hashCode$p(ctx, value) to get the hash code (where nType) is the
-            // type of the primitive
+            // type of the primitive and the value can take more than one slot
             Builder.loadCtx(code);
             loadTypeConstant(code, type);
             code.invokestatic(CD_nType, "$ensureType",
                     MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
             Builder.loadCtx(code);
-            Builder.load(code, cdThis, valueSlot);
+            for (int i = 2, count = mdOptimized.parameterCount(); i < count; i++) {
+                Builder.load(code, mdOptimized.parameterType(i), code.parameterSlot(i));
+            }
+            Builder.box(code, type);
             code.invokevirtual(CD_nType, "hashCode$p",
                     MethodTypeDesc.of(CD_long, CD_Ctx, CD_Hashable));
             code.lreturn();
@@ -2528,7 +2646,7 @@ public class CommonBuilder
                 code.invokevirtual(CD_nType, "hashCode$p",
                         MethodTypeDesc.of(CD_long, CD_Ctx, CD_Hashable));
                 // long primitive hashCode on the stack
-            } else if (propType.isA(pool.typeService())) {
+            } else if (propType.isA(pool().typeService())) {
                 buildGetIdentityHashCode(code, prop, valueSlot);
                 // long primitive service identity hashCode on the stack
             } else if (!propType.isA(typeHashable)) {
@@ -3742,6 +3860,11 @@ public class CommonBuilder
             }
         }
 
+        if (isInterface && method.isAbstractFunction()) {
+            // static abstract functions are represented by the separate funky interface
+            return;
+        }
+
         MethodTypeDesc md;
         if (jmd.isOptimized) {
             assembleMethodWrapper(classBuilder, jitName, jmd);
@@ -3751,16 +3874,10 @@ public class CommonBuilder
             md = jmd.standardMD;
         }
 
-        MakeStatic:
         if (method.isFunction() || method.isCtorOrValidator()) {
-            if (isInterface) {
-                if (method.isAbstractFunction()) {
-                    // this is a funky interface method; create a virtual method declaration
-                    break MakeStatic;
-                } else if (method.isVirtualConstructor()) {
-                    // virtual constructors only generate the "new$" virtual method declarations
-                    return;
-                }
+            if (isInterface && method.isVirtualConstructor()) {
+                // virtual constructors only generate the "new$" virtual method declarations
+                return;
             }
             flags |= ClassFile.ACC_STATIC;
         } else if (jmd.isOptimizedStatic) {
@@ -3893,12 +4010,13 @@ public class CommonBuilder
             "org.xtclang.ecstasy.Assertion",
             "org.xtclang.ecstasy.Boolean",
             "org.xtclang.ecstasy.Closed",
+            "org.xtclang.ecstasy.Comparable",
             "org.xtclang.ecstasy.ConcurrentModification",
             "org.xtclang.ecstasy.Const",
             "org.xtclang.ecstasy.Deadlock",
-// TODO     "org.xtclang.ecstasy.Duplicable",               // requires virtual constructor support
+            "org.xtclang.ecstasy.Duplicable",
             "org.xtclang.ecstasy.Exception*",
-// TODO     "org.xtclang.ecstasy.Freezable",
+            "org.xtclang.ecstasy.Freezable",
             "org.xtclang.ecstasy.IllegalArgument",
             "org.xtclang.ecstasy.IllegalState",
             "org.xtclang.ecstasy.Iterable*",
@@ -3914,11 +4032,12 @@ public class CommonBuilder
             "org.xtclang.ecstasy.Range",
             "org.xtclang.ecstasy.ReadOnly",
             "org.xtclang.ecstasy.Sequential",
-// TODO     "org.xtclang.ecstasy.Service",
+            "org.xtclang.ecstasy.Service",
             "org.xtclang.ecstasy.Service$Aware",
             "org.xtclang.ecstasy.Sliceable*",
             "org.xtclang.ecstasy.StackOverflow",
             "org.xtclang.ecstasy.TimedOut",
+            "org.xtclang.ecstasy.Timeout",
             "org.xtclang.ecstasy.TypeMismatch",
             "org.xtclang.ecstasy.Unsupported",
 
@@ -3927,44 +4046,53 @@ public class CommonBuilder
             "org.xtclang.ecstasy.collections.Array$Mutability",
             "org.xtclang.ecstasy.collections.Collection",
             "org.xtclang.ecstasy.collections.List",
-// TODO     "org.xtclang.ecstasy.collections.UniformIndexed*",
+            "org.xtclang.ecstasy.collections.NaturalHasher",
+            "org.xtclang.ecstasy.collections.Set",
+            "org.xtclang.ecstasy.collections.UniformIndexed*",
+            "org.xtclang.ecstasy.collections.VirtualHasher",
 
             // io
             "org.xtclang.ecstasy.io.Reader",
-// TODO     "org.xtclang.ecstasy.io.TextPosition",
+            "org.xtclang.ecstasy.io.TextPosition",
             "org.xtclang.ecstasy.io.IOException",
             "org.xtclang.ecstasy.io.IllegalUTF",
 
             // maps
-// TODO     "org.xtclang.ecstasy.maps.Map",
+            "org.xtclang.ecstasy.maps.CollectImmutableMap",
+            "org.xtclang.ecstasy.maps.CopyableMap",
+            "org.xtclang.ecstasy.maps.CursorEntry",
+            "org.xtclang.ecstasy.maps.DiscreteEntry*",
+            "org.xtclang.ecstasy.maps.KeyEntry",
+            "org.xtclang.ecstasy.maps.ListMapCollector",
+            "org.xtclang.ecstasy.maps.Map",
+            "org.xtclang.ecstasy.maps.Map$Entry",
             "org.xtclang.ecstasy.maps.MapAppender",
             "org.xtclang.ecstasy.maps.MapCollector",
+            "org.xtclang.ecstasy.maps.StringableEntry",
+            "org.xtclang.ecstasy.maps.deferred.DeferredMap",
 
             // numbers
             "org.xtclang.ecstasy.numbers.BFloat16",
             "org.xtclang.ecstasy.numbers.BinaryFPNumber",
+            "org.xtclang.ecstasy.numbers.Bit",
             "org.xtclang.ecstasy.numbers.Dec*",
             "org.xtclang.ecstasy.numbers.Float16",
             "org.xtclang.ecstasy.numbers.Float32",
             "org.xtclang.ecstasy.numbers.Float64",
             "org.xtclang.ecstasy.numbers.Float128",
             "org.xtclang.ecstasy.numbers.FPConvertible",
+            "org.xtclang.ecstasy.numbers.FPLiteral",
+            "org.xtclang.ecstasy.numbers.Int*",
             "org.xtclang.ecstasy.numbers.Number",
-             "org.xtclang.ecstasy.numbers.FPNumber",
-// TODO     "org.xtclang.ecstasy.numbers.Int*",             // depends on IntLiteral
-            "org.xtclang.ecstasy.numbers.IntNumber",
-            "org.xtclang.ecstasy.numbers.IntConvertible",
-            "org.xtclang.ecstasy.numbers.IntLiteral",
+            "org.xtclang.ecstasy.numbers.FPNumber",
+            "org.xtclang.ecstasy.numbers.Nibble",
+            "org.xtclang.ecstasy.numbers.Number$compare$Family*",
             "org.xtclang.ecstasy.numbers.Number$Signum*",
-// TODO     "org.xtclang.ecstasy.numbers.UInt*",            // need Range support
-            "org.xtclang.ecstasy.numbers.IntN",
-            "org.xtclang.ecstasy.numbers.UIntN",
-            "org.xtclang.ecstasy.numbers.UIntNumber",
+            "org.xtclang.ecstasy.numbers.UInt*",
 
             // reflect
             "org.xtclang.ecstasy.reflect.Module",
-// TODO     "org.xtclang.ecstasy.reflect.Package",
-// TODO     "org.xtclang.ecstasy.reflect.Type",
+            "org.xtclang.ecstasy.reflect.Package",
 
             // text
             "org.xtclang.ecstasy.text.Char*",
@@ -3982,23 +4110,41 @@ public class CommonBuilder
     private final static String[] NO_JIT_LIST = new String[] {
     };
 
-    private final static Map<String, Set<String>> NO_JIT_METHODS = Map.of(
-    "org.xtclang.ecstasy.collections.Collection",
-            Set.of(
-                   // TODO: resolve generic call signatures in the caller's formal-type context
-                   "flatMap",
-                   "groupBy",
-                   "groupWith",
-
-                   // TODO: resolve formal Element types in nested lambda signatures
-                   "any"),
-    "org.xtclang.ecstasy.Range",
-            Set.of("appendTo", "estimateStringLength"), // TODO: if (Element.is(Type<Stringable>)) does not cast
-    "org.xtclang.ecstasy.numbers.Number",
+    private final static Map<String, Set<String>> NO_JIT_METHODS = Map.ofEntries(
+        Map.entry("org.xtclang.ecstasy.collections.UniformIndexed",
+            Set.of("elementAt")), // TODO: NEWCG_N is not implemented
+        Map.entry("org.xtclang.ecstasy.collections.Set",
+            Set.of("symmetricDifference")), // TODO: MOV_TYPE for the Replicable virtual constructor
+        Map.entry("org.xtclang.ecstasy.collections.VirtualHasher",
+            Set.of("hashOf")), // TODO: nested method formal has no enclosing MethodStructure
+        Map.entry("org.xtclang.ecstasy.maps.CollectImmutableMap",
+            Set.of("reduce")), // TODO: conditional local is missing from one stack-map path
+        Map.entry("org.xtclang.ecstasy.maps.DiscreteEntry",
+            Set.of("construct", // TODO: specialized constructor chains to unspecialized class
+                   "freeze")),  // TODO: specialized return is incompatible with a conditional mixin
+        Map.entry("org.xtclang.ecstasy.maps.Map",
+            Set.of("computeIfAbsent",  // TODO: RETURN_T is not implemented
+                   "defaultCollector", // TODO: virtual constructor method constant
+                   "estimateStringLength", // TODO: incompatible formal iterator result types
+                   "map",              // TODO: incompatible formal result types in TypeMatrix
+                   "removeAll")),      // TODO: key's formal type is tracked as Object
+        Map.entry("org.xtclang.ecstasy.maps.deferred.DeferredMap",
+            Set.of("defaultCollector", // TODO: unresolved method formal in specialized class
+                   "fromEntry")),      // TODO: A_SUPER argument for a virtual construction
+        Map.entry("org.xtclang.ecstasy.Range",
+            Set.of("appendTo", "estimateStringLength")), // TODO: if (Element.is(Type<Stringable>)) does not cast
+        Map.entry("org.xtclang.ecstasy.Timeout",
+            Set.of("construct")),   // TODO: loading a Duration constant
+        Map.entry("org.xtclang.ecstasy.numbers.Number",
             Set.of("converterFor",
-                   "converterTo"),
-    "org.xtclang.ecstasy.numbers.IntNumber",
-            Set.of("not")          // TODO: depends on virtual constructor
+                   "converterTo")),
+        Map.entry("org.xtclang.ecstasy.numbers.IntNumber",
+            Set.of("not")),         // TODO: depends on virtual constructor
+        Map.entry("org.xtclang.ecstasy.numbers.Int64",
+            Set.of("equals",       // TODO: Array<Bit> passed to Array<Object>
+                   "parse")),       // TODO: verifier stack mismatch
+        Map.entry("org.xtclang.ecstasy.numbers.UInt16",
+            Set.of("parse"))        // TODO: GP_SUB for a formal value
     );
 
     private final static HashSet<String> SKIP_SET = new HashSet<>();

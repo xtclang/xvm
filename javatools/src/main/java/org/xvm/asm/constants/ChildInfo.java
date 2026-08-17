@@ -38,9 +38,38 @@ public class ChildInfo {
             Component             child,
             Access                access,
             Set<IdentityConstant> setIds) {
-        f_child  = child;
-        f_access = access;
-        f_setIds = setIds;
+        this(null, child, access, setIds);
+    }
+
+    /**
+     * Internal: Construct a ChildInfo owned by the specified TypeInfo.
+     */
+    private ChildInfo(
+            TypeInfo              infoType,
+            Component             child,
+            Access                access,
+            Set<IdentityConstant> setIds) {
+        m_infoType = infoType;
+        f_child    = child;
+        f_access   = access;
+        f_setIds   = setIds;
+    }
+
+    /**
+     * Internal: Associate this ChildInfo with the specified TypeInfo, copying it if it already
+     * belongs to a different TypeInfo.
+     */
+    synchronized ChildInfo forType(TypeInfo infoType) {
+        assert infoType != null;
+
+        if (m_infoType == null) {
+            m_infoType = infoType;
+            return this;
+        }
+
+        return m_infoType == infoType
+                ? this
+                : new ChildInfo(infoType, f_child, f_access, new HashSet<>(f_setIds));
     }
 
 
@@ -51,6 +80,13 @@ public class ChildInfo {
      */
     public String getName() {
         return f_child.getName();
+    }
+
+    /**
+     * @return the containing TypeInfo, or null while this ChildInfo is being assembled
+     */
+    public TypeInfo getTypeInfo() {
+        return m_infoType;
     }
 
     /**
@@ -165,15 +201,20 @@ public class ChildInfo {
     /**
      * The child component.
      */
-    Component f_child;
+    private final Component f_child;
 
     /**
      * The accessibility that this child is declared with.
      */
-    Access f_access;
+    private final Access f_access;
 
     /**
      * The potential identities that this child is known as.
      */
-    Set<IdentityConstant> f_setIds;
+    private final Set<IdentityConstant> f_setIds;
+
+    /**
+     * The TypeInfo that contains this ChildInfo, or null while it is being assembled.
+     */
+    private TypeInfo m_infoType;
 }

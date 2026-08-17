@@ -17,7 +17,6 @@ package charArrayTests {
     }
 
     void run() {
-        console.print(">>>> Running Char Array Tests >>>>");
 
         shouldCreateWithCapacity();
         shouldCreateArrayInitializedWithZeroValue();
@@ -44,7 +43,6 @@ package charArrayTests {
         shouldDeleteSpecificIndexFromArray();
         shouldInsertValueIntoArray();
 
-        console.print(">>>> Running Char Array Tests >>>>");
     }
 
     void shouldCreateWithCapacity() {

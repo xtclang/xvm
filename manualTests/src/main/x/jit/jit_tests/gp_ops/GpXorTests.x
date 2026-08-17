@@ -6,7 +6,6 @@ class GpXorTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running GpXorTests >>>>");
         testGpXorInt();
         testGpXorUInt();
         testGpXorInt8();
@@ -18,7 +17,6 @@ class GpXorTests {
         testGpXorInt128();
         testGpXorUInt128();
         testGpXorBit();
-        console.print("<<<< Finished GpXorTests <<<<<");
     }
 
     void testGpXorInt() {

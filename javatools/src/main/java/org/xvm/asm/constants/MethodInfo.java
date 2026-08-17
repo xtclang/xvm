@@ -59,10 +59,47 @@ public class MethodInfo
      * @param nRank  the rank of the method
      */
     protected MethodInfo(MethodBody[] aBody, int nRank) {
+        this(null, aBody, nRank);
+    }
+
+    /**
+     * Internal: Construct a MethodInfo owned by the specified TypeInfo.
+     *
+     * @param infoType  the containing TypeInfo, or null while the MethodInfo is being assembled
+     * @param aBody     the array of method bodies that make up the method chain
+     * @param nRank     the rank of the method
+     */
+    private MethodInfo(TypeInfo infoType, MethodBody[] aBody, int nRank) {
         assert aBody != null && aBody.length >= 1;
 
-        m_aBody = aBody;
-        f_nRank = nRank;
+        int          cBodies = aBody.length;
+        MethodBody[] aOwned  = new MethodBody[cBodies];
+        for (int i = 0; i < cBodies; ++i) {
+            MethodBody body = aBody[i];
+            assert body != null;
+            aOwned[i] = body.forMethod(this);
+        }
+
+        m_infoType = infoType;
+        m_aBody    = aOwned;
+        f_nRank    = nRank;
+    }
+
+    /**
+     * Internal: Associate this MethodInfo with the specified TypeInfo, copying it if it already
+     * belongs to a different TypeInfo.
+     */
+    synchronized MethodInfo forType(TypeInfo infoType) {
+        assert infoType != null;
+
+        if (m_infoType == null) {
+            m_infoType = infoType;
+            return this;
+        }
+
+        return m_infoType == infoType
+                ? this
+                : new MethodInfo(infoType, m_aBody, f_nRank);
     }
 
     /**
@@ -579,6 +616,13 @@ public class MethodInfo
      */
     public MethodConstant getIdentity() {
         return getHead().getIdentity();
+    }
+
+    /**
+     * @return the containing TypeInfo, or null while this MethodInfo is being assembled
+     */
+    public TypeInfo getTypeInfo() {
+        return m_infoType;
     }
 
     /**
@@ -1210,7 +1254,7 @@ public class MethodInfo
                         if (listNew == null) {
                             listNew = startList(chain, i);
                         }
-                        body = new MethodBody(body, Implementation.Native);
+                        body = new MethodBody(body, Implementation.Native).forMethod(this);
                     }
                     if (listNew != null) {
                         listNew.add(body);
@@ -1595,6 +1639,11 @@ public class MethodInfo
      * The method chain.
      */
     private final MethodBody[] m_aBody;
+
+    /**
+     * The TypeInfo that contains this MethodInfo, or null while the MethodInfo is being assembled.
+     */
+    private TypeInfo m_infoType;
 
     /**
      * This value represents a relative order of method's appearance in the containing class. It's

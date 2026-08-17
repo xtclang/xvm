@@ -2,7 +2,6 @@ package lambdaTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running LambdaTests >>>>");
 
         test1();
         test2();

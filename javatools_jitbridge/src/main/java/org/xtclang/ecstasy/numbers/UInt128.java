@@ -20,7 +20,7 @@ public class UInt128 extends UIntNumber {
     /**
      * Construct an Ecstasy UInt128 object.
      */
-    UInt128(long lowValue, long highValue) {
+    private UInt128(long lowValue, long highValue) {
         $lowValue  = lowValue;
         $highValue = highValue;
     }
@@ -166,7 +166,7 @@ public class UInt128 extends UIntNumber {
     /**
      * @return  a {@code long} value converted to an unsigned {@link BigInteger}
      */
-    public static BigInteger toUnsignedBigInteger(long value) {
+    private static BigInteger toUnsignedBigInteger(long value) {
         if (value >= 0L) {
             return BigInteger.valueOf(value);
         }
@@ -239,6 +239,16 @@ public class UInt128 extends UIntNumber {
     }
 
     /**
+     * Native implementation of: "Int toInt(Boolean checkBounds = False)"
+     *
+     * This bridge is required because a primitive invocation bypasses the natural toInt()
+     * implementation that delegates to toInt64().
+     */
+    public static long toInt$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return toInt64$p(thi$Lo, thi$Hi, ctx, checkBounds, dfltCheckBounds);
+    }
+
+    /**
      * Implementation of Int64 toInt64(Boolean checkBounds = False)
      *
      * @param ctx              the build context
@@ -286,6 +296,26 @@ public class UInt128 extends UIntNumber {
      */
     public static IntN toIntN$p(long thi$Lo, long thi$Hi, Ctx ctx) {
         return IntN.$box(thi$Lo, thi$Hi);
+    }
+
+    /**
+     * The primitive implementation of Nibble toNibble(Boolean checkBounds = False)
+     *
+     * @param ctx              the build context
+     * @param checkBounds      the check bounds flag
+     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
+     *                         default value (in this case False)
+     *
+     * @return this value as the least significant four bits of a Java {@code int}
+     */
+    public static int toNibble$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && thi$Hi != 0 && thi$Hi != -1
+                && (thi$Lo < 0L || thi$Lo > 255L)) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "UInt128 value " + $toBigInteger(thi$Lo, thi$Hi)
+                    + " is not a valid Nibble value");
+        }
+        return (byte) thi$Lo & 0x0F;
     }
 
     /**
@@ -346,6 +376,16 @@ public class UInt128 extends UIntNumber {
                     + " is not a valid UInt32 value");
         }
         return (int) thi$Lo;
+    }
+
+    /**
+     * Native implementation of: "UInt toUInt(Boolean checkBounds = False)"
+     *
+     * This bridge is required because a primitive invocation bypasses the natural toUInt()
+     * implementation that delegates to toUInt64().
+     */
+    public static long toUInt$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return toUInt64$p(thi$Lo, thi$Hi, ctx, checkBounds, dfltCheckBounds);
     }
 
     /**

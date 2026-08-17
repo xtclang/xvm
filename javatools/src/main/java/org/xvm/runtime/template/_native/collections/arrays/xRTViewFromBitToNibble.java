@@ -17,6 +17,8 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
+import org.xvm.runtime.template.numbers.xInt16;
+import org.xvm.runtime.template.numbers.xNibble;
 
 
 /**
@@ -68,7 +70,7 @@ public class xRTViewFromBitToNibble
         if (tSource instanceof BitView tView) {
             byte[] abBits = tView.getBytes(hSource, ofStart/2, cSize/2, fReverse);
 
-            return xRTNibbleDelegate.INSTANCE.makeHandle(abBits, cSize, mutability);
+            return xRTNibbleDelegate.INSTANCE.packHandle(abBits, mutability);
         }
 
         throw new UnsupportedOperationException();
@@ -88,7 +90,7 @@ public class xRTViewFromBitToNibble
             } else {
                 nNibble = nNibble & 0x0F;
             }
-            return xRTNibbleDelegate.assignNibble(frame, nNibble, iReturn);
+            return frame.assignValue(iReturn, xNibble.INSTANCE.makeJavaLong(nNibble));
         }
 
         throw new UnsupportedOperationException();
@@ -100,9 +102,10 @@ public class xRTViewFromBitToNibble
         ViewHandle     hView   = (ViewHandle) hTarget;
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
-        int            nNibble = xRTNibbleDelegate.getValue((GenericHandle) hValue);
 
         if (tSource instanceof ByteView tView) {
+            int nNibble = (int) ((ObjectHandle.JavaLong) hValue).getValue();
+
             // the underlying delegate is a BitView, which is a ByteView
             int bValue = tView.extractByte(hSource, lIndex / 2) & 0xFF;
             if (lIndex % 2 == 0) {

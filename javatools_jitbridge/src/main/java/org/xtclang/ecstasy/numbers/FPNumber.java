@@ -48,10 +48,55 @@ public abstract class FPNumber extends Number {
         return $toBigDecimal().setScale(0, direction.$roundingMode()).toBigInteger();
     }
 
+    /**
+     * Return the signum of the given IEEE 754-2008 floating point number held in an float value.
+     * In IEEE 754-2008, zero, infinity, and NaN can all be signed, so the signum will never be
+     * zero, it can only be -1 for negative or +1 for positive values.
+     */
+    public static int $signum(float value, Ctx ctx) {
+        return $signum(Float.floatToRawIntBits(value), ctx);
+    }
+
+    /**
+     * Return the signum of the given IEEE 754-2008 floating point number held in an float value.
+     * In IEEE 754-2008, zero, infinity, and NaN can all be signed, so the signum will never be
+     * zero, it can only be -1 for negative or +1 for positive values.
+     */
+    public static int $signum(double value, Ctx ctx) {
+        return $signum(Double.doubleToRawLongBits(value), ctx);
+    }
+
+    /**
+     * Return the signum of the given IEEE 754-2008 floating point number held in an integer value.
+     * In IEEE 754-2008, zero, infinity, and NaN can all be signed, so the signum will never be
+     * zero, it can only be -1 for negative or +1 for positive values.
+     */
+    public static int $signum(int value, Ctx ctx) {
+        return value < 0 ? -1 : 1;
+    }
+
+    /**
+     * Return the signum of the given IEEE 754-2008 floating point number held in an long value.
+     * In IEEE 754-2008, zero, infinity, and NaN can all be signed, so the signum will never be
+     * zero, it can only be -1 for negative or +1 for positive values.
+     */
+    public static int $signum(long value, Ctx ctx) {
+        return value < 0 ? -1 : 1;
+    }
+
+    /**
+     * Return the signum of the given IEEE 754-2008 floating point number held in an long value.
+     * In IEEE 754-2008, zero, infinity, and NaN can all be signed, so the signum will never be
+     * zero, it can only be -1 for negative or +1 for positive values.
+     */
+    public static int $signum(long lowBits, long highBits, Ctx ctx) {
+        return highBits < 0 ? -1 : 1;
+    }
+
     // ----- conversion ----------------------------------------------------------------------------
 
     /**
-     * Implementation of the Dec32 method
+     * Implementation of the FPNumber method
      * <pre>
      * toInt8(Boolean checkBounds = False, Rounding direction = TowardZero)
      * </pre>
@@ -63,21 +108,21 @@ public abstract class FPNumber extends Number {
      * @param direction        an optional direction for rounding, if not specified, the default
      *                         direction of TowardZero will be used
      *
-     * @return this Dec32 value converted to an Int8 value inside a Java {@code int}
+     * @return this FPNumber value converted to an Int8 value inside a Java {@code int}
      */
     public int toInt8$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits >= Byte.SIZE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid Int8 value");
         }
         return bi.byteValue();
     }
 
     /**
-     * Implementation of the Dec32 method
+     * Implementation of the FPNumber method
      * <pre>
      * toInt16(Boolean checkBounds = False, Rounding direction = TowardZero)
      * </pre>
@@ -89,21 +134,21 @@ public abstract class FPNumber extends Number {
      * @param direction        an optional direction for rounding, if not specified, the default
      *                         direction of TowardZero will be used
      *
-     * @return this Dec32 value converted to an Int16 value inside a Java {@code int}
+     * @return this FPNumber value converted to an Int16 value inside a Java {@code int}
      */
     public int toInt16$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits >= Short.SIZE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid Int16 value");
         }
         return bi.shortValue();
     }
 
     /**
-     * Implementation of the Dec32 method
+     * Implementation of the FPNumber method
      * <pre>
      * toInt32(Boolean checkBounds = False, Rounding direction = TowardZero)
      * </pre>
@@ -115,21 +160,21 @@ public abstract class FPNumber extends Number {
      * @param direction        an optional direction for rounding, if not specified, the default
      *                         direction of TowardZero will be used
      *
-     * @return this Dec32 value converted to an Int32 value inside a Java {@code int}
+     * @return this FPNumber value converted to an Int32 value inside a Java {@code int}
      */
     public int toInt32$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits >= Integer.SIZE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid Int32 value");
         }
         return bi.intValue();
     }
 
     /**
-     * Implementation of the Dec32 method
+     * Implementation of the FPNumber method
      * <pre>
      * toInt64(Boolean checkBounds = False, Rounding direction = TowardZero)
      * </pre>
@@ -141,7 +186,7 @@ public abstract class FPNumber extends Number {
      * @param direction        an optional direction for rounding, if not specified, the default
      *                         direction of TowardZero will be used
      *
-     * @return this Dec32 value converted to an Int64 value inside a Java {@code long}
+     * @return this FPNumber value converted to an Int64 value inside a Java {@code long}
      */
     public long toInt64$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
                              Rounding direction) {
@@ -149,14 +194,14 @@ public abstract class FPNumber extends Number {
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits >= Long.SIZE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid Int64 value");
         }
         return bi.longValue();
     }
 
     /**
-     * Implementation of the Dec32 method
+     * Implementation of the FPNumber method
      * <pre>
      * toInt128(Boolean checkBounds = False, Rounding direction = TowardZero)
      * </pre>
@@ -170,7 +215,7 @@ public abstract class FPNumber extends Number {
      * @param direction        an optional direction for rounding, if not specified, the default
      *                         direction of TowardZero will be used
      *
-     * @return the low 64-bits of this Dec32 value converted to an Int128 value inside a
+     * @return the low 64-bits of this FPNumber value converted to an Int128 value inside a
      *         Java {@code long}
      */
     public long toInt128$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
@@ -180,14 +225,46 @@ public abstract class FPNumber extends Number {
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits >= 128)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid Int128 value");
         }
         return Int128.$fromBigInteger(ctx, bi);
     }
 
     /**
-     * Implementation of the Dec32 method
+     * Implementation of the FPNumber method
+     * <pre>
+     * toNibble(Boolean checkBounds = False, Rounding direction = TowardZero)
+     * </pre>
+     *
+     * @param ctx              the build context
+     * @param checkBounds      the check bounds flag
+     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
+     *                         default value (in this case False)
+     * @param direction        an optional direction for rounding, if not specified, the default
+     *                         direction of TowardZero will be used
+     *
+     * @return this FPNumber value converted to an Nibble value inside a Java {@code int}
+     */
+    public int toNibble$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
+                            Rounding direction) {
+        if ($isSigned()) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+                    + " is not a valid Nibble value");
+        }
+        BigInteger bi   = $toBigInteger(direction);
+        int        bits = bi.bitLength();
+        if (!dfltCheckBounds && checkBounds && (bits > 4)) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+                    + " is not a valid Nibble value");
+        }
+        return bi.intValue() & 0x0F;
+    }
+
+    /**
+     * Implementation of the FPNumber method
      * <pre>
      * toUInt8(Boolean checkBounds = False, Rounding direction = TowardZero)
      * </pre>
@@ -199,27 +276,27 @@ public abstract class FPNumber extends Number {
      * @param direction        an optional direction for rounding, if not specified, the default
      *                         direction of TowardZero will be used
      *
-     * @return this Dec32 value converted to an UInt8 value inside a Java {@code int}
+     * @return this FPNumber value converted to an UInt8 value inside a Java {@code int}
      */
     public int toUInt8$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
                             Rounding direction) {
         if ($isSigned()) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt8 value");
         }
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits > Byte.SIZE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt8 value");
         }
         return bi.intValue() & 0xFF;
     }
 
     /**
-     * Implementation of the Dec32 method
+     * Implementation of the FPNumber method
      * <pre>
      * toUInt16(Boolean checkBounds = False, Rounding direction = TowardZero)
      * </pre>
@@ -231,27 +308,27 @@ public abstract class FPNumber extends Number {
      * @param direction        an optional direction for rounding, if not specified, the default
      *                         direction of TowardZero will be used
      *
-     * @return this Dec32 value converted to an UInt16 value inside a Java {@code int}
+     * @return this FPNumber value converted to an UInt16 value inside a Java {@code int}
      */
     public int toUInt16$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
                              Rounding direction) {
         if ($isSigned()) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt8 value");
         }
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits > Short.SIZE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt16 value");
         }
         return bi.shortValue() & 0xFFFF;
     }
 
     /**
-     * Implementation of the Dec32 method
+     * Implementation of the FPNumber method
      * <pre>
      * toUInt32(Boolean checkBounds = False, Rounding direction = TowardZero)
      * </pre>
@@ -263,27 +340,27 @@ public abstract class FPNumber extends Number {
      * @param direction        an optional direction for rounding, if not specified, the default
      *                         direction of TowardZero will be used
      *
-     * @return this Dec32 value converted to an UInt32 value inside a Java {@code int}
+     * @return this FPNumber value converted to an UInt32 value inside a Java {@code int}
      */
     public int toUInt32$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
                              Rounding direction) {
         if ($isSigned()) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt32 value");
         }
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits > Integer.SIZE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt32 value");
         }
         return bi.intValue();
     }
 
     /**
-     * Implementation of the Dec32 method
+     * Implementation of the FPNumber method
      * <pre>
      * toUInt64(Boolean checkBounds = False, Rounding direction = TowardZero)
      * </pre>
@@ -295,27 +372,27 @@ public abstract class FPNumber extends Number {
      * @param direction        an optional direction for rounding, if not specified, the default
      *                         direction of TowardZero will be used
      *
-     * @return this Dec32 value converted to an UInt64 value inside a Java {@code long}
+     * @return this FPNumber value converted to an UInt64 value inside a Java {@code long}
      */
     public long toUInt64$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
                               Rounding direction) {
         if ($isSigned()) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt64 value");
         }
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits > Long.SIZE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt64 value");
         }
         return bi.longValue();
     }
 
     /**
-     * Implementation of the Dec32 method
+     * Implementation of the FPNumber method
      * <pre>
      * toUInt128(Boolean checkBounds = False, Rounding direction = TowardZero)
      * </pre>
@@ -329,14 +406,14 @@ public abstract class FPNumber extends Number {
      * @param direction        an optional direction for rounding, if not specified, the default
      *                         direction of TowardZero will be used
      *
-     * @return the low 64-bits of this Dec32 value converted to an UInt128 value inside a
+     * @return the low 64-bits of this FPNumber value converted to an UInt128 value inside a
      *         Java {@code long}
      */
     public long toUInt128$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
                                Rounding direction) {
         if ($isSigned()) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt128 value");
         }
 
@@ -344,7 +421,7 @@ public abstract class FPNumber extends Number {
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits > 128)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Dec32 value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt128 value");
         }
         return UInt128.$fromBigInteger(ctx, bi);

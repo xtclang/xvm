@@ -127,7 +127,7 @@ public abstract class xUnconstrainedInteger
                 }
                 System.arraycopy(abOld, 0, ab, cb - cbActual, cbActual);
             }
-            return frame.assignValue(iReturn, xArray.makeBitArrayHandle(ab, cb*8, xArray.Mutability.Constant));
+            return frame.assignValue(iReturn, xArray.makeBitArrayHandle(ab, cb, xArray.Mutability.Constant));
         }
 
         case "bitCount": {

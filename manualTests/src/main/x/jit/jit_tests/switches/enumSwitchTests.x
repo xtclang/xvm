@@ -5,14 +5,12 @@ package enumSwitchTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Enum switch tests >>>>");
 
         testSimpleSwitch();
         testSimpleSwitchWithNullableEnum();
         testSimpleSwitchWithNullableEnumAndNullCase();
         testMultiSwitch();
 
-        console.print(">>>> Finished Enum switch tests >>>>");
     }
 
     enum Color {Red, Orange, Yellow, Green, Blue, Indigo, Violet}

@@ -286,6 +286,11 @@ public class MethodConstant
      */
     public String ensureJitMethodName(TypeSystem ts) {
         String sJitName = m_sJitName;
+        if (sJitName != null) {
+            return sJitName;
+        }
+
+        sJitName = NativeNames.findReservedJitName(this);
         if (sJitName == null) {
             if (isFunction() || (isConstructor() && !isVirtualConstructor())) {
                 // function names don't have to be unique across the type system, but they may need
@@ -308,22 +313,16 @@ public class MethodConstant
                 assert fFound;
                 sJitName = computePrefix(ts) + (ix == 0 ? getName() : getName() + "$" + ix);
             } else {
-                String sReservedName = NativeNames.findReservedJitName(this);
-                if (sReservedName == null) {
-                    String            prefix = computePrefix(ts);
-                    SignatureConstant sigJit = getSignature();
-                    if (!prefix.isEmpty()) {
-                        sigJit  = sigJit.getConstantPool().ensureSignatureConstant(
-                            prefix + sigJit.getName(), sigJit.getRawParams(), sigJit.getRawReturns());
-                    }
-                    sJitName = sigJit.ensureJitMethodName(ts);
-                } else {
-                    sJitName = sReservedName;
+                String            prefix = computePrefix(ts);
+                SignatureConstant sigJit = getSignature();
+                if (!prefix.isEmpty()) {
+                    sigJit  = sigJit.getConstantPool().ensureSignatureConstant(
+                        prefix + sigJit.getName(), sigJit.getRawParams(), sigJit.getRawReturns());
                 }
+                sJitName = sigJit.ensureJitMethodName(ts);
             }
-            m_sJitName = sJitName;
         }
-        return sJitName;
+        return m_sJitName = sJitName;
     }
 
     private String computePrefix(TypeSystem ts) {

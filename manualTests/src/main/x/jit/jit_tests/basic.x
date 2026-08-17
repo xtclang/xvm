@@ -27,6 +27,7 @@ package basic {
                 passed &= runTest(() -> fbindTests.run());
                 passed &= runTest(() -> exceptionTests.run());
                 passed &= runTest(() -> stringTests.run());
+                passed &= runTest(() -> literalTests.run());
             } catch (IllegalState e) {
                 console.print(e);
             }

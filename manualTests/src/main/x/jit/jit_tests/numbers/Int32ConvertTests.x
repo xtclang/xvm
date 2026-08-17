@@ -6,7 +6,6 @@ class Int32ConvertTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Int32 Conversion tests >>>>");
 
         // Int32.MinValue is 0x80000000 the lowest byte is 0x0000 == 0
         testInt32ToInt8(Int32.MinValue, 0);
@@ -157,7 +156,6 @@ class Int32ConvertTests {
         testInt32ToUIntN(100, 100, False);
         testInt32ToUIntN(Int32.MaxValue, 2147483647, False);
 
-        console.print("<<<<< Finished Int32 Conversion tests >>><<");
     }
 
     void testInt32ToInt8(Int32 a, Int8 expected) {

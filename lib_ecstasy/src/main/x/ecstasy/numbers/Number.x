@@ -84,25 +84,19 @@
     /**
      * The number of bits that the number uses.
      */
-    @RO Int bitLength.get() {
-        return bits.size;
-    }
+    @RO Int bitLength.get() = bits.size;
 
     /**
      * The number of bytes that this number uses for its storage. In the case of a number that does
      * not use an exact number of bytes, the number is rounded up to the closest byte.
      */
-    @RO Int byteLength.get() {
-        return (bitLength + 7) / 8;
-    }
+    @RO Int byteLength.get() = (bitLength + 7) / 8;
 
     /**
      * True if the numeric type is signed (has the potential to hold positive or negative values);
      * False if unsigned (representing only a magnitude).
      */
-    @RO Boolean signed.get() {
-        return True;
-    }
+    @RO Boolean signed.get() = True;
 
     /**
      * The Sign of the number. The case of [Zero] is special, in that some numeric formats have an
@@ -114,33 +108,25 @@
      * The explicit negative sign of this number. This method only differs from the `sign==Negative`
      * when the value is a negative zero.
      */
-    @RO Boolean negative.get() {
-        return sign == Negative;
-    }
+    @RO Boolean negative.get() = (sign == Negative);
 
     /**
      * True iff the floating point value is a finite value, indicating that it is neither infinity
      * nor Not-a-Number (`NaN`).
      */
-    @RO Boolean finite.get() {
-        return !infinity && !NaN;
-    }
+    @RO Boolean finite.get() = !infinity && !NaN;
 
     /**
      * True iff the this Number is positive infinity or negative infinity. Some forms of Numbers
      * such as floating point values can be infinite as the result of math overflow, for example.
      */
-    @RO Boolean infinity.get() {
-        return False;
-    }
+    @RO Boolean infinity.get() = False;
 
     /**
      * True iff the this Number is a `NaN` (_Not-a-Number_). Some forms of Numbers such as floating
      * point values can be `NaN` as the result of math underflow, for example.
      */
-    @RO Boolean NaN.get() {
-        return False;
-    }
+    @RO Boolean NaN.get() = False;
 
     /**
      * The magnitude of this number (its distance from zero), which may use a different Number type
@@ -148,9 +134,7 @@
      *
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
      */
-    @RO Number! magnitude.get() {
-        return abs();
-    }
+    @RO Number! magnitude.get() = abs();
 
 
     // ----- operators -----------------------------------------------------------------------------
@@ -259,9 +243,7 @@
      *
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
      */
-    Number remainder(Number n) {
-        return this - (this / n * n);
-    }
+    Number remainder(Number n) = (this - (this / n * n));
 
     /**
      * Calculate the absolute value of this number. If there is no absolute value representable
@@ -367,6 +349,18 @@
      *                     if additional bits are required
      *
      * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
+     *                      unsigned 4-bit integer range
+     */
+    @Override
+    Nibble toNibble(Boolean checkBounds = False) = toUInt64(checkBounds).toNibble(checkBounds);
+
+    /**
+     * @param checkBounds  pass `True` to bounds-check this value before conversion, or `False` to
+     *                     blindly retain only the necessary number of least significant bits, which
+     *                     may lose magnitude or change the sign of the result, and then zero extend
+     *                     if additional bits are required
+     *
+     * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
      *                      unsigned 8-bit integer range
      */
     @Override
@@ -460,9 +454,7 @@
      *
      * @return the number as an array of bits
      */
-    Bit[] toBitArray(Array.Mutability mutability = Constant) {
-        return bits.toArray(mutability);
-    }
+    Bit[] toBitArray(Array.Mutability mutability = Constant) = bits.toArray(mutability);
 
     /**
      * Obtain the number as an array of nibbles, in left-to-right order.
@@ -471,9 +463,7 @@
      *
      * @return the number as an array of nibbles
      */
-    Nibble[] toNibbleArray(Array.Mutability mutability = Constant) {
-        return bits.toNibbleArray(mutability);
-    }
+    Nibble[] toNibbleArray(Array.Mutability mutability = Constant) = bits.toNibbleArray(mutability);
 
     /**
      * Obtain the number as an array of bytes, in left-to-right order.
@@ -482,9 +472,7 @@
      *
      * @return the number as an array of bytes
      */
-    Byte[] toByteArray(Array.Mutability mutability = Constant) {
-        return bits.toByteArray(mutability);
-    }
+    Byte[] toByteArray(Array.Mutability mutability = Constant) = bits.toByteArray(mutability);
 
     /**
      * Obtain a function that converts from the first specified numeric type to the second
@@ -495,53 +483,48 @@
      *
      * @return a function that converts from the `from` type and to the `to` type
      */
-    static <From extends Number!, To extends Number!> function To(From) converterFor(Type<From> from, Type<To> to) {
-        return From.converterTo(to);
-    }
+    static <From extends Number!, To extends Number!> function To(From)
+            converterFor(Type<From> from, Type<To> to) = From.converterTo(to);
 
 
     // ----- Numeric interface ---------------------------------------------------------------------
 
     @Override
-    static conditional Int fixedBitLength() {
-        return False;
-    }
+    static conditional Int fixedBitLength() = False;
 
     @Override
-    static conditional Range<Number> range() {
-        return False;
-    }
+    static conditional Range<Number> range() = False;
 
     @Override
     static <To extends Number!> function To (Number) converterTo(Type<To> to) {
         return switch (to) {
-            case Int8               : n -> n.toInt8()    .as(To);
-            case Int16              : n -> n.toInt16()   .as(To);
-            case Int32              : n -> n.toInt32()   .as(To);
-            case Int64              : n -> n.toInt64()   .as(To);
-            case Int128             : n -> n.toInt128()  .as(To);
-            case IntN               : n -> n.toIntN()    .as(To);
+            case Int8     : n -> n.toInt8()    .as(To);
+            case Int16    : n -> n.toInt16()   .as(To);
+            case Int32    : n -> n.toInt32()   .as(To);
+            case Int64    : n -> n.toInt64()   .as(To);
+            case Int128   : n -> n.toInt128()  .as(To);
+            case IntN     : n -> n.toIntN()    .as(To);
 
-            case UInt8              : n -> n.toUInt8()   .as(To);
-            case UInt16             : n -> n.toUInt16()  .as(To);
-            case UInt32             : n -> n.toUInt32()  .as(To);
-            case UInt64             : n -> n.toUInt64()  .as(To);
-            case UInt128            : n -> n.toUInt128() .as(To);
-            case UIntN              : n -> n.toUIntN()   .as(To);
+            case UInt8    : n -> n.toUInt8()   .as(To);
+            case UInt16   : n -> n.toUInt16()  .as(To);
+            case UInt32   : n -> n.toUInt32()  .as(To);
+            case UInt64   : n -> n.toUInt64()  .as(To);
+            case UInt128  : n -> n.toUInt128() .as(To);
+            case UIntN    : n -> n.toUIntN()   .as(To);
 
-            case Dec32              : n -> n.toDec32()   .as(To);
-            case Dec64              : n -> n.toDec64()   .as(To);
-            case Dec128             : n -> n.toDec128()  .as(To);
-            case DecN               : n -> n.toDecN()    .as(To);
+            case Dec32    : n -> n.toDec32()   .as(To);
+            case Dec64    : n -> n.toDec64()   .as(To);
+            case Dec128   : n -> n.toDec128()  .as(To);
+            case DecN     : n -> n.toDecN()    .as(To);
 
-            case Float8e4           : n -> n.toFloat8e4().as(To);
-            case Float8e5           : n -> n.toFloat8e5().as(To);
-            case BFloat16           : n -> n.toBFloat16().as(To);
-            case Float16            : n -> n.toFloat16() .as(To);
-            case Float32            : n -> n.toFloat32() .as(To);
-            case Float64            : n -> n.toFloat64() .as(To);
-            case Float128           : n -> n.toFloat128().as(To);
-            case FloatN             : n -> n.toFloatN()  .as(To);
+            case Float8e4 : n -> n.toFloat8e4().as(To);
+            case Float8e5 : n -> n.toFloat8e5().as(To);
+            case BFloat16 : n -> n.toBFloat16().as(To);
+            case Float16  : n -> n.toFloat16() .as(To);
+            case Float32  : n -> n.toFloat32() .as(To);
+            case Float64  : n -> n.toFloat64() .as(To);
+            case Float128 : n -> n.toFloat128().as(To);
+            case FloatN   : n -> n.toFloatN()  .as(To);
 
             default: assert as $"unsupported convert-to type: {to}";
         };
@@ -600,9 +583,8 @@
     }
 
     @Override
-    static <CompileType extends Number> Boolean equals(CompileType value1, CompileType value2) {
-        return (value1 <=> value2) == Equal;
-    }
+    static <CompileType extends Number> Boolean equals(CompileType value1, CompileType value2) =
+            ((value1 <=> value2) == Equal);
 
     @Override
     static <CompileType extends Number> Int hashCode(CompileType value) = value.toInt64();

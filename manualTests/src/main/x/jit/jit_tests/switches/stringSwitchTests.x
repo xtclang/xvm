@@ -5,7 +5,6 @@ package stringSwitchTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running String switch tests >>>>");
 
         testSimpleSwitch();
         testSimpleSwitchWithNullableString();
@@ -13,7 +12,6 @@ package stringSwitchTests {
         testMultiSwitch();
         testRangeSwitch();
 
-        console.print(">>>> Finished String switch tests >>>>");
     }
 
     void testSimpleSwitch() {

@@ -169,6 +169,14 @@ const UIntN
     }
 
     @Override
+    Nibble toNibble(Boolean checkBounds = False) {
+        assert:bounds !checkBounds || this <= Nibble.MaxValue;
+        return bitLength < 4
+                ? new Nibble(new Bit[4](i -> i < 4-bitLength ? 0 : bits[i]))
+                : new Nibble(bits[bitLength-4 ..< bitLength]);
+    }
+
+    @Override
     UInt8 toUInt8(Boolean checkBounds = False) {
         assert:bounds !checkBounds || this <= UInt8.MaxValue;
         return bitLength < 8

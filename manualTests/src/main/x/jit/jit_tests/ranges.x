@@ -11,6 +11,7 @@ package ranges {
             Boolean passed = True;
             try {
                 passed &= runTest(() -> int64RangeTests.run());
+                passed &= runTest(() -> primitiveRangeTests.run());
             } catch (IllegalState e) {
                 console.print(e);
             }

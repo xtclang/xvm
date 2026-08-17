@@ -475,12 +475,12 @@ public class String
     // ----- Hashable interface --------------------------------------------------------------------
 
     /**
-     * The native implementation of String.x
+     * The native implementation of:
      *
-     *    private Int64 hash.get()
+     * static <CompileType extends Hashable> Int hashCode(CompileType value);
      */
-    public long hash$get$p(Ctx ctx) {
-        return toString().hashCode();
+    public static long hashCode$p(Ctx ctx, nType type, String value) {
+        return value.toString().hashCode();
     }
 
     // ----- Orderable interface -------------------------------------------------------------------

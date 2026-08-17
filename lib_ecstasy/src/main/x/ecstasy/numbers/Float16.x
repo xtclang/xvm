@@ -6,6 +6,28 @@
 const Float16
         extends BinaryFPNumber
         default(0.0) {
+    // ----- constants -----------------------------------------------------------------------------
+
+    /**
+     * The value for a positive infinity Float16.
+     */
+    static Float16 PositiveInfinity = new Float16(#7C00);
+
+    /**
+     * The value for a negative infinity Float16.
+     */
+    static Float16 NegativeInfinity = new Float16(#FC00);
+
+    /**
+     * The value for a positive NaN Float16.
+     */
+    static Float16 PositiveNaN = new Float16(#7FFF);
+
+    /**
+     * The value for a negative NaN Float16.
+     */
+    static Float16 NegativeNaN = new Float16(#FFFF);
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -67,10 +89,6 @@ const Float16
     @Override
     Signum sign.get() {
         UInt16 n = bits.toUInt16();
-        if (n == 0x0000 || n == 0x8000) {
-            return Zero;
-        }
-
         return n & 0x8000 == 0 ? Positive : Negative;
     }
 
@@ -133,6 +151,16 @@ const Float16
     @Override
     Int bias.get() {
         return emax;
+    }
+
+    @Override
+    Int significandBitLength.get() {
+        return 10;
+    }
+
+    @Override
+    Int exponentBitLength.get() {
+        return 5;
     }
 
 
@@ -300,6 +328,9 @@ const Float16
     IntN toIntN(Rounding direction = TowardZero) {
         return round(direction).toIntN();
     }
+
+    @Override
+    Nibble toNibble(Boolean checkBounds = False, Rounding direction = TowardZero);
 
     @Override
     UInt8 toUInt8(Boolean checkBounds = False, Rounding direction = TowardZero);

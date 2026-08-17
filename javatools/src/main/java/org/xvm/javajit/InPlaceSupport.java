@@ -75,31 +75,55 @@ public interface InPlaceSupport
             case "I", "S", "B", "Z":
                 switch (opCode) {
                     case OP_IP_DEC, OP_IIP_DEC:
-                        code.iinc(reg.slot(), -1);
+                        code.iload(reg.slot())
+                            .iconst_1()
+                            .isub();
+                        bctx.adjustIntValue(code, reg.type());
+                        code.istore(reg.slot());
                         break;
 
                     case OP_IP_INC, OP_IIP_INC:
-                        code.iinc(reg.slot(), +1);
+                        code.iload(reg.slot())
+                            .iconst_1()
+                            .iadd();
+                        bctx.adjustIntValue(code, reg.type());
+                        code.istore(reg.slot());
                         break;
 
                     case OP_IP_DECA, OP_IIP_DECA:
                         code.iload(reg.slot())
-                                .iinc(reg.slot(), -1); // leaves the old value on Java stack
+                            .dup()
+                            .iconst_1()
+                            .isub();
+                        bctx.adjustIntValue(code, reg.type());
+                        code.istore(reg.slot());
                         break;
 
                     case OP_IP_INCA, OP_IIP_INCA:
                         code.iload(reg.slot())
-                                .iinc(reg.slot(), +1);
+                            .dup()
+                            .iconst_1()
+                            .iadd();
+                        bctx.adjustIntValue(code, reg.type());
+                        code.istore(reg.slot());
                         break;
 
                     case OP_IP_DECB, OP_IIP_DECB:
-                        code.iinc(reg.slot(), -1)
-                                .iload(reg.slot());
+                        code.iload(reg.slot())
+                            .iconst_1()
+                            .isub();
+                        bctx.adjustIntValue(code, reg.type());
+                        code.dup()
+                            .istore(reg.slot());
                         break;
 
                     case OP_IP_INCB, OP_IIP_INCB:
-                        code.iinc(reg.slot(), +1)
-                                .iload(reg.slot());
+                        code.iload(reg.slot())
+                            .iconst_1()
+                            .iadd();
+                        bctx.adjustIntValue(code, reg.type());
+                        code.dup()
+                            .istore(reg.slot());
                         break;
 
                     default:

@@ -6,7 +6,6 @@ class IpAndTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running IpAndTests >>>>");
         testIpAndInt();
         testIpAndUInt();
         testIpAndInt8();
@@ -17,7 +16,6 @@ class IpAndTests {
         testIpAndUInt32();
         testIpAndInt128();
         testIpAndUInt128();
-        console.print("<<<< Finished IpAndTests <<<<<");
     }
 
     void testIpAndInt() {

@@ -4,7 +4,6 @@ package uint64ArrayTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running UInt64 Array Tests >>>>");
 
         shouldCreateWithCapacity();
         shouldCreateArrayInitializedWithZeroValue();
@@ -34,7 +33,6 @@ package uint64ArrayTests {
         shouldDeleteSpecificIndexFromArray();
         shouldInsertValueIntoArray();
 
-        console.print(">>>> Running UInt64 Array Tests >>>>");
     }
 
     void shouldCreateWithCapacity() {

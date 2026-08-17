@@ -5,7 +5,6 @@ class Int128Tests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Int128Tests >>>>");
 
         // Comparison tests
         testInt128CompareEqLowOnly();
@@ -21,6 +20,7 @@ class Int128Tests {
         testInt128MaxValueCompareEq();
         testInt128MinValueCompareEq();
         testInt128ZeroCompareEq();
+        testInt128Range();
 
         // Field tests
         testInt128AsFieldLowOnly();
@@ -147,7 +147,6 @@ class Int128Tests {
         testAppendTo();
         testEstimateStringLength();
 
-        console.print("<<<<< Finished Int128Tests tests >>>>>");
     }
 
     // ----- comparison tests ----------------------------------------------------------------------
@@ -170,6 +169,15 @@ class Int128Tests {
     void testInt128ZeroCompareEq() {
         Int128 n = 0;
         assert n == 0;
+    }
+
+    void testInt128Range() {
+        assert Range<Int128> range := Int128.range();
+        assert range.first      == Int128.MinValue;
+        assert range.last       == Int128.MaxValue;
+        assert range.lowerBound == Int128.MinValue;
+        assert range.upperBound == Int128.MaxValue;
+        assert !range.descending;
     }
 
     void testInt128CompareEqLowOnly() {

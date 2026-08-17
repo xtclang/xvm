@@ -240,7 +240,7 @@ public class JitMethodDesc {
         boolean            isOptimized  = isPrimitive;
 
         for (int iOrig = isPrimitive ? -1 : 0, iStd = 0, iOpt = 0, cOrig = paramTypes.length; iOrig < cOrig; iOrig++) {
-            TypeConstant type  = iOrig >= 0 ? paramTypes[iOrig] : targetType;
+            TypeConstant type  = iOrig >= 0 ? paramTypes[iOrig] : targetType.removeAccess();
             boolean      fDflt = iOrig >= reqParamCount;
             ClassDesc    cd;
 

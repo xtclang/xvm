@@ -114,6 +114,18 @@ public class Dec32 extends DecimalFPNumber {
         return appender;
     }
 
+    public static boolean infinity$get$p(int thi$, Ctx ctx) {
+        return $isInfinite($leftmost7Bits(thi$));
+    }
+
+    public static boolean finite$get$p(int thi$, Ctx ctx) {
+        return $isFinite($leftmost7Bits(thi$));
+    }
+
+    public static boolean NaN$get$p(int thi$, Ctx ctx) {
+        return $isNaN($leftmost7Bits(thi$));
+    }
+
     public static int toInt8$FP$p(
             int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
         return $box(thi$).toInt8$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
@@ -137,6 +149,11 @@ public class Dec32 extends DecimalFPNumber {
     public static long toInt128$FP$p(
             int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
         return $box(thi$).toInt128$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+    }
+
+    public static int toNibble$FP$p(
+            int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
+        return $box(thi$).toNibble$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
     }
 
     public static int toUInt8$FP$p(

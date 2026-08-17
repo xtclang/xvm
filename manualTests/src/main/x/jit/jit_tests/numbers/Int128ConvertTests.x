@@ -6,7 +6,6 @@ class Int128ConvertTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Int128 Conversion tests >>>>");
 
         testInt128ToInt8(Int128.MinValue, 0);
         testInt128ToInt8(-0x8000, 0);
@@ -152,7 +151,6 @@ class Int128ConvertTests {
         testInt128ToUInt128WithBoundsCheck(100, 100, False);
         testInt128ToUInt128WithBoundsCheck(Int128.MaxValue, 0x7FFF_FFFF_FFFF_FFFF, False);
 
-        console.print("<<<<< Finished Int128 Conversion tests >>><<");
     }
 
     void testInt128ToInt8(Int128 a, Int8 expected) {

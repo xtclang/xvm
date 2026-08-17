@@ -458,6 +458,7 @@ const IntLiteral(String text)
      * @throws OutOfBounds  if the literal value is outside of the 4-bit nibble range
      */
     @Auto
+    @Override
     Nibble toNibble() {
         Byte byte = toByte();
         assert:bounds byte <= 0xF;

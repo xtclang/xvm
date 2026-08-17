@@ -5,7 +5,6 @@ package int8SwitchTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Int8 switch tests >>>>");
 
         testSimpleSwitch();
         testSimpleSwitchWithNullable();
@@ -25,7 +24,6 @@ package int8SwitchTests {
 
         testRangeSwitch();
 
-        console.print(">>>> Finished Int8 switch tests >>>>");
     }
 
     void testSimpleSwitch() {

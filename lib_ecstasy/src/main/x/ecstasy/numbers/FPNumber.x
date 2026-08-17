@@ -415,6 +415,14 @@
      * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
      */
     @Override
+    Nibble toNibble(Boolean checkBounds = False, Rounding direction = TowardZero) {
+        return toUInt64(checkBounds, direction).toNibble(checkBounds);
+    }
+
+    /**
+     * @param direction  the [Rounding] direction to use if rounding to an integer is necessary
+     */
+    @Override
     UInt8 toUInt8(Boolean checkBounds = False, Rounding direction = TowardZero) {
         return toUInt64(checkBounds, direction).toUInt8(checkBounds);
     }

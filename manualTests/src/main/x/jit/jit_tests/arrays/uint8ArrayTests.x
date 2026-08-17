@@ -4,7 +4,6 @@ package uint8ArrayTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running UInt8 Array Tests >>>>");
 
         shouldCreateWithCapacity();
         shouldCreateArrayInitializedWithZeroValue();
@@ -34,7 +33,6 @@ package uint8ArrayTests {
         shouldDeleteSpecificIndexFromArray();
         shouldInsertValueIntoArray();
 
-        console.print(">>>> Running UInt8 Array Tests >>>>");
     }
 
     void shouldCreateWithCapacity() {

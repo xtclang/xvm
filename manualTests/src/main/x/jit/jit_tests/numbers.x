@@ -36,6 +36,10 @@ package numbers {
 
                 passed &= runTest(() -> new IntNTests().run());
                 passed &= runTest(() -> new UIntNTests().run());
+
+                passed &= runTest(() -> new NibbleTests().run());
+                passed &= runTest(() -> new NumberTests().run());
+                passed &= runTest(() -> new FPNumberTests().run());
             } catch (IllegalState e) {
                 console.print(e);
             }

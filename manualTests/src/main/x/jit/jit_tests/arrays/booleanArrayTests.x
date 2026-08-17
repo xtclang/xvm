@@ -4,7 +4,6 @@ package booleanArrayTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Boolean Array Tests >>>>");
 
         shouldCreateWithCapacity();
         shouldCreateArrayInitializedWithFalse();
@@ -21,7 +20,6 @@ package booleanArrayTests {
         shouldDeleteSpecificIndexFromArray();
         shouldInsertValueIntoArray();
 
-        console.print("<<<< Finished Boolean Array Tests <<<<");
     }
 
     void shouldCreateWithCapacity() {

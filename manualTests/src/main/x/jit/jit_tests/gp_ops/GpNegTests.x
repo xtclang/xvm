@@ -6,7 +6,6 @@ class GpNegTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running GpNegTests >>>>");
         testGpNegInt8();
         testGpNegNegativeInt8();
         testGpNegInt16();
@@ -27,7 +26,6 @@ class GpNegTests {
         testGpNegNegativeFloat32();
         testGpNegFloat64();
         testGpNegNegativeFloat64();
-        console.print("<<<< Finished GpNegTests <<<<<");
     }
 
     void testGpNegInt8() {

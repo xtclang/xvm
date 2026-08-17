@@ -17,7 +17,7 @@ public class Int128 extends IntNumber {
     /**
      * Construct an Ecstasy Int128 object.
      */
-    Int128(long lowValue, long highValue) {
+    private Int128(long lowValue, long highValue) {
         $lowValue  = lowValue;
         $highValue = highValue;
     }
@@ -156,7 +156,7 @@ public class Int128 extends IntNumber {
      *
      * @return a {@link BigInteger} created from the two long values
      */
-    private static BigInteger $toBigInteger(long lowValue, long highValue) {
+    public static BigInteger $toBigInteger(long lowValue, long highValue) {
         BigInteger low = BigInteger.valueOf(lowValue & Long.MAX_VALUE);
         if (lowValue < 0) {
             low = low.setBit(63);
@@ -170,9 +170,8 @@ public class Int128 extends IntNumber {
     // ----- conversion ----------------------------------------------------------------------------
 
     /**
-     * Implementation of Int8 toInt8(Boolean checkBounds = False)
+     * Native implementation of: "Int8 toInt8(Boolean checkBounds = False)"
      *
-     * @param ctx              the build context
      * @param checkBounds      the check bounds flag
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
@@ -190,9 +189,8 @@ public class Int128 extends IntNumber {
     }
 
     /**
-     * The primitive implementation of Int16 toInt16(Boolean checkBounds = False)
+     * Native implementation of: "Int16 toInt16(Boolean checkBounds = False)"
      *
-     * @param ctx              the build context
      * @param checkBounds      the check bounds flag
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
@@ -210,9 +208,8 @@ public class Int128 extends IntNumber {
     }
 
     /**
-     * The primitive implementation of Int32 toInt32(Boolean checkBounds = False)
+     * Native implementation of: "Int32 toInt32(Boolean checkBounds = False)"
      *
-     * @param ctx              the build context
      * @param checkBounds      the check bounds flag
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
@@ -230,9 +227,27 @@ public class Int128 extends IntNumber {
     }
 
     /**
-     * Implementation of Int64 toInt64(Boolean checkBounds = False)
+     * Native implementation of: "Int toInt(Boolean checkBounds = False)"
      *
-     * @param ctx              the build context
+     * Although Int and Int64 have the same JIT representation, "toInt()" and "toInt64()" are
+     * distinct Ecstasy methods.
+     *
+     * This bridge is required because a primitive invocation bypasses the natural toInt()
+     * implementation that delegates to toInt64().
+     *
+     * @param checkBounds      the check bounds flag
+     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
+     *                         default value (in this case False)
+     *
+     * @return this Int128 value as a Java long
+     */
+    public static long toInt$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return toInt64$p(thi$Lo, thi$Hi, ctx, checkBounds, dfltCheckBounds);
+    }
+
+    /**
+     * Native implementation of: "Int64 toInt64(Boolean checkBounds = False)"
+     *
      * @param checkBounds      the check bounds flag
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
@@ -250,9 +265,8 @@ public class Int128 extends IntNumber {
     }
 
     /**
-     * The primitive implementation of Int128 toInt128(Boolean checkBounds = False)
+     * Native implementation of: "Int128 toInt128(Boolean checkBounds = False)"
      *
-     * @param ctx              the build context
      * @param checkBounds      the check bounds flag
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
@@ -266,19 +280,35 @@ public class Int128 extends IntNumber {
     }
 
     /**
-     * The primitive implementation of:
-     * <pre>
-     *     IntN toIntN()
-     * </pre>
+     * Native implementation of: "IntN toIntN()"
      */
     public static IntN toIntN$p(long thi$Lo, long thi$Hi, Ctx ctx) {
         return IntN.$box(thi$Lo, thi$Hi);
     }
 
     /**
-     * The primitive implementation of UInt8 toUInt8(Boolean checkBounds = False)
+     * The primitive implementation of Nibble toNibble(Boolean checkBounds = False)
      *
      * @param ctx              the build context
+     * @param checkBounds      the check bounds flag
+     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
+     *                         default value (in this case False)
+     *
+     * @return this value as the least significant four bits of a Java {@code int}
+     */
+    public static int toNibble$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && thi$Hi != 0 && thi$Hi != -1
+                && (thi$Lo < 0L || thi$Lo > 255L)) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "Int128 value " + $toBigInteger(thi$Lo, thi$Hi)
+                    + " is not a valid Nibble value");
+        }
+        return (byte) thi$Lo & 0x0F;
+    }
+
+    /**
+     * Native implementation of: "UInt8 toUInt8(Boolean checkBounds = False)"
+     *
      * @param checkBounds      the check bounds flag
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
@@ -296,9 +326,8 @@ public class Int128 extends IntNumber {
     }
 
     /**
-     * The primitive implementation of UInt16 toUInt16(Boolean checkBounds = False)
+     * Native implementation of: "UInt16 toUInt16(Boolean checkBounds = False)"
      *
-     * @param ctx              the build context
      * @param checkBounds      the check bounds flag
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
@@ -316,9 +345,8 @@ public class Int128 extends IntNumber {
     }
 
     /**
-     * The primitive implementation of UInt32 toUInt8(Boolean checkBounds = False)
+     * Native implementation of: "UInt32 toUInt32(Boolean checkBounds = False)"
      *
-     * @param ctx              the build context
      * @param checkBounds      the check bounds flag
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
@@ -336,9 +364,21 @@ public class Int128 extends IntNumber {
     }
 
     /**
-     * The primitive implementation of UInt64 toUInt64(Boolean checkBounds = False)
+     * Native implementation of: "UInt toUInt(Boolean checkBounds = False)"
      *
-     * @param ctx              the build context
+     * Although UInt and UInt64 have the same JIT representation, "toUInt()" and "toUInt64()" are
+     * distinct Ecstasy methods.
+     *
+     * This bridge is required because a primitive invocation bypasses the natural toUInt()
+     * implementation that delegates to toUInt64().
+     */
+    public static long toUInt$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return toUInt64$p(thi$Lo, thi$Hi, ctx, checkBounds, dfltCheckBounds);
+    }
+
+    /**
+     * Native implementation of: "UInt64 toUInt64(Boolean checkBounds = False)"
+     *
      * @param checkBounds      the check bounds flag
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
@@ -356,9 +396,8 @@ public class Int128 extends IntNumber {
     }
 
     /**
-     * The primitive implementation of UInt128 toUInt128(Boolean checkBounds = False)
+     * Native implementation of: "UInt128 toUInt128(Boolean checkBounds = False)"
      *
-     * @param ctx              the build context
      * @param checkBounds      the check bounds flag
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
@@ -377,10 +416,7 @@ public class Int128 extends IntNumber {
     }
 
     /**
-     * The primitive implementation of:
-     * <pre>
-     *     UIntN toUIntN()
-     * </pre>
+     * Native implementation of: "UIntN toUIntN()"
      */
     public static UIntN toUIntN$p(long thi$Lo, long thi$Hi, Ctx ctx) {
         if (thi$Hi < 0) {

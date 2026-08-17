@@ -4,7 +4,6 @@ package arrayTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running ArrayTests >>>>");
 
         testStringAsArray();
         testStringArray();

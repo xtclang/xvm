@@ -67,6 +67,7 @@ public class xRTDelegate
             registerNativeTemplate(new xRTInt64Delegate   (f_container, f_struct, true));
             registerNativeTemplate(new xRTInt128Delegate  (f_container, f_struct, true));
 
+            registerNativeTemplate(new xRTNibbleDelegate   (f_container, f_struct, true));
             registerNativeTemplate(new xRTUInt8Delegate   (f_container, f_struct, true));
             registerNativeTemplate(new xRTUInt16Delegate  (f_container, f_struct, true));
             registerNativeTemplate(new xRTUInt32Delegate  (f_container, f_struct, true));
@@ -98,6 +99,7 @@ public class xRTDelegate
             mapDelegates.put(pool.typeInt64(),   xRTInt64Delegate  .INSTANCE);
             mapDelegates.put(pool.typeInt128(),  xRTInt128Delegate .INSTANCE);
 
+            mapDelegates.put(pool.typeNibble(),  xRTNibbleDelegate  .INSTANCE);
             mapDelegates.put(pool.typeUInt8(),   xRTUInt8Delegate  .INSTANCE);
             mapDelegates.put(pool.typeUInt16(),  xRTUInt16Delegate .INSTANCE);
             mapDelegates.put(pool.typeUInt32(),  xRTUInt32Delegate .INSTANCE);

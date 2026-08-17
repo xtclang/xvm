@@ -3,7 +3,6 @@ package setPropertyTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running SetPropertyTests >>>>");
 
         Test t = new Test(0, 0.0, "");
 
@@ -79,7 +78,6 @@ package setPropertyTests {
         t.testNullableXvmPrimitiveElvisAssign(2006);
         assert t.x == 2006;
 
-        console.print("<<<< Finished SetPropertyTests <<<<<");
     }
 
     class Test(Int i, Dec64 d, String s) {

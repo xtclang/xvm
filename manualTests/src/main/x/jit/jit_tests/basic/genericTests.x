@@ -3,7 +3,6 @@ package genericTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running GenericTests >>>>");
 
         TestBase t0 = new TestBase(5);
         console.print(t0);

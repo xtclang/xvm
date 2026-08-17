@@ -91,12 +91,10 @@ import org.xvm.util.TransientThreadLocal;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
 
+import static org.xvm.javajit.Builder.CD_Class;
 import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_Object;
-import static org.xvm.javajit.Builder.CD_Orderable;
 import static org.xvm.javajit.Builder.CD_Ordered;
 import static org.xvm.javajit.Builder.CD_nType;
-import static org.xvm.javajit.Builder.N_nRangeInt64;
 import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.Builder.XVM_PRIMITIVE_COMPARE;
 import static org.xvm.javajit.Builder.XVM_PRIMITIVE_EQUALS;
@@ -2236,7 +2234,7 @@ public abstract class TypeConstant
                 ? collectMixinAnnotations(listProcess)
                 : Annotation.NO_ANNOTATIONS;
 
-        TypeInfo info = new TypeInfo(this, cInvalidations, struct, 0, false, mapTypeParams,
+        TypeInfo info = new TypeInfoReal(this, cInvalidations, struct, 0, false, mapTypeParams,
                 aAnnoClass, aAnnoMixin, typeExtends, typeRebase, typeInto,
                 listProcess, listmapClassChain, listmapDefaultChain,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
@@ -2634,7 +2632,7 @@ public abstract class TypeConstant
                 getMethodBySignature(pool.sigToString());
         mapMethods.putIfAbsent(infoToString.getIdentity(), infoToString);
 
-        return new TypeInfo(this, cInvals, struct, 0,
+        return new TypeInfoReal(this, cInvals, struct, 0,
                 false, infoPri.getTypeParams(), infoPri.getClassAnnotations(), infoPri.getMixinAnnotations(),
                 infoPri.getExtends(), infoPri.getRebases(), infoPri.getInto(),
                 infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
@@ -5654,7 +5652,8 @@ public abstract class TypeConstant
             TypeInfo     infoMixin   = typePrivate.ensureTypeInfoInternal(errs);
             if (infoMixin == null) {
                 // return the incomplete info for whatever we've got so far
-                return new TypeInfo(this, cInvalidations, infoBase.getClassStructure(), 0, false,
+                return new TypeInfoReal(this, cInvalidations,
+                        infoBase.getClassStructure(), 0, false,
                         info.getTypeParams(), Annotation.NO_ANNOTATIONS, Annotation.NO_ANNOTATIONS,
                         info.getExtends(), info.getRebases(), info.getInto(),
                         info.getContributionList(), info.getClassChain(), info.getDefaultChain(),
@@ -5761,7 +5760,7 @@ public abstract class TypeConstant
 
         Annotation[] aAnnoMixin = collectMixinAnnotations(listProcess);
 
-        return new TypeInfo(typeTarget, cInvalidations, structBase, 0, false, mapTypeParams,
+        return new TypeInfoReal(typeTarget, cInvalidations, structBase, 0, false, mapTypeParams,
                 aAnnoClass, aAnnoMixin,
                 infoSource.getExtends(), infoSource.getRebases(), infoSource.getInto(),
                 listProcess, infoSource.getClassChain(), infoSource.getDefaultChain(),
@@ -7140,7 +7139,7 @@ public abstract class TypeConstant
         if (sJitName == null) {
             // get the master instance of the type constant
             ModuleLoader loader = ts.findOwnerLoader(this);
-            TypeConstant that = loader.module.getConstantPool().register(this);
+            TypeConstant that   = loader.module.getConstantPool().register(this);
             sJitName   = this == that ? buildJitClassName(ts, loader) : that.ensureJitClassName(ts);
             m_sJitName = sJitName;
         }
@@ -7153,7 +7152,7 @@ public abstract class TypeConstant
             return name;
         }
 
-        ConstantPool     pool = getConstantPool();
+        ConstantPool     pool = loader.module.getConstantPool();
         IdentityConstant id   = getSingleUnderlyingClass(true);
         if (id.equals(pool.clzArray())) {
             // see ParameterizedTypeConstant#buildJitClassName
@@ -7166,10 +7165,6 @@ public abstract class TypeConstant
                 // REVIEW CP: this is wrong
                 return Builder.N_ArrayObj;
             }
-        }
-
-        if (this.isA(pool.ensureRangeType(pool.typeInt64()))) {
-            return N_nRangeInt64;
         }
 
         if (id.equals(pool.clzClass())) {
@@ -7202,8 +7197,8 @@ public abstract class TypeConstant
 
         TypeConstant typeCanonical = getCallableJitType();
         if (typeCanonical.getParamsCount() > 0) {
-            // TODO CP
-            sb.appendCodePoint(HASH).append(typeCanonical.getPosition());
+            // it's critical here to use the class module loader's pool
+            sb.appendCodePoint(HASH).append(pool.register(typeCanonical).getPosition());
         }
         return sb.toString();
     }
@@ -7569,41 +7564,54 @@ public abstract class TypeConstant
 
             boolean        isFormal = isFormalType();
             ClassDesc      cd;
-            MethodTypeDesc md;
+            JitMethodDesc  jmd;
             String         sJitName;
 
             if (isFormal) {
-                cd = CD_nType;
-                switch (nOp) {
-                case Op.OP_IS_EQ,  Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> {
-                    md       = MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_Object, CD_Object);
-                    sJitName = "equals$p";
-                }
-                default -> {
-                    md       = MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_Orderable, CD_Orderable);
-                    sJitName ="compare";
-                }
-                }
+                // while the method is either "equals" or "compare", its parameter types depend
+                // on the interface that declares the abstract function; derive its exact signature
+                MethodInfo method = bctx.getTypeInfo(resolveConstraints()).getMethodBySignature(sig);
+                assert method.containsAbstractFunction();
+
+                MethodBody     bodyFunky = method.getAbstractFunction();
+                MethodConstant idFunky   = bodyFunky.getIdentity();
+                TypeConstant   typeFunky = idFunky.getNamespace().getType();
+
+                cd       = ClassDesc.of(TypeSystem.funkyInterface(
+                            bctx.builder.ensureJitClassName(typeFunky)));
+                sJitName = idFunky.ensureJitMethodName(ts);
+                jmd      = bodyFunky.getJitDesc(bctx.builder, typeFunky);
             } else {
-                MethodInfo    method = bctx.getTypeInfo(this).getMethodBySignature(sig);
-                JitMethodDesc jmd    = method.getJitDesc(bctx.builder, this);
+                MethodInfo method = bctx.getTypeInfo(this).getMethodBySignature(sig);
+
                 cd       = bctx.builder.ensureClassDesc(method.getJitIdentity().getNamespace().getType());
                 sJitName = method.ensureJitMethodName(ts);
+                jmd      = method.getJitDesc(bctx.builder, this);
+            }
 
-                switch (nOp) {
-                case Op.OP_IS_EQ,  Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> {
-                    assert jmd.isOptimized;
-                    sJitName += OPT;
-                    md        = jmd.optimizedMD;
-                }
-                default ->
-                    md = jmd.standardMD;
-                }
+            MethodTypeDesc md;
+            switch (nOp) {
+            case Op.OP_IS_EQ,  Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> {
+                assert jmd.isOptimized;
+                sJitName += OPT;
+                md        = jmd.optimizedMD;
+            }
+            default ->
+                md = jmd.standardMD;
             }
 
             if (isFormal) {
-                bctx.loadType(code, this);
+                RegisterInfo regType  = bctx.loadType(code, this);
+                int          slotType = bctx.storeTempValue(code, regType.cd());
+
+                // generated class-of-class extends Class and implements "sComparable" and "sOrderable"
+                Builder.load(code, regType.cd(), slotType);
                 bctx.loadCtx(code);
+                code.invokevirtual(CD_nType, "$xvmClass", MethodTypeDesc.of(CD_Class, CD_Ctx))
+                    .checkcast(cd);
+
+                bctx.loadCtx(code);
+                Builder.load(code, regType.cd(), slotType);
             } else {
                 bctx.loadCtx(code);
                 bctx.loadType(code, getType()); // type of this type
@@ -7615,10 +7623,8 @@ public abstract class TypeConstant
             case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
                  Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
                 if (isFormal) {
-                    // boolean equals$p(Ctx,Object,Object)
-                    code.invokevirtual(cd, sJitName, md);
+                    code.invokeinterface(cd, sJitName, md);
                 } else {
-                    // static boolean equals$p(Ctx,nType,Object,Object)
                     code.invokestatic(cd, sJitName, md);
                 }
 
@@ -7636,8 +7642,7 @@ public abstract class TypeConstant
                  Op.OP_IS_LTE, Op.OP_JMP_LTE :
 
                 if (isFormal) {
-                    // Ordered compare(Ctx,Object,Object)
-                    code.invokevirtual(cd, sJitName, md);
+                    code.invokeinterface(cd, sJitName, md);
                 } else {
                     // static Ordered compare(Ctx,nType,Object,Object)
                     code.invokestatic(cd, sJitName, md);

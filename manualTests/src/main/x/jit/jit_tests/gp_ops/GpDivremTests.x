@@ -6,7 +6,6 @@ class GpDivremTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running GpDivrem Tests >>>>");
         testGpDivremInt();
         testGpDivremUInt();
         testGpDivremInt8();
@@ -24,7 +23,6 @@ class GpDivremTests {
         testGpDivremDec128();
         testGpDivremFloat32();
         testGpDivremFloat64();
-        console.print("<<<< Finished GpDivrem Tests <<<<<");
     }
 
     void testGpDivremInt() {

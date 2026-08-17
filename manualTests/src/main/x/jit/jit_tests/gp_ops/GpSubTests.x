@@ -6,7 +6,6 @@ class GpSubTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running GpSubTests >>>>");
         testGpSubInt();
         testGpSubIntConstants();
         testGpSubUInt();
@@ -26,7 +25,6 @@ class GpSubTests {
         testGpSubIntFromChar();
         testGpSubCharFromChar();
         testGpSubNibble();
-        console.print("<<<< Finished GpSubTests <<<<");
     }
 
     void testGpSubInt() {

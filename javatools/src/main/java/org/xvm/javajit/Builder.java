@@ -82,6 +82,14 @@ public abstract class Builder {
     }
 
     /**
+     * Assemble the Java interface that represents the static abstract functions of an Ecstasy
+     * interface as instance methods.
+     */
+    public void buildFunkyInterface(ClassBuilder classBuilder) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
      * @return TypeConstant for "this" type
      */
     public TypeConstant getThisType() {
@@ -172,7 +180,7 @@ public abstract class Builder {
     protected void loadTypeConstant(BuildContext bctx, CodeBuilder code, TypeConstant type) {
         loadTypeConstant(code, type);
 
-        if (bctx != null && !bctx.isFunction && type.containsFormalType(true)) {
+        if (bctx != null && !bctx.isStatic && type.containsFormalType(true)) {
             code.dup()
                 .invokevirtual(CD_TypeConstant, "getConstantPool",
                         MethodTypeDesc.of(CD_ConstantPool));
@@ -318,6 +326,14 @@ public abstract class Builder {
                         propId.ensureJitPropertyName(typeSystem), jtd.cd);
                     return new SingleSlot(type, jtd.flavor, jtd.cd, "");
 
+                case XvmPrimitive:
+                    ClassDesc[] cds   = JitTypeDesc.getXvmPrimitiveClasses(type);
+                    String      name  = propId.ensureJitPropertyName(typeSystem) + "$";
+                    for (int i = 0; i < cds.length; i++) {
+                        code.getstatic(jtd.cd, name + i, cds[i]);
+                    }
+                    return new MultiSlot(bctx, jtd.flavor, type, jtd.cd, cds);
+
                 default:
                     throw new UnsupportedOperationException("Load property singleton " +
                         propId.getValueString());
@@ -378,15 +394,10 @@ public abstract class Builder {
             // support for the "local property" mode
             RegisterInfo targetReg = bctx.loadThis(code);
             int          ctxSlot   = bctx.ctxSlot(code);
-            PropertyInfo info;
-            if (isPrimitivePseudoField(targetReg.type(), propId)) {
-                if (!targetReg.flavor().isOptimized) {
-                    unbox(code, targetReg.type());
-                }
-                info = propId.getPropertyInfo(targetReg.type());
-            } else {
-                info = loadProperty(code, targetReg.type(), propId, true, ctxSlot);
-            }
+            PropertyInfo info      = isPrimitivePseudoField(targetReg.type(), propId)
+                    ? loadPrimitivePseudoField(code, targetReg, propId, ctxSlot)
+                    : loadProperty(code, targetReg.type(), propId, true, ctxSlot);
+
             TypeConstant type = info.getType();
             JitTypeDesc  jtd  = type.getJitDesc(this);
             switch (jtd.flavor) {
@@ -510,6 +521,9 @@ public abstract class Builder {
             }
         }
 
+        case UInt8ArrayConstant bytesConstant:
+            return loadUInt8Array(bctx, code, bytesConstant);
+
         case ArrayConstant arrayConst: {
             TypeConstant arrayType = arrayConst.getType();
             Constant[]   values    = arrayConst.getValue();
@@ -562,6 +576,31 @@ public abstract class Builder {
         }
 
         throw new UnsupportedOperationException(constant.toString());
+    }
+
+    private SingleSlot loadUInt8Array(BuildContext bctx, CodeBuilder code,
+                                      UInt8ArrayConstant bytesConstant) {
+        byte[] bytes  = bytesConstant.getValue();
+        long[] values = new long[(bytes.length + 7) >>> 3];
+        for (int i = 0; i < bytes.length; i++) {
+            values[i >>> 3] |= (long) (bytes[i] & 0xFF) << ((7 - (i & 7)) << 3);
+        }
+
+        loadCtx(bctx, code);
+        code.loadConstant((long) bytes.length) // size in bytes
+            .loadConstant(values.length)
+            .newarray(TypeKind.LONG);
+
+        for (int i = 0; i < values.length; i++) {
+            code.dup()
+                .loadConstant(i)
+                .loadConstant(values[i])
+                .lastore();
+        }
+
+        code.invokestatic(CD_ArrayUInt8, "$fromLongs",
+                MethodTypeDesc.of(CD_ArrayUInt8, CD_Ctx, CD_long, CD_long.arrayType()));
+        return new SingleSlot(bytesConstant.getType(), Specific, CD_ArrayUInt8, "");
     }
 
     private SingleSlot loadArray(BuildContext bctx, CodeBuilder code, TypeConstant arrayType,
@@ -725,66 +764,22 @@ public abstract class Builder {
     }
 
     private SingleSlot loadRange(BuildContext bctx, CodeBuilder code, RangeConstant rangeConst) {
-        TypeConstant   rangeType = rangeConst.getType();
-        TypeConstant   elType    = rangeType.getParamType(0);
-        Constant[]     values    = rangeConst.getValue();
-        ClassDesc      cdRange;
-        ClassDesc      cdPrimitive;
-        String         className;
+        TypeConstant rangeType = rangeConst.getType();
+        TypeConstant elType    = rangeType.getParamType(0);
+        Constant[]   values    = rangeConst.getValue();
+        MethodConstant idCtor  = rangeType.ensureTypeInfo().findConstructor(
+                elType, elType, pool().typeBoolean(), pool().typeBoolean());
 
-        // TODO: how/where to cache the result ??
-        if (elType.isJitPrimitive()) {
-            switch (elType.getSingleUnderlyingClass(false).getName()) {
-                case "Boolean":
-                    cdRange     = CD_nRangeBoolean;
-                    className   = N_nRangeBoolean;
-                    cdPrimitive = CD_int;
-                    break;
+        bctx.buildNew(code, rangeType, idCtor, jmdNew -> {
+            assert jmdNew.isOptimized;
 
-                case "Int8":
-                    cdRange     = CD_nRangeInt8;
-                    className   = N_nRangeInt8;
-                    cdPrimitive = CD_int;
-                    break;
-
-                case "Int64":
-                    cdRange     = CD_nRangeInt64;
-                    className   = N_nRangeInt64;
-                    cdPrimitive = CD_long;
-                    break;
-
-                case "Float32":
-                    cdRange     = CD_nRangeFloat32;
-                    className   = N_nRangeFloat32;
-                    cdPrimitive = CD_float;
-                    break;
-
-                case "Float64":
-                    cdRange     = CD_nRangeFloat64;
-                    className   = N_nRangeFloat64;
-                    cdPrimitive = CD_double;
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException("TODO");
-            }
-        } else {
-            // non-primitive range - must be Orderable and also maybe Sequential
-            throw new UnsupportedOperationException("TODO");
-        }
-
-        MethodTypeDesc mdNew = MethodTypeDesc.of(cdRange, CD_Ctx, CD_TypeConstant, cdPrimitive,
-                cdPrimitive, CD_boolean, CD_boolean, CD_boolean, CD_boolean);
-
-        loadCtx(bctx, code);
-        loadTypeConstant(bctx, code, rangeType);
-        loadConstant(bctx, code, values[0]);
-        loadConstant(bctx, code, values[1]);
-        code.loadConstant(rangeConst.isFirstExcluded() ? 1 : 0);
-        code.iconst_0();
-        code.loadConstant(rangeConst.isLastExcluded() ? 1 : 0);
-        code.iconst_0();
-        code.invokestatic(cdRange, "$new$p", mdNew);
+            loadConstant(bctx, code, values[0]);
+            loadConstant(bctx, code, values[1]);
+            code.loadConstant(rangeConst.isFirstExcluded() ? 1 : 0);
+            code.iconst_0();
+            code.loadConstant(rangeConst.isLastExcluded() ? 1 : 0);
+            code.iconst_0();
+        });
 
         return new SingleSlot(rangeType, Specific, ensureClassDesc(rangeType), "");
     }
@@ -1727,13 +1722,35 @@ public abstract class Builder {
     }
 
     /**
-     * Primitive classes don't have fields; the only exception is Char, where "codepoint" is the
-     * char itself.
+     * Primitive classes don't have fields; Char#codepoint and Bit#literal are represented by
+     * pseudo-fields.
      */
     public boolean isPrimitivePseudoField(TypeConstant typeContainer, PropertyConstant propId) {
-        return typeContainer.getAccess() == Constants.Access.STRUCT &&
-                typeContainer.removeAccess().equals(pool().typeChar()) &&
-                propId.getName().equals("codepoint");
+        if (typeContainer.getAccess() != Constants.Access.STRUCT) {
+            return false;
+        }
+
+        TypeConstant type = typeContainer.removeAccess();
+        String       name = propId.getName();
+        return type.equals(pool().typeChar()) && name.equals("codepoint") ||
+               type.equals(pool().typeBit())  && name.equals("literal");
+    }
+
+    /**
+     * Load a primitive pseudo-field. The primitive target is already on the Java stack.
+     */
+    public PropertyInfo loadPrimitivePseudoField(CodeBuilder code, RegisterInfo targetReg,
+                                                 PropertyConstant propId, int ctxSlot) {
+        TypeConstant typeContainer = targetReg.type();
+        assert isPrimitivePseudoField(typeContainer, propId);
+
+        if (!targetReg.flavor().isOptimized) {
+            unbox(code, typeContainer);
+        }
+
+        return typeContainer.removeAccess().equals(pool().typeBit())
+            ? loadProperty(code, typeContainer, propId, true, ctxSlot) // "literal"
+            : propId.getPropertyInfo(targetReg.type());                // "codepoint"
     }
 
     // ----- TEMPORARY: debugging support ----------------------------------------------------------
@@ -1844,10 +1861,6 @@ public abstract class Builder {
     public static final String N_nObj         = "org.xtclang.ecstasy.nObject";
     public static final String N_nPackage     = "org.xtclang.ecstasy.nPackage";
     public static final String N_nRef         = "org.xtclang.ecstasy.reflect.nRef";
-    public static final String N_nRangeBoolean = "org.xtclang.ecstasy.nRangeᐸBooleanᐳ";
-    public static final String N_nRangeFloat32 = "org.xtclang.ecstasy.nRangeᐸFloat32ᐳ";
-    public static final String N_nRangeFloat64 = "org.xtclang.ecstasy.nRangeᐸFloat64ᐳ";
-    public static final String N_nRangeInt8   = "org.xtclang.ecstasy.nRangeᐸInt8ᐳ";
     public static final String N_nRangeInt64  = "org.xtclang.ecstasy.nRangeᐸInt64ᐳ";
     public static final String N_nService     = "org.xtclang.ecstasy.nService";
     public static final String N_nType        = "org.xtclang.ecstasy.nType";
@@ -1928,11 +1941,6 @@ public abstract class Builder {
     public static final ClassDesc CD_nMethod             = ClassDesc.of(N_nMethod);
     public static final ClassDesc CD_nModule             = ClassDesc.of(N_nModule);
     public static final ClassDesc CD_nPackage            = ClassDesc.of(N_nPackage);
-    public static final ClassDesc CD_nRangeBoolean       = ClassDesc.of(N_nRangeBoolean);
-    public static final ClassDesc CD_nRangeFloat32       = ClassDesc.of(N_nRangeFloat32);
-    public static final ClassDesc CD_nRangeFloat64       = ClassDesc.of(N_nRangeFloat64);
-    public static final ClassDesc CD_nRangeInt8          = ClassDesc.of(N_nRangeInt8);
-    public static final ClassDesc CD_nRangeInt64         = ClassDesc.of(N_nRangeInt64);
 
     public static final ClassDesc CD_nConst              = ClassDesc.of(N_nConst);
     public static final ClassDesc CD_nEnum               = ClassDesc.of(N_nEnum);

@@ -6,7 +6,6 @@ class IpMulTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running IpMulTests >>>>");
         testIpMulInt();
         testIpMulUInt();
         testIpMulInt8();
@@ -22,7 +21,6 @@ class IpMulTests {
         testIpMulDec128();
         testIpMulFloat32();
         testIpMulFloat64();
-        console.print("<<<< Finished IpMulTests <<<<<");
     }
 
     void testIpMulInt() {

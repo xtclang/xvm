@@ -31,17 +31,6 @@ const String
     Char[] chars;
 
     /**
-     * A lazily calculated, cached hash code.
-     */
-    private @Lazy Int64 hash.calc() {
-        Int64 hash = Int64:982_451_653;         // start with a prime number
-        for (Char char : chars) {
-            hash = hash * 31 + char.toInt64();
-        }
-        return hash;
-    }
-
-    /**
      * Support for link-time conditional evaluation: Determine if the name represented by this
      * String is defined (an enabled option), within the [TypeSystem] of the current service.
      *
@@ -1151,16 +1140,6 @@ const String
         return size >= 2 && valueQuote(chars[0]) && chars[size-1] == chars[0]
                 ? (True, this[0 >..< size-1])
                 : False;
-    }
-
-    // ----- Hashable functions --------------------------------------------------------------------
-
-    @Override
-    static <CompileType extends String> Int64 hashCode(CompileType value) = value.hash;
-
-    @Override
-    static <CompileType extends String> Boolean equals(CompileType value1, CompileType value2) {
-        return value1.chars == value2.chars;
     }
 
     // ----- Stringable methods --------------------------------------------------------------------

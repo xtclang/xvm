@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.ref.WeakReference;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -641,16 +643,25 @@ public class SignatureConstant
             return -1;
         }
 
-        if (that == m_sigPrev) {
+        // caching the comparison result has a tremendous performance impact by short-circuiting a
+        // recursive comparison caused by signatures containing TypeParameterConstants;
+        // moreover, quite often, especially during the JIT processing, equivalent signatures are
+        // repeatedly compared across pools; we must keep cross-pool references as "weak" to avoid a
+        // long-lived pool retaining the other
+
+        WeakReference<SignatureConstant> refPrev = m_refSigPrev;
+        if (that == m_sigPrev || refPrev != null && that == refPrev.get()) {
             long stamp    = m_lockPrev.tryOptimisticRead();
             int  nCmpPrev = m_nCmpPrev;
-            if (that == m_sigPrev && m_lockPrev.validate(stamp)) {
+
+            refPrev = m_refSigPrev;
+            if ((that == m_sigPrev || refPrev != null && that == refPrev.get())
+                    && m_lockPrev.validate(stamp)) {
                 return nCmpPrev;
             }
         }
 
-        boolean fCache = this.getConstantPool() == that.getConstantPool() && !containsUnresolved();
-        int     n      = this.m_constName.compareTo(that.m_constName);
+        int n = this.m_constName.compareTo(that.m_constName);
         if (n == 0) {
             n = compareTypes(this.m_aconstParams, that.m_aconstParams);
             if (n == 0) {
@@ -661,14 +672,13 @@ public class SignatureConstant
             }
         }
 
-        if (fCache) {
-            // while completely non-obvious at first look, caching this result has a tremendous
-            // impact on the big-O, by short-circuiting a recursive comparison caused by signatures
-            // containing TypeParameterConstants
-            long stamp = m_lockPrev.tryWriteLock();
+        if (!this.containsUnresolved() && !that.containsUnresolved()) {
+            boolean fSamePool = this.getConstantPool() == that.getConstantPool();
+            long    stamp     = m_lockPrev.tryWriteLock();
             if (stamp != 0) {
-                m_sigPrev  = that;
-                m_nCmpPrev = n;
+                m_sigPrev    = fSamePool ? that : null;
+                m_refSigPrev = fSamePool ? null : new WeakReference<>(that);
+                m_nCmpPrev   = n;
                 m_lockPrev.unlockWrite(stamp);
             }
         }
@@ -746,7 +756,8 @@ public class SignatureConstant
 
         // clear the cache
         long stamp = m_lockPrev.writeLock();
-        m_sigPrev  = null;
+        m_sigPrev    = null;
+        m_refSigPrev = null;
         m_lockPrev.unlockWrite(stamp);
     }
 
@@ -939,7 +950,7 @@ public class SignatureConstant
     private transient boolean m_fProperty;
 
     /**
-     * Lock protecting {@link #m_sigPrev} and {@link #m_nCmpPrev}
+     * Lock protecting the cached comparison fields.
      */
     private final StampedLock m_lockPrev = new StampedLock();
 
@@ -947,6 +958,11 @@ public class SignatureConstant
      * Cached comparison target.
      */
     private transient SignatureConstant m_sigPrev;
+
+    /**
+     * Weakly cached comparison target from another constant pool.
+     */
+    private transient WeakReference<SignatureConstant> m_refSigPrev;
 
     /**
      * Cached comparison result.

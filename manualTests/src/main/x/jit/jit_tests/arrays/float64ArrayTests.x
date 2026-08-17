@@ -4,7 +4,6 @@ package float64ArrayTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running Float64 Array Tests >>>>");
 
         shouldCreateWithCapacity();
         shouldCreateArrayInitializedWithZeroValue();
@@ -23,7 +22,6 @@ package float64ArrayTests {
         shouldDeleteSpecificIndexFromArray();
         shouldInsertValueIntoArray();
 
-        console.print(">>>> Running Float64 Array Tests >>>>");
     }
 
     void shouldCreateWithCapacity() {

@@ -17,24 +17,16 @@ const Int64
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
-    static conditional Int fixedBitLength() {
-        return True, 64;
-    }
+    static conditional Int fixedBitLength() = (True, 64);
 
     @Override
-    static Int64 zero() {
-        return 0;
-    }
+    static Int64 zero() = 0;
 
     @Override
-    static Int64 one() {
-        return 1;
-    }
+    static Int64 one()  = 1;
 
     @Override
-    static conditional Range<Int64> range() {
-        return True, MinValue..MaxValue;
-    }
+    static conditional Range<Int64> range() = (True, MinValue..MaxValue);
 
 
     // ----- constructors --------------------------------------------------------------------------
@@ -283,53 +275,37 @@ const Int64
     }
 
     @Override
-    UInt64 magnitude.get() {
-        return toInt128().abs().toUInt64();
-    }
+    UInt64 magnitude.get() = toInt128().abs().toUInt64();
 
 
     // ----- operations ----------------------------------------------------------------------------
 
     @Override
     @Op("-#")
-    Int64 neg() {
-        return ~this + 1;
-    }
+    Int64 neg() = ~this + 1;
 
     @Override
     @Op("+")
-    Int64 add(Int64! n) {
-        return this + n;
-    }
+    Int64 add(Int64! n) = this + n;
 
     @Override
     @Op("-")
-    Int64 sub(Int64! n) {
-        return this + ~n + 1;
-    }
+    Int64 sub(Int64! n) = this + ~n + 1;
 
     @Override
     @Op("*")
-    Int64 mul(Int64! n) {
-        return this * n;
-    }
+    Int64 mul(Int64! n) = this * n;
 
     @Override
     @Op("/")
-    Int64 div(Int64! n) {
-        return this / n;
-    }
+    Int64 div(Int64! n) = this / n;
 
     @Override
     @Op("%")
-    Int64 mod(Int64! n) {
-        return this % n;
-    }
+    Int64 mod(Int64! n) = this % n;
 
     @Override
-    Int64 abs() {
-        return this < 0 ? -this : this;
-    }
+    Int64 abs() = this < 0 ? -this : this;
 
     @Override
     Int64 pow(Int64! n) {
@@ -448,6 +424,25 @@ const Int64
     Int128 toInt128(Boolean checkBounds = False) = new Int128(new Bit[128](i -> bits[i < 128-bitLength ? 0 : i]));
 
     /**
+     * Convert this Int64 to a Nibble.
+     *
+     * Conversion is performed after optionally checking the bounds, by preserving the low-order 4
+     * bits of this Int64.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of a Nibble
+     *
+     * @return  a Nibble that is equivalent to this Int64
+     *
+     * @throws OutOfBounds if checkBounds is True and this Int64 is negative, or does not fit within
+     *         the bounds of a Nibble
+     */
+    @Override
+    Nibble toNibble(Boolean checkBounds = False) {
+        assert:bounds !checkBounds || this >= Nibble.MinValue && this <= Nibble.MaxValue;
+        return new Nibble(bits[bitLength-4 ..< bitLength]);
+    }
+
+    /**
      * Convert this Int64 to a UInt8.
      *
      * Conversion is performed after optionally checking the bounds, by preserving the low-order 8
@@ -538,18 +533,5 @@ const Int64
     UInt128 toUInt128(Boolean checkBounds = False) {
         assert:bounds !checkBounds || this >= 0;
         return new UInt128(new Bit[128](i -> (i < 128-bitLength ? 0 : bits[i])));
-    }
-
-
-    // ----- Hashable functions --------------------------------------------------------------------
-
-    @Override
-    static <CompileType extends Int64> Int64 hashCode(CompileType value) {
-        return value;
-    }
-
-    @Override
-    static <CompileType extends Int64> Boolean equals(CompileType value1, CompileType value2) {
-        return value1.bits == value2.bits;
     }
 }

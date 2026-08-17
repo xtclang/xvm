@@ -295,6 +295,9 @@ const FloatN
     }
 
     @Override
+    Nibble toNibble(Boolean checkBounds = False, Rounding direction = TowardZero);
+
+    @Override
     UInt8 toUInt8(Boolean checkBounds = False, Rounding direction = TowardZero);
 
     @Override

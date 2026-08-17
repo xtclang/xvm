@@ -6,7 +6,6 @@ class IpAddTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running IpAddTests >>>>");
         testIpAddInt();
         testIpAddUInt();
         testIpAddInt8();
@@ -24,7 +23,6 @@ class IpAddTests {
         testIpAddFloat64();
         testIpAddString();
         testIpAddIntToChar();
-        console.print("<<<< Finished IpAddTests <<<<<");
     }
 
     void testIpAddInt() {

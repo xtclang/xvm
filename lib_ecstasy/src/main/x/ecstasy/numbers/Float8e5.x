@@ -11,6 +11,28 @@
 const Float8e5
         extends BinaryFPNumber
         default(0.0) {
+    // ----- constants -----------------------------------------------------------------------------
+
+    /**
+     * The value for a positive infinity Float8e5.
+     */
+    static Float8e5 PositiveInfinity = new Float8e5(#7C);
+
+    /**
+     * The value for a negative infinity Float8e5.
+     */
+    static Float8e5 NegativeInfinity = new Float8e5(#FC);
+
+    /**
+     * The value for a positive NaN Float8e5.
+     */
+    static Float8e5 PositiveNaN = new Float8e5(#7F);
+
+    /**
+     * The value for a negative NaN Float8e5.
+     */
+    static Float8e5 NegativeNaN = new Float8e5(#FF);
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -313,6 +335,9 @@ const Float8e5
     IntN toIntN(Rounding direction = TowardZero) {
         return round(direction).toIntN();
     }
+
+    @Override
+    Nibble toNibble(Boolean checkBounds = False, Rounding direction = TowardZero);
 
     @Override
     UInt8 toUInt8(Boolean checkBounds = False, Rounding direction = TowardZero);

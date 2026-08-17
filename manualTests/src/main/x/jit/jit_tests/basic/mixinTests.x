@@ -2,7 +2,6 @@ package mixinTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running MixinTests >>>>");
 
         test1();
         test2();

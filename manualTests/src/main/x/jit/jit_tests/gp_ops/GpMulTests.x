@@ -6,7 +6,6 @@ class GpMulTests {
     @Inject Console console;
 
     void run() {
-        console.print(">>>> Running GpMulTests >>>>");
         testGpMulInt();
         testGpMulIntConstants();
         testGpMulUInt();
@@ -23,7 +22,6 @@ class GpMulTests {
         testGpMulDec128();
         testGpMulFloat32();
         testGpMulFloat64();
-        console.print("<<<< Finished GpMulTests <<<<<");
     }
 
     void testGpMulInt() {

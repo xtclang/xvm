@@ -6,7 +6,6 @@ package callTests {
     Int val2.get() = 43;
 
     void run() {
-        console.print(">>>> Running CallTests >>>>");
 
         // const property initialization
         assert val2 - 1 == val1;

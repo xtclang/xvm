@@ -133,31 +133,27 @@ public class Char extends nConst {
 
     // ----- delegated IntConvertible methods -----------------------------------------------------
 
-    public static long toIntꖛ0$d$p(int thi$, Ctx ctx) {
-        return thi$;
-    }
-
     public static long toInt$d$p(int thi$, Ctx ctx) {
         return thi$;
     }
 
-    public static int toInt8ꖛ1$d$p(int thi$, Ctx ctx) {
+    public static int toInt8$d$p(int thi$, Ctx ctx) {
         return (byte) thi$;
     }
 
-    public static int toInt16ꖛ1$d$p(int thi$, Ctx ctx) {
+    public static int toInt16$d$p(int thi$, Ctx ctx) {
         return (short) thi$;
     }
 
-    public static int toInt32ꖛ1$d$p(int thi$, Ctx ctx) {
+    public static int toInt32$d$p(int thi$, Ctx ctx) {
         return thi$;
     }
 
-    public static long toInt64ꖛ1$d$p(int thi$, Ctx ctx) {
+    public static long toInt64$d$p(int thi$, Ctx ctx) {
         return thi$;
     }
 
-    public static long toInt128ꖛ1$d$p(int thi$, Ctx ctx) {
+    public static long toInt128$d$p(int thi$, Ctx ctx) {
         ctx.i0 = 0;
         return thi$;
     }
@@ -170,23 +166,23 @@ public class Char extends nConst {
         return thi$;
     }
 
-    public static int toUInt8ꖛ1$d$p(int thi$, Ctx ctx) {
+    public static int toUInt8$d$p(int thi$, Ctx ctx) {
         return thi$ & 0xFF;
     }
 
-    public static int toUInt16ꖛ1$d$p(int thi$, Ctx ctx) {
+    public static int toUInt16$d$p(int thi$, Ctx ctx) {
         return thi$ & 0xFFFF;
     }
 
-    public static int toUInt32ꖛ1$d$p(int thi$, Ctx ctx) {
+    public static int toUInt32$d$p(int thi$, Ctx ctx) {
         return thi$;
     }
 
-    public static long toUInt64ꖛ1$d$p(int thi$, Ctx ctx) {
+    public static long toUInt64$d$p(int thi$, Ctx ctx) {
         return thi$;
     }
 
-    public static long toUInt128ꖛ1$d$p(int thi$, Ctx ctx) {
+    public static long toUInt128$d$p(int thi$, Ctx ctx) {
         ctx.i0 = 0;
         return thi$;
     }
@@ -197,5 +193,9 @@ public class Char extends nConst {
 
     public static IntLiteral toIntLiteral$d$p(int thi$, Ctx ctx) {
         return null;
+    }
+
+    public static int toNibble$d$p(int thi$, Ctx ctx) {
+        return thi$ & 0xF;
     }
 }

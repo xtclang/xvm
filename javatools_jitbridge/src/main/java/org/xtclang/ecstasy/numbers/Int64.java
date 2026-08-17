@@ -3,9 +3,7 @@ package org.xtclang.ecstasy.numbers;
 import java.math.BigDecimal;
 
 import org.xtclang.ecstasy.AppenderᐸCharᐳ;
-import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.Exception;
-import org.xtclang.ecstasy.Orderable;
 import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.nType;
@@ -200,6 +198,16 @@ public class Int64 extends IntNumber {
     }
 
     /**
+     * Native implementation of: "Int toInt(Boolean checkBounds = False)"
+     *
+     * This bridge is required because a primitive invocation bypasses the natural toInt()
+     * implementation that delegates to toInt64().
+     */
+    public static long toInt$p(long thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return toInt64$p(thi$, ctx, checkBounds, dfltCheckBounds);
+    }
+
+    /**
      * Implementation of Int64 toInt64(Boolean checkBounds = False)
      *
      * @param ctx              the build context
@@ -237,6 +245,24 @@ public class Int64 extends IntNumber {
      */
     public static IntN toIntN$p(long thi$, Ctx ctx) {
         return IntN.$box(thi$);
+    }
+
+    /**
+     * The primitive implementation of Nibble toNibble(Boolean checkBounds = False)
+     *
+     * @param ctx              the build context
+     * @param checkBounds      the check bounds flag
+     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
+     *                         default value (in this case False)
+     *
+     * @return this value as the least significant four bits of a Java {@code int}
+     */
+    public static int toNibble$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && (thi$ < 0 || thi$ > 15)) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "Int64 value " + thi$ + " is not a valid Nibble value");
+        }
+        return thi$ & 0x0F;
     }
 
     /**
@@ -291,6 +317,16 @@ public class Int64 extends IntNumber {
             throw oob.$init(ctx, "Int64 value " + thi$ + " is not a valid UInt32 value");
         }
         return (int) (thi$ & 0xFFFFFFFFL);
+    }
+
+    /**
+     * Native implementation of: "UInt toUInt(Boolean checkBounds = False)"
+     *
+     * This bridge is required because a primitive invocation bypasses the natural toUInt()
+     * implementation that delegates to toUInt64().
+     */
+    public static long toUInt$p(long thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return toUInt64$p(thi$, ctx, checkBounds, dfltCheckBounds);
     }
 
     /**
@@ -352,12 +388,21 @@ public class Int64 extends IntNumber {
      *
      * static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
      */
-    public static Ordered compare(Ctx ctx, nType type, Orderable value1, Orderable value2) {
-        long l1 = ((Int64) value1).$value;
-        long l2 = ((Int64) value2).$value;
-        return l1 < l2    ? Ordered.Lesser.$INSTANCE
-               : l1 == l2 ? Ordered.Equal.$INSTANCE
-                          : Ordered.Greater.$INSTANCE;
+    public static Ordered compare(Ctx ctx, nType type, Int64 value1, Int64 value2) {
+        long l1 = value1.$value;
+        long l2 = value2.$value;
+        return l1 < l2  ? Ordered.Lesser.$INSTANCE
+             : l1 == l2 ? Ordered.Equal.$INSTANCE
+                        : Ordered.Greater.$INSTANCE;
+    }
+
+    /**
+     * The primitive implementation of:
+     *
+    *  static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
+     */
+    public static Boolean equals(Ctx ctx, nType type, Int64 value1, Int64 value2) {
+        return value1.$value == value2.$value ? Boolean.TRUE : Boolean.FALSE;
     }
 
     /**
@@ -365,10 +410,8 @@ public class Int64 extends IntNumber {
      *
      *  static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
      */
-    public static Boolean equals(Ctx ctx, nType type, Object value1, Object value2) {
-        long l1 = ((Int64) value1).$value;
-        long l2 = ((Int64) value2).$value;
-        return l1 == l2 ? Boolean.TRUE : Boolean.FALSE;
+    public static boolean equals$p(Ctx ctx, nType type, long value1, long value2) {
+        return value1 == value2;
     }
 
     // ----- debugging support ---------------------------------------------------------------------

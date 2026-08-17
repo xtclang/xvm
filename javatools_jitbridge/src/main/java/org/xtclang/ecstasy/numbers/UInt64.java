@@ -134,6 +134,16 @@ public class UInt64 extends UIntNumber {
     }
 
     /**
+     * Native implementation of: "Int toInt(Boolean checkBounds = False)"
+     *
+     * This bridge is required because a primitive invocation bypasses the natural toInt()
+     * implementation that delegates to toInt64().
+     */
+    public static long toInt$p(long thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return toInt64$p(thi$, ctx, checkBounds, dfltCheckBounds);
+    }
+
+    /**
      * Implementation of Int64 toInt64(Boolean checkBounds = False)
      *
      * @param ctx              the build context
@@ -175,6 +185,24 @@ public class UInt64 extends UIntNumber {
      */
     public static IntN toIntN$p(long thi$, Ctx ctx) {
         return IntN.$box(thi$);
+    }
+
+    /**
+     * The primitive implementation of Nibble toNibble(Boolean checkBounds = False)
+     *
+     * @param ctx              the build context
+     * @param checkBounds      the check bounds flag
+     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
+     *                         default value (in this case False)
+     *
+     * @return this value as the least significant four bits of a Java {@code int}
+     */
+    public static int toNibble$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        if (!dfltCheckBounds && checkBounds && (thi$ < 0 || thi$ > 15)) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "UInt64 value " + thi$ + " is not a valid Nibble value");
+        }
+        return thi$ & 0x0F;
     }
 
     /**
@@ -229,6 +257,16 @@ public class UInt64 extends UIntNumber {
             throw oob.$init(ctx, "UInt32 value " + thi$ + " is not a valid UInt32 value");
         }
         return (int) (thi$ & 0xFFFFFFFFL);
+    }
+
+    /**
+     * Native implementation of: "UInt toUInt(Boolean checkBounds = False)"
+     *
+     * This bridge is required because a primitive invocation bypasses the natural toUInt()
+     * implementation that delegates to toUInt64().
+     */
+    public static long toUInt$p(long thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        return toUInt64$p(thi$, ctx, checkBounds, dfltCheckBounds);
     }
 
     /**

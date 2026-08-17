@@ -1,9 +1,6 @@
 package org.xtclang.ecstasy.numbers;
 
-import java.math.BigDecimal;
-
-import org.xtclang.ecstasy.AppenderᐸCharᐳ;
-import org.xtclang.ecstasy.nConst;
+import org.bouncycastle.util.Exceptions;
 
 import org.xtclang.ecstasy.text.String;
 
@@ -12,14 +9,13 @@ import org.xvm.javajit.Ctx;
 /**
  * Native Nibble wrapper.
  */
-public class Nibble extends nConst {
+public class Nibble extends UIntNumber {
     /**
      * Construct an Ecstasy Nibble object.
      *
      * @param value  the 4-bit value (0-15)
      */
     private Nibble(int value) {
-        super(null);
         $value = value;
     }
 
@@ -27,30 +23,13 @@ public class Nibble extends nConst {
 
     public final int $value;
 
+    @Override
     public String toString(Ctx ctx) {
         return String.of(ctx, Integer.toUnsignedString($value));
     }
 
     public static String toString$p(int thi$, Ctx ctx) {
         return String.of(ctx, Integer.toUnsignedString(thi$));
-    }
-
-    public static long estimateStringLength$p(int thi$, Ctx ctx) {
-        return (int) Math.log10(thi$) + 1;
-    }
-
-    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
-        for (char c : Integer.toUnsignedString($value).toCharArray()) {
-            appender = appender.add$p(ctx, c);
-        }
-        return appender;
-    }
-
-    public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
-        for (char c : Integer.toUnsignedString(thi$).toCharArray()) {
-            appender = appender.add$p(ctx, c);
-        }
-        return appender;
     }
 
     /**
@@ -68,8 +47,46 @@ public class Nibble extends nConst {
         return ref;
     }
 
-    public BigDecimal $toBigDecimal() {
-        return BigDecimal.valueOf($value);
+    /**
+     * The primitive implementation of:
+     * <pre>
+     *     static Nibble of(Int n)
+     * </pre>
+     */
+    public static int of$p(Ctx ctx, long n) {
+        if (n < 0 || n > 15) {
+            throw Exceptions.illegalArgumentException("Int value " + n + " must be in the range 0..15", null);
+        }
+        return (int) n;
+    }
+
+    /**
+     * The primitive implementation of:
+     * <pre>
+     *     static Nibble of(Char ch)
+     * </pre>
+     */
+    public static int of$1$p(Ctx ctx, int ch) {
+        if (ch >= '0' && ch <= '9') {
+            return ch - '0';
+        } else if (ch >= 'A' && ch <= 'F') {
+            return ch - 'A' + 0xA;
+        } else if (ch >= 'a' && ch <= 'f') {
+            return ch - 'a' + 0xA;
+        }
+        java.lang.String msg = "Illegal character \"" + ch + "; the character value must be in " +
+                               "the range \"0..9\", \"A..F\", or \"a..f\"";
+        throw Exceptions.illegalArgumentException(msg, null);
+    }
+
+    @Override
+    protected long[] $longValues() {
+        return new long[]{(long) $value << 60};
+    }
+
+    @Override
+    protected long bitLength$get$p() {
+        return 4;
     }
 
     // ----- conversion ----------------------------------------------------------------------------
