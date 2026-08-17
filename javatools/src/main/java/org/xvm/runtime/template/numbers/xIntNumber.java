@@ -23,7 +23,9 @@ public abstract class xIntNumber
 
                 "Float16", "Float32", "Float64", "FloatN",
 
-                "Dec32", "Dec64", "Dec128", "DecN"
+                "Dec32", "Dec64", "Dec128", "DecN",
+
+                "Nibble"
             };
 
         for (String sName : NAMES) {
