@@ -4,13 +4,17 @@ package org.xvm.runtime.template.numbers;
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.ByteConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+
+import org.xvm.runtime.template.text.xChar;
 
 
 /**
@@ -62,6 +66,17 @@ public class xNibble
     public static JavaLong makeHandle(long lValue) {
         assert lValue >= 0 & lValue <= 15;
         return INSTANCE.cache[(int) lValue];
+    }
+
+    @Override
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn) {
+        if (method.getName().equals("toChar")) {
+            long lValue = ((JavaLong) hTarget).getValue();
+            long cValue = lValue <= 9 ? '0' + lValue : 'A' + lValue - 0xA;
+            return frame.assignValue(iReturn, xChar.makeHandle(cValue));
+        }
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
     }
 
     private final JavaLong[] cache = new JavaLong[16];
