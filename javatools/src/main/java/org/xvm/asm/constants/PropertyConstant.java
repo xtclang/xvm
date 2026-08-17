@@ -171,6 +171,14 @@ public class PropertyConstant
     }
 
     /**
+     * @return the type of the value produced by accessing this formal type property
+     */
+    public TypeConstant getFormalValueType() {
+        assert isFormalType();
+        return getType();
+    }
+
+    /**
      * @return true iff this property is a formal type parameter that materializes into a
      *         sequence of types
      */

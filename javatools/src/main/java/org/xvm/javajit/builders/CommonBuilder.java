@@ -552,7 +552,12 @@ public class CommonBuilder
         List<PropertyInfo> initProps = null;
 
         for (PropertyInfo prop : structInfo.getProperties().values()) {
-            if (!prop.hasField() && !prop.isInjected()) {
+            MethodConstant initializer = prop.getInitializer();
+            if (!prop.hasField() && !prop.isInjected() &&
+                    // initializers for static properties still need to be generated
+                    // TODO: the "isPrimitive" check below is not necessary; needs to be removed
+                    (isPrimitive || !prop.isConstant() || initializer == null)) {
+
                 // no field is necessary
                 continue;
             }
@@ -570,6 +575,12 @@ public class CommonBuilder
 
             if (prop.isConstant()) {
                 constProperties = lazyAdd(constProperties, prop);
+
+                if (initializer != null && extraMethods.add(initializer)) {
+                    MethodInfo methodInfo = typeInfo.getMethodById(initializer);
+                    assembleMethod(classBuilder, methodInfo,
+                            initializer.ensureJitMethodName(typeSystem), methodInfo.getJitDesc(this));
+                }
             } else if (prop.isInitialized()) {
                 initProps = lazyAdd(initProps, prop);
             }
@@ -782,8 +793,32 @@ public class CommonBuilder
                         code.putstatic(CD_this, jitName, reg.cd());
                     }
                 } else {
-                    throw new UnsupportedOperationException("TODO: Static field initializer for " +
-                        prop.getIdentity().getValueString());
+                    MethodConstant initializer = prop.getInitializer();
+                    MethodBody     body        = new MethodBody(
+                            (MethodStructure) initializer.getComponent());
+                    JitMethodDesc  jmd         = body.getJitDesc(this, thisType);
+                    TypeConstant   type        = prop.getType();
+                    JitTypeDesc    jtd         = type.getJitDesc(this);
+
+                    code.aload(ctxSlot)
+                        .invokestatic(CD_this, initializer.ensureJitMethodName(ts), jmd.standardMD);
+
+                    switch (jtd.flavor) {
+                    case Specific, Widened:
+                        code.putstatic(CD_this, jitName, jtd.cd);
+                        break;
+
+                    case Primitive:
+                        unbox(code, type);
+                        code.putstatic(CD_this, jitName,
+                                JitTypeDesc.getPrimitiveFieldClass(type));
+                        break;
+
+                    default:
+                        throw new UnsupportedOperationException(
+                                "Static field initializer for " +
+                                prop.getIdentity().getValueString());
+                    }
                 }
             }
 
@@ -3874,7 +3909,8 @@ public class CommonBuilder
             md = jmd.standardMD;
         }
 
-        if (method.isFunction() || method.isCtorOrValidator()) {
+        if (method.isFunction() || method.isCtorOrValidator() ||
+                method.getHead().getMethodStructure().isPropertyInitializer()) {
             if (isInterface && method.isVirtualConstructor()) {
                 // virtual constructors only generate the "new$" virtual method declarations
                 return;
@@ -4134,7 +4170,7 @@ public class CommonBuilder
         Map.entry("org.xtclang.ecstasy.Range",
             Set.of("appendTo", "estimateStringLength")), // TODO: if (Element.is(Type<Stringable>)) does not cast
         Map.entry("org.xtclang.ecstasy.Timeout",
-            Set.of("construct")),   // TODO: loading a Duration constant
+            Set.of("construct")), // TODO: native Service is a Java class, but the call expects an interface
         Map.entry("org.xtclang.ecstasy.numbers.Number",
             Set.of("converterFor",
                    "converterTo")),
