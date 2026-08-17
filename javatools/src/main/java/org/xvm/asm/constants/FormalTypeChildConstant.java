@@ -171,6 +171,11 @@ public class FormalTypeChildConstant
     }
 
     @Override
+    public TypeConstant getFormalValueType() {
+        return getType().getType();
+    }
+
+    @Override
     public IdentityConstant appendTrailingSegmentTo(IdentityConstant that) {
         return that.getConstantPool().ensureFormalTypeChildConstant((FormalConstant) that, getName());
     }

@@ -12,7 +12,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpProperty;
 import org.xvm.asm.Scope;
 
-import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
@@ -134,9 +133,10 @@ public class P_Get
         PropertyConstant idProp = bctx.getConstant(m_nPropId, PropertyConstant.class);
         TypeConstant     typeProp;
 
-        if (idProp instanceof FormalTypeChildConstant) {
-            // property points to a formal child or type parameter; will be resolved at run-time
-            typeProp = idProp.getType().getType();
+        if (idProp.isFormalType()) {
+            // property points to a formal child or type parameter; will be resolved at run-time;
+            // even if we can infer a more specific type, the Java verifier wouldn't accept that
+            typeProp = idProp.getFormalValueType();
         } else {
             TypeConstant typeTarget = bctx.getArgumentType(m_nTarget);
             PropertyInfo propInfo   = idProp.getPropertyInfo(typeTarget);

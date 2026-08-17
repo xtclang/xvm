@@ -378,16 +378,25 @@ public abstract class Builder {
         case ClassConstant _:
         case DecoratedClassConstant _: {
             IdentityConstant constId = (IdentityConstant) constant;
-            ConstantPool pool = typeSystem.pool();
-            TypeConstant type = constId.getValueType(pool, null);
-            String       name = ensureJitClassName(type);
-            // TODO GG the "e" class gen functionality must be merged into the "c" class result
-            if (!type.isA(pool.typeEnumeration())) {
-                name  = TypeSystem.classOfClass(name);
+            ConstantPool     pool    = typeSystem.pool();
+            TypeConstant     type    = constId.getValueType(pool, null);
+
+            if (type.isA(pool.typeEnumeration())) {
+                String    name = ensureJitClassName(type);
+                ClassDesc cd   = ClassDesc.of(name);
+                code.getstatic(cd, Instance, cd);
+                return new SingleSlot(type, Specific, cd, "");
             }
-            ClassDesc cd = ClassDesc.of(name);
-            code.getstatic(cd, Instance, cd);
-            return new SingleSlot(type, Specific, cd, "");
+
+            assert type.isA(pool.typeClass());
+
+            loadCtx(bctx, code);
+            loadTypeConstant(bctx, code, type.getParamType(0));
+            code.invokestatic(CD_nType, "$ensureType",
+                    MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
+            loadCtx(bctx, code)
+                .invokevirtual(CD_nType, "$xvmClass", MethodTypeDesc.of(CD_Class, CD_Ctx));
+            return new SingleSlot(type, Specific, CD_Class, "");
         }
 
         case PropertyConstant propId: {
@@ -824,13 +833,11 @@ public abstract class Builder {
             typeContainer = typeContainer.resolveConstraints().ensureAccess(Constants.Access.PRIVATE);
         }
 
-        PropertyInfo xvmInfo      = propId.getPropertyInfo(typeContainer);
-        TypeConstant typeJit      = typeContainer.getCallableJitType();
-        PropertyInfo jitInfo      = typeJit.equals(pool().typeObject()) // REVIEW GG
+        PropertyInfo xvmInfo     = propId.getPropertyInfo(typeContainer);
+        TypeConstant typeJit     = typeContainer.getCallableJitType();
+        PropertyInfo jitInfo     = typeJit.equals(pool().typeObject()) // REVIEW GG/CP
                 ? xvmInfo
                 : propId.getPropertyInfo(typeJit);
-// TODO JIT-names branch had this alternative definition for jitInfo:
-//      PropertyInfo  jitInfo    = propId.getPropertyInfo(typeContainer.getCallableJitType());
         TypeConstant  typeOwner  = jitInfo.getOwnerType(this, typeContainer);
         JitMethodDesc jmdGet     = jitInfo.getGetterJitDesc(this, typeContainer);
         String        getterName = jitInfo.ensureGetterJitMethodName(typeSystem);
