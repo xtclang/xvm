@@ -266,7 +266,7 @@ public class xRTSocket
     // ----- I/O -----------------------------------------------------------------------------------
 
     /**
-     * Implementation of "Byte[] readBytesImpl(Int count)" method.
+     * Implementation of "immutable Byte[] readBytesImpl(Int count)" method.
      */
     private static int invokeReadBytesImpl(Frame frame, SocketHandle hSocket, int cBytes, int iReturn) {
         Socket socket = hSocket.socket;

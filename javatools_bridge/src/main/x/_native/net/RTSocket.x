@@ -12,6 +12,8 @@ import libnet.ServerSocket;
  */
 service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
         implements Socket {
+    typedef immutable Byte[] as Binary;
+
     /**
      * Constructor from native land.
      *
@@ -105,14 +107,10 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
     }
 
     @Override
-    void shutdownInput() {
-        shutdownInputImpl();
-    }
+    void shutdownInput() = shutdownInputImpl();
 
     @Override
-    void shutdownOutput() {
-        shutdownOutputImpl();
-    }
+    void shutdownOutput() = shutdownOutputImpl();
 
     @Override
     void close(Exception? cause = Null) {
@@ -121,10 +119,7 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
     }
 
     @Override
-    String toString() {
-        return "Socket";
-    }
-
+    String toString() = "Socket";
 
     // ----- SocketChannel class -------------------------------------------------------------------
 
@@ -139,71 +134,118 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
     // ----- SocketInput class ---------------------------------------------------------------------
 
     /**
-     * Blocking [BinaryInput] over the native TCP socket.
+     * Non-blocking [BinaryInput] over the native TCP socket. Concurrent reads are processed in
+     * invocation order.
      */
+    @Concurrent
     class SocketInput
             implements BinaryInput {
-        private Boolean reachedEof = False;
+        /**
+         * The tail of the ordered native read operations.
+         */
+        private Future<Binary>? pendingRead = Null;
 
         @Override
-        @RO Boolean eof.get() {
-            return reachedEof;
-        }
+        public/private Boolean eof = False;
 
         @Override
-        @RO Int available.get() {
-            return availableImpl();
-        }
+        @RO Int available.get() = availableImpl();
 
         @Override
         Byte readByte() {
-            Byte[] bytes = readBytesImpl(1);
-            if (bytes.size == 0) {
-                reachedEof = True;
-                throw new EndOfFile();
-            }
-            return bytes[0];
+            return readAsync(1).transform(bytes -> {
+                if (bytes.size == 0) {
+                    eof = True;
+                    throw new EndOfFile();
+                }
+                return bytes[0];
+            });
         }
 
         @Override
-        immutable Byte[] readBytes(Int count) {
+        Binary readBytes(Int count) {
             assert:arg count >= 0;
 
             if (count == 0) {
                 return [];
             }
-            Byte[] bytes = readBytesImpl(count);
-            if (bytes.size < count) {
-                reachedEof = True;
+            return readAsync(count).transform(bytes -> {
+                if (bytes.size < count) {
+                    eof = True;
+                }
+                return bytes;
+            });
+        }
+
+        /**
+         * Schedule a native read after any pending read.
+         */
+        private Future<Binary> readAsync(Int count) {
+            if (Future<Binary> previous ?= pendingRead, !previous.assigned) {
+                @Future Binary result;
+                Future<Binary> future = &result;
+                previous.whenComplete((_, _) -> {
+                    try {
+                        result = readBytesImpl^(count);
+                    } catch (Exception e) {
+                        &result.completeExceptionally(e);
+                    }
+                });
+                return pendingRead <- future;
             }
-            return bytes.freeze(inPlace=True);
+
+            @Future Binary result = readBytesImpl^(count);
+            Future<Binary> future = &result;
+            return pendingRead <- future;
         }
     }
-
 
     // ----- SocketOutput class --------------------------------------------------------------------
 
     /**
-     * Blocking [BinaryOutput] over the native TCP socket.
+     * Non-blocking [BinaryOutput] over the native TCP socket. Concurrent writes are processed in
+     * invocation order.
      */
+    @Concurrent
     class SocketOutput
             implements BinaryOutput {
-        @Override
-        void writeByte(Byte value) {
-            writeBytesImpl([value], 0, 1);
-        }
+        /**
+         * The tail of the ordered native write operations.
+         */
+        private Future<Tuple>? pendingWrite = Null;
 
         @Override
-        void writeBytes(Byte[] bytes, Int offset, Int count) {
-            // service calls cannot take a mutable array; bytes is already immutable here
-            writeBytesImpl(bytes, offset, count);
+        void writeByte(Byte value) = writeAsync([value], 0, 1);
+
+        @Override
+        void writeBytes(Byte[] bytes, Int offset, Int count) = writeAsync(bytes, offset, count);
+
+        /**
+         * Schedule a native write after any pending write.
+         */
+        private Future<Tuple> writeAsync(Byte[] bytes, Int offset, Int count) {
+            if (Future<Tuple> previous ?= pendingWrite, !previous.assigned) {
+                @Future Tuple result;
+                Future<Tuple> future = &result;
+                previous.whenComplete((_, _) -> {
+                    try {
+                        result = writeBytesImpl^(bytes, offset, count);
+                    } catch (Exception e) {
+                        &result.completeExceptionally(e);
+                    }
+                });
+                return pendingWrite <- future;
+            }
+
+            @Future Tuple result = writeBytesImpl^(bytes, offset, count);
+            Future<Tuple> future = &result;
+            return pendingWrite <- future;
         }
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
-    private Byte[] readBytesImpl(Int count) {TODO("Native");}
+    private Binary readBytesImpl(Int count) {TODO("Native");}
 
     private void writeBytesImpl(Byte[] bytes, Int offset, Int count) {TODO("Native");}
 
