@@ -1,20 +1,17 @@
 /**
  * Manual check that {@code Network.connect} can open a TCP client and read/write bytes.
- * JUnit {@code xRTSocketLoopbackTest} covers the Java helpers this path uses.
  *
  * Listen/accept is not implemented, so start a tiny echo server first:
  *
  *     python3 -c 'import socket;s=socket.socket();s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1);s.bind(("127.0.0.1",9999));s.listen(1);c,_=s.accept();c.sendall(c.recv(64));c.close();s.close()'
  *
- * From the xvm repo root (this branch). {@code compileXtc} does not install {@code xec};
- * use Gradle {@code runOne} (args are comma-separated):
+ * From the xvm repo root, select this checkout's installed XDK once:
  *
- *     ./gradlew :manualTests:runOne -PtestName=TestTcpClient -PtestArgs=127.0.0.1,9999
+ *     export XDK_HOME="$PWD/xdk/build/install/xdk"
  *
- * Or install a local XDK first, then:
+ * Then run the test directly:
  *
- *     ./gradlew :xdk:installDist
- *     xdk/build/install/xdk/bin/xec -L manualTests/build/xtc/main/lib TestTcpClient 127.0.0.1 9999
+ *     xec -L manualTests/build/xtc/main/lib TestTcpClient 127.0.0.1 9999
  */
 module TestTcpClient {
     @Inject Console console;
@@ -26,13 +23,17 @@ module TestTcpClient {
     import net.Socket;
 
     void run(String[] args = ["127.0.0.1", "9999"]) {
+        @Inject Network insecureNetwork;
+
         String host = args.size > 0 ? args[0] : "127.0.0.1";
         UInt16 port = new UInt16(args.size > 1 ? args[1] : "9999");
 
-        @Inject Network insecureNetwork;
+        testPing(insecureNetwork, host, port);
+    }
 
+    void testPing(Network network, String host, UInt16 port) {
         IPAddress ip = new IPAddress(host);
-        if (Socket sock := insecureNetwork.connect((ip, port))) {
+        if (Socket sock := network.connect((ip, port))) {
             try {
                 Byte[] ping = "ping".utf8();
                 sock.out.writeBytes(ping);

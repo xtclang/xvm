@@ -76,7 +76,7 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
         case None:
         case Sync:
             mode = Sync;
-            val stream = new SocketInput();
+            BinaryInput stream = new SocketInput();
             return &stream.maskAs(BinaryInput);
 
         case Async:
@@ -93,7 +93,7 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
         case None:
         case Sync:
             mode = Sync;
-            val stream = new SocketOutput();
+            BinaryOutput stream = new SocketOutput();
             return &stream.maskAs(BinaryOutput);
 
         case Async:
@@ -106,18 +106,18 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
 
     @Override
     void shutdownInput() {
-        nativeShutdownInput();
+        shutdownInputImpl();
     }
 
     @Override
     void shutdownOutput() {
-        nativeShutdownOutput();
+        shutdownOutputImpl();
     }
 
     @Override
     void close(Exception? cause = Null) {
         mode = Closed;
-        nativeClose();
+        closeImpl();
     }
 
     @Override
@@ -152,29 +152,31 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
 
         @Override
         @RO Int available.get() {
-            return nativeAvailable();
+            return availableImpl();
         }
 
         @Override
         Byte readByte() {
-            Byte[] got = nativeReadBytes(1);
-            if (got.size == 0) {
+            Byte[] bytes = readBytesImpl(1);
+            if (bytes.size == 0) {
                 reachedEof = True;
                 throw new EndOfFile();
             }
-            return got[0];
+            return bytes[0];
         }
 
         @Override
         immutable Byte[] readBytes(Int count) {
-            if (count <= 0) {
+            assert:arg count >= 0;
+
+            if (count == 0) {
                 return [];
             }
-            Byte[] got = nativeReadBytes(count);
-            if (got.size < count) {
+            Byte[] bytes = readBytesImpl(count);
+            if (bytes.size < count) {
                 reachedEof = True;
             }
-            return got.freeze(inPlace=True);
+            return bytes.freeze(inPlace=True);
         }
     }
 
@@ -188,28 +190,28 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
             implements BinaryOutput {
         @Override
         void writeByte(Byte value) {
-            nativeWriteBytes([value].freeze(inPlace=True), 0, 1);
+            writeBytesImpl([value], 0, 1);
         }
 
         @Override
         void writeBytes(Byte[] bytes, Int offset, Int count) {
-            // Service calls cannot take a mutable array; copy if needed.
-            nativeWriteBytes(bytes.freeze(inPlace=False), offset, count);
+            // service calls cannot take a mutable array; bytes is already immutable here
+            writeBytesImpl(bytes, offset, count);
         }
     }
 
 
     // ----- internal ------------------------------------------------------------------------------
 
-    Byte[] nativeReadBytes(Int count) {TODO("Native");}
+    private Byte[] readBytesImpl(Int count) {TODO("Native");}
 
-    void nativeWriteBytes(Byte[] bytes, Int offset, Int count) {TODO("Native");}
+    private void writeBytesImpl(Byte[] bytes, Int offset, Int count) {TODO("Native");}
 
-    Int nativeAvailable() {TODO("Native");}
+    private Int availableImpl() {TODO("Native");}
 
-    void nativeShutdownInput() {TODO("Native");}
+    private void shutdownInputImpl() {TODO("Native");}
 
-    void nativeShutdownOutput() {TODO("Native");}
+    private void shutdownOutputImpl() {TODO("Native");}
 
-    void nativeClose() {TODO("Native");}
+    private void closeImpl() {TODO("Native");}
 }

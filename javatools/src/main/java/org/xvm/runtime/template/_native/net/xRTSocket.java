@@ -3,6 +3,7 @@ package org.xvm.runtime.template._native.net;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -64,12 +65,12 @@ public class xRTSocket
 
     @Override
     public void initNative() {
-        markNativeMethod("nativeReadBytes",      null, null);
-        markNativeMethod("nativeWriteBytes",     null, null);
-        markNativeMethod("nativeAvailable",      null, null);
-        markNativeMethod("nativeShutdownInput",  null, null);
-        markNativeMethod("nativeShutdownOutput", null, null);
-        markNativeMethod("nativeClose",          null, null);
+        markNativeMethod("readBytesImpl",      null, null);
+        markNativeMethod("writeBytesImpl",     null, null);
+        markNativeMethod("availableImpl",      null, null);
+        markNativeMethod("shutdownInputImpl",  null, null);
+        markNativeMethod("shutdownOutputImpl", null, null);
+        markNativeMethod("closeImpl",          null, null);
 
         invalidateTypeInfo();
     }
@@ -112,8 +113,8 @@ public class xRTSocket
         }
 
         switch (method.getName()) {
-        case "nativeReadBytes":
-            return nativeReadBytes(frame, hSocket, (int) ((JavaLong) hArg).getValue(), iReturn);
+        case "readBytesImpl":
+            return invokeReadBytesImpl(frame, hSocket, (int) ((JavaLong) hArg).getValue(), iReturn);
         }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -132,23 +133,23 @@ public class xRTSocket
         }
 
         switch (method.getName()) {
-        case "nativeReadBytes":
-            return nativeReadBytes(frame, hSocket, (int) ((JavaLong) ahArg[0]).getValue(), iReturn);
+        case "readBytesImpl":
+            return invokeReadBytesImpl(frame, hSocket, (int) ((JavaLong) ahArg[0]).getValue(), iReturn);
 
-        case "nativeWriteBytes":
-            return nativeWriteBytes(frame, hSocket, ahArg);
+        case "writeBytesImpl":
+            return invokeWriteBytesImpl(frame, hSocket, ahArg);
 
-        case "nativeAvailable":
-            return nativeAvailable(frame, hSocket, iReturn);
+        case "availableImpl":
+            return invokeAvailableImpl(frame, hSocket, iReturn);
 
-        case "nativeShutdownInput":
-            return nativeShutdown(frame, hSocket, true);
+        case "shutdownInputImpl":
+            return invokeShutdownImpl(frame, hSocket, true);
 
-        case "nativeShutdownOutput":
-            return nativeShutdown(frame, hSocket, false);
+        case "shutdownOutputImpl":
+            return invokeShutdownImpl(frame, hSocket, false);
 
-        case "nativeClose":
-            return nativeClose(frame, hSocket);
+        case "closeImpl":
+            return invokeCloseImpl(frame, hSocket);
         }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -170,11 +171,11 @@ public class xRTSocket
         CompletableFuture<Socket> cf = frame.f_context.f_container.scheduleIO(task);
         Frame.Continuation continuation = frameCaller -> {
             try {
-                Socket      sock    = cf.get();
-                InetAddress local   = sock.getLocalAddress();
+                Socket      socket  = cf.get();
+                InetAddress local   = socket.getLocalAddress();
                 byte[]      abLocal = local == null ? new byte[0] : local.getAddress();
-                int         nLocal  = sock.getLocalPort();
-                return INSTANCE.constructSocket(frameCaller, sock, abLocal, nLocal,
+                int         nLocal  = socket.getLocalPort();
+                return INSTANCE.constructSocket(frameCaller, socket, abLocal, nLocal,
                         abRemoteIP, nRemotePort, aiReturn);
             } catch (Throwable e) {
                 Throwable cause = unwrap(e);
@@ -196,32 +197,32 @@ public class xRTSocket
     static Socket openConnectedSocket(byte[] abRemoteIP, int nRemotePort,
                                       byte[] abLocalIP, int nLocalPort)
             throws IOException {
-        Socket  sock  = new Socket();
+        Socket  socket = new Socket();
         boolean owned = false;
         try {
-            sock.setTcpNoDelay(true);
-            sock.setKeepAlive(true);
+            socket.setTcpNoDelay(true);
+            socket.setKeepAlive(true);
             if (abLocalIP != null && abLocalIP.length > 0) {
-                sock.bind(new InetSocketAddress(InetAddress.getByAddress(abLocalIP), nLocalPort));
+                socket.bind(new InetSocketAddress(InetAddress.getByAddress(abLocalIP), nLocalPort));
             } else if (nLocalPort != 0) {
-                sock.bind(new InetSocketAddress(nLocalPort));
+                socket.bind(new InetSocketAddress(nLocalPort));
             }
-            sock.connect(new InetSocketAddress(InetAddress.getByAddress(abRemoteIP), nRemotePort),
+            socket.connect(new InetSocketAddress(InetAddress.getByAddress(abRemoteIP), nRemotePort),
                     CONNECT_TIMEOUT_MS);
             owned = true;
-            return sock;
+            return socket;
         } finally {
             if (!owned) {
-                closeQuietly(sock);
+                closeQuietly(socket);
             }
         }
     }
 
-    protected int constructSocket(Frame frame, Socket sock, byte[] abLocal, int nLocalPort,
+    protected int constructSocket(Frame frame, Socket socket, byte[] abLocal, int nLocalPort,
                                   byte[] abRemote, int nRemotePort, int[] aiReturn) {
+        ConstantPool     pool         = frame.poolContext();
         ClassTemplate    template     = this;
         ClassComposition clz          = template.getCanonicalClass();
-        ConstantPool     pool         = pool();
         MethodStructure  constructor  = template.getStructure().findConstructor(
                 pool.typeByteArray(), pool.typeUInt16(),
                 pool.typeByteArray(), pool.typeUInt16());
@@ -233,60 +234,67 @@ public class xRTSocket
 
         switch (template.construct(frame, constructor, clz, null, ahParams, Op.A_STACK)) {
         case Op.R_NEXT:
-            return finishConnect(frame, sock, aiReturn);
+            return finishConnect(frame, socket, aiReturn);
 
         case Op.R_EXCEPTION:
-            closeQuietly(sock);
+            closeQuietly(socket);
             return Op.R_EXCEPTION;
 
         case Op.R_CALL:
             frame.m_frameNext.addContinuation(frameCaller ->
-                    finishConnect(frameCaller, sock, aiReturn));
+                    finishConnect(frameCaller, socket, aiReturn));
             return Op.R_CALL;
 
         default:
-            closeQuietly(sock);
+            closeQuietly(socket);
             throw new IllegalStateException();
         }
     }
 
-    private static int finishConnect(Frame frame, Socket sock, int[] aiReturn) {
+    private static int finishConnect(Frame frame, Socket socket, int[] aiReturn) {
         ObjectHandle h = frame.popStack();
         SocketHandle hSocket = requireSocketHandle(h);
         if (hSocket == null) {
-            closeQuietly(sock);
+            closeQuietly(socket);
             return frame.raiseException(xException.illegalState(frame, "socket construct failed"));
         }
-        hSocket.socket = sock;
-        if (hSocket.f_context.getService() instanceof SocketHandle hSvc && hSvc != hSocket) {
-            hSvc.socket = sock;
-        }
+        hSocket.socket = socket;
         return frame.assignValues(aiReturn, xBoolean.TRUE, hSocket);
     }
 
 
     // ----- I/O -----------------------------------------------------------------------------------
 
-    private static Socket javaSocket(SocketHandle hSocket) {
-        if (hSocket.socket != null) {
-            return hSocket.socket;
-        }
-        if (hSocket.f_context.getService() instanceof SocketHandle hSvc) {
-            return hSvc.socket;
-        }
-        return null;
-    }
-
-    private static int nativeReadBytes(Frame frame, SocketHandle hSocket, int cBytes, int iReturn) {
-        Socket sock = javaSocket(hSocket);
-        if (sock == null || sock.isClosed()) {
+    /**
+     * Implementation of "Byte[] readBytesImpl(Int count)" method.
+     */
+    private static int invokeReadBytesImpl(Frame frame, SocketHandle hSocket, int cBytes, int iReturn) {
+        Socket socket = hSocket.socket;
+        if (socket == null || socket.isClosed()) {
             return frame.raiseException(xException.ioException(frame, "socket closed"));
         }
         if (cBytes <= 0) {
             return frame.assignValue(iReturn, xArray.makeByteArrayHandle(new byte[0], Mutability.Constant));
         }
 
-        Callable<byte[]> task = () -> readBytes(sock, cBytes);
+        Callable<byte[]> task = () -> {
+            InputStream in  = socket.getInputStream();
+            byte[]      buf = new byte[cBytes];
+            int         off = 0;
+            while (off < cBytes) {
+                int n = in.read(buf, off, cBytes - off);
+                if (n < 0) {
+                    break;
+                }
+                off += n;
+            }
+            if (off == cBytes) {
+                return buf;
+            }
+            byte[] actual = new byte[off];
+            System.arraycopy(buf, 0, actual, 0, off);
+            return actual;
+        };
         CompletableFuture<byte[]> cf = frame.f_context.f_container.scheduleIO(task);
         Frame.Continuation continuation = frameCaller -> {
             try {
@@ -300,29 +308,37 @@ public class xRTSocket
         return frame.waitForIO(cf, continuation);
     }
 
-    private static int nativeWriteBytes(Frame frame, SocketHandle hSocket, ObjectHandle[] ahArg) {
-        Socket sock = javaSocket(hSocket);
-        if (sock == null || sock.isClosed()) {
+    /**
+     * Implementation of "void writeBytesImpl(Byte[] bytes, Int offset, Int count)" method.
+     */
+    private static int invokeWriteBytesImpl(Frame frame, SocketHandle hSocket, ObjectHandle[] ahArg) {
+        Socket socket = hSocket.socket;
+        if (socket == null || socket.isClosed()) {
             return frame.raiseException(xException.ioException(frame, "socket closed"));
         }
         byte[] ab = xByteArray.getBytes((ArrayHandle) ahArg[0]);
         long   of = ((JavaLong) ahArg[1]).getValue();
         long   n  = ((JavaLong) ahArg[2]).getValue();
 
-        String sInvalid = invalidWriteRange(ab.length, of, n);
-        if (sInvalid != null) {
-            return frame.raiseException(xException.outOfBounds(frame, sInvalid));
+        if (n != 0 && (of < 0 || n < 0
+                || of > Integer.MAX_VALUE || n > Integer.MAX_VALUE
+                || of + n > ab.length)) {
+            return frame.raiseException(xException.outOfBounds(frame,
+                    "write offset " + of + " count " + n + " length " + ab.length));
         }
-        if (n <= 0) {
+        if (n == 0) {
             return Op.R_NEXT;
         }
 
         int ofWrite = (int) of;
         int nWrite  = (int) n;
         Callable<Void> task = () -> {
-            writeBytes(sock, ab, ofWrite, nWrite);
+            OutputStream out = socket.getOutputStream();
+            out.write(ab, ofWrite, nWrite);
+            out.flush();
             return null;
         };
+
         CompletableFuture<Void> cf = frame.f_context.f_container.scheduleIO(task);
         Frame.Continuation continuation = frameCaller -> {
             try {
@@ -337,103 +353,57 @@ public class xRTSocket
     }
 
     /**
-     * Validate a write {@code offset}/{@code count} coming from Ecstasy {@code Int}.
-     *
-     * @return {@code null} if the range is valid (including a zero-length no-op);
-     *         otherwise a message for an XVM {@code OutOfBounds}
+     * Implementation of "Int availableImpl()" method.
      */
-    static String invalidWriteRange(int nLength, long lOffset, long lCount) {
-        if (lCount == 0) {
-            return null;
-        }
-        if (lOffset < 0 || lCount < 0
-                || lOffset > Integer.MAX_VALUE || lCount > Integer.MAX_VALUE
-                || lOffset + lCount > nLength) {
-            return "write offset " + lOffset + " count " + lCount + " length " + nLength;
-        }
-        return null;
-    }
-
-    static byte[] readBytes(Socket sock, int cBytes)
-            throws IOException {
-        if (cBytes <= 0) {
-            return new byte[0];
-        }
-        InputStream in  = sock.getInputStream();
-        byte[]      buf = new byte[cBytes];
-        int         off = 0;
-        while (off < cBytes) {
-            int n = in.read(buf, off, cBytes - off);
-            if (n < 0) {
-                break;
-            }
-            off += n;
-        }
-        if (off == cBytes) {
-            return buf;
-        }
-        byte[] actual = new byte[off];
-        System.arraycopy(buf, 0, actual, 0, off);
-        return actual;
-    }
-
-    static void writeBytes(Socket sock, byte[] ab, int of, int n)
-            throws IOException {
-        if (n <= 0) {
-            return;
-        }
-        var out = sock.getOutputStream();
-        out.write(ab, of, n);
-        out.flush();
-    }
-
-    private static int nativeAvailable(Frame frame, SocketHandle hSocket, int iReturn) {
-        Socket sock = javaSocket(hSocket);
-        if (sock == null || sock.isClosed()) {
+    private static int invokeAvailableImpl(Frame frame, SocketHandle hSocket, int iReturn) {
+        Socket socket = hSocket.socket;
+        if (socket == null || socket.isClosed()) {
             return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(0));
         }
         try {
-            int n = sock.getInputStream().available();
+            int n = socket.getInputStream().available();
             return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(Math.max(n, 0)));
         } catch (IOException e) {
             return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(0));
         }
     }
 
-    private static int nativeShutdown(Frame frame, SocketHandle hSocket, boolean fInput) {
-        Socket sock = javaSocket(hSocket);
-        if (sock == null || sock.isClosed()) {
+    /**
+     * Implementation of "void shutdownInputImpl()" and "void shutdownOutputImpl()" methods.
+     */
+    private static int invokeShutdownImpl(Frame frame, SocketHandle hSocket, boolean fInput) {
+        Socket socket = hSocket.socket;
+        if (socket == null || socket.isClosed()) {
             return Op.R_NEXT;
         }
         try {
             if (fInput) {
-                sock.shutdownInput();
+                socket.shutdownInput();
             } else {
-                sock.shutdownOutput();
+                socket.shutdownOutput();
             }
             return Op.R_NEXT;
-        } catch (SocketException e) {
+        } catch (SocketException ignore) {
             return Op.R_NEXT;
         } catch (IOException e) {
             return frame.raiseException(xException.ioException(frame, e.getMessage()));
         }
     }
 
-    private static int nativeClose(Frame frame, SocketHandle hSocket) {
-        closeQuietly(javaSocket(hSocket));
+    /**
+     * Implementation of "void closeImpl()" method.
+     */
+    private static int invokeCloseImpl(Frame frame, SocketHandle hSocket) {
+        closeQuietly(hSocket.socket);
         hSocket.socket = null;
-        if (hSocket.f_context.getService() instanceof SocketHandle hSvc) {
-            hSvc.socket = null;
-        }
         return Op.R_NEXT;
     }
 
-    private static void closeQuietly(Socket sock) {
-        if (sock != null) {
+    private static void closeQuietly(Socket socket) {
+        if (socket != null) {
             try {
-                sock.close();
-            } catch (IOException ignore) {
-            }
+                socket.close();
+            } catch (IOException ignore) {}
         }
     }
 
@@ -445,10 +415,8 @@ public class xRTSocket
 
     private static SocketHandle requireSocketHandle(ObjectHandle h) {
         ObjectHandle origin = h.revealOrigin();
-        if (origin instanceof SocketHandle socketHandle) {
-            return socketHandle;
-        }
-        return h instanceof SocketHandle socketHandle ? socketHandle : null;
+        return origin instanceof SocketHandle hSocket ? hSocket :
+               h      instanceof SocketHandle hSocket ? hSocket : null;
     }
 
 
