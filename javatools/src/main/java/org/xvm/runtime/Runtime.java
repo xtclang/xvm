@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -39,16 +41,10 @@ public class Runtime {
         f_executorXVM = new ThreadPoolExecutor(parallelism, parallelism, 0, TimeUnit.SECONDS,
                 new ConcurrentLinkedBlockingQueue<>(), factoryXVM);
 
-        ThreadGroup groupIO = new ThreadGroup("IO");
-        ThreadFactory factoryIO = r -> {
-            Thread thread = new Thread(groupIO, r);
-            thread.setDaemon(true);
-            thread.setName("IOWorker@" + thread.hashCode());
-            return thread;
-        };
-
-        f_executorIO = new ThreadPoolExecutor(parallelism, 1024, 0, TimeUnit.SECONDS,
-                new ConcurrentLinkedBlockingQueue<>(), factoryIO);
+        ThreadFactory factoryIO = Thread.ofVirtual()
+                .name("IOWorker@", 0)
+                .factory();
+        f_executorIO = Executors.newThreadPerTaskExecutor(factoryIO);
     }
 
     public void start() {
@@ -138,9 +134,9 @@ public class Runtime {
     public final ThreadPoolExecutor f_executorXVM;
 
     /**
-     * The executor for XVM services.
+     * The executor for IO services.
      */
-    public final ThreadPoolExecutor f_executorIO;
+    public final ExecutorService f_executorIO;
 
     /**
      * The set of containers (stored as a Map with no values); used only for debugging.
