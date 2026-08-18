@@ -678,6 +678,8 @@ public class CommonBuilder
         ClassDesc CD_this = art.CD();
         classBuilder.withMethodBody(ConstantDescs.CLASS_INIT_NAME, MTD_void,
                 ClassFile.ACC_STATIC | ClassFile.ACC_PUBLIC, code -> {
+            prependCLInit(code);
+
             Label startScope = code.newLabel();
             Label endScope   = code.newLabel();
             code.labelBinding(startScope);
@@ -840,7 +842,7 @@ public class CommonBuilder
                 ;
             }
 
-            augmentCLInit(code);
+            appendCLInit(code);
 
             code.labelBinding(endScope)
                 .return_();
@@ -867,9 +869,14 @@ public class CommonBuilder
     }
 
     /**
-     * Allow subclasses to augment the <clinit> assembly.
+     * Allow subclasses to prepend the {@code <clinit>} assembly.
      */
-    protected void augmentCLInit(CodeBuilder code) {}
+    protected void prependCLInit(CodeBuilder code) {}
+
+    /**
+     * Allow subclasses to append to the {@code <clinit>} assembly.
+     */
+    protected void appendCLInit(CodeBuilder code) {}
 
     /**
      * Add fields initialization to the Java constructor {@code void <init>(Ctx ctx)}.

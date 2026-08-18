@@ -73,13 +73,116 @@ public class FPNumberBuilder extends NumberBuilder {
         }
     }
 
-    // TODO - this can probably be removed after the fix to generate the static initializer for
-    //  properties
     @Override
-    protected void augmentCLInit(CodeBuilder code) {
-        augmentFPNumberCLInit(code);
-        // must call super last as AugmentingBuilder can inject a "return" op
-        super.augmentCLInit(code);
+    protected void appendCLInit(CodeBuilder code) {
+        TypeConstant superType = pool().typeFPNumber();
+        if (!thisType.isA(superType)) {
+            // this type is not a FPNumber
+            return;
+        }
+
+        // initialize FPNumber static fields
+        if (thisType.isJavaPrimitive()) {
+            ClassDesc cd = JitTypeDesc.getJavaPrimitive(thisType);
+            assert cd != null;
+
+            long inf;
+            long negInf;
+            switch (cd.descriptorString()) {
+                case "I", "S", "B", "Z":
+                    negInf = calculateNegativeInfinity(32);
+                    inf    = negInf & Long.MAX_VALUE;
+                    code.loadConstant((int) (inf >>> 32))
+                        .putstatic(art.CD(), "PositiveInfinity", cd)
+                        .loadConstant((int) (negInf >>> 32))
+                        .putstatic(art.CD(), "NegativeInfinity", cd)
+                        .loadConstant(Integer.MAX_VALUE)
+                        .putstatic(art.CD(), "PositiveNaN", cd)
+                        .loadConstant(Integer.MIN_VALUE)
+                        .putstatic(art.CD(), "NegativeNaN", cd);
+                    break;
+
+                case "J":
+                    negInf = calculateNegativeInfinity(64);
+                    inf    = negInf & Long.MAX_VALUE;
+                    code.loadConstant(inf)
+                        .putstatic(art.CD(), "PositiveInfinity", cd)
+                        .loadConstant(negInf)
+                        .putstatic(art.CD(), "NegativeInfinity", cd)
+                        .loadConstant(Long.MAX_VALUE)
+                        .putstatic(art.CD(), "PositiveNaN", cd)
+                        .loadConstant(Long.MIN_VALUE)
+                        .putstatic(art.CD(), "NegativeNaN", cd);
+                    break;
+
+                case "F":
+                    int intNan = Float.floatToRawIntBits(Float.NaN) | 0x80000000;
+                    code.loadConstant(Float.POSITIVE_INFINITY)
+                        .putstatic(art.CD(), "PositiveInfinity", cd)
+                        .loadConstant(Float.NEGATIVE_INFINITY)
+                        .putstatic(art.CD(), "NegativeInfinity", cd)
+                        .loadConstant(Float.NaN)
+                        .putstatic(art.CD(), "PositiveNaN", cd)
+                        .loadConstant(Float.intBitsToFloat(intNan))
+                        .putstatic(art.CD(), "NegativeNaN", cd);
+                    break;
+
+                case "D":
+                    long longNan = Double.doubleToRawLongBits(Double.NaN) | 0x8000000000000000L;
+                    code.loadConstant(Double.POSITIVE_INFINITY)
+                        .putstatic(art.CD(), "PositiveInfinity", cd)
+                        .loadConstant(Double.NEGATIVE_INFINITY)
+                        .putstatic(art.CD(), "NegativeInfinity", cd)
+                        .loadConstant(Double.NaN)
+                        .putstatic(art.CD(), "PositiveNaN", cd)
+                        .loadConstant(Double.longBitsToDouble(longNan))
+                        .putstatic(art.CD(), "NegativeNaN", cd);
+                    break;
+
+                default:
+                    throw new UnsupportedOperationException("Unsupported number type " + cd);
+            }
+        } else if (thisType.isXvmPrimitive()) {
+            String name = thisType.getSingleUnderlyingClass(false).getName();
+
+            switch (name) {
+                case "Dec32":
+                    code.loadConstant(0b011110 << 26)
+                        .putstatic(art.CD(), "PositiveInfinity$0", CD_int)
+                        .loadConstant(0b111110 << 26)
+                        .putstatic(art.CD(), "NegativeInfinity$0", CD_int)
+                        .loadConstant(0b011111 << 26)
+                        .putstatic(art.CD(), "PositiveNaN$0", CD_int)
+                        .loadConstant(0b111111 << 26)
+                        .putstatic(art.CD(), "NegativeNaN$0", CD_int);
+                    break;
+
+                case "Dec64":
+                    code.loadConstant(0b011110L << 58)
+                        .putstatic(art.CD(), "PositiveInfinity$0", CD_long)
+                        .loadConstant(0b111110L << 58)
+                        .putstatic(art.CD(), "NegativeInfinity$0", CD_long)
+                        .loadConstant(0b011111L << 58)
+                        .putstatic(art.CD(), "PositiveNaN$0", CD_long)
+                        .loadConstant(0b111111L << 58)
+                        .putstatic(art.CD(), "NegativeNaN$0", CD_long);
+                    break;
+
+                case "Dec128":
+                    code.loadConstant(0b011110L << 58)
+                        .putstatic(art.CD(), "PositiveInfinity$1", CD_long)
+                        .loadConstant(0b111110L << 58)
+                        .putstatic(art.CD(), "NegativeInfinity$1", CD_long)
+                        .loadConstant(0b011111L << 58)
+                        .putstatic(art.CD(), "PositiveNaN$1", CD_long)
+                        .loadConstant(0b111111L << 58)
+                        .putstatic(art.CD(), "NegativeNaN$1", CD_long);
+                    break;
+
+                default:
+                    throw new UnsupportedOperationException("Unsupported number type " + name);
+            }
+        }
     }
 
     /**
@@ -174,122 +277,6 @@ public class FPNumberBuilder extends NumberBuilder {
         long radix = thisType.isA(pool().typeBinFPNumber()) ? 2L : 10L;
         code.loadConstant(radix)
             .lreturn();
-    }
-
-    /**
-     * Add code to the clinit method that will initialize the various FPNumber static fields.
-     */
-    // TODO - this can probably be removed after the fix to generate the static initializer for
-    //  properties
-    protected void augmentFPNumberCLInit(CodeBuilder code) {
-        TypeConstant superType = pool().typeFPNumber();
-        if (!thisType.isA(superType)) {
-            // this type is not a FPNumber
-            return;
-        }
-
-        if (thisType.isJavaPrimitive()) {
-            ClassDesc cd  = JitTypeDesc.getJavaPrimitive(thisType);
-            assert cd != null;
-
-            long inf;
-            long negInf;
-
-            switch (cd.descriptorString()) {
-                case "I", "S", "B", "Z":
-                    negInf = calculateNegativeInfinity(32);
-                    inf    = negInf & Long.MAX_VALUE;
-                    code.loadConstant((int) (inf >>> 32))
-                            .putstatic(art.CD(), "PositiveInfinity", cd)
-                            .loadConstant((int) (negInf >>> 32))
-                            .putstatic(art.CD(), "NegativeInfinity", cd)
-                            .loadConstant(Integer.MAX_VALUE)
-                            .putstatic(art.CD(), "PositiveNaN", cd)
-                            .loadConstant(Integer.MIN_VALUE)
-                            .putstatic(art.CD(), "NegativeNaN", cd);
-                    break;
-
-                case "J":
-                    negInf = calculateNegativeInfinity(64);
-                    inf    = negInf & Long.MAX_VALUE;
-                    code.loadConstant(inf)
-                            .putstatic(art.CD(), "PositiveInfinity", cd)
-                            .loadConstant(negInf)
-                            .putstatic(art.CD(), "NegativeInfinity", cd)
-                            .loadConstant(Long.MAX_VALUE)
-                            .putstatic(art.CD(), "PositiveNaN", cd)
-                            .loadConstant(Long.MIN_VALUE)
-                            .putstatic(art.CD(), "NegativeNaN", cd);
-                    break;
-
-                case "F":
-                    int intNan = Float.floatToRawIntBits(Float.NaN) | 0x80000000;
-                    code.loadConstant(Float.POSITIVE_INFINITY)
-                            .putstatic(art.CD(), "PositiveInfinity", cd)
-                            .loadConstant(Float.NEGATIVE_INFINITY)
-                            .putstatic(art.CD(), "NegativeInfinity", cd)
-                            .loadConstant(Float.NaN)
-                            .putstatic(art.CD(), "PositiveNaN", cd)
-                            .loadConstant(Float.intBitsToFloat(intNan))
-                            .putstatic(art.CD(), "NegativeNaN", cd);
-                    break;
-
-                case "D":
-                    long longNan = Double.doubleToRawLongBits(Double.NaN) | 0x8000000000000000L;
-                    code.loadConstant(Double.POSITIVE_INFINITY)
-                            .putstatic(art.CD(), "PositiveInfinity", cd)
-                            .loadConstant(Double.NEGATIVE_INFINITY)
-                            .putstatic(art.CD(), "NegativeInfinity", cd)
-                            .loadConstant(Double.NaN)
-                            .putstatic(art.CD(), "PositiveNaN", cd)
-                            .loadConstant(Double.longBitsToDouble(longNan))
-                            .putstatic(art.CD(), "NegativeNaN", cd);
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException("Unsupported number type " + cd);
-            }
-        } else if (thisType.isXvmPrimitive()) {
-            String name = thisType.getSingleUnderlyingClass(false).getName();
-
-            switch (name) {
-                case "Dec32":
-                    code.loadConstant(0b011110 << 26)
-                            .putstatic(art.CD(), "PositiveInfinity$0", CD_int)
-                            .loadConstant(0b111110 << 26)
-                            .putstatic(art.CD(), "NegativeInfinity$0", CD_int)
-                            .loadConstant(0b011111 << 26)
-                            .putstatic(art.CD(), "PositiveNaN$0", CD_int)
-                            .loadConstant(0b111111 << 26)
-                            .putstatic(art.CD(), "NegativeNaN$0", CD_int);
-                    break;
-
-                case "Dec64":
-                    code.loadConstant(0b011110L << 58)
-                            .putstatic(art.CD(), "PositiveInfinity$0", CD_long)
-                            .loadConstant(0b111110L << 58)
-                            .putstatic(art.CD(), "NegativeInfinity$0", CD_long)
-                            .loadConstant(0b011111L << 58)
-                            .putstatic(art.CD(), "PositiveNaN$0", CD_long)
-                            .loadConstant(0b111111L << 58)
-                            .putstatic(art.CD(), "NegativeNaN$0", CD_long);
-                    break;
-
-                case "Dec128":
-                    code.loadConstant(0b011110L << 58)
-                            .putstatic(art.CD(), "PositiveInfinity$1", CD_long)
-                            .loadConstant(0b111110L << 58)
-                            .putstatic(art.CD(), "NegativeInfinity$1", CD_long)
-                            .loadConstant(0b011111L << 58)
-                            .putstatic(art.CD(), "PositiveNaN$1", CD_long)
-                            .loadConstant(0b111111L << 58)
-                            .putstatic(art.CD(), "NegativeNaN$1", CD_long);
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException("Unsupported number type " + name);
-            }
-        }
     }
 
     protected long calculateNegativeInfinity(int bitLength) {

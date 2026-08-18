@@ -5,7 +5,9 @@ import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.FieldModel;
+import java.lang.classfile.Label;
 import java.lang.classfile.MethodModel;
+import java.lang.classfile.instruction.ReturnInstruction;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
@@ -47,7 +49,7 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     public ClassDesc getSuperCD() {
-        return model.superclass().get().asSymbol();
+        return model.superclass().orElseThrow().asSymbol();
     }
 
     @Override
@@ -96,13 +98,25 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     @Override
-    protected void augmentCLInit(CodeBuilder code) {
+    protected void prependCLInit(CodeBuilder code) {
         MethodModel model = findMethod(ConstantDescs.CLASS_INIT_NAME, MTD_void);
 
         if (model != null) {
             // the native class had the static initializer, which was skipped during the "copy"
-            // phase and now needs to be incorporated
-            model.code().ifPresent(oldCode -> oldCode.forEach(code::with));
+            // phase (see NativeTypeSystem.augmentNativeClass) and now needs to be incorporated;
+            // the native code should go first and jump instead of return
+            model.code().ifPresent(oldCode -> {
+                Label endLabel = code.newLabel();
+                oldCode.forEach(element -> {
+                    // redirect every native return to the generated initialization
+                    if (element instanceof ReturnInstruction) {
+                        code.goto_(endLabel);
+                    } else {
+                        code.with(element);
+                    }
+                });
+                code.labelBinding(endLabel);
+            });
         }
     }
 

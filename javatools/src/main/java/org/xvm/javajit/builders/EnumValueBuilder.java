@@ -29,7 +29,7 @@ public class EnumValueBuilder extends CommonBuilder {
     }
 
     @Override
-    protected void augmentCLInit(CodeBuilder code) {
+    protected void appendCLInit(CodeBuilder code) {
         code.aconst_null()
             .loadConstant(classStruct.getName())
             .invokestatic(CD_String, "of", MD_StringOf)
