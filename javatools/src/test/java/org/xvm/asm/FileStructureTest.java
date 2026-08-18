@@ -3,6 +3,8 @@ package org.xvm.asm;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 
@@ -26,9 +28,12 @@ import org.xvm.util.Severity;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.xvm.util.Handy.byteArrayToHexDump;
+import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.writeMagnitude;
 
 /**
  * Tests of XVM FileStructure.
@@ -41,6 +46,78 @@ public class FileStructureTest {
 
         assertEquals(2, file.getChildrenCount());
         assertFalse(file.hasMultipleChildren());
+    }
+
+    @Test
+    public void testSingleFileMetadataRoundTrip()
+            throws IOException {
+        var file = new FileStructure("Solo");
+        var ver  = new Version("2.1");
+        file.getModule().setVersion(ver);
+        file.ensureModule("Dependency").fingerprintRequired();
+
+        var metadata = file.getFileMetadata();
+        assertEquals(FileStructure.FileKind.Single, metadata.kind());
+        assertEquals(List.of("Solo"), metadata.moduleNames());
+        assertEquals(List.of(ver.toString()), metadata.versionsByModule().get("Solo"));
+
+        var out = new ByteArrayOutputStream();
+        file.writeTo(out);
+        var ab = out.toByteArray();
+
+        assertEquals(metadata, FileStructure.readMetadata(new ByteArrayInputStream(ab)));
+
+        var reread = new FileStructure(new ByteArrayInputStream(ab));
+        assertEquals(FileStructure.FileKind.Single, reread.getFileKind());
+        assertEquals(metadata, reread.getFileMetadata());
+    }
+
+    @Test
+    public void testLibraryFileMetadataRoundTripExcludesFingerprints()
+            throws IOException {
+        var fileLib = new FileStructure("Lib");
+        var verLib  = new Version("1.0");
+        fileLib.getModule().setVersion(verLib);
+
+        var bundle = new FileStructure("App");
+        var verApp = new Version("3.2");
+        bundle.getModule().setVersion(verApp);
+        bundle.merge(fileLib.getModule(), false, false);
+        bundle.findModule("Lib").markEmbedded();
+        bundle.ensureModule("External").fingerprintRequired();
+
+        var metadata = bundle.getFileMetadata();
+        assertEquals(FileStructure.FileKind.Library, metadata.kind());
+        assertEquals(List.of("App", "Lib"), metadata.moduleNames());
+        assertEquals(List.of(verApp.toString()), metadata.versionsByModule().get("App"));
+        assertEquals(List.of(verLib.toString()), metadata.versionsByModule().get("Lib"));
+        assertFalse(metadata.moduleNames().contains("External"));
+
+        var out = new ByteArrayOutputStream();
+        bundle.writeTo(out);
+        var ab = out.toByteArray();
+
+        assertEquals(metadata, FileStructure.readMetadata(new ByteArrayInputStream(ab)));
+
+        var reread = new FileStructure(new ByteArrayInputStream(ab));
+        assertEquals(FileStructure.FileKind.Library, reread.getFileKind());
+        assertEquals(metadata, reread.getFileMetadata());
+    }
+
+    @Test
+    public void testUnknownMetadataFormatSkipsBlockForDisassembly()
+            throws IOException {
+        var file = new FileStructure("Future");
+
+        var out = new ByteArrayOutputStream();
+        file.writeTo(out);
+        var ab = withUnknownMetadataFormat(out.toByteArray());
+
+        assertNull(FileStructure.readMetadata(new ByteArrayInputStream(ab)));
+
+        var reread = new FileStructure(new ByteArrayInputStream(ab));
+        assertEquals("Future", reread.getModuleId().getName());
+        assertEquals(FileStructure.FileKind.Single, reread.getFileKind());
     }
 
     @Test @Disabled("TODO: Re-enable test")
@@ -197,6 +274,38 @@ public class FileStructureTest {
         }
 
         assertArrayEquals(ab, ab2);
+    }
+
+    private static byte[] withUnknownMetadataFormat(byte[] ab)
+            throws IOException {
+        var in = new DataInputStream(new ByteArrayInputStream(ab));
+        assertEquals(Constants.FILE_MAGIC, in.readInt());
+        assertEquals(Constants.VERSION_MAJOR_CUR, in.readInt());
+        assertEquals(Constants.VERSION_MINOR_CUR, in.readInt());
+
+        var abMetadata = new byte[readMagnitude(in)];
+        in.readFully(abMetadata);
+        var abRemainder = in.readAllBytes();
+
+        var inMetadata = new DataInputStream(new ByteArrayInputStream(abMetadata));
+        assertEquals(1, readMagnitude(inMetadata));
+        var abMetadataRemainder = inMetadata.readAllBytes();
+
+        var outMetadata = new ByteArrayOutputStream();
+        var dataMetadata = new DataOutputStream(outMetadata);
+        writeMagnitude(dataMetadata, 999);
+        dataMetadata.write(abMetadataRemainder);
+        var abNewMetadata = outMetadata.toByteArray();
+
+        var out = new ByteArrayOutputStream();
+        var data = new DataOutputStream(out);
+        data.writeInt(Constants.FILE_MAGIC);
+        data.writeInt(Constants.VERSION_MAJOR_CUR);
+        data.writeInt(Constants.VERSION_MINOR_CUR);
+        writeMagnitude(data, abNewMetadata.length);
+        data.write(abNewMetadata);
+        data.write(abRemainder);
+        return out.toByteArray();
     }
 
     @Test @Disabled("TODO: Re-enable test")

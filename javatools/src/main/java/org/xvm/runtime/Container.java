@@ -407,6 +407,13 @@ public abstract class Container
     }
 
     /**
+     * @return a ClassTemplate for a type associated with the specified name (core classes only)
+     */
+    public <T extends ClassTemplate> T getTemplate(String sName, Class<T> clzTemplate) {
+        return clzTemplate.cast(getTemplate(sName));
+    }
+
+    /**
      * @return a ClassStructure for the specified name (core classes only)
      */
     public ClassStructure getClassStructure(String sName) {

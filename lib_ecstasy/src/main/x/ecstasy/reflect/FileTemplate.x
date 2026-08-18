@@ -6,9 +6,47 @@ import mgmt.ModuleRepository;
 interface FileTemplate
         extends ComponentTemplate {
     /**
+     * The persistent shape of an Ecstasy portable binary file.
+     */
+    enum Kind {
+        /**
+         * Compiler-style output: one real module, plus any number of dependency fingerprints.
+         */
+        Single,
+
+        /**
+         * Repository-style output: multiple real modules and/or versions, plus any number of
+         * dependency fingerprints.
+         */
+        Library,
+
+        /**
+         * Execution-style output: a fully linked, transitively closed module graph, with no
+         * fingerprints.
+         */
+        Xecable,
+    }
+
+    /**
      * The primary module that the `FileTemplate` represents.
      */
     @RO ModuleTemplate mainModule;
+
+    /**
+     * The persistent file kind.
+     */
+    @RO Kind kind;
+
+    /**
+     * The names of the real modules physically contained in the file. Module fingerprints are not
+     * included.
+     */
+    @RO String[] moduleNames;
+
+    /**
+     * Indicates whether the file physically contains a library or xecable bundle.
+     */
+    @RO Boolean bundle.get() = kind != Single;
 
     /**
      * Indicates whether the `FileTemplate` has been "resolved", which means that it is ready to

@@ -37,6 +37,19 @@ A bundle is exactly that shape: the main module (e.g. `kernel.xqiz.it`), its co-
 as embedded modules, and fingerprints for everything left external (typically the XDK modules).
 A fully self-contained bundle — such as the single-file XDK — has no fingerprints at all.
 
+Persistent `.xtc` files now also record a constant-pool-free `FileTemplate.Kind` in the file header:
+
+- **`Single`** — compiler-style output: one real module of one version, plus any number of
+  fingerprints.
+- **`Library`** — repository-style output: more than one real module and/or module version, plus
+  any number of fingerprints. This is what `xtc bundle` produces for multi-module output.
+- **`Xecable`** — execution-style output: a fully linked, transitively closed module graph, with no
+  fingerprints. The kind is representable now; a producing workflow is future work.
+
+The same header also records the real module names, excluding fingerprints, and optional version
+strings. It is length-prefixed and stored before the constant pool, so tools can identify bundle
+contents without deserializing the full `FileTemplate`.
+
 ## What `xtc bundle` does
 
 ```
@@ -110,6 +123,31 @@ single-module `.xtc` works. The mechanics:
 - **Launch forms.** Both work:
   `xec -L app.xtc app.xtc` (explicit file: the container is read directly and its main module
   runs) and `xec -L app.xtc some.module.name` (repository resolution by name).
+
+## Public API additions
+
+The bundle metadata is intentionally exposed as additive API, not by changing existing call
+contracts:
+
+- **Ecstasy reflection.** `reflect.FileTemplate` now exposes `Kind`, `kind`, `moduleNames`, and
+  `bundle`. Existing code that only asks for `mainModule`, `children`, `contents`, or `resolved`
+  continues to call the same members. `reflect.ModuleTemplate.fingerprint` keeps the same property
+  signature, but is now native-backed instead of using the previous heuristic default getter; this
+  makes embedded real modules and dependency fingerprints distinguishable without changing callers.
+- **Java file metadata.** `FileStructure` now exposes `FileKind`, `FileMetadata`,
+  `getFileKind()`, `setFileKind(...)`, `getFileMetadata()`, and `readMetadata(...)` overloads for
+  `File`, `InputStream`, and `DataInput`. `readMetadata(...)` reads only the header block and does
+  not deserialize the constant pool or module bodies, which is what lets `FileRepository` list
+  bundled module names cheaply.
+- **Typed runtime accessors.** `ObjectHandle.as(Class<T>)`,
+  `Container.getTemplate(String, Class<T>)`, and `ComponentTemplateHandle.getComponent(Class<T>)`
+  are additive helpers. The original untyped accessors remain available. New native-template code
+  can opt into the typed form so the required Java cast lives at the accessor boundary instead of
+  being repeated at each use site.
+
+The file-format change follows the normal XTC date-string version path: `xvm.version.minor` is
+bumped for the new header layout, and no separate pre-metadata compatibility constant is introduced.
+That matches the current exact-format support policy for `.xtc` files.
 
 ## Examples
 
@@ -197,7 +235,9 @@ Decisions worth remembering, and why they went the way they did:
 | Verb registration, help, dispatch | `javatools/.../org/xvm/tool/Launcher.java` (`CMD_BUNDLE`) |
 | Merge collision upgrade + sibling-dep fingerprint synthesis | `FileStructure.merge` in `javatools/.../org/xvm/asm/FileStructure.java` |
 | Runtime link tolerance | `FileStructure.linkModules` (runtime branch) |
+| Persistent metadata header | `FileStructure.FileMetadata` and `FileStructure.readMetadata` |
 | Multi-module repository read path, detached serving | `javatools/.../org/xvm/asm/FileRepository.java` |
+| Ecstasy metadata API | `reflect.FileTemplate.kind`, `moduleNames`, `bundle` |
 | Embedded marking | `ModuleStructure.markEmbedded()` |
 | Ecstasy-visible detached serving | `javatools/.../org/xvm/runtime/template/_native/mgmt/xCoreRepository.java` |
 | Single-file XDK build task | `bundleXdk` in `xdk/build.gradle.kts` (opt-in, incremental, configuration-cache compatible) |

@@ -52,6 +52,7 @@ public class xRTModuleTemplate
         markNativeProperty("qualifiedName");
         markNativeProperty("versionString");
         markNativeProperty("modulesByPath");
+        markNativeProperty("fingerprint");
         markNativeProperty("resolved");
 
         invalidateTypeInfo();
@@ -59,35 +60,38 @@ public class xRTModuleTemplate
 
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
-        ComponentTemplateHandle hTemplate = (ComponentTemplateHandle) hTarget;
+        var hTemplate = hTarget.as(ComponentTemplateHandle.class);
         switch (sPropName) {
         case "qualifiedName": {
-            ModuleStructure module = (ModuleStructure) hTemplate.getComponent();
+            var module = hTemplate.getComponent(ModuleStructure.class);
             return frame.assignValue(iReturn,
                 xString.makeHandle(module.getIdentityConstant().getName()));
         }
 
         case "versionString": {
-            ModuleStructure module   = (ModuleStructure) hTemplate.getComponent();
-            String          sVersion;
+            var module = hTemplate.getComponent(ModuleStructure.class);
+            String sVersion;
             if (module.isFingerprint()) {
-                VersionTree vtree = module.getFingerprintVersions();
+                var vtree = module.getFingerprintVersions();
                 sVersion = vtree.isEmpty()
                         ? null
                         : vtree.findLowestVersion().toString();
             } else {
                 sVersion = module.getVersionString();
             }
-            return frame.assignValue(iReturn, sVersion == null
-                ? xNullable.NULL
-                : xString.makeHandle(sVersion));
+            return frame.assignValue(iReturn, makeNullableStringHandle(sVersion));
         }
 
         case "modulesByPath":
             return getPropertyModulesByPath(frame, hTemplate, iReturn);
 
+        case "fingerprint": {
+            var module = hTemplate.getComponent(ModuleStructure.class);
+            return frame.assignValue(iReturn, xBoolean.makeHandle(module.isFingerprint()));
+        }
+
         case "resolved": {
-            ModuleStructure module = (ModuleStructure) hTemplate.getComponent();
+            var module = hTemplate.getComponent(ModuleStructure.class);
             return frame.assignValue(iReturn, xBoolean.makeHandle(module.getFileStructure().isLinked()));
         }
         }
@@ -99,8 +103,11 @@ public class xRTModuleTemplate
      * Implements property: modulesByPath.get()
      */
     public int getPropertyModulesByPath(Frame frame, ComponentTemplateHandle hTemplate, int iReturn) {
+        return getPropertyModulesByPath(frame, hTemplate.getComponent(ModuleStructure.class), iReturn);
+    }
+
+    private int getPropertyModulesByPath(Frame frame, ModuleStructure module, int iReturn) {
         // TODO GG: how to cache the result?
-        ModuleStructure module    = (ModuleStructure) hTemplate.getComponent();
         Container       container = frame.f_context.f_container;
         TypeComposition clzMap    = container.resolveClass(ensureListMapType());
 
@@ -125,6 +132,10 @@ public class xRTModuleTemplate
         ObjectHandle haTemplates = makeTemplateArrayHandle(container, ahTemplate);
 
         return Utils.constructListMap(frame, clzMap, haPaths, haTemplates, iReturn);
+    }
+
+    private static ObjectHandle makeNullableStringHandle(String sValue) {
+        return sValue == null ? xNullable.NULL : xString.makeHandle(sValue);
     }
 
     /**

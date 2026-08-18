@@ -52,13 +52,8 @@ interface ModuleTemplate
      * matches the fingerprint.
      *
      * A module with `fingerprint == True` must be `resolved == False`.
-     *
-     * TODO the default implementation of this property corresponds to the pre-existing behavior
-     *      of the FileStructure and ModuleStructure implementations. The default implementation
-     *      should be removed as soon as all class implementations of this interface have been
-     *      updated
      */
-    @RO Boolean fingerprint.get() = !resolved && this != parent.mainModule;
+    @RO Boolean fingerprint;
 
     /**
      * Indicates whether this ModuleTemplate has been linked, for example by [FileTemplate.resolve].

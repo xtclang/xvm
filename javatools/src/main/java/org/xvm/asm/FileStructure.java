@@ -20,8 +20,10 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,6 +31,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -36,8 +39,11 @@ import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.util.Handy.intToHexString;
 import static org.xvm.util.Handy.readIndex;
+import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.readUtf8String;
 import static org.xvm.util.Handy.toInputStream;
 import static org.xvm.util.Handy.writeMagnitude;
+import static org.xvm.util.Handy.writeUtf8String;
 
 
 /**
@@ -300,6 +306,235 @@ public class FileStructure
         reregisterConstants(true);
         assemble(out);
         resetModified();
+    }
+
+
+    // ----- metadata --------------------------------------------------------------------------------
+
+    /**
+     * @return the persistent file kind
+     */
+    public FileKind getFileKind() {
+        ensureChildren();
+
+        return m_kind == FileKind.Single && hasLibraryPayload() ? FileKind.Library : m_kind;
+    }
+
+    /**
+     * Set the persistent file kind.
+     *
+     * @param kind  the file kind
+     */
+    public void setFileKind(FileKind kind) {
+        if (kind == null) {
+            throw new IllegalArgumentException("file kind required");
+        }
+
+        if (m_kind != kind) {
+            m_kind = kind;
+            markModified();
+        }
+    }
+
+    /**
+     * @return the metadata for this file structure, derived from the current module contents
+     */
+    public FileMetadata getFileMetadata() {
+        return deriveFileMetadata(getFileKind());
+    }
+
+    /**
+     * Read the persistent metadata from a file without deserializing the constant pool or modules.
+     *
+     * @param file  the file to read
+     *
+     * @return the file metadata, or null if the metadata block uses an unknown skippable format
+     *
+     * @throws IOException  if the file is not an XTC file or the metadata cannot be read
+     */
+    public static FileMetadata readMetadata(File file)
+            throws IOException {
+        try (InputStream in = toInputStream(file)) {
+            return readMetadata(in);
+        }
+    }
+
+    /**
+     * Read the persistent metadata from a stream without deserializing the constant pool or modules.
+     * The stream is not closed by this method.
+     *
+     * @param in  the stream to read
+     *
+     * @return the file metadata, or null if the metadata block uses an unknown skippable format
+     *
+     * @throws IOException  if the stream is not an XTC file or the metadata cannot be read
+     */
+    public static FileMetadata readMetadata(InputStream in)
+            throws IOException {
+        return readMetadataFrom(new DataInputStream(in));
+    }
+
+    /**
+     * Read the persistent metadata from a DataInput without deserializing the constant pool or
+     * modules.
+     *
+     * @param in  the input to read
+     *
+     * @return the file metadata, or null if the metadata block uses an unknown skippable format
+     *
+     * @throws IOException  if the input is not an XTC file or the metadata cannot be read
+     */
+    public static FileMetadata readMetadata(DataInput in)
+            throws IOException {
+        return readMetadataFrom(in);
+    }
+
+    private static FileMetadata readMetadataFrom(DataInput in)
+            throws IOException {
+        int nMagic = in.readInt();
+        if (nMagic != FILE_MAGIC) {
+            throw new IOException(
+                    "not an .xtc format file; invalid magic header: " + intToHexString(nMagic));
+        }
+
+        int nMajor = in.readInt();
+        int nMinor = in.readInt();
+        if (!isFileVersionSupported(nMajor, nMinor)) {
+            throw new IOException("unsupported version: " + nMajor + "." + nMinor);
+        }
+
+        return hasMetadataHeader(nMajor, nMinor) ? readMetadataBlock(in) : null;
+    }
+
+    /**
+     * Derive metadata from the current module contents.
+     *
+     * @param kind  the file kind to report
+     *
+     * @return the derived metadata
+     */
+    private FileMetadata deriveFileMetadata(FileKind kind) {
+        ensureChildren();
+
+        var listNames = new ArrayList<String>();
+        var mapVersions = new LinkedHashMap<String, List<String>>();
+
+        var moduleMain = getModule();
+        collectMetadataModule(moduleMain, listNames, mapVersions);
+
+        realModules()
+                .filter(module -> module != moduleMain)
+                .sorted(Comparator.comparing(module -> module.getIdentityConstant().getName()))
+                .forEach(module -> collectMetadataModule(module, listNames, mapVersions));
+
+        return new FileMetadata(kind, listNames, mapVersions);
+    }
+
+    private static void collectMetadataModule(ModuleStructure module, List<String> listNames,
+                                              Map<String, List<String>> mapVersions) {
+        if (module == null || module.isFingerprint()) {
+            return;
+        }
+
+        String sName = module.getIdentityConstant().getName();
+        if (listNames.contains(sName)) {
+            return;
+        }
+
+        listNames.add(sName);
+        mapVersions.put(sName, versionStrings(module));
+    }
+
+    private Stream<? extends ModuleStructure> realModules() {
+        return children().stream().filter(module -> !module.isFingerprint());
+    }
+
+    private static List<String> versionStrings(ModuleStructure module) {
+        return StreamSupport.stream(module.getVersions().spliterator(), false)
+                .map(Version::toString)
+                .toList();
+    }
+
+    private boolean hasLibraryPayload() {
+        var modules = realModules().toList();
+
+        return modules.size() > 1 || modules.stream().anyMatch(module -> module.getVersions().size() > 1);
+    }
+
+    private static boolean hasMetadataHeader(int nMajor, int nMinor) {
+        return nMajor == VERSION_MAJOR_CUR && nMinor == VERSION_MINOR_CUR;
+    }
+
+    private static FileMetadata readMetadataBlock(DataInput in)
+            throws IOException {
+        int cb = readMagnitude(in);
+        if (cb == 0) {
+            return null;
+        }
+
+        var ab = new byte[cb];
+        in.readFully(ab);
+
+        var inMeta = new DataInputStream(new ByteArrayInputStream(ab));
+        int nFormat = readMagnitude(inMeta);
+        if (nFormat != FILE_METADATA_FORMAT) {
+            return null;
+        }
+
+        var kind = FileKind.valueOf(readUtf8String(inMeta));
+        int cModules = readMagnitude(inMeta);
+
+        var listNames = new ArrayList<String>(cModules);
+        var mapVersions = new LinkedHashMap<String, List<String>>();
+        for (int i = 0; i < cModules; ++i) {
+            var sName = readUtf8String(inMeta);
+            listNames.add(sName);
+
+            int cVersions = readMagnitude(inMeta);
+            var listVersions = new ArrayList<String>(cVersions);
+            for (int j = 0; j < cVersions; ++j) {
+                listVersions.add(readUtf8String(inMeta));
+            }
+            mapVersions.put(sName, listVersions);
+        }
+
+        return new FileMetadata(kind, listNames, mapVersions);
+    }
+
+    private static void writeMetadataBlock(DataOutput out, FileMetadata metadata)
+            throws IOException {
+        var outBytes = new ByteArrayOutputStream();
+        var outMeta  = new DataOutputStream(outBytes);
+
+        writeMagnitude(outMeta, FILE_METADATA_FORMAT);
+        writeUtf8String(outMeta, metadata.kind().name());
+        writeMagnitude(outMeta, metadata.moduleNames().size());
+
+        for (String sName : metadata.moduleNames()) {
+            writeUtf8String(outMeta, sName);
+
+            var listVersions = metadata.versionsByModule().getOrDefault(sName, List.of());
+            writeMagnitude(outMeta, listVersions.size());
+            for (String sVersion : listVersions) {
+                writeUtf8String(outMeta, sVersion);
+            }
+        }
+
+        outMeta.flush();
+        var ab = outBytes.toByteArray();
+        writeMagnitude(out, ab.length);
+        out.write(ab);
+    }
+
+    private void verifyMetadata(FileMetadata metadata)
+            throws IOException {
+        var derived = deriveFileMetadata(metadata.kind());
+        if (!metadata.moduleNames().equals(derived.moduleNames())) {
+            throw new IOException("file metadata module names do not match the module contents");
+        }
+        if (!metadata.versionsByModule().equals(derived.versionsByModule())) {
+            throw new IOException("file metadata module versions do not match the module contents");
+        }
     }
 
 
@@ -714,10 +949,6 @@ public class FileStructure
             return true;
         }
 
-        if (nVerMajor > VERSION_MAJOR_CUR) {
-            return false;
-        }
-
         // NOTE to future self: this is where specific version number backwards compatibility checks
         //                      will be added
 
@@ -941,6 +1172,11 @@ public class FileStructure
             throw new IOException("unsupported version: " + m_nMajorVer + "." + m_nMinorVer);
         }
 
+        var metadata = hasMetadataHeader(m_nMajorVer, m_nMinorVer) ? readMetadataBlock(in) : null;
+        if (metadata != null) {
+            m_kind = metadata.kind();
+        }
+
         // read in the constant pool
         ConstantPool pool = new ConstantPool(this);
         m_pool = pool;
@@ -952,6 +1188,10 @@ public class FileStructure
         // must be at least one module (the first module is considered to be the "main" module)
         if (getModule() == null) {
             throw new IOException("the file does not contain a primary module");
+        }
+
+        if (metadata != null) {
+            verifyMetadata(metadata);
         }
     }
 
@@ -977,6 +1217,7 @@ public class FileStructure
         out.writeInt(FILE_MAGIC);
         out.writeInt(VERSION_MAJOR_CUR);
         out.writeInt(VERSION_MINOR_CUR);
+        writeMetadataBlock(out, getFileMetadata());
         m_pool.assemble(out);
         writeMagnitude(out, getModuleId().getPosition());
         assembleChildren(out);
@@ -1106,6 +1347,76 @@ public class FileStructure
     }
 
 
+    // ----- file metadata ---------------------------------------------------------------------------
+
+    /**
+     * Persistent kind of a FileStructure.
+     */
+    public enum FileKind {
+        /**
+         * Compiler-style output: one real module, plus any number of dependency fingerprints.
+         */
+        Single,
+
+        /**
+         * Repository-style output: multiple real modules and/or versions, plus any number of
+         * dependency fingerprints.
+         */
+        Library,
+
+        /**
+         * Execution-style output: a fully linked, transitively closed module graph, with no
+         * fingerprints.
+         */
+        Xecable
+    }
+
+    /**
+     * Constant-pool-free metadata stored at the front of a persistent FileStructure.
+     *
+     * @param kind              the persistent file kind
+     * @param moduleNames       real module names contained in the file; fingerprints are excluded
+     * @param versionsByModule  optional version strings keyed by module name
+     */
+    public record FileMetadata(FileKind kind,
+                               List<String> moduleNames,
+                               Map<String, List<String>> versionsByModule) {
+        public FileMetadata {
+            if (kind == null) {
+                throw new IllegalArgumentException("file kind required");
+            }
+
+            moduleNames = List.copyOf(moduleNames);
+
+            var mapCopy = new LinkedHashMap<String, List<String>>();
+            versionsByModule.forEach((sName, listVersions) ->
+                    mapCopy.put(sName, List.copyOf(listVersions)));
+            versionsByModule = Collections.unmodifiableMap(mapCopy);
+        }
+
+        /**
+         * @return true iff the file physically contains more than one real module
+         */
+        public boolean hasMultipleModules() {
+            return moduleNames.size() > 1;
+        }
+
+        /**
+         * @return true iff this metadata describes a Library or Xecable file
+         */
+        public boolean isBundle() {
+            return kind != FileKind.Single;
+        }
+    }
+
+
+    // ----- constants -------------------------------------------------------------------------------
+
+    /**
+     * First metadata block format.
+     */
+    private static final int FILE_METADATA_FORMAT = 1;
+
     // ----- fields --------------------------------------------------------------------------------
 
     /**
@@ -1132,6 +1443,11 @@ public class FileStructure
      * null).
      */
     private ModuleConstant m_idModule;
+
+    /**
+     * The persistent file kind.
+     */
+    private FileKind m_kind = FileKind.Single;
 
     /**
      * This holds all of the children modules.
