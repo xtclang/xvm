@@ -5,7 +5,6 @@ import org.xtclang.ecstasy.Iterator;
 import org.xtclang.ecstasy.IteratorᐸUInt128ᐳ;
 import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.nType;
-import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.numbers.Int64;
 import org.xtclang.ecstasy.numbers.UInt128;
@@ -158,11 +157,6 @@ public class ArrayᐸUInt128ᐳ
         }
         $delete(ctx, index, 1);
         return this;
-    }
-
-    @Override
-    public ArrayᐸUInt128ᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
-        return (ArrayᐸUInt128ᐳ) super.slice(ctx, range);
     }
 
     // ----- Array internals -----------------------------------------------------------------------

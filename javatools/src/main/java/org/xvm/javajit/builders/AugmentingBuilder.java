@@ -24,6 +24,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitCtorDesc;
 import org.xvm.javajit.JitMethodDesc;
+import org.xvm.javajit.NativeTypeSystem;
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
 
@@ -46,6 +47,10 @@ public class AugmentingBuilder extends CommonBuilder {
      * The augmenting Classfile model.
      */
     public final ClassModel model;
+
+    protected NativeTypeSystem getTypeSystem() {
+        return (NativeTypeSystem) typeSystem;
+    }
 
     @Override
     public ClassDesc getSuperCD() {
@@ -215,7 +220,9 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     protected void assembleXvmType(ClassBuilder classBuilder) {
-        MethodModel mm = findMethod("$xvmType", MD_xvmType);
+        // nObject.$xvmType() is only a fallback that calls $type(); every augmented class must
+        // still get its own implementation unless it declares one natively
+        MethodModel mm = findDeclaredMethod("$xvmType", MD_xvmType);
         if (mm == null) {
             super.assembleXvmType(classBuilder);
         }
@@ -279,11 +286,50 @@ public class AugmentingBuilder extends CommonBuilder {
      * Find a MethodModel for the specified method.
      */
     protected MethodModel findMethod(String jitName, MethodTypeDesc md) {
-        for (MethodModel mm : model.methods()) {
-            if (mm.methodName().equalsString(jitName) &&
-                (md == null ||
-                    mm.methodTypeSymbol().descriptorString().equals(md.descriptorString()))) {
-                return mm;
+        MethodModel method = findDeclaredMethod(jitName, md);
+        if (method != null || jitName.equals(INIT_NAME) ||
+                jitName.equals(ConstantDescs.CLASS_INIT_NAME)) {
+            return method;
+        }
+
+        ClassModel declaringModel = model;
+        while (declaringModel.superclass().isPresent()) {
+            declaringModel = getTypeSystem().getNativeClassModel(
+                    declaringModel.superclass().orElseThrow().asSymbol());
+            if (declaringModel == null) {
+                return null;
+            }
+
+            method = findMethod(declaringModel, jitName, md, true);
+            if (method != null) {
+                return method;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Find a method declared directly by the class being augmented.
+     */
+    protected MethodModel findDeclaredMethod(String jitName, MethodTypeDesc md) {
+        return findMethod(model, jitName, md, false);
+    }
+
+    /**
+     * Find a method declared by the specified class model.
+     *
+     * @param checkSuper  true to allow inheritance chain traversal
+     */
+    private MethodModel findMethod(ClassModel declaringModel, String jitName,
+                                   MethodTypeDesc md, boolean checkSuper) {
+        for (MethodModel method : declaringModel.methods()) {
+            if (method.methodName().equalsString(jitName) &&
+                    (md == null || method.methodTypeSymbol().equals(md))) {
+                int flags = method.flags().flagsMask();
+                if (!checkSuper ||
+                        (flags & (ClassFile.ACC_PUBLIC | ClassFile.ACC_PROTECTED)) != 0) {
+                    return method;
+                }
             }
         }
         return null;
