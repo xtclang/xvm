@@ -1,7 +1,5 @@
 package org.xvm.javajit.builders;
 
-import java.lang.classfile.ClassBuilder;
-import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.CodeBuilder;
 
@@ -49,30 +47,7 @@ public class FPNumberBuilder extends NumberBuilder {
         };
     }
 
-    @Override
-    // TODO - this can probably be removed after the fix to generate the static initializer for
-    //  properties
-    protected void generateNumberFields(ClassBuilder classBuilder) {
-        int flags = ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC;
-        if (thisType.isJavaPrimitive()) {
-            ClassDesc cd = JitTypeDesc.getJavaPrimitive(thisType);
-            classBuilder.withField("PositiveInfinity", cd, flags);
-            classBuilder.withField("NegativeInfinity", cd, flags);
-            classBuilder.withField("PositiveNaN", cd, flags);
-            classBuilder.withField("NegativeNaN", cd, flags);
-        } else {
-            // must be XVM primitive
-            ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(thisType);
-            for (int i = 0; i < cds.length; i++) {
-                ClassDesc cd = cds[i];
-                classBuilder.withField("PositiveInfinity$" + i, cd, flags);
-                classBuilder.withField("NegativeInfinity$" + i, cd, flags);
-                classBuilder.withField("PositiveNaN$" + i, cd, flags);
-                classBuilder.withField("NegativeNaN$" + i, cd, flags);
-            }
-        }
-    }
-
+    // TODO - this can probably be removed after constructor/primitive-conversion path is fixed
     @Override
     protected void appendCLInit(CodeBuilder code) {
         TypeConstant superType = pool().typeFPNumber();

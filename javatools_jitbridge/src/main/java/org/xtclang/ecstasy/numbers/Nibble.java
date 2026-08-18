@@ -2,6 +2,9 @@ package org.xtclang.ecstasy.numbers;
 
 import org.bouncycastle.util.Exceptions;
 
+import org.xtclang.ecstasy.collections.Array;
+import org.xtclang.ecstasy.collections.ArrayᐸNibbleᐳ;
+
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
@@ -77,6 +80,17 @@ public class Nibble extends UIntNumber {
         java.lang.String msg = "Illegal character \"" + ch + "; the character value must be in " +
                                "the range \"0..9\", \"A..F\", or \"a..f\"";
         throw Exceptions.illegalArgumentException(msg, null);
+    }
+
+    /**
+     * Native implementation of: "private static Nibble[] values = [0, ..., 15]"
+     *
+     * The naturally compiled initializer currently erases the array literal's element type to
+     * Object, resulting in an invalid attempt to pass an optimized Nibble value to Array.add(Object).
+     */
+    public static ArrayᐸNibbleᐳ values$init(Ctx ctx) {
+        return ArrayᐸNibbleᐳ.$fromLongs(ctx, Array.Mutability.Constant.$INSTANCE, 64,
+                0x0123_4567_89AB_CDEFL);
     }
 
     @Override
