@@ -240,7 +240,7 @@ public class NativeTypeSystem
                     element instanceof MethodModel methodModel &&
                     methodModel.methodName().stringValue().equals(ConstantDescs.CLASS_INIT_NAME)) {
                 // skip the static initializer for now; we will re-incorporate it later;
-                // see AugmentingBuilder.augmentStaticInitializer()
+                // see AugmentingBuilder.prependCLInit()
                 return;
             }
 
