@@ -277,7 +277,7 @@ public class xRTComponentTemplate
      * @return the handle to the appropriate Ecstasy {@code ComponentTemplate.Format} enum value
      */
     protected static EnumHandle makeFormatHandle(Frame frame, Component.Format format) {
-        xEnum enumForm = (xEnum) INSTANCE.f_container.getTemplate("reflect.ComponentTemplate.Format");
+        var enumForm = INSTANCE.f_container.getTemplate("reflect.ComponentTemplate.Format", xEnum.class);
 
         switch (format) {
         case INTERFACE:
@@ -372,6 +372,10 @@ public class xRTComponentTemplate
 
         public Component getComponent() {
             return f_struct;
+        }
+
+        public <T extends Component> T getComponent(Class<T> clzComponent) {
+            return clzComponent.cast(f_struct);
         }
 
         @Override

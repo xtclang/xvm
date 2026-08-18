@@ -71,6 +71,18 @@ public abstract class ObjectHandle
     }
 
     /**
+     * Cast this handle to the expected Java handle type.
+     *
+     * @param clzHandle  the expected handle type
+     * @param <T>        the handle type
+     *
+     * @return this handle cast to the specified type
+     */
+    public <T extends ObjectHandle> T as(Class<T> clzHandle) {
+        return clzHandle.cast(this);
+    }
+
+    /**
      * Reveal this handle using the "inception" type.
      *
      * @return the "fully accessible" handle

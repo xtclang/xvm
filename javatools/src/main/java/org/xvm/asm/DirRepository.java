@@ -139,6 +139,14 @@ public class DirRepository
             return;
         }
 
+        File[] files = m_dir.listFiles(ModulesOnly);
+        if (files == null) {
+            modulesByFile = new HashMap<>();
+            modulesByName.clear();
+            lastScan = System.currentTimeMillis();
+            return;
+        }
+
         Map<File, ModuleInfo> oldModulesByFile = modulesByFile;
         boolean               fWriteCache      = false;
         if (oldModulesByFile.isEmpty()) {
@@ -155,7 +163,6 @@ public class DirRepository
         modulesByFile = newModulesByFile;
         modulesByName.clear();
 
-        File[] files = m_dir.listFiles(ModulesOnly);
         fWriteCache |= files.length != oldModulesByFile.size();
         for (File file : files) {
             ModuleInfo info = oldModulesByFile.get(file);
@@ -283,10 +290,16 @@ public class DirRepository
             // a persistent cache is only a performance aid
         } finally {
             if (pathTemp != null) {
-                try {
-                    Files.deleteIfExists(pathTemp);
-                } catch (IOException ignore) {}
+                deleteTempCacheFile(pathTemp);
             }
+        }
+    }
+
+    private static void deleteTempCacheFile(Path path) {
+        try {
+            Files.deleteIfExists(path);
+        } catch (IOException _) {
+            path.toFile().deleteOnExit();
         }
     }
 

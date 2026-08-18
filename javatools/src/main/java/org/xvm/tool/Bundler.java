@@ -89,6 +89,9 @@ public class Bundler extends Launcher<BundlerOptions> {
         bundle.children().stream()
                 .filter(module -> !module.isFingerprint() && !module.isMainModule())
                 .forEach(ModuleStructure::markEmbedded);
+        if (bundle.hasMultipleChildren()) {
+            bundle.setFileKind(FileStructure.FileKind.Library);
+        }
 
         reportExternalDependencies(bundle, repo, selection.keySet());
         assert bundle.validateModuleConstants();

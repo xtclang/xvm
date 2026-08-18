@@ -4,9 +4,12 @@ package org.xvm.asm;
 import java.io.File;
 import java.io.IOException;
 
+import java.nio.file.Files;
+
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -116,7 +119,12 @@ public class FileRepository
             err = false;
         } catch (IOException e) {
             err = true;
-            file.delete(); // don't leave a corrupted file; it may prevent the next compilation
+            try {
+                Files.deleteIfExists(file.toPath());
+            } catch (IOException deleteFailure) {
+                file.deleteOnExit();
+                e.addSuppressed(deleteFailure);
+            }
             throw new IOException("Error writing module to file: " + file, e);
         }
 
@@ -164,12 +172,17 @@ public class FileRepository
         this.size      = file.length();
         this.err       = false;
 
-        var structLoaded = tryLoad();
-        if (structLoaded == null) {
-            this.cache = Cache.EMPTY;
-            this.err   = true;
+        var metadata = tryReadMetadata();
+        if (metadata != null) {
+            cacheFrom(metadata);
         } else {
-            cacheFrom(structLoaded);
+            var structLoaded = tryLoad();
+            if (structLoaded == null) {
+                this.cache = Cache.EMPTY;
+                this.err   = true;
+            } else {
+                cacheFrom(structLoaded);
+            }
         }
 
         this.lastScan = System.currentTimeMillis();
@@ -197,7 +210,23 @@ public class FileRepository
         // free by getModuleNames()
         this.cache = new Cache(
                 Collections.unmodifiableSet(new LinkedHashSet<>(mapModules.keySet())),
-                mapVersions, mapModules, struct);
+                mapVersions, mapModules, struct, struct.getFileMetadata());
+    }
+
+    /**
+     * Populate the cache from constant-pool-free file metadata.
+     *
+     * @param metadata  the metadata to cache
+     */
+    private void cacheFrom(FileStructure.FileMetadata metadata) {
+        var mapVersions = new LinkedHashMap<String, VersionTree<Boolean>>();
+        var versionsByModule = metadata.versionsByModule();
+        metadata.moduleNames().forEach(sName ->
+                mapVersions.put(sName, versionTree(versionsByModule.getOrDefault(sName, List.of()))));
+
+        this.cache = new Cache(
+                Collections.unmodifiableSet(new LinkedHashSet<>(metadata.moduleNames())),
+                mapVersions, new LinkedHashMap<>(), null, metadata);
     }
 
     /**
@@ -216,11 +245,11 @@ public class FileRepository
             return true;
         }
 
-        if (cache.struct() == null || timestamp != file.lastModified() || size != file.length()) {
+        if (cache.struct() == null && cache.metadata() == null) {
             return false;
         }
 
-        return true;
+        return timestamp == file.lastModified() && size == file.length();
     }
 
     /**
@@ -259,6 +288,22 @@ public class FileRepository
         return null;
     }
 
+    private FileStructure.FileMetadata tryReadMetadata() {
+        try {
+            return FileStructure.readMetadata(file);
+        } catch (Exception _) {
+            return null;
+        }
+    }
+
+    private static VersionTree<Boolean> versionTree(List<String> versions) {
+        return versions.stream()
+                .map(Version::new)
+                .collect(VersionTree::new,
+                        (vtree, version) -> vtree.put(version, Boolean.TRUE),
+                        VersionTree::putAll);
+    }
+
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -266,14 +311,15 @@ public class FileRepository
      * An atomically swapped snapshot of the cached container state: the servable module names
      * (insertion-ordered, primary module first, immutable and safe to hand out), the per-name
      * version trees, the loaded modules by name (non-main members are memoized detached copies),
-     * and the loaded container itself — null when the file is absent, unreadable, or not yet
-     * scanned, which is also what marks the snapshot as needing a rebuild.
+     * the loaded container itself, and the constant-pool-free metadata when available. Both the
+     * container and metadata are null when the file is absent, unreadable, or not yet scanned.
      */
     private record Cache(Set<String>                       names,
                          Map<String, VersionTree<Boolean>> versionsByName,
                          Map<String, ModuleStructure>      modulesByName,
-                         FileStructure                     struct) {
-        private static final Cache EMPTY = new Cache(Set.of(), Map.of(), Map.of(), null);
+                         FileStructure                     struct,
+                         FileStructure.FileMetadata        metadata) {
+        private static final Cache EMPTY = new Cache(Set.of(), Map.of(), Map.of(), null, null);
     }
 
     private final File    file;

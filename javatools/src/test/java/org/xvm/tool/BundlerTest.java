@@ -105,6 +105,11 @@ class BundlerTest {
         var fileOut = tempDir.resolve("bundle.xtc").toFile();
         bundle.writeTo(fileOut);
 
+        var metadata = FileStructure.readMetadata(fileOut);
+        assertEquals(FileStructure.FileKind.Library, metadata.kind());
+        assertEquals(List.of("ModB", "ModA"), metadata.moduleNames());
+        assertEquals(List.of(verA.toString()), metadata.versionsByModule().get("ModA"));
+
         // the container round-trips with both modules and their types intact
         var reread = new FileStructure(fileOut);
         assertEquals("ModB", reread.getModuleId().getName());
@@ -116,6 +121,7 @@ class BundlerTest {
         var repo = new FileRepository(fileOut, true);
         assertEquals(2, repo.getModuleNames().size());
         assertTrue(repo.getModuleNames().containsAll(Set.of("ModA", "ModB")));
+        assertTrue(repo.getAvailableVersions("ModA").contains(verA));
 
         var moduleMain = repo.loadModule("ModB");
         assertNotNull(moduleMain);
@@ -151,8 +157,14 @@ class BundlerTest {
         var fileOut = tempDir.resolve("solo.xtc").toFile();
         file.writeTo(fileOut);
 
+        var metadata = FileStructure.readMetadata(fileOut);
+        assertEquals(FileStructure.FileKind.Single, metadata.kind());
+        assertEquals(List.of("Solo"), metadata.moduleNames());
+        assertEquals(List.of(version.toString()), metadata.versionsByModule().get("Solo"));
+
         var repo = new FileRepository(fileOut, true);
         assertEquals(Set.of("Solo"), repo.getModuleNames());
+        assertTrue(repo.getAvailableVersions("Solo").contains(version));
 
         var module = repo.loadModule("Solo");
         assertNotNull(module);

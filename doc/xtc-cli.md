@@ -320,6 +320,10 @@ Merges compiled modules into a single multi-module `.xtc` file (a "bundle"). The
 self-contained module repository: both the runner and the compiler can resolve every bundled
 module from it by name, so one file can replace a `lib/` directory full of `.xtc` files.
 
+Multi-module bundle output is tagged as `FileTemplate.Kind.Library` in the `.xtc` header, with the
+real module names recorded separately from dependency fingerprints. Single-module output remains
+`Single`.
+
 With no explicit module selection, every non-system module found on the module path is bundled.
 System (`xtclang.org`) modules are never bundled implicitly; they remain external dependencies,
 resolved from the XDK at run time, exactly as with a lib directory. Pass `--include-system` to
