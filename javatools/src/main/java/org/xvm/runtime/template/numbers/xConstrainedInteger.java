@@ -280,7 +280,8 @@ public abstract class xConstrainedInteger
         case "toDec32":
         case "toDec64":
         case "toDecN":
-        case "toChar": {
+        case "toChar":
+        case "toNibble": {
             TypeConstant  typeRet  = method.getReturn(0).getType();
             ClassTemplate template = f_container.getTemplate(typeRet);
 
