@@ -133,6 +133,11 @@ public class NativeTypeSystem
     private final ClassHierarchyResolver bridgeHierarchyResolver;
 
     /**
+     * A cache of parsed native class models keyed by their JVM class descriptor.
+     */
+    private final Map<ClassDesc, ClassModel> nativeModels = new ConcurrentHashMap<>();
+
+    /**
      * A cache of native class names keyed by class id.
      */
     private final Map<IdentityConstant, String> nativeByClass = new ConcurrentHashMap<>();
@@ -211,6 +216,8 @@ public class NativeTypeSystem
      * Augment the existing native class with the Ecstasy methods.
      */
     private byte[] augmentNativeClass(ClassModel model, String className, TypeConstant type) {
+        nativeModels.put(model.thisClass().asSymbol(), model);
+
         IdentityConstant id      = type.getSingleUnderlyingClass(true);
         ClassStructure   struct  = (ClassStructure) id.getComponent();
         Artifact         art     = new Artifact(type, struct, ClassfileShape.Impl, className);
@@ -251,6 +258,33 @@ public class NativeTypeSystem
                 builder.build(classBuilder);
             }
         });
+    }
+
+    /**
+     * Find the native class model for the specified JVM class descriptor.
+     *
+     * @return the parsed native class model, or null if the class is not a bridge class
+     */
+    public ClassModel getNativeClassModel(ClassDesc classDesc) {
+        ClassModel model = nativeModels.get(classDesc);
+        if (model != null) {
+            return model;
+        }
+
+        String descriptor = classDesc.descriptorString();
+        if (descriptor.length() < 2 || descriptor.charAt(0) != 'L') {
+            return null;
+        }
+
+        String classPath = descriptor.substring(1, descriptor.length() - 1) + ".class";
+        try (InputStream in = bridgeLoader.getResourceAsStream(classPath)) {
+            if (in != null) {
+                model = ClassFile.of().parse(in.readAllBytes());
+                nativeModels.put(classDesc, model);
+                return model;
+            }
+        } catch (IOException ignore) {}
+        return null;
     }
 
     @Override
