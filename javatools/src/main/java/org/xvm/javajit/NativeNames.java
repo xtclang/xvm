@@ -39,6 +39,8 @@ public class NativeNames {
         reservedMethodName.put("numbers.Bit/or/1",  "or");
         reservedMethodName.put("numbers.Bit/xor/1", "xor");
 
+        reservedMethodName.put("numbers.Nibble.values/=/0", "values$init");
+
         reservedMethodName.put("collections.Array/add/1",        "add");
         reservedMethodName.put("collections.Array/addAll/1",     "addAll");
         reservedMethodName.put("collections.Array/delete/1",     "delete");

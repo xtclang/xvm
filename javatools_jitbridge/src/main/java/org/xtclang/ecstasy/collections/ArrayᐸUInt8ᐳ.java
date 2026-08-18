@@ -148,6 +148,29 @@ public class ArrayᐸUInt8ᐳ
         return (ArrayᐸUInt8ᐳ) super.slice(ctx, range);
     }
 
+    /**
+     * Native implementation of: "Bit[] toBitArray(Mutability mutability = Constant)"
+     */
+    public ArrayᐸBitᐳ toBitArray(Ctx ctx, Mutability mutability) {
+        long   byteCount = size$get$p(ctx);
+        int    longCount = (int) ((byteCount + 7) >>> 3);
+        long[] values;
+
+        if ($delegate == null) {
+            values = $storage == null
+                    ? new long[longCount]
+                    : Arrays.copyOf($storage, longCount);
+        } else {
+            values = new long[longCount];
+            for (long index = 0; index < byteCount; index++) {
+                values[(int) (index >>> 3)] |=
+                        $getElement$pi(ctx, index) << ((7 - (index & 7)) << 3);
+            }
+        }
+
+        return ArrayᐸBitᐳ.$fromLongs(ctx, mutability, byteCount << 3, values);
+    }
+
     // ----- Array internals -----------------------------------------------------------------------
 
     @Override

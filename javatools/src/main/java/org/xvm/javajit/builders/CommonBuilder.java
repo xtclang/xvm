@@ -555,8 +555,7 @@ public class CommonBuilder
             MethodConstant initializer = prop.getInitializer();
             if (!prop.hasField() && !prop.isInjected() &&
                     // initializers for static properties still need to be generated
-                    // TODO: the "isPrimitive" check below is not necessary; needs to be removed
-                    (isPrimitive || !prop.isConstant() || initializer == null)) {
+                    !(prop.isConstant() && initializer != null)) {
 
                 // no field is necessary
                 continue;
@@ -814,6 +813,14 @@ public class CommonBuilder
                         unbox(code, type);
                         code.putstatic(CD_this, jitName,
                                 JitTypeDesc.getPrimitiveFieldClass(type));
+                        break;
+
+                    case XvmPrimitive:
+                        unbox(code, type);
+                        ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
+                        for (int i = cds.length - 1; i >= 0; i--) {
+                            code.putstatic(CD_this, jitName + "$" + i, cds[i]);
+                        }
                         break;
 
                     default:
@@ -2711,7 +2718,8 @@ public class CommonBuilder
 
                 IdentityConstant idTarget = hashMethod.getIdentity().getClassIdentity();
                 ClassDesc        cdTarget = ensureClassDesc(idTarget.getType());
-                code.checkcast(cdTarget)
+                ClassDesc        cdValue  = hashJmd.getOptimizedParam(1).cd;
+                code.checkcast(cdValue)
                     .invokestatic(cdTarget, hashOptName, hashJmd.optimizedMD);
                 // long hashCode on the stack
             }

@@ -982,8 +982,14 @@ public class MethodStructure
         SignatureConstant sigResolved =
                 getIdentityConstant().getSignature().resolveGenericTypes(pool, typeTarget);
 
-        // generic types are passed to "static" lambdas as type parameters
-        if (isLambda() && getTypeParamCount() > 0) {
+        TypeConstant typeJit = typeTarget.getCallableJitType();
+
+        // generic types are passed to lambdas as type parameters; primitive and layer-two
+        // specialized targets also need concrete formal types for their specialized JVM descriptors;
+        // function targets always use the central nFunction interface, not a specialized wrapper
+        if (getTypeParamCount() > 0 &&
+                (isLambda() || typeJit.isJitPrimitive() ||
+                 !typeJit.isFunction() && typeJit.isJitL2Specialized())) {
             SignatureConstant sigOrig = sigResolved;
 
             sigResolved = sigResolved.resolveGenericTypes(pool, formalConst -> {
@@ -994,8 +1000,14 @@ public class MethodStructure
 
                 TypeConstant typeOfType = sigOrig.getRawParams()[iParam];
                 assert typeOfType.isTypeOfType();
+
                 TypeConstant type = typeOfType.getParamType(0);
-                return type.isJitPrimitive() ? type : null;
+                if (type.containsAutoNarrowing(false)) {
+                    type = type.resolveAutoNarrowing(pool, false, typeJit, null);
+                }
+                return type.isJitPrimitive() || type.isJitL2Specialized()
+                        ? type
+                        : null;
             });
         }
         return sigResolved;
