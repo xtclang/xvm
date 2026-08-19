@@ -11,6 +11,7 @@ import java.io.PrintWriter;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.xvm.util.Handy.byteArrayToHexDump;
@@ -46,7 +48,7 @@ public class FileStructureTest {
         file.ensureModule("Dependency").fingerprintRequired();
 
         assertEquals(2, file.getChildrenCount());
-        assertFalse(file.hasMultipleChildren());
+        assertFalse(file.isBundle());
     }
 
     @Test
@@ -57,10 +59,10 @@ public class FileStructureTest {
         file.getModule().setVersion(ver);
         file.ensureModule("Dependency").fingerprintRequired();
 
-        var metadata = file.getFileMetadata();
+        var metadata = file.buildFileInfo();
         assertEquals(FileStructure.FileKind.Single, metadata.kind());
-        assertEquals(List.of("Solo"), metadata.moduleNames());
-        assertEquals(List.of(ver.toString()), metadata.versionsByModule().get("Solo"));
+        assertEquals(Set.of("Solo"), metadata.modules().keySet());
+        assertEquals(new VersionTree(ver, true), metadata.modules().get("Solo"));
         assertFalse(metadata.hasMultipleModules());
         assertFalse(metadata.isBundle());
 
@@ -68,13 +70,13 @@ public class FileStructureTest {
         file.writeTo(out);
         var ab = out.toByteArray();
 
-        assertEquals(metadata, FileStructure.readMetadata(new ByteArrayInputStream(ab)));
+        assertEquals(metadata, FileStructure.readFileInfo(new ByteArrayInputStream(ab)));
         DataInput inMetadata = new DataInputStream(new ByteArrayInputStream(ab));
-        assertEquals(metadata, FileStructure.readMetadata(inMetadata));
+        assertEquals(metadata, FileStructure.readFileInfo(inMetadata));
 
         var reread = new FileStructure(new ByteArrayInputStream(ab));
         assertEquals(FileStructure.FileKind.Single, reread.getFileKind());
-        assertEquals(metadata, reread.getFileMetadata());
+        assertEquals(metadata, reread.buildFileInfo());
     }
 
     @Test
@@ -88,15 +90,15 @@ public class FileStructureTest {
         var verApp = new Version("3.2");
         bundle.getModule().setVersion(verApp);
         bundle.merge(fileLib.getModule(), false, false);
-        bundle.findModule("Lib").markEmbedded();
+        bundle.getChild("Lib").markEmbedded();
         bundle.ensureModule("External").fingerprintRequired();
 
-        var metadata = bundle.getFileMetadata();
+        var metadata = bundle.buildFileInfo();
         assertEquals(FileStructure.FileKind.Library, metadata.kind());
-        assertEquals(List.of("App", "Lib"), metadata.moduleNames());
-        assertEquals(List.of(verApp.toString()), metadata.versionsByModule().get("App"));
-        assertEquals(List.of(verLib.toString()), metadata.versionsByModule().get("Lib"));
-        assertFalse(metadata.moduleNames().contains("External"));
+        assertEquals(Set.of("App", "Lib"), metadata.modules().keySet());
+        assertEquals(new VersionTree(verApp, true), metadata.modules().get("App"));
+        assertEquals(new VersionTree(verLib, true), metadata.modules().get("Lib"));
+        assertFalse(metadata.modules().containsKey("External"));
         assertTrue(metadata.hasMultipleModules());
         assertTrue(metadata.isBundle());
 
@@ -104,27 +106,26 @@ public class FileStructureTest {
         bundle.writeTo(out);
         var ab = out.toByteArray();
 
-        assertEquals(metadata, FileStructure.readMetadata(new ByteArrayInputStream(ab)));
+        assertEquals(metadata, FileStructure.readFileInfo(new ByteArrayInputStream(ab)));
 
         var reread = new FileStructure(new ByteArrayInputStream(ab));
         assertEquals(FileStructure.FileKind.Library, reread.getFileKind());
-        assertEquals(metadata, reread.getFileMetadata());
+        assertEquals(metadata, reread.buildFileInfo());
     }
 
     @Test
-    public void testUnknownMetadataFormatSkipsBlockForDisassembly()
+    public void testUnknownFileKindIsRejected()
             throws IOException {
         var file = new FileStructure("Future");
 
         var out = new ByteArrayOutputStream();
         file.writeTo(out);
-        var ab = withUnknownMetadataFormat(out.toByteArray());
+        var ab = withUnknownFileKind(out.toByteArray());
 
-        assertNull(FileStructure.readMetadata(new ByteArrayInputStream(ab)));
-
-        var reread = new FileStructure(new ByteArrayInputStream(ab));
-        assertEquals("Future", reread.getModuleId().getName());
-        assertEquals(FileStructure.FileKind.Single, reread.getFileKind());
+        assertThrows(IllegalArgumentException.class,
+                () -> FileStructure.readFileInfo(new ByteArrayInputStream(ab)));
+        assertThrows(IllegalArgumentException.class,
+                () -> new FileStructure(new ByteArrayInputStream(ab)));
     }
 
     @Test @Disabled("TODO: Re-enable test")
@@ -283,34 +284,21 @@ public class FileStructureTest {
         assertArrayEquals(ab, ab2);
     }
 
-    private static byte[] withUnknownMetadataFormat(byte[] ab)
+    private static byte[] withUnknownFileKind(byte[] ab)
             throws IOException {
         var in = new DataInputStream(new ByteArrayInputStream(ab));
         assertEquals(Constants.FILE_MAGIC, in.readInt());
         assertEquals(Constants.VERSION_MAJOR_CUR, in.readInt());
         assertEquals(Constants.VERSION_MINOR_CUR, in.readInt());
-
-        var abMetadata = new byte[readMagnitude(in)];
-        in.readFully(abMetadata);
+        assertEquals(FileStructure.FileKind.Single.ordinal(), readMagnitude(in));
         var abRemainder = in.readAllBytes();
-
-        var inMetadata = new DataInputStream(new ByteArrayInputStream(abMetadata));
-        assertEquals(1, readMagnitude(inMetadata));
-        var abMetadataRemainder = inMetadata.readAllBytes();
-
-        var outMetadata = new ByteArrayOutputStream();
-        var dataMetadata = new DataOutputStream(outMetadata);
-        writeMagnitude(dataMetadata, 999);
-        dataMetadata.write(abMetadataRemainder);
-        var abNewMetadata = outMetadata.toByteArray();
 
         var out = new ByteArrayOutputStream();
         var data = new DataOutputStream(out);
         data.writeInt(Constants.FILE_MAGIC);
         data.writeInt(Constants.VERSION_MAJOR_CUR);
         data.writeInt(Constants.VERSION_MINOR_CUR);
-        writeMagnitude(data, abNewMetadata.length);
-        data.write(abNewMetadata);
+        writeMagnitude(data, 999);
         data.write(abRemainder);
         return out.toByteArray();
     }

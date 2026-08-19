@@ -20,23 +20,26 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import java.util.function.Consumer;
 
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import static org.xvm.util.Handy.copyPut;
+import static org.xvm.util.Handy.copyRemap;
+import static org.xvm.util.Handy.copyRemove;
 import static org.xvm.util.Handy.intToHexString;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -224,7 +227,7 @@ public class FileStructure
             // present there as real (embedded) sibling modules rather than fingerprints; those
             // dependencies must still be represented here, or the merged clone's constants cannot
             // be re-registered against this pool and the module is unlinkable when detached
-            if (fileSource.hasMultipleChildren()) {
+            if (fileSource.isBundle()) {
                 module.collectDependencies().keySet().stream()
                         .filter(id -> !id.equals(module.getIdentityConstant()) && getModule(id) == null)
                         .map(fileSource::getModule)
@@ -253,7 +256,6 @@ public class FileStructure
             moduleClone.markPrimary();
         }
     }
-
 
     // ----- serialization -------------------------------------------------------------------------
 
@@ -308,7 +310,6 @@ public class FileStructure
         resetModified();
     }
 
-
     // ----- metadata --------------------------------------------------------------------------------
 
     /**
@@ -316,8 +317,13 @@ public class FileStructure
      */
     public FileKind getFileKind() {
         ensureChildren();
-
+        // TODO maintain m_kind so that it is always correct and we don't have to hack it here
         return m_kind == FileKind.Single && hasLibraryPayload() ? FileKind.Library : m_kind;
+    }
+    // TODO get rid of this
+    private boolean hasLibraryPayload() {
+        var modules = realModules().toList();
+        return modules.size() > 1 || modules.stream().anyMatch(module -> module.getVersions().size() > 1);
     }
 
     /**
@@ -337,221 +343,267 @@ public class FileStructure
     }
 
     /**
-     * @return the metadata for this file structure, derived from the current module contents
+     * @return the FileInfo reflecting the current state of the FileStructure
      */
-    public FileMetadata getFileMetadata() {
-        return deriveFileMetadata(getFileKind());
+    public FileInfo buildFileInfo() {
+        return new FileInfo(getFileMajorVersion(), getFileMinorVersion(), getFileKind(), moduleVersionsByName());
     }
 
     /**
-     * Read the persistent metadata from a file without deserializing the constant pool or modules.
-     *
-     * @param file  the file to read
-     *
-     * @return the file metadata, or null if the metadata block uses an unknown skippable format
-     *
-     * @throws IOException  if the file is not an XTC file or the metadata cannot be read
-     */
-    public static FileMetadata readMetadata(File file)
-            throws IOException {
-        try (InputStream in = toInputStream(file)) {
-            return readMetadata(in);
-        }
-    }
-
-    /**
-     * Read the persistent metadata from a stream without deserializing the constant pool or modules.
-     * The stream is not closed by this method.
-     *
-     * @param in  the stream to read
-     *
-     * @return the file metadata, or null if the metadata block uses an unknown skippable format
-     *
-     * @throws IOException  if the stream is not an XTC file or the metadata cannot be read
-     */
-    public static FileMetadata readMetadata(InputStream in)
-            throws IOException {
-        DataInput data = new DataInputStream(in);
-        return readMetadata(data);
-    }
-
-    /**
-     * Read the persistent metadata from a DataInput without deserializing the constant pool or
+     * Read the persistent FileInfo metadata from a file without deserializing the constant pool or
      * modules.
      *
-     * @param in  the input to read
+     * @param file  the File to read from
      *
-     * @return the file metadata, or null if the metadata block uses an unknown skippable format
+     * @return a FileInfo for the file
      *
-     * @throws IOException  if the input is not an XTC file or the metadata cannot be read
+     * @throws IOException       if the file is not a valid and supported ".xtc" file or an error
+     *                           occurs reading the FileInfo
+     * @throws RuntimeException  if some other assertion or failure is encountered while parsing and
+     *                           constructing the FileInfo data
      */
-    public static FileMetadata readMetadata(DataInput in)
+    public static FileInfo readFileInfo(File file)
             throws IOException {
-        return readMetadataFrom(in);
-    }
-
-    private static FileMetadata readMetadataFrom(DataInput in)
-            throws IOException {
-        int nMagic = in.readInt();
-        if (nMagic != FILE_MAGIC) {
-            throw new IOException(
-                    "not an .xtc format file; invalid magic header: " + intToHexString(nMagic));
+        try (InputStream in = toInputStream(file)) {
+            DataInput data = new DataInputStream(in);
+            return readFileInfo(data);
         }
-
-        int nMajor = in.readInt();
-        int nMinor = in.readInt();
-        if (!isFileVersionSupported(nMajor, nMinor)) {
-            throw new IOException("unsupported version: " + nMajor + "." + nMinor);
-        }
-
-        return hasMetadataHeader(nMajor, nMinor) ? readMetadataBlock(in) : null;
     }
 
     /**
-     * Derive metadata from the current module contents.
+     * Read the persistent FileInfo metadata from a stream without deserializing the constant pool or
+     * modules. The stream is not closed by this method.
      *
-     * @param kind  the file kind to report
+     * @param in  the stream to read from
      *
-     * @return the derived metadata
+     * @return a FileInfo for the file
+     *
+     * @throws IOException       if the stream does not contain a valid and supported ".xtc" file
+     *                           header, or an error occurs while reading the FileInfo
+     * @throws RuntimeException  if some other assertion or failure is encountered while parsing and
+     *                           constructing the FileInfo data
      */
-    private FileMetadata deriveFileMetadata(FileKind kind) {
-        ensureChildren();
-
-        var listNames = new ArrayList<String>();
-        var mapVersions = new LinkedHashMap<String, List<String>>();
-
-        var moduleMain = getModule();
-        collectMetadataModule(moduleMain, listNames, mapVersions);
-
-        realModules()
-                .filter(module -> module != moduleMain)
-                .sorted(Comparator.comparing(module -> module.getIdentityConstant().getName()))
-                .forEach(module -> collectMetadataModule(module, listNames, mapVersions));
-
-        return new FileMetadata(kind, listNames, mapVersions);
+    public static FileInfo readFileInfo(InputStream in)
+            throws IOException {
+        DataInput data = new DataInputStream(in);
+        return readFileInfo(data);
     }
 
-    private static void collectMetadataModule(ModuleStructure module, List<String> listNames,
-                                              Map<String, List<String>> mapVersions) {
-        if (module == null || module.isFingerprint()) {
-            return;
+    /**
+     * Read the persistent FileInfo metadata from a DataInput source without deserializing the
+     * constant pool or modules.
+     *
+     * @param in  the DataInput to read from
+     *
+     * @return a FileInfo for the file
+     *
+     * @throws IOException       if the input does not contain a valid and supported ".xtc" file
+     *                           header, or an error occurs while reading the FileInfo
+     * @throws RuntimeException  if some other assertion or failure is encountered while parsing and
+     *                           constructing the FileInfo data
+     */
+    public static FileInfo readFileInfo(DataInput in)
+            throws IOException {
+        return readFileInfo(in, false);
+    }
+
+    /**
+     * Read the persistent FileInfo metadata from a DataInput source without deserializing the
+     * constant pool or modules.
+     *
+     * @param in            the DataInput to read from
+     * @param skipContents  pass true to skip reading the module names and module version lists
+     *
+     * @return a FileInfo for the file
+     *
+     * @throws IOException       if the stream does not contain a value and supported ".xtc" file
+     *                           header, or an error occurs while reading the FileInfo
+     * @throws RuntimeException  if some other assertion or failure is encountered while parsing and
+     *                           constructing the FileInfo data
+     */
+    private static FileInfo readFileInfo(DataInput in, boolean skipContents)
+            throws IOException {
+        // validate that it is an xtc/xvm file format
+        int nMagic = in.readInt();
+        if (nMagic != FILE_MAGIC) {
+            throw new IOException("Not an .xtc format file; invalid magic value: "
+                    + intToHexString(nMagic)
+                    + " (expected magic value: " + intToHexString(FILE_MAGIC) + ")");
         }
 
-        String sName = module.getIdentityConstant().getName();
-        if (listNames.contains(sName)) {
-            return;
+        // validate the version; this is rather simple in the beginning (before there is a long
+        // history of evolution of the Ecstasy language and the XVM specification), as versions will
+        // initially be ascending-only, but at some point, only up-to-specific-minor-versions of
+        // specific-major-versions are likely to be supported
+        int nMajorVer = in.readInt();
+        int nMinorVer = in.readInt();
+        if (!isFileVersionSupported(nMajorVer, nMinorVer)) {
+            throw new IOException("Unsupported .xtc version: " + nMajorVer + "." + nMinorVer
+                    + " (supported version is " + VERSION_MAJOR_CUR + "." + VERSION_MINOR_CUR + ")");
         }
 
-        listNames.add(sName);
-        mapVersions.put(sName, versionStrings(module));
+        FileKind kind = FileKind.fromOrdinal(readMagnitude(in));
+
+        Map<String, VersionTree<Boolean>> modules = null;
+        int cb = readMagnitude(in);
+        assert cb > 0;
+        if (skipContents) {
+            in.skipBytes(cb);
+        } else {
+            int cModules = readMagnitude(in);
+            modules = new LinkedHashMap(cModules);
+            for (int iModule = 0; iModule < cModules; ++iModule) {
+                String sName = readUtf8String(in);
+                int cVersions = readMagnitude(in);
+                VersionTree<Boolean> versions = new VersionTree();
+                for (int iVersion = 0; iVersion < cVersions; ++iVersion) {
+                    versions.put(new Version(readUtf8String(in)), true);
+                }
+                modules.put(sName, versions);
+            }
+        }
+
+        return new FileInfo(nMajorVer, nMinorVer, kind, modules);
+    }
+
+    /**
+     * Write the file header including the persistent FileInfo metadata.
+     *
+     * @param out  the DataOutput stream to write to
+     */
+    private void writeFileInfo(DataOutput out)
+            throws IOException {
+        out.writeInt(FILE_MAGIC);
+        out.writeInt(VERSION_MAJOR_CUR);
+        out.writeInt(VERSION_MINOR_CUR);
+
+        ensureChildren();
+        writeMagnitude(out, getFileKind().ordinal());
+
+        // the FileInfo's module names and versions contents are length-encoded
+        ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
+        DataOutputStream      outInfo  = new DataOutputStream(outBytes);
+
+        Map<String, VersionTree<Boolean>> moduleVersByName = moduleVersionsByName();
+        int                               cModules         = moduleVersByName.size();
+        assert cModules >= 1;
+        writeMagnitude(outInfo, cModules);
+
+        for (Entry<String, VersionTree<Boolean>> entry : moduleVersByName.entrySet()) {
+            String name = entry.getKey();
+            writeUtf8String(outInfo, name);
+
+            VersionTree<Boolean> vers = entry.getValue();
+            writeMagnitude(outInfo, vers.size());
+
+            for (Version ver : vers) {
+                writeUtf8String(outInfo, ver.toString());
+            }
+        }
+
+        outInfo.flush();
+        byte[] ab = outBytes.toByteArray();
+        writeMagnitude(out, ab.length);
+        out.write(ab);
+    }
+
+    /**
+     * @return the "table of contents" of the FileStructure as a Map of module names to the
+     *         (optional) versions of those modules
+     */
+    private Map<String, VersionTree<Boolean>> moduleVersionsByName() {
+        // for all non-fingerprint modules, collect all Versions of that module within the
+        // FileStructure; it is possible for the same module name to appear multiple times in the
+        // ModuleByIdMap, since the ModuleConstants for each may have a different Version number;
+        // alternatively, a single unversioned ModuleConstant may correspond to any number of
+        // ModuleStructure siblings that each has its own Version
+        LinkedHashMap<String, VersionTree<Boolean>> moduleVersByName = new LinkedHashMap();
+        for (Entry<ModuleConstant, ModuleStructure> entry : getModuleByIdMap().entrySet()) {
+            ModuleConstant  moduleId = entry.getKey();
+            ModuleStructure module   = entry.getValue();
+            if (!module.isFingerprint()) {
+                String               name = moduleId.getName();
+                VersionTree<Boolean> vers = new VersionTree();
+                VersionTree<Boolean> prev = moduleVersByName.get(name);
+                if (prev != null) {
+                    vers.putAll(prev);
+                }
+
+                // the module id may contain version information
+                Version idVer = moduleId.getVersion();
+                if (idVer == null) {
+                    // must not allow both versioned and unversioned of the same module, or two
+                    // unversioned of the same module
+                    assert prev == null;
+
+                    // the module itself may contain one or more versions
+                    boolean first = true;
+                    for (Iterator iter = module.siblings(); iter.hasNext(); first = false) {
+                        Version structVer = ((ModuleStructure) iter.next()).getVersion();
+                        if (structVer == null) {
+                            // must not allow both versioned and unversioned of the same module
+                            assert vers.isEmpty();
+                        } else {
+                            assert first || !vers.isEmpty();
+                            vers.put(structVer.withoutBuildString(), true);
+                        }
+                    }
+                } else {
+                    // must not allow both versioned and unversioned of the same module
+                    assert prev == null || !prev.isEmpty();
+
+                    // this id must be the first time we're encountering this version
+                    idVer = idVer.withoutBuildString();
+                    assert !vers.contains(idVer);
+
+                    // siblings must be either unversioned or the same version as the id
+                    for (Iterator iter = module.siblings(); iter.hasNext(); ) {
+                        Version structVer = ((ModuleStructure) iter.next()).getVersion();
+                        assert structVer == null || structVer.withoutBuildString().equals(idVer);
+                    }
+
+                    vers.put(idVer, true);
+                }
+
+                moduleVersByName.put(name, vers.ensureReadOnly());
+            }
+        }
+        return moduleVersByName;
     }
 
     private Stream<? extends ModuleStructure> realModules() {
         return children().stream().filter(module -> !module.isFingerprint());
     }
 
-    private static List<String> versionStrings(ModuleStructure module) {
-        return StreamSupport.stream(module.getVersions().spliterator(), false)
-                .map(Version::toString)
-                .toList();
-    }
-
-    private boolean hasLibraryPayload() {
-        var modules = realModules().toList();
-
-        return modules.size() > 1 || modules.stream().anyMatch(module -> module.getVersions().size() > 1);
-    }
-
-    private static boolean hasMetadataHeader(int nMajor, int nMinor) {
-        return nMajor == VERSION_MAJOR_CUR && nMinor == VERSION_MINOR_CUR;
-    }
-
-    private static FileMetadata readMetadataBlock(DataInput in)
+    /**
+     * Compare the passed FileInfo (presumed to come from the header of a file) with the state of
+     * this actual FileStructure.
+     *
+     * @param info  a FileInfo presumably read from a file
+     *
+     * @throws IOException if the passed FileInfo doesn't perfectly match this FileStructure
+     */
+    private void verifyFileInfo(FileInfo info)
             throws IOException {
-        int cb = readMagnitude(in);
-        if (cb == 0) {
-            return null;
-        }
-
-        var ab = new byte[cb];
-        in.readFully(ab);
-
-        var inMeta = new DataInputStream(new ByteArrayInputStream(ab));
-        int nFormat = readMagnitude(inMeta);
-        if (nFormat != FILE_METADATA_FORMAT) {
-            return null;
-        }
-
-        var kind = FileKind.valueOf(readUtf8String(inMeta));
-        int cModules = readMagnitude(inMeta);
-
-        var listNames = new ArrayList<String>(cModules);
-        var mapVersions = new LinkedHashMap<String, List<String>>();
-        for (int i = 0; i < cModules; ++i) {
-            var sName = readUtf8String(inMeta);
-            listNames.add(sName);
-
-            int cVersions = readMagnitude(inMeta);
-            var listVersions = new ArrayList<String>(cVersions);
-            for (int j = 0; j < cVersions; ++j) {
-                listVersions.add(readUtf8String(inMeta));
-            }
-            mapVersions.put(sName, listVersions);
-        }
-
-        return new FileMetadata(kind, listNames, mapVersions);
-    }
-
-    private static void writeMetadataBlock(DataOutput out, FileMetadata metadata)
-            throws IOException {
-        var outBytes = new ByteArrayOutputStream();
-        var outMeta  = new DataOutputStream(outBytes);
-
-        writeMagnitude(outMeta, FILE_METADATA_FORMAT);
-        writeUtf8String(outMeta, metadata.kind().name());
-        writeMagnitude(outMeta, metadata.moduleNames().size());
-
-        for (String sName : metadata.moduleNames()) {
-            writeUtf8String(outMeta, sName);
-
-            var listVersions = metadata.versionsByModule().getOrDefault(sName, List.of());
-            writeMagnitude(outMeta, listVersions.size());
-            for (String sVersion : listVersions) {
-                writeUtf8String(outMeta, sVersion);
-            }
-        }
-
-        outMeta.flush();
-        var ab = outBytes.toByteArray();
-        writeMagnitude(out, ab.length);
-        out.write(ab);
-    }
-
-    private void verifyMetadata(FileMetadata metadata)
-            throws IOException {
-        var derived = deriveFileMetadata(metadata.kind());
-        if (!metadata.moduleNames().equals(derived.moduleNames())) {
-            throw new IOException("file metadata module names do not match the module contents");
-        }
-        if (!metadata.versionsByModule().equals(derived.versionsByModule())) {
-            throw new IOException("file metadata module versions do not match the module contents");
+        Map<String, VersionTree<Boolean>> moduleVersByName = moduleVersionsByName();
+        if (!info.modules.equals(moduleVersByName)) {
+            throw new IOException("FileInfo metadata does not match the FileStructure contents");
         }
     }
-
 
     // ----- module containment --------------------------------------------------------------------
 
     /**
      * Obtain the primary module that the FileStructure represents.
      *
-     * @return the ModuleStructure that this FileStructure represents; never null
+     * @return the primary ModuleStructure that this FileStructure represents
      */
     public ModuleStructure getModule() {
-        return (ModuleStructure) getChild(m_idModule);
+        return getModule(getModuleId());
     }
 
     /**
-     * @return the id of the primary Module
+     * @return the ModuleConstant id of the primary Module
      */
     public ModuleConstant getModuleId() {
         return m_idModule;
@@ -561,7 +613,15 @@ public class FileStructure
      * @return an unmodifiable set of the module ids contained within this FileStructure
      */
     public Set<ModuleConstant> moduleIds() {
-        return Collections.unmodifiableSet(f_moduleById.keySet());
+        return getModuleByIdMap().keySet();
+    }
+
+    /**
+     * @return a read-only map containing ModuleStructure keyed by ModuleConstant
+     */
+    Map<ModuleConstant, ModuleStructure> getModuleByIdMap() {
+        ensureChildren();
+        return m_moduleById;
     }
 
     /**
@@ -572,7 +632,7 @@ public class FileStructure
      * @return the specified module, or null if it does not exist in this FileStructure
      */
     public ModuleStructure getModule(ModuleConstant id) {
-        return f_moduleById.get(id);
+        return id == null ? null : getModuleByIdMap().get(id);
     }
 
     /**
@@ -591,7 +651,7 @@ public class FileStructure
      * Obtain the specified module from the FileStructure, creating it if it does not already
      * exist in the FileStructure.
      *
-     * @param id  the module ide
+     * @param id  the module constant
      *
      * @return the specified module
      */
@@ -601,22 +661,6 @@ public class FileStructure
             addChild(module = new ModuleStructure(this, id));
         }
         return module;
-    }
-
-    /**
-     * Find a module with the specified name at this FileStructure.
-     *
-     * @param sName  the qualified module name
-     *
-     * @return the specified module or null if not found
-     */
-    public ModuleStructure findModule(String sName) {
-        for (ModuleStructure module : f_moduleById.values()) {
-            if (module.getName().equals(sName)) {
-                return module;
-            }
-        }
-        return null;
     }
 
     /**
@@ -653,8 +697,10 @@ public class FileStructure
      *
      * @return the first missing module name; null all modules are present
      */
-    private ModuleConstant findMissing(ModuleRepository repository, Set<String> setFilesChecked,
-                               boolean fRuntime) {
+    private ModuleConstant findMissing(
+            ModuleRepository repository,
+            Set<String>      setFilesChecked,
+            boolean          fRuntime) {
         if (!setFilesChecked.add(getModuleId().getName())) {
             return null;
         }
@@ -686,8 +732,9 @@ public class FileStructure
                 // no need to recurse at run-time since all contained modules must have
                 // corresponding fingerprints at the top file
                 if (!fRuntime) {
-                    ModuleStructure moduleUnlinked = repository.loadModule(sModule,
-                                                        idModule.getVersion(), !fRuntime);
+                    ModuleStructure moduleUnlinked = idModule.getVersion() == null
+                            ? repository.loadModule(sModule)
+                            : repository.loadModule(sModule, idModule.getVersion(), !fRuntime);
                     assert moduleUnlinked != null;
 
                     FileStructure fileUnlinked = moduleUnlinked.getFileStructure();
@@ -718,8 +765,11 @@ public class FileStructure
      *
      * @return null iff success, otherwise the id of the first module that could not be linked to
      */
-    private ModuleConstant linkModules(ModuleRepository repository, FileStructure fileTop,
-                                       Set<ModuleConstant> setFilesDone, boolean fRuntime) {
+    private ModuleConstant linkModules(
+            ModuleRepository    repository,
+            FileStructure       fileTop,
+            Set<ModuleConstant> setFilesDone,
+            boolean             fRuntime) {
         if (!setFilesDone.add(getModuleId())) {
             return null;
         }
@@ -752,8 +802,9 @@ public class FileStructure
                 return idModule;
             }
 
-            ModuleStructure moduleUnlinked =
-                    repository.loadModule(idModule.getName(), idModule.getVersion(), !fRuntime);
+            ModuleStructure moduleUnlinked = idModule.getVersion() == null
+                    ? repository.loadModule(idModule.getName())
+                    : repository.loadModule(idModule.getName(), idModule.getVersion(), !fRuntime);
             if (moduleUnlinked == null) {
                 return idModule;
             }
@@ -970,11 +1021,9 @@ public class FileStructure
         ModuleConstant  idOld  = module.getIdentityConstant();
 
         idNew = m_pool.register(idNew);
-
         module.replaceThisIdentityConstant(idNew);
-
-        f_moduleById.put(idNew, module);
         m_pool.replaceModule(idOld, idNew);
+        markModified();
 
         ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
         try {
@@ -1004,37 +1053,31 @@ public class FileStructure
 
     @Override
     protected boolean isSiblingAllowed() {
-        // TODO
-        return false;
+        return getFileKind() != FileKind.Linked;
     }
 
     @Override
     protected void replaceChildIdentityConstant(IdentityConstant idOld, IdentityConstant idNew) {
-        assert idOld instanceof ModuleConstant;
-        assert idNew instanceof ModuleConstant;
-
-        Map<ModuleConstant, ModuleStructure> map = f_moduleById;
-
-        ModuleStructure child = map.remove(idOld);
-        if (child != null) {
-            map.put((ModuleConstant) idNew, child);
-        }
-
-        if (m_idModule.equals(idOld)) {
-            m_idModule = (ModuleConstant) idNew;
+        ModuleConstant midOld = (ModuleConstant) idOld;
+        ModuleConstant midNew = (ModuleConstant) idNew;
+        if (midNew != midOld) {
+            m_moduleById = copyRemap(getModuleByIdMap(), midOld, midNew);
+            if (m_idModule.equals(midOld)) {
+                m_idModule = midNew;
+            }
+            markModified();
         }
     }
 
     @Override
     public Map<String, Component> getChildByNameMap() {
-        // there could be number of child modules with the same name;
-        // "Use f_moduleById or children() instead"
+        // there could be number of child modules with the same name
         throw new UnsupportedOperationException();
     }
 
     @Override
     public Map<String, Component> ensureChildByNameMap() {
-        return getChildByNameMap();
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -1042,12 +1085,12 @@ public class FileStructure
         // FileStructure can only hold ModuleStructures
         assert child instanceof ModuleStructure;
 
-        Map<ModuleConstant, ModuleStructure> kids    = f_moduleById;
+        Map<ModuleConstant, ModuleStructure> kids    = getModuleByIdMap();
         ModuleStructure                      module  = (ModuleStructure) child;
         ModuleConstant                       id      = module.getIdentityConstant();
         ModuleStructure                      sibling = kids.get(id);
         if (sibling == null) {
-            kids.put(id, module);
+            m_moduleById = copyPut(kids, id, module);
         } else if (isSiblingAllowed()) {
             linkSibling(module, sibling);
         } else {
@@ -1063,12 +1106,28 @@ public class FileStructure
         assert child instanceof ModuleStructure;
         assert child.getParent() == this;
 
-        Map<ModuleConstant, ModuleStructure> kids    = f_moduleById;
+        Map<ModuleConstant, ModuleStructure> kids    = getModuleByIdMap();
         ModuleStructure                      module  = (ModuleStructure) child;
         ModuleConstant                       id      = module.getIdentityConstant();
-        ModuleStructure                      sibling = kids.remove(id);
-
-        unlinkSibling(kids, id, module, sibling);
+        ModuleStructure                      sibling = kids.get(id);
+        if (sibling != null) {
+            if (sibling == child) {
+                m_moduleById = child.getNextSibling() == null
+                        ? copyRemove(kids, id) // the only sibling with that id
+                        : copyPut(kids, id, (ModuleStructure) child.getNextSibling());
+                markModified();
+            } else {
+                // the child to remove must be in the middle of the linked list
+                do {
+                    if (sibling.getNextSibling() == child) {
+                        sibling.setNextSibling(child.getNextSibling());
+                        markModified();
+                        break;
+                    }
+                    sibling = (ModuleStructure) sibling.getNextSibling();
+                } while (sibling != null);
+            }
+        }
     }
 
     @Override
@@ -1077,26 +1136,33 @@ public class FileStructure
         assert childNew instanceof ModuleStructure;
         assert childNew.getParent() == this;
         assert childOld.getIdentityConstant().equals(childNew.getIdentityConstant());
-
-        ModuleStructure module = (ModuleStructure) childNew;
-        f_moduleById.put(module.getIdentityConstant(), module);
+        m_moduleById = copyPut(getModuleByIdMap(), (ModuleConstant) childNew.getIdentityConstant(),
+                (ModuleStructure) childNew);
     }
 
     @Override
-    public Component getChild(Constant constId) {
-        return constId instanceof ModuleConstant idModule ? f_moduleById.get(idModule) : null;
+    protected void unlinkSibling(Map kids, Object id, Component child, Component sibling) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected boolean areChildrenIdentical(Component that) {
+        return equalChildMaps(this.getModuleByIdMap(), ((FileStructure) that).getModuleByIdMap());
+    }
+
+    @Override
+    public ModuleStructure getChild(Constant constId) {
+        return constId instanceof ModuleConstant idModule ? getModuleByIdMap().get(idModule) : null;
     }
 
     @Override
     public ModuleStructure getChild(String sName) {
-        return f_moduleById.get(new ModuleConstant(m_pool, sName));
+        return getModuleByIdMap().get(getConstantPool().ensureModuleConstant(sName));
     }
 
     @Override
     public int getChildrenCount() {
-        ensureChildren();
-
-        return f_moduleById.size();
+        return getModuleByIdMap().size();
     }
 
     @Override
@@ -1104,23 +1170,21 @@ public class FileStructure
         return getChildrenCount() > 0;
     }
 
+    @Override
+    public Collection<? extends ModuleStructure> children() {
+        return getModuleByIdMap().values();
+    }
+
     /**
      * @return true iff this FileStructure contains more than one module, i.e. it is a
      *         multi-module container rather than a plain single-module file
      */
-    public boolean hasMultipleChildren() {
-        ensureChildren();
-        return f_moduleById.values().stream()
-                .filter(module -> !module.isFingerprint())
+    public boolean isBundle() {
+        return getChildrenCount() > 1 && getModuleByIdMap().values().stream()
+                .filter(component -> component instanceof ModuleStructure module && !module.isFingerprint())
                 .limit(2)
                 .count() > 1;
     }
-
-    @Override
-    public Collection<? extends ModuleStructure> children() {
-        return f_moduleById.values();
-    }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -1154,29 +1218,17 @@ public class FileStructure
     }
 
     @Override
+    protected void markModified() {
+        super.markModified();
+    }
+
+    @Override
     protected void disassemble(DataInput in)
             throws IOException {
-        // validate that it is an xtc/xvm file format
-        int nMagic = in.readInt();
-        if (nMagic != FILE_MAGIC) {
-            throw new IOException(
-                    "not an .xtc format file; invalid magic header: " + intToHexString(nMagic));
-        }
-
-        // validate the version; this is rather simple in the beginning (before there is a long
-        // history of evolution of the Ecstasy language and the XVM specification), as versions will
-        // initially be ascending-only, but at some point, only up-to-specific-minor-versions of
-        // specific-major-versions are likely to be supported
-        m_nMajorVer = in.readInt();
-        m_nMinorVer = in.readInt();
-        if (!isFileVersionSupported(m_nMajorVer, m_nMinorVer)) {
-            throw new IOException("unsupported version: " + m_nMajorVer + "." + m_nMinorVer);
-        }
-
-        var metadata = hasMetadataHeader(m_nMajorVer, m_nMinorVer) ? readMetadataBlock(in) : null;
-        if (metadata != null) {
-            m_kind = metadata.kind();
-        }
+        FileInfo info = readFileInfo(in, false); // TODO true
+        m_nMajorVer = info.majorVer;
+        m_nMinorVer = info.minorVer;
+        m_kind      = info.kind;
 
         // read in the constant pool
         ConstantPool pool = new ConstantPool(this);
@@ -1186,13 +1238,12 @@ public class FileStructure
         m_idModule = pool.getConstant(readIndex(in), ModuleConstant.class);
         disassembleChildren(in, m_fLazyDeser);
 
-        // must be at least one module (the first module is considered to be the "main" module)
-        if (getModule() == null) {
-            throw new IOException("the file does not contain a primary module");
-        }
+        // TODO remove
+        verifyFileInfo(info);
 
-        if (metadata != null) {
-            verifyMetadata(metadata);
+        // must be at least one module (the first module is considered to be the "main" module)
+        if (moduleIds().isEmpty()) {
+            throw new IOException("the file does not contain any modules");
         }
     }
 
@@ -1215,13 +1266,15 @@ public class FileStructure
     @Override
     protected void assemble(DataOutput out)
             throws IOException {
-        out.writeInt(FILE_MAGIC);
-        out.writeInt(VERSION_MAJOR_CUR);
-        out.writeInt(VERSION_MINOR_CUR);
-        writeMetadataBlock(out, getFileMetadata());
+        writeFileInfo(out);
         m_pool.assemble(out);
         writeMagnitude(out, getModuleId().getPosition());
         assembleChildren(out);
+
+        // after assembling the FileStructure, we assume that we have fully upgraded the structures
+        // to the latest versions, since we only assemble the current XVM version of the structures
+        m_nMajorVer = VERSION_MAJOR_CUR;
+        m_nMinorVer = VERSION_MINOR_CUR;
     }
 
     @Override
@@ -1321,7 +1374,6 @@ public class FileStructure
         m_errs = errs;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -1340,83 +1392,96 @@ public class FileStructure
             // XVM structures
             return this.m_nMajorVer == that.m_nMajorVer
                     && this.m_nMinorVer == that.m_nMinorVer
+                    && this.m_kind.equals(that.m_kind)
                     && this.m_idModule.equals(that.m_idModule)
-                    && this.f_moduleById.equals(that.f_moduleById);
+                    && this.getModuleByIdMap().equals(that.getModuleByIdMap());
         }
 
         return false;
     }
 
-
     // ----- file metadata ---------------------------------------------------------------------------
 
     /**
-     * Persistent kind of a FileStructure.
+     * A representation of the "kind" of a FileStructure.
      */
     public enum FileKind {
         /**
-         * Compiler-style output: one real module, plus any number of dependency fingerprints.
+         * A FileTemplate containing a Single primary module, and the fingerprints of the modules
+         * that the primary module depends upon. This Kind corresponds to the output of the
+         * compiler.
          */
         Single,
 
         /**
-         * Repository-style output: multiple real modules and/or versions, plus any number of
-         * dependency fingerprints.
+         * A Library FileTemplate can contain multiple modules and/or versions of those modules that
+         * have been bundled together, plus all of the module fingerprints of the dependencies of
+         * those modules. This Kind corresponds to the contents managed by a repository, and also
+         * is used for deploying an application composed of multiple modules as a single file.
          */
         Library,
 
         /**
-         * Execution-style output: a fully linked, transitively closed module graph, with no
-         * fingerprints.
+         * A Linked FileTemplate is a fully linked, transitively closed module graph, with no
+         * fingerprints. This Kind corresponds to the representation of a linked module at runtime,
+         * and can also be used to pre-link and store an application in a manner that it is more
+         * quickly loaded when being executed from an OS terminal.
          */
-        Executable
+        Linked,
+        ;
+
+        public static FileKind fromOrdinal(int i) {
+            return switch (i) {
+                case 0 -> Single;
+                case 1 -> Library;
+                case 2 -> Linked;
+                default -> throw new IllegalArgumentException("illegal FileKind ordinal " + i);
+            };
+        }
     }
 
     /**
-     * Constant-pool-free metadata stored at the front of a persistent FileStructure.
+     * Metadata stored in the FileStructure header for fast access. For efficiency, this metadata
+     * does not reference or use a ConstantPool.
      *
-     * @param kind              the persistent file kind
-     * @param moduleNames       real module names contained in the file; fingerprints are excluded
-     * @param versionsByModule  optional version strings keyed by module name
+     * @param majorVer  the major XVM (.xtc) version of the file
+     * @param minorVer  the minor XVM (.xtc) version of the file
+     * @param kind      the persistent file kind
+     * @param modules   (optional) module names and any versions thereof contained in the file;
+     *                  fingerprint modules should not be included
      */
-    public record FileMetadata(FileKind kind,
-                               List<String> moduleNames,
-                               Map<String, List<String>> versionsByModule) {
-        public FileMetadata {
+    public record FileInfo(
+            int                               majorVer,
+            int                               minorVer,
+            FileKind                          kind,
+            Map<String, VersionTree<Boolean>> modules) {
+        public FileInfo {
             if (kind == null) {
                 throw new IllegalArgumentException("file kind required");
             }
 
-            moduleNames = List.copyOf(moduleNames);
-
-            var mapCopy = new LinkedHashMap<String, List<String>>();
-            versionsByModule.forEach((sName, listVersions) ->
-                    mapCopy.put(sName, List.copyOf(listVersions)));
-            versionsByModule = Collections.unmodifiableMap(mapCopy);
+            if (modules != null) {
+                assert kind != FileKind.Single || modules.size() == 1;
+                modules = modules.entrySet().stream().collect(Collectors.toUnmodifiableMap(
+                        Entry::getKey,
+                        e -> ((VersionTree) e.getValue()).ensureReadOnly()));
+            }
         }
 
         /**
-         * @return true iff the file physically contains more than one real module
+         * @return `true` iff the file physically contains more than one real module
          */
         public boolean hasMultipleModules() {
-            return moduleNames.size() > 1;
+            return modules.size() > 1;
         }
 
         /**
-         * @return true iff this metadata describes a Library or Executable file
+         * @return `true` iff this metadata describes a Library or Linked file
          */
         public boolean isBundle() {
             return kind != FileKind.Single;
         }
     }
-
-
-    // ----- constants -------------------------------------------------------------------------------
-
-    /**
-     * First metadata block format.
-     */
-    private static final int FILE_METADATA_FORMAT = 1;
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -1424,6 +1489,23 @@ public class FileStructure
      * The file that the file structure was loaded from.
      */
     private File m_file;
+
+    /**
+     * If the structure was disassembled from a binary, this is the major version of the Ecstasy/XVM
+     * specification that the binary was assembled with. Otherwise, it is the current version.
+     */
+    private int m_nMajorVer;
+
+    /**
+     * If the structure was disassembled from a binary, this is the minor version of the Ecstasy/XVM
+     * specification that the binary was assembled with. Otherwise, it is the current version.
+     */
+    private int m_nMinorVer;
+
+    /**
+     * The persistent file kind.
+     */
+    private FileKind m_kind = FileKind.Single;
 
     /**
      * The indicator that deserialization of components should be done lazily (deferred).
@@ -1446,14 +1528,10 @@ public class FileStructure
     private ModuleConstant m_idModule;
 
     /**
-     * The persistent file kind.
+     * This holds the child ModuleStructure objects, keyed by ModuleConstant. The Map must always be
+     * an unmodifiable Map.
      */
-    private FileKind m_kind = FileKind.Single;
-
-    /**
-     * This holds all of the children modules.
-     */
-    private final Map<ModuleConstant, ModuleStructure> f_moduleById = new HashMap<>();
+    private Map<ModuleConstant, ModuleStructure> m_moduleById = Collections.emptyMap();
 
     /**
      * The ConstantPool for the FileStructure.
@@ -1463,19 +1541,12 @@ public class FileStructure
     /**
      * The AssemblerContext that is associated with this FileStructure.
      */
-    private AssemblerContext m_ctx;
+    private transient AssemblerContext m_ctx;
 
     /**
-     * If the structure was disassembled from a binary, this is the major version of the Ecstasy/XVM
-     * specification that the binary was assembled with. Otherwise, it is the current version.
+     * Holds an ErrorListener explicitly provided to this FileStructure. An absence of an
+     * ErrorListener implies that either the ErrorListener from the ConstantPool associated with
+     * the current thread should be used, or failing that, the runtime ErrorListener should be used.
      */
-    private int m_nMajorVer;
-
-    /**
-     * If the structure was disassembled from a binary, this is the minor version of the Ecstasy/XVM
-     * specification that the binary was assembled with. Otherwise, it is the current version.
-     */
-    private int m_nMinorVer;
-
     private transient ErrorListener m_errs;
 }

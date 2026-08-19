@@ -85,7 +85,7 @@ public class xCoreRepository
             ModuleStructure  module = repo.loadModule(sName);
 
             if (module != null && !module.isMainModule()
-                    && module.getFileStructure().hasMultipleChildren()) {
+                    && module.getFileStructure().isBundle()) {
                 // a non-main module served out of a multi-module container ("bundle") is handed
                 // out as a detached copy, so that reflection anchored on its file structure (such
                 // as "template.parent.resolve(repo).mainModule" in getResolvedModule) behaves
