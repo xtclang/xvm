@@ -307,7 +307,27 @@ public class Int16 extends IntNumber {
             OutOfBounds oob = new OutOfBounds(ctx);
             throw oob.$init(ctx, "Int16 value " + thi$ + " is not a valid UIntN value");
         }
-        return UIntN.$box(thi$);
+        return UIntN.$box(((long) thi$) & 0xFFFFL);
+    }
+
+    /**
+     * The native implementation of:
+     * <pre>
+     *     IntN toIntN()
+     * </pre>
+     */
+    public IntN toIntN(Ctx ctx) {
+        return toIntN$p($value, ctx);
+    }
+
+    /**
+     * The native implementation of:
+     * <pre>
+     *     UIntN toUIntN()
+     * </pre>
+     */
+    public UIntN toUIntN$p(Ctx ctx) {
+        return toUIntN$p($value, ctx);
     }
 
     // ----- debugging support ---------------------------------------------------------------------

@@ -152,21 +152,19 @@ public abstract class BaseInt128
             return frame.assignValue(iReturn, xInt64.makeHandle(128));
 
         case "leftmostBit": {
-            LongLong ll = ((LongLongHandle) hTarget).getValue();
-            long     lH = ll.getHighValue();
-
-            return frame.assignValue(iReturn, xInt64.makeHandle(lH == 0
-                ? Long.highestOneBit(ll.getLowValue())
-                : Long.highestOneBit(lH) + 64));
+            LongLong ll  = ((LongLongHandle) hTarget).getValue();
+            long     lH  = ll.getHighValue();
+            LongLong lmb = lH == 0 ? new LongLong(Long.highestOneBit(ll.getLowValue()), 0L)
+                                   : new LongLong(0L, Long.highestOneBit(lH));
+            return frame.assignValue(iReturn, makeHandle(lmb));
         }
 
         case "rightmostBit": {
             LongLong ll   = ((LongLongHandle) hTarget).getValue();
             long     lLow = ll.getLowValue();
-
-            return frame.assignValue(iReturn, xInt64.makeHandle(lLow == 0
-                ? 64 + Long.lowestOneBit(ll.getHighValue())
-                : Long.lowestOneBit(lLow)));
+            LongLong rmb  = lLow == 0 ? new LongLong(0L, Long.lowestOneBit(ll.getHighValue()))
+                                      : new LongLong(Long.lowestOneBit(lLow), 0L);
+            return frame.assignValue(iReturn, makeHandle(rmb));
         }
 
         case "leadingZeroCount": {
@@ -487,7 +485,13 @@ public abstract class BaseInt128
 
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        return ((LongLongHandle) hValue1).getValue().equals(((LongLongHandle) hValue2).getValue());
+        LongLong value1;
+        if (hValue1 instanceof LongLongHandle lh) {
+            value1 = lh.getValue();
+        } else {
+            value1 = new LongLong(((JavaLong) hValue1).getValue(), 0);
+        }
+        return value1.equals(((LongLongHandle) hValue2).getValue());
     }
 
     @Override

@@ -427,6 +427,22 @@ public abstract class FPNumber extends Number {
         return UInt128.$fromBigInteger(ctx, bi);
     }
 
+    public IntN toIntN$FP$p(Ctx ctx, Rounding direction) {
+        BigInteger bi = $toBigInteger(direction);
+        return IntN.$box(bi);
+    }
+
+    public UIntN toUIntN$FP$p(Ctx ctx, Rounding direction) {
+        if ($isSigned()) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+                    + " is not a valid UIntN value");
+        }
+        BigInteger bi = $toBigInteger(direction);
+        return UIntN.$box(bi);
+    }
+
+
     // ----- inner class Rounding ------------------------------------------------------------------
 
     /**

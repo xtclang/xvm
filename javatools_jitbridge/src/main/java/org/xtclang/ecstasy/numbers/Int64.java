@@ -381,6 +381,26 @@ public class Int64 extends IntNumber {
         return UIntN.$box(thi$);
     }
 
+    /**
+     * The native implementation of:
+     * <pre>
+     *     IntN toIntN()
+     * </pre>
+     */
+    public IntN toIntN(Ctx ctx) {
+        return toIntN$p($value, ctx);
+    }
+
+    /**
+     * The native implementation of:
+     * <pre>
+     *     UIntN toUIntN()
+     * </pre>
+     */
+    public UIntN toUIntN$p(Ctx ctx) {
+        return toUIntN$p($value, ctx);
+    }
+
     // ----- Orderable interface -------------------------------------------------------------------
 
     /**

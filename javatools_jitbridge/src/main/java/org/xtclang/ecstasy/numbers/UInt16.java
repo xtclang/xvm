@@ -176,7 +176,7 @@ public class UInt16 extends UIntNumber {
      * </pre>
      */
     public static IntN toIntN$p(int thi$, Ctx ctx) {
-        return IntN.$box(thi$);
+        return IntN.$box(((long) thi$) & 0xFFFFL);
     }
 
     /**
@@ -290,7 +290,27 @@ public class UInt16 extends UIntNumber {
      * </pre>
      */
     public static UIntN toUIntN$p(int thi$, Ctx ctx) {
-        return UIntN.$box(thi$);
+        return UIntN.$box(((long) thi$) & 0xFFFFL);
+    }
+
+    /**
+     * The native implementation of:
+     * <pre>
+     *     IntN toIntN()
+     * </pre>
+     */
+    public IntN toIntN(Ctx ctx) {
+        return toIntN$p($value, ctx);
+    }
+
+    /**
+     * The native implementation of:
+     * <pre>
+     *     UIntN toUIntN()
+     * </pre>
+     */
+    public UIntN toUIntN$p(Ctx ctx) {
+        return toUIntN$p($value, ctx);
     }
 
     // ----- debugging support ---------------------------------------------------------------------

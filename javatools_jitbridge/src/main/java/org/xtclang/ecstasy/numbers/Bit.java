@@ -216,6 +216,26 @@ public class Bit extends nConst {
     }
 
     /**
+     * The primitive implementation of:
+     * <pre>
+     *     IntN toIntN()
+     * </pre>
+     */
+    public IntN toIntN(Ctx ctx) {
+        return toIntN$p($value, ctx);
+    }
+
+    /**
+     * The primitive implementation of:
+     * <pre>
+     *     IntN toIntN()
+     * </pre>
+     */
+    public static IntN toIntN$p(int thi$, Ctx ctx) {
+        return thi$ == 0 ? IntN.zero(ctx) : IntN.one(ctx);
+    }
+
+    /**
      * The primitive implementation of Nibble toNibble(Boolean checkBounds = False)
      *
      * @param ctx              the build context
@@ -298,6 +318,26 @@ public class Bit extends nConst {
     public static long toUInt128$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         ctx.i0 = 0L;
         return thi$ & 0x1L;
+    }
+
+    /**
+     * The primitive implementation of:
+     * <pre>
+     *     IntN toIntN()
+     * </pre>
+     */
+    public UIntN toUIntN(Ctx ctx) {
+        return toUIntN$p($value, ctx);
+    }
+
+    /**
+     * The primitive implementation of:
+     * <pre>
+     *     IntN toIntN()
+     * </pre>
+     */
+    public static UIntN toUIntN$p(int thi$, Ctx ctx) {
+        return thi$ == 0 ? UIntN.zero(ctx): UIntN.one(ctx);
     }
 
     // ----- debugging support ---------------------------------------------------------------------

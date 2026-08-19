@@ -183,6 +183,14 @@ public class Float32 extends BinaryFPNumber {
         return $box(thi$).toUInt128$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
     }
 
+    public static IntN toIntN$FP$p(float thi$, Ctx ctx, Rounding direction) {
+        return $box(thi$).toIntN$FP$p(ctx, direction);
+    }
+
+    public static UIntN toUIntN$FP$p(float thi$, Ctx ctx, Rounding direction) {
+        return $box(thi$).toUIntN$FP$p(ctx, direction);
+    }
+
     public static int toDec32$p(float thi$, Ctx ctx) {
         if (Float.isFinite(thi$)) {
             return Dec32.$toIntBits(ctx, $box(thi$).$toBigDecimal());

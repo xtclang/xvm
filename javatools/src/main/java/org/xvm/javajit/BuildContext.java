@@ -3279,24 +3279,6 @@ public class BuildContext {
     }
 
     /**
-     * Adjust the int value on the stack according to its type.
-     */
-    public void adjustIntValue(CodeBuilder code, TypeConstant type) {
-        switch (type.getSingleUnderlyingClass(false).getName()) {
-            case "Bit"    -> code.i2b().ldc(0x01).iand();
-            case "Nibble" -> code.ldc(0x0F).iand();
-            case "Int8"   -> code.i2b();
-            case "UInt8"  -> code.ldc(0xFF).iand();
-            case "Int16"  -> code.i2s();
-            case "UInt16" -> code.ldc(0xFFFF).iand();
-            case "Int32",
-                 "UInt32",
-                 "Char"   -> {}
-            default       -> throw new IllegalStateException();
-        }
-    }
-
-    /**
      * Create a temporary {@link RegisterInfo} for internal "use once within a scope" scenarios.
      * This register can only be addressed via the synthetic register -1, at which point it will be
      * "popped".

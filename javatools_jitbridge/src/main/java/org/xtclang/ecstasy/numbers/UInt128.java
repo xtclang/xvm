@@ -295,7 +295,7 @@ public class UInt128 extends UIntNumber {
      * </pre>
      */
     public static IntN toIntN$p(long thi$Lo, long thi$Hi, Ctx ctx) {
-        return IntN.$box(thi$Lo, thi$Hi);
+        return IntN.$box($toBigInteger(thi$Lo, thi$Hi));
     }
 
     /**
@@ -430,7 +430,27 @@ public class UInt128 extends UIntNumber {
      * </pre>
      */
     public static UIntN toUIntN$p(long thi$Lo, long thi$Hi, Ctx ctx) {
-        return UIntN.$box(thi$Lo, thi$Hi);
+        return UIntN.$box($toBigInteger(thi$Lo, thi$Hi));
+    }
+
+    /**
+     * The native implementation of:
+     * <pre>
+     *     IntN toIntN()
+     * </pre>
+     */
+    public IntN toIntN(Ctx ctx) {
+        return toIntN$p($lowValue, $highValue, ctx);
+    }
+
+    /**
+     * The native implementation of:
+     * <pre>
+     *     UIntN toUIntN()
+     * </pre>
+     */
+    public UIntN toUIntN$p(Ctx ctx) {
+        return toUIntN$p($lowValue, $highValue, ctx);
     }
 
     // ----- Orderable interface -------------------------------------------------------------------
