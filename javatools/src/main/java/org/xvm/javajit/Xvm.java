@@ -214,7 +214,9 @@ public class Xvm {
             repo = systemRepo;
         }
 
-        ModuleStructure moduleStructure = repo.loadModule(module, ver, false);
+        ModuleStructure moduleStructure = ver == null
+                ? repo.loadModule(module)
+                : repo.loadModule(module, ver, false);
         return moduleStructure == null ? null : createTypeSystem(repo, moduleStructure, refiner);
     }
 

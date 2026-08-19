@@ -15,6 +15,7 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.Version;
 import org.xvm.asm.ModuleStructure.ModuleType;
 
+import org.xvm.asm.VersionTree;
 import org.xvm.tool.LauncherOptions.BundlerOptions;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -106,25 +107,25 @@ class BundlerTest {
         // merge ModA into ModB's container, per the Bundler recipe
         var bundle = new FileStructure(fileB.getModule(), false);
         bundle.merge(fileA.getModule(), false, false);
-        bundle.findModule("ModA").markEmbedded();
+        bundle.getChild("ModA").markEmbedded();
 
-        assertTrue(bundle.hasMultipleChildren());
+        assertTrue(bundle.isBundle());
         assertEquals("ModB", bundle.getModuleId().getName());
 
         var fileOut = tempDir.resolve("bundle.xtc").toFile();
         bundle.writeTo(fileOut);
 
-        var metadata = FileStructure.readMetadata(fileOut);
+        var metadata = FileStructure.readFileInfo(fileOut);
         assertEquals(FileStructure.FileKind.Library, metadata.kind());
-        assertEquals(List.of("ModB", "ModA"), metadata.moduleNames());
-        assertEquals(List.of(verA.toString()), metadata.versionsByModule().get("ModA"));
+        assertEquals(Set.of("ModB", "ModA"), metadata.modules().keySet());
+        assertEquals(new VersionTree(verA, true), metadata.modules().get("ModA"));
 
         // the container round-trips with both modules and their types intact
         var reread = new FileStructure(fileOut);
         assertEquals("ModB", reread.getModuleId().getName());
-        assertNotNull(reread.findModule("ModA"));
-        assertEquals(ModuleType.Embedded, reread.findModule("ModA").getModuleType());
-        assertFalse(reread.findModule("ModA").isFingerprint());
+        assertNotNull(reread.getChild("ModA"));
+        assertEquals(ModuleType.Embedded, reread.getChild("ModA").getModuleType());
+        assertFalse(reread.getChild("ModA").isFingerprint());
 
         // the generalized FileRepository exposes and serves both modules by name
         var repo = new FileRepository(fileOut, true);
@@ -166,10 +167,10 @@ class BundlerTest {
         var fileOut = tempDir.resolve("solo.xtc").toFile();
         file.writeTo(fileOut);
 
-        var metadata = FileStructure.readMetadata(fileOut);
+        var metadata = FileStructure.readFileInfo(fileOut);
         assertEquals(FileStructure.FileKind.Single, metadata.kind());
-        assertEquals(List.of("Solo"), metadata.moduleNames());
-        assertEquals(List.of(version.toString()), metadata.versionsByModule().get("Solo"));
+        assertEquals(Set.of("Solo"), metadata.modules().keySet());
+        assertEquals(new VersionTree(version, true), metadata.modules().get("Solo"));
 
         var repo = new FileRepository(fileOut, true);
         assertEquals(Set.of("Solo"), repo.getModuleNames());

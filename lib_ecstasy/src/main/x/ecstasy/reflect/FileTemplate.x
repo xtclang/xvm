@@ -10,21 +10,27 @@ interface FileTemplate
      */
     enum Kind {
         /**
-         * Compiler-style output: one real module, plus any number of dependency fingerprints.
+         * A FileTemplate containing a Single primary module, and the fingerprints of the modules
+         * that the primary module depends upon. This Kind corresponds to the output of the
+         * compiler.
          */
         Single,
 
         /**
-         * Repository-style output: multiple real modules and/or versions, plus any number of
-         * dependency fingerprints.
+         * A Library FileTemplate can contain multiple modules and/or versions of those modules that
+         * have been bundled together, plus all of the module fingerprints of the dependencies of
+         * those modules. This Kind corresponds to the contents managed by a repository, and also
+         * is used for deploying an application composed of multiple modules as a single file.
          */
         Library,
 
         /**
-         * Execution-style output: a fully linked, transitively closed module graph, with no
-         * fingerprints.
+         * A Linked FileTemplate is a fully linked, transitively closed module graph, with no
+         * fingerprints. This Kind corresponds to the representation of a linked module at runtime,
+         * and can also be used to pre-link and store an application in a manner that it is more
+         * quickly loaded when being executed from an OS terminal.
          */
-        Executable,
+        Linked,
     }
 
     /**
@@ -44,7 +50,7 @@ interface FileTemplate
     @RO String[] moduleNames;
 
     /**
-     * Indicates whether the file physically contains a library or executable bundle.
+     * Indicates whether the file physically contains a library or Linked bundle.
      */
     @RO Boolean bundle.get() = kind != Single;
 

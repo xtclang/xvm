@@ -1016,7 +1016,7 @@ public class TypeCompositionStatement
                 Version              version    = vtreeAllow.isEmpty() ? null : vtreeAllow.findLowestVersion();
 
                 boolean         fNewFingerprint = false;
-                ModuleStructure moduleImport    = fileStruct.findModule(sModule);
+                ModuleStructure moduleImport    = fileStruct.getChild(sModule);
                 if (moduleImport == null) {
                     // create the fingerprint
                     fNewFingerprint = true;

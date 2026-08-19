@@ -43,7 +43,7 @@ Persistent `.xtc` files now also record a constant-pool-free `FileTemplate.Kind`
   fingerprints.
 - **`Library`** — repository-style output: more than one real module and/or module version, plus
   any number of fingerprints. This is what `xtc bundle` produces for multi-module output.
-- **`Executable`** — execution-style output: a fully linked, transitively closed module graph, with no
+- **`Linked`** — execution-style output: a fully linked, transitively closed module graph, with no
   fingerprints. The kind is representable now; a producing workflow is future work.
 
 The same header also records the real module names, excluding fingerprints, and optional version
@@ -134,9 +134,9 @@ contracts:
   continues to call the same members. `reflect.ModuleTemplate.fingerprint` keeps the same property
   signature, but is now native-backed instead of using the previous heuristic default getter; this
   makes embedded real modules and dependency fingerprints distinguishable without changing callers.
-- **Java file metadata.** `FileStructure` now exposes `FileKind`, `FileMetadata`,
-  `getFileKind()`, `setFileKind(...)`, `getFileMetadata()`, and `readMetadata(...)` overloads for
-  `File`, `InputStream`, and `DataInput`. `readMetadata(...)` reads only the header block and does
+- **Java file metadata.** `FileStructure` now exposes `FileKind`, `FileInfo`,
+  `getFileKind()`, `setFileKind(...)`, `buildFileInfo()`, and `readFileInfo(...)` overloads for
+  `File`, `InputStream`, and `DataInput`. `readFileInfo(...)` reads only the header block and does
   not deserialize the constant pool or module bodies, which is what lets `FileRepository` list
   bundled module names cheaply.
 - **Typed runtime accessors.** `ObjectHandle.as(Class<T>)`,
@@ -235,7 +235,7 @@ Decisions worth remembering, and why they went the way they did:
 | Verb registration, help, dispatch | `javatools/.../org/xvm/tool/Launcher.java` (`CMD_BUNDLE`) |
 | Merge collision upgrade + sibling-dep fingerprint synthesis | `FileStructure.merge` in `javatools/.../org/xvm/asm/FileStructure.java` |
 | Runtime link tolerance | `FileStructure.linkModules` (runtime branch) |
-| Persistent metadata header | `FileStructure.FileMetadata` and `FileStructure.readMetadata` |
+| Persistent metadata header | `FileStructure.FileInfo` and `FileStructure.readFileInfo` |
 | Multi-module repository read path, detached serving | `javatools/.../org/xvm/asm/FileRepository.java` |
 | Ecstasy metadata API | `reflect.FileTemplate.kind`, `moduleNames`, `bundle` |
 | Embedded marking | `ModuleStructure.markEmbedded()` |

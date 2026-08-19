@@ -99,7 +99,7 @@ public class xRTFileTemplate
 
         case "moduleNames":
             return frame.assignValue(iReturn, xString.makeArrayHandle(
-                    fileStruct.getFileMetadata().moduleNames().toArray(Utils.NO_NAMES)));
+                    fileStruct.buildFileInfo().modules().keySet().toArray(new String[0])));
 
         case "resolved":
             return frame.assignValue(iReturn, xBoolean.makeHandle(fileStruct.isLinked()));
