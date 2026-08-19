@@ -213,7 +213,7 @@ val prepareDistributionScripts = tasks.register<Copy>("prepareDistributionScript
  *
  *     java -jar javatools.jar run -L xdk.xtc app.xtc
  */
-val bundleXdk by tasks.registering(JavaExec::class) {
+val bundleXdk = tasks.register<JavaExec>("bundleXdk") {
     group = "distribution"
     description = "Bundle all XDK modules into a single self-contained xdk.xtc"
     dependsOn(tasks.installDist)
