@@ -378,6 +378,14 @@ public class xRTComponentTemplate
             return clzComponent.cast(f_struct);
         }
 
+        public FileStructure getFileStructure() {
+            return getComponent(FileStructure.class);
+        }
+
+        public ModuleStructure getModuleStructure() {
+            return getComponent(ModuleStructure.class);
+        }
+
         @Override
         public String toString() {
             return super.toString() + f_struct.getName();

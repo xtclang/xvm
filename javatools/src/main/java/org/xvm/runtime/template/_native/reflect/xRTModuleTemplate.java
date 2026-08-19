@@ -63,13 +63,13 @@ public class xRTModuleTemplate
         ComponentTemplateHandle hTemplate = hTarget.as(ComponentTemplateHandle.class);
         switch (sPropName) {
         case "qualifiedName": {
-            ModuleStructure module = hTemplate.getComponent(ModuleStructure.class);
+            ModuleStructure module = hTemplate.getModuleStructure();
             return frame.assignValue(iReturn,
                 xString.makeHandle(module.getIdentityConstant().getName()));
         }
 
         case "versionString": {
-            ModuleStructure       module   = hTemplate.getComponent(ModuleStructure.class);
+            ModuleStructure       module   = hTemplate.getModuleStructure();
             String                sVersion;
             if (module.isFingerprint()) {
                 VersionTree<Boolean> vtree = module.getFingerprintVersions();
@@ -86,12 +86,12 @@ public class xRTModuleTemplate
             return getPropertyModulesByPath(frame, hTemplate, iReturn);
 
         case "fingerprint": {
-            ModuleStructure module = hTemplate.getComponent(ModuleStructure.class);
+            ModuleStructure module = hTemplate.getModuleStructure();
             return frame.assignValue(iReturn, xBoolean.makeHandle(module.isFingerprint()));
         }
 
         case "resolved": {
-            ModuleStructure module = hTemplate.getComponent(ModuleStructure.class);
+            ModuleStructure module = hTemplate.getModuleStructure();
             return frame.assignValue(iReturn, xBoolean.makeHandle(module.getFileStructure().isLinked()));
         }
         }
@@ -104,7 +104,7 @@ public class xRTModuleTemplate
      */
     public int getPropertyModulesByPath(Frame frame, ComponentTemplateHandle hTemplate, int iReturn) {
         // TODO GG: how to cache the result?
-        ModuleStructure module    = hTemplate.getComponent(ModuleStructure.class);
+        ModuleStructure module    = hTemplate.getModuleStructure();
         Container       container = frame.f_context.f_container;
         TypeComposition clzMap    = container.resolveClass(ensureListMapType());
 
