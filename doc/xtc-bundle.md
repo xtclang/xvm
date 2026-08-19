@@ -43,7 +43,7 @@ Persistent `.xtc` files now also record a constant-pool-free `FileTemplate.Kind`
   fingerprints.
 - **`Library`** — repository-style output: more than one real module and/or module version, plus
   any number of fingerprints. This is what `xtc bundle` produces for multi-module output.
-- **`Xecable`** — execution-style output: a fully linked, transitively closed module graph, with no
+- **`Executable`** — execution-style output: a fully linked, transitively closed module graph, with no
   fingerprints. The kind is representable now; a producing workflow is future work.
 
 The same header also records the real module names, excluding fingerprints, and optional version
