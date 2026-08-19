@@ -17,6 +17,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -139,14 +140,11 @@ public class DirRepository
             return;
         }
 
-        File[] files = m_dir.listFiles(ModulesOnly);
-        if (files == null) {
-            modulesByFile = new HashMap<>();
-            modulesByName.clear();
-            lastScan = System.currentTimeMillis();
-            return;
-        }
+        Optional.ofNullable(m_dir.listFiles(ModulesOnly))
+                .ifPresentOrElse(this::rebuildCache, this::clearCache);
+    }
 
+    private void rebuildCache(File[] files) {
         Map<File, ModuleInfo> oldModulesByFile = modulesByFile;
         boolean               fWriteCache      = false;
         if (oldModulesByFile.isEmpty()) {
@@ -182,6 +180,12 @@ public class DirRepository
         if (fWriteCache) {
             writeCache();
         }
+    }
+
+    private void clearCache() {
+        modulesByFile.clear();
+        modulesByName.clear();
+        lastScan = System.currentTimeMillis();
     }
 
     /**

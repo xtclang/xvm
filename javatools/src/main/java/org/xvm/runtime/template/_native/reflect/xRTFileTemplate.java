@@ -83,7 +83,7 @@ public class xRTFileTemplate
 
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
-        ComponentTemplateHandle hFile      = hTarget.as(ComponentTemplateHandle.class);
+        ComponentTemplateHandle hFile      = componentTemplateHandle(hTarget);
         FileStructure           fileStruct = hFile.getFileStructure();
 
         switch (sPropName) {
@@ -127,7 +127,7 @@ public class xRTFileTemplate
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn) {
-        ComponentTemplateHandle hFile = hTarget.as(ComponentTemplateHandle.class);
+        ComponentTemplateHandle hFile = componentTemplateHandle(hTarget);
         FileStructure           file  = hFile.getFileStructure();
         switch (method.getName()) {
         case "resolve":
@@ -143,7 +143,7 @@ public class xRTFileTemplate
     @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                               ObjectHandle[] ahArg, int[] aiReturn) {
-        ComponentTemplateHandle hFile = hTarget.as(ComponentTemplateHandle.class);
+        ComponentTemplateHandle hFile = componentTemplateHandle(hTarget);
         FileStructure           file  = hFile.getFileStructure();
         switch (method.getName()) {
         case "extractVersionImpl": { // conditional ModuleTemplate extractVersionImpl(String version)
@@ -213,7 +213,7 @@ public class xRTFileTemplate
         }
 
         for (ObjectHandle hAddModule : ahAddModules) {
-            ComponentTemplateHandle hModule = hAddModule.as(ComponentTemplateHandle.class);
+            ComponentTemplateHandle hModule = componentTemplateHandle(hAddModule);
             file.merge(hModule.getModuleStructure(), true, false);
             assert file.validateConstants();
         }
@@ -257,7 +257,7 @@ public class xRTFileTemplate
 
         GenericArrayDelegate haGeneric = hArray.m_hDelegate.as(GenericArrayDelegate.class);
         for (long i = 0, c = haGeneric.m_cSize; i < c; i++) {
-            ComponentTemplateHandle hModule        = haGeneric.get(i).as(ComponentTemplateHandle.class);
+            ComponentTemplateHandle hModule        = componentTemplateHandle(haGeneric.get(i));
             ModuleStructure         moduleUnlinked = hModule.getModuleStructure();
             ModuleStructure         moduleReplace  = file.getModule(moduleUnlinked.getIdentityConstant());
 
@@ -304,7 +304,7 @@ public class xRTFileTemplate
 
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
-        FileStructure module = hTarget.as(ComponentTemplateHandle.class).getFileStructure();
+        FileStructure module = componentTemplateHandle(hTarget).getFileStructure();
         return frame.assignValue(iReturn, xString.makeHandle(module.getModuleId().getName()));
     }
 
