@@ -1316,11 +1316,12 @@ public class CommonBuilder
     protected void assembleGenericProperty(ClassBuilder classBuilder, String name) {
         classBuilder.withMethodBody(name + "$get", MethodTypeDesc.of(CD_nType, CD_Ctx),
             ClassFile.ACC_PUBLIC, code ->
-                // return nObject.$type(ctx, name);
+                // return nObject.$typeForName(ctx, name);
                 code.aload(0)                     // this
                     .aload(code.parameterSlot(0)) // ctx
                     .ldc(name)
-                    .invokevirtual(CD_nObject, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString))
+                    .invokevirtual(CD_nObject, "$typeForName",
+                            MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString))
                     .areturn()
         );
     }
