@@ -371,7 +371,8 @@ public class FileStructure
      */
     public static FileMetadata readMetadata(InputStream in)
             throws IOException {
-        return readMetadataFrom(new DataInputStream(in));
+        DataInput data = new DataInputStream(in);
+        return readMetadata(data);
     }
 
     /**
