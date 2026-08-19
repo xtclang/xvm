@@ -73,7 +73,7 @@ public class xRTComponentTemplate
 
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
-        ComponentTemplateHandle hComponent = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle hComponent = componentTemplateHandle(hTarget);
         switch (sPropName) {
         case "access":
             return getPropertyAccess(frame, hComponent, iReturn);
@@ -106,7 +106,7 @@ public class xRTComponentTemplate
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn) {
-        ComponentTemplateHandle hComponent = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle hComponent = componentTemplateHandle(hTarget);
         switch (method.getName()) {
         case "children":
             return invokeChildren(frame, hComponent, iReturn);
@@ -118,8 +118,8 @@ public class xRTComponentTemplate
     @Override
     public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
-        ComponentTemplateHandle hTemplate1 = (ComponentTemplateHandle) hValue1;
-        ComponentTemplateHandle hTemplate2 = (ComponentTemplateHandle) hValue2;
+        ComponentTemplateHandle hTemplate1 = componentTemplateHandle(hValue1);
+        ComponentTemplateHandle hTemplate2 = componentTemplateHandle(hValue2);
 
         return frame.assignValue(iReturn,
             xBoolean.makeHandle(hTemplate1.getComponent().equals(hTemplate2.getComponent())));
@@ -127,8 +127,8 @@ public class xRTComponentTemplate
 
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        ComponentTemplateHandle hTemplate1 = (ComponentTemplateHandle) hValue1;
-        ComponentTemplateHandle hTemplate2 = (ComponentTemplateHandle) hValue2;
+        ComponentTemplateHandle hTemplate1 = componentTemplateHandle(hValue1);
+        ComponentTemplateHandle hTemplate2 = componentTemplateHandle(hValue2);
 
         return hTemplate1.getComponent() == hTemplate2.getComponent();
     }
@@ -319,6 +319,10 @@ public class xRTComponentTemplate
     }
 
     // ----- ObjectHandle --------------------------------------------------------------------------
+
+    protected static ComponentTemplateHandle componentTemplateHandle(ObjectHandle hTemplate) {
+        return hTemplate.as(ComponentTemplateHandle.class);
+    }
 
     /**
      * Given a Component structure, create ComponentTemplateHandle for it.

@@ -60,7 +60,7 @@ public class xRTModuleTemplate
 
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
-        ComponentTemplateHandle hTemplate = hTarget.as(ComponentTemplateHandle.class);
+        ComponentTemplateHandle hTemplate = componentTemplateHandle(hTarget);
         switch (sPropName) {
         case "qualifiedName": {
             ModuleStructure module = hTemplate.getModuleStructure();

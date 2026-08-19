@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -18,6 +17,8 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.tool.LauncherOptions.BundlerOptions;
+
+import static java.util.Objects.requireNonNull;
 
 import static org.xvm.util.Handy.quoted;
 import static org.xvm.util.Severity.ERROR;
@@ -80,7 +81,8 @@ public class Bundler extends Launcher<BundlerOptions> {
         // merge everything into one container; merge() upgrades fingerprints to real modules and
         // synthesizes fingerprints for any dependencies left external, so selection order is
         // irrelevant here
-        var bundle = new FileStructure(moduleMain, /*fSynthesize*/ false);
+        var bundle = new FileStructure(requireNonNull(moduleMain, "moduleMain"),
+                /*fSynthesize*/ false);
         selection.values().stream()
                 .filter(module -> module != moduleMain)
                 .forEach(module -> bundle.merge(module, /*fSynthesize*/ false, /*fTakeFile*/ false));
