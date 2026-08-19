@@ -9,6 +9,8 @@ import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.FileStructure;
@@ -81,8 +83,8 @@ public class xRTFileTemplate
 
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
-        var hFile      = hTarget.as(ComponentTemplateHandle.class);
-        var fileStruct = hFile.getComponent(FileStructure.class);
+        ComponentTemplateHandle hFile      = hTarget.as(ComponentTemplateHandle.class);
+        FileStructure           fileStruct = hFile.getComponent(FileStructure.class);
 
         switch (sPropName) {
         case "mainModule":
@@ -125,8 +127,8 @@ public class xRTFileTemplate
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn) {
-        var hFile = hTarget.as(ComponentTemplateHandle.class);
-        var file = hFile.getComponent(FileStructure.class);
+        ComponentTemplateHandle hFile = hTarget.as(ComponentTemplateHandle.class);
+        FileStructure           file  = hFile.getComponent(FileStructure.class);
         switch (method.getName()) {
         case "resolve":
             return invokeResolve(frame, file, hArg,
@@ -141,15 +143,15 @@ public class xRTFileTemplate
     @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                               ObjectHandle[] ahArg, int[] aiReturn) {
-        var hFile = hTarget.as(ComponentTemplateHandle.class);
-        var file = hFile.getComponent(FileStructure.class);
+        ComponentTemplateHandle hFile = hTarget.as(ComponentTemplateHandle.class);
+        FileStructure           file  = hFile.getComponent(FileStructure.class);
         switch (method.getName()) {
         case "extractVersionImpl": { // conditional ModuleTemplate extractVersionImpl(String version)
-            var sVersion = ahArg[0].as(StringHandle.class).getStringValue();
+            String sVersion = ahArg[0].as(StringHandle.class).getStringValue();
 
-            var module = file.getModule();
+            ModuleStructure module = file.getModule();
             if (!sVersion.isEmpty()) {
-                var version = new Version(sVersion);
+                Version version = new Version(sVersion);
                 if (module.containsVersion(version)) {
                     module = module.extractVersion(version);
                 } else {
@@ -211,7 +213,7 @@ public class xRTFileTemplate
         }
 
         for (ObjectHandle hAddModule : ahAddModules) {
-            var hModule = hAddModule.as(ComponentTemplateHandle.class);
+            ComponentTemplateHandle hModule = hAddModule.as(ComponentTemplateHandle.class);
             file.merge(hModule.getComponent(ModuleStructure.class), true, false);
             assert file.validateConstants();
         }
@@ -251,13 +253,13 @@ public class xRTFileTemplate
      * Native implementation of "void replace(ModuleTemplate[] unresolved)" method.
      */
     private int invokeReplace(Frame frame, FileStructure file, ArrayHandle hArray) {
-        var listUnlinked = new ArrayList<ModuleStructure>();
+        List<ModuleStructure> listUnlinked = new ArrayList<>();
 
-        var haGeneric = hArray.m_hDelegate.as(GenericArrayDelegate.class);
+        GenericArrayDelegate haGeneric = hArray.m_hDelegate.as(GenericArrayDelegate.class);
         for (long i = 0, c = haGeneric.m_cSize; i < c; i++) {
-            var hModule = haGeneric.get(i).as(ComponentTemplateHandle.class);
-            var moduleUnlinked = hModule.getComponent(ModuleStructure.class);
-            var moduleReplace = file.getModule(moduleUnlinked.getIdentityConstant());
+            ComponentTemplateHandle hModule        = haGeneric.get(i).as(ComponentTemplateHandle.class);
+            ModuleStructure         moduleUnlinked = hModule.getComponent(ModuleStructure.class);
+            ModuleStructure         moduleReplace  = file.getModule(moduleUnlinked.getIdentityConstant());
 
             if (moduleReplace == null) {
                 return frame.raiseException("Missing module \"" + moduleUnlinked.getName() +
@@ -277,13 +279,13 @@ public class xRTFileTemplate
         // calling the super() would pick up all modules, including the native, so we limit
         // the modules to the dependents of the main module
 
-        var file = hComponent.getComponent(FileStructure.class);
-        var module = file.getModule();
+        FileStructure   file   = hComponent.getComponent(FileStructure.class);
+        ModuleStructure module = file.getModule();
 
-        var mapModulePaths = module.collectDependencies();
+        Map<ModuleConstant, String> mapModulePaths = module.collectDependencies();
 
         int            cModules  = mapModulePaths.size() - 1;
-        var            ahModule  = new ObjectHandle[cModules];
+        ObjectHandle[] ahModule  = new ObjectHandle[cModules];
         Container      container = frame.f_context.f_container;
         int            index     = 0;
 
@@ -302,7 +304,7 @@ public class xRTFileTemplate
 
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
-        var module = hTarget.as(ComponentTemplateHandle.class).getComponent(FileStructure.class);
+        FileStructure module = hTarget.as(ComponentTemplateHandle.class).getComponent(FileStructure.class);
         return frame.assignValue(iReturn, xString.makeHandle(module.getModuleId().getName()));
     }
 

@@ -60,19 +60,19 @@ public class xRTModuleTemplate
 
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
-        var hTemplate = hTarget.as(ComponentTemplateHandle.class);
+        ComponentTemplateHandle hTemplate = hTarget.as(ComponentTemplateHandle.class);
         switch (sPropName) {
         case "qualifiedName": {
-            var module = hTemplate.getComponent(ModuleStructure.class);
+            ModuleStructure module = hTemplate.getComponent(ModuleStructure.class);
             return frame.assignValue(iReturn,
                 xString.makeHandle(module.getIdentityConstant().getName()));
         }
 
         case "versionString": {
-            var module = hTemplate.getComponent(ModuleStructure.class);
-            String sVersion;
+            ModuleStructure       module   = hTemplate.getComponent(ModuleStructure.class);
+            String                sVersion;
             if (module.isFingerprint()) {
-                var vtree = module.getFingerprintVersions();
+                VersionTree<Boolean> vtree = module.getFingerprintVersions();
                 sVersion = vtree.isEmpty()
                         ? null
                         : vtree.findLowestVersion().toString();
@@ -86,12 +86,12 @@ public class xRTModuleTemplate
             return getPropertyModulesByPath(frame, hTemplate, iReturn);
 
         case "fingerprint": {
-            var module = hTemplate.getComponent(ModuleStructure.class);
+            ModuleStructure module = hTemplate.getComponent(ModuleStructure.class);
             return frame.assignValue(iReturn, xBoolean.makeHandle(module.isFingerprint()));
         }
 
         case "resolved": {
-            var module = hTemplate.getComponent(ModuleStructure.class);
+            ModuleStructure module = hTemplate.getComponent(ModuleStructure.class);
             return frame.assignValue(iReturn, xBoolean.makeHandle(module.getFileStructure().isLinked()));
         }
         }
@@ -103,11 +103,8 @@ public class xRTModuleTemplate
      * Implements property: modulesByPath.get()
      */
     public int getPropertyModulesByPath(Frame frame, ComponentTemplateHandle hTemplate, int iReturn) {
-        return getPropertyModulesByPath(frame, hTemplate.getComponent(ModuleStructure.class), iReturn);
-    }
-
-    private int getPropertyModulesByPath(Frame frame, ModuleStructure module, int iReturn) {
         // TODO GG: how to cache the result?
+        ModuleStructure module    = hTemplate.getComponent(ModuleStructure.class);
         Container       container = frame.f_context.f_container;
         TypeComposition clzMap    = container.resolveClass(ensureListMapType());
 
