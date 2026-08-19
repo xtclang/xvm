@@ -11,9 +11,14 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import java.util.stream.Stream;
+
+import static org.xvm.util.Handy.BINARY_EXTENSION;
+import static org.xvm.util.Handy.hasBinaryExtension;
+import static org.xvm.util.Handy.removeSourceExtension;
 
 
 /**
@@ -34,16 +39,7 @@ public class FileRepository
     public FileRepository(File file, boolean fReadOnly) {
         assert file != null && !file.isDirectory();
 
-        String sName = file.getName();
-        if (!sName.endsWith(".xtc")) {
-            if (sName.endsWith(".x")) {
-                file = new File(file.getParentFile(), sName.substring(0, sName.lastIndexOf('.')) + ".xtc");
-            } else {
-                file = new File(file.getParentFile(), sName + ".xtc");
-            }
-        }
-
-        this.file = file;
+        this.file = moduleFile(file);
         this.fRO = fReadOnly;
     }
 
@@ -128,7 +124,7 @@ public class FileRepository
             throw new IOException("Error writing module to file: " + file, e);
         }
 
-        cacheFrom(module.getFileStructure());
+        this.cache     = cacheFrom(module.getFileStructure());
         this.timestamp = file.lastModified();
         this.size      = file.length();
         this.lastScan  = System.currentTimeMillis();
@@ -161,6 +157,24 @@ public class FileRepository
     // ----- internal ------------------------------------------------------------------------------
 
     /**
+     * Convert a source or extensionless module file name to its compiled module file name.
+     *
+     * @param file  the module file
+     *
+     * @return the same file if it already names an .xtc file, otherwise the .xtc sibling
+     */
+    private static File moduleFile(File file) {
+        String sName = file.getName();
+        if (hasBinaryExtension(sName)) {
+            return file;
+        }
+
+        return file.toPath()
+                .resolveSibling(removeSourceExtension(sName) + BINARY_EXTENSION)
+                .toFile();
+    }
+
+    /**
      * Make sure that the cache is up to date.
      */
     void checkCache() {
@@ -172,28 +186,32 @@ public class FileRepository
         this.size      = file.length();
         this.err       = false;
 
-        var metadata = tryReadMetadata();
-        if (metadata != null) {
-            cacheFrom(metadata);
-        } else {
-            var structLoaded = tryLoad();
-            if (structLoaded == null) {
-                this.cache = Cache.EMPTY;
-                this.err   = true;
-            } else {
-                cacheFrom(structLoaded);
-            }
-        }
-
-        this.lastScan = System.currentTimeMillis();
+        this.cache     = readCache();
+        this.err       = cache == Cache.EMPTY;
+        this.lastScan  = System.currentTimeMillis();
     }
 
     /**
-     * Populate the cache from the passed file structure.
+     * Build a cache snapshot from the file.
+     *
+     * @return the cache snapshot, or {@link Cache#EMPTY} on load failure
+     */
+    private Cache readCache() {
+        return Optional.ofNullable(tryReadMetadata())
+                .map(FileRepository::cacheFrom)
+                .or(() -> Optional.ofNullable(tryLoad())
+                        .map(FileRepository::cacheFrom))
+                .orElse(Cache.EMPTY);
+    }
+
+    /**
+     * Build a cache snapshot from the passed file structure.
      *
      * @param struct  the FileStructure to cache the contained module information from
+     *
+     * @return the cache snapshot
      */
-    private void cacheFrom(FileStructure struct) {
+    private static Cache cacheFrom(FileStructure struct) {
         // the primary module comes first; fingerprints represent external dependencies of the
         // contained modules and are not modules that this repository can provide
         var mapModules = new LinkedHashMap<String, ModuleStructure>();
@@ -208,23 +226,25 @@ public class FileRepository
         // hash-ordered (randomized per JVM run), so an unmodifiable view over a LinkedHashSet is
         // the only stdlib form that keeps insertion order; wrapped once here, handed out for
         // free by getModuleNames()
-        this.cache = new Cache(
+        return new Cache(
                 Collections.unmodifiableSet(new LinkedHashSet<>(mapModules.keySet())),
                 mapVersions, mapModules, struct, struct.getFileMetadata());
     }
 
     /**
-     * Populate the cache from constant-pool-free file metadata.
+     * Build a cache snapshot from constant-pool-free file metadata.
      *
      * @param metadata  the metadata to cache
+     *
+     * @return the cache snapshot
      */
-    private void cacheFrom(FileStructure.FileMetadata metadata) {
+    private static Cache cacheFrom(FileStructure.FileMetadata metadata) {
         var mapVersions = new LinkedHashMap<String, VersionTree<Boolean>>();
         var versionsByModule = metadata.versionsByModule();
         metadata.moduleNames().forEach(sName ->
                 mapVersions.put(sName, versionTree(versionsByModule.getOrDefault(sName, List.of()))));
 
-        this.cache = new Cache(
+        return new Cache(
                 Collections.unmodifiableSet(new LinkedHashSet<>(metadata.moduleNames())),
                 mapVersions, new LinkedHashMap<>(), null, metadata);
     }
@@ -271,7 +291,7 @@ public class FileRepository
                 err = true;
                 return false;
             }
-            cacheFrom(structLoaded);
+            this.cache = cacheFrom(structLoaded);
         }
 
         return true;

@@ -37,6 +37,8 @@ import static org.xvm.util.Handy.countHexDigits;
 import static org.xvm.util.Handy.digitValue;
 import static org.xvm.util.Handy.hexStringToByteArray;
 import static org.xvm.util.Handy.hexitValue;
+import static org.xvm.util.Handy.hasBinaryExtension;
+import static org.xvm.util.Handy.hasSourceExtension;
 import static org.xvm.util.Handy.indentLines;
 import static org.xvm.util.Handy.intToHexString;
 import static org.xvm.util.Handy.isCharEscaped;
@@ -47,6 +49,7 @@ import static org.xvm.util.Handy.nibbleToChar;
 import static org.xvm.util.Handy.quotedChar;
 import static org.xvm.util.Handy.quotedString;
 import static org.xvm.util.Handy.readUtf8String;
+import static org.xvm.util.Handy.removeSourceExtension;
 import static org.xvm.util.Handy.renderByteToHex;
 import static org.xvm.util.Handy.renderIntToHex;
 import static org.xvm.util.Handy.renderLongToHex;
@@ -57,6 +60,21 @@ import static org.xvm.util.Handy.writeUtf8String;
  * Tests of the Handy class.
  */
 public class HandyTest {
+    @Test
+    public void testModuleFileExtensions() {
+        assertTrue(hasSourceExtension("sample.x"));
+        assertTrue(hasSourceExtension(".x"));
+        assertFalse(hasSourceExtension("sample.xtc"));
+        assertFalse(hasSourceExtension(null));
+        assertEquals("sample", removeSourceExtension("sample.x"));
+        assertEquals("", removeSourceExtension(".x"));
+        assertEquals("sample.xtc", removeSourceExtension("sample.xtc"));
+
+        assertTrue(hasBinaryExtension("sample.xtc"));
+        assertFalse(hasBinaryExtension("sample.x"));
+        assertFalse(hasBinaryExtension(null));
+    }
+
     @Test
     public void testNibbleToChar() {
         // TODO: These are in the wrong order. The "actual" value should always be the first parameter for reports to make sense.

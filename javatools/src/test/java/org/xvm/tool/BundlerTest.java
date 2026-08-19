@@ -85,6 +85,15 @@ class BundlerTest {
         assertEquals(1, result);
     }
 
+    @Test
+    void testFileRepositoryNormalizesModuleFileNames(@TempDir Path tempDir) {
+        var fileXtc = tempDir.resolve("sample.xtc").toFile();
+
+        assertEquals(fileXtc, new FileRepository(fileXtc, true).getFile());
+        assertEquals(fileXtc, new FileRepository(tempDir.resolve("sample.x").toFile(), true).getFile());
+        assertEquals(fileXtc, new FileRepository(tempDir.resolve("sample").toFile(), true).getFile());
+    }
+
     // ----- multi-module container round-trip -----------------------------------------------------
 
     @Test
