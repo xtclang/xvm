@@ -1424,6 +1424,51 @@ public final class Handy {
     }
 
     /**
+     * The Ecstasy source file extension.
+     */
+    public static final String SOURCE_EXTENSION = ".x";
+
+    /**
+     * The Ecstasy compiled module file extension.
+     */
+    public static final String BINARY_EXTENSION = ".xtc";
+
+    /**
+     * Determine if the passed file name has the Ecstasy source file extension.
+     *
+     * @param sFile  the file name
+     *
+     * @return true iff the passed file name ends with {@link #SOURCE_EXTENSION}
+     */
+    public static boolean hasSourceExtension(String sFile) {
+        return sFile != null && sFile.endsWith(SOURCE_EXTENSION);
+    }
+
+    /**
+     * Remove the Ecstasy source file extension from the passed file name, if present.
+     *
+     * @param sFile  the file name
+     *
+     * @return the file name without {@link #SOURCE_EXTENSION}, or the original file name
+     */
+    public static String removeSourceExtension(String sFile) {
+        return hasSourceExtension(sFile)
+                ? sFile.substring(0, sFile.length() - SOURCE_EXTENSION.length())
+                : sFile;
+    }
+
+    /**
+     * Determine if the passed file name has the Ecstasy compiled module file extension.
+     *
+     * @param sFile  the file name
+     *
+     * @return true iff the passed file name ends with {@link #BINARY_EXTENSION}
+     */
+    public static boolean hasBinaryExtension(String sFile) {
+        return sFile != null && sFile.endsWith(BINARY_EXTENSION);
+    }
+
+    /**
      * If the passed file  has a "dot extension" such as ".x" or ".xtc" extension, then return the
      * extension, such as "x" or "xtc"
      *

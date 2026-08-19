@@ -40,7 +40,7 @@ import org.xvm.util.Handy;
  * Runtime operates on Object handles holding the struct references or the values themselves
  * for the following types:
  *  Bit, Boolean, Char, Int, UInt, Nullable.Null, and optionally for some Tuples
- *
+ * <p>
  * Note, that the equals() and hashCode() methods should be only for immutable handles.
  */
 public abstract class ObjectHandle
@@ -764,7 +764,7 @@ public abstract class ObjectHandle
     /**
      * DeferredCallHandle represents a deferred action, such as a property access or a method call,
      * which would place the result of that action on the corresponding frame's stack.
-     *
+     * <p>
      * Note: this handle cannot be allocated naturally and must be processed in a special way.
      */
     public static class DeferredCallHandle
@@ -821,7 +821,7 @@ public abstract class ObjectHandle
     /**
      * DeferredPropertyHandle represents a deferred property access, which would place the result
      * of that action on the corresponding frame's stack.
-     *
+     * <p>
      * Note: this handle cannot be allocated naturally and must be processed in a special way.
      */
     public static class DeferredPropertyHandle
@@ -875,7 +875,7 @@ public abstract class ObjectHandle
     /**
      * DeferredSingletonHandle represents a deferred singleton calculation, which would place the
      * result of that action on the corresponding frame's stack.
-     *
+     * <p>
      * Note: this handle cannot be allocated naturally and must be processed in a special way.
      */
     public static class DeferredSingletonHandle
@@ -915,7 +915,7 @@ public abstract class ObjectHandle
     /**
      * DeferredArrayHandle represents a deferred array initialization, which would place the array
      * handle on the corresponding frame's stack.
-     *
+     * <p>
      * Note: this handle cannot be allocated naturally and must be processed in a special way.
      */
     public static class DeferredArrayHandle
