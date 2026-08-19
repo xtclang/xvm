@@ -40,7 +40,7 @@ public interface NumberSupport
         switch (regTarget.cd().descriptorString()) {
             case "I" -> {
                 code.iadd();
-                bctx.adjustIntValue(code, regTarget.type());
+                Builder.adjustIntValue(code, regTarget.type());
             }
             case "J" -> code.ladd();
             case "F" -> code.fadd();
@@ -92,7 +92,7 @@ public interface NumberSupport
         switch (regTarget.cd().descriptorString()) {
             case "I" -> {
                 code.iand();
-                bctx.adjustIntValue(code, regTarget.type());
+                Builder.adjustIntValue(code, regTarget.type());
             }
             case "J" -> code.land();
             case "Z" -> code.iand();
@@ -137,7 +137,7 @@ public interface NumberSupport
         switch (regTarget.cd().descriptorString()) {
             case "I"  -> {
                 code.iconst_m1().ixor();
-                bctx.adjustIntValue(code, regTarget.type());
+                Builder.adjustIntValue(code, regTarget.type());
             }
             case "Z" -> code.iconst_1().ixor();
             case "J" -> code.ldc(-1L).lxor();
@@ -184,7 +184,7 @@ public interface NumberSupport
                 } else {
                     code.idiv();
                 }
-                bctx.adjustIntValue(code, typeTarget);
+                Builder.adjustIntValue(code, typeTarget);
             }
             case "J" -> {
                 boolean fUnsigned = typeTarget.getValueString().charAt(0) == 'U';
@@ -305,7 +305,7 @@ public interface NumberSupport
                 } else {
                     code.invokestatic(CD_JavaMath, "floorMod", MD_FloorModI);
                 }
-                bctx.adjustIntValue(code, regTarget.type());
+                Builder.adjustIntValue(code, regTarget.type());
             }
             case "J" -> {
                 if (unsigned) {
@@ -415,7 +415,7 @@ public interface NumberSupport
         switch (regTarget.cd().descriptorString()) {
             case "I" -> {
                 code.imul();
-                bctx.adjustIntValue(code, regTarget.type());
+                Builder.adjustIntValue(code, regTarget.type());
             }
             case "J" -> code.lmul();
             case "F" -> code.fmul();
@@ -466,7 +466,7 @@ public interface NumberSupport
         switch (regTarget.cd().descriptorString()) {
             case "I" -> {
                 code.ior();
-                bctx.adjustIntValue(code, regTarget.type());
+                Builder.adjustIntValue(code, regTarget.type());
             }
             case "Z" -> code.ior();
             case "J" -> code.lor();
@@ -528,7 +528,7 @@ public interface NumberSupport
         switch (regLoaded.cd().descriptorString()) {
             case "I" -> {
                 code.ishl();
-                bctx.adjustIntValue(code, regLoaded.type());
+                Builder.adjustIntValue(code, regLoaded.type());
             }
             case "J" -> code.lshl();
             default  -> throw new IllegalStateException();
@@ -690,7 +690,7 @@ public interface NumberSupport
                 } else {
                     code.ishr();
                 }
-                bctx.adjustIntValue(code, typeTarget);
+                Builder.adjustIntValue(code, typeTarget);
             }
             case "J" -> {
                 if (fUnsigned) {
@@ -717,7 +717,7 @@ public interface NumberSupport
         switch (regTarget.cd().descriptorString()) {
             case "I" -> {
                 code.isub();
-                bctx.adjustIntValue(code, regTarget.type());
+                Builder.adjustIntValue(code, regTarget.type());
             }
             case "J" -> code.lsub();
             case "F" -> code.fsub();
@@ -769,7 +769,7 @@ public interface NumberSupport
         switch (regTarget.cd().descriptorString()) {
             case "I" -> {
                 code.ixor();
-                bctx.adjustIntValue(code, regTarget.type());
+                Builder.adjustIntValue(code, regTarget.type());
             }
             case "Z" -> code.ixor();
             case "J" -> code.lxor();

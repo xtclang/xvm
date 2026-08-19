@@ -1,6 +1,7 @@
 package org.xtclang.ecstasy.numbers;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 
 import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.OutOfBounds;
@@ -64,7 +65,7 @@ public class UInt64 extends UIntNumber {
 
     @Override
     public BigDecimal $toBigDecimal() {
-        return BigDecimal.valueOf($value);
+        return new BigDecimal(Long.toUnsignedString($value));
     }
 
     @Override
@@ -184,7 +185,7 @@ public class UInt64 extends UIntNumber {
      * </pre>
      */
     public static IntN toIntN$p(long thi$, Ctx ctx) {
-        return IntN.$box(thi$);
+        return IntN.$box(new BigInteger(Long.toUnsignedString(thi$)));
     }
 
     /**
@@ -306,7 +307,27 @@ public class UInt64 extends UIntNumber {
      * </pre>
      */
     public static UIntN toUIntN$p(long thi$, Ctx ctx) {
-        return UIntN.$box(thi$);
+        return UIntN.$box(new BigInteger(Long.toUnsignedString(thi$)));
+    }
+
+    /**
+     * The native implementation of:
+     * <pre>
+     *     IntN toIntN()
+     * </pre>
+     */
+    public IntN toIntN(Ctx ctx) {
+        return toIntN$p($value, ctx);
+    }
+
+    /**
+     * The native implementation of:
+     * <pre>
+     *     UIntN toUIntN()
+     * </pre>
+     */
+    public UIntN toUIntN$p(Ctx ctx) {
+        return toUIntN$p($value, ctx);
     }
 
     // ----- debugging support ---------------------------------------------------------------------

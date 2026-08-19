@@ -501,9 +501,7 @@ const IntLiteral(String text)
 
     @Auto
     @Override
-    IntN toIntN() {
-        TODO
-    }
+    IntN toIntN() = explicitSign == Negative ? magnitude.toIntN().neg() : magnitude.toIntN();
 
     @Auto
     @Override

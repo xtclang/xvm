@@ -229,7 +229,8 @@ public class FPNumberBuilder extends NumberBuilder {
      * @return the IEEE 754-2008 exponent length for this type
      */
     protected int getExponentLength() {
-        String name = thisType.getSingleUnderlyingClass(false).getName();
+        String name      = thisType.getSingleUnderlyingClass(false).getName();
+        int    bitLength = getBitLength();
 
         return switch (name) {
             case "Float8e4"                     -> 4;
@@ -238,7 +239,25 @@ public class FPNumberBuilder extends NumberBuilder {
             case "BFloat16", "Float32", "Dec64" -> 8;
             case "Float64"                      -> 11;
             case "Dec128"                       -> 12;
-            default -> throw new UnsupportedOperationException("Unsupported number type " + name);
+            default -> switch (bitLength) {
+                case 16  -> 5;
+                case 32  -> 8;
+                case 64  -> 11;
+                case 128 -> 15;
+                case 256 -> 19;
+                default  -> {
+                    if (thisType.isA(pool().typeBinFPNumber()) && bitLength >= 128) {
+                        // IEEE-754-2008 spec Table 3.5 — Binary interchange format parameters
+                        // for bit lengths >= 128
+                        yield (int) Math.round((Math.log10(bitLength) / Math.log10(2)) * 4) - 13;
+                    } else if (thisType.isA(pool().typeDecFPNumber()) && bitLength >= 32) {
+                        // IEEE-754-2008 spec Table 3.6 — Decimal interchange format parameters
+                        // for bit lengths >= 32
+                        yield (bitLength / 16) + 9;
+                    }
+                    throw new UnsupportedOperationException("Unsupported bitLength " + bitLength);
+                }
+            };
         };
     }
 
@@ -254,29 +273,22 @@ public class FPNumberBuilder extends NumberBuilder {
             .lreturn();
     }
 
+    /**
+     * Calculate the bit pattern for negative infinity.
+     * <p>
+     * This only applies to BinaryFPNumber instances as DecimalFPNumber is finite.
+     */
     protected long calculateNegativeInfinity(int bitLength) {
         ConstantPool pool = pool();
         if (thisType.isA(pool.typeBinFPNumber())) {
-            String name = thisType.getSingleUnderlyingClass(false).getName();
-            int exp = switch (name) {
-                case "BFloat16" -> 8;
-                case "Float8e4" -> 4;
-                case "Float8e5" -> 5;
-                default -> switch (bitLength) {
-                    case 16  -> 5;
-                    case 32  -> 8;
-                    case 64  -> 11;
-                    case 128 -> 15;
-                    case 256 -> 19;
-                    default  -> throw new UnsupportedOperationException("Unsupported bitLength "
-                            + bitLength);
-                };
-            };
+            // For binary fp numbers -Infinity is all exponent bits set to 1 and sign bit set to 1,
+            int exp = getExponentLength();
             return -1L << (bitLength - exp - 1) << (64 - bitLength);
         }
 
         if (thisType.isA(pool.typeDecFPNumber())) {
-            return 0L;
+            long g0g4 = 0b11110L << 58;
+            return Long.MIN_VALUE | g0g4;
         }
 
         throw new UnsupportedOperationException("Unsupported number type " + thisType);

@@ -62,6 +62,10 @@ public class NumberBuilder extends AugmentingBuilder {
             return new FPNumberBuilder(typeSystem, art, model);
         }
 
+        if (type.isA(pool.typeIntNumber())) {
+            return new IntNumberBuilder(typeSystem, art, model);
+        }
+
         return new NumberBuilder(typeSystem, art, model);
     }
 

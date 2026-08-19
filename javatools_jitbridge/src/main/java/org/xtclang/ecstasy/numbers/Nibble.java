@@ -191,6 +191,26 @@ public class Nibble extends UIntNumber {
     }
 
     /**
+     * The primitive implementation of:
+     * <pre>
+     *     IntN toIntN()
+     * </pre>
+     */
+    public static IntN toIntN$p(int thi$, Ctx ctx) {
+        return IntN.$box(((long) thi$) & 0x0FL);
+    }
+
+    /**
+     * The primitive implementation of:
+     * <pre>
+     *     IntN toIntN()
+     * </pre>
+     */
+    public IntN toIntN(Ctx ctx) {
+        return toIntN$p($value, ctx);
+    }
+
+    /**
      * The primitive implementation of UInt8 toUInt8(Boolean checkBounds = False)
      *
      * @param ctx              the build context
@@ -259,6 +279,26 @@ public class Nibble extends UIntNumber {
     public static long toUInt128$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         ctx.i0 = 0L;
         return thi$ & 0xFL;
+    }
+
+    /**
+     * The primitive implementation of:
+     * <pre>
+     *     UInt toUInt()
+     * </pre>
+     */
+    public static UIntN toUIntN$p(int thi$, Ctx ctx) {
+        return UIntN.$box(((long) thi$) & 0x0FL);
+    }
+
+    /**
+     * The primitive implementation of:
+     * <pre>
+     *     UIntN toUIntN()
+     * </pre>
+     */
+    public UIntN toUIntN(Ctx ctx) {
+        return toUIntN$p($value, ctx);
     }
 
     // ----- debugging support ---------------------------------------------------------------------

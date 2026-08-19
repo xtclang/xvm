@@ -229,6 +229,14 @@ public class Dec128 extends DecimalFPNumber {
         return $box(thi$Lo, thi$Hi).toUInt128$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
     }
 
+    public static IntN toIntN$FP$p(long thi$Lo, long thi$Hi, Ctx ctx, Rounding direction) {
+        return $box(thi$Lo, thi$Hi).toIntN$FP$p(ctx, direction);
+    }
+
+    public static UIntN toUIntN$FP$p(long thi$Lo, long thi$Hi, Ctx ctx, Rounding direction) {
+        return $box(thi$Lo, thi$Hi).toUIntN$FP$p(ctx, direction);
+    }
+
     // ----- Op methods ----------------------------------------------------------------------------
 
     /**

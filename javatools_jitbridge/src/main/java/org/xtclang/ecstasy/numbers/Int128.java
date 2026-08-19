@@ -283,7 +283,7 @@ public class Int128 extends IntNumber {
      * Native implementation of: "IntN toIntN()"
      */
     public static IntN toIntN$p(long thi$Lo, long thi$Hi, Ctx ctx) {
-        return IntN.$box(thi$Lo, thi$Hi);
+        return IntN.$box($toBigInteger(thi$Lo, thi$Hi));
     }
 
     /**
@@ -424,7 +424,27 @@ public class Int128 extends IntNumber {
             throw oob.$init(ctx, "Int128 value " + $toBigInteger(thi$Lo, thi$Hi)
                     + " is not a valid UIntN value");
         }
-        return UIntN.$box(thi$Lo, thi$Hi);
+        return UIntN.$box($toBigInteger(thi$Lo, thi$Hi));
+    }
+
+    /**
+     * The native implementation of:
+     * <pre>
+     *     IntN toIntN()
+     * </pre>
+     */
+    public IntN toIntN(Ctx ctx) {
+        return toIntN$p($lowValue, $highValue, ctx);
+    }
+
+    /**
+     * The native implementation of:
+     * <pre>
+     *     UIntN toUIntN()
+     * </pre>
+     */
+    public UIntN toUIntN$p(Ctx ctx) {
+        return toUIntN$p($lowValue, $highValue, ctx);
     }
 
     // ----- internal JIT support ------------------------------------------------------------------
