@@ -10,6 +10,8 @@ import java.lang.classfile.ClassModel;
 
 import java.lang.classfile.constantpool.ClassEntry;
 
+import java.lang.reflect.AccessFlag;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -156,6 +158,7 @@ public class ModuleLoader
                     out.println("Methods:");
                     model.methods().stream().map(m -> "  " + m.methodName() +
                                     m.methodTypeSymbol().displayDescriptor() +
+                                    (m.flags().has(AccessFlag.STATIC) ? " static" : "") +
                                     (m.code().isPresent() ? "\n" + render(m.code().get().toDebugString()) : "")).
                             forEach(out::println);
                 } catch (FileNotFoundException e) {
