@@ -82,7 +82,7 @@ public abstract class nObject
      *
      * @see {@link org.xvm.javajit.builders.CommonBuilder#assembleGenericProperty}
      */
-    public nType $type(Ctx ctx, java.lang.String name) {
+    public nType $typeForName(Ctx ctx, java.lang.String name) {
         TypeConstant type = $xvmType(ctx).resolveGenericType(name);
         return type == null ? null : nType.$ensureType(ctx, type);
     }
@@ -154,18 +154,6 @@ public abstract class nObject
         // TODO
 
         return true;
-    }
-
-    public static nType $type(Ctx ctx, java.lang.Object ref) {
-        if (ref instanceof nObject xRef) {
-            return xRef.$type(ctx);
-        }
-
-        // handle all of the intrinsic types
-        // TODO
-
-        // not an Ecstasy ref
-        throw new IllegalStateException();
     }
 
     protected static final long $ID_MASK   = -1L >>> 8;

@@ -1359,7 +1359,7 @@ public class BuildContext {
             }
             loadCtx(code);
             code.ldc(((FormalConstant) dataType.getDefiningConstant()).getName())
-                .invokevirtual(CD_nObject, "$type",
+                .invokevirtual(CD_nObject, "$typeForName",
                         MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString));
             return new SingleSlot(type, Specific, CD_nType, "");
         }
@@ -1412,7 +1412,8 @@ public class BuildContext {
         }
         loadCtx(code);
         code.ldc(formalConst.getName())
-            .invokevirtual(CD_nObject, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString));
+            .invokevirtual(CD_nObject, "$typeForName",
+                    MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString));
         return new SingleSlot(formalConst.getType(), Specific, CD_nType, "");
     }
 
