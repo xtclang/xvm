@@ -3,6 +3,7 @@ package org.xvm.asm;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -60,12 +61,16 @@ public class FileStructureTest {
         assertEquals(FileStructure.FileKind.Single, metadata.kind());
         assertEquals(List.of("Solo"), metadata.moduleNames());
         assertEquals(List.of(ver.toString()), metadata.versionsByModule().get("Solo"));
+        assertFalse(metadata.hasMultipleModules());
+        assertFalse(metadata.isBundle());
 
         var out = new ByteArrayOutputStream();
         file.writeTo(out);
         var ab = out.toByteArray();
 
         assertEquals(metadata, FileStructure.readMetadata(new ByteArrayInputStream(ab)));
+        DataInput inMetadata = new DataInputStream(new ByteArrayInputStream(ab));
+        assertEquals(metadata, FileStructure.readMetadata(inMetadata));
 
         var reread = new FileStructure(new ByteArrayInputStream(ab));
         assertEquals(FileStructure.FileKind.Single, reread.getFileKind());
@@ -92,6 +97,8 @@ public class FileStructureTest {
         assertEquals(List.of(verApp.toString()), metadata.versionsByModule().get("App"));
         assertEquals(List.of(verLib.toString()), metadata.versionsByModule().get("Lib"));
         assertFalse(metadata.moduleNames().contains("External"));
+        assertTrue(metadata.hasMultipleModules());
+        assertTrue(metadata.isBundle());
 
         var out = new ByteArrayOutputStream();
         bundle.writeTo(out);
