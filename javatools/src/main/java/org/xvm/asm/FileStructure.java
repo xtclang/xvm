@@ -1368,7 +1368,7 @@ public class FileStructure
          * Execution-style output: a fully linked, transitively closed module graph, with no
          * fingerprints.
          */
-        Xecable
+        Executable
     }
 
     /**
@@ -1402,7 +1402,7 @@ public class FileStructure
         }
 
         /**
-         * @return true iff this metadata describes a Library or Xecable file
+         * @return true iff this metadata describes a Library or Executable file
          */
         public boolean isBundle() {
             return kind != FileKind.Single;

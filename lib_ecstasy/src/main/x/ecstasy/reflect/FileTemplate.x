@@ -24,7 +24,7 @@ interface FileTemplate
          * Execution-style output: a fully linked, transitively closed module graph, with no
          * fingerprints.
          */
-        Xecable,
+        Executable,
     }
 
     /**
@@ -44,7 +44,7 @@ interface FileTemplate
     @RO String[] moduleNames;
 
     /**
-     * Indicates whether the file physically contains a library or xecable bundle.
+     * Indicates whether the file physically contains a library or executable bundle.
      */
     @RO Boolean bundle.get() = kind != Single;
 
