@@ -34,13 +34,13 @@ public class FileRepository
      * Construct a single-file ModuleRepository.
      *
      * @param file       the file that contains the module(s)
-     * @param fReadOnly  true to make the repository "read-only"
+     * @param readOnly  true to make the repository "read-only"
      */
-    public FileRepository(File file, boolean fReadOnly) {
+    public FileRepository(File file, boolean readOnly) {
         assert file != null && !file.isDirectory();
 
-        this.file = moduleFile(file);
-        this.fRO = fReadOnly;
+        this.file     = moduleFile(file);
+        this.readOnly = readOnly;
     }
 
 
@@ -57,7 +57,7 @@ public class FileRepository
      * @return true iff read-only
      */
     public boolean isReadOnly() {
-        return fRO;
+        return readOnly;
     }
 
 
@@ -78,19 +78,11 @@ public class FileRepository
     @Override
     public ModuleStructure loadModule(String sModule) {
         checkCache();
-        if (!cache.names().contains(sModule) || !ensureModulesLoaded()) {
+        if (!cache.hasModule(sModule) || !ensureModulesLoaded()) {
             return null;
         }
 
-        var module = cache.modulesByName().get(sModule);
-        if (module != null && !module.isMainModule() && module.getFileStructure() == cache.struct()) {
-            // a non-main module of a multi-module container ("bundle") is served as a detached
-            // copy (memoized), so that every consumer - the linker, the runtime compiler's
-            // fingerprint hoisting, reflection - sees the single-module-file shape it expects
-            module = module.detachedCopy();
-            cache.modulesByName().put(sModule, module);
-        }
-        return module;
+        return cache.moduleFor(sModule);
     }
 
     @Override
@@ -101,7 +93,7 @@ public class FileRepository
     @Override
     public void storeModule(ModuleStructure module)
             throws IOException {
-        if (fRO) {
+        if (readOnly) {
             throw new IOException("repository is read-only: " + this);
         }
 
@@ -145,12 +137,12 @@ public class FileRepository
         }
 
         return this.file.equals(that.file) &&
-               this.fRO      == that.fRO;
+               this.readOnly == that.readOnly;
     }
 
     @Override
     public String toString() {
-        return "FileRepository(Path=" + file.toString() + ", RO=" + fRO + ")";
+        return "FileRepository(Path=" + file.toString() + ", RO=" + readOnly + ")";
     }
 
 
@@ -164,14 +156,12 @@ public class FileRepository
      * @return the same file if it already names an .xtc file, otherwise the .xtc sibling
      */
     private static File moduleFile(File file) {
-        String sName = file.getName();
-        if (hasBinaryExtension(sName)) {
-            return file;
-        }
-
-        return file.toPath()
-                .resolveSibling(removeSourceExtension(sName) + BINARY_EXTENSION)
-                .toFile();
+        return Optional.of(file.getName())
+                .filter(sName -> !hasBinaryExtension(sName))
+                .map(sName -> file.toPath()
+                        .resolveSibling(removeSourceExtension(sName) + BINARY_EXTENSION)
+                        .toFile())
+                .orElse(file);
     }
 
     /**
@@ -199,8 +189,7 @@ public class FileRepository
     private Cache readCache() {
         return Optional.ofNullable(tryReadMetadata())
                 .map(FileRepository::cacheFrom)
-                .or(() -> Optional.ofNullable(tryLoad())
-                        .map(FileRepository::cacheFrom))
+                .or(() -> Optional.ofNullable(tryLoad()).map(FileRepository::cacheFrom))
                 .orElse(Cache.EMPTY);
     }
 
@@ -265,7 +254,7 @@ public class FileRepository
             return true;
         }
 
-        if (cache.struct() == null && cache.metadata() == null) {
+        if (!cache.hasFileSnapshot()) {
             return false;
         }
 
@@ -282,10 +271,7 @@ public class FileRepository
             return false;
         }
 
-        // detached copies handed out by loadModule() are freshly cloned (and thus "modified"), so
-        // staleness is judged by the container's own (attached) main module only
-        var struct = cache.struct();
-        if (struct == null || struct.getModule().isModified()) {
+        if (cache.needsModuleLoad()) {
             var structLoaded = tryLoad();
             if (structLoaded == null) {
                 err = true;
@@ -340,10 +326,36 @@ public class FileRepository
                          FileStructure                     struct,
                          FileStructure.FileMetadata        metadata) {
         private static final Cache EMPTY = new Cache(Set.of(), Map.of(), Map.of(), null, null);
+
+        boolean hasModule(String sModule) {
+            return names.contains(sModule);
+        }
+
+        boolean hasFileSnapshot() {
+            return struct != null || metadata != null;
+        }
+
+        boolean needsModuleLoad() {
+            // detached copies handed out by loadModule() are freshly cloned (and thus "modified"),
+            // so staleness is judged by the container's own (attached) main module only
+            return struct == null || struct.getModule().isModified();
+        }
+
+        ModuleStructure moduleFor(String sModule) {
+            var module = modulesByName.get(sModule);
+            if (module != null && !module.isMainModule() && module.getFileStructure() == struct) {
+                // a non-main module of a multi-module container ("bundle") is served as a detached
+                // copy (memoized), so that every consumer - the linker, the runtime compiler's
+                // fingerprint hoisting, reflection - sees the single-module-file shape it expects
+                module = module.detachedCopy();
+                modulesByName.put(sModule, module);
+            }
+            return module;
+        }
     }
 
     private final File    file;
-    private final boolean fRO;
+    private final boolean readOnly;
 
     private Cache   cache = Cache.EMPTY;
     private long    timestamp;
