@@ -8,16 +8,25 @@ module StringBufferTest {
     }
 
     void run(String[] params = []) {
-        if (params.empty) {
-            append1();
-            append2();
-            addDup();
-            trunc();
-            clear();
-            setElement();
+        Boolean deterministicOnly = params.contains("deterministic-only");
+        if (params.empty || deterministicOnly) {
+            runDeterministic();
+            if (deterministicOnly) {
+                return;
+            }
         }
 
         randomize(params.empty ? 0 : Int.parse(params[0]) ?: 0);
+    }
+
+    static void runDeterministic() {
+        append1();
+        append2();
+        addDup();
+        trunc();
+        clear();
+        setElement();
+        committedChunksStayAppendable();
     }
 
     static void append1() {
@@ -72,6 +81,18 @@ module StringBufferTest {
         control = bufSetElement(buf, 13, 'q', control);
         control = bufSetElement(buf, 0, '*', control);
         control = bufSetElement(buf, 25, '!', control);
+        verify(buf, control);
+    }
+
+    static void committedChunksStayAppendable() {
+        StringBuffer buf     = new StringBuffer();
+        String       control = "";
+
+        // This sequence used to leave the committed chunk list typed as immutable Char[] chunks,
+        // then try to commit a later mutable append buffer into it.
+        control = bufAddAll(buf, "x".dup(65), control);
+        control = bufAddAll(buf, "a".dup(64), control);
+        control = bufAdd(buf, 'b', control);
         verify(buf, control);
     }
 

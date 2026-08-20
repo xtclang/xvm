@@ -625,6 +625,11 @@ class StringBuffer
         Int waste = buf.capacity - used;
         if (waste > used && waste > MinBuf) {
             buf = new Array<Char>(Constant, buf);
+        } else if (buf.inPlace) {
+            // Committed buffers are no longer appended to. Store them with the same immutable
+            // representation as large string chunks so the chunk list never narrows to a type that
+            // rejects later committed buffers.
+            buf = buf.freeze(inPlace=True);
         }
 
         bufs      = bufs.toArray(mutability=Mutable, inPlace=True).add(buf);
