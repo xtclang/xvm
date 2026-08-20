@@ -41,6 +41,8 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
+import org.xvm.util.Lazy;
+
 /**
  * Native OSStorage implementation.
  */
@@ -52,8 +54,6 @@ public class xOSStorage
 
     @Override
     public void initNative() {
-        s_methodOnEvent = getStructure().findMethodDeep("onEvent", Utils.ANY);
-
         markNativeProperty("homeDir");
         markNativeProperty("curDir");
         markNativeProperty("tmpDir");
@@ -319,9 +319,11 @@ public class xOSStorage
                 Path pathRelative = (Path) event.context();
                 Path pathAbsolute = pathDir.resolve(pathRelative);
 
+                xOSStorage     templateStorage = context.hStorage.getTemplate(xOSStorage.class);
                 FunctionHandle hfnOnEvent =
                         xRTFunction.makeInternalHandle(
-                                context.hStorage.f_context.f_container, s_methodOnEvent).
+                                context.hStorage.f_context.f_container,
+                                templateStorage.ensureOnEventMethod()).
                                 bindTarget(null, context.hStorage);
 
                 StringHandle hPathDir  = xString.makeHandle(pathDir.toString());
@@ -366,7 +368,17 @@ public class xOSStorage
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static MethodStructure s_methodOnEvent;
+    /**
+     * Owner-scoped replacement for the old static event callback method cache. Watch events are
+     * delivered through the watched storage handle, so resolving the method from that handle's
+     * template preserves the old callback binding without a JVM-global MethodStructure.
+     */
+    private final Lazy<MethodStructure> f_methodOnEvent =
+            Lazy.of(() -> getStructure().findMethodDeep("onEvent", Utils.ANY));
+
+    private MethodStructure ensureOnEventMethod() {
+        return f_methodOnEvent.get();
+    }
 
     private static WatchServiceDaemon s_daemonWatch;
 }
