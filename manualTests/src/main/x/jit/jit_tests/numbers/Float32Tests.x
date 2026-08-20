@@ -38,6 +38,10 @@ class Float32Tests {
         testDecAsNullableDecReturn();
         testNullableDecConditionalReturn();
 
+        // Number tests
+        testFloat32toArray();
+        testFloat32Rounding();
+
         // Stringable
         testAppendTo();
         testEstimateStringLength();
@@ -303,6 +307,29 @@ class Float32Tests {
             return True, Null;
         }
         return False;
+    }
+
+    // ----- Number tests --------------------------------------------------------------------------
+
+    void testFloat32toArray() {
+        Float32 value = 4.2;
+
+        assert new Float32(value.toBitArray()) == value;
+        assert new Float32(value.toByteArray()) == value;
+    }
+
+    void testFloat32Rounding() {
+        Float32 positive = 3.8;
+        assert positive.round() == 4.0;
+        assert positive.floor() == 3.0;
+        assert positive.ceil() == 4.0;
+        assert positive.round(TowardZero) == 3.0;
+
+        Float32 negative = -3.8;
+        assert negative.round() == -4.0;
+        assert negative.floor() == -4.0;
+        assert negative.ceil() == -3.0;
+        assert negative.round(TowardZero) == -3.0;
     }
 
     // ----- Stringable tests ----------------------------------------------------------------------

@@ -71,6 +71,14 @@ class UInt16ConvertTests {
         testUInt16ToUInt128(500, 500);
         testUInt16ToUInt128(Int16.MaxValue, 32767);
 
+        testUInt16toArray();
+    }
+
+    void testUInt16toArray() {
+        UInt16 value = 0xFEDC;
+
+        assert new UInt16(value.toBitArray()) == value;
+        assert new UInt16(value.toByteArray()) == value;
     }
 
     void testUInt16ToInt8(UInt16 a, Int8 expected) {

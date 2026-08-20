@@ -11,11 +11,56 @@ class FPNumberTests {
         testEMax();
         testEMin();
         testBias();
+        testPiConversions();
+        testFloat16toArray();
+        testFloat16ConstantLoading();
+        testFloat16Rounding();
     }
 
     void test(Number n) {
         Int32 i2 = n.toInt32();
         assert i2 == 100;
+    }
+
+    void testPiConversions() {
+        Float16 pi16 = FPNumber.PI;
+        Float32 pi32 = FPNumber.PI;
+        Float64 pi64 = FPNumber.PI;
+        Dec64   piDec = FPNumber.PI;
+
+        assert pi16 > 3.0 && pi16 < 3.2;
+        assert pi32 > 3.0 && pi32 < 3.2;
+        assert pi64 > 3.0 && pi64 < 3.2;
+        assert piDec > 3.0 && piDec < 3.2;
+    }
+
+    void testFloat16toArray() {
+        Float16 value = 4.2;
+
+        assert new Float16(value.toBitArray()) == value;
+        assert new Float16(value.toByteArray()) == value;
+    }
+
+    void testFloat16ConstantLoading() {
+        Float16 value = 4;
+        assert value.toFloat64() == 4.0;
+    }
+
+    void testFloat16Rounding() {
+        Float16 three = 3;
+        Float16 four  = 4;
+
+        Float16 positive = 3.8;
+        assert positive.round() == four;
+        assert positive.floor() == three;
+        assert positive.ceil() == four;
+        assert positive.round(TowardZero) == three;
+
+        Float16 negative = -3.8;
+        assert negative.round() == -four;
+        assert negative.floor() == -four;
+        assert negative.ceil() == -three;
+        assert negative.round(TowardZero) == -three;
     }
 
     void testExponentBitLength() {

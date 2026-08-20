@@ -427,7 +427,7 @@ public class Dec64 extends DecimalFPNumber {
      * @return {@code true} if the two Dec32 values are equal, {@code false} otherwise.
      */
     public static boolean $equals(long value1, long value2) {
-        return value1 == value2;
+        return $compare(value1, value2) == 0;
     }
 
     // ----- accessors -----------------------------------------------------------------------------

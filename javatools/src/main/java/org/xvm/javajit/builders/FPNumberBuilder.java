@@ -2,24 +2,28 @@ package org.xvm.javajit.builders;
 
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
 
 import java.util.Collection;
 
 import java.util.function.BiConsumer;
 
-import org.xvm.asm.ConstantPool;
-
 import org.xvm.asm.constants.PropertyInfo;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.TypeSystem;
 
+import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_double;
+import static java.lang.constant.ConstantDescs.CD_float;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
+import static java.lang.constant.ConstantDescs.CD_void;
+import static java.lang.constant.ConstantDescs.INIT_NAME;
 
 /**
  * The builder for FPNumber types.
@@ -35,7 +39,7 @@ public class FPNumberBuilder extends NumberBuilder {
     }
 
     @Override
-    protected BiConsumer<CodeBuilder, JitMethodDesc> getCodeGenerator(String jitName) {
+    protected BiConsumer<CodeBuilder, JitMethodDesc> getPropertyCodeGenerator(String jitName) {
         return switch (jitName) {
             case "exponent"             -> this::generateExponentGet;
             case "exponentBitLength"    -> this::generateExponentBitLengthGet;
@@ -43,128 +47,26 @@ public class FPNumberBuilder extends NumberBuilder {
             case "radix"                -> this::generateRadixGet;
             case "significand"          -> this::generateSignificandGet;
             case "significandBitLength" -> this::generateSignificandBitLengthGet;
-            default -> super.getCodeGenerator(jitName);
+            default -> super.getPropertyCodeGenerator(jitName);
         };
     }
 
-    // TODO - this can probably be removed after constructor/primitive-conversion path is fixed
     @Override
-    protected void appendCLInit(CodeBuilder code) {
-        TypeConstant superType = pool().typeFPNumber();
-        if (!thisType.isA(superType)) {
-            // this type is not a FPNumber
-            return;
-        }
-
-        // initialize FPNumber static fields
-        if (thisType.isJavaPrimitive()) {
-            ClassDesc cd = JitTypeDesc.getJavaPrimitive(thisType);
-            assert cd != null;
-
-            long inf;
-            long negInf;
-            switch (cd.descriptorString()) {
-                case "I", "S", "B", "Z":
-                    negInf = calculateNegativeInfinity(32);
-                    inf    = negInf & Long.MAX_VALUE;
-                    code.loadConstant((int) (inf >>> 32))
-                        .putstatic(art.CD(), "PositiveInfinity", cd)
-                        .loadConstant((int) (negInf >>> 32))
-                        .putstatic(art.CD(), "NegativeInfinity", cd)
-                        .loadConstant(Integer.MAX_VALUE)
-                        .putstatic(art.CD(), "PositiveNaN", cd)
-                        .loadConstant(Integer.MIN_VALUE)
-                        .putstatic(art.CD(), "NegativeNaN", cd);
-                    break;
-
-                case "J":
-                    negInf = calculateNegativeInfinity(64);
-                    inf    = negInf & Long.MAX_VALUE;
-                    code.loadConstant(inf)
-                        .putstatic(art.CD(), "PositiveInfinity", cd)
-                        .loadConstant(negInf)
-                        .putstatic(art.CD(), "NegativeInfinity", cd)
-                        .loadConstant(Long.MAX_VALUE)
-                        .putstatic(art.CD(), "PositiveNaN", cd)
-                        .loadConstant(Long.MIN_VALUE)
-                        .putstatic(art.CD(), "NegativeNaN", cd);
-                    break;
-
-                case "F":
-                    int intNan = Float.floatToRawIntBits(Float.NaN) | 0x80000000;
-                    code.loadConstant(Float.POSITIVE_INFINITY)
-                        .putstatic(art.CD(), "PositiveInfinity", cd)
-                        .loadConstant(Float.NEGATIVE_INFINITY)
-                        .putstatic(art.CD(), "NegativeInfinity", cd)
-                        .loadConstant(Float.NaN)
-                        .putstatic(art.CD(), "PositiveNaN", cd)
-                        .loadConstant(Float.intBitsToFloat(intNan))
-                        .putstatic(art.CD(), "NegativeNaN", cd);
-                    break;
-
-                case "D":
-                    long longNan = Double.doubleToRawLongBits(Double.NaN) | 0x8000000000000000L;
-                    code.loadConstant(Double.POSITIVE_INFINITY)
-                        .putstatic(art.CD(), "PositiveInfinity", cd)
-                        .loadConstant(Double.NEGATIVE_INFINITY)
-                        .putstatic(art.CD(), "NegativeInfinity", cd)
-                        .loadConstant(Double.NaN)
-                        .putstatic(art.CD(), "PositiveNaN", cd)
-                        .loadConstant(Double.longBitsToDouble(longNan))
-                        .putstatic(art.CD(), "NegativeNaN", cd);
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException("Unsupported number type " + cd);
-            }
-        } else if (thisType.isXvmPrimitive()) {
-            String name = thisType.getSingleUnderlyingClass(false).getName();
-
-            switch (name) {
-                case "Dec32":
-                    code.loadConstant(0b011110 << 26)
-                        .putstatic(art.CD(), "PositiveInfinity$0", CD_int)
-                        .loadConstant(0b111110 << 26)
-                        .putstatic(art.CD(), "NegativeInfinity$0", CD_int)
-                        .loadConstant(0b011111 << 26)
-                        .putstatic(art.CD(), "PositiveNaN$0", CD_int)
-                        .loadConstant(0b111111 << 26)
-                        .putstatic(art.CD(), "NegativeNaN$0", CD_int);
-                    break;
-
-                case "Dec64":
-                    code.loadConstant(0b011110L << 58)
-                        .putstatic(art.CD(), "PositiveInfinity$0", CD_long)
-                        .loadConstant(0b111110L << 58)
-                        .putstatic(art.CD(), "NegativeInfinity$0", CD_long)
-                        .loadConstant(0b011111L << 58)
-                        .putstatic(art.CD(), "PositiveNaN$0", CD_long)
-                        .loadConstant(0b111111L << 58)
-                        .putstatic(art.CD(), "NegativeNaN$0", CD_long);
-                    break;
-
-                case "Dec128":
-                    code.loadConstant(0b011110L << 58)
-                        .putstatic(art.CD(), "PositiveInfinity$1", CD_long)
-                        .loadConstant(0b111110L << 58)
-                        .putstatic(art.CD(), "NegativeInfinity$1", CD_long)
-                        .loadConstant(0b011111L << 58)
-                        .putstatic(art.CD(), "PositiveNaN$1", CD_long)
-                        .loadConstant(0b111111L << 58)
-                        .putstatic(art.CD(), "NegativeNaN$1", CD_long);
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException("Unsupported number type " + name);
-            }
-        }
+    protected BiConsumer<CodeBuilder, JitMethodDesc> getMethodCodeGenerator(String jitName) {
+        return switch (jitName) {
+            case "round" -> this::generateRound;
+            case "floor" -> this::generateFloor;
+            case "ceil"  -> this::generateCeil;
+            default      -> super.getMethodCodeGenerator(jitName);
+        };
     }
 
+    // ----- properties ----------------------------------------------------------------------------
+
+    // TODO - this can probably be removed after constructor/primitive-conversion path is fixed
+
     /**
-     * Assemble the static primitive accessor "radix$get$p" method, for example:
-     * <pre>
-     *     long radix$get$p(int thi$, Ctx ctx)
-     * </pre>
+     * Assemble an optimized static implementation of "exponentBitLength$get$p()".
      */
     protected void generateExponentBitLengthGet(CodeBuilder code, JitMethodDesc jmd) {
         long exp = getExponentLength();
@@ -173,10 +75,7 @@ public class FPNumberBuilder extends NumberBuilder {
     }
 
     /**
-     * Assemble the static primitive accessor "precision$get$p" method, for example:
-     * <pre>
-     *     long precision$get$p(int thi$, Ctx ctx)
-     * </pre>
+     * Assemble an optimized static implementation of "precision$get$p()".
      */
     protected void generatePrecisionGet(CodeBuilder code, JitMethodDesc jmd) {
         long p = getSignificandLength() + 1;
@@ -185,10 +84,7 @@ public class FPNumberBuilder extends NumberBuilder {
     }
 
     /**
-     * Assemble the static primitive accessor "significandBitLength$get$p" method, for example:
-     * <pre>
-     *     long significandBitLength$get$p(int thi$, Ctx ctx)
-     * </pre>
+     * Assemble an optimized static implementation of "significandBitLength$get$p()".
      */
     protected void generateSignificandBitLengthGet(CodeBuilder code, JitMethodDesc jmd) {
         long p = getSignificandLength();
@@ -197,10 +93,9 @@ public class FPNumberBuilder extends NumberBuilder {
     }
 
     /**
-     * Assemble the static primitive accessor "exponent$get$p" method, for example:
-     * <pre>
-     *     long exponent$get$p(int thi$, Ctx ctx)
-     * </pre>
+     * Assemble an optimized static implementation of "exponent$get$p()".
+     *
+     * {@code return Int64.valueOf((rawBits & exponentMask) >>> significandBitLength);}
      */
     protected void generateExponentGet(CodeBuilder code, JitMethodDesc jmd) {
         generateGetExponent(code, jmd);
@@ -208,10 +103,9 @@ public class FPNumberBuilder extends NumberBuilder {
     }
 
     /**
-     * Assemble the static primitive accessor "significand$get$p" method, for example:
-     * <pre>
-     *     long significand$get$p(int thi$, Ctx ctx)
-     * </pre>
+     * Assemble an optimized static implementation of "significand$get$p()".
+     *
+     * {@code return Int64.valueOf(rawBits & significandMask);}
      */
     protected void generateSignificandGet(CodeBuilder code, JitMethodDesc jmd) {
         generateGetSignificand(code, jmd);
@@ -262,36 +156,12 @@ public class FPNumberBuilder extends NumberBuilder {
     }
 
     /**
-     * Assemble the static primitive accessor "radix$get$p" method, for example:
-     * <pre>
-     *     long radix$get$p(int thi$, Ctx ctx)
-     * </pre>
+     * Assemble an optimized static implementation of "radix$get$p()".
      */
     protected void generateRadixGet(CodeBuilder code, JitMethodDesc jmd) {
         long radix = thisType.isA(pool().typeBinFPNumber()) ? 2L : 10L;
         code.loadConstant(radix)
             .lreturn();
-    }
-
-    /**
-     * Calculate the bit pattern for negative infinity.
-     * <p>
-     * This only applies to BinaryFPNumber instances as DecimalFPNumber is finite.
-     */
-    protected long calculateNegativeInfinity(int bitLength) {
-        ConstantPool pool = pool();
-        if (thisType.isA(pool.typeBinFPNumber())) {
-            // For binary fp numbers -Infinity is all exponent bits set to 1 and sign bit set to 1,
-            int exp = getExponentLength();
-            return -1L << (bitLength - exp - 1) << (64 - bitLength);
-        }
-
-        if (thisType.isA(pool.typeDecFPNumber())) {
-            long g0g4 = 0b11110L << 58;
-            return Long.MIN_VALUE | g0g4;
-        }
-
-        throw new UnsupportedOperationException("Unsupported number type " + thisType);
     }
 
     /**
@@ -323,7 +193,8 @@ public class FPNumberBuilder extends NumberBuilder {
                 break;
             case "F":
                 code.fload(slot)
-                    .invokestatic(CD_JavaFloat, "floatToRawIntBits", MD_floatToInt)
+                    .invokestatic(CD_JavaFloat, "floatToRawIntBits",
+                            MethodTypeDesc.of(CD_int, CD_float))
                     .loadConstant(Integer.MAX_VALUE)
                     .iand()
                     .loadConstant(sigLen)
@@ -332,7 +203,8 @@ public class FPNumberBuilder extends NumberBuilder {
                 break;
             case "D":
                 code.dload(slot)
-                    .invokestatic(CD_JavaDouble, "doubleToRawLongBits", MD_doubleToLong)
+                    .invokestatic(CD_JavaDouble, "doubleToRawLongBits",
+                            MethodTypeDesc.of(CD_long, CD_double))
                     .loadConstant(Long.MAX_VALUE)
                     .land()
                     .loadConstant(sigLen)
@@ -379,7 +251,8 @@ public class FPNumberBuilder extends NumberBuilder {
                 break;
             case "F":
                 code.fload(slot)
-                    .invokestatic(CD_JavaFloat, "floatToRawIntBits", MD_floatToInt)
+                    .invokestatic(CD_JavaFloat, "floatToRawIntBits",
+                            MethodTypeDesc.of(CD_int, CD_float))
                     .loadConstant(shift)
                     .ishl()
                     .loadConstant(shift)
@@ -388,7 +261,8 @@ public class FPNumberBuilder extends NumberBuilder {
                 break;
             case "D":
                 code.dload(slot)
-                    .invokestatic(CD_JavaDouble, "doubleToRawLongBits", MD_doubleToLong)
+                    .invokestatic(CD_JavaDouble, "doubleToRawLongBits",
+                            MethodTypeDesc.of(CD_long, CD_double))
                     .loadConstant(shift)
                     .lshl()
                     .loadConstant(shift)
@@ -403,4 +277,176 @@ public class FPNumberBuilder extends NumberBuilder {
                     code.parameterSlot(jmd.optimizedMD.parameterCount() - 1));
         }
     }
+
+    // ----- methods -------------------------------------------------------------------------------
+
+    /**
+     * Assemble an optimized static implementation of "round$p()".
+     *
+     * {@code return finite ? bigDecimal.setScale(0, direction).toFPNumber() : this;}
+     */
+    protected void generateRound(CodeBuilder code, JitMethodDesc jmd) {
+        generateRounding(code, jmd, null);
+    }
+
+    /**
+     * Assemble an optimized static implementation of "floor$p()".
+     *
+     * {@code return finite ? bigDecimal.setScale(0, FLOOR).toFPNumber() : this;}
+     */
+    protected void generateFloor(CodeBuilder code, JitMethodDesc jmd) {
+        generateRounding(code, jmd, "FLOOR");
+    }
+
+    /**
+     * Assemble an optimized static implementation of "ceil$p()".
+     *
+     * {@code return finite ? bigDecimal.setScale(0, CEILING).toFPNumber() : this;}
+     */
+    protected void generateCeil(CodeBuilder code, JitMethodDesc jmd) {
+        generateRounding(code, jmd, "CEILING");
+    }
+
+    /**
+     * Generate a rounding operation for a primitive FPNumber.
+     *
+     * @param mode  the fixed {@link java.math.RoundingMode} name, or null to load the method
+     *              argument
+     */
+    protected void generateRounding(CodeBuilder code, JitMethodDesc jmd, String mode) {
+        if (thisType.isJavaPrimitive()) {
+            generateBinaryRounding(code, jmd, mode);
+        } else if (thisType.isXvmPrimitive()) {
+            generateDecimalRounding(code, jmd, mode);
+        } else {
+            throw new IllegalStateException("Unsupported FPNumber type " + thisType);
+        }
+    }
+
+    /**
+     * Generate a rounding operation for Float16, Float32, or Float64.
+     */
+    protected void generateBinaryRounding(CodeBuilder code, JitMethodDesc jmd, String mode) {
+        ClassDesc valueCD = JitTypeDesc.getJavaPrimitive(thisType);
+        assert valueCD != null;
+
+        if (mode != null) {
+            loadBinaryValueAsDouble(code, valueCD);
+            code.invokestatic(CD_JavaMath, mode.equals("FLOOR") ? "floor" : "ceil",
+                    MethodTypeDesc.of(CD_double, CD_double));
+            if (valueCD.equals(CD_float)) {
+                code.d2f();
+            }
+            addPrimitiveReturn(code, jmd);
+            return;
+        }
+
+        Label finite = code.newLabel();
+        load(code, valueCD, code.parameterSlot(0));
+        code.invokestatic(valueCD.equals(CD_float) ? CD_JavaFloat : CD_JavaDouble,
+                    "isFinite", MethodTypeDesc.of(CD_boolean, valueCD))
+            .ifne(finite);
+        load(code, valueCD, code.parameterSlot(0));
+        addPrimitiveReturn(code, jmd);
+
+        code.labelBinding(finite)
+            .new_(CD_BigDecimal)
+            .dup();
+        loadBinaryValueAsDouble(code, valueCD);
+        code.invokespecial(CD_BigDecimal, INIT_NAME, MethodTypeDesc.of(CD_void, CD_double));
+        generateSetScale(code, jmd, null);
+        code.invokevirtual(CD_BigDecimal, "doubleValue", MethodTypeDesc.of(CD_double));
+        if (valueCD.equals(CD_float)) {
+            code.d2f();
+        }
+        addPrimitiveReturn(code, jmd);
+    }
+
+    /**
+     * Generate a rounding operation for Dec32, Dec64, or Dec128.
+     */
+    protected void generateDecimalRounding(CodeBuilder code, JitMethodDesc jmd, String mode) {
+        ClassDesc   valueCD  = JitTypeDesc.getXvmPrimitiveClass(thisType);
+        ClassDesc[] valueCDs = JitTypeDesc.getXvmPrimitiveClasses(thisType);
+        assert valueCD != null;
+
+        Label finite = code.newLabel();
+        loadTarget(code, jmd);
+        code.invokestatic(CD_DecimalFPNumber, "$leftmost7Bits",
+                    MethodTypeDesc.of(CD_int, valueCDs))
+            .invokestatic(CD_DecimalFPNumber, "$isFinite",
+                    MethodTypeDesc.of(CD_boolean, CD_int))
+            .ifne(finite);
+        loadTarget(code, jmd);
+        addPrimitiveReturn(code, jmd);
+
+        code.labelBinding(finite)
+            .aload(code.parameterSlot(jmd.optimizedCtx()));
+        loadTarget(code, jmd);
+        code.invokestatic(valueCD, "$toBigDecimal",
+                MethodTypeDesc.of(CD_BigDecimal, valueCDs));
+        generateSetScale(code, jmd, mode);
+
+        ClassDesc returnCD = jmd.optimizedMD.returnType();
+        code.invokestatic(valueCD, returnCD.equals(CD_int) ? "$toIntBits" : "$toLongBits",
+                    MethodTypeDesc.of(returnCD, CD_Ctx, CD_BigDecimal));
+        addReturn(code, returnCD);
+    }
+
+    /**
+     * Load the primitive binary value as a double.
+     */
+    protected void loadBinaryValueAsDouble(CodeBuilder code, ClassDesc valueCD) {
+        load(code, valueCD, code.parameterSlot(0));
+        if (valueCD.equals(CD_float)) {
+            code.f2d();
+        } else if (!valueCD.equals(CD_double)) {
+            throw new IllegalStateException("Unsupported binary FPNumber type " + thisType);
+        }
+    }
+
+    /**
+     * Load all primitive slots that represent the target value.
+     */
+    protected void loadTarget(CodeBuilder code, JitMethodDesc jmd) {
+        for (int i = 0, count = jmd.optimizedParams.length;
+                i < count && jmd.optimizedParams[i].index < 0; i++) {
+            load(code, jmd.optimizedParams[i].cd, code.parameterSlot(i));
+        }
+    }
+
+    /**
+     * Round the BigDecimal on the stack to an integer scale.
+     */
+    protected void generateSetScale(CodeBuilder code, JitMethodDesc jmd, String mode) {
+        code.iconst_0();
+        if (mode == null) {
+            Label specified = code.newLabel();
+            Label loaded    = code.newLabel();
+            int   modeSlot  = code.parameterSlot(
+                    jmd.getImplicitParamCount() + jmd.getOptimizedParamIndex(0));
+
+            code.aload(modeSlot)
+                .dup()
+                .ifnonnull(specified)
+                .pop()
+                .getstatic(CD_RoundingMode, "UP", CD_RoundingMode)
+                .goto_(loaded)
+                .labelBinding(specified)
+                .invokevirtual(CD_Rounding, "$roundingMode",
+                        MethodTypeDesc.of(CD_RoundingMode))
+                .labelBinding(loaded);
+        } else {
+            code.getstatic(CD_RoundingMode, mode, CD_RoundingMode);
+        }
+        code.invokevirtual(CD_BigDecimal, "setScale",
+                MethodTypeDesc.of(CD_BigDecimal, CD_int, CD_RoundingMode));
+    }
+
+    private static final ClassDesc CD_BigDecimal = ClassDesc.of("java.math.BigDecimal");
+    private static final ClassDesc CD_RoundingMode = ClassDesc.of("java.math.RoundingMode");
+    private static final ClassDesc CD_DecimalFPNumber =
+            ClassDesc.of("org.xtclang.ecstasy.numbers.DecimalFPNumber");
+    private static final ClassDesc CD_Rounding =
+            ClassDesc.of("org.xtclang.ecstasy.numbers.FPNumber$Rounding");
 }

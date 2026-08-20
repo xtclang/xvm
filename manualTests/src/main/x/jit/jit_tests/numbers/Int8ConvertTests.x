@@ -120,6 +120,14 @@ class Int8ConvertTests {
         testInt8ToUIntN(100, 100);
         testInt8ToUIntN(Int8.MaxValue, 127);
 
+        testInt8toArray();
+    }
+
+    void testInt8toArray() {
+        Int8 value = -42;
+
+        assert new Int8(value.toBitArray()) == value;
+        assert new Int8(value.toByteArray()) == value;
     }
 
     void testInt8ToInt8(Int8 a, Int8 expected) {

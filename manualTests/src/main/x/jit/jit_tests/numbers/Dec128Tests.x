@@ -38,6 +38,9 @@ class Dec128Tests {
         testDecAsNullableDecReturn();
         testNullableDecConditionalReturn();
 
+        // Number tests
+        testDec128Rounding();
+
         // Stringable
         testAppendTo();
         testEstimateStringLength();
@@ -303,6 +306,25 @@ class Dec128Tests {
             return True, Null;
         }
         return False;
+    }
+
+    // ----- Number tests --------------------------------------------------------------------------
+
+    void testDec128Rounding() {
+        Dec128 three = 3;
+        Dec128 four  = 4;
+
+        Dec128 positive = 3.8;
+        assert positive.round() == four;
+        assert positive.floor() == three;
+        assert positive.ceil() == four;
+        assert positive.round(TowardZero) == three;
+
+        Dec128 negative = -3.8;
+        assert negative.round() == -four;
+        assert negative.floor() == -four;
+        assert negative.ceil() == -three;
+        assert negative.round(TowardZero) == -three;
     }
 
     // ----- Stringable tests ----------------------------------------------------------------------

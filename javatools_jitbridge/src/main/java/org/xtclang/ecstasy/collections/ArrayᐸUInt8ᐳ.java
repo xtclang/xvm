@@ -202,6 +202,8 @@ public class ArrayᐸUInt8ᐳ
         return $fromLongs(ctx, null, bytes, values);
     }
 
+    // ----- helper methods ------------------------------------------------------------------------
+
     /**
      * Internal method to create a UInt8 array from a long array.
      *
@@ -214,6 +216,28 @@ public class ArrayᐸUInt8ᐳ
         array.$storage = values;
         array.$size((int) bytes);
         return array;
+    }
+
+    /**
+     * Read a 64-bit segment of this array.
+     * Used by {@link org.xvm.javajit.builders.NumberBuilder#loadConstructorLong}.
+     *
+     * @param index      the index of the 64-bit segment
+     * @param bitLength  the bit length of the Number being constructed
+     *
+     * @return the segment, with the first bit stored in its most significant position
+     */
+    public long $toLong(Ctx ctx, int index, int bitLength) {
+        long start   = (long) index << 6;
+        long count   = Math.min(bitLength - start, Long.SIZE);
+        long padding = (size$get$p(ctx) << 3) - bitLength;
+        long value   = 0;
+        for (long offset = 0; offset < count; offset++) {
+            long source = padding + start + offset;
+            long octet  = getElement$pi(ctx, source >>> 3);
+            value |= (octet >>> (7 - (source & 7)) & 1) << (63 - offset);
+        }
+        return value;
     }
 
     @Override

@@ -143,10 +143,22 @@ class Int128Tests {
         testInt128OpXor();
         testInt128OpXorInPlace();
 
+        // Number tests
+        testInt128toArray();
+
         // Stringable
         testAppendTo();
         testEstimateStringLength();
 
+    }
+
+    // ----- Number tests --------------------------------------------------------------------------
+
+    void testInt128toArray() {
+        Int128 value = -42;
+
+        assert new Int128(value.toBitArray()) == value;
+        assert new Int128(value.toByteArray()) == value;
     }
 
     // ----- comparison tests ----------------------------------------------------------------------

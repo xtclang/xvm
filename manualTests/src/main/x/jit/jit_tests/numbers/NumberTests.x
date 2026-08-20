@@ -15,7 +15,18 @@ class NumberTests {
         testInfinity();
         testNaN();
         testMagnitude();
+// TODO: JIT calls $hasOptMethod() with a null nFunction context
+//        testConverterFor();
     }
+
+//    void testConverterFor() {
+//        function Byte(Int) toByte = Number.converterFor(Int, Byte);
+//        assert toByte(3) == 3;
+//        assert toByte(45) == 45;
+//
+//        function Float64(Int) toFloat64 = Number.converterFor(Int, Float64);
+//        assert toFloat64(42) == 42.0;
+//    }
 
     void testBitLength() {
         assert Dec32.one().bitLength == 32;
