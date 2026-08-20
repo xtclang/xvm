@@ -82,7 +82,7 @@ public class xTerminalConsole
                              ObjectHandle[] ahArg, int iReturn) {
         switch (method.getName()) {
         case "print": { // Object o = "", Boolean suppressNewline = False
-            boolean fNewline = ahArg[1] != xBoolean.TRUE;
+            boolean fNewline = !xBoolean.isTrue(ahArg[1]);
 
             ObjectHandle hVal = ahArg[0];
             if (hVal == ObjectHandle.DEFAULT) {
@@ -119,7 +119,7 @@ public class xTerminalConsole
      */
     protected int invokeReadLine(Frame frame, ObjectHandle[] ahArg, int iReturn) {
         String  sPrompt = ahArg[0] instanceof StringHandle hString ? hString.getStringValue() : "";
-        boolean fEcho   = ahArg[1] != xBoolean.TRUE;
+        boolean fEcho   = !xBoolean.isTrue(ahArg[1]);
 
         StringHandle hLine;
         if (READER == null) {

@@ -67,13 +67,13 @@ public class IsNType
                 typeTest = hType.getUnsafeDataType();
             } catch (ClassCastException e) {
                 // should not happen
-                return frame.assignValue(m_nRetValue, xBoolean.FALSE);
+                return frame.assignValue(m_nRetValue, xBoolean.falseHandle(frame));
             } catch (ExceptionHandle.WrapperException e) {
                 return frame.raiseException(e);
             }
         }
 
         return frame.assignValue(m_nRetValue,
-                xBoolean.makeHandle(!hValue.getUnsafeType().isA(typeTest)));
+                xBoolean.makeHandle(frame, !hValue.getUnsafeType().isA(typeTest)));
     }
 }

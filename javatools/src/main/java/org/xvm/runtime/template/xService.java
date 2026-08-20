@@ -236,7 +236,7 @@ public class xService
                 return frame.raiseException("Call out of context");
             }
 
-            if (hArg == xNullable.NULL) {
+            if (xNullable.isNull(hArg)) {
                 frame.f_fiber.setTimeoutHandle(hArg, 0L);
                 return Op.R_NEXT;
             }
@@ -333,7 +333,7 @@ public class xService
 
         case "synchronizedSection":
             ObjectHandle hCriticalSection = hService.f_context.getSynchronizedSection();
-            return frame.assignValue(iReturn, hCriticalSection == null ? xNullable.NULL : hCriticalSection);
+            return frame.assignValue(iReturn, hCriticalSection == null ? xNullable.makeHandle(frame) : hCriticalSection);
 
         case "synchronicity": {
             if (frame.f_context != hService.f_context) {
@@ -467,7 +467,7 @@ public class xService
         Map<ObjectHandle, ObjectHandle> mapTokens = frame.f_fiber.getTokens();
 
         ObjectHandle hToken = mapTokens == null ? null : mapTokens.get(hContext);
-        return frame.assignValue(iReturn, hToken == null ? xNullable.NULL : hToken);
+        return frame.assignValue(iReturn, hToken == null ? xNullable.makeHandle(frame) : hToken);
     }
 
     /**

@@ -103,31 +103,6 @@ public class SingletonConstantTest {
     }
 
     private static Fiber createFiber() {
-        return new Fiber(null, new ServiceContext.Message(null) {
-            @Override
-            public boolean isAsync() {
-                return false;
-            }
-
-            @Override
-            public int getCallDepth() {
-                return 0;
-            }
-
-            @Override
-            public ObjectHandle getTimeoutHandle() {
-                return null;
-            }
-
-            @Override
-            public long getTimeoutStamp() {
-                return 0;
-            }
-
-            @Override
-            Frame createFrame(ServiceContext context) {
-                return null;
-            }
-        });
+        return new Fiber();
     }
 }

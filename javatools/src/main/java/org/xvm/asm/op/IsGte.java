@@ -60,13 +60,13 @@ public class IsGte
                                    ObjectHandle hValue1, ObjectHandle hValue2) {
         switch (type.callCompare(frame, hValue1, hValue2, A_STACK)) {
         case R_NEXT:
-            return frame.assignValue(m_nRetValue, xBoolean.makeHandle(
-                    frame.popStack() != xOrdered.LESSER));
+            return frame.assignValue(m_nRetValue, xBoolean.makeHandle(frame,
+                    !xOrdered.isLesser(frame.popStack())));
 
         case R_CALL:
             frame.m_frameNext.addContinuation(frameCaller ->
-                frameCaller.assignValue(m_nRetValue, xBoolean.makeHandle(
-                        frameCaller.popStack() != xOrdered.LESSER)));
+                frameCaller.assignValue(m_nRetValue, xBoolean.makeHandle(frameCaller,
+                        !xOrdered.isLesser(frameCaller.popStack()))));
             return R_CALL;
 
         case R_EXCEPTION:

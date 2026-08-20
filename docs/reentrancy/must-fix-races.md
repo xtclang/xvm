@@ -16,8 +16,8 @@ and lazy-publication counts are scan signals generated on branch
 | Priority | Broken pattern | Signal | Failure mode | Required replacement |
 | --- | --- | --- | --- | --- |
 | Must fix | Mutable native template `INSTANCE` fields | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes all 143 fields and all 139 constructor assignments. | Last writer wins across containers; constructor `this` escape | `NativeTemplates` central key table, existing container template cache, plus container/frame lookup |
-| Must fix | Static runtime-owned metadata | `master`: 151 field-shaped runtime/template static metadata fields after excluding `INSTANCE`. This branch fixes 145 and leaves 6. | Type/composition/method/handle values from one owner reused in another owner | Owner-scoped final `Lazy`, grouped info records, or owner-owned `ConcurrentMap` |
-| Must fix | Raw enum handles returned through public/native paths | 83 raw enum accessor references, including definitions/comments; several public helper groups still return raw handles | Natural enum construction struct escapes as if it were the finalized enum singleton | `ensureEnumByName`, `ensureEnumByOrdinal`, or `Utils.ensureInitializedEnum` on public paths |
+| Must fix | Static runtime-owned metadata | `master`: 151 field-shaped runtime/template static metadata fields after excluding `INSTANCE`. This branch fixes all 151 and leaves 0 in the scanned runtime-template/Utils category. | Type/composition/method/handle values from one owner reused in another owner | Owner-scoped final `Lazy`, grouped info records, or owner-owned `ConcurrentMap` |
+| Must fix | Raw enum handles returned through public/native paths | 86 raw enum accessor references, including definitions/comments and safe owner-scoped internal factories; several public helper groups still return raw handles | Natural enum construction struct escapes as if it were the finalized enum singleton | `ensureEnumByName`, `ensureEnumByOrdinal`, or `Utils.ensureInitializedEnum` on public paths |
 | Must fix | Manual lazy publication in shared runtime/asm objects | 111 strong same-field lazy-init matches in runtime/asm | Plain field read/write with no happens-before edge; duplicate, stale, partial, or wrong-owner state | Final `Lazy`, `ConcurrentMap.computeIfAbsent`, or explicit atomic/locked state |
 | Must fix | Split lifecycle state across several fields | `SingletonConstant` was the known concrete case and is fixed in this branch | Fibers see mixed handle/owner/waiter state; false recursion or missed wait | One immutable state snapshot in `AtomicReference<State>` or one lock |
 
@@ -84,19 +84,19 @@ Count with this broader command:
 
 ```text
 master: 151
-current branch: 6
-fixed in this branch: 145
+current branch: 0
+fixed in this branch: 151
 ```
+
+The broader non-final static scan also found `xRTBuffer.PROP_RAW_BYTES`, a
+template-owned `PropertyConstant` cache that was not matched by the command
+above because it does not include `PropertyConstant`. This branch fixes that
+site as final owner-local lazy state as well.
 
 Representative current branch hits:
 
 ```text
-javatools/src/main/java/org/xvm/runtime/template/xBoolean.java:19:    public static BooleanHandle TRUE;
-javatools/src/main/java/org/xvm/runtime/template/xBoolean.java:20:    public static BooleanHandle FALSE;
-javatools/src/main/java/org/xvm/runtime/template/xNullable.java:16:    public static EnumHandle NULL;
-javatools/src/main/java/org/xvm/runtime/template/xOrdered.java:18:    public static EnumHandle LESSER;
-javatools/src/main/java/org/xvm/runtime/template/xOrdered.java:19:    public static EnumHandle EQUAL;
-javatools/src/main/java/org/xvm/runtime/template/xOrdered.java:20:    public static EnumHandle GREATER;
+none
 ```
 
 Why this is broken:
@@ -135,7 +135,8 @@ rg -n "getEnumByName|getEnumByOrdinal" \
 Current signal:
 
 ```text
-83 raw enum accessor references, including definitions and comments
+86 raw enum accessor references, including definitions, comments, and safe
+owner-scoped internal factories
 ```
 
 Branch-covered groups:
@@ -159,8 +160,9 @@ Branch-covered groups:
 
 High-risk groups still requiring review:
 
-- `xBoolean`, `xNullable`, and `xOrdered` assign static enum handles during
-  `initNative()`.
+- `xBoolean`, `xNullable`, and `xOrdered` no longer assign static enum handles
+  during `initNative()`. They keep native enum values in the owner template and
+  expose owner-required factories plus pure value predicates.
 - Any remaining public/native raw `getEnumByName(...)` or
   `getEnumByOrdinal(...)` path not listed above must be reviewed before this
   category can be considered globally closed.

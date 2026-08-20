@@ -98,7 +98,7 @@ public class xRTServiceControl
         switch (sPropName) {
         case "contended":
             return frame.assignValue(iReturn,
-                    xBoolean.makeHandle(hControl.getContext().isContended()));
+                    xBoolean.makeHandle(frame, hControl.getContext().isContended()));
 
         case "statusIndicator": {
             xEnum.EnumHandle hStatus = f_templateServiceStatus.get().getEnumByName(

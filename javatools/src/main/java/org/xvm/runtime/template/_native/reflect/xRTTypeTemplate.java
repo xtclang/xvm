@@ -243,7 +243,7 @@ public class xRTTypeTemplate
      */
     public int getPropertyExplicitlyImmutable(Frame frame, TypeTemplateHandle hType, int iReturn) {
         TypeConstant type = hType.getDataType();
-        return frame.assignValue(iReturn, xBoolean.makeHandle(type.isImmutabilitySpecified()));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, type.isImmutabilitySpecified()));
     }
 
     /**
@@ -268,7 +268,7 @@ public class xRTTypeTemplate
                     : idClz.getPathString();
         }
 
-        return frame.assignValue(iReturn, sName == null ? xNullable.NULL : xString.makeHandle(frame, sName));
+        return frame.assignValue(iReturn, sName == null ? xNullable.makeHandle(frame) : xString.makeHandle(frame, sName));
     }
 
     /**
@@ -277,7 +277,7 @@ public class xRTTypeTemplate
     public int getPropertyRecursive(Frame frame, TypeTemplateHandle hType, int iReturn) {
         TypeConstant type   = hType.getDataType();
         boolean      fRecur = type.containsRecursiveType();
-        return frame.assignValue(iReturn, xBoolean.makeHandle(fRecur));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, fRecur));
     }
 
     /**
@@ -318,7 +318,7 @@ public class xRTTypeTemplate
 
             return frame.assignConditionalDeferredValue(aiReturn, hEnum);
         }
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
 
     /**
@@ -348,17 +348,17 @@ public class xRTTypeTemplate
 
             if (Op.anyDeferred(ahArg)) {
                 Frame.Continuation stepNext = frameCaller -> {
-                    frameCaller.assignValue(aiReturn[0], xBoolean.TRUE);
+                    frameCaller.assignValue(aiReturn[0], xBoolean.trueHandle(frameCaller));
                     return Utils.constructAnnotationTemplate(frame, hClass, ahArg, aiReturn[1]);
                 };
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
             }
 
-            frame.assignValue(aiReturn[0], xBoolean.TRUE);
+            frame.assignValue(aiReturn[0], xBoolean.trueHandle(frame));
             return Utils.constructAnnotationTemplate(frame, hClass, ahArg, aiReturn[1]);
         }
 
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
 
     /**
@@ -371,9 +371,9 @@ public class xRTTypeTemplate
         if (typeTarget.isVirtualChild() || typeTarget.isAnonymousClass()) {
             TypeTemplateHandle hParent =
                     makeHandle(frame.container(), typeTarget.getParentType());
-            return frame.assignValues(aiReturn, xBoolean.TRUE, hParent);
+            return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), hParent);
         } else {
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         }
     }
 
@@ -383,7 +383,7 @@ public class xRTTypeTemplate
     public int invokeFromClass(Frame frame, TypeTemplateHandle hType, int[] aiReturn) {
         TypeConstant type = hType.getDataType();
         if (!type.isExplicitClassIdentity(true)) {
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         }
 
         IdentityConstant idClz = type.getSingleUnderlyingClass(true);
@@ -398,7 +398,7 @@ public class xRTTypeTemplate
 
         return type.isAnnotated()
                 ? new CreateAnnotationComposition(hClass, type.getAnnotations(), aiReturn).doNext(frame)
-                : frame.assignValues(aiReturn, xBoolean.TRUE, hClass);
+                : frame.assignValues(aiReturn, xBoolean.trueHandle(frame), hClass);
     }
 
     /**
@@ -416,12 +416,12 @@ public class xRTTypeTemplate
 
                 return Op.isDeferred(hProperty)
                     ? hProperty.proceed(frame, frameCaller ->
-                        frameCaller.assignValues(aiReturn, xBoolean.TRUE, frameCaller.popStack()))
-                    : frame.assignValues(aiReturn, xBoolean.TRUE, hProperty);
+                        frameCaller.assignValues(aiReturn, xBoolean.trueHandle(frameCaller), frameCaller.popStack()))
+                    : frame.assignValues(aiReturn, xBoolean.trueHandle(frame), hProperty);
             }
         }
 
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
 
     /**
@@ -430,7 +430,7 @@ public class xRTTypeTemplate
     public int invokeIsA(Frame frame, TypeTemplateHandle hType, TypeTemplateHandle hThat, int iReturn) {
         TypeConstant typeThis = hType.getDataType();
         TypeConstant typeThat = hThat.getDataType();
-        return frame.assignValue(iReturn, xBoolean.makeHandle(typeThis.isA(typeThat)));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, typeThis.isA(typeThat)));
     }
 
     /**
@@ -439,9 +439,9 @@ public class xRTTypeTemplate
     public int invokeModifying(Frame frame, TypeTemplateHandle hType, int[] aiReturn) {
         TypeConstant type = hType.getDataType();
         return type.isModifyingType()
-                ? frame.assignValues(aiReturn, xBoolean.TRUE,
+                ? frame.assignValues(aiReturn, xBoolean.trueHandle(frame),
                         makeHandle(frame.container(), type.getUnderlyingType()))
-                : frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                : frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
 
     /**
@@ -451,10 +451,10 @@ public class xRTTypeTemplate
         TypeConstant type      = hType.getDataType();
         Container    container = frame.container();
         return type.isRelationalType()
-            ? frame.assignValues(aiReturn, xBoolean.TRUE,
+            ? frame.assignValues(aiReturn, xBoolean.trueHandle(frame),
                     makeHandle(container, type.getUnderlyingType()),
                     makeHandle(container, type.getUnderlyingType2()))
-            : frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            : frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
 
     /**
@@ -463,7 +463,7 @@ public class xRTTypeTemplate
     public int invokeParameterized(Frame frame, TypeTemplateHandle hType, int[] aiReturn) {
         TypeConstant type = hType.getDataType();
         if (!type.isParamsSpecified()) {
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         }
 
         TypeConstant[]       atypes  = type.getParamTypesArray();
@@ -475,7 +475,7 @@ public class xRTTypeTemplate
 
         ObjectHandle hArray = xArray.createImmutableArray(
                 ensureArrayClassComposition(frame.container()), ahTypes);
-        return frame.assignValues(aiReturn, xBoolean.TRUE, hArray);
+        return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), hArray);
     }
 
     /**
@@ -569,8 +569,8 @@ public class xRTTypeTemplate
         TypeConstant typeR = type.resolveGenericType(hName.getStringValue());
 
         return typeR == null
-                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                : frame.assignValues(aiReturn, xBoolean.TRUE,
+                ? frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame))
+                : frame.assignValues(aiReturn, xBoolean.trueHandle(frame),
                     makeHandle(frame.container(), typeR));
     }
 

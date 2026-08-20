@@ -150,13 +150,13 @@ public class xRTNameService
 
                         TypeComposition clz = ensureByteArrayArrayComposition(container);
                         return frameCaller.assignValues(aiReturn,
-                                xBoolean.TRUE, xArray.createImmutableArray(clz, ah));
+                                xBoolean.trueHandle(frame), xArray.createImmutableArray(clz, ah));
                     }
                 } catch (Throwable ignore) {
                     // REVIEW CP: do we want to report the reason somehow?
                     // return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
                 }
-                return frameCaller.assignValue(aiReturn[0], xBoolean.FALSE);
+                return frameCaller.assignValue(aiReturn[0], xBoolean.falseHandle(frameCaller));
             };
 
             return frame.waitForIO(cfResolve, continuation);
@@ -175,13 +175,13 @@ public class xRTNameService
                     String      sNotName = addr.getHostAddress();
                     if (sName != null && !sName.isEmpty() && !sName.equals(sNotName)) {
                         return frameCaller.assignValues(aiReturn,
-                                xBoolean.TRUE, xString.makeHandle(frameCaller, sName));
+                                xBoolean.trueHandle(frame), xString.makeHandle(frameCaller, sName));
                     }
                 } catch (Exception ignore) {
                     // REVIEW CP: do we want to report the reason somehow?
                     // return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
                 }
-                return frameCaller.assignValue(aiReturn[0], xBoolean.FALSE);
+                return frameCaller.assignValue(aiReturn[0], xBoolean.falseHandle(frameCaller));
             };
 
             return frame.waitForIO(cfLookup, continuation);

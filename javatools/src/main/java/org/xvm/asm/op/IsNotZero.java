@@ -49,6 +49,6 @@ public class IsNotZero
     @Override
     protected int completeUnaryOp(Frame frame, ObjectHandle hValue) {
         return frame.assignValue(m_nRetValue,
-            xBoolean.makeHandle(((JavaLong) hValue).getValue() != 0));
+            xBoolean.makeHandle(frame, ((JavaLong) hValue).getValue() != 0));
     }
 }

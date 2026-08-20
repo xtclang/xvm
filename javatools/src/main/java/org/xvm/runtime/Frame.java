@@ -984,7 +984,7 @@ public class Frame
                 if (hVal == null) {
                     // a "null" value can only occur in a conditional assignment; we need to
                     // avoid the scenario in which some values are assigned and others are not
-                    assert i == 1 && ahValue[0] == xBoolean.FALSE;
+                    assert i == 1 && xBoolean.isFalse(ahValue[0]);
                     return Op.R_NEXT;
                 }
 
@@ -1012,7 +1012,7 @@ public class Frame
             case 1: {
                 ObjectHandle hVal = ahValue[i];
                 if (hVal == null) {
-                    assert i == 1 && ahValue[0] == xBoolean.FALSE;
+                    assert i == 1 && xBoolean.isFalse(ahValue[0]);
                     return Op.R_NEXT;
                 }
                 return assignValue(anVar[i], hVal);
@@ -1090,8 +1090,9 @@ public class Frame
     public int assignConditionalDeferredValue(int[] anVar, ObjectHandle hValue) {
         return hValue instanceof DeferredCallHandle
                 ? hValue.proceed(this, frameCaller ->
-                    frameCaller.assignValues(anVar, xBoolean.TRUE, frameCaller.popStack()))
-                : assignValues(anVar, xBoolean.TRUE, hValue);
+                    frameCaller.assignValues(anVar, xBoolean.trueHandle(frameCaller),
+                            frameCaller.popStack()))
+                : assignValues(anVar, xBoolean.trueHandle(this), hValue);
     }
 
     /**
@@ -1135,7 +1136,7 @@ public class Frame
     public int returnValue(ObjectHandle hValue, boolean fDynamic) {
         switch (f_iReturn) {
         case Op.A_MULTI:
-            assert f_function.isConditionalReturn() && hValue.equals(xBoolean.FALSE);
+            assert f_function.isConditionalReturn() && xBoolean.isFalse(hValue);
             return returnValue(f_aiReturn[0], hValue, fDynamic);
 
         case Op.A_TUPLE:
@@ -2316,7 +2317,7 @@ public class Frame
         }
 
         protected int handleJump(Frame frame, int iGuard) {
-            introduceValue(frame, iGuard, xNullable.NULL, "");
+            introduceValue(frame, iGuard, xNullable.makeHandle(frame), "");
 
             // need to jump to the instruction past the FinallyStart
             return f_nFinallyStartAddress + 1;

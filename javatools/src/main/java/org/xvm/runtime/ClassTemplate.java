@@ -571,7 +571,7 @@ public abstract class ClassTemplate
         case 3:
             if ("equals".equals(method.getName())) {
                 return frame.assignValue(iReturn,
-                        xBoolean.makeHandle(ahArg[1] == ahArg[2]));
+                        xBoolean.makeHandle(frame, ahArg[1] == ahArg[2]));
             }
             break;
         }
@@ -918,7 +918,7 @@ public abstract class ClassTemplate
                                 ? constString.getValue()
                                 : prop.getName();
 
-        ObjectHandle hOpts = aParams.length < 2 ? xNullable.NULL : frame.getConstHandle(aParams[1]);
+        ObjectHandle hOpts = aParams.length < 2 ? xNullable.makeHandle(frame) : frame.getConstHandle(aParams[1]);
         if (Op.isDeferred(hOpts)) {
             return hOpts.proceed(frame, frameCaller ->
                     getInjectedProperty(frameCaller, hThis, idProp, iReturn));
@@ -1514,7 +1514,7 @@ public abstract class ClassTemplate
     public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         if (hValue1 == hValue2) {
-            return frame.assignValue(iReturn, xBoolean.TRUE);
+            return frame.assignValue(iReturn, xBoolean.trueHandle(frame));
         }
 
         // if there is an "equals" function that is not native (on the Object itself),
@@ -1549,7 +1549,7 @@ public abstract class ClassTemplate
 
             return template.callEquals(frame, clazz, hValue1, hValue2, iReturn);
         }
-        return frame.assignValue(iReturn, xBoolean.FALSE);
+        return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
     }
 
     /**
@@ -1566,7 +1566,7 @@ public abstract class ClassTemplate
     public int callCompare(Frame frame, TypeComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         if (hValue1 == hValue2) {
-            return frame.assignValue(iReturn, xOrdered.EQUAL);
+            return frame.assignValue(iReturn, xOrdered.equalHandle(frame));
         }
 
         // if there is a "compare" function, we need to call it

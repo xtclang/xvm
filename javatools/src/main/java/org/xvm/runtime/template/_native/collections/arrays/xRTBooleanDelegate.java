@@ -43,7 +43,7 @@ public class xRTBooleanDelegate
 
     @Override
     protected ObjectHandle makeBitHandle(boolean f) {
-        return xBoolean.makeHandle(f);
+        return xBoolean.makeHandle(f_container, f);
     }
 
     @Override

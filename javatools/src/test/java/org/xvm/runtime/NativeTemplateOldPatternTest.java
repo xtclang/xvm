@@ -184,6 +184,34 @@ public class NativeTemplateOldPatternTest {
         assertDoesNotThrow(() -> ownerB.raise(exceptionsB.illegalState("fourth")));
     }
 
+    @Test
+    public void staticNativeEnumValueCanReturnForeignOwnerHandle() {
+        Owner ownerA = new Owner("container-A");
+        Owner ownerB = new Owner("container-B");
+
+        OldBooleanGlobals.init(ownerA);
+        OwnerEnumHandle trueA = OldBooleanGlobals.makeHandle(true);
+        assertDoesNotThrow(() -> ownerA.booleanTemplate.use(trueA));
+
+        OldBooleanGlobals.init(ownerB);
+
+        OwnerEnumHandle trueFromGlobal = OldBooleanGlobals.makeHandle(true);
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> ownerA.booleanTemplate.use(trueFromGlobal));
+        assertEquals("enum handle owner container-B used with template owner container-A",
+                e.getMessage());
+
+        OwnerScopedBooleans booleansA = new OwnerScopedBooleans(ownerA);
+        OwnerScopedBooleans booleansB = new OwnerScopedBooleans(ownerB);
+
+        assertSame(booleansA.trueHandle(), booleansA.makeHandle(true));
+        assertNotSame(booleansA.trueHandle(), booleansB.trueHandle());
+        assertDoesNotThrow(() -> ownerA.booleanTemplate.use(booleansA.makeHandle(true)));
+        assertDoesNotThrow(() -> ownerB.booleanTemplate.use(booleansB.makeHandle(false)));
+        assertTrue(OwnerScopedBooleans.isTrue(booleansB.makeHandle(true)));
+        assertTrue(OwnerScopedBooleans.isFalse(booleansA.makeHandle(false)));
+    }
+
 
     /**
      * A minimal stand-in for constructor-assigned native template INSTANCE
@@ -286,6 +314,7 @@ public class NativeTemplateOldPatternTest {
             method             = new OwnerMethod(id);
             exceptionInfo      = new OwnerExceptionInfo(id);
             stringTemplate     = new OwnerStringTemplate(id);
+            booleanTemplate    = new OwnerBooleanTemplate(id);
             refTemplate        = new OwnerRefTemplate(id);
             refSignature       = new OwnerSignature(id);
             varSignature       = new OwnerSignature(id);
@@ -305,6 +334,7 @@ public class NativeTemplateOldPatternTest {
         private final OwnerMethod             method;
         private final OwnerExceptionInfo      exceptionInfo;
         private final OwnerStringTemplate     stringTemplate;
+        private final OwnerBooleanTemplate    booleanTemplate;
         private final OwnerRefTemplate        refTemplate;
         private final OwnerSignature          refSignature;
         private final OwnerSignature          varSignature;
@@ -461,6 +491,97 @@ public class NativeTemplateOldPatternTest {
 
         private final String ownerId;
         private final String value;
+    }
+
+    /**
+     * A minimal stand-in for xBoolean's old public static TRUE/FALSE handles.
+     */
+    private static final class OldBooleanGlobals {
+        static OwnerEnumHandle FALSE;
+        static OwnerEnumHandle TRUE;
+
+        static void init(Owner owner) {
+            FALSE = owner.booleanTemplate.falseHandle();
+            TRUE  = owner.booleanTemplate.trueHandle();
+        }
+
+        static OwnerEnumHandle makeHandle(boolean value) {
+            return value ? TRUE : FALSE;
+        }
+    }
+
+    /**
+     * A minimal stand-in for the owner-scoped replacement: the handles are still
+     * cached enum values, but the owner is selected before the value is read.
+     */
+    private static final class OwnerScopedBooleans {
+        OwnerScopedBooleans(Owner owner) {
+            template = Lazy.of(() -> owner.booleanTemplate);
+        }
+
+        OwnerEnumHandle makeHandle(boolean value) {
+            return value ? trueHandle() : falseHandle();
+        }
+
+        OwnerEnumHandle trueHandle() {
+            return template.get().trueHandle();
+        }
+
+        OwnerEnumHandle falseHandle() {
+            return template.get().falseHandle();
+        }
+
+        static boolean isTrue(OwnerEnumHandle handle) {
+            return handle.value;
+        }
+
+        static boolean isFalse(OwnerEnumHandle handle) {
+            return !handle.value;
+        }
+
+        private final Lazy<OwnerBooleanTemplate> template;
+    }
+
+    private static final class OwnerBooleanTemplate {
+        OwnerBooleanTemplate(String ownerId) {
+            this.ownerId = ownerId;
+            this.hFalse  = new OwnerEnumHandle(ownerId, false);
+            this.hTrue   = new OwnerEnumHandle(ownerId, true);
+        }
+
+        OwnerEnumHandle makeHandle(boolean value) {
+            return value ? hTrue : hFalse;
+        }
+
+        OwnerEnumHandle trueHandle() {
+            return makeHandle(true);
+        }
+
+        OwnerEnumHandle falseHandle() {
+            return makeHandle(false);
+        }
+
+        void use(OwnerEnumHandle handle) {
+            if (!ownerId.equals(handle.ownerId)) {
+                throw new IllegalStateException(
+                        "enum handle owner " + handle.ownerId +
+                        " used with template owner " + ownerId);
+            }
+        }
+
+        private final String          ownerId;
+        private final OwnerEnumHandle hFalse;
+        private final OwnerEnumHandle hTrue;
+    }
+
+    private static final class OwnerEnumHandle {
+        OwnerEnumHandle(String ownerId, boolean value) {
+            this.ownerId = ownerId;
+            this.value   = value;
+        }
+
+        private final String  ownerId;
+        private final boolean value;
     }
 
     /**

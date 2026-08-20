@@ -7807,7 +7807,7 @@ public abstract class TypeConstant
      */
     public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         if (hValue1 == hValue2) {
-            return frame.assignValue(iReturn, xBoolean.TRUE);
+            return frame.assignValue(iReturn, xBoolean.trueHandle(frame));
         }
 
         // this type is a common [compile time] type that should be used for the comparison
@@ -7835,7 +7835,7 @@ public abstract class TypeConstant
      */
     public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         if (hValue1 == hValue2) {
-            return frame.assignValue(iReturn, xOrdered.EQUAL);
+            return frame.assignValue(iReturn, xOrdered.equalHandle(frame));
         }
 
         // this type is a common [compile time] type that should be used for the comparison

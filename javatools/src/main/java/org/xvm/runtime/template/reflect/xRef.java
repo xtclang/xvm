@@ -164,7 +164,7 @@ public class xRef
             return frame.assignValue(iReturn, xInt64.makeHandle(frame, 64)); // TODO
 
         case "selfContained":
-            return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isSelfContained()));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(frame, hRef.isSelfContained()));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -264,7 +264,7 @@ public class xRef
         switch (method.getName()) {
         case "instanceOf":
             return actOnReferent(frame, hRef, h -> frame.assignValue(iReturn,
-                    xBoolean.makeHandle(instanceOf(h, (TypeHandle) hArg))));
+                    xBoolean.makeHandle(frame, instanceOf(h, (TypeHandle) hArg))));
         }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -306,8 +306,8 @@ public class xRef
         case "hasName": {
             String sName = hRef.getName();
             return sName == null
-                    ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                    : frame.assignValues(aiReturn, xBoolean.TRUE, xString.makeHandle(frame, sName));
+                    ? frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame))
+                    : frame.assignValues(aiReturn, xBoolean.trueHandle(frame), xString.makeHandle(frame, sName));
         }
 
         case "isProperty": {
@@ -317,8 +317,8 @@ public class xRef
 
         case "peek":
             return hRef.isAssigned()
-                    ? actOnReferent(frame, hRef, h -> frame.assignValues(aiReturn, xBoolean.TRUE, h))
-                    : frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                    ? actOnReferent(frame, hRef, h -> frame.assignValues(aiReturn, xBoolean.trueHandle(frame), h))
+                    : frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
 
         case "revealAs":
             return actOnReferent(frame, hRef, h -> revealAs(frame, h, (TypeHandle) ahArg[1], aiReturn));
@@ -409,7 +409,7 @@ public class xRef
         // object, or the two objects that they reference are both immutable and structurally identical.
         return hRef1.isAssigned() && hRef2.isAssigned()
                 ? new CompareReferents(hRef1, hRef2, this, iReturn).doNext(frame)
-                : frame.assignValue(iReturn, xBoolean.FALSE);
+                : frame.assignValue(iReturn, xBoolean.falseHandle(frame));
     }
 
 
@@ -660,7 +660,7 @@ public class xRef
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION}
      */
     protected int getPropertyAssigned(Frame frame, RefHandle hRef, int iReturn) {
-        return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isAssigned()));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, hRef.isAssigned()));
     }
 
     /**
@@ -697,11 +697,11 @@ public class xRef
 
                 return Op.isDeferred(hProp)
                     ? hProp.proceed(frame, frameCaller ->
-                        frameCaller.assignValues(aiReturn, xBoolean.TRUE, frameCaller.popStack(), hContainer))
-                    : frame.assignValues(aiReturn, xBoolean.TRUE, hProp, hContainer);
+                        frameCaller.assignValues(aiReturn, xBoolean.trueHandle(frameCaller), frameCaller.popStack(), hContainer))
+                    : frame.assignValues(aiReturn, xBoolean.trueHandle(frame), hProp, hContainer);
             }
         }
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
 
     /**
@@ -788,11 +788,11 @@ public class xRef
             if (!typeReveal.isA(pool.typeStruct())) {
                 ObjectHandle hRevealed = hGeneric.revealAs(frame, typeReveal);
                 if (hRevealed != null) {
-                    return frame.assignValues(aiReturn, xBoolean.TRUE, hRevealed);
+                    return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), hRevealed);
                 }
             }
         }
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
 
     /**
@@ -813,12 +813,12 @@ public class xRef
                 typeReveal = pool.ensureAccessTypeConstant(hTarget.getType(), Access.STRUCT);
                 ObjectHandle hRevealed = hGeneric.revealAs(frame, typeReveal);
                 if (hRevealed != null) {
-                    return frame.assignValues(aiReturn, xBoolean.TRUE, hRevealed);
+                    return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), hRevealed);
                 }
             }
         }
 
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
 
     /**
@@ -1197,7 +1197,7 @@ public class xRef
             boolean fEquals = template == hReferent2.getTemplate()
                 && template.compareIdentity(hReferent1, hReferent2);
 
-            return frameCaller.assignValue(iReturn, xBoolean.makeHandle(fEquals));
+            return frameCaller.assignValue(iReturn, xBoolean.makeHandle(frameCaller, fEquals));
         }
 
         private final RefHandle hRef1;

@@ -170,7 +170,7 @@ public class xEnum
     @Override
     public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
-        return frame.assignValue(iReturn, xBoolean.makeHandle(compareIdentity(hValue1, hValue2)));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, compareIdentity(hValue1, hValue2)));
     }
 
     @Override
@@ -178,7 +178,7 @@ public class xEnum
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         EnumHandle hEnum1 = (EnumHandle) hValue1;
         EnumHandle hEnum2 = (EnumHandle) hValue2;
-        return frame.assignValue(iReturn, xOrdered.makeHandle(hEnum1.getOrdinal() - hEnum2.getOrdinal()));
+        return frame.assignValue(iReturn, xOrdered.makeHandle(frame, hEnum1.getOrdinal() - hEnum2.getOrdinal()));
     }
 
     @Override
@@ -241,8 +241,8 @@ public class xEnum
         ObjectHandle[] ahVar = new ObjectHandle[4];
         ahVar[0] = hFirst;
         ahVar[1] = hLast;
-        ahVar[2] = xBoolean.makeHandle(fFirstEx);
-        ahVar[3] = xBoolean.makeHandle(fLastEx);
+        ahVar[2] = xBoolean.makeHandle(frame, fFirstEx);
+        ahVar[3] = xBoolean.makeHandle(frame, fLastEx);
 
         return f_templateRange.get().construct(frame, f_ctorRange.get(), typeRange.ensureClass(frame),
                 null, ahVar, iReturn);

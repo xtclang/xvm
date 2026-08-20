@@ -355,7 +355,7 @@ public class xIntLiteral
         IntNHandle h1 = (IntNHandle) hValue1;
         IntNHandle h2 = (IntNHandle) hValue2;
 
-        return frame.assignValue(iReturn, xBoolean.makeHandle(h1.getValue().equals(h2.getValue())));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, h1.getValue().equals(h2.getValue())));
     }
 
     @Override
@@ -364,7 +364,7 @@ public class xIntLiteral
         IntNHandle h1 = (IntNHandle) hValue1;
         IntNHandle h2 = (IntNHandle) hValue2;
 
-        return frame.assignValue(iReturn, xOrdered.makeHandle(h1.getValue().cmp(h2.getValue())));
+        return frame.assignValue(iReturn, xOrdered.makeHandle(frame, h1.getValue().cmp(h2.getValue())));
     }
 
     // ----- helpers -------------------------------------------------------------------------------

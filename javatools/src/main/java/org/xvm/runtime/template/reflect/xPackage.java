@@ -105,14 +105,14 @@ public class xPackage
     @Override
     protected int callEqualsImpl(Frame frame, TypeComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
-        return frame.assignValue(iReturn, xBoolean.makeHandle(
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame,
             (((PackageHandle) hValue1).getId().equals(((PackageHandle) hValue2).getId()))));
     }
 
     @Override
     protected int callCompareImpl(Frame frame, TypeComposition clazz,
                                   ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
-        return frame.assignValue(iReturn, xOrdered.makeHandle(
+        return frame.assignValue(iReturn, xOrdered.makeHandle(frame,
             (((PackageHandle) hValue1).getId().compareTo(((PackageHandle) hValue2).getId()))));
     }
 
@@ -184,7 +184,7 @@ public class xPackage
     public int invokeIsModuleImport(Frame frame, PackageHandle hTarget, int[] aiReturn) {
         ClassStructure struct = hTarget.getStructure();
         if (struct instanceof ModuleStructure module && !module.isMainModule()) {
-            return frame.assignValues(aiReturn, xBoolean.TRUE, hTarget);
+            return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), hTarget);
         }
 
         if (struct instanceof PackageStructure pkg && pkg.isModuleImport()) {
@@ -196,7 +196,7 @@ public class xPackage
             return frame.assignConditionalDeferredValue(aiReturn,
                     frame.getConstHandle(constInstance));
         }
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
 
 

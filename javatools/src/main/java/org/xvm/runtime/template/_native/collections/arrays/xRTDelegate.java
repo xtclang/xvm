@@ -212,7 +212,7 @@ public class xRTDelegate
 
         case "reify": { // ArrayDelegate reify(Mutability? mutability = Null)
             DelegateHandle hDelegate  = (DelegateHandle) hTarget;
-            Mutability     mutability = hArg == ObjectHandle.DEFAULT || hArg == xNullable.NULL
+            Mutability     mutability = hArg == ObjectHandle.DEFAULT || xNullable.isNull(hArg)
                     ? hDelegate.getMutability()
                     : Mutability.values()[((EnumHandle) hArg).getOrdinal()];
             return frame.assignValue(iReturn, createCopy(hDelegate, mutability));
@@ -248,7 +248,7 @@ public class xRTDelegate
         // compare the array dimensions
         int cElements = ah1.length;
         if (cElements != ah2.length) {
-            return frame.assignValue(iReturn, xBoolean.FALSE);
+            return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
         }
 
         // use the compile-time element type
@@ -785,7 +785,7 @@ public class xRTDelegate
         @Override
         public int proceed(Frame frameCaller) {
             ObjectHandle hResult = frameCaller.popStack();
-            if (hResult == xBoolean.FALSE) {
+            if (xBoolean.isFalse(hResult)) {
                 return frameCaller.assignValue(iReturn, hResult);
             }
             return doNext(frameCaller);
@@ -797,7 +797,7 @@ public class xRTDelegate
                 switch (typeEl.callEquals(frameCaller, ah1[iEl], ah2[iEl], Op.A_STACK)) {
                 case Op.R_NEXT:
                     ObjectHandle hResult = frameCaller.popStack();
-                    if (hResult == xBoolean.FALSE) {
+                    if (xBoolean.isFalse(hResult)) {
                         return frameCaller.assignValue(iReturn, hResult);
                     }
                     break;
@@ -813,7 +813,7 @@ public class xRTDelegate
                     throw new IllegalStateException();
                 }
             }
-            return frameCaller.assignValue(iReturn, xBoolean.TRUE);
+            return frameCaller.assignValue(iReturn, xBoolean.trueHandle(frameCaller));
         }
     }
 

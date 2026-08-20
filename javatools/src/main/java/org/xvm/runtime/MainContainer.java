@@ -98,7 +98,7 @@ public class MainContainer
         ObjectHandle hResource = f_parent.getInjectable(frame, sName, type, hOpts);
         return hResource == null
                 ? type.isNullable()
-                    ? xNullable.NULL
+                    ? xNullable.makeHandle(frame)
                     : new DeferredCallHandle(xException.makeHandle(frame, "Invalid resource: " + sName))
                 : maskInjection(frame, hResource, type);
     }
@@ -140,7 +140,7 @@ public class MainContainer
         TypeConstant typeResource = hResource.getComposition().getType();
         if (typeResource.isShared(getConstantPool())) {
             if (typeInject.isNullable()) {
-                if (hResource == xNullable.NULL) {
+                if (xNullable.isNull(hResource)) {
                     return hResource;
                 }
                 typeInject = typeInject.removeNullable();

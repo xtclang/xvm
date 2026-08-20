@@ -49,7 +49,7 @@ public class Identity
         case "equals": {
             IdentityHandle hId1 = (IdentityHandle) ahArg[1];
             IdentityHandle hId2 = (IdentityHandle) ahArg[2];
-            return frame.assignValue(iReturn, xBoolean.makeHandle(hId1.m_hValue == hId2.m_hValue));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(frame, hId1.m_hValue == hId2.m_hValue));
         }
 
         case "hashCode": {
@@ -67,7 +67,7 @@ public class Identity
         IdentityHandle hId1 = (IdentityHandle) hValue1;
         IdentityHandle hId2 = (IdentityHandle) hValue2;
 
-        return frame.assignValue(iReturn, xBoolean.makeHandle(hId1.m_hValue == hId2.m_hValue));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, hId1.m_hValue == hId2.m_hValue));
     }
 
     /**

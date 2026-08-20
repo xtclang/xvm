@@ -98,7 +98,7 @@ public class xCPFileStore
             FSNodeConstant constNode = (FSNodeConstant) hNode.getConstant();
 
             ObjectHandle[] ahValue = new ObjectHandle[5];
-            ahValue[0] = xBoolean.makeHandle(constNode.getFormat() == Format.FSDir);
+            ahValue[0] = xBoolean.makeHandle(frame, constNode.getFormat() == Format.FSDir);
             ahValue[1] = xString.makeHandle(frame, constNode.getName());
             ahValue[2] = frame.getConstHandle(constNode.getCreatedConstant());
             ahValue[3] = frame.getConstHandle(constNode.getModifiedConstant());

@@ -59,13 +59,13 @@ public class xOSFileNode
             return frame.assignValue(iReturn, xString.makeHandle(frame, hNode.f_path.toString()));
 
         case "exists":
-            return frame.assignValue(iReturn, xBoolean.makeHandle(hNode.f_path.toFile().exists()));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(frame, hNode.f_path.toFile().exists()));
 
         case "readable":
-            return frame.assignValue(iReturn, xBoolean.makeHandle(hNode.f_path.toFile().canRead()));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(frame, hNode.f_path.toFile().canRead()));
 
         case "writable":
-            return frame.assignValue(iReturn, xBoolean.makeHandle(hNode.f_path.toFile().canWrite()));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(frame, hNode.f_path.toFile().canWrite()));
 
         case "createdMillis":
             try {
@@ -149,7 +149,7 @@ public class xOSFileNode
                 ? ""
                 : clzException.getSimpleName().replace("Exception", "") + ": ";
         return frame.raiseException(
-            xException.pathException(frame, sException + e.getMessage(), xNullable.NULL));
+            xException.pathException(frame, sException + e.getMessage(), xNullable.makeHandle(frame)));
     }
 
 

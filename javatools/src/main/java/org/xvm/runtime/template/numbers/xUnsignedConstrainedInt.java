@@ -40,7 +40,7 @@ public abstract class xUnsignedConstrainedInt
         JavaLong h1 = (JavaLong) hValue1;
         JavaLong h2 = (JavaLong) hValue2;
 
-        return frame.assignValue(iReturn, xOrdered.makeHandle(
+        return frame.assignValue(iReturn, xOrdered.makeHandle(frame,
             Long.compareUnsigned(h1.getValue(), h2.getValue())));
     }
 }

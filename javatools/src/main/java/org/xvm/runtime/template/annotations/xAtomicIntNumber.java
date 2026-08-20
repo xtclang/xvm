@@ -90,10 +90,10 @@ public class xAtomicIntNumber
             long lCur;
             while ((lCur = atomic.get()) == lExpect) {
                 if (atomic.compareAndSet(lCur, lNew)) {
-                    return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                    return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
                 }
             }
-            return frame.assignValues(aiReturn, xBoolean.TRUE, f_templateReferent.makeJavaLong(lCur));
+            return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), f_templateReferent.makeJavaLong(lCur));
         }
         }
 

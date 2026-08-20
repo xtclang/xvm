@@ -137,7 +137,7 @@ public class xOSStorage
             try {
                 Path path = Paths.get(hPathString.getStringValue());
                 if (Files.exists(path) && !Files.isDirectory(path)) {
-                    return frame.assignValue(iReturn, xBoolean.FALSE);
+                    return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
                 }
 
                 Path parent = path.getParent();
@@ -150,7 +150,7 @@ public class xOSStorage
                             "Cannot create file, parent is not a directory: " + path));
                 }
                 return frame.assignValue(iReturn,
-                    xBoolean.makeHandle(path.toFile().createNewFile()));
+                    xBoolean.makeHandle(frame, path.toFile().createNewFile()));
             } catch (IOException|InvalidPathException e) {
                 return frame.raiseException(xException.ioException(frame, e.getMessage()));
             }
@@ -162,11 +162,11 @@ public class xOSStorage
             try {
                 Path path = Paths.get(hPathString.getStringValue());
                 if (Files.exists(path) && Files.isDirectory(path)) {
-                    return frame.assignValue(iReturn, xBoolean.FALSE);
+                    return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
                 }
 
                 return frame.assignValue(iReturn,
-                    xBoolean.makeHandle(path.toFile().mkdirs()));
+                    xBoolean.makeHandle(frame, path.toFile().mkdirs()));
             } catch (InvalidPathException e) {
                 return frame.raiseException(xException.ioException(frame, e.getMessage()));
             }
@@ -177,11 +177,11 @@ public class xOSStorage
 
             Path path = Paths.get(hPathString.getStringValue());
             if (!Files.exists(path)) {
-                return frame.assignValue(iReturn, xBoolean.FALSE);
+                return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
             }
 
             return frame.assignValue(iReturn,
-                xBoolean.makeHandle(path.toFile().delete()));
+                xBoolean.makeHandle(frame, path.toFile().delete()));
         }
 
         case "watch": { // (pathStringDir)
@@ -239,7 +239,7 @@ public class xOSStorage
                         xOSFileNode.createHandle(frame, hStore, path, Files.isDirectory(path), Op.A_STACK),
                         aiReturn);
                 }
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
             } catch (InvalidPathException e) {
                 return frame.raiseException(xException.ioException(frame, e.getMessage()));
             }
@@ -331,7 +331,8 @@ public class xOSStorage
                 StringHandle hPathNode = xString.makeHandle(container, pathAbsolute.toString());
 
                 ObjectHandle[] ahArg = new ObjectHandle[] {
-                    hPathDir, hPathNode, xBoolean.TRUE, xInt64.makeHandle(container, iKind)
+                    hPathDir, hPathNode, xBoolean.trueHandle(container),
+                    xInt64.makeHandle(container, iKind)
                 };
                 context.hStorage.f_context.callLater(hfnOnEvent, ahArg);
             }

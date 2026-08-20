@@ -86,10 +86,10 @@ public abstract class BaseDecFP
                         Mutability.Constant));
 
         case "infinity":
-            return frame.assignValue(iReturn, xBoolean.makeHandle(dec.isInfinite()));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(frame, dec.isInfinite()));
 
         case "NaN":
-            return frame.assignValue(iReturn, xBoolean.makeHandle(dec.isNaN()));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(frame, dec.isNaN()));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -184,7 +184,7 @@ public abstract class BaseDecFP
                     f_container.nativeTemplates().dec128().makeHandle(toDec128(dec)));
 
         case "toInt64": {
-            boolean      fCheckBounds = ahArg[0] == xBoolean.TRUE;
+            boolean      fCheckBounds = xBoolean.isTrue(ahArg[0]);
             ObjectHandle hRound = ahArg[1];
 
             if (dec.isFinite()) {
@@ -314,7 +314,7 @@ public abstract class BaseDecFP
                     iExp      = 0;
                     lMantissa = 0;
             }
-            return frame.assignValues(aiReturn, xBoolean.makeHandle(fSign),
+            return frame.assignValues(aiReturn, xBoolean.makeHandle(frame, fSign),
                                       xInt64.makeHandle(frame, lMantissa), xInt64.makeHandle(frame, iExp));
         }
         }
@@ -389,7 +389,7 @@ public abstract class BaseDecFP
         DecimalHandle h2 = (DecimalHandle) hValue2;
 
         return frame.assignValue(iReturn,
-            xOrdered.makeHandle(h1.getValue().compareForObjectOrder(h2.getValue())));
+            xOrdered.makeHandle(frame, h1.getValue().compareForObjectOrder(h2.getValue())));
     }
 
     @Override

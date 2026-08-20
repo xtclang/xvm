@@ -152,7 +152,7 @@ public class xRTCompiler
         try {
             String sMissing = compiler.partialCompile(sMissingPrev != null);
             if (sMissing != null) {
-                if (sMissing.equals(sMissingPrev) || hRepo == xNullable.NULL) {
+                if (sMissing.equals(sMissingPrev) || xNullable.isNull(hRepo)) {
                     return completeWithError(frame, compiler, sMissing, aiReturn);
                 }
                 CallChain chain = computeGetModuleChain(frame, hRepo);
@@ -208,12 +208,12 @@ public class xRTCompiler
     private boolean popModuleStructure(Frame frame, CompilerAdapter compiler) {
         ObjectHandle hReturn = frame.popStack();
         if (hReturn instanceof ComponentTemplateHandle hModule) {
-            assert frame.popStack() == xBoolean.TRUE;
+            assert xBoolean.isTrue(frame.popStack());
             compiler.addRepo((ModuleStructure) hModule.getComponent());
             return true;
         }
 
-        assert hReturn == xBoolean.FALSE;
+        assert xBoolean.isFalse(hReturn);
         return false;
     }
 

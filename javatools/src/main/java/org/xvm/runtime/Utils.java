@@ -290,7 +290,7 @@ public abstract class Utils {
 
         int iResult = FInPlace == null
             ? chain.invoke(frame, hValue, Op.A_STACK)
-            : chain.invoke(frame, hValue, xBoolean.makeHandle(FInPlace), Op.A_STACK);
+            : chain.invoke(frame, hValue, xBoolean.makeHandle(frame, FInPlace), Op.A_STACK);
 
         switch (iResult) {
         case Op.R_NEXT:
@@ -320,11 +320,11 @@ public abstract class Utils {
     public static int assignConditionalResult(Frame frame, int iResult, int[] aiReturn) {
         switch (iResult) {
         case Op.R_NEXT:
-            return frame.assignValues(aiReturn, xBoolean.TRUE, frame.popStack());
+            return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), frame.popStack());
 
         case Op.R_CALL:
             frame.m_frameNext.addContinuation(frameCaller ->
-                frameCaller.assignValues(aiReturn, xBoolean.TRUE, frameCaller.popStack()));
+                frameCaller.assignValues(aiReturn, xBoolean.trueHandle(frameCaller), frameCaller.popStack()));
             return Op.R_CALL;
 
         case Op.R_EXCEPTION:
@@ -578,7 +578,7 @@ public abstract class Utils {
                 if (hValue == null) {
                     // a "null" value can only occur in a conditional assignment; we need to
                     // avoid the scenario in which some values are assigned and others are not
-                    assert index == 1 && ahValue[0] == xBoolean.FALSE;
+                    assert index == 1 && xBoolean.isFalse(ahValue[0]);
                     return Op.R_RETURN;
                 }
 
@@ -671,7 +671,7 @@ public abstract class Utils {
                 if (hValue == null) {
                     // a "null" value can only occur in a conditional assignment; we need to
                     // avoid the scenario in which some values are assigned and others are not
-                    assert index == 1 && ahValue[0] == xBoolean.FALSE;
+                    assert index == 1 && xBoolean.isFalse(ahValue[0]);
                     return Op.R_RETURN;
                 }
 
@@ -748,7 +748,7 @@ public abstract class Utils {
     public static int callEqualsSequence(Frame frame, TypeConstant type1, TypeConstant type2,
                                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         if (hValue1 == hValue2) {
-            return frame.assignValue(iReturn, xBoolean.TRUE);
+            return frame.assignValue(iReturn, xBoolean.trueHandle(frame));
         }
 
         switch (type1.callEquals(frame, hValue1, hValue2, Op.A_STACK)) {
@@ -774,7 +774,7 @@ public abstract class Utils {
     protected static int completeEquals(Frame frame, TypeConstant type2,
                                         ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         ObjectHandle hResult = frame.popStack();
-        return hResult == xBoolean.FALSE
+        return xBoolean.isFalse(hResult)
             ? frame.assignValue(iReturn, hResult)
             : type2.callEquals(frame, hValue1, hValue2, iReturn);
     }
@@ -785,7 +785,7 @@ public abstract class Utils {
     public static int callCompareSequence(Frame frame, TypeConstant type1, TypeConstant type2,
                                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         if (hValue1 == hValue2) {
-            return frame.assignValue(iReturn, xOrdered.EQUAL);
+            return frame.assignValue(iReturn, xOrdered.equalHandle(frame));
         }
 
         switch (type1.callCompare(frame, hValue1, hValue2, Op.A_STACK)) {
@@ -811,7 +811,7 @@ public abstract class Utils {
     protected static int completeCompare(Frame frame, TypeConstant type2,
                                         ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         ObjectHandle hResult = frame.popStack();
-        return hResult != xOrdered.EQUAL
+        return !xOrdered.isEqual(hResult)
             ? frame.assignValue(iReturn, hResult)
             : type2.callCompare(frame, hValue1, hValue2, iReturn);
     }
@@ -1706,13 +1706,15 @@ public abstract class Utils {
                 MethodStructure  construct = constructRTParameter;
                 ObjectHandle[]   ahArg     = new ObjectHandle[construct.getMaxVars()];
                 ahArg[0] = xInt64.makeHandle(frameCaller, index); // ordinal
-                ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(frameCaller, sName);
-                ahArg[2] = xBoolean.makeHandle(fFormal);
+                ahArg[1] = sName == null
+                        ? xNullable.makeHandle(frameCaller)
+                        : xString.makeHandle(frameCaller, sName);
+                ahArg[2] = xBoolean.makeHandle(frameCaller, fFormal);
                 if (constDefault == null) {
-                    ahArg[3] = xBoolean.FALSE;
-                    ahArg[4] = xNullable.NULL;
+                    ahArg[3] = xBoolean.falseHandle(frameCaller);
+                    ahArg[4] = xNullable.makeHandle(frameCaller);
                 } else {
-                    ahArg[3] = xBoolean.TRUE;
+                    ahArg[3] = xBoolean.trueHandle(frameCaller);
                     ahArg[4] = frameCaller.getConstHandle(constDefault);
                 }
 
@@ -1774,7 +1776,7 @@ public abstract class Utils {
         MethodStructure constructor = metadata.constructArgument;
         ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
         ahArg[0] = hValue;
-        ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(frame, sName);
+        ahArg[1] = sName == null ? xNullable.makeHandle(frame) : xString.makeHandle(frame, sName);
 
         ClassTemplate   template = metadata.templateArgument;
         TypeComposition clzArg   = template.

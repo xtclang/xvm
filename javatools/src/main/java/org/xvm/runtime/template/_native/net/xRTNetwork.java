@@ -111,16 +111,16 @@ public class xRTNetwork
         case "isSecure": // conditional Algorithms isSecure()
             try {
                 if (isSecure(frame, hService)) {
-                    return frame.assignValues(aiReturn, xBoolean.TRUE, /*TODO Algorithms*/ null);
+                    return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), /*TODO Algorithms*/ null);
                 }
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
             } catch (Exception e) {
                 return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
             }
 
         case "defaultInterface": // conditional NetworkInterface defaultInterface()
             try {
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
             } catch (Exception e) {
                 return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
             }
@@ -130,9 +130,9 @@ public class xRTNetwork
             try {
                 NetworkInterface nic = NetworkInterface.getByName(sName);
                 if (nic != null) {
-                    return frame.assignValues(aiReturn, xBoolean.TRUE, /*TODO NetworkInterface*/ null);
+                    return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), /*TODO NetworkInterface*/ null);
                 }
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
             } catch (SocketException e) {
                 return frame.raiseException(xException.ioException(frame, e.getMessage()));
             } catch (Exception e) {
@@ -146,9 +146,9 @@ public class xRTNetwork
                 InetAddress      addr = InetAddress.getByAddress(abIP);
                 NetworkInterface nic  = NetworkInterface.getByInetAddress(addr);
                 if (nic != null) {
-                    return frame.assignValues(aiReturn, xBoolean.TRUE, /*TODO NetworkInterface*/ null);
+                    return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), /*TODO NetworkInterface*/ null);
                 }
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
             } catch (Exception e) {
                 return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
             }
@@ -168,7 +168,7 @@ public class xRTNetwork
             int    nLocalPort = (int) ((JavaLong) ahArg[1]).getValue();
             try {
                 // TODO
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
             } catch (Exception e) {
                 return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
             }

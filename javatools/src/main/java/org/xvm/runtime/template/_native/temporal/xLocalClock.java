@@ -85,7 +85,7 @@ public class xLocalClock
         case "schedule": {
             GenericHandle  hWakeup = (GenericHandle)  ahArg[0];
             FunctionHandle hAlarm  = (FunctionHandle) ahArg[1];
-            BooleanHandle  hKeep   = ahArg[2] instanceof BooleanHandle hB ? hB : xBoolean.FALSE;
+            BooleanHandle  hKeep   = ahArg[2] instanceof BooleanHandle hB ? hB : xBoolean.falseHandle(frame);
             long           ldtNow  = frame.f_context.f_container.currentTimeMillis();
             long           ldtWakeup;
             long           cDelay;
@@ -142,7 +142,7 @@ public class xLocalClock
             m_hLocalClock = hClock = createServiceHandle(
                 f_container.createServiceContext("LocalClock"),
                     getCanonicalClass(), getCanonicalType());
-            hClock.setField(frame, "utc", xBoolean.FALSE);
+            hClock.setField(frame, "utc", xBoolean.falseHandle(frame));
         }
 
         return hClock;
@@ -159,7 +159,7 @@ public class xLocalClock
             m_hUTCClock = hClock = createServiceHandle(
                 f_container.createServiceContext("LocalClock"),
                 getCanonicalClass(), getCanonicalType());
-            hClock.setField(frame, "utc", xBoolean.TRUE);
+            hClock.setField(frame, "utc", xBoolean.trueHandle(frame));
         }
 
         return hClock;

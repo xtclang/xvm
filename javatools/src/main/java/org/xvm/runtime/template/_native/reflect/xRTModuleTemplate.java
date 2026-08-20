@@ -71,7 +71,7 @@ public class xRTModuleTemplate
                 sVersion = module.getVersionString();
             }
             return frame.assignValue(iReturn, sVersion == null
-                ? xNullable.NULL
+                ? xNullable.makeHandle(frame)
                 : xString.makeHandle(frame, sVersion));
         }
 
@@ -80,7 +80,7 @@ public class xRTModuleTemplate
 
         case "resolved": {
             ModuleStructure module = (ModuleStructure) hTemplate.getComponent();
-            return frame.assignValue(iReturn, xBoolean.makeHandle(module.getFileStructure().isLinked()));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(frame, module.getFileStructure().isLinked()));
         }
         }
 

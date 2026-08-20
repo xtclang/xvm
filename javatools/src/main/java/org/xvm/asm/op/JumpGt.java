@@ -60,12 +60,12 @@ public class JumpGt
                                    ObjectHandle hValue1, ObjectHandle hValue2) {
         switch (type.callCompare(frame, hValue1, hValue2, A_STACK)) {
         case R_NEXT:
-            return frame.popStack() == xOrdered.GREATER ?
+            return xOrdered.isGreater(frame.popStack()) ?
                 jump(frame, iPC + m_ofJmp, m_cExits) : iPC + 1;
 
         case R_CALL:
             frame.m_frameNext.addContinuation(frameCaller ->
-                frameCaller.popStack() == xOrdered.GREATER ?
+                xOrdered.isGreater(frameCaller.popStack()) ?
                     jump(frameCaller, iPC + m_ofJmp, m_cExits) : iPC + 1);
             return R_CALL;
 

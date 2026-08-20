@@ -323,14 +323,14 @@ public class JumpVal_N
                         switch (checkRange(frame, typeColumn, hValue, hLo, hHi,
                                     hLoEx.get(), hHiEx.get(), true, stepNext)) {
                         case Op.R_NEXT:
-                            if (frame.popStack() == xBoolean.TRUE) {
+                            if (xBoolean.isTrue(frame.popStack())) {
                                 continue NextColumn;
                             }
                             continue NextRow;
 
                         case Op.R_CALL:
                             frame.m_frameNext.addContinuation(frameCaller ->
-                                frameCaller.popStack() == xBoolean.TRUE
+                                xBoolean.isTrue(frameCaller.popStack())
                                     ? findSmallNatural(frameCaller, iPC, ahValue, ixBits,
                                         iCurrentRow, iCurrentCol + 1)
                                     : findSmallNatural(frameCaller, iPC, ahValue, ixBits,
@@ -350,14 +350,14 @@ public class JumpVal_N
                 case NaturalSimple: {
                     switch (typeColumn.callEquals(frame, hValue, hCase, Op.A_STACK)) {
                     case Op.R_NEXT:
-                        if (frame.popStack() == xBoolean.TRUE) {
+                        if (xBoolean.isTrue(frame.popStack())) {
                             continue NextColumn;
                         }
                         continue NextRow;
 
                     case Op.R_CALL:
                         frame.m_frameNext.addContinuation(frameCaller ->
-                            frameCaller.popStack() == xBoolean.TRUE
+                            xBoolean.isTrue(frameCaller.popStack())
                                 ? findSmallNatural(frameCaller, iPC, ahValue, ixBits,
                                     iCurrentRow, iCurrentCol + 1)
                                 : findSmallNatural(frameCaller, iPC, ahValue, ixBits,

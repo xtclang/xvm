@@ -197,11 +197,11 @@ public abstract class ByteBasedDelegate
 
         if (cbThat == 0) {
             return ofStart > cbThis
-                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(frame, ofStart));
+                ? frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame))
+                : frame.assignValues(aiReturn, xBoolean.trueHandle(frame), xInt64.makeHandle(frame, ofStart));
         }
         if (ofStart > cbThis - cbThat) {
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         }
 
         byte bFirstMatch = abThat[0];
@@ -213,10 +213,10 @@ public abstract class ByteBasedDelegate
                         continue Next;
                     }
                 }
-                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(frame, of));
+                return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), xInt64.makeHandle(frame, of));
             }
         }
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
 }
 
 
@@ -327,7 +327,7 @@ public abstract class ByteBasedDelegate
         ByteArrayHandle h2 = (ByteArrayHandle) hValue2;
 
         return frame.assignValue(iReturn,
-                xBoolean.makeHandle(Arrays.equals(h1.m_abValue, h2.m_abValue)));
+                xBoolean.makeHandle(frame, Arrays.equals(h1.m_abValue, h2.m_abValue)));
     }
 
     @Override
@@ -434,7 +434,7 @@ public abstract class ByteBasedDelegate
             var           templates     = getComposition().getContainer().nativeTemplates();
             return switch (getTemplate()) {
                 case xRTBitDelegate     _ -> templateValue == xBit.ZERO.getTemplate();
-                case xRTBooleanDelegate _ -> templateValue == xBoolean.TRUE.getTemplate();
+                case xRTBooleanDelegate _ -> templateValue == templates.booleanTemplate();
                 case xRTInt8Delegate    _ -> templateValue == templates.int8();
                 case xRTUInt8Delegate   _ -> templateValue == templates.uint8();
                 default                   -> super.checkAssign(hValue);

@@ -187,11 +187,11 @@ public abstract class OpSwitch
             ObjectHandle hResult = frame.popStack();
             if (fLow) {
                 boolean fMatch = fLoEx
-                                    ? hResult == xOrdered.GREATER
-                                    : hResult != xOrdered.LESSER;   // GREATER or EQUAL
+                                    ? xOrdered.isGreater(hResult)
+                                    : !xOrdered.isLesser(hResult);   // GREATER or EQUAL
                 if (!fMatch) {
                     // we're done; no match
-                    frame.pushStack(xBoolean.FALSE);
+                    frame.pushStack(xBoolean.falseHandle(frame));
                     return continuation.proceed(frame);
                 }
 
@@ -199,9 +199,9 @@ public abstract class OpSwitch
                         hLo, hHi, fLoEx, fHiEx, false, continuation);
             } else {
                 boolean fMatch = fHiEx
-                                    ? hResult == xOrdered.LESSER
-                                    : hResult != xOrdered.GREATER;  // LESSER or EQUAL
-                frame.pushStack(xBoolean.makeHandle(fMatch));
+                                    ? xOrdered.isLesser(hResult)
+                                    : !xOrdered.isGreater(hResult);  // LESSER or EQUAL
+                frame.pushStack(xBoolean.makeHandle(frame, fMatch));
                 return continuation.proceed(frame);
             }
 
@@ -210,11 +210,11 @@ public abstract class OpSwitch
                 ObjectHandle hR = frameCaller.popStack();
                 if (fLow) {
                     boolean fMatch = fLoEx
-                                        ? hR == xOrdered.GREATER
-                                        : hR != xOrdered.LESSER;   // GREATER or EQUAL
+                                        ? xOrdered.isGreater(hR)
+                                        : !xOrdered.isLesser(hR);   // GREATER or EQUAL
                     if (!fMatch) {
                         // we're done; no match
-                        frameCaller.pushStack(xBoolean.FALSE);
+                        frameCaller.pushStack(xBoolean.falseHandle(frameCaller));
                         return continuation.proceed(frameCaller);
                     }
 
@@ -222,9 +222,9 @@ public abstract class OpSwitch
                             hLo, hHi, fLoEx, fHiEx, false, continuation);
                 } else {
                     boolean fMatch = fHiEx
-                                        ? hR == xOrdered.LESSER
-                                        : hR != xOrdered.GREATER;  // LESSER or EQUAL
-                    frameCaller.pushStack(xBoolean.makeHandle(fMatch));
+                                        ? xOrdered.isLesser(hR)
+                                        : !xOrdered.isGreater(hR);  // LESSER or EQUAL
+                    frameCaller.pushStack(xBoolean.makeHandle(frameCaller, fMatch));
                     return continuation.proceed(frameCaller);
                 }
             };
