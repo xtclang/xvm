@@ -109,7 +109,7 @@ public class AssertV
             try {
                 ahArg[i] = frame.getArgument(m_anValue[i]);
             } catch (Exception e) {
-                ahArg[i] = xString.EMPTY_STRING;
+                ahArg[i] = xString.emptyString(frame);
             }
         }
 

@@ -437,12 +437,13 @@ public class xIntLiteral
             assert piValue != null;
 
             m_piValue = piValue;
+            m_hText    = hText;
         }
 
         public StringHandle getText() {
             StringHandle hText = m_hText;
             if (hText == null) {
-                m_hText = hText = xString.makeHandle(m_piValue.toString());
+                m_hText = hText = xString.makeHandle(this, m_piValue.toString());
             }
             return hText;
         }

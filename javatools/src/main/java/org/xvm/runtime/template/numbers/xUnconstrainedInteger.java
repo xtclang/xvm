@@ -465,7 +465,7 @@ public abstract class xUnconstrainedInteger
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
         PackedInteger pi = ((IntNHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xString.makeHandle(pi.toString()));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, pi.toString()));
     }
 
 

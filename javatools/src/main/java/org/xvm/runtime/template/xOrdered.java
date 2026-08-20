@@ -32,9 +32,9 @@ public class xOrdered
             EQUAL   = getEnumByOrdinal(1);
             GREATER = getEnumByOrdinal(2);
 
-            LESSER .setField(null, "symbol", xString.makeHandle("<"));
-            EQUAL  .setField(null, "symbol", xString.makeHandle("="));
-            GREATER.setField(null, "symbol", xString.makeHandle(">"));
+            LESSER .setField(null, "symbol", xString.makeHandle(f_container, "<"));
+            EQUAL  .setField(null, "symbol", xString.makeHandle(f_container, "="));
+            GREATER.setField(null, "symbol", xString.makeHandle(f_container, ">"));
 
             LESSER .setField(null, "reversed", GREATER);
             EQUAL  .setField(null, "reversed", EQUAL);

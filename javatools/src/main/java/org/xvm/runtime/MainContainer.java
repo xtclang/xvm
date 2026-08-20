@@ -62,7 +62,7 @@ public class MainContainer
         if (!listValue.isEmpty()) {
             if (typeRequired.equals(typeString)) {
                 // require String, return the last element
-                return xString.makeHandle(listValue.getLast());
+                return xString.makeHandle(frame, listValue.getLast());
             }
             if (typeRequired.equals(typeStrings)) {
                 // require String[], return the whole List<String> as an array
@@ -108,7 +108,7 @@ public class MainContainer
         TypeComposition clz      = type.ensureClass(frame);
         ClassTemplate   template = clz.getTemplate();
         MethodStructure ctor     = template.getStructure().findMethod("construct", 1, pool.typeString());
-        ObjectHandle[]  ahArgs   = new ObjectHandle[]{xString.makeHandle(sValue)};
+        ObjectHandle[]  ahArgs   = new ObjectHandle[]{xString.makeHandle(frame, sValue)};
         int             iResult  = template.construct(frame, ctor, clz, null, ahArgs, Op.A_STACK);
         return frame.popResult(iResult);
     }

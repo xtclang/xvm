@@ -379,14 +379,14 @@ public abstract class BaseBinaryFP
     protected int callAppendTo(Frame frame, ObjectHandle hTarget, ObjectHandle hAppender, int iReturn) {
         double d = ((FloatHandle) hTarget).getValue();
 
-        return xString.callAppendTo(frame, xString.makeHandle(toString(d)), hAppender, iReturn);
+        return xString.callAppendTo(frame, xString.makeHandle(frame, toString(d)), hAppender, iReturn);
     }
 
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
         double d = ((FloatHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xString.makeHandle(toString(d)));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, toString(d)));
     }
 
 

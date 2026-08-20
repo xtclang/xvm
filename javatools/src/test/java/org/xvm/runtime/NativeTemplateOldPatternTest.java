@@ -6,6 +6,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.util.Lazy;
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -86,6 +88,31 @@ public class NativeTemplateOldPatternTest {
 
         assertDoesNotThrow(metadataA::construct);
         assertDoesNotThrow(metadataB::construct);
+    }
+
+    @Test
+    public void staticStringFactoryCanReturnForeignOwnerHandles() {
+        Owner ownerA = new Owner("container-A");
+        Owner ownerB = new Owner("container-B");
+
+        OldStringGlobals.init(ownerA);
+        OwnerStringHandle handleA = OldStringGlobals.makeHandle("alpha");
+        assertDoesNotThrow(() -> ownerA.stringTemplate.use(handleA));
+
+        OldStringGlobals.init(ownerB);
+
+        OwnerStringHandle handleFromGlobal = OldStringGlobals.makeHandle("alpha");
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> ownerA.stringTemplate.use(handleFromGlobal));
+        assertEquals("string handle owner container-B used with template owner container-A",
+                e.getMessage());
+
+        OwnerScopedStrings stringsA = new OwnerScopedStrings(ownerA);
+        OwnerScopedStrings stringsB = new OwnerScopedStrings(ownerB);
+
+        assertDoesNotThrow(() -> ownerA.stringTemplate.use(stringsA.makeHandle("alpha")));
+        assertDoesNotThrow(() -> ownerB.stringTemplate.use(stringsB.makeHandle("alpha")));
+        assertNotSame(stringsA.emptyString(), stringsB.emptyString());
     }
 
     /**
@@ -186,10 +213,12 @@ public class NativeTemplateOldPatternTest {
         Owner(String id) {
             template = new OwnerTemplate(id);
             method   = new OwnerMethod(id);
+            stringTemplate = new OwnerStringTemplate(id);
         }
 
-        private final OwnerTemplate template;
-        private final OwnerMethod   method;
+        private final OwnerTemplate       template;
+        private final OwnerMethod         method;
+        private final OwnerStringTemplate stringTemplate;
     }
 
     private static final class OwnerTemplate {
@@ -213,5 +242,79 @@ public class NativeTemplateOldPatternTest {
         }
 
         private final String ownerId;
+    }
+
+    /**
+     * A minimal stand-in for xString's old JVM-global INSTANCE and common
+     * handle caches.
+     */
+    private static final class OldStringGlobals {
+        static OwnerStringTemplate template;
+        static OwnerStringHandle   emptyString;
+
+        static void init(Owner owner) {
+            template    = owner.stringTemplate;
+            emptyString = template.makeHandle("");
+        }
+
+        static OwnerStringHandle makeHandle(String value) {
+            return value.isEmpty()
+                    ? emptyString
+                    : template.makeHandle(value);
+        }
+    }
+
+    /**
+     * A minimal stand-in for the owner-scoped replacement: the cache is still
+     * lazy, but the owner is selected before any handle is made.
+     */
+    private static final class OwnerScopedStrings {
+        OwnerScopedStrings(Owner owner) {
+            template    = Lazy.of(() -> owner.stringTemplate);
+            emptyString = Lazy.of(() -> template.get().makeHandle(""));
+        }
+
+        OwnerStringHandle makeHandle(String value) {
+            return value.isEmpty()
+                    ? emptyString()
+                    : template.get().makeHandle(value);
+        }
+
+        OwnerStringHandle emptyString() {
+            return emptyString.get();
+        }
+
+        private final Lazy<OwnerStringTemplate> template;
+        private final Lazy<OwnerStringHandle>   emptyString;
+    }
+
+    private static final class OwnerStringTemplate {
+        OwnerStringTemplate(String ownerId) {
+            this.ownerId = ownerId;
+        }
+
+        OwnerStringHandle makeHandle(String value) {
+            return new OwnerStringHandle(ownerId, value);
+        }
+
+        void use(OwnerStringHandle handle) {
+            if (!ownerId.equals(handle.ownerId)) {
+                throw new IllegalStateException(
+                        "string handle owner " + handle.ownerId +
+                        " used with template owner " + ownerId);
+            }
+        }
+
+        private final String ownerId;
+    }
+
+    private static final class OwnerStringHandle {
+        OwnerStringHandle(String ownerId, String value) {
+            this.ownerId = ownerId;
+            this.value   = value;
+        }
+
+        private final String ownerId;
+        private final String value;
     }
 }

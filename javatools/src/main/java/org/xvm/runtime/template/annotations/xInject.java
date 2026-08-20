@@ -76,7 +76,7 @@ public class xInject
         if (aParams.length < 2) {
             // opts are not specified; the handle could be trivially initialized on-the-spot
             InjectedHandle hInject = new InjectedHandle(clazz.ensureAccess(Access.PUBLIC), sName, sResource);
-            hInject.setField(frame, "resourceName", xString.makeHandle(sResource));
+            hInject.setField(frame, "resourceName", xString.makeHandle(frame, sResource));
             hInject.setField(frame, "opts", xNullable.NULL);
             hInject.makeImmutable();
             return hInject;

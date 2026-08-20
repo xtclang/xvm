@@ -20,6 +20,8 @@ import org.xvm.runtime.template.reflect.xModule;
 import org.xvm.runtime.template.reflect.xPackage;
 import org.xvm.runtime.template.reflect.xInjector;
 
+import org.xvm.runtime.template.text.xString;
+
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xService;
 
@@ -345,6 +347,10 @@ public final class NativeTemplates {
         return get(SERVICE);
     }
 
+    public xString string() {
+        return get(STRING);
+    }
+
     public xInjector injector() {
         return get(INJECTOR);
     }
@@ -505,6 +511,9 @@ public final class NativeTemplates {
 
     private static final NativeTemplateRef<xService> SERVICE =
             NativeTemplateRef.of("Service", xService.class);
+
+    private static final NativeTemplateRef<xString> STRING =
+            NativeTemplateRef.of("text.String", xString.class);
 
     private static final NativeTemplateRef<xInjector> INJECTOR =
             NativeTemplateRef.of("reflect.Injector", xInjector.class);

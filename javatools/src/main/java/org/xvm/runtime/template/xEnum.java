@@ -145,7 +145,7 @@ public class xEnum
 
         case "name":
             return frame.assignValue(iReturn,
-                    xString.makeHandle(enumInfo().names().get(hThis.getOrdinal())));
+                    xString.makeHandle(frame, enumInfo().names().get(hThis.getOrdinal())));
 
         case "ordinal":
             return frame.assignValue(iReturn, xInt64.makeHandle(hThis.getOrdinal()));
@@ -198,7 +198,7 @@ public class xEnum
         EnumHandle hThis = (EnumHandle) hTarget;
 
         return frame.assignValue(iReturn,
-                xString.makeHandle(enumInfo().names().get(hThis.getOrdinal())));
+                xString.makeHandle(frame, enumInfo().names().get(hThis.getOrdinal())));
     }
 
     @Override

@@ -98,7 +98,7 @@ public class xException
         // String formatExceptionString(String exceptionName, String stackTrace)
 
         ObjectHandle[] ahVars = new ObjectHandle[METHOD_FORMAT_EXCEPTION.getMaxVars()];
-        ahVars[0] = xString.makeHandle(getClassConstant().getValueString()); // appender
+        ahVars[0] = xString.makeHandle(frame, getClassConstant().getValueString()); // appender
         ahVars[1] = hException.getField(frame, "stackTrace");
 
         return frame.call1(METHOD_FORMAT_EXCEPTION, hException, ahVars, iReturn);
@@ -301,7 +301,7 @@ public class xException
                                              String sMessage, ExceptionHandle hCause) {
         ExceptionHandle hException = makeMutableStruct(frame, clzEx, null);
 
-        hException.setField(frame, "text",  sMessage == null ? xNullable.NULL : xString.makeHandle(sMessage));
+        hException.setField(frame, "text",  sMessage == null ? xNullable.NULL : xString.makeHandle(frame, sMessage));
         hException.setField(frame, "cause", hCause == null   ? xNullable.NULL : hCause);
         hException.makeImmutable();
 
@@ -328,7 +328,7 @@ public class xException
                                              String sMessage, String sRtError) {
         ExceptionHandle hException = makeMutableStruct(frame, clzEx, sRtError);
 
-        hException.setField(frame, "text",  sMessage == null ? xNullable.NULL : xString.makeHandle(sMessage));
+        hException.setField(frame, "text",  sMessage == null ? xNullable.NULL : xString.makeHandle(frame, sMessage));
         hException.setField(frame, "cause", xNullable.NULL);
         hException.makeImmutable();
 
@@ -341,7 +341,7 @@ public class xException
         ExceptionHandle hException = new ExceptionHandle(clxEx, sRTError);
 
         hException.setField(frame, "stackTrace", xString.makeHandle(
-                frame == null ? "" : frame.getStackTrace()));
+                clxEx.getContainer(), frame == null ? "" : frame.getStackTrace()));
 
         return hException;
     }

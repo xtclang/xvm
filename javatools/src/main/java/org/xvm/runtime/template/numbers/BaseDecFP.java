@@ -413,14 +413,14 @@ public abstract class BaseDecFP
     protected int callAppendTo(Frame frame, ObjectHandle hTarget, ObjectHandle hAppender, int iReturn) {
         Decimal dec = ((DecimalHandle) hTarget).getValue();
 
-        return xString.callAppendTo(frame, xString.makeHandle(dec.toString()), hAppender, iReturn);
+        return xString.callAppendTo(frame, xString.makeHandle(frame, dec.toString()), hAppender, iReturn);
     }
 
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
         Decimal dec = ((DecimalHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xString.makeHandle(dec.toString()));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, dec.toString()));
     }
 
 

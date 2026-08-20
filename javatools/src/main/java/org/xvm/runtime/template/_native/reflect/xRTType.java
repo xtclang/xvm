@@ -308,7 +308,7 @@ public class xRTType
         switch (method.getName()) {
         case "dump":
             return frame.assignValue(iReturn,
-                xString.makeHandle(hType.getUnsafeDataType().ensureTypeInfo().toString()));
+                xString.makeHandle(frame, hType.getUnsafeDataType().ensureTypeInfo().toString()));
         }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
     }
@@ -532,7 +532,7 @@ public class xRTType
         TypeHandle[]            ahType     = new TypeHandle[cInfos];
         int                     ix         = 0;
         for (String sName : mapInfos.keySet()) {
-            ahName[ix  ] = xString.makeHandle(sName);
+            ahName[ix  ] = xString.makeHandle(container, sName);
             ahType[ix++] = infoTarget.calculateChildType(poolCtx, sName).ensureTypeHandle(container);
         }
 
@@ -1349,7 +1349,7 @@ public class xRTType
 
         return sName == null
             ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-            : frame.assignValues(aiReturn, xBoolean.TRUE, xString.makeHandle(sName));
+            : frame.assignValues(aiReturn, xBoolean.TRUE, xString.makeHandle(frame, sName));
     }
 
     /**

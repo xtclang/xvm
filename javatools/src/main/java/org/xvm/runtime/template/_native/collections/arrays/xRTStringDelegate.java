@@ -117,7 +117,7 @@ public class xRTStringDelegate
         StringArrayHandle hDelegate = (StringArrayHandle) hTarget;
 
         String s = hDelegate.m_asValue[(int) lIndex];
-        return frame.assignValue(iReturn, xString.makeHandle(s));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, s));
     }
 
     @Override

@@ -291,7 +291,7 @@ public class xRef
             String sName = hRef.getName();
             return sName == null
                     ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                    : frame.assignValues(aiReturn, xBoolean.TRUE, xString.makeHandle(sName));
+                    : frame.assignValues(aiReturn, xBoolean.TRUE, xString.makeHandle(frame, sName));
         }
 
         case "isProperty": {

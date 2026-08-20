@@ -201,7 +201,7 @@ public class xFPLiteral
         public StringHandle getText() {
             StringHandle hText = m_hText;
             if (hText == null) {
-                m_hText = hText = xString.makeHandle(m_decValue.toString());
+                m_hText = hText = xString.makeHandle(this, m_decValue.toString());
             }
             return hText;
         }

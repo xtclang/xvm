@@ -56,7 +56,7 @@ public class xRTModuleTemplate
         case "qualifiedName": {
             ModuleStructure module = (ModuleStructure) hTemplate.getComponent();
             return frame.assignValue(iReturn,
-                xString.makeHandle(module.getIdentityConstant().getName()));
+                xString.makeHandle(frame, module.getIdentityConstant().getName()));
         }
 
         case "versionString": {
@@ -72,7 +72,7 @@ public class xRTModuleTemplate
             }
             return frame.assignValue(iReturn, sVersion == null
                 ? xNullable.NULL
-                : xString.makeHandle(sVersion));
+                : xString.makeHandle(frame, sVersion));
         }
 
         case "modulesByPath":
@@ -108,7 +108,7 @@ public class xRTModuleTemplate
             if (!idDep.equals(module.getIdentityConstant())) {
                 ModuleStructure moduleDep = module.getFileStructure().getModule(idDep);
 
-                ahPaths[index]    = xString.makeHandle(entry.getValue());
+                ahPaths[index]    = xString.makeHandle(container, entry.getValue());
                 ahTemplate[index] = makeHandle(container, moduleDep);
                 ++index;
             }

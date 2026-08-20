@@ -12,8 +12,10 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
@@ -46,29 +48,12 @@ import org.xvm.util.Lazy;
 public class xString
         extends xConst
         implements IndexSupport {
-    public static xString INSTANCE;
-
     public xString(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void initNative() {
-        ConstantPool   pool      = pool();
-        TypeConstant   typeArg   = pool.ensureClassTypeConstant(
-                pool.ensureEcstasyClassConstant("Appender"), null,
-                pool.typeChar());
-
-        EMPTY_STRING     = new StringHandle(getCanonicalClass(), new char[0]);
-        EMPTY_ARRAY      = makeHandle(new char[] {'[', ']'});
-        ZERO             = makeHandle(new char[] {'0'});
-        ONE              = makeHandle(new char[] {'1'});
-        METHOD_APPEND_TO = getStructure().findMethod("appendTo", 1, typeArg);
-
         markNativeProperty("size");
         markNativeProperty("chars");
 
@@ -93,7 +78,7 @@ public class xString
     @Override
     public int createConstHandle(Frame frame, Constant constant) {
         if (constant instanceof StringConstant hString) {
-            return frame.pushStack(makeHandle(hString.getValue().toCharArray()));
+            return frame.pushStack(makeHandle(frame, hString.getValue().toCharArray()));
         }
 
         return super.createConstHandle(frame, constant);
@@ -107,7 +92,7 @@ public class xString
         }
 
         return frame.assignValue(iReturn,
-                makeHandle(getChars((ArrayHandle) ahVar[0])));
+                makeHandle(frame, getChars((ArrayHandle) ahVar[0])));
     }
 
     @Override
@@ -280,7 +265,7 @@ public class xString
         char[] ach = new char[c1 + c2];
         System.arraycopy(ach1, 0, ach, 0, c1);
         System.arraycopy(ach2, 0, ach, c1, c2);
-        return makeHandle(ach);
+        return makeHandle(h1, ach);
     }
 
     private static int indexOf(char[] achSource, char chTarget, int ofStart) {
@@ -316,10 +301,11 @@ public class xString
      */
     public static int callAppendTo(Frame frame, StringHandle hString,
                                    ObjectHandle hAppender, int iReturn) {
-        ObjectHandle[] ahArg = new ObjectHandle[METHOD_APPEND_TO.getMaxVars()];
+        MethodStructure methodAppendTo = getInstance(frame).f_methodAppendTo.get();
+        ObjectHandle[]  ahArg          = new ObjectHandle[methodAppendTo.getMaxVars()];
         ahArg[0] = hAppender;
 
-        return frame.call1(METHOD_APPEND_TO, hString, ahArg, iReturn);
+        return frame.call1(methodAppendTo, hString, ahArg, iReturn);
     }
 
 
@@ -407,14 +393,66 @@ public class xString
         }
     }
 
-    public static StringHandle makeHandle(String sValue) {
-        return makeHandle(sValue.toCharArray());
+    public static xString getInstance(Frame frame) {
+        return NativeTemplates.get(frame).string();
     }
 
-    public static StringHandle makeHandle(char[] achValue) {
+    public static xString getInstance(Container container) {
+        return NativeTemplates.get(container).string();
+    }
+
+    public static xString getInstance(ClassTemplate template) {
+        return NativeTemplates.get(template).string();
+    }
+
+    public static StringHandle makeHandle(Frame frame, String sValue) {
+        return makeHandle(frame.container(), sValue);
+    }
+
+    public static StringHandle makeHandle(Frame frame, char[] achValue) {
+        return makeHandle(frame.container(), achValue);
+    }
+
+    public static StringHandle makeHandle(Container container, String sValue) {
+        return makeHandle(container, sValue.toCharArray());
+    }
+
+    public static StringHandle makeHandle(Container container, char[] achValue) {
+        return getInstance(container).makeHandle(achValue);
+    }
+
+    public static StringHandle makeHandle(ClassTemplate template, String sValue) {
+        return NativeTemplates.get(template).string().makeHandle(sValue.toCharArray());
+    }
+
+    public static StringHandle makeHandle(ObjectHandle owner, String sValue) {
+        return makeHandle(owner.getComposition().getContainer(), sValue);
+    }
+
+    public static StringHandle emptyString(Frame frame) {
+        return emptyString(frame.container());
+    }
+
+    public static StringHandle emptyString(Container container) {
+        return getInstance(container).f_emptyString.get();
+    }
+
+    public static StringHandle zero(Frame frame) {
+        return getInstance(frame).f_zero.get();
+    }
+
+    public static StringHandle one(Frame frame) {
+        return getInstance(frame).f_one.get();
+    }
+
+    private static StringHandle makeHandle(StringHandle owner, char[] achValue) {
+        return owner.getTemplate(xString.class).makeHandle(achValue);
+    }
+
+    private StringHandle makeHandle(char[] achValue) {
         return achValue.length == 0
-            ? EMPTY_STRING
-            : new StringHandle(INSTANCE.getCanonicalClass(), achValue);
+            ? f_emptyString.get()
+            : new StringHandle(getCanonicalClass(), achValue);
     }
 
 
@@ -427,7 +465,7 @@ public class xString
         int            cValues = asValue.length;
         StringHandle[] ahValue = new StringHandle[cValues];
         for (int i = 0; i < cValues; i++) {
-            ahValue[i] = makeHandle(asValue[i]);
+            ahValue[i] = makeHandle(container, asValue[i]);
         }
         return xArray.makeStringArrayHandle(container, ahValue);
     }
@@ -436,18 +474,32 @@ public class xString
      * @return the handle for an empty Array of String
      */
     public static ArrayHandle ensureEmptyArray(Container container) {
-        return container.getTemplate(container.getConstantPool().typeString(), xString.class).
-                f_emptyStringArray.get();
+        return getInstance(container).f_emptyStringArray.get();
     }
 
     // ----- data members --------------------------------------------------------------------------
 
-    public static StringHandle EMPTY_STRING;
-    public static StringHandle EMPTY_ARRAY;
-    public static StringHandle ZERO;
-    public static StringHandle ONE;
+    /**
+     * Owner-local cached empty string handle. String handles carry a TypeComposition, so even the
+     * common empty string must be cached by the owning container/template, not in a JVM global.
+     */
+    private final Lazy<StringHandle> f_emptyString =
+            Lazy.of(() -> new StringHandle(getCanonicalClass(), new char[0]));
 
-    private static MethodStructure METHOD_APPEND_TO;
+    private final Lazy<StringHandle> f_zero =
+            Lazy.of(() -> makeHandle(new char[] {'0'}));
+
+    private final Lazy<StringHandle> f_one =
+            Lazy.of(() -> makeHandle(new char[] {'1'}));
+
+    private final Lazy<MethodStructure> f_methodAppendTo = Lazy.of(() -> {
+        ConstantPool pool    = pool();
+        TypeConstant typeArg = pool.ensureClassTypeConstant(
+                pool.ensureEcstasyClassConstant("Appender"), null,
+                pool.typeChar());
+
+        return getStructure().findMethod("appendTo", 1, typeArg);
+    });
 
     private final Lazy<ArrayHandle> f_emptyStringArray =
             Lazy.of(() -> xArray.makeStringArrayHandle(f_container, Utils.STRINGS_NONE));

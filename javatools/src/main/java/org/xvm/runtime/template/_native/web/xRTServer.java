@@ -461,7 +461,7 @@ public class xRTServer
         return sName == null
             ? frame.assignValue(aiResult[0], xBoolean.FALSE)
             : frame.assignValues(aiResult, xBoolean.TRUE,
-                    xString.makeHandle(sName), xUInt16.INSTANCE.makeJavaLong(nPort));
+                    xString.makeHandle(frame, sName), xUInt16.INSTANCE.makeJavaLong(nPort));
     }
 
     /**
@@ -470,7 +470,7 @@ public class xRTServer
     private int invokeGetProtocol(Frame frame, HttpContextHandle hCtx, int iResult) {
         String sProtocol = hCtx.f_exchange.getProtocol();
 
-        return frame.assignValue(iResult, xString.makeHandle(sProtocol));
+        return frame.assignValue(iResult, xString.makeHandle(frame, sProtocol));
     }
 
     /**
@@ -668,8 +668,10 @@ public class xRTServer
         private ObjectHandle[] createArguments(HttpExchange exchange) {
             ObjectHandle      hBinding  = f_hServer.getBinding();
             HttpContextHandle hContext  = new HttpContextHandle(exchange);
-            StringHandle      hURI      = xString.makeHandle(exchange.getRequestURI().toASCIIString());
-            StringHandle      hMethod   = xString.makeHandle(exchange.getRequestMethod());
+            Container         container = f_context.f_container;
+            StringHandle      hURI      = xString.makeHandle(
+                    container, exchange.getRequestURI().toASCIIString());
+            StringHandle      hMethod   = xString.makeHandle(container, exchange.getRequestMethod());
             BooleanHandle     hTls      = xBoolean.makeHandle(exchange instanceof HttpsExchange);
             return new ObjectHandle[]{hBinding, hContext, hURI, hMethod, hTls};
         }

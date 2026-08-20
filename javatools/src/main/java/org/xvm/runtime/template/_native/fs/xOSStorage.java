@@ -326,8 +326,9 @@ public class xOSStorage
                                 templateStorage.ensureOnEventMethod()).
                                 bindTarget(null, context.hStorage);
 
-                StringHandle hPathDir  = xString.makeHandle(pathDir.toString());
-                StringHandle hPathNode = xString.makeHandle(pathAbsolute.toString());
+                Container    container = context.hStorage.f_context.f_container;
+                StringHandle hPathDir  = xString.makeHandle(container, pathDir.toString());
+                StringHandle hPathNode = xString.makeHandle(container, pathAbsolute.toString());
 
                 ObjectHandle[] ahArg = new ObjectHandle[] {
                     hPathDir, hPathNode, xBoolean.TRUE, xInt64.makeHandle(iKind)

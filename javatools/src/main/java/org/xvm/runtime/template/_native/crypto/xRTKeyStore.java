@@ -330,16 +330,16 @@ public class xRTKeyStore
             // create the arguments
             List<ObjectHandle> list = new ArrayList<>(9);
             list.add(xBoolean.TRUE);
-            list.add(xString.makeHandle(sIssuer));
-            list.add(xString.makeHandle(sSubject));
+            list.add(xString.makeHandle(frame, sIssuer));
+            list.add(xString.makeHandle(frame, sSubject));
             list.add(xInt64.makeHandle(nVersion));
             addDate(dateNotBefore, list);
             addDate(dateNotAfter, list);
             list.add(xArray.makeBooleanArrayHandle(frame.container(), abUsage, cUsage,
                     Mutability.Constant));
-            list.add(xString.makeHandle(sSigAlgName));
+            list.add(xString.makeHandle(frame, sSigAlgName));
             list.add(xByteArray.makeByteArrayHandle(frame.container(), abSignature, Mutability.Constant));
-            list.add(xString.makeHandle(sAlgorithm));
+            list.add(xString.makeHandle(frame, sAlgorithm));
             list.add(xInt64.makeHandle(cKeyBits >>> 3));
             list.add(xByteArray.makeByteArrayHandle(frame.container(), abPublic, Mutability.Constant));
             list.add(new SecretHandle(publicKey));
@@ -450,7 +450,7 @@ public class xRTKeyStore
 
                 List<ObjectHandle> list = new ArrayList<>(9);
                 list.add(xBoolean.TRUE);
-                list.add(xString.makeHandle(sAlgorithm));
+                list.add(xString.makeHandle(frame, sAlgorithm));
                 list.add(xInt64.makeHandle(cKeyBits >>> 3));
                 list.add(new SecretHandle(key));
                 if (publicKey == null) {
@@ -480,13 +480,14 @@ public class xRTKeyStore
             Key key = hStore.getKey(sName);
             if (key instanceof PBEKey keyPwd) {
                 return frame.assignValues(aiReturn,
-                        xBoolean.TRUE, xString.makeHandle(keyPwd.getPassword()));
+                        xBoolean.TRUE, xString.makeHandle(frame, keyPwd.getPassword()));
             }
 
             // unfortunately com.sun.crypto.provider.PBEKey is not public
             if ("PBEKey".equals(key.getClass().getSimpleName())) {
                 return frame.assignValues(aiReturn, xBoolean.TRUE,
-                        xString.makeHandle(new String(key.getEncoded(), StandardCharsets.UTF_8)));
+                        xString.makeHandle(frame,
+                                new String(key.getEncoded(), StandardCharsets.UTF_8)));
             }
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         } catch (GeneralSecurityException e) {
@@ -513,7 +514,7 @@ public class xRTKeyStore
             return (StringHandle) hNamed.getField(null, "password");
         }
         // this is basically an assertion; the result is clearly unusable
-        return xString.EMPTY_STRING;
+        return xString.emptyString(frame);
     }
 
     /**

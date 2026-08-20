@@ -175,7 +175,7 @@ public class xRTNameService
                     String      sNotName = addr.getHostAddress();
                     if (sName != null && !sName.isEmpty() && !sName.equals(sNotName)) {
                         return frameCaller.assignValues(aiReturn,
-                                xBoolean.TRUE, xString.makeHandle(sName));
+                                xBoolean.TRUE, xString.makeHandle(frameCaller, sName));
                     }
                 } catch (Exception ignore) {
                     // REVIEW CP: do we want to report the reason somehow?

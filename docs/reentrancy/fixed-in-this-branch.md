@@ -63,6 +63,7 @@ actually owns the value.
 | --- | --- | --- | --- |
 | Native template singleton | Mutable `public static INSTANCE`, assigned from constructors | Central `NativeTemplates` lookup table plus `Container`-owned lazy cache | One resolved template per container/key, cached behind `Lazy` |
 | Immutable template/pool metadata | Mutable static `TypeConstant`, `TypeComposition`, `MethodStructure`, `xEnum`, etc. | Final template field, usually `Lazy<T>` or grouped `Lazy<Info>` | Same "compute once" behavior, but per owning template/container |
+| String handles and common string values | Mutable `xString.INSTANCE`, static `EMPTY_STRING`, `ZERO`, `ONE`, and ownerless `makeHandle(...)` | `NativeTemplates.string()`, owner-required factories, and final owner-local `Lazy` fields | Same cached empty/one/zero/empty-array handles, but one cache per owning container |
 | Finite owner-derived keyed cache | Mutable static map | Final `Lazy<Map<K,V>>` with immutable `Map.copyOf` | Same single map build, no global cross-container map |
 | Pure process-global data | Mutable static collection | `private static final Set.of(...)` or equivalent immutable constant | Class-init safe publication, no per-container overhead |
 | Suspendable lifecycle state | Several mutable fields | One immutable state record in `AtomicReference` | CAS publishes complete lifecycle snapshots |
@@ -192,6 +193,7 @@ getters for existing call sites; resource templates are resolved directly from
 - `xRTViewToBitFromUInt64.INSTANCE`
 - `xRTViewToBitFromUInt8.INSTANCE`
 - `xArray.INSTANCE`
+- `xString.INSTANCE`
 - `xEnum.INSTANCE`
 - `xService.INSTANCE`
 - `xModule.INSTANCE`
@@ -300,7 +302,7 @@ fields. The branch moves them to owner-scoped final lazy state.
 | `xEnum` | range template/ctor, enum name and handle lists | `f_templateRange`, `f_ctorRange`, `f_enumInfo` | Must fix for startup; see enum lifecycle note below |
 | `xService` | `INCEPTION_CLASS`, `SYNCHRONICITY`, `REMAINING_TIME` | `f_constInception`, `f_templateSynchronicity`, `f_propRemainingTime` | Must fix |
 | `xModule` | private static `LISTMAP_TYPE` | compute from caller `ConstantPool` | Must fix |
-| `xString` | static empty string-array handle and no-container array helpers | `f_emptyStringArray`; callers pass `Container` | Must fix |
+| `xString` | `INSTANCE`, `EMPTY_STRING`, `EMPTY_ARRAY`, `ZERO`, `ONE`, `METHOD_APPEND_TO`, and ownerless `makeHandle(...)`/array helpers | `NativeTemplates.string()`, `f_emptyString`, `f_emptyStringArray`, `f_zero`, `f_one`, `f_methodAppendTo`, and owner-required factories | Must fix |
 
 These replacements preserve caching. They do not turn old bootstrap caches into
 repeated lookups. The cache key changed from "entire JVM" to "owning
@@ -344,6 +346,28 @@ internal invariant stable. `StringBufferTest.committedChunksStayAppendable()`
 verifies the deterministic failing sequence, and the `TestServices` parallel
 stress command that exposed the crash now passes.
 
+The `xString` wave removes the last-writer-wins string template bridge entirely.
+On master, `xString.makeHandle("...")` used `xString.INSTANCE`, and the common
+handles `EMPTY_STRING`, `ZERO`, `ONE`, and `EMPTY_ARRAY` were mutable static
+runtime handles. A string handle carries a `TypeComposition`; it is therefore not
+a JVM-global value. This branch keeps the old cache shape, but moves each cache to
+the owning string template:
+
+- `EMPTY_STRING` -> `f_emptyString`
+- `EMPTY_ARRAY` -> `f_emptyStringArray`
+- `ZERO` -> `f_zero`
+- `ONE` -> `f_one`
+- `METHOD_APPEND_TO` -> `f_methodAppendTo`
+
+The factories now require a `Frame`, `Container`, `ClassTemplate`, or existing
+owner handle. That preserves the old "make a string handle here" behavior while
+making the owner explicit enough for the compiler to reject new no-owner calls.
+`NativeTemplateOldPatternTest.staticStringFactoryCanReturnForeignOwnerHandles`
+demonstrates the old failure shape: two simulated containers initialize the
+global string cache, then container A receives a string handle owned by container
+B. The owner-scoped replacement in the same test keeps the per-owner empty-string
+cache and does not allow cross-owner handles.
+
 One intentional exception is `xService`'s atomic property-name set. On `master`
 it was a mutable `static Set<String>` even though it contains only string
 literals. This branch makes it `private static final Set.of(...)`, not a
@@ -384,6 +408,10 @@ This branch removes or hardens those overloads:
 - `xString.makeArrayHandle(String[])` and `xString.ensureEmptyArray()` were
   removed. Callers now use `xString.makeArrayHandle(Container, String[])` and
   `xString.ensureEmptyArray(Container)`.
+- `xString.makeHandle(String)`, `xString.makeHandle(char[])`, `xString.ZERO`,
+  `xString.ONE`, and `xString.EMPTY_STRING` were removed. Callers now pass a
+  `Frame`, `Container`, `ClassTemplate`, or existing handle owner, or use
+  `xString.zero(frame)`, `xString.one(frame)`, and `xString.emptyString(...)`.
 - `xRTType.makeForeignHandle(TypeConstant)` was replaced by
   `xRTType.makeForeignHandle(Container, TypeConstant)`. `TypeConstant` already
   had the caller container in `ensureTypeHandle(Container)`, so the owner is now
@@ -490,9 +518,8 @@ accept small opportunistic cleanup, but they are not the reason for the PR.
 | Site | Current branch state | Recommendation |
 | --- | --- | --- |
 | `xRTClassTemplate.NO_TEMPLATES` | made `public static final` | Safe to keep; pure empty array reference, but exposed mutable array contents remain a broader design smell |
-| `xString.EMPTY_STRING_ARRAY` | moved from static mutable handle to per-template `Lazy<ArrayHandle>` | Keep; this is container-owned handle state and is a must-fix cache |
 | `xString.StringHandle` hash/String memoization | left as the old per-handle transient cache | Keep out of this PR; replacing with `Lazy` would add two objects per string handle for a should-fix-only concern |
-| `xString.INSTANCE`, `EMPTY_STRING`, `EMPTY_ARRAY`, `ZERO`, `ONE`, `METHOD_APPEND_TO` | still old-style static compatibility state | TODO; needs a separate container-widening pass |
+| `xIntLiteral.IntNHandle` text memoization | now stores the constructor-provided text handle and otherwise creates text through its own handle owner | Keep; this preserves the old optional cache and avoids reintroducing ownerless string creation |
 
 ## Unfixed Legacy `INSTANCE` Patterns
 
@@ -503,9 +530,8 @@ on `master` and still remain after this branch. The full list is maintained in
 
 Examples still requiring follow-up include root templates such as `Identity`,
 `xConst`, `xException`, and `xObject`; reflection templates such as `xRef` and
-`xVar`; many primitive templates; and `xString`/`xChar`. Those are not safe by
-design just because this PR does not touch them; they are the next migration
-backlog.
+`xVar`; many primitive templates; and `xChar`. Those are not safe by design just
+because this PR does not touch them; they are the next migration backlog.
 
 ## Proof Points Added By This Branch
 
@@ -513,7 +539,8 @@ backlog.
 contains deterministic demonstrations of the old pattern:
 
 - a static `INSTANCE` cache is last-writer-wins across two owners,
-- constructor assignment can expose a partially initialized object.
+- constructor assignment can expose a partially initialized object,
+- static string factories can return handles owned by the wrong container.
 
 `javatools/src/test/java/org/xvm/runtime/SingletonConstantTest.java` covers the
 new singleton state machine:

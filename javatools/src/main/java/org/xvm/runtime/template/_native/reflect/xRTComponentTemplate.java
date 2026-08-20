@@ -159,7 +159,7 @@ public class xRTComponentTemplate
         String    sDoc      = component.getDocumentation();
         return frame.assignValue(iReturn, sDoc == null
                 ? xNullable.NULL
-                : xString.makeHandle(sDoc));
+                : xString.makeHandle(frame, sDoc));
     }
 
     /**
@@ -192,7 +192,7 @@ public class xRTComponentTemplate
      */
     protected int getPropertyName(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         Component component = hComponent.getComponent();
-        return frame.assignValue(iReturn, xString.makeHandle(component.getSimpleName()));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, component.getSimpleName()));
     }
 
     /**
