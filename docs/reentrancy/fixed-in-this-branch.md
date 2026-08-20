@@ -130,6 +130,7 @@ getters for existing call sites; resource templates are resolved directly from
 - `xListMap.INSTANCE`
 - `xTuple.INSTANCE`
 - `xFuture.INSTANCE`
+- `xAtomicIntNumber.INSTANCE`
 - `xOSDirectory.INSTANCE`
 - `xOSFile.INSTANCE`
 - `xRawOSFileChannel.INSTANCE`
@@ -276,6 +277,7 @@ fields. The branch moves them to owner-scoped final lazy state.
 | `xListMap`, `Utils`, map-literal opcodes, enum-name map construction | `xListMap.INSTANCE`, static `xListMap.CONSTRUCTOR`, static `Utils.LIST_MAP_CONSTRUCT` | `NativeTemplates.listMap()`, owner-scoped `xListMap.f_constructor`, and constructor lookup from the caller's map composition | Must fix |
 | `xTuple`, void-return handling, async service responses | `xTuple.INSTANCE`, `xTuple.INCEPTION_CLASS`, static `xTuple.H_VOID` | `NativeTemplates.tuple()`, final owner-local inception constant, and per-container lazy `Tuple()` handle via `xTuple.ensureEmptyTuple(container)` | Must fix |
 | `xFuture`, wait-frame construction, async result assignment | `xFuture.INSTANCE`, static `TYPE`, static `COMPLETION`, ownerless `makeHandle(CompletableFuture)` | `NativeTemplates.future()`, final owner-local lazy future type and completion enum template, and `makeHandle(Container, CompletableFuture)` | Must fix |
+| `xAtomic`, `xAtomicIntNumber`, `xAtomicInt128` | `xAtomicIntNumber.INSTANCE`, static `xAtomic.NUMBER_TEMPLATES`, and wrapper construction from numeric template `INSTANCE` fields | final owner-local `Lazy<Map<TypeConstant,xAtomic>>`, immutable `Map.copyOf`, and wrapper construction from this container's number templates | Must fix |
 | Native filesystem templates and CP filesystem constants | `xOSDirectory.INSTANCE`, `xOSFile.INSTANCE`, `xRawOSFileChannel.INSTANCE`, and static constructor `MethodStructure` caches on `xOSDirectory`, `xOSFile`, `xCPDirectory`, `xCPFile`, `xCPFileStore` | `NativeTemplates` filesystem getters plus final owner-scoped lazy constructor caches on the owning template | Must fix |
 | `xRTFunction` | `LISTMAP_TYPE`, ownerless native/internal function factories, process-global finalizer no-op anchor | `f_typeListMap`, owner-required helper APIs, `FullyBoundHandle.noOp(Container)` | Must fix |
 | `xRTMethod` | `EMPTY_ARRAY` | `f_constEmptyArray` | Must fix |
@@ -460,10 +462,10 @@ on `master` and still remain after this branch. The full list is maintained in
 [state-inventory.md#mutable-template-instance-inventory](state-inventory.md#mutable-template-instance-inventory).
 
 Examples still requiring follow-up include root templates such as `Identity`,
-`xConst`, `xException`, and `xObject`; the annotation template
-`xAtomicIntNumber`; reflection templates such as `xRef` and `xVar`; many
-primitive templates; and `xString`/`xChar`. Those are not safe by design just
-because this PR does not touch them; they are the next migration backlog.
+`xConst`, `xException`, and `xObject`; reflection templates such as `xRef` and
+`xVar`; many primitive templates; and `xString`/`xChar`. Those are not safe by
+design just because this PR does not touch them; they are the next migration
+backlog.
 
 ## Proof Points Added By This Branch
 
@@ -491,3 +493,8 @@ lightweight containers in one process:
 These tests do not prove the absence of every race in the runtime. They prove
 that the old pattern is concretely broken and that the new replacement has the
 intended ownership and lifecycle behavior for the most important fixed paths.
+
+No existing manual module was found that directly exercises `@Atomic`
+specialized numeric references; the atomic owner-scope wave is covered by Java
+compile/test verification and should get an explicit X-level test in a
+follow-up.

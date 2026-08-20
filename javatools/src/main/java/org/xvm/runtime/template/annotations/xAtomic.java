@@ -27,6 +27,8 @@ import org.xvm.runtime.template.numbers.*;
 
 import org.xvm.runtime.template.reflect.xVar;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native implementation of Atomic.
@@ -42,32 +44,12 @@ public class xAtomic
         markNativeMethod("exchange", null, null);
         markNativeMethod("replaceFailed", null, null);
 
-        ConstantPool               pool         = f_container.getConstantPool();
-        Map<TypeConstant, xAtomic> mapTemplates = new HashMap<>();
-
-        // Int128, UInt128
-        mapTemplates.put(pool.typeInt128(),  new xAtomicInt128(xInt128.INSTANCE));
-        mapTemplates.put(pool.typeUInt128(), new xAtomicInt128(xUInt128.INSTANCE));
-
-        mapTemplates.put(pool.typeInt8(),    new xAtomicIntNumber(xInt8.INSTANCE));
-        mapTemplates.put(pool.typeInt16(),   new xAtomicIntNumber(xInt16.INSTANCE));
-        mapTemplates.put(pool.typeInt32(),   new xAtomicIntNumber(xInt32.INSTANCE));
-        mapTemplates.put(pool.typeInt64(),   new xAtomicIntNumber(xInt64.INSTANCE));
-
-        mapTemplates.put(pool.typeNibble(),  new xAtomicIntNumber(xNibble.INSTANCE));
-        mapTemplates.put(pool.typeUInt8(),   new xAtomicIntNumber(xUInt8.INSTANCE));
-        mapTemplates.put(pool.typeUInt16(),  new xAtomicIntNumber(xUInt16.INSTANCE));
-        mapTemplates.put(pool.typeUInt32(),  new xAtomicIntNumber(xUInt32.INSTANCE));
-        mapTemplates.put(pool.typeUInt64(),  new xAtomicIntNumber(xUInt64.INSTANCE));
-
-        NUMBER_TEMPLATES = mapTemplates;
-
         invalidateTypeInfo();
     }
 
     @Override
     public ClassTemplate getTemplate(TypeConstant type) {
-        ClassTemplate templateAtomicInt = NUMBER_TEMPLATES.get(type.getParamType(0));
+        ClassTemplate templateAtomicInt = f_numberTemplates.get().get(type.getParamType(0));
         return templateAtomicInt == null ? this : templateAtomicInt;
     }
 
@@ -242,7 +224,51 @@ public class xAtomic
     }
 
 
-    // ----- data fields ---------------------------------------------------------------------------
+    // ----- fields --------------------------------------------------------------------------------
 
-    protected static Map<TypeConstant, xAtomic> NUMBER_TEMPLATES;
+    /**
+     * Owner-scoped replacement for the old NUMBER_TEMPLATES static map. The
+     * keys and referent templates are derived from this container's pool and
+     * template registry, so a JVM-global map would cross container ownership.
+     */
+    private final Lazy<Map<TypeConstant, xAtomic>> f_numberTemplates =
+            Lazy.of(this::createNumberTemplates);
+
+    private Map<TypeConstant, xAtomic> createNumberTemplates() {
+        ConstantPool       pool              = f_container.getConstantPool();
+        xAtomicIntNumber   templateAtomicInt = f_container.getTemplate(
+                "annotations.AtomicIntNumber", xAtomicIntNumber.class);
+        Map<TypeConstant, xAtomic> mapTemplates = new HashMap<>();
+
+        mapTemplates.put(pool.typeInt128(),  new xAtomicInt128(
+                numberTemplate(pool.typeInt128(), xInt128.class), templateAtomicInt));
+        mapTemplates.put(pool.typeUInt128(), new xAtomicInt128(
+                numberTemplate(pool.typeUInt128(), xUInt128.class), templateAtomicInt));
+
+        mapTemplates.put(pool.typeInt8(),    new xAtomicIntNumber(
+                numberTemplate(pool.typeInt8(), xInt8.class), templateAtomicInt));
+        mapTemplates.put(pool.typeInt16(),   new xAtomicIntNumber(
+                numberTemplate(pool.typeInt16(), xInt16.class), templateAtomicInt));
+        mapTemplates.put(pool.typeInt32(),   new xAtomicIntNumber(
+                numberTemplate(pool.typeInt32(), xInt32.class), templateAtomicInt));
+        mapTemplates.put(pool.typeInt64(),   new xAtomicIntNumber(
+                numberTemplate(pool.typeInt64(), xInt64.class), templateAtomicInt));
+
+        mapTemplates.put(pool.typeNibble(),  new xAtomicIntNumber(
+                numberTemplate(pool.typeNibble(), xNibble.class), templateAtomicInt));
+        mapTemplates.put(pool.typeUInt8(),   new xAtomicIntNumber(
+                numberTemplate(pool.typeUInt8(), xUInt8.class), templateAtomicInt));
+        mapTemplates.put(pool.typeUInt16(),  new xAtomicIntNumber(
+                numberTemplate(pool.typeUInt16(), xUInt16.class), templateAtomicInt));
+        mapTemplates.put(pool.typeUInt32(),  new xAtomicIntNumber(
+                numberTemplate(pool.typeUInt32(), xUInt32.class), templateAtomicInt));
+        mapTemplates.put(pool.typeUInt64(),  new xAtomicIntNumber(
+                numberTemplate(pool.typeUInt64(), xUInt64.class), templateAtomicInt));
+
+        return Map.copyOf(mapTemplates);
+    }
+
+    private <T extends ClassTemplate> T numberTemplate(TypeConstant type, Class<T> clz) {
+        return f_container.getTemplate(type, clz);
+    }
 }
