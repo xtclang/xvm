@@ -313,7 +313,8 @@ public class xRTFunction
 
     private int constructListMap(Frame frame,
                                  ObjectHandle[] ahParam, ObjectHandle[] ahValue, int iReturn) {
-        ObjectHandle haParams = xArray.createImmutableArray(xRTSignature.ensureParamArray(), ahParam);
+        ObjectHandle haParams = xArray.createImmutableArray(
+                xRTSignature.ensureParamArray(frame.container()), ahParam);
         ObjectHandle haValues = xArray.makeObjectArrayHandle(frame.container(), ahValue, Mutability.Constant);
 
         return Utils.constructListMap(frame,
