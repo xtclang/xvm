@@ -342,7 +342,7 @@ public class xRTKeyStore
             list.add(xString.makeHandle(frame, sAlgorithm));
             list.add(xInt64.makeHandle(frame, cKeyBits >>> 3));
             list.add(xByteArray.makeByteArrayHandle(frame.container(), abPublic, Mutability.Constant));
-            list.add(new SecretHandle(publicKey));
+            list.add(new SecretHandle(frame.container(), publicKey));
             list.add(xByteArray.makeByteArrayHandle(frame.container(), abDer, Mutability.Constant));
 
             return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
@@ -452,12 +452,12 @@ public class xRTKeyStore
                 list.add(xBoolean.TRUE);
                 list.add(xString.makeHandle(frame, sAlgorithm));
                 list.add(xInt64.makeHandle(frame, cKeyBits >>> 3));
-                list.add(new SecretHandle(key));
+                list.add(new SecretHandle(frame.container(), key));
                 if (publicKey == null) {
                     list.add(xNullable.NULL);
                     list.add(xArray.ensureEmptyByteArray(frame.container()));
                 } else {
-                    list.add(new SecretHandle(publicKey));
+                    list.add(new SecretHandle(frame.container(), publicKey));
                     list.add(xArray.makeByteArrayHandle(frame.container(), abPublic,
                             Mutability.Constant));
                 }

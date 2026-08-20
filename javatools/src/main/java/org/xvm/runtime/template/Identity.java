@@ -11,6 +11,7 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
@@ -22,17 +23,10 @@ import org.xvm.runtime.template.numbers.xInt64;
  */
 public class Identity
         extends ClassTemplate {
-    public static Identity INSTANCE;
-    public static ClassConstant INCEPTION_CLASS;
-
-    public Identity(Container container, ClassStructure structure, boolean fInstance) {
+    public Identity(Container container, ClassStructure structure) {
         super(container, structure);
 
-        if (fInstance) {
-            INSTANCE = this;
-            INCEPTION_CLASS = new NativeRebaseConstant(
-                    (ClassConstant) structure.getIdentityConstant());
-        }
+        f_constInception = new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant());
     }
 
     @Override
@@ -45,7 +39,7 @@ public class Identity
 
     @Override
     protected ClassConstant getInceptionClassConstant() {
-        return INCEPTION_CLASS;
+        return f_constInception;
     }
 
     @Override
@@ -80,7 +74,8 @@ public class Identity
      * Create an identity handle for a mutable or non-hashable object.
      */
     public static IdentityHandle ensureIdentity(ObjectHandle h) {
-        return new IdentityHandle(INSTANCE.getCanonicalClass(), h);
+        Identity template = NativeTemplates.get(h.getComposition().getContainer()).identity();
+        return new IdentityHandle(template.getCanonicalClass(), h);
     }
 
 
@@ -109,4 +104,13 @@ public class Identity
 
         private final ObjectHandle m_hValue;
     }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * Identity is the native rebase for Ref.Identity. Keeping the rebase constant on the owner
+     * template preserves the old inception type without publishing it as JVM-global state.
+     */
+    private final ClassConstant f_constInception;
 }

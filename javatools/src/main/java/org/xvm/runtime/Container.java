@@ -320,7 +320,7 @@ public abstract class Container
             case ANNOTATION, MIXIN, CLASS, INTERFACE:
                 temp = structClass.isInstanceChild()
                     ? new Child(this,   structClass)
-                    : new xObject(this, structClass, false);
+                    : new xObject(this, structClass);
                 break;
 
             case SERVICE:

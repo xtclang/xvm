@@ -171,7 +171,7 @@ public class NativeContainer
         // Legacy templates still using constructor-published INSTANCE fields need these anchors set
         // up before reflective template loading. Converted base templates resolve through
         // NativeTemplates and do not publish from their constructors.
-        storeNativeTemplate(new xObject (this, getClassStructure("Object"),  true));
+        storeNativeTemplate(new xObject (this, getClassStructure("Object")));
         storeNativeTemplate(new xEnum   (this, getClassStructure("Enum")));
         storeNativeTemplate(new xConst  (this, getClassStructure("Const"),   true));
         storeNativeTemplate(new xService(this, getClassStructure("Service")));

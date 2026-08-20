@@ -44,7 +44,10 @@ import org.xvm.runtime.template.reflect.xVar;
 import org.xvm.runtime.template.text.xChar;
 import org.xvm.runtime.template.text.xString;
 
+import org.xvm.runtime.template.Identity;
+import org.xvm.runtime.template.Proxy;
 import org.xvm.runtime.template.xEnum;
+import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template._native.collections.xBasicHashCollector;
@@ -122,6 +125,7 @@ public final class NativeTemplates {
                 f_container.getConstantPool().typeRef(), xRef.class));
         f_templateVar = Lazy.of(() -> f_container.getTemplate(
                 f_container.getConstantPool().typeVar(), xVar.class));
+        f_templateProxy = Lazy.of(() -> new Proxy(f_container));
     }
 
     /**
@@ -449,6 +453,18 @@ public final class NativeTemplates {
         return get(SERVICE);
     }
 
+    public xObject object() {
+        return get(OBJECT);
+    }
+
+    public Identity identity() {
+        return get(IDENTITY);
+    }
+
+    public Proxy proxy() {
+        return f_templateProxy.get();
+    }
+
     public xString string() {
         return get(STRING);
     }
@@ -467,6 +483,10 @@ public final class NativeTemplates {
 
     public boolean isService(ClassTemplate template) {
         return is(SERVICE, template);
+    }
+
+    public boolean isObject(ClassTemplate template) {
+        return is(OBJECT, template);
     }
 
     private <T extends ClassTemplate> boolean is(NativeTemplateRef<T> ref, ClassTemplate template) {
@@ -679,6 +699,12 @@ public final class NativeTemplates {
     private static final NativeTemplateRef<xService> SERVICE =
             NativeTemplateRef.of("Service", xService.class);
 
+    private static final NativeTemplateRef<xObject> OBJECT =
+            NativeTemplateRef.of("Object", xObject.class);
+
+    private static final NativeTemplateRef<Identity> IDENTITY =
+            NativeTemplateRef.of("reflect.Ref.Identity", Identity.class);
+
     private static final NativeTemplateRef<xString> STRING =
             NativeTemplateRef.of("text.String", xString.class);
 
@@ -724,6 +750,13 @@ public final class NativeTemplates {
      * their own reflected structures.
      */
     private final Lazy<xVar> f_templateVar;
+
+    /**
+     * Owner-local proxy support object. Proxy is not a normal registered native template; the
+     * legacy runtime constructed one global helper from Service registration. This preserves that
+     * helper object, but scopes it to the container that owns the proxy composition.
+     */
+    private final Lazy<Proxy> f_templateProxy;
 
     /**
      * Lazily resolved templates by immutable native-template key.

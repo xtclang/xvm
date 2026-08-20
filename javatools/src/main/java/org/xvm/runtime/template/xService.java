@@ -63,7 +63,10 @@ public class xService
 
     @Override
     public void registerNativeTemplates() {
-        new Proxy(f_container); // this initializes the Proxy.INSTANCE reference
+        // Proxy is an owner-local support object, not a normally registered native template.
+        // Touch it during Service registration to preserve the old eager startup behavior without
+        // publishing a process-global proxy singleton.
+        NativeTemplates.get(this).proxy();
     }
 
     @Override

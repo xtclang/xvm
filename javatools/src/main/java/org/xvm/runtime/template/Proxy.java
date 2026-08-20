@@ -15,6 +15,7 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ProxyComposition;
 import org.xvm.runtime.ServiceContext;
@@ -32,12 +33,8 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
  */
 public class Proxy
         extends xService {
-    public static Proxy INSTANCE;
-
     public Proxy(Container container) {
-        super(container, xObject.INSTANCE.getStructure());
-
-        INSTANCE = this;
+        super(container, NativeTemplates.get(container).object().getStructure());
     }
 
     @Override
@@ -211,7 +208,7 @@ public class Proxy
      * service boundaries.
      */
     private FunctionHandle makeAsyncNativeHandle(ObjectHandle hTarget, MethodStructure method) {
-        return new AsyncHandle(INSTANCE.f_container, method) {
+        return new AsyncHandle(f_container, method) {
             @Override
             protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService) {
                 return hTarget;

@@ -32,12 +32,12 @@ public class ProxyComposition
 
     @Override
     public OpSupport getSupport() {
-        return Proxy.INSTANCE;
+        return NativeTemplates.get(getContainer()).proxy();
     }
 
     @Override
     public ClassTemplate getTemplate() {
-        return Proxy.INSTANCE;
+        return NativeTemplates.get(getContainer()).proxy();
     }
 
     @Override

@@ -3,9 +3,10 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 
 
 /**
@@ -13,22 +14,21 @@ import org.xvm.runtime.Container;
  */
 public class xObject
         extends ClassTemplate {
-    public static xObject INSTANCE;
-    public static ClassComposition CLASS;
+    public static xObject getInstance(Frame frame) {
+        return NativeTemplates.get(frame).object();
+    }
 
-    public xObject(Container container, ClassStructure structure, boolean fInstance) {
+    public static xObject getInstance(Container container) {
+        return NativeTemplates.get(container).object();
+    }
+
+    public xObject(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
-            CLASS = getCanonicalClass();
-
+        if (NativeTemplates.get(this).isObject(this)) {
             markNativeMethod("equals", null, BOOLEAN);
             markNativeMethod("makeImmutable", VOID, null);
 

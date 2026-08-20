@@ -41,7 +41,7 @@ public class xCPFile
             MethodStructure constructor = f_constructor.get();
             ObjectHandle[]  ahVar       = Utils.ensureSize(Utils.OBJECTS_NONE,
                     constructor.getMaxVars());
-            ahVar[0] = new ConstantHandle(constFile);
+            ahVar[0] = new ConstantHandle(frame.container(), constFile);
 
             return proceedConstruction(frame, constructor, true, hStruct, ahVar, Op.A_STACK);
         }
