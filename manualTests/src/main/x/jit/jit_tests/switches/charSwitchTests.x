@@ -28,22 +28,21 @@ package charSwitchTests {
     }
 
     void testSimpleSwitch() {
-// TODO requires Char to be compiled by the JIT for Char.toInt64()
-//        assert performSimpleSwitch('a') == "one";
-//        assert performSimpleSwitch('b') == "two";
-//        assert performSimpleSwitch('c') == "default";
+        assert performSimpleSwitch('a') == "one";
+        assert performSimpleSwitch('b') == "two";
+        assert performSimpleSwitch('c') == "default";
     }
 
-//    String performSimpleSwitch(Char n) {
-//        switch (n) {
-//        case 'a':
-//            return "one";
-//        case 'b':
-//            return "two";
-//        default:
-//            return "default";
-//        }
-//    }
+    String performSimpleSwitch(Char n) {
+        switch (n) {
+        case 'a':
+            return "one";
+        case 'b':
+            return "two";
+        default:
+            return "default";
+        }
+    }
 
     void testSimpleSwitchWithNullable() {
         assert performSimpleSwitchWithNullable('a') == "one";
@@ -84,118 +83,113 @@ package charSwitchTests {
     }
 
     void testSimpleSwitchMultiCases() {
-// TODO requires Char to be compiled by the JIT for Char.toInt64()
-//        assert performSimpleSwitchMultiCases('a') == "one";
-//        assert performSimpleSwitchMultiCases('c') == "one";
-//        assert performSimpleSwitchMultiCases('e') == "one";
-//        assert performSimpleSwitchMultiCases('b') == "two";
-//        assert performSimpleSwitchMultiCases('d') == "two";
-//        assert performSimpleSwitchMultiCases('f') == "two";
-//        assert performSimpleSwitchMultiCases('g') == "default";
+        assert performSimpleSwitchMultiCases('a') == "one";
+        assert performSimpleSwitchMultiCases('c') == "one";
+        assert performSimpleSwitchMultiCases('e') == "one";
+        assert performSimpleSwitchMultiCases('b') == "two";
+        assert performSimpleSwitchMultiCases('d') == "two";
+        assert performSimpleSwitchMultiCases('f') == "two";
+        assert performSimpleSwitchMultiCases('g') == "default";
     }
 
-//    String performSimpleSwitchMultiCases(Char n) {
-//        switch (n) {
-//        case 'a', 'c', 'e':
-//            return "one";
-//        case 'b', 'd', 'f':
-//            return "two";
-//        default:
-//            return "default";
-//        }
-//    }
+    String performSimpleSwitchMultiCases(Char n) {
+        switch (n) {
+        case 'a', 'c', 'e':
+            return "one";
+        case 'b', 'd', 'f':
+            return "two";
+        default:
+            return "default";
+        }
+    }
 
     void testSimpleSwitchMixedCases() {
-// TODO requires Char to be compiled by the JIT for Char.toInt64()
-//        assert performSimpleSwitchMixedCases('a') == "one";
-//        assert performSimpleSwitchMixedCases('c') == "one";
-//        assert performSimpleSwitchMixedCases('k') == "one";
-//        assert performSimpleSwitchMixedCases('m') == "one";
-//        assert performSimpleSwitchMixedCases('o') == "one";
-//        assert performSimpleSwitchMixedCases('t') == "one";
-//        assert performSimpleSwitchMixedCases('b') == "two";
-//        assert performSimpleSwitchMixedCases('e') == "two";
-//        assert performSimpleSwitchMixedCases('f') == "two";
-//        assert performSimpleSwitchMixedCases('j') == "two";
-//        assert performSimpleSwitchMixedCases('r') == "two";
-//        assert performSimpleSwitchMixedCases('d') == "default";
-//        assert performSimpleSwitchMixedCases('s') == "default";
-//        assert performSimpleSwitchMixedCases('v') == "default";
+        assert performSimpleSwitchMixedCases('a') == "one";
+        assert performSimpleSwitchMixedCases('c') == "one";
+        assert performSimpleSwitchMixedCases('k') == "one";
+        assert performSimpleSwitchMixedCases('m') == "one";
+        assert performSimpleSwitchMixedCases('o') == "one";
+        assert performSimpleSwitchMixedCases('t') == "one";
+        assert performSimpleSwitchMixedCases('b') == "two";
+        assert performSimpleSwitchMixedCases('e') == "two";
+        assert performSimpleSwitchMixedCases('f') == "two";
+        assert performSimpleSwitchMixedCases('j') == "two";
+        assert performSimpleSwitchMixedCases('r') == "two";
+        assert performSimpleSwitchMixedCases('d') == "default";
+        assert performSimpleSwitchMixedCases('s') == "default";
+        assert performSimpleSwitchMixedCases('v') == "default";
     }
 
-//    String performSimpleSwitchMixedCases(Char n) {
-//        switch (n) {
-//        case 'a', 'c', 'k'..'o', 't':
-//            return "one";
-//        case 'b', 'e'..'j', 'r':
-//            return "two";
-//        default:
-//            return "default";
-//        }
-//    }
+    String performSimpleSwitchMixedCases(Char n) {
+        switch (n) {
+        case 'a', 'c', 'k'..'o', 't':
+            return "one";
+        case 'b', 'e'..'j', 'r':
+            return "two";
+        default:
+            return "default";
+        }
+    }
 
     void testSimpleSwitchNoDefault() {
-// TODO requires Char to be compiled by the JIT for Char.toInt64()
-//        assert performSimpleSwitchNoDefault('a') == "one";
-//        assert performSimpleSwitchNoDefault('b') == "two";
-//        assert performSimpleSwitchNoDefault('c') == "foo";
+        assert performSimpleSwitchNoDefault('a') == "one";
+        assert performSimpleSwitchNoDefault('b') == "two";
+        assert performSimpleSwitchNoDefault('c') == "foo";
     }
 
-//    String performSimpleSwitchNoDefault(Char n) {
-//        switch (n) {
-//        case 'a':
-//            return "one";
-//        case 'b':
-//            return "two";
-//        }
-//        return "foo";
-//    }
+    String performSimpleSwitchNoDefault(Char n) {
+        switch (n) {
+        case 'a':
+            return "one";
+        case 'b':
+            return "two";
+        }
+        return "foo";
+    }
 
     void testSimpleSwitchWithBreak() {
-// TODO requires Char to be compiled by the JIT for Char.toInt64()
-//        assert performSimpleSwitchWithBreak('a') == "one";
-//        assert performSimpleSwitchWithBreak('b') == "two";
-//        assert performSimpleSwitchWithBreak('c') == "default";
+        assert performSimpleSwitchWithBreak('a') == "one";
+        assert performSimpleSwitchWithBreak('b') == "two";
+        assert performSimpleSwitchWithBreak('c') == "default";
     }
 
-//    String performSimpleSwitchWithBreak(Char n) {
-//        String s = "";
-//        switch (n) {
-//        case 'a':
-//            s = "one";
-//            break;
-//        case 'b':
-//            s = "two";
-//            break;
-//        default:
-//            s = "default";
-//            break;
-//        }
-//        return s;
-//    }
+    String performSimpleSwitchWithBreak(Char n) {
+        String s = "";
+        switch (n) {
+        case 'a':
+            s = "one";
+            break;
+        case 'b':
+            s = "two";
+            break;
+        default:
+            s = "default";
+            break;
+        }
+        return s;
+    }
 
     void testSimpleSwitchWithContinue() {
-// TODO requires Char to be compiled by the JIT for Char.toInt64()
-//        assert performSimpleSwitchWithContinue('a') == 1;
-//        assert performSimpleSwitchWithContinue('b') == 110;
-//        assert performSimpleSwitchWithContinue('c') == 100;
+        assert performSimpleSwitchWithContinue('a') == 1;
+        assert performSimpleSwitchWithContinue('b') == 110;
+        assert performSimpleSwitchWithContinue('c') == 100;
     }
 
-//    Int performSimpleSwitchWithContinue(Char i) {
-//        Int n = 0;
-//        switch (i) {
-//        case 'a':
-//            n += 1;
-//            break;
-//        case 'b':
-//            n += 10;
-//            continue;
-//        default:
-//            n += 100;
-//            break;
-//        }
-//        return n;
-//    }
+    Int performSimpleSwitchWithContinue(Char i) {
+        Int n = 0;
+        switch (i) {
+        case 'a':
+            n += 1;
+            break;
+        case 'b':
+            n += 10;
+            continue;
+        default:
+            n += 100;
+            break;
+        }
+        return n;
+    }
 
     void testMultiSwitch() {
         assert performMultiSwitch('a', 'b') == "one";
@@ -331,23 +325,21 @@ package charSwitchTests {
     }
 
     void testRangeSwitch() {
-// TODO requires Char to be compiled by the JIT for Char.toInt64()
-//        assert performRangeSwitch('a') == "one";
-//        assert performRangeSwitch('d') == "one";
-//        assert performRangeSwitch('f') == "two";
-//        assert performRangeSwitch('i') == "two";
-//        assert performRangeSwitch('k') == "default";
+        assert performRangeSwitch('a') == "one";
+        assert performRangeSwitch('d') == "one";
+        assert performRangeSwitch('f') == "two";
+        assert performRangeSwitch('i') == "two";
+        assert performRangeSwitch('k') == "default";
     }
 
-//    String performRangeSwitch(Char n) {
-//        String s = "a";
-//        switch (s[0]) {
-//        case 'a'..'e':
-//            return "one";
-//        case 'f'..'j':
-//            return "two";
-//        default:
-//            return "default";
-//        }
-//    }
+    String performRangeSwitch(Char n) {
+        switch (n) {
+        case 'a'..'e':
+            return "one";
+        case 'f'..'j':
+            return "two";
+        default:
+            return "default";
+        }
+    }
 }

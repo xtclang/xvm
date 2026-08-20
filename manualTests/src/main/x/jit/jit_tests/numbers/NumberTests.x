@@ -385,7 +385,8 @@ class NumberTests {
         // Floats
         assert Float16.one().sign == Positive;
         testSignBinaryFPNumber(Float16.one(), Positive);
-        // TODO - test for negative zero
+        assert (-Float16.zero()).sign == Negative;
+        testSignBinaryFPNumber(-Float16.zero(), Negative);
         assert Float16.zero().sign == Positive;
         testSignBinaryFPNumber(Float16.zero(), Positive);
         assert (-Float16.one()).sign == Negative;
@@ -396,13 +397,13 @@ class NumberTests {
         testSignBinaryFPNumber(Float16.NegativeInfinity, Negative);
         assert Float16.PositiveNaN.sign == Positive;
         testSignBinaryFPNumber(Float16.PositiveNaN, Positive);
-// TODO Fails because Java float cannot do -NaN but the Ecstasy interpreter can
-//        assert Float16.NegativeNaN.sign == Negative;
-//        testSignBinaryFPNumber(Float16.NegativeNaN, Negative);
+        assert Float16.NegativeNaN.sign == Negative;
+        testSignBinaryFPNumber(Float16.NegativeNaN, Negative);
 
         assert Float32.one().sign == Positive;
         testSignBinaryFPNumber(Float32.one(), Positive);
-        // TODO - test for negative zero
+        assert (-Float32.zero()).sign == Negative;
+        testSignBinaryFPNumber(-Float32.zero(), Negative);
         assert Float32.zero().sign == Positive;
         testSignBinaryFPNumber(Float32.zero(), Positive);
         assert (-Float32.one()).sign == Negative;
@@ -413,13 +414,13 @@ class NumberTests {
         testSignBinaryFPNumber(Float32.NegativeInfinity, Negative);
         assert Float32.PositiveNaN.sign == Positive;
         testSignBinaryFPNumber(Float32.PositiveNaN, Positive);
-// TODO Fails because Java float cannot do -NaN but the Ecstasy interpreter can
-//        assert Float32.NegativeNaN.sign == Negative;
-//        testSignBinaryFPNumber(Float32.NegativeNaN, Negative);
+        assert Float32.NegativeNaN.sign == Negative;
+        testSignBinaryFPNumber(Float32.NegativeNaN, Negative);
 
         assert Float64.one().sign == Positive;
         testSignBinaryFPNumber(Float64.one(), Positive);
-        // TODO - test for negative zero
+        assert (-Float64.zero()).sign == Negative;
+        testSignBinaryFPNumber(-Float64.zero(), Negative);
         assert Float64.zero().sign == Positive;
         testSignBinaryFPNumber(Float64.zero(), Positive);
         assert (-Float64.one()).sign == Negative;
@@ -430,9 +431,8 @@ class NumberTests {
         testSignBinaryFPNumber(Float64.NegativeInfinity, Negative);
         assert Float64.PositiveNaN.sign == Positive;
         testSignBinaryFPNumber(Float64.PositiveNaN, Positive);
-// TODO Fails because Java double cannot do -NaN but the Ecstasy interpreter can
-//        assert Float64.NegativeNaN.sign == Negative;
-//        testSignBinaryFPNumber(Float64.NegativeNaN, Negative);
+        assert Float64.NegativeNaN.sign == Negative;
+        testSignBinaryFPNumber(Float64.NegativeNaN, Negative);
 
         // Nibble
         assert Nibble.one().sign == Positive;
@@ -604,9 +604,8 @@ class NumberTests {
         testNegativeBinaryFPNumber(Float16.NegativeInfinity, True);
         assert Float16.PositiveNaN.negative == False;
         testNegativeBinaryFPNumber(Float16.PositiveNaN, False);
-// TODO Fails because Java float cannot do -NaN but the Ecstasy interpreter can
-//        assert Float16.NegativeNaN.negative == True;
-//        testNegativeBinaryFPNumber(Float16.NegativeNaN, True);
+        assert Float16.NegativeNaN.negative == True;
+        testNegativeBinaryFPNumber(Float16.NegativeNaN, True);
 
         assert Float32.one().negative == False;
         testNegativeBinaryFPNumber(Float32.one(), False);
@@ -620,9 +619,8 @@ class NumberTests {
         testNegativeBinaryFPNumber(Float32.NegativeInfinity, True);
         assert Float32.PositiveNaN.negative == False;
         testNegativeBinaryFPNumber(Float32.PositiveNaN, False);
-// TODO Fails because Java float cannot do -NaN but the Ecstasy interpreter can
-//        assert Float32.NegativeNaN.negative == True;
-//        testNegativeBinaryFPNumber(Float32.NegativeNaN, True);
+        assert Float32.NegativeNaN.negative == True;
+        testNegativeBinaryFPNumber(Float32.NegativeNaN, True);
 
         assert Float64.one().negative == False;
         testNegativeBinaryFPNumber(Float64.one(), False);
@@ -636,9 +634,8 @@ class NumberTests {
         testNegativeBinaryFPNumber(Float64.NegativeInfinity, True);
         assert Float64.PositiveNaN.negative == False;
         testNegativeBinaryFPNumber(Float64.PositiveNaN, False);
-// TODO Fails because Java float cannot do -NaN but the Ecstasy interpreter can
-//        assert Float64.NegativeNaN.negative == True;
-//        testNegativeBinaryFPNumber(Float64.NegativeNaN, True);
+        assert Float64.NegativeNaN.negative == True;
+        testNegativeBinaryFPNumber(Float64.NegativeNaN, True);
 
         // Nibble
         assert Nibble.one().negative == False;
