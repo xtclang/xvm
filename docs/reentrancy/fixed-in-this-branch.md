@@ -112,6 +112,7 @@ getters for existing call sites; resource templates are resolved directly from
 - `xRTComponentTemplate.INSTANCE`
 - `xRTMethod.INSTANCE`
 - `xRTModuleTemplate.INSTANCE`
+- `xRTProperty.INSTANCE`
 - `xRTPropertyClassTemplate.INSTANCE`
 - `xRTFunction.INSTANCE`
 - `xRTType.INSTANCE`
@@ -247,6 +248,7 @@ fields. The branch moves them to owner-scoped final lazy state.
 | `xRTFileTemplate` | `INSTANCE`, `FILE_TEMPLATE_TYPE`, `LINK_MODULES_METHOD` | caller-owned template lookup, `f_typeFileTemplate`, `f_methodLinkModules`, and `ensureFileTemplateType(container)` | Must fix |
 | `xRTModuleTemplate` | private static `LISTMAP_TYPE` | compute from caller `ConstantPool` | Must fix |
 | `xRTPackageTemplate` | `INSTANCE`, `PACKAGE_TEMPLATE_TYPE` | caller-owned template lookup and `f_typePackageTemplate` | Must fix |
+| `xRTProperty` | `INSTANCE`, `EMPTY_PROPERTY_ARRAY`, ownerless property handle construction | caller-owned template lookup, `f_constEmptyPropertyArray`, and `NativeTemplates.property()` | Must fix |
 | `xRTPropertyTemplate` | `INSTANCE`, `PROPERTY_TEMPLATE_COMP`, `ARRAY_PROP_COMP`, ownerless property handle helpers | caller-owned helpers with `f_compPropertyTemplate` and `f_compPropertyTemplateArray` | Must fix |
 | `xRTPropertyClassTemplate` | `PROPERTY_CLASS_TEMPLATE_COMP` | `f_compPropertyClassTemplate` | Must fix |
 | `xRTType` | `TYPE_ARRAY_TYPE`, `EMPTY_TYPE_ARRAY`, `LISTMAP_TYPE`, register composition/constructor, lazy property constants | final `Lazy` fields | Must fix |
