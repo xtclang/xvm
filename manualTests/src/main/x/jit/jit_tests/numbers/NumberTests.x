@@ -15,6 +15,8 @@ class NumberTests {
         testInfinity();
         testNaN();
         testMagnitude();
+        testAbs();
+        testAbsMinValue();
 // TODO: JIT calls $hasOptMethod() with a null nFunction context
 //        testConverterFor();
     }
@@ -1336,5 +1338,88 @@ class NumberTests {
 //    void testMagnitudeUIntNumber(UIntNumber n, UIntNumber expected) {
 //        assert n.magnitude == expected;
 //        testMagnitudeIntNumber(n, expected);
+    }
+
+    void testAbs() {
+        Nibble nibble = 10;
+        assert nibble.abs() == 10;
+
+        Int8 int8 = -2;
+        assert int8.abs() == 2;
+        Int16 int16 = -2;
+        assert int16.abs() == 2;
+        Int32 int32 = -2;
+        assert int32.abs() == 2;
+        Int64 int64 = -2;
+        assert int64.abs() == 2;
+        Int128 int128 = -2;
+        assert int128.abs() == 2;
+
+        UInt8 uint8 = 2;
+        assert uint8.abs() == 2;
+        UInt16 uint16 = 2;
+        assert uint16.abs() == 2;
+        UInt32 uint32 = 2;
+        assert uint32.abs() == 2;
+        UInt64 uint64 = 2;
+        assert uint64.abs() == 2;
+        UInt128 uint128 = 2;
+        assert uint128.abs() == 2;
+
+        Float16 float16 = -2.5;
+        assert float16.abs() == 2.5;
+        Float32 float32 = -2.5;
+        assert float32.abs() == 2.5;
+        Float64 float64 = -2.5;
+        assert float64.abs() == 2.5;
+
+        Dec32 dec32 = -2.5;
+        assert dec32.abs() == 2.5;
+        Dec64 dec64 = -2.5;
+        assert dec64.abs() == 2.5;
+        Dec128 dec128 = -2.5;
+        assert dec128.abs() == 2.5;
+    }
+
+    void testAbsMinValue() {
+        try {
+            Int8 int8 = Int8.MinValue;
+            int8.abs();
+            assert as "Expected OutOfBounds";
+        } catch (OutOfBounds e) {
+            // expected
+        }
+
+        try {
+            Int16 int16 = Int16.MinValue;
+            int16.abs();
+            assert as "Expected OutOfBounds";
+        } catch (OutOfBounds e) {
+            // expected
+        }
+
+        try {
+            Int32 int32 = Int32.MinValue;
+            int32.abs();
+            assert as "Expected OutOfBounds";
+        } catch (OutOfBounds e) {
+            // expected
+        }
+
+        try {
+            Int64 int64 = Int64.MinValue;
+            int64.abs();
+            assert as "Expected OutOfBounds";
+        } catch (OutOfBounds e) {
+            // expected
+        }
+
+        try {
+            Int128 int128 = Int128.MinValue;
+            int128.abs();
+            assert as "Expected OutOfBounds";
+        } catch (OutOfBounds e) {
+            // expected
+        }
     }
 }

@@ -23,7 +23,7 @@ public interface NumberSupportInt128 {
     /**
      * The {@link ClassDesc} for {@code java.lang.Math}.
      */
-    ClassDesc CD_Math = ClassDesc.of("java.lang.Math");
+    ClassDesc CD_Math = ClassDesc.of(Math.class.getName());
 
     /**
      * The name of the {@code unsignedMultiplyHigh} method in {@code java.lang.Math}.

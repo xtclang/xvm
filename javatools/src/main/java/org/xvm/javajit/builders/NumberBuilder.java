@@ -129,6 +129,7 @@ public class NumberBuilder extends AugmentingBuilder {
 
     protected BiConsumer<CodeBuilder, JitMethodDesc> getMethodCodeGenerator(String jitName) {
         return switch (jitName) {
+            case "abs" -> this::generateAbs;
             case "toBitArray",
                  "toByteArray",
                  "toNibbleArray" -> (code, jmd) -> generateToArray(code, jmd, jitName);
@@ -741,6 +742,65 @@ public class NumberBuilder extends AugmentingBuilder {
     }
 
     /**
+     * Assemble an optimized static implementation of "abs$p()".
+     */
+    protected void generateAbs(CodeBuilder code, JitMethodDesc jmd) {
+        String name    = thisType.getSingleUnderlyingClass(false).getName();
+        int    ctxSlot = code.parameterSlot(jmd.optimizedCtx());
+        Label  valid   = code.newLabel();
+
+        switch (name) {
+        case "Int8":
+            code.iload(code.parameterSlot(0))
+                .loadConstant((int) Byte.MIN_VALUE)
+                .if_icmpne(valid);
+            throwOutOfBounds(code, "", ctxSlot);
+            code.labelBinding(valid);
+            break;
+
+        case "Int16":
+            code.iload(code.parameterSlot(0))
+                .loadConstant((int) Short.MIN_VALUE)
+                .if_icmpne(valid);
+            throwOutOfBounds(code, "", ctxSlot);
+            code.labelBinding(valid);
+            break;
+
+        case "Int32":
+            code.iload(code.parameterSlot(0))
+                .loadConstant(Integer.MIN_VALUE)
+                .if_icmpne(valid);
+            throwOutOfBounds(code, "", ctxSlot);
+            code.labelBinding(valid);
+            break;
+
+        case "Int64":
+            code.lload(code.parameterSlot(0))
+                .loadConstant(Long.MIN_VALUE)
+                .lcmp()
+                .ifne(valid);
+            throwOutOfBounds(code, "", ctxSlot);
+            code.labelBinding(valid);
+            break;
+
+        case "Int128":
+            code.lload(code.parameterSlot(1))
+                .loadConstant(Long.MIN_VALUE)
+                .lcmp()
+                .ifne(valid)
+                .lload(code.parameterSlot(0))
+                .lconst_0()
+                .lcmp()
+                .ifne(valid);
+            throwOutOfBounds(code, "", ctxSlot);
+            code.labelBinding(valid);
+            break;
+        }
+
+        generateMagnitudeGet(code, jmd);
+    }
+
+    /**
      * Assemble an optimized static implementation of "magnitude$get$p()".
      *
      * {@code return isUnsigned ? value : Math.abs(value);}
@@ -786,52 +846,87 @@ public class NumberBuilder extends AugmentingBuilder {
             break;
 
         case "Dec32":
-            code.iload(paramSlot);
-            code.aload(code.parameterSlot(jmd.optimizedCtx()));
-            code.invokestatic(art.CD(), "abs$p",
-                    MethodTypeDesc.of(CD_int, CD_int, CD_Ctx));
+            code.iload(paramSlot)
+                .loadConstant(Integer.MAX_VALUE)
+                .iand();
             generateMagnitudeReturn(code, jmd);
             break;
 
         case "Dec64":
-            code.lload(paramSlot);
-            code.aload(code.parameterSlot(jmd.optimizedCtx()));
-            code.invokestatic(art.CD(), "abs$p",
-                    MethodTypeDesc.of(CD_long, CD_long, CD_Ctx));
+            code.lload(paramSlot)
+                .loadConstant(Long.MAX_VALUE)
+                .land();
             generateMagnitudeReturn(code, jmd);
             break;
 
-        case "Dec128", "Int128":
-            code.lload(code.parameterSlot(0));
-            code.lload(code.parameterSlot(1));
-            code.aload(code.parameterSlot(jmd.optimizedCtx()));
-            code.invokestatic(art.CD(), "abs$p",
-                    MethodTypeDesc.of(CD_long, CD_long, CD_long, CD_Ctx));
-            if (jmd.optimizedMD.returnType().isPrimitive()) {
-                code.lreturn();
-            } else {
-                loadFromContext(code, CD_long, 0, code.parameterSlot(jmd.optimizedCtx()));
-                box(code, thisType);
-                code.areturn();
-            }
+        case "Dec128":
+            code.lload(code.parameterSlot(0))
+                .lload(code.parameterSlot(1))
+                .loadConstant(Long.MAX_VALUE)
+                .land();
+            generateLongLongReturn(code, jmd);
+            break;
+
+        case "Int128":
+            generateInt128Magnitude(code, jmd);
             break;
 
         case "UInt128":
-            if (jmd.optimizedMD.returnType().isPrimitive()) {
-                code.lload(code.parameterSlot(1));
-                storeToContext(code, CD_long, 0, code.parameterSlot(jmd.optimizedCtx()));
-                code.lload(code.parameterSlot(0))
-                    .lreturn();
-            } else {
-                code.lload(code.parameterSlot(0));
-                code.lload(code.parameterSlot(1));
-                box(code, thisType);
-                code.areturn();
-            }
+            code.lload(code.parameterSlot(0))
+                .lload(code.parameterSlot(1));
+            generateLongLongReturn(code, jmd);
             break;
 
         default:
             throw new UnsupportedOperationException("Unsupported number type " + name);
+        }
+    }
+
+    /**
+     * Generate the absolute value of an Int128, leaving its low and high words on the stack.
+     */
+    private void generateInt128Magnitude(CodeBuilder code, JitMethodDesc jmd) {
+        int   low      = code.parameterSlot(0);
+        int   high     = code.parameterSlot(1);
+        Label positive = code.newLabel();
+        Label lowSet   = code.newLabel();
+        Label done     = code.newLabel();
+
+        code.lload(high)
+            .lconst_0()
+            .lcmp()
+            .ifge(positive)
+            .lload(low)
+            .lneg()
+            .lload(low)
+            .lconst_0()
+            .lcmp()
+            .ifne(lowSet)
+            .lload(high)
+            .lneg()
+            .goto_(done)
+            .labelBinding(lowSet)
+            .lload(high)
+            .loadConstant(-1L)
+            .lxor()
+            .goto_(done)
+            .labelBinding(positive)
+            .lload(low)
+            .lload(high)
+            .labelBinding(done);
+
+        generateLongLongReturn(code, jmd);
+    }
+
+    /**
+     * Return a two-word primitive value currently on the stack, boxing it when required.
+     */
+    private void generateLongLongReturn(CodeBuilder code, JitMethodDesc jmd) {
+        if (jmd.optimizedMD.returnType().isPrimitive()) {
+            addPrimitiveReturn(code, jmd);
+        } else {
+            box(code, thisType);
+            code.areturn();
         }
     }
 
