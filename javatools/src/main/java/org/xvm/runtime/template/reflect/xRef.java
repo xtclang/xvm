@@ -28,6 +28,7 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.PropertyComposition;
@@ -54,6 +55,8 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template._native.reflect.xRTProperty;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native Ref implementation.
@@ -61,17 +64,20 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 public class xRef
         extends ClassTemplate
         implements VarSupport {
-    public static xRef INSTANCE;
-    public static ClassConstant INCEPTION_CLASS;
-
     public xRef(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
-        if (fInstance) {
-            INSTANCE = this;
-            INCEPTION_CLASS = new NativeRebaseConstant(
-                    (ClassConstant) structure.getIdentityConstant());
-        }
+        f_fInstance = fInstance;
+
+        // fInstance is true only for the canonical native Ref template loaded by NativeContainer.
+        // Ref-derived templates such as @Inject inherit the base Ref inception/signature metadata;
+        // publishing that metadata from each constructor was the old process-global race.
+        f_constInception = fInstance
+                ? new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant())
+                : null;
+        f_sigGet = fInstance
+                ? Lazy.of(this::resolveGetSignature)
+                : Lazy.of(() -> xRef.getInstance(f_container).getGetSignature());
     }
 
     @Override
@@ -89,7 +95,9 @@ public class xRef
 
     @Override
     public void registerNativeTemplates() {
-        if (this == INSTANCE) {
+        // Only the canonical Ref template owns the native Identity child. The legacy
+        // implementation used "this == INSTANCE"; keep the constructor flag local instead.
+        if (f_fInstance) {
             // register the native "Identity" template
             ClassStructure structId = (ClassStructure) f_struct.getChild("Identity");
 
@@ -99,8 +107,6 @@ public class xRef
 
     @Override
     public void initNative() {
-        s_sigGet = getStructure().findMethod("get", 0).getIdentityConstant().getSignature();
-
         markNativeMethod("equals", null, BOOLEAN);
 
         invalidateTypeInfo();
@@ -108,7 +114,17 @@ public class xRef
 
     @Override
     protected ClassConstant getInceptionClassConstant() {
-        return INCEPTION_CLASS;
+        return f_constInception == null
+                ? xRef.getInstance(f_container).getInceptionClassConstant()
+                : f_constInception;
+    }
+
+    public static xRef getInstance(Frame frame) {
+        return NativeTemplates.get(frame).ref();
+    }
+
+    public static xRef getInstance(Container container) {
+        return NativeTemplates.get(container).ref();
     }
 
     @Override
@@ -471,10 +487,23 @@ public class xRef
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     protected int invokeGetReferent(Frame frame, RefHandle hRef, int iReturn) {
-        CallChain chain = hRef.getComposition().getMethodCallChain(s_sigGet);
+        CallChain chain = hRef.getComposition().getMethodCallChain(getGetSignature());
         return chain.isExplicit()
             ? chain.invoke(frame, hRef, iReturn)
             : getReferentImpl(frame, hRef, true, iReturn);
+    }
+
+    protected SignatureConstant getGetSignature() {
+        return f_sigGet.get();
+    }
+
+    private SignatureConstant resolveGetSignature() {
+        MethodStructure method = getStructure().findMethod("get", 0);
+        if (method == null) {
+            throw new IllegalStateException("Missing Ref.get() on the canonical Ref template: " +
+                    getStructure());
+        }
+        return method.getIdentityConstant().getSignature();
     }
 
     @Override
@@ -1184,5 +1213,9 @@ public class xRef
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static SignatureConstant s_sigGet;
+    private final boolean f_fInstance;
+
+    private final ClassConstant f_constInception;
+
+    private final Lazy<SignatureConstant> f_sigGet;
 }

@@ -198,6 +198,8 @@ getters for existing call sites; resource templates are resolved directly from
 - `xService.INSTANCE`
 - `xModule.INSTANCE`
 - `xPackage.INSTANCE`
+- `xRef.INSTANCE`
+- `xVar.INSTANCE`
 
 This is must-fix. The old pattern was both a constructor `this` escape and a
 process-global last-writer-wins cache. The replacement keys are private to
@@ -303,6 +305,8 @@ fields. The branch moves them to owner-scoped final lazy state.
 | `xService` | `INCEPTION_CLASS`, `SYNCHRONICITY`, `REMAINING_TIME` | `f_constInception`, `f_templateSynchronicity`, `f_propRemainingTime` | Must fix |
 | `xModule` | private static `LISTMAP_TYPE` | compute from caller `ConstantPool` | Must fix |
 | `xString` | `INSTANCE`, `EMPTY_STRING`, `EMPTY_ARRAY`, `ZERO`, `ONE`, `METHOD_APPEND_TO`, and ownerless `makeHandle(...)`/array helpers | `NativeTemplates.string()`, `f_emptyString`, `f_emptyStringArray`, `f_zero`, `f_one`, `f_methodAppendTo`, and owner-required factories | Must fix |
+| `xRef` | `INSTANCE`, `INCEPTION_CLASS`, `s_sigGet` | `NativeTemplates.ref()`, canonical owner `f_constInception`/`f_sigGet`, derived templates delegating back to owner Ref, and owner-required call sites | Must fix |
+| `xVar` | `INSTANCE`, `INCEPTION_CLASS`, `s_sigSet` | `NativeTemplates.var()`, canonical owner `f_constInception`/`f_sigSet`, derived templates delegating back to owner Var, and owner-required call sites | Must fix |
 
 These replacements preserve caching. They do not turn old bootstrap caches into
 repeated lookups. The cache key changed from "entire JVM" to "owning
@@ -367,6 +371,22 @@ demonstrates the old failure shape: two simulated containers initialize the
 global string cache, then container A receives a string handle owned by container
 B. The owner-scoped replacement in the same test keeps the per-owner empty-string
 cache and does not allow cross-owner handles.
+
+The `xRef`/`xVar` wave removes the reflected-reference singleton bridge. The old
+static `INCEPTION_CLASS` values and `get`/`set` signatures were canonical base
+Ref/Var metadata stored in JVM-global fields. That distinction matters: `xVar`
+inherits `Ref.get()`, and Var annotations such as `@Lazy` inherit `Var.set()`;
+they do not declare those methods on their own structures. This branch keeps the
+same semantics by storing the canonical Ref/Var inception constants and
+`Lazy<SignatureConstant>` values on the owner-scoped base templates, while
+derived templates lazily delegate back to the owner base template. Existing
+dynamic reference creation still caches through `ensureParameterizedClass(...)`;
+only the template owner source changed from `xRef.INSTANCE`/`xVar.INSTANCE` to
+`NativeTemplates.ref()`/`NativeTemplates.var()`. The `fInstance` constructor flag
+is retained as local construction state for the canonical `Ref` template to
+register its native `Identity` child without comparing against a mutable global,
+and for canonical Ref/Var metadata construction without letting derived
+templates publish replacement metadata.
 
 One intentional exception is `xService`'s atomic property-name set. On `master`
 it was a mutable `static Set<String>` even though it contains only string
@@ -529,9 +549,9 @@ on `master` and still remain after this branch. The full list is maintained in
 [state-inventory.md#mutable-template-instance-inventory](state-inventory.md#mutable-template-instance-inventory).
 
 Examples still requiring follow-up include root templates such as `Identity`,
-`xConst`, `xException`, and `xObject`; reflection templates such as `xRef` and
-`xVar`; many primitive templates; and `xChar`. Those are not safe by design just
-because this PR does not touch them; they are the next migration backlog.
+`xConst`, `xException`, and `xObject`; many primitive templates; and `xChar`.
+Those are not safe by design just because this PR does not touch them; they are
+the next migration backlog.
 
 ## Proof Points Added By This Branch
 
@@ -540,7 +560,11 @@ contains deterministic demonstrations of the old pattern:
 
 - a static `INSTANCE` cache is last-writer-wins across two owners,
 - constructor assignment can expose a partially initialized object,
-- static string factories can return handles owned by the wrong container.
+- static string factories can return handles owned by the wrong container,
+- static Ref signature caches can invoke a Ref handle with a foreign owner
+  signature,
+- derived Ref/Var templates fail if they compute `get`/`set` metadata from their
+  own structures instead of inheriting the owner base Ref/Var signatures.
 
 `javatools/src/test/java/org/xvm/runtime/SingletonConstantTest.java` covers the
 new singleton state machine:
