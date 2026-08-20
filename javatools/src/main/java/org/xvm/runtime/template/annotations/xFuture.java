@@ -237,9 +237,9 @@ public class xFuture
                             frame.f_context.postRequest(frame, hRun, Utils.OBJECTS_NONE, 0);
 
                     cfThen.whenComplete((hVoid, exThen) ->
-                            hThen.complete(hR, Utils.translate(exThen)));
+                            hThen.complete(hR, Utils.translate(f_container, exThen)));
                 } else {
-                    hThen.complete(null, Utils.translate(ex));
+                    hThen.complete(null, Utils.translate(f_container, ex));
                 }
             });
             return frame.assignValue(iReturn, hThen);
@@ -286,9 +286,9 @@ public class xFuture
                             frame.f_context.postRequest(frame, hConsume, new ObjectHandle[] {hR}, 0);
 
                     cfPass.whenComplete((hVoid, exPass) ->
-                            hPass.complete(hR, Utils.translate(exPass)));
+                            hPass.complete(hR, Utils.translate(f_container, exPass)));
                 } else {
-                    hPass.complete(null, Utils.translate(ex));
+                    hPass.complete(null, Utils.translate(f_container, ex));
                 }
             });
             return frame.assignValue(iReturn, hPass);
@@ -338,9 +338,9 @@ public class xFuture
                             frame.f_context.postRequest(frame, hConvert, new ObjectHandle[] {hR}, 1);
 
                     cfTrans.whenComplete((hNew, exTrans) ->
-                            hTrans.complete(hNew, Utils.translate(exTrans)));
+                            hTrans.complete(hNew, Utils.translate(f_container, exTrans)));
                 } else {
-                    hTrans.complete(null, Utils.translate(ex));
+                    hTrans.complete(null, Utils.translate(f_container, ex));
                 }
             });
             return frame.assignValue(iReturn, hTrans);
@@ -389,12 +389,12 @@ public class xFuture
                 if (ex == null) {
                     hHandle.complete(hR, null);
                 } else {
-                    ExceptionHandle hEx = Utils.translate(ex);
+                    ExceptionHandle hEx = Utils.translate(f_container, ex);
                     CompletableFuture<ObjectHandle> cfTrans =
                             frame.f_context.postRequest(frame, hConvert, new ObjectHandle[] {hEx}, 1);
 
                     cfTrans.whenComplete((hNew, exTrans) ->
-                            hHandle.complete(hNew, Utils.translate(exTrans)));
+                            hHandle.complete(hNew, Utils.translate(f_container, exTrans)));
                 }
             });
             return frame.assignValue(iReturn, hHandle);
@@ -438,7 +438,7 @@ public class xFuture
                         frame.f_context.postRequest(frame, hConvert, combineResult(hR, ex), 1);
 
                 cfTrans.whenComplete((hNew, exTrans) ->
-                        hTrans.complete(hNew, Utils.translate(exTrans)));
+                        hTrans.complete(hNew, Utils.translate(f_container, exTrans)));
             });
             return frame.assignValue(iReturn, hTrans);
         }
@@ -503,9 +503,9 @@ public class xFuture
                             frame.f_context.postRequest(frame, hCombine, ahArg, 1);
 
                     cfAnd.whenComplete((hNew, exTrans) ->
-                            hAnd.complete(hNew, Utils.translate(exTrans)));
+                            hAnd.complete(hNew, Utils.translate(f_container, exTrans)));
                 } else {
-                    hAnd.complete(null, Utils.translate(ex));
+                    hAnd.complete(null, Utils.translate(f_container, ex));
                 }
             });
             return frame.assignValue(iReturn, hAnd);
@@ -568,7 +568,8 @@ public class xFuture
                     if (exWhen == null && ex == null) {
                         hWhen.complete(hR, null);
                     } else {
-                        hWhen.complete(null, Utils.translate(exWhen == null ? ex : exWhen));
+                        hWhen.complete(null, Utils.translate(f_container,
+                                exWhen == null ? ex : exWhen));
                     }
                 });
             });
@@ -606,7 +607,7 @@ public class xFuture
             ahR[1] = xNullable.NULL;
         } catch (Throwable e) {
             ahR[0] = xNullable.NULL;
-            ahR[1] = Utils.translate(e);
+            ahR[1] = Utils.translate(frame.container(), e);
         }
         return ahR;
     }
@@ -626,7 +627,7 @@ public class xFuture
                 : hResult;
         ahArg[1] = exception == null
                 ? xNullable.NULL
-                : Utils.translate(exception);
+                : Utils.translate(f_container, exception);
         return ahArg;
     }
 
@@ -730,7 +731,7 @@ public class xFuture
                 ? Op.R_NEXT
                 : frame.assignValue(iReturn, hValue);
         } catch (Throwable e) {
-            return frame.raiseException(Utils.translate(e));
+            return frame.raiseException(Utils.translate(frame.container(), e));
         }
     }
 
@@ -818,7 +819,7 @@ public class xFuture
                     future.get();
                     throw new IllegalStateException(); // cannot happen
                 } catch (Exception e) {
-                    return Utils.translate(e);
+                    return Utils.translate(getComposition().getContainer(), e);
                 }
             }
             return null;
@@ -887,7 +888,7 @@ public class xFuture
             try {
                 return String.valueOf(getFuture().get());
             } catch (Throwable e) {
-                return Utils.translate(e).toString();
+                return Utils.translate(getComposition().getContainer(), e).toString();
             }
         }
     }
@@ -930,7 +931,7 @@ public class xFuture
                     try {
                         f_ahValue[i] = hFuture.getFuture().get();
                     } catch (Throwable e) {
-                        return frame.raiseException(Utils.translate(e));
+                        return frame.raiseException(Utils.translate(frame.container(), e));
                     }
                 }
             }

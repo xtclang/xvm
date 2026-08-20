@@ -1,6 +1,8 @@
 package org.xvm.runtime;
 
 
+import java.util.concurrent.CancellationException;
+
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -28,6 +30,14 @@ public class NativeTemplatesTest {
     @Test
     public void rejectsTemplateWithNullOwner() {
         assertThrows(NullPointerException.class, () -> NativeTemplates.get(new NullOwnerTemplate()));
+    }
+
+    @Test
+    public void throwableTranslationRequiresOwner() {
+        assertThrows(NoSuchMethodException.class,
+                () -> Utils.class.getMethod("translate", Throwable.class));
+        assertThrows(NullPointerException.class,
+                () -> Utils.translate(null, new CancellationException()));
     }
 
     @Test

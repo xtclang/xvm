@@ -46,7 +46,9 @@ import org.xvm.runtime.template.text.xString;
 
 import org.xvm.runtime.template.Identity;
 import org.xvm.runtime.template.Proxy;
+import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
@@ -437,6 +439,22 @@ public final class NativeTemplates {
         return is(ENUM, template);
     }
 
+    public xConst constTemplate() {
+        return get(CONST);
+    }
+
+    public boolean isConst(ClassTemplate template) {
+        return is(CONST, template);
+    }
+
+    public xException exception() {
+        return get(EXCEPTION);
+    }
+
+    public boolean isException(ClassTemplate template) {
+        return is(EXCEPTION, template);
+    }
+
     public xModule module() {
         return get(MODULE);
     }
@@ -689,6 +707,12 @@ public final class NativeTemplates {
 
     private static final NativeTemplateRef<xEnum> ENUM =
             NativeTemplateRef.of("Enum", xEnum.class);
+
+    private static final NativeTemplateRef<xConst> CONST =
+            NativeTemplateRef.of("Const", xConst.class);
+
+    private static final NativeTemplateRef<xException> EXCEPTION =
+            NativeTemplateRef.of("Exception", xException.class);
 
     private static final NativeTemplateRef<xModule> MODULE =
             NativeTemplateRef.of("reflect.Module", xModule.class);

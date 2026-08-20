@@ -162,6 +162,28 @@ public class NativeTemplateOldPatternTest {
         assertDoesNotThrow(() -> vars.setReferent(handle));
     }
 
+    @Test
+    public void staticExceptionClassCacheCanUseForeignOwner() {
+        Owner ownerA = new Owner("container-A");
+        Owner ownerB = new Owner("container-B");
+
+        OldExceptionGlobals.init(ownerA);
+        assertDoesNotThrow(() -> ownerA.raise(OldExceptionGlobals.illegalState("first")));
+
+        OldExceptionGlobals.init(ownerB);
+
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> ownerA.raise(OldExceptionGlobals.illegalState("second")));
+        assertEquals("exception class owner container-B used with frame owner container-A",
+                e.getMessage());
+
+        OwnerScopedExceptions exceptionsA = new OwnerScopedExceptions(ownerA);
+        OwnerScopedExceptions exceptionsB = new OwnerScopedExceptions(ownerB);
+
+        assertDoesNotThrow(() -> ownerA.raise(exceptionsA.illegalState("third")));
+        assertDoesNotThrow(() -> ownerB.raise(exceptionsB.illegalState("fourth")));
+    }
+
 
     /**
      * A minimal stand-in for constructor-assigned native template INSTANCE
@@ -259,17 +281,29 @@ public class NativeTemplateOldPatternTest {
 
     private static final class Owner {
         Owner(String id) {
-            template = new OwnerTemplate(id);
-            method   = new OwnerMethod(id);
-            stringTemplate = new OwnerStringTemplate(id);
+            this.id            = id;
+            template           = new OwnerTemplate(id);
+            method             = new OwnerMethod(id);
+            exceptionInfo      = new OwnerExceptionInfo(id);
+            stringTemplate     = new OwnerStringTemplate(id);
             refTemplate        = new OwnerRefTemplate(id);
             refSignature       = new OwnerSignature(id);
             varSignature       = new OwnerSignature(id);
             derivedVarTemplate = new OwnerDerivedVarTemplate(id);
         }
 
+        void raise(OwnerExceptionHandle handle) {
+            if (!id.equals(handle.ownerId)) {
+                throw new IllegalStateException(
+                        "exception class owner " + handle.ownerId +
+                        " used with frame owner " + id);
+            }
+        }
+
+        private final String                  id;
         private final OwnerTemplate           template;
         private final OwnerMethod             method;
+        private final OwnerExceptionInfo      exceptionInfo;
         private final OwnerStringTemplate     stringTemplate;
         private final OwnerRefTemplate        refTemplate;
         private final OwnerSignature          refSignature;
@@ -298,6 +332,61 @@ public class NativeTemplateOldPatternTest {
         }
 
         private final String ownerId;
+    }
+
+    /**
+     * A minimal stand-in for xException's old static well-known class cache.
+     */
+    private static final class OldExceptionGlobals {
+        static OwnerExceptionInfo info;
+
+        static void init(Owner owner) {
+            info = owner.exceptionInfo;
+        }
+
+        static OwnerExceptionHandle illegalState(String message) {
+            return info.illegalState(message);
+        }
+    }
+
+    /**
+     * A minimal stand-in for the owner-scoped replacement: exception classes are still cached, but
+     * the selected cache is the caller's owner.
+     */
+    private static final class OwnerScopedExceptions {
+        OwnerScopedExceptions(Owner owner) {
+            info = Lazy.of(() -> owner.exceptionInfo);
+        }
+
+        OwnerExceptionHandle illegalState(String message) {
+            return info.get().illegalState(message);
+        }
+
+        private final Lazy<OwnerExceptionInfo> info;
+    }
+
+    private static final class OwnerExceptionInfo {
+        OwnerExceptionInfo(String ownerId) {
+            this.ownerId = ownerId;
+        }
+
+        OwnerExceptionHandle illegalState(String message) {
+            return new OwnerExceptionHandle(ownerId, "IllegalState", message);
+        }
+
+        private final String ownerId;
+    }
+
+    private static final class OwnerExceptionHandle {
+        OwnerExceptionHandle(String ownerId, String className, String message) {
+            this.ownerId   = ownerId;
+            this.className = className;
+            this.message   = message;
+        }
+
+        private final String ownerId;
+        private final String className;
+        private final String message;
     }
 
     /**
