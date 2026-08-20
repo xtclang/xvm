@@ -822,15 +822,16 @@ public abstract class Utils {
     /**
      * Translate a Throwable thrown by {@link CompletableFuture#get} to an ExceptionHandle.
      */
-    public static ExceptionHandle translate(Throwable e) {
+    public static ExceptionHandle translate(Container container, Throwable e) {
         return switch (e) {
             case null                               -> null;
             case WrapperException      we -> we.getExceptionHandle();
             case ExecutionException    _,
-                 CompletionException   _ -> translate(e.getCause());
-            case CancellationException _ -> xException.makeHandle(null, "cancelled");
-            case InterruptedException  _ -> xException.makeHandle(null, "interrupted");
-            default -> xException.makeHandle(null, "Unexpected native exception: " + e.getMessage());
+                 CompletionException   _ -> translate(container, e.getCause());
+            case CancellationException _ -> xException.makeHandle(container, "cancelled");
+            case InterruptedException  _ -> xException.makeHandle(container, "interrupted");
+            default -> xException.makeHandle(container,
+                    "Unexpected native exception: " + e.getMessage());
         };
     }
 

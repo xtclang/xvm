@@ -105,9 +105,9 @@ then fail under a parallel runner on a loaded machine.
 
 The XVM codebase has normalized this pattern. On `master`, a direct audit finds
 143 mutable template `INSTANCE` declarations and 139 constructor assignments of
-`INSTANCE = this` in runtime templates. This branch fixes 141 mutable template
-fields and 137 constructor assignments, leaving 2 mutable `INSTANCE` fields
-and 2 constructor assignments for follow-up. A broader scan for escape-shaped
+`INSTANCE = this` in runtime templates. This branch fixes all 143 mutable
+template fields and all 139 constructor assignments in that package. A broader
+scan for escape-shaped
 `this` assignments and calls reports hundreds of hits in
 `javatools/src/main/java`, many of which are false positives, but the signal is
 clear: publishing receivers into mutable non-final state is common enough that
@@ -857,10 +857,12 @@ rg -l "public static (?!final)[A-Za-z0-9_<>, ?]+ INSTANCE;" \
   --pcre2 javatools/src/main/java/org/xvm/runtime/template | sort
 ```
 
-At the time this document was written, it reported 2 unconverted template
-files. They should be migrated in follow-up PRs. Grouping them by package:
+At the time this document was updated, it reported no unconverted template
+files. Grouping the current branch by package:
 
-- Root templates: `xConst`, `xException`.
+- Root templates: no mutable `INSTANCE` fields remain. `xConst` and
+  `xException` were the final root-template holdouts and are fixed in this
+  branch.
 - Text templates: no mutable `INSTANCE` fields remain in the text template package.
 - Collection templates: no mutable `INSTANCE` fields remain in the collection template package.
 - Array delegates and views: no mutable `INSTANCE` fields remain in the
@@ -1012,30 +1014,33 @@ Converted `INSTANCE` fields in this branch include:
 - `xUInt64`,
 - `xUInt128`,
 - `xUIntN`,
-- `xObject`.
+- `xObject`,
+- `xConst`,
+- `xException`.
 
 ## TODO: Legacy Static Metadata Caches Not Removed
 
-The remaining mutable `INSTANCE` fields are the broadest risk. Static metadata
-caches are the next risk. Follow-up work should prioritize any static field
-whose type is container, pool, structure, composition, template, method, or
-handle state.
+The mutable template `INSTANCE` category is closed on this branch. Static
+metadata caches are the next risk. Follow-up work should prioritize any static
+field whose type is container, pool, structure, composition, template, method,
+or handle state.
 
 Known high-priority leftovers include:
 
-- `xConst`: native helper method caches such as estimate length, append, freeze,
-  range, date/time, duration, version, path, and hash signature.
-- `xException`: cached exception class compositions and formatting method.
-- Miscellaneous native templates: `xRTBuffer.PROP_RAW_BYTES` and any remaining
-  owner-derived static metadata found by the audit command below.
+- Native enum value globals: `xBoolean.TRUE/FALSE`, `xNullable.NULL`, and
+  `xOrdered.LESSER/EQUAL/GREATER`. These are pervasive public handles and need
+  a separate representation/API change rather than a one-line lazy field.
 - `xString` is no longer in this TODO: this branch moves its common handles,
   append method cache, and helper factories to owner-scoped state.
+- `xConst` and `xException` are no longer in this TODO: this branch moves their
+  helper method caches, hash signature, exception class compositions, and
+  formatting method to owner-scoped `Lazy` info records.
 
 Use this audit command for static metadata:
 
 ```bash
-rg -n "private static (?!final).*(TypeConstant|TypeComposition|ClassTemplate|ClassComposition|MethodStructure|MethodConstant|SignatureConstant|ArrayConstant|ArrayHandle|xEnum)|protected static (?!final).*(xEnum|Map<TypeConstant)|public static (?!final).*(TypeConstant|ArrayHandle|ArrayConstant)" \
-  --pcre2 javatools/src/main/java/org/xvm/runtime/template \
+rg -n --pcre2 "^\s*(?:public|protected|private)?\s*static\s+(?!final\b)(?:Map<[^;=()]+>|TypeConstant|TypeComposition|ClassTemplate|ClassComposition|MethodStructure|MethodConstant|SignatureConstant|ArrayConstant|ArrayHandle|ObjectHandle|StringHandle|TupleHandle|EnumHandle|BooleanHandle|xEnum|x[A-Z][A-Za-z0-9_]*)\s+(?!INSTANCE\b)[A-Za-z_][A-Za-z0-9_]*\s*(?:=|;)" \
+  javatools/src/main/java/org/xvm/runtime/template \
   javatools/src/main/java/org/xvm/runtime/Utils.java | sort -u
 ```
 

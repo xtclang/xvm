@@ -196,6 +196,8 @@ getters for existing call sites; resource templates are resolved directly from
 - `xArray.INSTANCE`
 - `xString.INSTANCE`
 - `xEnum.INSTANCE`
+- `xConst.INSTANCE`
+- `xException.INSTANCE`
 - `xService.INSTANCE`
 - `xModule.INSTANCE`
 - `xPackage.INSTANCE`
@@ -367,6 +369,8 @@ fields. The branch moves them to owner-scoped final lazy state.
 | `xString` | `INSTANCE`, `EMPTY_STRING`, `EMPTY_ARRAY`, `ZERO`, `ONE`, `METHOD_APPEND_TO`, and ownerless `makeHandle(...)`/array helpers | `NativeTemplates.string()`, `f_emptyString`, `f_emptyStringArray`, `f_zero`, `f_one`, `f_methodAppendTo`, and owner-required factories | Must fix |
 | `xRef` | `INSTANCE`, `INCEPTION_CLASS`, `s_sigGet` | `NativeTemplates.ref()`, canonical owner `f_constInception`/`f_sigGet`, derived templates delegating back to owner Ref, and owner-required call sites | Must fix |
 | `xVar` | `INSTANCE`, `INCEPTION_CLASS`, `s_sigSet` | `NativeTemplates.var()`, canonical owner `f_constInception`/`f_sigSet`, derived templates delegating back to owner Var, and owner-required call sites | Must fix |
+| `xConst` | `INSTANCE`, helper method caches, construct-method caches, and `HASH_SIG` | `NativeTemplates.constTemplate()`, `f_info: Lazy<ConstInfo>`, and owner-template abstract checks | Must fix |
+| `xException` | `INSTANCE`, well-known exception class compositions, format method, and ownerless `Utils.translate(Throwable)` path | `NativeTemplates.exception()`, `f_info: Lazy<ExceptionInfo>`, static factories resolving from `Frame`/`Container`, and `Utils.translate(Container, Throwable)` | Must fix |
 
 These replacements preserve caching. They do not turn old bootstrap caches into
 repeated lookups. The cache key changed from "entire JVM" to "owning
@@ -392,6 +396,29 @@ demonstrates the old failure shape: two simulated container owners interleave
 updates to separate static template/method fields and then throw when a method
 from one owner is invoked through a template from another. The owner-scoped
 bundle in the same test does not allow that mixed state.
+
+The final root-template wave applies the same rule to `xConst` and
+`xException`. `xConst` still performs the same helper method lookups for
+stringification, freezing, range/nibble/literal construction, and hash support;
+they are now one owner-scoped `ConstInfo` lazy bundle. `xException` still caches
+the same well-known exception class compositions and formatting method; they
+are now one owner-scoped `ExceptionInfo` lazy bundle. Java-side async
+`Throwable` translation now requires a `Container` because those exception
+handles need an owner even when there is no live XTC frame. The helper preserves
+the old empty-stack behavior for Java `Throwable` translation while removing
+the process-global exception-class cache.
+
+`NativeTemplateOldPatternTest.staticExceptionClassCacheCanUseForeignOwner`
+models the old failure in which a stock exception factory creates a handle with
+a class composition from another owner.
+
+Some constructors still accept a legacy `boolean fInstance` parameter because
+`NativeContainer.instantiateNativeTemplate(...)` supports the reflective
+`(Container, ClassStructure, boolean)` signature. In converted templates such
+as `xConst` and `xException`, that flag is compatibility shape only: it no
+longer assigns a static `INSTANCE` or selects a global metadata cache. Removing
+the dead constructor parameter across the hierarchy is a should-fix API cleanup,
+not an incomplete must-fix singleton publication bug.
 
 The `TestCompiler` stress run also exposed an older `xRTCompiler.addError(...)`
 bug: `CompilerAdapter.getErrors()` returns `stream().toList()`, which is
@@ -601,17 +628,19 @@ accept small opportunistic cleanup, but they are not the reason for the PR.
 | `xString.StringHandle` hash/String memoization | left as the old per-handle transient cache | Keep out of this PR; replacing with `Lazy` would add two objects per string handle for a should-fix-only concern |
 | `xIntLiteral.IntNHandle` text memoization | now stores the constructor-provided text handle and otherwise creates text through its own handle owner | Keep; this preserves the old optional cache and avoids reintroducing ownerless string creation |
 
-## Unfixed Legacy `INSTANCE` Patterns
+## Remaining Legacy Runtime Globals
 
-This branch deliberately fixes the native-template `INSTANCE` sites that have
-clear owner-sensitive startup behavior. A small root-template set still remains
-after this branch. The full current list is maintained in
-[state-inventory.md#mutable-template-instance-inventory](state-inventory.md#mutable-template-instance-inventory).
+This branch fixes all native-template `INSTANCE` fields found by the current
+runtime/template audit. The full current list is maintained in
+[state-inventory.md#mutable-template-instance-inventory](state-inventory.md#mutable-template-instance-inventory)
+and is empty on this branch.
 
-Examples still requiring follow-up are the remaining root templates `xConst`
-and `xException`. Those are not safe by design just because this PR does not
-touch them; they are the next migration backlog. `Identity`, `Proxy`, `xObject`,
-the primitive number templates, and `xChar` are fixed in this branch.
+The remaining must-fix runtime globals are not template `INSTANCE` fields. They
+are the public enum/nullable value handles: `xBoolean.TRUE/FALSE`,
+`xNullable.NULL`, and `xOrdered.LESSER/EQUAL/GREATER`. Those are still real
+process-global runtime handles. They are more pervasive than `xConst` and
+`xException`, so they should be handled as a separate representation/API
+change, not hidden inside this PR.
 
 ## Proof Points Added By This Branch
 
@@ -620,6 +649,8 @@ contains deterministic demonstrations of the old pattern:
 
 - a static `INSTANCE` cache is last-writer-wins across two owners,
 - constructor assignment can expose a partially initialized object,
+- static exception class factories can create handles whose class composition
+  belongs to a foreign owner,
 - static string factories can return handles owned by the wrong container,
 - static Ref signature caches can invoke a Ref handle with a foreign owner
   signature,

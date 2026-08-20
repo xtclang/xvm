@@ -29,6 +29,7 @@ import org.xvm.runtime.ClassComposition.FieldInfo;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -50,6 +51,8 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * While this template represents a native interface, it never serves as an inception type
@@ -57,14 +60,13 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
  */
 public class xConst
         extends ClassTemplate {
-    public static xConst INSTANCE;
-
     public xConst(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
-        if (fInstance) {
-            INSTANCE = this;
-        }
+        // NativeContainer still supports the legacy reflective constructor shape
+        // (Container, ClassStructure, boolean). Converted templates ignore the flag; canonical
+        // template ownership and lookup now live in NativeTemplates, not in constructor-published
+        // static fields.
     }
 
     @Override
@@ -80,7 +82,7 @@ public class xConst
 
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
+        if (NativeTemplates.get(this).isConst(this)) {
             // equals and Comparable support
             getStructure().findMethod("equals",   3).markNative();
             getStructure().findMethod("compare",  3).markNative();
@@ -88,38 +90,9 @@ public class xConst
 
             invalidateTypeInfo();
 
-            // Stringable support
-            ClassStructure constHelper = Utils.constHelper(f_container);
-            FN_ESTIMATE_LENGTH = constHelper.findMethod("estimateStringLength", 2);
-            FN_APPEND_TO       = constHelper.findMethod("appendTo", 3);
-            FN_FREEZE          = constHelper.findMethod("freeze", 1);
-
-            // Range support
-            RANGE_CONSTRUCT = f_container.getClassStructure("Range").findMethod("construct", 4);
-
-            // Nibble support
-            ConstantPool pool         = pool();
-            TypeConstant typeBitArray = pool.ensureArrayType(pool.typeBit());
-            NIBBLE_CONSTRUCT = f_container.getClassStructure("numbers.Nibble").
-                findMethod("construct", 1, typeBitArray);
-
-            // Time support
-            TIME_CONSTRUCT      = f_container.getClassStructure("temporal.Time").
-                findMethod("construct", 1, pool.typeString());
-            DATE_CONSTRUCT      = f_container.getClassStructure("temporal.Date").
-                findMethod("construct", 1, pool.typeString());
-            TIMEOFDAY_CONSTRUCT = f_container.getClassStructure("temporal.TimeOfDay").
-                findMethod("construct", 1, pool.typeString());
-            DURATION_CONSTRUCT  = f_container.getClassStructure("temporal.Duration").
-                findMethod("construct", 1, pool.typeString());
-            VERSION_CONSTRUCT   = f_container.getClassStructure("reflect.Version").
-                findMethod("construct", 1, pool.typeString());
-
-            PATH_CONSTRUCT = f_container.getClassStructure("fs.Path").
-                findMethod("construct", 1, pool.typeString());
-
-            HASH_SIG = f_container.getClassStructure("collections.Hashable").
-                findMethod("hashCode", 2).getIdentityConstant().getSignature();
+            // Preserve the old eager bootstrap work, but cache the results in this owner instead
+            // of publishing them through process-global static fields.
+            info();
         }
     }
 
@@ -130,10 +103,11 @@ public class xConst
             ObjectHandle  h2 = frame.getConstHandle(constRange.getLast());
             BooleanHandle f1 = xBoolean.makeHandle(constRange.isFirstExcluded());
             BooleanHandle f2 = xBoolean.makeHandle(constRange.isLastExcluded());
+            ConstInfo     info = info();
 
             TypeConstant    typeRange   = constRange.getType();
             TypeComposition clzRange    = typeRange.ensureClass(frame);
-            MethodStructure constructor = RANGE_CONSTRUCT;
+            MethodStructure constructor = info.rangeConstruct();
 
             ObjectHandle[] ahArg = new ObjectHandle[constructor.getMaxVars()];
             ahArg[0] = h1;
@@ -155,37 +129,38 @@ public class xConst
         if (constant instanceof LiteralConstant constLiteral) {
             ConstantPool    pool      = frame.poolContext();
             Container       container = f_container;
+            ConstInfo       info      = info();
             TypeComposition clz;
             MethodStructure constructor;
             switch (constant.getFormat()) {
             case Time:
                 clz         = ensureClass(container, pool.typeTime());
-                constructor = TIME_CONSTRUCT;
+                constructor = info.timeConstruct();
                 break;
 
             case Date:
                 clz         = ensureClass(container, pool.typeDate());
-                constructor = DATE_CONSTRUCT;
+                constructor = info.dateConstruct();
                 break;
 
             case TimeOfDay:
                 clz         = ensureClass(container, pool.typeTimeOfDay());
-                constructor = TIMEOFDAY_CONSTRUCT;
+                constructor = info.timeOfDayConstruct();
                 break;
 
             case Duration:
                 clz         = ensureClass(container, pool.typeDuration());
-                constructor = DURATION_CONSTRUCT;
+                constructor = info.durationConstruct();
                 break;
 
             case Version:
                 clz         = ensureClass(container, pool.typeVersion());
-                constructor = VERSION_CONSTRUCT;
+                constructor = info.versionConstruct();
                 break;
 
             case Path:
                 clz         = ensureClass(container, pool.typePath());
-                constructor = PATH_CONSTRUCT;
+                constructor = info.pathConstruct();
                 break;
 
             default:
@@ -200,11 +175,12 @@ public class xConst
 
         if (constant.getFormat() == Format.Nibble) {
             byte[] abValue = new byte[] {(byte) (((ByteConstant) constant).getValue().byteValue() << 4)};
+            MethodStructure constructor = info().nibbleConstruct();
 
-            ObjectHandle[] ahArg = new ObjectHandle[NIBBLE_CONSTRUCT.getMaxVars()];
+            ObjectHandle[] ahArg = new ObjectHandle[constructor.getMaxVars()];
             ahArg[0] = xArray.makeBitArrayHandle(frame.container(), abValue, 4, Mutability.Constant);
 
-            return construct(frame, NIBBLE_CONSTRUCT,
+            return construct(frame, constructor,
                     ensureClass(frame.f_context.f_container, constant.getType()),
                     null, ahArg, Op.A_STACK);
         }
@@ -259,10 +235,11 @@ public class xConst
                     ArrayHandle    haValues    =
                         xArray.makeObjectArrayHandle(frame.container(), ahFreezable, Mutability.Fixed);
 
-                    ObjectHandle[] ahVars = new ObjectHandle[FN_FREEZE.getMaxVars()];
+                    MethodStructure fnFreeze = info().freeze();
+                    ObjectHandle[] ahVars = new ObjectHandle[fnFreeze.getMaxVars()];
                     ahVars[0] = haValues;
 
-                    Frame frameFreeze = frame.createFrame1(FN_FREEZE, null, ahVars, Op.A_IGNORE);
+                    Frame frameFreeze = frame.createFrame1(fnFreeze, null, ahVars, Op.A_IGNORE);
                     frameFreeze.addContinuation(frameCaller -> {
                         ObjectHandle[] ahValueNew;
                         try {
@@ -358,7 +335,7 @@ public class xConst
     protected int callEqualsImpl(Frame frame, TypeComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         // Note: the actual types could be subclasses of the specified class
-        return this == INSTANCE
+        return NativeTemplates.get(this).isConst(this)
                 ? frame.raiseException(xException.abstractMethod(frame, "Const.compare()"))
                 : new Equals((GenericHandle) hValue1, (GenericHandle) hValue2,
                     (ClassComposition) clazz, iReturn).doNext(frame);
@@ -368,7 +345,7 @@ public class xConst
     protected int callCompareImpl(Frame frame, TypeComposition clazz,
                                   ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         // Note: the actual types could be subclasses of the specified class
-        return this == INSTANCE
+        return NativeTemplates.get(this).isConst(this)
                 ? frame.raiseException(xException.abstractMethod(frame, "Const.compare()"))
                 : new Compare((GenericHandle) hValue1, (GenericHandle) hValue2,
                         (ClassComposition) clazz, iReturn).doNext(frame);
@@ -385,7 +362,7 @@ public class xConst
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int callHashCode(Frame frame, TypeConstant type, ObjectHandle hValue, int iReturn) {
-        return this == INSTANCE
+        return NativeTemplates.get(this).isConst(this)
                 ? frame.raiseException(xException.abstractMethod(frame, "Const.hashCode()"))
                 : buildHashCode(frame, getCanonicalClass(frame.f_context.f_container), hValue, iReturn);
     }
@@ -407,7 +384,8 @@ public class xConst
             }
         }
 
-        return new HashCode(hConst, (ClassComposition) clazz, fCache, iReturn).doNext(frame);
+        return new HashCode(hConst, (ClassComposition) clazz, fCache, info().hashSig(), iReturn).
+                doNext(frame);
     }
 
     /**
@@ -428,13 +406,14 @@ public class xConst
         if (ahNames.length > 0) {
             ObjectHandle hNames  = xArray.makeStringArrayHandle(frame.container(), ahNames);
             ObjectHandle hValues = xArray.makeObjectArrayHandle(frame.container(), ahFields, Mutability.Constant);
+            MethodStructure fnEstimateLength = info().estimateLength();
 
             // estimateStringLength(String[] names, Object[] fields)
-            ObjectHandle[] ahVars = new ObjectHandle[FN_ESTIMATE_LENGTH.getMaxVars()];
+            ObjectHandle[] ahVars = new ObjectHandle[fnEstimateLength.getMaxVars()];
             ahVars[0] = hNames;
             ahVars[1] = hValues;
 
-            return frame.call1(FN_ESTIMATE_LENGTH, null, ahVars, iReturn);
+            return frame.call1(fnEstimateLength, null, ahVars, iReturn);
         } else {
             return frame.assignValue(iReturn, xInt64.makeHandle(frame, 2));
         }
@@ -459,14 +438,61 @@ public class xConst
 
         ObjectHandle hNames  = xArray.makeStringArrayHandle(frame.container(), ahNames);
         ObjectHandle hValues = xArray.makeObjectArrayHandle(frame.container(), ahFields, Mutability.Constant);
+        MethodStructure fnAppendTo = info().appendTo();
 
         // appendTo(Appender<Char> appender, String[] names, Object[] fields)
-        ObjectHandle[] ahVars = new ObjectHandle[FN_APPEND_TO.getMaxVars()];
+        ObjectHandle[] ahVars = new ObjectHandle[fnAppendTo.getMaxVars()];
         ahVars[0] = hAppender; // appender
         ahVars[1] = hNames;
         ahVars[2] = hValues;
 
-        return frame.call1(FN_APPEND_TO, null, ahVars, iReturn);
+        return frame.call1(fnAppendTo, null, ahVars, iReturn);
+    }
+
+    /**
+     * @return immutable owner-scoped metadata for the canonical Const template
+     */
+    private ConstInfo info() {
+        return f_info.get();
+    }
+
+    private ConstInfo createInfo() {
+        // Stringable support
+        ClassStructure constHelper = Utils.constHelper(f_container);
+        MethodStructure estimateLength = constHelper.findMethod("estimateStringLength", 2);
+        MethodStructure appendTo       = constHelper.findMethod("appendTo", 3);
+        MethodStructure freeze         = constHelper.findMethod("freeze", 1);
+
+        // Range support
+        MethodStructure rangeConstruct =
+                f_container.getClassStructure("Range").findMethod("construct", 4);
+
+        // Nibble support
+        ConstantPool pool         = pool();
+        TypeConstant typeBitArray = pool.ensureArrayType(pool.typeBit());
+        MethodStructure nibbleConstruct = f_container.getClassStructure("numbers.Nibble").
+                findMethod("construct", 1, typeBitArray);
+
+        // Time support
+        MethodStructure timeConstruct = f_container.getClassStructure("temporal.Time").
+                findMethod("construct", 1, pool.typeString());
+        MethodStructure dateConstruct = f_container.getClassStructure("temporal.Date").
+                findMethod("construct", 1, pool.typeString());
+        MethodStructure timeOfDayConstruct = f_container.getClassStructure("temporal.TimeOfDay").
+                findMethod("construct", 1, pool.typeString());
+        MethodStructure durationConstruct = f_container.getClassStructure("temporal.Duration").
+                findMethod("construct", 1, pool.typeString());
+        MethodStructure versionConstruct = f_container.getClassStructure("reflect.Version").
+                findMethod("construct", 1, pool.typeString());
+        MethodStructure pathConstruct = f_container.getClassStructure("fs.Path").
+                findMethod("construct", 1, pool.typeString());
+
+        SignatureConstant hashSig = f_container.getClassStructure("collections.Hashable").
+                findMethod("hashCode", 2).getIdentityConstant().getSignature();
+
+        return new ConstInfo(estimateLength, appendTo, freeze, rangeConstruct, nibbleConstruct,
+                timeConstruct, dateConstruct, timeOfDayConstruct, durationConstruct, versionConstruct,
+                pathConstruct, hashSig);
     }
 
 
@@ -666,14 +692,17 @@ public class xConst
         private final GenericHandle    hConst;
         private final ClassComposition clzBase;
         private final boolean          fCache;
+        private final SignatureConstant f_sigHash;
         private final int              iReturn;
         private       long             lResult;
         private final Iterator<Map.Entry<Object, FieldInfo>> iterFields;
 
-        public HashCode(GenericHandle hConst, ClassComposition clzBase, boolean fCache, int iReturn) {
+        public HashCode(GenericHandle hConst, ClassComposition clzBase, boolean fCache,
+                        SignatureConstant sigHash, int iReturn) {
             this.hConst  = hConst;
             this.clzBase = clzBase;
             this.fCache  = fCache;
+            f_sigHash    = sigHash;
             this.iReturn = iReturn;
 
             iterFields = clzBase.getFieldLayout().entrySet().iterator();
@@ -724,7 +753,7 @@ public class xConst
                 if (typeProp instanceof UnionTypeConstant && typeProp.isA(pool.typeHashable())) {
                     iResult = typeProp.callHashCode(frameCaller, hProp, Op.A_STACK);
                 } else {
-                    MethodStructure methodHash = typeProp.findCallable(HASH_SIG);
+                    MethodStructure methodHash = typeProp.findCallable(f_sigHash);
                     if (methodHash == null) {
                         // ignore this field
                         continue;
@@ -778,17 +807,26 @@ public class xConst
     private static final String      PROP_HASH = "@hash";
     private static final FieldInfo[] NO_FIELDS = new FieldInfo[0];
 
-    private static MethodStructure FN_ESTIMATE_LENGTH;
-    private static MethodStructure FN_APPEND_TO;
-    private static MethodStructure FN_FREEZE;
-    private static MethodStructure RANGE_CONSTRUCT;
-    private static MethodStructure NIBBLE_CONSTRUCT;
-    private static MethodStructure TIME_CONSTRUCT;
-    private static MethodStructure DATE_CONSTRUCT;
-    private static MethodStructure TIMEOFDAY_CONSTRUCT;
-    private static MethodStructure DURATION_CONSTRUCT;
-    private static MethodStructure VERSION_CONSTRUCT;
-    private static MethodStructure PATH_CONSTRUCT;
+    private record ConstInfo(MethodStructure estimateLength,
+                             MethodStructure appendTo,
+                             MethodStructure freeze,
+                             MethodStructure rangeConstruct,
+                             MethodStructure nibbleConstruct,
+                             MethodStructure timeConstruct,
+                             MethodStructure dateConstruct,
+                             MethodStructure timeOfDayConstruct,
+                             MethodStructure durationConstruct,
+                             MethodStructure versionConstruct,
+                             MethodStructure pathConstruct,
+                             SignatureConstant hashSig) {}
 
-    private static SignatureConstant HASH_SIG;
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * Owner-scoped equivalent of the old static Const metadata caches. The structures and
+     * signatures are derived from this template's container and constant pool, so they cannot be
+     * shared safely between containers.
+     */
+    private final Lazy<ConstInfo> f_info = Lazy.of(this::createInfo);
 }

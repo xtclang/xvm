@@ -15,8 +15,8 @@ and lazy-publication counts are scan signals generated on branch
 
 | Priority | Broken pattern | Signal | Failure mode | Required replacement |
 | --- | --- | --- | --- | --- |
-| Must fix | Mutable native template `INSTANCE` fields | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes 141 fields / 137 assignments and leaves 2/2. | Last writer wins across containers; constructor `this` escape | `NativeTemplates` central key table, existing container template cache, plus container/frame lookup |
-| Must fix | Static runtime-owned metadata | `master`: 151 field-shaped runtime/template static metadata fields after excluding `INSTANCE`. This branch fixes 111 and leaves 40. | Type/composition/method/handle values from one owner reused in another owner | Owner-scoped final `Lazy`, grouped info records, or owner-owned `ConcurrentMap` |
+| Must fix | Mutable native template `INSTANCE` fields | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes all 143 fields and all 139 constructor assignments. | Last writer wins across containers; constructor `this` escape | `NativeTemplates` central key table, existing container template cache, plus container/frame lookup |
+| Must fix | Static runtime-owned metadata | `master`: 151 field-shaped runtime/template static metadata fields after excluding `INSTANCE`. This branch fixes 145 and leaves 6. | Type/composition/method/handle values from one owner reused in another owner | Owner-scoped final `Lazy`, grouped info records, or owner-owned `ConcurrentMap` |
 | Must fix | Raw enum handles returned through public/native paths | 83 raw enum accessor references, including definitions/comments; several public helper groups still return raw handles | Natural enum construction struct escapes as if it were the finalized enum singleton | `ensureEnumByName`, `ensureEnumByOrdinal`, or `Utils.ensureInitializedEnum` on public paths |
 | Must fix | Manual lazy publication in shared runtime/asm objects | 111 strong same-field lazy-init matches in runtime/asm | Plain field read/write with no happens-before edge; duplicate, stale, partial, or wrong-owner state | Final `Lazy`, `ConcurrentMap.computeIfAbsent`, or explicit atomic/locked state |
 | Must fix | Split lifecycle state across several fields | `SingletonConstant` was the known concrete case and is fixed in this branch | Fibers see mixed handle/owner/waiter state; false recursion or missed wait | One immutable state snapshot in `AtomicReference<State>` or one lock |
@@ -84,8 +84,8 @@ Count with this broader command:
 
 ```text
 master: 151
-current branch: 41
-fixed in this branch: 110
+current branch: 6
+fixed in this branch: 145
 ```
 
 Representative current branch hits:
@@ -93,42 +93,7 @@ Representative current branch hits:
 ```text
 javatools/src/main/java/org/xvm/runtime/template/xBoolean.java:19:    public static BooleanHandle TRUE;
 javatools/src/main/java/org/xvm/runtime/template/xBoolean.java:20:    public static BooleanHandle FALSE;
-javatools/src/main/java/org/xvm/runtime/template/xConst.java:780:    private static MethodStructure FN_ESTIMATE_LENGTH;
-javatools/src/main/java/org/xvm/runtime/template/xConst.java:781:    private static MethodStructure FN_APPEND_TO;
-javatools/src/main/java/org/xvm/runtime/template/xConst.java:782:    private static MethodStructure FN_FREEZE;
-javatools/src/main/java/org/xvm/runtime/template/xConst.java:783:    private static MethodStructure RANGE_CONSTRUCT;
-javatools/src/main/java/org/xvm/runtime/template/xConst.java:784:    private static MethodStructure NIBBLE_CONSTRUCT;
-javatools/src/main/java/org/xvm/runtime/template/xConst.java:785:    private static MethodStructure TIME_CONSTRUCT;
-javatools/src/main/java/org/xvm/runtime/template/xConst.java:786:    private static MethodStructure DATE_CONSTRUCT;
-javatools/src/main/java/org/xvm/runtime/template/xConst.java:787:    private static MethodStructure TIMEOFDAY_CONSTRUCT;
-javatools/src/main/java/org/xvm/runtime/template/xConst.java:788:    private static MethodStructure DURATION_CONSTRUCT;
-javatools/src/main/java/org/xvm/runtime/template/xConst.java:789:    private static MethodStructure VERSION_CONSTRUCT;
-javatools/src/main/java/org/xvm/runtime/template/xConst.java:790:    private static MethodStructure PATH_CONSTRUCT;
-javatools/src/main/java/org/xvm/runtime/template/xConst.java:792:    private static SignatureConstant HASH_SIG;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:351:    private static ClassComposition s_clzDeadlock;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:352:    private static ClassComposition s_clzException;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:353:    private static ClassComposition s_clzIllegalArgument;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:354:    private static ClassComposition s_clzIllegalState;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:355:    private static ClassComposition s_clzInvalidType;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:356:    private static ClassComposition s_clzNotImplemented;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:357:    private static ClassComposition s_clzOutOfBounds;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:358:    private static ClassComposition s_clzOutOfMemory;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:359:    private static ClassComposition s_clzReadOnly;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:360:    private static ClassComposition s_clzSizeLimited;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:361:    private static ClassComposition s_clzStackOverflow;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:362:    private static ClassComposition s_clzTimedOut;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:363:    private static ClassComposition s_clzTypeMismatch;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:364:    private static ClassComposition s_clzUnsupported;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:365:    private static ClassComposition s_clzDivisionByZero;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:366:    private static ClassComposition s_clzPathException;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:367:    private static ClassComposition s_clzFileNotFoundException;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:368:    private static ClassComposition s_clzAccessDeniedException;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:369:    private static ClassComposition s_clzFileAlreadyExistsException;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:370:    private static ClassComposition s_clzIOException;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:371:    private static ClassComposition s_clzIOIllegalUTF;
-javatools/src/main/java/org/xvm/runtime/template/xException.java:373:    private static MethodStructure METHOD_FORMAT_EXCEPTION;
 javatools/src/main/java/org/xvm/runtime/template/xNullable.java:16:    public static EnumHandle NULL;
-javatools/src/main/java/org/xvm/runtime/template/xObject.java:17:    public static ClassComposition CLASS;
 javatools/src/main/java/org/xvm/runtime/template/xOrdered.java:18:    public static EnumHandle LESSER;
 javatools/src/main/java/org/xvm/runtime/template/xOrdered.java:19:    public static EnumHandle EQUAL;
 javatools/src/main/java/org/xvm/runtime/template/xOrdered.java:20:    public static EnumHandle GREATER;
@@ -188,6 +153,9 @@ Branch-covered groups:
   `ensureEnumByOrdinal(...)` plus deferred argument handling.
 - `xRTServiceControl.SERVICE_STATUS` is fixed in this branch by moving the enum
   template to `f_templateServiceStatus`.
+- `xConst` and `xException` no longer use static metadata caches. Their helper
+  methods, hash signature, exception classes, and format method are grouped in
+  owner-scoped `Lazy` info records.
 
 High-risk groups still requiring review:
 
