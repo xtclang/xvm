@@ -209,6 +209,27 @@ template registration. It intentionally leaves array templates that still have
 real static call sites from `xBitArray`, `xByteArray`, or `xNibbleArray` for a
 separate owner-plumbing pass.
 
+The unused-own-`INSTANCE` wave removes template singleton fields that had no
+remaining own `X.INSTANCE` readers and no `this == INSTANCE` behavior. These
+classes still use the reflected native-template constructor shape, but they no
+longer publish themselves into process-global mutable fields:
+
+- `xAtomic.INSTANCE`
+- `xInject.INSTANCE`
+- `BitBasedArray.INSTANCE`
+- `xFloat16.INSTANCE`
+- `xIntLiteral.INSTANCE`
+- `xClass.INSTANCE`
+- `xClassTemplate.INSTANCE`
+- `xEnumValue.INSTANCE`
+- `xEnumeration.INSTANCE`
+- `xRegEx.INSTANCE`
+
+`xClass.createConstHandle(...)` was also changed to resolve
+`reflect.EnumValue` and `reflect.Enumeration` through the caller frame's
+container. That preserves the old behavior of using the specialized templates
+for enum class constants without depending on process-global singleton fields.
+
 ### Static Runtime Metadata Caches
 
 The following master caches held runtime-owned values in JVM-global static

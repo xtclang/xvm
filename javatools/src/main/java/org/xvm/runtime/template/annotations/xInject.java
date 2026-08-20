@@ -33,14 +33,8 @@ import org.xvm.runtime.template.reflect.xRef;
  */
 public class xInject
         extends xRef {
-    public static xInject INSTANCE;
-
     public xInject(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

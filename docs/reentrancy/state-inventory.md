@@ -32,8 +32,8 @@ independent bug.
 
 | Priority | Category | Signal | Why it is bad | Proper replacement |
 | --- | --- | --- | --- | --- |
-| Must fix | Mutable template `INSTANCE` fields and `INSTANCE = this` constructors | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes 64 fields / 61 assignments and leaves 79/78. | Process-global last-writer-wins template lookup; constructor `this` escape; wrong container/pool can be observed | `NativeTemplates` central key table plus owner-scoped lazy lookup |
-| Must fix | Static runtime metadata caches | `master`: 149 field-shaped runtime/template static metadata hits after excluding `INSTANCE`; this branch fixes 54 and leaves 95. | `TypeConstant`, `TypeComposition`, `MethodStructure`, handles, and `xEnum` values are pool/container/runtime state, not JVM-global constants | Final `Lazy` fields on the owning template, immutable grouped info records, or a container-owned cache |
+| Must fix | Mutable template `INSTANCE` fields and `INSTANCE = this` constructors | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes 74 fields / 70 assignments and leaves 69/69. | Process-global last-writer-wins template lookup; constructor `this` escape; wrong container/pool can be observed | `NativeTemplates` central key table plus owner-scoped lazy lookup |
+| Must fix | Static runtime metadata caches | `master`: 149 field-shaped runtime/template static metadata hits after excluding `INSTANCE`; this branch fixes 54 and leaves 97. | `TypeConstant`, `TypeComposition`, `MethodStructure`, handles, and `xEnum` values are pool/container/runtime state, not JVM-global constants | Final `Lazy` fields on the owning template, immutable grouped info records, or a container-owned cache |
 | Must fix | Split mutable lifecycle state | Old `SingletonConstant` used separate handle/owner/waiter fields | Readers can observe impossible lifecycle snapshots across fibers | One immutable state snapshot in `AtomicReference`; use CAS for transitions |
 | Must fix | Natural enum construction structs escaping public paths | PR #534 enum struct mismatch | A caller can observe a construction struct where an immutable enum value is required | Public enum helpers that return initialized singletons or deferred results |
 | Must fix | Unsynchronized lazy null caches in shared runtime state | 98 field-shaped checks; 47 strong same-field lazy-init matches | Plain field read/write has no happens-before edge and can publish partial state | Final `Lazy` for immutable values; `ConcurrentMap.computeIfAbsent` for keyed caches; `AtomicReference` or a lock for lifecycle/resettable state |
@@ -226,11 +226,8 @@ javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTPackageTempl
 javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTProperty.java
 javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTPropertyTemplate.java
 javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTSignature.java
-javatools/src/main/java/org/xvm/runtime/template/annotations/xAtomic.java
 javatools/src/main/java/org/xvm/runtime/template/annotations/xAtomicIntNumber.java
 javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java
-javatools/src/main/java/org/xvm/runtime/template/annotations/xInject.java
-javatools/src/main/java/org/xvm/runtime/template/collections/BitBasedArray.java
 javatools/src/main/java/org/xvm/runtime/template/collections/xBitArray.java
 javatools/src/main/java/org/xvm/runtime/template/collections/xByteArray.java
 javatools/src/main/java/org/xvm/runtime/template/collections/xNibbleArray.java
@@ -248,7 +245,6 @@ javatools/src/main/java/org/xvm/runtime/template/numbers/xDec128.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xDec32.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xDec64.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xFPLiteral.java
-javatools/src/main/java/org/xvm/runtime/template/numbers/xFloat16.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xFloat32.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xFloat64.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xInt128.java
@@ -256,7 +252,6 @@ javatools/src/main/java/org/xvm/runtime/template/numbers/xInt16.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xInt32.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xInt64.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xInt8.java
-javatools/src/main/java/org/xvm/runtime/template/numbers/xIntLiteral.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xIntN.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xNibble.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xUInt128.java
@@ -265,14 +260,9 @@ javatools/src/main/java/org/xvm/runtime/template/numbers/xUInt32.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xUInt64.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xUInt8.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xUIntN.java
-javatools/src/main/java/org/xvm/runtime/template/reflect/xClass.java
-javatools/src/main/java/org/xvm/runtime/template/reflect/xClassTemplate.java
-javatools/src/main/java/org/xvm/runtime/template/reflect/xEnumValue.java
-javatools/src/main/java/org/xvm/runtime/template/reflect/xEnumeration.java
 javatools/src/main/java/org/xvm/runtime/template/reflect/xRef.java
 javatools/src/main/java/org/xvm/runtime/template/reflect/xVar.java
 javatools/src/main/java/org/xvm/runtime/template/text/xChar.java
-javatools/src/main/java/org/xvm/runtime/template/text/xRegEx.java
 javatools/src/main/java/org/xvm/runtime/template/text/xString.java
 javatools/src/main/java/org/xvm/runtime/template/xConst.java
 javatools/src/main/java/org/xvm/runtime/template/xException.java
@@ -425,7 +415,7 @@ Master count and current branch remainder:
 
 ```text
 master: 149
-current branch: 95
+current branch: 97
 fixed in this branch: 54
 ```
 

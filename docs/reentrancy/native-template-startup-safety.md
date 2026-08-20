@@ -105,9 +105,9 @@ then fail under a parallel runner on a loaded machine.
 
 The XVM codebase has normalized this pattern. On `master`, a direct audit finds
 143 mutable template `INSTANCE` declarations and 139 constructor assignments of
-`INSTANCE = this` in runtime templates. This branch fixes 64 mutable template
-fields and 61 constructor assignments, leaving 79 mutable `INSTANCE` fields
-and 78 constructor assignments for follow-up. A broader scan for escape-shaped
+`INSTANCE = this` in runtime templates. This branch fixes 74 mutable template
+fields and 70 constructor assignments, leaving 69 mutable `INSTANCE` fields
+and 69 constructor assignments for follow-up. A broader scan for escape-shaped
 `this` assignments and calls reports hundreds of hits in
 `javatools/src/main/java`, many of which are false positives, but the signal is
 clear: publishing receivers into mutable non-final state is common enough that
@@ -855,13 +855,13 @@ rg -l "public static (?!final)[A-Za-z0-9_<>, ?]+ INSTANCE;" \
   --pcre2 javatools/src/main/java/org/xvm/runtime/template | sort
 ```
 
-At the time this document was written, it reported 79 unconverted template
+At the time this document was written, it reported 69 unconverted template
 files. They should be migrated in follow-up PRs. Grouping them by package:
 
 - Root templates: `Identity`, `Proxy`, `xConst`, `xException`, `xObject`.
-- Text templates: `xString`, `xChar`, `xRegEx`.
-- Collection templates: `BitBasedArray`, `xBitArray`, `xByteArray`,
-  `xNibbleArray`, `xTuple`, `xListMap`.
+- Text templates: `xString`, `xChar`.
+- Collection templates: `xBitArray`, `xByteArray`, `xNibbleArray`, `xTuple`,
+  `xListMap`.
 - Array delegates and views: `xRTBitDelegate`, `xRTBooleanDelegate`,
   `xRTFloat64Delegate`, `xRTInt8Delegate`, `xRTInt16Delegate`,
   `xRTInt64Delegate`, `xRTUInt8Delegate`, `xRTNibbleDelegate`,
@@ -871,14 +871,12 @@ files. They should be migrated in follow-up PRs. Grouping them by package:
 - Native reflect templates still using mutable `INSTANCE`:
   `xRTFileTemplate`, `xRTMethodTemplate`, `xRTPackageTemplate`,
   `xRTProperty`, `xRTPropertyTemplate`, `xRTSignature`.
-- Annotation templates: `xAtomic`, `xAtomicIntNumber`, `xFuture`,
-  `xInject`.
+- Annotation templates: `xAtomicIntNumber`, `xFuture`.
 - Number templates: all checked and unchecked integer/decimal/float literal
   templates still listed by the audit, including `xInt*`, `xUInt*`,
-  `xCheckedInt*`, `xCheckedUInt*`, `xDec*`, `xFloat*`, `xIntLiteral`,
-  `xFPLiteral`, `xNibble`.
-- Reflect templates: `xClass`, `xClassTemplate`, `xEnumValue`,
-  `xEnumeration`, `xRef`, `xVar`.
+  `xCheckedInt*`, `xCheckedUInt*`, `xDec*`, `xFloat*`, `xFPLiteral`,
+  `xNibble`.
+- Reflect templates: `xRef`, `xVar`.
 
 Converted `INSTANCE` fields in this branch include:
 
@@ -943,6 +941,16 @@ Converted `INSTANCE` fields in this branch include:
 - `xRTViewToBitFromUInt32`,
 - `xRTViewToBitFromUInt64`,
 - `xRTViewToBitFromUInt8`,
+- `xAtomic`,
+- `xInject`,
+- `BitBasedArray`,
+- `xFloat16`,
+- `xIntLiteral`,
+- `xClass`,
+- `xClassTemplate`,
+- `xEnumValue`,
+- `xEnumeration`,
+- `xRegEx`,
 - `xModule`,
 - `xPackage`.
 

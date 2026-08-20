@@ -30,14 +30,8 @@ import org.xvm.runtime.template.xEnum.EnumHandle;
  */
 public class xEnumeration
         extends xClass {
-    public static xEnumeration INSTANCE;
-
     public xEnumeration(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

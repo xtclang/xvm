@@ -40,14 +40,8 @@ import org.xvm.util.PackedInteger;
  */
 public class xIntLiteral
         extends xConst {
-    public static xIntLiteral INSTANCE;
-
     public xIntLiteral(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
