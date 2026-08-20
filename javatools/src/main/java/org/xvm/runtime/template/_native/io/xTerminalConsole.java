@@ -132,20 +132,20 @@ public class xTerminalConsole
                 if (fEcho || CONSOLE == null) {
                     String sLine = CONSOLE_IN.readLine();
                     hLine = sLine == null
-                        ? xString.EMPTY_STRING
-                        : xString.makeHandle(sLine);
+                        ? xString.emptyString(frame)
+                        : xString.makeHandle(frame, sLine);
                 } else {
                     char[] achLine = CONSOLE.readPassword();
                     hLine = achLine == null
-                        ? xString.EMPTY_STRING
-                        : xString.makeHandle(achLine);
+                        ? xString.emptyString(frame)
+                        : xString.makeHandle(frame, achLine);
                 }
             } catch (IOException e) {
                 return frame.raiseException(xException.obscureIoException(frame, e.getMessage()));
             }
         } else {
             try {
-                hLine = xString.makeHandle(READER.readLine(sPrompt, fEcho ? null : '\0'));
+                hLine = xString.makeHandle(frame, READER.readLine(sPrompt, fEcho ? null : '\0'));
             } catch (UserInterruptException e) {
                 System.exit(0);
                 return 0; // not reachable

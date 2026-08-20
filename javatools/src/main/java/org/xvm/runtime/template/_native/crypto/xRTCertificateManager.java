@@ -107,7 +107,9 @@ public class xRTCertificateManager
      * Injection support method.
      */
     public ObjectHandle ensureManager(Frame frame, ObjectHandle hOpts) {
-        StringHandle     hProvider = hOpts instanceof StringHandle hS ? hS : xString.makeHandle("self");
+        StringHandle     hProvider = hOpts instanceof StringHandle hS
+                ? hS
+                : xString.makeHandle(frame, "self");
         ClassComposition clz       = getCanonicalClass();
         ServiceHandle    hMgr      = createServiceHandle(
                 f_container.createServiceContext("CertificateManager"), clz, getCanonicalType());

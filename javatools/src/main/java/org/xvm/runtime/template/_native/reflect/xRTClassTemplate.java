@@ -166,7 +166,7 @@ public class xRTClassTemplate
         if (id instanceof ClassConstant idClz) {
             String sAlias = idClz.getImplicitImportName();
             if (sAlias != null) {
-                return frame.assignValue(iReturn, xString.makeHandle(sAlias));
+                return frame.assignValue(iReturn, xString.makeHandle(frame, sAlias));
             }
         }
         return frame.assignValue(iReturn, xNullable.NULL);
@@ -260,7 +260,7 @@ public class xRTClassTemplate
                     for (int i = 0; i < cParams; i++) {
                         Parameter param = ctor.getParam(i);
 
-                        ahNames[i] = xString.makeHandle(param.getName());
+                        ahNames[i] = xString.makeHandle(container, param.getName());
                         if (ahParam[i] == null) {
                             if (!param.hasDefaultValue()) {
                                 return frameCaller.raiseException(
@@ -316,7 +316,7 @@ public class xRTClassTemplate
                         TypeConstant type  = entry.getValue();
 
                         // use Type<Object> as an indicator of a non-constrained formal type
-                        ahNames[i] = xString.makeHandle(sName);
+                        ahNames[i] = xString.makeHandle(container, sName);
                         ahTypes[i] = (type == null ? pool().typeObject() : type).
                                         ensureTypeHandle(container);
                         i++;
@@ -459,7 +459,7 @@ public class xRTClassTemplate
 
         int i = 0;
         for (Map.Entry<StringConstant, TypeConstant> entry : listParams) {
-            ahName[i]   = xString.makeHandle(entry.getKey().getValue());
+            ahName[i]   = xString.makeHandle(container, entry.getKey().getValue());
             ahType[i++] = xRTTypeTemplate.makeHandle(container, entry.getValue());
         }
 

@@ -156,7 +156,7 @@ public class xRTCompiler
                     return completeWithError(frame, compiler, sMissing, aiReturn);
                 }
                 CallChain chain = computeGetModuleChain(frame, hRepo);
-                switch (chain.invoke(frame, hRepo, xString.makeHandle(sMissing), STACK_2)) {
+                switch (chain.invoke(frame, hRepo, xString.makeHandle(frame, sMissing), STACK_2)) {
                 case Op.R_NEXT:
                     return popModuleStructure(frame, compiler)
                         ? doCompile(frame, compiler, hRepo, sMissing, aiReturn)

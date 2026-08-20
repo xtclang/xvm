@@ -336,14 +336,14 @@ public class xClass
                 if (fTuple) {
                     TypeConstant[] atypeParam = typeClz.getParamTypesArray();
                     for (int i = 0; i < cParams; ++i) {
-                        ahNames[i] = xString.makeHandle("ElementTypes[" + i + "]");
+                        ahNames[i] = xString.makeHandle(container, "ElementTypes[" + i + "]");
                         ahTypes[i] = atypeParam[i].ensureTypeHandle(container);
                     }
                 } else {
                     Iterator<StringConstant> iterNames  = clz.getTypeParams().keySet().iterator();
                     TypeConstant[]           atypeParam = clz.normalizeParameters(pool, typeClz.getParamTypesArray());
                     for (int i = 0; i < cParams; ++i) {
-                        ahNames[i] = xString.makeHandle(iterNames.next().getValue());
+                        ahNames[i] = xString.makeHandle(container, iterNames.next().getValue());
                         ahTypes[i] = atypeParam[i].ensureTypeHandle(container);
                     }
                 }

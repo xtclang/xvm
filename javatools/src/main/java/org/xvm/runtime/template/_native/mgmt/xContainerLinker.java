@@ -156,7 +156,7 @@ public class xContainerLinker
         TypeHandle[]   ahType    = new TypeHandle[cInjects];
         int            ix        = 0;
         for (InjectionKey key : setInjections) {
-            ahName[ix  ] = xString.makeHandle(key.f_sName);
+            ahName[ix  ] = xString.makeHandle(container, key.f_sName);
             ahType[ix++] = key.f_type.ensureTypeHandle(container);
         }
         ArrayHandle haNames = xArray.makeStringArrayHandle(container, ahName);
@@ -281,7 +281,7 @@ public class xContainerLinker
             while (++index < aKeys.length) {
                 InjectionKey key   = aKeys[index];
                 TypeHandle   hType = key.f_type.ensureTypeHandle(container);
-                StringHandle hName = xString.makeHandle(key.f_sName);
+                StringHandle hName = xString.makeHandle(container, key.f_sName);
                 CallChain    chain = hProvider.getComposition().getMethodCallChain(
                         xContainerLinker.getInstance(frameCaller).getResourceSignature());
 

@@ -105,9 +105,9 @@ then fail under a parallel runner on a loaded machine.
 
 The XVM codebase has normalized this pattern. On `master`, a direct audit finds
 143 mutable template `INSTANCE` declarations and 139 constructor assignments of
-`INSTANCE = this` in runtime templates. This branch fixes 107 mutable template
-fields and 103 constructor assignments, leaving 36 mutable `INSTANCE` fields
-and 36 constructor assignments for follow-up. A broader scan for escape-shaped
+`INSTANCE = this` in runtime templates. This branch fixes 108 mutable template
+fields and 104 constructor assignments, leaving 35 mutable `INSTANCE` fields
+and 35 constructor assignments for follow-up. A broader scan for escape-shaped
 `this` assignments and calls reports hundreds of hits in
 `javatools/src/main/java`, many of which are false positives, but the signal is
 clear: publishing receivers into mutable non-final state is common enough that
@@ -437,6 +437,8 @@ This branch intentionally removes several no-owner overloads:
 
 - `xString.makeArrayHandle(String[])`
 - `xString.ensureEmptyArray()`
+- `xString.makeHandle(String)`
+- `xString.makeHandle(char[])`
 - `xRTType.makeForeignHandle(TypeConstant)`
 - `xRTFunction.makeAsyncNativeHandle(MethodStructure)`
 
@@ -855,11 +857,11 @@ rg -l "public static (?!final)[A-Za-z0-9_<>, ?]+ INSTANCE;" \
   --pcre2 javatools/src/main/java/org/xvm/runtime/template | sort
 ```
 
-At the time this document was written, it reported 36 unconverted template
+At the time this document was written, it reported 35 unconverted template
 files. They should be migrated in follow-up PRs. Grouping them by package:
 
 - Root templates: `Identity`, `Proxy`, `xConst`, `xException`, `xObject`.
-- Text templates: `xString`, `xChar`.
+- Text templates: `xChar`.
 - Collection templates: no mutable `INSTANCE` fields remain in the collection template package.
 - Array delegates and views: no mutable `INSTANCE` fields remain in the
   collection-array delegate/view package.
@@ -997,9 +999,8 @@ Known high-priority leftovers include:
 - `xException`: cached exception class compositions and formatting method.
 - Miscellaneous native templates: `xRTBuffer.PROP_RAW_BYTES` and any remaining
   owner-derived static metadata found by the audit command below.
-- Compatibility bridge: `xString.INSTANCE`, `EMPTY_STRING`, `EMPTY_ARRAY`,
-  `ZERO`, `ONE`, and `METHOD_APPEND_TO` remain old-style until the remaining
-  callers are container-widened.
+- `xString` is no longer in this TODO: this branch moves its common handles,
+  append method cache, and helper factories to owner-scoped state.
 
 Use this audit command for static metadata:
 

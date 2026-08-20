@@ -149,7 +149,7 @@ public class xPackage
                 IdentityConstant id     = component.getIdentityConstant();
                 ObjectHandle     hClass = frame.getConstHandle(pool.ensureClassConstant(id.getType()));
 
-                listNames  .add(xString.makeHandle(entry.getKey()));
+                listNames  .add(xString.makeHandle(frame, entry.getKey()));
                 listClasses.add(hClass);
                 fDeferred |= Op.isDeferred(hClass);
             }

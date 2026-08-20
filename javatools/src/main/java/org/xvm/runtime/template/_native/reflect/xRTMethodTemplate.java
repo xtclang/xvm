@@ -128,7 +128,7 @@ public class xRTMethodTemplate
 
         ObjectHandle[] ahReturn = new ObjectHandle[5];
 
-        ahReturn[0] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
+        ahReturn[0] = sName == null ? xNullable.NULL : xString.makeHandle(frame, sName);
         ahReturn[1] = xRTTypeTemplate.makeHandle(frame.f_context.f_container, parameter.getType());
         ahReturn[2] = xBoolean.makeHandle(parameter.isTypeParameter());
         ahReturn[3] = xBoolean.makeHandle(fDefault);
@@ -163,7 +163,7 @@ public class xRTMethodTemplate
 
         ObjectHandle[] ahReturn = new ObjectHandle[3];
 
-        ahReturn[0] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
+        ahReturn[0] = sName == null ? xNullable.NULL : xString.makeHandle(frame, sName);
         ahReturn[1] = xRTTypeTemplate.makeHandle(frame.f_context.f_container, parameter.getType());
         ahReturn[2] = xBoolean.makeHandle(parameter.isConditionalReturn());
 

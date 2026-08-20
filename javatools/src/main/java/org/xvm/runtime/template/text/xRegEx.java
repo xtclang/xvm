@@ -87,7 +87,7 @@ public class xRegEx
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         RegExHandle hPattern = (RegExHandle) hTarget;
         if ("pattern".equals(sPropName)) {
-            return frame.assignValue(iReturn, xString.makeHandle(hPattern.f_regex));
+            return frame.assignValue(iReturn, xString.makeHandle(frame, hPattern.f_regex));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -104,7 +104,7 @@ public class xRegEx
             return frame.assignValue(iReturn, makeHandle(regex, nFlags));
         }
         case "appendTo": {
-            StringHandle hRegex = xString.makeHandle(((RegExHandle) hTarget).getRegex());
+            StringHandle hRegex = xString.makeHandle(frame, ((RegExHandle) hTarget).getRegex());
             return xString.callAppendTo(frame, hRegex, hArg, iReturn);
         }
         }
@@ -121,7 +121,7 @@ public class xRegEx
             String       text        = hText.getStringValue();
             String       replacement = ((StringHandle) ahArg[1]).getStringValue();
             Matcher      matcher     = ((RegExHandle) hTarget).getPattern().matcher(text);
-            StringHandle hResult     = xString.makeHandle(matcher.replaceAll(replacement));
+            StringHandle hResult     = xString.makeHandle(frame, matcher.replaceAll(replacement));
             return frame.assignValue(iReturn, hResult);
         }
         }

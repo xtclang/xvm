@@ -193,7 +193,7 @@ public class xConst
             }
 
             ObjectHandle[] ahArg = new ObjectHandle[constructor.getMaxVars()];
-            ahArg[0] = xString.makeHandle(constLiteral.getValue());
+            ahArg[0] = xString.makeHandle(frame, constLiteral.getValue());
 
             return construct(frame, constructor, clz, null, ahArg, Op.A_STACK);
         }

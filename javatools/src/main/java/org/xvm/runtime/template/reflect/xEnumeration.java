@@ -89,7 +89,7 @@ public class xEnumeration
             boolean        fDefer = false;
 
             for (int i = 0; i < cNames; i++) {
-                ahName[i] = xString.makeHandle(listNames.get(i));
+                ahName[i] = xString.makeHandle(frame, listNames.get(i));
 
                 EnumHandle hValue = listValues.get(i);
                 if (hValue.isStruct()) {

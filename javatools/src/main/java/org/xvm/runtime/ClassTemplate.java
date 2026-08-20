@@ -1968,7 +1968,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
-        return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, hTarget.toString()));
     }
 
 

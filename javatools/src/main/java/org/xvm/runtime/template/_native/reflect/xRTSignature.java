@@ -105,7 +105,7 @@ public class xRTSignature
      * Implements property: name.get()
      */
     protected int getPropertyName(Frame frame, SignatureHandle hFunc, int iReturn) {
-        return frame.assignValue(iReturn, xString.makeHandle(hFunc.getName()));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, hFunc.getName()));
     }
 
     /**
@@ -466,7 +466,7 @@ public class xRTSignature
                 String sName = param.getName();
 
                 ahParams[0] = xInt64.makeHandle(index);
-                ahParams[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
+                ahParams[1] = sName == null ? xNullable.NULL : xString.makeHandle(frameCaller, sName);
                 if (!fRetVals) {
                     ahParams[2] = xBoolean.makeHandle(param.isTypeParameter());
                     if (param.hasDefaultValue()) {

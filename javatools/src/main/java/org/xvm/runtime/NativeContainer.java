@@ -527,8 +527,8 @@ public class NativeContainer
                 if (sKey.startsWith("xvm.")) {
                     String sVal = System.getProperty(sKey);
                     if (sVal != null) {
-                        listKeys.add(xString.makeHandle(sKey.substring(4)));
-                        listVals.add(xString.makeHandle(sVal));
+                        listKeys.add(xString.makeHandle(this, sKey.substring(4)));
+                        listVals.add(xString.makeHandle(this, sVal));
                     }
                 }
             }

@@ -294,7 +294,7 @@ public class xRTProperty
      * Implements property: name.get()
      */
     public int getPropertyName(Frame frame, PropertyHandle hProp, int iReturn) {
-        return frame.assignValue(iReturn, xString.makeHandle(hProp.getPropertyConstant().getName()));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, hProp.getPropertyConstant().getName()));
     }
 
     /**

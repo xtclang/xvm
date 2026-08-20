@@ -299,8 +299,8 @@ public class xRTFileTemplate
 
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
-        FileStructure module = componentTemplateHandle(hTarget).getFileStructure();
-        return frame.assignValue(iReturn, xString.makeHandle(module.getModuleId().getName()));
+        FileStructure module = (FileStructure) ((ComponentTemplateHandle) hTarget).getComponent();
+        return frame.assignValue(iReturn, xString.makeHandle(frame, module.getModuleId().getName()));
     }
 
 

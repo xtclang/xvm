@@ -501,7 +501,7 @@ public abstract class BaseInt128
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
         LongLong ll = ((LongLongHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xString.makeHandle(
+        return frame.assignValue(iReturn, xString.makeHandle(frame,
             f_fSigned
                 ? ll.toBigInteger().toString()
                 : ll.toUnsignedBigInteger().toString()));

@@ -131,7 +131,7 @@ public class xModule
      */
     public int getPropertySimpleName(Frame frame, PackageHandle hModule, int iReturn) {
         String sName = ((ModuleConstant) hModule.getId()).getUnqualifiedName();
-        return frame.assignValue(iReturn, xString.makeHandle(sName));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, sName));
     }
 
     /**
@@ -139,7 +139,7 @@ public class xModule
      */
     public int getPropertyQualifiedName(Frame frame, PackageHandle hModule, int iReturn) {
         String sName = hModule.getId().getName();
-        return frame.assignValue(iReturn, xString.makeHandle(sName));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, sName));
     }
 
     /**
@@ -179,7 +179,7 @@ public class xModule
             ModuleConstant idDep = entry.getKey();
             if (idDep != idModule) {
                 ObjectHandle hM = frame.getConstHandle(idDep);
-                ahPaths  [index] = xString.makeHandle(entry.getValue());
+                ahPaths  [index] = xString.makeHandle(container, entry.getValue());
                 ahModules[index] = hM;
                 fDeferred |= Op.isDeferred(hM);
                 ++index;

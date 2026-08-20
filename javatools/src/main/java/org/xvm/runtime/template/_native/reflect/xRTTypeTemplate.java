@@ -235,7 +235,7 @@ public class xRTTypeTemplate
     public int getPropertyDesc(Frame frame, TypeTemplateHandle hType, int iReturn) {
         TypeConstant type  = hType.getDataType();
         String       sDesc = type.getValueString();
-        return frame.assignValue(iReturn, xString.makeHandle(sDesc));
+        return frame.assignValue(iReturn, xString.makeHandle(frame, sDesc));
     }
 
     /**
@@ -268,7 +268,7 @@ public class xRTTypeTemplate
                     : idClz.getPathString();
         }
 
-        return frame.assignValue(iReturn, sName == null ? xNullable.NULL : xString.makeHandle(sName));
+        return frame.assignValue(iReturn, sName == null ? xNullable.NULL : xString.makeHandle(frame, sName));
     }
 
     /**

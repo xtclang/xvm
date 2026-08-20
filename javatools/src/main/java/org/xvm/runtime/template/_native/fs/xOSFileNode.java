@@ -56,7 +56,7 @@ public class xOSFileNode
         NodeHandle hNode = (NodeHandle) hTarget;
         switch (sPropName) {
         case "pathString":
-            return frame.assignValue(iReturn, xString.makeHandle(hNode.f_path.toString()));
+            return frame.assignValue(iReturn, xString.makeHandle(frame, hNode.f_path.toString()));
 
         case "exists":
             return frame.assignValue(iReturn, xBoolean.makeHandle(hNode.f_path.toFile().exists()));

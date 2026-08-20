@@ -315,7 +315,7 @@ public class xService
             return frame.f_context.f_container.ensureTypeSystemHandle(frame, iReturn);
 
         case "serviceName":
-            return frame.assignValue(iReturn, xString.makeHandle(hService.f_context.f_sName));
+            return frame.assignValue(iReturn, xString.makeHandle(frame, hService.f_context.f_sName));
 
         case "serviceControl":
             return frame.assignValue(iReturn, xRTServiceControl.makeHandle(hService.f_context));

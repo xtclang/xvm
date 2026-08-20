@@ -187,7 +187,7 @@ public class xBit
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
         long l = ((JavaLong) hTarget).getValue();
 
-        return frame.assignValue(iReturn, l == 0 ? xString.ZERO : xString.ONE);
+        return frame.assignValue(iReturn, l == 0 ? xString.zero(frame) : xString.one(frame));
     }
 
     public static JavaLong makeHandle(boolean f) {
