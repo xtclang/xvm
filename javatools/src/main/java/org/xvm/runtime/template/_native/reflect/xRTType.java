@@ -964,12 +964,12 @@ public class xRTType
                     switch (getPropertyProperties(frame, hType, Op.A_STACK)) {
                     case Op.R_NEXT:
                         return createProxyArray(frame, (ArrayHandle) frame.popStack(),
-                                xRTProperty.INSTANCE.getCanonicalClass());
+                                xRTProperty.getInstance(container).getCanonicalClass());
 
                     case Op.R_CALL:
                         frame.m_frameNext.addContinuation(frameCaller ->
                             createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
-                                xRTProperty.INSTANCE.getCanonicalClass()));
+                                xRTProperty.getInstance(container).getCanonicalClass()));
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -1062,12 +1062,12 @@ public class xRTType
                     switch (getPropertyUnderlyingTypes(frame, hType, Op.A_STACK)) {
                     case Op.R_NEXT:
                         return createProxyArray(frame, (ArrayHandle) frame.popStack(),
-                                xRTProperty.INSTANCE.getCanonicalClass());
+                                xRTProperty.getInstance(container).getCanonicalClass());
 
                     case Op.R_CALL:
                         frame.m_frameNext.addContinuation(frameCaller ->
                             createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
-                                xRTProperty.INSTANCE.getCanonicalClass()));
+                                xRTProperty.getInstance(container).getCanonicalClass()));
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:

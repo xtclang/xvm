@@ -45,6 +45,7 @@ import org.xvm.runtime.template._native.reflect.xRTComponentTemplate;
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTMethod;
 import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
+import org.xvm.runtime.template._native.reflect.xRTProperty;
 import org.xvm.runtime.template._native.reflect.xRTPropertyClassTemplate;
 import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template._native.reflect.xRTTypeTemplate;
@@ -213,6 +214,10 @@ public final class NativeTemplates {
         return get(RT_MODULE_TEMPLATE);
     }
 
+    public xRTProperty property() {
+        return get(RT_PROPERTY);
+    }
+
     public xRTPropertyClassTemplate propertyClassTemplate() {
         return get(RT_PROPERTY_CLASS_TEMPLATE);
     }
@@ -368,6 +373,9 @@ public final class NativeTemplates {
 
     private static final NativeTemplateRef<xRTModuleTemplate> RT_MODULE_TEMPLATE =
             NativeTemplateRef.of("_native.reflect.RTModuleTemplate", xRTModuleTemplate.class);
+
+    private static final NativeTemplateRef<xRTProperty> RT_PROPERTY =
+            NativeTemplateRef.of("_native.reflect.RTProperty", xRTProperty.class);
 
     private static final NativeTemplateRef<xRTPropertyClassTemplate> RT_PROPERTY_CLASS_TEMPLATE =
             NativeTemplateRef.of("_native.reflect.RTPropertyClassTemplate",

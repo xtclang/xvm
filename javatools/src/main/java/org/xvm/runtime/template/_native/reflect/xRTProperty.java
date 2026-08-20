@@ -18,6 +18,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -32,30 +33,20 @@ import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.text.xString;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native Property implementation.
  */
 public class xRTProperty
         extends xConst {
-    public static xRTProperty INSTANCE;
-
     public xRTProperty(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void initNative() {
-        ConstantPool pool = pool();
-
-        EMPTY_PROPERTY_ARRAY = pool.ensureArrayConstant(
-                pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Property")),
-                Constant.NO_CONSTS);
-
         markNativeProperty("abstract");
         markNativeProperty("annotations");
         markNativeProperty("atomic");
@@ -179,19 +170,21 @@ public class xRTProperty
     public static ObjectHandle makeHandle(Frame frame, TypeConstant typeTarget, PropertyInfo infoProp) {
         Annotation[] aAnno    = infoProp.getPropertyAnnotations();
         TypeConstant typeProp = infoProp.getIdentity().getValueType(frame.poolContext(), typeTarget);
+        Container    container = frame.container();
+        xRTProperty  template  = getInstance(container);
 
         if (aAnno != null && aAnno.length > 0) {
             typeProp = frame.poolContext().ensureAnnotatedTypeConstant(typeProp, aAnno);
 
-            TypeComposition clzProp = INSTANCE.ensureClass(frame.f_context.f_container, typeProp);
+            TypeComposition clzProp = template.ensureClass(container, typeProp);
             PropertyHandle  hStruct = new PropertyHandle(clzProp.ensureAccess(Access.STRUCT));
 
-            int iResult = INSTANCE.proceedConstruction(
+            int iResult = template.proceedConstruction(
                                 frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK);
             return frame.popResultImmutable(iResult);
         }
 
-        return new PropertyHandle(INSTANCE.ensureClass(frame.f_context.f_container, typeProp));
+        return new PropertyHandle(template.ensureClass(container, typeProp));
     }
 
     /**
@@ -368,13 +361,14 @@ public class xRTProperty
      * @return the handle for an empty Array of Property
      */
     public static ArrayHandle ensureEmptyArray(Container container) {
-        ArrayHandle haEmpty = (ArrayHandle) container.f_heap.getConstHandle(EMPTY_PROPERTY_ARRAY);
+        ArrayConstant constEmpty = getInstance(container).f_constEmptyPropertyArray.get();
+        ArrayHandle   haEmpty    = (ArrayHandle) container.f_heap.getConstHandle(constEmpty);
         if (haEmpty == null) {
             ConstantPool    pool = container.getConstantPool();
             TypeComposition clz  = container.resolveClass(pool.ensureArrayType(pool.typeProperty()));
 
             haEmpty = xArray.createImmutableArray(clz, Utils.OBJECTS_NONE);
-            container.f_heap.saveConstHandle(EMPTY_PROPERTY_ARRAY, haEmpty);
+            container.f_heap.saveConstHandle(constEmpty, haEmpty);
         }
         return haEmpty;
     }
@@ -391,8 +385,24 @@ public class xRTProperty
         return frame.f_context.f_container.resolveClass(typePropertyArray);
     }
 
+    /**
+     * @return the caller-owned native Property template
+     */
+    public static xRTProperty getInstance(Container container) {
+        return NativeTemplates.get(container).property();
+    }
 
-    // ----- constants -----------------------------------------------------------------------------
 
-    private static ArrayConstant EMPTY_PROPERTY_ARRAY;
+    // ----- data members --------------------------------------------------------------------------
+
+    /**
+     * Empty Property array constants are pool-owned. Caching the key on this container's template
+     * preserves the old ConstHeap handle cache without crossing container ConstantPools.
+     */
+    private final Lazy<ArrayConstant> f_constEmptyPropertyArray = Lazy.of(() -> {
+        ConstantPool pool = pool();
+        return pool.ensureArrayConstant(
+                pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Property")),
+                Constant.NO_CONSTS);
+    });
 }
