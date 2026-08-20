@@ -58,10 +58,6 @@ public class xClass
 
     @Override
     public void initNative() {
-        ConstantPool pool = f_container.getConstantPool();
-
-        CLASS_ARRAY_TYPE = pool.ensureArrayType(pool.typeClass());
-
         markNativeProperty("abstract");
         markNativeProperty("canonicalParams");
         markNativeProperty("composition");
@@ -491,11 +487,10 @@ public class xClass
      * @return the TypeComposition for an Array of Class
      */
     public static TypeComposition ensureArrayComposition(Container container) {
-        return container.ensureClassComposition(CLASS_ARRAY_TYPE, xArray.getInstance(container));
+        // The caller already supplies the owner. Its ConstantPool interns the Array<Class> type, so
+        // this preserves the old cached value without storing a process-global TypeConstant.
+        ConstantPool pool           = container.getConstantPool();
+        TypeConstant  typeClassArray = pool.ensureArrayType(pool.typeClass());
+        return container.ensureClassComposition(typeClassArray, xArray.getInstance(container));
     }
-
-
-    // ----- constants -----------------------------------------------------------------------------
-
-    private static TypeConstant CLASS_ARRAY_TYPE;
 }

@@ -49,6 +49,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -76,6 +77,8 @@ import org.xvm.runtime.template._native.crypto.xRTAlgorithms.SecretHandle;
 
 import org.xvm.runtime.template._native.collections.arrays.xRTBooleanDelegate;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native implementation of the xRTKeyStore.x service.
@@ -94,10 +97,6 @@ public class xRTKeyStore
         markNativeMethod("getKeyInfo"        , STRING, null);
         markNativeMethod("getCertificateInfo", null,   null);
         markNativeMethod("getPasswordInfo"   , STRING, null);
-
-        ConstantPool pool = pool();
-        s_typeNamedPassword = pool.ensureClassConstant(
-                pool.ensureModuleConstant("crypto.xtclang.org"), "CryptoPassword").getType();
 
         invalidateTypeInfo();
     }
@@ -509,12 +508,19 @@ public class xRTKeyStore
         }
 
         // the handle could be a proxy; make it real
-        hPwd = hPwd.revealAs(frame, s_typeNamedPassword);
+        hPwd = hPwd.revealAs(frame, NativeTemplates.get(frame).keyStore().ensureNamedPasswordType());
         if (hPwd instanceof GenericHandle hNamed) {
             return (StringHandle) hNamed.getField(null, "password");
         }
         // this is basically an assertion; the result is clearly unusable
         return xString.EMPTY_STRING;
+    }
+
+    /**
+     * @return the owner-scoped NamedPassword type used to reveal password proxies
+     */
+    private TypeConstant ensureNamedPasswordType() {
+        return f_typeNamedPassword.get();
     }
 
 
@@ -570,7 +576,13 @@ public class xRTKeyStore
     private TypeConstant m_typeCanonical;
 
     /**
-     * Cached NamedPassword type.
+     * Owner-scoped replacement for the old static NamedPassword type cache. The ConstantPool still
+     * interns the type once for this owner, but the cached constant can no longer leak across
+     * containers.
      */
-    private static TypeConstant s_typeNamedPassword;
+    private final Lazy<TypeConstant> f_typeNamedPassword = Lazy.of(() -> {
+        ConstantPool pool = pool();
+        return pool.ensureClassConstant(
+                pool.ensureModuleConstant("crypto.xtclang.org"), "CryptoPassword").getType();
+    });
 }

@@ -995,14 +995,11 @@ Known high-priority leftovers include:
 - `Utils`: `ANNOTATION_TEMPLATE`, `ANNOTATION_TEMPLATE_TEMPLATE`,
   `ARGUMENT_TEMPLATE`, `RT_PARAMETER_TEMPLATE`, constructor method caches,
   `STRING_VALUE_OF`, array type constants, and injection/freezing signatures.
-- `xClass`: array type caches.
 - `xConst`: native helper method caches such as estimate length, append, freeze,
   range, date/time, duration, version, path, and hash signature.
 - `xException`: cached exception class compositions and formatting method.
-- File-system templates: the event method cache in `xOSStorage`.
-- Miscellaneous native templates: `xRTKeyStore.s_typeNamedPassword`,
-  `xRTCompiler.GET_MODULE_ID`, `xRTBuffer.PROP_RAW_BYTES`,
-  `xNanosTimer.s_clzDuration`.
+- Miscellaneous native templates: `xRTBuffer.PROP_RAW_BYTES` and any remaining
+  owner-derived static metadata found by the audit command below.
 - Compatibility bridge: `xString.INSTANCE`, `EMPTY_STRING`, `EMPTY_ARRAY`,
   `ZERO`, `ONE`, and `METHOD_APPEND_TO` remain old-style until the remaining
   callers are container-widened.

@@ -279,6 +279,7 @@ fields. The branch moves them to owner-scoped final lazy state.
 | `xFuture`, wait-frame construction, async result assignment | `xFuture.INSTANCE`, static `TYPE`, static `COMPLETION`, ownerless `makeHandle(CompletableFuture)` | `NativeTemplates.future()`, final owner-local lazy future type and completion enum template, and `makeHandle(Container, CompletableFuture)` | Must fix |
 | `xAtomic`, `xAtomicIntNumber`, `xAtomicInt128` | `xAtomicIntNumber.INSTANCE`, static `xAtomic.NUMBER_TEMPLATES`, and wrapper construction from numeric template `INSTANCE` fields | final owner-local `Lazy<Map<TypeConstant,xAtomic>>`, immutable `Map.copyOf`, and wrapper construction from this container's number templates | Must fix |
 | Native filesystem templates and CP filesystem constants | `xOSDirectory.INSTANCE`, `xOSFile.INSTANCE`, `xRawOSFileChannel.INSTANCE`, and static constructor `MethodStructure` caches on `xOSDirectory`, `xOSFile`, `xCPDirectory`, `xCPFile`, `xCPFileStore` | `NativeTemplates` filesystem getters plus final owner-scoped lazy constructor caches on the owning template | Must fix |
+| Leaf static metadata caches | `xRTKeyStore.s_typeNamedPassword`, `xOSStorage.s_methodOnEvent`, `xRTCompiler.GET_MODULE_ID`, `xNanosTimer.s_clzDuration`, `xClass.CLASS_ARRAY_TYPE` | final owner-local `Lazy` fields for template-owned metadata; `xClass.ensureArrayComposition(Container)` computes from the caller's `ConstantPool`, which interns the same `Array<Class>` type per owner | Must fix |
 | `xRTFunction` | `LISTMAP_TYPE`, ownerless native/internal function factories, process-global finalizer no-op anchor | `f_typeListMap`, owner-required helper APIs, `FullyBoundHandle.noOp(Container)` | Must fix |
 | `xRTMethod` | `EMPTY_ARRAY` | `f_constEmptyArray` | Must fix |
 | `xRTMethodTemplate` | `INSTANCE`, `METHOD_TEMPLATE_COMP`, ownerless `makeHandle(MethodStructure)` | caller-owned `makeHandle(Container, MethodStructure)` and `f_compMethodTemplate` | Must fix |
@@ -303,6 +304,14 @@ fields. The branch moves them to owner-scoped final lazy state.
 These replacements preserve caching. They do not turn old bootstrap caches into
 repeated lookups. The cache key changed from "entire JVM" to "owning
 container/template".
+
+The leaf static metadata wave follows the same rule without adding unnecessary
+tables. `xRTKeyStore`, `xOSStorage`, `xRTCompiler`, and `xNanosTimer` each own
+exactly one metadata value, so a final `Lazy` field on the template keeps the
+old one-time lookup. `xClass.ensureArrayComposition(Container)` already has the
+owner as a parameter, so it asks that owner's `ConstantPool` for `Array<Class>`;
+the pool interns the value, preserving the old cache behavior without a
+process-global `TypeConstant`.
 
 One intentional exception is `xService`'s atomic property-name set. On `master`
 it was a mutable `static Set<String>` even though it contains only string

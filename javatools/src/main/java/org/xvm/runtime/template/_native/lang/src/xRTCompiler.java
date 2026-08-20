@@ -56,6 +56,7 @@ import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.ModuleInfo;
 import org.xvm.tool.ModuleInfo.Node;
 
+import org.xvm.util.Lazy;
 import org.xvm.util.Severity;
 
 
@@ -70,9 +71,6 @@ public class xRTCompiler
 
     @Override
     public void initNative() {
-        ClassStructure structRepo = f_container.getClassStructure("mgmt.ModuleRepository");
-        GET_MODULE_ID = structRepo.findMethod("getModule", 2).getIdentityConstant();
-
         markNativeMethod("compileImpl", null, null);
 
         invalidateTypeInfo();
@@ -186,14 +184,15 @@ public class xRTCompiler
     }
 
     private CallChain computeGetModuleChain(Frame frame, ObjectHandle hRepo) {
-        Object nid = GET_MODULE_ID.resolveNestedIdentity(
+        MethodConstant idGetModule = f_idGetModule.get();
+        Object         nid         = idGetModule.resolveNestedIdentity(
                         frame.poolContext(), frame.getGenericsResolver(true));
 
         TypeComposition clazz = hRepo.getComposition();
         CallChain       chain = clazz.getMethodCallChain(nid);
         if (chain.isEmpty()) {
             return new CallChain.ExceptionChain(xException.makeHandle(frame,
-                "Missing method \"" + GET_MODULE_ID +
+                "Missing method \"" + idGetModule +
                 "\" on " + hRepo.getType().getValueString()));
         }
 
@@ -495,5 +494,13 @@ public class xRTCompiler
 
     private static final int[] STACK_2 = new int[] {Op.A_STACK, Op.A_STACK};
 
-    private static MethodConstant GET_MODULE_ID;
+    /**
+     * Owner-scoped replacement for the old static ModuleRepository.getModule identity cache. The
+     * identity is still found once for this template, but it stays tied to this container's module
+     * repository metadata.
+     */
+    private final Lazy<MethodConstant> f_idGetModule = Lazy.of(() -> {
+        ClassStructure structRepo = f_container.getClassStructure("mgmt.ModuleRepository");
+        return structRepo.findMethod("getModule", 2).getIdentityConstant();
+    });
 }

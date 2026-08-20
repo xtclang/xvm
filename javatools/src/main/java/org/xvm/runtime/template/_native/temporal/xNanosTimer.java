@@ -12,6 +12,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ServiceContext;
@@ -31,6 +32,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
 import org.xvm.util.ListSet;
+import org.xvm.util.Lazy;
 
 
 /**
@@ -45,8 +47,6 @@ public class xNanosTimer
 
     @Override
     public void initNative() {
-        s_clzDuration = f_container.getTemplate("temporal.Duration").getCanonicalClass();
-
         markNativeProperty("elapsed");
 
         markNativeMethod("start"   , VOID, null);
@@ -232,7 +232,8 @@ public class xNanosTimer
          * @return the elapsed time, as an Ecstasy Duration object
          */
         public GenericHandle elapsedDuration(Frame frame) {
-            GenericHandle hDuration = new GenericHandle(s_clzDuration);
+            GenericHandle hDuration = new GenericHandle(
+                    NativeTemplates.get(frame).nanosTimer().ensureDurationClass());
             LongLong      llPicos   = new LongLong(elapsed(frame)).mulChecked(PICOS_PER_NANO_LL);
 
             if (llPicos == LongLong.OVERFLOW) {
@@ -513,7 +514,14 @@ public class xNanosTimer
     public static final long     NANOS_PER_MILLI    = 1_000_000;
 
     /**
-     * Cached Duration class.
+     * Owner-scoped replacement for the old static Duration class cache. Timer handles obtain the
+     * class through the caller's frame so the cached TypeComposition belongs to the active
+     * container, while retaining the one-time template lookup underneath.
      */
-    private static TypeComposition s_clzDuration;
+    private final Lazy<TypeComposition> f_clzDuration =
+            Lazy.of(() -> f_container.getTemplate("temporal.Duration").getCanonicalClass());
+
+    private TypeComposition ensureDurationClass() {
+        return f_clzDuration.get();
+    }
 }
