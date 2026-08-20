@@ -32,8 +32,8 @@ independent bug.
 
 | Priority | Category | Signal | Why it is bad | Proper replacement |
 | --- | --- | --- | --- | --- |
-| Must fix | Mutable template `INSTANCE` fields and `INSTANCE = this` constructors | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes 75 fields / 71 assignments and leaves 68/68. | Process-global last-writer-wins template lookup; constructor `this` escape; wrong container/pool can be observed | `NativeTemplates` central key table plus owner-scoped lazy lookup |
-| Must fix | Static runtime metadata caches | `master`: 149 field-shaped runtime/template static metadata hits after excluding `INSTANCE`; this branch fixes 55 and leaves 96. | `TypeConstant`, `TypeComposition`, `MethodStructure`, handles, and `xEnum` values are pool/container/runtime state, not JVM-global constants | Final `Lazy` fields on the owning template, immutable grouped info records, or a container-owned cache |
+| Must fix | Mutable template `INSTANCE` fields and `INSTANCE = this` constructors | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes 77 fields / 73 assignments and leaves 66/66. | Process-global last-writer-wins template lookup; constructor `this` escape; wrong container/pool can be observed | `NativeTemplates` central key table plus owner-scoped lazy lookup |
+| Must fix | Static runtime metadata caches | `master`: 151 field-shaped runtime/template static metadata hits after excluding `INSTANCE`; this branch fixes 58 and leaves 93. | `TypeConstant`, `TypeComposition`, `MethodStructure`, handles, and `xEnum` values are pool/container/runtime state, not JVM-global constants | Final `Lazy` fields on the owning template, immutable grouped info records, or a container-owned cache |
 | Must fix | Split mutable lifecycle state | Old `SingletonConstant` used separate handle/owner/waiter fields | Readers can observe impossible lifecycle snapshots across fibers | One immutable state snapshot in `AtomicReference`; use CAS for transitions |
 | Must fix | Natural enum construction structs escaping public paths | PR #534 enum struct mismatch | A caller can observe a construction struct where an immutable enum value is required | Public enum helpers that return initialized singletons or deferred results |
 | Must fix | Unsynchronized lazy null caches in shared runtime state | 98 field-shaped checks; 47 strong same-field lazy-init matches | Plain field read/write has no happens-before edge and can publish partial state | Final `Lazy` for immutable values; `ConcurrentMap.computeIfAbsent` for keyed caches; `AtomicReference` or a lock for lifecycle/resettable state |
@@ -220,8 +220,6 @@ javatools/src/main/java/org/xvm/runtime/template/_native/collections/arrays/xRTV
 javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSDirectory.java
 javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSFile.java
 javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java
-javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTFileTemplate.java
-javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTPackageTemplate.java
 javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTProperty.java
 javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTPropertyTemplate.java
 javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTSignature.java
@@ -414,8 +412,8 @@ Master count and current branch remainder:
 
 ```text
 master: 149
-current branch: 96
-fixed in this branch: 54
+current branch: 93
+fixed in this branch: 58
 ```
 
 High-risk categories:

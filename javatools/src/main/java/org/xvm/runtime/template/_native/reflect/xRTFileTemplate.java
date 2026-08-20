@@ -46,27 +46,20 @@ import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.GenericAr
 
 import org.xvm.runtime.template._native.mgmt.xCoreRepository;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native FileTemplate implementation.
  */
 public class xRTFileTemplate
         extends xRTComponentTemplate {
-    public static xRTFileTemplate INSTANCE;
-
     public xRTFileTemplate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void initNative() {
-        FILE_TEMPLATE_TYPE = pool().ensureEcstasyTypeConstant("reflect.FileTemplate");
-        LINK_MODULES_METHOD = f_struct.findMethod("linkModules", 1);
-
         markNativeProperty("mainModule");
         markNativeProperty("kind");
         markNativeProperty("moduleNames");
@@ -226,11 +219,12 @@ public class xRTFileTemplate
                     : frame.raiseException("Missing dependent module: " + idMissing.getName());
         }
 
-        ObjectHandle[] ahArg = new ObjectHandle[LINK_MODULES_METHOD.getMaxVars()];
+        MethodStructure methodLinkModules = f_methodLinkModules.get();
+        ObjectHandle[]  ahArg             = new ObjectHandle[methodLinkModules.getMaxVars()];
         ahArg[0] = hRepo;
 
         FileStructure fileUnlinked = file;
-        switch (frame.call1(LINK_MODULES_METHOD, makeHandle(container, fileUnlinked), ahArg, iReturn)) {
+        switch (frame.call1(methodLinkModules, makeHandle(container, fileUnlinked), ahArg, iReturn)) {
         case Op.R_NEXT:
             fileUnlinked.markLinked();
             return frame.assignValue(iReturn, makeHandle(container, fileUnlinked));
@@ -322,13 +316,30 @@ public class xRTFileTemplate
      */
     public static ComponentTemplateHandle makeHandle(Container container, FileStructure fileStruct) {
         // note: no need to initialize the struct because there are no natural fields
-        TypeComposition clzFile = INSTANCE.ensureClass(container,
-                INSTANCE.getCanonicalType(), FILE_TEMPLATE_TYPE);
+        xRTFileTemplate template = container.getTemplate("_native.reflect.RTFileTemplate",
+                xRTFileTemplate.class);
+        TypeComposition clzFile = template.ensureClass(container,
+                template.getCanonicalType(), template.f_typeFileTemplate.get());
         return new ComponentTemplateHandle(clzFile, fileStruct);
     }
 
-    // ----- constants -----------------------------------------------------------------------------
+    /**
+     * @return the container-owned FileTemplate type
+     */
+    public static TypeConstant ensureFileTemplateType(Container container) {
+        return container.getTemplate("_native.reflect.RTFileTemplate", xRTFileTemplate.class)
+                .f_typeFileTemplate.get();
+    }
 
-    public static TypeConstant     FILE_TEMPLATE_TYPE;
-    private static MethodStructure LINK_MODULES_METHOD;
+    // ----- data members --------------------------------------------------------------------------
+
+    /**
+     * FileTemplate metadata used to be mutable static state. Both values come from this template's
+     * structure and constant pool, so cache them on the owning template.
+     */
+    private final Lazy<TypeConstant> f_typeFileTemplate =
+            Lazy.of(() -> pool().ensureEcstasyTypeConstant("reflect.FileTemplate"));
+
+    private final Lazy<MethodStructure> f_methodLinkModules =
+            Lazy.of(() -> f_struct.findMethod("linkModules", 1));
 }

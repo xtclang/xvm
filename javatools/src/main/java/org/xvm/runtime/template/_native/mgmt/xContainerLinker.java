@@ -211,7 +211,9 @@ public class xContainerLinker
             return frame.raiseException(e);
         }
 
-        switch (xRTFileTemplate.INSTANCE.invokeResolve(frame, file, hRepo,
+        xRTFileTemplate templateFile = frame.container().getTemplate("_native.reflect.RTFileTemplate",
+                xRTFileTemplate.class);
+        switch (templateFile.invokeResolve(frame, file, hRepo,
                     ahShared, ahAdditional, Op.A_STACK)) {
         case Op.R_NEXT:
             return completeResolveAndLink(frame, container, popModule(frame),
