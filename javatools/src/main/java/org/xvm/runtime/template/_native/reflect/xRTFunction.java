@@ -1,6 +1,8 @@
 package org.xvm.runtime.template._native.reflect;
 
 
+import java.util.Objects;
+
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
@@ -19,6 +21,7 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
@@ -40,31 +43,29 @@ import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native Function implementation.
  */
 public class xRTFunction
         extends xRTSignature {
-    public static xRTFunction INSTANCE;
 
-    public xRTFunction(Container container, ClassStructure structure, boolean fInstance) {
+    public static xRTFunction getInstance(Frame frame) {
+        return NativeTemplates.get(frame).function();
+    }
+
+    public static xRTFunction getInstance(Container container) {
+        return NativeTemplates.get(container).function();
+    }
+
+    public xRTFunction(Container container, ClassStructure structure) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void initNative() {
-        ConstantPool pool = f_container.getConstantPool();
-
-        TO_ARRAY = getStructure().findMethod("toArray", 1);
-
-        FUNCTION_ARRAY_TYPE  = pool.ensureArrayType(pool.typeFunction());
-        EMPTY_FUNCTION_ARRAY = pool.ensureArrayConstant(FUNCTION_ARRAY_TYPE, Constant.NO_CONSTS);
-
         markNativeMethod("bind", new String[] {"reflect.Type<Object>", "reflect.Parameter", "Object"}, null);
         markNativeMethod("bind", new String[] {"maps.Map<reflect.Parameter, Object>"}, null);
         markNativeMethod("invoke", null, null);
@@ -217,10 +218,11 @@ public class xRTFunction
             }
         };
 
-        ObjectHandle[] ahArg = new ObjectHandle[TO_ARRAY.getMaxVars()];
+        MethodStructure methodToArray = f_methodToArray.get();
+        ObjectHandle[]  ahArg         = new ObjectHandle[methodToArray.getMaxVars()];
         ahArg[0] = hArg;
 
-        Frame frameNext = frame.createFrameN(TO_ARRAY, null, ahArg, new int[] {Op.A_STACK, Op.A_STACK});
+        Frame frameNext = frame.createFrameN(methodToArray, null, ahArg, new int[] {Op.A_STACK, Op.A_STACK});
         frameNext.addContinuation(stepBind);
         return frame.callInitialized(frameNext);
     }
@@ -312,10 +314,10 @@ public class xRTFunction
     private int constructListMap(Frame frame,
                                  ObjectHandle[] ahParam, ObjectHandle[] ahValue, int iReturn) {
         ObjectHandle haParams = xArray.createImmutableArray(xRTSignature.ensureParamArray(), ahParam);
-        ObjectHandle haValues = xArray.makeObjectArrayHandle(ahValue, Mutability.Constant);
+        ObjectHandle haValues = xArray.makeObjectArrayHandle(frame.container(), ahValue, Mutability.Constant);
 
         return Utils.constructListMap(frame,
-                frame.f_context.f_container.resolveClass(ensureListMapType()),
+                frame.container().resolveClass(ensureListMapType(frame.container())),
                 haParams, haValues, iReturn);
     }
 
@@ -383,7 +385,7 @@ public class xRTFunction
          * Instantiate an immutable FunctionHandle for a method.
          */
         protected FunctionHandle(Container container, CallChain chain, int nDepth) {
-            super(INSTANCE.ensureClass(container, chain.getMethod(nDepth).getIdentityConstant().
+            super(ensureFunctionClass(container, chain.getMethod(nDepth).getIdentityConstant().
                     getSignature().asFunctionType()), chain, nDepth);
 
             m_fMutable = false;
@@ -393,7 +395,7 @@ public class xRTFunction
          * Instantiate a mutable FunctionHandle for a method or function.
          */
         protected FunctionHandle(Container container, TypeConstant type, MethodStructure function) {
-            this(INSTANCE.ensureClass(container, type), type, function);
+            this(ensureFunctionClass(container, type), type, function);
         }
 
         /**
@@ -718,10 +720,10 @@ public class xRTFunction
      */
     public static class NativeFunctionHandle
             extends FunctionHandle {
-        public NativeFunctionHandle(xService.NativeOperation op) {
-            super(INSTANCE.f_container, INSTANCE.getCanonicalType(), null);
+        public NativeFunctionHandle(Container container, xService.NativeOperation op) {
+            super(container, canonicalType(container), null);
 
-            f_op       = op;
+            f_op       = Objects.requireNonNull(op, "op");
             m_fMutable = false;
         }
 
@@ -867,7 +869,7 @@ public class xRTFunction
         protected FullyBoundHandle m_next;
 
         protected FullyBoundHandle(Container container, FunctionHandle hDelegate, ObjectHandle[] ahArg) {
-            super(container, hDelegate == null ? INSTANCE.getCanonicalType() : hDelegate.getType(), hDelegate);
+            super(container, hDelegate == null ? canonicalType(container) : hDelegate.getType(), hDelegate);
 
             f_ahArg = ahArg;
         }
@@ -914,7 +916,7 @@ public class xRTFunction
         }
 
         public FullyBoundHandle chain(FullyBoundHandle handle) {
-            if (handle != NO_OP) {
+            if (!(handle instanceof NoOpHandle)) {
                 assert m_next == null;
                 m_next = handle;
             }
@@ -949,8 +951,16 @@ public class xRTFunction
             return frameThis;
         }
 
-        public static FullyBoundHandle NO_OP =
-                new FullyBoundHandle(INSTANCE.f_container, null, Utils.OBJECTS_NONE) {
+        public static FullyBoundHandle noOp(Container container) {
+            return new NoOpHandle(container);
+        }
+
+        private static class NoOpHandle
+                extends FullyBoundHandle {
+            private NoOpHandle(Container container) {
+                super(container, null, Utils.OBJECTS_NONE);
+            }
+
             @Override
             public int callChain(Frame frame, ObjectHandle hTarget, Frame.Continuation continuation) {
                 return continuation.proceed(frame);
@@ -965,7 +975,7 @@ public class xRTFunction
             public String toString() {
                 return "NO_OP";
             }
-        };
+        }
     }
 
     /**
@@ -1253,14 +1263,18 @@ public class xRTFunction
     /**
      * Create a function handle representing an asynchronous (service) native call.
      *
+     * @param frame   the current frame
      * @param method  the method structure
      *
      * @return the corresponding function handle
      */
-    public static AsyncHandle makeAsyncNativeHandle(MethodStructure method) {
+    public static AsyncHandle makeAsyncNativeHandle(Frame frame, MethodStructure method) {
+        Objects.requireNonNull(frame, "frame");
+        Objects.requireNonNull(method, "method");
+
         assert method.isNative();
 
-        return new AsyncHandle(INSTANCE.f_container, method);
+        return new AsyncHandle(frame.container(), method);
     }
 
     /**
@@ -1276,8 +1290,20 @@ public class xRTFunction
      * The returned handle will not carry any annotations
      */
     public static FunctionHandle makeInternalHandle(Frame frame, MethodStructure function) {
-        Container container = frame == null ? INSTANCE.f_container : frame.f_context.f_container;
-        return new FunctionHandle(container, function);
+        return makeInternalHandle(Objects.requireNonNull(frame, "frame").container(), function);
+    }
+
+    /**
+     * Create an immutable FunctionHandle for a given function.
+     *
+     * The returned handle will not carry any annotations.
+     */
+    public static FunctionHandle makeInternalHandle(Container container, MethodStructure function) {
+        // Function handles carry a composition from their owning runtime. Require the owner
+        // explicitly instead of falling back to xRTFunction.INSTANCE, which is process-global.
+        return new FunctionHandle(
+                Objects.requireNonNull(container, "container"),
+                Objects.requireNonNull(function, "function"));
     }
 
     /**
@@ -1286,7 +1312,7 @@ public class xRTFunction
      * The returned handle could be deferred.
      */
     public static ObjectHandle makeHandle(Frame frame, MethodStructure function) {
-        Container container = frame == null ? INSTANCE.f_container : frame.f_context.f_container;
+        Container container = Objects.requireNonNull(frame, "frame").container();
 
         Annotation[] aAnno = function.getAnnotations();
 
@@ -1294,7 +1320,7 @@ public class xRTFunction
             TypeConstant type = function.getIdentityConstant().getSignature().asFunctionType();
             type = container.getConstantPool().ensureAnnotatedTypeConstant(type, aAnno);
 
-            TypeComposition clzFunction = INSTANCE.ensureClass(container, function);
+            TypeComposition clzFunction = ensureFunctionClass(container, function);
             FunctionHandle  hStruct     = new FunctionHandle(clzFunction.
                                             ensureAccess(Constants.Access.STRUCT), type, function);
 
@@ -1318,14 +1344,14 @@ public class xRTFunction
         TypeComposition clzConstruct;
 
         if (constructor == null) {
-            clzConstruct = INSTANCE.ensureClass(container, typeConstructor);
+            clzConstruct = ensureFunctionClass(container, typeConstructor);
         } else {
             Annotation[] aAnno = constructor.getAnnotations();
             if (aAnno.length > 0) {
                 typeConstructor = container.getConstantPool().
                         ensureAnnotatedTypeConstant(typeConstructor, aAnno);
 
-                TypeComposition clzConstructor = INSTANCE.ensureClass(container, constructor).
+                TypeComposition clzConstructor = ensureFunctionClass(container, constructor).
                         ensureAccess(Constants.Access.STRUCT);
 
                 ConstructorHandle hConstructor = new ConstructorHandle(
@@ -1335,7 +1361,7 @@ public class xRTFunction
                                     frame, null, true, hConstructor, Utils.OBJECTS_NONE, Op.A_STACK);
                 return frame.popResultImmutable(iResult);
             } else {
-                clzConstruct = INSTANCE.ensureClass(container, constructor);
+                clzConstruct = ensureFunctionClass(container, constructor);
             }
         }
 
@@ -1463,17 +1489,21 @@ public class xRTFunction
      * @return the TypeComposition for an Array of Function
      */
     public static TypeComposition ensureArrayComposition(Container container) {
-        return container.ensureClassComposition(FUNCTION_ARRAY_TYPE, xArray.INSTANCE);
+        xRTFunction template = template(container);
+        return container.ensureClassComposition(
+                template.f_typeFunctionArray.get(), xArray.getInstance(container));
     }
 
     /**
      * @return the handle for an empty Array of Function
      */
     public static ArrayHandle ensureEmptyArray(Container container) {
-        ArrayHandle haEmpty = (ArrayHandle) container.f_heap.getConstHandle(EMPTY_FUNCTION_ARRAY);
+        xRTFunction   template   = template(container);
+        ArrayConstant constEmpty = template.f_constEmptyFunctionArray.get();
+        ArrayHandle   haEmpty    = (ArrayHandle) container.f_heap.getConstHandle(constEmpty);
         if (haEmpty == null) {
             haEmpty = xArray.createImmutableArray(ensureArrayComposition(container), Utils.OBJECTS_NONE);
-            container.f_heap.saveConstHandle(EMPTY_FUNCTION_ARRAY, haEmpty);
+            container.f_heap.saveConstHandle(constEmpty, haEmpty);
         }
         return haEmpty;
     }
@@ -1481,15 +1511,12 @@ public class xRTFunction
     /**
      * @return the TypeConstant for a ListMap<Parameter, Object>
      */
-    public static TypeConstant ensureListMapType() {
-        TypeConstant type = LISTMAP_TYPE;
-        if (type == null) {
-            ConstantPool pool = INSTANCE.pool();
-            LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
-                    pool.ensureEcstasyTypeConstant("maps.ListMap"),
-                    pool.typeParameter(), pool.typeObject());
-        }
-        return type;
+    public static TypeConstant ensureListMapType(Container container) {
+        // ConstantPool interning keeps this cached in the caller's owner. A static LISTMAP_TYPE
+        // would pin the first initialized container and leak it into later containers.
+        return Objects.requireNonNull(container, "container").
+                getTemplate("_native.reflect.RTFunction", xRTFunction.class).
+                f_typeListMap.get();
     }
 
     /**
@@ -1515,13 +1542,41 @@ public class xRTFunction
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static TypeConstant  FUNCTION_ARRAY_TYPE;
-    private static ArrayConstant EMPTY_FUNCTION_ARRAY;
-    private static TypeConstant  LISTMAP_TYPE;
+    // These caches are derived from this template's ConstantPool and structure. Keeping them lazy
+    // and final preserves the old interning/handle caching behavior without leaking one container's
+    // metadata into another container through process-global mutable statics.
+    private final Lazy<TypeConstant> f_typeFunctionArray = Lazy.of(() ->
+            pool().ensureArrayType(pool().typeFunction()));
+
+    private final Lazy<ArrayConstant> f_constEmptyFunctionArray = Lazy.of(() ->
+            pool().ensureArrayConstant(f_typeFunctionArray.get(), Constant.NO_CONSTS));
+
+    private final Lazy<TypeConstant> f_typeListMap = Lazy.of(() ->
+            pool().ensureParameterizedTypeConstant(
+                    pool().ensureEcstasyTypeConstant("maps.ListMap"),
+                    pool().typeParameter(), pool().typeObject()));
 
     /**
      * RTFunction:
      *      static (Int[], Object[]) toArray(Map<Parameter, Object> params)
      */
-    private static MethodStructure TO_ARRAY;
+    private final Lazy<MethodStructure> f_methodToArray = Lazy.of(() ->
+            getStructure().findMethod("toArray", 1));
+
+    private static xRTFunction template(Container container) {
+        return getInstance(Objects.requireNonNull(container, "container"));
+    }
+
+    private static TypeConstant canonicalType(Container container) {
+        return template(container).getCanonicalType();
+    }
+
+    private static TypeComposition ensureFunctionClass(Container container, TypeConstant type) {
+        return template(container).ensureClass(container, type);
+    }
+
+    private static TypeComposition ensureFunctionClass(Container container, MethodStructure function) {
+        return template(container).ensureClass(container, function);
+    }
+
 }

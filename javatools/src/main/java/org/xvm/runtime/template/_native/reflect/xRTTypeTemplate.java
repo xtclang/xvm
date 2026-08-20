@@ -22,6 +22,7 @@ import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
@@ -44,31 +45,29 @@ import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.GenericAr
 
 import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTemplateHandle;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native TypeTemplate implementation.
  */
 public class xRTTypeTemplate
         extends xConst {
-    public static xRTTypeTemplate INSTANCE;
 
-    public xRTTypeTemplate(Container container, ClassStructure structure, boolean fInstance) {
+    public static xRTTypeTemplate getInstance(Frame frame) {
+        return NativeTemplates.get(frame).typeTemplate();
+    }
+
+    public static xRTTypeTemplate getInstance(Container container) {
+        return NativeTemplates.get(container).typeTemplate();
+    }
+
+    public xRTTypeTemplate(Container container, ClassStructure structure) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void initNative() {
-        ConstantPool pool = f_container.getConstantPool();
-
-        TEMPLATE_ARRAY_TYPE = pool.ensureArrayType(
-                                pool.ensureEcstasyTypeConstant("reflect.TypeTemplate"));
-
-        CREATE_COMPOSITION_METHOD = f_struct.findMethod("createComposition", 2);
-
         markNativeProperty("desc");
         markNativeProperty("explicitlyImmutable");
         markNativeProperty("form");
@@ -196,8 +195,9 @@ public class xRTTypeTemplate
      * @return the resulting {@link TypeTemplateHandle}
      */
     public static TypeTemplateHandle makeHandle(Container container, TypeConstant type) {
-        ConstantPool    pool = INSTANCE.pool();
-        TypeComposition clz  = INSTANCE.ensureClass(container, INSTANCE.getCanonicalType(),
+        xRTTypeTemplate template = NativeTemplates.get(container).typeTemplate();
+        ConstantPool    pool     = template.pool();
+        TypeComposition clz      = template.ensureClass(container, template.getCanonicalType(),
                 pool.ensureEcstasyTypeConstant("reflect.TypeTemplate"));
         return new TypeTemplateHandle(clz, type);
     }
@@ -296,11 +296,11 @@ public class xRTTypeTemplate
 
         TypeTemplateHandle[] ahTypes = new TypeTemplateHandle[aUnderlying.length];
         for (int i = 0, c = ahTypes.length; i < c; ++i) {
-            ahTypes[i] = makeHandle(frame.f_context.f_container, aUnderlying[i]);
+            ahTypes[i] = makeHandle(frame.container(), aUnderlying[i]);
         }
 
         ObjectHandle hArray = xArray.createImmutableArray(
-                                ensureArrayClassComposition(frame.f_context.f_container), ahTypes);
+                                ensureArrayClassComposition(frame.container()), ahTypes);
         return frame.assignValue(iReturn, hArray);
     }
 
@@ -334,7 +334,7 @@ public class xRTTypeTemplate
             int              cArgs      = aconstArg.length;
 
             ComponentTemplateHandle hClass = xRTComponentTemplate.makeComponentHandle(
-                    frame.f_context.f_container, idClass.getComponent());
+                    frame.container(), idClass.getComponent());
 
             ObjectHandle[] ahArg;
             if (cArgs == 0) {
@@ -370,7 +370,7 @@ public class xRTTypeTemplate
         // REVIEW GG + CP: include PropertyClassTypeConstant?
         if (typeTarget.isVirtualChild() || typeTarget.isAnonymousClass()) {
             TypeTemplateHandle hParent =
-                    makeHandle(frame.f_context.f_container, typeTarget.getParentType());
+                    makeHandle(frame.container(), typeTarget.getParentType());
             return frame.assignValues(aiReturn, xBoolean.TRUE, hParent);
         } else {
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
@@ -394,7 +394,7 @@ public class xRTTypeTemplate
         }
 
         ComponentTemplateHandle hClass =
-                xRTComponentTemplate.makeComponentHandle(frame.f_context.f_container, clz);
+                xRTComponentTemplate.makeComponentHandle(frame.container(), clz);
 
         return type.isAnnotated()
                 ? new CreateAnnotationComposition(hClass, type.getAnnotations(), aiReturn).doNext(frame)
@@ -440,7 +440,7 @@ public class xRTTypeTemplate
         TypeConstant type = hType.getDataType();
         return type.isModifyingType()
                 ? frame.assignValues(aiReturn, xBoolean.TRUE,
-                        makeHandle(frame.f_context.f_container, type.getUnderlyingType()))
+                        makeHandle(frame.container(), type.getUnderlyingType()))
                 : frame.assignValue(aiReturn[0], xBoolean.FALSE);
     }
 
@@ -449,7 +449,7 @@ public class xRTTypeTemplate
      */
     public int invokeRelational(Frame frame, TypeTemplateHandle hType, int[] aiReturn) {
         TypeConstant type      = hType.getDataType();
-        Container    container = frame.f_context.f_container;
+        Container    container = frame.container();
         return type.isRelationalType()
             ? frame.assignValues(aiReturn, xBoolean.TRUE,
                     makeHandle(container, type.getUnderlyingType()),
@@ -470,11 +470,11 @@ public class xRTTypeTemplate
         int                  cTypes  = atypes.length;
         TypeTemplateHandle[] ahTypes = new TypeTemplateHandle[cTypes];
         for (int i = 0; i < cTypes; ++i) {
-            ahTypes[i] = makeHandle(frame.f_context.f_container, atypes[i]);
+            ahTypes[i] = makeHandle(frame.container(), atypes[i]);
         }
 
         ObjectHandle hArray = xArray.createImmutableArray(
-                ensureArrayClassComposition(frame.f_context.f_container), ahTypes);
+                ensureArrayClassComposition(frame.container()), ahTypes);
         return frame.assignValues(aiReturn, xBoolean.TRUE, hArray);
     }
 
@@ -509,7 +509,7 @@ public class xRTTypeTemplate
             // TODO: validate constraints
         }
         return frame.assignValue(iReturn,
-                makeHandle(frame.f_context.f_container,
+                makeHandle(frame.container(),
                 frame.poolContext().ensureParameterizedTypeConstant(typeThis, aTypes)));
     }
 
@@ -554,7 +554,7 @@ public class xRTTypeTemplate
 
                 AnnotatedTypeConstant typeAnno =
                         pool.ensureAnnotatedTypeConstant(idMixin, aconst, typeThis);
-                return frame.assignValue(iReturn, makeHandle(frame.f_context.f_container, typeAnno));
+                return frame.assignValue(iReturn, makeHandle(frame.container(), typeAnno));
             }
         }
         return frame.raiseException("Invalid annotation: " + idMixin.getValueString());
@@ -571,7 +571,7 @@ public class xRTTypeTemplate
         return typeR == null
                 ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
                 : frame.assignValues(aiReturn, xBoolean.TRUE,
-                    makeHandle(frame.f_context.f_container, typeR));
+                    makeHandle(frame.container(), typeR));
     }
 
 
@@ -581,11 +581,10 @@ public class xRTTypeTemplate
      * @return the TypeComposition for an Array of TypeTemplate
      */
     public static TypeComposition ensureArrayClassComposition(Container container) {
-        return container.ensureClassComposition(TEMPLATE_ARRAY_TYPE, xArray.INSTANCE);
+        xRTTypeTemplate template = NativeTemplates.get(container).typeTemplate();
+        return container.ensureClassComposition(
+                template.f_typeTemplateArray.get(), xArray.getInstance(container));
     }
-
-    private static TypeConstant TEMPLATE_ARRAY_TYPE;
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -598,7 +597,7 @@ public class xRTTypeTemplate
      * @return the handle to the appropriate Ecstasy {@code Access} enum value
      */
     public EnumHandle makeAccessHandle(Frame frame, Constants.Access access) {
-        xEnum enumAccess = (xEnum) f_container.getTemplate("reflect.Access");
+        xEnum enumAccess = frame.container().getEnumTemplate("reflect.Access");
         switch (access) {
         case PUBLIC:
             return enumAccess.getEnumByName("Public");
@@ -626,7 +625,7 @@ public class xRTTypeTemplate
      * @return the handle to the appropriate Ecstasy {@code TypeTemplate.Form} enum value
      */
     protected EnumHandle makeFormHandle(Frame frame, TypeConstant type) {
-        xEnum enumForm = (xEnum) f_container.getTemplate("reflect.TypeTemplate.Form");
+        xEnum enumForm = frame.container().getEnumTemplate("reflect.TypeTemplate.Form");
 
         switch (type.getFormat()) {
         case ParameterizedType:
@@ -824,7 +823,7 @@ public class xRTTypeTemplate
                 ClassStructure clzAnno = (ClassStructure) idAnno.getComponent();
 
                 ComponentTemplateHandle hAnnoClass = xRTComponentTemplate.
-                        makeComponentHandle(frameCaller.f_context.f_container, clzAnno);
+                        makeComponentHandle(frameCaller.container(), clzAnno);
 
                 int iResult = Utils.constructAnnotationTemplate(
                                 frameCaller, hAnnoClass, ahAnnoArg, Op.A_STACK);
@@ -840,13 +839,15 @@ public class xRTTypeTemplate
             }
 
             TypeComposition clzArray = xRTClassTemplate.
-                    ensureAnnotationTemplateArrayComposition(frameCaller.f_context.f_container);
+                    ensureAnnotationTemplateArrayComposition(frameCaller.container());
 
-            ObjectHandle[] ahVar = new ObjectHandle[CREATE_COMPOSITION_METHOD.getMaxVars()];
+            MethodStructure methodCreateComposition =
+                    xRTTypeTemplate.getInstance(frameCaller).f_methodCreateComposition.get();
+            ObjectHandle[] ahVar = new ObjectHandle[methodCreateComposition.getMaxVars()];
             ahVar[0] = hClass;
             ahVar[1] = xArray.createImmutableArray(clzArray, ahAnno);
 
-            return frameCaller.callN(CREATE_COMPOSITION_METHOD, null, ahVar, aiReturn);
+            return frameCaller.callN(methodCreateComposition, null, ahVar, aiReturn);
         }
 
         enum Stage {ArgValue, Argument, Template}
@@ -864,5 +865,9 @@ public class xRTTypeTemplate
         private MethodStructure               constructor;
     }
 
-    private static MethodStructure CREATE_COMPOSITION_METHOD;
+    private final Lazy<TypeConstant> f_typeTemplateArray = Lazy.of(() ->
+            pool().ensureArrayType(pool().ensureEcstasyTypeConstant("reflect.TypeTemplate")));
+
+    private final Lazy<MethodStructure> f_methodCreateComposition = Lazy.of(() ->
+            f_struct.findMethod("createComposition", 2));
 }

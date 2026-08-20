@@ -1332,6 +1332,13 @@ public class Frame
     }
 
     /**
+     * @return the container that owns this frame
+     */
+    public Container container() {
+        return f_context.f_container;
+    }
+
+    /**
      * @return an ObjectHandle for the constant (could be a DeferredCallHandle)
      */
     public ObjectHandle getConstHandle(Constant constant) {

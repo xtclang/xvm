@@ -37,7 +37,7 @@ public class xRTViewToBitFromFloat64
     public static xRTViewToBitFromFloat64 INSTANCE;
 
     public xRTViewToBitFromFloat64(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;

@@ -67,13 +67,13 @@ public class MainContainer
             if (typeRequired.equals(typeStrings)) {
                 // require String[], return the whole List<String> as an array
                 String[] asValue = listValue.toArray(String[]::new);
-                return xString.makeArrayHandle(asValue);
+                return xString.makeArrayHandle(this, asValue);
             }
             if (typeRequired.isEnum()) {
                 TypeComposition clz    = typeRequired.ensureClass(frame);
-                xEnum           en     = (xEnum) clz.getTemplate();
+                xEnum           en     = clz.getTemplate(xEnum.class);
                 String          sValue = listValue.getLast();
-                ObjectHandle    handle = en.getEnumByName(sValue);
+                ObjectHandle    handle = en.ensureEnumByName(frame, sValue);
                 if (handle == null) {
                     // a value was injected that does not match any of the enum values
                     String msg = "Injectable " + sName + "=\"" + sValue
@@ -203,7 +203,7 @@ public class MainContainer
             CallChain         chain      = clzModule.getMethodCallChain(sigMethod);
             boolean           fReturn    = sigMethod.getReturnCount() > 0;
 
-            FunctionHandle hInstantiateModuleAndRun = new NativeFunctionHandle((frame, ah, iRet) -> {
+            FunctionHandle hInstantiateModuleAndRun = new NativeFunctionHandle(this, (frame, ah, iRet) -> {
                 SingletonConstant idModule = frame.poolContext().ensureSingletonConstConstant(f_idModule);
                 ObjectHandle      hModule  = frame.getConstHandle(idModule);
                 int               iReturn  = fReturn ? Op.A_STACK : Op.A_IGNORE;

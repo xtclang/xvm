@@ -41,7 +41,7 @@ public abstract class LongBasedDelegate
         implements BitView {
     protected LongBasedDelegate(Container container, ClassStructure structure,
                                 int nBitsPerValue, boolean fSigned) {
-        super(container, structure, false);
+        super(container, structure);
 
         // note: assumption is that all bit counts are a power of two
         assert Integer.bitCount(nBitsPerValue) == 1;

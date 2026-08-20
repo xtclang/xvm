@@ -31,7 +31,7 @@ public class xRTNetworkInterface
     public static xRTNetworkInterface INSTANCE;
 
     public xRTNetworkInterface(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;
@@ -78,7 +78,7 @@ public class xRTNetworkInterface
 
         if (frame.f_context != hService.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
-            return xRTFunction.makeAsyncNativeHandle(method).callN(frame, hTarget, ahArg, aiReturn);
+            return xRTFunction.makeAsyncNativeHandle(frame, method).callN(frame, hTarget, ahArg, aiReturn);
         }
 
         switch (method.getName()) {

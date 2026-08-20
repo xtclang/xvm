@@ -14,7 +14,7 @@ public abstract class BitBasedArray
     public static BitBasedArray INSTANCE;
 
     protected BitBasedArray(Container container, ClassStructure structure) {
-        super(container, structure, false);
+        super(container, structure);
     }
 
     @Override

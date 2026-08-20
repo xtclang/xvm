@@ -4,6 +4,7 @@ package org.xvm.runtime;
 import java.io.File;
 import java.io.IOException;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 
 import java.net.URLDecoder;
@@ -167,12 +168,13 @@ public class NativeContainer
             scanNativeDirectory(dirTemplates, "", mapTemplateClasses);
         }
 
-        // we need a number of INSTANCE static variables to be set up right away
-        // (they are used by the ClassTemplate constructor)
+        // Legacy templates still using constructor-published INSTANCE fields need these anchors set
+        // up before reflective template loading. Converted base templates resolve through
+        // NativeTemplates and do not publish from their constructors.
         storeNativeTemplate(new xObject (this, getClassStructure("Object"),  true));
-        storeNativeTemplate(new xEnum   (this, getClassStructure("Enum"),    true));
+        storeNativeTemplate(new xEnum   (this, getClassStructure("Enum")));
         storeNativeTemplate(new xConst  (this, getClassStructure("Const"),   true));
-        storeNativeTemplate(new xService(this, getClassStructure("Service"), true));
+        storeNativeTemplate(new xService(this, getClassStructure("Service")));
 
         for (Map.Entry<String, Class> entry : mapTemplateClasses.entrySet()) {
             ClassStructure structClass = getClassStructure(entry.getKey());
@@ -192,9 +194,7 @@ public class NativeContainer
             Class<ClassTemplate> clz = entry.getValue();
             if (!Modifier.isAbstract(clz.getModifiers())) {
                 try {
-                    storeNativeTemplate(clz.getConstructor(
-                        Container.class, ClassStructure.class, Boolean.TYPE).
-                        newInstance(this, structClass, Boolean.TRUE));
+                    storeNativeTemplate(instantiateNativeTemplate(clz, structClass));
                 } catch (Exception e) {
                     throw new LauncherException(true, "Constructor failed for " + clz.getName(), e);
                 }
@@ -202,8 +202,8 @@ public class NativeContainer
         }
 
         // add run-time templates
-        f_mapTemplatesByType.put(pool.typeFunction(), xRTFunction.INSTANCE);
-        f_mapTemplatesByType.put(pool.typeType()    , xRTType.INSTANCE);
+        f_mapTemplatesByType.put(pool.typeFunction(), xRTFunction.getInstance(this));
+        f_mapTemplatesByType.put(pool.typeType()    , xRTType.getInstance(this));
 
         // clone the map since the loop below can add to it
         Set<ClassTemplate> setTemplates = new HashSet<>(f_mapTemplatesByType.values());
@@ -366,7 +366,7 @@ public class NativeContainer
         addResourceSupplier(new InjectionKey("server", typeServer), templateServer::ensureServer);
 
         // +++ mgmt.Linker
-        xContainerLinker templateLinker = xContainerLinker.INSTANCE;
+        xContainerLinker templateLinker = xContainerLinker.getInstance(this);
         TypeConstant     typeLinker     = templateLinker.getCanonicalType();
         addResourceSupplier(new InjectionKey("linker", typeLinker), templateLinker::ensureLinker);
 
@@ -527,8 +527,10 @@ public class NativeContainer
                     }
                 }
             }
-            ObjectHandle haKeys   = xArray.makeStringArrayHandle(listKeys.toArray(Utils.STRINGS_NONE));
-            ObjectHandle haValues = xArray.makeStringArrayHandle(listVals.toArray(Utils.STRINGS_NONE));
+            ObjectHandle haKeys   = xArray.makeStringArrayHandle(this,
+                    listKeys.toArray(Utils.STRINGS_NONE));
+            ObjectHandle haValues = xArray.makeStringArrayHandle(this,
+                    listVals.toArray(Utils.STRINGS_NONE));
 
             ConstantPool pool       = getConstantPool();
             TypeConstant typeReveal = pool.ensureMapType(pool.typeString(), pool.typeString());
@@ -766,6 +768,19 @@ public class NativeContainer
      */
     protected void registerNativeTemplate(TypeConstant type, ClassTemplate template) {
         f_mapTemplatesByType.putIfAbsent(type, template);
+    }
+
+    private ClassTemplate instantiateNativeTemplate(
+            Class<ClassTemplate> clz, ClassStructure structClass) throws Exception {
+        try {
+            Constructor<ClassTemplate> constructor =
+                    clz.getConstructor(Container.class, ClassStructure.class);
+            return constructor.newInstance(this, structClass);
+        } catch (NoSuchMethodException ignore) {
+            Constructor<ClassTemplate> constructor =
+                    clz.getConstructor(Container.class, ClassStructure.class, Boolean.TYPE);
+            return constructor.newInstance(this, structClass, Boolean.TRUE);
+        }
     }
 
     /**

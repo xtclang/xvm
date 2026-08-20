@@ -31,7 +31,7 @@ public class xRTFloat64Delegate
     public static xRTFloat64Delegate INSTANCE;
 
     public xRTFloat64Delegate(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;

@@ -176,7 +176,8 @@ public abstract class xConstrainedInteger
             long l = ((JavaLong) hTarget).getValue();
 
             return frame.assignValue(iReturn, xArray.makeBitArrayHandle(
-                toByteArray(l, f_cNumBits >>> 3), f_cNumBits, Mutability.Constant));
+                frame.container(), toByteArray(l, f_cNumBits >>> 3), f_cNumBits,
+                Mutability.Constant));
         }
 
         case "bitCount": {

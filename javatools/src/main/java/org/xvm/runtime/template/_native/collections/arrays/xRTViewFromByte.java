@@ -5,6 +5,7 @@ import org.xvm.asm.ClassStructure;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
@@ -17,19 +18,14 @@ import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.Sl
  */
 public class xRTViewFromByte
         extends xRTView {
-    public static xRTViewFromByte INSTANCE;
 
-    public xRTViewFromByte(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTViewFromByte(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void registerNativeTemplates() {
-        if (this == INSTANCE) {
+        if (NativeTemplates.get(this).isViewFromByte(this)) {
             registerNativeTemplate(new xRTViewFromByteToInt8   (f_container, f_struct, true));
             registerNativeTemplate(new xRTViewFromByteToInt16  (f_container, f_struct, true));
             registerNativeTemplate(new xRTViewFromByteToInt64  (f_container, f_struct, true));

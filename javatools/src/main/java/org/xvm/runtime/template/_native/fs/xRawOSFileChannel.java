@@ -199,7 +199,8 @@ public class xRawOSFileChannel
                 int cbRead = cfRead.get().intValue();
                 return frameCaller.assignValue(iReturn, cbRead < 0
                         ? xInt64.makeHandle(-1)
-                        : xArray.makeByteArrayHandle(buffer.array(), cbRead, Mutability.Constant));
+                        : xArray.makeByteArrayHandle(frameCaller.container(), buffer.array(), cbRead,
+                                Mutability.Constant));
             } catch (InterruptedException | ExecutionException e) {
                 return xOSFileNode.raisePathException(frameCaller, e, hChannel.f_path);
             }

@@ -85,7 +85,7 @@ public class xRTKeyStore
     public static xRTKeyStore INSTANCE;
 
     public xRTKeyStore(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;
@@ -214,7 +214,7 @@ public class xRTKeyStore
             try {
                 ArrayList<String> listNames = Collections.list(hStore.f_keyStore.aliases());
                 return frame.assignValue(iReturn,
-                        xString.makeArrayHandle(listNames.toArray(Utils.NO_NAMES)));
+                        xString.makeArrayHandle(frame.container(), listNames.toArray(Utils.NO_NAMES)));
             } catch (KeyStoreException e) {
                 return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
             }
@@ -342,14 +342,15 @@ public class xRTKeyStore
             list.add(xInt64.makeHandle(nVersion));
             addDate(dateNotBefore, list);
             addDate(dateNotAfter, list);
-            list.add(xArray.makeBooleanArrayHandle(abUsage, cUsage, Mutability.Constant));
+            list.add(xArray.makeBooleanArrayHandle(frame.container(), abUsage, cUsage,
+                    Mutability.Constant));
             list.add(xString.makeHandle(sSigAlgName));
-            list.add(xByteArray.makeByteArrayHandle(abSignature, Mutability.Constant));
+            list.add(xByteArray.makeByteArrayHandle(frame.container(), abSignature, Mutability.Constant));
             list.add(xString.makeHandle(sAlgorithm));
             list.add(xInt64.makeHandle(cKeyBits >>> 3));
-            list.add(xByteArray.makeByteArrayHandle(abPublic, Mutability.Constant));
+            list.add(xByteArray.makeByteArrayHandle(frame.container(), abPublic, Mutability.Constant));
             list.add(new SecretHandle(publicKey));
-            list.add(xByteArray.makeByteArrayHandle(abDer, Mutability.Constant));
+            list.add(xByteArray.makeByteArrayHandle(frame.container(), abDer, Mutability.Constant));
 
             return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
         } catch (GeneralSecurityException e) {
@@ -461,10 +462,11 @@ public class xRTKeyStore
                 list.add(new SecretHandle(key));
                 if (publicKey == null) {
                     list.add(xNullable.NULL);
-                    list.add(xArray.ensureEmptyByteArray());
+                    list.add(xArray.ensureEmptyByteArray(frame.container()));
                 } else {
                     list.add(new SecretHandle(publicKey));
-                    list.add(xArray.makeByteArrayHandle(abPublic, Mutability.Constant));
+                    list.add(xArray.makeByteArrayHandle(frame.container(), abPublic,
+                            Mutability.Constant));
                 }
                 return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
             }

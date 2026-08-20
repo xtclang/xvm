@@ -201,7 +201,7 @@ public class xConst
             byte[] abValue = new byte[] {(byte) (((ByteConstant) constant).getValue().byteValue() << 4)};
 
             ObjectHandle[] ahArg = new ObjectHandle[NIBBLE_CONSTRUCT.getMaxVars()];
-            ahArg[0] = xArray.makeBitArrayHandle(abValue, 4, Mutability.Constant);
+            ahArg[0] = xArray.makeBitArrayHandle(frame.container(), abValue, 4, Mutability.Constant);
 
             return construct(frame, NIBBLE_CONSTRUCT,
                     ensureClass(frame.f_context.f_container, constant.getType()),
@@ -256,7 +256,7 @@ public class xConst
                     ObjectHandle[] ahFreezable = listFreezable.toArray(Utils.OBJECTS_NONE);
                     FieldInfo[]    aFieldInfo  = listInfo.toArray(NO_FIELDS);
                     ArrayHandle    haValues    =
-                        xArray.makeObjectArrayHandle(ahFreezable, Mutability.Fixed);
+                        xArray.makeObjectArrayHandle(frame.container(), ahFreezable, Mutability.Fixed);
 
                     ObjectHandle[] ahVars = new ObjectHandle[FN_FREEZE.getMaxVars()];
                     ahVars[0] = haValues;
@@ -425,8 +425,8 @@ public class xConst
         StringHandle[] ahNames  = clz.getFieldNameArray();
         ObjectHandle[] ahFields = clz.getFieldValueArray(frame, hConst);
         if (ahNames.length > 0) {
-            ObjectHandle hNames  = xArray.makeStringArrayHandle(ahNames);
-            ObjectHandle hValues = xArray.makeObjectArrayHandle(ahFields, Mutability.Constant);
+            ObjectHandle hNames  = xArray.makeStringArrayHandle(frame.container(), ahNames);
+            ObjectHandle hValues = xArray.makeObjectArrayHandle(frame.container(), ahFields, Mutability.Constant);
 
             // estimateStringLength(String[] names, Object[] fields)
             ObjectHandle[] ahVars = new ObjectHandle[FN_ESTIMATE_LENGTH.getMaxVars()];
@@ -456,8 +456,8 @@ public class xConst
         StringHandle[] ahNames  = clz.getFieldNameArray();
         ObjectHandle[] ahFields = clz.getFieldValueArray(frame, hConst);
 
-        ObjectHandle hNames  = xArray.makeStringArrayHandle(ahNames);
-        ObjectHandle hValues = xArray.makeObjectArrayHandle(ahFields, Mutability.Constant);
+        ObjectHandle hNames  = xArray.makeStringArrayHandle(frame.container(), ahNames);
+        ObjectHandle hValues = xArray.makeObjectArrayHandle(frame.container(), ahFields, Mutability.Constant);
 
         // appendTo(Appender<Char> appender, String[] names, Object[] fields)
         ObjectHandle[] ahVars = new ObjectHandle[FN_APPEND_TO.getMaxVars()];

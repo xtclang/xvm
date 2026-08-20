@@ -94,7 +94,7 @@ public class xRTServer
     public static xRTServer INSTANCE;
 
     public xRTServer(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;
@@ -190,19 +190,19 @@ public class xRTServer
         case "setHeaders":
             return frame.f_context == hServer.f_context
                     ? invokeSetHeaders(frame, ahArg)
-                    : xRTFunction.makeAsyncNativeHandle(method).
+                    : xRTFunction.makeAsyncNativeHandle(frame, method).
                             call1(frame, hServer, ahArg, iReturn);
 
         case "setBodyBytes":
             return frame.f_context == hServer.f_context
                     ? invokeSetBodyBytes(frame, ahArg)
-                    : xRTFunction.makeAsyncNativeHandle(method).
+                    : xRTFunction.makeAsyncNativeHandle(frame, method).
                             call1(frame, hServer, ahArg, iReturn);
 
         case "readBody":
             return frame.f_context == hServer.f_context
                     ? invokeReadBody(frame, ahArg, iReturn)
-                    : xRTFunction.makeAsyncNativeHandle(method).
+                    : xRTFunction.makeAsyncNativeHandle(frame, method).
                             call1(frame, hServer, ahArg, iReturn);
 
         case "closeImpl":
@@ -438,7 +438,7 @@ public class xRTServer
         int               nPort = addr.getPort();
 
         return frame.assignValues(aiResult,
-                xByteArray.makeByteArrayHandle(ab, Mutability.Constant),
+                xByteArray.makeByteArrayHandle(frame.container(), ab, Mutability.Constant),
                 xUInt16.INSTANCE.makeJavaLong(nPort));
     }
 
@@ -451,7 +451,7 @@ public class xRTServer
         int               nPort = addr.getPort();
 
         return frame.assignValues(aiResult,
-                xByteArray.makeByteArrayHandle(ab, Mutability.Constant),
+                xByteArray.makeByteArrayHandle(frame.container(), ab, Mutability.Constant),
                 xUInt16.INSTANCE.makeJavaLong(nPort));
     }
 
@@ -486,7 +486,7 @@ public class xRTServer
         Headers headers = hCtx.f_exchange.getRequestHeaders();
 
         return frame.assignValue(iResult,
-                xString.makeArrayHandle(headers.keySet().toArray(Utils.NO_NAMES)));
+                xString.makeArrayHandle(frame.container(), headers.keySet().toArray(Utils.NO_NAMES)));
     }
 
     /**
@@ -504,7 +504,7 @@ public class xRTServer
         }
 
         return frame.assignValues(aiResult, xBoolean.TRUE,
-                xString.makeArrayHandle(listValues.toArray(Utils.NO_NAMES)));
+                xString.makeArrayHandle(frame.container(), listValues.toArray(Utils.NO_NAMES)));
     }
 
     /**
@@ -518,8 +518,8 @@ public class xRTServer
             InputStream in    = hCtx.f_exchange.getRequestBody();
             byte[]      ab    = in.readNBytes((int) Math.min(cb, Integer.MAX_VALUE));
             return frame.assignValue(iResult, ab.length == 0
-                    ? xByteArray.ensureEmptyByteArray()
-                    : xByteArray.makeByteArrayHandle(ab, Mutability.Constant));
+                    ? xByteArray.ensureEmptyByteArray(frame.container())
+                    : xByteArray.makeByteArrayHandle(frame.container(), ab, Mutability.Constant));
         } catch (IOException e) {
             return frame.raiseException(xException.obscureIoException(frame, e.getMessage()));
         }

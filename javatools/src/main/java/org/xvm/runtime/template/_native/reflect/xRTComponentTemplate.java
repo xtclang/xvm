@@ -17,6 +17,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
@@ -31,27 +32,32 @@ import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.text.xString;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native ComponentTemplate (abstract base class) implementation.
  */
 public class xRTComponentTemplate
         extends ClassTemplate {
-    public static xRTComponentTemplate INSTANCE;
 
-    public xRTComponentTemplate(Container container, ClassStructure structure, boolean fInstance) {
+    public static xRTComponentTemplate getInstance(Frame frame) {
+        return NativeTemplates.get(frame).componentTemplate();
+    }
+
+    public static xRTComponentTemplate getInstance(Container container) {
+        return NativeTemplates.get(container).componentTemplate();
+    }
+
+    public xRTComponentTemplate(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void registerNativeTemplates() {
-        if (this == INSTANCE) {
+        if (NativeTemplates.get(this).isComponentTemplate(this)) {
             ClassStructure struct = f_container.getClassStructure("_native.reflect.RTMultiMethodTemplate");
-            registerNativeTemplate(new xRTComponentTemplate(f_container, struct, false));
+            registerNativeTemplate(new xRTComponentTemplate(f_container, struct));
         }
     }
 
@@ -196,7 +202,7 @@ public class xRTComponentTemplate
         Component    parent  = hComponent.getComponent().getParent();
         ObjectHandle hParent = parent == null
                 ? xNullable.NULL
-                : makeComponentHandle(frame.f_context.f_container, parent);
+                : makeComponentHandle(frame.container(), parent);
         return frame.assignValue(iReturn, hParent);
     }
 
@@ -215,7 +221,7 @@ public class xRTComponentTemplate
      * Implementation for: {@code ComponentTemplate[] children()}.
      */
     protected int invokeChildren(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
-        Container      container  = frame.f_context.f_container;
+        Container      container  = frame.container();
         Component      component  = hComponent.getComponent();
         int            cChildren  = component.getChildrenCount();
         ObjectHandle[] ahChildren = new ObjectHandle[cChildren];
@@ -229,7 +235,7 @@ public class xRTComponentTemplate
         // the only possible child type of MultiMethodTemplate is the MethodTemplate
         TypeComposition clzArray = component instanceof MultiMethodStructure
                 ? xRTClassTemplate.ensureMethodTemplateArrayComposition(container)
-                : container.resolveClass(ensureComponentArrayType());
+                : container.resolveClass(ensureComponentArrayType(container));
 
         return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahChildren));
     }
@@ -240,25 +246,19 @@ public class xRTComponentTemplate
     /**
      * @return the TypeConstant for an Array of ComponentTemplate
      */
-    public static TypeConstant ensureComponentArrayType() {
-        TypeConstant type = COMPONENT_ARRAY_TYPE;
-        if (type == null) {
-            ConstantPool pool = INSTANCE.pool();
-            COMPONENT_ARRAY_TYPE = type = pool.ensureArrayType(
-                    pool.ensureEcstasyTypeConstant("reflect.ComponentTemplate"));
-        }
-        return type;
+    public static TypeConstant ensureComponentArrayType(Container container) {
+        // The pool dependency is inside the container-owned template's Lazy field. Keeping the
+        // container parameter here preserves the old cache behavior without using a process-global
+        // TypeConstant from whichever container initialized last.
+        return NativeTemplates.get(container).componentTemplate().f_typeComponentArray.get();
     }
 
     /**
      * @return the TypeComposition for an RTMultiMethodTemplate
      */
     public static TypeComposition getMultiMethodTemplateComposition(Container container) {
-        ClassTemplate templateRT = MULTI_METHOD_TEMPLATE;
-        if (templateRT == null) {
-            MULTI_METHOD_TEMPLATE = templateRT =
-                INSTANCE.f_container.getTemplate("_native.reflect.RTMultiMethodTemplate");
-        }
+        xRTComponentTemplate template   = NativeTemplates.get(container).componentTemplate();
+        ClassTemplate        templateRT = template.f_templateMultiMethod.get();
 
         ConstantPool pool         = container.getConstantPool();
         TypeConstant typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MultiMethodTemplate");
@@ -277,7 +277,8 @@ public class xRTComponentTemplate
      * @return the handle to the appropriate Ecstasy {@code ComponentTemplate.Format} enum value
      */
     protected static EnumHandle makeFormatHandle(Frame frame, Component.Format format) {
-        xEnum enumForm = (xEnum) INSTANCE.f_container.getTemplate("reflect.ComponentTemplate.Format");
+        xEnum enumForm = frame.container().
+                getEnumTemplate("reflect.ComponentTemplate.Format");
 
         switch (format) {
         case INTERFACE:
@@ -382,9 +383,11 @@ public class xRTComponentTemplate
         private final Component f_struct;
     }
 
+    // ----- fields --------------------------------------------------------------------------------
 
-    // ----- constants -----------------------------------------------------------------------------
+    private final Lazy<TypeConstant> f_typeComponentArray = Lazy.of(() ->
+            pool().ensureArrayType(pool().ensureEcstasyTypeConstant("reflect.ComponentTemplate")));
 
-    private static TypeConstant  COMPONENT_ARRAY_TYPE;
-    private static ClassTemplate MULTI_METHOD_TEMPLATE;
+    private final Lazy<ClassTemplate> f_templateMultiMethod = Lazy.of(() ->
+            f_container.getTemplate("_native.reflect.RTMultiMethodTemplate"));
 }

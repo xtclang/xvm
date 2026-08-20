@@ -41,7 +41,7 @@ public class xLocalClock
     public static xLocalClock INSTANCE;
 
     public xLocalClock(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;
@@ -131,7 +131,7 @@ public class xLocalClock
             return frame.raiseException(e.getMessage());
         }
 
-        FunctionHandle hCancel = new NativeFunctionHandle((_, _, _) -> {
+        FunctionHandle hCancel = new NativeFunctionHandle(frame.container(), (_, _, _) -> {
             alarm.cancel();
             return Op.R_NEXT;
         });

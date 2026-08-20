@@ -34,7 +34,7 @@ public class xByteArray
     public static xByteArray INSTANCE;
 
     public xByteArray(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;
@@ -62,7 +62,8 @@ public class xByteArray
     @Override
     public int createConstHandle(Frame frame, Constant constant) {
         if (constant instanceof UInt8ArrayConstant constBytes) {
-            return frame.pushStack(makeByteArrayHandle(constBytes.getValue(), Mutability.Constant));
+            return frame.pushStack(makeByteArrayHandle(
+                    frame.container(), constBytes.getValue(), Mutability.Constant));
         }
 
         return super.createConstHandle(frame, constant);

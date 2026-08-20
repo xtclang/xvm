@@ -23,6 +23,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.NativeContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -40,31 +41,29 @@ import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native implementation of Package interface.
  */
 public class xPackage
         extends xConst {
-    public static xPackage INSTANCE;
 
-    public xPackage(Container container, ClassStructure structure, boolean fInstance) {
+    public static xPackage getInstance(Frame frame) {
+        return NativeTemplates.get(frame).packageTemplate();
+    }
+
+    public static xPackage getInstance(Container container) {
+        return NativeTemplates.get(container).packageTemplate();
+    }
+
+    public xPackage(Container container, ClassStructure structure) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
-            ConstantPool pool = f_container.getConstantPool();
-            LIST_MAP_TYPE = pool.ensureParameterizedTypeConstant(
-                    pool.ensureEcstasyTypeConstant("maps.ListMap"),
-                    pool.typeString(), pool.typeClass());
-            LIST_MAP_TEMPLATE = f_container.getTemplate(LIST_MAP_TYPE);
-        }
     }
 
     @Override
@@ -159,7 +158,7 @@ public class xPackage
         StringHandle[] ahNames   = listNames  .toArray(Utils.STRINGS_NONE);
         ObjectHandle[] ahClasses = listClasses.toArray(Utils.OBJECTS_NONE);
 
-        ObjectHandle hNames = xArray.makeStringArrayHandle(ahNames);
+        ObjectHandle hNames = xArray.makeStringArrayHandle(container, ahNames);
 
         if (fDeferred) {
             Frame.Continuation stepNext = frameCaller -> {
@@ -246,7 +245,8 @@ public class xPackage
      * @return the TypeComposition for {@code ListMap<String, Class>}
      */
     public static TypeComposition ensureListMapComposition(Container container) {
-        return container.ensureClassComposition(LIST_MAP_TYPE, LIST_MAP_TEMPLATE);
+        xPackage template = NativeTemplates.get(container).packageTemplate();
+        return container.ensureClassComposition(template.f_typeListMap.get(), template.f_templateListMap.get());
     }
 
 
@@ -312,8 +312,15 @@ public class xPackage
         }
     }
 
-    // ----- constants -----------------------------------------------------------------------------
+    // ----- data members --------------------------------------------------------------------------
 
-    private static TypeConstant  LIST_MAP_TYPE;
-    private static ClassTemplate LIST_MAP_TEMPLATE;
+    // ListMap metadata is owned by this template's container. Keeping it as final lazy state
+    // preserves the old per-template cache without racing through process-global statics.
+    private final Lazy<TypeConstant> f_typeListMap = Lazy.of(() ->
+            pool().ensureParameterizedTypeConstant(
+                    pool().ensureEcstasyTypeConstant("maps.ListMap"),
+                    pool().typeString(), pool().typeClass()));
+
+    private final Lazy<ClassTemplate> f_templateListMap = Lazy.of(() ->
+            f_container.getTemplate(f_typeListMap.get()));
 }

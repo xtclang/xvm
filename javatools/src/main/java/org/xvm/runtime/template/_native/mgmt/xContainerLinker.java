@@ -21,6 +21,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.NestedContainer;
@@ -44,27 +45,30 @@ import org.xvm.runtime.template._native.reflect.xRTFileTemplate;
 import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native Container functionality.
  */
 public class xContainerLinker
         extends xService {
-    public static xContainerLinker INSTANCE;
 
-    public xContainerLinker(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+    public static xContainerLinker getInstance(Frame frame) {
+        return NativeTemplates.get(frame).containerLinker();
+    }
 
-        if (fInstance) {
-            INSTANCE = this;
-        }
+    public static xContainerLinker getInstance(Container container) {
+        return NativeTemplates.get(container).containerLinker();
+    }
+
+    public xContainerLinker(Container container, ClassStructure structure) {
+        super(container, structure);
     }
 
     @Override
     public void initNative() {
-        ClassStructure clz = (ClassStructure)
-                pool().ensureEcstasyClassConstant("mgmt.ResourceProvider").getComponent();
-        GET_RESOURCE = clz.findMethod("getResource", 2).getIdentityConstant().getSignature();
+        f_sigGetResource.get();
 
         markNativeMethod("collectInjectionsImpl", null, null);
         markNativeMethod("loadFileTemplate", BYTES, null);
@@ -82,14 +86,7 @@ public class xContainerLinker
      * Injection support.
      */
     public ObjectHandle ensureLinker(Frame frame, ObjectHandle hOpts) {
-        ObjectHandle hLinker = m_hLinker;
-        if (hLinker == null) {
-            m_hLinker = hLinker = createServiceHandle(
-                    f_container.createServiceContext("Linker"),
-                        getCanonicalClass(), getCanonicalType());
-        }
-
-        return hLinker;
+        return f_hLinker.get();
     }
 
     @Override
@@ -162,7 +159,7 @@ public class xContainerLinker
             ahName[ix  ] = xString.makeHandle(key.f_sName);
             ahType[ix++] = key.f_type.ensureTypeHandle(container);
         }
-        ArrayHandle haNames = xArray.makeStringArrayHandle(ahName);
+        ArrayHandle haNames = xArray.makeStringArrayHandle(container, ahName);
         ArrayHandle haTypes = xArray.makeArrayHandle(xRTType.ensureTypeArrayComposition(container),
                                     cInjects, ahType, xArray.Mutability.Constant);
         return frame.assignValues(aiReturn, haNames, haTypes);
@@ -250,6 +247,10 @@ public class xContainerLinker
         return new CollectResources(containerNested, iReturn).doNext(frame);
     }
 
+    private SignatureConstant getResourceSignature() {
+        return f_sigGetResource.get();
+    }
+
     public static class CollectResources
                 implements Frame.Continuation {
         public CollectResources(NestedContainer container, int iReturn) {
@@ -279,7 +280,8 @@ public class xContainerLinker
                 InjectionKey key   = aKeys[index];
                 TypeHandle   hType = key.f_type.ensureTypeHandle(container);
                 StringHandle hName = xString.makeHandle(key.f_sName);
-                CallChain    chain = hProvider.getComposition().getMethodCallChain(GET_RESOURCE);
+                CallChain    chain = hProvider.getComposition().getMethodCallChain(
+                        xContainerLinker.getInstance(frameCaller).getResourceSignature());
 
                 ObjectHandle[] ahArg = new ObjectHandle[chain.getMaxVars()];
                 ahArg[0] = hType;
@@ -304,7 +306,7 @@ public class xContainerLinker
             }
 
             return frameCaller.assignValue(iReturn,
-                xContainerControl.INSTANCE.makeHandle(container));
+                xContainerControl.getInstance(frameCaller).makeHandle(container));
         }
 
         private final NestedContainer container;
@@ -315,10 +317,19 @@ public class xContainerLinker
         private int index = -1;
     }
 
-    static SignatureConstant GET_RESOURCE;
+    /**
+     * Lazily resolved ResourceProvider.getResource signature owned by this template's container.
+     */
+    private final Lazy<SignatureConstant> f_sigGetResource = Lazy.of(() -> {
+        ClassStructure clz = (ClassStructure)
+                pool().ensureEcstasyClassConstant("mgmt.ResourceProvider").getComponent();
+        return clz.findMethod("getResource", 2).getIdentityConstant().getSignature();
+    });
 
     /**
      * Cached Linker handle.
      */
-    private ObjectHandle m_hLinker;
+    private final Lazy<ObjectHandle> f_hLinker = Lazy.of(() ->
+            createServiceHandle(f_container.createServiceContext("Linker"),
+                    getCanonicalClass(), getCanonicalType()));
 }

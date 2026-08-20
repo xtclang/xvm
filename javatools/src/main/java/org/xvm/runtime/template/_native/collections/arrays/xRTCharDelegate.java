@@ -33,7 +33,7 @@ public class xRTCharDelegate
     public static xRTCharDelegate INSTANCE;
 
     public xRTCharDelegate(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;

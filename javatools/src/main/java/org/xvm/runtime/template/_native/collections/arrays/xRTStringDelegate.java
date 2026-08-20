@@ -34,7 +34,7 @@ public class xRTStringDelegate
     public static xRTStringDelegate INSTANCE;
 
     public xRTStringDelegate(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;

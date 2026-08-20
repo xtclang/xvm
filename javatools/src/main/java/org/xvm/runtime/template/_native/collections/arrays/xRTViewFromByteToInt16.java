@@ -26,7 +26,7 @@ public class xRTViewFromByteToInt16
     public static xRTViewFromByteToInt16 INSTANCE;
 
     public xRTViewFromByteToInt16(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;

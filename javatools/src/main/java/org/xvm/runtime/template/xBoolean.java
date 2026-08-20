@@ -20,7 +20,7 @@ public class xBoolean
     public static BooleanHandle FALSE;
 
     public xBoolean(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
     }
 
     @Override

@@ -28,7 +28,7 @@ public class xRTViewFromBitToBoolean
     public static xRTViewFromBitToBoolean INSTANCE;
 
     public xRTViewFromBitToBoolean(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;

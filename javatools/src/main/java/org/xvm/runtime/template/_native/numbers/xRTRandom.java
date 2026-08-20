@@ -51,7 +51,7 @@ public class xRTRandom
     public static xRTRandom INSTANCE;
 
     public xRTRandom(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;
@@ -117,7 +117,9 @@ public class xRTRandom
 
             byte[] ab = new byte[(int) ((cBits+7)>>>3)];
             rnd(hTarget).nextBytes(ab);
-            return frame.assignValue(iReturn, xBitArray.makeBitArrayHandle(ab, (int) cBits, Mutability.Constant));
+            return frame.assignValue(iReturn,
+                    xBitArray.makeBitArrayHandle(frame.container(), ab, (int) cBits,
+                            Mutability.Constant));
         }
 
         case "bytes": { // "Byte[] bytes(Int size)"
@@ -134,7 +136,8 @@ public class xRTRandom
 
             byte[] ab = new byte[(int) cBytes];
             rnd(hTarget).nextBytes(ab);
-            return frame.assignValue(iReturn, xByteArray.makeByteArrayHandle(ab, Mutability.Constant));
+            return frame.assignValue(iReturn,
+                    xByteArray.makeByteArrayHandle(frame.container(), ab, Mutability.Constant));
         }
 
         case "int":

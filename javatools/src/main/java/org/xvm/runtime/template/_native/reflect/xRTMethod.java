@@ -20,6 +20,7 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.TypeComposition;
@@ -32,20 +33,25 @@ import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native Method implementation.
  */
 public class xRTMethod
         extends xRTSignature {
-    public static xRTMethod INSTANCE;
 
-    public xRTMethod(Container container, ClassStructure structure, boolean fInstance) {
+    public static xRTMethod getInstance(Frame frame) {
+        return NativeTemplates.get(frame).method();
+    }
+
+    public static xRTMethod getInstance(Container container) {
+        return NativeTemplates.get(container).method();
+    }
+
+    public xRTMethod(Container container, ClassStructure structure) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -182,9 +188,8 @@ public class xRTMethod
      * Implements property: access.get()
      */
     public int getPropertyAccess(Frame frame, MethodHandle hMethod, int iReturn) {
-        Access       access  = hMethod.getMethodInfo().getAccess();
-        ObjectHandle hAccess = xRTType.makeAccessHandle(frame, access);
-        return frame.assignValue(iReturn, hAccess);
+        Access access = hMethod.getMethodInfo().getAccess();
+        return Utils.assignInitializedEnum(frame, xRTType.makeAccessHandle(frame, access), iReturn);
     }
 
 
@@ -261,7 +266,7 @@ public class xRTMethod
         if (aAnno != null && aAnno.length > 0) {
             type = pool.ensureAnnotatedTypeConstant(type, aAnno);
 
-            TypeComposition clzMethod = INSTANCE.ensureClass(container, type);
+            TypeComposition clzMethod = NativeTemplates.get(container).method().ensureClass(container, type);
             MethodHandle    hStruct   = new MethodHandle(clzMethod.ensureAccess(Access.STRUCT),
                                             type, method, typeTarget);
 
@@ -270,7 +275,8 @@ public class xRTMethod
             return frame.popResultImmutable(iResult);
         }
 
-        return new MethodHandle(INSTANCE.ensureClass(container, type), type, method, typeTarget);
+        return new MethodHandle(NativeTemplates.get(container).method().ensureClass(container, type),
+                type, method, typeTarget);
     }
 
     /**
@@ -344,21 +350,15 @@ public class xRTMethod
     /**
      * @return the ArrayConstant for an empty Array of Method
      */
-    public static ArrayConstant ensureEmptyArrayConstant() {
-        ArrayConstant constant = EMPTY_ARRAY;
-        if (constant == null) {
-            ConstantPool pool = INSTANCE.pool();
-            EMPTY_ARRAY = constant = new ArrayConstant(pool, Constant.Format.Array,
-                                            pool.ensureArrayType(pool.typeMethod()));
-        }
-        return constant;
+    public static ArrayConstant ensureEmptyArrayConstant(Container container) {
+        return NativeTemplates.get(container).method().f_constEmptyArray.get();
     }
 
     /**
      * @return the handle for an empty Array of Method
      */
     public static ObjectHandle ensureEmptyArray(Container container) {
-        ArrayConstant constArray = ensureEmptyArrayConstant();
+        ArrayConstant constArray = ensureEmptyArrayConstant(container);
         ObjectHandle hArray = container.f_heap.getConstHandle(constArray);
         if (hArray == null) {
             TypeComposition clzArray = container.resolveClass(constArray.getType());
@@ -377,11 +377,17 @@ public class xRTMethod
         ConstantPool pool            = frame.poolContext();
         TypeConstant typeMethodArray = pool.ensureArrayType(
             pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget));
-        return frame.f_context.f_container.resolveClass(typeMethodArray);
+        return frame.container().resolveClass(typeMethodArray);
     }
 
 
-    // ----- data members --------------------------------------------------------------------------
+    // ----- fields --------------------------------------------------------------------------------
 
-    private static ArrayConstant EMPTY_ARRAY;
+    /**
+     * Empty Method[] constant derived from this template's constant pool.
+     */
+    private final Lazy<ArrayConstant> f_constEmptyArray = Lazy.of(() -> {
+        ConstantPool pool = pool();
+        return new ArrayConstant(pool, Constant.Format.Array, pool.ensureArrayType(pool.typeMethod()));
+    });
 }

@@ -2,7 +2,6 @@ package org.xvm.runtime.template._native.reflect;
 
 
 import java.util.Map;
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
@@ -13,6 +12,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -27,28 +27,20 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native ModuleTemplate implementation.
  */
 public class xRTModuleTemplate
         extends xRTClassTemplate {
-    public static xRTModuleTemplate INSTANCE;
-
-    public xRTModuleTemplate(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
+    public xRTModuleTemplate(Container container, ClassStructure structure) {
+        super(container, structure);
     }
 
     @Override
     public void initNative() {
-        ConstantPool pool = f_container.getConstantPool();
-
-        MODULE_TEMPLATE_TYPE = pool.ensureEcstasyTypeConstant("reflect.ModuleTemplate");
-
         markNativeProperty("qualifiedName");
         markNativeProperty("versionString");
         markNativeProperty("modulesByPath");
@@ -102,7 +94,7 @@ public class xRTModuleTemplate
         // TODO GG: how to cache the result?
         ModuleStructure module    = (ModuleStructure) hTemplate.getComponent();
         Container       container = frame.f_context.f_container;
-        TypeComposition clzMap    = container.resolveClass(ensureListMapType());
+        TypeComposition clzMap    = container.resolveClass(ensureListMapType(container));
 
         // starting with this module, find all module dependencies, and the shortest path to each
         Map<ModuleConstant, String> mapModulePaths = module.collectDependencies();
@@ -121,7 +113,7 @@ public class xRTModuleTemplate
                 ++index;
             }
         }
-        ObjectHandle haPaths     = xArray.makeStringArrayHandle(ahPaths);
+        ObjectHandle haPaths     = xArray.makeStringArrayHandle(container, ahPaths);
         ObjectHandle haTemplates = makeTemplateArrayHandle(container, ahTemplate);
 
         return Utils.constructListMap(frame, clzMap, haPaths, haTemplates, iReturn);
@@ -130,20 +122,22 @@ public class xRTModuleTemplate
     /**
      * @return the TypeConstant for ListMap<String, ModuleTemplate>
      */
-    private static TypeConstant ensureListMapType() {
-        TypeConstant type = LISTMAP_TYPE;
-        if (type == null) {
-            ConstantPool pool = INSTANCE.pool();
-            LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
-                    pool.ensureEcstasyTypeConstant("maps.ListMap"),
-                    pool.typeString(), MODULE_TEMPLATE_TYPE);
-        }
-        return type;
+    private static TypeConstant ensureListMapType(Container container) {
+        // ConstantPool interning keeps this cached in the caller's owner. A static LISTMAP_TYPE
+        // would pin the first initialized container and leak it into later containers.
+        ConstantPool pool = container.getConstantPool();
+        xRTModuleTemplate template = template(container);
+        return pool.ensureParameterizedTypeConstant(
+                pool.ensureEcstasyTypeConstant("maps.ListMap"),
+                pool.typeString(),
+                template.typeModuleTemplate(container));
     }
 
     private static ArrayHandle makeTemplateArrayHandle(Container container, ObjectHandle[] ahTemplate) {
+        xRTModuleTemplate template = template(container);
         TypeComposition clzArray = container.ensureClassComposition(
-                container.getConstantPool().ensureArrayType(MODULE_TEMPLATE_TYPE), xArray.INSTANCE);
+                container.getConstantPool().ensureArrayType(template.typeModuleTemplate(container)),
+                xArray.getInstance(container));
         return xArray.makeArrayHandle(clzArray, ahTemplate.length, ahTemplate, Mutability.Constant);
     }
 
@@ -158,14 +152,26 @@ public class xRTModuleTemplate
      */
     public static ComponentTemplateHandle makeHandle(Container container, ModuleStructure module) {
         // note: no need to initialize the struct because there are no natural fields
-        TypeComposition clz = INSTANCE.ensureClass(container,
-                                INSTANCE.getCanonicalType(), MODULE_TEMPLATE_TYPE);
+        xRTModuleTemplate template = template(container);
+        TypeComposition   clz      = template.ensureClass(container,
+                template.getCanonicalType(), template.typeModuleTemplate(container));
         return new ComponentTemplateHandle(clz, module);
     }
 
 
-    // ----- constants -----------------------------------------------------------------------------
+    // ----- data members --------------------------------------------------------------------------
 
-    private static TypeConstant MODULE_TEMPLATE_TYPE;
-    private static TypeConstant LISTMAP_TYPE;
+    // This type is owned by a ConstantPool. Store it on the owner template and register it into the
+    // caller's pool when constructing arrays/maps, instead of publishing one container's value in a
+    // mutable static field.
+    private final Lazy<TypeConstant> f_typeModuleTemplate = Lazy.of(() ->
+            pool().ensureEcstasyTypeConstant("reflect.ModuleTemplate"));
+
+    private static xRTModuleTemplate template(Container container) {
+        return NativeTemplates.get(container).moduleTemplate();
+    }
+
+    private TypeConstant typeModuleTemplate(Container container) {
+        return container.getConstantPool().register(f_typeModuleTemplate.get());
+    }
 }

@@ -92,7 +92,8 @@ public class xBitArray
 
             byte[] aBits = getBits(hArray);
 
-            return frame.assignValue(iReturn, xArray.makeByteArrayHandle(aBits, mutability));
+            return frame.assignValue(iReturn,
+                    xArray.makeByteArrayHandle(frame.container(), aBits, mutability));
         }
         }
 
@@ -116,7 +117,7 @@ public class xBitArray
                     hArray.m_hDelegate, mutability);
 
             return frame.assignValue(iReturn, new ArrayHandle(
-                    xArray.getBooleanArrayComposition(), hDelegate, mutability));
+                    xArray.getBooleanArrayComposition(frame.container()), hDelegate, mutability));
         }
 
         case "asByteArray": {

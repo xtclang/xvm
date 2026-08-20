@@ -41,7 +41,7 @@ public class xRTSigner
     public static xRTSigner INSTANCE;
 
     public xRTSigner(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;
@@ -106,7 +106,7 @@ public class xRTSigner
         }
 
         return frame.assignValue(iReturn,
-                xArray.makeByteArrayHandle(abSig, Mutability.Constant));
+                xArray.makeByteArrayHandle(frame.container(), abSig, Mutability.Constant));
     }
 
     /**
