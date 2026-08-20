@@ -204,18 +204,19 @@ public class xRTPropertyClassTemplate
      * Implements property: properties.get()
      */
     public int getPropertyProperties(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
-        PropertyStructure prop = (PropertyStructure) hComponent.getComponent();
+        Container         container = frame.container();
+        PropertyStructure prop      = (PropertyStructure) hComponent.getComponent();
 
         List<ComponentTemplateHandle> listProps = new ArrayList<>();
         for (Component child : prop.children()) {
             if (child instanceof PropertyStructure) {
-                listProps.add(xRTPropertyTemplate.makePropertyHandle((PropertyStructure) child));
+                listProps.add(xRTPropertyTemplate.makePropertyHandle(container, (PropertyStructure) child));
             }
         }
 
         ComponentTemplateHandle[] ahProp = listProps.toArray(xRTClassTemplate.NO_TEMPLATES);
         ObjectHandle hArray = xArray.createImmutableArray(
-                xRTPropertyTemplate.ensureArrayComposition(), ahProp);
+                xRTPropertyTemplate.ensureArrayComposition(container), ahProp);
         return frame.assignValue(iReturn, hArray);
     }
 
@@ -264,7 +265,7 @@ public class xRTPropertyClassTemplate
     protected int invokeFromProperty(Frame frame, ComponentTemplateHandle hComponent, int[] aiReturn) {
         PropertyStructure prop = (PropertyStructure) hComponent.getComponent();
         return frame.assignValues(aiReturn,
-            xBoolean.TRUE, xRTPropertyTemplate.makePropertyHandle(prop));
+            xBoolean.TRUE, xRTPropertyTemplate.makePropertyHandle(frame.container(), prop));
     }
 
 

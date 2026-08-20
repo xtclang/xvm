@@ -390,18 +390,19 @@ public class xRTClassTemplate
      * Implements property: properties.get()
      */
     public int getPropertyProperties(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
-        ClassStructure clz = (ClassStructure) hComponent.getComponent();
+        Container      container = frame.container();
+        ClassStructure clz       = (ClassStructure) hComponent.getComponent();
 
         List<ComponentTemplateHandle> listProps = new ArrayList<>();
         for (Component child : clz.children()) {
             if (child instanceof PropertyStructure prop) {
-                listProps.add(xRTPropertyTemplate.makePropertyHandle(prop));
+                listProps.add(xRTPropertyTemplate.makePropertyHandle(container, prop));
             }
         }
 
         ComponentTemplateHandle[] ahProp = listProps.toArray(NO_TEMPLATES);
         ArrayHandle hArray = xArray.createImmutableArray(
-                xRTPropertyTemplate.ensureArrayComposition(), ahProp);
+                xRTPropertyTemplate.ensureArrayComposition(container), ahProp);
         return frame.assignValue(iReturn, hArray);
     }
 

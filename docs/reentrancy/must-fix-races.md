@@ -15,8 +15,8 @@ and lazy-publication counts are scan signals generated on branch
 
 | Priority | Broken pattern | Signal | Failure mode | Required replacement |
 | --- | --- | --- | --- | --- |
-| Must fix | Mutable native template `INSTANCE` fields | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes 77 fields / 73 assignments and leaves 66/66. | Last writer wins across containers; constructor `this` escape | `NativeTemplates` central key table plus container/frame lookup |
-| Must fix | Static runtime-owned metadata | `master`: 151 field-shaped runtime/template static metadata fields after excluding `INSTANCE`. This branch fixes 58 and leaves 93. | Type/composition/method/handle values from one owner reused in another owner | Owner-scoped final `Lazy`, grouped info records, or owner-owned `ConcurrentMap` |
+| Must fix | Mutable native template `INSTANCE` fields | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes 78 fields / 74 assignments and leaves 65/65. | Last writer wins across containers; constructor `this` escape | `NativeTemplates` central key table plus container/frame lookup |
+| Must fix | Static runtime-owned metadata | `master`: 151 field-shaped runtime/template static metadata fields after excluding `INSTANCE`. This branch fixes 60 and leaves 91. | Type/composition/method/handle values from one owner reused in another owner | Owner-scoped final `Lazy`, grouped info records, or owner-owned `ConcurrentMap` |
 | Must fix | Raw enum handles returned through public/native paths | 83 raw enum accessor references, including definitions/comments; several public helper groups still return raw handles | Natural enum construction struct escapes as if it were the finalized enum singleton | `ensureEnumByName`, `ensureEnumByOrdinal`, or `Utils.ensureInitializedEnum` on public paths |
 | Must fix | Manual lazy publication in shared runtime/asm objects | 111 strong same-field lazy-init matches in runtime/asm | Plain field read/write with no happens-before edge; duplicate, stale, partial, or wrong-owner state | Final `Lazy`, `ConcurrentMap.computeIfAbsent`, or explicit atomic/locked state |
 | Must fix | Split lifecycle state across several fields | `SingletonConstant` was the known concrete case and is fixed in this branch | Fibers see mixed handle/owner/waiter state; false recursion or missed wait | One immutable state snapshot in `AtomicReference<State>` or one lock |
@@ -84,8 +84,8 @@ Count with this broader command:
 
 ```text
 master: 151
-current branch: 93
-fixed in this branch: 58
+current branch: 91
+fixed in this branch: 60
 ```
 
 Representative current branch hits:
@@ -115,8 +115,6 @@ javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSFile.java:509:   
 javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSStorage.java:366:    private static MethodStructure s_methodOnEvent;
 javatools/src/main/java/org/xvm/runtime/template/_native/lang/src/xRTCompiler.java:501:    private static MethodConstant GET_MODULE_ID;
 javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTProperty.java:397:    private static ArrayConstant EMPTY_PROPERTY_ARRAY;
-javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTPropertyTemplate.java:226:    private static TypeComposition PROPERTY_TEMPLATE_COMP;
-javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTPropertyTemplate.java:227:    private static TypeComposition ARRAY_PROP_COMP;
 javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTSignature.java:312:    private static TypeConstant RETURN_TYPE;
 javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTSignature.java:313:    private static TypeConstant PARAM_TYPE;
 javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTSignature.java:314:    private static TypeConstant RTRETURN_TYPE;
