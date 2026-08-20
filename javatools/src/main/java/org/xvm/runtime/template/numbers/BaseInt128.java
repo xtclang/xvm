@@ -253,7 +253,7 @@ public abstract class BaseInt128
                 return frame.assignValue(iReturn, hTarget);
             }
 
-            boolean  fCheckBounds = hArg == xBoolean.TRUE;
+            boolean  fCheckBounds = xBoolean.isTrue(hArg);
             LongLong llValue      = ((LongLongHandle) hTarget).getValue();
 
             if (template instanceof xConstrainedInteger templateTo) {
@@ -312,7 +312,7 @@ public abstract class BaseInt128
         case "toIntN":
         case "toUIntN":
             // default argument: checkBounds = False;
-            return invokeNative1(frame, method, hTarget, xBoolean.FALSE, iReturn);
+            return invokeNative1(frame, method, hTarget, xBoolean.falseHandle(frame), iReturn);
         }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -479,7 +479,7 @@ public abstract class BaseInt128
         LongLongHandle h1 = (LongLongHandle) hValue1;
         LongLongHandle h2 = (LongLongHandle) hValue2;
 
-        return frame.assignValue(iReturn, xOrdered.makeHandle(
+        return frame.assignValue(iReturn, xOrdered.makeHandle(frame,
             f_fSigned
                 ? h1.getValue().compare(h2.getValue())
                 : h1.getValue().compareUnsigned(h2.getValue())));

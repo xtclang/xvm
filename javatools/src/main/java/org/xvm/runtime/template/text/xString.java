@@ -160,8 +160,8 @@ public class xString
                     ofResult = hThis.getStringValue().indexOf(sValue, ofStart);
                 }
                 return ofResult < 0
-                        ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                        : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(frame, ofResult));
+                        ? frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame))
+                        : frame.assignValues(aiReturn, xBoolean.trueHandle(frame), xInt64.makeHandle(frame, ofResult));
             }
             }
         }
@@ -202,7 +202,7 @@ public class xString
     @Override
     public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
-        return frame.assignValue(iReturn, xBoolean.makeHandle(compareIdentity(hValue1, hValue2)));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, compareIdentity(hValue1, hValue2)));
     }
 
     @Override
@@ -212,7 +212,7 @@ public class xString
         StringHandle h2 = (StringHandle) hValue2;
 
         return frame.assignValue(iReturn,
-                xOrdered.makeHandle(Arrays.compare(h1.m_achValue, h2.m_achValue)));
+                xOrdered.makeHandle(frame, Arrays.compare(h1.m_achValue, h2.m_achValue)));
     }
 
     @Override

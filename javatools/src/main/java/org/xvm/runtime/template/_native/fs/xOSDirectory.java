@@ -69,7 +69,7 @@ public class xOSDirectory
             Path pathDir = hNode.f_path;
             File file    = pathDir.toFile();
             if (!file.isDirectory()) {
-                return frame.assignValue(iReturn, xBoolean.FALSE);
+                return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
             }
 
             try {
@@ -89,7 +89,7 @@ public class xOSDirectory
                            return FileVisitResult.CONTINUE;
                        }
                 });
-                return frame.assignValue(iReturn, xBoolean.TRUE);
+                return frame.assignValue(iReturn, xBoolean.trueHandle(frame));
             } catch (IOException e) {
                 return raisePathException(frame, e, hNode.f_path);
             }

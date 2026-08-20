@@ -212,7 +212,7 @@ public class xModule
         String          sClass  = ((StringHandle) hArg).getStringValue();
         Object          oResult = resolveClass(module.getFileStructure(), module, sClass);
         if (oResult == null) {
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         }
 
         if (oResult instanceof TypeConstant typeClz) {
@@ -231,7 +231,7 @@ public class xModule
         String          sType   = ((StringHandle) hArg).getStringValue();
         Object          oResult = resolveType(module.getFileStructure(), module, sType);
         if (oResult == null) {
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         }
 
         if (oResult instanceof TypeConstant) {

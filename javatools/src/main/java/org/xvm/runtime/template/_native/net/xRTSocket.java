@@ -175,7 +175,7 @@ public class xRTSocket
             } catch (Throwable e) {
                 Throwable cause = unwrap(e);
                 if (cause instanceof IOException) {
-                    return frameCaller.assignValue(aiReturn[0], xBoolean.FALSE);
+                    return frameCaller.assignValue(aiReturn[0], xBoolean.falseHandle(frameCaller));
                 }
                 return frameCaller.raiseException(
                         xException.makeHandle(frameCaller, cause.getMessage()));
@@ -254,7 +254,7 @@ public class xRTSocket
             return frame.raiseException(xException.illegalState(frame, "socket construct failed"));
         }
         hSocket.socket = socket;
-        return frame.assignValues(aiReturn, xBoolean.TRUE, hSocket);
+        return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), hSocket);
     }
 
 

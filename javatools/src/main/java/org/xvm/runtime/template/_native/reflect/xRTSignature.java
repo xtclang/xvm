@@ -127,7 +127,7 @@ public class xRTSignature
      */
     protected int getPropertyConditionalResult(Frame frame, SignatureHandle hFunc, int iReturn) {
         MethodStructure structFunc = hFunc.getMethod();
-        BooleanHandle   handle     = xBoolean.makeHandle(structFunc.isConditionalReturn());
+        BooleanHandle   handle     = xBoolean.makeHandle(frame, structFunc.isConditionalReturn());
         return frame.assignValue(iReturn, handle);
     }
 
@@ -135,7 +135,7 @@ public class xRTSignature
      * Implements property: futureResult.get()
      */
     protected int getPropertyFutureResult(Frame frame, SignatureHandle hFunc, int iReturn) {
-        BooleanHandle handle = xBoolean.makeHandle(hFunc.isAsync());
+        BooleanHandle handle = xBoolean.makeHandle(frame, hFunc.isAsync());
         return frame.assignValue(iReturn, handle);
     }
 
@@ -174,8 +174,8 @@ public class xRTSignature
     public int invokeHasTemplate(Frame frame, SignatureHandle hFunc, int[] aiReturn) {
         MethodStructure method = hFunc.getMethod();
         return method == null
-                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                : frame.assignValues(aiReturn, xBoolean.TRUE,
+                ? frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame))
+                : frame.assignValues(aiReturn, xBoolean.trueHandle(frame),
                     xRTMethodTemplate.makeHandle(frame.container(), method));
     }
 
@@ -466,11 +466,13 @@ public class xRTSignature
                 String sName = param.getName();
 
                 ahParams[0] = xInt64.makeHandle(frameCaller, index);
-                ahParams[1] = sName == null ? xNullable.NULL : xString.makeHandle(frameCaller, sName);
+                ahParams[1] = sName == null
+                        ? xNullable.makeHandle(frameCaller)
+                        : xString.makeHandle(frameCaller, sName);
                 if (!fRetVals) {
-                    ahParams[2] = xBoolean.makeHandle(param.isTypeParameter());
+                    ahParams[2] = xBoolean.makeHandle(frameCaller, param.isTypeParameter());
                     if (param.hasDefaultValue()) {
-                        ahParams[3] = xBoolean.TRUE;
+                        ahParams[3] = xBoolean.trueHandle(frameCaller);
                         ObjectHandle hDefault = frameCaller.getConstHandle(param.getDefaultValue());
                         if (Op.isDeferred(hDefault)) {
                             index--;
@@ -479,8 +481,8 @@ public class xRTSignature
                         }
                         ahParams[4] = hDefault;
                     } else {
-                        ahParams[3] = xBoolean.FALSE;
-                        ahParams[4] = xNullable.NULL;
+                        ahParams[3] = xBoolean.falseHandle(frameCaller);
+                        ahParams[4] = xNullable.makeHandle(frameCaller);
                     }
                 }
 

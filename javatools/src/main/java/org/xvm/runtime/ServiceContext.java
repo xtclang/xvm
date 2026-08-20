@@ -70,10 +70,11 @@ import org.xvm.util.concurrent.VarHandles;
  */
 public class ServiceContext {
     ServiceContext(Container container, String sName, long lId) {
-        f_container = container;
-        f_pool      = container.getConstantPool();
-        f_sName     = sName;
-        f_lId       = lId;
+        f_container             = container;
+        f_pool                  = container.getConstantPool();
+        f_sName                 = sName;
+        f_lId                   = lId;
+        m_hSynchronizedSection  = xNullable.makeHandle(container);
     }
 
 
@@ -120,14 +121,14 @@ public class ServiceContext {
     public int setSynchronizedSection(Frame frame, ObjectHandle hSection) {
         assert hSection != null;
 
-        if (m_hSynchronizedSection != xNullable.NULL && m_fiberSyncOwner != frame.f_fiber) {
+        if (!xNullable.isNull(m_hSynchronizedSection) && m_fiberSyncOwner != frame.f_fiber) {
             // should never happen
             return frame.raiseException("Attempt to reset unowned SynchronizedSection");
         }
 
         m_hSynchronizedSection = hSection;
 
-        if (hSection == xNullable.NULL) {
+        if (xNullable.isNull(hSection)) {
             setSynchronicity(null, Synchronicity.Concurrent);
         } else {
             ObjectHandle hCritical = ((GenericHandle) hSection).getField(frame, "critical");
@@ -1497,7 +1498,7 @@ public class ServiceContext {
         Op opInit = new Op() {
             public int process(Frame frame, int iPC) {
                 return Utils.initConstants(frame, listConstants,
-                    frameCaller -> frameCaller.assignValue(0, xNullable.NULL));
+                    frameCaller -> frameCaller.assignValue(0, xNullable.makeHandle(frameCaller)));
             }
 
             public String toString() {
@@ -1654,7 +1655,7 @@ public class ServiceContext {
                         ObjectHandle hReturn = ahReturn[i];
                         if (hReturn == null) {
                             // this is only possible for a conditional return of "False"
-                            assert i > 0 && ahReturn[0].equals(xBoolean.FALSE);
+                            assert i > 0 && xBoolean.isFalse(ahReturn[0]);
 
                             // since "null" indicates a deferred future value, replace it with
                             // the DEFAULT value (see Utils.GET_AND_RETURN)
@@ -1846,7 +1847,7 @@ public class ServiceContext {
                         ObjectHandle hReturn = ahReturn[i];
                         if (hReturn == null) {
                             // this is only possible for a conditional return of "False"
-                            assert i > 0 && ahReturn[0].equals(xBoolean.FALSE);
+                            assert i > 0 && xBoolean.isFalse(ahReturn[0]);
 
                             // since "null" indicates a deferred future value, replace it with
                             // the DEFAULT value (see Utils.GET_AND_RETURN)
@@ -1913,7 +1914,7 @@ public class ServiceContext {
 
         @Override
         public ObjectHandle getTimeoutHandle() {
-            return xNullable.NULL;
+            return xNullable.makeHandle(f_hFunction.getComposition().getContainer());
         }
 
         @Override
@@ -2088,7 +2089,7 @@ public class ServiceContext {
     /**
      * The current SynchronizedSection for the service.
      */
-    private ObjectHandle m_hSynchronizedSection = xNullable.NULL;
+    private ObjectHandle m_hSynchronizedSection;
 
     /**
      * Metrics: the total time (in nanos) this service has been running.

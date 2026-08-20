@@ -356,7 +356,7 @@ public class Proxy
                 ObjectHandle[] ahReturn = new ObjectHandle[cReturns];
                 for (int i = cReturns - 1; i >= 0; i--) {
                     ObjectHandle hReturn = frame.popStack();
-                    if (hReturn == xBoolean.FALSE && i == cReturns-1 &&
+                    if (xBoolean.isFalse(hReturn) && i == cReturns-1 &&
                             method.isConditionalReturn()) {
                         // conditional False
                         return frame.assignValue(aiReturn[0], hReturn);

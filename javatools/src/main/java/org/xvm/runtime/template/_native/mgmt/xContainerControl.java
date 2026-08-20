@@ -73,7 +73,7 @@ public class xContainerControl
         switch (sPropName) {
         case "mainService": {
             ServiceContext ctx = container.getServiceContext();
-            return frame.assignValue(iReturn, ctx == null ? xNullable.NULL : ctx.getService());
+            return frame.assignValue(iReturn, ctx == null ? xNullable.makeHandle(frame) : ctx.getService());
         }
 
         case "innerTypeSystem":
@@ -121,7 +121,7 @@ public class xContainerControl
             }
 
             ServiceHandle hService = hRunWithin == ObjectHandle.DEFAULT ||
-                                     hRunWithin == xNullable.NULL
+                                     xNullable.isNull(hRunWithin)
                     ? ctxContainer.getService()
                     : (ServiceHandle) hRunWithin;
 
@@ -174,7 +174,7 @@ public class xContainerControl
         }
 
         ObjectHandle[] ahVars = new ObjectHandle[chain.getMaxVars()];
-        ahVars[0] = xNullable.NULL;
+        ahVars[0] = xNullable.makeHandle(frame);
         return chain.invoke(frame, hProvider, ahVars, Op.A_IGNORE);
     }
 

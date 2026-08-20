@@ -655,7 +655,7 @@ public class NativeContainer
         ClassComposition clzMask         = templateNetwork.getCanonicalClass();
         ConstantPool     pool            = getConstantPool();
         MethodStructure  constructor     = templateNetwork.getStructure().findConstructor(pool.typeBoolean());
-        ObjectHandle[]   ahParams        = new ObjectHandle[] {xBoolean.makeHandle(fSecure)};
+        ObjectHandle[]   ahParams        = new ObjectHandle[] {xBoolean.makeHandle(frame, fSecure)};
 
         switch (templateNetwork.construct(frame, constructor, clzMask, null, ahParams, Op.A_STACK)) {
         case Op.R_NEXT:
@@ -705,7 +705,7 @@ public class NativeContainer
             // for "Nullable" types the NativeContainer can only supply a trivial result;
             // anything better than that must be done naturally by a container that hosts the
             // calling container
-            return type.isNullable() ? xNullable.NULL : null;
+            return type.isNullable() ? xNullable.makeHandle(frame) : null;
         }
 
         // check for equality first, but allow "congruency", "duck type" equality as well or

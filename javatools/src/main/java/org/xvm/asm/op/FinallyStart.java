@@ -87,7 +87,7 @@ public class FinallyStart
         // so we need to initialize the exception slot (to Null) when coming in normally;
         // presence or absence of the exception will be checked by the FinallyEnd
         frame.introduceResolvedVar(m_nVar, frame.poolContext().typeException१(), null,
-                Frame.VAR_STANDARD, xNullable.NULL);
+                Frame.VAR_STANDARD, xNullable.makeHandle(frame));
 
         return iPC + 1;
     }

@@ -93,15 +93,15 @@ public class xRawOSFileChannel
 
         case "readable":
             return frame.assignValue(iReturn,
-                xBoolean.makeHandle(hChannel.f_channel instanceof ReadableByteChannel));
+                xBoolean.makeHandle(frame, hChannel.f_channel instanceof ReadableByteChannel));
 
         case "writable":
             return frame.assignValue(iReturn,
-                xBoolean.makeHandle(hChannel.f_channel instanceof WritableByteChannel));
+                xBoolean.makeHandle(frame, hChannel.f_channel instanceof WritableByteChannel));
 
         case "closed":
             return frame.assignValue(iReturn,
-                xBoolean.makeHandle(!hChannel.f_channel.isOpen()));
+                xBoolean.makeHandle(frame, !hChannel.f_channel.isOpen()));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

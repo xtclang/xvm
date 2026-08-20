@@ -301,15 +301,15 @@ public abstract class LongBasedDelegate
         LongArrayHandle h2 = (LongArrayHandle) hValue2;
 
         if (h1 == h2) {
-            return frame.assignValue(iReturn, xBoolean.TRUE);
+            return frame.assignValue(iReturn, xBoolean.trueHandle(frame));
         }
         if (h1.m_cSize != h2.m_cSize) {
-            return frame.assignValue(iReturn, xBoolean.FALSE);
+            return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
         }
 
         // this is slightly incorrect; it assumes that we always trim the tail
         int cStore = storage(h1.m_cSize);
-        return frame.assignValue(iReturn, xBoolean.makeHandle(
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame,
                 Arrays.equals(h1.m_alValue, 0, cStore, h2.m_alValue, 0, cStore)));
     }
 

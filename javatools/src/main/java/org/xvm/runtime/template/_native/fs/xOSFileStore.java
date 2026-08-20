@@ -165,7 +165,7 @@ public class xOSFileStore
                     // TODO: implement native support for link files
                     System.err.println("*** File is a link: " + path);
                 }
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
             } catch (InvalidPathException e) {
                 return frame.raiseException(xException.ioException(frame, e.getMessage()));
             }

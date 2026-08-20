@@ -18,6 +18,8 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xByteArray;
 
+import org.xvm.util.Lazy;
+
 /**
  * Native RTBuffer implementation.
  */
@@ -30,8 +32,6 @@ public class xRTBuffer
     @Override
     public void initNative() {
         markNativeMethod("copyRawBytes", null, VOID);
-
-        PROP_RAW_BYTES = getStructure().findPropertyDeep("rawBytes").getIdentityConstant();
     }
 
     @Override
@@ -64,7 +64,7 @@ public class xRTBuffer
         long        ofDst  = ((JavaLong) ahArg[2]).getValue();
         long        count  = ((JavaLong) ahArg[3]).getValue();
 
-        ArrayHandle hRawBytes = (ArrayHandle) hBuf.getField(frame, PROP_RAW_BYTES);
+        ArrayHandle hRawBytes = (ArrayHandle) hBuf.getField(frame, f_propRawBytes.get());
         byte[]      abRaw     = xByteArray.getBytes(hRawBytes);
 
         xByteArray.setBytes(abRaw, (int) ofSrc, hBytes, (int) ofDst, (int) count);
@@ -89,5 +89,8 @@ public class xRTBuffer
         }
     }
 
-    private static PropertyConstant PROP_RAW_BYTES;
+    // Template-owned metadata must not be a process-global cache. This keeps
+    // the old one-time lookup behavior, but under the owning container/template.
+    private final Lazy<PropertyConstant> f_propRawBytes =
+            Lazy.of(() -> getStructure().findPropertyDeep("rawBytes").getIdentityConstant());
 }

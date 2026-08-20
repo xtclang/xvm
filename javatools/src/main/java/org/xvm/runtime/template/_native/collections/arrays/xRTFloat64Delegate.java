@@ -204,15 +204,15 @@ public class xRTFloat64Delegate
         DoubleArrayHandle h2 = (DoubleArrayHandle) hValue2;
 
         if (h1 == h2) {
-            return frame.assignValue(iReturn, xBoolean.TRUE);
+            return frame.assignValue(iReturn, xBoolean.trueHandle(frame));
         }
         if (h1.m_cSize != h2.m_cSize) {
-            return frame.assignValue(iReturn, xBoolean.FALSE);
+            return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
         }
 
         // this is slightly incorrect; it assumes that we always trim the tail
         int cStore = (int) h1.m_cSize;
-        return frame.assignValue(iReturn, xBoolean.makeHandle(
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame,
                 Arrays.equals(h1.m_adValue, 0, cStore, h2.m_adValue, 0, cStore)));
     }
 

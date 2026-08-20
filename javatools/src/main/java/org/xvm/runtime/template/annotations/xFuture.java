@@ -97,7 +97,7 @@ public class xFuture
 
         switch (sPropName) {
         case "assigned":
-            return frame.assignValue(iReturn, xBoolean.makeHandle(hThis.isAssigned()));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(frame, hThis.isAssigned()));
 
         case "failure":
             return frame.assignValue(iReturn, hThis.getException());
@@ -116,7 +116,7 @@ public class xFuture
 
         case "notify":
             // currently unused
-            return frame.assignValue(iReturn, xNullable.NULL);
+            return frame.assignValue(iReturn, xNullable.makeHandle(frame));
         }
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
     }
@@ -193,7 +193,7 @@ public class xFuture
         FutureHandle hVar2 = (FutureHandle) hValue2;
 
         return frame.assignValue(iReturn,
-                xBoolean.makeHandle(hVar1.getFuture() == hVar2.getFuture()));
+                xBoolean.makeHandle(frame, hVar1.getFuture() == hVar2.getFuture()));
     }
 
 
@@ -207,7 +207,7 @@ public class xFuture
 
         if (cfThis.isDone()) {
             ObjectHandle[] ahR = extractResult(frame, cfThis);
-            if (ahR[1] != xNullable.NULL) {
+            if (!xNullable.isNull(ahR[1])) {
                 // the future terminated exceptionally; re-throw it
                 return frame.raiseException((ExceptionHandle) ahR[1]);
             }
@@ -254,7 +254,7 @@ public class xFuture
 
         if (cfThis.isDone()) {
             ObjectHandle[] ahR = extractResult(frame, cfThis);
-            if (ahR[1] != xNullable.NULL) {
+            if (!xNullable.isNull(ahR[1])) {
                 // the future terminated exceptionally; re-throw it
                 return frame.raiseException((ExceptionHandle) ahR[1]);
             }
@@ -305,7 +305,7 @@ public class xFuture
 
         if (cfThis.isDone()) {
             ObjectHandle[] ahR = extractResult(frame, cfThis);
-            if (ahR[1] != xNullable.NULL) {
+            if (!xNullable.isNull(ahR[1])) {
                 // the future terminated exceptionally; re-throw it
                 return frame.raiseException((ExceptionHandle) ahR[1]);
             }
@@ -360,7 +360,7 @@ public class xFuture
             }
 
             ObjectHandle[] ahR = extractResult(frame, cfThis);
-            assert ahR[0] == xNullable.NULL;
+            assert xNullable.isNull(ahR[0]);
 
             ahR[0] = ahR[1]; // hException
             ahR[1] = null;
@@ -459,10 +459,10 @@ public class xFuture
             ObjectHandle[] ahRThis = extractResult(frame, cfThis);
             ObjectHandle[] ahRThat = extractResult(frame, cfThis);
 
-            if (ahRThis[1] != xNullable.NULL) {
+            if (!xNullable.isNull(ahRThis[1])) {
                 return frame.raiseException((ExceptionHandle) ahRThis[1]);
             }
-            if (ahRThat[1] != xNullable.NULL) {
+            if (!xNullable.isNull(ahRThat[1])) {
                 return frame.raiseException((ExceptionHandle) ahRThat[1]);
             }
 
@@ -584,12 +584,12 @@ public class xFuture
         CompletableFuture<ObjectHandle> cfThis = hThis.getFuture();
         if (cfThis.isDone()) {
             ObjectHandle[] ahR = extractResult(frame, cfThis);
-            if (ahR[1] != xNullable.NULL) {
+            if (!xNullable.isNull(ahR[1])) {
                 // the future terminated exceptionally; return the exception
-                return frame.assignValues(aiReturn, xBoolean.TRUE, ahR[1]);
+                return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), ahR[1]);
             }
         }
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
 
     /**
@@ -604,9 +604,9 @@ public class xFuture
         ObjectHandle[] ahR = new ObjectHandle[2];
         try {
             ahR[0] = cf.get();
-            ahR[1] = xNullable.NULL;
+            ahR[1] = xNullable.makeHandle(frame);
         } catch (Throwable e) {
-            ahR[0] = xNullable.NULL;
+            ahR[0] = xNullable.makeHandle(frame);
             ahR[1] = Utils.translate(frame.container(), e);
         }
         return ahR;
@@ -623,10 +623,10 @@ public class xFuture
     protected ObjectHandle[] combineResult(ObjectHandle hResult, Throwable exception) {
         ObjectHandle[] ahArg = new ObjectHandle[2];
         ahArg[0] = hResult == null
-                ? xNullable.NULL
+                ? xNullable.makeHandle(f_container)
                 : hResult;
         ahArg[1] = exception == null
-                ? xNullable.NULL
+                ? xNullable.makeHandle(f_container)
                 : Utils.translate(f_container, exception);
         return ahArg;
     }

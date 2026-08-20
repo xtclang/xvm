@@ -77,7 +77,7 @@ public class xInject
             // opts are not specified; the handle could be trivially initialized on-the-spot
             InjectedHandle hInject = new InjectedHandle(clazz.ensureAccess(Access.PUBLIC), sName, sResource);
             hInject.setField(frame, "resourceName", xString.makeHandle(frame, sResource));
-            hInject.setField(frame, "opts", xNullable.NULL);
+            hInject.setField(frame, "opts", xNullable.makeHandle(frame));
             hInject.makeImmutable();
             return hInject;
         }
@@ -129,22 +129,22 @@ public class xInject
         switch (getReferent(frame, hRef, Op.A_STACK)) {
         case Op.R_NEXT:
             frame.popStack();
-            return frame.assignValue(iReturn, xBoolean.TRUE);
+            return frame.assignValue(iReturn, xBoolean.trueHandle(frame));
 
         case Op.R_CALL:
             frame.m_frameNext.addContinuation(frameCaller -> {
                 if (frameCaller.clearException() == null) {
                     frameCaller.popStack();
-                    return frameCaller.assignValue(iReturn, xBoolean.TRUE);
+                    return frameCaller.assignValue(iReturn, xBoolean.trueHandle(frameCaller));
                 } else {
-                    return frameCaller.assignValue(iReturn, xBoolean.FALSE);
+                    return frameCaller.assignValue(iReturn, xBoolean.falseHandle(frameCaller));
                 }
             });
             return Op.R_CALL;
 
         case Op.R_EXCEPTION:
             frame.clearException();
-            return frame.assignValue(iReturn, xBoolean.FALSE);
+            return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
 
         default:
             throw new IllegalStateException();

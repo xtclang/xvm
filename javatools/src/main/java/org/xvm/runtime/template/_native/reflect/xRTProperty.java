@@ -227,7 +227,7 @@ public class xRTProperty
      */
     public int getPropertyAbstract(Frame frame, PropertyHandle hProp, int iReturn) {
         return frame.assignValue(iReturn,
-            xBoolean.makeHandle(hProp.getPropertyInfo().isAbstract()));
+            xBoolean.makeHandle(frame, hProp.getPropertyInfo().isAbstract()));
     }
 
     /**
@@ -248,7 +248,7 @@ public class xRTProperty
      */
     public int getPropertyAtomic(Frame frame, PropertyHandle hProp, int iReturn) {
         return frame.assignValue(iReturn,
-            xBoolean.makeHandle(hProp.getPropertyInfo().isAtomic()));
+            xBoolean.makeHandle(frame, hProp.getPropertyInfo().isAtomic()));
     }
 
     /**
@@ -256,7 +256,7 @@ public class xRTProperty
      */
     public int getPropertyFormal(Frame frame, PropertyHandle hProp, int iReturn) {
         return frame.assignValue(iReturn,
-            xBoolean.makeHandle(hProp.getPropertyInfo().isFormalType()));
+            xBoolean.makeHandle(frame, hProp.getPropertyInfo().isFormalType()));
     }
 
     /**
@@ -264,7 +264,7 @@ public class xRTProperty
      */
     public int getPropertyHasField(Frame frame, PropertyHandle hProp, int iReturn) {
         return frame.assignValue(iReturn,
-            xBoolean.makeHandle(hProp.getPropertyInfo().hasField()));
+            xBoolean.makeHandle(frame, hProp.getPropertyInfo().hasField()));
     }
 
     /**
@@ -272,7 +272,7 @@ public class xRTProperty
      */
     public int getPropertyHasUnreachableSetter(Frame frame, PropertyHandle hProp, int iReturn) {
         return frame.assignValue(iReturn,
-            xBoolean.makeHandle(hProp.getPropertyInfo().isSetterUnreachable()));
+            xBoolean.makeHandle(frame, hProp.getPropertyInfo().isSetterUnreachable()));
     }
 
     /**
@@ -280,14 +280,14 @@ public class xRTProperty
      */
     public int getPropertyInjected(Frame frame, PropertyHandle hProp, int iReturn) {
         return frame.assignValue(iReturn,
-            xBoolean.makeHandle(hProp.getPropertyInfo().isInjected()));
+            xBoolean.makeHandle(frame, hProp.getPropertyInfo().isInjected()));
     }
 
     /**
      * Implements property: lazy.get()
      */
     public int getPropertyLazy(Frame frame, PropertyHandle hProp, int iReturn) {
-        return frame.assignValue(iReturn, xBoolean.makeHandle(hProp.getPropertyInfo().isLazy()));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, hProp.getPropertyInfo().isLazy()));
     }
 
     /**
@@ -301,7 +301,7 @@ public class xRTProperty
      * Implements property: readOnly.get()
      */
     public int getPropertyReadOnly(Frame frame, PropertyHandle hProp, int iReturn) {
-        return frame.assignValue(iReturn, xBoolean.makeHandle(!hProp.getPropertyInfo().isVar()));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, !hProp.getPropertyInfo().isVar()));
     }
 
 
@@ -319,7 +319,7 @@ public class xRTProperty
             return frame.assignConditionalDeferredValue(aiReturn, frame.getConstHandle(idSingleton));
         }
 
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
 
     /**

@@ -83,7 +83,7 @@ public class xRTViewFromBitToBoolean
         if (tSource instanceof BitView tView) {
             // the underlying delegate is a BitView, which is a ByteView
             return frame.assignValue(iReturn,
-                    xBoolean.makeHandle(tView.extractBit(hSource, lIndex)));
+                    xBoolean.makeHandle(frame, tView.extractBit(hSource, lIndex)));
         }
 
         throw new UnsupportedOperationException();

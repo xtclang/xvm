@@ -282,7 +282,7 @@ public class xRTKeyStore
         try {
             Certificate[] aCert = hStore.f_keyStore.getCertificateChain(sName);
             if (aCert == null || aCert.length <= nIndex) {
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
             }
 
             if (!(aCert[nIndex] instanceof X509Certificate cert509)) {
@@ -294,7 +294,7 @@ public class xRTKeyStore
             Date dateNotAfter  = cert509.getNotAfter();
             if (dateNotBefore == null || dateNotAfter == null) {
                 // invalid certificate
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
             }
 
             // issuer
@@ -329,7 +329,7 @@ public class xRTKeyStore
 
             // create the arguments
             List<ObjectHandle> list = new ArrayList<>(9);
-            list.add(xBoolean.TRUE);
+            list.add(xBoolean.trueHandle(frame));
             list.add(xString.makeHandle(frame, sIssuer));
             list.add(xString.makeHandle(frame, sSubject));
             list.add(xInt64.makeHandle(frame, nVersion));
@@ -403,12 +403,12 @@ public class xRTKeyStore
                 } else {
                     nType = 1; // Pair
                 }
-                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(frame, nType));
+                return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), xInt64.makeHandle(frame, nType));
             }
             if (keyStore.isCertificateEntry(sName)) {
-                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(frame, 1)); // Certificate
+                return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), xInt64.makeHandle(frame, 1)); // Certificate
             }
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         } catch (GeneralSecurityException e) {
             return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
         }
@@ -432,7 +432,7 @@ public class xRTKeyStore
             if (keyStore.isKeyEntry(sName)) {
                 Key key = hStore.getKey(sName);
                 if (key == null) {
-                    return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                    return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
                 }
 
                 String      sAlgorithm = key.getAlgorithm();
@@ -449,12 +449,12 @@ public class xRTKeyStore
                                         : key.getEncoded().length << 3;
 
                 List<ObjectHandle> list = new ArrayList<>(9);
-                list.add(xBoolean.TRUE);
+                list.add(xBoolean.trueHandle(frame));
                 list.add(xString.makeHandle(frame, sAlgorithm));
                 list.add(xInt64.makeHandle(frame, cKeyBits >>> 3));
                 list.add(new SecretHandle(frame.container(), key));
                 if (publicKey == null) {
-                    list.add(xNullable.NULL);
+                    list.add(xNullable.makeHandle(frame));
                     list.add(xArray.ensureEmptyByteArray(frame.container()));
                 } else {
                     list.add(new SecretHandle(frame.container(), publicKey));
@@ -464,7 +464,7 @@ public class xRTKeyStore
                 return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
             }
 
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         } catch (GeneralSecurityException e) {
             return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
         }
@@ -480,16 +480,16 @@ public class xRTKeyStore
             Key key = hStore.getKey(sName);
             if (key instanceof PBEKey keyPwd) {
                 return frame.assignValues(aiReturn,
-                        xBoolean.TRUE, xString.makeHandle(frame, keyPwd.getPassword()));
+                        xBoolean.trueHandle(frame), xString.makeHandle(frame, keyPwd.getPassword()));
             }
 
             // unfortunately com.sun.crypto.provider.PBEKey is not public
             if ("PBEKey".equals(key.getClass().getSimpleName())) {
-                return frame.assignValues(aiReturn, xBoolean.TRUE,
+                return frame.assignValues(aiReturn, xBoolean.trueHandle(frame),
                         xString.makeHandle(frame,
                                 new String(key.getEncoded(), StandardCharsets.UTF_8)));
             }
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         } catch (GeneralSecurityException e) {
             return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
         }

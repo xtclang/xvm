@@ -72,7 +72,7 @@ public class NestedContainer
             FunctionHandle hProxy = xRTFunction.makeAsyncDelegatingHandle(hService, hFunction);
             f_mapResources.put(key, (frame, hOpts) -> {
                 ObjectHandle[] ahArg = new ObjectHandle[hProxy.getParamCount()];
-                ahArg[0] = hOpts == ObjectHandle.DEFAULT ? xNullable.NULL : hOpts;
+                ahArg[0] = hOpts == ObjectHandle.DEFAULT ? xNullable.makeHandle(frame) : hOpts;
 
                 switch (hProxy.call1(frame, null, ahArg, Op.A_STACK)) {
                 case Op.R_NEXT:
@@ -127,7 +127,7 @@ public class NestedContainer
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts) {
         InjectionSupplier supplier = f_mapResources.get(new InjectionKey(sName, type));
         return supplier == null
-                ? type.isNullable() ? xNullable.NULL : null
+                ? type.isNullable() ? xNullable.makeHandle(frame) : null
                 : supplier.supply(frame, hOpts);
     }
 

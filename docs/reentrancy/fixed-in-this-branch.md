@@ -346,7 +346,7 @@ fields. The branch moves them to owner-scoped final lazy state.
 | `xFuture`, wait-frame construction, async result assignment | `xFuture.INSTANCE`, static `TYPE`, static `COMPLETION`, ownerless `makeHandle(CompletableFuture)` | `NativeTemplates.future()`, final owner-local lazy future type and completion enum template, and `makeHandle(Container, CompletableFuture)` | Must fix |
 | `xAtomic`, `xAtomicIntNumber`, `xAtomicInt128` | `xAtomicIntNumber.INSTANCE`, static `xAtomic.NUMBER_TEMPLATES`, and wrapper construction from numeric template `INSTANCE` fields | final owner-local `Lazy<Map<TypeConstant,xAtomic>>`, immutable `Map.copyOf`, and wrapper construction from this container's number templates | Must fix |
 | Native filesystem templates and CP filesystem constants | `xOSDirectory.INSTANCE`, `xOSFile.INSTANCE`, `xRawOSFileChannel.INSTANCE`, and static constructor `MethodStructure` caches on `xOSDirectory`, `xOSFile`, `xCPDirectory`, `xCPFile`, `xCPFileStore` | `NativeTemplates` filesystem getters plus final owner-scoped lazy constructor caches on the owning template | Must fix |
-| Leaf static metadata caches | `xRTKeyStore.s_typeNamedPassword`, `xOSStorage.s_methodOnEvent`, `xRTCompiler.GET_MODULE_ID`, `xNanosTimer.s_clzDuration`, `xClass.CLASS_ARRAY_TYPE` | final owner-local `Lazy` fields for template-owned metadata; `xClass.ensureArrayComposition(Container)` computes from the caller's `ConstantPool`, which interns the same `Array<Class>` type per owner | Must fix |
+| Leaf static metadata caches | `xRTKeyStore.s_typeNamedPassword`, `xOSStorage.s_methodOnEvent`, `xRTCompiler.GET_MODULE_ID`, `xNanosTimer.s_clzDuration`, `xRTBuffer.PROP_RAW_BYTES`, `xClass.CLASS_ARRAY_TYPE` | final owner-local `Lazy` fields for template-owned metadata; `xClass.ensureArrayComposition(Container)` computes from the caller's `ConstantPool`, which interns the same `Array<Class>` type per owner | Must fix |
 | `xRTFunction` | `LISTMAP_TYPE`, ownerless native/internal function factories, process-global finalizer no-op anchor | `f_typeListMap`, owner-required helper APIs, `FullyBoundHandle.noOp(Container)` | Must fix |
 | `xRTMethod` | `EMPTY_ARRAY` | `f_constEmptyArray` | Must fix |
 | `xRTMethodTemplate` | `INSTANCE`, `METHOD_TEMPLATE_COMP`, ownerless `makeHandle(MethodStructure)` | caller-owned `makeHandle(Container, MethodStructure)` and `f_compMethodTemplate` | Must fix |
@@ -371,18 +371,19 @@ fields. The branch moves them to owner-scoped final lazy state.
 | `xVar` | `INSTANCE`, `INCEPTION_CLASS`, `s_sigSet` | `NativeTemplates.var()`, canonical owner `f_constInception`/`f_sigSet`, derived templates delegating back to owner Var, and owner-required call sites | Must fix |
 | `xConst` | `INSTANCE`, helper method caches, construct-method caches, and `HASH_SIG` | `NativeTemplates.constTemplate()`, `f_info: Lazy<ConstInfo>`, and owner-template abstract checks | Must fix |
 | `xException` | `INSTANCE`, well-known exception class compositions, format method, and ownerless `Utils.translate(Throwable)` path | `NativeTemplates.exception()`, `f_info: Lazy<ExceptionInfo>`, static factories resolving from `Frame`/`Container`, and `Utils.translate(Container, Throwable)` | Must fix |
+| `xBoolean`, `xNullable`, `xOrdered` | public mutable native enum value handles: `TRUE`, `FALSE`, `NULL`, `LESSER`, `EQUAL`, `GREATER` | `NativeTemplates.booleanTemplate()`, `nullable()`, and `ordered()` plus owner-required factories and pure value predicates | Must fix |
 
 These replacements preserve caching. They do not turn old bootstrap caches into
 repeated lookups. The cache key changed from "entire JVM" to "owning
 container/template".
 
 The leaf static metadata wave follows the same rule without adding unnecessary
-tables. `xRTKeyStore`, `xOSStorage`, `xRTCompiler`, and `xNanosTimer` each own
-exactly one metadata value, so a final `Lazy` field on the template keeps the
-old one-time lookup. `xClass.ensureArrayComposition(Container)` already has the
-owner as a parameter, so it asks that owner's `ConstantPool` for `Array<Class>`;
-the pool interns the value, preserving the old cache behavior without a
-process-global `TypeConstant`.
+tables. `xRTKeyStore`, `xOSStorage`, `xRTCompiler`, `xNanosTimer`, and
+`xRTBuffer` each own exactly one metadata value, so a final `Lazy` field on the
+template keeps the old one-time lookup. `xClass.ensureArrayComposition(Container)`
+already has the owner as a parameter, so it asks that owner's `ConstantPool` for
+`Array<Class>`; the pool interns the value, preserving the old cache behavior
+without a process-global `TypeConstant`.
 
 The `Utils` metadata wave removes the old split static helper block entirely.
 The same templates, constructors, array types, and signatures are still looked
@@ -419,6 +420,20 @@ as `xConst` and `xException`, that flag is compatibility shape only: it no
 longer assigns a static `INSTANCE` or selects a global metadata cache. Removing
 the dead constructor parameter across the hierarchy is a should-fix API cleanup,
 not an incomplete must-fix singleton publication bug.
+
+The native enum value wave closes the remaining scanned static runtime metadata
+category. On master, `xBoolean.TRUE/FALSE`, `xNullable.NULL`, and
+`xOrdered.LESSER/EQUAL/GREATER` were public mutable process-global handles
+assigned during `initNative()`. Those handles are not JVM constants: each one
+carries the owning enum template and composition. The replacement keeps the old
+cache semantics by retrieving the same owner-local enum handle from
+`getEnumByOrdinal(...)` on the owner template. It removes only the process
+global shortcut. Static factories such as `xBoolean.makeHandle(...)`,
+`xNullable.makeHandle(...)`, and `xOrdered.makeHandle(...)` now require a
+`Frame` or `Container`, and branch conditions use `isTrue(...)`,
+`isNull(...)`, or `isEqual(...)` style predicates instead of comparing to a
+global handle. There is no new per-use allocation: the value factories return
+the already-cached enum handle for the caller's owner.
 
 The `TestCompiler` stress run also exposed an older `xRTCompiler.addError(...)`
 bug: `CompilerAdapter.getErrors()` returns `stream().toList()`, which is
@@ -635,12 +650,11 @@ runtime/template audit. The full current list is maintained in
 [state-inventory.md#mutable-template-instance-inventory](state-inventory.md#mutable-template-instance-inventory)
 and is empty on this branch.
 
-The remaining must-fix runtime globals are not template `INSTANCE` fields. They
-are the public enum/nullable value handles: `xBoolean.TRUE/FALSE`,
-`xNullable.NULL`, and `xOrdered.LESSER/EQUAL/GREATER`. Those are still real
-process-global runtime handles. They are more pervasive than `xConst` and
-`xException`, so they should be handled as a separate representation/API
-change, not hidden inside this PR.
+The scanned runtime-template/Utils static metadata category is also empty on
+this branch. Remaining global-state backlog now lives in the broader categories
+documented in [state-inventory.md](state-inventory.md), such as terminal/debug
+process resources, `ClassTemplate`'s exposed mutable string arrays, `xBit.ZERO`
+and `xBit.ONE`, and compiler/JIT counters/constants.
 
 ## Proof Points Added By This Branch
 
@@ -652,6 +666,8 @@ contains deterministic demonstrations of the old pattern:
 - static exception class factories can create handles whose class composition
   belongs to a foreign owner,
 - static string factories can return handles owned by the wrong container,
+- static native enum value factories can return handles owned by the wrong
+  container,
 - static Ref signature caches can invoke a Ref handle with a foreign owner
   signature,
 - derived Ref/Var templates fail if they compute `get`/`set` metadata from their

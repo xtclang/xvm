@@ -148,9 +148,9 @@ public class xRTPropertyClassTemplate
         Utils.ValueSupplier supplier    = (frameCaller, index) -> {
             Contribution contrib     = listContrib.get(index);
             TypeConstant typeContrib = contrib.getTypeConstant();
-            ObjectHandle hDelegatee  = xNullable.NULL; // TODO
-            ObjectHandle haNames     = xNullable.NULL;
-            ObjectHandle haTypes     = xNullable.NULL;
+            ObjectHandle hDelegatee  = xNullable.makeHandle(frame); // TODO
+            ObjectHandle haNames     = xNullable.makeHandle(frame);
+            ObjectHandle haTypes     = xNullable.makeHandle(frame);
 
             String sAction;
             switch (contrib.getComposition()) {
@@ -226,7 +226,7 @@ public class xRTPropertyClassTemplate
     public int getPropertySingleton(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         PropertyStructure prop       = (PropertyStructure) hComponent.getComponent();
         boolean           fSingleton = prop.isStatic();
-        return frame.assignValue(iReturn, xBoolean.makeHandle(fSingleton));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, fSingleton));
     }
 
     /**
@@ -256,7 +256,7 @@ public class xRTPropertyClassTemplate
      */
     protected int invokeDeannotate(Frame frame, ComponentTemplateHandle hComponent, int[] aiReturn) {
         // a Composition that is a ClassTemplate is not annotated
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
 
     /**
@@ -265,7 +265,7 @@ public class xRTPropertyClassTemplate
     protected int invokeFromProperty(Frame frame, ComponentTemplateHandle hComponent, int[] aiReturn) {
         PropertyStructure prop = (PropertyStructure) hComponent.getComponent();
         return frame.assignValues(aiReturn,
-            xBoolean.TRUE, xRTPropertyTemplate.makePropertyHandle(frame.container(), prop));
+            xBoolean.trueHandle(frame), xRTPropertyTemplate.makePropertyHandle(frame.container(), prop));
     }
 
 

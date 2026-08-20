@@ -122,7 +122,7 @@ public class xRTSigner
                 signature.update(abData);
 
                 return frame.assignValue(iReturn,
-                        xBoolean.makeHandle(signature.verify(abSig)));
+                        xBoolean.makeHandle(frame, signature.verify(abSig)));
             } else if (hCipher instanceof MacHandle hMac) {
                 Mac mac        = hMac.f_mac;
                 Key privateKey = xRTAlgorithms.extractKey(frame, hKey,
@@ -131,7 +131,7 @@ public class xRTSigner
                 byte[] abSigActual = mac.doFinal(abData);
 
                 return frame.assignValue(iReturn,
-                        xBoolean.makeHandle(MessageDigest.isEqual(abSig, abSigActual)));
+                        xBoolean.makeHandle(frame, MessageDigest.isEqual(abSig, abSigActual)));
             } else {
                 return frame.raiseException(xException.makeObscure(frame, "Invalid cipher"));
             }

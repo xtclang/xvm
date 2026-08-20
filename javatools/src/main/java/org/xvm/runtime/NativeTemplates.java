@@ -49,7 +49,10 @@ import org.xvm.runtime.template.Proxy;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xObject;
+import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template._native.collections.xBasicHashCollector;
@@ -439,6 +442,18 @@ public final class NativeTemplates {
         return is(ENUM, template);
     }
 
+    public xBoolean booleanTemplate() {
+        return get(BOOLEAN);
+    }
+
+    public xNullable nullable() {
+        return get(NULLABLE);
+    }
+
+    public xOrdered ordered() {
+        return get(ORDERED);
+    }
+
     public xConst constTemplate() {
         return get(CONST);
     }
@@ -707,6 +722,15 @@ public final class NativeTemplates {
 
     private static final NativeTemplateRef<xEnum> ENUM =
             NativeTemplateRef.of("Enum", xEnum.class);
+
+    private static final NativeTemplateRef<xBoolean> BOOLEAN =
+            NativeTemplateRef.of("Boolean", xBoolean.class);
+
+    private static final NativeTemplateRef<xNullable> NULLABLE =
+            NativeTemplateRef.of("Nullable", xNullable.class);
+
+    private static final NativeTemplateRef<xOrdered> ORDERED =
+            NativeTemplateRef.of("Ordered", xOrdered.class);
 
     private static final NativeTemplateRef<xConst> CONST =
             NativeTemplateRef.of("Const", xConst.class);

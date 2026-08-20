@@ -219,7 +219,7 @@ public class JumpVal
                     switch (checkRange(frame, m_typeCond, hValue, hLo, hHi,
                                 hLoEx.get(), hHiEx.get(), true, stepNext)) {
                     case Op.R_NEXT:
-                        if (frame.popStack() == xBoolean.TRUE) {
+                        if (xBoolean.isTrue(frame.popStack())) {
                             // it's a match
                             return jump(frame, iPC + m_aofCase[iCase], m_acExits[iCase]);
                         }
@@ -227,7 +227,7 @@ public class JumpVal
 
                     case Op.R_CALL:
                         frame.m_frameNext.addContinuation(frameCaller ->
-                            frameCaller.popStack() == xBoolean.TRUE
+                            xBoolean.isTrue(frameCaller.popStack())
                                 ? jump(frameCaller, iPC + m_aofCase[iCurrent], m_acExits[iCurrent])
                                 : findNatural(frameCaller, iPC, hValue, iCurrent + 1));
                         return Op.R_CALL;
@@ -245,7 +245,7 @@ public class JumpVal
             case NaturalSimple: {
                 switch (m_typeCond.callEquals(frame, hValue, hCase, Op.A_STACK)) {
                 case Op.R_NEXT:
-                    if (frame.popStack() == xBoolean.TRUE) {
+                    if (xBoolean.isTrue(frame.popStack())) {
                         // it's a match
                         return jump(frame, iPC + m_aofCase[iCase], m_acExits[iCase]);
                     }
@@ -253,7 +253,7 @@ public class JumpVal
 
                 case Op.R_CALL:
                     frame.m_frameNext.addContinuation(frameCaller ->
-                        frameCaller.popStack() == xBoolean.TRUE
+                        xBoolean.isTrue(frameCaller.popStack())
                             ? jump(frameCaller, iPC + m_aofCase[iCurrent], m_acExits[iCurrent])
                             : findNatural(frameCaller, iPC, hValue, iCurrent + 1));
                     return Op.R_CALL;

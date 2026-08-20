@@ -616,7 +616,7 @@ public abstract class Container
                     .toList()) {
                 ObjectHandle hModule = frame.getConstHandle(idDep);
                 ahModules[index] = hModule;
-                ahShared [index] = xBoolean.makeHandle(isModuleShared(idDep));
+                ahShared [index] = xBoolean.makeHandle(frame, isModuleShared(idDep));
                 fDeferred |= Op.isDeferred(hModule);
                 ++index;
             }

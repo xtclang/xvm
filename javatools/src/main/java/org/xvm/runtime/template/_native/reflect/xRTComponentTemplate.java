@@ -128,7 +128,7 @@ public class xRTComponentTemplate
         ComponentTemplateHandle hTemplate2 = componentTemplateHandle(hValue2);
 
         return frame.assignValue(iReturn,
-            xBoolean.makeHandle(hTemplate1.getComponent().equals(hTemplate2.getComponent())));
+            xBoolean.makeHandle(frame, hTemplate1.getComponent().equals(hTemplate2.getComponent())));
     }
 
     @Override
@@ -158,7 +158,7 @@ public class xRTComponentTemplate
         Component component = hComponent.getComponent();
         String    sDoc      = component.getDocumentation();
         return frame.assignValue(iReturn, sDoc == null
-                ? xNullable.NULL
+                ? xNullable.makeHandle(frame)
                 : xString.makeHandle(frame, sDoc));
     }
 
@@ -176,7 +176,7 @@ public class xRTComponentTemplate
      */
     protected int getPropertyIsAbstract(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         Component component = hComponent.getComponent();
-        return frame.assignValue(iReturn, xBoolean.makeHandle(component.isAbstract()));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, component.isAbstract()));
     }
 
     /**
@@ -184,7 +184,7 @@ public class xRTComponentTemplate
      */
     protected int getPropertyIsStatic(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         Component component = hComponent.getComponent();
-        return frame.assignValue(iReturn, xBoolean.makeHandle(component.isStatic()));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, component.isStatic()));
     }
 
     /**
@@ -201,7 +201,7 @@ public class xRTComponentTemplate
     protected int getPropertyParent(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         Component    parent  = hComponent.getComponent().getParent();
         ObjectHandle hParent = parent == null
-                ? xNullable.NULL
+                ? xNullable.makeHandle(frame)
                 : makeComponentHandle(frame.container(), parent);
         return frame.assignValue(iReturn, hParent);
     }
@@ -211,7 +211,7 @@ public class xRTComponentTemplate
      */
     protected int getPropertySynthetic(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         Component component = hComponent.getComponent();
-        return frame.assignValue(iReturn, xBoolean.makeHandle(component.isSynthetic()));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, component.isSynthetic()));
     }
 
 

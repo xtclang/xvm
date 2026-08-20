@@ -93,7 +93,7 @@ public class xNanosTimer
         case "schedule": {
             GenericHandle  hDuration = (GenericHandle ) ahArg[0];
             FunctionHandle hAlarm    = (FunctionHandle) ahArg[1];
-            BooleanHandle  hKeep     = ahArg[2] instanceof BooleanHandle hB ? hB : xBoolean.FALSE;
+            BooleanHandle  hKeep     = ahArg[2] instanceof BooleanHandle hB ? hB : xBoolean.falseHandle(frame);
             return invokeSchedule(frame, hTimer, hDuration, hAlarm, hKeep, iReturn);
         }
         }

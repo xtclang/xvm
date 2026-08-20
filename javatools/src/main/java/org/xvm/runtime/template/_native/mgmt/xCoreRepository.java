@@ -89,8 +89,8 @@ public class xCoreRepository
             }
 
             return module == null
-                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                : frame.assignValues(aiReturn, xBoolean.TRUE,
+                ? frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame))
+                : frame.assignValues(aiReturn, xBoolean.trueHandle(frame),
                         xRTModuleTemplate.makeHandle(frame.f_context.f_container, module));
         }
         }

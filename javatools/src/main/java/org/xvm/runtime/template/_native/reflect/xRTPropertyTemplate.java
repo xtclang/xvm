@@ -97,7 +97,7 @@ public class xRTPropertyTemplate
     public int getPropertyIsConstant(Frame frame, ComponentTemplateHandle hProp, int iReturn) {
         PropertyStructure prop = (PropertyStructure) hProp.getComponent();
 
-        return frame.assignValue(iReturn, xBoolean.makeHandle(prop.isConstant()));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, prop.isConstant()));
     }
 
     /**
@@ -161,11 +161,11 @@ public class xRTPropertyTemplate
 
             return Op.isDeferred(hInitial)
                 ? hInitial.proceed(frame, frameCaller ->
-                    frameCaller.assignValues(aiReturn, xBoolean.TRUE, frameCaller.popStack()))
-                : frame.assignValues(aiReturn, xBoolean.TRUE, hInitial);
+                    frameCaller.assignValues(aiReturn, xBoolean.trueHandle(frameCaller), frameCaller.popStack()))
+                : frame.assignValues(aiReturn, xBoolean.trueHandle(frame), hInitial);
         }
 
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
 
 

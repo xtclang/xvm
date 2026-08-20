@@ -169,7 +169,7 @@ public class xRTClassTemplate
                 return frame.assignValue(iReturn, xString.makeHandle(frame, sAlias));
             }
         }
-        return frame.assignValue(iReturn, xNullable.NULL);
+        return frame.assignValue(iReturn, xNullable.makeHandle(frame));
     }
 
     /**
@@ -212,10 +212,10 @@ public class xRTClassTemplate
         Utils.ValueSupplier supplier    = (frameCaller, index) -> {
             Contribution contrib     = listContrib.get(index);
             TypeConstant typeContrib = contrib.getTypeConstant();
-            ObjectHandle haParams    = xNullable.NULL;
-            ObjectHandle hDelegatee  = xNullable.NULL; // TODO
-            ObjectHandle haNames     = xNullable.NULL;
-            ObjectHandle haTypes     = xNullable.NULL;
+            ObjectHandle haParams    = xNullable.makeHandle(frame);
+            ObjectHandle hDelegatee  = xNullable.makeHandle(frame); // TODO
+            ObjectHandle haNames     = xNullable.makeHandle(frame);
+            ObjectHandle haTypes     = xNullable.makeHandle(frame);
 
             String sAction;
             switch (contrib.getComposition()) {
@@ -412,7 +412,7 @@ public class xRTClassTemplate
     public int getPropertySingleton(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         ClassStructure clz        = (ClassStructure) hComponent.getComponent();
         boolean        fSingleton = clz.isSingleton();
-        return frame.assignValue(iReturn, xBoolean.makeHandle(fSingleton));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, fSingleton));
     }
 
     /**
@@ -421,7 +421,7 @@ public class xRTClassTemplate
     public int getPropertyHasDefault(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         ClassStructure clz      = (ClassStructure) hComponent.getComponent();
         boolean        fDefault = clz.getCanonicalType().getDefaultValue() != null;
-        return frame.assignValue(iReturn, xBoolean.makeHandle(fDefault));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, fDefault));
     }
 
     /**
@@ -478,7 +478,7 @@ public class xRTClassTemplate
     public int getPropertyVirtualChild(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         ClassStructure clz      = (ClassStructure) hComponent.getComponent();
         boolean        fVirtual = clz.isVirtualChild();
-        return frame.assignValue(iReturn, xBoolean.makeHandle(fVirtual));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, fVirtual));
     }
 
     /**
@@ -510,7 +510,7 @@ public class xRTClassTemplate
      */
     protected int invokeDeannotate(Frame frame, ComponentTemplateHandle hComponent, int[] aiReturn) {
         // ClassTemplate annotations are actually contributions
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
 
 

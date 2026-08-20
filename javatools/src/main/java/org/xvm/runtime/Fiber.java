@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,6 +39,9 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 public class Fiber
         implements Comparable<Fiber> {
     public Fiber(ServiceContext context, Message msgCall) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(msgCall, "msgCall");
+
         f_lId        = s_counter.getAndIncrement();
         f_context    = context;
         f_iCallerId  = msgCall.f_iCallerId;
@@ -49,7 +53,7 @@ public class Fiber
             f_nDepth     = 0;
             f_refCaller  = null;
             m_ldtTimeout = 0L;
-            m_hTimeout   = xNullable.NULL;
+            m_hTimeout   = xNullable.makeHandle(context.f_container);
             m_mapTokens  = null;
             m_fCloneMap  = false;
         } else {
@@ -68,6 +72,27 @@ public class Fiber
                 m_fCloneMap = true;
             }
         }
+
+        m_hAsyncSection = xNullable.makeHandle(context.f_container);
+    }
+
+    /**
+     * Identity-only constructor for unit tests that exercise state machines which store a Fiber
+     * reference but never execute fiber logic.
+     */
+    Fiber() {
+        f_lId        = s_counter.getAndIncrement();
+        f_context    = null;
+        f_refCaller  = null;
+        f_iCallerId  = 0;
+        f_fnCaller   = null;
+        f_nDepth     = 0;
+        m_status     = FiberStatus.Initial;
+        m_ldtTimeout = 0L;
+        m_hTimeout      = null;
+        m_mapTokens     = null;
+        m_fCloneMap     = false;
+        m_hAsyncSection = null;
     }
 
     /**
@@ -107,7 +132,7 @@ public class Fiber
      */
     public void clearTimeout() {
         m_ldtTimeout = 0L;
-        m_hTimeout   = xNullable.NULL;
+        m_hTimeout   = xNullable.makeHandle(f_context.f_container);
     }
 
     /**
@@ -395,7 +420,7 @@ public class Fiber
 
     protected void processUnhandledException(ExceptionHandle hException) {
         ObjectHandle hAsyncSection = m_hAsyncSection;
-        if (hAsyncSection == xNullable.NULL) {
+        if (xNullable.isNull(hAsyncSection)) {
             f_context.callUnhandledExceptionHandler(hException);
         } else {
             // there is an active AsyncSection - defer the exception handling
@@ -416,7 +441,7 @@ public class Fiber
      */
     public int registerAsyncSection(Frame frame, ObjectHandle hSectionNew) {
         ObjectHandle hSectionOld = m_hAsyncSection;
-        if (hSectionOld != xNullable.NULL) {
+        if (!xNullable.isNull(hSectionOld)) {
             // check if all the unguarded calls have completed
             if (isSectionPending(hSectionOld)) {
                 m_resume = frameCaller -> {
@@ -654,7 +679,7 @@ public class Fiber
     /**
      * Currently active AsyncSection.
      */
-    private ObjectHandle m_hAsyncSection = xNullable.NULL;
+    private ObjectHandle m_hAsyncSection;
 
     /**
      * List of exceptions to be processed by this fiber when the active AsyncSection is closed.

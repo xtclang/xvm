@@ -48,6 +48,6 @@ public class JumpNotNull
 
     @Override
     protected int completeUnaryOp(Frame frame, int iPC, ObjectHandle hValue) {
-        return hValue == xNullable.NULL ? iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);
+        return xNullable.isNull(hValue) ? iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);
     }
 }

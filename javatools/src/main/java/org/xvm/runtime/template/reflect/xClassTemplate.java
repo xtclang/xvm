@@ -30,6 +30,6 @@ public class xClassTemplate
         return hValue1 instanceof ComponentTemplateHandle &&
                 hValue2 instanceof ComponentTemplateHandle
             ? xRTComponentTemplate.getInstance(frame).callEquals(frame, clazz, hValue1, hValue2, iReturn)
-            : frame.assignValue(iReturn, xBoolean.FALSE);
+            : frame.assignValue(iReturn, xBoolean.falseHandle(frame));
     }
 }

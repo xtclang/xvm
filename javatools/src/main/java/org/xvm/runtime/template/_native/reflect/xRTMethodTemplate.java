@@ -107,7 +107,7 @@ public class xRTMethodTemplate
      */
     protected int getPropertyHasCode(Frame frame, ComponentTemplateHandle hMethod, int iReturn) {
         MethodStructure method = (MethodStructure) hMethod.getComponent();
-        return frame.assignValue(iReturn, xBoolean.makeHandle(method.hasCode()));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, method.hasCode()));
     }
 
 
@@ -128,10 +128,10 @@ public class xRTMethodTemplate
 
         ObjectHandle[] ahReturn = new ObjectHandle[5];
 
-        ahReturn[0] = sName == null ? xNullable.NULL : xString.makeHandle(frame, sName);
+        ahReturn[0] = sName == null ? xNullable.makeHandle(frame) : xString.makeHandle(frame, sName);
         ahReturn[1] = xRTTypeTemplate.makeHandle(frame.f_context.f_container, parameter.getType());
-        ahReturn[2] = xBoolean.makeHandle(parameter.isTypeParameter());
-        ahReturn[3] = xBoolean.makeHandle(fDefault);
+        ahReturn[2] = xBoolean.makeHandle(frame, parameter.isTypeParameter());
+        ahReturn[3] = xBoolean.makeHandle(frame, fDefault);
 
         if (fDefault) {
             ObjectHandle hDefault = frame.getConstHandle(parameter.getDefaultValue());
@@ -143,7 +143,7 @@ public class xRTMethodTemplate
             }
             ahReturn[4] = hDefault;
         } else {
-            ahReturn[4] = xNullable.NULL;
+            ahReturn[4] = xNullable.makeHandle(frame);
         }
 
         return frame.assignValues(aiReturn, ahReturn);
@@ -163,9 +163,9 @@ public class xRTMethodTemplate
 
         ObjectHandle[] ahReturn = new ObjectHandle[3];
 
-        ahReturn[0] = sName == null ? xNullable.NULL : xString.makeHandle(frame, sName);
+        ahReturn[0] = sName == null ? xNullable.makeHandle(frame) : xString.makeHandle(frame, sName);
         ahReturn[1] = xRTTypeTemplate.makeHandle(frame.f_context.f_container, parameter.getType());
-        ahReturn[2] = xBoolean.makeHandle(parameter.isConditionalReturn());
+        ahReturn[2] = xBoolean.makeHandle(frame, parameter.isConditionalReturn());
 
         return frame.assignValues(aiReturn, ahReturn);
     }

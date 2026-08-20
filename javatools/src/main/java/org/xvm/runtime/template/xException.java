@@ -289,9 +289,9 @@ public class xException
         ExceptionHandle hException = makeMutableStruct(frame, clzEx, null);
 
         hException.setField(frame, "text",  sMessage == null
-                ? xNullable.NULL
+                ? xNullable.makeHandle(frame)
                 : xString.makeHandle(clzEx.getContainer(), sMessage));
-        hException.setField(frame, "cause", hCause == null   ? xNullable.NULL : hCause);
+        hException.setField(frame, "cause", hCause == null   ? xNullable.makeHandle(frame) : hCause);
         hException.makeImmutable();
 
         return (ExceptionHandle) hException.ensureAccess(Access.PUBLIC);
@@ -318,9 +318,9 @@ public class xException
         ExceptionHandle hException = makeMutableStruct(frame, clzEx, sRtError);
 
         hException.setField(frame, "text",  sMessage == null
-                ? xNullable.NULL
+                ? xNullable.makeHandle(frame)
                 : xString.makeHandle(clzEx.getContainer(), sMessage));
-        hException.setField(frame, "cause", xNullable.NULL);
+        hException.setField(frame, "cause", xNullable.makeHandle(frame));
         hException.makeImmutable();
 
         return (ExceptionHandle) hException.ensureAccess(Access.PUBLIC);
@@ -332,9 +332,9 @@ public class xException
         ExceptionHandle hException = makeMutableStruct(null, clzEx, null);
 
         hException.setField(null, "text", sMessage == null
-                ? xNullable.NULL
+                ? xNullable.makeHandle(clzEx.getContainer())
                 : xString.makeHandle(clzEx.getContainer(), sMessage));
-        hException.setField(null, "cause", xNullable.NULL);
+        hException.setField(null, "cause", xNullable.makeHandle(clzEx.getContainer()));
         hException.makeImmutable();
 
         return (ExceptionHandle) hException.ensureAccess(Access.PUBLIC);

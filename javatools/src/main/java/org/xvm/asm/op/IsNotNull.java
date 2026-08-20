@@ -48,6 +48,6 @@ public class IsNotNull
 
     @Override
     protected int completeUnaryOp(Frame frame, ObjectHandle hValue) {
-        return frame.assignValue(m_nRetValue, xBoolean.makeHandle(hValue != xNullable.NULL));
+        return frame.assignValue(m_nRetValue, xBoolean.makeHandle(frame, !xNullable.isNull(hValue)));
     }
 }

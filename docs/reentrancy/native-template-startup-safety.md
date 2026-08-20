@@ -1020,21 +1020,39 @@ Converted `INSTANCE` fields in this branch include:
 
 ## TODO: Legacy Static Metadata Caches Not Removed
 
-The mutable template `INSTANCE` category is closed on this branch. Static
-metadata caches are the next risk. Follow-up work should prioritize any static
-field whose type is container, pool, structure, composition, template, method,
-or handle state.
+The mutable template `INSTANCE` category is closed on this branch. The scanned
+runtime-template/Utils static metadata category is also closed on this branch:
+the last public native enum value globals were removed by replacing
+`xBoolean.TRUE/FALSE`, `xNullable.NULL`, and
+`xOrdered.LESSER/EQUAL/GREATER` with owner-required factories and value
+predicates.
+
+Follow-up work should still prioritize any static field outside that scan whose
+type is container, pool, structure, composition, template, method, or handle
+state.
 
 Known high-priority leftovers include:
 
-- Native enum value globals: `xBoolean.TRUE/FALSE`, `xNullable.NULL`, and
-  `xOrdered.LESSER/EQUAL/GREATER`. These are pervasive public handles and need
-  a separate representation/API change rather than a one-line lazy field.
+- `xBit.ZERO` and `xBit.ONE`. These are native value handles and should follow
+  the same owner-scoped factory/predicate rule used for Boolean, Nullable, and
+  Ordered.
+- Terminal/debug globals such as `xTerminalConsole.READER`, `TERMINAL`, and
+  `DebugConsole`'s equivalent process resources. These are resettable process
+  resources, not container metadata, so they need an explicit lifecycle owner
+  or synchronized holder rather than `Lazy`.
+- `xLocalClock.TIMER`. This is a real process resource; it should either be
+  made final with a documented JVM-wide lifecycle or moved behind an explicit
+  runtime/owner lifecycle.
 - `xString` is no longer in this TODO: this branch moves its common handles,
   append method cache, and helper factories to owner-scoped state.
+- `xRTBuffer` is no longer in this TODO: this branch moves its `rawBytes`
+  property constant cache to final owner-scoped lazy state.
 - `xConst` and `xException` are no longer in this TODO: this branch moves their
   helper method caches, hash signature, exception class compositions, and
   formatting method to owner-scoped `Lazy` info records.
+- `xBoolean`, `xNullable`, and `xOrdered` are no longer in this TODO: this
+  branch keeps their enum value handles in the owning enum template and removes
+  the public mutable statics.
 
 Use this audit command for static metadata:
 

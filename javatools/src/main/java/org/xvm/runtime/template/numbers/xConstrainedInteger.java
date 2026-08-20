@@ -303,7 +303,7 @@ public abstract class xConstrainedInteger
             }
 
             long    lValue       = ((JavaLong) hTarget).getValue();
-            boolean fCheckBounds = hArg == xBoolean.TRUE;
+            boolean fCheckBounds = xBoolean.isTrue(hArg);
             if (template instanceof xConstrainedInteger templateTo) {
                 if (fCheckBounds && lValue < 0 &&
                         (this instanceof xUInt64              // UInt64 -> Int*
@@ -384,7 +384,7 @@ public abstract class xConstrainedInteger
         case "toDecN":
         case "toChar":
             // default argument: checkBounds = False;
-            return invokeNative1(frame, method, hTarget, xBoolean.FALSE, iReturn);
+            return invokeNative1(frame, method, hTarget, xBoolean.falseHandle(frame), iReturn);
 
         case "neg":
             return invokeNeg(frame, hTarget, iReturn);
@@ -572,7 +572,7 @@ public abstract class xConstrainedInteger
         JavaLong h1 = (JavaLong) hValue1;
         JavaLong h2 = (JavaLong) hValue2;
 
-        return frame.assignValue(iReturn, xOrdered.makeHandle(f_fSigned
+        return frame.assignValue(iReturn, xOrdered.makeHandle(frame, f_fSigned
                 ? Long.compare(h1.getValue(), h2.getValue())
                 : Long.compareUnsigned(h1.getValue(), h2.getValue())));
     }

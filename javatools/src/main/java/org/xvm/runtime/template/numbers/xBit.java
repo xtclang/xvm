@@ -122,7 +122,7 @@ public class xBit
             }
 
             if (template instanceof xBoolean) {
-                return frame.assignValue(iReturn, xBoolean.makeHandle(fValue));
+                return frame.assignValue(iReturn, xBoolean.makeHandle(frame, fValue));
             }
             break;
         }
@@ -158,7 +158,7 @@ public class xBit
     @Override
     public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
-        return frame.assignValue(iReturn, xBoolean.makeHandle(compareIdentity(hValue1, hValue2)));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, compareIdentity(hValue1, hValue2)));
     }
 
     @Override
@@ -168,7 +168,7 @@ public class xBit
         JavaLong h2 = (JavaLong) hValue2;
 
         return frame.assignValue(iReturn,
-            xOrdered.makeHandle(Long.compare(h1.getValue(), h2.getValue())));
+            xOrdered.makeHandle(frame, Long.compare(h1.getValue(), h2.getValue())));
     }
 
     @Override

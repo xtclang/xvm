@@ -59,7 +59,7 @@ public class FinallyEnd
         int nException = frame.f_anNextVar[frame.m_iScope - 1];
 
         ObjectHandle hException = frame.f_ahVar[nException];
-        if (hException == xNullable.NULL) {
+        if (xNullable.isNull(hException)) {
             DeferredGuardAction deferred = frame.m_deferred;
             if (deferred == null) {
                 // the "finally" scope was entered naturally and exits naturally

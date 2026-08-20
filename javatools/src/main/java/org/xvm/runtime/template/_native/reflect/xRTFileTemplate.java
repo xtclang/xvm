@@ -95,7 +95,7 @@ public class xRTFileTemplate
                     fileStruct.buildFileInfo().modules().keySet().toArray(new String[0])));
 
         case "resolved":
-            return frame.assignValue(iReturn, xBoolean.makeHandle(fileStruct.isLinked()));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(frame, fileStruct.isLinked()));
 
         case "contents":
             return getPropertyContents(frame, fileStruct, iReturn);
@@ -152,9 +152,9 @@ public class xRTFileTemplate
                 }
             }
             return module == null
-                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
+                ? frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame))
                 : frame.assignValues(aiReturn,
-                        xBoolean.TRUE,
+                        xBoolean.trueHandle(frame),
                         xRTModuleTemplate.makeHandle(frame.f_context.f_container, module));
         }
         }

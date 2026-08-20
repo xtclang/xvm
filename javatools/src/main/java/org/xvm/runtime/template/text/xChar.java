@@ -156,7 +156,7 @@ public class xChar
     @Override
     public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
-        return frame.assignValue(iReturn, xBoolean.makeHandle(compareIdentity(hValue1, hValue2)));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, compareIdentity(hValue1, hValue2)));
     }
 
     @Override
@@ -166,7 +166,7 @@ public class xChar
         JavaLong h2 = (JavaLong) hValue2;
 
         return frame.assignValue(iReturn,
-            xOrdered.makeHandle(Long.compare(h1.getValue(), h2.getValue())));
+            xOrdered.makeHandle(frame, Long.compare(h1.getValue(), h2.getValue())));
     }
 
     @Override

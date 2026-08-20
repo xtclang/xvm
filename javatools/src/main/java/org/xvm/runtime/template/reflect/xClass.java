@@ -150,14 +150,14 @@ public class xClass
     protected int callEqualsImpl(Frame frame, TypeComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         return frame.assignValue(iReturn,
-            xBoolean.makeHandle(getClassType(hValue1).equals(getClassType(hValue2))));
+            xBoolean.makeHandle(frame, getClassType(hValue1).equals(getClassType(hValue2))));
     }
 
     @Override
     protected int callCompareImpl(Frame frame, TypeComposition clazz,
                                   ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         return frame.assignValue(iReturn,
-            xOrdered.makeHandle(getClassType(hValue1).compareTo(getClassType(hValue2))));
+            xOrdered.makeHandle(frame, getClassType(hValue1).compareTo(getClassType(hValue2))));
     }
 
     @Override
@@ -173,7 +173,7 @@ public class xClass
      */
     public int getPropertyAbstract(Frame frame, ObjectHandle hTarget, int iReturn) {
         TypeConstant typeTarget = getClassType(hTarget);
-        ObjectHandle hResult    = xBoolean.makeHandle(typeTarget.ensureTypeInfo().isAbstract());
+        ObjectHandle hResult    = xBoolean.makeHandle(frame, typeTarget.ensureTypeInfo().isAbstract());
         return frame.assignValue(iReturn, hResult);
     }
 
@@ -201,7 +201,7 @@ public class xClass
      */
     public int getPropertyVirtualChild(Frame frame, ObjectHandle hTarget, int iReturn) {
         TypeConstant typeTarget = getClassType(hTarget);
-        ObjectHandle hResult    = xBoolean.makeHandle(typeTarget.isVirtualChild());
+        ObjectHandle hResult    = xBoolean.makeHandle(frame, typeTarget.isVirtualChild());
         return frame.assignValue(iReturn, hResult);
     }
 
@@ -215,7 +215,7 @@ public class xClass
         TypeConstant typePublic = getClassType(hTarget);
 
         if (typePublic.ensureTypeInfo().isSingleton()) {
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         }
 
         typePublic = typePublic.removeImmutable().removeAccess();
@@ -224,7 +224,7 @@ public class xClass
         ClassTemplate   template  = container.getTemplate(typePublic);
         TypeComposition clzPublic = typePublic.ensureClass(frame);
 
-        if (hParent == ObjectHandle.DEFAULT || hParent == xNullable.NULL) {
+        if (hParent == ObjectHandle.DEFAULT || xNullable.isNull(hParent)) {
             if (typePublic.isVirtualChild()) {
                 return frame.raiseException(
                     xException.illegalArgument(frame, "Parent instance required"));
@@ -248,7 +248,7 @@ public class xClass
             break;
 
         default:
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         }
 
         if (hParent != null && !hParent.isPassThrough()) {
@@ -257,11 +257,11 @@ public class xClass
 
         switch (contextAlloc.sendAllocateRequest(frame, clzPublic, hParent, Op.A_STACK)) {
         case Op.R_NEXT:
-            return frame.assignValues(aiReturn, xBoolean.TRUE, frame.popStack());
+            return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), frame.popStack());
 
         case Op.R_CALL:
             frame.m_frameNext.addContinuation(frameCaller ->
-                frameCaller.assignValues(aiReturn, xBoolean.TRUE, frameCaller.popStack()));
+                frameCaller.assignValues(aiReturn, xBoolean.trueHandle(frameCaller), frameCaller.popStack()));
             return Op.R_CALL;
 
         case Op.R_EXCEPTION:
@@ -286,7 +286,7 @@ public class xClass
 
             case Op.R_CALL:
                 frame.m_frameNext.addContinuation(frameCaller ->
-                    frameCaller.assignValues(aiReturn, xBoolean.TRUE, hStruct));
+                    frameCaller.assignValues(aiReturn, xBoolean.trueHandle(frameCaller), hStruct));
                 return Op.R_CALL;
 
             case Op.R_EXCEPTION:
@@ -301,7 +301,7 @@ public class xClass
             ((GenericHandle) hStruct).setField(frame, GenericHandle.OUTER, hParent);
         }
 
-        return frame.assignValues(aiReturn, xBoolean.TRUE, hStruct);
+        return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), hStruct);
     }
 
     /**
@@ -392,7 +392,7 @@ public class xClass
             return frame.assignConditionalDeferredValue(aiReturn,
                     frame.getConstHandle(constInstance));
         }
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
 
     /**
@@ -405,7 +405,7 @@ public class xClass
             return frame.assignConditionalDeferredValue(aiReturn,
                     frame.getConstHandle(constDefault));
         }
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
 
 

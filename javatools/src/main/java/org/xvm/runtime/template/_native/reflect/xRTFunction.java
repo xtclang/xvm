@@ -176,14 +176,14 @@ public class xRTFunction
     @Override
     protected int callEqualsImpl(Frame frame, TypeComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
-        return frame.assignValue(iReturn, xBoolean.makeHandle(hValue1 == hValue2));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(frame, hValue1 == hValue2));
     }
 
     @Override
     protected int callCompareImpl(Frame frame, TypeComposition clazz,
                                   ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         return frame.assignValue(iReturn,
-            xOrdered.makeHandle(hValue1.hashCode() - hValue2.hashCode()));
+            xOrdered.makeHandle(frame, hValue1.hashCode() - hValue2.hashCode()));
     }
 
 
@@ -299,7 +299,7 @@ public class xRTFunction
             hFunc.addBoundArguments(ahValue);
 
             // TODO: what if any of the assigns below return a deferred handle?
-            frame.assignValue(aiReturn[0], xBoolean.TRUE);
+            frame.assignValue(aiReturn[0], xBoolean.trueHandle(frame));
             frame.assignValue(aiReturn[1], xRTMethodTemplate.makeHandle(frame.container(), method));
             frame.assignValue(aiReturn[2], makeHandle(frame, method));
 
@@ -309,7 +309,7 @@ public class xRTFunction
                     frame.container(), method.getParamArray(), ahParam, stepNext).doNext(frame);
         }
 
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
 
     private int constructListMap(Frame frame,
@@ -343,7 +343,7 @@ public class xRTFunction
                 : createMethodParams(frame, method, hMethod, hTarget, ahValue, aiReturn);
         }
 
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
     }
 
     private int createMethodParams(Frame frame, MethodStructure method, ObjectHandle hMethod,
@@ -351,7 +351,7 @@ public class xRTFunction
         ObjectHandle[] ahParam = new ObjectHandle[method.getParamCount()];
 
         // TODO: what if any of the assigns below return R_CALL?
-        frame.assignValue(aiReturn[0], xBoolean.TRUE);
+        frame.assignValue(aiReturn[0], xBoolean.trueHandle(frame));
         frame.assignValue(aiReturn[1], hTarget);
         frame.assignValue(aiReturn[2], hMethod);
 

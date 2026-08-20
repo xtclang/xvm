@@ -182,7 +182,7 @@ public class xRTStringDelegate
         StringArrayHandle h2 = (StringArrayHandle) hValue2;
 
         return frame.assignValue(iReturn,
-                xBoolean.makeHandle(Arrays.equals(h1.m_asValue, h2.m_asValue)));
+                xBoolean.makeHandle(frame, Arrays.equals(h1.m_asValue, h2.m_asValue)));
     }
 
     @Override

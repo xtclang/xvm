@@ -57,7 +57,7 @@ public class xRTNetworkInterface
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         switch (sPropName) {
         case "nameService": {
-            BooleanHandle hRunning = xBoolean.FALSE; // TODO
+            BooleanHandle hRunning = xBoolean.falseHandle(frame); // TODO
             return frame.assignValue(iReturn, hRunning);
         }
         }
@@ -90,7 +90,7 @@ public class xRTNetworkInterface
             int    nLocalPort = (int) ((JavaLong) ahArg[1]).getValue();
             try {
                 // TODO
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
             } catch (Exception e) {
                 return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
             }

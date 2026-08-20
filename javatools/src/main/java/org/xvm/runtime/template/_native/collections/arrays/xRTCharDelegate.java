@@ -172,7 +172,7 @@ public class xRTCharDelegate
         CharArrayHandle h2 = (CharArrayHandle) hValue2;
 
         return frame.assignValue(iReturn,
-                xBoolean.makeHandle(Arrays.equals(h1.m_achValue, h2.m_achValue)));
+                xBoolean.makeHandle(frame, Arrays.equals(h1.m_achValue, h2.m_achValue)));
     }
 
     @Override
@@ -292,11 +292,11 @@ public class xRTCharDelegate
 
         if (cchThat == 0) {
             return ofStart > cchThis
-                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(frame, ofStart));
+                ? frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame))
+                : frame.assignValues(aiReturn, xBoolean.trueHandle(frame), xInt64.makeHandle(frame, ofStart));
         }
         if (ofStart > cchThis - cchThat) {
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         }
 
         char chFirstMatch = achThat[0];
@@ -308,10 +308,10 @@ public class xRTCharDelegate
                         continue Next;
                     }
                 }
-                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(frame, of));
+                return frame.assignValues(aiReturn, xBoolean.trueHandle(frame), xInt64.makeHandle(frame, of));
             }
         }
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
 }
 
 

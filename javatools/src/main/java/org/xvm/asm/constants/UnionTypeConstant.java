@@ -1031,7 +1031,7 @@ public class UnionTypeConstant
         }
 
         assert !typeV1.equals(typeV2);
-        return frame.assignValue(iReturn, xBoolean.FALSE);
+        return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
     }
 
     @Override
@@ -1050,7 +1050,7 @@ public class UnionTypeConstant
         }
 
         assert !typeV1.equals(typeV2);
-        return frame.assignValue(iReturn, xOrdered.makeHandle(typeV1.compareTo(typeV2)));
+        return frame.assignValue(iReturn, xOrdered.makeHandle(frame, typeV1.compareTo(typeV2)));
     }
 
     @Override

@@ -95,7 +95,7 @@ public abstract class xNumber
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
         // all numbers are consts with identity being the value
         return frame.assignValue(iReturn,
-                xBoolean.makeHandle(compareIdentity(hValue1, hValue2)));
+                xBoolean.makeHandle(frame, compareIdentity(hValue1, hValue2)));
     }
 
     @Override

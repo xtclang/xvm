@@ -101,8 +101,8 @@ public class xConst
         if (constant instanceof RangeConstant constRange) {
             ObjectHandle  h1 = frame.getConstHandle(constRange.getFirst());
             ObjectHandle  h2 = frame.getConstHandle(constRange.getLast());
-            BooleanHandle f1 = xBoolean.makeHandle(constRange.isFirstExcluded());
-            BooleanHandle f2 = xBoolean.makeHandle(constRange.isLastExcluded());
+            BooleanHandle f1 = xBoolean.makeHandle(frame, constRange.isFirstExcluded());
+            BooleanHandle f2 = xBoolean.makeHandle(frame, constRange.isLastExcluded());
             ConstInfo     info = info();
 
             TypeConstant    typeRange   = constRange.getType();
@@ -522,7 +522,7 @@ public class xConst
         @Override
         public int proceed(Frame frameCaller) {
             ObjectHandle hResult = frameCaller.popStack();
-            if (hResult == xBoolean.FALSE) {
+            if (xBoolean.isFalse(hResult)) {
                 return frameCaller.assignValue(iReturn, hResult);
             }
             return doNext(frameCaller);
@@ -566,7 +566,7 @@ public class xConst
                 switch (typeProp.callEquals(frameCaller, h1, h2, Op.A_STACK)) {
                 case Op.R_NEXT:
                     ObjectHandle hResult = frameCaller.popStack();
-                    if (hResult == xBoolean.FALSE) {
+                    if (xBoolean.isFalse(hResult)) {
                         return frameCaller.assignValue(iReturn, hResult);
                     }
                     break;
@@ -582,7 +582,7 @@ public class xConst
                     throw new IllegalStateException();
                 }
             }
-            return frameCaller.assignValue(iReturn, xBoolean.TRUE);
+            return frameCaller.assignValue(iReturn, xBoolean.trueHandle(frameCaller));
         }
     }
 
@@ -610,7 +610,7 @@ public class xConst
         @Override
         public int proceed(Frame frameCaller) {
             EnumHandle hResult = (EnumHandle) frameCaller.popStack();
-            if (hResult != xOrdered.EQUAL) {
+            if (!xOrdered.isEqual(hResult)) {
                 return frameCaller.assignValue(iReturn, hResult);
             }
             return doNext(frameCaller);
@@ -664,7 +664,7 @@ public class xConst
                 switch (iResult) {
                 case Op.R_NEXT:
                     EnumHandle hResult = (EnumHandle) frameCaller.popStack();
-                    if (hResult != xOrdered.EQUAL) {
+                    if (!xOrdered.isEqual(hResult)) {
                         return frameCaller.assignValue(iReturn, hResult);
                     }
                     break;
@@ -680,7 +680,7 @@ public class xConst
                     throw new IllegalStateException();
                 }
             }
-            return frameCaller.assignValue(iReturn, xOrdered.EQUAL);
+            return frameCaller.assignValue(iReturn, xOrdered.equalHandle(frameCaller));
         }
     }
 

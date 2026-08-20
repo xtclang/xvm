@@ -396,13 +396,13 @@ public class xRTServer
         RouteInfo     info      = router.mapRoutes.get(sHostName);
 
         if (info == null) {
-            return frame.assignValue(iResult, xBoolean.FALSE);
+            return frame.assignValue(iResult, xBoolean.falseHandle(frame));
         }
 
         RequestHandler handler = createRequestHandler(frame, hWrapper, hServer);
         router.mapRoutes.put(sHostName,
             new RouteInfo(handler, info.nHttpPort, info.nHttpsPort, info.hKeyStore, info.sTlsKey));
-        return frame.assignValue(iResult, xBoolean.TRUE);
+        return frame.assignValue(iResult, xBoolean.trueHandle(frame));
     }
 
     private RequestHandler createRequestHandler(Frame frame, ServiceHandle hWrapper, HttpServerHandle hServer) {
@@ -459,8 +459,8 @@ public class xRTServer
         int          nPort    = extractHostPort(sHost, exchange);
 
         return sName == null
-            ? frame.assignValue(aiResult[0], xBoolean.FALSE)
-            : frame.assignValues(aiResult, xBoolean.TRUE,
+            ? frame.assignValue(aiResult[0], xBoolean.falseHandle(frame))
+            : frame.assignValues(aiResult, xBoolean.trueHandle(frame),
                     xString.makeHandle(frame, sName),
                     frame.container().nativeTemplates().uint16().makeJavaLong(nPort));
     }
@@ -495,10 +495,10 @@ public class xRTServer
 
         List<String> listValues = headers.get(sName);
         if (listValues == null) {
-            return frame.assignValue(aiResult[0], xBoolean.FALSE);
+            return frame.assignValue(aiResult[0], xBoolean.falseHandle(frame));
         }
 
-        return frame.assignValues(aiResult, xBoolean.TRUE,
+        return frame.assignValues(aiResult, xBoolean.trueHandle(frame),
                 xString.makeArrayHandle(frame.container(), listValues.toArray(Utils.NO_NAMES)));
     }
 
@@ -526,7 +526,7 @@ public class xRTServer
      */
     private int invokeContainsBodies(Frame frame, HttpContextHandle hCtx, int iResult) {
         // TODO implement
-        return frame.assignValue(iResult, xBoolean.FALSE);
+        return frame.assignValue(iResult, xBoolean.falseHandle(frame));
     }
 
     /**
@@ -673,7 +673,8 @@ public class xRTServer
             StringHandle      hURI      = xString.makeHandle(
                     container, exchange.getRequestURI().toASCIIString());
             StringHandle      hMethod   = xString.makeHandle(container, exchange.getRequestMethod());
-            BooleanHandle     hTls      = xBoolean.makeHandle(exchange instanceof HttpsExchange);
+            BooleanHandle     hTls      = xBoolean.makeHandle(container,
+                    exchange instanceof HttpsExchange);
             return new ObjectHandle[]{hBinding, hContext, hURI, hMethod, hTls};
         }
 

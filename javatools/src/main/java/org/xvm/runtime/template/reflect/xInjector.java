@@ -56,7 +56,7 @@ public class xInjector
             ObjectHandle hOpts = ahArg[3];
 
             if (hOpts == ObjectHandle.DEFAULT) {
-                hOpts = xNullable.NULL;
+                hOpts = xNullable.makeHandle(frame);
             }
             ObjectHandle hValue =
                     frame.getInjected(hName.getStringValue(), hType.getDataType(), hOpts);

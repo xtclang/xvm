@@ -98,7 +98,7 @@ public class xAtomic
             //    return true, hExpect;
 
             if (atomic.compareAndSet(hExpect, hNew)) {
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
             }
 
             TypeConstant type = hThis.getType().resolveGenericType("Referent");
@@ -181,12 +181,12 @@ public class xAtomic
 
         @Override
         public int proceed(Frame frameCaller) {
-            if (frameCaller.popStack() == xBoolean.FALSE) {
-                return frameCaller.assignValues(aiReturn, xBoolean.TRUE, hExpect);
+            if (xBoolean.isFalse(frameCaller.popStack())) {
+                return frameCaller.assignValues(aiReturn, xBoolean.trueHandle(frameCaller), hExpect);
             }
 
             if (atomic.compareAndSet(hExpect, hNew)) {
-                return frameCaller.assignValue(aiReturn[0], xBoolean.FALSE);
+                return frameCaller.assignValue(aiReturn[0], xBoolean.falseHandle(frameCaller));
             }
 
             return doNext(frameCaller);
@@ -198,12 +198,13 @@ public class xAtomic
 
                 switch (type.callEquals(frameCaller, hCurrent, hExpect, Op.A_STACK)) {
                 case Op.R_NEXT:
-                    if (frameCaller.popStack() == xBoolean.FALSE) {
-                        return frameCaller.assignValues(aiReturn, xBoolean.TRUE, hCurrent);
+                    if (xBoolean.isFalse(frameCaller.popStack())) {
+                        return frameCaller.assignValues(aiReturn, xBoolean.trueHandle(frameCaller),
+                                hCurrent);
                     }
 
                     if (atomic.compareAndSet(hCurrent, hNew)) {
-                        return frameCaller.assignValue(aiReturn[0], xBoolean.FALSE);
+                        return frameCaller.assignValue(aiReturn[0], xBoolean.falseHandle(frameCaller));
                     }
                     hExpect = hCurrent;
                     break;

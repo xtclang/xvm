@@ -145,7 +145,7 @@ public class xRegEx
                     createMatchHandle(frame, result, hText, hRegEx, Op.A_STACK),
                     aiReturn);
             }
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         }
         case "matchPrefix": {
             StringHandle hText   = (StringHandle) ahArg[0];
@@ -158,7 +158,7 @@ public class xRegEx
                     createMatchHandle(frame, result, hText, hRegEx, Op.A_STACK),
                     aiReturn);
             }
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         }
         case "find": {
             StringHandle  hText   = (StringHandle) ahArg[0];
@@ -175,7 +175,7 @@ public class xRegEx
                     createMatchHandle(frame, result, hText, hRegEx, Op.A_STACK),
                     aiReturn);
             }
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
         }
         }
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
@@ -213,14 +213,14 @@ public class xRegEx
             if (nStart >= 0) {
                 GenericHandle hRange = new GenericHandle(clzRange);
                 hRange.setField(frame, "lowerBound",     xInt64.makeHandle(frame, nStart));
-                hRange.setField(frame, "lowerExclusive", xBoolean.FALSE);
+                hRange.setField(frame, "lowerExclusive", xBoolean.falseHandle(frame));
                 hRange.setField(frame, "upperBound",     xInt64.makeHandle(frame, match.end(i)));
-                hRange.setField(frame, "upperExclusive", xBoolean.TRUE);
-                hRange.setField(frame, "descending",     xBoolean.FALSE);
+                hRange.setField(frame, "upperExclusive", xBoolean.trueHandle(frame));
+                hRange.setField(frame, "descending",     xBoolean.falseHandle(frame));
                 hRange.makeImmutable();
                 ah[i] = hRange;
             } else {
-                ah[i] = xNullable.NULL;
+                ah[i] = xNullable.makeHandle(frame);
             }
         }
 

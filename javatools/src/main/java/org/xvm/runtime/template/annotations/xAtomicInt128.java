@@ -77,10 +77,10 @@ public class xAtomicInt128
             LongLong llCur;
             while ((llCur = atomic.get()).equals(llExpect)) {
                 if (atomic.compareAndSet(llCur, llNew)) {
-                    return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                    return frame.assignValue(aiReturn[0], xBoolean.falseHandle(frame));
                 }
             }
-            return frame.assignValues(aiReturn, xBoolean.TRUE,
+            return frame.assignValues(aiReturn, xBoolean.trueHandle(frame),
                 f_templateReferent.makeHandle(llCur));
         }
         }

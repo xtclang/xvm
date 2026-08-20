@@ -67,10 +67,10 @@ public abstract class BaseBinaryFP
                 xArray.makeBitArrayHandle(frame.container(), getBits(d), f_cBits, Mutability.Constant));
 
         case "infinity":
-            return frame.assignValue(iReturn, xBoolean.makeHandle(Double.isInfinite(d)));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(frame, Double.isInfinite(d)));
 
         case "NaN":
-            return frame.assignValue(iReturn, xBoolean.makeHandle(Double.isNaN(d)));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(frame, Double.isNaN(d)));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -284,7 +284,7 @@ public abstract class BaseBinaryFP
                     iExp      = (int) (l & EXP_MASK >>> 52);
                     lMantissa = l & MANTISSA_MASK;
             }
-            return frame.assignValues(aiReturn, xBoolean.makeHandle(fSign),
+            return frame.assignValues(aiReturn, xBoolean.makeHandle(frame, fSign),
                                       xInt64.makeHandle(frame, lMantissa), xInt64.makeHandle(frame, iExp));
         }
         }
@@ -357,7 +357,7 @@ public abstract class BaseBinaryFP
         FloatHandle h2 = (FloatHandle) hValue2;
 
         return frame.assignValue(iReturn,
-                xOrdered.makeHandle(Double.compare(h1.getValue(), h2.getValue())));
+                xOrdered.makeHandle(frame, Double.compare(h1.getValue(), h2.getValue())));
     }
 
     @Override
@@ -406,7 +406,7 @@ public abstract class BaseBinaryFP
     }
 
     protected int convertToInt64(Frame frame, double d, ObjectHandle[] ahArg, int iReturn) {
-        boolean fCheckBound = ahArg[0] == xBoolean.TRUE;
+        boolean fCheckBound = xBoolean.isTrue(ahArg[0]);
         if (!Double.isFinite(d)) {
             if (fCheckBound) {
                 return overflow(frame);

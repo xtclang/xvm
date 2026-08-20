@@ -543,7 +543,7 @@ public class xTuple
         // compare the tuple sizes first
         int cElements = ah1.length;
         if (cElements != ah2.length) {
-            return frame.assignValue(iReturn, xBoolean.FALSE);
+            return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
         }
 
         TypeConstant[] atypeCommon = clazz.getType().getParamTypesArray();
@@ -564,7 +564,7 @@ public class xTuple
             // for the types that were not explicitly specified do a strict check
             for (int i = cCommon; i < cElements; i++) {
                 if (!atype1[i].equals(atype2[i])) {
-                    return frame.assignValue(iReturn, xBoolean.FALSE);
+                    return frame.assignValue(iReturn, xBoolean.falseHandle(frame));
                 }
             }
         }
@@ -597,7 +597,7 @@ public class xTuple
         @Override
         public int proceed(Frame frameCaller) {
             ObjectHandle hResult = frameCaller.popStack();
-            if (hResult == xBoolean.FALSE) {
+            if (xBoolean.isFalse(hResult)) {
                 return frameCaller.assignValue(iReturn, hResult);
             }
             return doNext(frameCaller);
@@ -620,7 +620,7 @@ public class xTuple
                 switch (iResult) {
                 case Op.R_NEXT:
                     ObjectHandle hResult = frameCaller.popStack();
-                    if (hResult == xBoolean.FALSE) {
+                    if (xBoolean.isFalse(hResult)) {
                         return frameCaller.assignValue(iReturn, hResult);
                     }
                     break;
@@ -636,7 +636,7 @@ public class xTuple
                     throw new IllegalStateException();
                 }
             }
-            return frameCaller.assignValue(iReturn, xBoolean.TRUE);
+            return frameCaller.assignValue(iReturn, xBoolean.trueHandle(frameCaller));
         }
     }
 
@@ -695,7 +695,7 @@ public class xTuple
                     ObjectHandle hValue = ahValue[i];
                     if (hValue == null) {
                         // this can only be a scenario of a conditional Tuple
-                        assert i > 0 && ahValue[0] == xBoolean.FALSE;
+                        assert i > 0 && xBoolean.isFalse(ahValue[0]);
                     } else if (!hValue.isService() && !hValue.makeImmutable()) {
                         return false;
                     }
@@ -715,7 +715,7 @@ public class xTuple
                 ObjectHandle hValue = ahValue[i];
                 if (hValue == null) {
                     // this can only be a scenario of a conditional Tuple
-                    assert i > 0 && ahValue[0] == xBoolean.FALSE;
+                    assert i > 0 && xBoolean.isFalse(ahValue[0]);
                     return type;
                 }
                 TypeConstant typeVal  = hValue.getType();

@@ -221,7 +221,7 @@ public abstract class xUnconstrainedInteger
                 return frame.assignValue(iReturn, hTarget);
             }
 
-            boolean fCheckBounds = hArg == xBoolean.TRUE;
+            boolean fCheckBounds = xBoolean.isTrue(hArg);
 
             if (template instanceof xConstrainedInteger templateTo) {
                 if (fCheckBounds) {
@@ -292,7 +292,7 @@ public abstract class xUnconstrainedInteger
         case "toUInt64":
         case "toUInt128":
             // default argument: checkBounds = False;
-            return invokeNative1(frame, method, hTarget, xBoolean.FALSE, iReturn);
+            return invokeNative1(frame, method, hTarget, xBoolean.falseHandle(frame), iReturn);
 
         case "toIntN": {
             ObjectHandle hResult = hTarget;
@@ -477,7 +477,7 @@ public abstract class xUnconstrainedInteger
         IntNHandle h1 = (IntNHandle) hValue1;
         IntNHandle h2 = (IntNHandle) hValue2;
 
-        return frame.assignValue(iReturn, xOrdered.makeHandle(h1.getValue().compareTo(h2.getValue())));
+        return frame.assignValue(iReturn, xOrdered.makeHandle(frame, h1.getValue().compareTo(h2.getValue())));
     }
 
     @Override

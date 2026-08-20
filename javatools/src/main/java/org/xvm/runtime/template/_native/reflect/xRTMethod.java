@@ -168,7 +168,7 @@ public class xRTMethod
         MethodHandle hMethod2 = (MethodHandle) hValue2;
 
         return frame.assignValue(iReturn,
-            xBoolean.makeHandle(hMethod1.getMethodId().equals(hMethod2.getMethodId())));
+            xBoolean.makeHandle(frame, hMethod1.getMethodId().equals(hMethod2.getMethodId())));
     }
 
     @Override
@@ -178,7 +178,7 @@ public class xRTMethod
         MethodHandle hMethod2 = (MethodHandle) hValue2;
 
         return frame.assignValue(iReturn,
-            xOrdered.makeHandle(hMethod1.getMethodId().compareTo(hMethod2.getMethodId())));
+            xOrdered.makeHandle(frame, hMethod1.getMethodId().compareTo(hMethod2.getMethodId())));
     }
 
 
