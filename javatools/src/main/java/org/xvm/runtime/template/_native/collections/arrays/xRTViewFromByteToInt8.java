@@ -23,14 +23,8 @@ import org.xvm.runtime.template.numbers.xInt8;
  */
 public class xRTViewFromByteToInt8
         extends xRTViewFromByte {
-    public static xRTViewFromByteToInt8 INSTANCE;
-
     public xRTViewFromByteToInt8(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -54,7 +48,8 @@ public class xRTViewFromByteToInt8
         if (tSource instanceof ByteView tView) {
             byte[] abValue = tView.getBytes(hSource, ofStart, cSize, fReverse);
 
-            return xRTInt8Delegate.INSTANCE.makeHandle(abValue, cSize, mutability);
+            return ((xRTInt8Delegate) xRTDelegate.getArrayTemplate(
+                    f_container, pool().typeInt8())).makeHandle(abValue, cSize, mutability);
         }
 
         throw new UnsupportedOperationException();

@@ -20,14 +20,8 @@ import org.xvm.runtime.template.numbers.xBit;
  */
 public class xRTBitDelegate
         extends BitBasedDelegate {
-    public static xRTBitDelegate INSTANCE;
-
     public xRTBitDelegate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

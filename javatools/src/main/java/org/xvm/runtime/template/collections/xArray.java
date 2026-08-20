@@ -452,7 +452,8 @@ public class xArray
                     xRTViewToBit.getInstance(frame).createBitViewDelegate(hArray.m_hDelegate, mutability);
 
             return frame.assignValue(iReturn,
-                    new ArrayHandle(xBitArray.INSTANCE.getCanonicalClass(), hView, mutability));
+                    new ArrayHandle(xBitArray.getInstance(frame.container()).getCanonicalClass(),
+                            hView, mutability));
         }
 
         case "clear": {

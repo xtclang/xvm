@@ -105,9 +105,9 @@ then fail under a parallel runner on a loaded machine.
 
 The XVM codebase has normalized this pattern. On `master`, a direct audit finds
 143 mutable template `INSTANCE` declarations and 139 constructor assignments of
-`INSTANCE = this` in runtime templates. This branch fixes 80 mutable template
-fields and 76 constructor assignments, leaving 63 mutable `INSTANCE` fields
-and 63 constructor assignments for follow-up. A broader scan for escape-shaped
+`INSTANCE = this` in runtime templates. This branch fixes 100 mutable template
+fields and 96 constructor assignments, leaving 43 mutable `INSTANCE` fields
+and 43 constructor assignments for follow-up. A broader scan for escape-shaped
 `this` assignments and calls reports hundreds of hits in
 `javatools/src/main/java`, many of which are false positives, but the signal is
 clear: publishing receivers into mutable non-final state is common enough that
@@ -855,17 +855,14 @@ rg -l "public static (?!final)[A-Za-z0-9_<>, ?]+ INSTANCE;" \
   --pcre2 javatools/src/main/java/org/xvm/runtime/template | sort
 ```
 
-At the time this document was written, it reported 63 unconverted template
+At the time this document was written, it reported 43 unconverted template
 files. They should be migrated in follow-up PRs. Grouping them by package:
 
 - Root templates: `Identity`, `Proxy`, `xConst`, `xException`, `xObject`.
 - Text templates: `xString`, `xChar`.
-- Collection templates: `xBitArray`, `xByteArray`, `xNibbleArray`, `xTuple`,
-  `xListMap`.
-- Array delegates and views: `xRTBitDelegate`, `xRTBooleanDelegate`,
-  `xRTFloat64Delegate`, `xRTInt8Delegate`, `xRTInt16Delegate`,
-  `xRTInt64Delegate`, `xRTUInt8Delegate`, `xRTNibbleDelegate`,
-  `xRTSlicingDelegate`, `xRTViewFrom*`, and `xRTViewToBitFromNibble`.
+- Collection templates: `xTuple`, `xListMap`.
+- Array delegates and views: no mutable `INSTANCE` fields remain in the
+  collection-array delegate/view package.
 - File-system templates: `xOSDirectory`, `xOSFile`,
   `xRawOSFileChannel`.
 - Native reflect templates: no `_native.reflect` mutable `INSTANCE` fields remain.
@@ -894,6 +891,26 @@ Converted `INSTANCE` fields in this branch include:
 - `xRTViewFromBit`,
 - `xRTViewFromByte`,
 - `xRTViewToBit`,
+- `xBitArray`,
+- `xByteArray`,
+- `xNibbleArray`,
+- `xRTBitDelegate`,
+- `xRTBooleanDelegate`,
+- `xRTFloat64Delegate`,
+- `xRTInt8Delegate`,
+- `xRTInt16Delegate`,
+- `xRTInt64Delegate`,
+- `xRTUInt8Delegate`,
+- `xRTNibbleDelegate`,
+- `xRTSlicingDelegate`,
+- `xRTViewFromBitToBoolean`,
+- `xRTViewFromBitToByte`,
+- `xRTViewFromBitToNibble`,
+- `xRTViewFromByteToFloat64`,
+- `xRTViewFromByteToInt16`,
+- `xRTViewFromByteToInt64`,
+- `xRTViewFromByteToInt8`,
+- `xRTViewToBitFromNibble`,
 - `xContainerControl`,
 - `xContainerLinker`,
 - `xBasicHashCollector`,
@@ -971,11 +988,9 @@ Known high-priority leftovers include:
   `ARGUMENT_TEMPLATE`, `RT_PARAMETER_TEMPLATE`, constructor method caches,
   `STRING_VALUE_OF`, array type constants, and injection/freezing signatures.
 - `xClass`: array type caches.
-- `xByteArray`: numeric array compositions.
 - `xConst`: native helper method caches such as estimate length, append, freeze,
   range, date/time, duration, version, path, and hash signature.
 - `xException`: cached exception class compositions and formatting method.
-- `xRTViewToBit`: `VIEWS`.
 - `xAtomic`: `NUMBER_TEMPLATES`.
 - `xFuture`: `TYPE`, `COMPLETION`.
 - File-system templates: static constructor methods on `xCPDirectory`,

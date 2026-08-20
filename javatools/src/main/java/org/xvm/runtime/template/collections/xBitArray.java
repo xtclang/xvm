@@ -9,6 +9,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.xEnum;
@@ -20,9 +21,7 @@ import org.xvm.runtime.template._native.collections.arrays.BitView;
 import org.xvm.runtime.template._native.collections.arrays.xRTBitDelegate;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
-import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToBoolean;
-import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToByte;
-import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToNibble;
+import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBit;
 
 
 /**
@@ -30,14 +29,8 @@ import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToNibbl
  */
 public class xBitArray
         extends BitBasedArray {
-    public static xBitArray INSTANCE;
-
     public xBitArray(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -113,8 +106,9 @@ public class xBitArray
             }
 
             Mutability     mutability = hArray.m_mutability;
-            DelegateHandle hDelegate  = xRTViewFromBitToBoolean.INSTANCE.createBitViewDelegate(
-                    hArray.m_hDelegate, mutability);
+            DelegateHandle hDelegate  = xRTViewFromBit.getInstance(frame.container())
+                    .createBitViewDelegate(frame.poolContext().typeBoolean(),
+                            hArray.m_hDelegate, mutability);
 
             return frame.assignValue(iReturn, new ArrayHandle(
                     xArray.getBooleanArrayComposition(frame.container()), hDelegate, mutability));
@@ -129,11 +123,13 @@ public class xBitArray
             }
 
             Mutability     mutability = hArray.m_mutability;
-            DelegateHandle hDelegate  = xRTViewFromBitToByte.INSTANCE.createBitViewDelegate(
-                    hArray.m_hDelegate, mutability);
+            DelegateHandle hDelegate  = xRTViewFromBit.getInstance(frame.container())
+                    .createBitViewDelegate(frame.poolContext().typeByte(),
+                            hArray.m_hDelegate, mutability);
 
             return frame.assignValue(iReturn, new ArrayHandle(
-                    xByteArray.INSTANCE.getCanonicalClass(), hDelegate, mutability));
+                    xByteArray.getInstance(frame.container()).getCanonicalClass(),
+                    hDelegate, mutability));
         }
 
         case "asNibbleArray": {
@@ -145,11 +141,13 @@ public class xBitArray
             }
 
             Mutability     mutability = hArray.m_mutability;
-            DelegateHandle hDelegate  = xRTViewFromBitToNibble.INSTANCE.createBitViewDelegate(
-                    hArray.m_hDelegate, mutability);
+            DelegateHandle hDelegate  = xRTViewFromBit.getInstance(frame.container())
+                    .createBitViewDelegate(frame.poolContext().typeNibble(),
+                            hArray.m_hDelegate, mutability);
 
             return frame.assignValue(iReturn, new ArrayHandle(
-                    xNibbleArray.INSTANCE.getCanonicalClass(), hDelegate, mutability));
+                    xNibbleArray.getInstance(frame.container()).getCanonicalClass(),
+                    hDelegate, mutability));
         }
 
         case "toByteArray":
@@ -203,5 +201,9 @@ public class xBitArray
             return;
         }
         throw new UnsupportedOperationException();
+    }
+
+    public static xBitArray getInstance(Container container) {
+        return NativeTemplates.get(container).bitArray();
     }
 }

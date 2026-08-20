@@ -1,7 +1,13 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
+
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
@@ -10,6 +16,8 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * The native RTViewFromBit base implementation.
@@ -17,6 +25,9 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 public class xRTViewFromBit
         extends xRTView
         implements ByteView {
+    public static xRTViewFromBit getInstance(Container container) {
+        return NativeTemplates.get(container).viewFromBit();
+    }
 
     public xRTViewFromBit(Container container, ClassStructure structure) {
         super(container, structure);
@@ -43,6 +54,19 @@ public class xRTViewFromBit
      */
     public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability) {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Create a typed view into the specified ArrayDelegate<Bit> source.
+     */
+    public DelegateHandle createBitViewDelegate(TypeConstant typeElement,
+                                                DelegateHandle hSource,
+                                                Mutability mutability) {
+        xRTViewFromBit template = f_views.get().get(typeElement);
+        if (template != null) {
+            return template.createBitViewDelegate(hSource, mutability);
+        }
+        throw new UnsupportedOperationException("RTViewFromBitTo" + typeElement.getValueString());
     }
 
 
@@ -109,5 +133,28 @@ public class xRTViewFromBit
         public DelegateHandle getSource() {
             return f_hSource;
         }
+    }
+
+
+    // ----- data members --------------------------------------------------------------------------
+
+    private final Lazy<Map<TypeConstant, xRTViewFromBit>> f_views = Lazy.of(this::createViews);
+
+    private Map<TypeConstant, xRTViewFromBit> createViews() {
+        ConstantPool                      pool     = pool();
+        Map<TypeConstant, xRTViewFromBit> mapViews = new HashMap<>();
+
+        putView(mapViews, pool, pool.typeBoolean());
+        putView(mapViews, pool, pool.typeByte());
+        putView(mapViews, pool, pool.typeNibble());
+
+        return Map.copyOf(mapViews);
+    }
+
+    private void putView(Map<TypeConstant, xRTViewFromBit> mapViews,
+                         ConstantPool pool, TypeConstant typeElement) {
+        TypeConstant typeView = pool.ensureParameterizedTypeConstant(
+                getInceptionClassConstant().getType(), typeElement);
+        mapViews.put(typeElement, f_container.getTemplate(typeView, xRTViewFromBit.class));
     }
 }

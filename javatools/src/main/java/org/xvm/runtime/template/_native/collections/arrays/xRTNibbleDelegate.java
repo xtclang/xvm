@@ -19,14 +19,8 @@ import org.xvm.runtime.template.numbers.xNibble;
 public class xRTNibbleDelegate
         extends LongBasedDelegate
         implements ByteView {
-    public static xRTNibbleDelegate INSTANCE;
-
     public xRTNibbleDelegate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, 4, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
