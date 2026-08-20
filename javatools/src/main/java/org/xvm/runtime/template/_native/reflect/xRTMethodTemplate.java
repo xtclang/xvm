@@ -10,7 +10,6 @@ import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -25,20 +24,16 @@ import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native MethodTemplate implementation.
  */
 public class xRTMethodTemplate
         extends xRTComponentTemplate {
-    public static xRTMethodTemplate INSTANCE;
-
     public xRTMethodTemplate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -181,16 +176,9 @@ public class xRTMethodTemplate
     /**
      * @return the TypeComposition for an RTMethodTemplate
      */
-    public static TypeComposition ensureMethodTemplateComposition() { // TODO: use the container
-        TypeComposition clz = METHOD_TEMPLATE_COMP;
-        if (clz == null) {
-            ClassTemplate templateRT   = INSTANCE;
-            ConstantPool  pool         = templateRT.pool();
-            TypeConstant  typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MethodTemplate");
-            METHOD_TEMPLATE_COMP = clz = templateRT.ensureClass(templateRT.f_container, typeTemplate);
-            assert clz != null;
-        }
-        return clz;
+    public static TypeComposition ensureMethodTemplateComposition(Container container) {
+        return container.getTemplate("_native.reflect.RTMethodTemplate", xRTMethodTemplate.class)
+                .f_compMethodTemplate.get();
     }
 
     // ----- ObjectHandle support ------------------------------------------------------------------
@@ -202,12 +190,22 @@ public class xRTMethodTemplate
      *
      * @return the newly created handle
      */
-    static ComponentTemplateHandle makeHandle(MethodStructure method) {
-        return new ComponentTemplateHandle(ensureMethodTemplateComposition(), method);
+    static ComponentTemplateHandle makeHandle(Container container, MethodStructure method) {
+        return new ComponentTemplateHandle(ensureMethodTemplateComposition(container), method);
     }
 
 
-    // ----- constants -----------------------------------------------------------------------------
+    // ----- data members --------------------------------------------------------------------------
 
-    private static TypeComposition METHOD_TEMPLATE_COMP;
+    /**
+     * The old cache was process-global and reached through INSTANCE. The composition is owned by
+     * the native template's container, so cache it on that template instead.
+     */
+    private final Lazy<TypeComposition> f_compMethodTemplate = Lazy.of(() -> {
+        ConstantPool     pool         = pool();
+        TypeConstant     typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MethodTemplate");
+        TypeComposition  clz          = ensureClass(f_container, typeTemplate);
+        assert clz != null;
+        return clz;
+    });
 }

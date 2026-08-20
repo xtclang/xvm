@@ -353,7 +353,7 @@ public class xRTComponentTemplate
             return new ComponentTemplateHandle(getMultiMethodTemplateComposition(container), component);
 
         case METHOD:
-            return xRTMethodTemplate.makeHandle((MethodStructure) component);
+            return xRTMethodTemplate.makeHandle(container, (MethodStructure) component);
 
         case PROPERTY:
             return xRTPropertyTemplate.makePropertyHandle((PropertyStructure) component);

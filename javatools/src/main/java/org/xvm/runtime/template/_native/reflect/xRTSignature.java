@@ -178,7 +178,8 @@ public class xRTSignature
         MethodStructure method = hFunc.getMethod();
         return method == null
                 ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                : frame.assignValues(aiReturn, xBoolean.TRUE, xRTMethodTemplate.makeHandle(method));
+                : frame.assignValues(aiReturn, xBoolean.TRUE,
+                    xRTMethodTemplate.makeHandle(frame.container(), method));
     }
 
 
