@@ -24,14 +24,8 @@ import org.xvm.util.Handy;
  */
 public class xRTViewFromByteToFloat64
         extends xRTViewFromByte {
-    public static xRTViewFromByteToFloat64 INSTANCE;
-
     public xRTViewFromByteToFloat64(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -59,7 +53,9 @@ public class xRTViewFromByteToFloat64
                 adValue[i] = Double.longBitsToDouble(Handy.byteArrayToLong(ab, 0));
             }
 
-            return xRTFloat64Delegate.INSTANCE.makeHandle(adValue, adValue.length, mutability);
+            return ((xRTFloat64Delegate) xRTDelegate.getArrayTemplate(
+                    f_container, pool().typeFloat64())).makeHandle(
+                            adValue, adValue.length, mutability);
         }
 
         throw new UnsupportedOperationException();

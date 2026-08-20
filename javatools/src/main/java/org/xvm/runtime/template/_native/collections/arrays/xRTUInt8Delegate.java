@@ -18,14 +18,8 @@ import org.xvm.runtime.template.numbers.xUInt8;
 public class xRTUInt8Delegate
         extends ByteBasedDelegate
         implements ByteView {
-    public static xRTUInt8Delegate INSTANCE;
-
     public xRTUInt8Delegate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, (byte) 0, (byte) 0xFF);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -49,6 +43,7 @@ public class xRTUInt8Delegate
      * Obtain an array of bytes from the specified ByteArrayHandle.
      */
     public static byte[] getBytes(ByteArrayHandle hDelegate) {
-        return INSTANCE.getBytes(hDelegate, 0, hDelegate.m_cSize, false);
+        return ((ByteBasedDelegate) hDelegate.getTemplate())
+                .getBytes(hDelegate, 0, hDelegate.m_cSize, false);
     }
 }

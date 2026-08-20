@@ -7,6 +7,9 @@ import java.util.concurrent.ConcurrentMap;
 import static java.util.Objects.requireNonNull;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xBitArray;
+import org.xvm.runtime.template.collections.xByteArray;
+import org.xvm.runtime.template.collections.xNibbleArray;
 
 import org.xvm.runtime.template.reflect.xModule;
 import org.xvm.runtime.template.reflect.xPackage;
@@ -18,6 +21,7 @@ import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template._native.collections.xBasicHashCollector;
 
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate;
+import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBit;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByte;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewToBit;
@@ -71,7 +75,16 @@ import org.xvm.util.Lazy;
  */
 public final class NativeTemplates {
     NativeTemplates(Container container) {
-        f_container = requireNonNull(container, "container");
+        f_container    = requireNonNull(container, "container");
+        f_templateBit  = Lazy.of(() -> f_container.getTemplate(
+                f_container.getConstantPool().typeBitArray(), xBitArray.class));
+        f_templateByte = Lazy.of(() -> f_container.getTemplate(
+                f_container.getConstantPool().typeByteArray(), xByteArray.class));
+        f_templateNibble = Lazy.of(() -> {
+            var pool = f_container.getConstantPool();
+            return f_container.getTemplate(pool.ensureArrayType(pool.typeNibble()),
+                    xNibbleArray.class);
+        });
     }
 
     /**
@@ -97,6 +110,18 @@ public final class NativeTemplates {
 
     public xArray array() {
         return get(ARRAY);
+    }
+
+    public xBitArray bitArray() {
+        return f_templateBit.get();
+    }
+
+    public xByteArray byteArray() {
+        return f_templateByte.get();
+    }
+
+    public xNibbleArray nibbleArray() {
+        return f_templateNibble.get();
     }
 
     public boolean isArray(ClassTemplate template) {
@@ -129,6 +154,10 @@ public final class NativeTemplates {
 
     public xRTViewToBit viewToBit() {
         return get(RT_VIEW_TO_BIT);
+    }
+
+    public xRTSlicingDelegate slicingDelegate() {
+        return get(RT_SLICING_DELEGATE);
     }
 
     public boolean isViewToBit(ClassTemplate template) {
@@ -323,6 +352,10 @@ public final class NativeTemplates {
     private static final NativeTemplateRef<xRTViewToBit> RT_VIEW_TO_BIT =
             NativeTemplateRef.of("_native.collections.arrays.RTViewToBit", xRTViewToBit.class);
 
+    private static final NativeTemplateRef<xRTSlicingDelegate> RT_SLICING_DELEGATE =
+            NativeTemplateRef.of("_native.collections.arrays.RTSlicingDelegate",
+                    xRTSlicingDelegate.class);
+
     private static final NativeTemplateRef<xContainerControl> CONTAINER_CONTROL =
             NativeTemplateRef.of("_native.mgmt.ContainerControl", xContainerControl.class);
 
@@ -432,6 +465,24 @@ public final class NativeTemplates {
      * The owning container.
      */
     private final Container f_container;
+
+    /**
+     * Specialized array templates are selected by the array element type; resolving them by the mixin
+     * name would return the generic xObject fallback for the mixin itself.
+     */
+    private final Lazy<xBitArray> f_templateBit;
+
+    /**
+     * Specialized array templates are selected by the array element type; resolving them by the mixin
+     * name would return the generic xObject fallback for the mixin itself.
+     */
+    private final Lazy<xByteArray> f_templateByte;
+
+    /**
+     * Specialized array templates are selected by the array element type; resolving them by the mixin
+     * name would return the generic xObject fallback for the mixin itself.
+     */
+    private final Lazy<xNibbleArray> f_templateNibble;
 
     /**
      * Lazily resolved templates by immutable native-template key.

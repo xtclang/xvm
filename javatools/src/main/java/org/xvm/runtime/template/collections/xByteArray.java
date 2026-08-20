@@ -11,6 +11,7 @@ import org.xvm.asm.constants.UInt8ArrayConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
@@ -20,10 +21,9 @@ import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.Byt
 import org.xvm.runtime.template._native.collections.arrays.ByteView;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
-import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToInt8;
-import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToInt16;
-import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToInt64;
-import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToFloat64;
+import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByte;
+
+import org.xvm.util.Lazy;
 
 
 /**
@@ -31,14 +31,8 @@ import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToFloa
  */
 public class xByteArray
         extends xArray {
-    public static xByteArray INSTANCE;
-
     public xByteArray(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -86,8 +80,9 @@ public class xByteArray
         case "asInt8Array": {
             ArrayHandle    hArray     = (ArrayHandle) hTarget;
             Mutability     mutability = hArray.m_mutability;
-            DelegateHandle hView      = xRTViewFromByteToInt8.INSTANCE.createByteView(
-                                                hArray.m_hDelegate, mutability, 1);
+            DelegateHandle hView      = xRTViewFromByte.getInstance(frame.container())
+                    .createByteView(frame.poolContext().typeInt8(),
+                            hArray.m_hDelegate, mutability, 1);
             return frame.assignValue(iReturn,
                     new ArrayHandle(getInt8ArrayComposition(), hView, mutability));
         }
@@ -100,8 +95,9 @@ public class xByteArray
             }
 
             Mutability     mutability = hArray.m_mutability;
-            DelegateHandle hView      = xRTViewFromByteToInt16.INSTANCE.createByteView(
-                                                hArray.m_hDelegate, mutability, 2);
+            DelegateHandle hView      = xRTViewFromByte.getInstance(frame.container())
+                    .createByteView(frame.poolContext().typeInt16(),
+                            hArray.m_hDelegate, mutability, 2);
             return frame.assignValue(iReturn,
                     new ArrayHandle(getInt16ArrayComposition(), hView, mutability));
         }
@@ -114,8 +110,9 @@ public class xByteArray
             }
 
             Mutability     mutability = hArray.m_mutability;
-            DelegateHandle hView      = xRTViewFromByteToInt64.INSTANCE.createByteView(
-                                                hArray.m_hDelegate, mutability, 8);
+            DelegateHandle hView      = xRTViewFromByte.getInstance(frame.container())
+                    .createByteView(frame.poolContext().typeInt64(),
+                            hArray.m_hDelegate, mutability, 8);
             return frame.assignValue(iReturn,
                     new ArrayHandle(getInt64ArrayComposition(), hView, mutability));
         }
@@ -128,8 +125,9 @@ public class xByteArray
             }
 
             Mutability     mutability = hArray.m_mutability;
-            DelegateHandle hView      = xRTViewFromByteToFloat64.INSTANCE.createByteView(
-                                                hArray.m_hDelegate, mutability, 8);
+            DelegateHandle hView      = xRTViewFromByte.getInstance(frame.container())
+                    .createByteView(frame.poolContext().typeFloat64(),
+                            hArray.m_hDelegate, mutability, 8);
             return frame.assignValue(iReturn,
                     new ArrayHandle(getFloat64ArrayComposition(), hView, mutability));
         }
@@ -191,44 +189,34 @@ public class xByteArray
     }
 
     private TypeComposition getInt8ArrayComposition() {
-        TypeComposition clz = INT8_ARRAY_CLZ;
-        if (clz == null) {
-            TypeConstant typeInt8 = pool().typeInt8();
-
-            INT8_ARRAY_CLZ = clz = f_container.resolveClass(pool().ensureArrayType(typeInt8));
-        }
-        return clz;
+        return f_clzInt8Array.get();
     }
 
     private TypeComposition getInt16ArrayComposition() {
-        TypeComposition clz = INT16_ARRAY_CLZ;
-        if (clz == null) {
-            TypeConstant typeInt16 = pool().typeInt16();
-            INT16_ARRAY_CLZ = clz = f_container.resolveClass(pool().ensureArrayType(typeInt16));
-        }
-        return clz;
+        return f_clzInt16Array.get();
     }
 
     private TypeComposition getInt64ArrayComposition() {
-        TypeComposition clz = INT64_ARRAY_CLZ;
-        if (clz == null) {
-            INT64_ARRAY_CLZ = clz =
-                    f_container.resolveClass(pool().ensureArrayType(pool().typeInt64()));
-        }
-        return clz;
+        return f_clzInt64Array.get();
     }
 
     private TypeComposition getFloat64ArrayComposition() {
-        TypeComposition clz = FLOAT64_ARRAY_CLZ;
-        if (clz == null) {
-            FLOAT64_ARRAY_CLZ = clz =
-                    f_container.resolveClass(pool().ensureArrayType(pool().typeFloat64()));
-        }
-        return clz;
+        return f_clzFloat64Array.get();
     }
 
-    private static TypeComposition INT8_ARRAY_CLZ;
-    private static TypeComposition INT16_ARRAY_CLZ;
-    private static TypeComposition INT64_ARRAY_CLZ;
-    private static TypeComposition FLOAT64_ARRAY_CLZ;
+    public static xByteArray getInstance(Container container) {
+        return NativeTemplates.get(container).byteArray();
+    }
+
+    private final Lazy<TypeComposition> f_clzInt8Array = Lazy.of(() ->
+            f_container.resolveClass(pool().ensureArrayType(pool().typeInt8())));
+
+    private final Lazy<TypeComposition> f_clzInt16Array = Lazy.of(() ->
+            f_container.resolveClass(pool().ensureArrayType(pool().typeInt16())));
+
+    private final Lazy<TypeComposition> f_clzInt64Array = Lazy.of(() ->
+            f_container.resolveClass(pool().ensureArrayType(pool().typeInt64())));
+
+    private final Lazy<TypeComposition> f_clzFloat64Array = Lazy.of(() ->
+            f_container.resolveClass(pool().ensureArrayType(pool().typeFloat64())));
 }

@@ -22,14 +22,8 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
  */
 public class xRTSlicingDelegate
         extends xRTDelegate {
-    public static xRTSlicingDelegate INSTANCE;
-
     public xRTSlicingDelegate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

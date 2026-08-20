@@ -28,14 +28,8 @@ import org.xvm.runtime.template.numbers.xInt64;
  */
 public class xRTFloat64Delegate
         extends xRTDelegate {
-    public static xRTFloat64Delegate INSTANCE;
-
     public xRTFloat64Delegate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

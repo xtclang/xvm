@@ -415,7 +415,8 @@ public class xRTDelegate
     public DelegateHandle slice(DelegateHandle hTarget, long ofStart, long cSize, boolean fReverse) {
         return ofStart == 0 && cSize == hTarget.m_cSize && !fReverse
             ? hTarget
-            : xRTSlicingDelegate.INSTANCE.makeHandle(hTarget, ofStart, cSize, fReverse);
+            : NativeTemplates.get(this).slicingDelegate()
+                    .makeHandle(hTarget, ofStart, cSize, fReverse);
     }
 
     /**

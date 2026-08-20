@@ -64,7 +64,8 @@ public abstract class LongBasedBitView
 
         byte[] abBits = getBits(hView, ofStart, cSize, fReverse);
 
-        return xRTBitDelegate.INSTANCE.makeHandle(abBits, cSize, mutability);
+        return ((xRTBitDelegate) xRTDelegate.getArrayTemplate(f_container, pool().typeBit()))
+                .makeHandle(abBits, cSize, mutability);
     }
 
     @Override

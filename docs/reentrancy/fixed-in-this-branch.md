@@ -107,6 +107,26 @@ getters for existing call sites; resource templates are resolved directly from
 - `xRTViewFromBit.INSTANCE`
 - `xRTViewFromByte.INSTANCE`
 - `xRTViewToBit.INSTANCE`
+- `xBitArray.INSTANCE`
+- `xByteArray.INSTANCE`
+- `xNibbleArray.INSTANCE`
+- `xRTBitDelegate.INSTANCE`
+- `xRTBooleanDelegate.INSTANCE`
+- `xRTFloat64Delegate.INSTANCE`
+- `xRTInt8Delegate.INSTANCE`
+- `xRTInt16Delegate.INSTANCE`
+- `xRTInt64Delegate.INSTANCE`
+- `xRTUInt8Delegate.INSTANCE`
+- `xRTNibbleDelegate.INSTANCE`
+- `xRTSlicingDelegate.INSTANCE`
+- `xRTViewFromBitToBoolean.INSTANCE`
+- `xRTViewFromBitToByte.INSTANCE`
+- `xRTViewFromBitToNibble.INSTANCE`
+- `xRTViewFromByteToFloat64.INSTANCE`
+- `xRTViewFromByteToInt16.INSTANCE`
+- `xRTViewFromByteToInt64.INSTANCE`
+- `xRTViewFromByteToInt8.INSTANCE`
+- `xRTViewToBitFromNibble.INSTANCE`
 - `xRTNameService.INSTANCE`
 - `xRTClassTemplate.INSTANCE`
 - `xRTComponentTemplate.INSTANCE`
@@ -243,6 +263,10 @@ fields. The branch moves them to owner-scoped final lazy state.
 | `xRTNameService` | `BYTE_ARRAY_ARRAY_TYPE`, lazy `m_typeCanonical` | `f_typeByteArrayArray`, `f_typeCanonical` | Must fix |
 | `xRTClassTemplate` | class/template array types, contribution/method/annotation array types, empty parameter array, action enum, helper methods | final `Lazy` fields on the template | Must fix |
 | `xRTComponentTemplate` | `COMPONENT_ARRAY_TYPE`, `MULTI_METHOD_TEMPLATE` | `f_typeComponentArray`, `f_templateMultiMethod` | Must fix |
+| `xBitArray`, `xByteArray`, `xNibbleArray` | `INSTANCE`; `xByteArray` numeric array compositions | `NativeTemplates` array-template getters and `xByteArray` final lazy compositions | Must fix |
+| `xRTViewFromBit`, `xRTViewFromByte` | specialized view lookup through subtype `INSTANCE` fields | owner-local final lazy dispatch maps keyed by `TypeConstant` | Must fix |
+| `xRTBitDelegate`, `xRTBooleanDelegate`, `xRTFloat64Delegate`, `xRTInt8Delegate`, `xRTInt16Delegate`, `xRTInt64Delegate`, `xRTUInt8Delegate`, `xRTNibbleDelegate`, `xRTSlicingDelegate` | constructor-published delegate `INSTANCE` fields | owner-local delegate dispatch and `NativeTemplates.slicingDelegate()` | Must fix |
+| `xRTViewFromBitTo*`, `xRTViewFromByteTo*`, `xRTViewToBitFromNibble` | constructor-published specialized view `INSTANCE` fields | owner-local base view dispatch or existing `xRTViewToBit` dispatch | Must fix |
 | `xRTFunction` | `LISTMAP_TYPE`, ownerless native/internal function factories, process-global finalizer no-op anchor | `f_typeListMap`, owner-required helper APIs, `FullyBoundHandle.noOp(Container)` | Must fix |
 | `xRTMethod` | `EMPTY_ARRAY` | `f_constEmptyArray` | Must fix |
 | `xRTMethodTemplate` | `INSTANCE`, `METHOD_TEMPLATE_COMP`, ownerless `makeHandle(MethodStructure)` | caller-owned `makeHandle(Container, MethodStructure)` and `f_compMethodTemplate` | Must fix |
