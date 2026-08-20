@@ -14,14 +14,8 @@ import org.xvm.runtime.Container;
  */
 public class xRTViewToBitFromUInt8
         extends ByteBasedBitView {
-    public static xRTViewToBitFromUInt8 INSTANCE;
-
-    public xRTViewToBitFromUInt8(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTViewToBitFromUInt8(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

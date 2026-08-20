@@ -30,8 +30,6 @@ import org.xvm.runtime.template._native.collections.arrays.LongBasedDelegate.Lon
  */
 public abstract class LongLongDelegate
         extends xRTDelegate {
-    public static LongLongDelegate INSTANCE;
-
     public LongLongDelegate(Container container, ClassStructure structure, boolean fSigned) {
         super(container, structure);
 

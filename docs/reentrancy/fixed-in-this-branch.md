@@ -140,6 +140,28 @@ getters for existing call sites; resource templates are resolved directly from
 - `xRTBuffer.INSTANCE`
 - `xRTNetworkInterface.INSTANCE`
 - `xRTSocket.INSTANCE`
+- `LongBasedBitView.INSTANCE`
+- `LongDelegate.INSTANCE`
+- `LongLongDelegate.INSTANCE`
+- `xRTCharDelegate.INSTANCE`
+- `xRTInt128Delegate.INSTANCE`
+- `xRTInt32Delegate.INSTANCE`
+- `xRTStringDelegate.INSTANCE`
+- `xRTUInt128Delegate.INSTANCE`
+- `xRTUInt16Delegate.INSTANCE`
+- `xRTUInt32Delegate.INSTANCE`
+- `xRTUInt64Delegate.INSTANCE`
+- `xRTViewToBitFromFloat64.INSTANCE`
+- `xRTViewToBitFromInt128.INSTANCE`
+- `xRTViewToBitFromInt16.INSTANCE`
+- `xRTViewToBitFromInt32.INSTANCE`
+- `xRTViewToBitFromInt64.INSTANCE`
+- `xRTViewToBitFromInt8.INSTANCE`
+- `xRTViewToBitFromUInt128.INSTANCE`
+- `xRTViewToBitFromUInt16.INSTANCE`
+- `xRTViewToBitFromUInt32.INSTANCE`
+- `xRTViewToBitFromUInt64.INSTANCE`
+- `xRTViewToBitFromUInt8.INSTANCE`
 - `xArray.INSTANCE`
 - `xEnum.INSTANCE`
 - `xService.INSTANCE`
@@ -180,6 +202,12 @@ container template registration already owns them. The exception is
 `NativeTemplates.socket()` from the callback frame instead of reading the old
 global `INSTANCE`. The important fix is removing the public process-global
 field and constructor escape.
+
+The array leaf wave removes unused or constructor-published statics from
+delegate/view leaves that are already resolved by the owner container's native
+template registration. It intentionally leaves array templates that still have
+real static call sites from `xBitArray`, `xByteArray`, or `xNibbleArray` for a
+separate owner-plumbing pass.
 
 ### Static Runtime Metadata Caches
 

@@ -42,19 +42,19 @@ public class xRTViewToBit
         if (NativeTemplates.get(this).isViewToBit(this)) {
             registerNativeTemplate(new xRTViewToBitFromNibble(f_container, f_struct, true));
 
-            registerNativeTemplate(new xRTViewToBitFromInt8   (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromInt16  (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromInt32  (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromInt64  (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromInt128 (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromInt8   (f_container, f_struct));
+            registerNativeTemplate(new xRTViewToBitFromInt16  (f_container, f_struct));
+            registerNativeTemplate(new xRTViewToBitFromInt32  (f_container, f_struct));
+            registerNativeTemplate(new xRTViewToBitFromInt64  (f_container, f_struct));
+            registerNativeTemplate(new xRTViewToBitFromInt128 (f_container, f_struct));
 
-            registerNativeTemplate(new xRTViewToBitFromUInt8  (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromUInt16 (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromUInt32 (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromUInt64 (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromUInt128(f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromUInt8  (f_container, f_struct));
+            registerNativeTemplate(new xRTViewToBitFromUInt16 (f_container, f_struct));
+            registerNativeTemplate(new xRTViewToBitFromUInt32 (f_container, f_struct));
+            registerNativeTemplate(new xRTViewToBitFromUInt64 (f_container, f_struct));
+            registerNativeTemplate(new xRTViewToBitFromUInt128(f_container, f_struct));
 
-            registerNativeTemplate(new xRTViewToBitFromFloat64(f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromFloat64(f_container, f_struct));
         }
     }
     @Override

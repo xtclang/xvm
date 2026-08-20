@@ -17,14 +17,8 @@ import org.xvm.runtime.template.numbers.xUInt64;
  */
 public class xRTUInt64Delegate
         extends LongDelegate {
-    public static xRTUInt64Delegate INSTANCE;
-
-    public xRTUInt64Delegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTUInt64Delegate(Container container, ClassStructure structure) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

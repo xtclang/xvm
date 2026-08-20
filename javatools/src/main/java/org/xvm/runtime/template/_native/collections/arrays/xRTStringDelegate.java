@@ -31,14 +31,8 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  */
 public class xRTStringDelegate
         extends xRTDelegate {
-    public static xRTStringDelegate INSTANCE;
-
-    public xRTStringDelegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTStringDelegate(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     // ----- RTDelegate API ------------------------------------------------------------------------

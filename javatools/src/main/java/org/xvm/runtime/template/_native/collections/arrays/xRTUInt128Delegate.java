@@ -18,14 +18,8 @@ import org.xvm.runtime.template.numbers.xUInt128;
  */
 public class xRTUInt128Delegate
         extends LongLongDelegate {
-    public static xRTUInt128Delegate INSTANCE;
-
-    public xRTUInt128Delegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTUInt128Delegate(Container container, ClassStructure structure) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
