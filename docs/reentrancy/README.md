@@ -25,6 +25,9 @@ Start here:
 - [state-inventory.md](state-inventory.md): the broader source inventory of
   mutable/racy/state-design smells, including must-fix and should-fix
   categories with scan commands.
+- [stress-discovered-runtime-issues.md](stress-discovered-runtime-issues.md):
+  concrete failures found by the parallel manual-test runner that are adjacent
+  to, but distinct from, the Java static owner-cache work.
 
 The distinction is intentional:
 

@@ -334,6 +334,16 @@ This branch now appends to a mutable copy, preserving the existing compiler
 diagnostics and adding the caught exception without crashing the native
 compiler service.
 
+The parallel `TestServices` stress run exposed a separate `StringBuffer`
+representation bug, documented in
+[stress-discovered-runtime-issues.md](stress-discovered-runtime-issues.md).
+Large immutable string chunks could make the committed chunk list reject a later
+mutable append buffer. `StringBuffer.commitBuf()` now commits append buffers as
+immutable chunks, preserving the chunked cache behavior while making the
+internal invariant stable. `StringBufferTest.committedChunksStayAppendable()`
+verifies the deterministic failing sequence, and the `TestServices` parallel
+stress command that exposed the crash now passes.
+
 One intentional exception is `xService`'s atomic property-name set. On `master`
 it was a mutable `static Set<String>` even though it contains only string
 literals. This branch makes it `private static final Set.of(...)`, not a

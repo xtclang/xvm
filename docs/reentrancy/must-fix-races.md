@@ -225,13 +225,13 @@ Required replacement:
 - Static enum-template caches must move to owner-scoped final `Lazy<xEnum>` or
   container-owned lookup.
 
-## Open Parallel-Stress Signals
+## Stress-Discovered Runtime Issues
 
-Status: observed runtime failures that still need root-cause work.
+Status: separate runtime failures found while validating this branch.
 
-During the `xFuture` owner-scope wave on 2026-08-20,
+During stress validation on 2026-08-20,
 `manualTests:runParallelStress -PstressIterations=2 -PstressModules=TestServices`
-failed once in the runner console path:
+failed in the runner console path:
 
 ```text
 ecstasy:TypeMismatch: Expected "immutable Array<Char>", actual "Array<Char>"
@@ -240,16 +240,16 @@ ecstasy:TypeMismatch: Expected "immutable Array<Char>", actual "Array<Char>"
     at ConsoleBack.print(Object, Boolean) (runner.x:90)
 ```
 
-The same command passed on rerun, and the failing stack does not go through the
-changed `xFuture` Java owner lookup. It is still a must-investigate
-parallel-runner signal because it involves `StringBuffer`/array mutability in a
-shared console service while `xString`, `xChar`, primitive array/value
-templates, and several global enum/value handles remain in the must-fix
-inventory.
+This was not a Java static owner-cache race. It was a deterministic
+`StringBuffer` chunk mutability invariant bug: large immutable string chunks
+could make the committed chunk list reject a later mutable append buffer. The
+fix and proof are documented in
+[stress-discovered-runtime-issues.md](stress-discovered-runtime-issues.md).
 
-Do not treat this as fixed by the current branch. Treat it as evidence that the
-remaining `xString`/array/value-template migrations need their own stress
-coverage and root-cause pass.
+The broader lesson remains relevant to this inventory: the parallel runner is
+valuable because it turns hidden representation and ownership assumptions into
+observable crashes. Future waves should continue to record any such finding as a
+separate issue with a focused reproducer and a post-fix stress command.
 
 ## Manual Lazy Publication
 
