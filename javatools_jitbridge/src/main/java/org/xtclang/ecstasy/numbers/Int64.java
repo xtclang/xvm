@@ -5,7 +5,6 @@ import java.math.BigDecimal;
 import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Ordered;
-import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.nType;
 
 import org.xtclang.ecstasy.text.String;
@@ -136,52 +135,6 @@ public class Int64 extends IntNumber {
             throw Exception.$oob(ctx, "64-bit min value exceeded");
         }
         return n - 1;
-    }
-
-    // ----- conversion ----------------------------------------------------------------------------
-
-    /**
-     * The primitive implementation of:
-     * <pre>
-     *     IntN toIntN()
-     * </pre>
-     */
-    public static IntN toIntN$p(long thi$, Ctx ctx) {
-        return IntN.$box(thi$);
-    }
-
-    /**
-     * The primitive implementation of:
-     * <pre>
-     *     UIntN toUIntN()
-     * </pre>
-     */
-    public static UIntN toUIntN$p(long thi$, Ctx ctx) {
-        if (thi$ < 0) {
-            OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int64 value " + thi$ + " is not a valid UIntN value");
-        }
-        return UIntN.$box(thi$);
-    }
-
-    /**
-     * The native implementation of:
-     * <pre>
-     *     IntN toIntN()
-     * </pre>
-     */
-    public IntN toIntN(Ctx ctx) {
-        return toIntN$p($value, ctx);
-    }
-
-    /**
-     * The native implementation of:
-     * <pre>
-     *     UIntN toUIntN()
-     * </pre>
-     */
-    public UIntN toUIntN$p(Ctx ctx) {
-        return toUIntN$p($value, ctx);
     }
 
     // ----- Orderable interface -------------------------------------------------------------------

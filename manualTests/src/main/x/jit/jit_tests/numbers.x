@@ -21,6 +21,8 @@ package numbers {
                 passed &= runTest(() -> new UInt16ConvertTests().run());
                 passed &= runTest(() -> new UInt32ConvertTests().run());
                 passed &= runTest(() -> new UInt64ConvertTests().run());
+                passed &= runTest(() -> new IntNConvertTests().run());
+                passed &= runTest(() -> new UIntNConvertTests().run());
 
                 passed &= runTest(() -> new Dec32Tests().run());
                 passed &= runTest(() -> new Dec64Tests().run());

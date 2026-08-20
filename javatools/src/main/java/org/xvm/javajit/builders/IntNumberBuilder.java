@@ -7,6 +7,8 @@ import java.lang.classfile.Label;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import java.math.BigInteger;
+
 import java.util.Collection;
 
 import java.util.function.BiConsumer;
@@ -60,6 +62,7 @@ public class IntNumberBuilder extends NumberBuilder {
                  "toInt",  "toInt8",  "toInt16",  "toInt32",  "toInt64",  "toInt128",
                  "toUInt", "toUInt8", "toUInt16", "toUInt32", "toUInt64", "toUInt128" ->
                     this::generateFixedConversion;
+            case "toIntN", "toUIntN" -> this::generateUnboundedConversion;
             default -> super.getMethodCodeGenerator(jitName);
         };
     }
@@ -357,6 +360,78 @@ public class IntNumberBuilder extends NumberBuilder {
     }
 
     // ----- methods -------------------------------------------------------------------------------
+
+    /**
+     * Assemble an optimized static implementation of "toIntN$p()" or "toUIntN$p()".
+     *
+     * {@code return Target.$box(value);}
+     */
+    protected void generateUnboundedConversion(CodeBuilder code, JitMethodDesc jmd) {
+        assert jmd.optimizedReturns.length == 1;
+
+        FixedInt     source         = FixedInt.of(thisType);
+        TypeConstant targetType     = jmd.optimizedReturns[0].type;
+        boolean      targetUnsigned = targetType.isA(pool().typeUIntN());
+        ClassDesc    targetCD       = jmd.optimizedReturns[0].cd;
+
+        assert targetUnsigned || targetType.isA(pool().typeIntN());
+
+        if (targetUnsigned && source.signed) {
+            Label valid = code.newLabel();
+            if (source.bitLength == 128) {
+                code.lload(code.parameterSlot(1))
+                    .lconst_0()
+                    .lcmp()
+                    .ifge(valid);
+            } else {
+                loadComparableLong(code, source);
+                code.lconst_0()
+                    .lcmp()
+                    .ifge(valid);
+            }
+            throwOutOfBounds(code, "", code.parameterSlot(jmd.optimizedCtx()));
+            code.labelBinding(valid);
+        }
+
+        if (source.bitLength == 128) {
+            code.lload(code.parameterSlot(0))
+                .lload(code.parameterSlot(1))
+                .invokestatic(art.CD(), "$toBigInteger",
+                        MethodTypeDesc.of(CD_BigInteger, CD_long, CD_long))
+                .invokestatic(targetCD, "$box",
+                        MethodTypeDesc.of(targetCD, CD_BigInteger));
+        } else if (!source.signed && source.bitLength == 64) {
+            generateUnsignedLongAsBigInteger(code);
+            code.invokestatic(targetCD, "$box",
+                    MethodTypeDesc.of(targetCD, CD_BigInteger));
+        } else {
+            loadConversionLong(code, source, source.signed);
+            code.invokestatic(targetCD, "$box", MethodTypeDesc.of(targetCD, CD_long));
+        }
+        code.areturn();
+    }
+
+    /**
+     * Convert the unsigned long value to a positive {@link BigInteger}.
+     */
+    private void generateUnsignedLongAsBigInteger(CodeBuilder code) {
+        int   valueSlot   = code.parameterSlot(0);
+        Label nonNegative = code.newLabel();
+
+        code.lload(valueSlot)
+            .loadConstant(Long.MAX_VALUE)
+            .land()
+            .invokestatic(CD_BigInteger, "valueOf",
+                    MethodTypeDesc.of(CD_BigInteger, CD_long))
+            .lload(valueSlot)
+            .lconst_0()
+            .lcmp()
+            .ifge(nonNegative)
+            .loadConstant(63)
+            .invokevirtual(CD_BigInteger, "setBit",
+                    MethodTypeDesc.of(CD_BigInteger, CD_int))
+            .labelBinding(nonNegative);
+    }
 
     /**
      * Assemble an optimized static fixed-length integer conversion.
@@ -691,4 +766,5 @@ public class IntNumberBuilder extends NumberBuilder {
         addPrimitiveReturn(code, jmd);
     }
 
+    private static final ClassDesc CD_BigInteger = ClassDesc.of(BigInteger.class.getName());
 }
