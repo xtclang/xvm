@@ -115,6 +115,54 @@ public class NativeTemplateOldPatternTest {
         assertNotSame(stringsA.emptyString(), stringsB.emptyString());
     }
 
+    @Test
+    public void staticRefSignatureCacheCanUseForeignOwner() {
+        Owner ownerA = new Owner("container-A");
+        Owner ownerB = new Owner("container-B");
+
+        OldRefGlobals.init(ownerA);
+        OwnerRefHandle refA = ownerA.refTemplate.makeHandle();
+        assertDoesNotThrow(() -> OldRefGlobals.getReferent(refA));
+
+        OldRefGlobals.init(ownerB);
+
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> OldRefGlobals.getReferent(refA));
+        assertEquals("ref handle owner container-A used with signature owner container-B",
+                e.getMessage());
+
+        OwnerScopedRefMetadata refsA = new OwnerScopedRefMetadata(ownerA);
+        OwnerScopedRefMetadata refsB = new OwnerScopedRefMetadata(ownerB);
+
+        assertDoesNotThrow(() -> refsA.getReferent(refA));
+        assertDoesNotThrow(() -> refsB.getReferent(ownerB.refTemplate.makeHandle()));
+    }
+
+    @Test
+    public void derivedRefAndVarTemplatesUseOwnerBaseSignatures() {
+        Owner owner = new Owner("container-A");
+
+        IllegalStateException getError = assertThrows(IllegalStateException.class,
+                () -> new PerTemplateRefMetadata(owner.derivedVarTemplate)
+                        .getReferent(owner.derivedVarTemplate.makeHandle()));
+        assertEquals("template @Lazy Var in container-A does not declare get",
+                getError.getMessage());
+
+        IllegalStateException setError = assertThrows(IllegalStateException.class,
+                () -> new PerTemplateVarMetadata(owner.derivedVarTemplate)
+                        .setReferent(owner.derivedVarTemplate.makeHandle()));
+        assertEquals("template @Lazy Var in container-A does not declare set",
+                setError.getMessage());
+
+        OwnerRefHandle        handle = owner.derivedVarTemplate.makeHandle();
+        OwnerScopedRefMetadata refs  = new OwnerScopedRefMetadata(owner);
+        OwnerScopedVarMetadata vars  = new OwnerScopedVarMetadata(owner);
+
+        assertDoesNotThrow(() -> refs.getReferent(handle));
+        assertDoesNotThrow(() -> vars.setReferent(handle));
+    }
+
+
     /**
      * A minimal stand-in for constructor-assigned native template INSTANCE
      * fields.
@@ -214,11 +262,19 @@ public class NativeTemplateOldPatternTest {
             template = new OwnerTemplate(id);
             method   = new OwnerMethod(id);
             stringTemplate = new OwnerStringTemplate(id);
+            refTemplate        = new OwnerRefTemplate(id);
+            refSignature       = new OwnerSignature(id);
+            varSignature       = new OwnerSignature(id);
+            derivedVarTemplate = new OwnerDerivedVarTemplate(id);
         }
 
-        private final OwnerTemplate       template;
-        private final OwnerMethod         method;
-        private final OwnerStringTemplate stringTemplate;
+        private final OwnerTemplate           template;
+        private final OwnerMethod             method;
+        private final OwnerStringTemplate     stringTemplate;
+        private final OwnerRefTemplate        refTemplate;
+        private final OwnerSignature          refSignature;
+        private final OwnerSignature          varSignature;
+        private final OwnerDerivedVarTemplate derivedVarTemplate;
     }
 
     private static final class OwnerTemplate {
@@ -316,5 +372,144 @@ public class NativeTemplateOldPatternTest {
 
         private final String ownerId;
         private final String value;
+    }
+
+    /**
+     * A minimal stand-in for xRef/xVar's old static signature caches.
+     */
+    private static final class OldRefGlobals {
+        static OwnerSignature getSignature;
+
+        static void init(Owner owner) {
+            getSignature = owner.refSignature;
+        }
+
+        static void getReferent(OwnerRefHandle handle) {
+            handle.invoke(getSignature);
+        }
+    }
+
+    /**
+     * A minimal stand-in for the owner-scoped replacement: the get signature is
+     * still computed lazily, but it is owned by one Ref template owner.
+     */
+    private static final class OwnerScopedRefMetadata {
+        OwnerScopedRefMetadata(Owner owner) {
+            getSignature = Lazy.of(() -> owner.refSignature);
+        }
+
+        void getReferent(OwnerRefHandle handle) {
+            handle.invoke(getSignature.get());
+        }
+
+        private final Lazy<OwnerSignature> getSignature;
+    }
+
+    /**
+     * A stand-in for the incorrect "make every Ref-derived template own its own
+     * get signature" rewrite. Var and annotation templates inherit Ref.get() and
+     * must use the owner base Ref signature.
+     */
+    private static final class PerTemplateRefMetadata {
+        PerTemplateRefMetadata(OwnerDerivedVarTemplate template) {
+            getSignature = Lazy.of(template::findGetSignature);
+        }
+
+        void getReferent(OwnerRefHandle handle) {
+            handle.invoke(getSignature.get());
+        }
+
+        private final Lazy<OwnerSignature> getSignature;
+    }
+
+    /**
+     * A stand-in for the incorrect "make every Var-derived template own its own
+     * set signature" rewrite. Var annotations such as @Lazy inherit Var.set()
+     * and must use the owner base Var signature.
+     */
+    private static final class PerTemplateVarMetadata {
+        PerTemplateVarMetadata(OwnerDerivedVarTemplate template) {
+            setSignature = Lazy.of(template::findSetSignature);
+        }
+
+        void setReferent(OwnerRefHandle handle) {
+            handle.invoke(setSignature.get());
+        }
+
+        private final Lazy<OwnerSignature> setSignature;
+    }
+
+    /**
+     * A minimal stand-in for the owner-scoped replacement: the set signature is
+     * still lazy, but it is owned by one base Var template owner.
+     */
+    private static final class OwnerScopedVarMetadata {
+        OwnerScopedVarMetadata(Owner owner) {
+            setSignature = Lazy.of(() -> owner.varSignature);
+        }
+
+        void setReferent(OwnerRefHandle handle) {
+            handle.invoke(setSignature.get());
+        }
+
+        private final Lazy<OwnerSignature> setSignature;
+    }
+
+    private static final class OwnerRefTemplate {
+        OwnerRefTemplate(String ownerId) {
+            this.ownerId = ownerId;
+        }
+
+        OwnerRefHandle makeHandle() {
+            return new OwnerRefHandle(ownerId);
+        }
+
+        private final String ownerId;
+    }
+
+    private static final class OwnerDerivedVarTemplate {
+        OwnerDerivedVarTemplate(String ownerId) {
+            this.ownerId = ownerId;
+        }
+
+        OwnerRefHandle makeHandle() {
+            return new OwnerRefHandle(ownerId);
+        }
+
+        OwnerSignature findGetSignature() {
+            throw new IllegalStateException(
+                    "template @Lazy Var in " + ownerId + " does not declare get");
+        }
+
+        OwnerSignature findSetSignature() {
+            throw new IllegalStateException(
+                    "template @Lazy Var in " + ownerId + " does not declare set");
+        }
+
+        private final String ownerId;
+    }
+
+    private static final class OwnerRefHandle {
+        OwnerRefHandle(String ownerId) {
+            this.ownerId = ownerId;
+        }
+
+        void invoke(OwnerSignature signature) {
+            if (!ownerId.equals(signature.ownerId)) {
+                throw new IllegalStateException(
+                        "ref handle owner " + ownerId +
+                        " used with signature owner " + signature.ownerId);
+            }
+        }
+
+        private final String ownerId;
+    }
+
+    private static final class OwnerSignature {
+        OwnerSignature(String ownerId) {
+            this.ownerId = ownerId;
+        }
+
+        private final String ownerId;
     }
 }

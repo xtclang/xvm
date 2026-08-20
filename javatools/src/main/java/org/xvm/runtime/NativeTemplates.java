@@ -19,6 +19,8 @@ import org.xvm.runtime.template.annotations.xFuture;
 import org.xvm.runtime.template.reflect.xModule;
 import org.xvm.runtime.template.reflect.xPackage;
 import org.xvm.runtime.template.reflect.xInjector;
+import org.xvm.runtime.template.reflect.xRef;
+import org.xvm.runtime.template.reflect.xVar;
 
 import org.xvm.runtime.template.text.xString;
 
@@ -96,6 +98,10 @@ public final class NativeTemplates {
             return f_container.getTemplate(pool.ensureArrayType(pool.typeNibble()),
                     xNibbleArray.class);
         });
+        f_templateRef = Lazy.of(() -> f_container.getTemplate(
+                f_container.getConstantPool().typeRef(), xRef.class));
+        f_templateVar = Lazy.of(() -> f_container.getTemplate(
+                f_container.getConstantPool().typeVar(), xVar.class));
     }
 
     /**
@@ -351,6 +357,14 @@ public final class NativeTemplates {
         return get(STRING);
     }
 
+    public xRef ref() {
+        return f_templateRef.get();
+    }
+
+    public xVar var() {
+        return f_templateVar.get();
+    }
+
     public xInjector injector() {
         return get(INJECTOR);
     }
@@ -543,6 +557,20 @@ public final class NativeTemplates {
      * name would return the generic xObject fallback for the mixin itself.
      */
     private final Lazy<xNibbleArray> f_templateNibble;
+
+    /**
+     * Canonical owner Ref template. Ref-derived templates inherit this template's
+     * native rebase and get-signature metadata; they must not recompute it from
+     * their own reflected structures.
+     */
+    private final Lazy<xRef> f_templateRef;
+
+    /**
+     * Canonical owner Var template. Var-derived templates inherit this template's
+     * native rebase and set-signature metadata; they must not recompute it from
+     * their own reflected structures.
+     */
+    private final Lazy<xVar> f_templateVar;
 
     /**
      * Lazily resolved templates by immutable native-template key.

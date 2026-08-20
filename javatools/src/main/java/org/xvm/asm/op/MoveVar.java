@@ -103,7 +103,7 @@ public class MoveVar
                         ? frame.poolContext().typeObject()
                         : frame.getVarInfo(nFrom).getType();
             }
-            TypeComposition clzRef = xVar.INSTANCE.
+            TypeComposition clzRef = xVar.getInstance(frame).
                     ensureParameterizedClass(frame.f_context.f_container, typeReferent);
             hRef = new RefHandle(clzRef, frame, nFrom);
             if (fNextReg) {

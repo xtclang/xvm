@@ -12,6 +12,7 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils.BinaryAction;
 import org.xvm.runtime.Utils.InPlaceVarBinary;
@@ -22,6 +23,8 @@ import org.xvm.runtime.VarSupport;
 import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xException;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native Var implementation.
@@ -29,27 +32,37 @@ import org.xvm.runtime.template.xException;
 public class xVar
         extends xRef
         implements VarSupport {
-    public static xVar INSTANCE;
-    public static ClassConstant INCEPTION_CLASS;
-
     public xVar(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance) {
-            INSTANCE = this;
-            INCEPTION_CLASS = new NativeRebaseConstant(
-                (ClassConstant) structure.getIdentityConstant());
-        }
+        // fInstance is true only for the canonical native Var template. Var-derived templates such
+        // as @Lazy and @Future use the base Var inception/signature metadata, matching the old
+        // static fields without leaking it across containers.
+        f_constInception = fInstance
+                ? new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant())
+                : null;
+        f_sigSet = fInstance
+                ? Lazy.of(this::resolveSetSignature)
+                : Lazy.of(() -> xVar.getInstance(f_container).getSetSignature());
     }
 
     @Override
     public void initNative() {
-        s_sigSet = getStructure().findMethod("set", 1).getIdentityConstant().getSignature();
     }
 
     @Override
     protected ClassConstant getInceptionClassConstant() {
-        return INCEPTION_CLASS;
+        return f_constInception == null
+                ? xVar.getInstance(f_container).getInceptionClassConstant()
+                : f_constInception;
+    }
+
+    public static xVar getInstance(Frame frame) {
+        return NativeTemplates.get(frame).var();
+    }
+
+    public static xVar getInstance(Container container) {
+        return NativeTemplates.get(container).var();
     }
 
     @Override
@@ -161,10 +174,23 @@ public class xVar
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     protected int invokeSetReferent(Frame frame, RefHandle hRef, ObjectHandle hValue) {
-        CallChain chain = hRef.getComposition().getMethodCallChain(s_sigSet);
+        CallChain chain = hRef.getComposition().getMethodCallChain(getSetSignature());
         return chain.isExplicit()
             ? chain.invoke(frame, hRef, hValue, Op.A_IGNORE)
             : setReferentImpl(frame, hRef, true, hValue);
+    }
+
+    protected SignatureConstant getSetSignature() {
+        return f_sigSet.get();
+    }
+
+    private SignatureConstant resolveSetSignature() {
+        MethodStructure method = getStructure().findMethod("set", 1);
+        if (method == null) {
+            throw new IllegalStateException("Missing Var.set() on the canonical Var template: " +
+                    getStructure());
+        }
+        return method.getIdentityConstant().getSignature();
     }
 
     public int invokeVarAdd(Frame frame, RefHandle hTarget, ObjectHandle hArg) {
@@ -256,5 +282,7 @@ public class xVar
 
     // ----- constants -----------------------------------------------------------------------------
 
-    protected static SignatureConstant s_sigSet;
+    private final ClassConstant f_constInception;
+
+    private final Lazy<SignatureConstant> f_sigSet;
 }

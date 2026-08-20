@@ -531,7 +531,8 @@ public class xArray
             TypeConstant   typeRef   = pool.ensureParameterizedTypeConstant(
                                            pool.typeVar(), hDelegate.getType());
 
-            ClassComposition clzRef  = frame.container().ensureClassComposition(typeRef, xRef.INSTANCE);
+            ClassComposition clzRef  = frame.container().ensureClassComposition(
+                    typeRef, xRef.getInstance(frame));
             RefHandle        hRef    = new RefHandle(clzRef, "delegate", hDelegate);
 
             return frame.assignValue(iReturn, hRef);
