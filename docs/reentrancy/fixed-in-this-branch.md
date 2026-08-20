@@ -100,6 +100,7 @@ mechanism.
 ### Constructor-Published Native Template `INSTANCE`
 
 These master sites assigned `INSTANCE = this` from constructors and now resolve
+through an owner-scoped template cache. Most externally used templates resolve
 through the central `NativeTemplates` table. Some still expose compatibility
 getters for existing call sites; resource templates are resolved directly from
 `Container.nativeTemplates()` and no longer expose `INSTANCE` at all:
@@ -200,12 +201,20 @@ getters for existing call sites; resource templates are resolved directly from
 - `xPackage.INSTANCE`
 - `xRef.INSTANCE`
 - `xVar.INSTANCE`
+- `xCheckedInt8.INSTANCE`
+- `xCheckedUInt8.INSTANCE`
+- `xCheckedInt16.INSTANCE`
+- `xCheckedUInt16.INSTANCE`
+- `xCheckedInt32.INSTANCE`
+- `xCheckedUInt32.INSTANCE`
+- `xCheckedInt64.INSTANCE`
+- `xCheckedUInt64.INSTANCE`
 
 This is must-fix. The old pattern was both a constructor `this` escape and a
 process-global last-writer-wins cache. The replacement keys are private to
-`NativeTemplates`; converted template classes do not own an `INSTANCE` field at
-all. The actual template object is resolved and cached by the active
-`Container`.
+`NativeTemplates` where named external access is needed; converted template
+classes do not own an `INSTANCE` field at all. The actual template object is
+resolved and cached by the active `Container`.
 
 The new files are:
 
@@ -216,6 +225,15 @@ The new files are:
 and resolves the template from `Lazy.get()`. That preserves per-container
 caching while avoiding template bootstrap recursion inside
 `ConcurrentHashMap.computeIfAbsent`.
+
+The checked-integer templates use an even smaller replacement. Their only
+static readers were sibling signed/unsigned lookups inside instance methods
+such as `CheckedInt8.magnitude`. Those peer templates are already native
+templates registered and cached by the same `Container`, so
+`xConstrainedInteger.getComplimentaryTemplate(String, Class<T>)` now resolves
+through `f_container.getTemplate(...)`. That keeps the old
+one-template-per-container behavior and removes the process-global peer pointer
+without adding a second cache table.
 
 The resource-template wave updates `NativeContainer.initResources()` to resolve
 injectable resource suppliers from `Container.nativeTemplates()` instead of

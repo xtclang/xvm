@@ -89,6 +89,18 @@ public abstract class xConstrainedInteger
      */
     protected abstract xConstrainedInteger getComplimentaryTemplate();
 
+    /**
+     * Look up the signed/unsigned peer in the same owner that created this template.
+     *
+     * The old checked-integer templates cached these peers through process-global INSTANCE fields.
+     * Container.getTemplate() already provides the same native-template caching, but keyed by the
+     * owning container; that preserves the old per-template behavior without allowing one parallel
+     * container startup to overwrite another container's peer template.
+     */
+    protected <T extends xConstrainedInteger> T getComplimentaryTemplate(String sName, Class<T> clzTemplate) {
+        return f_container.getTemplate(sName, clzTemplate);
+    }
+
     @Override
     public boolean isGenericHandle() {
         return false;
