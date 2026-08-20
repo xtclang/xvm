@@ -20,7 +20,7 @@ public class xOrdered
     public static EnumHandle GREATER;
 
     public xOrdered(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
     }
 
     @Override

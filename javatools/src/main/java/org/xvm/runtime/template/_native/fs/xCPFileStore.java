@@ -80,7 +80,7 @@ public class xCPFileStore
             ConstantHandle hNode     = (ConstantHandle) hArg;
             FSNodeConstant constNode = (FSNodeConstant) hNode.getConstant();
             ObjectHandle   hBinary   = xArray.makeByteArrayHandle(
-                    constNode.getFileBytes(), Mutability.Constant);
+                    frame.container(), constNode.getFileBytes(), Mutability.Constant);
             return frame.assignValue(iReturn, hBinary);
         }
         }
@@ -122,8 +122,8 @@ public class xCPFileStore
             }
 
             return frame.assignValues(aiReturn,
-                    xArray.makeStringArrayHandle(ahNames),
-                    xArray.makeObjectArrayHandle(ahCookies, Mutability.Constant));
+                    xArray.makeStringArrayHandle(frame.container(), ahNames),
+                    xArray.makeObjectArrayHandle(frame.container(), ahCookies, Mutability.Constant));
         }
         }
 

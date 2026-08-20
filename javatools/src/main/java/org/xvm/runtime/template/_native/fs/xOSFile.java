@@ -132,7 +132,7 @@ public class xOSFile
 
             return ixUpper > ixLower
                     ? invokeReadImpl(frame, hFile, ixLower, ixUpper, iReturn)
-                    : frame.assignValue(iReturn, xArray.ensureEmptyByteArray());
+                    : frame.assignValue(iReturn, xArray.ensureEmptyByteArray(frame.container()));
         }
 
         case "appendBytes":
@@ -196,7 +196,8 @@ public class xOSFile
         Frame.Continuation continuation = frameCaller -> {
             try {
                 return frameCaller.assignValue(iReturn,
-                    xArray.makeByteArrayHandle(cfRead.get(), Mutability.Constant));
+                    xArray.makeByteArrayHandle(frameCaller.container(), cfRead.get(),
+                            Mutability.Constant));
             } catch (Throwable e) {
                 return raisePathException(frameCaller, e, path);
             }
@@ -259,7 +260,8 @@ public class xOSFile
             try {
                 if (cfRead.get() == cbCapacity) {
                     return frameCaller.assignValue(iReturn,
-                        xArray.makeByteArrayHandle(buffer.array(), Mutability.Constant));
+                        xArray.makeByteArrayHandle(frameCaller.container(), buffer.array(),
+                                Mutability.Constant));
                 } else {
                     return frameCaller.raiseException(
                             xException.ioException(frameCaller, "Read failed"));

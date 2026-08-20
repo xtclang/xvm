@@ -10,9 +10,13 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
+
+import org.xvm.util.Lazy;
 
 
 /**
@@ -20,19 +24,22 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
  */
 public class xRTViewToBit
         extends xRTView {
-    public static xRTViewToBit INSTANCE;
 
-    public xRTViewToBit(Container container, ClassStructure structure, boolean fInstance) {
+    public static xRTViewToBit getInstance(Frame frame) {
+        return NativeTemplates.get(frame).viewToBit();
+    }
+
+    public static xRTViewToBit getInstance(Container container) {
+        return NativeTemplates.get(container).viewToBit();
+    }
+
+    public xRTViewToBit(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void registerNativeTemplates() {
-        if (this == INSTANCE) {
+        if (NativeTemplates.get(this).isViewToBit(this)) {
             registerNativeTemplate(new xRTViewToBitFromNibble(f_container, f_struct, true));
 
             registerNativeTemplate(new xRTViewToBitFromInt8   (f_container, f_struct, true));
@@ -52,29 +59,6 @@ public class xRTViewToBit
     }
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
-            // register native views
-            ConstantPool                    pool     = pool();
-            Map<TypeConstant, xRTViewToBit> mapViews = new HashMap<>();
-
-            mapViews.put(pool.typeNibble(), xRTViewToBitFromNibble.INSTANCE);
-
-            mapViews.put(pool.typeInt8()   , xRTViewToBitFromInt8   .INSTANCE);
-            mapViews.put(pool.typeInt16()  , xRTViewToBitFromInt16  .INSTANCE);
-            mapViews.put(pool.typeInt32()  , xRTViewToBitFromInt32  .INSTANCE);
-            mapViews.put(pool.typeInt64()  , xRTViewToBitFromInt64  .INSTANCE);
-            mapViews.put(pool.typeInt128() , xRTViewToBitFromInt128 .INSTANCE);
-
-            mapViews.put(pool.typeUInt8()  , xRTViewToBitFromUInt8  .INSTANCE);
-            mapViews.put(pool.typeUInt16() , xRTViewToBitFromUInt16 .INSTANCE);
-            mapViews.put(pool.typeUInt32() , xRTViewToBitFromUInt32 .INSTANCE);
-            mapViews.put(pool.typeUInt64() , xRTViewToBitFromUInt64 .INSTANCE);
-            mapViews.put(pool.typeUInt128(), xRTViewToBitFromUInt128.INSTANCE);
-
-            mapViews.put(pool.typeFloat64(), xRTViewToBitFromFloat64.INSTANCE);
-
-            VIEWS = mapViews;
-        }
     }
 
     @Override
@@ -95,7 +79,7 @@ public class xRTViewToBit
      */
     public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability) {
         TypeConstant typeElement = hSource.getType().getParamType(0);
-        xRTViewToBit template    = VIEWS.get(typeElement);
+        xRTViewToBit template    = f_views.get().get(typeElement);
 
         if (template != null) {
             return template.createBitViewDelegate(hSource, mutability);
@@ -104,7 +88,40 @@ public class xRTViewToBit
     }
 
 
-    // ----- constants -----------------------------------------------------------------------------
+    // ----- data members --------------------------------------------------------------------------
 
-    private static Map<TypeConstant, xRTViewToBit> VIEWS;
+    // The dispatch map is owner-local because both the element type keys and specialized templates
+    // are ConstantPool/container owned. A static map built from subtype INSTANCE fields can cross
+    // containers under parallel startup.
+    private final Lazy<Map<TypeConstant, xRTViewToBit>> f_views = Lazy.of(this::createViews);
+
+    private Map<TypeConstant, xRTViewToBit> createViews() {
+        ConstantPool                    pool     = pool();
+        Map<TypeConstant, xRTViewToBit> mapViews = new HashMap<>();
+
+        putView(mapViews, pool, pool.typeNibble());
+
+        putView(mapViews, pool, pool.typeInt8());
+        putView(mapViews, pool, pool.typeInt16());
+        putView(mapViews, pool, pool.typeInt32());
+        putView(mapViews, pool, pool.typeInt64());
+        putView(mapViews, pool, pool.typeInt128());
+
+        putView(mapViews, pool, pool.typeUInt8());
+        putView(mapViews, pool, pool.typeUInt16());
+        putView(mapViews, pool, pool.typeUInt32());
+        putView(mapViews, pool, pool.typeUInt64());
+        putView(mapViews, pool, pool.typeUInt128());
+
+        putView(mapViews, pool, pool.typeFloat64());
+
+        return mapViews;
+    }
+
+    private void putView(Map<TypeConstant, xRTViewToBit> mapViews,
+                         ConstantPool pool, TypeConstant typeElement) {
+        TypeConstant typeView = pool.ensureParameterizedTypeConstant(
+                getInceptionClassConstant().getType(), typeElement);
+        mapViews.put(typeElement, f_container.getTemplate(typeView, xRTViewToBit.class));
+    }
 }

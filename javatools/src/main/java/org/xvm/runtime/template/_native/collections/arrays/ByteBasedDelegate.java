@@ -36,7 +36,7 @@ public abstract class ByteBasedDelegate
         implements ByteView {
     public ByteBasedDelegate(Container container, ClassStructure structure,
                              byte bMinValue, byte bMaxValue) {
-        super(container, structure, false);
+        super(container, structure);
 
         f_bMinValue = bMinValue;
         f_bMaxValue = bMaxValue;

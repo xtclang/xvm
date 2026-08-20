@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 import java.util.function.Consumer;
 
@@ -110,7 +111,7 @@ public class SingletonConstant
      * @return an ObjectHandle representing this singleton value
      */
     public ObjectHandle getHandle() {
-        return m_handle;
+        return f_state.get().handle();
     }
 
     /**
@@ -123,13 +124,16 @@ public class SingletonConstant
         // INITIALIZING to anything or from a struct to an immutable value
         assert handle != null;
 
-        CompletableFuture<ObjectHandle> cfInitialized = m_cfInitialized;
-        m_handle            = handle;
-        m_fiberInitializing = null;
-        m_cfInitialized     = null;
-
-        if (cfInitialized != null) {
-            cfInitialized.complete(handle);
+        while (true) {
+            InitState oldState = f_state.get();
+            InitState newState = InitState.completed(handle);
+            if (f_state.compareAndSet(oldState, newState)) {
+                CompletableFuture<ObjectHandle> cfInitialized = oldState.waiter();
+                if (cfInitialized != null) {
+                    cfInitialized.complete(handle);
+                }
+                return;
+            }
         }
     }
 
@@ -145,12 +149,16 @@ public class SingletonConstant
 
         // initialization is entered from the main context; record which fiber owns the attempt, so
         // other fibers would wait without being mistaken for recursion
-        if (m_fiberInitializing != null) {
-            return false;
-        }
+        while (true) {
+            InitState oldState = f_state.get();
+            if (oldState.handle() != null || oldState.owner() != null) {
+                return false;
+            }
 
-        m_fiberInitializing = fiber;
-        return true;
+            if (f_state.compareAndSet(oldState, InitState.initializing(fiber))) {
+                return true;
+            }
+        }
     }
 
     /**
@@ -162,21 +170,42 @@ public class SingletonConstant
      */
     public CompletableFuture<ObjectHandle> getInitializationWaiter(Fiber fiber) {
         assert fiber != null;
-        Fiber fiberInitializing = m_fiberInitializing;
+        while (true) {
+            InitState    oldState = f_state.get();
+            ObjectHandle hHandle  = oldState.handle();
+            if (hHandle != null && !(hHandle instanceof InitializingHandle)) {
+                return CompletableFuture.completedFuture(hHandle);
+            }
 
-        assert fiberInitializing != null;
-        if (fiber == fiberInitializing) {
-            // only the initializing fiber represents true recursive initialization; all others
-            // must wait for completion
-            m_handle = new InitializingHandle(this);
-            return null;
-        }
+            Fiber fiberInitializing = oldState.owner();
+            if (fiberInitializing == null) {
+                return CompletableFuture.completedFuture(null);
+            }
 
-        CompletableFuture<ObjectHandle> cfInitialized = m_cfInitialized;
-        if (cfInitialized == null) {
-            m_cfInitialized = cfInitialized = new CompletableFuture<>();
+            if (fiber == fiberInitializing) {
+                // only the initializing fiber represents true recursive initialization; all others
+                // must wait for completion
+                if (hHandle instanceof InitializingHandle) {
+                    return null;
+                }
+
+                InitState newState = oldState.withHandle(new InitializingHandle(this));
+                if (f_state.compareAndSet(oldState, newState)) {
+                    return null;
+                }
+                continue;
+            }
+
+            CompletableFuture<ObjectHandle> cfInitialized = oldState.waiter();
+            if (cfInitialized == null) {
+                cfInitialized = new CompletableFuture<>();
+                InitState newState = oldState.withWaiter(cfInitialized);
+                if (!f_state.compareAndSet(oldState, newState)) {
+                    continue;
+                }
+            }
+            return cfInitialized;
         }
-        return cfInitialized;
     }
 
     /**
@@ -185,13 +214,15 @@ public class SingletonConstant
      * @param e  the exception that prevented initialization
      */
     public void abortInitialization(Throwable e) {
-        CompletableFuture<ObjectHandle> cfInitialized = m_cfInitialized;
-        m_handle            = null;
-        m_fiberInitializing = null;
-        m_cfInitialized     = null;
-
-        if (cfInitialized != null) {
-            cfInitialized.completeExceptionally(e);
+        while (true) {
+            InitState oldState = f_state.get();
+            if (f_state.compareAndSet(oldState, InitState.EMPTY)) {
+                CompletableFuture<ObjectHandle> cfInitialized = oldState.waiter();
+                if (cfInitialized != null) {
+                    cfInitialized.completeExceptionally(e);
+                }
+                return;
+            }
         }
     }
 
@@ -288,18 +319,36 @@ public class SingletonConstant
     private IdentityConstant m_constClass;
 
     /**
-     * The ObjectHandle representing this singleton's value. Can be observed outside the
-     * main-context fiber.
+     * Runtime initialization state. The field is final; transitions replace immutable snapshots.
      */
-    private transient volatile ObjectHandle m_handle;
+    private final transient AtomicReference<InitState> f_state =
+            new AtomicReference<>(InitState.EMPTY);
 
     /**
-     * The fiber that is initializing the handle (optional).
+     * Immutable runtime initialization state.
+     *
+     * @param handle  the current handle, optionally an InitializingHandle
+     * @param owner   the fiber currently initializing the singleton
+     * @param waiter  a shared waiter for non-owner fibers
      */
-    private transient Fiber m_fiberInitializing;
+    private record InitState(ObjectHandle handle, Fiber owner,
+                             CompletableFuture<ObjectHandle> waiter) {
+        static final InitState EMPTY = new InitState(null, null, null);
 
-    /**
-     * Future completed when a concurrent initialization finishes.
-     */
-    private transient CompletableFuture<ObjectHandle> m_cfInitialized;
+        static InitState initializing(Fiber owner) {
+            return new InitState(null, owner, null);
+        }
+
+        static InitState completed(ObjectHandle handle) {
+            return new InitState(handle, null, null);
+        }
+
+        InitState withHandle(ObjectHandle handle) {
+            return new InitState(handle, owner, waiter);
+        }
+
+        InitState withWaiter(CompletableFuture<ObjectHandle> waiter) {
+            return new InitState(handle, owner, waiter);
+        }
+    }
 }

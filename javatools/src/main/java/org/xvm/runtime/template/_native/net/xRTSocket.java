@@ -56,7 +56,7 @@ public class xRTSocket
     public static final int CONNECT_TIMEOUT_MS = 15_000;
 
     public xRTSocket(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;
@@ -108,7 +108,7 @@ public class xRTSocket
         }
 
         if (frame.f_context != hSocket.f_context) {
-            return xRTFunction.makeAsyncNativeHandle(method).
+            return xRTFunction.makeAsyncNativeHandle(frame, method).
                     call1(frame, hTarget, new ObjectHandle[] {hArg}, iReturn);
         }
 
@@ -129,7 +129,7 @@ public class xRTSocket
         }
 
         if (frame.f_context != hSocket.f_context) {
-            return xRTFunction.makeAsyncNativeHandle(method).call1(frame, hTarget, ahArg, iReturn);
+            return xRTFunction.makeAsyncNativeHandle(frame, method).call1(frame, hTarget, ahArg, iReturn);
         }
 
         switch (method.getName()) {
@@ -227,9 +227,9 @@ public class xRTSocket
                 pool.typeByteArray(), pool.typeUInt16(),
                 pool.typeByteArray(), pool.typeUInt16());
         ObjectHandle[]   ahParams     = new ObjectHandle[constructor.getMaxVars()];
-        ahParams[0] = xArray.makeByteArrayHandle(abLocal, Mutability.Constant);
+        ahParams[0] = xArray.makeByteArrayHandle(frame.container(), abLocal, Mutability.Constant);
         ahParams[1] = xUInt16.INSTANCE.makeJavaLong(nLocalPort);
-        ahParams[2] = xArray.makeByteArrayHandle(abRemote, Mutability.Constant);
+        ahParams[2] = xArray.makeByteArrayHandle(frame.container(), abRemote, Mutability.Constant);
         ahParams[3] = xUInt16.INSTANCE.makeJavaLong(nRemotePort);
 
         switch (template.construct(frame, constructor, clz, null, ahParams, Op.A_STACK)) {
@@ -274,7 +274,8 @@ public class xRTSocket
             return frame.raiseException(xException.ioException(frame, "socket closed"));
         }
         if (cBytes <= 0) {
-            return frame.assignValue(iReturn, xArray.makeByteArrayHandle(new byte[0], Mutability.Constant));
+            return frame.assignValue(iReturn,
+                    xArray.makeByteArrayHandle(frame.container(), new byte[0], Mutability.Constant));
         }
 
         Callable<byte[]> task = () -> {
@@ -299,7 +300,8 @@ public class xRTSocket
         Frame.Continuation continuation = frameCaller -> {
             try {
                 return frameCaller.assignValue(iReturn,
-                        xArray.makeByteArrayHandle(cf.get(), Mutability.Constant));
+                        xArray.makeByteArrayHandle(frameCaller.container(), cf.get(),
+                                Mutability.Constant));
             } catch (Throwable e) {
                 return frameCaller.raiseException(
                         xException.ioException(frameCaller, unwrap(e).getMessage()));

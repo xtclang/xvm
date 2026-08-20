@@ -19,6 +19,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
@@ -35,6 +36,8 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * The native RTDelegate<Object> implementation.
@@ -42,19 +45,22 @@ import org.xvm.runtime.template.numbers.xInt64;
 public class xRTDelegate
         extends ClassTemplate
         implements IndexSupport {
-    public static xRTDelegate INSTANCE;
 
-    public xRTDelegate(Container container, ClassStructure structure, boolean fInstance) {
+    public static xRTDelegate getInstance(Frame frame) {
+        return NativeTemplates.get(frame).delegate();
+    }
+
+    public static xRTDelegate getInstance(Container container) {
+        return NativeTemplates.get(container).delegate();
+    }
+
+    public xRTDelegate(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void registerNativeTemplates() {
-        if (this == INSTANCE) {
+        if (NativeTemplates.get(this).isDelegate(this)) {
             registerNativeTemplate(new xRTNibbleDelegate  (f_container, f_struct, true));
 
             registerNativeTemplate(new xRTBooleanDelegate (f_container, f_struct, true));
@@ -82,36 +88,7 @@ public class xRTDelegate
 
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
-            // register native delegations
-            ConstantPool                   pool         = pool();
-            Map<TypeConstant, xRTDelegate> mapDelegates = new HashMap<>();
-
-            mapDelegates.put(pool.typeNibble(),  xRTNibbleDelegate .INSTANCE);
-
-            mapDelegates.put(pool.typeBoolean(), xRTBooleanDelegate.INSTANCE);
-            mapDelegates.put(pool.typeBit(),     xRTBitDelegate    .INSTANCE);
-            mapDelegates.put(pool.typeChar(),    xRTCharDelegate   .INSTANCE);
-
-            mapDelegates.put(pool.typeInt8(),    xRTInt8Delegate   .INSTANCE);
-            mapDelegates.put(pool.typeInt16(),   xRTInt16Delegate  .INSTANCE);
-            mapDelegates.put(pool.typeInt32(),   xRTInt32Delegate  .INSTANCE);
-            mapDelegates.put(pool.typeInt64(),   xRTInt64Delegate  .INSTANCE);
-            mapDelegates.put(pool.typeInt128(),  xRTInt128Delegate .INSTANCE);
-
-            mapDelegates.put(pool.typeNibble(),  xRTNibbleDelegate  .INSTANCE);
-            mapDelegates.put(pool.typeUInt8(),   xRTUInt8Delegate  .INSTANCE);
-            mapDelegates.put(pool.typeUInt16(),  xRTUInt16Delegate .INSTANCE);
-            mapDelegates.put(pool.typeUInt32(),  xRTUInt32Delegate .INSTANCE);
-            mapDelegates.put(pool.typeUInt64(),  xRTUInt64Delegate .INSTANCE);
-            mapDelegates.put(pool.typeUInt128(), xRTUInt128Delegate.INSTANCE);
-
-            mapDelegates.put(pool.typeFloat64(), xRTFloat64Delegate.INSTANCE);
-
-            mapDelegates.put(pool.typeString(),  xRTStringDelegate .INSTANCE);
-
-            DELEGATES = mapDelegates;
-
+        if (NativeTemplates.get(this).isDelegate(this)) {
             // mark native properties and methods
             markNativeProperty("capacity");
             markNativeProperty("mutability");
@@ -137,7 +114,7 @@ public class xRTDelegate
     public TypeComposition ensureParameterizedClass(Container container, TypeConstant... atypeParams) {
         assert atypeParams.length == 1;
 
-        xRTDelegate template = DELEGATES.get(atypeParams[0]);
+        xRTDelegate template = getArrayTemplate(atypeParams[0]);
 
         return template == null
                 ? super.ensureParameterizedClass(container, atypeParams)
@@ -146,7 +123,8 @@ public class xRTDelegate
 
     @Override
     public ClassTemplate getTemplate(TypeConstant type) {
-        return getArrayTemplate(type.getParamType(0));
+        xRTDelegate template = getArrayTemplate(type.getParamType(0));
+        return template == null ? this : template;
     }
 
     /**
@@ -188,7 +166,8 @@ public class xRTDelegate
 
         case "mutability":
             return Utils.assignInitializedEnum(frame,
-                xArray.MUTABILITY.getEnumByOrdinal(hDelegate.getMutability().ordinal()), iReturn);
+                xArray.getInstance(frame).getMutabilityTemplate().
+                    getEnumByOrdinal(hDelegate.getMutability().ordinal()), iReturn);
 
         case "size":
             return getPropertySize(frame, hTarget, iReturn);
@@ -715,9 +694,39 @@ public class xRTDelegate
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    public static xRTDelegate getArrayTemplate(TypeConstant typeParam) {
-        xRTDelegate template = DELEGATES.get(typeParam);
-        return template == null ? INSTANCE : template;
+    public static xRTDelegate getArrayTemplate(Container container, TypeConstant typeParam) {
+        xRTDelegate templateBase = NativeTemplates.get(container).delegate();
+        xRTDelegate template     = templateBase.getArrayTemplate(typeParam);
+        return template == null ? templateBase : template;
+    }
+
+    private xRTDelegate getArrayTemplate(TypeConstant typeParam) {
+        return f_delegates.get().get(typeParam);
+    }
+
+    private Map<TypeConstant, xRTDelegate> createDelegates() {
+        ConstantPool                   pool         = pool();
+        Map<TypeConstant, xRTDelegate> mapDelegates = new HashMap<>();
+
+        for (TypeConstant type : new TypeConstant[] {
+                pool.typeNibble(),
+                pool.typeBoolean(), pool.typeBit(),    pool.typeChar(),
+                pool.typeInt8(),    pool.typeInt16(),  pool.typeInt32(),
+                pool.typeInt64(),   pool.typeInt128(),
+                pool.typeUInt8(),   pool.typeUInt16(), pool.typeUInt32(),
+                pool.typeUInt64(),  pool.typeUInt128(),
+                pool.typeFloat64(), pool.typeString()
+        }) {
+            addDelegate(mapDelegates, type);
+        }
+
+        return Map.copyOf(mapDelegates);
+    }
+
+    private void addDelegate(Map<TypeConstant, xRTDelegate> mapDelegates, TypeConstant typeElement) {
+        TypeConstant typeDelegate = pool().ensureParameterizedTypeConstant(
+                getInceptionClassConstant().getType(), typeElement);
+        mapDelegates.put(typeElement, f_container.getTemplate(typeDelegate, xRTDelegate.class));
     }
 
     private static ObjectHandle[] reverse(ObjectHandle[] ahValue, int cSize) {
@@ -946,5 +955,5 @@ public class xRTDelegate
 
     protected static final String[] ELEMENT_TYPE = new String[] {"Element"};
 
-    private static Map<TypeConstant, xRTDelegate> DELEGATES;
+    private final Lazy<Map<TypeConstant, xRTDelegate>> f_delegates = Lazy.of(this::createDelegates);
 }

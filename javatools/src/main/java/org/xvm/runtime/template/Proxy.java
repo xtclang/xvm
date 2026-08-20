@@ -35,7 +35,7 @@ public class Proxy
     public static Proxy INSTANCE;
 
     public Proxy(Container container) {
-        super(container, xObject.INSTANCE.getStructure(), false);
+        super(container, xObject.INSTANCE.getStructure());
 
         INSTANCE = this;
     }

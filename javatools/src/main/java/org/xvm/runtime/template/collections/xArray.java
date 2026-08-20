@@ -22,6 +22,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -54,6 +55,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTViewToBit;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 import org.xvm.util.Handy;
+import org.xvm.util.Lazy;
 
 
 /**
@@ -62,20 +64,22 @@ import org.xvm.util.Handy;
 public class xArray
         extends ClassTemplate
         implements IndexSupport {
-    public static xArray INSTANCE;
-    public static xEnum  MUTABILITY;
 
-    public xArray(Container container, ClassStructure structure, boolean fInstance) {
+    public static xArray getInstance(Frame frame) {
+        return NativeTemplates.get(frame).array();
+    }
+
+    public static xArray getInstance(Container container) {
+        return NativeTemplates.get(container).array();
+    }
+
+    public xArray(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void registerNativeTemplates() {
-        if (this == INSTANCE) {
+        if (NativeTemplates.get(this).isArray(this)) {
             registerNativeTemplate(new xBitArray   (f_container, f_struct, true));
             registerNativeTemplate(new xByteArray  (f_container, f_struct, true));
             registerNativeTemplate(new xNibbleArray(f_container, f_struct, true));
@@ -84,65 +88,8 @@ public class xArray
 
     @Override
     public void initNative() {
-        // register array specializations
-        ConstantPool              pool         = f_container.getConstantPool();
-        Map<TypeConstant, xArray> mapTemplates = new HashMap<>();
-
-        mapTemplates.put(pool.typeBit(),  xBitArray.INSTANCE);
-        mapTemplates.put(pool.typeByte(), xByteArray.INSTANCE);
-
-        ARRAY_TEMPLATES = mapTemplates;
-
-        // cache the constructors
-        for (MethodStructure method :
-                ((MultiMethodStructure) getStructure().getChild("construct")).methods()) {
-            if (method.getAccess() == Constants.Access.PUBLIC) {
-                TypeConstant typeParam0 = method.getParam(0).getType();
-
-                if (method.getParamCount() == 1) {
-                    if (typeParam0.equals(pool.typeInt64())) {
-                        // 0) construct(Int capacity = 0)
-                        CONSTRUCTORS[0] = method.getIdentityConstant();
-                    } else {
-                        // 3) construct(Array that)
-                        CONSTRUCTORS[3] = method.getIdentityConstant();
-                    }
-                } else {
-                    // 1) construct(Int size, Element | function Element (Int) supply)
-                    // 2) construct(Mutability mutability, Element... elements)
-                    if (typeParam0.equals(pool.typeInt64())) {
-                        CONSTRUCTORS[1] = method.getIdentityConstant();
-                    } else {
-                        CONSTRUCTORS[2] = method.getIdentityConstant();
-                    }
-                }
-            } else {
-                // protected construct(ArrayDelegate<Element> delegate, Mutability mutability)
-                CONSTRUCTORS[4] = method.getIdentityConstant();
-            }
-        }
-
-        // cache helper methods
-        FILL_FROM_ITERABLE = xRTDelegate.INSTANCE.getStructure().findMethod("fillFromIterable", 4);
-        CREATE_LIST_SET    = Utils.CONST_HELPER.findMethod("createListSet", 2);
-
-        // cache Mutability template
-        MUTABILITY = (xEnum) f_container.getTemplate("collections.Array.Mutability");
-
-        OBJECT_ARRAY_CLZ  = f_container.resolveClass(pool.ensureArrayType(pool.typeObject()));
-        STRING_ARRAY_CLZ  = f_container.resolveClass(pool.ensureArrayType(pool.typeString()));
-        BOOLEAN_ARRAY_CLZ = f_container.resolveClass(pool.ensureArrayType(pool.typeBoolean()));
-        CHAR_ARRAY_CLZ    = f_container.resolveClass(pool.ensureArrayType(pool.typeChar()));
-        BIT_ARRAY_CLZ     = f_container.resolveClass(pool.typeBitArray());
-        BYTE_ARRAY_CLZ    = f_container.resolveClass(pool.typeByteArray());
-
-        ClassStructure clzList = f_container.getTemplate("collections.List").getStructure();
-        LIST_INDEX_OF = clzList.findMethod("indexOf", m ->
-                        m.getParamCount() == 2 && m.getParam(0).getType().isA(pool.typeList()));
-
         ClassStructure clzHashable = f_container.getTemplate("collections.Array.HashableArray").getStructure();
         ((PropertyStructure) clzHashable.getChild("cachedHash")).markNative();
-        CALCULATE_HASH = clzHashable.findMethod("calculateHash", 0);
 
         // mark native properties and methods
         markNativeProperty("delegate");
@@ -163,6 +110,13 @@ public class xArray
         invalidateTypeInfo();
     }
 
+    /**
+     * @return the Array.Mutability enum template
+     */
+    public xEnum getMutabilityTemplate() {
+        return f_templateMutability.get();
+    }
+
     @Override
     public boolean isGenericHandle() {
         return false;
@@ -172,7 +126,7 @@ public class xArray
     public TypeComposition ensureParameterizedClass(Container container, TypeConstant... atypeParams) {
         assert atypeParams.length == 1;
 
-        xArray template = ARRAY_TEMPLATES.get(atypeParams[0]);
+        xArray template = arrayTemplates().get(atypeParams[0]);
 
         return template == null
                 ? super.ensureParameterizedClass(container, atypeParams)
@@ -181,7 +135,7 @@ public class xArray
 
     @Override
     public ClassTemplate getTemplate(TypeConstant type) {
-        xArray template = ARRAY_TEMPLATES.get(type.getParamType(0));
+        xArray template = arrayTemplates().get(type.getParamType(0));
 
         return template == null ? this : template;
     }
@@ -227,7 +181,7 @@ public class xArray
 
             return createListSet(frame, typeEl, ahValue);
         } else {
-            TypeComposition clzArray = frame.f_context.f_container.resolveClass(typeArray);
+            TypeComposition clzArray = frame.container().resolveClass(typeArray);
             if (fDeferred) {
                 Frame.Continuation stepNext = frameCaller ->
                         frameCaller.pushStack(createImmutableArray(clzArray, ahValue));
@@ -242,9 +196,10 @@ public class xArray
     public int construct(Frame frame, MethodStructure constructor, TypeComposition clzArray,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn) {
         IdentityConstant idConstruct = constructor.getIdentityConstant();
+        MethodConstant[] aConstruct  = info().constructors;
         int              nScenario;
         for (nScenario = 0; nScenario < 4; nScenario++) {
-            if (CONSTRUCTORS[nScenario].equals(idConstruct)) {
+            if (aConstruct[nScenario].equals(idConstruct)) {
                 break;
             }
         }
@@ -346,13 +301,14 @@ public class xArray
                 : 0;
 
         ArrayHandle    hArray = createEmptyArray(clzArray, cCapacity, Mutability.Mutable);
-        ObjectHandle[] ahArg = new ObjectHandle[FILL_FROM_ITERABLE.getMaxVars()];
-        ahArg[0] = clzArray.getType().getParamType(0).ensureTypeHandle(frame.f_context.f_container);
+        MethodStructure fillFromIterable = info().fillFromIterable;
+        ObjectHandle[]  ahArg            = new ObjectHandle[fillFromIterable.getMaxVars()];
+        ahArg[0] = clzArray.getType().getParamType(0).ensureTypeHandle(frame.container());
         ahArg[1] = hArray;
         ahArg[2] = hIterable;
         ahArg[3] = hMutability;
 
-        return frame.call1(FILL_FROM_ITERABLE, null, ahArg, iReturn);
+        return frame.call1(fillFromIterable, null, ahArg, iReturn);
     }
 
     /**
@@ -365,16 +321,24 @@ public class xArray
 
         if (hThat.isMutable() && (mutability == Mutability.Mutable || mutability == Mutability.Fixed)) {
             ObjectHandle[] ahArg = new ObjectHandle[] {
-                MUTABILITY.getEnumByOrdinal(mutability.ordinal()),
+                getMutabilityTemplate().ensureEnumByOrdinal(frame, mutability.ordinal()),
                 hThat
             };
-            return construct2(frame, clzArray, ahArg, iReturn);
+            Frame.Continuation stepNext = frameCaller ->
+                    construct2(frameCaller, clzArray, ahArg, iReturn);
+            return Op.anyDeferred(ahArg)
+                    ? new Utils.GetArguments(ahArg, stepNext).doNext(frame)
+                    : construct2(frame, clzArray, ahArg, iReturn);
         } else {
             ObjectHandle[] ahArg = new ObjectHandle[] {
                 hThat.m_hDelegate,
-                MUTABILITY.getEnumByOrdinal(mutability.ordinal())
+                getMutabilityTemplate().ensureEnumByOrdinal(frame, mutability.ordinal())
             };
-            return construct4(frame, clzArray, ahArg, iReturn);
+            Frame.Continuation stepNext = frameCaller ->
+                    construct4(frameCaller, clzArray, ahArg, iReturn);
+            return Op.anyDeferred(ahArg)
+                    ? new Utils.GetArguments(ahArg, stepNext).doNext(frame)
+                    : construct4(frame, clzArray, ahArg, iReturn);
         }
     }
 
@@ -410,7 +374,7 @@ public class xArray
 
         case "mutability":
             return Utils.assignInitializedEnum(frame,
-                MUTABILITY.getEnumByOrdinal(hArray.m_mutability.ordinal()), iReturn);
+                getMutabilityTemplate().getEnumByOrdinal(hArray.m_mutability.ordinal()), iReturn);
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -485,7 +449,7 @@ public class xArray
                     : Mutability.Fixed;
 
             DelegateHandle hView  =
-                    xRTViewToBit.INSTANCE.createBitViewDelegate(hArray.m_hDelegate, mutability);
+                    xRTViewToBit.getInstance(frame).createBitViewDelegate(hArray.m_hDelegate, mutability);
 
             return frame.assignValue(iReturn,
                     new ArrayHandle(xBitArray.INSTANCE.getCanonicalClass(), hView, mutability));
@@ -546,8 +510,9 @@ public class xArray
                         }
                     }
                 }
-                return frame.callN(LIST_INDEX_OF, hTarget,
-                    Utils.ensureSize(ahArg, LIST_INDEX_OF.getMaxVars()), aiReturn);
+                MethodStructure listIndexOf = info().listIndexOf;
+                return frame.callN(listIndexOf, hTarget,
+                    Utils.ensureSize(ahArg, listIndexOf.getMaxVars()), aiReturn);
             }}
         }
 
@@ -565,7 +530,7 @@ public class xArray
             TypeConstant   typeRef   = pool.ensureParameterizedTypeConstant(
                                            pool.typeVar(), hDelegate.getType());
 
-            ClassComposition clzRef  = frame.f_context.f_container.ensureClassComposition(typeRef, xRef.INSTANCE);
+            ClassComposition clzRef  = frame.container().ensureClassComposition(typeRef, xRef.INSTANCE);
             RefHandle        hRef    = new RefHandle(clzRef, "delegate", hDelegate);
 
             return frame.assignValue(iReturn, hRef);
@@ -594,8 +559,9 @@ public class xArray
     private int calculateHash(Frame frame, ArrayHandle hTarget, int iReturn) {
         JavaLong hHash = hTarget.m_hHash;
         if (hHash == null) {
-            frame.call1(CALCULATE_HASH, hTarget,
-                new ObjectHandle[CALCULATE_HASH.getMaxVars()], Op.A_STACK);
+            MethodStructure calculateHash = info().calculateHash;
+            frame.call1(calculateHash, hTarget,
+                new ObjectHandle[calculateHash.getMaxVars()], Op.A_STACK);
             frame.m_frameNext.addContinuation(frameCaller -> {
                 JavaLong hValue = (JavaLong) frameCaller.popStack();
                 frameCaller.assignValue(iReturn, hValue);
@@ -700,7 +666,7 @@ public class xArray
      */
     private int createListSet(Frame frame, TypeConstant typeEl, ObjectHandle[] ahValue) {
         TypeConstant    typeArray = frame.poolContext().ensureArrayType(typeEl);
-        TypeComposition clzArray  = frame.f_context.f_container.resolveClass(typeArray);
+        TypeComposition clzArray  = frame.container().resolveClass(typeArray);
 
         return createListSet(frame, createImmutableArray(clzArray, ahValue), Op.A_STACK);
     }
@@ -714,11 +680,12 @@ public class xArray
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public static int createListSet(Frame frame, ArrayHandle hArray, int iResult) {
-        ObjectHandle[] ahVar = new ObjectHandle[CREATE_LIST_SET.getMaxVars()];
-        ahVar[0] = hArray.getType().getParamType(0).ensureTypeHandle(frame.f_context.f_container);
+        MethodStructure createListSet = info(frame.container()).createListSet;
+        ObjectHandle[]  ahVar         = new ObjectHandle[createListSet.getMaxVars()];
+        ahVar[0] = hArray.getType().getParamType(0).ensureTypeHandle(frame.container());
         ahVar[1] = hArray;
 
-        return frame.call1(CREATE_LIST_SET, null, ahVar, iResult);
+        return frame.call1(createListSet, null, ahVar, iResult);
     }
 
     /**
@@ -865,8 +832,8 @@ public class xArray
     /**
      * @return the TypeComposition for Array<Boolean>.
      */
-    public static TypeComposition getBooleanArrayComposition() {
-        return BOOLEAN_ARRAY_CLZ;
+    public static TypeComposition getBooleanArrayComposition(Container container) {
+        return info(container).booleanArrayClz;
     }
 
 
@@ -901,69 +868,74 @@ public class xArray
     /**
      * @return an immutable String array handle
      */
-    public static ArrayHandle makeStringArrayHandle(StringHandle[] ahValue) {
-        return makeArrayHandle(STRING_ARRAY_CLZ, ahValue.length, ahValue, Mutability.Constant);
+    public static ArrayHandle makeStringArrayHandle(Container container, StringHandle[] ahValue) {
+        return makeArrayHandle(info(container).stringArrayClz, ahValue.length, ahValue, Mutability.Constant);
     }
 
     /**
      * @return a Bit array handle
      */
-    public static ArrayHandle makeBitArrayHandle(byte[] abValue, int cBits, Mutability mutability) {
-        DelegateHandle hDelegate = xRTBitDelegate.INSTANCE.makeHandle(abValue, cBits, mutability);
-        return new ArrayHandle(BIT_ARRAY_CLZ, hDelegate, mutability);
+    public static ArrayHandle makeBitArrayHandle(
+            Container container, byte[] abValue, int cBits, Mutability mutability) {
+        ArrayInfo      info      = info(container);
+        DelegateHandle hDelegate = info.bitDelegate.makeHandle(abValue, cBits, mutability);
+        return new ArrayHandle(info.bitArrayClz, hDelegate, mutability);
     }
 
     /**
      * @return a Boolean array handle
      */
-    public static ArrayHandle makeBooleanArrayHandle(byte[] abValue, int cBits, Mutability mutability) {
-        DelegateHandle hDelegate = xRTBooleanDelegate.INSTANCE.makeHandle(abValue, cBits, mutability);
-        return new ArrayHandle(BOOLEAN_ARRAY_CLZ, hDelegate, mutability);
+    public static ArrayHandle makeBooleanArrayHandle(
+            Container container, byte[] abValue, int cBits, Mutability mutability) {
+        ArrayInfo      info      = info(container);
+        DelegateHandle hDelegate = info.booleanDelegate.makeHandle(abValue, cBits, mutability);
+        return new ArrayHandle(info.booleanArrayClz, hDelegate, mutability);
     }
 
     /**
      * @return a Byte array handle
      */
-    public static ArrayHandle makeByteArrayHandle(byte[] abValue, Mutability mutability) {
-        return makeByteArrayHandle(abValue, abValue.length, mutability);
+    public static ArrayHandle makeByteArrayHandle(
+            Container container, byte[] abValue, Mutability mutability) {
+        return makeByteArrayHandle(container, abValue, abValue.length, mutability);
     }
 
     /**
      * @return a Byte array handle
      */
-    public static ArrayHandle makeByteArrayHandle(byte[] abValue, int cBytes, Mutability mutability) {
+    public static ArrayHandle makeByteArrayHandle(
+            Container container, byte[] abValue, int cBytes, Mutability mutability) {
         if (abValue.length == 0 && mutability == Mutability.Constant) {
-            return ensureEmptyByteArray();
+            return ensureEmptyByteArray(container);
         }
-        DelegateHandle hDelegate = xRTUInt8Delegate.INSTANCE.makeHandle(abValue, cBytes, mutability);
-        return new ArrayHandle(BYTE_ARRAY_CLZ, hDelegate, mutability);
+        ArrayInfo      info      = info(container);
+        DelegateHandle hDelegate = info.byteDelegate.makeHandle(abValue, cBytes, mutability);
+        return new ArrayHandle(info.byteArrayClz, hDelegate, mutability);
     }
 
     /**
      * @return the handle for an empty immutable array of Bytes.
      */
-    public static ArrayHandle ensureEmptyByteArray() {
-        if (EMPTY_BYTE_ARRAY == null) {
-            DelegateHandle hDelegate = xRTUInt8Delegate.INSTANCE.makeHandle(
-                    Handy.EMPTY_BYTE_ARRAY, 0, Mutability.Constant);
-            EMPTY_BYTE_ARRAY = new ArrayHandle(BYTE_ARRAY_CLZ, hDelegate, Mutability.Constant);
-        }
-        return EMPTY_BYTE_ARRAY;
+    public static ArrayHandle ensureEmptyByteArray(Container container) {
+        return info(container).emptyByteArray.get();
     }
 
     /**
      * @return a Char array handle
      */
-    public static ArrayHandle makeCharArrayHandle(char[] achValue, Mutability mutability) {
-        DelegateHandle hDelegate = xRTCharDelegate.INSTANCE.makeHandle(achValue, mutability);
-        return new ArrayHandle(CHAR_ARRAY_CLZ, hDelegate, mutability);
+    public static ArrayHandle makeCharArrayHandle(
+            Container container, char[] achValue, Mutability mutability) {
+        ArrayInfo      info      = info(container);
+        DelegateHandle hDelegate = info.charDelegate.makeHandle(achValue, mutability);
+        return new ArrayHandle(info.charArrayClz, hDelegate, mutability);
     }
 
     /**
      * @return an Object array handle with the specified mutability
      */
-    public static ArrayHandle makeObjectArrayHandle(ObjectHandle[] ahValue, Mutability mutability) {
-        return makeArrayHandle(OBJECT_ARRAY_CLZ, ahValue.length, ahValue, mutability);
+    public static ArrayHandle makeObjectArrayHandle(
+            Container container, ObjectHandle[] ahValue, Mutability mutability) {
+        return makeArrayHandle(info(container).objectArrayClz, ahValue.length, ahValue, mutability);
     }
 
     /**
@@ -983,7 +955,8 @@ public class xArray
     protected static DelegateHandle makeDelegate(TypeComposition clzArray, int cCapacity,
                                                  ObjectHandle[] ahValue, Mutability mutability) {
         TypeConstant typeElement      = clzArray.getType().getParamType(0);
-        xRTDelegate  templateDelegate = xRTDelegate.getArrayTemplate(typeElement);
+        xRTDelegate  templateDelegate = xRTDelegate.getArrayTemplate(
+                clzArray.getContainer(), typeElement);
 
         return templateDelegate.createDelegate(
                 clzArray.getContainer(), typeElement, cCapacity, ahValue, mutability);
@@ -1016,7 +989,7 @@ public class xArray
 
         @Override
         public xArray getTemplate() {
-            return (xArray) super.getTemplate();
+            return super.getTemplate(xArray.class);
         }
 
         @Override
@@ -1040,24 +1013,121 @@ public class xArray
 
     public enum Mutability {Constant, Persistent, Fixed, Mutable}
 
-    // array of constructors
-    private static final MethodConstant[] CONSTRUCTORS = new MethodConstant[5];
-
     protected static final String[] ELEMENT_TYPE = new String[] {"Element"};
 
-    private static TypeComposition OBJECT_ARRAY_CLZ;
-    private static TypeComposition STRING_ARRAY_CLZ;
-    private static TypeComposition BIT_ARRAY_CLZ;
-    private static TypeComposition BOOLEAN_ARRAY_CLZ;
-    private static TypeComposition BYTE_ARRAY_CLZ;
-    private static TypeComposition CHAR_ARRAY_CLZ;
+    /**
+     * Lazily resolved Array.Mutability enum template.
+     */
+    private final Lazy<xEnum> f_templateMutability = Lazy.of(() ->
+            f_container.getEnumTemplate("collections.Array.Mutability"));
 
-    private static MethodStructure CREATE_LIST_SET;
-    private static MethodStructure FILL_FROM_ITERABLE;
-    private static MethodStructure LIST_INDEX_OF;
-    private static MethodStructure CALCULATE_HASH;
+    // This dispatch map is used while Container.getTemplate(TypeConstant) promotes Array<T> to a
+    // specialized template, so it must stay separate from ArrayInfo, which resolves Array classes.
+    private final Lazy<Map<TypeConstant, xArray>> f_arrayTemplates = Lazy.of(this::createArrayTemplates);
 
-    private static Map<TypeConstant, xArray> ARRAY_TEMPLATES;
+    private final Lazy<ArrayInfo> f_info = Lazy.of(this::createArrayInfo);
 
-    private static ArrayHandle EMPTY_BYTE_ARRAY;
+    private Map<TypeConstant, xArray> arrayTemplates() {
+        return f_arrayTemplates.get();
+    }
+
+    private ArrayInfo info() {
+        return f_info.get();
+    }
+
+    private static ArrayInfo info(Container container) {
+        return NativeTemplates.get(container).array().info();
+    }
+
+    private ArrayInfo createArrayInfo() {
+        ConstantPool pool = pool();
+
+        MethodConstant[] constructors = new MethodConstant[5];
+        for (MethodStructure method :
+                ((MultiMethodStructure) getStructure().getChild("construct")).methods()) {
+            if (method.getAccess() == Constants.Access.PUBLIC) {
+                TypeConstant typeParam0 = method.getParam(0).getType();
+
+                if (method.getParamCount() == 1) {
+                    if (typeParam0.equals(pool.typeInt64())) {
+                        // 0) construct(Int capacity = 0)
+                        constructors[0] = method.getIdentityConstant();
+                    } else {
+                        // 3) construct(Array that)
+                        constructors[3] = method.getIdentityConstant();
+                    }
+                } else {
+                    // 1) construct(Int size, Element | function Element (Int) supply)
+                    // 2) construct(Mutability mutability, Element... elements)
+                    if (typeParam0.equals(pool.typeInt64())) {
+                        constructors[1] = method.getIdentityConstant();
+                    } else {
+                        constructors[2] = method.getIdentityConstant();
+                    }
+                }
+            } else {
+                // protected construct(ArrayDelegate<Element> delegate, Mutability mutability)
+                constructors[4] = method.getIdentityConstant();
+            }
+        }
+
+        ClassStructure clzList = f_container.getTemplate("collections.List").getStructure();
+        ClassStructure clzHash = f_container.getTemplate("collections.Array.HashableArray").getStructure();
+
+        TypeComposition clzByteArray = f_container.resolveClass(pool.typeByteArray());
+        xRTUInt8Delegate byteDelegate =
+                (xRTUInt8Delegate) xRTDelegate.getArrayTemplate(f_container, pool.typeByte());
+
+        Lazy<ArrayHandle> emptyByteArray = Lazy.of(() -> new ArrayHandle(
+                clzByteArray,
+                byteDelegate.makeHandle(Handy.EMPTY_BYTE_ARRAY, 0, Mutability.Constant),
+                Mutability.Constant));
+
+        return new ArrayInfo(
+                constructors,
+                f_container.getClassStructure("_native.ConstHelper").findMethod("createListSet", 2),
+                xRTDelegate.getInstance(f_container).getStructure().findMethod("fillFromIterable", 4),
+                clzList.findMethod("indexOf", m ->
+                        m.getParamCount() == 2 && m.getParam(0).getType().isA(pool.typeList())),
+                clzHash.findMethod("calculateHash", 0),
+                f_container.resolveClass(pool.ensureArrayType(pool.typeObject())),
+                f_container.resolveClass(pool.ensureArrayType(pool.typeString())),
+                f_container.resolveClass(pool.typeBitArray()),
+                f_container.resolveClass(pool.ensureArrayType(pool.typeBoolean())),
+                clzByteArray,
+                f_container.resolveClass(pool.ensureArrayType(pool.typeChar())),
+                (xRTBitDelegate) xRTDelegate.getArrayTemplate(f_container, pool.typeBit()),
+                (xRTBooleanDelegate) xRTDelegate.getArrayTemplate(f_container, pool.typeBoolean()),
+                byteDelegate,
+                (xRTCharDelegate) xRTDelegate.getArrayTemplate(f_container, pool.typeChar()),
+                emptyByteArray);
+    }
+
+    private Map<TypeConstant, xArray> createArrayTemplates() {
+        ConstantPool              pool         = pool();
+        Map<TypeConstant, xArray> mapTemplates = new HashMap<>();
+
+        mapTemplates.put(pool.typeBit(),  f_container.getTemplate(pool.typeBitArray(), xArray.class));
+        mapTemplates.put(pool.typeByte(), f_container.getTemplate(pool.typeByteArray(), xArray.class));
+
+        return Map.copyOf(mapTemplates);
+    }
+
+    private record ArrayInfo(
+            MethodConstant[] constructors,
+            MethodStructure createListSet,
+            MethodStructure fillFromIterable,
+            MethodStructure listIndexOf,
+            MethodStructure calculateHash,
+            TypeComposition objectArrayClz,
+            TypeComposition stringArrayClz,
+            TypeComposition bitArrayClz,
+            TypeComposition booleanArrayClz,
+            TypeComposition byteArrayClz,
+            TypeComposition charArrayClz,
+            xRTBitDelegate bitDelegate,
+            xRTBooleanDelegate booleanDelegate,
+            xRTUInt8Delegate byteDelegate,
+            xRTCharDelegate charDelegate,
+            Lazy<ArrayHandle> emptyByteArray) {}
 }

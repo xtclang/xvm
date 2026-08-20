@@ -24,7 +24,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 public abstract class xRTView
         extends xRTDelegate {
     protected xRTView(Container container, ClassStructure structure) {
-        super(container, structure, false);
+        super(container, structure);
     }
 
     @Override

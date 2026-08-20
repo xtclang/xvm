@@ -37,6 +37,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateH
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
 
 import org.xvm.util.Handy;
+import org.xvm.util.Lazy;
 
 
 /**
@@ -140,7 +141,7 @@ public class xString
 
         case "chars":
             return frame.assignValue(iReturn,
-                    xArray.makeCharArrayHandle(hThis.m_achValue, Mutability.Constant));
+                    xArray.makeCharArrayHandle(frame.container(), hThis.m_achValue, Mutability.Constant));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -327,6 +328,10 @@ public class xString
     public static class StringHandle
             extends ObjectHandle {
         private final     char[]   m_achValue;
+
+        // Per-handle memoization intentionally does not use Lazy: these values are immutable and a
+        // benign race can only compute the same value twice, while Lazy would add two objects to
+        // every StringHandle.
         private transient JavaLong m_hash;   // cached hash value
         private transient String   m_sValue; // cached String value
 
@@ -342,9 +347,10 @@ public class xString
 
         public String getStringValue() {
             String sValue = m_sValue;
-            return sValue == null
-                    ? (m_sValue = new String(m_achValue))
-                    : sValue;
+            if (sValue == null) {
+                m_sValue = sValue = new String(m_achValue);
+            }
+            return sValue;
         }
 
         public int calcHashCode() {
@@ -365,10 +371,11 @@ public class xString
         }
 
         public JavaLong getHashCode() {
-            JavaLong hHash = m_hash;
-            return hHash == null
-                    ? (m_hash = xInt64.makeHandle(calcHashCode()))
-                    : hHash;
+            JavaLong hash = m_hash;
+            if (hash == null) {
+                m_hash = hash = xInt64.makeHandle(calcHashCode());
+            }
+            return hash;
         }
 
         @Override
@@ -416,25 +423,22 @@ public class xString
     /**
      * @return an immutable array of Strings
      */
-    public static ArrayHandle makeArrayHandle(String[] asValue) {
+    public static ArrayHandle makeArrayHandle(Container container, String[] asValue) {
         int            cValues = asValue.length;
         StringHandle[] ahValue = new StringHandle[cValues];
         for (int i = 0; i < cValues; i++) {
             ahValue[i] = makeHandle(asValue[i]);
         }
-        return xArray.makeStringArrayHandle(ahValue);
+        return xArray.makeStringArrayHandle(container, ahValue);
     }
 
     /**
      * @return the handle for an empty Array of String
      */
-    public static ArrayHandle ensureEmptyArray() {
-        if (EMPTY_STRING_ARRAY == null) {
-            EMPTY_STRING_ARRAY = xArray.makeStringArrayHandle(Utils.STRINGS_NONE);
-        }
-        return EMPTY_STRING_ARRAY;
+    public static ArrayHandle ensureEmptyArray(Container container) {
+        return container.getTemplate(container.getConstantPool().typeString(), xString.class).
+                f_emptyStringArray.get();
     }
-
 
     // ----- data members --------------------------------------------------------------------------
 
@@ -443,6 +447,8 @@ public class xString
     public static StringHandle ZERO;
     public static StringHandle ONE;
 
-    private static ArrayHandle     EMPTY_STRING_ARRAY;
     private static MethodStructure METHOD_APPEND_TO;
+
+    private final Lazy<ArrayHandle> f_emptyStringArray =
+            Lazy.of(() -> xArray.makeStringArrayHandle(f_container, Utils.STRINGS_NONE));
 }

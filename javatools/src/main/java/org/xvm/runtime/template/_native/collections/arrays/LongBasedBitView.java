@@ -28,7 +28,7 @@ public abstract class LongBasedBitView
     public static LongBasedBitView INSTANCE;
 
     public LongBasedBitView(Container container, ClassStructure structure, int nBitsPerValue) {
-        super(container, structure, false);
+        super(container, structure);
 
         f_nBitsPerValue = nBitsPerValue;
     }

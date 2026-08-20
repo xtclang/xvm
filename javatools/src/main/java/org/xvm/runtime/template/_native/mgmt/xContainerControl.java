@@ -15,6 +15,7 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.NestedContainer;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
@@ -32,28 +33,30 @@ import org.xvm.runtime.template._native.xRTServiceControl;
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native implementation of _native.mgmt.ContainerControl class.
  */
 public class xContainerControl
         extends xRTServiceControl {
-    public static xContainerControl INSTANCE;
 
-    public xContainerControl(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+    public static xContainerControl getInstance(Frame frame) {
+        return NativeTemplates.get(frame).containerControl();
+    }
 
-        if (fInstance) {
-            INSTANCE = this;
-        }
+    public static xContainerControl getInstance(Container container) {
+        return NativeTemplates.get(container).containerControl();
+    }
+
+    public xContainerControl(Container container, ClassStructure structure) {
+        super(container, structure);
     }
 
     @Override
     public void initNative() {
-        ConstantPool pool     = pool();
-        TypeConstant typeMask = pool.ensureEcstasyTypeConstant("mgmt.Container.Control");
-
-        m_clzControl = ensureClass(f_container, getCanonicalType(), typeMask);
+        f_clzControl.get();
 
         markNativeProperty("mainService");
         markNativeProperty("innerTypeSystem");
@@ -202,7 +205,7 @@ public class xContainerControl
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     public ObjectHandle makeHandle(Container container) {
-        return new ControlHandle(m_clzControl, container);
+        return new ControlHandle(f_clzControl.get(), container);
     }
 
     protected static class ControlHandle
@@ -224,5 +227,8 @@ public class xContainerControl
         protected final Container f_container;
     }
 
-    private TypeComposition m_clzControl;
+    private final Lazy<TypeComposition> f_clzControl = Lazy.of(() -> {
+        TypeConstant typeMask = pool().ensureEcstasyTypeConstant("mgmt.Container.Control");
+        return ensureClass(f_container, getCanonicalType(), typeMask);
+    });
 }

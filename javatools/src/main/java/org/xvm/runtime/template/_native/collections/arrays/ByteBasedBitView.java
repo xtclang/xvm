@@ -26,7 +26,7 @@ public abstract class ByteBasedBitView
         extends xRTViewToBit
         implements BitView {
     public ByteBasedBitView(Container container, ClassStructure structure) {
-        super(container, structure, false);
+        super(container, structure);
     }
 
     @Override
@@ -42,7 +42,7 @@ public abstract class ByteBasedBitView
 
             DelegateHandle hView = hSource instanceof ByteArrayHandle hBytes
                     ? new ViewHandle(clzView, hBytes, hBytes.getBitCount(), mutability)
-                    : xRTViewToBit.INSTANCE.createBitViewDelegate(hSource, mutability);
+                    : xRTViewToBit.getInstance(f_container).createBitViewDelegate(hSource, mutability);
 
             return slice(hView, hSlice.f_ofStart*8, hSlice.m_cSize*8, false);
         }
@@ -53,7 +53,7 @@ public abstract class ByteBasedBitView
 
         return hSource instanceof ByteArrayHandle hBytes
                     ? new ViewHandle(clzView, hBytes, hBytes.getBitCount(), mutability)
-                    : xRTViewToBit.INSTANCE.createBitViewDelegate(hSource, mutability);
+                    : xRTViewToBit.getInstance(f_container).createBitViewDelegate(hSource, mutability);
     }
 
 

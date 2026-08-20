@@ -67,7 +67,7 @@ public class xRTCompiler
     public static xRTCompiler INSTANCE;
 
     public xRTCompiler(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;
@@ -262,10 +262,10 @@ public class xRTCompiler
         if (fSuccess) {
             haTemplates = xArray.makeArrayHandle(clzArray, listFiles.size(),
                             listFiles.toArray(Utils.OBJECTS_NONE), Mutability.Constant);
-            haErrors    = xString.ensureEmptyArray();
+            haErrors    = xString.ensureEmptyArray(frame.container());
         } else {
             haTemplates = xArray.makeArrayHandle(clzArray, 0, Utils.OBJECTS_NONE, Mutability.Constant);
-            haErrors    = xString.makeArrayHandle(listErrors.toArray(Utils.NO_NAMES));
+            haErrors    = xString.makeArrayHandle(frame.container(), listErrors.toArray(Utils.NO_NAMES));
         }
 
         compiler.reset();

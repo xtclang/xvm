@@ -28,7 +28,7 @@ public class xRTViewFromByteToInt64
     public static xRTViewFromByteToInt64 INSTANCE;
 
     public xRTViewFromByteToInt64(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;

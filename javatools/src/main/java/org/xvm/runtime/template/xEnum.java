@@ -21,6 +21,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
@@ -30,51 +31,35 @@ import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * A template for the base of all Enum classes
  */
 public class xEnum
         extends xConst {
-    public static xEnum INSTANCE;
 
-    public xEnum(Container container, ClassStructure structure, boolean fInstance) {
+    public static xEnum getInstance(Frame frame) {
+        return NativeTemplates.get(frame).enumTemplate();
+    }
+
+    public static xEnum getInstance(Container container) {
+        return NativeTemplates.get(container).enumTemplate();
+    }
+
+    public xEnum(Container container, ClassStructure structure) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
+        if (NativeTemplates.get(this).isEnum(this)) {
             // all the methods are marked as native due to a "rebase"
-
-            RANGE_TEMPLATE = f_container.getTemplate("Range");
-            RANGE_CTOR     = RANGE_TEMPLATE.getStructure().findMethod("construct", 4);
+            f_templateRange.get();
+            f_ctorRange.get();
         } else if (getStructure().getFormat() == Format.ENUM) {
-            Collection<? extends Component> listAll = getStructure().children();
-            List<String>     listNames   = new ArrayList<>(listAll.size());
-            List<EnumHandle> listHandles = new ArrayList<>(listAll.size());
-
-            int iOrdinal = 0;
-            for (Component child : listAll) {
-                if (child.getFormat() == Format.ENUMVALUE) {
-                    TypeConstant type   = ((ClassStructure) child).getCanonicalType();
-                    EnumHandle   hValue = makeEnumHandle(ensureClass(f_container, type, type), iOrdinal++);
-
-                    listNames.add(child.getName());
-                    listHandles.add(hValue);
-
-                    // native enums don't require any initialization
-                    if (!hValue.isStruct()) {
-                        pool().ensureSingletonConstConstant(child.getIdentityConstant()).setHandle(hValue);
-                    }
-                }
-            }
-            m_listNames   = listNames;
-            m_listHandles = listHandles;
+            f_enumInfo.get();
         }
     }
 
@@ -97,7 +82,8 @@ public class xEnum
             xEnum templateEnum = (xEnum) getSuper();
 
             EnumHandle hEnum = templateEnum.getEnumByConstant(constValue.getClassConstant());
-            constValue.setHandle(hEnum);
+            // For natural enums, hEnum is the mutable struct until completeConstruction() returns.
+            // Utils.initConstants() publishes the finalized singleton handle after construction.
 
             return hEnum.isStruct()
                     ? completeConstruction(frame, hEnum)
@@ -158,7 +144,8 @@ public class xEnum
         }
 
         case "name":
-            return frame.assignValue(iReturn, xString.makeHandle(m_listNames.get(hThis.getOrdinal())));
+            return frame.assignValue(iReturn,
+                    xString.makeHandle(enumInfo().names().get(hThis.getOrdinal())));
 
         case "ordinal":
             return frame.assignValue(iReturn, xInt64.makeHandle(hThis.getOrdinal()));
@@ -211,7 +198,7 @@ public class xEnum
         EnumHandle hThis = (EnumHandle) hTarget;
 
         return frame.assignValue(iReturn,
-                xString.makeHandle(m_listNames.get(hThis.getOrdinal())));
+                xString.makeHandle(enumInfo().names().get(hThis.getOrdinal())));
     }
 
     @Override
@@ -257,7 +244,7 @@ public class xEnum
         ahVar[2] = xBoolean.makeHandle(fFirstEx);
         ahVar[3] = xBoolean.makeHandle(fLastEx);
 
-        return RANGE_TEMPLATE.construct(frame, RANGE_CTOR, typeRange.ensureClass(frame),
+        return f_templateRange.get().construct(frame, f_ctorRange.get(), typeRange.ensureClass(frame),
                 null, ahVar, iReturn);
     }
 
@@ -281,12 +268,37 @@ public class xEnum
     }
 
     public EnumHandle getEnumByName(String sName) {
-        int ix = m_listNames.indexOf(sName);
-        return ix >= 0 ? m_listHandles.get(ix) : null;
+        EnumInfo info = enumInfo();
+        int      ix   = info.names().indexOf(sName);
+        return ix >= 0 ? info.handles().get(ix) : null;
+    }
+
+    /**
+     * Obtain an initialized enum value handle by name.
+     *
+     * @return the initialized enum value handle, a deferred handle, or null
+     */
+    public ObjectHandle ensureEnumByName(Frame frame, String sName) {
+        EnumHandle hEnum = getEnumByName(sName);
+        return hEnum == null
+                ? null
+                : Utils.ensureInitializedEnum(frame, hEnum);
     }
 
     public EnumHandle getEnumByOrdinal(int ix) {
-        return ix >= 0 ? m_listHandles.get(ix) : null;
+        return ix >= 0 ? enumInfo().handles().get(ix) : null;
+    }
+
+    /**
+     * Obtain an initialized enum value handle by ordinal.
+     *
+     * @return the initialized enum value handle, a deferred handle, or null
+     */
+    public ObjectHandle ensureEnumByOrdinal(Frame frame, int ix) {
+        EnumHandle hEnum = getEnumByOrdinal(ix);
+        return hEnum == null
+                ? null
+                : Utils.ensureInitializedEnum(frame, hEnum);
     }
 
     /**
@@ -314,21 +326,21 @@ public class xEnum
      * @return an Enum value name for the specified ordinal
      */
     public String getNameByOrdinal(int ix) {
-        return m_listNames.get(ix);
+        return enumInfo().names().get(ix);
     }
 
     /**
      * @return a list of enum names
      */
     public List<String> getNames() {
-        return m_listNames;
+        return enumInfo().names();
     }
 
     /**
      * @return a list of enum values
      */
     public List<EnumHandle> getValues() {
-        return m_listHandles;
+        return enumInfo().handles();
     }
 
     /**
@@ -339,7 +351,7 @@ public class xEnum
 
         hEnum.makeImmutable();
 
-        m_listHandles.set(hEnum.m_index, hEnum);
+        enumInfo().handles().set(hEnum.m_index, hEnum);
     }
 
 
@@ -403,7 +415,7 @@ public class xEnum
 
         @Override
         public xEnum getTemplate() {
-            return (xEnum) super.getTemplate();
+            return super.getTemplate(xEnum.class);
         }
 
         @Override
@@ -417,9 +429,47 @@ public class xEnum
 
     // ----- constants and fields ------------------------------------------------------------------
 
-    private static ClassTemplate   RANGE_TEMPLATE;
-    private static MethodStructure RANGE_CTOR;
+    private final Lazy<ClassTemplate> f_templateRange = Lazy.of(() ->
+            f_container.getTemplate("Range"));
 
-    protected List<String>     m_listNames;
-    protected List<EnumHandle> m_listHandles;
+    private final Lazy<MethodStructure> f_ctorRange = Lazy.of(() ->
+            f_templateRange.get().getStructure().findMethod("construct", 4));
+
+    private EnumInfo enumInfo() {
+        return f_enumInfo.get();
+    }
+
+    private EnumInfo createEnumInfo() {
+        Collection<? extends Component> listAll = getStructure().children();
+        List<String>     listNames   = new ArrayList<>(listAll.size());
+        List<EnumHandle> listHandles = new ArrayList<>(listAll.size());
+
+        int iOrdinal = 0;
+        for (Component child : listAll) {
+            if (child.getFormat() == Format.ENUMVALUE) {
+                TypeConstant type   = ((ClassStructure) child).getCanonicalType();
+                EnumHandle   hValue = makeEnumHandle(ensureClass(f_container, type, type), iOrdinal++);
+
+                listNames.add(child.getName());
+                listHandles.add(hValue);
+
+                // native enums don't require any initialization
+                if (!hValue.isStruct()) {
+                    pool().ensureSingletonConstConstant(child.getIdentityConstant()).setHandle(hValue);
+                }
+            }
+        }
+
+        return new EnumInfo(listNames, listHandles);
+    }
+
+    private final Lazy<EnumInfo> f_enumInfo = Lazy.of(this::createEnumInfo);
+
+    /**
+     * Template-local enum index. Natural enum values can start as construction structs; the
+     * authoritative cross-fiber publication point for the final public value is the corresponding
+     * SingletonConstant, so public callers must use ensureEnumByName/ensureEnumByOrdinal or
+     * Utils.ensureInitializedEnum instead of treating this list as a publication boundary.
+     */
+    private record EnumInfo(List<String> names, List<EnumHandle> handles) {}
 }

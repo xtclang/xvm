@@ -27,6 +27,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
@@ -44,26 +45,29 @@ import org.xvm.runtime.template.collections.xByteArray;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native implementation of a network name service.
  */
 public class xRTNameService
         extends xService {
-    public static xRTNameService INSTANCE;
 
-    public xRTNameService(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+    public static xRTNameService getInstance(Frame frame) {
+        return NativeTemplates.get(frame).nameService();
+    }
 
-        if (fInstance) {
-            INSTANCE = this;
-        }
+    public static xRTNameService getInstance(Container container) {
+        return NativeTemplates.get(container).nameService();
+    }
+
+    public xRTNameService(Container container, ClassStructure structure) {
+        super(container, structure);
     }
 
     @Override
     public void initNative() {
-        BYTE_ARRAY_ARRAY_TYPE = pool().ensureArrayType(pool().typeByteArray());
-
         markNativeMethod("nativeResolve", null, null);
         markNativeMethod("nativeRecords", null, null);
         markNativeMethod("nativeLookup" , null, null);
@@ -73,13 +77,7 @@ public class xRTNameService
 
     @Override
     public TypeConstant getCanonicalType() {
-        TypeConstant type = m_typeCanonical;
-        if (type == null) {
-            var pool = f_container.getConstantPool();
-            m_typeCanonical = type = pool.ensureTerminalTypeConstant(pool.ensureClassConstant(
-                    pool.ensureModuleConstant("net.xtclang.org"), "NameService"));
-        }
-        return type;
+        return f_typeCanonical.get();
     }
 
     @Override
@@ -92,7 +90,7 @@ public class xRTNameService
 
         if (frame.f_context != hService.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
-            return xRTFunction.makeAsyncNativeHandle(method).call1(frame, hTarget, ahArg, iReturn);
+            return xRTFunction.makeAsyncNativeHandle(frame, method).call1(frame, hTarget, ahArg, iReturn);
         }
 
         switch (method.getName()) {
@@ -106,7 +104,7 @@ public class xRTNameService
                 Frame.Continuation continuation = frameCaller -> {
                     try {
                         return frameCaller.assignValue(iReturn,
-                                xString.makeArrayHandle(cfRecords.get()));
+                                xString.makeArrayHandle(frameCaller.container(), cfRecords.get()));
                     } catch (Throwable e) {
                         return frameCaller.raiseException(
                             xException.obscureIoException(frameCaller, exceptionMessage(e)));
@@ -126,7 +124,7 @@ public class xRTNameService
 
         if (frame.f_context != hService.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
-            return xRTFunction.makeAsyncNativeHandle(method).callN(frame, hTarget, ahArg, aiReturn);
+            return xRTFunction.makeAsyncNativeHandle(frame, method).callN(frame, hTarget, ahArg, aiReturn);
         }
 
         switch (method.getName()) {
@@ -146,7 +144,8 @@ public class xRTNameService
                         ObjectHandle[] ah = new ObjectHandle[c];
                         for (int i = 0; i < c; ++i) {
                             ah[i] = xArray.makeByteArrayHandle(
-                                        aAddr[i].getAddress(), Mutability.Constant);
+                                        frameCaller.container(), aAddr[i].getAddress(),
+                                        Mutability.Constant);
                         }
 
                         TypeComposition clz = ensureByteArrayArrayComposition(container);
@@ -196,7 +195,9 @@ public class xRTNameService
     // -----  helpers ------------------------------------------------------------------------------
 
     static TypeComposition ensureByteArrayArrayComposition(Container container) {
-        return container.ensureClassComposition(BYTE_ARRAY_ARRAY_TYPE, xArray.INSTANCE);
+        xRTNameService template = NativeTemplates.get(container).nameService();
+        return container.ensureClassComposition(
+                template.f_typeByteArrayArray.get(), xArray.getInstance(container));
     }
 
     static String[] getAllRecords(String sName)
@@ -277,12 +278,14 @@ public class xRTNameService
 
     // ----- constants and fields ------------------------------------------------------------------
 
-    /**
-     * Cached canonical type.
-     */
-    private TypeConstant m_typeCanonical;
+    private final Lazy<TypeConstant> f_typeCanonical = Lazy.of(() -> {
+        var pool = f_container.getConstantPool();
+        return pool.ensureTerminalTypeConstant(pool.ensureClassConstant(
+                pool.ensureModuleConstant("net.xtclang.org"), "NameService"));
+    });
 
-    private static TypeConstant BYTE_ARRAY_ARRAY_TYPE;
+    private final Lazy<TypeConstant> f_typeByteArrayArray =
+            Lazy.of(() -> pool().ensureArrayType(pool().typeByteArray()));
 
     private static final String[] NO_RECORD_FIELDS = new String[0];
 

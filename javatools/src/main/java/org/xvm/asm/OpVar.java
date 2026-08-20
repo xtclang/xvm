@@ -142,7 +142,8 @@ public abstract class OpVar
         if (clzArray == null || !typeList.equals(typePrev)) {
             TypeConstant typeEl = typeList.resolveGenericType("Element");
 
-            clzArray = xArray.INSTANCE.ensureParameterizedClass(context.f_container, typeEl);
+            clzArray = xArray.getInstance(context.f_container).
+                    ensureParameterizedClass(context.f_container, typeEl);
 
             context.setOpInfo(this, Category.Composition, clzArray);
             context.setOpInfo(this, Category.Type, typeList);

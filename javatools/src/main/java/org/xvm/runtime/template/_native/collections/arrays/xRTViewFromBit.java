@@ -5,6 +5,7 @@ import org.xvm.asm.ClassStructure;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
@@ -16,19 +17,14 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 public class xRTViewFromBit
         extends xRTView
         implements ByteView {
-    public static xRTViewFromBit INSTANCE;
 
-    public xRTViewFromBit(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTViewFromBit(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void registerNativeTemplates() {
-        if (this == INSTANCE) {
+        if (NativeTemplates.get(this).isViewFromBit(this)) {
             registerNativeTemplate(new xRTViewFromBitToBoolean (f_container, f_struct, true));
             registerNativeTemplate(new xRTViewFromBitToByte    (f_container, f_struct, true));
             registerNativeTemplate(new xRTViewFromBitToNibble  (f_container, f_struct, true));

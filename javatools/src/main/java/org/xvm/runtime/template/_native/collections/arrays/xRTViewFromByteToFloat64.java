@@ -27,7 +27,7 @@ public class xRTViewFromByteToFloat64
     public static xRTViewFromByteToFloat64 INSTANCE;
 
     public xRTViewFromByteToFloat64(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;

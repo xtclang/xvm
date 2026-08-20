@@ -47,7 +47,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 public class xOSStorage
         extends xService {
     public xOSStorage(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
     }
 
     @Override
@@ -109,7 +109,7 @@ public class xOSStorage
         ServiceHandle hStorage = (ServiceHandle) hTarget;
 
         if (frame.f_context != hStorage.f_context) {
-            return xRTFunction.makeAsyncNativeHandle(method).
+            return xRTFunction.makeAsyncNativeHandle(frame, method).
                 call1(frame, hTarget, new ObjectHandle[] {hArg}, iReturn);
         }
 
@@ -122,9 +122,10 @@ public class xOSStorage
                 String[] asName = path.toFile().list();
                 int      cNames = asName == null ? 0 : asName.length;
 
+                Container container = frame.container();
                 return cNames == 0
-                         ? frame.assignValue(iReturn, xString.ensureEmptyArray())
-                         : frame.assignValue(iReturn, xString.makeArrayHandle(asName));
+                         ? frame.assignValue(iReturn, xString.ensureEmptyArray(container))
+                         : frame.assignValue(iReturn, xString.makeArrayHandle(container, asName));
             } catch (InvalidPathException e) {
                 return frame.raiseException(xException.ioException(frame, e.getMessage()));
             }
@@ -205,7 +206,7 @@ public class xOSStorage
 
         if (hStorage != null && frame.f_context != hStorage.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
-            return xRTFunction.makeAsyncNativeHandle(method).call1(frame, hTarget, ahArg, iReturn);
+            return xRTFunction.makeAsyncNativeHandle(frame, method).call1(frame, hTarget, ahArg, iReturn);
         }
 
         switch (method.getName()) {
@@ -223,7 +224,7 @@ public class xOSStorage
 
         if (frame.f_context != hStorage.f_context) {
             // for now let's make sure all the calls are processed on the service fibers
-            return xRTFunction.makeAsyncNativeHandle(method).callN(frame, hTarget, ahArg, aiReturn);
+            return xRTFunction.makeAsyncNativeHandle(frame, method).callN(frame, hTarget, ahArg, aiReturn);
         }
 
         switch (method.getName()) {
@@ -319,7 +320,9 @@ public class xOSStorage
                 Path pathAbsolute = pathDir.resolve(pathRelative);
 
                 FunctionHandle hfnOnEvent =
-                        xRTFunction.makeInternalHandle(null, s_methodOnEvent).bindTarget(null, context.hStorage);
+                        xRTFunction.makeInternalHandle(
+                                context.hStorage.f_context.f_container, s_methodOnEvent).
+                                bindTarget(null, context.hStorage);
 
                 StringHandle hPathDir  = xString.makeHandle(pathDir.toString());
                 StringHandle hPathNode = xString.makeHandle(pathAbsolute.toString());

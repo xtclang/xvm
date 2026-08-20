@@ -29,7 +29,7 @@ public class xRTViewFromBitToNibble
     public static xRTViewFromBitToNibble INSTANCE;
 
     public xRTViewFromBitToNibble(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;

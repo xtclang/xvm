@@ -19,7 +19,7 @@ public class xRTPackageTemplate
     public static xRTPackageTemplate INSTANCE;
 
     public xRTPackageTemplate(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;

@@ -195,7 +195,7 @@ public class xClass
             Component component = id.getComponent();
             return frame.assignValue(iReturn,
                     component instanceof PropertyStructure prop
-                        ? xRTPropertyClassTemplate.makeHandle(prop)
+                        ? xRTPropertyClassTemplate.makeHandle(frame.f_context.f_container, prop)
                         : xRTComponentTemplate.makeComponentHandle(frame.f_context.f_container, component));
         }
 
@@ -336,7 +336,7 @@ public class xClass
             int iResult;
             if (cParams == 0) {
                 iResult = Utils.constructListMap(frame, clzMap,
-                        xString.ensureEmptyArray(),
+                        xString.ensureEmptyArray(container),
                         xRTType.ensureEmptyTypeArray(container), Op.A_STACK);
             } else {
                 StringHandle[] ahNames   = new StringHandle[cParams];
@@ -357,7 +357,7 @@ public class xClass
                 }
 
                 iResult = Utils.constructListMap(frame, clzMap,
-                        xArray.makeStringArrayHandle(ahNames),
+                        xArray.makeStringArrayHandle(container, ahNames),
                         xArray.createImmutableArray(
                             xRTType.ensureTypeArrayComposition(container), ahTypes),
                         Op.A_STACK);
@@ -495,7 +495,7 @@ public class xClass
      * @return the TypeComposition for an Array of Class
      */
     public static TypeComposition ensureArrayComposition(Container container) {
-        return container.ensureClassComposition(CLASS_ARRAY_TYPE, xArray.INSTANCE);
+        return container.ensureClassComposition(CLASS_ARRAY_TYPE, xArray.getInstance(container));
     }
 
 

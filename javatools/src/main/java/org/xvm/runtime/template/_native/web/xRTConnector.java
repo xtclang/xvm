@@ -71,7 +71,7 @@ public class xRTConnector
     public static xRTConnector INSTANCE;
 
     public xRTConnector(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;
@@ -136,7 +136,7 @@ public class xRTConnector
                     ? invokeSendRequest(frame, hConnector, (StringHandle) ahArg[0],
                         (StringHandle) ahArg[1], (ArrayHandle) ahArg[2],
                         (ArrayHandle) ahArg[3], (ArrayHandle) ahArg[4], aiReturn)
-                    : xRTFunction.makeAsyncNativeHandle(method).
+                    : xRTFunction.makeAsyncNativeHandle(frame, method).
                         callN(frame, hConnector, ahArg, aiReturn);
         }
         }
@@ -154,8 +154,9 @@ public class xRTConnector
         ArrayHandle hNames  = m_hDefaultNames;
         ArrayHandle hValues = m_hDefaultValues;
         if (hNames == null) {
-            m_hDefaultNames  = hNames  = xString.makeArrayHandle(new String[] {"User-Agent"});
-            m_hDefaultValues = hValues = xString.makeArrayHandle(new String[] {s_sAgent});
+            Container container = frame.container();
+            m_hDefaultNames  = hNames  = xString.makeArrayHandle(container, new String[] {"User-Agent"});
+            m_hDefaultValues = hValues = xString.makeArrayHandle(container, new String[] {s_sAgent});
         }
 
         return frame.assignValues(aiReturn, hNames, hValues);
@@ -255,13 +256,13 @@ public class xRTConnector
             byte[] abResponse = response.body();
 
             ObjectHandle hResponseBytes = abResponse == null || abResponse.length == 0
-                    ? xArray.ensureEmptyByteArray()
-                    : xArray.makeByteArrayHandle(abResponse, Mutability.Constant);
+                    ? xArray.ensureEmptyByteArray(frame.container())
+                    : xArray.makeByteArrayHandle(frame.container(), abResponse, Mutability.Constant);
 
             return frame.assignValues(aiReturn,
                     xInt64.makeHandle(nResponseCode),
-                    xString.makeArrayHandle(asResponseNames),
-                    xString.makeArrayHandle(asResponseValues),
+                    xString.makeArrayHandle(frame.container(), asResponseNames),
+                    xString.makeArrayHandle(frame.container(), asResponseValues),
                     hResponseBytes
                     );
         } catch (Exception e) {

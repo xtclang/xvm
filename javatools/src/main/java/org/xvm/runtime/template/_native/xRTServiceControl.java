@@ -10,6 +10,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
@@ -22,20 +23,25 @@ import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native implementation of _native.RTServiceControl class.
  */
 public class xRTServiceControl
         extends ClassTemplate {
-    public static xRTServiceControl INSTANCE;
 
-    public xRTServiceControl(Container container, ClassStructure structure, boolean fInstance) {
+    public static xRTServiceControl getInstance(Frame frame) {
+        return NativeTemplates.get(frame).serviceControl();
+    }
+
+    public static xRTServiceControl getInstance(Container container) {
+        return NativeTemplates.get(container).serviceControl();
+    }
+
+    public xRTServiceControl(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -45,12 +51,8 @@ public class xRTServiceControl
 
     @Override
     public void initNative() {
-        TypeConstant typeInception = getCanonicalType();
-        TypeConstant typeMask      = pool().ensureEcstasyTypeConstant("Service.ServiceControl");
-
-        m_clzControl = ensureClass(f_container, typeInception, typeMask);
-
-        SERVICE_STATUS = (xEnum) f_container.getTemplate("Service.ServiceStatus");
+        f_clzControl.get();
+        f_templateServiceStatus.get();
 
         markNativeProperty("statusIndicator");
         markNativeProperty("upTime");
@@ -61,7 +63,7 @@ public class xRTServiceControl
         markNativeMethod("shutdown", VOID, VOID);
         markNativeMethod("kill", VOID, VOID);
 
-        typeInception.invalidateTypeInfo();
+        getCanonicalType().invalidateTypeInfo();
     }
 
     @Override
@@ -79,7 +81,7 @@ public class xRTServiceControl
             }
             return frame.f_context == context
                 ? context.shutdown(frame)
-                : xRTFunction.makeAsyncNativeHandle(method).call1(frame, hService, ahArg, iReturn);
+                : xRTFunction.makeAsyncNativeHandle(frame, method).call1(frame, hService, ahArg, iReturn);
         }
 
         case "kill":
@@ -99,7 +101,7 @@ public class xRTServiceControl
                     xBoolean.makeHandle(hControl.getContext().isContended()));
 
         case "statusIndicator": {
-            xEnum.EnumHandle hStatus = SERVICE_STATUS.getEnumByName(
+            xEnum.EnumHandle hStatus = f_templateServiceStatus.get().getEnumByName(
                     hControl.getContext().getStatus().name());
             return Utils.assignInitializedEnum(frame, hStatus, iReturn);
         }
@@ -112,7 +114,8 @@ public class xRTServiceControl
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     public static ObjectHandle makeHandle(ServiceContext context) {
-        return new ControlHandle(INSTANCE.m_clzControl, context);
+        xRTServiceControl template = NativeTemplates.get(context.f_container).serviceControl();
+        return new ControlHandle(template.f_clzControl.get(), context);
     }
 
     protected static class ControlHandle
@@ -137,12 +140,19 @@ public class xRTServiceControl
     }
 
 
-    // ----- constants -----------------------------------------------------------------------------
+    // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * Enum used by the native properties.
+     * Lazily resolved ServiceControl composition owned by this template's container.
      */
-    protected static xEnum SERVICE_STATUS;
+    private final Lazy<TypeComposition> f_clzControl = Lazy.of(() -> {
+        TypeConstant typeMask = pool().ensureEcstasyTypeConstant("Service.ServiceControl");
+        return ensureClass(f_container, getCanonicalType(), typeMask);
+    });
 
-    private TypeComposition m_clzControl;
+    /**
+     * Lazily resolved Service.ServiceStatus enum template owned by this template's container.
+     */
+    private final Lazy<xEnum> f_templateServiceStatus = Lazy.of(() ->
+            f_container.getEnumTemplate("Service.ServiceStatus"));
 }

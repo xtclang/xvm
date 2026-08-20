@@ -131,6 +131,13 @@ public abstract class ObjectHandle
     }
 
     /**
+     * @return the underlying template for this handle as the expected type
+     */
+    public <T extends ClassTemplate> T getTemplate(Class<T> clzTemplate) {
+        return clzTemplate.cast(getComposition().getTemplate());
+    }
+
+    /**
      * @return the OpSupport for the inception type of this handle
      */
     public OpSupport getOpSupport() {

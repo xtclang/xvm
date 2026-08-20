@@ -35,7 +35,7 @@ public class xRTDecryptor
     public static xRTDecryptor INSTANCE;
 
     public xRTDecryptor(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;
@@ -82,7 +82,7 @@ public class xRTDecryptor
             byte[] abEncoded = cipher.doFinal(abData);
 
             return frame.assignValue(iReturn,
-                    xArray.makeByteArrayHandle(abEncoded, Mutability.Constant));
+                    xArray.makeByteArrayHandle(frame.container(), abEncoded, Mutability.Constant));
         } catch (GeneralSecurityException e) {
             return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
         }
@@ -105,7 +105,7 @@ public class xRTDecryptor
             byte[] abSig = cipher.doFinal(abData);
 
             return frame.assignValue(iReturn,
-                    xArray.makeByteArrayHandle(abSig, Mutability.Constant));
+                    xArray.makeByteArrayHandle(frame.container(), abSig, Mutability.Constant));
         } catch (GeneralSecurityException e) {
             return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
         }

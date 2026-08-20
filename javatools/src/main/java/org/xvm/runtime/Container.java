@@ -89,6 +89,13 @@ public abstract class Container
         return f_idModule.getConstantPool();
     }
 
+    /**
+     * @return the owner-local native-template lookup table for this container
+     */
+    public NativeTemplates nativeTemplates() {
+        return f_nativeTemplates;
+    }
+
 
     // ----- Container API -------------------------------------------------------------------------
 
@@ -99,10 +106,11 @@ public abstract class Container
         ServiceContext ctx = m_contextMain;
         if (ctx == null) {
             try (var ignore = ConstantPool.withPool(getConstantPool())) {
+                xService templateService = xService.getInstance(this);
                 m_contextMain = ctx = createServiceContext(getModule().getName());
-                xService.INSTANCE.createServiceHandle(ctx,
-                    xService.INSTANCE.getCanonicalClass(),
-                    xService.INSTANCE.getCanonicalType());
+                templateService.createServiceHandle(ctx,
+                    templateService.getCanonicalClass(),
+                    templateService.getCanonicalType());
             }
         }
         return ctx;
@@ -262,6 +270,13 @@ public abstract class Container
     }
 
     /**
+     * @return a ClassTemplate of the expected type for the specified type
+     */
+    public <T extends ClassTemplate> T getTemplate(TypeConstant type, Class<T> clzTemplate) {
+        return clzTemplate.cast(getTemplate(type));
+    }
+
+    /**
      * @return a ClassTemplate for the specified class identity
      */
     public ClassTemplate getTemplate(IdentityConstant idClass) {
@@ -286,7 +301,10 @@ public abstract class Container
             ClassTemplate temp;
             switch (structClass.getFormat()) {
             case ENUMVALUE, ENUM:
-                temp = new xEnum(this, structClass, false);
+                // These are owner-local fallback/specialized templates, not native base templates.
+                // Converted templates resolve their base instance through the container, so there is
+                // no constructor flag here that could publish this fallback object globally.
+                temp = new xEnum(this, structClass);
                 temp.initNative();
                 break;
 
@@ -297,7 +315,8 @@ public abstract class Container
                 break;
 
             case SERVICE:
-                temp = new xService(this, structClass, false);
+                // Owner-local fallback; do not publish via the legacy fInstance/INSTANCE path.
+                temp = new xService(this, structClass);
                 break;
 
             case CONST:
@@ -307,11 +326,13 @@ public abstract class Container
                 break;
 
             case MODULE:
-                temp = new xModule(this, structClass, false);
+                // Owner-local fallback; do not publish via the legacy fInstance/INSTANCE path.
+                temp = new xModule(this, structClass);
                 break;
 
             case PACKAGE:
-                temp = new xPackage(this, structClass, false);
+                // Owner-local fallback; do not publish via the legacy fInstance/INSTANCE path.
+                temp = new xPackage(this, structClass);
                 break;
 
             default:
@@ -323,10 +344,24 @@ public abstract class Container
     }
 
     /**
+     * @return a ClassTemplate of the expected type for the specified class identity
+     */
+    public <T extends ClassTemplate> T getTemplate(IdentityConstant idClass, Class<T> clzTemplate) {
+        return clzTemplate.cast(getTemplate(idClass));
+    }
+
+    /**
      * @return a ClassTemplate for a type associated with the specified constant
      */
     public ClassTemplate getTemplate(Constant constValue) {
         return getTemplate(getType(constValue)); // the type must exist
+    }
+
+    /**
+     * @return a ClassTemplate of the expected type for a type associated with the specified constant
+     */
+    public <T extends ClassTemplate> T getTemplate(Constant constValue, Class<T> clzTemplate) {
+        return clzTemplate.cast(getTemplate(constValue));
     }
 
     /**
@@ -407,10 +442,17 @@ public abstract class Container
     }
 
     /**
-     * @return a ClassTemplate for a type associated with the specified name (core classes only)
+     * @return a ClassTemplate of the expected type for the specified name (core classes only)
      */
     public <T extends ClassTemplate> T getTemplate(String sName, Class<T> clzTemplate) {
         return clzTemplate.cast(getTemplate(sName));
+    }
+
+    /**
+     * @return an xEnum template for the specified core enum name
+     */
+    public xEnum getEnumTemplate(String sName) {
+        return getTemplate(sName, xEnum.class);
     }
 
     /**
@@ -575,7 +617,7 @@ public abstract class Container
             MethodStructure  constructor = templateTS.getStructure().findMethod("construct", 2);
             ObjectHandle[]   ahArg       = new ObjectHandle[constructor.getMaxVars()];
 
-            ahArg[1] = xArray.makeArrayHandle(xArray.getBooleanArrayComposition(),
+            ahArg[1] = xArray.makeArrayHandle(xArray.getBooleanArrayComposition(this),
                         ahShared.length, ahShared, Mutability.Constant);
 
             TypeComposition clzArray = xModule.ensureArrayComposition(this);
@@ -705,6 +747,11 @@ public abstract class Container
      * The constant heap.
      */
     public final ConstHeap f_heap;
+
+    /**
+     * Lazily resolved native template references for this container.
+     */
+    private final NativeTemplates f_nativeTemplates = new NativeTemplates(this);
 
     /**
      * The parent container.

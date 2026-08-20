@@ -30,7 +30,7 @@ public class xRTHasher
     public static xRTHasher INSTANCE;
 
     public xRTHasher(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;
@@ -66,6 +66,6 @@ public class xRTHasher
         byte[] abSig = digest.digest(abData);
 
         return frame.assignValue(iReturn,
-                xArray.makeByteArrayHandle(abSig, Mutability.Constant));
+                xArray.makeByteArrayHandle(frame.container(), abSig, Mutability.Constant));
     }
 }

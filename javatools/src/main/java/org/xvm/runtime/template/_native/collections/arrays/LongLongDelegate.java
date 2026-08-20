@@ -33,7 +33,7 @@ public abstract class LongLongDelegate
     public static LongLongDelegate INSTANCE;
 
     public LongLongDelegate(Container container, ClassStructure structure, boolean fSigned) {
-        super(container, structure, false);
+        super(container, structure);
 
         f_fSigned = fSigned;
     }

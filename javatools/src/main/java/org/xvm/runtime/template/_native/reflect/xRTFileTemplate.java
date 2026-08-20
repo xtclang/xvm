@@ -55,7 +55,7 @@ public class xRTFileTemplate
     public static xRTFileTemplate INSTANCE;
 
     public xRTFileTemplate(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;
@@ -181,7 +181,8 @@ public class xRTFileTemplate
         }
 
         return frame.assignValue(iReturn,
-            xArray.makeByteArrayHandle(stream.toByteArray(), xArray.Mutability.Constant));
+            xArray.makeByteArrayHandle(frame.container(), stream.toByteArray(),
+                    xArray.Mutability.Constant));
     }
 
     /**
@@ -296,7 +297,7 @@ public class xRTFileTemplate
         }
         assert index == cModules;
 
-        TypeComposition clzArray = container.resolveClass(ensureComponentArrayType());
+        TypeComposition clzArray = container.resolveClass(ensureComponentArrayType(container));
         return frame.assignValue(iReturn,
                 xArray.createImmutableArray(clzArray, ahModule));
 

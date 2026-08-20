@@ -16,7 +16,7 @@ public class xNullable
     public static EnumHandle NULL;
 
     public xNullable(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
     }
 
     @Override

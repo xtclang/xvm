@@ -15,6 +15,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
@@ -26,29 +27,30 @@ import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xArray;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native RTPropertyClassTemplate implementation.
  */
 public class xRTPropertyClassTemplate
         extends xRTComponentTemplate {
-    public static xRTPropertyClassTemplate INSTANCE;
 
-    public xRTPropertyClassTemplate(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+    public static xRTPropertyClassTemplate getInstance(Frame frame) {
+        return NativeTemplates.get(frame).propertyClassTemplate();
+    }
 
-        if (fInstance) {
-            INSTANCE = this;
-        }
+    public static xRTPropertyClassTemplate getInstance(Container container) {
+        return NativeTemplates.get(container).propertyClassTemplate();
+    }
+
+    public xRTPropertyClassTemplate(Container container, ClassStructure structure) {
+        super(container, structure);
     }
 
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
-            TypeConstant typeMask = pool().ensureEcstasyTypeConstant("reflect.ClassTemplate");
-
-            PROPERTY_CLASS_TEMPLATE_COMP = ensureClass(f_container, getCanonicalType(), typeMask);
-
+        if (NativeTemplates.get(this).isPropertyClassTemplate(this)) {
             markNativeProperty("classes");
             markNativeProperty("contribs");
             markNativeProperty("multimethods");
@@ -119,7 +121,7 @@ public class xRTPropertyClassTemplate
     public int getPropertyClasses(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         PropertyStructure prop = (PropertyStructure) hComponent.getComponent();
 
-        Container                     container     = frame.f_context.f_container;
+        Container                     container     = frame.container();
         List<ComponentTemplateHandle> listTemplates = new ArrayList<>();
         for (Component child : prop.children()) {
             switch (child.getFormat()) {
@@ -166,21 +168,26 @@ public class xRTPropertyClassTemplate
                 throw new IllegalStateException();
             }
 
-            MethodStructure methodCreateContrib = xRTClassTemplate.CREATE_CONTRIB_METHOD;
-            xEnum           enumAction          = xRTClassTemplate.ACTION_TEMPLATE;
+            xRTClassTemplate templateClass = xRTClassTemplate.getInstance(frameCaller);
+            MethodStructure   methodCreateContrib = templateClass.getCreateContributionMethod();
+            xEnum             enumAction          = templateClass.getActionTemplate();
 
             ObjectHandle[] ahVar = new ObjectHandle[methodCreateContrib.getMaxVars()];
             ahVar[0] = Utils.ensureInitializedEnum(frameCaller, enumAction.getEnumByName(sAction));
-            ahVar[1] = typeContrib.ensureTypeHandle(frameCaller.f_context.f_container);
+            ahVar[1] = typeContrib.ensureTypeHandle(frameCaller.container());
             ahVar[2] = hDelegatee;
             ahVar[3] = haNames;
             ahVar[4] = haTypes;
 
-            return frameCaller.call1(methodCreateContrib, null, ahVar, Op.A_STACK);
+            Frame.Continuation stepNext = frameCaller2 ->
+                    frameCaller2.call1(methodCreateContrib, null, ahVar, Op.A_STACK);
+            return Op.anyDeferred(ahVar)
+                    ? new Utils.GetArguments(ahVar, stepNext).doNext(frameCaller)
+                    : stepNext.proceed(frameCaller);
         };
 
         return xArray.createAndFill(frame,
-                xRTClassTemplate.ensureContribArrayComposition(frame.f_context.f_container),
+                xRTClassTemplate.ensureContribArrayComposition(frame.container()),
                 listContrib.size(), supplier, iReturn);
     }
 
@@ -237,7 +244,7 @@ public class xRTPropertyClassTemplate
         PropertyStructure prop = (PropertyStructure) hComponent.getComponent();
 
         return frame.assignValue(iReturn,
-            xRTTypeTemplate.makeHandle(frame.f_context.f_container, prop.getType()));
+            xRTTypeTemplate.makeHandle(frame.container(), prop.getType()));
     }
 
 
@@ -270,13 +277,17 @@ public class xRTPropertyClassTemplate
      *
      * @return the resulting {@link ComponentTemplateHandle}
      */
-    public static ComponentTemplateHandle makeHandle(PropertyStructure prop) {
+    public static ComponentTemplateHandle makeHandle(Container container, PropertyStructure prop) {
         // note: no need to initialize the struct because there are no natural fields
-        return new ComponentTemplateHandle(PROPERTY_CLASS_TEMPLATE_COMP, prop);
+        xRTPropertyClassTemplate template = NativeTemplates.get(container).propertyClassTemplate();
+        return new ComponentTemplateHandle(template.f_compPropertyClassTemplate.get(), prop);
     }
 
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static TypeComposition PROPERTY_CLASS_TEMPLATE_COMP;
+    private final Lazy<TypeComposition> f_compPropertyClassTemplate = Lazy.of(() -> {
+        TypeConstant typeMask = pool().ensureEcstasyTypeConstant("reflect.ClassTemplate");
+        return ensureClass(f_container, getCanonicalType(), typeMask);
+    });
 }

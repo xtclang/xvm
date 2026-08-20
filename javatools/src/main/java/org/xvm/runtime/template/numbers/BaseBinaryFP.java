@@ -64,7 +64,7 @@ public abstract class BaseBinaryFP
         switch (sPropName) {
         case "bits":
             return frame.assignValue(iReturn,
-                xArray.makeBitArrayHandle(getBits(d), f_cBits, Mutability.Constant));
+                xArray.makeBitArrayHandle(frame.container(), getBits(d), f_cBits, Mutability.Constant));
 
         case "infinity":
             return frame.assignValue(iReturn, xBoolean.makeHandle(Double.isInfinite(d)));

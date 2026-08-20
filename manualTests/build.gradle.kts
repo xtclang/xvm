@@ -506,6 +506,40 @@ val runParallel = tasks.register<XtcRunTask>("runParallel") {
 }
 
 /**
+ * Stress the parallel container startup path by asking the Runner module to start the same manual
+ * tests many times in one invocation. This is intentionally not wired into CI aggregate tasks; it is
+ * a race finder for local/manual use.
+ *
+ * Examples:
+ *   ./gradlew :manualTests:runParallelStress
+ *   ./gradlew :manualTests:runParallelStress -PstressIterations=50
+ *   ./gradlew :manualTests:runParallelStress -PstressModules=TestReflection,TestArray
+ */
+val runParallelStress = tasks.register<XtcRunTask>("runParallelStress") {
+    group = "verification"
+    description = "Stress runtime startup by running repeated manual-test modules in parallel containers."
+
+    module {
+        verbose = false
+        moduleName = "Runner"
+        moduleArgs(provider {
+            val iterations = providers.gradleProperty("stressIterations")
+                .map(String::toInt)
+                .getOrElse(10)
+                .coerceAtLeast(1)
+            val selectedModules = providers.gradleProperty("stressModules")
+                .orNull
+                ?.split(',')
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() }
+                ?: testModuleNames
+
+            List(iterations) { selectedModules }.flatten()
+        })
+    }
+}
+
+/**
  * Run all tests sequentially, one after another. Each test module runs to completion before
  * the next one starts. This is useful for debugging or when parallel execution causes issues.
  */

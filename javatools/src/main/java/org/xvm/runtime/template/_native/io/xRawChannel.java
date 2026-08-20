@@ -25,7 +25,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 public abstract class xRawChannel
         extends xService {
     public xRawChannel(Container container, ClassStructure structure) {
-        super(container, structure, false);
+        super(container, structure);
     }
 
     @Override
@@ -65,7 +65,7 @@ public abstract class xRawChannel
         // at the moment, there is nothing special about the byte array returned here;
         // it's *always* going to be wrapped by the native RTBuffer
         return frame.assignValue(iReturn, xArray.makeByteArrayHandle(
-                new byte[hChannel.m_cPreferredBufferSize], Mutability.Mutable));
+                frame.container(), new byte[hChannel.m_cPreferredBufferSize], Mutability.Mutable));
     }
 
     /**

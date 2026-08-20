@@ -2,6 +2,7 @@ package org.xvm.runtime.template.reflect;
 
 
 import java.util.Map;
+import java.util.Objects;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
@@ -29,6 +30,7 @@ import org.xvm.compiler.ast.TypeExpression;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -41,32 +43,30 @@ import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native implementation of Module interface.
  */
 public class xModule
         extends xPackage {
-    public static xModule INSTANCE;
 
-    public xModule(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+    public static xModule getInstance(Frame frame) {
+        return NativeTemplates.get(frame).module();
+    }
 
-        if (fInstance) {
-            INSTANCE = this;
-        }
+    public static xModule getInstance(Container container) {
+        return NativeTemplates.get(container).module();
+    }
+
+    public xModule(Container container, ClassStructure structure) {
+        super(container, structure);
     }
 
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
-            ConstantPool pool = f_container.getConstantPool();
-
-            MODULE_ARRAY_TYPE  = pool.ensureArrayType(pool.typeModule());
-            EMPTY_MODULE_ARRAY = pool.ensureArrayConstant(MODULE_ARRAY_TYPE, Constant.NO_CONSTS);
-
-            VERSION_DEFAULT = new VersionConstant(pool(), new Version("CI"));
-
+        if (NativeTemplates.get(this).isModule(this)) {
             // while these properties are naturally implementable, they are accessed
             // by the TypeSystem constructor for modules that belong to the constructed
             // TypeSystem, creating "the chicken or the egg" problem
@@ -150,7 +150,7 @@ public class xModule
         VersionConstant ver    = module.getVersionConstant();
 
         return frame.assignDeferredValue(iReturn,
-            frame.getConstHandle(ver == null ? VERSION_DEFAULT : ver));
+            frame.getConstHandle(ver == null ? f_constDefaultVersion.get() : ver));
     }
 
     /**
@@ -161,14 +161,14 @@ public class xModule
         Container       container = frame.f_context.f_container;
         ModuleConstant  idModule  = (ModuleConstant) hTarget.getId();
         ModuleStructure module    = (ModuleStructure) idModule.getComponent();
-        TypeComposition clzMap    = container.resolveClass(ensureListMapType());
+        TypeComposition clzMap    = container.resolveClass(ensureListMapType(container));
 
         // starting with this module, find all module dependencies, and the shortest path to each
         Map<ModuleConstant, String> mapModulePaths = module.collectDependencies();
         int cModules = mapModulePaths.size() - 1;
         if (cModules == 0) {
             return Utils.constructListMap(frame, clzMap,
-                    xString.ensureEmptyArray(), ensureEmptyArray(container), iReturn);
+                    xString.ensureEmptyArray(container), ensureEmptyArray(container), iReturn);
         }
 
         StringHandle[] ahPaths   = new StringHandle[cModules];
@@ -186,7 +186,7 @@ public class xModule
             }
         }
 
-        ObjectHandle    hPaths   = xArray.makeStringArrayHandle(ahPaths);
+        ObjectHandle    hPaths   = xArray.makeStringArrayHandle(container, ahPaths);
         TypeComposition clzArray = ensureArrayComposition(container);
 
         if (fDeferred) {
@@ -245,8 +245,8 @@ public class xModule
     /**
      * Resolve a class string into a class type.
      *
-     * @param structTS  (optional) the FileStructure representing the TypeSystem
-     * @param module    (optional) the module to begin the name resolution from
+     * @param structTS  the FileStructure representing the TypeSystem; required when module is null
+     * @param module    the module to begin the name resolution from
      * @param sClass    the class string
      *
      * @return either a TypeConstant or null if the class couldn't be resolved for any reason
@@ -258,8 +258,8 @@ public class xModule
     /**
      * Resolve a type string into a type.
      *
-     * @param structTS  (optional) the FileStructure representing the TypeSystem
-     * @param module    (optional) the module to begin the name resolution from
+     * @param structTS  the FileStructure representing the TypeSystem; required when module is null
+     * @param module    the module to begin the name resolution from
      * @param sType     the type string
      *
      * @return either a TypeConstant or null if the type couldn't be resolved for any reason
@@ -270,9 +270,9 @@ public class xModule
 
     private static Object resolveClassOrType(FileStructure structTS, ModuleStructure module, String sClassOrType, boolean fClass) {
         if (module == null) {
-            module = structTS == null
-                ? INSTANCE.f_struct.getFileStructure().getModule()  // only Ecstasy classes
-                : structTS.getModule();
+            // The old fallback reached through xModule.INSTANCE.f_struct, which made this static
+            // helper depend on whichever container last assigned the mutable INSTANCE field.
+            module = Objects.requireNonNull(structTS, "structTS").getModule();
         }
 
         if (fClass && sClassOrType.isEmpty()) {
@@ -314,17 +314,21 @@ public class xModule
      * @return the TypeComposition for an Array of Module
      */
     public static TypeComposition ensureArrayComposition(Container container) {
-        return container.ensureClassComposition(MODULE_ARRAY_TYPE, xArray.INSTANCE);
+        xModule template = template(container);
+        return container.ensureClassComposition(
+                template.f_typeModuleArray.get(), xArray.getInstance(container));
     }
 
     /**
      * @return the handle for an empty Array of Module
      */
     public static ArrayHandle ensureEmptyArray(Container container) {
-        ArrayHandle haEmpty = (ArrayHandle) container.f_heap.getConstHandle(EMPTY_MODULE_ARRAY);
+        xModule       template   = template(container);
+        ArrayConstant constEmpty = template.f_constEmptyModuleArray.get();
+        ArrayHandle   haEmpty    = (ArrayHandle) container.f_heap.getConstHandle(constEmpty);
         if (haEmpty == null) {
             haEmpty = xArray.createImmutableArray(ensureArrayComposition(container), Utils.OBJECTS_NONE);
-            container.f_heap.saveConstHandle(EMPTY_MODULE_ARRAY, haEmpty);
+            container.f_heap.saveConstHandle(constEmpty, haEmpty);
         }
         return haEmpty;
     }
@@ -332,22 +336,30 @@ public class xModule
     /**
      * @return the TypeConstant for {@code ListMap<String, Module>}
      */
-    private static TypeConstant ensureListMapType() {
-        TypeConstant type = LISTMAP_TYPE;
-        if (type == null) {
-            ConstantPool pool = INSTANCE.pool();
-            LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
-                    pool.ensureEcstasyTypeConstant("maps.ListMap"),
-                    pool.typeString(), pool.typeModule());
-        }
-        return type;
+    private static TypeConstant ensureListMapType(Container container) {
+        // ConstantPool interning keeps this cached in the caller's owner. A static LISTMAP_TYPE
+        // would pin the first initialized container and leak it into later containers.
+        ConstantPool pool = container.getConstantPool();
+        return pool.ensureParameterizedTypeConstant(
+                pool.ensureEcstasyTypeConstant("maps.ListMap"),
+                pool.typeString(), pool.typeModule());
     }
 
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static TypeConstant    MODULE_ARRAY_TYPE;
-    private static ArrayConstant   EMPTY_MODULE_ARRAY;
-    private static TypeConstant    LISTMAP_TYPE;
-    private static VersionConstant VERSION_DEFAULT;
+    // These constants are tied to this template's ConstantPool. Lazy final fields preserve the
+    // previous single-computation behavior without sharing one container's constants globally.
+    private final Lazy<TypeConstant> f_typeModuleArray = Lazy.of(() ->
+            pool().ensureArrayType(pool().typeModule()));
+
+    private final Lazy<ArrayConstant> f_constEmptyModuleArray = Lazy.of(() ->
+            pool().ensureArrayConstant(f_typeModuleArray.get(), Constant.NO_CONSTS));
+
+    private final Lazy<VersionConstant> f_constDefaultVersion = Lazy.of(() ->
+            pool().ensureVersionConstant(new Version("CI")));
+
+    private static xModule template(Container container) {
+        return getInstance(Objects.requireNonNull(container, "container"));
+    }
 }

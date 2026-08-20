@@ -77,7 +77,7 @@ public class xRTCertificateManager
     public static xRTCertificateManager INSTANCE;
 
     public xRTCertificateManager(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
         if (fInstance) {
             INSTANCE = this;
@@ -500,7 +500,8 @@ public class xRTCertificateManager
                         ? frameCaller.raiseException(xException.ioException(frameCaller,
                                 "Invalid or inaccessible key \"" + hName.getStringValue() + '"'))
                         : frameCaller.assignValue(iReturn,
-                                xArray.makeByteArrayHandle(key.getEncoded(), Mutability.Constant));
+                                xArray.makeByteArrayHandle(frameCaller.container(), key.getEncoded(),
+                                        Mutability.Constant));
             } catch (InterruptedException | ExecutionException e) {
                 // TODO: we temporarily print the stack trace for unhandled exceptions here; remove
                 e.printStackTrace();

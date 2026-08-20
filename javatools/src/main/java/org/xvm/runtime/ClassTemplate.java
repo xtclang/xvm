@@ -2421,7 +2421,7 @@ public abstract class ClassTemplate
             if (hfn == null) {
                 // in case super constructors have their own finalizers, we need a non-null anchor
                 // that may be replaced by Frame.chainFinalizers()
-                hfn = FullyBoundHandle.NO_OP;
+                hfn = FullyBoundHandle.noOp(frame.container());
             }
 
             frame.m_hfnFinally = hfn;

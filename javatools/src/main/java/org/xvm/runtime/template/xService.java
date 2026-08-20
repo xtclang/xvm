@@ -1,7 +1,6 @@
 package org.xvm.runtime.template;
 
 
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -21,6 +20,7 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ServiceContext;
@@ -40,23 +40,25 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 import org.xvm.runtime.template._native.temporal.xNanosTimer;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native Service implementation.
  */
 public class xService
         extends ClassTemplate {
-    public static xService INSTANCE;
-    public static ClassConstant INCEPTION_CLASS;
 
-    public xService(Container container, ClassStructure structure, boolean fInstance) {
+    public static xService getInstance(Frame frame) {
+        return NativeTemplates.get(frame).service();
+    }
+
+    public static xService getInstance(Container container) {
+        return NativeTemplates.get(container).service();
+    }
+
+    public xService(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-            INCEPTION_CLASS = new NativeRebaseConstant(
-                (ClassConstant) structure.getIdentityConstant());
-        }
     }
 
     @Override
@@ -66,26 +68,18 @@ public class xService
 
     @Override
     public void initNative() {
-        if (this == INSTANCE) {
-            SYNCHRONICITY = (xEnum) f_container.getTemplate("Service.Synchronicity");
-
+        if (NativeTemplates.get(this).isService(this)) {
             // since Service is an interface, we cannot annotate the properties naturally and need to do
             // an ad-hoc check (the list is to be updated)
-            Set<String> setAtomic = new HashSet<>();
-            setAtomic.add("serviceName");
-            setAtomic.add("serviceControl");
-            setAtomic.add("timeout");
-            s_setAtomicProperties = setAtomic;
-
-            IdentityConstant idTimeout  = pool().getImplicitlyImportedIdentity("Timeout");
-            ClassStructure   clzTimeout = (ClassStructure) idTimeout.getComponent();
-            REMAINING_TIME = (PropertyConstant) clzTimeout.getChild("remainingTime").getIdentityConstant();
+            f_propRemainingTime.get();
         }
     }
 
     @Override
     protected ClassConstant getInceptionClassConstant() {
-        return this == INSTANCE ? INCEPTION_CLASS : (ClassConstant) super.getInceptionClassConstant();
+        return NativeTemplates.get(this).isService(this)
+                ? f_constInception.get()
+                : (ClassConstant) super.getInceptionClassConstant();
     }
 
     /**
@@ -244,7 +238,8 @@ public class xService
                 return Op.R_NEXT;
             }
 
-            switch (hArg.getTemplate().getPropertyValue(frame, hArg, REMAINING_TIME, Op.A_STACK)) {
+            switch (hArg.getTemplate().getPropertyValue(frame, hArg,
+                    f_propRemainingTime.get(), Op.A_STACK)) {
             case Op.R_NEXT: {
                 long cRemains = xNanosTimer.millisFromDuration(frame.popStack());
                 frame.f_fiber.setTimeoutHandle(hArg,
@@ -341,7 +336,7 @@ public class xService
             if (frame.f_context != hService.f_context) {
                 return frame.raiseException("Call out of context");
             }
-            EnumHandle hSynchronicity = SYNCHRONICITY.getEnumByName(
+            EnumHandle hSynchronicity = f_templateSynchronicity.get().getEnumByName(
                     frame.getSynchronicity().name());
             return Utils.assignInitializedEnum(frame, hSynchronicity, iReturn);
         }
@@ -539,7 +534,8 @@ public class xService
 
         @Override
         public boolean isAtomic(PropertyConstant idProp) {
-            return s_setAtomicProperties.contains(idProp.getName()) || super.isAtomic(idProp);
+            return ATOMIC_PROPERTIES.contains(idProp.getName())
+                    || super.isAtomic(idProp);
         }
     }
 
@@ -565,17 +561,29 @@ public class xService
     // ----- constants -----------------------------------------------------------------------------
 
     /**
-     * Enum used by the native properties.
+     * The inception class for the native rebase.
      */
-    protected static xEnum SYNCHRONICITY;
+    private final Lazy<ClassConstant> f_constInception = Lazy.of(() ->
+            new NativeRebaseConstant((ClassConstant) f_struct.getIdentityConstant()));
 
     /**
-     * Names of atomic properties.
+     * Pure property names; unlike template/type/method metadata, these are not container state.
      */
-    private static Set<String> s_setAtomicProperties;
+    private static final Set<String> ATOMIC_PROPERTIES =
+            Set.of("serviceName", "serviceControl", "timeout");
 
     /**
      * Property constant for "Timeout.remainingTime".
      */
-    private static PropertyConstant REMAINING_TIME;
+    private final Lazy<PropertyConstant> f_propRemainingTime = Lazy.of(() -> {
+        IdentityConstant idTimeout  = pool().getImplicitlyImportedIdentity("Timeout");
+        ClassStructure   clzTimeout = (ClassStructure) idTimeout.getComponent();
+        return (PropertyConstant) clzTimeout.getChild("remainingTime").getIdentityConstant();
+    });
+
+    /**
+     * Enum used by the native properties.
+     */
+    private final Lazy<xEnum> f_templateSynchronicity = Lazy.of(() ->
+            f_container.getEnumTemplate("Service.Synchronicity"));
 }

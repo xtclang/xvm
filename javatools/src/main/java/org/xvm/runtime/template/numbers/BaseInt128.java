@@ -139,7 +139,7 @@ public abstract class BaseInt128
         case "bits": {
             LongLong ll = ((LongLongHandle) hTarget).getValue();
             return frame.assignValue(iReturn, xArray.makeBitArrayHandle(
-                toByteArray(ll), 128, Mutability.Constant));
+                frame.container(), toByteArray(ll), 128, Mutability.Constant));
         }
 
         case "bitCount": {

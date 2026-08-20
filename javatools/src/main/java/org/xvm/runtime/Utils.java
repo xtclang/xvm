@@ -874,10 +874,10 @@ public abstract class Utils {
 
         switch (constValue.getFormat()) {
         case Module:
-            return xModule.INSTANCE.createConstHandle(frame, constValue);
+            return xModule.getInstance(frame).createConstHandle(frame, constValue);
 
         case Package:
-            return xPackage.INSTANCE.createConstHandle(frame, constValue);
+            return xPackage.getInstance(frame).createConstHandle(frame, constValue);
 
         case Property:
             return callPropertyInitializer(frame, (PropertyConstant) constValue);
@@ -1543,7 +1543,7 @@ public abstract class Utils {
      */
     public static ArrayHandle makeAnnoArrayHandle(Container container, ObjectHandle[] ahAnno) {
         return xArray.makeArrayHandle(
-                container.ensureClassComposition(ANNOTATION_ARRAY_TYPE, xArray.INSTANCE),
+                container.ensureClassComposition(ANNOTATION_ARRAY_TYPE, xArray.getInstance(container)),
                 ahAnno.length, ahAnno, Mutability.Constant);
     }
 
@@ -1552,7 +1552,7 @@ public abstract class Utils {
      */
     public static ArrayHandle makeArgumentArrayHandle(Container container, ObjectHandle[] ahArg) {
         return xArray.makeArrayHandle(
-                container.ensureClassComposition(ARGUMENT_ARRAY_TYPE, xArray.INSTANCE),
+                container.ensureClassComposition(ARGUMENT_ARRAY_TYPE, xArray.getInstance(container)),
                 ahArg.length, ahArg, Mutability.Constant);
     }
 
