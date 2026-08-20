@@ -70,7 +70,7 @@ public abstract class ByteBasedDelegate
     public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
         ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_abValue.length));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, hDelegate.m_abValue.length));
     }
 
     @Override
@@ -198,7 +198,7 @@ public abstract class ByteBasedDelegate
         if (cbThat == 0) {
             return ofStart > cbThis
                 ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(ofStart));
+                : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(frame, ofStart));
         }
         if (ofStart > cbThis - cbThat) {
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
@@ -213,7 +213,7 @@ public abstract class ByteBasedDelegate
                         continue Next;
                     }
                 }
-                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(of));
+                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(frame, of));
             }
         }
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
@@ -431,11 +431,12 @@ public abstract class ByteBasedDelegate
         @Override
         public boolean checkAssign(ObjectHandle hValue) {
             ClassTemplate templateValue = hValue.getTemplate();
+            var           templates     = getComposition().getContainer().nativeTemplates();
             return switch (getTemplate()) {
                 case xRTBitDelegate     _ -> templateValue == xBit.ZERO.getTemplate();
                 case xRTBooleanDelegate _ -> templateValue == xBoolean.TRUE.getTemplate();
-                case xRTInt8Delegate    _ -> templateValue == xInt8.INSTANCE;
-                case xRTUInt8Delegate   _ -> templateValue == xUInt8.INSTANCE;
+                case xRTInt8Delegate    _ -> templateValue == templates.int8();
+                case xRTUInt8Delegate   _ -> templateValue == templates.uint8();
                 default                   -> super.checkAssign(hValue);
             };
         }

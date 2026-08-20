@@ -96,7 +96,8 @@ public class xRTViewFromBitToByte
         if (tSource instanceof ByteView tView) {
             // the underlying delegate is a BitView, which is a ByteView
             return frame.assignValue(iReturn,
-                    xUInt8.INSTANCE.makeJavaLong(tView.extractByte(hSource, lIndex)));
+                    frame.container().nativeTemplates().uint8().makeJavaLong(
+                            tView.extractByte(hSource, lIndex)));
         }
 
         throw new UnsupportedOperationException();

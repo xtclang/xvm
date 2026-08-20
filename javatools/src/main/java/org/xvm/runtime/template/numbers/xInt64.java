@@ -4,8 +4,10 @@ package org.xvm.runtime.template.numbers;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
@@ -15,19 +17,13 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
  */
 public class xInt64
         extends xConstrainedInteger {
-    public static xInt64 INSTANCE;
-
     public xInt64(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, Long.MIN_VALUE, Long.MAX_VALUE, 64, false, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     protected xConstrainedInteger getComplimentaryTemplate() {
-        return xUInt64.INSTANCE;
+        return getComplimentaryTemplate("numbers.UInt64", xUInt64.class);
     }
 
     @Override
@@ -62,7 +58,19 @@ public class xInt64
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
     }
 
-    public static JavaLong makeHandle(long lValue) {
-        return INSTANCE.makeJavaLong(lValue);
+    public static JavaLong makeHandle(Frame frame, long lValue) {
+        return makeHandle(frame.container(), lValue);
+    }
+
+    public static JavaLong makeHandle(Container container, long lValue) {
+        return NativeTemplates.get(container).int64().makeJavaLong(lValue);
+    }
+
+    public static JavaLong makeHandle(ClassTemplate template, long lValue) {
+        return makeHandle(template.f_container, lValue);
+    }
+
+    public static JavaLong makeHandle(ObjectHandle owner, long lValue) {
+        return makeHandle(owner.getComposition().getContainer(), lValue);
     }
 }

@@ -64,7 +64,8 @@ public class xRTViewFromByteToInt8
         if (tSource instanceof ByteView tView) {
             byte bValue = tView.extractByte(hSource, lIndex);
 
-            return frame.assignValue(iReturn, xInt8.INSTANCE.makeJavaLong(bValue));
+            return frame.assignValue(iReturn,
+                    frame.container().nativeTemplates().int8().makeJavaLong(bValue));
         }
 
         throw new UnsupportedOperationException();

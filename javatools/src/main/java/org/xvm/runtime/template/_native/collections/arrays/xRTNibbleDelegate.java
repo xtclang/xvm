@@ -37,7 +37,7 @@ public class xRTNibbleDelegate
 
     @Override
     protected ObjectHandle makeElementHandle(long lValue) {
-        return xNibble.INSTANCE.makeJavaLong(lValue);
+        return f_container.nativeTemplates().nibble().makeJavaLong(lValue);
     }
 
     /**

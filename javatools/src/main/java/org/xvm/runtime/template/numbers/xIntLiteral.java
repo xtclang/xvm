@@ -337,7 +337,7 @@ public class xIntLiteral
     @Override
     protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         IntNHandle hLiteral = (IntNHandle) hTarget;
-        return frame.assignValue(iReturn, xInt64.makeHandle(hLiteral.getValue().hashCode()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, hLiteral.getValue().hashCode()));
     }
 
     @Override

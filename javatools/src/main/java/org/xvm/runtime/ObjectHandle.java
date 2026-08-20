@@ -726,7 +726,7 @@ public abstract class ObjectHandle
 
         @Override
         public String toString() {
-            return super.toString() + (m_clazz.getTemplate() == xChar.INSTANCE
+            return super.toString() + (m_clazz.getTemplate() instanceof xChar
                     ? Handy.quotedChar((char) m_lValue)
                     : String.valueOf(m_lValue));
         }

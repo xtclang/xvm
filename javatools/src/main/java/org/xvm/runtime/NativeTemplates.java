@@ -21,6 +21,19 @@ import org.xvm.runtime.template.numbers.xDec32;
 import org.xvm.runtime.template.numbers.xDec64;
 import org.xvm.runtime.template.numbers.xFloat32;
 import org.xvm.runtime.template.numbers.xFloat64;
+import org.xvm.runtime.template.numbers.xInt128;
+import org.xvm.runtime.template.numbers.xInt16;
+import org.xvm.runtime.template.numbers.xInt32;
+import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xInt8;
+import org.xvm.runtime.template.numbers.xIntN;
+import org.xvm.runtime.template.numbers.xNibble;
+import org.xvm.runtime.template.numbers.xUInt128;
+import org.xvm.runtime.template.numbers.xUInt16;
+import org.xvm.runtime.template.numbers.xUInt32;
+import org.xvm.runtime.template.numbers.xUInt64;
+import org.xvm.runtime.template.numbers.xUInt8;
+import org.xvm.runtime.template.numbers.xUIntN;
 
 import org.xvm.runtime.template.reflect.xModule;
 import org.xvm.runtime.template.reflect.xPackage;
@@ -28,6 +41,7 @@ import org.xvm.runtime.template.reflect.xInjector;
 import org.xvm.runtime.template.reflect.xRef;
 import org.xvm.runtime.template.reflect.xVar;
 
+import org.xvm.runtime.template.text.xChar;
 import org.xvm.runtime.template.text.xString;
 
 import org.xvm.runtime.template.xEnum;
@@ -283,6 +297,62 @@ public final class NativeTemplates {
         return get(FLOAT64);
     }
 
+    public xNibble nibble() {
+        return get(NIBBLE);
+    }
+
+    public xChar charTemplate() {
+        return get(CHAR);
+    }
+
+    public xInt8 int8() {
+        return get(INT8);
+    }
+
+    public xInt16 int16() {
+        return get(INT16);
+    }
+
+    public xInt32 int32() {
+        return get(INT32);
+    }
+
+    public xInt64 int64() {
+        return get(INT64);
+    }
+
+    public xInt128 int128() {
+        return get(INT128);
+    }
+
+    public xIntN intN() {
+        return get(INT_N);
+    }
+
+    public xUInt8 uint8() {
+        return get(UINT8);
+    }
+
+    public xUInt16 uint16() {
+        return get(UINT16);
+    }
+
+    public xUInt32 uint32() {
+        return get(UINT32);
+    }
+
+    public xUInt64 uint64() {
+        return get(UINT64);
+    }
+
+    public xUInt128 uint128() {
+        return get(UINT128);
+    }
+
+    public xUIntN uintN() {
+        return get(UINT_N);
+    }
+
     public xRTClassTemplate classTemplate() {
         return get(RT_CLASS_TEMPLATE);
     }
@@ -508,6 +578,48 @@ public final class NativeTemplates {
 
     private static final NativeTemplateRef<xFloat64> FLOAT64 =
             NativeTemplateRef.of("numbers.Float64", xFloat64.class);
+
+    private static final NativeTemplateRef<xNibble> NIBBLE =
+            NativeTemplateRef.of("numbers.Nibble", xNibble.class);
+
+    private static final NativeTemplateRef<xChar> CHAR =
+            NativeTemplateRef.of("text.Char", xChar.class);
+
+    private static final NativeTemplateRef<xInt8> INT8 =
+            NativeTemplateRef.of("numbers.Int8", xInt8.class);
+
+    private static final NativeTemplateRef<xInt16> INT16 =
+            NativeTemplateRef.of("numbers.Int16", xInt16.class);
+
+    private static final NativeTemplateRef<xInt32> INT32 =
+            NativeTemplateRef.of("numbers.Int32", xInt32.class);
+
+    private static final NativeTemplateRef<xInt64> INT64 =
+            NativeTemplateRef.of("numbers.Int64", xInt64.class);
+
+    private static final NativeTemplateRef<xInt128> INT128 =
+            NativeTemplateRef.of("numbers.Int128", xInt128.class);
+
+    private static final NativeTemplateRef<xIntN> INT_N =
+            NativeTemplateRef.of("numbers.IntN", xIntN.class);
+
+    private static final NativeTemplateRef<xUInt8> UINT8 =
+            NativeTemplateRef.of("numbers.UInt8", xUInt8.class);
+
+    private static final NativeTemplateRef<xUInt16> UINT16 =
+            NativeTemplateRef.of("numbers.UInt16", xUInt16.class);
+
+    private static final NativeTemplateRef<xUInt32> UINT32 =
+            NativeTemplateRef.of("numbers.UInt32", xUInt32.class);
+
+    private static final NativeTemplateRef<xUInt64> UINT64 =
+            NativeTemplateRef.of("numbers.UInt64", xUInt64.class);
+
+    private static final NativeTemplateRef<xUInt128> UINT128 =
+            NativeTemplateRef.of("numbers.UInt128", xUInt128.class);
+
+    private static final NativeTemplateRef<xUIntN> UINT_N =
+            NativeTemplateRef.of("numbers.UIntN", xUIntN.class);
 
     private static final NativeTemplateRef<xRTClassTemplate> RT_CLASS_TEMPLATE =
             NativeTemplateRef.of("_native.reflect.RTClassTemplate", xRTClassTemplate.class);

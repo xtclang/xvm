@@ -134,13 +134,13 @@ public abstract class xUnconstrainedInteger
         case "bitCount": {
             PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
             int cBits = pi.isBig() ? pi.getBigInteger().bitCount() : Long.bitCount(pi.getLong());
-            return frame.assignValue(iReturn, xInt64.makeHandle(cBits));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, cBits));
         }
 
         case "bitLength": {
             PackedInteger pi    = ((IntNHandle) hTarget).m_piValue;
             int           cBits = pi.getBigInteger().bitLength();
-            return frame.assignValue(iReturn, xInt64.makeHandle(cBits));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, cBits));
         }
 
         case "leftmostBit": {
@@ -166,7 +166,7 @@ public abstract class xUnconstrainedInteger
         }
 
         case "leadingZeroCount":
-            return frame.assignValue(iReturn, xInt64.makeHandle(0));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, 0));
 
         case "trailingZeroCount": {
             PackedInteger pi = ((IntNHandle) hTarget).m_piValue;
@@ -176,7 +176,7 @@ public abstract class xUnconstrainedInteger
             } else {
                 c = Long.numberOfTrailingZeros(pi.getLong());
             }
-            return frame.assignValue(iReturn, xInt64.makeHandle(c));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, c));
         }
         }
 
@@ -489,7 +489,7 @@ public abstract class xUnconstrainedInteger
     public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         PackedInteger pi = ((IntNHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(pi.hashCode()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, pi.hashCode()));
     }
 
 

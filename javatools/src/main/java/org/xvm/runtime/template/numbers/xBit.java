@@ -180,7 +180,7 @@ public class xBit
     public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         long l = ((JavaLong) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(l != 0 ? 1L : 0L));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, l != 0 ? 1L : 0L));
     }
 
     @Override

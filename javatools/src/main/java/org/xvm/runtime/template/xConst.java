@@ -436,7 +436,7 @@ public class xConst
 
             return frame.call1(FN_ESTIMATE_LENGTH, null, ahVars, iReturn);
         } else {
-            return frame.assignValue(iReturn, xInt64.makeHandle(2));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, 2));
         }
     }
 
@@ -763,7 +763,7 @@ public class xConst
                 lResult = clzBase.hashCode();
             }
 
-            JavaLong hHash = xInt64.makeHandle(lResult);
+            JavaLong hHash = xInt64.makeHandle(frameCaller, lResult);
             if (fCache) {
                 hConst.setField(frameCaller, PROP_HASH, hHash);
             }

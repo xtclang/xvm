@@ -36,6 +36,6 @@ public class xRTInt8Delegate
 
     @Override
     protected ObjectHandle makeElementHandle(long lValue) {
-        return xInt8.INSTANCE.makeJavaLong(lValue);
+        return f_container.nativeTemplates().int8().makeJavaLong(lValue);
     }
 }

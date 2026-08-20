@@ -61,11 +61,11 @@ public class xRTMethodTemplate
 
         case "parameterCount":
             return frame.assignValue(iReturn,
-                                     xInt64.makeHandle(((MethodStructure) hMethod.getComponent()).getParamCount()));
+                                     xInt64.makeHandle(frame, ((MethodStructure) hMethod.getComponent()).getParamCount()));
 
         case "returnCount":
             return frame.assignValue(iReturn,
-                                     xInt64.makeHandle(((MethodStructure) hMethod.getComponent()).getReturnCount()));
+                                     xInt64.makeHandle(frame, ((MethodStructure) hMethod.getComponent()).getReturnCount()));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

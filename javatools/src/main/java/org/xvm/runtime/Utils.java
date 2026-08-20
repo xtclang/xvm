@@ -1704,7 +1704,7 @@ public abstract class Utils {
 
                 MethodStructure  construct = constructRTParameter;
                 ObjectHandle[]   ahArg     = new ObjectHandle[construct.getMaxVars()];
-                ahArg[0] = xInt64.makeHandle(index); // ordinal
+                ahArg[0] = xInt64.makeHandle(frameCaller, index); // ordinal
                 ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(frameCaller, sName);
                 ahArg[2] = xBoolean.makeHandle(fFormal);
                 if (constDefault == null) {

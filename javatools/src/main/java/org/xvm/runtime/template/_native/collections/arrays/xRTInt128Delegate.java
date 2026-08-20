@@ -36,6 +36,6 @@ public class xRTInt128Delegate
 
     @Override
     protected ObjectHandle makeElementHandle(LongLong ll) {
-        return xInt128.INSTANCE.makeHandle(ll);
+        return f_container.nativeTemplates().int128().makeHandle(ll);
     }
    }

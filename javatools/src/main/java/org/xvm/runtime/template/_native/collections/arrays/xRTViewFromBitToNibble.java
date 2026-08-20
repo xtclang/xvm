@@ -85,7 +85,8 @@ public class xRTViewFromBitToNibble
             } else {
                 nNibble = nNibble & 0x0F;
             }
-            return frame.assignValue(iReturn, xNibble.INSTANCE.makeJavaLong(nNibble));
+            return frame.assignValue(iReturn,
+                    frame.container().nativeTemplates().nibble().makeJavaLong(nNibble));
         }
 
         throw new UnsupportedOperationException();

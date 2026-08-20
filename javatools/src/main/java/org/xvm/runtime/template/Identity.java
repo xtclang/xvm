@@ -60,7 +60,7 @@ public class Identity
 
         case "hashCode": {
             IdentityHandle hId = (IdentityHandle) ahArg[1];
-            return frame.assignValue(iReturn, xInt64.makeHandle(hId.hashCode()));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, hId.hashCode()));
         }
         }
 

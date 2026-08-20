@@ -433,7 +433,7 @@ public class xRTServer
 
         return frame.assignValues(aiResult,
                 xByteArray.makeByteArrayHandle(frame.container(), ab, Mutability.Constant),
-                xUInt16.INSTANCE.makeJavaLong(nPort));
+                frame.container().nativeTemplates().uint16().makeJavaLong(nPort));
     }
 
     /**
@@ -446,7 +446,7 @@ public class xRTServer
 
         return frame.assignValues(aiResult,
                 xByteArray.makeByteArrayHandle(frame.container(), ab, Mutability.Constant),
-                xUInt16.INSTANCE.makeJavaLong(nPort));
+                frame.container().nativeTemplates().uint16().makeJavaLong(nPort));
     }
 
     /**
@@ -461,7 +461,8 @@ public class xRTServer
         return sName == null
             ? frame.assignValue(aiResult[0], xBoolean.FALSE)
             : frame.assignValues(aiResult, xBoolean.TRUE,
-                    xString.makeHandle(frame, sName), xUInt16.INSTANCE.makeJavaLong(nPort));
+                    xString.makeHandle(frame, sName),
+                    frame.container().nativeTemplates().uint16().makeJavaLong(nPort));
     }
 
     /**

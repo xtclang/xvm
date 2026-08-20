@@ -144,18 +144,18 @@ public abstract class BaseInt128
 
         case "bitCount": {
             LongLong ll = ((LongLongHandle) hTarget).getValue();
-            return frame.assignValue(iReturn, xInt64.makeHandle(
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame,
                 Long.bitCount(ll.getLowValue()) + Long.bitCount(ll.getHighValue())));
         }
 
         case "bitLength":
-            return frame.assignValue(iReturn, xInt64.makeHandle(128));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, 128));
 
         case "leftmostBit": {
             LongLong ll = ((LongLongHandle) hTarget).getValue();
             long     lH = ll.getHighValue();
 
-            return frame.assignValue(iReturn, xInt64.makeHandle(lH == 0
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, lH == 0
                 ? Long.highestOneBit(ll.getLowValue())
                 : Long.highestOneBit(lH) + 64));
         }
@@ -164,7 +164,7 @@ public abstract class BaseInt128
             LongLong ll   = ((LongLongHandle) hTarget).getValue();
             long     lLow = ll.getLowValue();
 
-            return frame.assignValue(iReturn, xInt64.makeHandle(lLow == 0
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, lLow == 0
                 ? 64 + Long.lowestOneBit(ll.getHighValue())
                 : Long.lowestOneBit(lLow)));
         }
@@ -173,7 +173,7 @@ public abstract class BaseInt128
             LongLong ll = ((LongLongHandle) hTarget).getValue();
             long     lH = ll.getHighValue();
 
-            return frame.assignValue(iReturn, xInt64.makeHandle(lH == 0
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, lH == 0
                 ? 64 + Long.numberOfLeadingZeros(ll.getLowValue())
                 : Long.numberOfLeadingZeros(lH)));
         }
@@ -182,7 +182,7 @@ public abstract class BaseInt128
             LongLong ll   = ((LongLongHandle) hTarget).getValue();
             long     lLow = ll.getLowValue();
 
-            return frame.assignValue(iReturn, xInt64.makeHandle(lLow == 0
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, lLow == 0
                 ? 64 + Long.numberOfTrailingZeros(ll.getHighValue())
                 : Long.numberOfTrailingZeros(lLow)));
         }
@@ -494,7 +494,7 @@ public abstract class BaseInt128
     public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         LongLong ll = ((LongLongHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(ll.hashCode()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, ll.hashCode()));
     }
 
     @Override

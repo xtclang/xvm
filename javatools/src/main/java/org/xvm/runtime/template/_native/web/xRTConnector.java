@@ -255,7 +255,7 @@ public class xRTConnector
                     : xArray.makeByteArrayHandle(frame.container(), abResponse, Mutability.Constant);
 
             return frame.assignValues(aiReturn,
-                    xInt64.makeHandle(nResponseCode),
+                    xInt64.makeHandle(frame, nResponseCode),
                     xString.makeArrayHandle(frame.container(), asResponseNames),
                     xString.makeArrayHandle(frame.container(), asResponseValues),
                     hResponseBytes

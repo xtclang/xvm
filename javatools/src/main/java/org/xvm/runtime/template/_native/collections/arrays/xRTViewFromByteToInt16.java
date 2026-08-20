@@ -74,7 +74,8 @@ public class xRTViewFromByteToInt16
 
             // using a "short" intermediary takes care of the sign handling
             short nValue = (short) (((short) bValue0) << 8 | (bValue1 & 0xFF));
-            return frame.assignValue(iReturn, xInt16.INSTANCE.makeJavaLong(nValue));
+            return frame.assignValue(iReturn,
+                    frame.container().nativeTemplates().int16().makeJavaLong(nValue));
         }
 
         throw new UnsupportedOperationException();

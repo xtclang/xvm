@@ -54,7 +54,7 @@ public class xBasicHashCollector
                 return frame.assignValue(iReturn, hTarget);
             }
             case "compute": {
-                JavaLong hHash = xInt64.makeHandle(hCollector.collector.compute());
+                JavaLong hHash = xInt64.makeHandle(frame, hCollector.collector.compute());
                 return frame.assignValue(iReturn, hHash);
             }
         }

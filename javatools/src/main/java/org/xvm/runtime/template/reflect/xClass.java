@@ -162,7 +162,7 @@ public class xClass
 
     @Override
     protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
-        return frame.assignValue(iReturn, xInt64.makeHandle(getClassType(hTarget).hashCode()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, getClassType(hTarget).hashCode()));
     }
 
 

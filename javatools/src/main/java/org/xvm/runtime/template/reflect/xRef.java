@@ -161,7 +161,7 @@ public class xRef
                 h -> frame.assignValue(iReturn, Identity.ensureIdentity(h)));
 
         case "bitLength":
-            return frame.assignValue(iReturn, xInt64.makeHandle(64)); // TODO
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, 64)); // TODO
 
         case "selfContained":
             return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isSelfContained()));
