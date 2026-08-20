@@ -3,8 +3,6 @@ package org.xtclang.ecstasy.numbers;
 import java.math.BigDecimal;
 
 import org.xtclang.ecstasy.AppenderᐸCharᐳ;
-import org.xtclang.ecstasy.OutOfBounds;
-
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
@@ -75,52 +73,6 @@ public class Int32 extends IntNumber {
     @Override
     protected long bitLength$get$p() {
         return 32;
-    }
-
-    // ----- conversion ----------------------------------------------------------------------------
-
-    /**
-     * The primitive implementation of:
-     * <pre>
-     *     IntN toIntN()
-     * </pre>
-     */
-    public static IntN toIntN$p(int thi$, Ctx ctx) {
-        return IntN.$box(thi$);
-    }
-
-    /**
-     * The primitive implementation of:
-     * <pre>
-     *     UIntN toUIntN()
-     * </pre>
-     */
-    public static UIntN toUIntN$p(int thi$, Ctx ctx) {
-        if (thi$ < 0) {
-            OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int32 value " + thi$ + " is not a valid UIntN value");
-        }
-        return UIntN.$box(((long) thi$) & 0xFFFFFFFFL);
-    }
-
-    /**
-     * The native implementation of:
-     * <pre>
-     *     IntN toIntN()
-     * </pre>
-     */
-    public IntN toIntN(Ctx ctx) {
-        return toIntN$p($value, ctx);
-    }
-
-    /**
-     * The native implementation of:
-     * <pre>
-     *     UIntN toUIntN()
-     * </pre>
-     */
-    public UIntN toUIntN$p(Ctx ctx) {
-        return toUIntN$p($value, ctx);
     }
 
     // ----- debugging support ---------------------------------------------------------------------

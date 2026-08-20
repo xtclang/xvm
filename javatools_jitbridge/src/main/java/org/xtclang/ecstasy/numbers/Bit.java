@@ -144,46 +144,6 @@ public class Bit extends nConst {
         return thi$;
     }
 
-    /**
-     * The primitive implementation of:
-     * <pre>
-     *     IntN toIntN()
-     * </pre>
-     */
-    public IntN toIntN(Ctx ctx) {
-        return toIntN$p($value, ctx);
-    }
-
-    /**
-     * The primitive implementation of:
-     * <pre>
-     *     IntN toIntN()
-     * </pre>
-     */
-    public static IntN toIntN$p(int thi$, Ctx ctx) {
-        return thi$ == 0 ? IntN.zero(ctx) : IntN.one(ctx);
-    }
-
-    /**
-     * The primitive implementation of:
-     * <pre>
-     *     IntN toIntN()
-     * </pre>
-     */
-    public UIntN toUIntN(Ctx ctx) {
-        return toUIntN$p($value, ctx);
-    }
-
-    /**
-     * The primitive implementation of:
-     * <pre>
-     *     IntN toIntN()
-     * </pre>
-     */
-    public static UIntN toUIntN$p(int thi$, Ctx ctx) {
-        return thi$ == 0 ? UIntN.zero(ctx): UIntN.one(ctx);
-    }
-
     // ----- debugging support ---------------------------------------------------------------------
 
     @Override public java.lang.String toString() {

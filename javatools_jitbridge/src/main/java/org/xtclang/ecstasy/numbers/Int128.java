@@ -4,8 +4,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 
 import org.xtclang.ecstasy.AppenderᐸCharᐳ;
-import org.xtclang.ecstasy.OutOfBounds;
-
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
@@ -165,47 +163,6 @@ public class Int128 extends IntNumber {
             return low;
         }
         return low.or(BigInteger.valueOf(highValue).shiftLeft(64));
-    }
-
-    // ----- conversion ----------------------------------------------------------------------------
-
-    /**
-     * Native implementation of: "IntN toIntN()"
-     */
-    public static IntN toIntN$p(long thi$Lo, long thi$Hi, Ctx ctx) {
-        return IntN.$box($toBigInteger(thi$Lo, thi$Hi));
-    }
-
-    /**
-     * Native implementation of: "UIntN toUIntN()"
-     */
-    public static UIntN toUIntN$p(long thi$Lo, long thi$Hi, Ctx ctx) {
-        if (thi$Hi < 0) {
-            OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int128 value " + $toBigInteger(thi$Lo, thi$Hi)
-                    + " is not a valid UIntN value");
-        }
-        return UIntN.$box($toBigInteger(thi$Lo, thi$Hi));
-    }
-
-    /**
-     * The native implementation of:
-     * <pre>
-     *     IntN toIntN()
-     * </pre>
-     */
-    public IntN toIntN(Ctx ctx) {
-        return toIntN$p($lowValue, $highValue, ctx);
-    }
-
-    /**
-     * The native implementation of:
-     * <pre>
-     *     UIntN toUIntN()
-     * </pre>
-     */
-    public UIntN toUIntN$p(Ctx ctx) {
-        return toUIntN$p($lowValue, $highValue, ctx);
     }
 
     // ----- internal JIT support ------------------------------------------------------------------
