@@ -24,8 +24,8 @@ import org.xvm.runtime.template.numbers.LongLong;
  */
 public class xAtomicInt128
         extends xAtomic {
-    public xAtomicInt128(BaseInt128 templateIntBase) {
-        super(templateIntBase.f_container, xAtomicIntNumber.INSTANCE.getStructure(), false);
+    public xAtomicInt128(BaseInt128 templateIntBase, xAtomicIntNumber templateAtomicInt) {
+        super(templateIntBase.f_container, templateAtomicInt.getStructure(), false);
 
         f_templateReferent = templateIntBase;
     }

@@ -32,14 +32,14 @@ independent bug.
 
 | Priority | Category | Signal | Why it is bad | Proper replacement |
 | --- | --- | --- | --- | --- |
-| Must fix | Mutable template `INSTANCE` fields and `INSTANCE = this` constructors | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes 106 fields / 102 assignments and leaves 37/37. | Process-global last-writer-wins template lookup; constructor `this` escape; wrong container/pool can be observed | `NativeTemplates` central key table plus owner-scoped lazy lookup |
-| Must fix | Static runtime metadata caches | `master`: 151 field-shaped runtime/template static metadata hits after excluding `INSTANCE`; this branch fixes 83 and leaves 68. | `TypeConstant`, `TypeComposition`, `MethodStructure`, handles, and `xEnum` values are pool/container/runtime state, not JVM-global constants | Final `Lazy` fields on the owning template, immutable grouped info records, or a container-owned cache |
+| Must fix | Mutable template `INSTANCE` fields and `INSTANCE = this` constructors | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes 107 fields / 103 assignments and leaves 36/36. | Process-global last-writer-wins template lookup; constructor `this` escape; wrong container/pool can be observed | `NativeTemplates` central key table plus owner-scoped lazy lookup |
+| Must fix | Static runtime metadata caches | `master`: 151 field-shaped runtime/template static metadata hits after excluding `INSTANCE`; this branch fixes 84 and leaves 67. | `TypeConstant`, `TypeComposition`, `MethodStructure`, handles, and `xEnum` values are pool/container/runtime state, not JVM-global constants | Final `Lazy` fields on the owning template, immutable grouped info records, or a container-owned cache |
 | Must fix | Split mutable lifecycle state | Old `SingletonConstant` used separate handle/owner/waiter fields | Readers can observe impossible lifecycle snapshots across fibers | One immutable state snapshot in `AtomicReference`; use CAS for transitions |
 | Must fix | Natural enum construction structs escaping public paths | PR #534 enum struct mismatch | A caller can observe a construction struct where an immutable enum value is required | Public enum helpers that return initialized singletons or deferred results |
 | Must fix | Unsynchronized lazy null caches in shared runtime state | 98 field-shaped checks; 47 strong same-field lazy-init matches | Plain field read/write has no happens-before edge and can publish partial state | Final `Lazy` for immutable values; `ConcurrentMap.computeIfAbsent` for keyed caches; `AtomicReference` or a lock for lifecycle/resettable state |
 | Must fix | Non-final static runtime globals | 274 non-final static fields across runtime/asm/compiler; 277 across all Java sources | Plain static mutation is shared process state with no owner, no reset story, and no visibility guarantee | Delete, make `static final` immutable, move to owner scope, or guard resettable state with a lock/atomic holder |
 | Should fix soon | `volatile` as partial synchronization | 21 `volatile` hits in runtime/asm/compiler | `volatile` orders one variable; it does not make a group of fields or mutable map contents atomic | Keep only for independent scalar state; otherwise use immutable state snapshots, `ConcurrentMap`, or synchronized critical sections |
-| Should fix soon | Static mutable collection fields | 9 `static final` collection fields; 3 non-final static collection fields | `final` protects the reference, not the collection contents; global mutable maps need an update policy | `Map.of`/`Set.of`/`List.of` or `Collections.unmodifiable*` for constants; `ConcurrentMap` with documented key ownership for real caches |
+| Should fix soon | Static mutable collection fields | 10 `static final` collection-like fields; 1 non-final static collection-like field | `final` protects the reference, not the collection contents; global mutable maps need an update policy | `Map.of`/`Set.of`/`List.of` or `Collections.unmodifiable*` for constants; `ConcurrentMap` with documented key ownership for real caches |
 | Should fix soon | Public/protected mutable fields | 166 public/protected non-final `m_`, `s_`, or `f_` fields in runtime/asm/compiler | Any caller can mutate state without preserving invariants or synchronization | Private fields plus methods that enforce ownership, synchronization, and lifecycle invariants |
 | Should fix soon | Public/protected static arrays and exposed arrays | 42 public/protected static arrays; 75 public/protected array fields in runtime/asm/compiler | Array elements are mutable shared variables even when the array reference is final | Private `static final` arrays with defensive copies, immutable lists, or package-private documented internal constants |
 | Should fix soon | Thread-local hidden global context | 17 `ThreadLocal`/`TransientThreadLocal` hits in runtime/asm/compiler | Thread locals hide dependencies, can leak scope across pooled threads, and make reentrancy depend on cleanup discipline | Prefer explicit context parameters or owner-scoped stacks; if unavoidable, use scoped `try/finally remove()` wrappers |
@@ -166,7 +166,7 @@ rg -l "public static (?!final)[A-Za-z0-9_<>, ?]+ INSTANCE;" \
 Current branch count:
 
 ```text
-37
+36
 ```
 
 Current branch constructor publication audit:
@@ -180,15 +180,15 @@ rg -n "INSTANCE\s*=\s*this" \
 Current branch count:
 
 ```text
-37
+36
 ```
 
 Representative bad examples:
 
 - `xString`: publishes `INSTANCE = this`, then `initNative()` writes
   `EMPTY_STRING`, `EMPTY_ARRAY`, `ZERO`, `ONE`, and `METHOD_APPEND_TO`.
-- `xAtomicIntNumber`: publishes `INSTANCE = this`, and atomic number templates
-  are still registered through `xAtomic.NUMBER_TEMPLATES`.
+- `xRef`/`xVar`: publish `INSTANCE = this` and cache signature metadata in
+  static fields.
 - `Identity`: publishes `INSTANCE = this` and exposes `INCEPTION_CLASS`.
 
 Current branch mutable template `INSTANCE` file list:
@@ -196,7 +196,6 @@ Current branch mutable template `INSTANCE` file list:
 ```text
 javatools/src/main/java/org/xvm/runtime/template/Identity.java
 javatools/src/main/java/org/xvm/runtime/template/Proxy.java
-javatools/src/main/java/org/xvm/runtime/template/annotations/xAtomicIntNumber.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xCheckedInt16.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xCheckedInt32.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xCheckedInt64.java
@@ -379,8 +378,8 @@ Master count and current branch remainder:
 
 ```text
 master: 138
-current branch: 58
-fixed in this branch: 80
+current branch: 57
+fixed in this branch: 81
 ```
 
 High-risk categories:
@@ -394,8 +393,8 @@ High-risk categories:
   `xOSStorage.s_methodOnEvent`.
 - Runtime handles/constants in static fields, for example
   `xString.EMPTY_STRING` and the native enum handle globals.
-- Static maps keyed by pool-owned values, for example
-  `xAtomic.NUMBER_TEMPLATES`.
+- Static maps keyed by pool-owned values remain a must-review category even
+  after this branch removes the native-template examples currently known here.
 
 Each of these should become final lazy state on the owner, a container-owned
 cache entry, or a true immutable static constant with no runtime owner.
@@ -605,8 +604,8 @@ rg -n --pcre2 "^\s*(?:public|protected|private)\s+static\s+(?!final\b)(?:Map|Has
 Current counts:
 
 ```text
-9 static final collection-like fields
-3 non-final static collection-like fields
+10 static final collection-like fields
+1 non-final static collection-like field
 ```
 
 Representative examples:
@@ -616,8 +615,7 @@ Representative examples:
 - `BinaryAST.ALREADY_DISPLAYED`.
 - `TypeConstant.s_setRecursions`.
 - `UnionTypeConstant.SpecialFunkies`.
-- `xRTViewToBit.VIEWS`.
-- `xAtomic.NUMBER_TEMPLATES`.
+- `xService.ATOMIC_PROPERTIES`.
 - `xLocalClock.TIMER`.
 
 Why this is bad design:

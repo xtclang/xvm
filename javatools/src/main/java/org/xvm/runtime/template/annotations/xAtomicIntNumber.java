@@ -25,19 +25,15 @@ import org.xvm.runtime.template.numbers.xConstrainedInteger;
  */
 public class xAtomicIntNumber
         extends xAtomic {
-    public static xAtomicIntNumber INSTANCE;
-
-    public xAtomicIntNumber(Container container, ClassStructure structure, boolean fInstance) {
+    public xAtomicIntNumber(Container container, ClassStructure structure) {
         super(container, structure, false);
 
-        if (fInstance) {
-            INSTANCE = this;
-        }
         f_templateReferent = null;
     }
 
-    public xAtomicIntNumber(xConstrainedInteger templateIntNumber) {
-        super(templateIntNumber.f_container, INSTANCE.f_struct, false);
+    public xAtomicIntNumber(xConstrainedInteger templateIntNumber,
+                            xAtomicIntNumber templateAtomicInt) {
+        super(templateIntNumber.f_container, templateAtomicInt.getStructure(), false);
 
         f_templateReferent = templateIntNumber;
     }
