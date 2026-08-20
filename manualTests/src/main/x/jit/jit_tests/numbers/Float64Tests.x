@@ -38,6 +38,11 @@ class Float64Tests {
         testDecAsNullableDecReturn();
         testNullableDecConditionalReturn();
 
+        // Number tests
+        testFloat64toArray();
+        testFloat64Arithmetic();
+        testFloat64Rounding();
+
         // Stringable
         testAppendTo();
         testEstimateStringLength();
@@ -303,6 +308,38 @@ class Float64Tests {
             return True, Null;
         }
         return False;
+    }
+
+    // ----- Number tests --------------------------------------------------------------------------
+
+    void testFloat64toArray() {
+        Float64 value = 4.2;
+
+        assert new Float64(value.toBitArray()) == value;
+        assert new Float64(value.toByteArray()) == value;
+    }
+
+    void testFloat64Arithmetic() {
+        Float64 value = 4.2;
+
+        assert value + 1 == 5.2;
+        assert value + 1 - 1 == value;
+        assert value * 10 == 42;
+        assert value * 10 / 10 == value;
+    }
+
+    void testFloat64Rounding() {
+        Float64 positive = 3.8;
+        assert positive.round() == 4;
+        assert positive.floor() == 3;
+        assert positive.ceil() == 4;
+        assert positive.round(TowardZero) == 3;
+
+        Float64 negative = -3.8;
+        assert negative.round() == -4;
+        assert negative.floor() == -4;
+        assert negative.ceil() == -3;
+        assert negative.round(TowardZero) == -3;
     }
 
     // ----- Stringable tests ----------------------------------------------------------------------

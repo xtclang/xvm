@@ -3338,9 +3338,9 @@ public class CommonBuilder
     }
 
     /**
-     * Assemble an "optimized" routing call from a cap to its target method.
+     * Assemble an "optimized" routing call from one method signature to another.
      */
-    private void assembleOptimizedCap(
+    protected void assembleOptimizedCap(
             ClassBuilder  classBuilder,
             String        srcName,
             String        dstName,
@@ -3362,6 +3362,9 @@ public class CommonBuilder
                 }
             } else if (!jmdSrc.isOptimizedStatic) {
                 code.aload(0); // this
+                if (jmdDst.isPrimitivized()) {
+                    unbox(code, thisType);
+                }
             }
 
             int extraCount = jmdSrc.getImplicitParamCount();

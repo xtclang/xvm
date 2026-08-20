@@ -177,6 +177,8 @@ public class ArrayᐸBitᐳ
         return $fromLongs(ctx, null, bits, values);
     }
 
+    // ----- helper methods ------------------------------------------------------------------------
+
     /**
      * Internal method to create a bit array from a long array.
      *
@@ -189,6 +191,24 @@ public class ArrayᐸBitᐳ
         array.$storage = values;
         array.$size((int) bits);
         return array;
+    }
+
+    /**
+     * Read a 64-bit segment of this array.
+     * Used by {@link org.xvm.javajit.builders.NumberBuilder#loadConstructorLong}.
+     *
+     * @param index  the index of the 64-bit segment
+     *
+     * @return the segment, with the first bit stored in its most significant position
+     */
+    public long $toLong(Ctx ctx, int index) {
+        long start = (long) index << 6;
+        long count = Math.min(size$get$p(ctx) - start, Long.SIZE);
+        long value = 0;
+        for (long offset = 0; offset < count; offset++) {
+            value |= (long) getElement$pi(ctx, start + offset) << (63 - offset);
+        }
+        return value;
     }
 
     @Override

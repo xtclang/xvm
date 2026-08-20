@@ -156,6 +156,14 @@ class Int32ConvertTests {
         testInt32ToUIntN(100, 100, False);
         testInt32ToUIntN(Int32.MaxValue, 2147483647, False);
 
+        testInt32toArray();
+    }
+
+    void testInt32toArray() {
+        Int32 value = -42;
+
+        assert new Int32(value.toBitArray()) == value;
+        assert new Int32(value.toByteArray()) == value;
     }
 
     void testInt32ToInt8(Int32 a, Int8 expected) {

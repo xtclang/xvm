@@ -114,10 +114,22 @@ class Int64Tests {
         testInt64OpXor();
         testInt64OpXorInPlace();
 
+        // Number tests
+        testInt64toArray();
+
         // Stringable
         testAppendTo();
         testEstimateStringLength();
 
+    }
+
+    // ----- Number tests --------------------------------------------------------------------------
+
+    void testInt64toArray() {
+        Int64 value = -42;
+
+        assert new Int64(value.toBitArray()) == value;
+        assert new Int64(value.toByteArray()) == value;
     }
 
     // ----- comparison tests ----------------------------------------------------------------------

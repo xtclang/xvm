@@ -204,7 +204,25 @@ public class AugmentingBuilder extends CommonBuilder {
         if (mm != null &&
                 ((mm.flags().flagsMask() & ClassFile.ACC_ABSTRACT) == 0 ||
                     method.isAbstract() || method.isNative())) {
-            // the method is already copied by the NativeTypeSystem
+            if (jmd.isOptimized && findMethod(jitName, jmd.standardMD) == null) {
+                // we have the optimized native method; still need to generate the standard one
+                assembleMethodWrapper(classBuilder, jitName, jmd);
+            }
+
+            if (jmd.isPrimitivized()) {
+                // callers into a non-primitive base use an optimized virtual method, while a
+                // primitive subclass implements that method as a static function with a "thi$";
+                // e.g. route virtual "Boolean.estimateStringLength$p(Ctx)" (defined on Enum)
+                //          to static "Boolean.estimateStringLength$p(boolean thi$, Ctx)"
+                TypeConstant  typeDeclared = method.getJitIdentity().getClassIdentity().getType();
+                JitMethodDesc jmdDeclared  = method.getJitDesc(this, typeDeclared);
+                if (jmdDeclared.isOptimized && !jmdDeclared.isOptimizedStatic &&
+                        findMethod(jitName+OPT, jmdDeclared.optimizedMD) == null) {
+                    assembleOptimizedCap(classBuilder, jitName+OPT, jitName+OPT, jmdDeclared, jmd);
+                }
+            }
+
+            // the method (and, if necessary, its standard wrapper) is already provided
             return;
         }
 

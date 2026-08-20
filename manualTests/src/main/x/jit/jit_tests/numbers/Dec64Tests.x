@@ -38,6 +38,11 @@ class Dec64Tests {
         testDecAsNullableDecReturn();
         testNullableDecConditionalReturn();
 
+        // Number tests
+        testDec64toArray();
+        testDec64Arithmetic();
+        testDec64Rounding();
+
         // Stringable
         testAppendTo();
         testEstimateStringLength();
@@ -303,6 +308,39 @@ class Dec64Tests {
             return True, Null;
         }
         return False;
+    }
+
+    // ----- Number tests --------------------------------------------------------------------------
+
+    void testDec64toArray() {
+        Dec64 value = 4.2;
+
+        assert new Dec64(value.toBitArray()) == value;
+        assert new Dec64(value.toByteArray()) == value;
+    }
+
+    void testDec64Arithmetic() {
+        Dec64 value = 4.2;
+
+        assert value + 1 == 5.2;
+        assert value + 1 - 1 == value;
+        assert value * 10 == 42.0;
+        assert value * 10 == 42;
+        assert value * 10 / 10 == value;
+    }
+
+    void testDec64Rounding() {
+        Dec64 positive = 3.8;
+        assert positive.round() == 4;
+        assert positive.floor() == 3;
+        assert positive.ceil() == 4;
+        assert positive.round(TowardZero) == 3;
+
+        Dec64 negative = -3.8;
+        assert negative.round() == -4;
+        assert negative.floor() == -4;
+        assert negative.ceil() == -3;
+        assert negative.round(TowardZero) == -3;
     }
 
     // ----- Stringable tests ----------------------------------------------------------------------

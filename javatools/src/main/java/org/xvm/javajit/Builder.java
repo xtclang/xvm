@@ -291,7 +291,13 @@ public abstract class Builder {
 
         case FloatConstant floatConstant:
             return switch (floatConstant.getFormat()) {
-                case Float16, Float32 -> {
+                case Float16 -> {
+                    float value = floatConstant.getValue();
+                    // normalize the value produced by the legacy Float16 constant decoder
+                    code.loadConstant(Float.float16ToFloat(Float.floatToFloat16(value)));
+                    yield new SingleSlot(constant.getType(), Primitive, CD_float, "");
+                }
+                case Float32 -> {
                     code.loadConstant(floatConstant.getValue().floatValue());
                     yield new SingleSlot(constant.getType(), Primitive, CD_float, "");
                 }
@@ -848,6 +854,20 @@ public abstract class Builder {
             getterName += OPT;
         } else {
             md = jmdGet.standardMD;
+        }
+
+        // TODO GG: this doesn't seem right
+        if (!jmdGet.isOptimizedStatic) {
+            PropertyInfo   ownerInfo = propId.getPropertyInfo(typeOwner);
+            JitMethodDesc  ownerJmd  = ownerInfo.getGetterJitDesc(this, typeOwner);
+            MethodTypeDesc ownerMd   = ownerJmd.isOptimized && allowUnboxing
+                    ? ownerJmd.optimizedMD
+                    : ownerJmd.standardMD;
+            if (!md.equals(ownerMd)) {
+                // a covariant declaration owns the signature being invoked, while the inherited
+                // implementation may belong to a superclass with a wider return type
+                typeOwner = typeJit;
+            }
         }
 
         code.aload(ctxSlot);

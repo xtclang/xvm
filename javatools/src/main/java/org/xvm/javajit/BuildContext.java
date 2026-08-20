@@ -1647,7 +1647,8 @@ public class BuildContext {
                             code.localVariable(slots[i], name + "$" + i, cds[i], varStart, scope.endLabel);
                         }
                     }
-                    yield new MultiSlot(this, regId, slots, XvmPrimitive, type, jtd.cd, cds, name);
+                    yield new MultiSlot(this, regId, slots, XvmPrimitive,
+                            jtd.type, jtd.cd, cds, name);
 
                 }
                 case NullableXvmPrimitive -> {

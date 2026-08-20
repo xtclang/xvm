@@ -138,6 +138,14 @@ class Int16ConvertTests {
         testInt16ToUIntN(100, 100, False);
         testInt16ToUIntN(Int16.MaxValue, 32767, False);
 
+        testInt16toArray();
+    }
+
+    void testInt16toArray() {
+        Int16 value = -42;
+
+        assert new Int16(value.toBitArray()) == value;
+        assert new Int16(value.toByteArray()) == value;
     }
 
     void testInt16ToInt8(Int16 a, Int8 expected) {

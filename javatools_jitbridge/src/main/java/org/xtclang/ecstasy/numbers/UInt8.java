@@ -3,7 +3,6 @@ package org.xtclang.ecstasy.numbers;
 import java.math.BigDecimal;
 
 import org.xtclang.ecstasy.AppenderᐸCharᐳ;
-import org.xtclang.ecstasy.OutOfBounds;
 
 import org.xtclang.ecstasy.text.String;
 
@@ -86,92 +85,6 @@ public class UInt8 extends UIntNumber {
     // ----- conversion ----------------------------------------------------------------------------
 
     /**
-     * Implementation of Int8 toInt8(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this UInt8 value as a Java {@code int}
-     */
-    public static int toInt8$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && (thi$ < 0 || thi$ > Byte.MAX_VALUE)) {
-            OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "UInt8 value " + thi$ + " is not a valid Int8 value");
-        }
-        return (byte) thi$;
-    }
-
-    /**
-     * The primitive implementation of Int16 toInt16(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this UInt8 value as a Java {@code int}
-     */
-    public static int toInt16$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return thi$;
-    }
-
-    /**
-     * The primitive implementation of Int32 toInt32(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this UInt8 value as a Java {@code int}
-     */
-    public static int toInt32$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return thi$;
-    }
-
-    /**
-     * Native implementation of: "Int toInt(Boolean checkBounds = False)"
-     *
-     * This bridge is required because a primitive invocation bypasses the natural toInt()
-     * implementation that delegates to toInt64().
-     */
-    public static long toInt$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return toInt64$p(thi$, ctx, checkBounds, dfltCheckBounds);
-    }
-
-    /**
-     * Implementation of Int64 toInt64(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this UInt8 value as a Java long
-     */
-    public static long toInt64$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return thi$;
-    }
-
-    /**
-     * The primitive implementation of Int128 toInt128(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this UInt8 value as an Int128
-     */
-    public static long toInt128$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        // load the high long value to the context and return the low value
-        ctx.i0 = 0L;
-        return thi$ & 0xFFL;
-    }
-
-    /**
      * The primitive implementation of:
      * <pre>
      *     IntN toIntN()
@@ -179,106 +92,6 @@ public class UInt8 extends UIntNumber {
      */
     public static IntN toIntN$p(int thi$, Ctx ctx) {
         return IntN.$box(((long) thi$) & 0xFFL);
-    }
-
-    /**
-     * The primitive implementation of Nibble toNibble(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this value as the least significant four bits of a Java {@code int}
-     */
-    public static int toNibble$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && (thi$ < 0 || thi$ > 15)) {
-            OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "UInt8 value " + thi$ + " is not a valid Nibble value");
-        }
-        return thi$ & 0x0F;
-    }
-
-    /**
-     * The primitive implementation of UInt8 toUInt8(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this UInt8 value as a Java {@code int}
-     */
-    public static int toUInt8$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return thi$;
-    }
-
-    /**
-     * The primitive implementation of UInt16 toUInt16(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this UInt8 value as a Java {@code int}
-     */
-    public static int toUInt16$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return thi$;
-    }
-
-    /**
-     * The primitive implementation of UInt32 toUInt8(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this UInt8 value as a Java {@code int}
-     */
-    public static int toUInt32$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return thi$;
-    }
-
-    /**
-     * Native implementation of: "UInt toUInt(Boolean checkBounds = False)"
-     *
-     * This bridge is required because a primitive invocation bypasses the natural toUInt()
-     * implementation that delegates to toUInt64().
-     */
-    public static long toUInt$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return toUInt64$p(thi$, ctx, checkBounds, dfltCheckBounds);
-    }
-
-    /**
-     * The primitive implementation of UInt64 toUInt64(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this UInt8 value as a Java long
-     */
-    public static long toUInt64$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return thi$;
-    }
-
-    /**
-     * The primitive implementation of UInt128 toUInt128(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this UInt8 value as a UInt128
-     */
-    public static long toUInt128$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        // load the high long value to the context and return the low value
-        ctx.i0 = 0L;
-        return thi$ & 0xFFL;
     }
 
     /**
