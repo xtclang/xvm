@@ -209,6 +209,12 @@ getters for existing call sites; resource templates are resolved directly from
 - `xCheckedUInt32.INSTANCE`
 - `xCheckedInt64.INSTANCE`
 - `xCheckedUInt64.INSTANCE`
+- `xDec32.INSTANCE`
+- `xDec64.INSTANCE`
+- `xDec128.INSTANCE`
+- `xFloat32.INSTANCE`
+- `xFloat64.INSTANCE`
+- `xFPLiteral.INSTANCE`
 
 This is must-fix. The old pattern was both a constructor `this` escape and a
 process-global last-writer-wins cache. The replacement keys are private to
@@ -234,6 +240,16 @@ templates registered and cached by the same `Container`, so
 through `f_container.getTemplate(...)`. That keeps the old
 one-template-per-container behavior and removes the process-global peer pointer
 without adding a second cache table.
+
+The decimal and binary floating-point templates use the central
+`NativeTemplates` table because their readers are spread across conversion
+code, random number generation, and array delegates. The replacement preserves
+the old cache behavior: `Dec32`, `Dec64`, `Dec128`, `Float32`, and `Float64`
+are still resolved once per owner and then reused for handle creation. The only
+semantic change is removing the JVM-global last-writer-wins pointer, so a
+conversion in container A cannot accidentally allocate a decimal or float
+handle with container B's composition. `FPLiteral` had no legitimate external
+singleton readers left, so it only needed the constructor publication removed.
 
 The resource-template wave updates `NativeContainer.initResources()` to resolve
 injectable resource suppliers from `Container.nativeTemplates()` instead of

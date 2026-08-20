@@ -149,19 +149,23 @@ public abstract class BaseBinaryFP
             return convertToInt64(frame, d, ahArg, iReturn);
 
         case "toDec32":
-            return frame.assignValue(iReturn, xDec32.INSTANCE.makeHandle(toDec32(d)));
+            return frame.assignValue(iReturn,
+                    f_container.nativeTemplates().dec32().makeHandle(toDec32(d)));
 
         case "toDec64":
-            return frame.assignValue(iReturn, xDec64.INSTANCE.makeHandle(toDec64(d)));
+            return frame.assignValue(iReturn,
+                    f_container.nativeTemplates().dec64().makeHandle(toDec64(d)));
 
         case "toDec128":
-            return frame.assignValue(iReturn, xDec128.INSTANCE.makeHandle(toDec128(d)));
+            return frame.assignValue(iReturn,
+                    f_container.nativeTemplates().dec128().makeHandle(toDec128(d)));
 
         case "toFloat32":
-            return frame.assignValue(iReturn, xFloat32.INSTANCE.makeHandle(d));
+            return frame.assignValue(iReturn, f_container.nativeTemplates().float32().makeHandle(d));
 
         case "toFloat64":
-            return frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(toFloat64(d)));
+            return frame.assignValue(iReturn,
+                    f_container.nativeTemplates().float64().makeHandle(toFloat64(d)));
 
         case "toIntN":
         case "toUIntN":

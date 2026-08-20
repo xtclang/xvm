@@ -14,7 +14,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.BaseBinaryFP.FloatHandle;
-import org.xvm.runtime.template.numbers.xFloat64;
 
 import org.xvm.util.Handy;
 
@@ -71,7 +70,8 @@ public class xRTViewFromByteToFloat64
             byte[] ab = tView.getBytes(hSource, lIndex*8, 8, false);
             double d  = Double.longBitsToDouble(Handy.byteArrayToLong(ab, 0));
 
-            return frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(d));
+            return frame.assignValue(iReturn,
+                    frame.container().nativeTemplates().float64().makeHandle(d));
         }
 
         throw new UnsupportedOperationException();
