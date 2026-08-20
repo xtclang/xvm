@@ -12,7 +12,6 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -23,20 +22,16 @@ import org.xvm.runtime.template.xBoolean;
 
 import org.xvm.runtime.template.collections.xArray;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native PropertyTemplate implementation.
  */
 public class xRTPropertyTemplate
         extends xRTComponentTemplate {
-    public static xRTPropertyTemplate INSTANCE;
-
     public xRTPropertyTemplate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -179,31 +174,15 @@ public class xRTPropertyTemplate
     /**
      * @return the TypeComposition for an RTPropertyTemplate
      */
-    public static TypeComposition ensurePropertyTemplateComposition() {
-        TypeComposition clz = PROPERTY_TEMPLATE_COMP;
-        if (clz == null) {
-            ClassTemplate templateRT   = INSTANCE;
-            ConstantPool  pool         = templateRT.pool();
-            TypeConstant  typeTemplate = pool.ensureEcstasyTypeConstant("reflect.PropertyTemplate");
-            PROPERTY_TEMPLATE_COMP = clz = templateRT.ensureClass(templateRT.f_container, typeTemplate);
-            assert clz != null;
-        }
-        return clz;
+    public static TypeComposition ensurePropertyTemplateComposition(Container container) {
+        return template(container).f_compPropertyTemplate.get();
     }
 
     /**
      * @return the TypeComposition for an Array of PropertyTemplate
      */
-    public static TypeComposition ensureArrayComposition() {
-        TypeComposition clz = ARRAY_PROP_COMP;
-        if (clz == null) {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typePropertyTemplate = pool.ensureEcstasyTypeConstant("reflect.PropertyTemplate");
-            TypeConstant typePropertyArray = pool.ensureArrayType(typePropertyTemplate);
-            ARRAY_PROP_COMP = clz = INSTANCE.f_container.resolveClass(typePropertyArray);
-            assert clz != null;
-        }
-        return clz;
+    public static TypeComposition ensureArrayComposition(Container container) {
+        return template(container).f_compPropertyTemplateArray.get();
     }
 
 
@@ -216,13 +195,35 @@ public class xRTPropertyTemplate
      *
      * @return the newly created handle
      */
-    static ComponentTemplateHandle makePropertyHandle(PropertyStructure prop) {
-        return new ComponentTemplateHandle(ensurePropertyTemplateComposition(), prop);
+    static ComponentTemplateHandle makePropertyHandle(Container container, PropertyStructure prop) {
+        return new ComponentTemplateHandle(ensurePropertyTemplateComposition(container), prop);
     }
 
+    private static xRTPropertyTemplate template(Container container) {
+        return container.getTemplate("_native.reflect.RTPropertyTemplate", xRTPropertyTemplate.class);
+    }
 
-    // ----- constants -----------------------------------------------------------------------------
+    // ----- data members --------------------------------------------------------------------------
 
-    private static TypeComposition PROPERTY_TEMPLATE_COMP;
-    private static TypeComposition ARRAY_PROP_COMP;
+    /**
+     * PropertyTemplate compositions are container-owned metadata. The old static caches could mix
+     * one container's template with another container's handles.
+     */
+    private final Lazy<TypeComposition> f_compPropertyTemplate = Lazy.of(() -> {
+        ConstantPool    pool         = pool();
+        TypeConstant    typeTemplate = pool.ensureEcstasyTypeConstant("reflect.PropertyTemplate");
+        TypeComposition clz          = ensureClass(f_container, typeTemplate);
+        assert clz != null;
+        return clz;
+    });
+
+    private final Lazy<TypeComposition> f_compPropertyTemplateArray = Lazy.of(() -> {
+        ConstantPool pool                 = pool();
+        TypeConstant typePropertyTemplate =
+                pool.ensureEcstasyTypeConstant("reflect.PropertyTemplate");
+        TypeConstant typePropertyArray    = pool.ensureArrayType(typePropertyTemplate);
+        TypeComposition clz               = f_container.resolveClass(typePropertyArray);
+        assert clz != null;
+        return clz;
+    });
 }
