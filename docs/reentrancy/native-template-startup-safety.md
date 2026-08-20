@@ -105,9 +105,9 @@ then fail under a parallel runner on a loaded machine.
 
 The XVM codebase has normalized this pattern. On `master`, a direct audit finds
 143 mutable template `INSTANCE` declarations and 139 constructor assignments of
-`INSTANCE = this` in runtime templates. This branch fixes 118 mutable template
-fields and 114 constructor assignments, leaving 25 mutable `INSTANCE` fields
-and 25 constructor assignments for follow-up. A broader scan for escape-shaped
+`INSTANCE = this` in runtime templates. This branch fixes 124 mutable template
+fields and 120 constructor assignments, leaving 19 mutable `INSTANCE` fields
+and 19 constructor assignments for follow-up. A broader scan for escape-shaped
 `this` assignments and calls reports hundreds of hits in
 `javatools/src/main/java`, many of which are false positives, but the signal is
 clear: publishing receivers into mutable non-final state is common enough that
@@ -857,7 +857,7 @@ rg -l "public static (?!final)[A-Za-z0-9_<>, ?]+ INSTANCE;" \
   --pcre2 javatools/src/main/java/org/xvm/runtime/template | sort
 ```
 
-At the time this document was written, it reported 25 unconverted template
+At the time this document was written, it reported 19 unconverted template
 files. They should be migrated in follow-up PRs. Grouping them by package:
 
 - Root templates: `Identity`, `Proxy`, `xConst`, `xException`, `xObject`.
@@ -870,9 +870,9 @@ files. They should be migrated in follow-up PRs. Grouping them by package:
 - Native reflect templates: no `_native.reflect` mutable `INSTANCE` fields remain.
 - Annotation templates: no mutable `INSTANCE` fields remain in the annotation
   template package.
-- Number templates: unchecked integer/decimal/float literal templates remain,
-  including `xInt*`, `xUInt*`, `xDec*`, `xFloat*`, `xFPLiteral`, and
-  `xNibble`. Checked integer peer-template globals are fixed in this branch.
+- Number templates: unchecked integer templates remain, including `xInt*`,
+  `xUInt*`, and `xNibble`. Checked integer peer-template globals and
+  decimal/float template globals are fixed in this branch.
 
 Converted `INSTANCE` fields in this branch include:
 
@@ -989,7 +989,13 @@ Converted `INSTANCE` fields in this branch include:
 - `xCheckedInt32`,
 - `xCheckedUInt32`,
 - `xCheckedInt64`,
-- `xCheckedUInt64`.
+- `xCheckedUInt64`,
+- `xDec32`,
+- `xDec64`,
+- `xDec128`,
+- `xFloat32`,
+- `xFloat64`,
+- `xFPLiteral`.
 
 ## TODO: Legacy Static Metadata Caches Not Removed
 

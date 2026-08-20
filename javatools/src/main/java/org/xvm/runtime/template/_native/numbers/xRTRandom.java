@@ -29,9 +29,6 @@ import org.xvm.runtime.template.collections.xByteArray;
 import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
 import org.xvm.runtime.template.numbers.LongLong;
 import org.xvm.runtime.template.numbers.xBit;
-import org.xvm.runtime.template.numbers.xDec64;
-import org.xvm.runtime.template.numbers.xFloat32;
-import org.xvm.runtime.template.numbers.xFloat64;
 import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xInt8;
 import org.xvm.runtime.template.numbers.xInt16;
@@ -177,13 +174,19 @@ public class xRTRandom
         case "dec64":
             // Float64 has more precision than Dec64, so this should work fine, although there
             // won't be as solid of a guarantee on a perfect distribution of random values
-            return frame.assignValue(iReturn, xDec64.INSTANCE.makeHandle(rnd(hTarget).nextDouble()));
+            return frame.assignValue(iReturn,
+                    frame.container().nativeTemplates().dec64().makeHandle(
+                            rnd(hTarget).nextDouble()));
 
         case "float32":
-            return frame.assignValue(iReturn, xFloat32.INSTANCE.makeHandle(rnd(hTarget).nextFloat()));
+            return frame.assignValue(iReturn,
+                    frame.container().nativeTemplates().float32().makeHandle(
+                            rnd(hTarget).nextFloat()));
 
         case "float64":
-            return frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(rnd(hTarget).nextDouble()));
+            return frame.assignValue(iReturn,
+                    frame.container().nativeTemplates().float64().makeHandle(
+                            rnd(hTarget).nextDouble()));
         }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);

@@ -32,14 +32,8 @@ import org.xvm.type.Decimal128;
  */
 public class xFPLiteral
         extends xConst {
-    public static xFPLiteral INSTANCE;
-
     public xFPLiteral(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -145,15 +139,18 @@ public class xFPLiteral
 
         case "toDec32":
             return frame.assignValue(iReturn,
-                    xDec32.INSTANCE.makeHandle(new Decimal32(hLiteral.getValue())));
+                    f_container.nativeTemplates().dec32().makeHandle(
+                            new Decimal32(hLiteral.getValue())));
 
         case "toDec64":
             return frame.assignValue(iReturn,
-                    xDec64.INSTANCE.makeHandle(new Decimal64(hLiteral.getValue())));
+                    f_container.nativeTemplates().dec64().makeHandle(
+                            new Decimal64(hLiteral.getValue())));
 
         case "toDec128":
             return frame.assignValue(iReturn,
-                    xDec128.INSTANCE.makeHandle(new Decimal128(hLiteral.getValue())));
+                    f_container.nativeTemplates().dec128().makeHandle(
+                            new Decimal128(hLiteral.getValue())));
 
         case "toFloat128":
         case "toFloatN":

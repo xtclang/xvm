@@ -19,7 +19,6 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.numbers.BaseBinaryFP.FloatHandle;
-import org.xvm.runtime.template.numbers.xFloat64;
 import org.xvm.runtime.template.numbers.xInt64;
 
 
@@ -121,7 +120,8 @@ public class xRTFloat64Delegate
         DoubleArrayHandle hDelegate = (DoubleArrayHandle) hTarget;
 
         return frame.assignValue(iReturn,
-                xFloat64.INSTANCE.makeHandle(hDelegate.m_adValue[(int) lIndex]));
+                frame.container().nativeTemplates().float64().makeHandle(
+                        hDelegate.m_adValue[(int) lIndex]));
     }
 
     @Override
@@ -297,7 +297,9 @@ public class xRTFloat64Delegate
 
         @Override
         public boolean checkAssign(ObjectHandle hValue) {
-            return hValue.getTemplate() == xFloat64.INSTANCE;
+            // Static delegate handles have no frame; their composition identifies the owner.
+            return hValue.getTemplate() == getComposition().getTemplate().f_container
+                    .nativeTemplates().float64();
         }
 
         @Override

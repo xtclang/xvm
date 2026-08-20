@@ -166,17 +166,22 @@ public abstract class BaseDecFP
 
         case "toFloat64":
             return dec.isFinite()
-                ? frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(dec.toBigDecimal().doubleValue()))
+                ? frame.assignValue(iReturn,
+                        f_container.nativeTemplates().float64().makeHandle(
+                                dec.toBigDecimal().doubleValue()))
                 : overflow(frame);
 
         case "toDec32":
-            return frame.assignValue(iReturn, xDec32.INSTANCE.makeHandle(toDec32(dec)));
+            return frame.assignValue(iReturn,
+                    f_container.nativeTemplates().dec32().makeHandle(toDec32(dec)));
 
         case "toDec64":
-            return frame.assignValue(iReturn, xDec64.INSTANCE.makeHandle(toDec64(dec)));
+            return frame.assignValue(iReturn,
+                    f_container.nativeTemplates().dec64().makeHandle(toDec64(dec)));
 
         case "toDec128":
-            return frame.assignValue(iReturn, xDec128.INSTANCE.makeHandle(toDec128(dec)));
+            return frame.assignValue(iReturn,
+                    f_container.nativeTemplates().dec128().makeHandle(toDec128(dec)));
 
         case "toInt64": {
             boolean      fCheckBounds = ahArg[0] == xBoolean.TRUE;

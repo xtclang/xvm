@@ -16,6 +16,12 @@ import org.xvm.runtime.template.maps.xListMap;
 
 import org.xvm.runtime.template.annotations.xFuture;
 
+import org.xvm.runtime.template.numbers.xDec128;
+import org.xvm.runtime.template.numbers.xDec32;
+import org.xvm.runtime.template.numbers.xDec64;
+import org.xvm.runtime.template.numbers.xFloat32;
+import org.xvm.runtime.template.numbers.xFloat64;
+
 import org.xvm.runtime.template.reflect.xModule;
 import org.xvm.runtime.template.reflect.xPackage;
 import org.xvm.runtime.template.reflect.xInjector;
@@ -257,6 +263,26 @@ public final class NativeTemplates {
         return get(RT_RANDOM);
     }
 
+    public xDec32 dec32() {
+        return get(DEC32);
+    }
+
+    public xDec64 dec64() {
+        return get(DEC64);
+    }
+
+    public xDec128 dec128() {
+        return get(DEC128);
+    }
+
+    public xFloat32 float32() {
+        return get(FLOAT32);
+    }
+
+    public xFloat64 float64() {
+        return get(FLOAT64);
+    }
+
     public xRTClassTemplate classTemplate() {
         return get(RT_CLASS_TEMPLATE);
     }
@@ -467,6 +493,21 @@ public final class NativeTemplates {
 
     private static final NativeTemplateRef<xRTRandom> RT_RANDOM =
             NativeTemplateRef.of("_native.numbers.RTRandom", xRTRandom.class);
+
+    private static final NativeTemplateRef<xDec32> DEC32 =
+            NativeTemplateRef.of("numbers.Dec32", xDec32.class);
+
+    private static final NativeTemplateRef<xDec64> DEC64 =
+            NativeTemplateRef.of("numbers.Dec64", xDec64.class);
+
+    private static final NativeTemplateRef<xDec128> DEC128 =
+            NativeTemplateRef.of("numbers.Dec128", xDec128.class);
+
+    private static final NativeTemplateRef<xFloat32> FLOAT32 =
+            NativeTemplateRef.of("numbers.Float32", xFloat32.class);
+
+    private static final NativeTemplateRef<xFloat64> FLOAT64 =
+            NativeTemplateRef.of("numbers.Float64", xFloat64.class);
 
     private static final NativeTemplateRef<xRTClassTemplate> RT_CLASS_TEMPLATE =
             NativeTemplateRef.of("_native.reflect.RTClassTemplate", xRTClassTemplate.class);
