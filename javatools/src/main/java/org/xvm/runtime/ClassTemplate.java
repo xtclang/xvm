@@ -598,10 +598,12 @@ public abstract class ClassTemplate
             switch (method.getReturnCount()) {
             case 0:
                 return switch (invokeNative1(frame, method, hTarget, ahArg[0], Op.A_IGNORE)) {
-                    case Op.R_NEXT -> frame.assignValue(iReturn, xTuple.H_VOID);
+                    case Op.R_NEXT -> frame.assignValue(iReturn,
+                            xTuple.ensureEmptyTuple(frame.container()));
                     case Op.R_CALL -> {
                         frame.m_frameNext.addContinuation(frameCaller ->
-                            frameCaller.assignValue(iReturn, xTuple.H_VOID));
+                            frameCaller.assignValue(iReturn,
+                                    xTuple.ensureEmptyTuple(frameCaller.container())));
                         yield Op.R_CALL;
                     }
                     case Op.R_EXCEPTION -> Op.R_EXCEPTION;
@@ -629,10 +631,12 @@ public abstract class ClassTemplate
             return switch (method.getReturnCount()) {
                 case 0 ->
                     switch (invokeNativeN(frame, method, hTarget, ahArg, Op.A_IGNORE)) {
-                        case Op.R_NEXT -> frame.assignValue(iReturn, xTuple.H_VOID);
+                        case Op.R_NEXT -> frame.assignValue(iReturn,
+                                xTuple.ensureEmptyTuple(frame.container()));
                         case Op.R_CALL -> {
                             frame.m_frameNext.addContinuation(frameCaller ->
-                                frameCaller.assignValue(iReturn, xTuple.H_VOID));
+                                frameCaller.assignValue(iReturn,
+                                        xTuple.ensureEmptyTuple(frameCaller.container())));
                             yield Op.R_CALL;
                         }
                         case Op.R_EXCEPTION -> Op.R_EXCEPTION;

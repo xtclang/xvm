@@ -10,6 +10,7 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xBitArray;
 import org.xvm.runtime.template.collections.xByteArray;
 import org.xvm.runtime.template.collections.xNibbleArray;
+import org.xvm.runtime.template.collections.xTuple;
 
 import org.xvm.runtime.template.maps.xListMap;
 
@@ -128,6 +129,10 @@ public final class NativeTemplates {
 
     public xListMap listMap() {
         return get(LIST_MAP);
+    }
+
+    public xTuple tuple() {
+        return get(TUPLE);
     }
 
     public boolean isArray(ClassTemplate template) {
@@ -364,6 +369,9 @@ public final class NativeTemplates {
 
     private static final NativeTemplateRef<xListMap> LIST_MAP =
             NativeTemplateRef.of("maps.ListMap", xListMap.class);
+
+    private static final NativeTemplateRef<xTuple> TUPLE =
+            NativeTemplateRef.of("collections.Tuple", xTuple.class);
 
     private static final NativeTemplateRef<xContainerControl> CONTAINER_CONTROL =
             NativeTemplateRef.of("_native.mgmt.ContainerControl", xContainerControl.class);

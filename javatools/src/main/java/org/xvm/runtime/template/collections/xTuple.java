@@ -18,6 +18,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
@@ -36,29 +37,25 @@ import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
+import org.xvm.util.Lazy;
+
 /**
  * Native Tuple implementation.
  */
 public class xTuple
         extends ClassTemplate
         implements IndexSupport {
-    public static xTuple INSTANCE;
-    public static ClassConstant INCEPTION_CLASS;
-    public static TupleHandle H_VOID;
-
-    public xTuple(Container container, ClassStructure structure, boolean fInstance) {
+    public xTuple(Container container, ClassStructure structure) {
         super(container, structure);
 
-        if (fInstance) {
-            INSTANCE = this;
-            INCEPTION_CLASS = new NativeRebaseConstant(
+        f_constInception = new NativeRebaseConstant(
                 (ClassConstant) structure.getIdentityConstant());
-        }
+        f_hVoid = Lazy.of(() -> makeImmutableHandle(getCanonicalClass(), Utils.OBJECTS_NONE));
     }
 
     @Override
     public void initNative() {
-        H_VOID = makeImmutableHandle(getCanonicalClass(), Utils.OBJECTS_NONE);
+        f_hVoid.get();
 
         // Note: all interface methods and properties are implicitly native due to "NativeRebase"
     }
@@ -77,7 +74,7 @@ public class xTuple
 
     @Override
     protected ClassConstant getInceptionClassConstant() {
-        return INCEPTION_CLASS;
+        return f_constInception;
     }
 
     @Override
@@ -90,7 +87,7 @@ public class xTuple
         int c = aconst.length;
 
         if (c == 0) {
-            return frame.pushStack(H_VOID);
+            return frame.pushStack(f_hVoid.get());
         }
 
         TypeConstant typeTuple = constTuple.getType();
@@ -666,6 +663,14 @@ public class xTuple
         return new TupleHandle(clazz, ahValue, !clazz.getType().isImmutable());
     }
 
+    public static xTuple getInstance(Container container) {
+        return NativeTemplates.get(container).tuple();
+    }
+
+    public static TupleHandle ensureEmptyTuple(Container container) {
+        return getInstance(container).f_hVoid.get();
+    }
+
     public static class TupleHandle
             extends ObjectHandle {
         public ObjectHandle[] m_ahValue;
@@ -741,4 +746,15 @@ public class xTuple
             return "Tuple: " + Arrays.toString(m_ahValue);
         }
     }
+
+    /**
+     * Native rebase constant for this owner-local template.
+     */
+    private final ClassConstant f_constInception;
+
+    /**
+     * Owner-scoped empty tuple handle. The handle's composition is container-owned, so the old static
+     * H_VOID cache could leak one container's Tuple() into another container.
+     */
+    private final Lazy<TupleHandle> f_hVoid;
 }

@@ -105,9 +105,9 @@ then fail under a parallel runner on a loaded machine.
 
 The XVM codebase has normalized this pattern. On `master`, a direct audit finds
 143 mutable template `INSTANCE` declarations and 139 constructor assignments of
-`INSTANCE = this` in runtime templates. This branch fixes 101 mutable template
-fields and 97 constructor assignments, leaving 42 mutable `INSTANCE` fields
-and 42 constructor assignments for follow-up. A broader scan for escape-shaped
+`INSTANCE = this` in runtime templates. This branch fixes 102 mutable template
+fields and 98 constructor assignments, leaving 41 mutable `INSTANCE` fields
+and 41 constructor assignments for follow-up. A broader scan for escape-shaped
 `this` assignments and calls reports hundreds of hits in
 `javatools/src/main/java`, many of which are false positives, but the signal is
 clear: publishing receivers into mutable non-final state is common enough that
@@ -855,12 +855,12 @@ rg -l "public static (?!final)[A-Za-z0-9_<>, ?]+ INSTANCE;" \
   --pcre2 javatools/src/main/java/org/xvm/runtime/template | sort
 ```
 
-At the time this document was written, it reported 42 unconverted template
+At the time this document was written, it reported 41 unconverted template
 files. They should be migrated in follow-up PRs. Grouping them by package:
 
 - Root templates: `Identity`, `Proxy`, `xConst`, `xException`, `xObject`.
 - Text templates: `xString`, `xChar`.
-- Collection templates: `xTuple`.
+- Collection templates: no mutable `INSTANCE` fields remain in the collection template package.
 - Array delegates and views: no mutable `INSTANCE` fields remain in the
   collection-array delegate/view package.
 - File-system templates: `xOSDirectory`, `xOSFile`,
@@ -912,6 +912,7 @@ Converted `INSTANCE` fields in this branch include:
 - `xRTViewFromByteToInt8`,
 - `xRTViewToBitFromNibble`,
 - `xListMap`,
+- `xTuple`,
 - `xContainerControl`,
 - `xContainerLinker`,
 - `xBasicHashCollector`,

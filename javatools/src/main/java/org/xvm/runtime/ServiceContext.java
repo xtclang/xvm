@@ -1621,7 +1621,8 @@ public class ServiceContext {
             switch (cReturns) {
             case 0:
                 ctxDst.respond(new Response<ObjectHandle>(
-                        fiberCaller, xTuple.H_VOID, frame.m_hException, future));
+                        fiberCaller, xTuple.ensureEmptyTuple(ctxDst.f_container),
+                        frame.m_hException, future));
                 break;
 
             case 1: {
@@ -1945,7 +1946,9 @@ public class ServiceContext {
                     // "callLater" has returned
                     ExceptionHandle hException = frame0.m_hException;
                     if (hException == null) {
-                        f_future.complete(f_cReturns == 0 ? xTuple.H_VOID : frame0.f_ahVar[0]);
+                        f_future.complete(f_cReturns == 0
+                                ? xTuple.ensureEmptyTuple(frame0.container())
+                                : frame0.f_ahVar[0]);
                     } else {
                         f_future.completeExceptionally(hException.getException());
                     }

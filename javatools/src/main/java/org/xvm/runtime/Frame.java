@@ -1108,8 +1108,10 @@ public class Frame
         return switch (f_iReturn) {
             case Op.A_IGNORE,
                  Op.A_IGNORE_ASYNC -> Op.R_RETURN;
-            case Op.A_TUPLE        -> returnValue(f_aiReturn[0], xTuple.H_VOID, false);
-            default                -> returnValue(f_iReturn, xTuple.H_VOID, false);
+            case Op.A_TUPLE        -> returnValue(f_aiReturn[0],
+                                            xTuple.ensureEmptyTuple(container()), false);
+            default                -> returnValue(f_iReturn,
+                                            xTuple.ensureEmptyTuple(container()), false);
         };
     }
 
