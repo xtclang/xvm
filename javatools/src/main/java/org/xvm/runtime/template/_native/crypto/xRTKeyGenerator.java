@@ -53,6 +53,7 @@ public class xRTKeyGenerator
         SecretKey key   = hKeyGen.f_generator.generateKey();
         int       nSize = key.getEncoded().length;
 
-        return frame.assignValues(aiReturn, xInt64.makeHandle(frame, nSize), new SecretHandle(key));
+        return frame.assignValues(aiReturn,
+                xInt64.makeHandle(frame, nSize), new SecretHandle(frame.container(), key));
     }
 }

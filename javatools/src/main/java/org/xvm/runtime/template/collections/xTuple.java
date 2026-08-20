@@ -609,9 +609,14 @@ public class xTuple
                 ObjectHandle h1 = hTuple1.m_ahValue[index];
                 ObjectHandle h2 = hTuple2.m_ahValue[index];
 
-                int iResult = index < cTypes
-                    ? atype[index].callEquals(frameCaller, h1, h2, Op.A_STACK)
-                    : xObject.INSTANCE.callEquals(frameCaller, xObject.CLASS, h1, h2, Op.A_STACK);
+                int iResult;
+                if (index < cTypes) {
+                    iResult = atype[index].callEquals(frameCaller, h1, h2, Op.A_STACK);
+                } else {
+                    xObject templateObject = NativeTemplates.get(frameCaller).object();
+                    iResult = templateObject.callEquals(
+                            frameCaller, templateObject.getCanonicalClass(), h1, h2, Op.A_STACK);
+                }
                 switch (iResult) {
                 case Op.R_NEXT:
                     ObjectHandle hResult = frameCaller.popStack();

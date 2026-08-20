@@ -28,6 +28,7 @@ import org.xvm.asm.Op;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ServiceContext;
@@ -36,7 +37,6 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
@@ -131,13 +131,14 @@ public class xRTAlgorithms
         try {
             int          nBlockSize;
             ObjectHandle hImpl;
+            Container    container = frame.container();
 
             switch (hMethod.getOrdinal()) {
             case 0: { // Hasher
                 MessageDigest digest = MessageDigest.getInstance(sName);
 
                 nBlockSize = 0;
-                hImpl      = new DigestHandle(digest);
+                hImpl      = new DigestHandle(container, digest);
                 break;
             }
 
@@ -146,7 +147,7 @@ public class xRTAlgorithms
                 Cipher cipher = Cipher.getInstance(sName);
 
                 nBlockSize = cipher.getBlockSize();
-                hImpl      = new CipherHandle(cipher);
+                hImpl      = new CipherHandle(container, cipher);
                 break;
             }
 
@@ -154,7 +155,7 @@ public class xRTAlgorithms
                 Mac mac = Mac.getInstance(sName);
 
                 nBlockSize = 0;
-                hImpl      = new MacHandle(mac);
+                hImpl      = new MacHandle(container, mac);
                 break;
             }
 
@@ -162,7 +163,7 @@ public class xRTAlgorithms
                 Signature sig = Signature.getInstance(sName);
 
                 nBlockSize = 0;
-                hImpl      = new SignatureHandle(sig);
+                hImpl      = new SignatureHandle(container, sig);
                 break;
             }
 
@@ -170,7 +171,7 @@ public class xRTAlgorithms
                 KeyGenerator generator = KeyGenerator.getInstance(sName);
 
                 nBlockSize = 0;
-                hImpl      = new KeyGenHandle(generator);
+                hImpl      = new KeyGenHandle(container, generator);
                 break;
             }
 
@@ -282,8 +283,8 @@ public class xRTAlgorithms
      */
     public static class DigestHandle
             extends ObjectHandle {
-        protected DigestHandle(MessageDigest digest) {
-            super(xObject.INSTANCE.getCanonicalClass());
+        protected DigestHandle(Container container, MessageDigest digest) {
+            super(NativeTemplates.get(container).object().getCanonicalClass());
 
             f_digest = digest;
         }
@@ -299,8 +300,8 @@ public class xRTAlgorithms
      */
     public static class CipherHandle
             extends ObjectHandle {
-        protected CipherHandle(Cipher cipher) {
-            super(xObject.INSTANCE.getCanonicalClass());
+        protected CipherHandle(Container container, Cipher cipher) {
+            super(NativeTemplates.get(container).object().getCanonicalClass());
 
             f_cipher = cipher;
         }
@@ -316,8 +317,8 @@ public class xRTAlgorithms
      */
     public static class SignatureHandle
             extends ObjectHandle {
-        protected SignatureHandle(Signature signature) {
-            super(xObject.INSTANCE.getCanonicalClass());
+        protected SignatureHandle(Container container, Signature signature) {
+            super(NativeTemplates.get(container).object().getCanonicalClass());
 
             f_signature = signature;
         }
@@ -333,8 +334,8 @@ public class xRTAlgorithms
      */
     public static class MacHandle
             extends ObjectHandle {
-        protected MacHandle(Mac mac) {
-            super(xObject.INSTANCE.getCanonicalClass());
+        protected MacHandle(Container container, Mac mac) {
+            super(NativeTemplates.get(container).object().getCanonicalClass());
 
             f_mac = mac;
         }
@@ -350,8 +351,8 @@ public class xRTAlgorithms
      */
     public static class SecretHandle
             extends ObjectHandle {
-        protected SecretHandle(Key key) {
-            super(xObject.INSTANCE.getCanonicalClass());
+        protected SecretHandle(Container container, Key key) {
+            super(NativeTemplates.get(container).object().getCanonicalClass());
 
             f_key = key;
         }
@@ -372,8 +373,8 @@ public class xRTAlgorithms
          */
         public final KeyGenerator f_generator;
 
-        protected KeyGenHandle(KeyGenerator generator) {
-            super(xObject.INSTANCE.getCanonicalClass());
+        protected KeyGenHandle(Container container, KeyGenerator generator) {
+            super(NativeTemplates.get(container).object().getCanonicalClass());
 
             f_generator = generator;
         }

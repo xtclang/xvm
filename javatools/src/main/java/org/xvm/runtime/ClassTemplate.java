@@ -51,7 +51,6 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
-import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.annotations.xFuture.FutureHandle;
@@ -180,7 +179,7 @@ public abstract class ClassTemplate
                 if ("Object".equals(f_sName)) {
                     return null;
                 }
-                templateSuper = m_templateSuper = xObject.INSTANCE;
+                templateSuper = m_templateSuper = NativeTemplates.get(f_container).object();
             } else {
                 templateSuper = m_templateSuper =
                     f_container.getTemplate(f_structSuper.getIdentityConstant());

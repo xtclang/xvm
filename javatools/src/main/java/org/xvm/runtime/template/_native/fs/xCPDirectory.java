@@ -41,7 +41,7 @@ public class xCPDirectory
             MethodStructure constructor = f_constructor.get();
             ObjectHandle[]  ahVar       = Utils.ensureSize(Utils.OBJECTS_NONE,
                     constructor.getMaxVars());
-            ahVar[0] = new ConstantHandle(constDir);
+            ahVar[0] = new ConstantHandle(frame.container(), constDir);
 
             return proceedConstruction(frame, constructor, true, hStruct, ahVar, Op.A_STACK);
         }

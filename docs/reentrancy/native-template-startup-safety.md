@@ -105,9 +105,9 @@ then fail under a parallel runner on a loaded machine.
 
 The XVM codebase has normalized this pattern. On `master`, a direct audit finds
 143 mutable template `INSTANCE` declarations and 139 constructor assignments of
-`INSTANCE = this` in runtime templates. This branch fixes 138 mutable template
-fields and 134 constructor assignments, leaving 5 mutable `INSTANCE` fields
-and 5 constructor assignments for follow-up. A broader scan for escape-shaped
+`INSTANCE = this` in runtime templates. This branch fixes 141 mutable template
+fields and 137 constructor assignments, leaving 2 mutable `INSTANCE` fields
+and 2 constructor assignments for follow-up. A broader scan for escape-shaped
 `this` assignments and calls reports hundreds of hits in
 `javatools/src/main/java`, many of which are false positives, but the signal is
 clear: publishing receivers into mutable non-final state is common enough that
@@ -857,10 +857,10 @@ rg -l "public static (?!final)[A-Za-z0-9_<>, ?]+ INSTANCE;" \
   --pcre2 javatools/src/main/java/org/xvm/runtime/template | sort
 ```
 
-At the time this document was written, it reported 5 unconverted template
+At the time this document was written, it reported 2 unconverted template
 files. They should be migrated in follow-up PRs. Grouping them by package:
 
-- Root templates: `Identity`, `Proxy`, `xConst`, `xException`, `xObject`.
+- Root templates: `xConst`, `xException`.
 - Text templates: no mutable `INSTANCE` fields remain in the text template package.
 - Collection templates: no mutable `INSTANCE` fields remain in the collection template package.
 - Array delegates and views: no mutable `INSTANCE` fields remain in the
@@ -990,6 +990,8 @@ Converted `INSTANCE` fields in this branch include:
 - `xCheckedUInt32`,
 - `xCheckedInt64`,
 - `xCheckedUInt64`,
+- `Identity`,
+- `Proxy`,
 - `xChar`,
 - `xDec32`,
 - `xDec64`,
@@ -1009,7 +1011,8 @@ Converted `INSTANCE` fields in this branch include:
 - `xUInt32`,
 - `xUInt64`,
 - `xUInt128`,
-- `xUIntN`.
+- `xUIntN`,
+- `xObject`.
 
 ## TODO: Legacy Static Metadata Caches Not Removed
 

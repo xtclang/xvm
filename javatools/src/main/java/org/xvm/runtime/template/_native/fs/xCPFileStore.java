@@ -63,7 +63,7 @@ public class xCPFileStore
             ObjectHandle[]  ahVar       = Utils.ensureSize(Utils.OBJECTS_NONE,
                     constructor.getMaxVars());
             ahVar[0] = xString.makeHandle(frame, constStore.getPath());
-            ahVar[1] = new ConstantHandle(constStore.getValue());
+            ahVar[1] = new ConstantHandle(frame.container(), constStore.getValue());
 
             return proceedConstruction(frame, constructor, true, hStruct, ahVar, Op.A_STACK);
         }
@@ -118,7 +118,7 @@ public class xCPFileStore
             for (int i = 0; i < cNodes; ++i) {
                 FSNodeConstant constEach = aNodes[i];
                 ahNames  [i] = xString.makeHandle(frame, constEach.getName());
-                ahCookies[i] = new ConstantHandle(constEach);
+                ahCookies[i] = new ConstantHandle(frame.container(), constEach);
             }
 
             return frame.assignValues(aiReturn,

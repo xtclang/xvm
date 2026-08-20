@@ -55,6 +55,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
@@ -64,7 +65,6 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
@@ -668,8 +668,8 @@ public class xRTServer
 
         private ObjectHandle[] createArguments(HttpExchange exchange) {
             ObjectHandle      hBinding  = f_hServer.getBinding();
-            HttpContextHandle hContext  = new HttpContextHandle(exchange);
             Container         container = f_context.f_container;
+            HttpContextHandle hContext  = new HttpContextHandle(container, exchange);
             StringHandle      hURI      = xString.makeHandle(
                     container, exchange.getRequestURI().toASCIIString());
             StringHandle      hMethod   = xString.makeHandle(container, exchange.getRequestMethod());
@@ -949,8 +949,8 @@ public class xRTServer
      */
     protected static class HttpContextHandle
                 extends ObjectHandle {
-        public HttpContextHandle(HttpExchange exchange) {
-            super(xObject.INSTANCE.getCanonicalClass());
+        public HttpContextHandle(Container container, HttpExchange exchange) {
+            super(NativeTemplates.get(container).object().getCanonicalClass());
 
             f_exchange = exchange;
             m_fMutable = false;

@@ -23,7 +23,6 @@ import org.xvm.runtime.ClassComposition.FieldInfo;
 
 import org.xvm.runtime.template.Proxy;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -737,8 +736,8 @@ public abstract class ObjectHandle
      */
     public static class ConstantHandle
             extends ObjectHandle {
-        public ConstantHandle(Constant constant) {
-            super(xObject.CLASS);
+        public ConstantHandle(Container container, Constant constant) {
+            super(NativeTemplates.get(container).object().getCanonicalClass());
 
             assert constant != null;
             f_constant = constant;

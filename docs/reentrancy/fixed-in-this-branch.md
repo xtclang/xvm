@@ -264,6 +264,19 @@ the owner template during `initNative()`, and uncached values still allocate the
 same Java handle type. The semantic change is only that the owner is explicit
 and cannot be stolen from a process-global `INSTANCE`.
 
+The root support wave removes `xObject.INSTANCE`, `xObject.CLASS`,
+`Identity.INSTANCE`, `Identity.INCEPTION_CLASS`, and `Proxy.INSTANCE`. `Object`
+and `Ref.Identity` now resolve through `NativeTemplates`, while `Proxy` is an
+owner-local support object constructed by `NativeTemplates.proxy()` and touched
+during `Service` registration to preserve the old eager creation point.
+`Identity.ensureIdentity(...)` derives the owner from the wrapped referent, the
+tuple fallback equality path uses the caller frame's `Object` template, and
+opaque Java handles such as constant-pool filesystem cookies, crypto provider
+objects, and HTTP exchange wrappers now receive an explicit `Container`.
+This preserves the old role of representing these wrappers as `Object`, but the
+composition now belongs to the runtime owner that created the wrapper instead
+of whichever container last assigned the global root template.
+
 The resource-template wave updates `NativeContainer.initResources()` to resolve
 injectable resource suppliers from `Container.nativeTemplates()` instead of
 public template statics. The old suppliers were registered during native
@@ -595,10 +608,10 @@ clear owner-sensitive startup behavior. A small root-template set still remains
 after this branch. The full current list is maintained in
 [state-inventory.md#mutable-template-instance-inventory](state-inventory.md#mutable-template-instance-inventory).
 
-Examples still requiring follow-up are the remaining root templates
-`Identity`, `Proxy`, `xConst`, `xException`, and `xObject`. Those are not safe
-by design just because this PR does not touch them; they are the next migration
-backlog. The primitive number templates and `xChar` are fixed in this branch.
+Examples still requiring follow-up are the remaining root templates `xConst`
+and `xException`. Those are not safe by design just because this PR does not
+touch them; they are the next migration backlog. `Identity`, `Proxy`, `xObject`,
+the primitive number templates, and `xChar` are fixed in this branch.
 
 ## Proof Points Added By This Branch
 

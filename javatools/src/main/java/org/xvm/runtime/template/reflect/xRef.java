@@ -101,7 +101,7 @@ public class xRef
             // register the native "Identity" template
             ClassStructure structId = (ClassStructure) f_struct.getChild("Identity");
 
-            registerNativeTemplate(new Identity(f_container, structId, true));
+            registerNativeTemplate(new Identity(f_container, structId));
         }
     }
 
