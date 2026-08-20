@@ -46,6 +46,8 @@ import org.xvm.runtime.template.reflect.xModule;
 import org.xvm.runtime.template.reflect.xPackage;
 
 import org.xvm.runtime.template._native.temporal.xNanosTimer;
+
+import org.xvm.util.Lazy;
 import org.xvm.util.concurrent.ConcurrentWeakHasherMap;
 
 
@@ -94,6 +96,13 @@ public abstract class Container
      */
     public NativeTemplates nativeTemplates() {
         return f_nativeTemplates;
+    }
+
+    /**
+     * @return owner-local runtime helper metadata
+     */
+    Utils.RuntimeMetadata runtimeMetadata() {
+        return f_runtimeMetadata.get();
     }
 
 
@@ -752,6 +761,14 @@ public abstract class Container
      * Lazily resolved native template references for this container.
      */
     private final NativeTemplates f_nativeTemplates = new NativeTemplates(this);
+
+    /**
+     * Runtime helper metadata derived from this container's template registry, structures, and
+     * constant pool. This replaces Utils' old JVM-global mutable metadata fields while preserving
+     * the same one-time lookup behavior for each owner.
+     */
+    private final Lazy<Utils.RuntimeMetadata> f_runtimeMetadata =
+            Lazy.of(() -> Utils.createRuntimeMetadata(this));
 
     /**
      * The parent container.

@@ -16,7 +16,7 @@ and lazy-publication counts are scan signals generated on branch
 | Priority | Broken pattern | Signal | Failure mode | Required replacement |
 | --- | --- | --- | --- | --- |
 | Must fix | Mutable native template `INSTANCE` fields | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes 107 fields / 103 assignments and leaves 36/36. | Last writer wins across containers; constructor `this` escape | `NativeTemplates` central key table plus container/frame lookup |
-| Must fix | Static runtime-owned metadata | `master`: 151 field-shaped runtime/template static metadata fields after excluding `INSTANCE`. This branch fixes 89 and leaves 62. | Type/composition/method/handle values from one owner reused in another owner | Owner-scoped final `Lazy`, grouped info records, or owner-owned `ConcurrentMap` |
+| Must fix | Static runtime-owned metadata | `master`: 151 field-shaped runtime/template static metadata fields after excluding `INSTANCE`. This branch fixes 103 and leaves 48. | Type/composition/method/handle values from one owner reused in another owner | Owner-scoped final `Lazy`, grouped info records, or owner-owned `ConcurrentMap` |
 | Must fix | Raw enum handles returned through public/native paths | 83 raw enum accessor references, including definitions/comments; several public helper groups still return raw handles | Natural enum construction struct escapes as if it were the finalized enum singleton | `ensureEnumByName`, `ensureEnumByOrdinal`, or `Utils.ensureInitializedEnum` on public paths |
 | Must fix | Manual lazy publication in shared runtime/asm objects | 111 strong same-field lazy-init matches in runtime/asm | Plain field read/write with no happens-before edge; duplicate, stale, partial, or wrong-owner state | Final `Lazy`, `ConcurrentMap.computeIfAbsent`, or explicit atomic/locked state |
 | Must fix | Split lifecycle state across several fields | `SingletonConstant` was the known concrete case and is fixed in this branch | Fibers see mixed handle/owner/waiter state; false recursion or missed wait | One immutable state snapshot in `AtomicReference<State>` or one lock |
@@ -84,27 +84,13 @@ Count with this broader command:
 
 ```text
 master: 151
-current branch: 62
-fixed in this branch: 89
+current branch: 48
+fixed in this branch: 103
 ```
 
 Representative current branch hits:
 
 ```text
-javatools/src/main/java/org/xvm/runtime/Utils.java:1780:    private static ClassTemplate     ANNOTATION_TEMPLATE;
-javatools/src/main/java/org/xvm/runtime/Utils.java:1781:    private static ClassTemplate     ANNOTATION_TEMPLATE_TEMPLATE;
-javatools/src/main/java/org/xvm/runtime/Utils.java:1782:    private static ClassTemplate     ARGUMENT_TEMPLATE;
-javatools/src/main/java/org/xvm/runtime/Utils.java:1783:    private static ClassTemplate     RT_PARAMETER_TEMPLATE;
-javatools/src/main/java/org/xvm/runtime/Utils.java:1784:    private static MethodStructure   ANNOTATION_CONSTRUCT;
-javatools/src/main/java/org/xvm/runtime/Utils.java:1785:    private static MethodStructure   ANNOTATION_TEMPLATE_CONSTRUCT;
-javatools/src/main/java/org/xvm/runtime/Utils.java:1786:    private static MethodStructure   ARGUMENT_CONSTRUCT;
-javatools/src/main/java/org/xvm/runtime/Utils.java:1787:    private static MethodStructure   RT_PARAMETER_CONSTRUCT;
-javatools/src/main/java/org/xvm/runtime/Utils.java:1788:    private static MethodStructure   STRING_VALUE_OF;
-javatools/src/main/java/org/xvm/runtime/Utils.java:1789:    private static TypeConstant      ANNOTATION_ARRAY_TYPE;
-javatools/src/main/java/org/xvm/runtime/Utils.java:1790:    private static TypeConstant      ARGUMENT_ARRAY_TYPE;
-javatools/src/main/java/org/xvm/runtime/Utils.java:1791:    private static SignatureConstant SIG_FREEZE;
-javatools/src/main/java/org/xvm/runtime/Utils.java:1792:    private static SignatureConstant SIG_GET_RESOURCE;
-javatools/src/main/java/org/xvm/runtime/Utils.java:1793:    private static SignatureConstant SIG_INJECT;
 javatools/src/main/java/org/xvm/runtime/template/reflect/xRef.java:1187:    private static SignatureConstant s_sigGet;
 javatools/src/main/java/org/xvm/runtime/template/reflect/xVar.java:259:    protected static SignatureConstant s_sigSet;
 javatools/src/main/java/org/xvm/runtime/template/text/xString.java:445:    public static StringHandle EMPTY_STRING;

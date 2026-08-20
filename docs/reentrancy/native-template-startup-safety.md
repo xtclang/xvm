@@ -992,9 +992,6 @@ handle state.
 
 Known high-priority leftovers include:
 
-- `Utils`: `ANNOTATION_TEMPLATE`, `ANNOTATION_TEMPLATE_TEMPLATE`,
-  `ARGUMENT_TEMPLATE`, `RT_PARAMETER_TEMPLATE`, constructor method caches,
-  `STRING_VALUE_OF`, array type constants, and injection/freezing signatures.
 - `xConst`: native helper method caches such as estimate length, append, freeze,
   range, date/time, duration, version, path, and hash signature.
 - `xException`: cached exception class compositions and formatting method.

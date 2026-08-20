@@ -81,26 +81,121 @@ public abstract class Utils {
      * @param container the template registry
      */
     public static void initNative(NativeContainer container) {
+        // Preserve native bootstrap's eager validation of this metadata, but cache it on the
+        // owning container instead of publishing values from this container into JVM-global fields.
+        runtimeMetadata(container);
+    }
+
+    /**
+     * Create owner-local metadata used by static utility helpers.
+     *
+     * <p>All values in this bundle are derived from the same container's template registry,
+     * structures, and constant pool. Keeping them together preserves the old "look up once"
+     * behavior without allowing one container's bootstrap to overwrite another container's runtime
+     * helper metadata.</p>
+     */
+    static RuntimeMetadata createRuntimeMetadata(Container container) {
         ConstantPool pool = container.getConstantPool();
 
-        ANNOTATION_TEMPLATE           = container.getTemplate("reflect.Annotation");
-        ANNOTATION_TEMPLATE_TEMPLATE  = container.getTemplate("reflect.AnnotationTemplate");
-        ARGUMENT_TEMPLATE             = container.getTemplate("reflect.Argument");
-        RT_PARAMETER_TEMPLATE         = container.getTemplate("_native.reflect.RTParameter");
-        ANNOTATION_CONSTRUCT          = ANNOTATION_TEMPLATE.getStructure().findMethod("construct", 2);
-        ANNOTATION_TEMPLATE_CONSTRUCT = ANNOTATION_TEMPLATE_TEMPLATE.getStructure().findMethod("construct", 2);
-        ARGUMENT_CONSTRUCT            = ARGUMENT_TEMPLATE.getStructure().findMethod("construct", 2);
-        RT_PARAMETER_CONSTRUCT        = RT_PARAMETER_TEMPLATE.getStructure().findMethod("construct", 5);
-        ANNOTATION_ARRAY_TYPE         = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Annotation"));
-        ARGUMENT_ARRAY_TYPE           = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Argument"));
-        CONST_HELPER                  = container.getClassStructure("_native.ConstHelper");
-        STRING_VALUE_OF               = CONST_HELPER.findMethod("valueOf", 1);
-        SIG_FREEZE                    = container.getClassStructure("Freezable").findMethod("freeze", 1).
-                                            getIdentityConstant().getSignature();
-        SIG_GET_RESOURCE              = container.getClassStructure("mgmt.ResourceProvider").findMethod("getResource", 2).
-                                            getIdentityConstant().getSignature();
-        SIG_INJECT                    = container.getClassStructure("reflect.Injector").findMethod("inject", 3).
-                                            getIdentityConstant().getSignature();
+        ClassTemplate  templateAnnotation         = container.getTemplate("reflect.Annotation");
+        ClassTemplate  templateAnnotationTemplate = container.getTemplate("reflect.AnnotationTemplate");
+        ClassTemplate  templateArgument           = container.getTemplate("reflect.Argument");
+        ClassTemplate  templateRTParameter        = container.getTemplate("_native.reflect.RTParameter");
+        ClassStructure constHelper                = container.getClassStructure("_native.ConstHelper");
+
+        return new RuntimeMetadata(
+                constHelper,
+                templateAnnotation,
+                templateAnnotationTemplate,
+                templateArgument,
+                templateRTParameter,
+                templateAnnotation.getStructure().findMethod("construct", 2),
+                templateAnnotationTemplate.getStructure().findMethod("construct", 2),
+                templateArgument.getStructure().findMethod("construct", 2),
+                templateRTParameter.getStructure().findMethod("construct", 5),
+                constHelper.findMethod("valueOf", 1),
+                pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Annotation")),
+                pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Argument")),
+                container.getClassStructure("Freezable").findMethod("freeze", 1).
+                        getIdentityConstant().getSignature(),
+                container.getClassStructure("mgmt.ResourceProvider").findMethod("getResource", 2).
+                        getIdentityConstant().getSignature(),
+                container.getClassStructure("reflect.Injector").findMethod("inject", 3).
+                        getIdentityConstant().getSignature());
+    }
+
+    /**
+     * @return runtime helper metadata for the specified owner
+     */
+    static RuntimeMetadata runtimeMetadata(Container container) {
+        return container.runtimeMetadata();
+    }
+
+    /**
+     * @return runtime helper metadata for the current frame owner
+     */
+    private static RuntimeMetadata runtimeMetadata(Frame frame) {
+        return runtimeMetadata(frame.container());
+    }
+
+    /**
+     * @return the owner-local ConstHelper class structure
+     */
+    public static ClassStructure constHelper(Container container) {
+        return runtimeMetadata(container).constHelper;
+    }
+
+    /**
+     * Immutable owner-local replacement for the old Utils static metadata fields.
+     */
+    static final class RuntimeMetadata {
+        private RuntimeMetadata(ClassStructure constHelper,
+                                ClassTemplate templateAnnotation,
+                                ClassTemplate templateAnnotationTemplate,
+                                ClassTemplate templateArgument,
+                                ClassTemplate templateRTParameter,
+                                MethodStructure constructAnnotation,
+                                MethodStructure constructAnnotationTemplate,
+                                MethodStructure constructArgument,
+                                MethodStructure constructRTParameter,
+                                MethodStructure methodStringValueOf,
+                                TypeConstant typeAnnotationArray,
+                                TypeConstant typeArgumentArray,
+                                SignatureConstant sigFreeze,
+                                SignatureConstant sigGetResource,
+                                SignatureConstant sigInject) {
+            this.constHelper                = constHelper;
+            this.templateAnnotation         = templateAnnotation;
+            this.templateAnnotationTemplate = templateAnnotationTemplate;
+            this.templateArgument           = templateArgument;
+            this.templateRTParameter        = templateRTParameter;
+            this.constructAnnotation        = constructAnnotation;
+            this.constructAnnotationTemplate = constructAnnotationTemplate;
+            this.constructArgument          = constructArgument;
+            this.constructRTParameter       = constructRTParameter;
+            this.methodStringValueOf        = methodStringValueOf;
+            this.typeAnnotationArray        = typeAnnotationArray;
+            this.typeArgumentArray          = typeArgumentArray;
+            this.sigFreeze                  = sigFreeze;
+            this.sigGetResource             = sigGetResource;
+            this.sigInject                  = sigInject;
+        }
+
+        final ClassStructure    constHelper;
+        final ClassTemplate     templateAnnotation;
+        final ClassTemplate     templateAnnotationTemplate;
+        final ClassTemplate     templateArgument;
+        final ClassTemplate     templateRTParameter;
+        final MethodStructure   constructAnnotation;
+        final MethodStructure   constructAnnotationTemplate;
+        final MethodStructure   constructArgument;
+        final MethodStructure   constructRTParameter;
+        final MethodStructure   methodStringValueOf;
+        final TypeConstant      typeAnnotationArray;
+        final TypeConstant      typeArgumentArray;
+        final SignatureConstant sigFreeze;
+        final SignatureConstant sigGetResource;
+        final SignatureConstant sigInject;
     }
 
     /**
@@ -167,9 +262,10 @@ public abstract class Utils {
      * @return R_CALL value
      */
     public static int callValueOf(Frame frame, ObjectHandle hValue) {
-        ObjectHandle[] ahVar = new ObjectHandle[STRING_VALUE_OF.getMaxVars()];
+        MethodStructure methodValueOf = runtimeMetadata(frame).methodStringValueOf;
+        ObjectHandle[]  ahVar         = new ObjectHandle[methodValueOf.getMaxVars()];
         ahVar[0] = hValue;
-        return frame.call1(STRING_VALUE_OF, null, ahVar, Op.A_STACK);
+        return frame.call1(methodValueOf, null, ahVar, Op.A_STACK);
     }
 
     /**
@@ -185,7 +281,8 @@ public abstract class Utils {
      */
     public static int callFreeze(Frame frame, ObjectHandle hValue, Boolean FInPlace,
                                  Frame.Continuation continuation) {
-        CallChain chain = hValue.getComposition().getMethodCallChain(SIG_FREEZE);
+        SignatureConstant sigFreeze = runtimeMetadata(frame).sigFreeze;
+        CallChain         chain     = hValue.getComposition().getMethodCallChain(sigFreeze);
         if (chain.isEmpty()) {
             return frame.raiseException(
                 "Missing method \"freeze()\" on " + hValue.getType().getValueString());
@@ -274,12 +371,13 @@ public abstract class Utils {
                         : frameCaller.pushStack(hResource);
             });
         } else {
-            TypeComposition clazz = hInjector.getComposition();
-            CallChain       chain = clazz.getMethodCallChain(SIG_GET_RESOURCE);
+            SignatureConstant sigGetResource = runtimeMetadata(frame).sigGetResource;
+            TypeComposition   clazz          = hInjector.getComposition();
+            CallChain         chain          = clazz.getMethodCallChain(sigGetResource);
 
             if (chain.isEmpty()) {
                 return new DeferredCallHandle(xException.makeHandle(frame,
-                    "Missing method \"" + SIG_GET_RESOURCE.getValueString() +
+                    "Missing method \"" + sigGetResource.getValueString() +
                     "\" on " + hInjector.getType().getValueString()));
             }
 
@@ -319,12 +417,13 @@ public abstract class Utils {
                         : frameCaller.pushStack(hResource);
             });
         } else {
-            TypeComposition clazz = hInjector.getComposition();
-            CallChain       chain = clazz.getMethodCallChain(SIG_INJECT);
+            SignatureConstant sigInject = runtimeMetadata(frame).sigInject;
+            TypeComposition   clazz     = hInjector.getComposition();
+            CallChain         chain     = clazz.getMethodCallChain(sigInject);
 
             if (chain.isEmpty()) {
                 return new DeferredCallHandle(xException.makeHandle(frame,
-                        "Missing method \"" + SIG_INJECT.getValueString() +
+                        "Missing method \"" + sigInject.getValueString() +
                                 "\" on " + hInjector.getType().getValueString()));
             }
 
@@ -1541,8 +1640,9 @@ public abstract class Utils {
      * @return a constant Annotation array handle
      */
     public static ArrayHandle makeAnnoArrayHandle(Container container, ObjectHandle[] ahAnno) {
+        RuntimeMetadata metadata = runtimeMetadata(container);
         return xArray.makeArrayHandle(
-                container.ensureClassComposition(ANNOTATION_ARRAY_TYPE, xArray.getInstance(container)),
+                container.ensureClassComposition(metadata.typeAnnotationArray, xArray.getInstance(container)),
                 ahAnno.length, ahAnno, Mutability.Constant);
     }
 
@@ -1550,8 +1650,9 @@ public abstract class Utils {
      * @return a constant Argument array handle
      */
     public static ArrayHandle makeArgumentArrayHandle(Container container, ObjectHandle[] ahArg) {
+        RuntimeMetadata metadata = runtimeMetadata(container);
         return xArray.makeArrayHandle(
-                container.ensureClassComposition(ARGUMENT_ARRAY_TYPE, xArray.getInstance(container)),
+                container.ensureClassComposition(metadata.typeArgumentArray, xArray.getInstance(container)),
                 ahArg.length, ahArg, Mutability.Constant);
     }
 
@@ -1560,12 +1661,20 @@ public abstract class Utils {
      */
     public static class CreateParameters
                 implements Frame.Continuation {
-        public CreateParameters(Parameter[] aParam, ObjectHandle[] ahParam,
+        public CreateParameters(Container container, Parameter[] aParam, ObjectHandle[] ahParam,
                                 Frame.Continuation continuation) {
-            this.aParam       = aParam;
-            this.ahParam      = ahParam;
-            this.continuation = continuation;
-            typeRTParameter   = RT_PARAMETER_TEMPLATE.getClassConstant().getType();
+            RuntimeMetadata metadata = runtimeMetadata(container);
+
+            // Capture all parameter-construction metadata from the starting owner. This
+            // continuation can suspend, so later execution must not re-select helper metadata from
+            // a process-global cache or an incidental current pool.
+            this.container            = container;
+            this.aParam               = aParam;
+            this.ahParam              = ahParam;
+            this.continuation         = continuation;
+            this.templateRTParameter  = metadata.templateRTParameter;
+            this.constructRTParameter = metadata.constructRTParameter;
+            this.typeRTParameter      = templateRTParameter.getClassConstant().getType();
         }
 
         @Override
@@ -1588,12 +1697,12 @@ public abstract class Utils {
                 boolean      fFormal      = param.isTypeParameter();
                 Constant     constDefault = param.getDefaultValue();
 
-                ConstantPool    pool      = frameCaller.poolContext();
-                ClassTemplate   template  = RT_PARAMETER_TEMPLATE;
+                ConstantPool    pool      = container.getConstantPool();
+                ClassTemplate   template  = templateRTParameter;
                 TypeConstant    typeParam = pool.ensureParameterizedTypeConstant(typeRTParameter, type);
-                TypeComposition clzParam  = frameCaller.f_context.f_container.ensureClassComposition(typeParam, template);
+                TypeComposition clzParam  = container.ensureClassComposition(typeParam, template);
 
-                MethodStructure  construct = RT_PARAMETER_CONSTRUCT;
+                MethodStructure  construct = constructRTParameter;
                 ObjectHandle[]   ahArg     = new ObjectHandle[construct.getMaxVars()];
                 ahArg[0] = xInt64.makeHandle(index); // ordinal
                 ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
@@ -1617,10 +1726,13 @@ public abstract class Utils {
             return continuation.proceed(frameCaller);
         }
 
-        private final Parameter[]    aParam;
-        private final ObjectHandle[] ahParam;
+        private final Parameter[]     aParam;
+        private final ObjectHandle[]  ahParam;
         private final Frame.Continuation continuation;
-        private final TypeConstant  typeRTParameter;
+        private final Container       container;
+        private final ClassTemplate   templateRTParameter;
+        private final MethodStructure constructRTParameter;
+        private final TypeConstant    typeRTParameter;
         private int index = -1;
     }
 
@@ -1657,14 +1769,16 @@ public abstract class Utils {
      */
     public static int constructArgument(Frame frame, TypeConstant typeReferent,
                                         ObjectHandle hValue, String sName) {
-        MethodStructure constructor = ARGUMENT_CONSTRUCT;
+        RuntimeMetadata metadata    = runtimeMetadata(frame);
+        MethodStructure constructor = metadata.constructArgument;
         ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
         ahArg[0] = hValue;
         ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
 
-        TypeComposition clzArg = ARGUMENT_TEMPLATE.
+        ClassTemplate   template = metadata.templateArgument;
+        TypeComposition clzArg   = template.
                 ensureParameterizedClass(frame.f_context.f_container, typeReferent);
-        return ARGUMENT_TEMPLATE.construct(frame, constructor, clzArg, null, ahArg, Op.A_STACK);
+        return template.construct(frame, constructor, clzArg, null, ahArg, Op.A_STACK);
     }
 
     /**
@@ -1679,12 +1793,13 @@ public abstract class Utils {
      */
     public static int constructAnnotation(Frame frame, ClassHandle hAnno,
                                           ObjectHandle[] ahAnnoArg, int iReturn) {
-        MethodStructure constructor = ANNOTATION_CONSTRUCT;
+        RuntimeMetadata metadata    = runtimeMetadata(frame);
+        MethodStructure constructor = metadata.constructAnnotation;
         ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
         ahArg[0] = hAnno;
         ahArg[1] = makeArgumentArrayHandle(frame.f_context.f_container, ahAnnoArg);
 
-        ClassTemplate template = ANNOTATION_TEMPLATE;
+        ClassTemplate template = metadata.templateAnnotation;
         return template.construct(frame, constructor,
                 template.getCanonicalClass(), null, ahArg, iReturn);
     }
@@ -1701,12 +1816,13 @@ public abstract class Utils {
      */
     public static int constructAnnotationTemplate(Frame frame, ComponentTemplateHandle hClass,
                                                   ObjectHandle[] ahAnnoArg, int iReturn) {
-        MethodStructure constructor = ANNOTATION_TEMPLATE_CONSTRUCT;
-        ObjectHandle[]  ahArg = new ObjectHandle[constructor.getMaxVars()];
+        RuntimeMetadata metadata    = runtimeMetadata(frame);
+        MethodStructure constructor = metadata.constructAnnotationTemplate;
+        ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
         ahArg[0] = hClass;
         ahArg[1] = makeArgumentArrayHandle(frame.f_context.f_container, ahAnnoArg);
 
-        ClassTemplate template = ANNOTATION_TEMPLATE_TEMPLATE;
+        ClassTemplate template = metadata.templateAnnotationTemplate;
         return template.construct(frame, constructor,
                 template.getCanonicalClass(), null, ahArg, iReturn);
     }
@@ -1775,22 +1891,6 @@ public abstract class Utils {
 
     public static final Frame.Continuation NEXT = frame -> Op.R_NEXT;
     public static final Predicate          ANY  = t -> true;
-
-    public  static ClassStructure    CONST_HELPER;
-    private static ClassTemplate     ANNOTATION_TEMPLATE;
-    private static ClassTemplate     ANNOTATION_TEMPLATE_TEMPLATE;
-    private static ClassTemplate     ARGUMENT_TEMPLATE;
-    private static ClassTemplate     RT_PARAMETER_TEMPLATE;
-    private static MethodStructure   ANNOTATION_CONSTRUCT;
-    private static MethodStructure   ANNOTATION_TEMPLATE_CONSTRUCT;
-    private static MethodStructure   ARGUMENT_CONSTRUCT;
-    private static MethodStructure   RT_PARAMETER_CONSTRUCT;
-    private static MethodStructure   STRING_VALUE_OF;
-    private static TypeConstant      ANNOTATION_ARRAY_TYPE;
-    private static TypeConstant      ARGUMENT_ARRAY_TYPE;
-    private static SignatureConstant SIG_FREEZE;
-    private static SignatureConstant SIG_GET_RESOURCE;
-    private static SignatureConstant SIG_INJECT;
 
      /**
      * Wait until the main context is no longer overwhelmed.
