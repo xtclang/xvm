@@ -275,6 +275,7 @@ fields. The branch moves them to owner-scoped final lazy state.
 | `xRTBitDelegate`, `xRTBooleanDelegate`, `xRTFloat64Delegate`, `xRTInt8Delegate`, `xRTInt16Delegate`, `xRTInt64Delegate`, `xRTUInt8Delegate`, `xRTNibbleDelegate`, `xRTSlicingDelegate` | constructor-published delegate `INSTANCE` fields | owner-local delegate dispatch and `NativeTemplates.slicingDelegate()` | Must fix |
 | `xRTViewFromBitTo*`, `xRTViewFromByteTo*`, `xRTViewToBitFromNibble` | constructor-published specialized view `INSTANCE` fields | owner-local base view dispatch or existing `xRTViewToBit` dispatch | Must fix |
 | `xListMap`, `Utils`, map-literal opcodes, enum-name map construction | `xListMap.INSTANCE`, static `xListMap.CONSTRUCTOR`, static `Utils.LIST_MAP_CONSTRUCT` | `NativeTemplates.listMap()`, owner-scoped `xListMap.f_constructor`, and constructor lookup from the caller's map composition | Must fix |
+| `Utils` runtime helper metadata | `CONST_HELPER`, annotation/argument/parameter templates, constructor methods, `STRING_VALUE_OF`, annotation/argument array types, and freeze/resource/inject signatures | `Container.f_runtimeMetadata`, a final owner-local `Lazy<Utils.RuntimeMetadata>` immutable bundle; helpers resolve metadata from `Frame` or `Container`, and `CreateParameters` captures the starting owner | Must fix |
 | `xTuple`, void-return handling, async service responses | `xTuple.INSTANCE`, `xTuple.INCEPTION_CLASS`, static `xTuple.H_VOID` | `NativeTemplates.tuple()`, final owner-local inception constant, and per-container lazy `Tuple()` handle via `xTuple.ensureEmptyTuple(container)` | Must fix |
 | `xFuture`, wait-frame construction, async result assignment | `xFuture.INSTANCE`, static `TYPE`, static `COMPLETION`, ownerless `makeHandle(CompletableFuture)` | `NativeTemplates.future()`, final owner-local lazy future type and completion enum template, and `makeHandle(Container, CompletableFuture)` | Must fix |
 | `xAtomic`, `xAtomicIntNumber`, `xAtomicInt128` | `xAtomicIntNumber.INSTANCE`, static `xAtomic.NUMBER_TEMPLATES`, and wrapper construction from numeric template `INSTANCE` fields | final owner-local `Lazy<Map<TypeConstant,xAtomic>>`, immutable `Map.copyOf`, and wrapper construction from this container's number templates | Must fix |
@@ -312,6 +313,19 @@ old one-time lookup. `xClass.ensureArrayComposition(Container)` already has the
 owner as a parameter, so it asks that owner's `ConstantPool` for `Array<Class>`;
 the pool interns the value, preserving the old cache behavior without a
 process-global `TypeConstant`.
+
+The `Utils` metadata wave removes the old split static helper block entirely.
+The same templates, constructors, array types, and signatures are still looked
+up once, but the lazy cell now lives on `Container`. That is semantically the
+same cache granularity the runtime actually needs: one metadata bundle per
+owner. It is also safer than separate lazy fields because the template, method,
+type, and signature values are created together from one owner and then
+published as one immutable `RuntimeMetadata` object. The regression test
+`NativeTemplateOldPatternTest.splitStaticMetadataCanMixOwnersAcrossContainers`
+demonstrates the old failure shape: two simulated container owners interleave
+updates to separate static template/method fields and then throw when a method
+from one owner is invoked through a template from another. The owner-scoped
+bundle in the same test does not allow that mixed state.
 
 The `TestCompiler` stress run also exposed an older `xRTCompiler.addError(...)`
 bug: `CompilerAdapter.getErrors()` returns `stream().toList()`, which is

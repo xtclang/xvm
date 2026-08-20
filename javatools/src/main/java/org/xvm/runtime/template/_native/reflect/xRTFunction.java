@@ -305,7 +305,8 @@ public class xRTFunction
 
             Frame.Continuation stepNext = frameCaller ->
                 constructListMap(frameCaller, ahParam, ahValue, aiReturn[3]);
-            return new Utils.CreateParameters(method.getParamArray(), ahParam, stepNext).doNext(frame);
+            return new Utils.CreateParameters(
+                    frame.container(), method.getParamArray(), ahParam, stepNext).doNext(frame);
         }
 
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
@@ -356,7 +357,8 @@ public class xRTFunction
 
         Frame.Continuation stepNext = frameCaller ->
             constructListMap(frameCaller, ahParam, ahValue, aiReturn[3]);
-        return new Utils.CreateParameters(method.getParamArray(), ahParam, stepNext).doNext(frame);
+        return new Utils.CreateParameters(
+                frame.container(), method.getParamArray(), ahParam, stepNext).doNext(frame);
     }
 
 

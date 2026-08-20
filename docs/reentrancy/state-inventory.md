@@ -33,7 +33,7 @@ independent bug.
 | Priority | Category | Signal | Why it is bad | Proper replacement |
 | --- | --- | --- | --- | --- |
 | Must fix | Mutable template `INSTANCE` fields and `INSTANCE = this` constructors | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes 107 fields / 103 assignments and leaves 36/36. | Process-global last-writer-wins template lookup; constructor `this` escape; wrong container/pool can be observed | `NativeTemplates` central key table plus owner-scoped lazy lookup |
-| Must fix | Static runtime metadata caches | `master`: 151 field-shaped runtime/template static metadata hits after excluding `INSTANCE`; this branch fixes 89 and leaves 62. | `TypeConstant`, `TypeComposition`, `MethodStructure`, handles, and `xEnum` values are pool/container/runtime state, not JVM-global constants | Final `Lazy` fields on the owning template, immutable grouped info records, or a container-owned cache |
+| Must fix | Static runtime metadata caches | `master`: 151 field-shaped runtime/template static metadata hits after excluding `INSTANCE`; this branch fixes 103 and leaves 48. | `TypeConstant`, `TypeComposition`, `MethodStructure`, handles, and `xEnum` values are pool/container/runtime state, not JVM-global constants | Final `Lazy` fields on the owning template, immutable grouped info records, or a container-owned cache |
 | Must fix | Split mutable lifecycle state | Old `SingletonConstant` used separate handle/owner/waiter fields | Readers can observe impossible lifecycle snapshots across fibers | One immutable state snapshot in `AtomicReference`; use CAS for transitions |
 | Must fix | Natural enum construction structs escaping public paths | PR #534 enum struct mismatch | A caller can observe a construction struct where an immutable enum value is required | Public enum helpers that return initialized singletons or deferred results |
 | Must fix | Unsynchronized lazy null caches in shared runtime state | 98 field-shaped checks; 47 strong same-field lazy-init matches | Plain field read/write has no happens-before edge and can publish partial state | Final `Lazy` for immutable values; `ConcurrentMap.computeIfAbsent` for keyed caches; `AtomicReference` or a lock for lifecycle/resettable state |
@@ -378,19 +378,18 @@ Master count and current branch remainder:
 
 ```text
 master: 138
-current branch: 52
-fixed in this branch: 86
+current branch: 38
+fixed in this branch: 100
 ```
 
 High-risk categories:
 
 - Container-owned compositions in static fields, for example
   `xException.s_clzIllegalState`.
-- Pool-owned type constants in static fields, for example
-  `Utils.ANNOTATION_ARRAY_TYPE` and `Utils.ARGUMENT_ARRAY_TYPE`.
+- Pool-owned type constants in static fields remain a must-review category
+  even though the known `Utils` examples are now fixed.
 - Structure-owned methods in static fields, for example
-  `Utils.RT_PARAMETER_CONSTRUCT`, `xConst.FN_APPEND_TO`, and
-  `xString.METHOD_APPEND_TO`.
+  `xConst.FN_APPEND_TO` and `xString.METHOD_APPEND_TO`.
 - Runtime handles/constants in static fields, for example
   `xString.EMPTY_STRING` and the native enum handle globals.
 - Static maps keyed by pool-owned values remain a must-review category even
@@ -422,14 +421,14 @@ rg -n --pcre2 "^\s*(?:public|protected|private)?\s*static\s+(?!final\b)(?!class\
 Current counts:
 
 ```text
-274 runtime/asm/compiler non-final static fields
-277 all-Java non-final static fields
+111 runtime/asm/compiler non-final static fields
+114 all-Java non-final static fields
 ```
 
 Representative examples:
 
-- `Utils.CONST_HELPER`, `Utils.ANNOTATION_TEMPLATE`,
-  `Utils.RT_PARAMETER_TEMPLATE`, and related method/type caches.
+- `xException.s_clzIllegalState` and related exception compositions.
+- `xConst.FN_APPEND_TO`, `xConst.RANGE_CONSTRUCT`, and related helper methods.
 - `DebugConsole.LINE_READER`, `DebugConsole.TERMINAL`, and
   `DebugConsole.READER`.
 - `xTerminalConsole.READER` and `xTerminalConsole.TERMINAL`.

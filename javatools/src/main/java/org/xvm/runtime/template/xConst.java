@@ -89,9 +89,10 @@ public class xConst
             invalidateTypeInfo();
 
             // Stringable support
-            FN_ESTIMATE_LENGTH = Utils.CONST_HELPER.findMethod("estimateStringLength", 2);
-            FN_APPEND_TO       = Utils.CONST_HELPER.findMethod("appendTo", 3);
-            FN_FREEZE          = Utils.CONST_HELPER.findMethod("freeze", 1);
+            ClassStructure constHelper = Utils.constHelper(f_container);
+            FN_ESTIMATE_LENGTH = constHelper.findMethod("estimateStringLength", 2);
+            FN_APPEND_TO       = constHelper.findMethod("appendTo", 3);
+            FN_FREEZE          = constHelper.findMethod("freeze", 1);
 
             // Range support
             RANGE_CONSTRUCT = f_container.getClassStructure("Range").findMethod("construct", 4);
