@@ -105,9 +105,9 @@ then fail under a parallel runner on a loaded machine.
 
 The XVM codebase has normalized this pattern. On `master`, a direct audit finds
 143 mutable template `INSTANCE` declarations and 139 constructor assignments of
-`INSTANCE = this` in runtime templates. This branch fixes 35 of those
-constructor-published template globals, leaving 108 mutable `INSTANCE` fields
-and 104 constructor assignments for follow-up. A broader scan for escape-shaped
+`INSTANCE = this` in runtime templates. This branch fixes 42 of those
+constructor-published template globals, leaving 101 mutable `INSTANCE` fields
+and 97 constructor assignments for follow-up. A broader scan for escape-shaped
 `this` assignments and calls reports hundreds of hits in
 `javatools/src/main/java`, many of which are false positives, but the signal is
 clear: publishing receivers into mutable non-final state is common enough that
@@ -855,7 +855,7 @@ rg -l "public static (?!final)[A-Za-z0-9_<>, ?]+ INSTANCE;" \
   --pcre2 javatools/src/main/java/org/xvm/runtime/template | sort
 ```
 
-At the time this document was written, it reported 108 unconverted template
+At the time this document was written, it reported 101 unconverted template
 files. They should be migrated in follow-up PRs. Grouping them by package:
 
 - Root templates: `Identity`, `Proxy`, `xConst`, `xException`, `xObject`.
@@ -867,12 +867,8 @@ files. They should be migrated in follow-up PRs. Grouping them by package:
   `xRTCharDelegate`, `xRTFloat64Delegate`, `xRTInt*Delegate`,
   `xRTUInt*Delegate`, `xRTNibbleDelegate`, `xRTSlicingDelegate`,
   `xRTStringDelegate`, `xRTViewFrom*`, `xRTViewToBit*`.
-- Crypto templates: `xRTDecryptor`, `xRTHasher`, `xRTKeyGenerator`,
-  `xRTSigner`.
 - File-system templates: `xOSDirectory`, `xOSFile`,
   `xRawOSFileChannel`.
-- IO templates: `xRTBuffer`.
-- Network templates: `xRTNetworkInterface`, `xRTSocket`.
 - Native reflect templates still using mutable `INSTANCE`:
   `xRTFileTemplate`, `xRTMethodTemplate`, `xRTPackageTemplate`,
   `xRTProperty`, `xRTPropertyTemplate`, `xRTSignature`.
@@ -919,6 +915,13 @@ Converted `INSTANCE` fields in this branch include:
 - `xRTConnector`,
 - `xRTServer`,
 - `xInjector`,
+- `xRTDecryptor`,
+- `xRTHasher`,
+- `xRTKeyGenerator`,
+- `xRTSigner`,
+- `xRTBuffer`,
+- `xRTNetworkInterface`,
+- `xRTSocket`,
 - `xModule`,
 - `xPackage`.
 

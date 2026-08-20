@@ -32,7 +32,7 @@ independent bug.
 
 | Priority | Category | Signal | Why it is bad | Proper replacement |
 | --- | --- | --- | --- | --- |
-| Must fix | Mutable template `INSTANCE` fields and `INSTANCE = this` constructors | `master`: 143 mutable template `INSTANCE` fields; 139 constructor assignments. This branch fixes 35 and leaves 108/104. | Process-global last-writer-wins template lookup; constructor `this` escape; wrong container/pool can be observed | `NativeTemplates` central key table plus owner-scoped lazy lookup |
+| Must fix | Mutable template `INSTANCE` fields and `INSTANCE = this` constructors | `master`: 143 mutable template `INSTANCE` fields; 139 constructor assignments. This branch fixes 42 and leaves 101/97. | Process-global last-writer-wins template lookup; constructor `this` escape; wrong container/pool can be observed | `NativeTemplates` central key table plus owner-scoped lazy lookup |
 | Must fix | Static runtime metadata caches | `master`: 149 field-shaped runtime/template static metadata hits after excluding `INSTANCE`; this branch fixes 54 and leaves 95. | `TypeConstant`, `TypeComposition`, `MethodStructure`, handles, and `xEnum` values are pool/container/runtime state, not JVM-global constants | Final `Lazy` fields on the owning template, immutable grouped info records, or a container-owned cache |
 | Must fix | Split mutable lifecycle state | Old `SingletonConstant` used separate handle/owner/waiter fields | Readers can observe impossible lifecycle snapshots across fibers | One immutable state snapshot in `AtomicReference`; use CAS for transitions |
 | Must fix | Natural enum construction structs escaping public paths | PR #534 enum struct mismatch | A caller can observe a construction struct where an immutable enum value is required | Public enum helpers that return initialized singletons or deferred results |
@@ -166,7 +166,7 @@ rg -l "public static (?!final)[A-Za-z0-9_<>, ?]+ INSTANCE;" \
 Current branch count:
 
 ```text
-108
+101
 ```
 
 Current branch constructor publication audit:
@@ -180,7 +180,7 @@ rg -n "INSTANCE\s*=\s*this" \
 Current branch count:
 
 ```text
-104
+97
 ```
 
 Representative bad examples:
@@ -239,16 +239,9 @@ javatools/src/main/java/org/xvm/runtime/template/_native/collections/arrays/xRTV
 javatools/src/main/java/org/xvm/runtime/template/_native/collections/arrays/xRTViewToBitFromUInt32.java
 javatools/src/main/java/org/xvm/runtime/template/_native/collections/arrays/xRTViewToBitFromUInt64.java
 javatools/src/main/java/org/xvm/runtime/template/_native/collections/arrays/xRTViewToBitFromUInt8.java
-javatools/src/main/java/org/xvm/runtime/template/_native/crypto/xRTDecryptor.java
-javatools/src/main/java/org/xvm/runtime/template/_native/crypto/xRTHasher.java
-javatools/src/main/java/org/xvm/runtime/template/_native/crypto/xRTKeyGenerator.java
-javatools/src/main/java/org/xvm/runtime/template/_native/crypto/xRTSigner.java
 javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSDirectory.java
 javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSFile.java
 javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java
-javatools/src/main/java/org/xvm/runtime/template/_native/io/xRTBuffer.java
-javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTNetworkInterface.java
-javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTSocket.java
 javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTFileTemplate.java
 javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTMethodTemplate.java
 javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTPackageTemplate.java

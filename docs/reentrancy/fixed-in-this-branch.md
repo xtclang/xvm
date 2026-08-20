@@ -133,6 +133,13 @@ getters for existing call sites; resource templates are resolved directly from
 - `xRTConnector.INSTANCE`
 - `xRTServer.INSTANCE`
 - `xInjector.INSTANCE`
+- `xRTDecryptor.INSTANCE`
+- `xRTHasher.INSTANCE`
+- `xRTKeyGenerator.INSTANCE`
+- `xRTSigner.INSTANCE`
+- `xRTBuffer.INSTANCE`
+- `xRTNetworkInterface.INSTANCE`
+- `xRTSocket.INSTANCE`
 - `xArray.INSTANCE`
 - `xEnum.INSTANCE`
 - `xService.INSTANCE`
@@ -164,6 +171,15 @@ was most recently assigned. The new code captures this container's template.
 through the caller frame's container for the same reason. `xRTConnector` also
 moves the old static agent string into a final owner field, preserving the
 same user-agent value without tying it to the removed `INSTANCE` branch.
+
+The leaf-template wave deletes remaining constructor-published statics from
+native templates that had no external `X.INSTANCE` readers. Most of these
+classes do not need named `NativeTemplates` accessors because ordinary
+container template registration already owns them. The exception is
+`xRTSocket.connect(...)`, which is a static helper and now resolves
+`NativeTemplates.socket()` from the callback frame instead of reading the old
+global `INSTANCE`. The important fix is removing the public process-global
+field and constructor escape.
 
 ### Static Runtime Metadata Caches
 

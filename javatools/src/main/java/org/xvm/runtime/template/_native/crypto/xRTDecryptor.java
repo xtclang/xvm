@@ -32,14 +32,8 @@ import org.xvm.runtime.template._native.crypto.xRTAlgorithms.KeyForm;
  */
 public class xRTDecryptor
         extends xService {
-    public static xRTDecryptor INSTANCE;
-
-    public xRTDecryptor(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTDecryptor(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

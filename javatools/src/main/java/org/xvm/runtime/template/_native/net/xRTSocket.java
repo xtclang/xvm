@@ -51,16 +51,10 @@ import org.xvm.runtime.template.numbers.xUInt16;
  */
 public class xRTSocket
         extends xService {
-    public static xRTSocket INSTANCE;
-
     public static final int CONNECT_TIMEOUT_MS = 15_000;
 
-    public xRTSocket(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTSocket(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -175,8 +169,9 @@ public class xRTSocket
                 InetAddress local   = socket.getLocalAddress();
                 byte[]      abLocal = local == null ? new byte[0] : local.getAddress();
                 int         nLocal  = socket.getLocalPort();
-                return INSTANCE.constructSocket(frameCaller, socket, abLocal, nLocal,
-                        abRemoteIP, nRemotePort, aiReturn);
+                return frameCaller.container().nativeTemplates().socket().
+                        constructSocket(frameCaller, socket, abLocal, nLocal,
+                                abRemoteIP, nRemotePort, aiReturn);
             } catch (Throwable e) {
                 Throwable cause = unwrap(e);
                 if (cause instanceof IOException) {
