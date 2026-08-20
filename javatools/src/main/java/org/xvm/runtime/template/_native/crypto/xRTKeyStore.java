@@ -332,15 +332,15 @@ public class xRTKeyStore
             list.add(xBoolean.TRUE);
             list.add(xString.makeHandle(frame, sIssuer));
             list.add(xString.makeHandle(frame, sSubject));
-            list.add(xInt64.makeHandle(nVersion));
-            addDate(dateNotBefore, list);
-            addDate(dateNotAfter, list);
+            list.add(xInt64.makeHandle(frame, nVersion));
+            addDate(frame, dateNotBefore, list);
+            addDate(frame, dateNotAfter, list);
             list.add(xArray.makeBooleanArrayHandle(frame.container(), abUsage, cUsage,
                     Mutability.Constant));
             list.add(xString.makeHandle(frame, sSigAlgName));
             list.add(xByteArray.makeByteArrayHandle(frame.container(), abSignature, Mutability.Constant));
             list.add(xString.makeHandle(frame, sAlgorithm));
-            list.add(xInt64.makeHandle(cKeyBits >>> 3));
+            list.add(xInt64.makeHandle(frame, cKeyBits >>> 3));
             list.add(xByteArray.makeByteArrayHandle(frame.container(), abPublic, Mutability.Constant));
             list.add(new SecretHandle(publicKey));
             list.add(xByteArray.makeByteArrayHandle(frame.container(), abDer, Mutability.Constant));
@@ -351,13 +351,13 @@ public class xRTKeyStore
         }
     }
 
-    private static void addDate(Date date, List<ObjectHandle> list) {
+    private static void addDate(Frame frame, Date date, List<ObjectHandle> list) {
         Calendar cal = Calendar.getInstance();
         cal.setTime(date);
 
-        list.add(xInt64.makeHandle(cal.get(Calendar.YEAR)));
-        list.add(xInt64.makeHandle(cal.get(Calendar.MONTH) + 1));
-        list.add(xInt64.makeHandle(cal.get(Calendar.DAY_OF_MONTH)));
+        list.add(xInt64.makeHandle(frame, cal.get(Calendar.YEAR)));
+        list.add(xInt64.makeHandle(frame, cal.get(Calendar.MONTH) + 1));
+        list.add(xInt64.makeHandle(frame, cal.get(Calendar.DAY_OF_MONTH)));
     }
 
     private static int getPublicKeyLength(PublicKey puk)
@@ -403,10 +403,10 @@ public class xRTKeyStore
                 } else {
                     nType = 1; // Pair
                 }
-                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(nType));
+                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(frame, nType));
             }
             if (keyStore.isCertificateEntry(sName)) {
-                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(1)); // Certificate
+                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(frame, 1)); // Certificate
             }
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         } catch (GeneralSecurityException e) {
@@ -451,7 +451,7 @@ public class xRTKeyStore
                 List<ObjectHandle> list = new ArrayList<>(9);
                 list.add(xBoolean.TRUE);
                 list.add(xString.makeHandle(frame, sAlgorithm));
-                list.add(xInt64.makeHandle(cKeyBits >>> 3));
+                list.add(xInt64.makeHandle(frame, cKeyBits >>> 3));
                 list.add(new SecretHandle(key));
                 if (publicKey == null) {
                     list.add(xNullable.NULL);

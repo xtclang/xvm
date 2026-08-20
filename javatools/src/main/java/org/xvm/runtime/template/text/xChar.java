@@ -12,9 +12,11 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.CharConstant;
 
 import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.ClassTemplate;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
@@ -40,14 +42,10 @@ import org.xvm.util.Handy;
  */
 public class xChar
         extends xConst {
-    public static xChar INSTANCE;
-
     public xChar(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
 
-        if (fInstance) {
-            INSTANCE = this;
-        }
+        f_fInstance = fInstance;
     }
 
     @Override
@@ -58,7 +56,7 @@ public class xChar
 
         invalidateTypeInfo();
 
-        if (this == INSTANCE) {
+        if (f_fInstance) {
             ClassComposition clz = getCanonicalClass();
             for (int i = 0; i < cache.length; ++i) {
                 cache[i] = new JavaLong(clz, i);
@@ -122,7 +120,9 @@ public class xChar
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         switch (sPropName) {
         case "codepoint":
-            return frame.assignValue(iReturn, xUInt32.INSTANCE.makeJavaLong(((JavaLong) hTarget).getValue()));
+            return frame.assignValue(iReturn,
+                    frame.container().nativeTemplates().uint32().makeJavaLong(
+                            ((JavaLong) hTarget).getValue()));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -178,19 +178,41 @@ public class xChar
     public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         JavaLong hThis = (JavaLong) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hThis.getValue()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, hThis.getValue()));
     }
 
 
     // ----- helpers -------------------------------------------------------------------------------
 
-    public static JavaLong makeHandle(long chValue) {
+    public JavaLong makeHandle(long chValue) {
         assert chValue >= 0 & chValue <= 0x10FFFF;
         if (chValue < 128) {
-            return INSTANCE.cache[(int)chValue];
+            return cache[(int) chValue];
         }
-        return new JavaLong(INSTANCE.getCanonicalClass(), chValue);
+        return new JavaLong(getCanonicalClass(), chValue);
     }
+
+    public static JavaLong makeHandle(Frame frame, long chValue) {
+        return makeHandle(frame.container(), chValue);
+    }
+
+    public static JavaLong makeHandle(Container container, long chValue) {
+        return NativeTemplates.get(container).charTemplate().makeHandle(chValue);
+    }
+
+    public static JavaLong makeHandle(ClassTemplate template, long chValue) {
+        return makeHandle(template.f_container, chValue);
+    }
+
+    public static JavaLong makeHandle(ObjectHandle owner, long chValue) {
+        return makeHandle(owner.getComposition().getContainer(), chValue);
+    }
+
+    /**
+     * True only for the canonical native template; avoids a recursive NativeTemplates lookup while
+     * prebuilding this owner template's cached ASCII handles.
+     */
+    private final boolean f_fInstance;
 
     private final JavaLong[] cache = new JavaLong[128];
 }

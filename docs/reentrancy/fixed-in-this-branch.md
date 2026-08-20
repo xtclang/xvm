@@ -251,6 +251,19 @@ conversion in container A cannot accidentally allocate a decimal or float
 handle with container B's composition. `FPLiteral` had no legitimate external
 singleton readers left, so it only needed the constructor publication removed.
 
+The primitive integer and `Char` wave removes the remaining numeric/text
+template globals from the central hot handle path. `Int8`, `Int16`, `Int32`,
+`Int64`, `Int128`, `IntN`, `UInt8`, `UInt16`, `UInt32`, `UInt64`, `UInt128`,
+`UIntN`, `Nibble`, and `Char` are resolved through `NativeTemplates` when a
+static helper needs an owner. `Int64.makeHandle(...)`, `UInt8.makeHandle(...)`,
+`Nibble.makeHandle(...)`, and `Char.makeHandle(...)` now require a `Frame`,
+`Container`, `ClassTemplate`, or existing owner handle, so new no-owner handle
+construction fails at compile time. The old per-template caches are preserved:
+`UInt8`, `Nibble`, and `Char` still prebuild their byte/nibble/ASCII handles on
+the owner template during `initNative()`, and uncached values still allocate the
+same Java handle type. The semantic change is only that the owner is explicit
+and cannot be stolen from a process-global `INSTANCE`.
+
 The resource-template wave updates `NativeContainer.initResources()` to resolve
 injectable resource suppliers from `Container.nativeTemplates()` instead of
 public template statics. The old suppliers were registered during native
@@ -577,15 +590,15 @@ accept small opportunistic cleanup, but they are not the reason for the PR.
 
 ## Unfixed Legacy `INSTANCE` Patterns
 
-This branch deliberately fixes only the `INSTANCE` sites needed by the native
-template startup and enum/singleton race. Many mutable `INSTANCE` fields remain
-on `master` and still remain after this branch. The full list is maintained in
+This branch deliberately fixes the native-template `INSTANCE` sites that have
+clear owner-sensitive startup behavior. A small root-template set still remains
+after this branch. The full current list is maintained in
 [state-inventory.md#mutable-template-instance-inventory](state-inventory.md#mutable-template-instance-inventory).
 
-Examples still requiring follow-up include root templates such as `Identity`,
-`xConst`, `xException`, and `xObject`; many primitive templates; and `xChar`.
-Those are not safe by design just because this PR does not touch them; they are
-the next migration backlog.
+Examples still requiring follow-up are the remaining root templates
+`Identity`, `Proxy`, `xConst`, `xException`, and `xObject`. Those are not safe
+by design just because this PR does not touch them; they are the next migration
+backlog. The primitive number templates and `xChar` are fixed in this branch.
 
 ## Proof Points Added By This Branch
 

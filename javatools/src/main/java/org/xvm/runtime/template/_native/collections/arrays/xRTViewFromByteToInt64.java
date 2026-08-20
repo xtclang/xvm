@@ -72,7 +72,7 @@ public class xRTViewFromByteToInt64
             byte[] ab = tView.getBytes(hSource, lIndex*8, 8, false);
             long   l  = Handy.byteArrayToLong(ab, 0);
 
-            return frame.assignValue(iReturn, xInt64.makeHandle(l));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, l));
         }
 
         throw new UnsupportedOperationException();

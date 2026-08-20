@@ -36,6 +36,6 @@ public class xRTUInt32Delegate
 
     @Override
     protected ObjectHandle makeElementHandle(long lValue) {
-        return xUInt32.INSTANCE.makeJavaLong(lValue);
+        return f_container.nativeTemplates().uint32().makeJavaLong(lValue);
     }
 }

@@ -148,7 +148,7 @@ public class xEnum
                     xString.makeHandle(frame, enumInfo().names().get(hThis.getOrdinal())));
 
         case "ordinal":
-            return frame.assignValue(iReturn, xInt64.makeHandle(hThis.getOrdinal()));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, hThis.getOrdinal()));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -162,7 +162,7 @@ public class xEnum
         if (method.getName().equals("stepsTo")) {
             EnumHandle hThat = (EnumHandle) hTarget;
             return frame.assignValue(iReturn,
-                    xInt64.makeHandle(hThis.getOrdinal() - hThat.getOrdinal()));
+                    xInt64.makeHandle(frame, hThis.getOrdinal() - hThat.getOrdinal()));
         }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
     }
@@ -190,7 +190,7 @@ public class xEnum
     public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         EnumHandle hThis = (EnumHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hThis.getOrdinal()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, hThis.getOrdinal()));
     }
 
     @Override

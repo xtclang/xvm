@@ -76,7 +76,7 @@ public abstract class LongLongDelegate
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
         return frame.assignValue(iReturn,
-                xInt64.makeHandle((long) hDelegate.m_alValue.length / 2));
+                xInt64.makeHandle(frame, (long) hDelegate.m_alValue.length / 2));
     }
 
     @Override

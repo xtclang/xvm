@@ -277,7 +277,7 @@ public class xArray
                     int                 cArgs       = hfnSupplier.getVarCount();
                     ObjectHandle[]      ahArg       = new ObjectHandle[cArgs];
                     Utils.ValueSupplier supplier    = (frameCaller, index) -> {
-                        ahArg[0] = xInt64.makeHandle(index);
+                        ahArg[0] = xInt64.makeHandle(frame, index);
                         return hfnSupplier.call1(frameCaller, null, ahArg, Op.A_STACK);
                     };
                     return new Utils.FillArray(hArray, cSize, supplier, iReturn).doNext(frame);

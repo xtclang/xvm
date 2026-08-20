@@ -70,7 +70,7 @@ public class xOSFileNode
         case "createdMillis":
             try {
                 BasicFileAttributes attr = Files.readAttributes(hNode.f_path, BasicFileAttributes.class);
-                return frame.assignValue(iReturn, xInt64.makeHandle(attr.creationTime().toMillis()));
+                return frame.assignValue(iReturn, xInt64.makeHandle(frame, attr.creationTime().toMillis()));
             } catch (IOException e) {
                 return raisePathException(frame, e, hNode.f_path);
             }
@@ -78,7 +78,7 @@ public class xOSFileNode
         case "accessedMillis":
             try {
                 BasicFileAttributes attr = Files.readAttributes(hNode.f_path, BasicFileAttributes.class);
-                return frame.assignValue(iReturn, xInt64.makeHandle(attr.lastAccessTime().toMillis()));
+                return frame.assignValue(iReturn, xInt64.makeHandle(frame, attr.lastAccessTime().toMillis()));
             } catch (IOException e) {
                 return raisePathException(frame, e, hNode.f_path);
             }
@@ -86,7 +86,7 @@ public class xOSFileNode
         case "modifiedMillis":
             try {
                 BasicFileAttributes attr = Files.readAttributes(hNode.f_path, BasicFileAttributes.class);
-                return frame.assignValue(iReturn, xInt64.makeHandle(attr.lastModifiedTime().toMillis()));
+                return frame.assignValue(iReturn, xInt64.makeHandle(frame, attr.lastModifiedTime().toMillis()));
             } catch (IOException e) {
                 return raisePathException(frame, e, hNode.f_path);
             }
@@ -96,9 +96,9 @@ public class xOSFileNode
                 Path path = hNode.f_path;
                 if (Files.exists(path)) {
                     BasicFileAttributes attr = Files.readAttributes(path, BasicFileAttributes.class);
-                    return frame.assignValue(iReturn, xInt64.makeHandle(attr.size()));
+                    return frame.assignValue(iReturn, xInt64.makeHandle(frame, attr.size()));
                 } else {
-                    return frame.assignValue(iReturn, xInt64.makeHandle(0));
+                    return frame.assignValue(iReturn, xInt64.makeHandle(frame, 0));
                 }
             } catch (IOException e) {
                 return raisePathException(frame, e, hNode.f_path);

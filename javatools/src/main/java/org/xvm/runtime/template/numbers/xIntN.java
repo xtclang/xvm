@@ -18,14 +18,8 @@ import org.xvm.util.PackedInteger;
  */
 public class xIntN
         extends xUnconstrainedInteger {
-    public static xIntN INSTANCE;
-
     public xIntN(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, true);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

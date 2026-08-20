@@ -122,7 +122,7 @@ public class xString
 
         switch (sPropName) {
         case "size":
-            return frame.assignValue(iReturn, xInt64.makeHandle(hThis.m_achValue.length));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, hThis.m_achValue.length));
 
         case "chars":
             return frame.assignValue(iReturn,
@@ -161,7 +161,7 @@ public class xString
                 }
                 return ofResult < 0
                         ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                        : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(ofResult));
+                        : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(frame, ofResult));
             }
             }
         }
@@ -178,7 +178,7 @@ public class xString
 
         return nIx < 0 || nIx >= ach.length
                 ? frame.raiseException(xException.outOfBounds(frame, lIndex, ach.length))
-                : frame.assignValue(iReturn, xChar.makeHandle(ach[nIx]));
+                : frame.assignValue(iReturn, xChar.makeHandle(frame, ach[nIx]));
     }
 
     @Override
@@ -359,7 +359,9 @@ public class xString
         public JavaLong getHashCode() {
             JavaLong hash = m_hash;
             if (hash == null) {
-                m_hash = hash = xInt64.makeHandle(calcHashCode());
+                // String handles can cache their hash without a frame; the handle composition is
+                // the owner for the Int64 hash handle.
+                m_hash = hash = xInt64.makeHandle(this, calcHashCode());
             }
             return hash;
         }

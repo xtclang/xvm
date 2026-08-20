@@ -119,7 +119,7 @@ public class xPackage
     @Override
     protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         return frame.assignValue(iReturn,
-            xInt64.makeHandle(((PackageHandle) hTarget).getId().hashCode()));
+            xInt64.makeHandle(frame, ((PackageHandle) hTarget).getId().hashCode()));
     }
 
 

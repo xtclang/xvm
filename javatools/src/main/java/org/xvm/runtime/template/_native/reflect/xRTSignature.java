@@ -465,7 +465,7 @@ public class xRTSignature
                 Parameter param = fRetVals ? hMethod.getReturn(index) : hMethod.getParam(index);
                 String sName = param.getName();
 
-                ahParams[0] = xInt64.makeHandle(index);
+                ahParams[0] = xInt64.makeHandle(frameCaller, index);
                 ahParams[1] = sName == null ? xNullable.NULL : xString.makeHandle(frameCaller, sName);
                 if (!fRetVals) {
                     ahParams[2] = xBoolean.makeHandle(param.isTypeParameter());

@@ -285,7 +285,7 @@ public abstract class BaseBinaryFP
                     lMantissa = l & MANTISSA_MASK;
             }
             return frame.assignValues(aiReturn, xBoolean.makeHandle(fSign),
-                                      xInt64.makeHandle(lMantissa), xInt64.makeHandle(iExp));
+                                      xInt64.makeHandle(frame, lMantissa), xInt64.makeHandle(frame, iExp));
         }
         }
 
@@ -369,14 +369,14 @@ public abstract class BaseBinaryFP
     protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         double d = ((FloatHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(Double.hashCode(d)));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, Double.hashCode(d)));
     }
 
     @Override
     protected int callEstimateLength(Frame frame, ObjectHandle hTarget, int iReturn) {
         double d = ((FloatHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(toString(d).length()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, toString(d).length()));
     }
 
     @Override
@@ -422,13 +422,15 @@ public abstract class BaseBinaryFP
                 case TowardZero     -> (long) (d < 0 ? Math.ceil(d) : Math.floor(d));
                 case TowardNegative -> (long) Math.floor(d);
             };
-            return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(l));
+            return frame.assignValue(iReturn,
+                    frame.container().nativeTemplates().int64().makeJavaLong(l));
         }
 
         BigInteger n = roundedInteger(d, ahArg[1]);
         return fCheckBound && n.bitLength() >= Long.SIZE
                 ? overflow(frame)
-                : frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(n.longValue()));
+                : frame.assignValue(iReturn,
+                        frame.container().nativeTemplates().int64().makeJavaLong(n.longValue()));
     }
 
     protected int convertToIntN(Frame frame, double d, ObjectHandle hRound, int iReturn) {
@@ -437,7 +439,8 @@ public abstract class BaseBinaryFP
         }
 
         return frame.assignValue(iReturn,
-                xIntN.INSTANCE.makeInt(new PackedInteger(roundedInteger(d, hRound))));
+                frame.container().nativeTemplates().intN().makeInt(
+                        new PackedInteger(roundedInteger(d, hRound))));
     }
 
     protected int convertToUIntN(Frame frame, double d, ObjectHandle hRound, int iReturn) {
@@ -450,7 +453,8 @@ public abstract class BaseBinaryFP
             return overflow(frame);
         }
 
-        return frame.assignValue(iReturn, xUIntN.INSTANCE.makeInt(new PackedInteger(n)));
+        return frame.assignValue(iReturn,
+                frame.container().nativeTemplates().uintN().makeInt(new PackedInteger(n)));
     }
 
     protected BigInteger roundedInteger(double d, ObjectHandle hRound) {

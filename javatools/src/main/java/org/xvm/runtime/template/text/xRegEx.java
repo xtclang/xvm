@@ -212,9 +212,9 @@ public class xRegEx
             int nStart = match.start(i);
             if (nStart >= 0) {
                 GenericHandle hRange = new GenericHandle(clzRange);
-                hRange.setField(frame, "lowerBound",     xInt64.makeHandle(nStart));
+                hRange.setField(frame, "lowerBound",     xInt64.makeHandle(frame, nStart));
                 hRange.setField(frame, "lowerExclusive", xBoolean.FALSE);
-                hRange.setField(frame, "upperBound",     xInt64.makeHandle(match.end(i)));
+                hRange.setField(frame, "upperBound",     xInt64.makeHandle(frame, match.end(i)));
                 hRange.setField(frame, "upperExclusive", xBoolean.TRUE);
                 hRange.setField(frame, "descending",     xBoolean.FALSE);
                 hRange.makeImmutable();

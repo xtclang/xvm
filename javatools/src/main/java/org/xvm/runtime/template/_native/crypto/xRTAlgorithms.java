@@ -179,7 +179,7 @@ public class xRTAlgorithms
             }
 
             List<ObjectHandle> list = new ArrayList<>(9);
-            list.add(xInt64.makeHandle(nBlockSize));
+            list.add(xInt64.makeHandle(frame, nBlockSize));
             list.add(hImpl);
             return frame.assignValues(aiReturn, list.toArray(Utils.OBJECTS_NONE));
 

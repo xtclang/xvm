@@ -297,7 +297,7 @@ public class xRTDelegate
     protected int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
         GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_ahValue.length));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, hDelegate.m_ahValue.length));
     }
 
     /**
@@ -330,7 +330,7 @@ public class xRTDelegate
     protected int getPropertySize(Frame frame, ObjectHandle hTarget, int iReturn) {
         DelegateHandle hDelegate = (DelegateHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_cSize));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, hDelegate.m_cSize));
     }
 
     /**

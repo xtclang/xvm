@@ -102,7 +102,7 @@ public class xCPFileStore
             ahValue[1] = xString.makeHandle(frame, constNode.getName());
             ahValue[2] = frame.getConstHandle(constNode.getCreatedConstant());
             ahValue[3] = frame.getConstHandle(constNode.getModifiedConstant());
-            ahValue[4] = xInt64.makeHandle(calcSize(constNode));
+            ahValue[4] = xInt64.makeHandle(frame, calcSize(constNode));
             return new Utils.AssignValues(aiReturn, ahValue).proceed(frame);
         }
 

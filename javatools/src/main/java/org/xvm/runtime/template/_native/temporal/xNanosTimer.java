@@ -241,7 +241,8 @@ public class xNanosTimer
                 llPicos = new LongLong(Long.MAX_VALUE);
             }
 
-            hDuration.setField(null, "picoseconds", xInt128.INSTANCE.makeHandle(llPicos));
+            hDuration.setField(null, "picoseconds",
+                    frame.container().nativeTemplates().int128().makeHandle(llPicos));
             hDuration.makeImmutable();
 
             return hDuration;

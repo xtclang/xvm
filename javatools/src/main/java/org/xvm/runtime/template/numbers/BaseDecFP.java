@@ -192,7 +192,7 @@ public abstract class BaseDecFP
                 if (!fCheckBounds ||
                         n.compareTo(BigInteger.valueOf(Long.MIN_VALUE)) >= 0 &&
                         n.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) <= 0) {
-                    return frame.assignValue(iReturn, xInt64.makeHandle(n.longValue()));
+                    return frame.assignValue(iReturn, xInt64.makeHandle(frame, n.longValue()));
                 }
             }
 
@@ -315,7 +315,7 @@ public abstract class BaseDecFP
                     lMantissa = 0;
             }
             return frame.assignValues(aiReturn, xBoolean.makeHandle(fSign),
-                                      xInt64.makeHandle(lMantissa), xInt64.makeHandle(iExp));
+                                      xInt64.makeHandle(frame, lMantissa), xInt64.makeHandle(frame, iExp));
         }
         }
 
@@ -404,14 +404,14 @@ public abstract class BaseDecFP
     protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         Decimal dec = ((DecimalHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(dec.hashCode()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, dec.hashCode()));
     }
 
     @Override
     protected int callEstimateLength(Frame frame, ObjectHandle hTarget, int iReturn) {
         Decimal dec = ((DecimalHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(dec.toString().length()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, dec.toString().length()));
     }
 
     @Override
@@ -446,7 +446,8 @@ public abstract class BaseDecFP
         }
 
         return frame.assignValue(iReturn,
-                xIntN.INSTANCE.makeInt(new PackedInteger(roundedInteger(dec, hRound))));
+                frame.container().nativeTemplates().intN().makeInt(
+                        new PackedInteger(roundedInteger(dec, hRound))));
     }
 
     protected int convertToUIntN(Frame frame, Decimal dec, ObjectHandle hRound, int iReturn) {
@@ -459,7 +460,8 @@ public abstract class BaseDecFP
             return overflow(frame);
         }
 
-        return frame.assignValue(iReturn, xUIntN.INSTANCE.makeInt(new PackedInteger(n)));
+        return frame.assignValue(iReturn,
+                frame.container().nativeTemplates().uintN().makeInt(new PackedInteger(n)));
     }
 
     protected BigInteger roundedInteger(Decimal dec, ObjectHandle hRound) {

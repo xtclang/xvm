@@ -74,7 +74,7 @@ public class xRTStringDelegate
     public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
         StringArrayHandle hDelegate = (StringArrayHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_asValue.length));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, hDelegate.m_asValue.length));
     }
 
     @Override

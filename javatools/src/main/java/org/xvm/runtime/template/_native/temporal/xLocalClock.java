@@ -169,11 +169,11 @@ public class xLocalClock
     // -----  helpers ------------------------------------------------------------------------------
 
     protected JavaLong epochMillis(Frame frame) {
-        return xInt64.makeHandle(System.currentTimeMillis());
+        return xInt64.makeHandle(frame, System.currentTimeMillis());
     }
 
     protected JavaLong timezoneMillis(Frame frame) {
-        return xInt64.makeHandle(TimeZone.getDefault().getOffset(System.currentTimeMillis()));
+        return xInt64.makeHandle(frame, TimeZone.getDefault().getOffset(System.currentTimeMillis()));
     }
 
     /**

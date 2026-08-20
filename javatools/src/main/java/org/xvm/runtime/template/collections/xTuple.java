@@ -162,7 +162,7 @@ public class xTuple
 
         switch (sPropName) {
         case "size":
-            return frame.assignValue(iReturn, xInt64.makeHandle(hTuple.m_ahValue.length));
+            return frame.assignValue(iReturn, xInt64.makeHandle(frame, hTuple.m_ahValue.length));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

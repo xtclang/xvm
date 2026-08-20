@@ -454,7 +454,7 @@ public class xRTType
 
     protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn) {
         return frame.assignValue(iReturn,
-            xInt64.makeHandle(((TypeHandle) hTarget).getUnsafeDataType().hashCode()));
+            xInt64.makeHandle(frame, ((TypeHandle) hTarget).getUnsafeDataType().hashCode()));
     }
 
 
@@ -1673,7 +1673,7 @@ public class xRTType
         MethodStructure ctor = f_ctorRegister.get();
 
         ObjectHandle[] ahArg = new ObjectHandle[ctor.getMaxVars()];
-        ahArg[0] = xInt64.makeHandle(nRegister);
+        ahArg[0] = xInt64.makeHandle(frame, nRegister);
 
         switch (clz.getTemplate().construct(frame, ctor, clz, null, ahArg, Op.A_STACK)) {
         case Op.R_NEXT:

@@ -35,6 +35,6 @@ public class xRTInt64Delegate
 
     @Override
     protected ObjectHandle makeElementHandle(long lValue) {
-        return xInt64.INSTANCE.makeJavaLong(lValue);
+        return f_container.nativeTemplates().int64().makeJavaLong(lValue);
     }
    }

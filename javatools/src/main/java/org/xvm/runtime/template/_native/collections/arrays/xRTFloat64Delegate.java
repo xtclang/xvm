@@ -71,7 +71,7 @@ public class xRTFloat64Delegate
     public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn) {
         DoubleArrayHandle hDelegate = (DoubleArrayHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_adValue.length));
+        return frame.assignValue(iReturn, xInt64.makeHandle(frame, hDelegate.m_adValue.length));
     }
 
     @Override
