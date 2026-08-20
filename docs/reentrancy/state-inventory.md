@@ -32,7 +32,7 @@ independent bug.
 
 | Priority | Category | Signal | Why it is bad | Proper replacement |
 | --- | --- | --- | --- | --- |
-| Must fix | Mutable template `INSTANCE` fields and `INSTANCE = this` constructors | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes 110 fields / 106 assignments and leaves 33/33. | Process-global last-writer-wins template lookup; constructor `this` escape; wrong container/pool can be observed | `NativeTemplates` central key table plus owner-scoped lazy lookup |
+| Must fix | Mutable template `INSTANCE` fields and `INSTANCE = this` constructors | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes 118 fields / 114 assignments and leaves 25/25. | Process-global last-writer-wins template lookup; constructor `this` escape; wrong container/pool can be observed | `NativeTemplates` central key table, existing container template cache, plus owner-scoped lazy lookup |
 | Must fix | Static runtime metadata caches | `master`: 151 field-shaped runtime/template static metadata hits after excluding `INSTANCE`; this branch fixes 110 and leaves 41. | `TypeConstant`, `TypeComposition`, `MethodStructure`, handles, and `xEnum` values are pool/container/runtime state, not JVM-global constants | Final `Lazy` fields on the owning template, immutable grouped info records, or a container-owned cache |
 | Must fix | Split mutable lifecycle state | Old `SingletonConstant` used separate handle/owner/waiter fields | Readers can observe impossible lifecycle snapshots across fibers | One immutable state snapshot in `AtomicReference`; use CAS for transitions |
 | Must fix | Natural enum construction structs escaping public paths | PR #534 enum struct mismatch | A caller can observe a construction struct where an immutable enum value is required | Public enum helpers that return initialized singletons or deferred results |
@@ -166,21 +166,20 @@ rg -l "public static (?!final)[A-Za-z0-9_<>, ?]+ INSTANCE;" \
 Current branch count:
 
 ```text
-33
+25
 ```
 
 Current branch constructor publication audit:
 
 ```bash
 rg -n "INSTANCE\s*=\s*this" \
-  javatools/src/main/java/org/xvm/runtime/template \
-  javatools/src/main/java/org/xvm/runtime | sort -u
+  javatools/src/main/java/org/xvm/runtime/template | sort -u
 ```
 
 Current branch count:
 
 ```text
-33
+25
 ```
 
 Representative bad examples:
@@ -192,14 +191,6 @@ Current branch mutable template `INSTANCE` file list:
 ```text
 javatools/src/main/java/org/xvm/runtime/template/Identity.java
 javatools/src/main/java/org/xvm/runtime/template/Proxy.java
-javatools/src/main/java/org/xvm/runtime/template/numbers/xCheckedInt16.java
-javatools/src/main/java/org/xvm/runtime/template/numbers/xCheckedInt32.java
-javatools/src/main/java/org/xvm/runtime/template/numbers/xCheckedInt64.java
-javatools/src/main/java/org/xvm/runtime/template/numbers/xCheckedInt8.java
-javatools/src/main/java/org/xvm/runtime/template/numbers/xCheckedUInt16.java
-javatools/src/main/java/org/xvm/runtime/template/numbers/xCheckedUInt32.java
-javatools/src/main/java/org/xvm/runtime/template/numbers/xCheckedUInt64.java
-javatools/src/main/java/org/xvm/runtime/template/numbers/xCheckedUInt8.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xDec128.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xDec32.java
 javatools/src/main/java/org/xvm/runtime/template/numbers/xDec64.java
