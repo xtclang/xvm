@@ -15,8 +15,8 @@ and lazy-publication counts are scan signals generated on branch
 
 | Priority | Broken pattern | Signal | Failure mode | Required replacement |
 | --- | --- | --- | --- | --- |
-| Must fix | Mutable native template `INSTANCE` fields | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes 105 fields / 101 assignments and leaves 38/38. | Last writer wins across containers; constructor `this` escape | `NativeTemplates` central key table plus container/frame lookup |
-| Must fix | Static runtime-owned metadata | `master`: 151 field-shaped runtime/template static metadata fields after excluding `INSTANCE`. This branch fixes 81 and leaves 70. | Type/composition/method/handle values from one owner reused in another owner | Owner-scoped final `Lazy`, grouped info records, or owner-owned `ConcurrentMap` |
+| Must fix | Mutable native template `INSTANCE` fields | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes 106 fields / 102 assignments and leaves 37/37. | Last writer wins across containers; constructor `this` escape | `NativeTemplates` central key table plus container/frame lookup |
+| Must fix | Static runtime-owned metadata | `master`: 151 field-shaped runtime/template static metadata fields after excluding `INSTANCE`. This branch fixes 83 and leaves 68. | Type/composition/method/handle values from one owner reused in another owner | Owner-scoped final `Lazy`, grouped info records, or owner-owned `ConcurrentMap` |
 | Must fix | Raw enum handles returned through public/native paths | 83 raw enum accessor references, including definitions/comments; several public helper groups still return raw handles | Natural enum construction struct escapes as if it were the finalized enum singleton | `ensureEnumByName`, `ensureEnumByOrdinal`, or `Utils.ensureInitializedEnum` on public paths |
 | Must fix | Manual lazy publication in shared runtime/asm objects | 111 strong same-field lazy-init matches in runtime/asm | Plain field read/write with no happens-before edge; duplicate, stale, partial, or wrong-owner state | Final `Lazy`, `ConcurrentMap.computeIfAbsent`, or explicit atomic/locked state |
 | Must fix | Split lifecycle state across several fields | `SingletonConstant` was the known concrete case and is fixed in this branch | Fibers see mixed handle/owner/waiter state; false recursion or missed wait | One immutable state snapshot in `AtomicReference<State>` or one lock |
@@ -84,8 +84,8 @@ Count with this broader command:
 
 ```text
 master: 151
-current branch: 70
-fixed in this branch: 81
+current branch: 68
+fixed in this branch: 83
 ```
 
 Representative current branch hits:
@@ -110,8 +110,6 @@ javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSStorage.java:369:
 javatools/src/main/java/org/xvm/runtime/template/_native/lang/src/xRTCompiler.java:498:    private static MethodConstant GET_MODULE_ID;
 javatools/src/main/java/org/xvm/runtime/template/_native/temporal/xNanosTimer.java:518:    private static TypeComposition s_clzDuration;
 javatools/src/main/java/org/xvm/runtime/template/annotations/xAtomic.java:247:    protected static Map<TypeConstant, xAtomic> NUMBER_TEMPLATES;
-javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java:43:    public static TypeConstant TYPE;
-javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java:44:    public static xEnum COMPLETION;
 javatools/src/main/java/org/xvm/runtime/template/reflect/xClass.java:500:    private static TypeConstant CLASS_ARRAY_TYPE;
 javatools/src/main/java/org/xvm/runtime/template/reflect/xRef.java:1187:    private static SignatureConstant s_sigGet;
 javatools/src/main/java/org/xvm/runtime/template/reflect/xVar.java:259:    protected static SignatureConstant s_sigSet;
@@ -222,9 +220,6 @@ High-risk groups still requiring review:
 
 - `xBoolean`, `xNullable`, and `xOrdered` assign static enum handles during
   `initNative()`.
-- `xFuture.COMPLETION` is still a static enum template cache; its current public
-  property path calls `Utils.assignInitializedEnum(...)`, but the static cache
-  ownership is still wrong.
 - Any remaining public/native raw `getEnumByName(...)` or
   `getEnumByOrdinal(...)` path not listed above must be reviewed before this
   category can be considered globally closed.
@@ -249,6 +244,32 @@ Required replacement:
   not crossing a public boundary.
 - Static enum-template caches must move to owner-scoped final `Lazy<xEnum>` or
   container-owned lookup.
+
+## Open Parallel-Stress Signals
+
+Status: observed runtime failures that still need root-cause work.
+
+During the `xFuture` owner-scope wave on 2026-08-20,
+`manualTests:runParallelStress -PstressIterations=2 -PstressModules=TestServices`
+failed once in the runner console path:
+
+```text
+ecstasy:TypeMismatch: Expected "immutable Array<Char>", actual "Array<Char>"
+    at collections.Array.add(Array.Element) (Array.x:418)
+    at text.StringBuffer.commitBuf() (StringBuffer.x:630)
+    at ConsoleBack.print(Object, Boolean) (runner.x:90)
+```
+
+The same command passed on rerun, and the failing stack does not go through the
+changed `xFuture` Java owner lookup. It is still a must-investigate
+parallel-runner signal because it involves `StringBuffer`/array mutability in a
+shared console service while `xString`, `xChar`, primitive array/value
+templates, and several global enum/value handles remain in the must-fix
+inventory.
+
+Do not treat this as fixed by the current branch. Treat it as evidence that the
+remaining `xString`/array/value-template migrations need their own stress
+coverage and root-cause pass.
 
 ## Manual Lazy Publication
 

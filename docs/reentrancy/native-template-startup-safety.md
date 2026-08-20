@@ -105,9 +105,9 @@ then fail under a parallel runner on a loaded machine.
 
 The XVM codebase has normalized this pattern. On `master`, a direct audit finds
 143 mutable template `INSTANCE` declarations and 139 constructor assignments of
-`INSTANCE = this` in runtime templates. This branch fixes 105 mutable template
-fields and 101 constructor assignments, leaving 38 mutable `INSTANCE` fields
-and 38 constructor assignments for follow-up. A broader scan for escape-shaped
+`INSTANCE = this` in runtime templates. This branch fixes 106 mutable template
+fields and 102 constructor assignments, leaving 37 mutable `INSTANCE` fields
+and 37 constructor assignments for follow-up. A broader scan for escape-shaped
 `this` assignments and calls reports hundreds of hits in
 `javatools/src/main/java`, many of which are false positives, but the signal is
 clear: publishing receivers into mutable non-final state is common enough that
@@ -855,7 +855,7 @@ rg -l "public static (?!final)[A-Za-z0-9_<>, ?]+ INSTANCE;" \
   --pcre2 javatools/src/main/java/org/xvm/runtime/template | sort
 ```
 
-At the time this document was written, it reported 38 unconverted template
+At the time this document was written, it reported 37 unconverted template
 files. They should be migrated in follow-up PRs. Grouping them by package:
 
 - Root templates: `Identity`, `Proxy`, `xConst`, `xException`, `xObject`.
@@ -866,7 +866,7 @@ files. They should be migrated in follow-up PRs. Grouping them by package:
 - File-system templates: no mutable `INSTANCE` fields remain in the native
   filesystem template package.
 - Native reflect templates: no `_native.reflect` mutable `INSTANCE` fields remain.
-- Annotation templates: `xAtomicIntNumber`, `xFuture`.
+- Annotation templates: `xAtomicIntNumber`.
 - Number templates: all checked and unchecked integer/decimal/float literal
   templates still listed by the audit, including `xInt*`, `xUInt*`,
   `xCheckedInt*`, `xCheckedUInt*`, `xDec*`, `xFloat*`, `xFPLiteral`,
@@ -977,6 +977,7 @@ Converted `INSTANCE` fields in this branch include:
 - `xOSDirectory`,
 - `xOSFile`,
 - `xRawOSFileChannel`,
+- `xFuture`,
 - `xModule`,
 - `xPackage`.
 
@@ -997,7 +998,6 @@ Known high-priority leftovers include:
   range, date/time, duration, version, path, and hash signature.
 - `xException`: cached exception class compositions and formatting method.
 - `xAtomic`: `NUMBER_TEMPLATES`.
-- `xFuture`: `TYPE`, `COMPLETION`.
 - File-system templates: the event method cache in `xOSStorage`.
 - Miscellaneous native templates: `xRTKeyStore.s_typeNamedPassword`,
   `xRTCompiler.GET_MODULE_ID`, `xRTBuffer.PROP_RAW_BYTES`,

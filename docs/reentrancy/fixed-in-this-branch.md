@@ -129,6 +129,7 @@ getters for existing call sites; resource templates are resolved directly from
 - `xRTViewToBitFromNibble.INSTANCE`
 - `xListMap.INSTANCE`
 - `xTuple.INSTANCE`
+- `xFuture.INSTANCE`
 - `xOSDirectory.INSTANCE`
 - `xOSFile.INSTANCE`
 - `xRawOSFileChannel.INSTANCE`
@@ -274,6 +275,7 @@ fields. The branch moves them to owner-scoped final lazy state.
 | `xRTViewFromBitTo*`, `xRTViewFromByteTo*`, `xRTViewToBitFromNibble` | constructor-published specialized view `INSTANCE` fields | owner-local base view dispatch or existing `xRTViewToBit` dispatch | Must fix |
 | `xListMap`, `Utils`, map-literal opcodes, enum-name map construction | `xListMap.INSTANCE`, static `xListMap.CONSTRUCTOR`, static `Utils.LIST_MAP_CONSTRUCT` | `NativeTemplates.listMap()`, owner-scoped `xListMap.f_constructor`, and constructor lookup from the caller's map composition | Must fix |
 | `xTuple`, void-return handling, async service responses | `xTuple.INSTANCE`, `xTuple.INCEPTION_CLASS`, static `xTuple.H_VOID` | `NativeTemplates.tuple()`, final owner-local inception constant, and per-container lazy `Tuple()` handle via `xTuple.ensureEmptyTuple(container)` | Must fix |
+| `xFuture`, wait-frame construction, async result assignment | `xFuture.INSTANCE`, static `TYPE`, static `COMPLETION`, ownerless `makeHandle(CompletableFuture)` | `NativeTemplates.future()`, final owner-local lazy future type and completion enum template, and `makeHandle(Container, CompletableFuture)` | Must fix |
 | Native filesystem templates and CP filesystem constants | `xOSDirectory.INSTANCE`, `xOSFile.INSTANCE`, `xRawOSFileChannel.INSTANCE`, and static constructor `MethodStructure` caches on `xOSDirectory`, `xOSFile`, `xCPDirectory`, `xCPFile`, `xCPFileStore` | `NativeTemplates` filesystem getters plus final owner-scoped lazy constructor caches on the owning template | Must fix |
 | `xRTFunction` | `LISTMAP_TYPE`, ownerless native/internal function factories, process-global finalizer no-op anchor | `f_typeListMap`, owner-required helper APIs, `FullyBoundHandle.noOp(Container)` | Must fix |
 | `xRTMethod` | `EMPTY_ARRAY` | `f_constEmptyArray` | Must fix |
@@ -344,6 +346,8 @@ This branch removes or hardens those overloads:
   `xRTType.makeForeignHandle(Container, TypeConstant)`. `TypeConstant` already
   had the caller container in `ensureTypeHandle(Container)`, so the owner is now
   passed through instead of discarded.
+- `xFuture.makeHandle(CompletableFuture<ObjectHandle>)` was replaced by
+  `xFuture.makeHandle(Container, CompletableFuture<ObjectHandle>)`.
 - `xRTFunction.makeAsyncNativeHandle(MethodStructure)` was replaced by
   `xRTFunction.makeAsyncNativeHandle(Frame, MethodStructure)`.
 - `NativeTemplates.get(...)`, `xRTFunction.makeInternalHandle(...)`,
@@ -456,8 +460,8 @@ on `master` and still remain after this branch. The full list is maintained in
 [state-inventory.md#mutable-template-instance-inventory](state-inventory.md#mutable-template-instance-inventory).
 
 Examples still requiring follow-up include root templates such as `Identity`,
-`xConst`, `xException`, and `xObject`; annotation templates such as `xFuture`
-and `xAtomicIntNumber`; reflection templates such as `xRef` and `xVar`; many
+`xConst`, `xException`, and `xObject`; the annotation template
+`xAtomicIntNumber`; reflection templates such as `xRef` and `xVar`; many
 primitive templates; and `xString`/`xChar`. Those are not safe by design just
 because this PR does not touch them; they are the next migration backlog.
 

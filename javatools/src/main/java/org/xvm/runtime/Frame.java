@@ -236,7 +236,7 @@ public class Frame
      * @return a new frame
      */
     public Frame createWaitFrame(CompletableFuture<ObjectHandle> cfResult, int iReturn) {
-        return createWaitFrame(xFuture.makeHandle(cfResult), iReturn);
+        return createWaitFrame(xFuture.makeHandle(container(), cfResult), iReturn);
     }
 
     /**
@@ -251,8 +251,12 @@ public class Frame
         ObjectHandle[] ahFuture = new ObjectHandle[]{hFuture};
 
         Frame frameNext = createNativeFrame(WAIT_FOR_FUTURE, ahFuture, iReturn, null);
+        Container    container  = container();
+        // Future metadata is cached by the owning template; bind this synthetic
+        // wait frame to the caller's owner once and reuse that cached type.
+        TypeConstant typeFuture = xFuture.getInstance(container).getCanonicalType();
 
-        frameNext.f_aInfo[0] = new VarInfo(xFuture.TYPE, VAR_DYNAMIC_REF);
+        frameNext.f_aInfo[0] = new VarInfo(typeFuture, VAR_DYNAMIC_REF);
 
         // add a wait completion notification; the service is responsible for timing out
         hFuture.getFuture().whenComplete((r, x) -> f_fiber.onResponse());
@@ -273,6 +277,10 @@ public class Frame
         ObjectHandle[] ahFuture = new ObjectHandle[cReturns];
 
         Frame frameNext = createNativeFrame(WAIT_FOR_FUTURE, ahFuture, Op.A_MULTI, aiReturn);
+        Container    container  = container();
+        // Future metadata is cached by the owning template; bind every
+        // synthetic result register in this wait frame to the same owner.
+        TypeConstant typeFuture = xFuture.getInstance(container).getCanonicalType();
 
         for (int i = 0; i < cReturns; i++) {
             final int iResult = i;
@@ -280,9 +288,9 @@ public class Frame
             CompletableFuture<ObjectHandle> cfReturn =
                     cfResult.thenApply(ahResult -> ahResult[iResult]);
 
-            ahFuture[i] = xFuture.makeHandle(cfReturn);
+            ahFuture[i] = xFuture.makeHandle(container, cfReturn);
 
-            frameNext.f_aInfo[i] = new VarInfo(xFuture.TYPE, VAR_DYNAMIC_REF);
+            frameNext.f_aInfo[i] = new VarInfo(typeFuture, VAR_DYNAMIC_REF);
         }
 
         // add a wait completion notification; the service is responsible for timing out
@@ -1047,7 +1055,7 @@ public class Frame
         }
 
         if (isFuture(iReturn)) {
-            return assignValue(iReturn, xFuture.makeHandle(cfResult));
+            return assignValue(iReturn, xFuture.makeHandle(container(), cfResult));
         }
 
         // the wait frame will deal with exceptions

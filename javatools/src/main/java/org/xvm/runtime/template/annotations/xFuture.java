@@ -15,6 +15,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
@@ -33,34 +34,20 @@ import org.xvm.runtime.template.reflect.xVar;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Future native implementation.
  */
 public class xFuture
         extends xVar {
-    public static xFuture INSTANCE;
-    public static TypeConstant TYPE;
-    public static xEnum COMPLETION;
-
-    public xFuture(Container container, ClassStructure structure, boolean fInstance) {
+    public xFuture(Container container, ClassStructure structure) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void initNative() {
-        ConstantPool  pool     = pool();
-        ClassConstant idMixin  = (ClassConstant) f_struct.getIdentityConstant();
-        Annotation    anno     = pool.ensureAnnotation(idMixin);
-        TypeConstant  typeVar  = xVar.INSTANCE.getCanonicalType();
-
-        TYPE       = pool.ensureAnnotatedTypeConstant(typeVar, anno);
-        COMPLETION = (xEnum) f_container.getTemplate("annotations.Future.Completion");
-
         markNativeMethod("thenDo", null, null);
         markNativeMethod("passTo", null, null);
         markNativeMethod("transform", null, null);
@@ -87,7 +74,7 @@ public class xFuture
 
     @Override
     public TypeConstant getCanonicalType() {
-        return TYPE;
+        return f_type.get();
     }
 
     @Override
@@ -116,12 +103,13 @@ public class xFuture
             return frame.assignValue(iReturn, hThis.getException());
 
         case "completion": {
+            xEnum      enumCompletion = f_templateCompletion.get();
             EnumHandle hValue =
                 hThis.isAssigned() ?
                     hThis.getFuture().isCompletedExceptionally() ?
-                        COMPLETION.getEnumByName("Error")  :
-                        COMPLETION.getEnumByName("Result") :
-                    COMPLETION.getEnumByName("Pending");
+                        enumCompletion.getEnumByName("Error")  :
+                        enumCompletion.getEnumByName("Result") :
+                    enumCompletion.getEnumByName("Pending");
 
             return Utils.assignInitializedEnum(frame, hValue, iReturn);
         }
@@ -749,13 +737,40 @@ public class xFuture
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
-    public static FutureHandle makeHandle(CompletableFuture<ObjectHandle> future) {
-        return makeHandle(INSTANCE.getCanonicalClass(), future);
+    public static FutureHandle makeHandle(Container container, CompletableFuture<ObjectHandle> future) {
+        return makeHandle(getInstance(container).getCanonicalClass(), future);
     }
 
     public static FutureHandle makeHandle(TypeComposition clz, CompletableFuture<ObjectHandle> future) {
         return new FutureHandle(clz, null, future);
     }
+
+    public static xFuture getInstance(Container container) {
+        return NativeTemplates.get(container).future();
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * Owner-scoped equivalent of the old static TYPE cache. The Future
+     * annotation type is derived from this template's pool and this container's
+     * Var template, so it cannot be JVM-global.
+     */
+    private final Lazy<TypeConstant> f_type = Lazy.of(() -> {
+        ConstantPool  pool    = pool();
+        ClassConstant idMixin = (ClassConstant) f_struct.getIdentityConstant();
+        Annotation    anno    = pool.ensureAnnotation(idMixin);
+        TypeConstant  typeVar = f_container.getTemplate("reflect.Var", xVar.class)
+                .getCanonicalType();
+
+        return pool.ensureAnnotatedTypeConstant(typeVar, anno);
+    });
+
+    /**
+     * Owner-scoped equivalent of the old static COMPLETION enum template cache.
+     */
+    private final Lazy<xEnum> f_templateCompletion = Lazy.of(() ->
+            f_container.getEnumTemplate("annotations.Future.Completion"));
 
     /**
      * Represents a future ObjectHandle.

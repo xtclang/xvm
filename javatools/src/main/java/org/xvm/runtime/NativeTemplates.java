@@ -14,6 +14,8 @@ import org.xvm.runtime.template.collections.xTuple;
 
 import org.xvm.runtime.template.maps.xListMap;
 
+import org.xvm.runtime.template.annotations.xFuture;
+
 import org.xvm.runtime.template.reflect.xModule;
 import org.xvm.runtime.template.reflect.xPackage;
 import org.xvm.runtime.template.reflect.xInjector;
@@ -137,6 +139,10 @@ public final class NativeTemplates {
 
     public xTuple tuple() {
         return get(TUPLE);
+    }
+
+    public xFuture future() {
+        return get(FUTURE);
     }
 
     public xOSDirectory osDirectory() {
@@ -388,6 +394,9 @@ public final class NativeTemplates {
 
     private static final NativeTemplateRef<xTuple> TUPLE =
             NativeTemplateRef.of("collections.Tuple", xTuple.class);
+
+    private static final NativeTemplateRef<xFuture> FUTURE =
+            NativeTemplateRef.of("annotations.Future", xFuture.class);
 
     private static final NativeTemplateRef<xOSDirectory> OS_DIRECTORY =
             NativeTemplateRef.of("_native.fs.OSDirectory", xOSDirectory.class);
