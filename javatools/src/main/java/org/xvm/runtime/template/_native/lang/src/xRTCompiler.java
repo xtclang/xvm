@@ -247,8 +247,11 @@ public class xRTCompiler
 
         assert fSuccess || !listErrors.isEmpty(); // a compilation failure must report reasons
 
-        ConstantPool    pool      = frame.poolContext();
-        TypeConstant    typeArray = pool.ensureArrayType(xRTFileTemplate.FILE_TEMPLATE_TYPE);
+        // FileTemplate handles are resolved by this native compiler's container, so build the
+        // matching array type from that same owner instead of a process-global template cache.
+        ConstantPool    pool      = f_container.getConstantPool();
+        TypeConstant    typeArray = pool.ensureArrayType(
+                xRTFileTemplate.ensureFileTemplateType(f_container));
         TypeComposition clzArray  = f_container.resolveClass(typeArray);
 
         ArrayHandle haTemplates;

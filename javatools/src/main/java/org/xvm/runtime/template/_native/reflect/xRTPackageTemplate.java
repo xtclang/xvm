@@ -10,27 +10,20 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.TypeComposition;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native PackageTemplate implementation.
  */
 public class xRTPackageTemplate
         extends xRTClassTemplate {
-    public static xRTPackageTemplate INSTANCE;
-
     public xRTPackageTemplate(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
     public void initNative() {
-        ConstantPool pool = f_container.getConstantPool();
-
-        PACKAGE_TEMPLATE_TYPE = pool.ensureEcstasyTypeConstant("reflect.PackageTemplate");
     }
 
 
@@ -45,13 +38,21 @@ public class xRTPackageTemplate
      */
     public static ComponentTemplateHandle makeHandle(Container container, PackageStructure pkg) {
         // note: no need to initialize the struct because there are no natural fields
-        TypeComposition clz = INSTANCE.ensureClass(container,
-                                INSTANCE.getCanonicalType(), PACKAGE_TEMPLATE_TYPE);
+        xRTPackageTemplate template = container.getTemplate("_native.reflect.RTPackageTemplate",
+                xRTPackageTemplate.class);
+        TypeComposition clz = template.ensureClass(container,
+                template.getCanonicalType(), template.f_typePackageTemplate.get());
         return new ComponentTemplateHandle(clz, pkg);
     }
 
 
-    // ----- constants -----------------------------------------------------------------------------
+    // ----- data members --------------------------------------------------------------------------
 
-    private static TypeConstant PACKAGE_TEMPLATE_TYPE;
+    /**
+     * PackageTemplate is a container-owned type constant, not JVM-global metadata.
+     */
+    private final Lazy<TypeConstant> f_typePackageTemplate = Lazy.of(() -> {
+        ConstantPool pool = f_container.getConstantPool();
+        return pool.ensureEcstasyTypeConstant("reflect.PackageTemplate");
+    });
 }
