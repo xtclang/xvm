@@ -300,7 +300,7 @@ public class xRTFunction
 
             // TODO: what if any of the assigns below return a deferred handle?
             frame.assignValue(aiReturn[0], xBoolean.TRUE);
-            frame.assignValue(aiReturn[1], xRTMethodTemplate.makeHandle(method));
+            frame.assignValue(aiReturn[1], xRTMethodTemplate.makeHandle(frame.container(), method));
             frame.assignValue(aiReturn[2], makeHandle(frame, method));
 
             Frame.Continuation stepNext = frameCaller ->
