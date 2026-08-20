@@ -18,11 +18,14 @@ import org.xvm.asm.Op;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
+
+import org.xvm.util.Lazy;
 
 
 /**
@@ -30,14 +33,8 @@ import org.xvm.runtime.template.xBoolean;
  */
 public class xOSDirectory
         extends xOSFileNode {
-    public static xOSDirectory INSTANCE;
-
-    public xOSDirectory(Container container, ClassStructure structure, boolean fInstance) {
+    public xOSDirectory(Container container, ClassStructure structure) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -46,8 +43,6 @@ public class xOSDirectory
         markNativeMethod("watchRecursively", null, null);
 
         invalidateTypeInfo();
-
-        s_constructor = getStructure().findConstructor();
     }
 
     @Override
@@ -120,13 +115,24 @@ public class xOSDirectory
 
         NodeHandle     hStruct = new NodeHandle(clz.ensureAccess(Constants.Access.STRUCT),
                                         path.toAbsolutePath(), hOSStore);
-        ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
+        MethodStructure constructor = f_constructor.get();
+        ObjectHandle[]  ahVar       = Utils.ensureSize(Utils.OBJECTS_NONE,
+                constructor.getMaxVars());
 
-        return proceedConstruction(frame, s_constructor, true, hStruct, ahVar, iReturn);
+        return proceedConstruction(frame, constructor, true, hStruct, ahVar, iReturn);
     }
 
+    public static xOSDirectory getInstance(Container container) {
+        return NativeTemplates.get(container).osDirectory();
+    }
 
-    // ----- constants -----------------------------------------------------------------------------
+    // ----- fields --------------------------------------------------------------------------------
 
-    private static MethodStructure s_constructor;
+    /**
+     * Preserves the old one-time constructor lookup, but scopes the cached
+     * MethodStructure to this template's owning ClassStructure instead of a
+     * process-global static.
+     */
+    private final Lazy<MethodStructure> f_constructor = Lazy.of(() ->
+            getStructure().findConstructor());
 }

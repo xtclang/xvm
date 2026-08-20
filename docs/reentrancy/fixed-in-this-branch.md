@@ -129,6 +129,9 @@ getters for existing call sites; resource templates are resolved directly from
 - `xRTViewToBitFromNibble.INSTANCE`
 - `xListMap.INSTANCE`
 - `xTuple.INSTANCE`
+- `xOSDirectory.INSTANCE`
+- `xOSFile.INSTANCE`
+- `xRawOSFileChannel.INSTANCE`
 - `xRTNameService.INSTANCE`
 - `xRTClassTemplate.INSTANCE`
 - `xRTComponentTemplate.INSTANCE`
@@ -271,6 +274,7 @@ fields. The branch moves them to owner-scoped final lazy state.
 | `xRTViewFromBitTo*`, `xRTViewFromByteTo*`, `xRTViewToBitFromNibble` | constructor-published specialized view `INSTANCE` fields | owner-local base view dispatch or existing `xRTViewToBit` dispatch | Must fix |
 | `xListMap`, `Utils`, map-literal opcodes, enum-name map construction | `xListMap.INSTANCE`, static `xListMap.CONSTRUCTOR`, static `Utils.LIST_MAP_CONSTRUCT` | `NativeTemplates.listMap()`, owner-scoped `xListMap.f_constructor`, and constructor lookup from the caller's map composition | Must fix |
 | `xTuple`, void-return handling, async service responses | `xTuple.INSTANCE`, `xTuple.INCEPTION_CLASS`, static `xTuple.H_VOID` | `NativeTemplates.tuple()`, final owner-local inception constant, and per-container lazy `Tuple()` handle via `xTuple.ensureEmptyTuple(container)` | Must fix |
+| Native filesystem templates and CP filesystem constants | `xOSDirectory.INSTANCE`, `xOSFile.INSTANCE`, `xRawOSFileChannel.INSTANCE`, and static constructor `MethodStructure` caches on `xOSDirectory`, `xOSFile`, `xCPDirectory`, `xCPFile`, `xCPFileStore` | `NativeTemplates` filesystem getters plus final owner-scoped lazy constructor caches on the owning template | Must fix |
 | `xRTFunction` | `LISTMAP_TYPE`, ownerless native/internal function factories, process-global finalizer no-op anchor | `f_typeListMap`, owner-required helper APIs, `FullyBoundHandle.noOp(Container)` | Must fix |
 | `xRTMethod` | `EMPTY_ARRAY` | `f_constEmptyArray` | Must fix |
 | `xRTMethodTemplate` | `INSTANCE`, `METHOD_TEMPLATE_COMP`, ownerless `makeHandle(MethodStructure)` | caller-owned `makeHandle(Container, MethodStructure)` and `f_compMethodTemplate` | Must fix |
@@ -451,10 +455,11 @@ template startup and enum/singleton race. Many mutable `INSTANCE` fields remain
 on `master` and still remain after this branch. The full list is maintained in
 [state-inventory.md#mutable-template-instance-inventory](state-inventory.md#mutable-template-instance-inventory).
 
-Examples still requiring follow-up include array delegate subclasses such as
-`xRTBitDelegate` and `xRTBooleanDelegate`, many primitive templates, and
-`xString`. Those are not safe by design just because this PR does not touch
-them; they are the next migration backlog.
+Examples still requiring follow-up include root templates such as `Identity`,
+`xConst`, `xException`, and `xObject`; annotation templates such as `xFuture`
+and `xAtomicIntNumber`; reflection templates such as `xRef` and `xVar`; many
+primitive templates; and `xString`/`xChar`. Those are not safe by design just
+because this PR does not touch them; they are the next migration backlog.
 
 ## Proof Points Added By This Branch
 

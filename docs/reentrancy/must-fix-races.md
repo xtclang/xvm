@@ -15,8 +15,8 @@ and lazy-publication counts are scan signals generated on branch
 
 | Priority | Broken pattern | Signal | Failure mode | Required replacement |
 | --- | --- | --- | --- | --- |
-| Must fix | Mutable native template `INSTANCE` fields | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes 102 fields / 98 assignments and leaves 41/41. | Last writer wins across containers; constructor `this` escape | `NativeTemplates` central key table plus container/frame lookup |
-| Must fix | Static runtime-owned metadata | `master`: 151 field-shaped runtime/template static metadata fields after excluding `INSTANCE`. This branch fixes 77 and leaves 74. | Type/composition/method/handle values from one owner reused in another owner | Owner-scoped final `Lazy`, grouped info records, or owner-owned `ConcurrentMap` |
+| Must fix | Mutable native template `INSTANCE` fields | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes 105 fields / 101 assignments and leaves 38/38. | Last writer wins across containers; constructor `this` escape | `NativeTemplates` central key table plus container/frame lookup |
+| Must fix | Static runtime-owned metadata | `master`: 151 field-shaped runtime/template static metadata fields after excluding `INSTANCE`. This branch fixes 81 and leaves 70. | Type/composition/method/handle values from one owner reused in another owner | Owner-scoped final `Lazy`, grouped info records, or owner-owned `ConcurrentMap` |
 | Must fix | Raw enum handles returned through public/native paths | 83 raw enum accessor references, including definitions/comments; several public helper groups still return raw handles | Natural enum construction struct escapes as if it were the finalized enum singleton | `ensureEnumByName`, `ensureEnumByOrdinal`, or `Utils.ensureInitializedEnum` on public paths |
 | Must fix | Manual lazy publication in shared runtime/asm objects | 111 strong same-field lazy-init matches in runtime/asm | Plain field read/write with no happens-before edge; duplicate, stale, partial, or wrong-owner state | Final `Lazy`, `ConcurrentMap.computeIfAbsent`, or explicit atomic/locked state |
 | Must fix | Split lifecycle state across several fields | `SingletonConstant` was the known concrete case and is fixed in this branch | Fibers see mixed handle/owner/waiter state; false recursion or missed wait | One immutable state snapshot in `AtomicReference<State>` or one lock |
@@ -84,8 +84,8 @@ Count with this broader command:
 
 ```text
 master: 151
-current branch: 74
-fixed in this branch: 77
+current branch: 70
+fixed in this branch: 81
 ```
 
 Representative current branch hits:
@@ -105,26 +105,21 @@ javatools/src/main/java/org/xvm/runtime/Utils.java:1790:    private static TypeC
 javatools/src/main/java/org/xvm/runtime/Utils.java:1791:    private static SignatureConstant SIG_FREEZE;
 javatools/src/main/java/org/xvm/runtime/Utils.java:1792:    private static SignatureConstant SIG_GET_RESOURCE;
 javatools/src/main/java/org/xvm/runtime/Utils.java:1793:    private static SignatureConstant SIG_INJECT;
-javatools/src/main/java/org/xvm/runtime/template/_native/crypto/xRTKeyStore.java:581:    private static TypeConstant s_typeNamedPassword;
-javatools/src/main/java/org/xvm/runtime/template/_native/fs/xCPDirectory.java:56:    private static MethodStructure s_constructor;
-javatools/src/main/java/org/xvm/runtime/template/_native/fs/xCPFile.java:56:    private static MethodStructure s_constructor;
-javatools/src/main/java/org/xvm/runtime/template/_native/fs/xCPFileStore.java:159:    private static MethodStructure s_constructor;
-javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSDirectory.java:131:    private static MethodStructure s_constructor;
-javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSFile.java:509:    private static MethodStructure s_constructor;
-javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSStorage.java:366:    private static MethodStructure s_methodOnEvent;
-javatools/src/main/java/org/xvm/runtime/template/_native/lang/src/xRTCompiler.java:501:    private static MethodConstant GET_MODULE_ID;
-javatools/src/main/java/org/xvm/runtime/template/_native/temporal/xNanosTimer.java:522:    private static TypeComposition s_clzDuration;
-javatools/src/main/java/org/xvm/runtime/template/annotations/xAtomic.java:253:    protected static Map<TypeConstant, xAtomic> NUMBER_TEMPLATES;
+javatools/src/main/java/org/xvm/runtime/template/_native/crypto/xRTKeyStore.java:575:    private static TypeConstant s_typeNamedPassword;
+javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSStorage.java:369:    private static MethodStructure s_methodOnEvent;
+javatools/src/main/java/org/xvm/runtime/template/_native/lang/src/xRTCompiler.java:498:    private static MethodConstant GET_MODULE_ID;
+javatools/src/main/java/org/xvm/runtime/template/_native/temporal/xNanosTimer.java:518:    private static TypeComposition s_clzDuration;
+javatools/src/main/java/org/xvm/runtime/template/annotations/xAtomic.java:247:    protected static Map<TypeConstant, xAtomic> NUMBER_TEMPLATES;
 javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java:43:    public static TypeConstant TYPE;
 javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java:44:    public static xEnum COMPLETION;
-javatools/src/main/java/org/xvm/runtime/template/reflect/xClass.java:504:    private static TypeConstant CLASS_ARRAY_TYPE;
+javatools/src/main/java/org/xvm/runtime/template/reflect/xClass.java:500:    private static TypeConstant CLASS_ARRAY_TYPE;
 javatools/src/main/java/org/xvm/runtime/template/reflect/xRef.java:1187:    private static SignatureConstant s_sigGet;
 javatools/src/main/java/org/xvm/runtime/template/reflect/xVar.java:259:    protected static SignatureConstant s_sigSet;
-javatools/src/main/java/org/xvm/runtime/template/text/xString.java:454:    public static StringHandle EMPTY_STRING;
-javatools/src/main/java/org/xvm/runtime/template/text/xString.java:455:    public static StringHandle EMPTY_ARRAY;
-javatools/src/main/java/org/xvm/runtime/template/text/xString.java:456:    public static StringHandle ZERO;
-javatools/src/main/java/org/xvm/runtime/template/text/xString.java:457:    public static StringHandle ONE;
-javatools/src/main/java/org/xvm/runtime/template/text/xString.java:459:    private static MethodStructure METHOD_APPEND_TO;
+javatools/src/main/java/org/xvm/runtime/template/text/xString.java:445:    public static StringHandle EMPTY_STRING;
+javatools/src/main/java/org/xvm/runtime/template/text/xString.java:446:    public static StringHandle EMPTY_ARRAY;
+javatools/src/main/java/org/xvm/runtime/template/text/xString.java:447:    public static StringHandle ZERO;
+javatools/src/main/java/org/xvm/runtime/template/text/xString.java:448:    public static StringHandle ONE;
+javatools/src/main/java/org/xvm/runtime/template/text/xString.java:450:    private static MethodStructure METHOD_APPEND_TO;
 javatools/src/main/java/org/xvm/runtime/template/xBoolean.java:19:    public static BooleanHandle TRUE;
 javatools/src/main/java/org/xvm/runtime/template/xBoolean.java:20:    public static BooleanHandle FALSE;
 javatools/src/main/java/org/xvm/runtime/template/xConst.java:780:    private static MethodStructure FN_ESTIMATE_LENGTH;
