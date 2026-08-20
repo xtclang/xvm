@@ -91,7 +91,6 @@ public abstract class Utils {
         ANNOTATION_TEMPLATE_CONSTRUCT = ANNOTATION_TEMPLATE_TEMPLATE.getStructure().findMethod("construct", 2);
         ARGUMENT_CONSTRUCT            = ARGUMENT_TEMPLATE.getStructure().findMethod("construct", 2);
         RT_PARAMETER_CONSTRUCT        = RT_PARAMETER_TEMPLATE.getStructure().findMethod("construct", 5);
-        LIST_MAP_CONSTRUCT            = xListMap.INSTANCE.ensureConstructor();
         ANNOTATION_ARRAY_TYPE         = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Annotation"));
         ARGUMENT_ARRAY_TYPE           = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Argument"));
         CONST_HELPER                  = container.getClassStructure("_native.ConstHelper");
@@ -1638,7 +1637,7 @@ public abstract class Utils {
      */
     public static int constructListMap(Frame frame, TypeComposition clzMap,
                                        ObjectHandle haKeys, ObjectHandle haValues, int iReturn) {
-        MethodStructure constructor = LIST_MAP_CONSTRUCT;
+        MethodStructure constructor = clzMap.getTemplate(xListMap.class).ensureConstructor();
         ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
         ahArg[0] = haKeys;
         ahArg[1] = haValues;
@@ -1786,7 +1785,6 @@ public abstract class Utils {
     private static MethodStructure   ANNOTATION_TEMPLATE_CONSTRUCT;
     private static MethodStructure   ARGUMENT_CONSTRUCT;
     private static MethodStructure   RT_PARAMETER_CONSTRUCT;
-    private static MethodStructure   LIST_MAP_CONSTRUCT;
     private static MethodStructure   STRING_VALUE_OF;
     private static TypeConstant      ANNOTATION_ARRAY_TYPE;
     private static TypeConstant      ARGUMENT_ARRAY_TYPE;

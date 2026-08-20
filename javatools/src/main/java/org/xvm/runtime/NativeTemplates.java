@@ -11,6 +11,8 @@ import org.xvm.runtime.template.collections.xBitArray;
 import org.xvm.runtime.template.collections.xByteArray;
 import org.xvm.runtime.template.collections.xNibbleArray;
 
+import org.xvm.runtime.template.maps.xListMap;
+
 import org.xvm.runtime.template.reflect.xModule;
 import org.xvm.runtime.template.reflect.xPackage;
 import org.xvm.runtime.template.reflect.xInjector;
@@ -122,6 +124,10 @@ public final class NativeTemplates {
 
     public xNibbleArray nibbleArray() {
         return f_templateNibble.get();
+    }
+
+    public xListMap listMap() {
+        return get(LIST_MAP);
     }
 
     public boolean isArray(ClassTemplate template) {
@@ -355,6 +361,9 @@ public final class NativeTemplates {
     private static final NativeTemplateRef<xRTSlicingDelegate> RT_SLICING_DELEGATE =
             NativeTemplateRef.of("_native.collections.arrays.RTSlicingDelegate",
                     xRTSlicingDelegate.class);
+
+    private static final NativeTemplateRef<xListMap> LIST_MAP =
+            NativeTemplateRef.of("maps.ListMap", xListMap.class);
 
     private static final NativeTemplateRef<xContainerControl> CONTAINER_CONTROL =
             NativeTemplateRef.of("_native.mgmt.ContainerControl", xContainerControl.class);

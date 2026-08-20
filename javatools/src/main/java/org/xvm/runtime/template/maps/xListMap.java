@@ -16,6 +16,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
 import org.xvm.runtime.TypeComposition;
@@ -23,20 +24,16 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xArray;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native ListMap support.
  */
 public class xListMap
         extends ClassTemplate {
-    public static xListMap INSTANCE;
-
-    public xListMap(Container container, ClassStructure structure, boolean fInstance) {
+    public xListMap(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -111,18 +108,19 @@ public class xListMap
                 ? new DeferredArrayHandle(clzValArray, ahVal)
                 : xArray.createImmutableArray(clzValArray, ahVal);
 
-        ObjectHandle[] ahArg = new ObjectHandle[CONSTRUCTOR.getMaxVars()];
+        MethodStructure constructor = ensureConstructor();
+        ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
         ahArg[0] = haKeys;
         ahArg[1] = haVals;
 
         if (fDeferredKey || fDeferredVal) {
             Frame.Continuation stepNext = frameCaller ->
-                construct(frameCaller, CONSTRUCTOR, clzMap, null, ahArg, iReturn);
+                construct(frameCaller, constructor, clzMap, null, ahArg, iReturn);
 
             return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
         }
 
-        return construct(frame, CONSTRUCTOR, clzMap, null, ahArg, iReturn);
+        return construct(frame, constructor, clzMap, null, ahArg, iReturn);
     }
 
 
@@ -130,10 +128,17 @@ public class xListMap
      * @return structure for "construct(Key[] keys, Value[] vals)"
      */
     public MethodStructure ensureConstructor() {
-        if (CONSTRUCTOR == null) {
-            CONSTRUCTOR = getStructure().findMethod("construct", m -> m.getParamCount() == 3);
-        }
-        return CONSTRUCTOR;
+        return f_constructor.get();
     }
-    private static MethodStructure CONSTRUCTOR;
+
+    public static xListMap getInstance(Container container) {
+        return NativeTemplates.get(container).listMap();
+    }
+
+    /**
+     * Owner-scoped constructor cache. The MethodStructure belongs to the template structure resolved
+     * by this container; keeping it static would cross containers during parallel startup.
+     */
+    private final Lazy<MethodStructure> f_constructor = Lazy.of(() ->
+            getStructure().findMethod("construct", m -> m.getParamCount() == 3));
 }

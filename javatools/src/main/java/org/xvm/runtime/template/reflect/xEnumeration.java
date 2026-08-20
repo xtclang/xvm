@@ -118,7 +118,7 @@ public class xEnumeration
             ConstantPool pool    = frame.poolContext();
             TypeConstant typeMap = pool.ensureMapType(pool.typeString(), idEnumeration.getType());
 
-            switch (xListMap.INSTANCE.constructMap(
+            switch (xListMap.getInstance(frame.container()).constructMap(
                         frame, typeMap, ahName, ahVal, false, fDefer, Op.A_STACK)) {
             case Op.R_NEXT: {
                 hMap = frame.popStack();
