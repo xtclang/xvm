@@ -31,22 +31,20 @@ import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native OSFileStore implementation.
  */
 public class xCPFileStore
         extends xConst {
-    public xCPFileStore(Container container, ClassStructure structure, boolean fInstance) {
+    public xCPFileStore(Container container, ClassStructure structure) {
         super(container, structure, false);
     }
 
     @Override
     public void initNative() {
-        ConstantPool pool = f_container.getConstantPool();
-
-        s_constructor = getStructure().findConstructor(pool.typeString(), pool.typeObject());
-
         markNativeMethod("loadNode"     , null, null);
         markNativeMethod("loadDirectory", null, null);
         markNativeMethod("loadFile"     , null, null);
@@ -61,11 +59,13 @@ public class xCPFileStore
                                         getCanonicalType(), frame.poolContext().typeFileStore());
 
             GenericHandle   hStruct = new GenericHandle(clz.ensureAccess(Access.STRUCT));
-            ObjectHandle[]  ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
+            MethodStructure constructor = f_constructor.get();
+            ObjectHandle[]  ahVar       = Utils.ensureSize(Utils.OBJECTS_NONE,
+                    constructor.getMaxVars());
             ahVar[0] = xString.makeHandle(constStore.getPath());
             ahVar[1] = new ConstantHandle(constStore.getValue());
 
-            return proceedConstruction(frame, s_constructor, true, hStruct, ahVar, Op.A_STACK);
+            return proceedConstruction(frame, constructor, true, hStruct, ahVar, Op.A_STACK);
         }
 
         return super.createConstHandle(frame, constant);
@@ -154,7 +154,15 @@ public class xCPFileStore
     }
 
 
-    // ----- constants -----------------------------------------------------------------------------
+    // ----- fields --------------------------------------------------------------------------------
 
-    private static MethodStructure s_constructor;
+    /**
+     * Preserves the old one-time constructor lookup, but scopes the cached
+     * MethodStructure to this template's owning ClassStructure instead of a
+     * process-global static.
+     */
+    private final Lazy<MethodStructure> f_constructor = Lazy.of(() -> {
+        ConstantPool pool = f_container.getConstantPool();
+        return getStructure().findConstructor(pool.typeString(), pool.typeObject());
+    });
 }

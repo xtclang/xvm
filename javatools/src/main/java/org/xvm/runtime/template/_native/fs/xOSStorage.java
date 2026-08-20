@@ -89,15 +89,15 @@ public class xOSStorage
         // the handles below are cached by the Container.initResources()
         switch (sPropName) {
         case "homeDir":
-            return xOSDirectory.INSTANCE.createHandle(frame, hStore,
+            return xOSDirectory.getInstance(frame.container()).createHandle(frame, hStore,
                 Paths.get(System.getProperty("user.home")), iReturn);
 
         case "curDir":
-            return xOSDirectory.INSTANCE.createHandle(frame, hStore,
+            return xOSDirectory.getInstance(frame.container()).createHandle(frame, hStore,
                 Paths.get(System.getProperty("user.dir")), iReturn);
 
         case "tmpDir":
-            return xOSDirectory.INSTANCE.createHandle(frame, hStore,
+            return xOSDirectory.getInstance(frame.container()).createHandle(frame, hStore,
                 Paths.get(System.getProperty("java.io.tmpdir")), iReturn);
         }
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

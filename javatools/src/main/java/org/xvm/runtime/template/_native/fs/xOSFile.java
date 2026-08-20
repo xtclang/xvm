@@ -29,6 +29,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
@@ -46,6 +47,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.util.Handy;
+import org.xvm.util.Lazy;
 
 
 /**
@@ -53,14 +55,8 @@ import org.xvm.util.Handy;
  */
 public class xOSFile
         extends xOSFileNode {
-    public static xOSFile INSTANCE;
-
-    public xOSFile(Container container, ClassStructure structure, boolean fInstance) {
+    public xOSFile(Container container, ClassStructure structure) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -74,8 +70,6 @@ public class xOSFile
         markNativeMethod("openImpl", null, null);
 
         invalidateTypeInfo();
-
-        s_constructor = getStructure().findConstructor();
     }
 
     @Override
@@ -176,9 +170,11 @@ public class xOSFile
                                 getCanonicalType(), frame.poolContext().typeFile());
         NodeHandle hStruct = new NodeHandle(clz.ensureAccess(Constants.Access.STRUCT),
                                 path.toAbsolutePath(), hOSStore);
-        ObjectHandle[] ahVar = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
+        MethodStructure constructor = f_constructor.get();
+        ObjectHandle[]  ahVar       = Utils.ensureSize(Utils.OBJECTS_NONE,
+                constructor.getMaxVars());
 
-        return proceedConstruction(frame, s_constructor, true, hStruct, ahVar, iReturn);
+        return proceedConstruction(frame, constructor, true, hStruct, ahVar, iReturn);
     }
 
 
@@ -489,7 +485,8 @@ public class xOSFile
         Path path = hFile.f_path;
         try {
             FileChannel channel = FileChannel.open(path, aOpenOpt);
-            return xRawOSFileChannel.INSTANCE.createHandle(frame, channel, path, iReturn);
+            return xRawOSFileChannel.getInstance(frame.container())
+                    .createHandle(frame, channel, path, iReturn);
         } catch (IOException e) {
             return raisePathException(frame, e, path);
         }
@@ -506,5 +503,15 @@ public class xOSFile
     private static final OpenOption[]  WRITE_ONLY = new OpenOption[] {StandardOpenOption.WRITE};
     private static final OpenOption[]  READ_WRITE = new OpenOption[] {StandardOpenOption.READ, StandardOpenOption.WRITE};
 
-    private static MethodStructure s_constructor;
+    public static xOSFile getInstance(Container container) {
+        return NativeTemplates.get(container).osFile();
+    }
+
+    /**
+     * Preserves the old one-time constructor lookup, but scopes the cached
+     * MethodStructure to this template's owning ClassStructure instead of a
+     * process-global static.
+     */
+    private final Lazy<MethodStructure> f_constructor = Lazy.of(() ->
+            getStructure().findConstructor());
 }

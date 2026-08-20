@@ -121,8 +121,8 @@ public class xOSFileNode
      */
     static int createHandle(Frame frame, ObjectHandle hOSStore, Path path, boolean fDir, int iReturn) {
         return fDir
-            ? xOSDirectory.INSTANCE.createHandle(frame, hOSStore, path, iReturn)
-            : xOSFile     .INSTANCE.createHandle(frame, hOSStore, path, iReturn);
+            ? xOSDirectory.getInstance(frame.container()).createHandle(frame, hOSStore, path, iReturn)
+            : xOSFile     .getInstance(frame.container()).createHandle(frame, hOSStore, path, iReturn);
     }
 
 

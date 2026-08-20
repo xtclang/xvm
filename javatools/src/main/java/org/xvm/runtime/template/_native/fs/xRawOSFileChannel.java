@@ -23,6 +23,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
@@ -47,14 +48,8 @@ import org.xvm.runtime.template._native.io.xRawChannel;
  */
 public class xRawOSFileChannel
         extends xRawChannel {
-    public static xRawOSFileChannel INSTANCE;
-
-    public xRawOSFileChannel(Container container, ClassStructure structure, boolean fInstance) {
+    public xRawOSFileChannel(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -267,6 +262,10 @@ public class xRawOSFileChannel
         hChannel.setPreferredBufferSize(cbPreferredSize);
 
         return frame.assignValue(iReturn, hChannel);
+    }
+
+    public static xRawOSFileChannel getInstance(Container container) {
+        return NativeTemplates.get(container).rawOSFileChannel();
     }
 
     /**

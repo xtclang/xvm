@@ -33,6 +33,10 @@ import org.xvm.runtime.template._native.crypto.xRTAlgorithms;
 import org.xvm.runtime.template._native.crypto.xRTCertificateManager;
 import org.xvm.runtime.template._native.crypto.xRTKeyStore;
 
+import org.xvm.runtime.template._native.fs.xOSDirectory;
+import org.xvm.runtime.template._native.fs.xOSFile;
+import org.xvm.runtime.template._native.fs.xRawOSFileChannel;
+
 import org.xvm.runtime.template._native.io.xTerminalConsole;
 
 import org.xvm.runtime.template._native.lang.src.xRTCompiler;
@@ -133,6 +137,18 @@ public final class NativeTemplates {
 
     public xTuple tuple() {
         return get(TUPLE);
+    }
+
+    public xOSDirectory osDirectory() {
+        return get(OS_DIRECTORY);
+    }
+
+    public xOSFile osFile() {
+        return get(OS_FILE);
+    }
+
+    public xRawOSFileChannel rawOSFileChannel() {
+        return get(RAW_OS_FILE_CHANNEL);
     }
 
     public boolean isArray(ClassTemplate template) {
@@ -372,6 +388,15 @@ public final class NativeTemplates {
 
     private static final NativeTemplateRef<xTuple> TUPLE =
             NativeTemplateRef.of("collections.Tuple", xTuple.class);
+
+    private static final NativeTemplateRef<xOSDirectory> OS_DIRECTORY =
+            NativeTemplateRef.of("_native.fs.OSDirectory", xOSDirectory.class);
+
+    private static final NativeTemplateRef<xOSFile> OS_FILE =
+            NativeTemplateRef.of("_native.fs.OSFile", xOSFile.class);
+
+    private static final NativeTemplateRef<xRawOSFileChannel> RAW_OS_FILE_CHANNEL =
+            NativeTemplateRef.of("_native.fs.RawOSFileChannel", xRawOSFileChannel.class);
 
     private static final NativeTemplateRef<xContainerControl> CONTAINER_CONTROL =
             NativeTemplateRef.of("_native.mgmt.ContainerControl", xContainerControl.class);
