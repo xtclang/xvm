@@ -10,19 +10,34 @@ import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.reflect.xModule;
 import org.xvm.runtime.template.reflect.xPackage;
+import org.xvm.runtime.template.reflect.xInjector;
 
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xService;
+
+import org.xvm.runtime.template._native.collections.xBasicHashCollector;
 
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBit;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByte;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewToBit;
 
+import org.xvm.runtime.template._native.crypto.xRTAlgorithms;
+import org.xvm.runtime.template._native.crypto.xRTCertificateManager;
+import org.xvm.runtime.template._native.crypto.xRTKeyStore;
+
+import org.xvm.runtime.template._native.io.xTerminalConsole;
+
+import org.xvm.runtime.template._native.lang.src.xRTCompiler;
+
 import org.xvm.runtime.template._native.mgmt.xContainerControl;
 import org.xvm.runtime.template._native.mgmt.xContainerLinker;
+import org.xvm.runtime.template._native.mgmt.xCoreRepository;
 
 import org.xvm.runtime.template._native.net.xRTNameService;
+import org.xvm.runtime.template._native.net.xRTNetwork;
+
+import org.xvm.runtime.template._native.numbers.xRTRandom;
 
 import org.xvm.runtime.template._native.reflect.xRTClassTemplate;
 import org.xvm.runtime.template._native.reflect.xRTComponentTemplate;
@@ -32,6 +47,12 @@ import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
 import org.xvm.runtime.template._native.reflect.xRTPropertyClassTemplate;
 import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template._native.reflect.xRTTypeTemplate;
+
+import org.xvm.runtime.template._native.temporal.xLocalClock;
+import org.xvm.runtime.template._native.temporal.xNanosTimer;
+
+import org.xvm.runtime.template._native.web.xRTConnector;
+import org.xvm.runtime.template._native.web.xRTServer;
 
 import org.xvm.runtime.template._native.xRTServiceControl;
 
@@ -119,8 +140,44 @@ public final class NativeTemplates {
         return get(CONTAINER_LINKER);
     }
 
+    public xBasicHashCollector basicHashCollector() {
+        return get(BASIC_HASH_COLLECTOR);
+    }
+
+    public xRTAlgorithms algorithms() {
+        return get(RT_ALGORITHMS);
+    }
+
+    public xRTCertificateManager certificateManager() {
+        return get(RT_CERTIFICATE_MANAGER);
+    }
+
+    public xRTKeyStore keyStore() {
+        return get(RT_KEY_STORE);
+    }
+
+    public xTerminalConsole terminalConsole() {
+        return get(TERMINAL_CONSOLE);
+    }
+
+    public xRTCompiler compiler() {
+        return get(RT_COMPILER);
+    }
+
+    public xCoreRepository coreRepository() {
+        return get(CORE_REPOSITORY);
+    }
+
     public xRTNameService nameService() {
         return get(RT_NAME_SERVICE);
+    }
+
+    public xRTNetwork network() {
+        return get(RT_NETWORK);
+    }
+
+    public xRTRandom random() {
+        return get(RT_RANDOM);
     }
 
     public xRTClassTemplate classTemplate() {
@@ -171,6 +228,22 @@ public final class NativeTemplates {
         return get(RT_SERVICE_CONTROL);
     }
 
+    public xLocalClock localClock() {
+        return get(LOCAL_CLOCK);
+    }
+
+    public xNanosTimer nanosTimer() {
+        return get(NANOS_TIMER);
+    }
+
+    public xRTConnector connector() {
+        return get(RT_CONNECTOR);
+    }
+
+    public xRTServer server() {
+        return get(RT_SERVER);
+    }
+
     public xEnum enumTemplate() {
         return get(ENUM);
     }
@@ -193,6 +266,10 @@ public final class NativeTemplates {
 
     public xService service() {
         return get(SERVICE);
+    }
+
+    public xInjector injector() {
+        return get(INJECTOR);
     }
 
     public boolean isService(ClassTemplate template) {
@@ -237,8 +314,37 @@ public final class NativeTemplates {
     private static final NativeTemplateRef<xContainerLinker> CONTAINER_LINKER =
             NativeTemplateRef.of("_native.mgmt.ContainerLinker", xContainerLinker.class);
 
+    private static final NativeTemplateRef<xBasicHashCollector> BASIC_HASH_COLLECTOR =
+            NativeTemplateRef.of("_native.collections.BasicHashCollector",
+                    xBasicHashCollector.class);
+
+    private static final NativeTemplateRef<xRTAlgorithms> RT_ALGORITHMS =
+            NativeTemplateRef.of("_native.crypto.RTAlgorithms", xRTAlgorithms.class);
+
+    private static final NativeTemplateRef<xRTCertificateManager> RT_CERTIFICATE_MANAGER =
+            NativeTemplateRef.of("_native.crypto.RTCertificateManager",
+                    xRTCertificateManager.class);
+
+    private static final NativeTemplateRef<xRTKeyStore> RT_KEY_STORE =
+            NativeTemplateRef.of("_native.crypto.RTKeyStore", xRTKeyStore.class);
+
+    private static final NativeTemplateRef<xTerminalConsole> TERMINAL_CONSOLE =
+            NativeTemplateRef.of("_native.io.TerminalConsole", xTerminalConsole.class);
+
+    private static final NativeTemplateRef<xRTCompiler> RT_COMPILER =
+            NativeTemplateRef.of("_native.lang.src.RTCompiler", xRTCompiler.class);
+
+    private static final NativeTemplateRef<xCoreRepository> CORE_REPOSITORY =
+            NativeTemplateRef.of("_native.mgmt.CoreRepository", xCoreRepository.class);
+
     private static final NativeTemplateRef<xRTNameService> RT_NAME_SERVICE =
             NativeTemplateRef.of("_native.net.RTNameService", xRTNameService.class);
+
+    private static final NativeTemplateRef<xRTNetwork> RT_NETWORK =
+            NativeTemplateRef.of("_native.net.RTNetwork", xRTNetwork.class);
+
+    private static final NativeTemplateRef<xRTRandom> RT_RANDOM =
+            NativeTemplateRef.of("_native.numbers.RTRandom", xRTRandom.class);
 
     private static final NativeTemplateRef<xRTClassTemplate> RT_CLASS_TEMPLATE =
             NativeTemplateRef.of("_native.reflect.RTClassTemplate", xRTClassTemplate.class);
@@ -268,6 +374,18 @@ public final class NativeTemplates {
     private static final NativeTemplateRef<xRTServiceControl> RT_SERVICE_CONTROL =
             NativeTemplateRef.of("_native.RTServiceControl", xRTServiceControl.class);
 
+    private static final NativeTemplateRef<xLocalClock> LOCAL_CLOCK =
+            NativeTemplateRef.of("_native.temporal.LocalClock", xLocalClock.class);
+
+    private static final NativeTemplateRef<xNanosTimer> NANOS_TIMER =
+            NativeTemplateRef.of("_native.temporal.NanosTimer", xNanosTimer.class);
+
+    private static final NativeTemplateRef<xRTConnector> RT_CONNECTOR =
+            NativeTemplateRef.of("_native.web.RTConnector", xRTConnector.class);
+
+    private static final NativeTemplateRef<xRTServer> RT_SERVER =
+            NativeTemplateRef.of("_native.web.RTServer", xRTServer.class);
+
     private static final NativeTemplateRef<xEnum> ENUM =
             NativeTemplateRef.of("Enum", xEnum.class);
 
@@ -279,6 +397,9 @@ public final class NativeTemplates {
 
     private static final NativeTemplateRef<xService> SERVICE =
             NativeTemplateRef.of("Service", xService.class);
+
+    private static final NativeTemplateRef<xInjector> INJECTOR =
+            NativeTemplateRef.of("reflect.Injector", xInjector.class);
 
 
     // ----- fields --------------------------------------------------------------------------------

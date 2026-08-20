@@ -48,14 +48,8 @@ import org.xvm.runtime.template.numbers.xUInt64;
  */
 public class xRTRandom
         extends xService {
-    public static xRTRandom INSTANCE;
-
-    public xRTRandom(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTRandom(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

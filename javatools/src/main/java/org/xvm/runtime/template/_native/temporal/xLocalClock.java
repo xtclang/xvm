@@ -38,14 +38,8 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle
  */
 public class xLocalClock
         extends xService {
-    public static xLocalClock INSTANCE;
-
-    public xLocalClock(Container container, ClassStructure structure, boolean fInstance) {
+    public xLocalClock(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

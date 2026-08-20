@@ -74,14 +74,8 @@ import org.xvm.runtime.template._native.crypto.xRTKeyStore.KeyStoreHandle;
 public class xRTCertificateManager
         extends xService {
 
-    public static xRTCertificateManager INSTANCE;
-
-    public xRTCertificateManager(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTCertificateManager(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -534,7 +528,8 @@ public class xRTCertificateManager
     private int invokeKeystoreFor(Frame frame, ObjectHandle[] ahArg, int iReturn) {
         ArrayHandle  hContent  = (ArrayHandle) ahArg[0];
         StringHandle hPwd      = xRTKeyStore.getPassword(frame, ahArg[1]);
-        ObjectHandle hKeyStore = xRTKeyStore.INSTANCE.ensureKeyStore(frame, hContent, hPwd);
+        ObjectHandle hKeyStore = frame.container().nativeTemplates().keyStore().
+                ensureKeyStore(frame, hContent, hPwd);
 
         return frame.assignDeferredValue(iReturn, hKeyStore);
     }

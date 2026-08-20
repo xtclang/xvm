@@ -23,16 +23,10 @@ import org.xvm.util.ByteHashCollector;
 public class xBasicHashCollector
         extends ClassTemplate {
 
-    public static xBasicHashCollector INSTANCE;
-
     private static final String[] TYPE_HASH_COLLECTOR = { "collections.HashCollector" };
 
-    public xBasicHashCollector(Container container, ClassStructure structure, boolean fInstance) {
+    public xBasicHashCollector(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

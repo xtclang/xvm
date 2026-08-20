@@ -33,14 +33,8 @@ import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
  */
 public class xCoreRepository
         extends ClassTemplate {
-    public static xCoreRepository INSTANCE;
-
-    public xCoreRepository(Container container, ClassStructure structure, boolean fInstance) {
+    public xCoreRepository(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

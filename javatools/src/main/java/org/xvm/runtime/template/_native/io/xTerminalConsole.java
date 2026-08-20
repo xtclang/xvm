@@ -46,14 +46,8 @@ import org.xvm.util.ConsoleLog;
  */
 public class xTerminalConsole
         extends xService {
-    public static xTerminalConsole INSTANCE;
-
-    public xTerminalConsole(Container container, ClassStructure structure, boolean fInstance) {
+    public xTerminalConsole(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

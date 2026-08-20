@@ -91,14 +91,8 @@ import org.xvm.util.Handy;
  */
 public class xRTServer
         extends xService {
-    public static xRTServer INSTANCE;
-
-    public xRTServer(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTServer(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

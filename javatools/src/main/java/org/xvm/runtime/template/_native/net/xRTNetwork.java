@@ -36,14 +36,8 @@ import org.xvm.runtime.template.text.xString;
  */
 public class xRTNetwork
         extends xService {
-    public static xRTNetwork INSTANCE;
-
-    public xRTNetwork(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTNetwork(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

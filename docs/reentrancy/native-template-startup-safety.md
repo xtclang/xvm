@@ -105,9 +105,9 @@ then fail under a parallel runner on a loaded machine.
 
 The XVM codebase has normalized this pattern. On `master`, a direct audit finds
 143 mutable template `INSTANCE` declarations and 139 constructor assignments of
-`INSTANCE = this` in runtime templates. This branch fixes 21 of those
-constructor-published template globals, leaving 122 mutable `INSTANCE` fields
-and 118 constructor assignments for follow-up. A broader scan for escape-shaped
+`INSTANCE = this` in runtime templates. This branch fixes 35 of those
+constructor-published template globals, leaving 108 mutable `INSTANCE` fields
+and 104 constructor assignments for follow-up. A broader scan for escape-shaped
 `this` assignments and calls reports hundreds of hits in
 `javatools/src/main/java`, many of which are false positives, but the signal is
 clear: publishing receivers into mutable non-final state is common enough that
@@ -855,7 +855,7 @@ rg -l "public static (?!final)[A-Za-z0-9_<>, ?]+ INSTANCE;" \
   --pcre2 javatools/src/main/java/org/xvm/runtime/template | sort
 ```
 
-At the time this document was written, it reported 122 unconverted template
+At the time this document was written, it reported 108 unconverted template
 files. They should be migrated in follow-up PRs. Grouping them by package:
 
 - Root templates: `Identity`, `Proxy`, `xConst`, `xException`, `xObject`.
@@ -867,21 +867,15 @@ files. They should be migrated in follow-up PRs. Grouping them by package:
   `xRTCharDelegate`, `xRTFloat64Delegate`, `xRTInt*Delegate`,
   `xRTUInt*Delegate`, `xRTNibbleDelegate`, `xRTSlicingDelegate`,
   `xRTStringDelegate`, `xRTViewFrom*`, `xRTViewToBit*`.
-- Native collections: `xBasicHashCollector`.
-- Crypto templates: `xRTAlgorithms`, `xRTCertificateManager`,
-  `xRTDecryptor`, `xRTHasher`, `xRTKeyGenerator`, `xRTKeyStore`,
+- Crypto templates: `xRTDecryptor`, `xRTHasher`, `xRTKeyGenerator`,
   `xRTSigner`.
 - File-system templates: `xOSDirectory`, `xOSFile`,
   `xRawOSFileChannel`.
-- IO templates: `xRTBuffer`, `xTerminalConsole`.
-- Compiler and management templates: `xRTCompiler`, `xCoreRepository`.
-- Network templates: `xRTNetwork`, `xRTNetworkInterface`, `xRTSocket`.
-- Native number/template utilities: `xRTRandom`.
+- IO templates: `xRTBuffer`.
+- Network templates: `xRTNetworkInterface`, `xRTSocket`.
 - Native reflect templates still using mutable `INSTANCE`:
   `xRTFileTemplate`, `xRTMethodTemplate`, `xRTPackageTemplate`,
   `xRTProperty`, `xRTPropertyTemplate`, `xRTSignature`.
-- Temporal templates: `xLocalClock`, `xNanosTimer`.
-- Web templates: `xRTConnector`, `xRTServer`.
 - Annotation templates: `xAtomic`, `xAtomicIntNumber`, `xFuture`,
   `xInject`.
 - Number templates: all checked and unchecked integer/decimal/float literal
@@ -889,7 +883,7 @@ files. They should be migrated in follow-up PRs. Grouping them by package:
   `xCheckedInt*`, `xCheckedUInt*`, `xDec*`, `xFloat*`, `xIntLiteral`,
   `xFPLiteral`, `xNibble`.
 - Reflect templates: `xClass`, `xClassTemplate`, `xEnumValue`,
-  `xEnumeration`, `xInjector`, `xRef`, `xVar`.
+  `xEnumeration`, `xRef`, `xVar`.
 
 Converted `INSTANCE` fields in this branch include:
 
@@ -911,6 +905,20 @@ Converted `INSTANCE` fields in this branch include:
 - `xRTViewToBit`,
 - `xContainerControl`,
 - `xContainerLinker`,
+- `xBasicHashCollector`,
+- `xRTAlgorithms`,
+- `xRTCertificateManager`,
+- `xRTKeyStore`,
+- `xTerminalConsole`,
+- `xRTCompiler`,
+- `xCoreRepository`,
+- `xRTNetwork`,
+- `xRTRandom`,
+- `xLocalClock`,
+- `xNanosTimer`,
+- `xRTConnector`,
+- `xRTServer`,
+- `xInjector`,
 - `xModule`,
 - `xPackage`.
 

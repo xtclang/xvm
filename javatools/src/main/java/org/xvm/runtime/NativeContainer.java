@@ -300,25 +300,30 @@ public class NativeContainer
     }
 
     private void initResources(ConstantPool pool) {
+        // Resource templates are container-owned. Resolve them from this container's table instead
+        // of the legacy process-global INSTANCE fields, so injected resources cannot capture
+        // another concurrently starting container's template or constant pool.
+        NativeTemplates templates = nativeTemplates();
+
         // +++ temporal.LocalClock
-        xLocalClock  templateClock = xLocalClock.INSTANCE;
+        xLocalClock  templateClock = templates.localClock();
         TypeConstant typeClock     = templateClock.getCanonicalType();
         addResourceSupplier(new InjectionKey("clock"     , typeClock), templateClock::ensureDefaultClock);
         addResourceSupplier(new InjectionKey("localClock", typeClock), templateClock::ensureLocalClock);
         addResourceSupplier(new InjectionKey("utcClock"  , typeClock), templateClock::ensureUTCClock);
 
         // +++ temporal.NanosTimer
-        xNanosTimer  templateTimer = xNanosTimer.INSTANCE;
+        xNanosTimer  templateTimer = templates.nanosTimer();
         TypeConstant typeTimer     = templateTimer.getCanonicalType();
         addResourceSupplier(new InjectionKey("timer", typeTimer), templateTimer::ensureTimer);
 
         // +++ io.Console
-        xTerminalConsole templateConsole = xTerminalConsole.INSTANCE;
+        xTerminalConsole templateConsole = templates.terminalConsole();
         TypeConstant     typeConsole     = templateConsole.getCanonicalType();
         addResourceSupplier(new InjectionKey("console", typeConsole), templateConsole::ensureConsole);
 
         // +++ numbers.Random
-        xRTRandom    templateRandom = xRTRandom.INSTANCE;
+        xRTRandom    templateRandom = templates.random();
         TypeConstant typeRandom     = templateRandom.getCanonicalType();
         addResourceSupplier(new InjectionKey("rnd"   , typeRandom), templateRandom::ensureDefaultRandom);
         addResourceSupplier(new InjectionKey("random", typeRandom), templateRandom::ensureDefaultRandom);
@@ -333,35 +338,35 @@ public class NativeContainer
         addResourceSupplier(new InjectionKey("tmpDir" , typeDirectory), this::ensureTmpDir);
 
         // +++ net:Network
-        xRTNetwork   templateNetwork = xRTNetwork.INSTANCE;
+        xRTNetwork   templateNetwork = templates.network();
         TypeConstant typeNetwork     = templateNetwork.getCanonicalType();
         addResourceSupplier(new InjectionKey("network"        , typeNetwork), this::ensureInsecureNetwork);
         addResourceSupplier(new InjectionKey("insecureNetwork", typeNetwork), this::ensureInsecureNetwork);
         addResourceSupplier(new InjectionKey("secureNetwork"  , typeNetwork), this::ensureSecureNetwork);
 
         // +++ crypto:KeyStore
-        xRTKeyStore  templateKeyStore = xRTKeyStore.INSTANCE;
+        xRTKeyStore  templateKeyStore = templates.keyStore();
         TypeConstant typeKeyStore     = templateKeyStore.getCanonicalType();
         addResourceSupplier(new InjectionKey("keystore", typeKeyStore), templateKeyStore::ensureKeyStore);
 
         // +++ crypto:CertificateManager
-        xRTCertificateManager templateCertManager = xRTCertificateManager.INSTANCE;
+        xRTCertificateManager templateCertManager = templates.certificateManager();
         TypeConstant          typeCertManager     = templateCertManager.getCanonicalType();
         addResourceSupplier(new InjectionKey("manager", typeCertManager), templateCertManager::ensureManager);
 
         // +++ crypto:Algorithms
-        xRTAlgorithms templateAlgorithms = xRTAlgorithms.INSTANCE;
+        xRTAlgorithms templateAlgorithms = templates.algorithms();
         TypeConstant  typeAlgorithms     = pool.ensureTerminalTypeConstant(
                 pool.ensureClassConstant(pool.ensureModuleConstant("crypto.xtclang.org"), "Algorithms"));
         addResourceSupplier(new InjectionKey("algorithms", typeAlgorithms), templateAlgorithms::ensureAlgorithms);
 
         // +++ web:Client.Connector
-        xRTConnector templateConnector = xRTConnector.INSTANCE;
+        xRTConnector templateConnector = templates.connector();
         TypeConstant typeConnector     = templateConnector.getCanonicalType();
         addResourceSupplier(new InjectionKey("connector", typeConnector), templateConnector::ensureConnector);
 
         // +++ web:WebServer
-        xRTServer templateServer = xRTServer.INSTANCE;
+        xRTServer templateServer = templates.server();
         TypeConstant typeServer  = templateServer.getCanonicalType();
         addResourceSupplier(new InjectionKey("server", typeServer), templateServer::ensureServer);
 
@@ -371,17 +376,17 @@ public class NativeContainer
         addResourceSupplier(new InjectionKey("linker", typeLinker), templateLinker::ensureLinker);
 
         // +++ mgmt.ModuleRepository
-        xCoreRepository templateRepo = xCoreRepository.INSTANCE;
+        xCoreRepository templateRepo = templates.coreRepository();
         TypeConstant    typeRepo     = templateRepo.getCanonicalType();
         addResourceSupplier(new InjectionKey("repository", typeRepo), templateRepo::ensureModuleRepository);
 
         // +++ lang.src.Compiler
-        xRTCompiler  templateCompiler = xRTCompiler.INSTANCE;
+        xRTCompiler  templateCompiler = templates.compiler();
         TypeConstant typeCompiler     = templateCompiler.getCanonicalType();
         addResourceSupplier(new InjectionKey("compiler", typeCompiler), templateCompiler::ensureCompiler);
 
         // +++ reflect.Injector
-        xInjector templateInjector = xInjector.INSTANCE;
+        xInjector templateInjector = templates.injector();
         TypeConstant typeInjector = templateInjector.getCanonicalType();
         addResourceSupplier(new InjectionKey("injector", typeInjector), templateInjector::ensureInjector);
 
@@ -390,7 +395,7 @@ public class NativeContainer
         addResourceSupplier(new InjectionKey("properties", typeProps), this::ensureProperties);
 
         // +++ collections.HashCollector
-        xBasicHashCollector templateHashCollector = xBasicHashCollector.INSTANCE;
+        xBasicHashCollector templateHashCollector = templates.basicHashCollector();
         TypeConstant        typeHashCollector     = templateHashCollector.getCanonicalType();
         addResourceSupplier(new InjectionKey("hash", typeHashCollector), templateHashCollector::ensureCollector);
     }
