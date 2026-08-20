@@ -16,7 +16,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -836,17 +836,32 @@ public abstract class Builder {
     public PropertyInfo loadProperty(CodeBuilder code, TypeConstant typeContainer,
                                      PropertyConstant propId, boolean allowUnboxing, int ctxSlot) {
         if (typeContainer.containsFormalType(true)) {
-            typeContainer = typeContainer.resolveConstraints().ensureAccess(Constants.Access.PRIVATE);
+            typeContainer = typeContainer.resolveConstraints().ensureAccess(Access.PRIVATE);
         }
 
-        PropertyInfo xvmInfo     = propId.getPropertyInfo(typeContainer);
-        TypeConstant typeJit     = typeContainer.getCallableJitType();
-        PropertyInfo jitInfo     = typeJit.equals(pool().typeObject()) // REVIEW GG/CP
-                ? xvmInfo
-                : propId.getPropertyInfo(typeJit);
-        TypeConstant  typeOwner  = jitInfo.getOwnerType(this, typeContainer);
-        JitMethodDesc jmdGet     = jitInfo.getGetterJitDesc(this, typeContainer);
-        String        getterName = jitInfo.ensureGetterJitMethodName(typeSystem);
+        PropertyInfo xvmInfo = propId.getPropertyInfo(typeContainer);
+        TypeConstant typeJit = typeContainer.getCallableJitType().ensureAccess(Access.PRIVATE);
+        PropertyInfo jitInfo = typeJit.ensureTypeInfo().findProperty(propId, true);
+        if (jitInfo == null) {
+            // a relational type can collapse to Object, which may not expose the property
+            jitInfo = xvmInfo;
+        }
+
+        TypeConstant  typeOwner    = typeJit;
+        JitMethodDesc jmdGet       = jitInfo.getGetterJitDesc(this, typeContainer);
+        boolean       isNative     = jitInfo.isNative();
+        boolean       invokeStatic = jmdGet.isOptimizedStatic && allowUnboxing;
+
+        if (!invokeStatic) {
+            // resolve the descriptor against the implementation owner
+            typeOwner = jitInfo.getOwnerType(this, typeContainer);
+            typeOwner = typeOwner.getCallableJitType();
+            jitInfo   = propId.getPropertyInfo(typeOwner);
+            jmdGet    = jitInfo.getGetterJitDesc(this, typeOwner);
+        }
+
+        String    getterName = jitInfo.ensureGetterJitMethodName(typeSystem);
+        ClassDesc ownerCD    = ensureClassDesc(typeOwner);
 
         MethodTypeDesc md;
         if (jmdGet.isOptimized && allowUnboxing) {
@@ -856,27 +871,17 @@ public abstract class Builder {
             md = jmdGet.standardMD;
         }
 
-        // TODO GG: this doesn't seem right
-        if (!jmdGet.isOptimizedStatic) {
-            PropertyInfo   ownerInfo = propId.getPropertyInfo(typeOwner);
-            JitMethodDesc  ownerJmd  = ownerInfo.getGetterJitDesc(this, typeOwner);
-            MethodTypeDesc ownerMd   = ownerJmd.isOptimized && allowUnboxing
-                    ? ownerJmd.optimizedMD
-                    : ownerJmd.standardMD;
-            if (!md.equals(ownerMd)) {
-                // a covariant declaration owns the signature being invoked, while the inherited
-                // implementation may belong to a superclass with a wider return type
-                typeOwner = typeJit;
-            }
-        }
-
+        // Note:
+        //   1) an optimized static getter is used only when the caller allows unboxing;
+        //   2) native accessors are hosted by their Java bridge class even when the Ecstasy owner
+        //      otherwise maps to a JIT interface
         code.aload(ctxSlot);
-        if (jmdGet.isOptimizedStatic && allowUnboxing) {
-            code.invokestatic(ensureClassDesc(typeContainer), getterName, md);
-        } else if (!jitInfo.isNative() && typeOwner.isJitInterface()) {
-            code.invokeinterface(ensureClassDesc(typeOwner), getterName, md);
+        if (invokeStatic) {
+            code.invokestatic(ownerCD, getterName, md);
+        } else if (!isNative && typeOwner.isJitInterface()) {
+            code.invokeinterface(ownerCD, getterName, md);
         } else {
-            code.invokevirtual(ensureClassDesc(typeOwner), getterName, md);
+            code.invokevirtual(ownerCD, getterName, md);
         }
 
         TypeConstant jitType = jitInfo.getType();
@@ -1685,7 +1690,7 @@ public abstract class Builder {
         MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
 
         if (infoCtor == null) {
-            infoTarget = typeTarget.ensureAccess(Constants.Access.PRIVATE).ensureTypeInfo();
+            infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();
             infoCtor   = infoTarget.getMethodById(idCtor);
         }
 
@@ -1753,7 +1758,7 @@ public abstract class Builder {
      * pseudo-fields.
      */
     public boolean isPrimitivePseudoField(TypeConstant typeContainer, PropertyConstant propId) {
-        if (typeContainer.getAccess() != Constants.Access.STRUCT) {
+        if (typeContainer.getAccess() != Access.STRUCT) {
             return false;
         }
 
