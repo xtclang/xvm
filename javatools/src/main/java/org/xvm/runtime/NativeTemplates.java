@@ -36,6 +36,7 @@ import org.xvm.runtime.template._native.mgmt.xCoreRepository;
 
 import org.xvm.runtime.template._native.net.xRTNameService;
 import org.xvm.runtime.template._native.net.xRTNetwork;
+import org.xvm.runtime.template._native.net.xRTSocket;
 
 import org.xvm.runtime.template._native.numbers.xRTRandom;
 
@@ -174,6 +175,10 @@ public final class NativeTemplates {
 
     public xRTNetwork network() {
         return get(RT_NETWORK);
+    }
+
+    public xRTSocket socket() {
+        return get(RT_SOCKET);
     }
 
     public xRTRandom random() {
@@ -342,6 +347,9 @@ public final class NativeTemplates {
 
     private static final NativeTemplateRef<xRTNetwork> RT_NETWORK =
             NativeTemplateRef.of("_native.net.RTNetwork", xRTNetwork.class);
+
+    private static final NativeTemplateRef<xRTSocket> RT_SOCKET =
+            NativeTemplateRef.of("_native.net.RTSocket", xRTSocket.class);
 
     private static final NativeTemplateRef<xRTRandom> RT_RANDOM =
             NativeTemplateRef.of("_native.numbers.RTRandom", xRTRandom.class);

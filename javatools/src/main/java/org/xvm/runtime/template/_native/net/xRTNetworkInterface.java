@@ -28,14 +28,8 @@ import org.xvm.runtime.template.collections.xByteArray;
  */
 public class xRTNetworkInterface
         extends xService {
-    public static xRTNetworkInterface INSTANCE;
-
-    public xRTNetworkInterface(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTNetworkInterface(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
