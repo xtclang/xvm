@@ -27,6 +27,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.TypeSystem;
+import org.xvm.javajit.TypeSystem.Artifact;
 
 import static java.lang.constant.ConstantDescs.CD_Double;
 import static java.lang.constant.ConstantDescs.CD_Float;
@@ -49,12 +50,11 @@ public class NumberBuilder extends AugmentingBuilder {
      */
     protected final Set<String> generatedProperties = new HashSet<>();
 
-    public NumberBuilder(TypeSystem typeSystem, TypeSystem.Artifact art, ClassModel model) {
+    public NumberBuilder(TypeSystem typeSystem, Artifact art, ClassModel model) {
         super(typeSystem, art, model);
     }
 
-    public static NumberBuilder builderFor(TypeSystem typeSystem, TypeSystem.Artifact art,
-            ClassModel model) {
+    public static NumberBuilder builderFor(TypeSystem typeSystem, Artifact art, ClassModel model) {
 
         ConstantPool pool = typeSystem.pool();
         TypeConstant type = art.type();
@@ -73,7 +73,7 @@ public class NumberBuilder extends AugmentingBuilder {
     @Override
     protected void assembleProperties(ClassBuilder classBuilder) {
         if (thisType.isJitPrimitive()) {
-            // For JIT primitives, we generate code for static primitive property accessor
+            // for JIT primitives, we generate code for static primitive property accessor
             // methods and optional wrapper instance methods that call them
             for (PropertyInfo prop : getProperties()) {
                 if (prop.isFormalType()) {
@@ -104,6 +104,9 @@ public class NumberBuilder extends AugmentingBuilder {
         super.assemblePropertyAccessor(classBuilder, prop, jitName, jmd, isGetter);
     }
 
+    /**
+     * @return the collection of "base" properties; overridden by subclasses
+     */
     protected Collection<PropertyInfo> getProperties() {
         return pool().typeNumber().ensureTypeInfo().getProperties().values();
     }
@@ -126,16 +129,19 @@ public class NumberBuilder extends AugmentingBuilder {
 
     protected BiConsumer<CodeBuilder, JitMethodDesc> getMethodCodeGenerator(String jitName) {
         return switch (jitName) {
-            case "toBitArray", "toNibbleArray", "toByteArray" ->
-                    (code, jmd) -> generateToArray(code, jmd, jitName);
+            case "toBitArray",
+                 "toByteArray",
+                 "toNibbleArray" -> (code, jmd) -> generateToArray(code, jmd, jitName);
             default -> null;
         };
     }
 
     protected boolean shouldCompileNaturally(MethodInfo method) {
         String name = method.getJitIdentity().getName();
-        return name.equals("zero") || name.equals("one") ||
-                name.equals("fixedBitLength") || name.equals("range");
+        return name.equals("zero") ||
+               name.equals("one") ||
+               name.equals("fixedBitLength") ||
+               name.equals("range");
     }
 
     @Override
@@ -149,9 +155,8 @@ public class NumberBuilder extends AugmentingBuilder {
     }
 
     @Override
-    protected void assembleMethod(
-            ClassBuilder classBuilder, MethodInfo method,
-            String jitName, JitMethodDesc jmd) {
+    protected void assembleMethod(ClassBuilder classBuilder, MethodInfo method,
+                                  String jitName, JitMethodDesc jmd) {
         if (!thisType.isJitPrimitive()) {
             super.assembleMethod(classBuilder, method, jitName, jmd);
             return;
@@ -187,8 +192,8 @@ public class NumberBuilder extends AugmentingBuilder {
      * Generate a method for a JIT primitive and any routing methods required to call it.
      */
     protected void assembleGeneratedMethod(ClassBuilder classBuilder, MethodInfo method,
-            String jitName, JitMethodDesc jmd,
-            BiConsumer<CodeBuilder, JitMethodDesc> generator) {
+                                           String jitName, JitMethodDesc jmd,
+                                           BiConsumer<CodeBuilder, JitMethodDesc> generator) {
         boolean        isOptimized = jmd.isOptimized;
         String         methodName  = isOptimized ? jitName+OPT : jitName;
         MethodTypeDesc md          = isOptimized ? jmd.optimizedMD : jmd.standardMD;

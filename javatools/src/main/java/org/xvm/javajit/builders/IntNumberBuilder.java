@@ -34,6 +34,7 @@ public class IntNumberBuilder extends NumberBuilder {
         super(typeSystem, art, model);
     }
 
+    @Override
     protected Collection<PropertyInfo> getProperties() {
         return pool().typeIntNumber().ensureTypeInfo().getProperties().values();
     }

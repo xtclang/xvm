@@ -34,6 +34,7 @@ public class FPNumberBuilder extends NumberBuilder {
         super(typeSystem, art, model);
     }
 
+    @Override
     protected Collection<PropertyInfo> getProperties() {
         return pool().typeFPNumber().ensureTypeInfo().getProperties().values();
     }
