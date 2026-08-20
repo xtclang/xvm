@@ -114,6 +114,7 @@ getters for existing call sites; resource templates are resolved directly from
 - `xRTModuleTemplate.INSTANCE`
 - `xRTProperty.INSTANCE`
 - `xRTPropertyClassTemplate.INSTANCE`
+- `xRTSignature.INSTANCE`
 - `xRTFunction.INSTANCE`
 - `xRTType.INSTANCE`
 - `xRTTypeTemplate.INSTANCE`
@@ -251,6 +252,7 @@ fields. The branch moves them to owner-scoped final lazy state.
 | `xRTProperty` | `INSTANCE`, `EMPTY_PROPERTY_ARRAY`, ownerless property handle construction | caller-owned template lookup, `f_constEmptyPropertyArray`, and `NativeTemplates.property()` | Must fix |
 | `xRTPropertyTemplate` | `INSTANCE`, `PROPERTY_TEMPLATE_COMP`, `ARRAY_PROP_COMP`, ownerless property handle helpers | caller-owned helpers with `f_compPropertyTemplate` and `f_compPropertyTemplateArray` | Must fix |
 | `xRTPropertyClassTemplate` | `PROPERTY_CLASS_TEMPLATE_COMP` | `f_compPropertyClassTemplate` | Must fix |
+| `xRTSignature` | `INSTANCE`, return/parameter type constants, RT templates, and array compositions | caller-owned helper APIs with final lazy signature metadata | Must fix |
 | `xRTType` | `TYPE_ARRAY_TYPE`, `EMPTY_TYPE_ARRAY`, `LISTMAP_TYPE`, register composition/constructor, lazy property constants | final `Lazy` fields | Must fix |
 | `xRTTypeTemplate` | `TEMPLATE_ARRAY_TYPE`, `CREATE_COMPOSITION_METHOD` | `f_typeTemplateArray`, `f_methodCreateComposition` | Must fix |
 | `xRTServiceControl` | static `SERVICE_STATUS`, mutable control composition cache | `f_templateServiceStatus`, `f_clzControl` | Must fix |

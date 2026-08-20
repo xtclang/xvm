@@ -105,9 +105,9 @@ then fail under a parallel runner on a loaded machine.
 
 The XVM codebase has normalized this pattern. On `master`, a direct audit finds
 143 mutable template `INSTANCE` declarations and 139 constructor assignments of
-`INSTANCE = this` in runtime templates. This branch fixes 79 mutable template
-fields and 75 constructor assignments, leaving 64 mutable `INSTANCE` fields
-and 64 constructor assignments for follow-up. A broader scan for escape-shaped
+`INSTANCE = this` in runtime templates. This branch fixes 80 mutable template
+fields and 76 constructor assignments, leaving 63 mutable `INSTANCE` fields
+and 63 constructor assignments for follow-up. A broader scan for escape-shaped
 `this` assignments and calls reports hundreds of hits in
 `javatools/src/main/java`, many of which are false positives, but the signal is
 clear: publishing receivers into mutable non-final state is common enough that
@@ -855,7 +855,7 @@ rg -l "public static (?!final)[A-Za-z0-9_<>, ?]+ INSTANCE;" \
   --pcre2 javatools/src/main/java/org/xvm/runtime/template | sort
 ```
 
-At the time this document was written, it reported 64 unconverted template
+At the time this document was written, it reported 63 unconverted template
 files. They should be migrated in follow-up PRs. Grouping them by package:
 
 - Root templates: `Identity`, `Proxy`, `xConst`, `xException`, `xObject`.
@@ -868,8 +868,7 @@ files. They should be migrated in follow-up PRs. Grouping them by package:
   `xRTSlicingDelegate`, `xRTViewFrom*`, and `xRTViewToBitFromNibble`.
 - File-system templates: `xOSDirectory`, `xOSFile`,
   `xRawOSFileChannel`.
-- Native reflect templates still using mutable `INSTANCE`:
-  `xRTSignature`.
+- Native reflect templates: no `_native.reflect` mutable `INSTANCE` fields remain.
 - Annotation templates: `xAtomicIntNumber`, `xFuture`.
 - Number templates: all checked and unchecked integer/decimal/float literal
   templates still listed by the audit, including `xInt*`, `xUInt*`,
@@ -955,6 +954,7 @@ Converted `INSTANCE` fields in this branch include:
 - `xRTPackageTemplate`,
 - `xRTPropertyTemplate`,
 - `xRTProperty`,
+- `xRTSignature`,
 - `xModule`,
 - `xPackage`.
 
@@ -970,8 +970,6 @@ Known high-priority leftovers include:
 - `Utils`: `ANNOTATION_TEMPLATE`, `ANNOTATION_TEMPLATE_TEMPLATE`,
   `ARGUMENT_TEMPLATE`, `RT_PARAMETER_TEMPLATE`, constructor method caches,
   `STRING_VALUE_OF`, array type constants, and injection/freezing signatures.
-- `xRTSignature`: return/parameter type constants, RT return/parameter
-  templates, and return/parameter array compositions.
 - `xClass`: array type caches.
 - `xByteArray`: numeric array compositions.
 - `xConst`: native helper method caches such as estimate length, append, freeze,

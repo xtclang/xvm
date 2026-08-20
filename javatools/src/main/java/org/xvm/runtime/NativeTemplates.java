@@ -47,6 +47,7 @@ import org.xvm.runtime.template._native.reflect.xRTMethod;
 import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
 import org.xvm.runtime.template._native.reflect.xRTProperty;
 import org.xvm.runtime.template._native.reflect.xRTPropertyClassTemplate;
+import org.xvm.runtime.template._native.reflect.xRTSignature;
 import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template._native.reflect.xRTTypeTemplate;
 
@@ -222,6 +223,10 @@ public final class NativeTemplates {
         return get(RT_PROPERTY_CLASS_TEMPLATE);
     }
 
+    public xRTSignature signature() {
+        return get(RT_SIGNATURE);
+    }
+
     public boolean isPropertyClassTemplate(ClassTemplate template) {
         return is(RT_PROPERTY_CLASS_TEMPLATE, template);
     }
@@ -380,6 +385,9 @@ public final class NativeTemplates {
     private static final NativeTemplateRef<xRTPropertyClassTemplate> RT_PROPERTY_CLASS_TEMPLATE =
             NativeTemplateRef.of("_native.reflect.RTPropertyClassTemplate",
                     xRTPropertyClassTemplate.class);
+
+    private static final NativeTemplateRef<xRTSignature> RT_SIGNATURE =
+            NativeTemplateRef.of("_native.reflect.RTSignature", xRTSignature.class);
 
     private static final NativeTemplateRef<xRTType> RT_TYPE =
             NativeTemplateRef.of("_native.reflect.RTType", xRTType.class);
