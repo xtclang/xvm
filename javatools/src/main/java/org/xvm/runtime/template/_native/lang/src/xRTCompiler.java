@@ -269,9 +269,9 @@ public class xRTCompiler
     }
 
     private List<String> addError(Exception exception, List<String> listErrors) {
-        if (listErrors.isEmpty()) {
-            listErrors = new ArrayList<>();
-        }
+        // CompilerAdapter.getErrors() returns stream().toList(), which is unmodifiable on current
+        // Java. Preserve those diagnostics and append the caught exception on a mutable copy.
+        listErrors = new ArrayList<>(listErrors);
         listErrors.add(exception.toString());
         return listErrors;
     }

@@ -313,6 +313,13 @@ owner as a parameter, so it asks that owner's `ConstantPool` for `Array<Class>`;
 the pool interns the value, preserving the old cache behavior without a
 process-global `TypeConstant`.
 
+The `TestCompiler` stress run also exposed an older `xRTCompiler.addError(...)`
+bug: `CompilerAdapter.getErrors()` returns `stream().toList()`, which is
+unmodifiable on current Java, and the exception path appended to that list.
+This branch now appends to a mutable copy, preserving the existing compiler
+diagnostics and adding the caught exception without crashing the native
+compiler service.
+
 One intentional exception is `xService`'s atomic property-name set. On `master`
 it was a mutable `static Set<String>` even though it contains only string
 literals. This branch makes it `private static final Set.of(...)`, not a
