@@ -1396,7 +1396,8 @@ public class xRTFunction
         @Override
         protected int callTImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn) {
             TypeConstant    typeTuple = frame.poolContext().ensureTupleType(f_clzTarget.getType());
-            TypeComposition clzTuple  = xTuple.INSTANCE.ensureClass(frame.f_context.f_container, typeTuple);
+            TypeComposition clzTuple  = xTuple.getInstance(frame.container())
+                    .ensureClass(frame.container(), typeTuple);
 
             switch (callImpl(frame, ahVar, Op.A_STACK)) {
             case Op.R_NEXT:

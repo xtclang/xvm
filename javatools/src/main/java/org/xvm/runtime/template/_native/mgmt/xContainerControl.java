@@ -180,7 +180,7 @@ public class xContainerControl
 
     private int completeKill(Frame frame, int iReturn) {
         // Note: the caller is async; we must return the Tuple()
-        return frame.assignValue(iReturn, xTuple.H_VOID);
+        return frame.assignValue(iReturn, xTuple.ensureEmptyTuple(frame.container()));
     }
 
     /**
