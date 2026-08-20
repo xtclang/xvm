@@ -45,8 +45,7 @@ GitHub tracking issue before the replacement branch exists on GitHub.
 
 ## Baseline Commands
 
-The branch has no committed delta from `master`; the PR work is currently in
-the working tree. Use these commands from the repository root:
+Use these commands from the repository root:
 
 ```bash
 git merge-base HEAD master
@@ -99,8 +98,10 @@ mechanism.
 
 ### Constructor-Published Native Template `INSTANCE`
 
-These master sites assigned `INSTANCE = this` from constructors and now expose
-only compatibility getters backed by the central `NativeTemplates` table:
+These master sites assigned `INSTANCE = this` from constructors and now resolve
+through the central `NativeTemplates` table. Some still expose compatibility
+getters for existing call sites; resource templates are resolved directly from
+`Container.nativeTemplates()` and no longer expose `INSTANCE` at all:
 
 - `xRTDelegate.INSTANCE`
 - `xRTViewFromBit.INSTANCE`
@@ -118,6 +119,20 @@ only compatibility getters backed by the central `NativeTemplates` table:
 - `xRTServiceControl.INSTANCE`
 - `xContainerControl.INSTANCE`
 - `xContainerLinker.INSTANCE`
+- `xBasicHashCollector.INSTANCE`
+- `xRTAlgorithms.INSTANCE`
+- `xRTCertificateManager.INSTANCE`
+- `xRTKeyStore.INSTANCE`
+- `xTerminalConsole.INSTANCE`
+- `xRTCompiler.INSTANCE`
+- `xCoreRepository.INSTANCE`
+- `xRTNetwork.INSTANCE`
+- `xRTRandom.INSTANCE`
+- `xLocalClock.INSTANCE`
+- `xNanosTimer.INSTANCE`
+- `xRTConnector.INSTANCE`
+- `xRTServer.INSTANCE`
+- `xInjector.INSTANCE`
 - `xArray.INSTANCE`
 - `xEnum.INSTANCE`
 - `xService.INSTANCE`
@@ -139,6 +154,16 @@ The new files are:
 and resolves the template from `Lazy.get()`. That preserves per-container
 caching while avoiding template bootstrap recursion inside
 `ConcurrentHashMap.computeIfAbsent`.
+
+The resource-template wave updates `NativeContainer.initResources()` to resolve
+injectable resource suppliers from `Container.nativeTemplates()` instead of
+public template statics. The old suppliers were registered during native
+container startup but still captured whatever process-global `INSTANCE` value
+was most recently assigned. The new code captures this container's template.
+`xRTCertificateManager.invokeKeystoreFor(...)` now resolves `xRTKeyStore`
+through the caller frame's container for the same reason. `xRTConnector` also
+moves the old static agent string into a final owner field, preserving the
+same user-agent value without tying it to the removed `INSTANCE` branch.
 
 ### Static Runtime Metadata Caches
 

@@ -54,14 +54,8 @@ import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
  */
 public class xRTAlgorithms
         extends xService {
-    public static xRTAlgorithms INSTANCE;
-
-    public xRTAlgorithms(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTAlgorithms(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

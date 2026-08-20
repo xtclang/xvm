@@ -68,17 +68,12 @@ import org.xvm.runtime.template._native.reflect.xRTFunction;
  */
 public class xRTConnector
         extends xService {
-    public static xRTConnector INSTANCE;
-
-    public xRTConnector(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTConnector(Container container, ClassStructure structure) {
         super(container, structure);
 
-        if (fInstance) {
-            INSTANCE = this;
-            s_sAgent = "Mozilla/5.0 (compatible; Ecstasy/"
-                       + structure.getFileStructure().getModule().getVersionString()
-                       + ')' ;
-        }
+        f_sAgent = "Mozilla/5.0 (compatible; Ecstasy/"
+                + structure.getFileStructure().getModule().getVersionString()
+                + ')' ;
     }
 
     @Override
@@ -156,7 +151,7 @@ public class xRTConnector
         if (hNames == null) {
             Container container = frame.container();
             m_hDefaultNames  = hNames  = xString.makeArrayHandle(container, new String[] {"User-Agent"});
-            m_hDefaultValues = hValues = xString.makeArrayHandle(container, new String[] {s_sAgent});
+            m_hDefaultValues = hValues = xString.makeArrayHandle(container, new String[] {f_sAgent});
         }
 
         return frame.assignValues(aiReturn, hNames, hValues);
@@ -383,9 +378,9 @@ public class xRTConnector
     // ----- data fields ---------------------------------------------------------------------------
 
     /**
-     * Cached agent string.
+     * Agent string for this owner.
      */
-    private static String s_sAgent;
+    private final String f_sAgent;
 
     /**
      * Cached canonical type.
