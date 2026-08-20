@@ -10,7 +10,7 @@ package arrayTests {
         testConstStringArray();
         testAnonArrayVar();
         testNamedArrayVar();
-//        testDistinct(); // TODO: depends on the compilation of Collections.reduce()
+//        testDistinct(); // TODO: DeferredCollection compilation fails in assembleCapRouting()
         shouldIterateUsingForLoop();
         shouldBeReadOnly();
     }
