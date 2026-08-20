@@ -33,14 +33,8 @@ import org.xvm.runtime.template.reflect.xVar;
  */
 public class xAtomic
         extends xVar {
-    public static xAtomic INSTANCE;
-
     public xAtomic(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

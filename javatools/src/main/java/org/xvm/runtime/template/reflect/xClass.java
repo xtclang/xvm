@@ -52,14 +52,8 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
  */
 public class xClass
         extends xConst {
-    public static xClass INSTANCE;
-
     public xClass(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override
@@ -99,8 +93,10 @@ public class xClass
                         frame.getGenericsResolver(typeClz.containsDynamicType()));
 
             ClassTemplate template = switch (idClz.getComponent().getFormat()) {
-                case ENUMVALUE -> xEnumValue  .INSTANCE;
-                case ENUM      -> xEnumeration.INSTANCE;
+                case ENUMVALUE -> frame.container().getTemplate("reflect.EnumValue",
+                        xEnumValue.class);
+                case ENUM      -> frame.container().getTemplate("reflect.Enumeration",
+                        xEnumeration.class);
                 default        -> this;
             };
 
