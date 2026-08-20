@@ -30,14 +30,8 @@ import org.xvm.runtime.template.text.xChar;
  */
 public class xRTCharDelegate
         extends xRTDelegate {
-    public static xRTCharDelegate INSTANCE;
-
-    public xRTCharDelegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTCharDelegate(Container container, ClassStructure structure) {
         super(container, structure);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

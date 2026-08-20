@@ -25,8 +25,6 @@ import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.Sl
 public abstract class LongBasedBitView
         extends xRTViewToBit
         implements BitView {
-    public static LongBasedBitView INSTANCE;
-
     public LongBasedBitView(Container container, ClassStructure structure, int nBitsPerValue) {
         super(container, structure);
 

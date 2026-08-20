@@ -105,9 +105,9 @@ then fail under a parallel runner on a loaded machine.
 
 The XVM codebase has normalized this pattern. On `master`, a direct audit finds
 143 mutable template `INSTANCE` declarations and 139 constructor assignments of
-`INSTANCE = this` in runtime templates. This branch fixes 42 of those
-constructor-published template globals, leaving 101 mutable `INSTANCE` fields
-and 97 constructor assignments for follow-up. A broader scan for escape-shaped
+`INSTANCE = this` in runtime templates. This branch fixes 64 mutable template
+fields and 61 constructor assignments, leaving 79 mutable `INSTANCE` fields
+and 78 constructor assignments for follow-up. A broader scan for escape-shaped
 `this` assignments and calls reports hundreds of hits in
 `javatools/src/main/java`, many of which are false positives, but the signal is
 clear: publishing receivers into mutable non-final state is common enough that
@@ -855,18 +855,17 @@ rg -l "public static (?!final)[A-Za-z0-9_<>, ?]+ INSTANCE;" \
   --pcre2 javatools/src/main/java/org/xvm/runtime/template | sort
 ```
 
-At the time this document was written, it reported 101 unconverted template
+At the time this document was written, it reported 79 unconverted template
 files. They should be migrated in follow-up PRs. Grouping them by package:
 
 - Root templates: `Identity`, `Proxy`, `xConst`, `xException`, `xObject`.
 - Text templates: `xString`, `xChar`, `xRegEx`.
 - Collection templates: `BitBasedArray`, `xBitArray`, `xByteArray`,
   `xNibbleArray`, `xTuple`, `xListMap`.
-- Array delegates and views: `LongBasedBitView`, `LongDelegate`,
-  `LongLongDelegate`, `xRTBitDelegate`, `xRTBooleanDelegate`,
-  `xRTCharDelegate`, `xRTFloat64Delegate`, `xRTInt*Delegate`,
-  `xRTUInt*Delegate`, `xRTNibbleDelegate`, `xRTSlicingDelegate`,
-  `xRTStringDelegate`, `xRTViewFrom*`, `xRTViewToBit*`.
+- Array delegates and views: `xRTBitDelegate`, `xRTBooleanDelegate`,
+  `xRTFloat64Delegate`, `xRTInt8Delegate`, `xRTInt16Delegate`,
+  `xRTInt64Delegate`, `xRTUInt8Delegate`, `xRTNibbleDelegate`,
+  `xRTSlicingDelegate`, `xRTViewFrom*`, and `xRTViewToBitFromNibble`.
 - File-system templates: `xOSDirectory`, `xOSFile`,
   `xRawOSFileChannel`.
 - Native reflect templates still using mutable `INSTANCE`:
@@ -922,6 +921,28 @@ Converted `INSTANCE` fields in this branch include:
 - `xRTBuffer`,
 - `xRTNetworkInterface`,
 - `xRTSocket`,
+- `LongBasedBitView`,
+- `LongDelegate`,
+- `LongLongDelegate`,
+- `xRTCharDelegate`,
+- `xRTInt128Delegate`,
+- `xRTInt32Delegate`,
+- `xRTStringDelegate`,
+- `xRTUInt128Delegate`,
+- `xRTUInt16Delegate`,
+- `xRTUInt32Delegate`,
+- `xRTUInt64Delegate`,
+- `xRTViewToBitFromFloat64`,
+- `xRTViewToBitFromInt128`,
+- `xRTViewToBitFromInt16`,
+- `xRTViewToBitFromInt32`,
+- `xRTViewToBitFromInt64`,
+- `xRTViewToBitFromInt8`,
+- `xRTViewToBitFromUInt128`,
+- `xRTViewToBitFromUInt16`,
+- `xRTViewToBitFromUInt32`,
+- `xRTViewToBitFromUInt64`,
+- `xRTViewToBitFromUInt8`,
 - `xModule`,
 - `xPackage`.
 

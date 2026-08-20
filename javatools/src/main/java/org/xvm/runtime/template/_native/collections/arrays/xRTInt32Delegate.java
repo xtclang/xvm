@@ -20,14 +20,8 @@ import org.xvm.runtime.template.numbers.xInt32;
 public class xRTInt32Delegate
         extends LongBasedDelegate
         implements ByteView {
-    public static xRTInt32Delegate INSTANCE;
-
-    public xRTInt32Delegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTInt32Delegate(Container container, ClassStructure structure) {
         super(container, structure, 32, true);
-
-        if (fInstance) {
-            INSTANCE = this;
-        }
     }
 
     @Override

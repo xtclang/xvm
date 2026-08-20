@@ -65,24 +65,24 @@ public class xRTDelegate
 
             registerNativeTemplate(new xRTBooleanDelegate (f_container, f_struct, true));
             registerNativeTemplate(new xRTBitDelegate     (f_container, f_struct, true));
-            registerNativeTemplate(new xRTCharDelegate    (f_container, f_struct, true));
+            registerNativeTemplate(new xRTCharDelegate    (f_container, f_struct));
 
             registerNativeTemplate(new xRTInt8Delegate    (f_container, f_struct, true));
             registerNativeTemplate(new xRTInt16Delegate   (f_container, f_struct, true));
-            registerNativeTemplate(new xRTInt32Delegate   (f_container, f_struct, true));
+            registerNativeTemplate(new xRTInt32Delegate   (f_container, f_struct));
             registerNativeTemplate(new xRTInt64Delegate   (f_container, f_struct, true));
-            registerNativeTemplate(new xRTInt128Delegate  (f_container, f_struct, true));
+            registerNativeTemplate(new xRTInt128Delegate  (f_container, f_struct));
 
             registerNativeTemplate(new xRTNibbleDelegate   (f_container, f_struct, true));
             registerNativeTemplate(new xRTUInt8Delegate   (f_container, f_struct, true));
-            registerNativeTemplate(new xRTUInt16Delegate  (f_container, f_struct, true));
-            registerNativeTemplate(new xRTUInt32Delegate  (f_container, f_struct, true));
-            registerNativeTemplate(new xRTUInt64Delegate  (f_container, f_struct, true));
-            registerNativeTemplate(new xRTUInt128Delegate (f_container, f_struct, true));
+            registerNativeTemplate(new xRTUInt16Delegate  (f_container, f_struct));
+            registerNativeTemplate(new xRTUInt32Delegate  (f_container, f_struct));
+            registerNativeTemplate(new xRTUInt64Delegate  (f_container, f_struct));
+            registerNativeTemplate(new xRTUInt128Delegate (f_container, f_struct));
 
             registerNativeTemplate(new xRTFloat64Delegate (f_container, f_struct, true));
 
-            registerNativeTemplate(new xRTStringDelegate  (f_container, f_struct, true));
+            registerNativeTemplate(new xRTStringDelegate  (f_container, f_struct));
         }
     }
 
