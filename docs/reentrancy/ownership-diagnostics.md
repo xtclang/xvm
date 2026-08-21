@@ -32,6 +32,29 @@ String dump = OwnershipDiagnostics.dump(true, containerA, containerB);
 useful in a diagnostic harness, but it is not appropriate for normal runtime
 logging because it changes what has been warmed.
 
+The same traversal is available as a validator:
+
+```java
+OwnershipDiagnostics.Validation validation =
+        OwnershipDiagnostics.validate(containerA, containerB);
+
+if (!validation.isValid()) {
+    throw new AssertionError(validation.message());
+}
+```
+
+For stress tests and manual runners that should fail immediately on illegal
+ownership, use the throwing shortcut:
+
+```java
+OwnershipDiagnostics.assertValid(containerA, containerB);
+```
+
+`assertValid(...)` throws `IllegalStateException` when it finds an owner
+mismatch, a constant-pool mismatch, or an owner-scoped object identity shared by
+two inspected containers. This is the mode to wire into race reproducers once a
+workload has warmed the path being checked.
+
 ## What It Dumps
 
 For each container, the dump includes:
@@ -44,6 +67,7 @@ For each container, the dump includes:
 - the container's `compositions` cache,
 - service contexts known to the container,
 - owner mismatches detected through runtime APIs,
+- constant-pool mismatches detected on traversed constants,
 - and cross-container object identity sharing for owner-bearing objects.
 
 Owner-bearing objects currently include:
