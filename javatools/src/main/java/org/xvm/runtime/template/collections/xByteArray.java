@@ -31,7 +31,7 @@ import org.xvm.util.Lazy;
  */
 public class xByteArray
         extends xArray {
-    public xByteArray(Container container, ClassStructure structure, boolean fInstance) {
+    public xByteArray(Container container, ClassStructure structure) {
         super(container, structure);
     }
 

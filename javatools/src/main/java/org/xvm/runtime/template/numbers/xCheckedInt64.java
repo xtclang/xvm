@@ -11,7 +11,7 @@ import org.xvm.runtime.Container;
  */
 public class xCheckedInt64
         extends xCheckedConstrainedInt {
-    public xCheckedInt64(Container container, ClassStructure structure, boolean fInstance) {
+    public xCheckedInt64(Container container, ClassStructure structure) {
         super(container, structure, Long.MIN_VALUE, Long.MAX_VALUE, 64, false);
     }
 

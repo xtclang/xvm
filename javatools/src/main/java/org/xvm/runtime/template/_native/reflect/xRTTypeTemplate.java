@@ -62,7 +62,7 @@ public class xRTTypeTemplate
     }
 
     public xRTTypeTemplate(Container container, ClassStructure structure) {
-        super(container, structure, false);
+        super(container, structure);
     }
 
     @Override

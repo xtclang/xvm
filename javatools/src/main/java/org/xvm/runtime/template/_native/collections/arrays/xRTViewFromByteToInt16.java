@@ -23,7 +23,7 @@ import org.xvm.runtime.template.numbers.xInt16;
  */
 public class xRTViewFromByteToInt16
         extends xRTViewFromByte {
-    public xRTViewFromByteToInt16(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTViewFromByteToInt16(Container container, ClassStructure structure) {
         super(container, structure);
     }
 

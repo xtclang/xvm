@@ -36,9 +36,9 @@ public class xRTViewFromBit
     @Override
     public void registerNativeTemplates() {
         if (NativeTemplates.get(this).isViewFromBit(this)) {
-            registerNativeTemplate(new xRTViewFromBitToBoolean (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewFromBitToByte    (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewFromBitToNibble  (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewFromBitToBoolean (f_container, f_struct));
+            registerNativeTemplate(new xRTViewFromBitToByte    (f_container, f_struct));
+            registerNativeTemplate(new xRTViewFromBitToNibble  (f_container, f_struct));
         }
     }
 

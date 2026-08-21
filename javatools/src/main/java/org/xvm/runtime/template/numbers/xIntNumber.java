@@ -11,8 +11,8 @@ import org.xvm.runtime.Container;
  */
 public abstract class xIntNumber
         extends xNumber {
-    public xIntNumber(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+    public xIntNumber(Container container, ClassStructure structure) {
+        super(container, structure);
     }
 
     @Override

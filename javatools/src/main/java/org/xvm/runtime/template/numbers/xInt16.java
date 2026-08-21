@@ -11,7 +11,7 @@ import org.xvm.runtime.Container;
  */
 public class xInt16
         extends xConstrainedInteger {
-    public xInt16(Container container, ClassStructure structure, boolean fInstance) {
+    public xInt16(Container container, ClassStructure structure) {
         super(container, structure, Short.MIN_VALUE, Short.MAX_VALUE, 16, false, false);
     }
 

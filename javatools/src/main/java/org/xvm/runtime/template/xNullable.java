@@ -24,7 +24,7 @@ public class xNullable
         return NativeTemplates.get(container).nullable();
     }
 
-    public xNullable(Container container, ClassStructure structure, boolean fInstance) {
+    public xNullable(Container container, ClassStructure structure) {
         super(container, structure);
     }
 

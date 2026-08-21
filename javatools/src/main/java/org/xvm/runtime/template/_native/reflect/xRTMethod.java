@@ -51,7 +51,7 @@ public class xRTMethod
     }
 
     public xRTMethod(Container container, ClassStructure structure) {
-        super(container, structure, false);
+        super(container, structure);
     }
 
     @Override

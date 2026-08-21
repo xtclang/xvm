@@ -37,10 +37,10 @@ public class xRTViewFromByte
     @Override
     public void registerNativeTemplates() {
         if (NativeTemplates.get(this).isViewFromByte(this)) {
-            registerNativeTemplate(new xRTViewFromByteToInt8   (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewFromByteToInt16  (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewFromByteToInt64  (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewFromByteToFloat64(f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewFromByteToInt8   (f_container, f_struct));
+            registerNativeTemplate(new xRTViewFromByteToInt16  (f_container, f_struct));
+            registerNativeTemplate(new xRTViewFromByteToInt64  (f_container, f_struct));
+            registerNativeTemplate(new xRTViewFromByteToFloat64(f_container, f_struct));
         }
     }
 

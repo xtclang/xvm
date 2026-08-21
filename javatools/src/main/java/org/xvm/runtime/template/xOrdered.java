@@ -26,7 +26,7 @@ public class xOrdered
         return NativeTemplates.get(container).ordered();
     }
 
-    public xOrdered(Container container, ClassStructure structure, boolean fInstance) {
+    public xOrdered(Container container, ClassStructure structure) {
         super(container, structure);
     }
 

@@ -15,7 +15,7 @@ import org.xvm.runtime.Frame;
  */
 public class xFloat64
         extends BaseBinaryFP {
-    public xFloat64(Container container, ClassStructure structure, boolean fInstance) {
+    public xFloat64(Container container, ClassStructure structure) {
         super(container, structure, 64);
     }
 

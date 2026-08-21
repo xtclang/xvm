@@ -25,7 +25,7 @@ public class xBoolean
         return NativeTemplates.get(container).booleanTemplate();
     }
 
-    public xBoolean(Container container, ClassStructure structure, boolean fInstance) {
+    public xBoolean(Container container, ClassStructure structure) {
         super(container, structure);
     }
 

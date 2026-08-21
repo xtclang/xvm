@@ -28,8 +28,8 @@ import org.xvm.runtime.template.xEnum;
  */
 public class xEnumeration
         extends xClass {
-    public xEnumeration(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+    public xEnumeration(Container container, ClassStructure structure) {
+        super(container, structure);
     }
 
     @Override

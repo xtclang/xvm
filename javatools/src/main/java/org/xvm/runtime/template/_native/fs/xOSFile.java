@@ -56,7 +56,7 @@ import org.xvm.util.Lazy;
 public class xOSFile
         extends xOSFileNode {
     public xOSFile(Container container, ClassStructure structure) {
-        super(container, structure, false);
+        super(container, structure);
     }
 
     @Override

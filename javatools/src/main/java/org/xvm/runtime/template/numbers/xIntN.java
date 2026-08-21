@@ -18,7 +18,7 @@ import org.xvm.util.PackedInteger;
  */
 public class xIntN
         extends xUnconstrainedInteger {
-    public xIntN(Container container, ClassStructure structure, boolean fInstance) {
+    public xIntN(Container container, ClassStructure structure) {
         super(container, structure, true);
     }
 

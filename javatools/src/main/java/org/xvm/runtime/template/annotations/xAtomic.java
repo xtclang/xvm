@@ -35,7 +35,7 @@ import org.xvm.util.Lazy;
  */
 public class xAtomic
         extends xVar {
-    public xAtomic(Container container, ClassStructure structure, boolean fInstance) {
+    public xAtomic(Container container, ClassStructure structure) {
         super(container, structure, false);
     }
 

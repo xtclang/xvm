@@ -168,12 +168,12 @@ public class NativeContainer
             scanNativeDirectory(dirTemplates, "", mapTemplateClasses);
         }
 
-        // Legacy templates still using constructor-published INSTANCE fields need these anchors set
-        // up before reflective template loading. Converted base templates resolve through
-        // NativeTemplates and do not publish from their constructors.
+        // Base templates are installed before reflective template loading so converted templates
+        // can resolve canonical owners through NativeTemplates instead of constructor-published
+        // INSTANCE fields.
         storeNativeTemplate(new xObject (this, getClassStructure("Object")));
         storeNativeTemplate(new xEnum   (this, getClassStructure("Enum")));
-        storeNativeTemplate(new xConst  (this, getClassStructure("Const"),   true));
+        storeNativeTemplate(new xConst  (this, getClassStructure("Const")));
         storeNativeTemplate(new xService(this, getClassStructure("Service")));
 
         for (Map.Entry<String, Class> entry : mapTemplateClasses.entrySet()) {
@@ -782,6 +782,8 @@ public class NativeContainer
                     clz.getConstructor(Container.class, ClassStructure.class);
             return constructor.newInstance(this, structClass);
         } catch (NoSuchMethodException ignore) {
+            // TODO: delete this fallback after the remaining canonical-template role flags
+            // (Ref, Var, Char, Nibble, UInt8) are replaced by explicit owner-local state.
             Constructor<ClassTemplate> constructor =
                     clz.getConstructor(Container.class, ClassStructure.class, Boolean.TYPE);
             return constructor.newInstance(this, structClass, Boolean.TRUE);

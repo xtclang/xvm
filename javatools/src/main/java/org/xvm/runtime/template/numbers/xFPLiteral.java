@@ -32,8 +32,8 @@ import org.xvm.type.Decimal128;
  */
 public class xFPLiteral
         extends xConst {
-    public xFPLiteral(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+    public xFPLiteral(Container container, ClassStructure structure) {
+        super(container, structure);
     }
 
     @Override
