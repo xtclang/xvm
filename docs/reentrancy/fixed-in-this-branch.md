@@ -143,6 +143,44 @@ The full incident, rejected hypothesis, diagnostics output, and proof commands
 are documented in
 [stress-discovered-runtime-issues.md#adopted-singletonconstant-runtime-state-leak](stress-discovered-runtime-issues.md#adopted-singletonconstant-runtime-state-leak).
 
+The adoption hardening wave also fixes the remaining runtime-relevant
+shallow-clone helper state identified by the audit:
+
+- `TypeConstant.setContaining(...)` now clears every non-logical transient
+  helper/runtime/JIT cache when a cloned type changes pool owner, including
+  recursive-depth, in-progress relation, consumption/production, type-handle,
+  JIT-name, and normalization state.
+- `ParameterizedTypeConstant.adoptedBy(...)` reconstructs the logical
+  parameterized type for the target pool instead of shallow-cloning the final
+  `StampedLock` and resolver/JIT helper state.
+- `SignatureConstant.adoptedBy(...)` reconstructs the logical signature for
+  the target pool, preserves the transient property-signature marker that
+  participates in in-memory identity, and drops comparison/JIT helper state.
+- `TypeParameterConstant.adoptedBy(...)` reconstructs the logical register
+  type parameter for the target pool instead of shallow-cloning the final
+  recursive-comparison `TransientThreadLocal`.
+- `HandleConstant.adoptedBy(...)` now allows only the first registration of a
+  fresh unowned runtime handle constant. Moving an already-owned live handle
+  constant to another pool throws immediately.
+
+These changes preserve the old cache intent: each target owner still computes
+and caches the same values locally after first use, but no owner inherits
+another owner's helper cell or runtime handle through `Object.clone()`. The
+focused regression test is
+`javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java`; copied into a
+detached `master` worktree, that test failed all five adoption cases.
+
+The broader owner-transfer audit is documented in
+[constant-adoption-clone-audit.md](constant-adoption-clone-audit.md). That file
+explains why adoption exists, why it should preserve only logical constant
+value state, and how this branch hardens the remaining runtime-relevant
+shallow-copied helper/runtime fields.
+
+The broader `ConstantPool` state audit is documented in
+[constant-pool-state-audit.md](constant-pool-state-audit.md). It distinguishes
+per-pool caches, ambient owner lookup, runtime registration/adoption hazards,
+and compiler-only pool mutation paths.
+
 ### Constructor-Published Native Template `INSTANCE`
 
 These master sites assigned `INSTANCE = this` from constructors and now resolve
@@ -740,7 +778,7 @@ per container. The bug was that the daemon constructor also captured a
 ```java
 daemonWatch = s_daemonWatch = new WatchServiceDaemon(pool);
 ...
-try (var ignore = ConstantPool.withPool(f_pool)) {
+try (var _ = ConstantPool.withPool(f_pool)) {
     ...
 }
 ```

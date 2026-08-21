@@ -745,6 +745,18 @@ public class SignatureConstant
         return sJitName;
     }
 
+    @Override
+    protected SignatureConstant adoptedBy(ConstantPool pool) {
+        SignatureConstant that = new SignatureConstant(pool, getName(),
+                Arrays.copyOf(m_aconstParams, m_aconstParams.length),
+                Arrays.copyOf(m_aconstReturns, m_aconstReturns.length));
+
+        // This transient marker participates in signature identity for in-memory property
+        // signatures. Everything else cached by this class is owner-local helper state and is
+        // intentionally born empty on the reconstructed target-pool constant.
+        that.m_fProperty = m_fProperty;
+        return that;
+    }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -952,7 +964,7 @@ public class SignatureConstant
     /**
      * Lock protecting the cached comparison fields.
      */
-    private final StampedLock m_lockPrev = new StampedLock();
+    private final transient StampedLock m_lockPrev = new StampedLock();
 
     /**
      * Cached comparison target.

@@ -2,6 +2,7 @@ package org.xvm.asm.constants;
 
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -47,6 +48,19 @@ public class HandleConstant
     @Override
     protected int compareDetails(Constant constant) {
         return -1;
+    }
+
+    @Override
+    protected Constant adoptedBy(ConstantPool pool) {
+        if (getContaining() == null) {
+            // Runtime annotation construction creates a fresh, unowned HandleConstant and then
+            // registers it in the current pool. Moving an already-owned live ObjectHandle to a
+            // different pool would leak frame/container-owned runtime state.
+            return super.adoptedBy(pool);
+        }
+
+        throw new IllegalStateException(
+                "HandleConstant wraps a live ObjectHandle and cannot be adopted into " + pool);
     }
 
     @Override
