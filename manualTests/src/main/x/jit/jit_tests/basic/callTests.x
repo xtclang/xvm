@@ -27,6 +27,8 @@ package callTests {
             assert i3 == 33;
         }
         assert testConditional();
+        assert testConditionalNarrowing("hello") == 5;
+        assert testConditionalNarrowing(42) == 0;
 
         assert testStatic(1);
         assert !testStatic(-1);
@@ -103,6 +105,8 @@ package callTests {
             return False;
         }
     }
+
+    Int testConditionalNarrowing(Object value) = value.is(String)?.size : 0;
 
     static Boolean testStatic(Int i) = i > 0;
 

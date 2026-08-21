@@ -10,6 +10,7 @@ import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.UnassignedTypeConstant;
 
 import org.xvm.javajit.BuildContext;
 
@@ -221,7 +222,10 @@ public abstract class OpVar
     public void computeTypes(BuildContext bctx) {
         if (isTypeAware()) {
             TypeConstant typeVar = switch (getOpCode()) {
-                case OP_VAR, OP_VAR_I, OP_VAR_N, OP_VAR_IN, OP_VAR_S, OP_VAR_SN ->
+                case OP_VAR, OP_VAR_N ->
+                    new UnassignedTypeConstant(bctx.getTypeConstant(m_nType));
+
+                case OP_VAR_I, OP_VAR_IN, OP_VAR_S, OP_VAR_SN ->
                     bctx.getTypeConstant(m_nType);
 
                 case OP_VAR_D, OP_VAR_DN ->
