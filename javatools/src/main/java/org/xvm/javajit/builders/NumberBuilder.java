@@ -184,7 +184,7 @@ public class NumberBuilder extends AugmentingBuilder {
                 ? getMethodCodeGenerator(method.getJitIdentity().getName())
                 : null;
         if (generator == null) {
-            generator = this::generateUnsupported;
+            generator = (code, jmd_) -> generateUnsupported(code, jmd_, jitName);
         }
         assembleGeneratedMethod(classBuilder, method, jitName, jmd, generator);
     }
@@ -222,9 +222,9 @@ public class NumberBuilder extends AugmentingBuilder {
     /**
      * Generate a placeholder method that throws Unsupported.
      */
-    protected void generateUnsupported(CodeBuilder code, JitMethodDesc jmd) {
+    protected void generateUnsupported(CodeBuilder code, JitMethodDesc jmd, String jitName) {
         code.aload(code.parameterSlot(jmd.optimizedCtx()))
-            .aconst_null()
+            .ldc(jitName)
             .invokestatic(CD_Exception, "$unsupported",
                     MethodTypeDesc.of(CD_nException, CD_Ctx, CD_JavaString))
             .athrow();
