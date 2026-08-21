@@ -49,7 +49,7 @@ public class xAtomic
 
     @Override
     public ClassTemplate getTemplate(TypeConstant type) {
-        ClassTemplate templateAtomicInt = f_numberTemplates.get().get(type.getParamType(0));
+        ClassTemplate templateAtomicInt = f_numberTemplates.get(this).get(type.getParamType(0));
         return templateAtomicInt == null ? this : templateAtomicInt;
     }
 
@@ -232,8 +232,8 @@ public class xAtomic
      * keys and referent templates are derived from this container's pool and
      * template registry, so a JVM-global map would cross container ownership.
      */
-    private final Lazy<Map<TypeConstant, xAtomic>> f_numberTemplates =
-            Lazy.of(this::createNumberTemplates);
+    private final Lazy.Owner<xAtomic, Map<TypeConstant, xAtomic>> f_numberTemplates =
+            Lazy.ofOwner(xAtomic::createNumberTemplates);
 
     private Map<TypeConstant, xAtomic> createNumberTemplates() {
         ConstantPool       pool              = f_container.getConstantPool();

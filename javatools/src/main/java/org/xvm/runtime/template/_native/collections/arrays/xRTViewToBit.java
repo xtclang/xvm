@@ -79,7 +79,7 @@ public class xRTViewToBit
      */
     public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability) {
         TypeConstant typeElement = hSource.getType().getParamType(0);
-        xRTViewToBit template    = f_views.get().get(typeElement);
+        xRTViewToBit template    = f_views.get(this).get(typeElement);
 
         if (template != null) {
             return template.createBitViewDelegate(hSource, mutability);
@@ -93,7 +93,8 @@ public class xRTViewToBit
     // The dispatch map is owner-local because both the element type keys and specialized templates
     // are ConstantPool/container owned. A static map built from subtype INSTANCE fields can cross
     // containers under parallel startup.
-    private final Lazy<Map<TypeConstant, xRTViewToBit>> f_views = Lazy.of(this::createViews);
+    private final Lazy.Owner<xRTViewToBit, Map<TypeConstant, xRTViewToBit>> f_views =
+            Lazy.ofOwner(xRTViewToBit::createViews);
 
     private Map<TypeConstant, xRTViewToBit> createViews() {
         ConstantPool                    pool     = pool();

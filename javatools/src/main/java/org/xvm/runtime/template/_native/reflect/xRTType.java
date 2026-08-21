@@ -1674,8 +1674,8 @@ public class xRTType
     }
 
     private ObjectHandle makeRegisterHandle(Frame frame, int nRegister) {
-        TypeComposition clz  = f_compRegister.get();
-        MethodStructure ctor = f_ctorRegister.get();
+        TypeComposition clz  = f_compRegister.get(this);
+        MethodStructure ctor = f_ctorRegister.get(this);
 
         ObjectHandle[] ahArg = new ObjectHandle[ctor.getMaxVars()];
         ahArg[0] = xInt64.makeHandle(frame, nRegister);
@@ -1688,7 +1688,7 @@ public class xRTType
             DeferredCallHandle hDeferred = new DeferredCallHandle(frame.m_frameNext);
             hDeferred.addContinuation(frameCaller ->
                  Utils.constructArgument(
-                     frameCaller, f_compRegister.get().getType(), frameCaller.popStack(), null));
+                     frameCaller, clz.getType(), frameCaller.popStack(), null));
             return hDeferred;
         }
 
@@ -1739,7 +1739,7 @@ public class xRTType
     public static TypeComposition ensureTypeArrayComposition(Container container) {
         xRTType template = NativeTemplates.get(container).type();
         return container.ensureClassComposition(
-                template.f_typeArray.get(), xArray.getInstance(container));
+                template.f_typeArray.get(template), xArray.getInstance(container));
     }
 
     /**
@@ -1747,7 +1747,7 @@ public class xRTType
      */
     public static ArrayHandle ensureEmptyTypeArray(Container container) {
         xRTType      templateType = NativeTemplates.get(container).type();
-        ArrayConstant constEmpty  = templateType.f_constEmptyTypeArray.get();
+        ArrayConstant constEmpty  = templateType.f_constEmptyTypeArray.get(templateType);
         ArrayHandle   haEmpty     = (ArrayHandle) container.f_heap.getConstHandle(constEmpty);
         if (haEmpty == null) {
             haEmpty = xArray.createImmutableArray(ensureTypeArrayComposition(container), Utils.OBJECTS_NONE);
@@ -1760,7 +1760,8 @@ public class xRTType
      * @return the TypeConstant for {@code immutable ListMap<String, Type>}
      */
     public static TypeConstant ensureListMapType(Container container) {
-        return NativeTemplates.get(container).type().f_typeListMap.get();
+        xRTType template = NativeTemplates.get(container).type();
+        return template.f_typeListMap.get(template);
     }
 
     // ----- TypeHandle support --------------------------------------------------------------------
@@ -1786,17 +1787,20 @@ public class xRTType
             ? new TypeHandle(template.ensureClass(container, type.getType()), null)
             : new TypeHandle(template.getCanonicalClass(), type.getType());
 
+        PropertyConstant propCalculate = template.f_propCalculate.get(template);
+        PropertyConstant propHasher    = template.f_propHasher.get(template);
+
         GenericHandle hMulti = (GenericHandle) hType.getField(null, "multimethods");
         hMulti.setField(null, GenericHandle.OUTER, hType);
-        hMulti.setField(null, template.f_propCalculate.get(),  xNullable.makeHandle(container));
+        hMulti.setField(null, propCalculate, xNullable.makeHandle(container));
 
-        GenericHandle hHasher = (GenericHandle) hType.getField(null, template.f_propHasher.get());
+        GenericHandle hHasher = (GenericHandle) hType.getField(null, propHasher);
         hHasher.setField(null, GenericHandle.OUTER, hType);
-        hHasher.setField(null, template.f_propCalculate.get(),  xNullable.makeHandle(container));
+        hHasher.setField(null, propCalculate, xNullable.makeHandle(container));
 
         GenericHandle hIter = (GenericHandle) hType.getField(null, "emptyIterator");
         hIter.setField(null, GenericHandle.OUTER, hType);
-        hIter.setField(null, template.f_propCalculate.get(),  xNullable.makeHandle(container));
+        hIter.setField(null, propCalculate, xNullable.makeHandle(container));
 
         return hType;
     }
@@ -1924,28 +1928,29 @@ public class xRTType
 
     // ----- data members --------------------------------------------------------------------------
 
-    private final Lazy<TypeConstant> f_typeArray = Lazy.of(() ->
-            pool().ensureArrayType(pool().typeType()));
+    private final Lazy.Owner<xRTType, TypeConstant> f_typeArray = Lazy.ofOwner(owner ->
+            owner.pool().ensureArrayType(owner.pool().typeType()));
 
-    private final Lazy<ArrayConstant> f_constEmptyTypeArray = Lazy.of(() ->
-            pool().ensureArrayConstant(f_typeArray.get(), Constant.NO_CONSTS));
+    private final Lazy.Owner<xRTType, ArrayConstant> f_constEmptyTypeArray = Lazy.ofOwner(owner ->
+            owner.pool().ensureArrayConstant(owner.f_typeArray.get(owner), Constant.NO_CONSTS));
 
-    private final Lazy<TypeConstant> f_typeListMap = Lazy.of(() -> {
-        ConstantPool  pool = pool();
+    private final Lazy.Owner<xRTType, TypeConstant> f_typeListMap = Lazy.ofOwner(owner -> {
+        ConstantPool  pool = owner.pool();
         TypeConstant type = pool.ensureEcstasyTypeConstant("maps.ListMap");
         type = pool.ensureParameterizedTypeConstant(type, pool.typeString(), pool.typeType());
         return pool.ensureImmutableTypeConstant(type);
     });
 
-    private final Lazy<TypeComposition> f_compRegister = Lazy.of(() ->
-            f_container.resolveClass(pool().ensureEcstasyTypeConstant("reflect.Register")));
+    private final Lazy.Owner<xRTType, TypeComposition> f_compRegister = Lazy.ofOwner(owner ->
+            owner.container().resolveClass(owner.pool().ensureEcstasyTypeConstant("reflect.Register")));
 
-    private final Lazy<MethodStructure> f_ctorRegister = Lazy.of(() ->
-            f_compRegister.get().getTemplate().getStructure().findMethod("construct", 1));
+    private final Lazy.Owner<xRTType, MethodStructure> f_ctorRegister = Lazy.ofOwner(owner ->
+            owner.f_compRegister.get(owner).getTemplate().getStructure().findMethod("construct", 1));
 
-    private final Lazy<PropertyConstant> f_propCalculate = Lazy.of(() ->
-            (PropertyConstant) pool().clzLazy().getComponent().getChild("calculate").getIdentityConstant());
+    private final Lazy.Owner<xRTType, PropertyConstant> f_propCalculate = Lazy.ofOwner(owner ->
+            (PropertyConstant) owner.pool().clzLazy().getComponent()
+                    .getChild("calculate").getIdentityConstant());
 
-    private final Lazy<PropertyConstant> f_propHasher = Lazy.of(() ->
-            (PropertyConstant) f_struct.getChild("hasher").getIdentityConstant());
+    private final Lazy.Owner<xRTType, PropertyConstant> f_propHasher = Lazy.ofOwner(owner ->
+            (PropertyConstant) owner.f_struct.getChild("hasher").getIdentityConstant());
 }

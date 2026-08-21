@@ -62,7 +62,7 @@ public class xRTViewFromBit
     public DelegateHandle createBitViewDelegate(TypeConstant typeElement,
                                                 DelegateHandle hSource,
                                                 Mutability mutability) {
-        xRTViewFromBit template = f_views.get().get(typeElement);
+        xRTViewFromBit template = f_views.get(this).get(typeElement);
         if (template != null) {
             return template.createBitViewDelegate(hSource, mutability);
         }
@@ -138,7 +138,8 @@ public class xRTViewFromBit
 
     // ----- data members --------------------------------------------------------------------------
 
-    private final Lazy<Map<TypeConstant, xRTViewFromBit>> f_views = Lazy.of(this::createViews);
+    private final Lazy.Owner<xRTViewFromBit, Map<TypeConstant, xRTViewFromBit>> f_views =
+            Lazy.ofOwner(xRTViewFromBit::createViews);
 
     private Map<TypeConstant, xRTViewFromBit> createViews() {
         ConstantPool                      pool     = pool();

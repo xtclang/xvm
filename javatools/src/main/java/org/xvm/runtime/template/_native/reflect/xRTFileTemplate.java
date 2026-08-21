@@ -205,7 +205,7 @@ public class xRTFileTemplate
                     : frame.raiseException("Missing dependent module: " + idMissing.getName());
         }
 
-        MethodStructure methodLinkModules = f_methodLinkModules.get();
+        MethodStructure methodLinkModules = f_methodLinkModules.get(this);
         ObjectHandle[]  ahArg             = new ObjectHandle[methodLinkModules.getMaxVars()];
         ahArg[0] = hRepo;
 
@@ -305,7 +305,7 @@ public class xRTFileTemplate
         xRTFileTemplate template = container.getTemplate("_native.reflect.RTFileTemplate",
                 xRTFileTemplate.class);
         TypeComposition clzFile = template.ensureClass(container,
-                template.getCanonicalType(), template.f_typeFileTemplate.get());
+                template.getCanonicalType(), template.f_typeFileTemplate.get(template));
         return new ComponentTemplateHandle(clzFile, fileStruct);
     }
 
@@ -313,8 +313,9 @@ public class xRTFileTemplate
      * @return the container-owned FileTemplate type
      */
     public static TypeConstant ensureFileTemplateType(Container container) {
-        return container.getTemplate("_native.reflect.RTFileTemplate", xRTFileTemplate.class)
-                .f_typeFileTemplate.get();
+        xRTFileTemplate template = container.getTemplate("_native.reflect.RTFileTemplate",
+                xRTFileTemplate.class);
+        return template.f_typeFileTemplate.get(template);
     }
 
     // ----- data members --------------------------------------------------------------------------
@@ -323,9 +324,9 @@ public class xRTFileTemplate
      * FileTemplate metadata used to be mutable static state. Both values come from this template's
      * structure and constant pool, so cache them on the owning template.
      */
-    private final Lazy<TypeConstant> f_typeFileTemplate =
-            Lazy.of(() -> pool().ensureEcstasyTypeConstant("reflect.FileTemplate"));
+    private final Lazy.Owner<xRTFileTemplate, TypeConstant> f_typeFileTemplate =
+            Lazy.ofOwner(owner -> owner.pool().ensureEcstasyTypeConstant("reflect.FileTemplate"));
 
-    private final Lazy<MethodStructure> f_methodLinkModules =
-            Lazy.of(() -> f_struct.findMethod("linkModules", 1));
+    private final Lazy.Owner<xRTFileTemplate, MethodStructure> f_methodLinkModules =
+            Lazy.ofOwner(owner -> owner.f_struct.findMethod("linkModules", 1));
 }

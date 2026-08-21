@@ -68,7 +68,7 @@ public class xContainerLinker
 
     @Override
     public void initNative() {
-        f_sigGetResource.get();
+        f_sigGetResource.get(this);
 
         markNativeMethod("collectInjectionsImpl", null, null);
         markNativeMethod("loadFileTemplate", BYTES, null);
@@ -86,7 +86,7 @@ public class xContainerLinker
      * Injection support.
      */
     public ObjectHandle ensureLinker(Frame frame, ObjectHandle hOpts) {
-        return f_hLinker.get();
+        return f_hLinker.get(this);
     }
 
     @Override
@@ -250,7 +250,7 @@ public class xContainerLinker
     }
 
     private SignatureConstant getResourceSignature() {
-        return f_sigGetResource.get();
+        return f_sigGetResource.get(this);
     }
 
     public static class CollectResources
@@ -322,16 +322,16 @@ public class xContainerLinker
     /**
      * Lazily resolved ResourceProvider.getResource signature owned by this template's container.
      */
-    private final Lazy<SignatureConstant> f_sigGetResource = Lazy.of(() -> {
+    private final Lazy.Owner<xContainerLinker, SignatureConstant> f_sigGetResource = Lazy.ofOwner(owner -> {
         ClassStructure clz = (ClassStructure)
-                pool().ensureEcstasyClassConstant("mgmt.ResourceProvider").getComponent();
+                owner.pool().ensureEcstasyClassConstant("mgmt.ResourceProvider").getComponent();
         return clz.findMethod("getResource", 2).getIdentityConstant().getSignature();
     });
 
     /**
      * Cached Linker handle.
      */
-    private final Lazy<ObjectHandle> f_hLinker = Lazy.of(() ->
-            createServiceHandle(f_container.createServiceContext("Linker"),
-                    getCanonicalClass(), getCanonicalType()));
+    private final Lazy.Owner<xContainerLinker, ObjectHandle> f_hLinker = Lazy.ofOwner(owner ->
+            owner.createServiceHandle(owner.container().createServiceContext("Linker"),
+                    owner.getCanonicalClass(), owner.getCanonicalType()));
 }

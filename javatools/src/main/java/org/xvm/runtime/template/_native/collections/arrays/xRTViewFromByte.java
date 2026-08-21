@@ -73,7 +73,7 @@ public class xRTViewFromByte
      */
     public DelegateHandle createByteView(TypeConstant typeElement, DelegateHandle hSource,
                                          Mutability mutability, int nBytes) {
-        xRTViewFromByte template = f_views.get().get(typeElement);
+        xRTViewFromByte template = f_views.get(this).get(typeElement);
         if (template != null) {
             return template.createByteView(hSource, mutability, nBytes);
         }
@@ -107,7 +107,8 @@ public class xRTViewFromByte
 
     // ----- data members --------------------------------------------------------------------------
 
-    private final Lazy<Map<TypeConstant, xRTViewFromByte>> f_views = Lazy.of(this::createViews);
+    private final Lazy.Owner<xRTViewFromByte, Map<TypeConstant, xRTViewFromByte>> f_views =
+            Lazy.ofOwner(xRTViewFromByte::createViews);
 
     private Map<TypeConstant, xRTViewFromByte> createViews() {
         ConstantPool                       pool     = pool();

@@ -186,42 +186,48 @@ public class xRTSignature
      * @return the TypeConstant for a Return
      */
     public static TypeConstant ensureReturnType(Container container) {
-        return getInstance(container).f_typeReturn.get();
+        xRTSignature template = getInstance(container);
+        return template.f_typeReturn.get(template);
     }
 
     /**
      * @return the TypeConstant for an RTReturn
      */
     public static TypeConstant ensureRTReturnType(Container container) {
-        return getInstance(container).f_typeRTReturn.get();
+        xRTSignature template = getInstance(container);
+        return template.f_typeRTReturn.get(template);
     }
 
     /**
      * @return the TypeConstant for a Parameter
      */
     public static TypeConstant ensureParamType(Container container) {
-        return getInstance(container).f_typeParam.get();
+        xRTSignature template = getInstance(container);
+        return template.f_typeParam.get(template);
     }
 
     /**
      * @return the TypeConstant for an RTParameter
      */
     public static TypeConstant ensureRTParamType(Container container) {
-        return getInstance(container).f_typeRTParam.get();
+        xRTSignature template = getInstance(container);
+        return template.f_typeRTParam.get(template);
     }
 
     /**
      * @return the ClassTemplate for an RTReturn
      */
     public static xConst ensureRTReturnTemplate(Container container) {
-        return getInstance(container).f_templateRTReturn.get();
+        xRTSignature template = getInstance(container);
+        return template.f_templateRTReturn.get(template);
     }
 
     /**
      * @return the ClassTemplate for an RTParameter
      */
     public static xConst ensureRTParamTemplate(Container container) {
-        return getInstance(container).f_templateRTParam.get();
+        xRTSignature template = getInstance(container);
+        return template.f_templateRTParam.get(template);
     }
 
     /**
@@ -266,14 +272,16 @@ public class xRTSignature
      * @return the TypeComposition for an Array of Return
      */
     public static TypeComposition ensureReturnArray(Container container) {
-        return getInstance(container).f_clzReturnArray.get();
+        xRTSignature template = getInstance(container);
+        return template.f_clzReturnArray.get(template);
     }
 
     /**
      * @return the TypeComposition for an Array of Parameter
      */
     public static TypeComposition ensureParamArray(Container container) {
-        return getInstance(container).f_clzParamArray.get();
+        xRTSignature template = getInstance(container);
+        return template.f_clzParamArray.get(template);
     }
 
     /**
@@ -536,29 +544,29 @@ public class xRTSignature
      * Signature metadata belongs to a ConstantPool/Container pair. Keeping these as final lazy
      * fields preserves the old one-time caching behavior without sharing metadata across owners.
      */
-    private final Lazy<TypeConstant> f_typeReturn = Lazy.of(() ->
-            pool().ensureEcstasyTypeConstant("reflect.Return"));
+    private final Lazy.Owner<xRTSignature, TypeConstant> f_typeReturn = Lazy.ofOwner(owner ->
+            owner.pool().ensureEcstasyTypeConstant("reflect.Return"));
 
-    private final Lazy<TypeConstant> f_typeParam = Lazy.of(() ->
-            pool().typeParameter());
+    private final Lazy.Owner<xRTSignature, TypeConstant> f_typeParam = Lazy.ofOwner(owner ->
+            owner.pool().typeParameter());
 
-    private final Lazy<TypeConstant> f_typeRTReturn = Lazy.of(() ->
-            f_container.getClassStructure("_native.reflect.RTReturn")
+    private final Lazy.Owner<xRTSignature, TypeConstant> f_typeRTReturn = Lazy.ofOwner(owner ->
+            owner.container().getClassStructure("_native.reflect.RTReturn")
                     .getIdentityConstant().getType());
 
-    private final Lazy<TypeConstant> f_typeRTParam = Lazy.of(() ->
-            f_container.getClassStructure("_native.reflect.RTParameter")
+    private final Lazy.Owner<xRTSignature, TypeConstant> f_typeRTParam = Lazy.ofOwner(owner ->
+            owner.container().getClassStructure("_native.reflect.RTParameter")
                     .getIdentityConstant().getType());
 
-    private final Lazy<xConst> f_templateRTReturn = Lazy.of(() ->
-            (xConst) f_container.getTemplate(f_typeRTReturn.get()));
+    private final Lazy.Owner<xRTSignature, xConst> f_templateRTReturn = Lazy.ofOwner(owner ->
+            owner.container().getTemplate(owner.f_typeRTReturn.get(owner), xConst.class));
 
-    private final Lazy<xConst> f_templateRTParam = Lazy.of(() ->
-            (xConst) f_container.getTemplate(f_typeRTParam.get()));
+    private final Lazy.Owner<xRTSignature, xConst> f_templateRTParam = Lazy.ofOwner(owner ->
+            owner.container().getTemplate(owner.f_typeRTParam.get(owner), xConst.class));
 
-    private final Lazy<TypeComposition> f_clzReturnArray = Lazy.of(() ->
-            f_container.resolveClass(pool().ensureArrayType(f_typeReturn.get())));
+    private final Lazy.Owner<xRTSignature, TypeComposition> f_clzReturnArray = Lazy.ofOwner(owner ->
+            owner.container().resolveClass(owner.pool().ensureArrayType(owner.f_typeReturn.get(owner))));
 
-    private final Lazy<TypeComposition> f_clzParamArray = Lazy.of(() ->
-            f_container.resolveClass(pool().ensureArrayType(f_typeParam.get())));
+    private final Lazy.Owner<xRTSignature, TypeComposition> f_clzParamArray = Lazy.ofOwner(owner ->
+            owner.container().resolveClass(owner.pool().ensureArrayType(owner.f_typeParam.get(owner))));
 }

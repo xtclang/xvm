@@ -580,7 +580,7 @@ public class xRTTypeTemplate
     public static TypeComposition ensureArrayClassComposition(Container container) {
         xRTTypeTemplate template = NativeTemplates.get(container).typeTemplate();
         return container.ensureClassComposition(
-                template.f_typeTemplateArray.get(), xArray.getInstance(container));
+                template.f_typeTemplateArray.get(template), xArray.getInstance(container));
     }
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -846,8 +846,9 @@ public class xRTTypeTemplate
             TypeComposition clzArray = xRTClassTemplate.
                     ensureAnnotationTemplateArrayComposition(frameCaller.container());
 
+            xRTTypeTemplate templateType = xRTTypeTemplate.getInstance(frameCaller);
             MethodStructure methodCreateComposition =
-                    xRTTypeTemplate.getInstance(frameCaller).f_methodCreateComposition.get();
+                    templateType.f_methodCreateComposition.get(templateType);
             ObjectHandle[] ahVar = new ObjectHandle[methodCreateComposition.getMaxVars()];
             ahVar[0] = hClass;
             ahVar[1] = xArray.createImmutableArray(clzArray, ahAnno);
@@ -870,9 +871,9 @@ public class xRTTypeTemplate
         private MethodStructure               constructor;
     }
 
-    private final Lazy<TypeConstant> f_typeTemplateArray = Lazy.of(() ->
-            pool().ensureArrayType(pool().ensureEcstasyTypeConstant("reflect.TypeTemplate")));
+    private final Lazy.Owner<xRTTypeTemplate, TypeConstant> f_typeTemplateArray = Lazy.ofOwner(owner ->
+            owner.pool().ensureArrayType(owner.pool().ensureEcstasyTypeConstant("reflect.TypeTemplate")));
 
-    private final Lazy<MethodStructure> f_methodCreateComposition = Lazy.of(() ->
-            f_struct.findMethod("createComposition", 2));
+    private final Lazy.Owner<xRTTypeTemplate, MethodStructure> f_methodCreateComposition = Lazy.ofOwner(owner ->
+            owner.f_struct.findMethod("createComposition", 2));
 }

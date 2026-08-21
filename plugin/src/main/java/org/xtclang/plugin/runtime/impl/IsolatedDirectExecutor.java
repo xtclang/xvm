@@ -2,6 +2,8 @@ package org.xtclang.plugin.runtime.impl;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import org.gradle.api.logging.Logger;
 
@@ -100,7 +102,10 @@ public final class IsolatedDirectExecutor {
             while (observedContainers.size() > ownershipValidationWindow()) {
                 observedContainers.removeFirst();
             }
-            containers = observedContainers.toArray(Container[]::new);
+
+            final Set<Container> relatedContainers = new LinkedHashSet<>(observedContainers);
+            relatedContainers.addAll(OwnershipDiagnostics.runtimeContainers(container));
+            containers = relatedContainers.toArray(Container[]::new);
         }
 
         try {

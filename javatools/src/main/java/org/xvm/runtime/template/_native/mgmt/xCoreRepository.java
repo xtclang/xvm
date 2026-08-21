@@ -97,7 +97,7 @@ public class xCoreRepository
      * Injection support.
      */
     public ObjectHandle ensureModuleRepository(Frame frame, ObjectHandle hOpts) {
-        return f_hRepository.get();
+        return f_hRepository.get(this);
     }
 
 
@@ -125,5 +125,6 @@ public class xCoreRepository
      * The final Lazy cell preserves one-handle-per-owner caching and safely
      * publishes the handle if injection is requested concurrently.
      */
-    private final Lazy<ObjectHandle> f_hRepository = Lazy.of(() -> makeHandle(f_container));
+    private final Lazy.Owner<xCoreRepository, ObjectHandle> f_hRepository =
+            Lazy.ofOwner(owner -> owner.makeHandle(owner.container()));
 }

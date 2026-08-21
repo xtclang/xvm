@@ -64,7 +64,7 @@ public class xRTBuffer
         long        ofDst  = ((JavaLong) ahArg[2]).getValue();
         long        count  = ((JavaLong) ahArg[3]).getValue();
 
-        ArrayHandle hRawBytes = (ArrayHandle) hBuf.getField(frame, f_propRawBytes.get());
+        ArrayHandle hRawBytes = (ArrayHandle) hBuf.getField(frame, f_propRawBytes.get(this));
         byte[]      abRaw     = xByteArray.getBytes(hRawBytes);
 
         xByteArray.setBytes(abRaw, (int) ofSrc, hBytes, (int) ofDst, (int) count);
@@ -91,6 +91,7 @@ public class xRTBuffer
 
     // Template-owned metadata must not be a process-global cache. This keeps
     // the old one-time lookup behavior, but under the owning container/template.
-    private final Lazy<PropertyConstant> f_propRawBytes =
-            Lazy.of(() -> getStructure().findPropertyDeep("rawBytes").getIdentityConstant());
+    private final Lazy.Owner<xRTBuffer, PropertyConstant> f_propRawBytes =
+            Lazy.ofOwner(owner -> owner.getStructure()
+                    .findPropertyDeep("rawBytes").getIdentityConstant());
 }

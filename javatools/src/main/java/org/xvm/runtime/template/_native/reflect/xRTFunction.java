@@ -218,7 +218,7 @@ public class xRTFunction
             }
         };
 
-        MethodStructure methodToArray = f_methodToArray.get();
+        MethodStructure methodToArray = f_methodToArray.get(this);
         ObjectHandle[]  ahArg         = new ObjectHandle[methodToArray.getMaxVars()];
         ahArg[0] = hArg;
 
@@ -1495,7 +1495,7 @@ public class xRTFunction
     public static TypeComposition ensureArrayComposition(Container container) {
         xRTFunction template = template(container);
         return container.ensureClassComposition(
-                template.f_typeFunctionArray.get(), xArray.getInstance(container));
+                template.f_typeFunctionArray.get(template), xArray.getInstance(container));
     }
 
     /**
@@ -1503,7 +1503,7 @@ public class xRTFunction
      */
     public static ArrayHandle ensureEmptyArray(Container container) {
         xRTFunction   template   = template(container);
-        ArrayConstant constEmpty = template.f_constEmptyFunctionArray.get();
+        ArrayConstant constEmpty = template.f_constEmptyFunctionArray.get(template);
         ArrayHandle   haEmpty    = (ArrayHandle) container.f_heap.getConstHandle(constEmpty);
         if (haEmpty == null) {
             haEmpty = xArray.createImmutableArray(ensureArrayComposition(container), Utils.OBJECTS_NONE);
@@ -1518,9 +1518,9 @@ public class xRTFunction
     public static TypeConstant ensureListMapType(Container container) {
         // ConstantPool interning keeps this cached in the caller's owner. A static LISTMAP_TYPE
         // would pin the first initialized container and leak it into later containers.
-        return Objects.requireNonNull(container, "container").
-                getTemplate("_native.reflect.RTFunction", xRTFunction.class).
-                f_typeListMap.get();
+        xRTFunction template = Objects.requireNonNull(container, "container")
+                .getTemplate("_native.reflect.RTFunction", xRTFunction.class);
+        return template.f_typeListMap.get(template);
     }
 
     /**
@@ -1549,23 +1549,23 @@ public class xRTFunction
     // These caches are derived from this template's ConstantPool and structure. Keeping them lazy
     // and final preserves the old interning/handle caching behavior without leaking one container's
     // metadata into another container through process-global mutable statics.
-    private final Lazy<TypeConstant> f_typeFunctionArray = Lazy.of(() ->
-            pool().ensureArrayType(pool().typeFunction()));
+    private final Lazy.Owner<xRTFunction, TypeConstant> f_typeFunctionArray = Lazy.ofOwner(owner ->
+            owner.pool().ensureArrayType(owner.pool().typeFunction()));
 
-    private final Lazy<ArrayConstant> f_constEmptyFunctionArray = Lazy.of(() ->
-            pool().ensureArrayConstant(f_typeFunctionArray.get(), Constant.NO_CONSTS));
+    private final Lazy.Owner<xRTFunction, ArrayConstant> f_constEmptyFunctionArray = Lazy.ofOwner(owner ->
+            owner.pool().ensureArrayConstant(owner.f_typeFunctionArray.get(owner), Constant.NO_CONSTS));
 
-    private final Lazy<TypeConstant> f_typeListMap = Lazy.of(() ->
-            pool().ensureParameterizedTypeConstant(
-                    pool().ensureEcstasyTypeConstant("maps.ListMap"),
-                    pool().typeParameter(), pool().typeObject()));
+    private final Lazy.Owner<xRTFunction, TypeConstant> f_typeListMap = Lazy.ofOwner(owner ->
+            owner.pool().ensureParameterizedTypeConstant(
+                    owner.pool().ensureEcstasyTypeConstant("maps.ListMap"),
+                    owner.pool().typeParameter(), owner.pool().typeObject()));
 
     /**
      * RTFunction:
      *      static (Int[], Object[]) toArray(Map<Parameter, Object> params)
      */
-    private final Lazy<MethodStructure> f_methodToArray = Lazy.of(() ->
-            getStructure().findMethod("toArray", 1));
+    private final Lazy.Owner<xRTFunction, MethodStructure> f_methodToArray = Lazy.ofOwner(owner ->
+            owner.getStructure().findMethod("toArray", 1));
 
     private static xRTFunction template(Container container) {
         return getInstance(Objects.requireNonNull(container, "container"));

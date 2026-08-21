@@ -246,7 +246,8 @@ public class xPackage
      */
     public static TypeComposition ensureListMapComposition(Container container) {
         xPackage template = NativeTemplates.get(container).packageTemplate();
-        return container.ensureClassComposition(template.f_typeListMap.get(), template.f_templateListMap.get());
+        return container.ensureClassComposition(
+                template.f_typeListMap.get(template), template.f_templateListMap.get(template));
     }
 
 
@@ -316,11 +317,11 @@ public class xPackage
 
     // ListMap metadata is owned by this template's container. Keeping it as final lazy state
     // preserves the old per-template cache without racing through process-global statics.
-    private final Lazy<TypeConstant> f_typeListMap = Lazy.of(() ->
-            pool().ensureParameterizedTypeConstant(
-                    pool().ensureEcstasyTypeConstant("maps.ListMap"),
-                    pool().typeString(), pool().typeClass()));
+    private final Lazy.Owner<xPackage, TypeConstant> f_typeListMap = Lazy.ofOwner(owner ->
+            owner.pool().ensureParameterizedTypeConstant(
+                    owner.pool().ensureEcstasyTypeConstant("maps.ListMap"),
+                    owner.pool().typeString(), owner.pool().typeClass()));
 
-    private final Lazy<ClassTemplate> f_templateListMap = Lazy.of(() ->
-            f_container.getTemplate(f_typeListMap.get()));
+    private final Lazy.Owner<xPackage, ClassTemplate> f_templateListMap = Lazy.ofOwner(owner ->
+            owner.container().getTemplate(owner.f_typeListMap.get(owner)));
 }

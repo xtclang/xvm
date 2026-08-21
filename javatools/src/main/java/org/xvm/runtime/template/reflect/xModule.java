@@ -150,7 +150,7 @@ public class xModule
         VersionConstant ver    = module.getVersionConstant();
 
         return frame.assignDeferredValue(iReturn,
-            frame.getConstHandle(ver == null ? f_constDefaultVersion.get() : ver));
+            frame.getConstHandle(ver == null ? f_constDefaultVersion.get(this) : ver));
     }
 
     /**
@@ -316,7 +316,7 @@ public class xModule
     public static TypeComposition ensureArrayComposition(Container container) {
         xModule template = template(container);
         return container.ensureClassComposition(
-                template.f_typeModuleArray.get(), xArray.getInstance(container));
+                template.f_typeModuleArray.get(template), xArray.getInstance(container));
     }
 
     /**
@@ -324,7 +324,7 @@ public class xModule
      */
     public static ArrayHandle ensureEmptyArray(Container container) {
         xModule       template   = template(container);
-        ArrayConstant constEmpty = template.f_constEmptyModuleArray.get();
+        ArrayConstant constEmpty = template.f_constEmptyModuleArray.get(template);
         ArrayHandle   haEmpty    = (ArrayHandle) container.f_heap.getConstHandle(constEmpty);
         if (haEmpty == null) {
             haEmpty = xArray.createImmutableArray(ensureArrayComposition(container), Utils.OBJECTS_NONE);
@@ -350,14 +350,14 @@ public class xModule
 
     // These constants are tied to this template's ConstantPool. Lazy final fields preserve the
     // previous single-computation behavior without sharing one container's constants globally.
-    private final Lazy<TypeConstant> f_typeModuleArray = Lazy.of(() ->
-            pool().ensureArrayType(pool().typeModule()));
+    private final Lazy.Owner<xModule, TypeConstant> f_typeModuleArray = Lazy.ofOwner(owner ->
+            owner.pool().ensureArrayType(owner.pool().typeModule()));
 
-    private final Lazy<ArrayConstant> f_constEmptyModuleArray = Lazy.of(() ->
-            pool().ensureArrayConstant(f_typeModuleArray.get(), Constant.NO_CONSTS));
+    private final Lazy.Owner<xModule, ArrayConstant> f_constEmptyModuleArray = Lazy.ofOwner(owner ->
+            owner.pool().ensureArrayConstant(owner.f_typeModuleArray.get(owner), Constant.NO_CONSTS));
 
-    private final Lazy<VersionConstant> f_constDefaultVersion = Lazy.of(() ->
-            pool().ensureVersionConstant(new Version("CI")));
+    private final Lazy.Owner<xModule, VersionConstant> f_constDefaultVersion = Lazy.ofOwner(owner ->
+            owner.pool().ensureVersionConstant(new Version("CI")));
 
     private static xModule template(Container container) {
         return getInstance(Objects.requireNonNull(container, "container"));

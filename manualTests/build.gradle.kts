@@ -522,6 +522,7 @@ val runParallel = tasks.register<XtcRunTask>("runParallel") {
 val runParallelStress = tasks.register<XtcRunTask>("runParallelStress") {
     group = "verification"
     description = "Stress runtime startup by running repeated manual-test modules in parallel containers."
+    jvmArgs("-Dxvm.runtime.validateOwnership=true")
 
     module {
         verbose = false

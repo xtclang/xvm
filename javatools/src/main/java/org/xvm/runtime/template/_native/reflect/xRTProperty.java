@@ -361,7 +361,8 @@ public class xRTProperty
      * @return the handle for an empty Array of Property
      */
     public static ArrayHandle ensureEmptyArray(Container container) {
-        ArrayConstant constEmpty = getInstance(container).f_constEmptyPropertyArray.get();
+        xRTProperty   template   = getInstance(container);
+        ArrayConstant constEmpty = template.f_constEmptyPropertyArray.get(template);
         ArrayHandle   haEmpty    = (ArrayHandle) container.f_heap.getConstHandle(constEmpty);
         if (haEmpty == null) {
             ConstantPool    pool = container.getConstantPool();
@@ -399,8 +400,8 @@ public class xRTProperty
      * Empty Property array constants are pool-owned. Caching the key on this container's template
      * preserves the old ConstHeap handle cache without crossing container ConstantPools.
      */
-    private final Lazy<ArrayConstant> f_constEmptyPropertyArray = Lazy.of(() -> {
-        ConstantPool pool = pool();
+    private final Lazy.Owner<xRTProperty, ArrayConstant> f_constEmptyPropertyArray = Lazy.ofOwner(owner -> {
+        ConstantPool pool = owner.pool();
         return pool.ensureArrayConstant(
                 pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Property")),
                 Constant.NO_CONSTS);

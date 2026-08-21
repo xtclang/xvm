@@ -56,10 +56,10 @@ public class xEnum
     public void initNative() {
         if (NativeTemplates.get(this).isEnum(this)) {
             // all the methods are marked as native due to a "rebase"
-            f_templateRange.get();
-            f_ctorRange.get();
+            f_templateRange.get(this);
+            f_ctorRange.get(this);
         } else if (getStructure().getFormat() == Format.ENUM) {
-            f_enumInfo.get();
+            f_enumInfo.get(this);
         }
     }
 
@@ -244,7 +244,7 @@ public class xEnum
         ahVar[2] = xBoolean.makeHandle(frame, fFirstEx);
         ahVar[3] = xBoolean.makeHandle(frame, fLastEx);
 
-        return f_templateRange.get().construct(frame, f_ctorRange.get(), typeRange.ensureClass(frame),
+        return f_templateRange.get(this).construct(frame, f_ctorRange.get(this), typeRange.ensureClass(frame),
                 null, ahVar, iReturn);
     }
 
@@ -428,14 +428,14 @@ public class xEnum
 
     // ----- constants and fields ------------------------------------------------------------------
 
-    private final Lazy<ClassTemplate> f_templateRange = Lazy.of(() ->
-            f_container.getTemplate("Range"));
+    private final Lazy.Owner<xEnum, ClassTemplate> f_templateRange =
+            Lazy.ofOwner(owner -> owner.container().getTemplate("Range"));
 
-    private final Lazy<MethodStructure> f_ctorRange = Lazy.of(() ->
-            f_templateRange.get().getStructure().findMethod("construct", 4));
+    private final Lazy.Owner<xEnum, MethodStructure> f_ctorRange = Lazy.ofOwner(owner ->
+            owner.f_templateRange.get(owner).getStructure().findMethod("construct", 4));
 
     private EnumInfo enumInfo() {
-        return f_enumInfo.get();
+        return f_enumInfo.get(this);
     }
 
     private EnumInfo createEnumInfo() {
@@ -462,7 +462,7 @@ public class xEnum
         return new EnumInfo(listNames, listHandles);
     }
 
-    private final Lazy<EnumInfo> f_enumInfo = Lazy.of(this::createEnumInfo);
+    private final Lazy.Owner<xEnum, EnumInfo> f_enumInfo = Lazy.ofOwner(xEnum::createEnumInfo);
 
     /**
      * Template-local enum index. Natural enum values can start as construction structs; the

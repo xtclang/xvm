@@ -1,0 +1,143 @@
+# Manual Lazy Cache Audit
+
+This audit covers the remaining manual lazy-null sites in `runtime` and `asm`
+after the native-template owner-cache work. The repository-wide category is
+tracked in [must-audit-backlog.md](must-audit-backlog.md); this file is the
+focused runtime/ASM drilldown. These are the patterns shaped like:
+
+```java
+if (m_field == null) {
+    m_field = value;
+}
+```
+
+The important distinction is whether the field is owner-bearing shared state.
+Some hits are real race candidates. Some are synchronized association helpers,
+frame-local lifecycle state, or append-only builder state where `Lazy` would be
+the wrong abstraction.
+
+## Current Scan
+
+Command:
+
+```bash
+rg -U -n --pcre2 \
+  "if\s*\(\s*((?:this\.)?(?:m_|s_|f_)[A-Za-z][A-Za-z0-9_]*)\s*==\s*null\s*\)\s*\{[\s\S]{0,320}\1\s*=(?!=)" \
+  javatools/src/main/java/org/xvm/runtime \
+  javatools/src/main/java/org/xvm/asm
+```
+
+Current branch result: 27 strong same-field lazy/init sites in runtime/asm.
+The same strict scan finds 47 sites across all `javatools/src/main/java`.
+
+## Classification
+
+| Classification | Sites | Why | Required next action |
+| --- | --- | --- | --- |
+| Must audit, likely must-fix if method/op graphs are shared across containers | `asm/op/JumpCond.m_cond`, `asm/op/JumpNCond.m_cond`, `asm/OpTest.m_typeCommon` | These are runtime-executed `Op` objects caching constants from a `Frame`. If the same decoded op object can run under multiple container/pool owners, the cached constant is owner-bearing and the field is a wrong-owner race. | Prove op graphs are owner-confined, or remove the mutable cache and resolve from the current `Frame` each execution. If caching is required, key it by owner/pool in a concurrent owner-owned map. |
+| Must audit, not yet proven runtime owner bug | `asm/OpJump.m_opDest`, `asm/OpCondJump.m_opDest`, `asm/op/LoopEnd.m_opDest`, `asm/op/OpSwitch.m_aOpCase`, `asm/op/JumpInt.m_aOpCase`, `asm/op/GuardStart.m_aOpCatch` | These mutate decoded op address/link state. They are safe only if address resolution happens before publication or under exclusive ownership. Lazy runtime resolution would be racy. | Verify when `resolveAddresses(...)` runs. Preferred fix is eager linking before code publication, or one synchronized/atomic resolved-address state per method owner. |
+| Should fix soon, low risk | `runtime/template/text/xRegEx.RegExHandle.m_pattern` | `Pattern` is immutable, but the plain lazy field can duplicate compilation and has no publication edge. It does not appear to carry container ownership. | Replace with a final `Lazy<Pattern>` or compile eagerly in the handle constructor if regex handles are expected to be shared across fibers. |
+| Should fix / audit during asm cleanup | `asm/constants/FSNodeConstant.m_constPath`, `asm/Parameter.m_regDeref` | These are immutable derived values on ASM objects. They are not known runtime container leaks, but the plain lazy field still assumes benign races. | Use final `Lazy` where construction dependencies are available, or synchronize if the value depends on mutable method/register lifecycle. |
+| Safe publication already present | `asm/constants/ChildInfo.m_infoType`, `MethodInfo.m_infoType`, `PropertyInfo.m_infoType`, `MethodBody.m_infoMethod`, `PropertyBody.m_infoProperty` | The association methods are `synchronized` and return a copy when the requested owner differs. This is not an unsynchronized lazy cache. | No PR blocker. Keep as-is unless a later refactor can make ownership explicit at construction. |
+| Thread/service/frame confined lifecycle state | `runtime/Frame.m_continuation`, `Frame.m_debug`, `runtime/DebugConsole.DebugStash.m_mapExpand`, `DebugStash.m_listWatches` | These are mutable frame/debugger lifecycle slots. They are not immutable caches, and `Lazy` would not express append/activation semantics. | No startup-race blocker. Keep private and service-thread confined; document confinement if these objects become cross-thread. |
+| Compile/write-time builder state | `asm/Scope.m_scopeChild`, `asm/Op.Prefix.m_op`, `asm/Op.ConstantRegistry.m_mapConstants`, `asm/Op.ConstantRegistry.m_aconst`, `asm/MethodStructure.Code.m_listOps`, `asm/op/Label.m_action` | These are builder/serialization/linker structures that are expected to mutate while code is being assembled. They are not owner-local runtime caches. | Not a runtime PR blocker. If same-JVM incremental compilation starts sharing these objects across worker threads, confine them to the compilation request or add builder locks. |
+| Must audit for owner key semantics, implementation appears synchronized | `runtime/ClassComposition.m_mapFields` | The field is `volatile` and initialized through `synchronized ensureFieldLayoutImpl(Container)`, but the method accepts a `Container`, so the cache key/owner contract needs to be explicit. | Prove a `ClassComposition` is owner-specific or that the field layout is container-independent. If not, split by owner/container. |
+| Must audit for same-JVM tooling reuse | `tool/ModuleInfo` resource/source nodes | These are tool-side source/resource caches, not runtime template state. Same-JVM Gradle direct execution and LSP reuse can still expose stale source/resource ownership if `ModuleInfo` objects are reused across requests. | Prove `ModuleInfo` is request-confined or add request-scoped invalidation/rebuild rules. |
+
+## Why The Runtime Op Caches Are The Serious Ones
+
+The native-template fixes in this branch removed static owner caches, but an
+`Op` field can create a similar problem if the `Op` object is shared. For
+example:
+
+```java
+protected int processUnaryOp(Frame frame, int iPC) {
+    if (m_cond == null) {
+        m_cond = frame.getConstant(m_nArg, ConditionalConstant.class);
+    }
+    return m_cond.evaluate(frame.f_context.getLinkerContext()) ? ... : ...;
+}
+```
+
+If the first execution happens in container A and caches A's constant, container
+B can later evaluate against A's constant unless the method/op graph is
+owner-confined. The safest implementation is:
+
+```java
+ConditionalConstant cond = frame.getConstant(m_nArg, ConditionalConstant.class);
+return cond.evaluate(frame.f_context.getLinkerContext()) ? ... : ...;
+```
+
+That preserves semantics and removes the cache. If `frame.getConstant(...)` is
+too expensive on a hot path, the cache needs an explicit owner key:
+
+```java
+private final ConcurrentMap<ConstantPool, ConditionalConstant> condByPool =
+        new ConcurrentHashMap<>();
+
+ConditionalConstant cond = condByPool.computeIfAbsent(
+        frame.poolContext(), pool -> frame.getConstant(m_nArg, ConditionalConstant.class));
+```
+
+The key point is that the owner is visible in the type. A plain field on a
+shared `Op` is not enough.
+
+## Stress Verification Backlog
+
+This is verification depth, not a known remaining code defect in the current
+branch.
+
+Current branch already has `manualTests:runDirectSequenceStress`, which runs
+selected modules repeatedly in direct mode inside one Gradle JVM with runtime
+ownership validation enabled.
+
+Already used as smoke verification on this branch:
+
+```bash
+CI=true ./gradlew :manualTests:runDirectSequenceStress \
+  -PsameJvmIterations=1 \
+  -PsameJvmModules=TestArray \
+  --console=plain --warning-mode=all --no-daemon --no-configuration-cache
+```
+
+Stronger pre-merge confidence would come from running a larger but still
+bounded matrix:
+
+```bash
+CI=true ./gradlew :manualTests:runDirectSequenceStress \
+  -PsameJvmIterations=2 \
+  -PsameJvmModules=TestArray,TestReflection \
+  --console=plain --warning-mode=all --no-daemon --no-configuration-cache
+```
+
+And, when time permits, the default known-working module set:
+
+```bash
+CI=true ./gradlew :manualTests:runDirectSequenceStress \
+  --console=plain --warning-mode=all --no-daemon --no-configuration-cache
+```
+
+Remaining harness backlog is tracked in
+[plans/same-jvm-launcher-stress.md](plans/same-jvm-launcher-stress.md):
+
+- add structured failure artifacts,
+- add benchmark reporting,
+- add a same-JVM parallel mode after serial mode is reliable,
+- add direct compile/test integration stress through `DirectRuntimeBuildService`,
+- decide which short same-JVM smoke is stable enough for CI.
+
+## First-PR Decision
+
+The manual lazy-null audit does not currently identify a new native-template
+startup blocker comparable to the old `INSTANCE` fields. It does identify a
+follow-up must-audit slice in runtime `Op` caches, because those can become
+wrong-owner caches if op graphs are reused across container/pool owners.
+
+Recommended handling:
+
+1. Keep this PR focused on native-template owner caches, enum publication, and
+   same-JVM ownership validation.
+2. Open a follow-up issue/PR for runtime `Op` cache ownership. Start with
+   `JumpCond`, `JumpNCond`, and `OpTest`.
+3. Treat `xRegEx.m_pattern` and immutable ASM derived values as should-fix
+   cleanup unless stress testing produces a concrete cross-owner failure.

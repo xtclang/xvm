@@ -50,8 +50,8 @@ public class xRTServiceControl
 
     @Override
     public void initNative() {
-        f_clzControl.get();
-        f_templateServiceStatus.get();
+        f_clzControl.get(this);
+        f_templateServiceStatus.get(this);
 
         markNativeProperty("statusIndicator");
         markNativeProperty("upTime");
@@ -101,7 +101,7 @@ public class xRTServiceControl
 
         case "statusIndicator": {
             return frame.assignDeferredValue(iReturn,
-                    f_templateServiceStatus.get().ensureEnumByName(
+                    f_templateServiceStatus.get(this).ensureEnumByName(
                             frame, hControl.getContext().getStatus().name()));
         }
         }
@@ -114,7 +114,7 @@ public class xRTServiceControl
 
     public static ObjectHandle makeHandle(ServiceContext context) {
         xRTServiceControl template = NativeTemplates.get(context.f_container).serviceControl();
-        return new ControlHandle(template.f_clzControl.get(), context);
+        return new ControlHandle(template.f_clzControl.get(template), context);
     }
 
     protected static class ControlHandle
@@ -144,14 +144,14 @@ public class xRTServiceControl
     /**
      * Lazily resolved ServiceControl composition owned by this template's container.
      */
-    private final Lazy<TypeComposition> f_clzControl = Lazy.of(() -> {
-        TypeConstant typeMask = pool().ensureEcstasyTypeConstant("Service.ServiceControl");
-        return ensureClass(f_container, getCanonicalType(), typeMask);
+    private final Lazy.Owner<xRTServiceControl, TypeComposition> f_clzControl = Lazy.ofOwner(owner -> {
+        TypeConstant typeMask = owner.pool().ensureEcstasyTypeConstant("Service.ServiceControl");
+        return owner.ensureClass(owner.container(), owner.getCanonicalType(), typeMask);
     });
 
     /**
      * Lazily resolved Service.ServiceStatus enum template owned by this template's container.
      */
-    private final Lazy<xEnum> f_templateServiceStatus = Lazy.of(() ->
-            f_container.getEnumTemplate("Service.ServiceStatus"));
+    private final Lazy.Owner<xRTServiceControl, xEnum> f_templateServiceStatus =
+            Lazy.ofOwner(owner -> owner.container().getEnumTemplate("Service.ServiceStatus"));
 }

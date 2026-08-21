@@ -73,7 +73,7 @@ public class xFuture
 
     @Override
     public TypeConstant getCanonicalType() {
-        return f_type.get();
+        return f_type.get(this);
     }
 
     @Override
@@ -102,7 +102,7 @@ public class xFuture
             return frame.assignValue(iReturn, hThis.getException());
 
         case "completion": {
-            xEnum      enumCompletion = f_templateCompletion.get();
+            xEnum      enumCompletion = f_templateCompletion.get(this);
             String     sCompletion    =
                     hThis.isAssigned()
                             ? hThis.getFuture().isCompletedExceptionally()
@@ -757,11 +757,11 @@ public class xFuture
      * annotation type is derived from this template's pool and this container's
      * Var template, so it cannot be JVM-global.
      */
-    private final Lazy<TypeConstant> f_type = Lazy.of(() -> {
-        ConstantPool  pool    = pool();
-        ClassConstant idMixin = (ClassConstant) f_struct.getIdentityConstant();
+    private final Lazy.Owner<xFuture, TypeConstant> f_type = Lazy.ofOwner(owner -> {
+        ConstantPool  pool    = owner.pool();
+        ClassConstant idMixin = (ClassConstant) owner.f_struct.getIdentityConstant();
         Annotation    anno    = pool.ensureAnnotation(idMixin);
-        TypeConstant  typeVar = f_container.getTemplate("reflect.Var", xVar.class)
+        TypeConstant  typeVar = owner.container().getTemplate("reflect.Var", xVar.class)
                 .getCanonicalType();
 
         return pool.ensureAnnotatedTypeConstant(typeVar, anno);
@@ -770,8 +770,8 @@ public class xFuture
     /**
      * Owner-scoped equivalent of the old static COMPLETION enum template cache.
      */
-    private final Lazy<xEnum> f_templateCompletion = Lazy.of(() ->
-            f_container.getEnumTemplate("annotations.Future.Completion"));
+    private final Lazy.Owner<xFuture, xEnum> f_templateCompletion = Lazy.ofOwner(owner ->
+            owner.container().getEnumTemplate("annotations.Future.Completion"));
 
     /**
      * Represents a future ObjectHandle.
