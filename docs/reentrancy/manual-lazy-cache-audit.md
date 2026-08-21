@@ -90,6 +90,15 @@ back to `m_typeCommon` during execution. The remaining `m_typeCommon` field is
 kept for assembly-time source ops, where it is encoded to `m_nType` before
 runtime execution.
 
+This is not a semantic cache removal. The old fields did not cache the result
+of `frame.resolveType(...)`, did not cache condition evaluation, and did not
+skip any owner-local type machinery. They only avoided a repeated
+`Frame.getConstant(...)` lookup, which is an indexed local-constant array read
+plus a `Class.cast(...)`. That shortcut is not safe on a shared decoded op
+object because the cached constant carries the first frame's owner. If a future
+profile proves that this lookup is material, the replacement should be an
+owner-keyed cache, not a process/shared-op field.
+
 ## Stress Verification Backlog
 
 This is verification depth, not a known remaining code defect in the current

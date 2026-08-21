@@ -95,16 +95,30 @@ import org.xvm.util.Handy;
  */
 public class NativeContainer
         extends Container {
-    public NativeContainer(Runtime runtime, ModuleRepository repository) {
+    /**
+     * Create and initialize the native container.
+     *
+     * Native template loading publishes owner-local template objects into this container. Keeping
+     * that work out of the constructor avoids exposing a partially constructed owner while
+     * preserving the previous "ready before returned to the connector" behavior.
+     */
+    public static NativeContainer create(Runtime runtime, ModuleRepository repository) {
+        return new NativeContainer(runtime, repository).initializeNativeTemplates();
+    }
+
+    private NativeContainer(Runtime runtime, ModuleRepository repository) {
         super(runtime, null, null);
 
         f_repository = repository;
+    }
 
+    private NativeContainer initializeNativeTemplates() {
         ConstantPool pool = loadNativeTemplates();
         try (var _ = ConstantPool.withPool(pool)) {
             ConstantPool.assertCurrentPool(pool, "NativeContainer.initResources");
             initResources(pool);
         }
+        return this;
     }
 
 

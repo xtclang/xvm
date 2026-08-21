@@ -192,6 +192,16 @@ This branch also narrows ambient `ConstantPool` lookup at runtime boundaries:
   `m_containerMain.getConstantPool()` instead of
   `ConstantPool.getCurrentPool()`. Correct callers see the same owner pool; stale
   ambient scope is detected by `ConstantPool.assertCurrentPoolIfPresent(...)`.
+- `InterpreterConnector` now obtains the native container through
+  `NativeContainer.create(...)`. The private native-container constructor only
+  initializes constructor-local owner state; the factory runs native template
+  loading, base-template installation, resource initialization, and
+  service-context creation after construction returns and before the connector
+  receives the container. That removes the three `NativeContainer` startup
+  `this`-escape diagnostics without delaying initialization or dropping any
+  startup cache. `InterpreterConnectorTest` covers the path by constructing
+  several connectors in parallel, loading `ecstasy.xtclang.org`, and forcing
+  ownership validation across the resulting containers.
 - `NativeContainer.loadNativeTemplates()` no longer mutates the current pool with
   a raw setter and later clears it to `null`. It uses lexical
   `withPool(...)` scopes, preserving prior ambient state and restoring it on
@@ -227,10 +237,15 @@ The old pattern was unsafe if a decoded method/op graph is reused across
 containers or constant pools: the first execution could write an owner-specific
 constant into the shared op, and later execution could read that first owner's
 constant. The replacement is deliberately small. `Frame.getConstant(...)` is an
-indexed local-constant array lookup; the expensive type resolution and condition
-evaluation remain exactly where they were and continue to use the current
-frame/container owner. `m_typeCommon` remains for assembly-time source ops and is
-encoded to `m_nType` before runtime execution.
+indexed local-constant array lookup plus the requested `Class.cast(...)`; the
+expensive type resolution and condition evaluation remain exactly where they
+were and continue to use the current frame/container owner. The old cache did
+not memoize `frame.resolveType(...)` or condition evaluation results, so this
+does not remove a hot semantic cache. It removes only an owner-bearing shortcut
+that saved that local constant lookup after the first execution. If profiling
+ever shows that lookup to matter, the safe replacement is an owner-keyed cache,
+not a plain field on the shared op. `m_typeCommon` remains for assembly-time
+source ops and is encoded to `m_nType` before runtime execution.
 
 `javatools/src/test/java/org/xvm/asm/OpRuntimeCacheTest.java` verifies that the
 condition fields are gone and guards against reintroducing the old common-type

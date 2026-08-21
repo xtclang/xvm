@@ -280,7 +280,7 @@ update that explains the ownership rule it enforces. Avoid bundling unrelated
 cleanup into these commits; the review needs to be able to answer "which owner
 bug did this commit close?"
 
-The seven rows below are all real hardening work. The order is about reducing
+The eight rows below are all real hardening work. The order is about reducing
 risk and making each later fix easier to prove, not about deciding which items
 can be ignored.
 
@@ -289,10 +289,11 @@ can be ignored.
 | 1 | Adoption/clone validator assertions | Done in this branch wave. The shallow-clone bug is proven, dangerous, and the reusable validator catches copied handles, locks, thread locals, and owner references while later work runs stress. | `ConstantAdoptionTest` proves direct detection and opt-in `ConstantPool.register(...)` failure for a default shallow-cloned helper reference. |
 | 2 | `ConstantPool` late-mutation guard | Done in this branch wave. Hidden late mutation now becomes an immediate diagnostic instead of a stale-owner symptom when `xvm.asm.validateConstantPoolLateRegistration` is enabled. | `ConstantPoolDiagnosticsTest` proves existing constants still return after publication and new registrations fail before publication into the pool. Diagnostic same-JVM stress now identifies `ClassComposition` access-type registration as the next warmup/design target. |
 | 3 | Ambient `ConstantPool` lookup cleanup | Done in this branch wave for runtime boundaries. `InterpreterConnector.invoke0(...)` now uses the main container's explicit pool, native startup no longer uses raw current-pool mutation, and the remaining runtime scoped bridges assert that the scoped pool matches the explicit owner. | `ConstantPoolDiagnosticsTest` covers exact scoped-owner assertions, explicit-owner calls with no ambient pool, and wrong-scope failures. Source scan now shows no runtime/API callers of raw `setCurrentPool(...)`; the method itself was removed. |
-| 4 | Runtime-executed `Op` caches | Done in this branch wave for owner-bearing frame-constant caches. `JumpCond`/`JumpNCond` no longer cache `ConditionalConstant` on the op, and `OpTest`/`OpCondJump` no longer write frame type constants back to `m_typeCommon` during execution. | `OpRuntimeCacheTest` verifies the condition fields are gone and guards against the old common-type write-back pattern. Same-JVM sequence and parallel stress exercise these op paths under runtime ownership validation. |
-| 5 | Manual lazy null caches in runtime/asm | Done for the first-PR must-fix slice. `xRegEx.RegExHandle` uses a final `Lazy<Pattern>`, `FSNodeConstant` no longer carries a source-pool path literal across adoption, and `_native:fs.OSFileNode.created` no longer caches a caller-owned `Time` handle inside the native file-system graph. Remaining Java hits are still audited below as builder/linkage, frame/debug lifecycle, synchronized association helpers, or must-audit op-address/class-layout state. | `RegExHandleTest` proves the regex cache remains per-handle and cached after first use. `ConstantAdoptionTest.adoptedFSNodeConstantDropsSourcePoolPathCache()` proves the adopted path cache is recomputed in the destination pool and still cached after that. `manualTests:runDirectSequenceStress` with `TestFiles` proves the native file-node owner leak is gone. |
-| 6 | Thread-local and scoped ambient state | Done for the first-PR must-fix slice. Runtime boundary `ConstantPool` scopes were already made lexical/asserted in wave 3. This wave removes one remaining owner-bearing runtime thread-local: `xRTServer.SimpleKeyManager` no longer keeps a selected `KeyStoreHandle` on the HTTPS worker thread. Broader compiler/type recursion ambient state remains audited below. | `xRTServerTest` proves the key manager has no thread-local field and resolves TLS aliases through explicit route state. Existing `ConstantPoolDiagnosticsTest` covers scoped pool assertions. |
-| 7 | Weak/identity owner registries | Done for the first-PR must-fix slice. `Runtime.f_containers` is a diagnostic weak registry and every access path now uses the same monitor; the old `findContainer(...)` iteration raced with registration and weak-map expunge. Remaining weak/identity maps are documented as service-local, metadata-audit, local traversal, or diagnostic-local state. | `RuntimeTest.findContainerSharesWeakRegistryMonitorWithRegistration()` proves lookup does not race registration. |
+| 4 | `NativeContainer` constructor startup escape | Done in this branch wave. Native template loading, base-template installation, resource initialization, and service-context creation no longer run from the native-container constructor. `NativeContainer.create(...)` constructs the owner first, then initializes it before handing it to `InterpreterConnector`. | `javac -Xlint:this-escape` now emits no `NativeContainer.java` diagnostics. `InterpreterConnectorTest` starts several connectors in parallel, loads `ecstasy.xtclang.org`, checks distinct native containers, and forces ownership validation over the warmed containers. Startup order is preserved because the factory still completes all native-template/resource initialization before returning the container. |
+| 5 | Runtime-executed `Op` caches | Done in this branch wave for owner-bearing frame-constant caches. `JumpCond`/`JumpNCond` no longer cache `ConditionalConstant` on the op, and `OpTest`/`OpCondJump` no longer write frame type constants back to `m_typeCommon` during execution. | `OpRuntimeCacheTest` verifies the condition fields are gone and guards against the old common-type write-back pattern. Same-JVM sequence and parallel stress exercise these op paths under runtime ownership validation. |
+| 6 | Manual lazy null caches in runtime/asm | Done for the first-PR must-fix slice. `xRegEx.RegExHandle` uses a final `Lazy<Pattern>`, `FSNodeConstant` no longer carries a source-pool path literal across adoption, and `_native:fs.OSFileNode.created` no longer caches a caller-owned `Time` handle inside the native file-system graph. Remaining Java hits are still audited below as builder/linkage, frame/debug lifecycle, synchronized association helpers, or must-audit op-address/class-layout state. | `RegExHandleTest` proves the regex cache remains per-handle and cached after first use. `ConstantAdoptionTest.adoptedFSNodeConstantDropsSourcePoolPathCache()` proves the adopted path cache is recomputed in the destination pool and still cached after that. `manualTests:runDirectSequenceStress` with `TestFiles` proves the native file-node owner leak is gone. |
+| 7 | Thread-local and scoped ambient state | Done for the first-PR must-fix slice. Runtime boundary `ConstantPool` scopes were already made lexical/asserted in wave 3. This wave removes one remaining owner-bearing runtime thread-local: `xRTServer.SimpleKeyManager` no longer keeps a selected `KeyStoreHandle` on the HTTPS worker thread. Broader compiler/type recursion ambient state remains audited below. | `xRTServerTest` proves the key manager has no thread-local field and resolves TLS aliases through explicit route state. Existing `ConstantPoolDiagnosticsTest` covers scoped pool assertions. |
+| 8 | Weak/identity owner registries | Done for the first-PR must-fix slice. `Runtime.f_containers` is a diagnostic weak registry and every access path now uses the same monitor; the old `findContainer(...)` iteration raced with registration and weak-map expunge. Remaining weak/identity maps are documented as service-local, metadata-audit, local traversal, or diagnostic-local state. | `RuntimeTest.findContainerSharesWeakRegistryMonitorWithRegistration()` proves lookup does not race registration. |
 
 The compiler/JIT bucket should remain separate unless an interpreter runtime
 path depends on it. The compiler counter atomics belong in their own PR from
@@ -384,8 +385,11 @@ Required closure:
 - If confinement cannot be proven, remove the field cache and resolve from the
   current frame, or key the cache by `ConstantPool`/owner. This branch used the
   simpler removal for frame constants: `Frame.getConstant(...)` is an indexed
-  local-constant lookup, while `resolveType(...)` and condition evaluation still
-  use the same owner-local machinery as before.
+  local-constant lookup plus `Class.cast(...)`, while `resolveType(...)` and
+  condition evaluation still use the same owner-local machinery as before. The
+  removed fields did not cache resolved types or evaluated conditions, so the
+  runtime semantics and meaningful caching behavior are preserved; the only
+  repeated work is the cheap owner-correct constant lookup.
 - Keep eager address/link caches only with documented link-before-publication
   ordering.
 
@@ -582,6 +586,60 @@ Current concrete proof points:
 - `NativeTemplatesTest` covers template lookup and enum-publication signatures.
 - `runDirectSequenceStress` and `runParallelStress` pass on `TestProps` after
   the adoption hardening wave.
+- Current focused verification on 2026-08-22:
+
+  ```bash
+  ./gradlew :javatools:test \
+    --tests org.xvm.api.InterpreterConnectorTest \
+    --tests org.xvm.asm.ConstantPoolDiagnosticsTest \
+    --tests org.xvm.asm.OpRuntimeCacheTest \
+    --console=plain
+  ```
+
+  Result: build successful; `InterpreterConnectorTest` ran with
+  `tests="1" skipped="0" failures="0" errors="0"`, `ConstantPoolDiagnosticsTest`
+  ran with `tests="6" skipped="0"`, and `OpRuntimeCacheTest` ran with
+  `tests="2" skipped="0"`.
+
+- The current forced root lint/build source of truth is
+  `/tmp/xvm-current-this-escape.log`:
+
+  ```bash
+  ./gradlew clean --console=plain --warning-mode=all \
+    -PincludeBuildLang=false \
+    -PincludeBuildAttachLang=false
+
+  ./gradlew build --rerun-tasks --no-build-cache \
+    -PincludeBuildLang=false \
+    -PincludeBuildAttachLang=false \
+    -Porg.xtclang.java.lint=true \
+    -Porg.xtclang.java.warningsAsErrors=false \
+    -Porg.xtclang.java.maxWarnings=10000 \
+    -Porg.xtclang.java.maxErrors=10000 \
+    --console=plain --warning-mode=all
+  ```
+
+  Result: `BUILD SUCCESSFUL in 1m 2s`, `141 actionable tasks: 141 executed`,
+  `80` emitted `this-escape` warnings at `77` unique source locations, and no
+  `NativeContainer.java` `this-escape` diagnostics.
+
+- Narrow same-JVM and parallel runtime stress also passed without a new clean or
+  lint rerun:
+
+  ```bash
+  CI=true ./gradlew :manualTests:runDirectSequenceStress \
+    -PsameJvmIterations=1 \
+    -PsameJvmModules=TestArray \
+    --console=plain --warning-mode=all --no-daemon --no-configuration-cache
+
+  CI=true ./gradlew :manualTests:runParallelStress \
+    -PstressIterations=1 \
+    -PstressModules=TestArray \
+    --console=plain --warning-mode=all --no-daemon --no-configuration-cache
+  ```
+
+  Results: direct sequence stress passed in `52s`; parallel stress passed in
+  `11s`.
 
 The remaining audit items become must-fix when these tests or diagnostics show
 that the owner object is shared, the cache is owner-bearing, or runtime execution

@@ -420,7 +420,8 @@ public final class OwnershipDiagnostics {
             line(indent, label + " = Lazy[" + (computed ? "computed" : "deferred") + "]");
 
             if (computed || forceLazy) {
-                dumpValue("value", lazy.get(), expected, indent + 1, allowNativeOwner);
+                dumpValue("value", withOwnerPool(expected, lazy::get), expected, indent + 1,
+                        allowNativeOwner);
             }
         }
 
@@ -435,8 +436,10 @@ public final class OwnershipDiagnostics {
                     return;
                 }
 
-                dumpValue("value", getOwnerLazy(lazy, owner), expected, indent + 1,
-                        allowNativeOwner);
+                Container ownerContainer = ownerOf(owner);
+                Container scopedOwner    = ownerContainer == null ? expected : ownerContainer;
+                dumpValue("value", withOwnerPool(scopedOwner, () -> getOwnerLazy(lazy, owner)),
+                        expected, indent + 1, allowNativeOwner);
             }
         }
 
@@ -829,6 +832,12 @@ public final class OwnershipDiagnostics {
         @SuppressWarnings({"rawtypes", "unchecked"})
         private static Object getOwnerLazy(Lazy.Owner lazy, Object owner) {
             return lazy.get(owner);
+        }
+
+        private static <T> T withOwnerPool(Container owner, SupplierWithException<T> supplier) {
+            try (var _ = ConstantPool.withPool(owner == null ? null : owner.getConstantPool())) {
+                return supplier.get();
+            }
         }
 
         private static <T> T safe(SupplierWithException<T> supplier) {

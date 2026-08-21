@@ -33,7 +33,7 @@ public class InterpreterConnector
         super(repository);
 
         f_runtime         = new Runtime();
-        f_containerNative = new NativeContainer(f_runtime, repository);
+        f_containerNative = NativeContainer.create(f_runtime, repository);
     }
 
     @Override

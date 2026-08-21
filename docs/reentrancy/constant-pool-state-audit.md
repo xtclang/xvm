@@ -25,6 +25,36 @@ The real risk categories are narrower:
 - live runtime values placed in constants, especially `HandleConstant`;
 - diagnostics and JIT caches that are not serialized logical constant value.
 
+## Completeness Status
+
+This file is the current ConstantPool/state catalog, not a proof that every
+parallelism-hostile pool pattern has been eliminated. The branch fixes the
+known runtime-owner defects listed below and adds guards for the classes of bugs
+that were proven during stress runs. A complete ConstantPool audit is still a
+must-audit backlog item because `ConstantPool` is also used as compiler,
+linker, serializer, runtime, and diagnostic state.
+
+The remaining audit must enumerate every owner-sensitive state edge in:
+
+- non-final mutable fields and mutable collections on `ConstantPool`;
+- `adoptedBy(...)`, `clone()`, copy constructors, and any method that changes a
+  constant's containing pool or copies helper state;
+- ambient owner lookup through `ConstantPool.getCurrentPool()`,
+  `ConstantPool.withPool(...)`, `ThreadLocal`, `TransientThreadLocal`, or
+  `ScopedValue`;
+- late runtime registration and mutation after a pool has been published to a
+  container;
+- live runtime handles or other container-owned objects stored in constants;
+- error-listener/current-pool assumptions such as `getErrorListener()` calls
+  that only work when the correct owner has already been scoped;
+- diagnostics, JIT, and metadata helper caches that are not serialized logical
+  constant value.
+
+The proper output of that audit is a must-fix/must-audit/should-fix/benign
+classification with a guard or explicit owner parameter recommendation for each
+site. The background ConstantPool-specific audit for this branch writes that
+expanded catalog to `constant-pool-hostile-state-audit.md`.
+
 ## Severity Table
 
 | Priority | Category | Sites | Why it matters | Proper fix or guard |
@@ -159,6 +189,9 @@ The runtime cleanup wave is intentionally narrow:
   `setCurrentPool(pool)` with a later `setCurrentPool(null)`. It uses
   `try (var _ = ConstantPool.withPool(pool))`, so the previous thread value is
   restored even when startup fails.
+- Native template loading now runs through `NativeContainer.create(...)` after
+  the native-container constructor returns, so the scoped pool is no longer
+  bound while the native-container owner itself is still under construction.
 - `ConstantPool.setCurrentPool(...)` was removed because no source caller
   remained. Keeping only `withPool(...)` prevents open-ended ambient owner
   mutation from being reintroduced accidentally.

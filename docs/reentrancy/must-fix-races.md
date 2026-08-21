@@ -18,6 +18,7 @@ and lazy-publication counts are scan signals generated on branch
 | Must fix | Mutable native template `INSTANCE` fields | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes all 143 fields and all 139 constructor assignments. | Last writer wins across containers; constructor `this` escape | `NativeTemplates` central key table, existing container template cache, plus container/frame lookup |
 | Must fix | Static runtime-owned metadata | `master`: 151 field-shaped runtime/template static metadata fields after excluding `INSTANCE`. This branch fixes all 151 and leaves 0 in the scanned runtime-template/Utils category. | Type/composition/method/handle values from one owner reused in another owner | Owner-scoped final `Lazy`, grouped info records, or owner-owned `ConcurrentMap` |
 | Must fix | Raw enum handles returned through public/native paths | Branch remainder: 14 raw accessor references, all protected/internal in `xEnum` or owner-local native enum factories in `xBoolean`, `xNullable`, and `xOrdered` | Natural enum construction struct escapes as if it were the finalized enum singleton | `ensureEnumByName`, `ensureEnumByOrdinal`, or `Utils.ensureInitializedEnum` on public paths |
+| Must fix | Native-container startup work from constructor | Current branch fixes the three `NativeContainer` `this-escape` diagnostics by moving native-template loading to `NativeContainer.create(...)` | Canonical native templates and resource handles were installed while the owner was still under construction | Private constructor plus post-construction factory initialization before publication |
 | Must audit, must fix when owner-shared | Manual lazy publication in shared runtime/asm objects | 23 strong same-field lazy-init matches in runtime/asm; 43 across all Java sources | Plain field read/write with no happens-before edge; duplicate, stale, partial, or wrong-owner state | Final `Lazy`, `ConcurrentMap.computeIfAbsent`, or explicit atomic/locked state |
 | Must fix | Split lifecycle state across several fields | `SingletonConstant` was the known concrete case and is fixed in this branch | Fibers see mixed handle/owner/waiter state; false recursion or missed wait | One immutable state snapshot in `AtomicReference<State>` or one lock |
 | Must fix | Runtime/helper state shallow-copied during constant adoption | Fixed in this branch for `SingletonConstant`, `FSNodeConstant`, `FileStoreConstant`, `TypeConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, `TypeParameterConstant`, and `HandleConstant` | A constant registered into pool B carries pool A's runtime handle/state cell, helper lock, JIT cache, or reentrancy marker | Adoption must copy only logical constant value state; transient runtime/helper state must be fresh or cleared |
@@ -121,6 +122,49 @@ Required replacement:
   `ConcurrentMap<K, Lazy<V>>`.
 - Runtime handles and enum values: prove they are true JVM-wide handles or move
   them behind container/frame initialized accessors.
+
+## Native-Container Startup Constructor Escape
+
+Status: fixed in this branch.
+
+`NativeContainer` used to load native templates, install base templates,
+register native helpers, initialize resources, and ensure the service context
+from its public constructor. That path was owner-sensitive startup work: it
+created canonical native templates owned by the native container and populated
+the container's runtime metadata before the Java constructor had returned.
+
+Why this was dangerous:
+
+- Native template loading intentionally publishes template objects into the
+  container's template maps.
+- The base templates are canonical owner-local templates; if they escape during
+  construction, later startup code can observe an owner whose constructor has
+  not completed.
+- This was close to the original `INSTANCE = this` failure family: the
+  publication target was container-local rather than JVM-global, but the owner
+  lifecycle was still blurred.
+
+Replacement:
+
+- `NativeContainer` now has a private constructor and
+  `NativeContainer.create(runtime, repository)`.
+- The constructor only initializes the owner fields required by `Container` and
+  stores the repository.
+- The factory calls `initializeNativeTemplates()` after construction returns
+  and before `InterpreterConnector` receives the container.
+
+Behavior and cache preservation:
+
+- Existing callers still get a fully initialized native container.
+- Native module loading, base-template installation, reflective native-template
+  loading, supplemental registration, `initNative()`, resource initialization,
+  and service-context creation run in the same relative order.
+- No cache is removed, delayed past connector construction, or changed from
+  owner-local to process-global.
+- `InterpreterConnectorTest.parallelConnectorsLoadIndependentNativeContainers()`
+  is the dedicated regression test. It starts several interpreter connectors
+  concurrently, loads `ecstasy.xtclang.org`, checks that their native containers
+  are distinct, and forces ownership validation over the warmed containers.
 
 ## Raw Natural-Enum Handles
 
