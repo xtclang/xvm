@@ -15,6 +15,8 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.runtime.Container;
+
 
 /**
  * The API between Java host environment and an XVM runtime.
@@ -102,6 +104,20 @@ public abstract class Connector {
      *              the return value
      */
     public abstract int join() throws InterruptedException;
+
+    /**
+     * Return the interpreter runtime container associated with this connector for
+     * diagnostics, or {@code null} when the connector implementation has a
+     * different ownership model.
+     *
+     * <p>This hook is intentionally not part of normal launcher semantics. It is
+     * used by opt-in same-JVM stress diagnostics to inspect owner-scoped runtime
+     * state after execution without teaching production code to depend on the
+     * concrete connector type.</p>
+     */
+    public Container diagnosticContainer() {
+        return null;
+    }
 
     // ----- data fields ---------------------------------------------------------------------------
 

@@ -220,6 +220,13 @@ replace legacy ownerless static lookups.
 JIT runtime. It is the entry point a launcher can use in place of the
 interpreter connector.
 
+The owner-diagnostics hook added for the interpreter path is intentionally a
+default no-op on `Connector`. `JitConnector` does not return an
+`org.xvm.runtime.Container`; it owns an `org.xvm.javajit.Container` inside an
+`Xvm`/`Ctx` runtime. That means `OwnershipDiagnostics` is not the right root for
+JIT validation, but adding the hook does not force the JIT connector into the
+interpreter ownership model.
+
 The lifecycle is:
 
 1. Construction creates a new `org.xvm.javajit.Xvm` from the supplied
@@ -254,6 +261,22 @@ normal "one connector loads one app then runs it" lifecycle. It is not a proof
 that one `JitConnector` instance can safely be reused concurrently for multiple
 modules or containers. Reentrant JIT testing should either use separate
 connector instances or explicitly define connector lifecycle synchronization.
+
+Branch verification included a launcher-level smoke of this path:
+
+```bash
+./gradlew :xdk:installDist --console=plain --warning-mode=all --no-daemon --no-configuration-cache
+xdk/build/install/xdk/bin/xec \
+  -L manualTests/build/xtc/main/lib \
+  -L manualTests/build/xtc/xdk/lib \
+  -J EchoTest hello jit
+```
+
+That command ran through `JitConnector`, generated JIT classes, printed the
+expected `EchoTest` arguments, and exited successfully. The dedicated
+`manualTests/src/main/x/jit` suite was not compiled by the default manualTests
+source set, so this is a connector smoke, not a comprehensive JIT correctness
+or ownership proof.
 
 ## Appendix: How The JIT Bridge Module Works
 

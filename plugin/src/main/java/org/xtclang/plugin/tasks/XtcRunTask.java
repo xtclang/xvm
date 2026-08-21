@@ -83,6 +83,7 @@ import org.xtclang.plugin.launchers.ExecutionStrategy;
 public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> implements XtcRuntimeExtension {
     protected final Map<XtcRunModule, Integer> executedModules; // Module -> exit code
     private final Property<@NotNull DefaultXtcRuntimeExtension> taskLocalModules;
+    private final Property<Boolean> validateRuntimeOwnership;
 
     // Command-line override properties (set via --module, --method, --args options)
     private final Property<String> cliModuleName;
@@ -102,6 +103,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         super(objects, project, XtcProjectDelegate.resolveXtcRuntimeExtension(project));
         this.executedModules = new LinkedHashMap<>();
         this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class));
+        this.validateRuntimeOwnership = objects.property(Boolean.class).convention(false);
         this.cliModuleName = objects.property(String.class);
         this.cliMethodName = objects.property(String.class);
         this.cliModuleArgs = objects.listProperty(String.class);
@@ -215,6 +217,19 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
             return getExtension().getModules();
         }
         return taskLocalModules.get().getModules();
+    }
+
+    /**
+     * Enable interpreter runtime ownership validation after each direct run.
+     *
+     * <p>This is intentionally task-local and opt-in. It keeps completed
+     * interpreter containers in the direct runtime classloader so stress tasks
+     * can detect owner-bearing objects shared across same-JVM runs. Normal run
+     * tasks should leave it disabled.</p>
+     */
+    @Input
+    public Property<Boolean> getValidateRuntimeOwnership() {
+        return validateRuntimeOwnership;
     }
 
     @Override

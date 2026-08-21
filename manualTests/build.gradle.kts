@@ -482,6 +482,10 @@ val testModuleNames = listOf(
     "TestTuples"
 )
 
+// Same set as runSequential: every known runnable manual test module, excluding
+// modules that the build already documents as broken outside this stress work.
+val knownWorkingTestModuleNames = testModuleNames.filter { it !in setOf("TestAnnotations") }
+
 /**
  * Run all tests in parallel using the Runner module, which spawns all test modules concurrently.
  */
@@ -559,6 +563,7 @@ val runDirectSequenceStress = tasks.register<XtcRunTask>("runDirectSequenceStres
     description = "Stress same-JVM direct runtime reuse by running repeated modules sequentially."
     executionMode = ExecutionMode.DIRECT
     verbose = false
+    validateRuntimeOwnership.set(true)
 
     val iterations = providers.gradleProperty("sameJvmIterations")
         .map(String::toInt)
@@ -569,7 +574,7 @@ val runDirectSequenceStress = tasks.register<XtcRunTask>("runDirectSequenceStres
         ?.split(',')
         ?.map { it.trim() }
         ?.filter { it.isNotEmpty() }
-        ?: listOf("TestArray", "TestNumbers", "TestReflection")
+        ?: knownWorkingTestModuleNames
 
     repeat(iterations) {
         selectedModules.forEach { moduleName(it) }
@@ -586,8 +591,7 @@ val runSequential = tasks.register<XtcRunTask>("runSequential") {
     // TODO: TestAnnotations is currently failing - fix the test and remove this exclusion
     // TODO: The runner.x in parallel tests apparently just swallows and prints exceptions WTF?
     // TODO: We should integrate this with xUnit instead maybe? OR finally implement negative and positive tests.
-    val excludedModules = setOf("TestAnnotations")
-    testModuleNames.filter { it !in excludedModules }.forEach { moduleName(it) }
+    knownWorkingTestModuleNames.forEach { moduleName(it) }
 }
 
 val runAllTestTasks = tasks.register("runAllTestTasks") {

@@ -858,7 +858,7 @@ lightweight containers in one process:
 ```
 
 `manualTests:runDirectSequenceStress` is the complementary same-JVM direct-mode
-smoke. It runs selected manual modules repeatedly as separate sequential
+stress task. It runs selected manual modules repeatedly as separate sequential
 `Runner.run()` calls through the Gradle plugin's `ExecutionMode.DIRECT` path,
 reusing one build-scoped isolated runtime classloader:
 
@@ -872,7 +872,23 @@ That is the shape that used to be vulnerable to stale process-global runtime
 state such as static `VIEWS`, `INSTANCE`, and owner-derived metadata caches
 surviving from run N into run N+1.
 
-The initial branch smoke passed with:
+The task now enables `XtcRunTask.validateRuntimeOwnership`, so it is not only a
+crash smoke. After each direct run, the plugin direct executor retains the
+completed interpreter container in a bounded recent-container window scoped to
+the build-scoped direct runtime classloader and validates the window with
+`OwnershipDiagnostics.assertValid(...)`. The current container is always in the
+window, so a later run fails if it reuses an owner-scoped template, handle,
+composition, service context, or constant-pool value from an earlier run. The
+window avoids making the diagnostic harness retain every completed runtime
+graph during long all-module stress loops.
+
+The validator allows the normal same-runtime `NativeContainer` parent sharing
+implemented by `Container.getTemplate(...)`: a main container may cache
+owner-local type keys whose implementation template is owned by its own native
+parent. It still rejects native-template values from any other run, and it
+validates nested lazy fields of native-owned templates against the native owner.
+
+The validated branch stress passed with:
 
 ```bash
 ./gradlew :manualTests:runDirectSequenceStress \
@@ -884,8 +900,9 @@ The initial branch smoke passed with:
   --no-configuration-cache
 ```
 
-The default smoke also passed with two iterations of the built-in module set
-(`TestArray`, `TestNumbers`, and `TestReflection`):
+The default validated stress now runs two iterations of every known working
+manual test module. The module list is shared with `runSequential` and excludes
+only `TestAnnotations`, which the build already documents as failing:
 
 ```bash
 ./gradlew :manualTests:runDirectSequenceStress \
@@ -895,6 +912,30 @@ The default smoke also passed with two iterations of the built-in module set
   --no-daemon \
   --no-configuration-cache
 ```
+
+This all-module validated stress passed locally in 2m29s.
+
+The branch also smoke-tested the launcher JIT path after the owner API changes:
+
+```bash
+./gradlew :xdk:installDist --console=plain --warning-mode=all --no-daemon --no-configuration-cache
+xdk/build/install/xdk/bin/xec \
+  -L manualTests/build/xtc/main/lib \
+  -L manualTests/build/xtc/xdk/lib \
+  -J EchoTest hello jit
+```
+
+That run used `JitConnector`, printed the expected `EchoTest` arguments, and
+exited successfully. It proves the changed interpreter owner APIs did not break
+the launcher-level JIT connector path. It does not prove JIT ownership safety;
+that remains the separate audit described in [jit-implications.md](jit-implications.md).
+
+During development, the first all-module validated run exposed a harness
+footprint problem rather than an owner mismatch: retaining every completed
+container strongly exhausted the Gradle JVM heap during `TestLambda`. The
+validator now uses a bounded recent-container window for long stress runs, and
+`OwnershipDiagnostics.validate(...)` no longer builds the full textual dump on
+the success path.
 
 These tests do not prove the absence of every race in the runtime. They prove
 that the old pattern is concretely broken and that the new replacement has the

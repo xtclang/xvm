@@ -106,8 +106,10 @@ creates many containers through one XTC `Runner` module invocation.
 `runDirectSequenceStress` creates many direct Java runner invocations in the same
 Gradle task and classloader owner.
 
-A future richer harness should invoke `Launcher`/`Runner` repeatedly in one JVM
-and attach ownership diagnostics:
+The current direct-mode task already invokes `Runner` repeatedly in one JVM and
+attaches ownership diagnostics through the Gradle plugin direct executor. A
+future richer harness should add structured artifacts, timings, and equivalent
+coverage for `TestRunner` and compiler paths:
 
 ```java
 for (String module : modules) {
@@ -178,17 +180,22 @@ written module file or jar.
 ### Container Visibility
 
 `OwnershipDiagnostics.assertValid(...)` needs real `Container` roots. The
-current `Launcher` API returns an exit code, so the harness needs one of these
-minimal hooks:
+current `Launcher` API returns an exit code. The direct-run path now uses the
+smallest production-safe hook:
 
-- a diagnostic callback registered on `Runner`/`TestRunner` that receives each
-  created container before teardown,
-- a test-only subclass or package-private accessor that exposes the container
-  after `run()`,
-- or a diagnostic listener on `Connector`/container creation.
+- `Connector.diagnosticContainer()` is a default no-op for connectors with a
+  different ownership model,
+- `InterpreterConnector` retains the completed main container after `join()`
+  only for opt-in diagnostics,
+- `Runner.diagnosticContainer()` exposes that completed container after
+  `Runner.run()`,
+- `IsolatedDirectExecutor` stores a bounded recent-container window in the
+  build-scoped direct runtime classloader and validates that window after each
+  successful direct run.
 
-The callback approach is preferred because it keeps production return values
-unchanged and makes the harness explicit:
+A callback or listener is still the preferred shape for broader future
+coverage, because it can cover `TestRunner`, compile/test direct requests, and
+parallel execution without teaching production return values about diagnostics:
 
 ```java
 var probe = new RuntimeOwnershipProbe();
@@ -211,11 +218,17 @@ After each warm path, validate:
 - constant-pool ownership,
 - and cross-container identity sharing.
 
-Use default non-invasive mode during normal stress loops:
+Use default non-invasive mode during normal stress loops. Long loops should
+validate a bounded recent-container window rather than retaining every completed
+container strongly:
 
 ```java
-OwnershipDiagnostics.assertValid(containers);
+OwnershipDiagnostics.assertValid(recentContainers);
 ```
+
+The current container must always be included. That catches stale owner values
+reachable from the current run, while the window catches direct cross-run
+sharing without turning the diagnostic harness into a heap-retention test.
 
 On failure, emit the full dump as an artifact:
 
@@ -234,6 +247,8 @@ recognize it instead of treating every shared object as a bug.
 
 Known examples:
 
+- a main container sharing class templates with its own `NativeContainer` parent
+  through `Container.getTemplate(...)`,
 - terminal input/output and JLine terminal state,
 - the `xLocalClock` daemon `Timer`,
 - the OS file-watch daemon holder,
@@ -306,8 +321,10 @@ Add the smallest diagnostic hook needed to capture containers created by
 `Runner` and `TestRunner`. Do not change launcher semantics or public exit-code
 behavior.
 
-Done when a focused javatools test can run one module, capture its container,
-and call `OwnershipDiagnostics.assertValid(...)`.
+Current state: done for interpreted `Runner` direct-mode execution through
+`Connector.diagnosticContainer()`, `InterpreterConnector`, `Runner`, and
+`IsolatedDirectExecutor`. `TestRunner` and compiler direct-mode ownership roots
+remain future coverage.
 
 ### Phase 1: Same-JVM Serial Manual Task
 
@@ -315,16 +332,17 @@ Add a manual Gradle task, probably in `manualTests`, that loops through selected
 modules in one JVM and records validation plus timing artifacts.
 
 Current state: `manualTests:runDirectSequenceStress` provides the direct-mode
-same-JVM sequence smoke. This phase is only fully done when the task also records
-ownership validation plus timing artifacts.
+same-JVM sequence stress with ownership validation enabled after every
+successful direct run. By default it runs the same known-working module set as
+`runSequential`: all `testModuleNames` except `TestAnnotations`, which is
+already documented as failing. This phase is only fully done when the task also
+records structured failure artifacts and timing artifacts.
 
-Initial branch verification passed with two direct iterations of `TestArray` and
-`TestReflection`, and also with two iterations of the default module set
-(`TestArray`, `TestNumbers`, and `TestReflection`). That covers repeated
-same-JVM execution of the bit/view-heavy array paths, numeric template paths, and
-the reflection/enum/template metadata paths, but it is still a smoke. Longer
-local race hunting should increase `sameJvmIterations` and include service,
-collection, map, and compiler-oriented modules as they become stable.
+Validated branch verification passed with two direct iterations of `TestArray`
+and `TestReflection`, and the default task now targets two iterations of the full
+known-working module set. The first full-list run exposed an all-container
+retention problem in the diagnostic harness itself; the validator now keeps a
+bounded recent-container window for long stress runs.
 
 ### Phase 2: Same-JVM Parallel Manual Task
 
@@ -338,8 +356,9 @@ validator can inspect them together after warmup.
 Add a plugin integration stress path that executes through the direct-mode
 Gradle plugin classes, including the isolated runtime classloader.
 
-Done when one Gradle daemon build can invoke multiple direct compile/run/test
-requests and prove that build-scoped runtime reuse does not leak owner state.
+Current state: done for direct run requests via
+`manualTests:runDirectSequenceStress`. Broader direct compile/test request
+coverage and benchmark artifacts remain backlog.
 
 ### Phase 4: Non-Default CI Gate
 
@@ -351,12 +370,11 @@ documented long race-hunting command.
 
 ## Open TODOs
 
-- Add a `Runner`/`TestRunner` diagnostic hook or equivalent container observer.
+- Add a `TestRunner` diagnostic hook or equivalent container observer.
 - Teach `OwnershipDiagnostics` how to write structured failure artifacts.
-- Add ownership diagnostics and benchmark reporting to
-  `manualTests:runDirectSequenceStress`.
+- Add benchmark reporting to `manualTests:runDirectSequenceStress`.
 - Add same-JVM parallel mode after serial mode is reliable.
-- Add plugin direct-mode integration stress through `DirectRuntimeBuildService`.
+- Add direct compile/test integration stress through `DirectRuntimeBuildService`.
 - Define and document the process-wide allowlist used by the validator.
 - Isolate XTC output, jar output, and Gradle cache locations for any stress mode
   that starts more than one outer Gradle process.

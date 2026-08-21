@@ -21,6 +21,8 @@ String dump = OwnershipDiagnostics.dump(containerA, containerB);
 The default mode is non-invasive. It reports lazy cells that are already
 computed and marks deferred cells as deferred. It does not instantiate new
 templates, views, handles, or metadata just because the dump was requested.
+The owning `NativeTemplates` table itself is already a final field on
+`Container`; inspecting it does not allocate a new owner table.
 
 For a deliberately complete snapshot after startup warmup:
 
@@ -55,6 +57,10 @@ mismatch, a constant-pool mismatch, or an owner-scoped object identity shared by
 two inspected containers. This is the mode to wire into race reproducers once a
 workload has warmed the path being checked.
 
+Validation traverses the same owner graph as `dump(...)`, but it does not build
+or retain the full textual dump on the success path. Full dump text is reserved
+for explicit `dump(...)` calls and failure logging.
+
 ## What It Dumps
 
 For each container, the dump includes:
@@ -80,6 +86,26 @@ Owner-bearing objects currently include:
 
 Constants are described with their `ConstantPool` identity so a dump can show
 pool mismatches for values that appear under the wrong container.
+
+## Native Parent Ownership
+
+The validator deliberately allows one narrow kind of sharing: a main container
+may point at a class template owned by its own `NativeContainer` parent.
+`Container.getTemplate(...)` already has that semantics. Shared/core templates
+such as `xArray`, `xVar`, `xListMap`, and many numeric templates are canonical
+native templates, while the main container may cache owner-local keys that refer
+to those native implementation objects.
+
+This allowance applies only to the inspected container's own native parent. It
+does not allow a main container from run N to point at run N-1's native
+container, and it does not allow arbitrary owner-scoped values to be shared
+between two main containers.
+
+The traversal also changes expectation at the boundary. If a main container's
+cache points at a native-owned template, the nested lazy fields of that template
+are validated against the native owner, not against both owners. That catches a
+native template that accidentally retains a main-container value and would leak
+it to another run.
 
 ## Interpreting The Checks
 
@@ -115,6 +141,18 @@ Use default mode first. If the dump shows only deferred cells for the path being
 investigated, rerun the same test with `forceLazy=true` after the workload has
 finished. Forced mode is for diagnostics only; it intentionally changes cache
 warmup timing.
+
+`manualTests:runDirectSequenceStress` enables this validator by setting
+`XtcRunTask.validateRuntimeOwnership=true`. The Gradle plugin direct executor
+keeps a bounded window of completed interpreter containers observed by the
+build-scoped direct runtime classloader and calls
+`OwnershipDiagnostics.assertValid(...)` after each successful direct
+`Runner.run()`. The current container is always validated, so stale owner values
+reachable from the current run fail structurally even when the workload happens
+not to crash. The recent-container window catches direct cross-run sharing
+without making the diagnostic harness retain every completed runtime graph in a
+long all-module stress run. The default window is six containers and can be
+overridden with the `org.xtclang.directRuntimeOwnershipWindow` system property.
 
 ## Limitations
 

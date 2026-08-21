@@ -80,8 +80,8 @@ public final class OwnershipDiagnostics {
      * @return structured validation findings
      */
     public static Validation validate(boolean forceLazy, Container... containers) {
-        Dumper dumper = new Dumper(forceLazy);
-        dumper.dump(containers);
+        Dumper dumper = new Dumper(forceLazy, false);
+        dumper.scan(containers);
         return dumper.validation();
     }
 
@@ -151,7 +151,7 @@ public final class OwnershipDiagnostics {
                     section("cross-container-shares", crossContainerShares))
                 .stream()
                 .filter(section -> !section.isEmpty())
-                .collect(Collectors.joining("\n", "Invalid XVM runtime ownership", ""));
+                .collect(Collectors.joining("\n", "Invalid XVM runtime ownership\n", ""));
         }
 
         private static String section(String label, List<String> findings) {
@@ -168,8 +168,9 @@ public final class OwnershipDiagnostics {
 
     private static final class Dumper {
         private final boolean forceLazy;
+        private final boolean emitDump;
 
-        private final StringBuilder out = new StringBuilder();
+        private final StringBuilder out;
 
         private final Map<Container, String> containerNames = new IdentityHashMap<>();
         private final Map<Object, Occurrence> seen = new IdentityHashMap<>();
@@ -181,14 +182,29 @@ public final class OwnershipDiagnostics {
         private final List<String> crossShares     = new ArrayList<>();
 
         Dumper(boolean forceLazy) {
+            this(forceLazy, true);
+        }
+
+        Dumper(boolean forceLazy, boolean emitDump) {
             this.forceLazy = forceLazy;
+            this.emitDump  = emitDump;
+            this.out       = emitDump ? new StringBuilder() : null;
         }
 
         String dump(Container... containers) {
+            scan(containers);
+            return out.toString();
+        }
+
+        void scan(Container... containers) {
             requireNonNull(containers, "containers");
 
-            out.append("XVM runtime ownership dump\n");
-            out.append("mode.lazy=").append(forceLazy ? "force" : "computed-only").append('\n');
+            if (emitDump) {
+                out.append("XVM runtime ownership dump\n");
+                out.append("mode.lazy=")
+                        .append(forceLazy ? "force" : "computed-only")
+                        .append('\n');
+            }
 
             for (int i = 0; i < containers.length; i++) {
                 Container container = requireNonNull(containers[i], "containers[" + i + "]");
@@ -199,23 +215,30 @@ public final class OwnershipDiagnostics {
                 dumpContainer(i, containers[i]);
             }
 
-            dumpShares();
-            return out.toString();
+            if (emitDump) {
+                dumpShares();
+            }
         }
 
         private void dumpContainer(int index, Container container) {
             String name = containerNames.get(container);
 
-            out.append('\n')
-                    .append(name)
-                    .append(' ')
-                    .append(describeContainer(container))
-                    .append('\n');
+            if (emitDump) {
+                out.append('\n')
+                        .append(name)
+                        .append(' ')
+                        .append(describeContainer(container))
+                        .append('\n');
+            }
 
             record("container[" + index + "]", container, container);
 
             dumpNativeTemplates(container);
-            dumpMap("templatesByType", readField(container, "f_mapTemplatesByType"), container, 1);
+            // A main container can cache app-specific parameterized type keys
+            // whose implementation template is the canonical native class
+            // template, for example Array<Property<Point>> -> native xArray.
+            dumpMap("templatesByType", readField(container, "f_mapTemplatesByType"),
+                    container, 1, true);
             dumpMap("compositions", readField(container, "f_mapCompositions"), container, 1);
             dumpCollection("services", readField(container, "f_setServices"), container, 1);
         }
@@ -223,16 +246,27 @@ public final class OwnershipDiagnostics {
         private void dumpNativeTemplates(Container container) {
             NativeTemplates templates = container.nativeTemplates();
 
-            out.append("  nativeTemplates = ")
-                    .append(describe(templates, container))
-                    .append('\n');
+            if (emitDump) {
+                out.append("  nativeTemplates = ")
+                        .append(describe(templates, container))
+                        .append('\n');
+            }
             record("nativeTemplates", templates, container);
 
-            dumpLazyFields(templates, container, 2);
-            dumpMap("nativeTemplateKeys", readField(templates, "f_mapTemplates"), container, 2);
+            // A main container's NativeTemplates table may resolve canonical
+            // core templates from its NativeContainer parent. That is the
+            // normal Container.getTemplate(...) delegation model; still reject
+            // native-template values from any other runtime owner.
+            dumpLazyFields(templates, container, 2, true);
+            dumpMap("nativeTemplateKeys", readField(templates, "f_mapTemplates"), container, 2, true);
         }
 
         private void dumpLazyFields(Object owner, Container expected, int indent) {
+            dumpLazyFields(owner, expected, indent, false);
+        }
+
+        private void dumpLazyFields(Object owner, Container expected, int indent,
+                                    boolean allowNativeOwner) {
             List<Field> fields = lazyFields(owner.getClass());
             if (fields.isEmpty()) {
                 return;
@@ -243,41 +277,56 @@ public final class OwnershipDiagnostics {
                 Object value = readField(owner, field);
                 if (value instanceof Lazy<?> lazy) {
                     dumpLazy(field.getDeclaringClass().getSimpleName() + "." + field.getName(),
-                            lazy, expected, indent + 1);
+                            lazy, expected, indent + 1, allowNativeOwner);
                 }
             }
         }
 
         private void dumpLazy(String label, Lazy<?> lazy, Container expected, int indent) {
+            dumpLazy(label, lazy, expected, indent, false);
+        }
+
+        private void dumpLazy(String label, Lazy<?> lazy, Container expected, int indent,
+                              boolean allowNativeOwner) {
             boolean computed = lazy.isComputed();
             line(indent, label + " = Lazy[" + (computed ? "computed" : "deferred") + "]");
 
             if (computed || forceLazy) {
-                dumpValue("value", lazy.get(), expected, indent + 1);
+                dumpValue("value", lazy.get(), expected, indent + 1, allowNativeOwner);
             }
         }
 
         private void dumpMap(String label, Object value, Container expected, int indent) {
+            dumpMap(label, value, expected, indent, false);
+        }
+
+        private void dumpMap(String label, Object value, Container expected, int indent,
+                             boolean allowNativeOwner) {
             if (!(value instanceof Map<?, ?> map)) {
-                line(indent, label + " = " + describe(value, expected));
+                line(indent, label + " = " + describe(value, expected, allowNativeOwner));
                 return;
             }
 
             line(indent, label + " size=" + map.size());
             map.entrySet().stream()
                     .sorted(Comparator.comparing(entry -> String.valueOf(entry.getKey())))
-                    .forEach(entry -> dumpMapEntry(entry, expected, indent + 1));
+                    .forEach(entry -> dumpMapEntry(entry, expected, indent + 1, allowNativeOwner));
         }
 
         private void dumpMapEntry(Map.Entry<?, ?> entry, Container expected, int indent) {
+            dumpMapEntry(entry, expected, indent, false);
+        }
+
+        private void dumpMapEntry(Map.Entry<?, ?> entry, Container expected, int indent,
+                                  boolean allowNativeOwner) {
             Object key   = entry.getKey();
             Object value = entry.getValue();
 
-            record("key " + key, key, expected);
+            record("key " + key, key, expected, allowNativeOwner);
             if (value instanceof Lazy<?> lazy) {
-                dumpLazy(String.valueOf(key), lazy, expected, indent);
+                dumpLazy(String.valueOf(key), lazy, expected, indent, allowNativeOwner);
             } else {
-                dumpValue(String.valueOf(key), value, expected, indent);
+                dumpValue(String.valueOf(key), value, expected, indent, allowNativeOwner);
             }
         }
 
@@ -298,16 +347,22 @@ public final class OwnershipDiagnostics {
         }
 
         private void dumpValue(String label, Object value, Container expected, int indent) {
-            line(indent, label + " = " + describe(value, expected));
-            record(label, value, expected);
+            dumpValue(label, value, expected, indent, false);
+        }
 
+        private void dumpValue(String label, Object value, Container expected, int indent,
+                               boolean allowNativeOwner) {
+            line(indent, label + " = " + describe(value, expected, allowNativeOwner));
+            record(label, value, expected, allowNativeOwner);
+
+            Container nestedExpected = nestedExpected(expected, value, allowNativeOwner);
             if (value instanceof ClassTemplate template && dumpedTemplateLazy.add(template)) {
-                dumpLazyFields(template, expected, indent + 1);
+                dumpLazyFields(template, nestedExpected, indent + 1, allowNativeOwner);
                 return;
             }
 
             if (value instanceof Map<?, ?> map) {
-                dumpMap("entries", map, expected, indent + 1);
+                dumpMap("entries", map, nestedExpected, indent + 1, allowNativeOwner);
                 return;
             }
 
@@ -315,46 +370,59 @@ public final class OwnershipDiagnostics {
                 int count = Array.getLength(value);
                 line(indent + 1, "arrayLength=" + count);
                 for (int i = 0; i < count; i++) {
-                    dumpValue("[" + i + "]", Array.get(value, i), expected, indent + 2);
+                    dumpValue("[" + i + "]", Array.get(value, i), nestedExpected,
+                            indent + 2, allowNativeOwner);
                 }
             }
         }
 
         private void record(String path, Object value, Container expected) {
+            record(path, value, expected, false);
+        }
+
+        private void record(String path, Object value, Container expected, boolean allowNativeOwner) {
             if (value instanceof Constant constant) {
-                recordConstantPool(path, constant, expected);
+                recordConstantPool(path, constant, expected, allowNativeOwner);
             }
 
             if (!isOwnerScoped(value)) {
                 return;
             }
 
-            Container actual = ownerOf(value);
-            if (actual != null && expected != null && actual != expected) {
-                ownerMismatches.add(path + " expected=" + containerName(expected)
+            Container actual            = ownerOf(value);
+            Container effectiveExpected = effectiveExpected(expected, actual, allowNativeOwner);
+            if (actual != null && effectiveExpected != null && actual != effectiveExpected) {
+                ownerMismatches.add(path + " expected=" + containerName(effectiveExpected)
                         + " actual=" + containerName(actual)
                         + " object=" + identity(value));
             }
 
-            Occurrence previous = seen.putIfAbsent(value, new Occurrence(path, expected, actual));
-            if (previous != null && previous.expected != expected) {
+            Occurrence previous = seen.putIfAbsent(value,
+                    new Occurrence(path, effectiveExpected, actual));
+            if (previous != null && previous.expected != effectiveExpected) {
                 crossShares.add(previous.path + " and " + path
                         + " share " + identity(value)
                         + " previousExpected=" + containerName(previous.expected)
-                        + " currentExpected=" + containerName(expected)
+                        + " currentExpected=" + containerName(effectiveExpected)
                         + " actualOwner=" + containerName(actual));
             }
         }
 
         private void recordConstantPool(String path, Constant constant, Container expected) {
+            recordConstantPool(path, constant, expected, false);
+        }
+
+        private void recordConstantPool(String path, Constant constant, Container expected,
+                                        boolean allowNativeOwner) {
             if (expected == null) {
                 return;
             }
 
             ConstantPool actual = safe(() -> constant.getConstantPool());
-            if (actual != null && actual != expected.getConstantPool()) {
-                poolMismatches.add(path + " expected=" + containerName(expected)
-                        + " expectedPool=" + identity(expected.getConstantPool())
+            Container expectedPoolOwner = effectivePoolOwner(expected, actual, allowNativeOwner);
+            if (actual != null && actual != expectedPoolOwner.getConstantPool()) {
+                poolMismatches.add(path + " expected=" + containerName(expectedPoolOwner)
+                        + " expectedPool=" + identity(expectedPoolOwner.getConstantPool())
                         + " actualPool=" + identity(actual)
                         + " object=" + identity(constant));
             }
@@ -381,25 +449,35 @@ public final class OwnershipDiagnostics {
         }
 
         private String describe(Object value, Container expected) {
+            return describe(value, expected, false);
+        }
+
+        private String describe(Object value, Container expected, boolean allowNativeOwner) {
             if (value == null) {
                 return "null";
             }
 
             StringBuilder description = new StringBuilder(identity(value));
             Container     owner       = ownerOf(value);
+            Container     expectedOwner = effectiveExpected(expected, owner, allowNativeOwner);
             if (owner != null) {
                 description.append(" owner=").append(containerName(owner));
-                if (expected != null && owner != expected) {
-                    description.append(" OWNER-MISMATCH expected=").append(containerName(expected));
+                if (expectedOwner != null && owner != expectedOwner) {
+                    description.append(" OWNER-MISMATCH expected=")
+                            .append(containerName(expectedOwner));
                 }
             }
 
             if (value instanceof Constant constant) {
                 ConstantPool pool = safe(() -> constant.getConstantPool());
+                Container expectedPoolOwner = expected == null || pool == null
+                        ? expected
+                        : effectivePoolOwner(expected, pool, allowNativeOwner);
                 description.append(" pool=").append(pool == null ? "null" : identity(pool));
-                if (expected != null && pool != null && pool != expected.getConstantPool()) {
+                if (expectedPoolOwner != null && pool != null
+                        && pool != expectedPoolOwner.getConstantPool()) {
                     description.append(" POOL-MISMATCH expected=")
-                            .append(identity(expected.getConstantPool()));
+                            .append(identity(expectedPoolOwner.getConstantPool()));
                 }
             }
 
@@ -408,6 +486,38 @@ public final class OwnershipDiagnostics {
             }
 
             return description.toString();
+        }
+
+        private static Container effectiveExpected(Container expected, Container actual,
+                                                   boolean allowNativeOwner) {
+            if (expected == null || actual == null || !allowNativeOwner) {
+                return expected;
+            }
+
+            NativeContainer nativeOwner = safe(() -> expected.getNativeContainer());
+            return actual == nativeOwner ? nativeOwner : expected;
+        }
+
+        private static Container effectivePoolOwner(Container expected, ConstantPool actual,
+                                                    boolean allowNativeOwner) {
+            if (!allowNativeOwner || actual == expected.getConstantPool()) {
+                return expected;
+            }
+
+            NativeContainer nativeOwner = safe(() -> expected.getNativeContainer());
+            return nativeOwner != null && actual == nativeOwner.getConstantPool()
+                    ? nativeOwner
+                    : expected;
+        }
+
+        private static Container nestedExpected(Container expected, Object value,
+                                                boolean allowNativeOwner) {
+            if (!allowNativeOwner || !isOwnerScoped(value)) {
+                return expected;
+            }
+
+            Container actual = ownerOf(value);
+            return actual == null ? expected : effectiveExpected(expected, actual, true);
         }
 
         private static Container ownerOf(Object value) {
@@ -467,7 +577,9 @@ public final class OwnershipDiagnostics {
         }
 
         private void line(int indent, String text) {
-            out.append("  ".repeat(Math.max(0, indent))).append(text).append('\n');
+            if (emitDump) {
+                out.append("  ".repeat(Math.max(0, indent))).append(text).append('\n');
+            }
         }
 
         private static List<Field> lazyFields(Class<?> clz) {

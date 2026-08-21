@@ -126,8 +126,14 @@ public class InterpreterConnector
         } while (!f_runtime.isIdle() || !m_containerMain.isIdle());
 
         int nResult = m_containerMain.getResult();
+        m_containerLast = m_containerMain;
         m_containerMain = null;
         return nResult;
+    }
+
+    @Override
+    public MainContainer diagnosticContainer() {
+        return m_containerMain == null ? m_containerLast : m_containerMain;
     }
 
 
@@ -147,6 +153,13 @@ public class InterpreterConnector
      * The main container currently associated with this Connector.
      */
     private MainContainer m_containerMain;
+
+    /**
+     * Last completed main container retained only so opt-in same-JVM direct
+     * diagnostics can validate owner-scoped state after {@link #join()} clears
+     * the active connector state.
+     */
+    private MainContainer m_containerLast;
 
     /**
      * Status indicator.

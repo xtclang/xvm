@@ -24,6 +24,8 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.JitConnector;
 
+import org.xvm.runtime.Container;
+
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
 
@@ -239,7 +241,11 @@ public class Runner extends Launcher<RunnerOptions> {
                 return checkErrors("method argument validation");
             }
             connector.invoke0(method, args);
-            return connector.join();
+            int result = connector.join();
+            // Direct same-JVM stress keeps this owner around long enough to
+            // validate that no owner-scoped runtime objects leaked across runs.
+            m_containerDiagnostic = connector.diagnosticContainer();
+            return result;
         } catch (InterruptedException e) {
             log(WARNING, e, "Interrupted while waiting for method {}", quoted(sName));
             return 1;
@@ -347,9 +353,24 @@ public class Runner extends Launcher<RunnerOptions> {
         return isJit ? new JitConnector(repo) : new InterpreterConnector(repo);
     }
 
+    /**
+     * Return the completed interpreter container for opt-in runtime ownership
+     * diagnostics, or {@code null} when the active connector cannot be inspected
+     * by {@link org.xvm.runtime.OwnershipDiagnostics}.
+     */
+    public Container diagnosticContainer() {
+        return m_containerDiagnostic;
+    }
+
     @Override
     protected void validateOptions() {
         // Validate the -L path of file(s)/dir(s)
         validateModulePath();
     }
+
+    /**
+     * Completed interpreter container retained for opt-in same-JVM direct
+     * diagnostics. Normal launcher execution ignores this field.
+     */
+    private Container m_containerDiagnostic;
 }
