@@ -31,27 +31,6 @@ Status: Suitable for use
 * AST nodes are multi-pass compiled (with optional re-queuing)
   via `org.xvm.compiler.ast.StageManager`
 
-### Compiler counters and same-JVM compilation
-
-Several AST nodes allocate synthetic labels or code-container ids from
-compiler-wide counters. These counters do not carry semantic ordering; they
-only need to produce stable, unique names during code generation. In the
-single-threaded compiler path, `AtomicInteger.incrementAndGet()` and
-`AtomicInteger.getAndIncrement()` preserve the old sequence exactly:
-`++counter` starts at one and `counter++` returns the current value.
-
-The counters are process-wide because they live on AST classes, so same-JVM
-incremental compilation or parallel compilation can exercise them from more
-than one thread. Plain `int` increments can lose updates in that scenario and
-produce duplicate labels. The counters are therefore `private static final
-AtomicInteger` fields. This is intentionally separate from runtime container
-ownership work: it does not change compiler ownership or reset behavior, it
-only gives the existing process-wide counters atomic allocation.
-
-`CompilerCounterAtomicTest` verifies both sides of that contract: sequential
-values match the old behavior for normal compilation, and bounded concurrent
-allocation produces unique labels.
-
 ## Assembler
 
 Status: Suitable for use
