@@ -108,7 +108,7 @@ public class MainContainer
         TypeComposition clz      = type.ensureClass(frame);
         ClassTemplate   template = clz.getTemplate();
         MethodStructure ctor     = template.getStructure().findMethod("construct", 1, pool.typeString());
-        ObjectHandle[]  ahArgs   = new ObjectHandle[]{xString.makeHandle(frame, sValue)};
+        ObjectHandle[]  ahArgs   = {xString.makeHandle(frame, sValue)};
         int             iResult  = template.construct(frame, ctor, clz, null, ahArgs, Op.A_STACK);
         return frame.popResult(iResult);
     }
