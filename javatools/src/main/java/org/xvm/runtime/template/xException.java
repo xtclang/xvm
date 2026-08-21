@@ -74,7 +74,12 @@ public class xException
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
         ExceptionHandle hException = (ExceptionHandle) hTarget;
-        MethodStructure methodFormat = info().methodFormatException();
+        // The formatter is declared by the canonical Exception template. Concrete exception
+        // subclasses share that owner-local metadata; asking a subclass template to compute it
+        // can return null because subclasses do not declare formatExceptionString themselves.
+        MethodStructure methodFormat =
+                NativeTemplates.get(hException.getComposition().getContainer()).
+                        exception().info().methodFormatException();
 
         // String formatExceptionString(String exceptionName, String stackTrace)
 

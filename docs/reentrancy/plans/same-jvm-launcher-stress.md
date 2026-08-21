@@ -67,6 +67,12 @@ This mode starts many test modules from one runner invocation. It should remain
 manual or opt-in because it is intentionally aggressive and can expose unrelated
 runtime representation bugs.
 
+Do not simulate this by starting several independent Gradle/manual-test
+processes against the same checkout. The branch audit observed truncated `.xtc`
+files, closed build-cache pack entries, and transient classloading failures when
+unrelated Gradle builds wrote the same generated outputs concurrently. Those are
+build-output isolation problems, not useful evidence about runtime owner sharing.
+
 ### Same-JVM Serial Launcher Mode
 
 Add a new manual task, for example:
@@ -138,6 +144,11 @@ This is important because the plugin direct path adds one more owner: the
 build-scoped isolated runtime classloader. The stress test must prove that
 runtime state is scoped to that build/runtime entry, not leaked into the Gradle
 daemon or into a different direct runtime fingerprint.
+
+The plugin/direct-mode variant must also isolate generated XTC and cache output
+per build service or per stress run. Otherwise a file-system race can hide the
+runtime result by making one invocation read another invocation's partially
+written module file or jar.
 
 ## Required Diagnostics
 
@@ -314,6 +325,8 @@ documented long race-hunting command.
 - Add same-JVM parallel mode after serial mode is reliable.
 - Add plugin direct-mode integration stress through `DirectRuntimeBuildService`.
 - Define and document the process-wide allowlist used by the validator.
+- Isolate XTC output, jar output, and Gradle cache locations for any stress mode
+  that starts more than one outer Gradle process.
 - Compare benchmark output against forked execution and keep the report in
   build artifacts.
 - Decide which short same-JVM smoke test is stable enough for CI.

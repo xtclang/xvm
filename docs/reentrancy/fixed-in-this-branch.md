@@ -449,7 +449,9 @@ bug: `CompilerAdapter.getErrors()` returns `stream().toList()`, which is
 unmodifiable on current Java, and the exception path appended to that list.
 This branch now appends to a mutable copy, preserving the existing compiler
 diagnostics and adding the caught exception without crashing the native
-compiler service.
+compiler service. The observed failure, mutability contract mistake, and fix are
+recorded in
+[stress-discovered-runtime-issues.md](stress-discovered-runtime-issues.md).
 
 The parallel `TestServices` stress run exposed a separate `StringBuffer`
 representation bug, documented in
@@ -460,6 +462,35 @@ immutable chunks, preserving the chunked cache behavior while making the
 internal invariant stable. `StringBufferTest.committedChunksStayAppendable()`
 verifies the deterministic failing sequence, and the `TestServices` parallel
 stress command that exposed the crash now passes.
+
+A first-PR readiness audit on 2026-08-21 reran the plan checks and then pushed a
+more aggressive mixed parallel stress shape:
+
+```bash
+./gradlew :manualTests:runParallelStress \
+  -PstressIterations=5 \
+  -PstressModules=TestReflection,TestArray,TestServices,TestTuples \
+  --console=plain --warning-mode=all --no-daemon --no-configuration-cache
+```
+
+That run found one additional branch bug before this note was written:
+`xException.buildStringValue()` still read `ExceptionInfo` from the concrete
+exception template. That was wrong for subclasses such as `IllegalState` because
+`formatExceptionString` is declared by the canonical `Exception` template. The
+fix now reads the owner-local canonical exception metadata from the handle's
+container, preserving the old single formatter cache semantics without returning
+to a JVM-global method cache. The same mixed stress command passes after the
+fix.
+
+The same audit also showed why verification needs controlled stress harnesses:
+running multiple unrelated Gradle/manual-test invocations concurrently in one
+checkout can produce truncated `.xtc` files, closed build-cache pack entries, or
+transient classloading failures while one build observes another build's
+partially written outputs. That is a build-output isolation problem, not a
+runtime owner-state proof. It is documented as a same-JVM stress harness
+requirement in
+[stress-discovered-runtime-issues.md](stress-discovered-runtime-issues.md) and
+[plans/same-jvm-launcher-stress.md](plans/same-jvm-launcher-stress.md).
 
 The `xString` wave removes the last-writer-wins string template bridge entirely.
 On master, `xString.makeHandle("...")` used `xString.INSTANCE`, and the common
@@ -829,6 +860,14 @@ lightweight containers in one process:
 These tests do not prove the absence of every race in the runtime. They prove
 that the old pattern is concretely broken and that the new replacement has the
 intended ownership and lifecycle behavior for the most important fixed paths.
+
+The broader `runtime`/`asm` metadata-shaped instance-field scan remains
+follow-up inventory, not a first-PR blocker by itself. A site from that scan
+should be promoted to must-fix when it is shared, owner-bearing, lazily
+published without synchronization, or part of a multi-field lifecycle
+transition. The first PR is intentionally scoped to the confirmed
+native-template/static-owner leaks, enum publication, and singleton lifecycle
+defects.
 
 No existing manual module was found that directly exercises `@Atomic`
 specialized numeric references; the atomic owner-scope wave is covered by Java
