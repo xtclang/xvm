@@ -53,7 +53,7 @@ mkdir -p /tmp/xvm-reentrancy-audit
 Result:
 
 ```text
-BUILD SUCCESSFUL in 1m 8s
+BUILD SUCCESSFUL in 1m 2s
 141 actionable tasks: 141 executed
 ```
 
@@ -69,7 +69,7 @@ All warning categories from the same root build:
 201 warning: [rawtypes]
 144 warning: [unchecked]
 112 warning: [fallthrough]
- 83 warning: [this-escape]
+ 80 warning: [this-escape]
  10 warning: [serial]
   9 warning: [try]
   4 warning: [overrides]
@@ -80,12 +80,12 @@ All warning categories from the same root build:
 `this-escape` distribution:
 
 ```text
- 75 javatools
+ 72 javatools
   7 javatools_utils
   1 javatools_jitbridge
 ```
 
-Javac emitted 83 `this-escape` diagnostics. Those correspond to 80 unique
+Javac emitted 80 `this-escape` diagnostics. Those correspond to 77 unique
 `file:line` source locations, because three lines produce duplicate emissions:
 
 ```text
@@ -100,9 +100,10 @@ javatools/src/main/java/org/xvm/compiler/Parser.java:70
 | --- | --- | --- | --- | --- |
 | Must fix, already fixed in this branch | Legacy native-template `INSTANCE = this` constructor publication from `master` | 139 constructor assignments in `master`; 0 remain in this branch | Done for this PR | Keep `INSTANCE` removed/private via owner APIs; do not reintroduce constructor-published static template singletons. |
 | Must fix, already fixed in this branch | Runtime template `Lazy.of(...)` receiver captures | 61 unique warning locations removed in this branch; 0 remain in this category | Done for this PR | Use `Lazy.Owner<O,T>`, eager final state, or grouped owner-local metadata so field initializers do not capture a constructing receiver. |
+| Must fix, already fixed in this branch | `NativeContainer` loads native templates and resources from its constructor | 3 unique warning locations removed in this branch; 0 remain in this category | Done for this PR | Use `NativeContainer.create(...)` so owner-sensitive startup runs after construction and before the container is returned to the connector. |
 | Must fix, fixed separately | `CooperativelyCleanableReference` publishes `this` to a static set from the constructor | 1 | Done on `lagergren/fix-utils-this-escape` | Use a private constructor plus factory/registration step after construction, or another design that does not publish the object until construction has returned. |
 | Must fix, fixed separately | `AbstractConverterMap` calls overridable factory methods from the base constructor | 1 | Done on `lagergren/fix-utils-this-escape` | Make factory results final concrete nested classes that do not dispatch to subclasses during construction, or lazily initialize views after construction with synchronization. |
-| Must audit, runtime owner construction | `Container`, `NativeContainer`, `CallChain`, `ClassTemplate`, `xOSFileNode`, `xRTMethod`, and `xRef` owner/child construction paths | 11 unique locations | Mixed | Prove construction confinement/publication, or split construction from owner registration/adoption. |
+| Must audit, runtime owner construction | `Container`, `CallChain`, `ClassTemplate`, `xOSFileNode`, `xRTMethod`, and `xRef` owner/child construction paths | 8 unique locations | Mixed | Prove construction confinement/publication, or split construction from owner registration/adoption. |
 | Must audit, ASM owner-copy and metadata construction | `FileStructure`, `ClassStructure`, `MethodStructure`, `PropertyInfo`, `MethodInfo`, `TypeInfoReal`, `PropertyConstant`, `VersionTree` | 17 unique locations | Mixed | Prove construction is request/thread confined, or split assembly from publication so owned children are connected after the owner constructor returns. |
 | Must audit, `Op` constructor virtual predicates/asserts | `Op`, `OpCondJump`, `OpGeneral`, `OpInPlace`, `OpIndex`, `OpPropInPlace`, `OpTest`, `OpVar` | 22 unique locations | Moderate | Replace constructor-time virtual predicate calls with explicit constructor parameters, final helper methods, or subclass-independent op metadata. |
 | Must audit, compiler/parser/AST construction callbacks | `Lexer`, `Parser`, expression/statement constructors and `adopt`/parent-link calls | 16 unique locations | Mixed | For incremental/parallel compiler safety, prove AST/request confinement or separate object construction from parent/adoption callbacks. |
@@ -116,7 +117,7 @@ Current unique-location classification:
  22 Must audit: ASM Op constructor dispatch
  17 Must audit: ASM metadata/owner construction
  16 Must audit: compiler/parser/AST construction
- 11 Must audit: runtime owner/container construction
+  8 Must audit: runtime owner/container construction
   6 Must audit: JIT construction
   5 Should fix: utility cleanup
   2 Must fix, fixed separately: concrete unsafe utility construction
@@ -230,7 +231,6 @@ The migration rule should be:
    4 javatools/src/main/java/org/xvm/asm/OpTest.java
    4 javatools/src/main/java/org/xvm/asm/OpCondJump.java
    3 javatools_utils/src/main/java/org/xvm/util/PackedInteger.java
-   3 javatools/src/main/java/org/xvm/runtime/NativeContainer.java
    3 javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java
    3 javatools/src/main/java/org/xvm/asm/OpPropInPlace.java
    3 javatools/src/main/java/org/xvm/asm/OpIndex.java
@@ -347,9 +347,6 @@ javatools/src/main/java/org/xvm/runtime/CallChain.java:540
 javatools/src/main/java/org/xvm/runtime/ClassTemplate.java:95
 javatools/src/main/java/org/xvm/runtime/Container.java:62
 javatools/src/main/java/org/xvm/runtime/Container.java:764
-javatools/src/main/java/org/xvm/runtime/NativeContainer.java:103
-javatools/src/main/java/org/xvm/runtime/NativeContainer.java:155
-javatools/src/main/java/org/xvm/runtime/NativeContainer.java:180
 javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSFileNode.java:169
 javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTMethod.java:297
 javatools/src/main/java/org/xvm/runtime/template/reflect/xRef.java:866

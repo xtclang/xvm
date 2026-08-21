@@ -7,8 +7,8 @@ should happen to them. The raw compiler tally is in
 Current forced root-lint source of truth:
 
 ```text
-83 emitted this-escape diagnostics
-80 unique file:line locations
+80 emitted this-escape diagnostics
+77 unique file:line locations
 ```
 
 ## Decision Summary
@@ -16,13 +16,14 @@ Current forced root-lint source of truth:
 | Decision | Count | Meaning |
 | --- | ---: | --- |
 | Fixed in this branch | 61 | Owner-local runtime `Lazy.of(...)` receiver captures converted to explicit owner-lazy state. |
+| Fixed in this branch | 3 | `NativeContainer` startup loading moved out of the constructor and into a post-construction factory. |
 | Fixed separately, still present here | 2 | Concrete unsafe construction/publication pattern. Fixed on `lagergren/fix-utils-this-escape`; still present in this branch until that PR is merged or rebased here. |
 | Remove after small design cleanup | 27 | Constructor-time virtual predicates/assertions or utility helper calls. Usually fixable, but should be separate from the runtime-owner PR. |
-| Audit before changing | 44 | Construction publishes `this` to owner/child structures or performs owner-sensitive assembly. Needs confinement or lifecycle proof. |
+| Audit before changing | 41 | Construction publishes `this` to owner/child structures or performs owner-sensitive assembly. Needs confinement or lifecycle proof. |
 | Document only for this PR | 7 | JIT/tooling paths that are not part of the runtime-owner fix. |
 
-These counts add the 61 warning locations already fixed in this branch to the
-80 unique locations still emitted by the current root lint run.
+These counts add the 64 warning locations already fixed in this branch to the
+77 unique locations still emitted by the current root lint run.
 
 ## Fixed Separately, Do Not Suppress Here
 
@@ -139,6 +140,46 @@ Remaining locations in this category:
 none
 ```
 
+## Fixed In This Branch: NativeContainer Startup Loading
+
+`NativeContainer` used to load native templates and initialize resource handles
+from its public constructor. That produced three `this-escape` diagnostics:
+
+```text
+javatools/src/main/java/org/xvm/runtime/NativeContainer.java:103
+javatools/src/main/java/org/xvm/runtime/NativeContainer.java:155
+javatools/src/main/java/org/xvm/runtime/NativeContainer.java:180
+```
+
+This was the most runtime-relevant remaining `this`-escape group because the
+work installs canonical native templates and owner-local runtime metadata.
+Those objects are intentionally visible to later container startup, so doing
+the work while the `NativeContainer` constructor was still running made the
+owner lifecycle harder to reason about.
+
+The branch now exposes `NativeContainer.create(runtime, repository)`. The
+private constructor only initializes final owner fields through `Container`.
+The factory then calls `initializeNativeTemplates()` after construction returns
+and before the container is handed back to `InterpreterConnector`.
+
+Semantic and performance equivalence:
+
+- callers still receive a fully initialized native container;
+- template loading, base-template installation, `registerNativeTemplates()`,
+  `initNative()`, resource initialization, and service-context creation run in
+  the same relative order as before;
+- no cache is removed or made lazier than before;
+- the only lifecycle change is that owner-sensitive loading no longer runs
+  from the constructor body.
+
+Focused coverage:
+
+- `InterpreterConnectorTest.parallelConnectorsLoadIndependentNativeContainers()`
+  creates several interpreter connectors concurrently, loads
+  `ecstasy.xtclang.org`, checks that each connector has a distinct native
+  container, and then forces `OwnershipDiagnostics.assertValid(true, ...)`
+  across all resulting containers.
+
 ## Remove After Small Design Cleanup
 
 These warnings should eventually disappear, but they are best handled in
@@ -196,9 +237,6 @@ not be suppressed until the construction lifecycle is documented.
 | `javatools/src/main/java/org/xvm/runtime/ClassTemplate.java:95` | Base template constructor calls overridable `registerImplicitFields(null)`. Current overrides in `xRef` and `xConst` add static field names. | Must audit. This is in the root template hierarchy, and future subclasses could read owner/template fields before their constructor body runs. | Move implicit-field collection to explicit metadata: pass immutable implicit-field names to the base constructor, or use a post-construction template initialization hook called by the owning container before publication. |
 | `javatools/src/main/java/org/xvm/runtime/Container.java:62` | Base constructor creates `new ConstHeap(this)`. The current `ConstHeap` constructor only stores the owner and does not publish it. | Must audit. This is probably safe today but still stores a not-yet-fully-constructed owner in a child object. | Either keep a local suppression with a proof that `ConstHeap` cannot publish/callback during construction, or create `ConstHeap` from a post-construction factory before the container is registered. |
 | `javatools/src/main/java/org/xvm/runtime/Container.java:764` | Field initializer creates `new NativeTemplates(this)`. `NativeTemplates` is final and currently stores the owner plus owner-lazy cells. | Must audit. Lower risk than old static `INSTANCE`, but it still captures the owner during base construction. | Initialize `NativeTemplates` from the same post-construction owner-registration path as the heap, or suppress locally only with a final-class/no-publication proof. |
-| `javatools/src/main/java/org/xvm/runtime/NativeContainer.java:103` | Native-container constructor calls `loadNativeTemplates()`, which performs owner-sensitive loading before the constructor returns. | Must fix in a lifecycle cleanup. This is startup-owner code and is close to the bugs this branch is removing. | Use a static/package factory such as `NativeContainer.create(...)`: construct the object, then load templates and resources after construction has completed, before publishing the container for use. |
-| `javatools/src/main/java/org/xvm/runtime/NativeContainer.java:155` | `loadNativeTemplates()` calls `finishNativeTemplateLoad(pool)`, a private method, while the native container is still constructing. | Must fix together with line 103. The method is private, but it performs the native-template registration work that can expose owner state. | Move the entire `loadNativeTemplates`/`finishNativeTemplateLoad` sequence to the factory post-construction phase, with one owner-local lock/guard around template installation. |
-| `javatools/src/main/java/org/xvm/runtime/NativeContainer.java:180` | Base templates are installed with `storeNativeTemplate(new xObject(this, ...))` and related owner template construction during native-container construction. | Must fix together with line 103. These are the canonical native templates, so wrong publication here can poison later owner-local lookup. | Construct and install base templates only after the native container constructor has returned. Keep `NativeTemplates` as the lookup API so no template constructor writes process-global state. |
 | `javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSFileNode.java:169` | `NodeHandle` constructor calls `setField(null, "store", hOSStore)` after `super(clazz)`. Field assignment goes through generic handle lookup. | Must audit. It probably remains frame/thread confined, but constructor-time field mutation through a public method is a bad handle-construction pattern. | Resolve the field index/composition before construction and assign the backing field array directly in a private constructor helper, or create through a factory that sets fields after construction. |
 | `javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTMethod.java:297` | `MethodHandle` constructor asserts `getMethodInfo() != null`; that calls through type info while the handle is still constructing. | Must audit. It should not publish the handle, but it can trigger owner/type metadata work from a partial handle. | Replace the assertion with a static validation helper using `typeTarget`, `method`, and identity constants directly, or perform validation in the factory before constructing the handle. |
 | `javatools/src/main/java/org/xvm/runtime/template/reflect/xRef.java:866` | `RefHandle(clazz, name, referent)` calls `setField(...)` from the constructor. | Must audit. This initializes a field on the handle being built; safe only if the field write cannot call out or publish. | Prefer a static factory that constructs the ref then assigns the referent, or add a private direct-field initializer that does not dispatch through public field-access methods. |
@@ -294,7 +332,7 @@ javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/nLongBasedArra
 22 Should fix: ASM Op constructor dispatch
 17 Must audit: ASM metadata/owner construction
 16 Must audit: compiler/parser/AST construction
-11 Must audit: runtime owner/container construction
+ 8 Must audit: runtime owner/container construction
  6 Document only: JIT construction
  5 Should fix: utility cleanup
  2 Fixed separately, still present here: concrete unsafe utility construction
@@ -310,9 +348,8 @@ The least risky order after this runtime-owner branch is:
    fixes the two concrete `javatools_utils` construction defects.
 2. Remove the ASM `Op*` constructor predicate warnings through opcode metadata
    or final/static helpers.
-3. Fix the two strongest remaining runtime publication paths:
-   `NativeContainer` post-construction loading and `xRef.RefHandle` frame-ref
-   registration.
+3. Fix the strongest remaining runtime publication path:
+   `xRef.RefHandle` frame-ref registration.
 4. Audit runtime owner-construction and ASM/compiler assembly paths with
    focused lifecycle tests before changing them.
 

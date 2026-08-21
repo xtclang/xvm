@@ -34,6 +34,13 @@ String dump = OwnershipDiagnostics.dump(true, containerA, containerB);
 useful in a diagnostic harness, but it is not appropriate for normal runtime
 logging because it changes what has been warmed.
 
+When forced mode computes a lazy cell, diagnostics temporarily bind the owning
+container's `ConstantPool` with `ConstantPool.withPool(...)`. That keeps the
+diagnostic traversal equivalent to normal owner-scoped runtime access: lazy
+template metadata that still consults the transitional ambient pool sees the
+same pool as the container/template being inspected, not a stale or missing
+thread-local value from the diagnostic thread.
+
 The same traversal is available as a validator:
 
 ```java
