@@ -1,6 +1,7 @@
 # Same-JVM Launcher Stress Plan
 
-Status: backlog plan.
+Status: phase 1 smoke task added; broader diagnostics and benchmarking remain
+backlog.
 
 The current `manualTests:runParallelStress` task is valuable because it asks the
 XVM runner module to start many manual-test modules in parallel containers
@@ -75,16 +76,38 @@ build-output isolation problems, not useful evidence about runtime owner sharing
 
 ### Same-JVM Serial Launcher Mode
 
-Add a new manual task, for example:
+The first smoke task is:
 
 ```bash
-./gradlew :manualTests:runSameJvmStress \
+./gradlew :manualTests:runDirectSequenceStress \
   -PsameJvmIterations=50 \
-  -PsameJvmModules=TestNumbers,TestCollections,TestReflection \
-  -PsameJvmMode=serial
+  -PsameJvmModules=TestNumbers,TestCollections,TestReflection
 ```
 
-The harness should invoke `Launcher`/`Runner` repeatedly in one JVM:
+This task uses `ExecutionMode.DIRECT`, so the Gradle plugin calls
+`DirectRuntimeBuildService`, reuses one build-scoped isolated runtime classloader
+for the selected runtime fingerprint, and invokes `Runner.run()` once per module
+entry. That is the execution shape that can expose stale JVM-global runtime
+state such as the old `VIEWS` and `INSTANCE` caches:
+
+```text
+Gradle task JVM
+  DirectRuntimeBuildService
+    PluginRuntimeClassLoader
+      Runner(TestArray).run()
+      Runner(TestNumbers).run()
+      Runner(TestReflection).run()
+      Runner(TestArray).run()
+      ...
+```
+
+The task intentionally differs from `runParallelStress`. `runParallelStress`
+creates many containers through one XTC `Runner` module invocation.
+`runDirectSequenceStress` creates many direct Java runner invocations in the same
+Gradle task and classloader owner.
+
+A future richer harness should invoke `Launcher`/`Runner` repeatedly in one JVM
+and attach ownership diagnostics:
 
 ```java
 for (String module : modules) {
@@ -291,8 +314,17 @@ and call `OwnershipDiagnostics.assertValid(...)`.
 Add a manual Gradle task, probably in `manualTests`, that loops through selected
 modules in one JVM and records validation plus timing artifacts.
 
-Done when serial same-JVM mode can run a small module set repeatedly and produce
-a benchmark report.
+Current state: `manualTests:runDirectSequenceStress` provides the direct-mode
+same-JVM sequence smoke. This phase is only fully done when the task also records
+ownership validation plus timing artifacts.
+
+Initial branch verification passed with two direct iterations of `TestArray` and
+`TestReflection`, and also with two iterations of the default module set
+(`TestArray`, `TestNumbers`, and `TestReflection`). That covers repeated
+same-JVM execution of the bit/view-heavy array paths, numeric template paths, and
+the reflection/enum/template metadata paths, but it is still a smoke. Longer
+local race hunting should increase `sameJvmIterations` and include service,
+collection, map, and compiler-oriented modules as they become stable.
 
 ### Phase 2: Same-JVM Parallel Manual Task
 
@@ -321,7 +353,8 @@ documented long race-hunting command.
 
 - Add a `Runner`/`TestRunner` diagnostic hook or equivalent container observer.
 - Teach `OwnershipDiagnostics` how to write structured failure artifacts.
-- Add same-JVM serial stress task under `manualTests`.
+- Add ownership diagnostics and benchmark reporting to
+  `manualTests:runDirectSequenceStress`.
 - Add same-JVM parallel mode after serial mode is reliable.
 - Add plugin direct-mode integration stress through `DirectRuntimeBuildService`.
 - Define and document the process-wide allowlist used by the validator.

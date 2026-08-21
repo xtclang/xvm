@@ -540,6 +540,43 @@ val runParallelStress = tasks.register<XtcRunTask>("runParallelStress") {
 }
 
 /**
+ * Stress same-JVM direct execution by running selected modules repeatedly as separate sequential
+ * direct runner invocations inside one Gradle task. This exercises the plugin DIRECT mode path that
+ * reuses one build-scoped isolated runtime classloader, so stale JVM-global runtime state from run N
+ * can break run N+1 without process isolation hiding the bug.
+ *
+ * This is intentionally separate from runParallelStress:
+ *   - runParallelStress starts many containers through one XTC Runner module invocation.
+ *   - runDirectSequenceStress starts many direct Runner invocations in the same Gradle JVM.
+ *
+ * Examples:
+ *   ./gradlew :manualTests:runDirectSequenceStress
+ *   ./gradlew :manualTests:runDirectSequenceStress -PsameJvmIterations=10
+ *   ./gradlew :manualTests:runDirectSequenceStress -PsameJvmModules=TestArray,TestReflection
+ */
+val runDirectSequenceStress = tasks.register<XtcRunTask>("runDirectSequenceStress") {
+    group = "verification"
+    description = "Stress same-JVM direct runtime reuse by running repeated modules sequentially."
+    executionMode = ExecutionMode.DIRECT
+    verbose = false
+
+    val iterations = providers.gradleProperty("sameJvmIterations")
+        .map(String::toInt)
+        .getOrElse(2)
+        .coerceAtLeast(1)
+    val selectedModules = providers.gradleProperty("sameJvmModules")
+        .orNull
+        ?.split(',')
+        ?.map { it.trim() }
+        ?.filter { it.isNotEmpty() }
+        ?: listOf("TestArray", "TestNumbers", "TestReflection")
+
+    repeat(iterations) {
+        selectedModules.forEach { moduleName(it) }
+    }
+}
+
+/**
  * Run all tests sequentially, one after another. Each test module runs to completion before
  * the next one starts. This is useful for debugging or when parallel execution causes issues.
  */
