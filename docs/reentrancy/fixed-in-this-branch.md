@@ -597,8 +597,19 @@ Fixed public/native paths include:
 - `xArray` mutability construction arguments
 - `xRTClassTemplate` contribution action enum values
 - `xRTMethod` access enum result
+- `xRTComponentTemplate` access and format enum results
+- `xRTType` access and form enum results
+- `xRTTypeTemplate` access and form enum results
 - `xRTDelegate` and `xArray` mutability property results through
   `Utils.assignInitializedEnum`
+
+The reflection helper wave intentionally renames raw-sounding helpers from
+`make*Handle` to `ensure*Handle` and changes their return type from
+`EnumHandle` to `ObjectHandle`. That is not cosmetic. `ensureEnumByName(...)`
+can return the final enum value immediately or a deferred handle while the
+corresponding `SingletonConstant` finishes initialization. A raw `EnumHandle`
+cannot represent that deferred result and, for a natural enum, may be the
+construction struct that must not cross a public/native publication boundary.
 
 This is must-fix. Raw `xEnum.getEnumByName()` and `getEnumByOrdinal()` still
 exist because some internal paths need the template-local index. They are not a
@@ -797,6 +808,10 @@ new singleton state machine:
 - concurrent initialization chooses one owner,
 - unrelated waiters share completion,
 - same-fiber recursion installs an initializing placeholder without deadlock.
+
+`javatools/src/test/java/org/xvm/runtime/NativeTemplatesTest.java` also asserts
+that reflection enum publication helpers return `ObjectHandle`, not raw
+`EnumHandle`, so the unsafe helper signature cannot come back unnoticed.
 
 `manualTests:runParallelStress` is an opt-in stress runner that invokes the
 existing parallel `Runner` with repeated module arguments, creating many
