@@ -824,7 +824,6 @@ Representative examples:
   `AtomicReferenceFieldUpdater`.
 - `TypeParameterConstant.f_tloReEntry`.
 - `ServiceContext.s_tloContext`.
-- `xRTServer.f_tloKeyStore`.
 
 Why this is bad design:
 
@@ -842,6 +841,11 @@ Proper replacements:
   owns the operation.
 - If a thread local remains necessary, wrap it in a scoped API that restores or
   removes the value in `finally`.
+
+This branch removes the runtime owner-bearing `xRTServer.SimpleKeyManager`
+thread-local. TLS key-manager callbacks now carry a synthetic route alias and
+resolve certificate/private-key material from the server's explicit `Router`
+state.
 
 ### Should Fix Soon: Weak And Identity Mutable Maps
 

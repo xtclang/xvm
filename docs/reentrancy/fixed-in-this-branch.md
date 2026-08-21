@@ -884,6 +884,34 @@ This is a must-fix runtime race because watch events arrive on a Java daemon
 thread, outside the service fiber that registered the watch. Any ambient owner
 used there must be re-established from the watched handle for each event.
 
+### `xRTServer` TLS Key Selection
+
+Master selected the HTTPS route key store by writing a `KeyStoreHandle` into a
+`ThreadLocal` from `SimpleKeyManager.chooseEngineServerAlias(...)` and later
+reading it from `getCertificateChain(...)` and `getPrivateKey(...)`.
+
+That is unsafe owner-bearing ambient state. HTTPS worker threads are pooled Java
+threads, while `KeyStoreHandle` belongs to an XVM service/container owner. If a
+later callback arrived on the same worker without a fresh alias selection, or if
+route removal/replacement interleaved with a handshake, the key manager could
+observe stale owner state left by a previous handshake.
+
+This branch removes the thread-local state. Each route now has a stable
+synthetic TLS alias derived from its host/ports/key name, and the key-manager
+certificate/private-key callbacks resolve that alias through the server's
+explicit `Router` state. The externally visible TLS key remains the same
+keystore entry name; the synthetic alias is internal to the JDK key-manager
+callback sequence.
+
+This keeps the old behavior of selecting certificates per route and does not add
+a runtime hot-path cost. The route lookup happens during TLS handshake callbacks
+only, and route maps were already concurrent. Missing or removed routes now
+return the normal empty certificate chain or null private key instead of reading
+a stale per-thread handle.
+
+`xRTServerTest` verifies that `SimpleKeyManager` has no thread-local field and
+that synthetic aliases resolve through explicit route state.
+
 ### Terminal And Debug Console Process State
 
 Master exposed JLine terminal state as public mutable process globals:

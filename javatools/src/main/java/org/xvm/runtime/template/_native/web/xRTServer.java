@@ -366,7 +366,8 @@ public class xRTServer
         }
 
         RequestHandler handler = createRequestHandler(frame, hWrapper, hServer);
-        RouteInfo      route   = new RouteInfo(handler, nHttpPort, nHttpsPort, hKeystore, sTlsKey);
+        RouteInfo      route   = RouteInfo.create(
+                handler, nHttpPort, nHttpsPort, hKeystore, sTlsKey, sHostName);
 
         if (hServer.getHttpServer().getAddress().getHostName().equals(sHostName)) {
             // the "direct" route is only used by the KeyManager when a host name is missing
@@ -400,8 +401,7 @@ public class xRTServer
         }
 
         RequestHandler handler = createRequestHandler(frame, hWrapper, hServer);
-        router.mapRoutes.put(sHostName,
-            new RouteInfo(handler, info.nHttpPort, info.nHttpsPort, info.hKeyStore, info.sTlsKey));
+        router.mapRoutes.put(sHostName, info.withHandler(handler));
         return frame.assignValue(iResult, xBoolean.trueHandle(frame));
     }
 
@@ -741,8 +741,7 @@ public class xRTServer
                     // TODO: REMOVE
                     System.err.println(Handy.logTime() + " Trace: Handshake with unknown host: " + sHost);
                 } else {
-                    f_tloKeyStore.set(route.hKeyStore);
-                    return route.sTlsKey;
+                    return route.tlsAlias;
                 }
             } else {
                 // TODO: REMOVE
@@ -760,7 +759,16 @@ public class xRTServer
         @Override
         public X509Certificate[] getCertificateChain(String sAlias) {
             try {
-                Certificate[] aCerts = f_tloKeyStore.get().f_keyStore.getCertificateChain(sAlias);
+                RouteInfo route = findRouteForTlsAlias(f_hServer.getRouter(), sAlias);
+                if (route == null || route.hKeyStore == null) {
+                    return new X509Certificate[0];
+                }
+
+                Certificate[] aCerts =
+                        route.hKeyStore.f_keyStore.getCertificateChain(route.sTlsKey);
+                if (aCerts == null) {
+                    return new X509Certificate[0];
+                }
                 if (aCerts instanceof X509Certificate[] aX509Certs) {
                     return aX509Certs;
                 }
@@ -778,11 +786,29 @@ public class xRTServer
         @Override
         public PrivateKey getPrivateKey(String sAlias) {
             try {
-                KeyStoreHandle hKeyStore = f_tloKeyStore.get();
-                return (PrivateKey) hKeyStore.getKey(sAlias);
+                RouteInfo route = findRouteForTlsAlias(f_hServer.getRouter(), sAlias);
+                return route == null || route.hKeyStore == null
+                        ? null
+                        : (PrivateKey) route.hKeyStore.getKey(route.sTlsKey);
             } catch (GeneralSecurityException e) {
                 return null;
             }
+        }
+
+        static RouteInfo findRouteForTlsAlias(Router router, String sAlias) {
+            if (sAlias == null) {
+                return null;
+            }
+
+            RouteInfo route = router.getDirectRoute();
+            if (route != null && sAlias.equals(route.tlsAlias)) {
+                return route;
+            }
+
+            return router.mapRoutes.values().stream()
+                    .filter(candidate -> sAlias.equals(candidate.tlsAlias))
+                    .findFirst()
+                    .orElse(null);
         }
 
         // ----- data fields -----------------------------------------------------------------------
@@ -791,11 +817,6 @@ public class xRTServer
          * The HttpServer handle.
          */
         private final HttpServerHandle f_hServer;
-
-        /**
-         * The key store handle used by the current thread.
-         */
-        private final ThreadLocal<KeyStoreHandle> f_tloKeyStore = new ThreadLocal<>();
     }
 
 
@@ -845,7 +866,22 @@ public class xRTServer
     }
 
     protected record RouteInfo(RequestHandler handler, int nHttpPort, int nHttpsPort,
-                               KeyStoreHandle hKeyStore, String sTlsKey) {}
+                               KeyStoreHandle hKeyStore, String sTlsKey, String tlsAlias) {
+        static RouteInfo create(RequestHandler handler, int nHttpPort, int nHttpsPort,
+                                KeyStoreHandle hKeyStore, String sTlsKey, String sHostName) {
+            // The JDK key-manager callback only passes an alias to getCertificateChain() and
+            // getPrivateKey(). Encode the route into that alias instead of keeping the selected
+            // KeyStoreHandle in ambient state tied to the pooled HTTPS worker thread.
+            String tlsAlias = sTlsKey == null
+                    ? null
+                    : sHostName + ':' + nHttpPort + ':' + nHttpsPort + ':' + sTlsKey;
+            return new RouteInfo(handler, nHttpPort, nHttpsPort, hKeyStore, sTlsKey, tlsAlias);
+        }
+
+        RouteInfo withHandler(RequestHandler handler) {
+            return new RouteInfo(handler, nHttpPort, nHttpsPort, hKeyStore, sTlsKey, tlsAlias);
+        }
+    }
 
 
     // ----- ObjectHandles -------------------------------------------------------------------------
