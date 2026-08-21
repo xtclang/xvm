@@ -272,6 +272,38 @@ CI=true ./gradlew :manualTests:runDirectSequenceStress \
 
 Result: `BUILD SUCCESSFUL in 57s`.
 
+### Runtime Constructor Assertion `this` Escapes
+
+This branch removes two constructor-time instance calls that existed only for
+debug assertions:
+
+- `CallChain.FieldAccessChain` no longer calls `isField()` from its
+  constructor. The public `isField()` method now delegates to the same private
+  static helper that the constructor assertion uses against the constructor
+  argument.
+- `xRTMethod.MethodHandle` no longer calls `getMethodInfo()` on itself from its
+  constructor. The assertion now resolves the same `MethodInfo` from
+  `typeTarget` and `method.getIdentityConstant()` directly.
+
+These changes do not remove caching or change runtime behavior. Java assertions
+are disabled in normal runs; when they are enabled, the same validation still
+happens, but it no longer dispatches through a partially constructed object.
+
+`javatools/src/test/java/org/xvm/runtime/RuntimeThisEscapeConstructionTest.java`
+guards both source patterns. A targeted lint compile after this wave:
+
+```bash
+./gradlew :javatools:compileJava --rerun-tasks --no-build-cache \
+  --no-configuration-cache \
+  -Porg.xtclang.java.lint=true \
+  -Porg.xtclang.java.warningsAsErrors=false \
+  -Porg.xtclang.java.maxWarnings=10000 \
+  -Porg.xtclang.java.maxErrors=10000 \
+  --console=plain --warning-mode=all
+```
+
+emits no `this-escape` warning for `CallChain.java` or `xRTMethod.java`.
+
 ### Runtime-Executed `Op` Frame-Constant Caches
 
 This branch removes owner-bearing frame-constant caches from runtime-executed

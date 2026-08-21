@@ -123,8 +123,7 @@ public class CallChain {
      * @return true iff the chain represents a field
      */
     public boolean isField() {
-        return f_aMethods.length > 0 &&
-               f_aMethods[0].getImplementation() == Implementation.Field;
+        return isFieldChain(f_aMethods);
     }
 
     /**
@@ -537,7 +536,9 @@ public class CallChain {
         public FieldAccessChain(MethodBody[] aMethods) {
             super(aMethods);
 
-            assert isField();
+            // Validate the constructor argument directly. Calling isField() here
+            // would dispatch through this before construction has completed.
+            assert CallChain.isFieldChain(aMethods);
         }
 
         @Override
@@ -756,6 +757,15 @@ public class CallChain {
 
 
     // ----- data fields ---------------------------------------------------------------------------
+
+    /**
+     * @return true iff the specified chain bodies represent a field
+     */
+    private static boolean isFieldChain(MethodBody[] aMethods) {
+        return aMethods != null &&
+               aMethods.length > 0 &&
+               aMethods[0].getImplementation() == Implementation.Field;
+    }
 
     /**
      * An array of method bodies.
