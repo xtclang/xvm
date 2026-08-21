@@ -25,6 +25,9 @@ Start here:
 - [state-inventory.md](state-inventory.md): the broader source inventory of
   mutable/racy/state-design smells, including must-fix and should-fix
   categories with scan commands.
+- [must-audit-backlog.md](must-audit-backlog.md): repository-wide state that is
+  not yet proven broken but depends on unproven owner, threading, or reset
+  assumptions.
 - [ownership-diagnostics.md](ownership-diagnostics.md): how to dump
   container-owned runtime state during stress runs and detect owner mismatches
   or cross-container sharing.
@@ -36,6 +39,14 @@ Start here:
 - [remaining-finstance-constructors.md](remaining-finstance-constructors.md):
   the removed `fInstance` constructor convention and the replacements for the
   final five semantic uses.
+- [manual-lazy-cache-audit.md](manual-lazy-cache-audit.md): classification of
+  remaining `if (field == null) field = ...` sites in runtime/asm and the
+  same-JVM stress verification backlog.
+- [this-escape-tally.md](this-escape-tally.md): clean-build
+  `javac -Xlint:this-escape` output and broad risk buckets.
+- [this-escape-removal-audit.md](this-escape-removal-audit.md): which
+  remaining constructor escapes should be removed immediately, which are
+  mechanical cleanup, and which need owner/confinement proof first.
 - [stress-discovered-runtime-issues.md](stress-discovered-runtime-issues.md):
   concrete failures found by the parallel manual-test runner that are adjacent
   to, but distinct from, the Java static owner-cache work.
@@ -46,10 +57,12 @@ Start here:
 
 The stress-discovered issue file is deliberately broader than the native
 template design. It also records branch-adjacent failures found while validating
-this work: the `StringBuffer` chunk invariant, the `xRTCompiler` unmodifiable
-diagnostic list, the `xException` canonical formatter lookup, and the concurrent
-Gradle/XTC output race that can masquerade as runtime state corruption when two
-heavy manual-test builds write the same checkout at the same time.
+this work: the adopted `SingletonConstant` runtime-state leak behind the
+parallel `TestProps` failure, the `StringBuffer` chunk invariant, the
+`xRTCompiler` unmodifiable diagnostic list, the `xException` canonical
+formatter lookup, and the concurrent Gradle/XTC output race that can masquerade
+as runtime state corruption when two heavy manual-test builds write the same
+checkout at the same time.
 
 The distinction is intentional:
 

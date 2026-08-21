@@ -259,6 +259,14 @@ public class SingletonConstant
     }
 
     @Override
+    protected SingletonConstant adoptedBy(ConstantPool pool) {
+        // Runtime singleton state is intentionally owner-local. Constant.adoptedBy() uses
+        // Object.clone(), which would shallow-copy the final AtomicReference below and make
+        // singleton constants in different pools share module/package/property handles.
+        return new SingletonConstant(pool, f_fmt, m_constClass);
+    }
+
+    @Override
     protected int compareDetails(Constant that) {
         if (!(that instanceof SingletonConstant)) {
             return -1;

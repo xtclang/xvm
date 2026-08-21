@@ -62,9 +62,9 @@ actually owns the value.
 | Old value kind | Old pattern on `master` | Replacement in this branch | Performance/cache behavior |
 | --- | --- | --- | --- |
 | Native template singleton | Mutable `public static INSTANCE`, assigned from constructors | Central `NativeTemplates` lookup table plus `Container`-owned lazy cache | One resolved template per container/key, cached behind `Lazy` |
-| Immutable template/pool metadata | Mutable static `TypeConstant`, `TypeComposition`, `MethodStructure`, `xEnum`, etc. | Final template field, usually `Lazy<T>` or grouped `Lazy<Info>` | Same "compute once" behavior, but per owning template/container |
+| Immutable template/pool metadata | Mutable static `TypeConstant`, `TypeComposition`, `MethodStructure`, `xEnum`, etc. | Final template field, usually `Lazy.Owner<O,T>` or grouped owner-local `Lazy<Info>` | Same "compute once" behavior, but per owning template/container |
 | String handles and common string values | Mutable `xString.INSTANCE`, static `EMPTY_STRING`, `ZERO`, `ONE`, and ownerless `makeHandle(...)` | `NativeTemplates.string()`, owner-required factories, and final owner-local `Lazy` fields | Same cached empty/one/zero/empty-array handles, but one cache per owning container |
-| Finite owner-derived keyed cache | Mutable static map | Final `Lazy<Map<K,V>>` with immutable `Map.copyOf` | Same single map build, no global cross-container map |
+| Finite owner-derived keyed cache | Mutable static map | Final `Lazy.Owner<O,Map<K,V>>` with immutable `Map.copyOf` | Same single map build, no global cross-container map |
 | Pure process-global data | Mutable static collection | `private static final Set.of(...)` or equivalent immutable constant | Class-init safe publication, no per-container overhead |
 | Suspendable lifecycle state | Several mutable fields | One immutable state record in `AtomicReference` | CAS publishes complete lifecycle snapshots |
 | Hot per-value memoization | Plain lazy fields on value objects | Usually unchanged in this PR unless it is a real owner/publication bug | Avoid adding per-object `Lazy` footprint for should-fix-only cleanup |
@@ -96,6 +96,52 @@ fiber with a stale waiter". The branch replaces them with one final
 This is must-fix. It is not a `Lazy` problem because singleton construction can
 suspend, recurse, abort, and retry. A CAS state machine is the correct simple
 mechanism.
+
+### Adopted Constant Runtime State
+
+The parallel `TestProps` stress run exposed another owner bug in the same
+general area: `Constant.adoptedBy(...)` uses `Object.clone()`, and the cloned
+`SingletonConstant` copied the final `AtomicReference<InitState>` that stores
+runtime singleton state. The field was final, but the referenced state cell was
+still mutable and became shared by constants registered in different pools.
+
+Effect:
+
+- one child container initialized a module/package/property singleton;
+- a second child container adopted the same logical singleton constant;
+- the adopted constant reused the first container's runtime handle state;
+- `mgmt.Container.invoke` then received a package/module handle owned by the
+  wrong container;
+- `TestProps` observed an `@Lazy` reference as already assigned in what should
+  have been a fresh container.
+
+Fix:
+
+- `SingletonConstant.adoptedBy(...)` constructs a fresh singleton constant for
+  the target pool, so the adopted constant starts with an empty owner-local
+  `InitState` cell.
+- `FSNodeConstant.adoptedBy(...)` and `FileStoreConstant.adoptedBy(...)` clear
+  cloned transient runtime handles for the same reason.
+- `OwnershipDiagnostics.assertHandleValidIfEnabled(...)` is now wired into the
+  `mgmt.Container.invoke` module-target boundary used by the parallel stress
+  runner, so wrong-owner handles fail structurally instead of surfacing later as
+  misleading XTC-level state failures.
+
+Ramifications:
+
+- Constant value semantics and interning behavior are unchanged.
+- The first initialization in each owner still caches the runtime handle for
+  that owner.
+- The source constant keeps its existing runtime cache; only the adopted copy
+  starts empty.
+- Normal single-container execution has no steady-state cache miss or extra
+  handle allocation after initialization.
+- This avoids a broader and more expensive `xContainerLinker` file-structure
+  cloning workaround; the correct owner boundary is constant adoption.
+
+The full incident, rejected hypothesis, diagnostics output, and proof commands
+are documented in
+[stress-discovered-runtime-issues.md#adopted-singletonconstant-runtime-state-leak](stress-discovered-runtime-issues.md#adopted-singletonconstant-runtime-state-leak).
 
 ### Constructor-Published Native Template `INSTANCE`
 
@@ -332,7 +378,7 @@ fields. The branch moves them to owner-scoped final lazy state.
 
 | File | Master cache | Replacement | Priority |
 | --- | --- | --- | --- |
-| `xRTDelegate` | static `DELEGATES` map | `final Lazy<Map<TypeConstant,xRTDelegate>> f_delegates`; immutable `Map.copyOf` | Must fix |
+| `xRTDelegate` | static `DELEGATES` map | final owner-local lazy map `f_delegates`; immutable `Map.copyOf` | Must fix |
 | `xRTNameService` | `BYTE_ARRAY_ARRAY_TYPE`, lazy `m_typeCanonical` | `f_typeByteArrayArray`, `f_typeCanonical` | Must fix |
 | `xRTClassTemplate` | class/template array types, contribution/method/annotation array types, empty parameter array, action enum, helper methods | final `Lazy` fields on the template | Must fix |
 | `xRTComponentTemplate` | `COMPONENT_ARRAY_TYPE`, `MULTI_METHOD_TEMPLATE` | `f_typeComponentArray`, `f_templateMultiMethod` | Must fix |
@@ -341,10 +387,10 @@ fields. The branch moves them to owner-scoped final lazy state.
 | `xRTBitDelegate`, `xRTBooleanDelegate`, `xRTFloat64Delegate`, `xRTInt8Delegate`, `xRTInt16Delegate`, `xRTInt64Delegate`, `xRTUInt8Delegate`, `xRTNibbleDelegate`, `xRTSlicingDelegate` | constructor-published delegate `INSTANCE` fields | owner-local delegate dispatch and `NativeTemplates.slicingDelegate()` | Must fix |
 | `xRTViewFromBitTo*`, `xRTViewFromByteTo*`, `xRTViewToBitFromNibble` | constructor-published specialized view `INSTANCE` fields | owner-local base view dispatch or existing `xRTViewToBit` dispatch | Must fix |
 | `xListMap`, `Utils`, map-literal opcodes, enum-name map construction | `xListMap.INSTANCE`, static `xListMap.CONSTRUCTOR`, static `Utils.LIST_MAP_CONSTRUCT` | `NativeTemplates.listMap()`, owner-scoped `xListMap.f_constructor`, and constructor lookup from the caller's map composition | Must fix |
-| `Utils` runtime helper metadata | `CONST_HELPER`, annotation/argument/parameter templates, constructor methods, `STRING_VALUE_OF`, annotation/argument array types, and freeze/resource/inject signatures | `Container.f_runtimeMetadata`, a final owner-local `Lazy<Utils.RuntimeMetadata>` immutable bundle; helpers resolve metadata from `Frame` or `Container`, and `CreateParameters` captures the starting owner | Must fix |
+| `Utils` runtime helper metadata | `CONST_HELPER`, annotation/argument/parameter templates, constructor methods, `STRING_VALUE_OF`, annotation/argument array types, and freeze/resource/inject signatures | `Container.f_runtimeMetadata`, a final owner-passed lazy `Utils.RuntimeMetadata` immutable bundle; helpers resolve metadata from `Frame` or `Container`, and `CreateParameters` captures the starting owner | Must fix |
 | `xTuple`, void-return handling, async service responses | `xTuple.INSTANCE`, `xTuple.INCEPTION_CLASS`, static `xTuple.H_VOID` | `NativeTemplates.tuple()`, final owner-local inception constant, and per-container lazy `Tuple()` handle via `xTuple.ensureEmptyTuple(container)` | Must fix |
-| `xFuture`, wait-frame construction, async result assignment | `xFuture.INSTANCE`, static `TYPE`, static `COMPLETION`, ownerless `makeHandle(CompletableFuture)` | `NativeTemplates.future()`, final owner-local lazy future type and completion enum template, and `makeHandle(Container, CompletableFuture)` | Must fix |
-| `xAtomic`, `xAtomicIntNumber`, `xAtomicInt128` | `xAtomicIntNumber.INSTANCE`, static `xAtomic.NUMBER_TEMPLATES`, and wrapper construction from numeric template `INSTANCE` fields | final owner-local `Lazy<Map<TypeConstant,xAtomic>>`, immutable `Map.copyOf`, and wrapper construction from this container's number templates | Must fix |
+| `xFuture`, wait-frame construction, async result assignment | `xFuture.INSTANCE`, static `TYPE`, static `COMPLETION`, ownerless `makeHandle(CompletableFuture)` | `NativeTemplates.future()`, final owner-passed lazy future type and completion enum template, and `makeHandle(Container, CompletableFuture)` | Must fix |
+| `xAtomic`, `xAtomicIntNumber`, `xAtomicInt128` | `xAtomicIntNumber.INSTANCE`, static `xAtomic.NUMBER_TEMPLATES`, and wrapper construction from numeric template `INSTANCE` fields | final owner-passed lazy map, immutable `Map.copyOf`, and wrapper construction from this container's number templates | Must fix |
 | Native filesystem templates and CP filesystem constants | `xOSDirectory.INSTANCE`, `xOSFile.INSTANCE`, `xRawOSFileChannel.INSTANCE`, and static constructor `MethodStructure` caches on `xOSDirectory`, `xOSFile`, `xCPDirectory`, `xCPFile`, `xCPFileStore` | `NativeTemplates` filesystem getters plus final owner-scoped lazy constructor caches on the owning template | Must fix |
 | Leaf static metadata caches | `xRTKeyStore.s_typeNamedPassword`, `xOSStorage.s_methodOnEvent`, `xRTCompiler.GET_MODULE_ID`, `xNanosTimer.s_clzDuration`, `xRTBuffer.PROP_RAW_BYTES`, `xClass.CLASS_ARRAY_TYPE` | final owner-local `Lazy` fields for template-owned metadata; `xClass.ensureArrayComposition(Container)` computes from the caller's `ConstantPool`, which interns the same `Array<Class>` type per owner | Must fix |
 | `xRTFunction` | `LISTMAP_TYPE`, ownerless native/internal function factories, process-global finalizer no-op anchor | `f_typeListMap`, owner-required helper APIs, `FullyBoundHandle.noOp(Container)` | Must fix |
@@ -362,15 +408,15 @@ fields. The branch moves them to owner-scoped final lazy state.
 | `xRTServiceControl` | static `SERVICE_STATUS`, mutable control composition cache | `f_templateServiceStatus`, `f_clzControl` | Must fix |
 | `xContainerControl` | mutable control composition cache | `f_clzControl` | Must fix |
 | `xContainerLinker` | static `GET_RESOURCE`, mutable linker handle cache | `f_sigGetResource`, `f_hLinker` | Must fix |
-| `xArray` | array compositions, constructor IDs, helper methods, specialized-template map, delegates, empty byte array, mutability enum | `f_templateMutability`, `f_arrayTemplates`, and `f_info: Lazy<ArrayInfo>` | Must fix |
+| `xArray` | array compositions, constructor IDs, helper methods, specialized-template map, delegates, empty byte array, mutability enum | `f_templateMutability`, `f_arrayTemplates`, and owner-passed `f_info` metadata | Must fix |
 | `xEnum` | range template/ctor, enum name and handle lists | `f_templateRange`, `f_ctorRange`, `f_enumInfo` | Must fix for startup; see enum lifecycle note below |
 | `xService` | `INCEPTION_CLASS`, `SYNCHRONICITY`, `REMAINING_TIME` | `f_constInception`, `f_templateSynchronicity`, `f_propRemainingTime` | Must fix |
 | `xModule` | private static `LISTMAP_TYPE` | compute from caller `ConstantPool` | Must fix |
 | `xString` | `INSTANCE`, `EMPTY_STRING`, `EMPTY_ARRAY`, `ZERO`, `ONE`, `METHOD_APPEND_TO`, and ownerless `makeHandle(...)`/array helpers | `NativeTemplates.string()`, `f_emptyString`, `f_emptyStringArray`, `f_zero`, `f_one`, `f_methodAppendTo`, and owner-required factories | Must fix |
 | `xRef` | `INSTANCE`, `INCEPTION_CLASS`, `s_sigGet` | `NativeTemplates.ref()`, canonical owner `f_constInception`/`f_sigGet`, derived templates delegating back to owner Ref, and owner-required call sites | Must fix |
 | `xVar` | `INSTANCE`, `INCEPTION_CLASS`, `s_sigSet` | `NativeTemplates.var()`, canonical owner `f_constInception`/`f_sigSet`, derived templates delegating back to owner Var, and owner-required call sites | Must fix |
-| `xConst` | `INSTANCE`, helper method caches, construct-method caches, and `HASH_SIG` | `NativeTemplates.constTemplate()`, `f_info: Lazy<ConstInfo>`, and owner-template abstract checks | Must fix |
-| `xException` | `INSTANCE`, well-known exception class compositions, format method, and ownerless `Utils.translate(Throwable)` path | `NativeTemplates.exception()`, `f_info: Lazy<ExceptionInfo>`, static factories resolving from `Frame`/`Container`, and `Utils.translate(Container, Throwable)` | Must fix |
+| `xConst` | `INSTANCE`, helper method caches, construct-method caches, and `HASH_SIG` | `NativeTemplates.constTemplate()`, owner-passed `f_info` metadata, and owner-template abstract checks | Must fix |
+| `xException` | `INSTANCE`, well-known exception class compositions, format method, and ownerless `Utils.translate(Throwable)` path | `NativeTemplates.exception()`, owner-passed `f_info` metadata, static factories resolving from `Frame`/`Container`, and `Utils.translate(Container, Throwable)` | Must fix |
 | `xBoolean`, `xNullable`, `xOrdered` | public mutable native enum value handles: `TRUE`, `FALSE`, `NULL`, `LESSER`, `EQUAL`, `GREATER` | `NativeTemplates.booleanTemplate()`, `nullable()`, and `ordered()` plus owner-required factories and pure value predicates | Must fix |
 | `xBit` | public mutable native value handles: `ZERO`, `ONE`, ownerless `makeHandle(boolean)`, and delegate assignability through `xBit.ZERO.getTemplate()` | `NativeTemplates.bit()`, final owner-local lazy zero/one handles warmed during `initNative()`, owner-required factories, and delegate assignability against the delegate owner's Bit template | Must fix |
 
@@ -518,7 +564,7 @@ Ref/Var metadata stored in JVM-global fields. That distinction matters: `xVar`
 inherits `Ref.get()`, and Var annotations such as `@Lazy` inherit `Var.set()`;
 they do not declare those methods on their own structures. This branch keeps the
 same semantics by storing the canonical Ref/Var inception constants and
-`Lazy<SignatureConstant>` values on the owner-scoped base templates, while
+owner-passed lazy `SignatureConstant` values on the owner-scoped base templates, while
 derived templates lazily delegate back to the owner base template. Existing
 dynamic reference creation still caches through `ensureParameterizedClass(...)`;
 only the template owner source changed from `xRef.INSTANCE`/`xVar.INSTANCE` to
@@ -842,7 +888,9 @@ new singleton state machine:
 
 - concurrent initialization chooses one owner,
 - unrelated waiters share completion,
-- same-fiber recursion installs an initializing placeholder without deadlock.
+- same-fiber recursion installs an initializing placeholder without deadlock,
+- adopted singleton constants get fresh owner-local runtime state,
+- adopted file-system constants clear copied owner-local handles.
 
 `javatools/src/test/java/org/xvm/runtime/NativeTemplatesTest.java` also asserts
 that reflection enum publication helpers return `ObjectHandle`, not raw

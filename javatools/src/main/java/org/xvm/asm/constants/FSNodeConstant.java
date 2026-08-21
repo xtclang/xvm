@@ -234,6 +234,16 @@ public class FSNodeConstant
         m_handle = handle;
     }
 
+    @Override
+    protected FSNodeConstant adoptedBy(ConstantPool pool) {
+        FSNodeConstant that = (FSNodeConstant) super.adoptedBy(pool);
+        // Runtime handles are owner-local. Constant.adoptedBy() shallow-copies transient fields, so
+        // clear any handle copied from the source pool before this constant is registered to a new
+        // owner.
+        that.m_handle = null;
+        return that;
+    }
+
 
     // ----- ValueConstant methods -----------------------------------------------------------------
 

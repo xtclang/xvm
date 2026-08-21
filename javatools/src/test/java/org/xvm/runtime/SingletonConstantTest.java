@@ -1,6 +1,8 @@
 package org.xvm.runtime;
 
 
+import java.nio.file.attribute.FileTime;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,6 +18,8 @@ import org.junit.jupiter.api.Test;
 import org.xvm.asm.Constant;
 import org.xvm.asm.FileStructure;
 
+import org.xvm.asm.constants.FSNodeConstant;
+import org.xvm.asm.constants.FileStoreConstant;
 import org.xvm.asm.constants.SingletonConstant;
 
 import org.xvm.runtime.ObjectHandle.InitializingHandle;
@@ -24,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -94,6 +99,62 @@ public class SingletonConstantTest {
         assertTrue(constant.markInitializing(fiber));
         assertNull(constant.getInitializationWaiter(fiber));
         assertInstanceOf(InitializingHandle.class, constant.getHandle());
+    }
+
+    @Test
+    public void adoptedSingletonHasOwnerLocalRuntimeState() {
+        SingletonConstant source = createConstant();
+        FileStructure     target = new FileStructure("target");
+
+        source.setHandle(ObjectHandle.DEFAULT);
+        SingletonConstant adopted = target.getConstantPool().register(source);
+
+        assertNotSame(source, adopted);
+        assertSame(ObjectHandle.DEFAULT, source.getHandle());
+        assertNull(adopted.getHandle());
+        assertTrue(adopted.markInitializing(createFiber()));
+    }
+
+    @Test
+    public void adoptedFsNodeClearsOwnerLocalHandle() {
+        FileStructure  sourceFile = new FileStructure("source");
+        FSNodeConstant source     = new FSNodeConstant(
+                sourceFile.getConstantPool(),
+                "data.bin",
+                FileTime.fromMillis(1),
+                FileTime.fromMillis(2),
+                new byte[] {1, 2, 3});
+        FileStructure targetFile = new FileStructure("target");
+
+        source.setHandle(ObjectHandle.DEFAULT);
+        FSNodeConstant adopted = targetFile.getConstantPool().register(source);
+
+        assertNotSame(source, adopted);
+        assertSame(ObjectHandle.DEFAULT, source.getHandle());
+        assertNull(adopted.getHandle());
+    }
+
+    @Test
+    public void adoptedFileStoreClearsOwnerLocalHandles() {
+        FileStructure  sourceFile = new FileStructure("source");
+        FSNodeConstant sourceRoot = new FSNodeConstant(
+                sourceFile.getConstantPool(),
+                "root",
+                FileTime.fromMillis(1),
+                FileTime.fromMillis(2),
+                FSNodeConstant.NO_NODES);
+        FileStoreConstant source = new FileStoreConstant(
+                sourceFile.getConstantPool(), "/tmp/root", sourceRoot);
+        FileStructure targetFile = new FileStructure("target");
+
+        sourceRoot.setHandle(ObjectHandle.DEFAULT);
+        source.setHandle(ObjectHandle.DEFAULT);
+        FileStoreConstant adopted = targetFile.getConstantPool().register(source);
+
+        assertNotSame(source, adopted);
+        assertSame(ObjectHandle.DEFAULT, source.getHandle());
+        assertNull(adopted.getHandle());
+        assertNull(adopted.getValue().getHandle());
     }
 
     private static SingletonConstant createConstant() {
