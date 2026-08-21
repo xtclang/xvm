@@ -8,7 +8,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -19,14 +19,18 @@ public class AbstractConverterMapTest {
     void shouldNotCallOverridableViewFactoriesDuringConstruction() {
         ConstructorSensitiveMap map = new ConstructorSensitiveMap();
 
-        assertSame(map.keySet(), map.keySet());
-        assertSame(map.values(), map.values());
-        assertSame(map.entrySet(), map.entrySet());
+        Set<String> keys = map.keySet();
+        Collection<String> values = map.values();
+        Set<Entry<String, String>> entries = map.entrySet();
+
+        assertNotSame(keys, map.keySet());
+        assertNotSame(values, map.values());
+        assertNotSame(entries, map.entrySet());
 
         map.put("hello", "world");
-        assertTrue(map.keySet().contains("hello"));
-        assertTrue(map.values().contains("world"));
-        assertEquals("world", map.entrySet().iterator().next().getValue());
+        assertTrue(keys.contains("hello"));
+        assertTrue(values.contains("world"));
+        assertEquals("world", entries.iterator().next().getValue());
     }
 
     /**

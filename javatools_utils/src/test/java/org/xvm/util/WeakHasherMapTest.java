@@ -38,12 +38,21 @@ public class WeakHasherMapTest {
     }
 
     @Test
-    void shouldCacheViews() {
+    void shouldReturnLiveFreshViews() {
         Map<Integer, String> map = new WeakHasherMap<>(Hasher.natural());
 
-        assertSame(map.keySet(), map.keySet());
-        assertSame(map.values(), map.values());
-        assertSame(map.entrySet(), map.entrySet());
+        var keys = map.keySet();
+        var values = map.values();
+        var entries = map.entrySet();
+
+        assertNotSame(keys, map.keySet());
+        assertNotSame(values, map.values());
+        assertNotSame(entries, map.entrySet());
+
+        map.put(1, "hello");
+        assertTrue(keys.contains(1));
+        assertTrue(values.contains("hello"));
+        assertEquals("hello", entries.iterator().next().getValue());
     }
 
     @Test
