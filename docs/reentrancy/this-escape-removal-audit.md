@@ -4,11 +4,11 @@ This file classifies the remaining `javac -Xlint:this-escape` warnings by what
 should happen to them. The raw compiler tally is in
 [this-escape-tally.md](this-escape-tally.md).
 
-Current clean-build source of truth:
+Current forced root-lint source of truth:
 
 ```text
-82 emitted this-escape diagnostics
-79 unique file:line locations
+83 emitted this-escape diagnostics
+80 unique file:line locations
 ```
 
 ## Decision Summary
@@ -16,30 +16,26 @@ Current clean-build source of truth:
 | Decision | Count | Meaning |
 | --- | ---: | --- |
 | Fixed in this branch | 61 | Owner-local runtime `Lazy.of(...)` receiver captures converted to explicit owner-lazy state. |
-| Fix, do not suppress | 2 | Concrete unsafe construction/publication pattern. Fixed on `lagergren/fix-utils-this-escape`; still present in this branch. |
+| Fixed separately, still present here | 2 | Concrete unsafe construction/publication pattern. Fixed on `lagergren/fix-utils-this-escape`; still present in this branch until that PR is merged or rebased here. |
 | Remove after small design cleanup | 27 | Constructor-time virtual predicates/assertions or utility helper calls. Usually fixable, but should be separate from the runtime-owner PR. |
-| Audit before changing | 43 | Construction publishes `this` to owner/child structures or performs owner-sensitive assembly. Needs confinement or lifecycle proof. |
+| Audit before changing | 44 | Construction publishes `this` to owner/child structures or performs owner-sensitive assembly. Needs confinement or lifecycle proof. |
 | Document only for this PR | 7 | JIT/tooling paths that are not part of the runtime-owner fix. |
 
-These counts are classification counts over the original 140 unique locations.
-The remaining total is 79 unique locations; the 61 runtime lazy-capture
-locations are now fixed in this branch.
+These counts add the 61 warning locations already fixed in this branch to the
+80 unique locations still emitted by the current root lint run.
 
-## Fix, Do Not Suppress
+## Fixed Separately, Do Not Suppress Here
 
 These warnings should be removed. Suppressing them would hide a real
-construction hazard.
+construction hazard. They have already been fixed on the separate branch
+`lagergren/fix-utils-this-escape` at commit
+`bab70f2d2 Fix concrete utility this-escape hazards`; they still appear in this
+branch only because that separate fix has not been merged here.
 
-| Site | Why it should be removed | Proper fix |
+| Site | Why it should be removed | Separate-branch fix |
 | --- | --- | --- |
-| `javatools_utils/src/main/java/org/xvm/util/CooperativelyCleanableReference.java:80` | Constructor adds `this` to static `KEEP_ALIVE`. That is real unsafe publication before constructor completion. | Use a private constructor plus a static factory that registers after construction returns, or move registration into a post-construction helper that cannot observe a partially constructed object. |
-| `javatools_utils/src/main/java/org/xvm/util/converter/AbstractConverterMap.java:40` | Base constructor calls overridable `newKeySet()`, `newValues()`, and `newEntrySet()`. A subclass can run before its fields are initialized. | Make the views concrete/final and build them without virtual dispatch, or lazily initialize them after construction using synchronization. |
-
-These two are not caused by the runtime native-template work, but they are the
-clearest remaining true `this`-escape defects from the lint report. They are
-tracked as a separate change on branch `lagergren/fix-utils-this-escape` at
-commit `bab70f2d2 Fix concrete utility this-escape hazards`; they are not part
-of this runtime-owner branch.
+| `javatools_utils/src/main/java/org/xvm/util/CooperativelyCleanableReference.java:80` | Constructor adds `this` to static `KEEP_ALIVE`. That is real unsafe publication before constructor completion. | The separate branch uses a private constructor plus factory registration after construction returns. |
+| `javatools_utils/src/main/java/org/xvm/util/converter/AbstractConverterMap.java:40` | Base constructor calls overridable `newKeySet()`, `newValues()`, and `newEntrySet()`. A subclass can run before its fields are initialized. | The separate branch removes constructor-time virtual dispatch by using concrete final view objects. |
 
 ## Fixed In This Branch: Runtime Lazy Captures
 
@@ -156,54 +152,31 @@ branches. The practical risk is lower than constructor publication, but the
 shape is brittle: subclass metadata is queried before the subclass constructor
 has completed.
 
-Proper fixes:
+The proper fix is not to suppress these warnings. The opcode shape is static
+metadata, so constructors should receive or derive that metadata without
+calling subclass-overridable methods.
 
-- Make the queried predicate final if it is truly invariant and does not depend
-  on subclass construction.
-- Replace constructor-time virtual calls with explicit constructor parameters
-  or static opcode metadata.
-- For deserialization, decode from opcode metadata instead of virtual methods
-  on a partially constructed instance.
-
-Current locations:
-
-```text
-javatools/src/main/java/org/xvm/asm/Op.java:681
-javatools/src/main/java/org/xvm/asm/OpCondJump.java:56
-javatools/src/main/java/org/xvm/asm/OpCondJump.java:69
-javatools/src/main/java/org/xvm/asm/OpCondJump.java:84
-javatools/src/main/java/org/xvm/asm/OpCondJump.java:99
-javatools/src/main/java/org/xvm/asm/OpGeneral.java:43
-javatools/src/main/java/org/xvm/asm/OpGeneral.java:58
-javatools/src/main/java/org/xvm/asm/OpGeneral.java:75
-javatools/src/main/java/org/xvm/asm/OpInPlace.java:52
-javatools/src/main/java/org/xvm/asm/OpInPlace.java:64
-javatools/src/main/java/org/xvm/asm/OpInPlace.java:79
-javatools/src/main/java/org/xvm/asm/OpIndex.java:65
-javatools/src/main/java/org/xvm/asm/OpIndex.java:79
-javatools/src/main/java/org/xvm/asm/OpIndex.java:96
-javatools/src/main/java/org/xvm/asm/OpPropInPlace.java:34
-javatools/src/main/java/org/xvm/asm/OpPropInPlace.java:49
-javatools/src/main/java/org/xvm/asm/OpPropInPlace.java:66
-javatools/src/main/java/org/xvm/asm/OpTest.java:49
-javatools/src/main/java/org/xvm/asm/OpTest.java:62
-javatools/src/main/java/org/xvm/asm/OpTest.java:77
-javatools/src/main/java/org/xvm/asm/OpTest.java:92
-javatools/src/main/java/org/xvm/asm/OpVar.java:58
-```
+| Site(s) | Current behavior | Seriousness | Proper refactor |
+| --- | --- | --- | --- |
+| `javatools/src/main/java/org/xvm/asm/Op.java:681` | `ConstantRegistry` calls public `init(RegisterAST[])` from its constructor. The class is non-final, so a subclass could observe an incomplete registry. | Should fix. This is not runtime container state, but it is a real constructor-time virtual call. | Make `ConstantRegistry` final if subclassing is not intended, and move constructor initialization into a private helper such as `initParameters(...)`. Keep the public `init(...)` method only for the `BinaryAST.ConstantResolver` contract after construction. |
+| `javatools/src/main/java/org/xvm/asm/OpCondJump.java:56`, `:69`, `:84`, `:99` | Constructors and deserialization branch on `isBinaryOp()` and `hasSecondArgument()`. Several concrete op subclasses override those predicates. | Should fix. Existing overrides appear to be constant opcode shape, but a future override could read subclass fields before they are initialized. | Introduce explicit constructor shape flags or an immutable opcode-shape record. The source constructors should pass the shape they already imply, and the deserialization constructor should decode shape from the op code metadata rather than virtual dispatch. |
+| `javatools/src/main/java/org/xvm/asm/OpGeneral.java:43`, `:58`, `:75` | Constructors and deserialization call overridable `isBinaryOp()`. | Should fix. Same brittle static-shape problem as conditional jumps. | Pass an explicit `binary` flag to protected base constructors, or make binary-ness final/static metadata attached to the concrete op code. |
+| `javatools/src/main/java/org/xvm/asm/OpInPlace.java:52`, `:64`, `:79` | Constructors and deserialization call overridable `isAssignOp()`. | Should fix. Existing overrides are static role markers, but the base constructor should not ask a subclass object what role it has before construction completes. | Replace `isAssignOp()` constructor checks with an explicit `assignsResult` constructor parameter or static opcode metadata; keep the virtual method for already-constructed behavior if needed. |
+| `javatools/src/main/java/org/xvm/asm/OpIndex.java:65`, `:79`, `:96` | Constructors and deserialization call overridable `isAssignOp()`. | Should fix for the same reason as `OpInPlace`. | Use the same explicit `assignsResult`/opcode metadata model as `OpInPlace`. |
+| `javatools/src/main/java/org/xvm/asm/OpPropInPlace.java:34`, `:49`, `:66` | Constructors and deserialization call overridable `isAssignOp()` after the property-base constructor. | Should fix. It is a static opcode role check, not stateful runtime behavior. | Carry the assign-role through constructor parameters or opcode metadata and avoid virtual calls until after construction. |
+| `javatools/src/main/java/org/xvm/asm/OpTest.java:49`, `:62`, `:77`, `:92` | Constructors and deserialization call overridable `isBinaryOp()` and `hasSecondArgument()`. | Should fix. Same static-shape problem as `OpCondJump`. | Use an immutable test-op shape record with `binary` and `secondArgument` bits, or pass both booleans explicitly to the base constructor. |
+| `javatools/src/main/java/org/xvm/asm/OpVar.java:58` | Deserialization calls overridable `isTypeAware()` before concrete construction has completed. | Should fix. Existing type-aware overrides are static op shape, so virtual dispatch is unnecessary. | Decode type-awareness from opcode metadata or pass a final constructor flag from each concrete op. |
 
 ### Utility Constructor Helpers
 
 These are small cleanup candidates. They are not owner-bearing runtime state,
 but they should not survive a future "this-escape as error" policy.
 
-```text
-javatools_utils/src/main/java/org/xvm/util/HasherReference.java:26
-javatools_utils/src/main/java/org/xvm/util/ListSet.java:46
-javatools_utils/src/main/java/org/xvm/util/PackedInteger.java:64
-javatools_utils/src/main/java/org/xvm/util/PackedInteger.java:73
-javatools_utils/src/main/java/org/xvm/util/PackedInteger.java:85
-```
+| Site(s) | Current behavior | Seriousness | Proper refactor |
+| --- | --- | --- | --- |
+| `javatools_utils/src/main/java/org/xvm/util/HasherReference.java:26` | Constructor calls protected `reset(...)`. A subclass can override it and run before its own fields are initialized. | Should fix. Probably not a runtime-owner race, but it is a classic unsafe-construction shape. | Assign `referent` and `hasher` directly in the constructor or through a private helper. Leave protected `reset(...)` for post-construction reuse. |
+| `javatools_utils/src/main/java/org/xvm/util/ListSet.java:46` | Collection constructor calls `addAll(...)`, which dispatches through overridable `add(...)`. | Should fix. A subclass can observe the not-yet-constructed `ListSet` while elements are being added. | Move population into a private insertion helper that uses the base storage directly, or make the class/fill path final if subclassing is not intended. |
+| `javatools_utils/src/main/java/org/xvm/util/PackedInteger.java:64`, `:73`, `:85` | Constructors call public mutable methods `setLong(...)`, `setBigInteger(...)`, and `readObject(...)`. | Should fix. The object is mutable by design, but constructors should not dispatch through public mutation APIs. | Extract private assignment/read helpers used by constructors and public methods. Public setters can delegate to the private helpers after construction. |
 
 ## Audit Before Changing
 
@@ -217,27 +190,19 @@ These publish the constructing runtime object to child/owner structures or call
 template methods during construction. They are not all wrong, but they should
 not be suppressed until the construction lifecycle is documented.
 
-```text
-javatools/src/main/java/org/xvm/runtime/CallChain.java:540
-javatools/src/main/java/org/xvm/runtime/ClassTemplate.java:95
-javatools/src/main/java/org/xvm/runtime/Container.java:62
-javatools/src/main/java/org/xvm/runtime/Container.java:762
-javatools/src/main/java/org/xvm/runtime/NativeContainer.java:103
-javatools/src/main/java/org/xvm/runtime/NativeContainer.java:173
-javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSFileNode.java:169
-javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTMethod.java:297
-javatools/src/main/java/org/xvm/runtime/template/reflect/xRef.java:866
-javatools/src/main/java/org/xvm/runtime/template/reflect/xRef.java:908
-```
-
-Proper fixes depend on the owner model:
-
-- Prefer static factories that fully construct an object, then register or link
-  it after construction returns.
-- For required child owner references, make the child private and prove that it
-  cannot publish the parent from its constructor.
-- For template registration paths, prove registration does not expose a
-  partially initialized template to other threads or containers.
+| Site | Current behavior | Seriousness | Proper refactor |
+| --- | --- | --- | --- |
+| `javatools/src/main/java/org/xvm/runtime/CallChain.java:540` | `FieldAccessChain` constructor calls inherited `isField()` in an assertion. | Should fix. Low practical risk because `isField()` only reads the final method array today, but it is still constructor-time virtual dispatch. | Make `CallChain.isField()` final, or replace the assertion with a private/static helper over `aMethods` so construction does not dispatch virtually. |
+| `javatools/src/main/java/org/xvm/runtime/ClassTemplate.java:95` | Base template constructor calls overridable `registerImplicitFields(null)`. Current overrides in `xRef` and `xConst` add static field names. | Must audit. This is in the root template hierarchy, and future subclasses could read owner/template fields before their constructor body runs. | Move implicit-field collection to explicit metadata: pass immutable implicit-field names to the base constructor, or use a post-construction template initialization hook called by the owning container before publication. |
+| `javatools/src/main/java/org/xvm/runtime/Container.java:62` | Base constructor creates `new ConstHeap(this)`. The current `ConstHeap` constructor only stores the owner and does not publish it. | Must audit. This is probably safe today but still stores a not-yet-fully-constructed owner in a child object. | Either keep a local suppression with a proof that `ConstHeap` cannot publish/callback during construction, or create `ConstHeap` from a post-construction factory before the container is registered. |
+| `javatools/src/main/java/org/xvm/runtime/Container.java:764` | Field initializer creates `new NativeTemplates(this)`. `NativeTemplates` is final and currently stores the owner plus owner-lazy cells. | Must audit. Lower risk than old static `INSTANCE`, but it still captures the owner during base construction. | Initialize `NativeTemplates` from the same post-construction owner-registration path as the heap, or suppress locally only with a final-class/no-publication proof. |
+| `javatools/src/main/java/org/xvm/runtime/NativeContainer.java:103` | Native-container constructor calls `loadNativeTemplates()`, which performs owner-sensitive loading before the constructor returns. | Must fix in a lifecycle cleanup. This is startup-owner code and is close to the bugs this branch is removing. | Use a static/package factory such as `NativeContainer.create(...)`: construct the object, then load templates and resources after construction has completed, before publishing the container for use. |
+| `javatools/src/main/java/org/xvm/runtime/NativeContainer.java:155` | `loadNativeTemplates()` calls `finishNativeTemplateLoad(pool)`, a private method, while the native container is still constructing. | Must fix together with line 103. The method is private, but it performs the native-template registration work that can expose owner state. | Move the entire `loadNativeTemplates`/`finishNativeTemplateLoad` sequence to the factory post-construction phase, with one owner-local lock/guard around template installation. |
+| `javatools/src/main/java/org/xvm/runtime/NativeContainer.java:180` | Base templates are installed with `storeNativeTemplate(new xObject(this, ...))` and related owner template construction during native-container construction. | Must fix together with line 103. These are the canonical native templates, so wrong publication here can poison later owner-local lookup. | Construct and install base templates only after the native container constructor has returned. Keep `NativeTemplates` as the lookup API so no template constructor writes process-global state. |
+| `javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSFileNode.java:169` | `NodeHandle` constructor calls `setField(null, "store", hOSStore)` after `super(clazz)`. Field assignment goes through generic handle lookup. | Must audit. It probably remains frame/thread confined, but constructor-time field mutation through a public method is a bad handle-construction pattern. | Resolve the field index/composition before construction and assign the backing field array directly in a private constructor helper, or create through a factory that sets fields after construction. |
+| `javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTMethod.java:297` | `MethodHandle` constructor asserts `getMethodInfo() != null`; that calls through type info while the handle is still constructing. | Must audit. It should not publish the handle, but it can trigger owner/type metadata work from a partial handle. | Replace the assertion with a static validation helper using `typeTarget`, `method`, and identity constants directly, or perform validation in the factory before constructing the handle. |
+| `javatools/src/main/java/org/xvm/runtime/template/reflect/xRef.java:866` | `RefHandle(clazz, name, referent)` calls `setField(...)` from the constructor. | Must audit. This initializes a field on the handle being built; safe only if the field write cannot call out or publish. | Prefer a static factory that constructs the ref then assigns the referent, or add a private direct-field initializer that does not dispatch through public field-access methods. |
+| `javatools/src/main/java/org/xvm/runtime/template/reflect/xRef.java:908` | `RefHandle(clazz, frame, iVar)` writes `this` into `Frame.VarInfo` before constructor completion. | Must fix after focused tests. This is real publication to frame state, even if current frames are normally thread-confined. | Use a factory: read `VarInfo`, construct the `RefHandle`, then call `infoSrc.setRef(ref)` after construction returns. If an existing ref is present, return a linked ref without publishing the new object early. |
 
 ### ASM Metadata and Owner Assembly
 
@@ -323,16 +288,31 @@ javatools/src/main/java/org/xvm/tool/ModuleInfo.java:316
 javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/nLongBasedArray.java:52
 ```
 
+## Current Remaining Classification
+
+```text
+22 Should fix: ASM Op constructor dispatch
+17 Must audit: ASM metadata/owner construction
+16 Must audit: compiler/parser/AST construction
+11 Must audit: runtime owner/container construction
+ 6 Document only: JIT construction
+ 5 Should fix: utility cleanup
+ 2 Fixed separately, still present here: concrete unsafe utility construction
+ 1 Should inspect: tooling
+```
+
 ## First Follow-Up Recommendation
 
-The next cleanup wave should not try to remove all 140 unique warnings at once.
-The least risky order is:
+The next cleanup wave should not try to remove all remaining warnings at once.
+The least risky order after this runtime-owner branch is:
 
-1. Fix the two concrete defects in `javatools_utils`.
-2. Convert the 61 runtime `Lazy.of(...)` receiver captures to `Lazy.Owner`,
-   eager final fields, owner-table entries, or grouped metadata records.
-3. Remove the ASM `Op*` constructor predicate warnings through opcode metadata
+1. Merge or rebase the separate `lagergren/fix-utils-this-escape` branch that
+   fixes the two concrete `javatools_utils` construction defects.
+2. Remove the ASM `Op*` constructor predicate warnings through opcode metadata
    or final/static helpers.
+3. Fix the two strongest remaining runtime publication paths:
+   `NativeContainer` post-construction loading and `xRef.RefHandle` frame-ref
+   registration.
 4. Audit runtime owner-construction and ASM/compiler assembly paths with
    focused lifecycle tests before changing them.
 

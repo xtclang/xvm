@@ -25,10 +25,10 @@ public class RuntimeTest {
     @Test
     public void findContainerSharesWeakRegistryMonitorWithRegistration()
             throws Exception {
-        Runtime runtime = new Runtime();
+        Runtime        runtime     = new Runtime();
         CountDownLatch lookupStart = new CountDownLatch(1);
-        CountDownLatch writerDone = new CountDownLatch(1);
-        AtomicBoolean signaled = new AtomicBoolean();
+        CountDownLatch writerDone  = new CountDownLatch(1);
+        AtomicBoolean  signaled    = new AtomicBoolean();
 
         IntStream.range(0, 8)
                 .mapToObj(i -> new TestContainer(

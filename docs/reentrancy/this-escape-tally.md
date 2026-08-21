@@ -26,10 +26,10 @@ current compiler tally. The removal decision layer is maintained in
 
 ## Audit Command
 
-This was rerun from the repository root after `clean`. The build cache was
-disabled and all tasks were forced so Gradle could not reuse compiled task
-outputs. Warnings were not promoted to errors for this audit only, because the
-goal was to collect the complete tally.
+This was rerun from the repository root with the build cache disabled and all
+tasks forced so Gradle could not reuse compiled task outputs. Warnings were not
+promoted to errors for this audit only, because the goal was to collect the
+complete tally.
 
 ```bash
 mkdir -p /tmp/xvm-reentrancy-audit
@@ -37,7 +37,7 @@ mkdir -p /tmp/xvm-reentrancy-audit
 ./gradlew clean --console=plain --warning-mode=all \
   -PincludeBuildLang=false \
   -PincludeBuildAttachLang=false \
-  > /tmp/xvm-reentrancy-audit/root-clean-final.log 2>&1
+  > /tmp/xvm-reentrancy-audit/current-clean.log 2>&1
 
 ./gradlew build --rerun-tasks --no-build-cache \
   -PincludeBuildLang=false \
@@ -47,13 +47,13 @@ mkdir -p /tmp/xvm-reentrancy-audit
   -Porg.xtclang.java.maxWarnings=10000 \
   -Porg.xtclang.java.maxErrors=10000 \
   --console=plain --warning-mode=all \
-  > /tmp/xvm-reentrancy-audit/root-build-final-lint.log 2>&1
+  > /tmp/xvm-current-this-escape.log 2>&1
 ```
 
 Result:
 
 ```text
-BUILD SUCCESSFUL in 1m 6s
+BUILD SUCCESSFUL in 1m 8s
 141 actionable tasks: 141 executed
 ```
 
@@ -69,9 +69,9 @@ All warning categories from the same root build:
 201 warning: [rawtypes]
 144 warning: [unchecked]
 112 warning: [fallthrough]
- 82 warning: [this-escape]
- 19 warning: [try]
+ 83 warning: [this-escape]
  10 warning: [serial]
+  9 warning: [try]
   4 warning: [overrides]
   4 warning: [classfile]
   1 warning: [cast]
@@ -80,12 +80,12 @@ All warning categories from the same root build:
 `this-escape` distribution:
 
 ```text
- 74 javatools
+ 75 javatools
   7 javatools_utils
   1 javatools_jitbridge
 ```
 
-Javac emitted 82 `this-escape` diagnostics. Those correspond to 79 unique
+Javac emitted 83 `this-escape` diagnostics. Those correspond to 80 unique
 `file:line` source locations, because three lines produce duplicate emissions:
 
 ```text
@@ -100,9 +100,9 @@ javatools/src/main/java/org/xvm/compiler/Parser.java:70
 | --- | --- | --- | --- | --- |
 | Must fix, already fixed in this branch | Legacy native-template `INSTANCE = this` constructor publication from `master` | 139 constructor assignments in `master`; 0 remain in this branch | Done for this PR | Keep `INSTANCE` removed/private via owner APIs; do not reintroduce constructor-published static template singletons. |
 | Must fix, already fixed in this branch | Runtime template `Lazy.of(...)` receiver captures | 61 unique warning locations removed in this branch; 0 remain in this category | Done for this PR | Use `Lazy.Owner<O,T>`, eager final state, or grouped owner-local metadata so field initializers do not capture a constructing receiver. |
-| Must fix, concrete unsafe publication | `CooperativelyCleanableReference` publishes `this` to a static set from the constructor | 1 | Small/moderate | Use a private constructor plus factory/registration step after construction, or another design that does not publish the object until construction has returned. |
-| Must fix, concrete unsafe virtual construction | `AbstractConverterMap` calls overridable factory methods from the base constructor | 1 | Moderate | Make factory results final concrete nested classes that do not dispatch to subclasses during construction, or lazily initialize views after construction with synchronization. |
-| Must audit, runtime owner construction | `Container`, `NativeContainer`, `CallChain`, `ClassTemplate`, `xOSFileNode`, `xRTMethod`, and `xRef` owner/child construction paths | 10 unique locations | Mixed | Prove construction confinement/publication, or split construction from owner registration/adoption. |
+| Must fix, fixed separately | `CooperativelyCleanableReference` publishes `this` to a static set from the constructor | 1 | Done on `lagergren/fix-utils-this-escape` | Use a private constructor plus factory/registration step after construction, or another design that does not publish the object until construction has returned. |
+| Must fix, fixed separately | `AbstractConverterMap` calls overridable factory methods from the base constructor | 1 | Done on `lagergren/fix-utils-this-escape` | Make factory results final concrete nested classes that do not dispatch to subclasses during construction, or lazily initialize views after construction with synchronization. |
+| Must audit, runtime owner construction | `Container`, `NativeContainer`, `CallChain`, `ClassTemplate`, `xOSFileNode`, `xRTMethod`, and `xRef` owner/child construction paths | 11 unique locations | Mixed | Prove construction confinement/publication, or split construction from owner registration/adoption. |
 | Must audit, ASM owner-copy and metadata construction | `FileStructure`, `ClassStructure`, `MethodStructure`, `PropertyInfo`, `MethodInfo`, `TypeInfoReal`, `PropertyConstant`, `VersionTree` | 17 unique locations | Mixed | Prove construction is request/thread confined, or split assembly from publication so owned children are connected after the owner constructor returns. |
 | Must audit, `Op` constructor virtual predicates/asserts | `Op`, `OpCondJump`, `OpGeneral`, `OpInPlace`, `OpIndex`, `OpPropInPlace`, `OpTest`, `OpVar` | 22 unique locations | Moderate | Replace constructor-time virtual predicate calls with explicit constructor parameters, final helper methods, or subclass-independent op metadata. |
 | Must audit, compiler/parser/AST construction callbacks | `Lexer`, `Parser`, expression/statement constructors and `adopt`/parent-link calls | 16 unique locations | Mixed | For incremental/parallel compiler safety, prove AST/request confinement or separate object construction from parent/adoption callbacks. |
@@ -116,10 +116,10 @@ Current unique-location classification:
  22 Must audit: ASM Op constructor dispatch
  17 Must audit: ASM metadata/owner construction
  16 Must audit: compiler/parser/AST construction
- 10 Must audit: runtime owner/container construction
+ 11 Must audit: runtime owner/container construction
   6 Must audit: JIT construction
   5 Should fix: utility cleanup
-  2 Must fix: concrete unsafe construction
+  2 Must fix, fixed separately: concrete unsafe utility construction
   1 Should inspect: tooling
 ```
 
@@ -230,6 +230,7 @@ The migration rule should be:
    4 javatools/src/main/java/org/xvm/asm/OpTest.java
    4 javatools/src/main/java/org/xvm/asm/OpCondJump.java
    3 javatools_utils/src/main/java/org/xvm/util/PackedInteger.java
+   3 javatools/src/main/java/org/xvm/runtime/NativeContainer.java
    3 javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java
    3 javatools/src/main/java/org/xvm/asm/OpPropInPlace.java
    3 javatools/src/main/java/org/xvm/asm/OpIndex.java
@@ -237,7 +238,6 @@ The migration rule should be:
    3 javatools/src/main/java/org/xvm/asm/OpGeneral.java
    3 javatools/src/main/java/org/xvm/asm/FileStructure.java
    2 javatools/src/main/java/org/xvm/runtime/template/reflect/xRef.java
-   2 javatools/src/main/java/org/xvm/runtime/NativeContainer.java
    2 javatools/src/main/java/org/xvm/runtime/Container.java
    2 javatools/src/main/java/org/xvm/javajit/BuildContext.java
    2 javatools/src/main/java/org/xvm/compiler/ast/TypeCompositionStatement.java
@@ -346,9 +346,10 @@ javatools/src/main/java/org/xvm/javajit/builders/ArrayBuilder.java:33
 javatools/src/main/java/org/xvm/runtime/CallChain.java:540
 javatools/src/main/java/org/xvm/runtime/ClassTemplate.java:95
 javatools/src/main/java/org/xvm/runtime/Container.java:62
-javatools/src/main/java/org/xvm/runtime/Container.java:762
+javatools/src/main/java/org/xvm/runtime/Container.java:764
 javatools/src/main/java/org/xvm/runtime/NativeContainer.java:103
-javatools/src/main/java/org/xvm/runtime/NativeContainer.java:173
+javatools/src/main/java/org/xvm/runtime/NativeContainer.java:155
+javatools/src/main/java/org/xvm/runtime/NativeContainer.java:180
 javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSFileNode.java:169
 javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTMethod.java:297
 javatools/src/main/java/org/xvm/runtime/template/reflect/xRef.java:866
