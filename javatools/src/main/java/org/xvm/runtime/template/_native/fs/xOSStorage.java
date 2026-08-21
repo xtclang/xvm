@@ -348,7 +348,7 @@ public class xOSStorage
                     StringHandle hPathDir  = xString.makeHandle(container, pathDir.toString());
                     StringHandle hPathNode = xString.makeHandle(container, pathAbsolute.toString());
 
-                    ObjectHandle[] ahArg = new ObjectHandle[] {
+                    ObjectHandle[] ahArg = {
                         hPathDir, hPathNode, xBoolean.trueHandle(container),
                         xInt64.makeHandle(container, iKind)
                     };
