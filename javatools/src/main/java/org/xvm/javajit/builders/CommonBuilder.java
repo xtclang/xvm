@@ -4172,8 +4172,6 @@ public class CommonBuilder
             Set.of("symmetricDifference")), // TODO: MOV_TYPE for the Replicable virtual constructor
         Map.entry("org.xtclang.ecstasy.collections.VirtualHasher",
             Set.of("hashOf")), // TODO: nested method formal has no enclosing MethodStructure
-        Map.entry("org.xtclang.ecstasy.maps.CollectImmutableMap",
-            Set.of("reduce")), // TODO: conditional local is missing from one stack-map path
         Map.entry("org.xtclang.ecstasy.maps.DiscreteEntry",
             Set.of("construct", // TODO: specialized constructor chains to unspecialized class
                    "freeze")),  // TODO: specialized return is incompatible with a conditional mixin

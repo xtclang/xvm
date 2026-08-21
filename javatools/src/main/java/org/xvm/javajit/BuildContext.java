@@ -265,7 +265,8 @@ public class BuildContext {
     private final Map<RegisterInfo, Label> unassignedRegisters = new IdentityHashMap<>();
 
     /**
-     * The registers used for conditional return payloads.
+     * The registers whose Java slots require verifier-visible default values because they are not
+     * assigned on every incoming control-flow path.
      */
     private final Set<Integer> conditionalRegisters = new HashSet<>();
 
@@ -1677,8 +1678,7 @@ public class BuildContext {
         registerInfos.put(regId, reg);
         unassignedRegisters.put(reg, varStart);
         if (conditionalRegisters.contains(regId)) {
-            // a conditional return payload is undefined when the condition is `False`, but its Java
-            // slots must still have verifier-visible values
+            // ensure a verifier-visible value
             Builder.defaultStore(code, reg);
         }
         return reg;
@@ -1695,6 +1695,15 @@ public class BuildContext {
             if (regId >= 0) {
                 conditionalRegisters.add(regId);
             }
+        }
+    }
+
+    /**
+     * Register a local whose assignment is conditional on the control-flow path.
+     */
+    public void registerConditionalAssignment(int regId) {
+        if (regId >= 0) {
+            conditionalRegisters.add(regId);
         }
     }
 

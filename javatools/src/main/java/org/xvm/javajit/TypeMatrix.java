@@ -11,6 +11,7 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.UnassignedTypeConstant;
 
 /**
  * The matrix that can answer type questions for a given register at a given op address.
@@ -62,13 +63,23 @@ public class TypeMatrix {
      * @return the set of registers that have widened their types
      */
     public Set<Integer> follow(int currAddr, int nextAddr, int exceptId) {
+        return follow(views[currAddr], nextAddr, exceptId);
+    }
+
+    /**
+     * Propagate all register types from the specified view to another op.
+     *
+     * @param exceptId  if not negative, indicates the register id **not** to propagate
+     *
+     * @return the set of registers that have widened their types
+     */
+    private Set<Integer> follow(OpView currView, int nextAddr, int exceptId) {
         Set<Integer> changeSet = Collections.emptySet();
 
         if (nextAddr >= views.length) {
             return changeSet;
         }
 
-        OpView currView = views[currAddr];
         OpView nextView = views[nextAddr];
 
         if (currView != null) {
@@ -118,10 +129,21 @@ public class TypeMatrix {
     public void assign(int currAddr, int nextAddr, int regId, TypeConstant type) {
         assert currAddr >= 0 && type != null;
 
-        follow(currAddr, nextAddr, -1);
+        OpView currView = views[currAddr];
+        if (currView.types.get(regId) instanceof UnassignedTypeConstant unassigned) {
+            // this assignment makes the register assigned on the incoming op; preserve its
+            // declared type while removing the synthetic marker before merging
+            currView = currView.copy();
+            currView.types.put(regId, unassigned.getUnderlyingType());
+        }
+
+        follow(currView, nextAddr, -1);
 
         OpView       nextView = ensureMutableView(nextAddr);
         TypeConstant nextType = nextView.types.get(regId);
+
+        // an UnassignedTypeConstant must've been merged by now
+        assert !(nextType instanceof UnassignedTypeConstant);
 
         ComputeType:
         if (nextType == null) {
@@ -223,21 +245,47 @@ public class TypeMatrix {
                 continue;
             }
 
-            TypeConstant currType = entry.getValue();
-            TypeConstant nextType = nextView.types.get(regId);
-            if (currType.equals(nextType)) {
-                continue;
+            // an UnassignedTypeConstant (UTC) produces six possible merge scenarios:
+            // - UTC(A) + null   -> UTC(A)
+            // - A      + null   -> A
+            // - UTC(A) + UTC(B) -> UTC(merge(A, B))
+            // - UTC(A) + B      -> merge(A, B) and register the conditional assignment
+            // - A      + UTC(B) -> merge(A, B) and register the conditional assignment
+            // - A      + B      -> merge(A, B)
+            TypeConstant currType        = entry.getValue();
+            TypeConstant nextType        = nextView.types.get(regId);
+            boolean      currUnassigned  = currType instanceof UnassignedTypeConstant;
+            boolean      nextUnassigned  = nextType == null ||
+                                           nextType instanceof UnassignedTypeConstant;
+            boolean      mergeUnassigned = false;
+            if (currUnassigned == nextUnassigned) {
+                if (currType.equals(nextType)) {
+                    continue;
+                } else {
+                    mergeUnassigned = currUnassigned;
+                }
+            } else if (nextType != null) {
+                bctx.registerConditionalAssignment(regId);
             }
+
+            currType = unwrap(currType);
+            nextType = unwrap(nextType);
 
             if (nextView.isImmutable) {
                 views[nextAddr] = nextView = nextView.copy();
             }
 
-            if (mergeType(nextView.types, regId, entry.getValue(), nextType)) {
+            if (mergeType(nextView.types, regId, currType, nextType)) {
                 if (changeSet.isEmpty()) {
                     changeSet = new HashSet<>();
                 }
                 changeSet.add(regId);
+            }
+
+            if (mergeUnassigned) {
+                nextView.types.compute(regId, (_, type) -> new UnassignedTypeConstant(type));
+            } else if (currUnassigned || nextUnassigned) {
+                nextView.types.compute(regId, (_, type) -> unwrap(type));
             }
         }
         return changeSet;
@@ -282,6 +330,15 @@ public class TypeMatrix {
         return false;
     }
 
+    /**
+     * Remove the synthetic unassigned marker from the specified type.
+     */
+    private static TypeConstant unwrap(TypeConstant type) {
+        return type instanceof UnassignedTypeConstant unassigned
+                ? unassigned.getUnderlyingType()
+                : type;
+    }
+
     // ----- retrieval phase -----------------------------------------------------------------------
 
     /**
@@ -289,6 +346,6 @@ public class TypeMatrix {
      */
     public TypeConstant getType(int regId, int addr) {
         OpView view = views[addr];
-        return view == null ? null : view.types.get(regId);
+        return view == null ? null : unwrap(view.types.get(regId));
     }
 }
