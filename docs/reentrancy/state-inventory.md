@@ -42,7 +42,7 @@ independent bug.
 | Must fix | Shallow-copied transient runtime/helper state during constant adoption | Fixed in this branch for `SingletonConstant`, `FSNodeConstant`, `FileStoreConstant`, `TypeConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, `TypeParameterConstant`, and `HandleConstant` | A constant adopted into a different pool can carry runtime state, helper locks, JIT caches, reentrancy markers, or live handles owned by the source pool | Override adoption to construct fresh owner-local helper state, or clear cloned transient fields at the owner boundary |
 | Must audit, must fix when runtime execution depends on it | Ambient current `ConstantPool` lookup | Runtime sites and `ConstantPool` fields are enumerated in `constant-pool-state-audit.md` | Hidden thread-local owner lookup can select a stale, absent, or wrong pool on reused Java threads and async callbacks | Add explicit `Frame`/`Container`/`ServiceContext`/`ConstantPool` parameters where practical; use scoped owner lookup only as a transitional boundary bridge with assertions |
 | Must fix | Natural enum construction structs escaping public paths | PR #534 enum struct mismatch | A caller can observe a construction struct where an immutable enum value is required | Public enum helpers that return initialized singletons or deferred results |
-| Must audit, must fix when owner-shared | Unsynchronized lazy null caches in shared runtime or compiler state | 98 field-shaped checks; 47 strong same-field lazy-init matches across `javatools/src/main/java`; 27 in runtime/asm | Plain field read/write has no happens-before edge and can publish partial, duplicate, stale, or wrong-owner state | Final `Lazy` for immutable values; `ConcurrentMap.computeIfAbsent` for keyed caches; `AtomicReference` or a lock for lifecycle/resettable state |
+| Must audit, must fix when owner-shared | Unsynchronized lazy null caches in shared runtime or compiler state | 94 field-shaped checks; 43 strong same-field lazy-init matches across `javatools/src/main/java`; 23 in runtime/asm | Plain field read/write has no happens-before edge and can publish partial, duplicate, stale, or wrong-owner state | Final `Lazy` for immutable values; `ConcurrentMap.computeIfAbsent` for keyed caches; `AtomicReference` or a lock for lifecycle/resettable state |
 | Should fix soon | Non-final static compiler/JIT globals | 4 non-final static fields across runtime/asm/compiler; 8 across all Java sources | The remaining hits are not owner-bearing runtime caches, but plain static mutation is still shared process state with no reset story and weak parallel/incremental compiler semantics | Delete, make `static final` immutable, move to the code/container owner, or guard resettable process state with a lock/atomic holder |
 | Should fix soon | `volatile` as partial synchronization | 21 `volatile` hits in runtime/asm/compiler | `volatile` orders one variable; it does not make a group of fields or mutable map contents atomic | Keep only for independent scalar state; otherwise use immutable state snapshots, `ConcurrentMap`, or synchronized critical sections |
 | Should fix soon | Static mutable collection fields | 11 `static final` collection/resource-like fields; 0 non-final static collection/resource-like fields | `final` protects the reference, not the collection contents; global mutable maps need an update policy | `Map.of`/`Set.of`/`List.of` or `Collections.unmodifiable*` for constants; `ConcurrentMap` with documented key ownership for real caches |
@@ -216,9 +216,9 @@ rg -U --pcre2 -c "if\s*\(\s*((?:this\.)?(?:m_|s_|f_)[A-Za-z][A-Za-z0-9_]*)\s*==\
 Current counts:
 
 ```text
-3124 broad null-equality checks
-98 field-shaped lazy-null checks
-47 strong same-field lazy-initialization matches
+3119 broad null-equality checks
+94 field-shaped lazy-null checks
+43 strong same-field lazy-initialization matches
 ```
 
 The broad count includes many ordinary local null checks. The field-shaped
@@ -240,6 +240,14 @@ slots are not first-PR blockers. The runtime-executed `Op` caches that stored
 frame constants on shared op objects were fixed in this branch: `JumpCond` and
 `JumpNCond` no longer have condition fields, and `OpTest`/`OpCondJump` no
 longer write frame type constants back to `m_typeCommon` during execution.
+The same wave also converted `xRegEx.RegExHandle.m_pattern` to final
+`Lazy<Pattern>` and fixed `FSNodeConstant.m_constPath` so an adopted node cannot
+reuse a source-pool path literal.
+Stress also found the same cache-shape problem in bridge XTC: native
+`OSFileNode.created` was an `@Lazy` property on a native-owned file node, but
+the getter can run in an application container. That cached a caller-owned
+`Time` handle into the native `OSStorage` object graph. This branch changes it
+to a computed getter, matching `modified` and `accessed`.
 
 ```text
 javatools/src/main/java/org/xvm/asm/ConstantPool.java:3652:        if (m_typeNakedRef == null) {
@@ -265,7 +273,6 @@ javatools/src/main/java/org/xvm/asm/Scope.java:58:        if (m_scopeChild == nu
 javatools/src/main/java/org/xvm/asm/constants/ChildInfo.java:65:        if (m_infoType == null) {
 javatools/src/main/java/org/xvm/asm/constants/DynamicFormalConstant.java:230:        if (m_reg == null) {
 javatools/src/main/java/org/xvm/asm/constants/DynamicFormalConstant.java:264:        if (this.m_reg == null) {
-javatools/src/main/java/org/xvm/asm/constants/FSNodeConstant.java:165:        if (m_constPath == null) {
 javatools/src/main/java/org/xvm/asm/constants/MethodBody.java:132:        if (m_infoMethod == null) {
 javatools/src/main/java/org/xvm/asm/constants/MethodInfo.java:95:        if (m_infoType == null) {
 javatools/src/main/java/org/xvm/asm/constants/ParameterizedTypeConstant.java:114:        if (m_aiTypeParams == null) {
@@ -332,7 +339,6 @@ javatools/src/main/java/org/xvm/runtime/ObjectHandle.java:798:            if (f_
 javatools/src/main/java/org/xvm/runtime/ServiceContext.java:1940:            if (f_fiberCaller == null) {
 javatools/src/main/java/org/xvm/runtime/ServiceContext.java:1989:            if (f_hException == null) {
 javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTFunction.java:942:            if (m_next == null) {
-javatools/src/main/java/org/xvm/runtime/template/text/xRegEx.java:293:            if (m_pattern == null) {
 javatools/src/main/java/org/xvm/tool/ModuleInfo.java:1246:            if (m_resdir == null) {
 javatools/src/main/java/org/xvm/tool/ModuleInfo.java:1291:            if (m_source == null) {
 javatools/src/main/java/org/xvm/tool/ModuleInfo.java:966:            if (m_resdir == null) {
@@ -578,9 +584,11 @@ second owner could receive the first owner's completed handle graph. The visible
 failure was a lazy property appearing already assigned in a fresh container; the
 cause was wrong-owner singleton state.
 
-The same category applies to direct transient handles. `FSNodeConstant.m_handle`
-and `FileStoreConstant.m_handle` are runtime handles, not serialized XTC
-constant values. They must not survive adoption into a different pool.
+The same category applies to direct transient handles and derived constant
+caches. `FSNodeConstant.m_handle` and `FileStoreConstant.m_handle` are runtime
+handles, not serialized XTC constant values. `FSNodeConstant.m_constPath` is a
+derived `LiteralConstant` owned by the pool that first computes it. None of that
+state may survive adoption into a different pool.
 
 Proper replacement:
 

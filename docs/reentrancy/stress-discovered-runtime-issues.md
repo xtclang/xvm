@@ -70,9 +70,10 @@ owner-local. Cloning a final reference to mutable state intentionally shares the
 state.
 
 The same adoption hazard exists for transient runtime handles on
-`FSNodeConstant` and `FileStoreConstant`. Those classes did not have the
-`AtomicReference` indirection, but the base clone still copied `m_handle` into a
-constant registered under a different pool.
+`FSNodeConstant` and `FileStoreConstant`, and for the derived
+`FSNodeConstant.m_constPath` literal cache. Those classes did not have the
+`AtomicReference` indirection, but the base clone still copied owner-local cache
+state into a constant registered under a different pool.
 
 ### Replacement
 
@@ -92,10 +93,12 @@ empty for the target owner.
 
 `FSNodeConstant.adoptedBy(...)` and `FileStoreConstant.adoptedBy(...)` still use
 the legacy clone path for their serialized constant payload, but immediately
-clear the cloned transient handle:
+clear cloned owner-local state. `FileStoreConstant` clears its runtime handle;
+`FSNodeConstant` clears its runtime handle and derived path cache:
 
 ```java
-that.m_handle = null;
+that.m_handle    = null;
+that.m_constPath = null;
 ```
 
 That containment is not a beautiful API. It is the smallest correct patch for
@@ -286,6 +289,112 @@ handle owned by another main container or by another runtime's native parent.
 - This explains why direct-sequence validation can show many native-parent
   values even when parallel `TestProps` is fixed. The former is legal canonical
   sharing; the latter was wrong-owner module singleton state.
+
+## Native `OSFileNode.created` Lazy Owner Leak
+
+Status: fixed in this branch.
+
+Observed failure while adding `TestFiles` to the same-JVM direct sequence
+stress:
+
+```text
+CI=true ./gradlew :manualTests:runDirectSequenceStress \
+  -PsameJvmIterations=1 \
+  -PsameJvmModules=TestFiles
+
+Runtime ownership validation failed after module TestFiles
+GenericHandle type=Time expected=external actual=C0
+```
+
+The typed ownership dump showed the leaked handle below the native file-store
+root:
+
+```text
+SingletonConst{singleton-const=TestFiles} owner=C0 type=TestFiles
+  [2] immutable FileStore owner=external/native
+    [1] LazyHandle type=immutable _native:fs.OSFileStore:private.root owner=external
+      [0] NodeHandle type=immutable Directory owner=external
+        [3] LazyHandle type=immutable _native:fs.OSDirectory:private.created owner=external
+          [0] GenericHandle owner=C0 type=Time OWNER-MISMATCH expected=external
+```
+
+This is exactly the kind of failure the ownership diagnostics are meant to make
+obvious: a native-owned object graph retained a handle created by the application
+container that happened to call a property getter.
+
+### Root Cause
+
+`OSStorage` is a native service. Its `OSFileStore` and root `OSDirectory` are
+owned by the native runtime container, not by each application container using
+file APIs. `OSFileNode.created` was declared as an XTC `@Lazy` property:
+
+```xtc
+@Lazy Time created.calc() = new Time(createdMillis*TimeOfDay.PicosPerMilli);
+```
+
+That is wrong for a native-owned node whose getter can execute in a caller
+frame. The getter allocated a `Time` value in the caller's owner context and the
+lazy property cached that caller-owned handle inside the native-owned file node.
+The next ownership walk then found a native graph containing a child-container
+`Time`.
+
+Parallel execution was not required for this bug. It was exposed by the
+same-JVM direct stress because that harness keeps enough live ownership roots to
+notice that the cached value belongs to the wrong container. In normal runs this
+kind of leak can retain an application container through the native file-system
+graph or let a later container observe a value created under an earlier caller.
+
+### Replacement
+
+`OSFileNode.created` is now a plain computed getter:
+
+```xtc
+Time created.get() = new Time(createdMillis*TimeOfDay.PicosPerMilli);
+```
+
+This matches the existing `modified` and `accessed` properties, which were
+already computed getters rather than `@Lazy` caches. It preserves the visible
+value calculation and removes only the invalid cache location. The native node
+no longer stores a caller-owned `Time` handle.
+
+### Ramifications
+
+- No normal XTC semantics change: every read still returns the same timestamp
+  value derived from the node metadata.
+- No steady-state owner cache is lost for `modified` or `accessed`; `created`
+  now follows their existing behavior.
+- The footprint decreases for native file nodes because they no longer retain a
+  lazy storage slot for `created`.
+- The only performance cost is constructing a small immutable `Time` value on
+  each `created` read. That is the safer representation until the runtime has an
+  owner-aware native file metadata cache. Caching this value in the native node
+  is unsound because the value is a handle allocated under the caller's owner.
+
+### Regression Proof
+
+The same focused stress run passed after the change and did not report ownership
+mismatches:
+
+```bash
+CI=true ./gradlew :manualTests:runDirectSequenceStress \
+  -PsameJvmIterations=1 \
+  -PsameJvmModules=TestFiles \
+  --rerun-tasks --no-build-cache --console=plain
+```
+
+The broader wave-5 stress run also completed with a successful Gradle result:
+
+```bash
+CI=true ./gradlew :manualTests:runDirectSequenceStress \
+  -PsameJvmIterations=2 \
+  -PsameJvmModules=TestRegularExpressions,TestFiles,TestProps \
+  --rerun-tasks --no-build-cache --console=plain
+```
+
+That broader run still logged asynchronous `OSStorage` class-loading errors
+documented below. Those logs are a separate direct-runner/classloader issue:
+they did not produce ownership mismatches, and the reported nested class was
+present in the built `javatools` jar.
 
 ## `StringBuffer` Chunk Mutability Invariant
 
@@ -521,6 +630,13 @@ against the same checkout at the same time:
 java.lang.NoClassDefFoundError: org/xvm/asm/op/NewV_1
 ```
 
+or, from asynchronous native `OSStorage` watcher fibers during same-JVM direct
+stress:
+
+```text
+java.lang.NoClassDefFoundError: org/xvm/runtime/template/reflect/xClass$1
+```
+
 and:
 
 ```text
@@ -530,8 +646,11 @@ Failed to store cache entry ... Entry 'tree-outputXtcModules/javatools.jar' clos
 
 In the `NoClassDefFoundError` case, inspecting the produced
 `manualTests/build/xtc/xdk/lib/javatools.jar` showed that `NewV_1.class` existed
-in the jar after the build completed. That points away from an XVM runtime owner
-leak and toward a workspace-output race during concurrent build/test execution.
+in the jar after the build completed. The same check for the same-JVM direct
+`xClass$1` symptom showed `xClass$1.class` present in
+`javatools/build/libs/javatools-0.4.4-SNAPSHOT.jar`. That points away from a
+missing compile artifact and toward output/classloader context problems around
+the stress harness and asynchronous service callbacks.
 
 ### Root Cause
 
@@ -549,7 +668,8 @@ runtime state:
 
 Those symptoms do not prove that two XVM containers shared a bad template,
 handle, constant pool, or composition. They prove that verification must isolate
-build outputs when the goal is to test runtime state sharing.
+build outputs and async classloader context when the goal is to test runtime
+state sharing.
 
 ### Replacement
 
@@ -560,6 +680,9 @@ verification rule is:
   same checkout when interpreting runtime ownership failures.
 - Use a single `manualTests:runParallelStress` invocation to create concurrent
   XVM containers inside one controlled runtime execution.
+- Treat asynchronous service-thread `NoClassDefFoundError` output as a separate
+  classloader-context backlog item unless it is accompanied by an ownership
+  validation failure or a task failure.
 - For future same-JVM launcher and Gradle direct-mode stress, isolate build
   outputs, XTC outputs, and Gradle cache locations per outer process, or run the
   entire stress loop inside one Gradle invocation.

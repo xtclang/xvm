@@ -174,6 +174,8 @@ Concrete failures/hazards:
   copied the reference, so two pools shared one runtime singleton state cell.
 - `FSNodeConstant.m_handle` and `FileStoreConstant.m_handle` could copy runtime
   handles across pools.
+- `FSNodeConstant.m_constPath` could copy a derived path literal owned by the
+  source pool after the first `getPathConstant()` call.
 - `TypeConstant.m_cRecursiveDepth` could copy a mutable recursion counter.
 - `TypeConstant.m_tloInProgress`, `m_mapConsumes`, `m_mapProduces`,
   `m_sJitName`, `m_handle`, and normalized/type-info caches could copy
@@ -195,7 +197,8 @@ Branch fix:
 - `SingletonConstant.adoptedBy(...)` constructs a fresh singleton constant for
   the target pool.
 - `FSNodeConstant.adoptedBy(...)` and `FileStoreConstant.adoptedBy(...)` clear
-  copied runtime handles.
+  copied runtime handles. `FSNodeConstant.adoptedBy(...)` also clears the
+  derived path-literal cache so it is recomputed under the destination pool.
 - `TypeConstant.setContaining(...)` clears every non-logical transient helper,
   runtime, and JIT cache on owner change.
 - `ParameterizedTypeConstant.adoptedBy(...)` reconstructs the logical
@@ -287,7 +290,7 @@ can be ignored.
 | 2 | `ConstantPool` late-mutation guard | Done in this branch wave. Hidden late mutation now becomes an immediate diagnostic instead of a stale-owner symptom when `xvm.asm.validateConstantPoolLateRegistration` is enabled. | `ConstantPoolDiagnosticsTest` proves existing constants still return after publication and new registrations fail before publication into the pool. Diagnostic same-JVM stress now identifies `ClassComposition` access-type registration as the next warmup/design target. |
 | 3 | Ambient `ConstantPool` lookup cleanup | Done in this branch wave for runtime boundaries. `InterpreterConnector.invoke0(...)` now uses the main container's explicit pool, native startup no longer uses raw current-pool mutation, and the remaining runtime scoped bridges assert that the scoped pool matches the explicit owner. | `ConstantPoolDiagnosticsTest` covers exact scoped-owner assertions, explicit-owner calls with no ambient pool, and wrong-scope failures. Source scan now shows no runtime/API callers of raw `setCurrentPool(...)`; the method itself was removed. |
 | 4 | Runtime-executed `Op` caches | Done in this branch wave for owner-bearing frame-constant caches. `JumpCond`/`JumpNCond` no longer cache `ConditionalConstant` on the op, and `OpTest`/`OpCondJump` no longer write frame type constants back to `m_typeCommon` during execution. | `OpRuntimeCacheTest` verifies the condition fields are gone and guards against the old common-type write-back pattern. Same-JVM sequence and parallel stress exercise these op paths under runtime ownership validation. |
-| 5 | Manual lazy null caches in runtime/asm | After the obvious owner boundaries are explicit, convert the remaining owner-bearing `if (field == null) field = ...` caches to final `Lazy`, `Lazy.Owner`, owner-local tables, or `ConcurrentMap`. | For each converted cache, add or update a test that exercises two owners and verifies cache identity/owner separation and unchanged repeated-call caching. |
+| 5 | Manual lazy null caches in runtime/asm | Done for the first-PR must-fix slice. `xRegEx.RegExHandle` uses a final `Lazy<Pattern>`, `FSNodeConstant` no longer carries a source-pool path literal across adoption, and `_native:fs.OSFileNode.created` no longer caches a caller-owned `Time` handle inside the native file-system graph. Remaining Java hits are still audited below as builder/linkage, frame/debug lifecycle, synchronized association helpers, or must-audit op-address/class-layout state. | `RegExHandleTest` proves the regex cache remains per-handle and cached after first use. `ConstantAdoptionTest.adoptedFSNodeConstantDropsSourcePoolPathCache()` proves the adopted path cache is recomputed in the destination pool and still cached after that. `manualTests:runDirectSequenceStress` with `TestFiles` proves the native file-node owner leak is gone. |
 | 6 | Thread-local and scoped ambient state | This is broader and should come after explicit-owner cleanup identifies the real remaining bridge points. The target is lexical scoped ownership, not another hidden global cache. | Add cleanup/scope tests for each bridge and assertions that no owner-bearing runtime value is stored in the ambient scope object. |
 | 7 | Weak/identity owner registries | These usually require lifecycle reasoning and should be handled after the core wrong-owner paths are closed. Some may be diagnostic-only, but each one needs an owner/lifetime contract. | Add concurrency or lifecycle tests for every registry that is used outside a single owner thread; document allowlisted diagnostic-only maps. |
 
@@ -422,6 +425,24 @@ Required closure:
   lock.
 - If the object is provably request/thread confined, document that proof at the
   field or in the audit.
+
+First-PR closure:
+
+- The owner-bearing runtime `Op` constant caches were removed in wave 4.
+- `xRegEx.RegExHandle.m_pattern` was converted to final `Lazy<Pattern>` in wave
+  5. The cache is not owner-bearing, but the old plain field was still an
+  unnecessary unsafe-publication pattern.
+- `FSNodeConstant.m_constPath` remains a lazy per-node cache, because converting
+  it to a final `Lazy` would be wrong with the current shallow-clone adoption
+  path: a computed final lazy cell would be copied to the adopted constant. The
+  correct minimal fix is to clear the adopted copy and recompute the literal in
+  the destination pool; the field is volatile for safe publication of the
+  immutable derived literal.
+- `_native:fs.OSFileNode.created` was changed from `@Lazy` to a computed getter.
+  The file node is native-owned, but the getter can be called from an
+  application container. Caching the resulting `Time` handle in the native node
+  retained the caller's owner. A computed getter matches `modified` and
+  `accessed` and avoids any cross-owner cache.
 
 ### Thread-Local And Scoped Ambient State
 

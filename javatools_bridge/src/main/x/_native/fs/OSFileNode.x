@@ -27,8 +27,11 @@ const OSFileNode
     conditional File linkAsFile() = store.linkAsFile(this:protected);
 
     // TODO: should it be the "local" timezone?
+    // Do not cache this on native-owned OSFileNode instances. The getter can run in an
+    // application container while the node belongs to the native OSStorage service; caching that
+    // caller-owned Time handle would leak the caller owner into the native filesystem graph.
     @Override
-    @Lazy Time created.calc() = new Time(createdMillis*TimeOfDay.PicosPerMilli);
+    Time created.get() = new Time(createdMillis*TimeOfDay.PicosPerMilli);
 
     @Override
     Time modified.get() = new Time(modifiedMillis*TimeOfDay.PicosPerMilli);

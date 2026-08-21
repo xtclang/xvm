@@ -375,6 +375,11 @@ documented long race-hunting command.
 - Add benchmark reporting to `manualTests:runDirectSequenceStress`.
 - Add same-JVM parallel mode after serial mode is reliable.
 - Add direct compile/test integration stress through `DirectRuntimeBuildService`.
+- Investigate asynchronous native-service classloader context in direct mode.
+  `TestFiles` same-JVM stress can log `NoClassDefFoundError` for
+  `org/xvm/runtime/template/reflect/xClass$1` from `OSStorage` watcher fibers
+  even though the class is present in the built `javatools` jar and the Gradle
+  task exits successfully.
 - Define and document the process-wide allowlist used by the validator.
 - Isolate XTC output, jar output, and Gradle cache locations for any stress mode
   that starts more than one outer Gradle process.

@@ -162,9 +162,9 @@ public class FSNodeConstant
 
     public LiteralConstant getPathConstant() {
         LiteralConstant constPath = m_constPath;
-        if (m_constPath == null) {
-            constPath = m_constPath =
-                new LiteralConstant(getConstantPool(), Format.Path, getName(), getName());
+        if (constPath == null) {
+            constPath = new LiteralConstant(getConstantPool(), Format.Path, getName(), getName());
+            m_constPath = constPath;
         }
         return constPath;
     }
@@ -237,10 +237,11 @@ public class FSNodeConstant
     @Override
     protected FSNodeConstant adoptedBy(ConstantPool pool) {
         FSNodeConstant that = (FSNodeConstant) super.adoptedBy(pool);
-        // Runtime handles are owner-local. Constant.adoptedBy() shallow-copies transient fields, so
-        // clear any handle copied from the source pool before this constant is registered to a new
-        // owner.
-        that.m_handle = null;
+        // Constant.adoptedBy() shallow-copies transient fields. Runtime handles and the derived
+        // path literal are pool-owned state, so an adopted copy must recompute them under the
+        // destination pool instead of retaining source-pool cache entries.
+        that.m_handle    = null;
+        that.m_constPath = null;
         return that;
     }
 
@@ -401,8 +402,10 @@ public class FSNodeConstant
 
     /**
      * The path specified for the node, or null if this node was not specified by path.
+     * This derived constant is still a lazy per-node cache; adopted copies clear it so the value is
+     * recomputed in the destination pool.
      */
-    private LiteralConstant m_constPath;
+    private volatile LiteralConstant m_constPath;
 
     /**
      * The date/time that the node was created.

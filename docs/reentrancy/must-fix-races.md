@@ -9,7 +9,7 @@ state.
 Startup-race counts use `master` as the baseline and call out the current
 branch remainder where this branch fixes part of a category. Broader raw-access
 and lazy-publication counts are scan signals generated on branch
-`lagergren/lazy-instance` on 2026-08-20.
+`lagergren/lazy-instance` on 2026-08-21.
 
 ## Summary
 
@@ -18,7 +18,7 @@ and lazy-publication counts are scan signals generated on branch
 | Must fix | Mutable native template `INSTANCE` fields | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes all 143 fields and all 139 constructor assignments. | Last writer wins across containers; constructor `this` escape | `NativeTemplates` central key table, existing container template cache, plus container/frame lookup |
 | Must fix | Static runtime-owned metadata | `master`: 151 field-shaped runtime/template static metadata fields after excluding `INSTANCE`. This branch fixes all 151 and leaves 0 in the scanned runtime-template/Utils category. | Type/composition/method/handle values from one owner reused in another owner | Owner-scoped final `Lazy`, grouped info records, or owner-owned `ConcurrentMap` |
 | Must fix | Raw enum handles returned through public/native paths | Branch remainder: 14 raw accessor references, all protected/internal in `xEnum` or owner-local native enum factories in `xBoolean`, `xNullable`, and `xOrdered` | Natural enum construction struct escapes as if it were the finalized enum singleton | `ensureEnumByName`, `ensureEnumByOrdinal`, or `Utils.ensureInitializedEnum` on public paths |
-| Must audit, must fix when owner-shared | Manual lazy publication in shared runtime/asm objects | 27 strong same-field lazy-init matches in runtime/asm; 47 across all Java sources | Plain field read/write with no happens-before edge; duplicate, stale, partial, or wrong-owner state | Final `Lazy`, `ConcurrentMap.computeIfAbsent`, or explicit atomic/locked state |
+| Must audit, must fix when owner-shared | Manual lazy publication in shared runtime/asm objects | 23 strong same-field lazy-init matches in runtime/asm; 43 across all Java sources | Plain field read/write with no happens-before edge; duplicate, stale, partial, or wrong-owner state | Final `Lazy`, `ConcurrentMap.computeIfAbsent`, or explicit atomic/locked state |
 | Must fix | Split lifecycle state across several fields | `SingletonConstant` was the known concrete case and is fixed in this branch | Fibers see mixed handle/owner/waiter state; false recursion or missed wait | One immutable state snapshot in `AtomicReference<State>` or one lock |
 | Must fix | Runtime/helper state shallow-copied during constant adoption | Fixed in this branch for `SingletonConstant`, `FSNodeConstant`, `FileStoreConstant`, `TypeConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, `TypeParameterConstant`, and `HandleConstant` | A constant registered into pool B carries pool A's runtime handle/state cell, helper lock, JIT cache, or reentrancy marker | Adoption must copy only logical constant value state; transient runtime/helper state must be fresh or cleared |
 | Must audit, must fix when runtime execution depends on it | Ambient current `ConstantPool` lookup | Runtime sites include `MainContainer`, `Container`, `ServiceContext`, watcher/request callbacks, `xContainerControl`, and type helpers | A hidden thread-local owner can be stale, absent, or wrong on reused Java threads and async callbacks | Add explicit owner parameters where practical; use scoped owner lookup only as a transitional boundary bridge with assertions |
@@ -293,15 +293,25 @@ rg -U --pcre2 -c "if\s*\(\s*((?:this\.)?(?:m_|s_|f_)[A-Za-z][A-Za-z0-9_]*)\s*==\
 Current count:
 
 ```text
-27 strong same-field lazy-initialization matches in runtime/asm
+23 strong same-field lazy-initialization matches in runtime/asm
 ```
 
 Runtime-template subset after this branch:
 
 ```text
-javatools/src/main/java/org/xvm/runtime/template/text/xRegEx.java:293:            if (m_pattern == null) {
-javatools/src/main/java/org/xvm/runtime/template/text/xRegEx.java:294:                m_pattern = Pattern.compile(f_regex, (int) f_nFlags);
+No strict same-field lazy-null hits remain under javatools/src/main/java/org/xvm/runtime/template.
 ```
+
+This branch removed the low-risk `xRegEx.RegExHandle.m_pattern` cache by
+replacing it with a final `Lazy<Pattern>`. It also fixed the owner-sensitive
+`FSNodeConstant.m_constPath` derived path cache: adopted copies now clear the
+cached source-pool path and recompute it under the destination pool while
+preserving repeated-call caching. A same-JVM `TestFiles` run found one
+additional bridge-XTC cache with the same owner shape: native
+`OSFileNode.created` was `@Lazy` even though the node belongs to the native
+`OSStorage` service and the getter can run in an application container. That
+cache is removed; `created` is now a computed getter like `modified` and
+`accessed`.
 
 Why this is broken in shared owners:
 
