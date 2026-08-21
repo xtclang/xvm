@@ -25,6 +25,14 @@ Start here:
 - [state-inventory.md](state-inventory.md): the broader source inventory of
   mutable/racy/state-design smells, including must-fix and should-fix
   categories with scan commands.
+- [ownership-diagnostics.md](ownership-diagnostics.md): how to dump
+  container-owned runtime state during stress runs and detect owner mismatches
+  or cross-container sharing.
+- [jit-implications.md](jit-implications.md): how the separate JIT runtime
+  path models containers, classloaders, generated static fields, and ownership
+  risks.
+- [scoped-value.md](scoped-value.md): whether a single `ScopedValue` runtime
+  scope can replace legacy mutable statics, and where it is only a bridge.
 - [stress-discovered-runtime-issues.md](stress-discovered-runtime-issues.md):
   concrete failures found by the parallel manual-test runner that are adjacent
   to, but distinct from, the Java static owner-cache work.
