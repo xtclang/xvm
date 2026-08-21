@@ -41,6 +41,9 @@ Start here:
 - [constant-pool-state-audit.md](constant-pool-state-audit.md): `ConstantPool`
   state inventory, ambient current-pool lookup sites, must-fix vs should-fix
   classification, and recommended guards.
+- [constant-pool-hostile-state-audit.md](constant-pool-hostile-state-audit.md):
+  background catalog of ConstantPool/constant adoption, clone, ambient-owner,
+  mutation, and cache patterns that remain hostile to reentrant execution.
 - [jit-implications.md](jit-implications.md): how the separate JIT runtime
   path models containers, classloaders, generated static fields, and ownership
   risks.
