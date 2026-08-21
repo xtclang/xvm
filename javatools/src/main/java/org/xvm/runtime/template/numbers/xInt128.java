@@ -10,7 +10,7 @@ import org.xvm.runtime.ObjectHandle;
 
 public class xInt128
         extends BaseInt128 {
-    public xInt128(Container container, ClassStructure structure, boolean fInstance) {
+    public xInt128(Container container, ClassStructure structure) {
         super(container, structure, true);
     }
 

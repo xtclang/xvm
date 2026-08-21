@@ -26,14 +26,14 @@ import org.xvm.runtime.template.numbers.xConstrainedInteger;
 public class xAtomicIntNumber
         extends xAtomic {
     public xAtomicIntNumber(Container container, ClassStructure structure) {
-        super(container, structure, false);
+        super(container, structure);
 
         f_templateReferent = null;
     }
 
     public xAtomicIntNumber(xConstrainedInteger templateIntNumber,
                             xAtomicIntNumber templateAtomicInt) {
-        super(templateIntNumber.f_container, templateAtomicInt.getStructure(), false);
+        super(templateIntNumber.f_container, templateAtomicInt.getStructure());
 
         f_templateReferent = templateIntNumber;
     }

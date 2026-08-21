@@ -27,6 +27,10 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
 
+import org.xvm.util.Lazy;
+
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * Native ModuleRepository functionality for the core repository.
@@ -102,19 +106,17 @@ public class xCoreRepository
      * Injection support.
      */
     public ObjectHandle ensureModuleRepository(Frame frame, ObjectHandle hOpts) {
-        ObjectHandle hRepository = m_hRepository;
-        if (hRepository == null) {
-            m_hRepository = hRepository = makeHandle();
-        }
-
-        return hRepository;
+        return f_hRepository.get();
     }
 
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
-    public ObjectHandle makeHandle() {
-        return new CoreRepoHandle(m_clzRepo);
+    private ObjectHandle makeHandle(Container container) {
+        if (requireNonNull(container, "container") != f_container) {
+            throw new IllegalArgumentException("Repository handle owner does not match template owner");
+        }
+        return new CoreRepoHandle(requireNonNull(m_clzRepo, "m_clzRepo"));
     }
 
     public static class CoreRepoHandle
@@ -127,7 +129,10 @@ public class xCoreRepository
     private TypeComposition m_clzRepo;
 
     /**
-     * Cached Repository handle.
+     * Cached Repository handle owned by this template's container.
+     *
+     * The final Lazy cell preserves one-handle-per-owner caching and safely
+     * publishes the handle if injection is requested concurrently.
      */
-    private ObjectHandle m_hRepository;
+    private final Lazy<ObjectHandle> f_hRepository = Lazy.of(() -> makeHandle(f_container));
 }

@@ -330,8 +330,8 @@ public abstract class Container
 
             case CONST:
                 temp = structClass.isException()
-                        ? new xException(this, structClass, false)
-                        : new xConst(this,     structClass, false);
+                        ? new xException(this, structClass)
+                        : new xConst(this,     structClass);
                 break;
 
             case MODULE:

@@ -48,8 +48,8 @@ import org.xvm.util.Lazy;
 public class xString
         extends xConst
         implements IndexSupport {
-    public xString(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+    public xString(Container container, ClassStructure structure) {
+        super(container, structure);
     }
 
     @Override

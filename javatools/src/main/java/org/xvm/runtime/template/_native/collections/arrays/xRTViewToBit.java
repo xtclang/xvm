@@ -40,7 +40,7 @@ public class xRTViewToBit
     @Override
     public void registerNativeTemplates() {
         if (NativeTemplates.get(this).isViewToBit(this)) {
-            registerNativeTemplate(new xRTViewToBitFromNibble(f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromNibble(f_container, f_struct));
 
             registerNativeTemplate(new xRTViewToBitFromInt8   (f_container, f_struct));
             registerNativeTemplate(new xRTViewToBitFromInt16  (f_container, f_struct));

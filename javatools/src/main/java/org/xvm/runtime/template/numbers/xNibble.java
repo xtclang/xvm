@@ -27,6 +27,9 @@ public class xNibble
     public xNibble(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, 0, 15, 4, false);
 
+        // Temporary legacy role flag: true only for the canonical native Nibble template.
+        // It owns the small-value cache below; replacing this boolean with an explicit
+        // canonical-template cache is a follow-up cleanup.
         f_fInstance = fInstance;
     }
 

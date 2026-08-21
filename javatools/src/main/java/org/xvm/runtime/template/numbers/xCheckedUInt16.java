@@ -11,7 +11,7 @@ import org.xvm.runtime.Container;
  */
 public class xCheckedUInt16
         extends xCheckedUnsignedInt {
-    public xCheckedUInt16(Container container, ClassStructure structure, boolean fInstance) {
+    public xCheckedUInt16(Container container, ClassStructure structure) {
         super(container, structure, 0L, 0xFFFFL, 16);
     }
 

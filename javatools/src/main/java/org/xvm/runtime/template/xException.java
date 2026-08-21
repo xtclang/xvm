@@ -31,8 +31,8 @@ import org.xvm.util.Lazy;
  */
 public class xException
         extends xConst {
-    public xException(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+    public xException(Container container, ClassStructure structure) {
+        super(container, structure);
 
         // The boolean is retained only for NativeContainer's legacy reflective constructor
         // signature. Exception ownership is resolved through NativeTemplates; this constructor no

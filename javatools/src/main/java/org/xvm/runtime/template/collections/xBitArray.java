@@ -29,7 +29,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBit;
  */
 public class xBitArray
         extends BitBasedArray {
-    public xBitArray(Container container, ClassStructure structure, boolean fInstance) {
+    public xBitArray(Container container, ClassStructure structure) {
         super(container, structure);
     }
 

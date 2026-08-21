@@ -61,7 +61,7 @@ public class xRTFunction
     }
 
     public xRTFunction(Container container, ClassStructure structure) {
-        super(container, structure, false);
+        super(container, structure);
     }
 
     @Override

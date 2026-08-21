@@ -11,7 +11,7 @@ import org.xvm.runtime.Container;
  */
 public class xUInt32
         extends xUnsignedConstrainedInt {
-    public xUInt32(Container container, ClassStructure structure, boolean fInstance) {
+    public xUInt32(Container container, ClassStructure structure) {
         super(container, structure, 0, 2L * (long) Integer.MAX_VALUE + 1, 32, false);
     }
 

@@ -48,7 +48,7 @@ import org.xvm.util.Lazy;
  */
 public class xOSStorage
         extends xService {
-    public xOSStorage(Container container, ClassStructure structure, boolean fInstance) {
+    public xOSStorage(Container container, ClassStructure structure) {
         super(container, structure);
     }
 

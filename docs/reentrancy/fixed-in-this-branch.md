@@ -422,13 +422,12 @@ the process-global exception-class cache.
 models the old failure in which a stock exception factory creates a handle with
 a class composition from another owner.
 
-Some constructors still accept a legacy `boolean fInstance` parameter because
-`NativeContainer.instantiateNativeTemplate(...)` supports the reflective
-`(Container, ClassStructure, boolean)` signature. In converted templates such
-as `xConst` and `xException`, that flag is compatibility shape only: it no
-longer assigns a static `INSTANCE` or selects a global metadata cache. Removing
-the dead constructor parameter across the hierarchy is a should-fix API cleanup,
-not an incomplete must-fix singleton publication bug.
+The dead `boolean fInstance` compatibility signatures have been removed from
+the converted templates. Five constructors still accept the flag because it is
+currently a local canonical-template role marker, not because they publish
+mutable singleton state. See
+[remaining-finstance-constructors.md](remaining-finstance-constructors.md) for
+the exact list and cleanup plan.
 
 The native enum value wave closes the remaining scanned static runtime metadata
 category. On master, `xBoolean.TRUE/FALSE`, `xNullable.NULL`, and

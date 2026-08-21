@@ -24,6 +24,9 @@ public class xUInt8
     public xUInt8(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, 0, 255, 8, false);
 
+        // Temporary legacy role flag: true only for the canonical native UInt8 template.
+        // It owns the small-value cache below; replacing this boolean with an explicit
+        // canonical-template cache is a follow-up cleanup.
         f_fInstance = fInstance;
     }
 

@@ -54,7 +54,7 @@ import org.xvm.util.Lazy;
  */
 public class xRTFileTemplate
         extends xRTComponentTemplate {
-    public xRTFileTemplate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTFileTemplate(Container container, ClassStructure structure) {
         super(container, structure);
     }
 

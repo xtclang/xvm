@@ -19,7 +19,7 @@ import org.xvm.runtime.template.xException;
 public abstract class BaseFP
         extends xNumber {
     public BaseFP(Container container, ClassStructure structure, int cBits) {
-        super(container, structure, false);
+        super(container, structure);
 
         f_cBits = cBits;
     }

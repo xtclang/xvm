@@ -80,9 +80,9 @@ public class xArray
     @Override
     public void registerNativeTemplates() {
         if (NativeTemplates.get(this).isArray(this)) {
-            registerNativeTemplate(new xBitArray   (f_container, f_struct, true));
-            registerNativeTemplate(new xByteArray  (f_container, f_struct, true));
-            registerNativeTemplate(new xNibbleArray(f_container, f_struct, true));
+            registerNativeTemplate(new xBitArray   (f_container, f_struct));
+            registerNativeTemplate(new xByteArray  (f_container, f_struct));
+            registerNativeTemplate(new xNibbleArray(f_container, f_struct));
         }
     }
 

@@ -33,6 +33,9 @@ Start here:
   risks.
 - [scoped-value.md](scoped-value.md): whether a single `ScopedValue` runtime
   scope can replace legacy mutable statics, and where it is only a bridge.
+- [remaining-finstance-constructors.md](remaining-finstance-constructors.md):
+  the remaining canonical-template role flags after removing dead
+  three-argument constructor compatibility signatures.
 - [stress-discovered-runtime-issues.md](stress-discovered-runtime-issues.md):
   concrete failures found by the parallel manual-test runner that are adjacent
   to, but distinct from, the Java static owner-cache work.

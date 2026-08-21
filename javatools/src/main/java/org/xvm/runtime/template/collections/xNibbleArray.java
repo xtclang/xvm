@@ -24,7 +24,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTViewToBit;
  */
 public class xNibbleArray
         extends BitBasedArray {
-    public xNibbleArray(Container container, ClassStructure structure, boolean fInstance) {
+    public xNibbleArray(Container container, ClassStructure structure) {
         super(container, structure);
     }
 

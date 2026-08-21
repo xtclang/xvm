@@ -29,7 +29,7 @@ import org.xvm.util.Lazy;
 public class xCPFile
         extends xConst {
     public xCPFile(Container container, ClassStructure structure) {
-        super(container, structure, false);
+        super(container, structure);
     }
 
     @Override

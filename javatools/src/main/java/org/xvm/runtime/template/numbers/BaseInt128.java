@@ -36,7 +36,7 @@ import org.xvm.util.PackedInteger;
 public abstract class BaseInt128
         extends xIntNumber {
     public BaseInt128(Container container, ClassStructure structure, boolean fSigned) {
-        super(container, structure, false);
+        super(container, structure);
 
         f_fSigned = fSigned;
     }

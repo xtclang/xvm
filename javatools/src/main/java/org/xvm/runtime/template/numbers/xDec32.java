@@ -20,7 +20,7 @@ import org.xvm.type.Decimal32;
  */
 public class xDec32
         extends BaseDecFP {
-    public xDec32(Container container, ClassStructure structure, boolean fInstance) {
+    public xDec32(Container container, ClassStructure structure) {
         super(container, structure, 32);
     }
 

@@ -49,7 +49,7 @@ public class xEnum
     }
 
     public xEnum(Container container, ClassStructure structure) {
-        super(container, structure, false);
+        super(container, structure);
     }
 
     @Override

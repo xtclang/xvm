@@ -32,7 +32,7 @@ import org.xvm.util.Lazy;
  */
 public class xRTMethodTemplate
         extends xRTComponentTemplate {
-    public xRTMethodTemplate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTMethodTemplate(Container container, ClassStructure structure) {
         super(container, structure);
     }
 

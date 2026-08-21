@@ -20,7 +20,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
  */
 public class xRTBooleanDelegate
         extends BitBasedDelegate {
-    public xRTBooleanDelegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTBooleanDelegate(Container container, ClassStructure structure) {
         super(container, structure);
     }
 

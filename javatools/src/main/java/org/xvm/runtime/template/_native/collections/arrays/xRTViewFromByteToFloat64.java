@@ -23,7 +23,7 @@ import org.xvm.util.Handy;
  */
 public class xRTViewFromByteToFloat64
         extends xRTViewFromByte {
-    public xRTViewFromByteToFloat64(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTViewFromByteToFloat64(Container container, ClassStructure structure) {
         super(container, structure);
     }
 

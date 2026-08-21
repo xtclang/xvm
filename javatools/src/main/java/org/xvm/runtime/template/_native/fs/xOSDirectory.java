@@ -34,7 +34,7 @@ import org.xvm.util.Lazy;
 public class xOSDirectory
         extends xOSFileNode {
     public xOSDirectory(Container container, ClassStructure structure) {
-        super(container, structure, false);
+        super(container, structure);
     }
 
     @Override

@@ -43,8 +43,11 @@ import org.xvm.util.Handy;
 public class xChar
         extends xConst {
     public xChar(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+        super(container, structure);
 
+        // Temporary legacy role flag: true only for the canonical native Char template.
+        // It owns the small-value cache below; replacing this boolean with an explicit
+        // canonical-template cache is a follow-up cleanup.
         f_fInstance = fInstance;
     }
 

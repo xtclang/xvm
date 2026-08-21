@@ -20,7 +20,7 @@ import org.xvm.util.PackedInteger;
  */
 public class xUInt64
         extends xUnsignedConstrainedInt {
-    public xUInt64(Container container, ClassStructure structure, boolean fInstance) {
+    public xUInt64(Container container, ClassStructure structure) {
         super(container, structure, 0, -1, 64, false);
     }
 

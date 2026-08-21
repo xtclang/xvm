@@ -37,7 +37,7 @@ public abstract class xConstrainedInteger
     protected xConstrainedInteger(Container container, ClassStructure structure,
                                   long cMinValue, long cMaxValue,
                                   int cNumBits, boolean fUnsigned, boolean fChecked) {
-        super(container, structure, false);
+        super(container, structure);
 
         f_cMinValue = cMinValue;
         f_cMaxValue = cMaxValue;

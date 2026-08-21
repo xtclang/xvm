@@ -60,7 +60,7 @@ import org.xvm.util.Lazy;
  */
 public class xConst
         extends ClassTemplate {
-    public xConst(Container container, ClassStructure structure, boolean fInstance) {
+    public xConst(Container container, ClassStructure structure) {
         super(container, structure);
 
         // NativeContainer still supports the legacy reflective constructor shape

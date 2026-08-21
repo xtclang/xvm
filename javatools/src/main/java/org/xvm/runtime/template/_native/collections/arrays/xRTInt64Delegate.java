@@ -17,7 +17,7 @@ import org.xvm.runtime.template.numbers.xInt64;
  */
 public class xRTInt64Delegate
         extends LongDelegate {
-    public xRTInt64Delegate(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTInt64Delegate(Container container, ClassStructure structure) {
         super(container, structure, true);
     }
 

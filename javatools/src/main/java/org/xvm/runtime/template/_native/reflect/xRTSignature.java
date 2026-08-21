@@ -39,7 +39,7 @@ import org.xvm.util.Lazy;
  */
 public class xRTSignature
         extends ClassTemplate {
-    public xRTSignature(Container container, ClassStructure structure, boolean fInstance) {
+    public xRTSignature(Container container, ClassStructure structure) {
         super(container, structure);
     }
 

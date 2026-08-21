@@ -41,8 +41,8 @@ public class xBit
         return NativeTemplates.get(container).bit();
     }
 
-    public xBit(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+    public xBit(Container container, ClassStructure structure) {
+        super(container, structure);
     }
 
     @Override
