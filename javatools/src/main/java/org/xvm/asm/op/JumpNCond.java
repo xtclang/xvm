@@ -47,13 +47,11 @@ public class JumpNCond
 
     @Override
     protected int processUnaryOp(Frame frame, int iPC) {
-        if (m_cond == null) {
-            m_cond = frame.getConstant(m_nArg, ConditionalConstant.class);
-        }
+        // Resolve from the current frame instead of caching on the shared Op. If a decoded method
+        // graph is reused under another owner, an Op field would keep the first frame's pool.
+        ConditionalConstant cond = frame.getConstant(m_nArg, ConditionalConstant.class);
 
         LinkerContext ctx = frame.f_context.getLinkerContext();
-        return !m_cond.evaluate(ctx) ? jump(frame, iPC + m_ofJmp, m_cExits) : iPC + 1;
+        return !cond.evaluate(ctx) ? jump(frame, iPC + m_ofJmp, m_cExits) : iPC + 1;
     }
-
-    private ConditionalConstant m_cond;
 }

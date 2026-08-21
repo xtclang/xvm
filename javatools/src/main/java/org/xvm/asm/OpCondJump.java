@@ -196,7 +196,9 @@ public abstract class OpCondJump
     protected TypeConstant calculateCommonType(Frame frame) {
         TypeConstant typeCommon = m_typeCommon;
         if (typeCommon == null) {
-            m_typeCommon = typeCommon = frame.getConstant(m_nType, TypeConstant.class);
+            // Do not cache the frame constant on the shared Op. The local-constant lookup is an
+            // indexed array read, while an Op field can pin the first runtime owner's pool.
+            typeCommon = frame.getConstant(m_nType, TypeConstant.class);
         }
         return frame.resolveType(typeCommon);
     }
@@ -704,7 +706,8 @@ public abstract class OpCondJump
     protected int m_nArg2;
     protected int m_ofJmp;
 
-    protected TypeConstant m_typeCommon; // the type to use for the comparison
+    // Assembly-time type argument. Runtime execution resolves m_nType from the current Frame.
+    protected TypeConstant m_typeCommon;
     private   Argument     m_argVal;
     private   Argument     m_argVal2;
     private   Op           m_opDest;

@@ -206,6 +206,31 @@ ambient pool, and wrong ambient scopes fail under assertions. This is a guard an
 ownership-visibility change, not a cache-policy change: all constants are still
 interned in the same per-owner `ConstantPool` as before.
 
+### Runtime-Executed `Op` Frame-Constant Caches
+
+This branch removes owner-bearing frame-constant caches from runtime-executed
+op-code objects:
+
+- `JumpCond` and `JumpNCond` no longer store a `ConditionalConstant` in
+  `m_cond`. They resolve the condition from the current `Frame` on each
+  execution.
+- `OpTest.calculateCommonType(...)` and
+  `OpCondJump.calculateCommonType(...)` no longer assign
+  `frame.getConstant(m_nType, TypeConstant.class)` back to `m_typeCommon`.
+
+The old pattern was unsafe if a decoded method/op graph is reused across
+containers or constant pools: the first execution could write an owner-specific
+constant into the shared op, and later execution could read that first owner's
+constant. The replacement is deliberately small. `Frame.getConstant(...)` is an
+indexed local-constant array lookup; the expensive type resolution and condition
+evaluation remain exactly where they were and continue to use the current
+frame/container owner. `m_typeCommon` remains for assembly-time source ops and is
+encoded to `m_nType` before runtime execution.
+
+`javatools/src/test/java/org/xvm/asm/OpRuntimeCacheTest.java` verifies that the
+condition fields are gone and guards against reintroducing the old common-type
+write-back pattern.
+
 ### Constructor-Published Native Template `INSTANCE`
 
 These master sites assigned `INSTANCE = this` from constructors and now resolve

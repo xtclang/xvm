@@ -286,7 +286,7 @@ can be ignored.
 | 1 | Adoption/clone validator assertions | Done in this branch wave. The shallow-clone bug is proven, dangerous, and the reusable validator catches copied handles, locks, thread locals, and owner references while later work runs stress. | `ConstantAdoptionTest` proves direct detection and opt-in `ConstantPool.register(...)` failure for a default shallow-cloned helper reference. |
 | 2 | `ConstantPool` late-mutation guard | Done in this branch wave. Hidden late mutation now becomes an immediate diagnostic instead of a stale-owner symptom when `xvm.asm.validateConstantPoolLateRegistration` is enabled. | `ConstantPoolDiagnosticsTest` proves existing constants still return after publication and new registrations fail before publication into the pool. Diagnostic same-JVM stress now identifies `ClassComposition` access-type registration as the next warmup/design target. |
 | 3 | Ambient `ConstantPool` lookup cleanup | Done in this branch wave for runtime boundaries. `InterpreterConnector.invoke0(...)` now uses the main container's explicit pool, native startup no longer uses raw current-pool mutation, and the remaining runtime scoped bridges assert that the scoped pool matches the explicit owner. | `ConstantPoolDiagnosticsTest` covers exact scoped-owner assertions, explicit-owner calls with no ambient pool, and wrong-scope failures. Source scan now shows no runtime/API callers of raw `setCurrentPool(...)`; the method itself was removed. |
-| 4 | Runtime-executed `Op` caches | These are the most suspicious remaining runtime hot-path caches. They must either be proven method-owner confined or keyed/removed before claiming parallel containers are safe. | Run the same compiled method through two containers in one JVM and validate no op cache points at the wrong pool; add source/diagnostic checks for owner-bearing op fields. |
+| 4 | Runtime-executed `Op` caches | Done in this branch wave for owner-bearing frame-constant caches. `JumpCond`/`JumpNCond` no longer cache `ConditionalConstant` on the op, and `OpTest`/`OpCondJump` no longer write frame type constants back to `m_typeCommon` during execution. | `OpRuntimeCacheTest` verifies the condition fields are gone and guards against the old common-type write-back pattern. Same-JVM sequence and parallel stress exercise these op paths under runtime ownership validation. |
 | 5 | Manual lazy null caches in runtime/asm | After the obvious owner boundaries are explicit, convert the remaining owner-bearing `if (field == null) field = ...` caches to final `Lazy`, `Lazy.Owner`, owner-local tables, or `ConcurrentMap`. | For each converted cache, add or update a test that exercises two owners and verifies cache identity/owner separation and unchanged repeated-call caching. |
 | 6 | Thread-local and scoped ambient state | This is broader and should come after explicit-owner cleanup identifies the real remaining bridge points. The target is lexical scoped ownership, not another hidden global cache. | Add cleanup/scope tests for each bridge and assertions that no owner-bearing runtime value is stored in the ambient scope object. |
 | 7 | Weak/identity owner registries | These usually require lifecycle reasoning and should be handled after the core wrong-owner paths are closed. Some may be diagnostic-only, but each one needs an owner/lifetime contract. | Add concurrency or lifecycle tests for every registry that is used outside a single owner thread; document allowlisted diagnostic-only maps. |
@@ -379,9 +379,29 @@ Required closure:
 - Add tests that run the same method/module through two containers and validate
   no op cache contains the wrong owner.
 - If confinement cannot be proven, remove the field cache and resolve from the
-  current frame, or key the cache by `ConstantPool`/owner.
+  current frame, or key the cache by `ConstantPool`/owner. This branch used the
+  simpler removal for frame constants: `Frame.getConstant(...)` is an indexed
+  local-constant lookup, while `resolveType(...)` and condition evaluation still
+  use the same owner-local machinery as before.
 - Keep eager address/link caches only with documented link-before-publication
   ordering.
+
+Completed in this branch:
+
+- `JumpCond` and `JumpNCond` resolve the `ConditionalConstant` from the current
+  `Frame` on each execution and no longer hold `m_cond`.
+- `OpTest.calculateCommonType(...)` and
+  `OpCondJump.calculateCommonType(...)` resolve `m_nType` from the current
+  `Frame` when the op was deserialized. They do not write that value to the
+  shared op object.
+- `m_typeCommon` remains as an assembly-time source-op argument field. It is
+  encoded to `m_nType` during write/registration; it is not a runtime cache for
+  deserialized methods.
+
+The separate address/link fields (`m_opDest`, `m_aOpCase`, `m_aOpCatch`) are
+not frame-constant caches. They link ops inside one method graph. They remain a
+must-audit category for eager link-before-publication ordering, not a known
+cross-pool owner leak from this wave.
 
 ### Manual Lazy Null Caches
 
