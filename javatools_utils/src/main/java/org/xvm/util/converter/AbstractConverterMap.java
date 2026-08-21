@@ -18,17 +18,17 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
     /**
      * The converter keySet.
      */
-    protected final Set<K> keys;
+    protected volatile Set<K> keys;
 
     /**
      * The converter values.
      */
-    protected final Collection<V> values;
+    protected volatile Collection<V> values;
 
     /**
      * The converter entrySet.
      */
-    protected final Set<Entry<K, V>> entries;
+    protected volatile Set<Entry<K, V>> entries;
 
     /**
      * Construct a {@link AbstractConverterMap}.
@@ -37,9 +37,6 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
      */
     protected AbstractConverterMap(Map<SK, SV> storage) {
         this.storage = storage;
-        keys = newKeySet();
-        values = newValues();
-        entries = newEntrySet();
     }
 
     /**
@@ -172,16 +169,45 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
 
     @Override
     public Set<K> keySet() {
+        Set<K> keys = this.keys;
+        if (keys == null) {
+            synchronized (this) {
+                keys = this.keys;
+                if (keys == null) {
+                    // Subclasses override the view factories. Build views after construction so a
+                    // subclass override cannot observe a partially initialized subclass instance.
+                    this.keys = keys = newKeySet();
+                }
+            }
+        }
         return keys;
     }
 
     @Override
     public Collection<V> values() {
+        Collection<V> values = this.values;
+        if (values == null) {
+            synchronized (this) {
+                values = this.values;
+                if (values == null) {
+                    this.values = values = newValues();
+                }
+            }
+        }
         return values;
     }
 
     @Override
     public Set<Entry<K, V>> entrySet() {
+        Set<Entry<K, V>> entries = this.entries;
+        if (entries == null) {
+            synchronized (this) {
+                entries = this.entries;
+                if (entries == null) {
+                    this.entries = entries = newEntrySet();
+                }
+            }
+        }
         return entries;
     }
 

@@ -38,6 +38,15 @@ public class WeakHasherMapTest {
     }
 
     @Test
+    void shouldCacheViews() {
+        Map<Integer, String> map = new WeakHasherMap<>(Hasher.natural());
+
+        assertSame(map.keySet(), map.keySet());
+        assertSame(map.values(), map.values());
+        assertSame(map.entrySet(), map.entrySet());
+    }
+
+    @Test
     void souldRetainAll() {
         Map<Integer, String> map = new WeakHasherMap<>(Hasher.natural());
         Map<Integer, String> map2 = new HashMap<>();
