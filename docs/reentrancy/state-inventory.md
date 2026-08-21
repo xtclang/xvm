@@ -10,6 +10,10 @@ The distinction matters:
 - Actual races and wrong-owner caches are must-fix correctness defects.
 - Constructor publication and split lifecycle state are must-fix publication
   defects even when a crash is hard to reproduce.
+- Must-audit items are not yet proven broken, but they depend on an owner,
+  thread-confinement, or same-JVM reset assumption that is not encoded in the
+  API. The repository-wide list is maintained in
+  [must-audit-backlog.md](must-audit-backlog.md).
 - Unnecessarily mutable fields, mutable arrays, and misleading names are
   should-fix design debt. They make the real races harder to see and make
   reentrant code harder to review, but they are not always independent runtime
@@ -35,8 +39,9 @@ independent bug.
 | Must fix | Mutable template `INSTANCE` fields and `INSTANCE = this` constructors | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes all 143 fields and all 139 constructor assignments. | Process-global last-writer-wins template lookup; constructor `this` escape; wrong container/pool can be observed | `NativeTemplates` central key table, existing container template cache, plus owner-scoped lazy lookup |
 | Must fix | Static runtime metadata caches | `master`: 151 field-shaped runtime/template static metadata hits after excluding `INSTANCE`; this branch fixes all 151 and leaves 0 in the scanned runtime-template/Utils category. | `TypeConstant`, `TypeComposition`, `MethodStructure`, handles, and `xEnum` values are pool/container/runtime state, not JVM-global constants | Final `Lazy` fields on the owning template, immutable grouped info records, or a container-owned cache |
 | Must fix | Split mutable lifecycle state | Old `SingletonConstant` used separate handle/owner/waiter fields | Readers can observe impossible lifecycle snapshots across fibers | One immutable state snapshot in `AtomicReference`; use CAS for transitions |
+| Must fix | Shallow-copied transient runtime state during constant adoption | Known fixed sites: `SingletonConstant.f_state`, `FSNodeConstant.m_handle`, `FileStoreConstant.m_handle` | A constant adopted into a different pool can carry runtime state owned by the source pool | Override adoption to construct fresh runtime state, or clear cloned transient fields at the owner boundary |
 | Must fix | Natural enum construction structs escaping public paths | PR #534 enum struct mismatch | A caller can observe a construction struct where an immutable enum value is required | Public enum helpers that return initialized singletons or deferred results |
-| Must fix | Unsynchronized lazy null caches in shared runtime state | 98 field-shaped checks; 47 strong same-field lazy-init matches | Plain field read/write has no happens-before edge and can publish partial state | Final `Lazy` for immutable values; `ConcurrentMap.computeIfAbsent` for keyed caches; `AtomicReference` or a lock for lifecycle/resettable state |
+| Must audit, must fix when owner-shared | Unsynchronized lazy null caches in shared runtime or compiler state | 98 field-shaped checks; 47 strong same-field lazy-init matches across `javatools/src/main/java`; 27 in runtime/asm | Plain field read/write has no happens-before edge and can publish partial, duplicate, stale, or wrong-owner state | Final `Lazy` for immutable values; `ConcurrentMap.computeIfAbsent` for keyed caches; `AtomicReference` or a lock for lifecycle/resettable state |
 | Should fix soon | Non-final static compiler/JIT globals | 4 non-final static fields across runtime/asm/compiler; 8 across all Java sources | The remaining hits are not owner-bearing runtime caches, but plain static mutation is still shared process state with no reset story and weak parallel/incremental compiler semantics | Delete, make `static final` immutable, move to the code/container owner, or guard resettable process state with a lock/atomic holder |
 | Should fix soon | `volatile` as partial synchronization | 21 `volatile` hits in runtime/asm/compiler | `volatile` orders one variable; it does not make a group of fields or mutable map contents atomic | Keep only for independent scalar state; otherwise use immutable state snapshots, `ConcurrentMap`, or synchronized critical sections |
 | Should fix soon | Static mutable collection fields | 11 `static final` collection/resource-like fields; 0 non-final static collection/resource-like fields | `final` protects the reference, not the collection contents; global mutable maps need an update policy | `Map.of`/`Set.of`/`List.of` or `Collections.unmodifiable*` for constants; `ConcurrentMap` with documented key ownership for real caches |
@@ -45,8 +50,8 @@ independent bug.
 | Should fix soon | Thread-local hidden global context | 17 `ThreadLocal`/`TransientThreadLocal` hits in runtime/asm/compiler | Thread locals hide dependencies, can leak scope across pooled threads, and make reentrancy depend on cleanup discipline | Prefer explicit context parameters or owner-scoped stacks; if unavoidable, use scoped `try/finally remove()` wrappers |
 | Should fix soon | Weak/identity mutable maps | 12 `WeakHashMap`/`IdentityHashMap` construction hits in runtime/asm/compiler | These maps are not concurrent and their semantics are easy to misuse as global caches | Confine to one owner/thread, synchronize, or use the project's concurrent weak-map helper where sharing is intended |
 | Should fix | Constant-looking non-final public statics | 0 public non-final uppercase/static constant-shaped fields across runtime/asm/compiler; 3 across all Java sources | They look immutable in review but can be reassigned and are not safely published as constants | `public static final` immutable values, private owner-scoped state, or accessor methods |
-| Should fix / must audit | Owner-local mutable metadata fields | 178 non-final runtime/asm metadata fields of type `TypeConstant`, `TypeComposition`, `MethodStructure`, handle, template, or enum in the 2026-08-21 branch audit | Some are valid lifecycle fields, but many are ad hoc first-use caches with no publication story | Final eager fields, final `Lazy`, `ConcurrentMap`, or explicit lifecycle state depending on semantics |
-| Should fix | Rare non-final `f_` fields | 2 direct hits | No written naming standard was found, but source usage strongly suggests `f_` normally denotes fixed/final owner state; exceptions are review hazards | Make final if immutable; otherwise rename to `m_` and document the mutation |
+| Must audit | Owner-local mutable metadata fields | 178 non-final runtime/asm metadata fields of type `TypeConstant`, `TypeComposition`, `MethodStructure`, handle, template, or enum in the 2026-08-21 branch audit | Some are valid lifecycle fields, but many are ad hoc first-use caches with no publication story | Final eager fields, final `Lazy`, `ConcurrentMap`, or explicit lifecycle state depending on semantics |
+| Should fix | Rare non-final `f_` fields | 2 direct hits | Project author guidance says `f_` is intended for fixed/final fields. Mutable exceptions are review hazards because callers may assume Java final-field semantics that are not actually present. | Make final if immutable; otherwise rename to `m_` and document the mutation |
 
 `Lazy` is only one replacement. It is the right default for immutable values
 that are expensive or inconvenient to compute during construction. It is not
@@ -65,10 +70,17 @@ this" rules.
 
 ## Policy
 
-Prefer final state when the value has one owner and one final result:
+Prefer final state when the value has one owner and one final result. For
+constructor-created runtime/template owner state, prefer owner-passed lazy cells
+so field initializers do not capture a partially constructed receiver:
 
 ```java
-private final Lazy<Info> f_info = Lazy.of(this::createInfo);
+private final Lazy.Owner<MyTemplate, Info> f_info =
+        Lazy.ofOwner(MyTemplate::createInfo);
+
+Info info() {
+    return f_info.get(this);
+}
 ```
 
 Avoid mutable lazy state:
@@ -90,7 +102,9 @@ containers, frames, services, and reflection helpers should not assume that.
 
 Choose the replacement by semantics:
 
-- Immutable, unkeyed, owner-derived metadata: final `Lazy<T>`.
+- Immutable, unkeyed, owner-derived metadata: final `Lazy.Owner<O, T>` when
+  built in the owner constructor, or final `Lazy<T>` when the supplier does not
+  capture a constructing receiver.
 - Immutable, keyed metadata: `ConcurrentMap<K, Lazy<V>>` or
   `ConcurrentMap.computeIfAbsent`, owned by the correct container/pool/template.
 - Resettable or in-progress lifecycle state: immutable state record held by
@@ -195,7 +209,7 @@ Audit commands:
 ```bash
 rg -n "==\s*null|null\s*==" javatools/src/main/java | wc -l
 rg -n --pcre2 "if\s*\(\s*(?:this\.)?(?:m_|s_|f_)[A-Za-z][A-Za-z0-9_]*\s*==\s*null\s*\)" javatools/src/main/java | wc -l
-rg -U --pcre2 -c "if\s*\(\s*((?:this\.)?(?:m_|s_|f_)[A-Za-z][A-Za-z0-9_]*)\s*==\s*null\s*\)\s*\{[\s\S]{0,240}\1\s*=" javatools/src/main/java | awk -F: '{s+=$2} END {print s}'
+rg -U --pcre2 -c "if\s*\(\s*((?:this\.)?(?:m_|s_|f_)[A-Za-z][A-Za-z0-9_]*)\s*==\s*null\s*\)\s*\{[\s\S]{0,320}\1\s*=(?!=)" javatools/src/main/java | awk -F: '{s+=$2} END {print s}'
 ```
 
 Current counts:
@@ -217,6 +231,14 @@ triaged:
 - If it is truly thread-confined, document the confinement.
 
 Field-shaped lazy-null checks:
+
+The current branch classification is maintained in
+[manual-lazy-cache-audit.md](manual-lazy-cache-audit.md). The short version is
+that synchronized `forType(...)` association helpers and frame/debug lifecycle
+slots are not first-PR blockers, while runtime-executed `Op` caches such as
+`JumpCond.m_cond`, `JumpNCond.m_cond`, and `OpTest.m_typeCommon` are a
+follow-up must-audit slice because they can become wrong-owner caches if decoded
+op graphs are reused across container or pool owners.
 
 ```text
 javatools/src/main/java/org/xvm/asm/ConstantPool.java:3652:        if (m_typeNakedRef == null) {
@@ -473,7 +495,8 @@ Why this is bad design:
 
 Proper replacements:
 
-- Immutable metadata with one owner: final `Lazy<T>`.
+- Immutable metadata with one owner: final `Lazy.Owner<O, T>` for constructor
+  fields, or final `Lazy<T>` when the supplier is not a receiver capture.
 - Several related metadata values that must come from the same owner:
   final `Lazy<InfoRecord>` where `InfoRecord` groups them.
 - Keyed metadata: owner-owned `ConcurrentMap<K, V>` or
@@ -539,6 +562,41 @@ private final transient AtomicReference<InitState> f_state =
 `InitState` contains the handle, owner fiber, and waiter future. Local variables
 named `cfInitialized` or `fiberInitializing` are not the problem; the old
 problem was storing those pieces as independent mutable fields.
+
+### Must Fix: Runtime State Copied By Constant Adoption
+
+`ConstantPool.register(...)` can adopt a constant from one pool into another
+pool. The legacy adoption path relies on `Object.clone()`, which shallow-copies
+all fields. That is acceptable only for logical constant value state that is
+then re-registered into the target pool. It is not acceptable for transient
+runtime state.
+
+The parallel `TestProps` failure proved the hazard. `SingletonConstant` had a
+final `AtomicReference<InitState>` that was correct for one owner, but the
+adopted constant shared that same mutable state cell with the source constant.
+After the first owner initialized a module/package/property singleton, the
+second owner could receive the first owner's completed handle graph. The visible
+failure was a lazy property appearing already assigned in a fresh container; the
+cause was wrong-owner singleton state.
+
+The same category applies to direct transient handles. `FSNodeConstant.m_handle`
+and `FileStoreConstant.m_handle` are runtime handles, not serialized XTC
+constant values. They must not survive adoption into a different pool.
+
+Proper replacement:
+
+- Prefer explicit adoption/copy constructors that copy logical constant value
+  fields and create fresh runtime state.
+- Where the existing clone path is retained for now, clear every transient
+  owner-bearing runtime field immediately in `adoptedBy(...)`.
+- Treat `AtomicReference`, `ObjectHandle`, `TypeComposition`, `ClassTemplate`,
+  `ServiceContext`, `Fiber`, and `CompletableFuture` fields on constants as
+  non-copyable unless there is a documented process-global invariant.
+- Add adoption tests whenever a constant class gains runtime state: source state
+  remains intact, adopted copy starts empty.
+
+The detailed incident and proof are in
+[stress-discovered-runtime-issues.md#adopted-singletonconstant-runtime-state-leak](stress-discovered-runtime-issues.md#adopted-singletonconstant-runtime-state-leak).
 
 ### Should Fix Soon: Volatile As Partial Synchronization
 
@@ -628,7 +686,7 @@ Proper replacements:
 - Immutable lookup tables: `Map.of`, `Map.copyOf`, `Set.of`, `List.of`, or
   unmodifiable wrappers after construction.
 - Container/pool/template keyed caches: owner-owned `ConcurrentMap`.
-- One-time grouped metadata: final `Lazy<InfoRecord>`.
+- One-time grouped metadata: final owner-passed lazy `InfoRecord`.
 - Resettable resources such as timers: explicit lifecycle owner plus close or
   reset semantics.
 
@@ -873,18 +931,18 @@ Current count:
 2 non-final f_ fields
 ```
 
-Naming-convention note: no formal XVM Java naming document was found in this
-repo. The claim here is based on observed source usage, not a written standard.
-An explicit declaration scan found hundreds of final `f_` field declarations
-and only the two non-final declarations below with access modifiers. That makes
-non-final `f_` fields unusual enough to be review hazards, even if the prefix
-is not formally specified.
+Naming-convention note: project author guidance says `f_` means fixed/final,
+while `m_` means mutable member. An explicit declaration scan found hundreds of
+final `f_` field declarations and only the two non-final declarations below
+with access modifiers. That makes non-final `f_` fields review hazards because
+readers can infer final-field safety that the Java declaration does not
+provide.
 
 Current hits:
 
 ```text
-javatools/src/main/java/org/xvm/runtime/ServiceContext.java:2027:        private long      f_ldtScheduled; // when
-javatools/src/main/java/org/xvm/runtime/template/_native/web/xRTConnector.java:362:        protected SSLContext f_sslContext;
+javatools/src/main/java/org/xvm/runtime/ServiceContext.java:2031:        private long      f_ldtScheduled; // when
+javatools/src/main/java/org/xvm/runtime/template/_native/web/xRTConnector.java:358:        protected SSLContext f_sslContext;
 ```
 
 Why this is bad design:
@@ -951,8 +1009,8 @@ Proper replacements:
 
 | Current pattern | Use `Lazy`? | Better mechanism when `Lazy` is wrong |
 | --- | --- | --- |
-| `private T m_x; if (m_x == null) m_x = compute();` where `T` is immutable owner-derived metadata | Yes, `private final Lazy<T>` | Eager final field if cheap |
-| Several caches computed from the same container/pool | Yes, but group them | `private final Lazy<InfoRecord>` |
+| `private T m_x; if (m_x == null) m_x = compute();` where `T` is immutable owner-derived metadata | Yes, `private final Lazy.Owner<O,T>` for owner-constructor fields | Eager final field if cheap |
+| Several caches computed from the same container/pool | Yes, but group them | Final owner-passed lazy `InfoRecord` |
 | Cache keyed by `TypeConstant`, `ClassConstant`, or other owner identity | Sometimes | Owner-owned `ConcurrentMap<K, V>` or `ConcurrentMap<K, Lazy<V>>` |
 | Singleton construction that can suspend or recurse | No | `AtomicReference<State>` plus CAS, or a lock and condition/future |
 | Timer, terminal, socket, file watcher, or external resource | No | Explicit lifecycle owner with start/stop/close and synchronized access |

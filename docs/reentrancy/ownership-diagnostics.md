@@ -61,6 +61,21 @@ Validation traverses the same owner graph as `dump(...)`, but it does not build
 or retain the full textual dump on the success path. Full dump text is reserved
 for explicit `dump(...)` calls and failure logging.
 
+For hot runtime boundaries where the expected owner is known but a full
+container graph scan would be too expensive, validate just the returned handle:
+
+```java
+OwnershipDiagnostics.assertHandleValidIfEnabled(
+        frame.f_context.f_container,
+        "mgmt.Container.invoke module target",
+        hModule);
+```
+
+That helper is controlled by the `xvm.runtime.validateOwnership` system
+property. It is intended for stress and diagnostic runs, not normal production
+execution. `manualTests:runParallelStress` enables it so wrong-owner module
+targets fail at the native boundary that produced them.
+
 ## What It Dumps
 
 For each container, the dump includes:
@@ -100,6 +115,13 @@ This allowance applies only to the inspected container's own native parent. It
 does not allow a main container from run N to point at run N-1's native
 container, and it does not allow arbitrary owner-scoped values to be shared
 between two main containers.
+
+The same native-parent allowance applies to constant-heap handle values. A main
+container's constant heap can memoize canonical native-parent values such as
+small `Char`, `Int`, `Boolean`, `String`, and native enum handles. Those are not
+cross-run leaks when their owner is the current container's own
+`NativeContainer`. They are still rejected if they come from another main
+container or another runtime's native parent.
 
 The traversal also changes expectation at the boundary. If a main container's
 cache points at a native-owned template, the nested lazy fields of that template
@@ -153,6 +175,19 @@ not to crash. The recent-container window catches direct cross-run sharing
 without making the diagnostic harness retain every completed runtime graph in a
 long all-module stress run. The default window is six containers and can be
 overridden with the `org.xtclang.directRuntimeOwnershipWindow` system property.
+
+`manualTests:runParallelStress` also enables the lightweight fail-fast property:
+
+```text
+-Dxvm.runtime.validateOwnership=true
+```
+
+That caught the `TestProps` adoption leak as an owner mismatch at
+`mgmt.Container.invoke` before the run reached the later
+`!&lazyInstance.assigned` assertion. The lesson is important for future
+debugging: a high-level XTC state failure can be downstream of an owner leak in
+a handle graph. When a parallel-only failure looks impossible at the language
+level, enable ownership validation and check the first wrong-owner boundary.
 
 ## Limitations
 

@@ -18,8 +18,9 @@ and lazy-publication counts are scan signals generated on branch
 | Must fix | Mutable native template `INSTANCE` fields | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes all 143 fields and all 139 constructor assignments. | Last writer wins across containers; constructor `this` escape | `NativeTemplates` central key table, existing container template cache, plus container/frame lookup |
 | Must fix | Static runtime-owned metadata | `master`: 151 field-shaped runtime/template static metadata fields after excluding `INSTANCE`. This branch fixes all 151 and leaves 0 in the scanned runtime-template/Utils category. | Type/composition/method/handle values from one owner reused in another owner | Owner-scoped final `Lazy`, grouped info records, or owner-owned `ConcurrentMap` |
 | Must fix | Raw enum handles returned through public/native paths | Branch remainder: 14 raw accessor references, all protected/internal in `xEnum` or owner-local native enum factories in `xBoolean`, `xNullable`, and `xOrdered` | Natural enum construction struct escapes as if it were the finalized enum singleton | `ensureEnumByName`, `ensureEnumByOrdinal`, or `Utils.ensureInitializedEnum` on public paths |
-| Must fix | Manual lazy publication in shared runtime/asm objects | 111 strong same-field lazy-init matches in runtime/asm | Plain field read/write with no happens-before edge; duplicate, stale, partial, or wrong-owner state | Final `Lazy`, `ConcurrentMap.computeIfAbsent`, or explicit atomic/locked state |
+| Must audit, must fix when owner-shared | Manual lazy publication in shared runtime/asm objects | 27 strong same-field lazy-init matches in runtime/asm; 47 across all Java sources | Plain field read/write with no happens-before edge; duplicate, stale, partial, or wrong-owner state | Final `Lazy`, `ConcurrentMap.computeIfAbsent`, or explicit atomic/locked state |
 | Must fix | Split lifecycle state across several fields | `SingletonConstant` was the known concrete case and is fixed in this branch | Fibers see mixed handle/owner/waiter state; false recursion or missed wait | One immutable state snapshot in `AtomicReference<State>` or one lock |
+| Must fix | Runtime state shallow-copied during constant adoption | `SingletonConstant`, `FSNodeConstant`, and `FileStoreConstant` are fixed in this branch | A constant registered into pool B carries pool A's runtime handle/state cell | Adoption must copy only logical constant value state; transient runtime state must be fresh or cleared |
 
 ## Mutable Template INSTANCE
 
@@ -110,7 +111,9 @@ Why this is broken:
 
 Required replacement:
 
-- Unkeyed metadata: final `Lazy<T>` on the owning template.
+- Unkeyed metadata: final owner-local lazy state on the owning template. Use
+  `Lazy.Owner<O,T>` for constructor-created owner-derived fields so the lazy
+  cell does not capture `this` while the owner is still under construction.
 - Related metadata: final `Lazy<InfoRecord>` that computes all values from the
   same owner.
 - Keyed metadata: owner-owned `ConcurrentMap<K, V>` or
@@ -228,6 +231,49 @@ valuable because it turns hidden representation and ownership assumptions into
 observable crashes. Future waves should continue to record any such finding as a
 separate issue with a focused reproducer and a post-fix stress command.
 
+## Shallow-Cloned Constant Runtime State
+
+Status: exact defect category, fixed for the known owner-bearing constant
+runtime fields in this branch.
+
+`Constant.adoptedBy(...)` is the owner-transfer boundary for registering a
+constant from one `ConstantPool` into another. The base implementation uses
+`Object.clone()`, which shallow-copies fields. That is dangerous for any
+constant field that is not part of the serialized logical constant value but is
+instead a runtime cache, handle, owner pointer, lifecycle cell, or mutable
+diagnostic state.
+
+Concrete failure:
+
+- parallel `TestProps` created two child containers from the same module;
+- one container initialized a module/package/property singleton;
+- the other container adopted the same logical `SingletonConstant`;
+- the adopted constant shared the source constant's final
+  `AtomicReference<InitState>`;
+- the second container received a singleton handle graph owned by the first
+  container;
+- `@Lazy` property state then appeared already assigned in the wrong container.
+
+This is not fixed by making the field final. Java final-field semantics safely
+publish the reference value; they do not deep-copy or freeze the mutable object
+behind that reference. Cloning a final reference to mutable owner state shares
+the owner state.
+
+Required replacement:
+
+- For constants with runtime lifecycle state, override adoption and construct a
+  fresh constant for the target pool.
+- For constants whose serialized value can safely use the legacy clone path,
+  clear all transient runtime fields immediately after cloning.
+- Do not copy `ObjectHandle`, `TypeComposition`, `ClassTemplate`,
+  `ServiceContext`, `Fiber`, `CompletableFuture`, `AtomicReference<State>`, or
+  owner-bearing caches across constant-pool adoption.
+- Add a test for every owner-bearing runtime field added to a constant class:
+  source has state, adopted copy starts empty, source state remains intact.
+
+The fixed incident is documented in
+[stress-discovered-runtime-issues.md#adopted-singletonconstant-runtime-state-leak](stress-discovered-runtime-issues.md#adopted-singletonconstant-runtime-state-leak).
+
 ## Manual Lazy Publication
 
 Status: exact defect category when the owner object is shared by runtime
@@ -236,7 +282,7 @@ threads or containers; must-review elsewhere.
 Audit command:
 
 ```bash
-rg -U --pcre2 -c "if\s*\(\s*((?:this\.)?(?:m_|s_)[A-Za-z][A-Za-z0-9_]*)\s*==\s*null\s*\)\s*\{[\s\S]{0,240}\1\s*=" \
+rg -U --pcre2 -c "if\s*\(\s*((?:this\.)?(?:m_|s_|f_)[A-Za-z][A-Za-z0-9_]*)\s*==\s*null\s*\)\s*\{[\s\S]{0,320}\1\s*=(?!=)" \
   javatools/src/main/java/org/xvm/runtime \
   javatools/src/main/java/org/xvm/asm | awk -F: '{s+=$2} END {print s}'
 ```
@@ -244,7 +290,7 @@ rg -U --pcre2 -c "if\s*\(\s*((?:this\.)?(?:m_|s_)[A-Za-z][A-Za-z0-9_]*)\s*==\s*n
 Current count:
 
 ```text
-111 strong same-field lazy-initialization matches in runtime/asm
+27 strong same-field lazy-initialization matches in runtime/asm
 ```
 
 Runtime-template subset after this branch:

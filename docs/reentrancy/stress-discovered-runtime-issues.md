@@ -6,6 +6,214 @@ startup-cache work, but they are not all the same class of bug. The useful rule
 is to keep each failure honest: document the observed crash, the root cause, the
 fix, and the test that proves the specific replacement.
 
+## Adopted `SingletonConstant` Runtime State Leak
+
+Status: fixed in this branch.
+
+Observed failure:
+
+```text
+./gradlew :manualTests:runParallelStress \
+  -PstressIterations=2 \
+  -PstressModules=TestProps
+
+!&lazyInstance.assigned
+```
+
+Running a single `TestProps` copy passed. Running two copies in the parallel
+manual runner failed sporadically after both child containers linked the same
+module into the same parent runtime. The XTC-level assertion made it look like a
+plain `@Lazy` property bug: a fresh module instance in one child container saw a
+lazy reference as already assigned before that container had touched it.
+
+Ownership validation then showed the real shape of the failure before the XTC
+assertion:
+
+```text
+Invalid XVM runtime ownership
+owner-mismatches: 4
+  - mgmt.Container.invoke module target expected=C0 actual=external@... object=PackageHandle@...
+  - [1] expected=C0 actual=external@... object=ProxyHandle@...
+  - [2] expected=C0 actual=external@... object=LazyHandle@...
+  - [1] expected=C0 actual=external@... object=PackageHandle@...
+```
+
+That means container C0 was about to invoke code with a module/package handle
+whose owner was not C0. The leaked `LazyHandle` was only a symptom: the second
+container was reusing another container's module singleton object graph.
+
+### Root Cause
+
+`ConstantPool.register(...)` adopts a constant from one pool into another pool
+by calling `Constant.adoptedBy(...)`. The base implementation uses
+`Object.clone()`. That is already a questionable legacy design, but the concrete
+bug was worse for constants that carry transient runtime state.
+
+`SingletonConstant` now correctly stores singleton initialization in one final
+state cell:
+
+```java
+private final transient AtomicReference<InitState> f_state =
+        new AtomicReference<>(InitState.EMPTY);
+```
+
+The final field fixed the split lifecycle race inside one constant, but
+`Object.clone()` shallow-copied the `AtomicReference` itself. Two adopted
+`SingletonConstant` objects in different pools therefore pointed at the same
+mutable runtime state cell. Once one pool initialized its module, package, or
+property singleton, another pool could observe the same completed handle even
+though that handle was owned by the first container.
+
+This is a useful Java memory-model lesson: a final reference is safely
+published, but it does not make the object referenced by that field immutable or
+owner-local. Cloning a final reference to mutable state intentionally shares the
+state.
+
+The same adoption hazard exists for transient runtime handles on
+`FSNodeConstant` and `FileStoreConstant`. Those classes did not have the
+`AtomicReference` indirection, but the base clone still copied `m_handle` into a
+constant registered under a different pool.
+
+### Replacement
+
+`SingletonConstant.adoptedBy(...)` now constructs a new `SingletonConstant`
+instead of using the base shallow clone:
+
+```java
+protected SingletonConstant adoptedBy(ConstantPool pool) {
+    return new SingletonConstant(pool, f_fmt, m_constClass);
+}
+```
+
+The adopted constant keeps the same logical constant value and class identity,
+and normal constant registration still adopts/registers the referenced class
+constant into the target pool. The runtime initialization cell is fresh and
+empty for the target owner.
+
+`FSNodeConstant.adoptedBy(...)` and `FileStoreConstant.adoptedBy(...)` still use
+the legacy clone path for their serialized constant payload, but immediately
+clear the cloned transient handle:
+
+```java
+that.m_handle = null;
+```
+
+That containment is not a beautiful API. It is the smallest correct patch for
+the current constant-pool design because adoption is the exact owner boundary
+where runtime state must not cross. A cleaner long-term design would replace
+clone-based adoption with explicit copy/adoption constructors that copy only
+constant-pool value state and never copy transient runtime state.
+
+### Ramifications
+
+This fix preserves XTC semantics:
+
+- The logical constants compare/register the same way after adoption.
+- Each pool/container still gets the same runtime singleton cache behavior it
+  had after first initialization: compute once per owner, then reuse.
+- No runtime handle from pool A is carried into pool B.
+- The normal single-container steady state does not allocate extra handles or
+  recompute after initialization.
+- The parallel runner no longer relies on timing to avoid cross-container
+  module/package/property leaks.
+
+It also avoids the larger, rejected workaround that temporarily cloned linked
+`FileStructure` objects in `xContainerLinker`. That workaround added footprint,
+did not address the shared `AtomicReference`, and would still have left any
+other adopted constant with copied transient runtime state. The correct fix is
+at the adoption boundary.
+
+### Regression Proof
+
+The focused Java tests are:
+
+```text
+SingletonConstantTest.adoptedSingletonHasOwnerLocalRuntimeState()
+SingletonConstantTest.adoptedFsNodeClearsOwnerLocalHandle()
+SingletonConstantTest.adoptedFileStoreClearsOwnerLocalHandles()
+OwnershipDiagnosticsTest.validatorRejectsForeignRootHandle()
+OwnershipDiagnosticsTest.validatorWalksHandleFieldGraph()
+```
+
+On the old shallow-clone behavior, the adopted singleton test observes the
+source handle through the adopted constant, and the file-system constant tests
+observe the source runtime handle after adoption. On this branch the adopted
+objects start empty while the source object retains its cache.
+
+The stress command that exposed the bug also passes with ownership validation
+enabled by `manualTests:runParallelStress`:
+
+```bash
+./gradlew :manualTests:runParallelStress \
+  -PincludeBuildLang=false \
+  -PincludeBuildAttachLang=false \
+  -PstressIterations=2 \
+  -PstressModules=TestProps \
+  --console=plain \
+  --warning-mode=all \
+  --no-daemon \
+  --no-configuration-cache
+```
+
+## Direct Sequence Validator Native-Parent False Positive
+
+Status: fixed in the diagnostic validator.
+
+Observed failure while checking repeated same-JVM direct execution:
+
+```text
+./gradlew :manualTests:runDirectSequenceStress \
+  -PsameJvmIterations=2 \
+  -PsameJvmModules=TestProps
+
+Runtime ownership validation failed after module TestProps
+Char{char='0', index=48} expected=C0 actual=external@...
+EnumValueConst{singleton-service=False} expected=C0 actual=external@...
+String{char-string=""} expected=C0 actual=external@...
+```
+
+This did not reproduce the adopted `SingletonConstant` leak. It exposed an
+over-strict diagnostic rule. The constant heap for a main container can legally
+memoize canonical values whose handle composition belongs to that container's
+own `NativeContainer` parent: small chars, ints, booleans, strings, and native
+enum values are examples. The validator already allowed the same
+native-parent-sharing rule for template lookup, because
+`Container.getTemplate(...)` delegates shared core templates to the native
+parent. It had not applied the rule to constant-heap handle values.
+
+### Root Cause
+
+`OwnershipDiagnostics.dumpConstHeap(...)` traversed `Container.f_heap` with a
+strict "everything under C0 must be owned by C0" expectation. That is too
+strong for canonical native-parent runtime values. It correctly catches handles
+from another main container, but it also flagged legal handles from C0's own
+native parent as `external@...` because the native parent is not one of the main
+containers retained by the direct-run stress window.
+
+### Replacement
+
+The const-heap traversal now uses the same narrow native-parent allowance as
+native-template traversal:
+
+```java
+dumpMap("constHeap.entries", readField(heap, "f_mapConstants"),
+        container, 2, true);
+```
+
+That changes only diagnostics. It does not change runtime ownership,
+construction, or caching. The validator still rejects a main container using a
+handle owned by another main container or by another runtime's native parent.
+
+### Ramifications
+
+- Direct same-JVM validation can inspect realistic warmed constant heaps without
+  failing on expected core/native values.
+- The diagnostic still catches the class of bug this branch is fixing: stale
+  owner-scoped values from a previous run or a parallel sibling container.
+- This explains why direct-sequence validation can show many native-parent
+  values even when parallel `TestProps` is fixed. The former is legal canonical
+  sharing; the latter was wrong-owner module singleton state.
+
 ## `StringBuffer` Chunk Mutability Invariant
 
 Status: fixed in this branch.
