@@ -1033,9 +1033,6 @@ state.
 
 Known high-priority leftovers include:
 
-- `xBit.ZERO` and `xBit.ONE`. These are native value handles and should follow
-  the same owner-scoped factory/predicate rule used for Boolean, Nullable, and
-  Ordered.
 - Terminal/debug globals such as `xTerminalConsole.READER`, `TERMINAL`, and
   `DebugConsole`'s equivalent process resources. These are resettable process
   resources, not container metadata, so they need an explicit lifecycle owner
@@ -1053,6 +1050,9 @@ Known high-priority leftovers include:
 - `xBoolean`, `xNullable`, and `xOrdered` are no longer in this TODO: this
   branch keeps their enum value handles in the owning enum template and removes
   the public mutable statics.
+- `xBit` is no longer in this TODO: this branch keeps its zero/one handles in
+  the owning Bit template, preserves eager warmup, and removes the public
+  mutable statics.
 
 Use this audit command for static metadata:
 

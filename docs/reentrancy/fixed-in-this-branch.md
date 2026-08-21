@@ -372,6 +372,7 @@ fields. The branch moves them to owner-scoped final lazy state.
 | `xConst` | `INSTANCE`, helper method caches, construct-method caches, and `HASH_SIG` | `NativeTemplates.constTemplate()`, `f_info: Lazy<ConstInfo>`, and owner-template abstract checks | Must fix |
 | `xException` | `INSTANCE`, well-known exception class compositions, format method, and ownerless `Utils.translate(Throwable)` path | `NativeTemplates.exception()`, `f_info: Lazy<ExceptionInfo>`, static factories resolving from `Frame`/`Container`, and `Utils.translate(Container, Throwable)` | Must fix |
 | `xBoolean`, `xNullable`, `xOrdered` | public mutable native enum value handles: `TRUE`, `FALSE`, `NULL`, `LESSER`, `EQUAL`, `GREATER` | `NativeTemplates.booleanTemplate()`, `nullable()`, and `ordered()` plus owner-required factories and pure value predicates | Must fix |
+| `xBit` | public mutable native value handles: `ZERO`, `ONE`, ownerless `makeHandle(boolean)`, and delegate assignability through `xBit.ZERO.getTemplate()` | `NativeTemplates.bit()`, final owner-local lazy zero/one handles warmed during `initNative()`, owner-required factories, and delegate assignability against the delegate owner's Bit template | Must fix |
 
 These replacements preserve caching. They do not turn old bootstrap caches into
 repeated lookups. The cache key changed from "entire JVM" to "owning
@@ -384,6 +385,14 @@ template keeps the old one-time lookup. `xClass.ensureArrayComposition(Container
 already has the owner as a parameter, so it asks that owner's `ConstantPool` for
 `Array<Class>`; the pool interns the value, preserving the old cache behavior
 without a process-global `TypeConstant`.
+
+The Bit handle wave follows the same value-handle rule as Boolean, Nullable,
+and Ordered, while preserving the old cache behavior: each owning `xBit`
+template still creates and reuses exactly one zero handle and one one handle,
+and `initNative()` still warms both handles. The difference is that those
+handles are no longer JVM-global. The `xRTBitDelegate` assignability check now
+compares an incoming value's template to the delegate owner's Bit template
+instead of comparing to a sample handle from a process-global static.
 
 The `Utils` metadata wave removes the old split static helper block entirely.
 The same templates, constructors, array types, and signatures are still looked
@@ -653,8 +662,8 @@ and is empty on this branch.
 The scanned runtime-template/Utils static metadata category is also empty on
 this branch. Remaining global-state backlog now lives in the broader categories
 documented in [state-inventory.md](state-inventory.md), such as terminal/debug
-process resources, `ClassTemplate`'s exposed mutable string arrays, `xBit.ZERO`
-and `xBit.ONE`, and compiler/JIT counters/constants.
+process resources, `ClassTemplate`'s exposed mutable string arrays, and
+compiler/JIT counters/constants.
 
 ## Proof Points Added By This Branch
 
@@ -668,6 +677,8 @@ contains deterministic demonstrations of the old pattern:
 - static string factories can return handles owned by the wrong container,
 - static native enum value factories can return handles owned by the wrong
   container,
+- static Bit value factories can return handles owned by the wrong container,
+  and the old delegate template check can accept that foreign Bit owner,
 - static Ref signature caches can invoke a Ref handle with a foreign owner
   signature,
 - derived Ref/Var templates fail if they compute `get`/`set` metadata from their

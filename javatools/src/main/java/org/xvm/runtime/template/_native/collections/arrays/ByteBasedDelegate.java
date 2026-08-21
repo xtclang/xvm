@@ -22,7 +22,6 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.xBit;
 import org.xvm.runtime.template.numbers.xInt8;
 import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xUInt8;
@@ -433,7 +432,7 @@ public abstract class ByteBasedDelegate
             ClassTemplate templateValue = hValue.getTemplate();
             var           templates     = getComposition().getContainer().nativeTemplates();
             return switch (getTemplate()) {
-                case xRTBitDelegate     _ -> templateValue == xBit.ZERO.getTemplate();
+                case xRTBitDelegate     _ -> templateValue == templates.bit();
                 case xRTBooleanDelegate _ -> templateValue == templates.booleanTemplate();
                 case xRTInt8Delegate    _ -> templateValue == templates.int8();
                 case xRTUInt8Delegate   _ -> templateValue == templates.uint8();

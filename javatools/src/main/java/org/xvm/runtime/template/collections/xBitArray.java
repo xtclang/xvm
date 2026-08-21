@@ -57,10 +57,10 @@ public class xBitArray
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         switch (sPropName) {
         case "Zero":
-            return frame.assignValue(iReturn, xBit.ZERO);
+            return frame.assignValue(iReturn, xBit.makeHandle(frame, false));
 
         case "One":
-            return frame.assignValue(iReturn, xBit.ONE);
+            return frame.assignValue(iReturn, xBit.makeHandle(frame, true));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

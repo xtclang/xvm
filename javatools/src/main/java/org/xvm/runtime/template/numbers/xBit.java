@@ -13,6 +13,7 @@ import org.xvm.asm.constants.ByteConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
@@ -24,20 +25,32 @@ import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.text.xString;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native Bit implementation.
  */
 public class xBit
         extends xConst {
+    public static xBit getInstance(Frame frame) {
+        return NativeTemplates.get(frame).bit();
+    }
+
+    public static xBit getInstance(Container container) {
+        return NativeTemplates.get(container).bit();
+    }
+
     public xBit(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure, false);
     }
 
     @Override
     public void initNative() {
-        ZERO = new JavaLong(getCanonicalClass(), 0);
-        ONE  = new JavaLong(getCanonicalClass(), 1);
+        // Preserve the old eager Bit handle cache warmup, but keep the handles owned by this
+        // template's container instead of publishing them in mutable process globals.
+        zeroHandle();
+        oneHandle();
 
         markNativeMethod("toBoolean", VOID, new String[]{"Boolean"});
         markNativeMethod("toUInt8"  , null, new String[]{"numbers.UInt8"}); // Byte
@@ -60,10 +73,11 @@ public class xBit
     @Override
     public int createConstHandle(Frame frame, Constant constant) {
         if (constant instanceof IntConstant constInt) {
-            return frame.pushStack(makeHandle(constInt.getValue().getLong() != 0L));
+            return frame.pushStack(makeHandle(frame, constInt.getValue().getLong() != 0L));
         }
         if (constant.getFormat() == Format.Bit) {
-            return frame.pushStack(makeHandle(((ByteConstant) constant).getValue().intValue() != 0));
+            return frame.pushStack(makeHandle(frame,
+                    ((ByteConstant) constant).getValue().intValue() != 0));
         }
         return super.createConstHandle(frame, constant);
     }
@@ -75,7 +89,7 @@ public class xBit
             try {
                 long lBit = hIntN.getValue().getInt();
                 if (lBit == 0 || lBit == 1) {
-                    return frame.assignValue(iReturn, makeHandle(lBit == 1));
+                    return frame.assignValue(iReturn, makeHandle(frame, lBit == 1));
                 }
             } catch (IllegalStateException ignore) {}
 
@@ -133,26 +147,29 @@ public class xBit
     @Override
     public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         return frame.assignValue(iReturn,
-            makeHandle(((JavaLong) hTarget).getValue() != 0 & ((JavaLong) hArg).getValue() != 0));
+            makeHandle(frame,
+                    ((JavaLong) hTarget).getValue() != 0 & ((JavaLong) hArg).getValue() != 0));
     }
 
     @Override
     public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         return frame.assignValue(iReturn,
-            makeHandle(((JavaLong) hTarget).getValue() != 0 | ((JavaLong) hArg).getValue() != 0));
+            makeHandle(frame,
+                    ((JavaLong) hTarget).getValue() != 0 | ((JavaLong) hArg).getValue() != 0));
     }
 
     @Override
     public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         return frame.assignValue(iReturn,
-            makeHandle(((JavaLong) hTarget).getValue() != 0 ^ ((JavaLong) hArg).getValue() != 0));
+            makeHandle(frame,
+                    ((JavaLong) hTarget).getValue() != 0 ^ ((JavaLong) hArg).getValue() != 0));
     }
 
     @Override
     public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn) {
         long l = ((JavaLong) hTarget).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(l == 0));
+        return frame.assignValue(iReturn, makeHandle(frame, l == 0));
     }
 
     @Override
@@ -190,10 +207,26 @@ public class xBit
         return frame.assignValue(iReturn, l == 0 ? xString.zero(frame) : xString.one(frame));
     }
 
-    public static JavaLong makeHandle(boolean f) {
-        return f ? ONE : ZERO;
+    public JavaLong makeHandle(boolean f) {
+        return f ? oneHandle() : zeroHandle();
     }
 
-    public static JavaLong ZERO;
-    public static JavaLong ONE;
+    public JavaLong zeroHandle() {
+        return f_zero.get();
+    }
+
+    public JavaLong oneHandle() {
+        return f_one.get();
+    }
+
+    public static JavaLong makeHandle(Frame frame, boolean f) {
+        return makeHandle(frame.container(), f);
+    }
+
+    public static JavaLong makeHandle(Container container, boolean f) {
+        return getInstance(container).makeHandle(f);
+    }
+
+    private final Lazy<JavaLong> f_zero = Lazy.of(() -> new JavaLong(getCanonicalClass(), 0));
+    private final Lazy<JavaLong> f_one  = Lazy.of(() -> new JavaLong(getCanonicalClass(), 1));
 }

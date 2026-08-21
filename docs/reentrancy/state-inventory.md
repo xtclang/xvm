@@ -44,7 +44,7 @@ independent bug.
 | Should fix soon | Public/protected static arrays and exposed arrays | 42 public/protected static arrays; 75 public/protected array fields in runtime/asm/compiler | Array elements are mutable shared variables even when the array reference is final | Private `static final` arrays with defensive copies, immutable lists, or package-private documented internal constants |
 | Should fix soon | Thread-local hidden global context | 17 `ThreadLocal`/`TransientThreadLocal` hits in runtime/asm/compiler | Thread locals hide dependencies, can leak scope across pooled threads, and make reentrancy depend on cleanup discipline | Prefer explicit context parameters or owner-scoped stacks; if unavoidable, use scoped `try/finally remove()` wrappers |
 | Should fix soon | Weak/identity mutable maps | 12 `WeakHashMap`/`IdentityHashMap` construction hits in runtime/asm/compiler | These maps are not concurrent and their semantics are easy to misuse as global caches | Confine to one owner/thread, synchronize, or use the project's concurrent weak-map helper where sharing is intended |
-| Should fix | Constant-looking non-final public statics | 18 public non-final uppercase/static constant-shaped fields | They look immutable in review but can be reassigned and are not safely published as constants | `public static final` immutable values, private owner-scoped state, or accessor methods |
+| Should fix | Constant-looking non-final public statics | 16 public non-final uppercase/static constant-shaped fields | They look immutable in review but can be reassigned and are not safely published as constants | `public static final` immutable values, private owner-scoped state, or accessor methods |
 | Should fix | Owner-local mutable metadata fields | 181 non-final runtime/asm metadata fields of type `TypeConstant`, `TypeComposition`, `MethodStructure`, handle, template, or enum | Some are valid lifecycle fields, but many are ad hoc first-use caches with no publication story | Final eager fields, final `Lazy`, `ConcurrentMap`, or explicit lifecycle state depending on semantics |
 | Should fix | Rare non-final `f_` fields | 2 direct hits | No written naming standard was found, but source usage strongly suggests `f_` normally denotes fixed/final owner state; exceptions are review hazards | Make final if immutable; otherwise rename to `m_` and document the mutation |
 
@@ -377,8 +377,8 @@ rg -n --pcre2 "^\s*(?:public|protected|private)?\s*static\s+(?!final\b)(?!class\
 Current counts:
 
 ```text
-23 runtime/asm/compiler non-final static fields
-26 all-Java non-final static fields
+21 runtime/asm/compiler non-final static fields
+24 all-Java non-final static fields
 ```
 
 Representative examples:
@@ -389,7 +389,6 @@ Representative examples:
 - `xLocalClock.TIMER`.
 - `ClassTemplate.VOID`, `THIS`, `OBJECT`, `INT`, `STRING`, `BOOLEAN`, and
   `BYTES`.
-- `xBit.ZERO` and `xBit.ONE`.
 - Compiler counters such as `ConditionalStatement.s_nLabelCounter`,
   `ElseExpression.s_nCounter`, and `ElvisExpression.s_nCounter`.
 
@@ -788,7 +787,7 @@ rg -n --pcre2 "\bpublic\s+static\s+(?!final\b)[^;=()]+\s+[A-Z][A-Z0-9_]*\s*=|\bp
 Current count:
 
 ```text
-18 public non-final uppercase/static constant-shaped fields
+16 public non-final uppercase/static constant-shaped fields
 ```
 
 Representative examples:
@@ -799,7 +798,6 @@ Representative examples:
 - `ClassTemplate.VOID`, `THIS`, `OBJECT`, `INT`, `STRING`, `BOOLEAN`, and
   `BYTES`.
 - `Op.NO_ARGS`.
-- Runtime handles such as `xBit.ZERO` and `xBit.ONE`.
 
 Why this is bad design:
 

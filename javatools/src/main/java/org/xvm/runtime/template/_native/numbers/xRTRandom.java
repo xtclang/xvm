@@ -142,7 +142,7 @@ public class xRTRandom
                              ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn) {
         switch (method.getName()) {
         case "bit":
-            return frame.assignValue(iReturn, xBit.makeHandle(rnd(hTarget).nextBoolean()));
+            return frame.assignValue(iReturn, xBit.makeHandle(frame, rnd(hTarget).nextBoolean()));
 
         case "nibble":
             return frame.assignValue(iReturn, xNibble.makeHandle(frame, rnd(hTarget).nextInt()));

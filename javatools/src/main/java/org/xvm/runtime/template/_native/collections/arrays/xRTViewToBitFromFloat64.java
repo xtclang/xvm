@@ -84,7 +84,7 @@ public class xRTViewToBitFromFloat64
     protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
         ViewHandle hView = (ViewHandle) hTarget;
 
-        return frame.assignValue(iReturn, xBit.makeHandle(
+        return frame.assignValue(iReturn, xBit.makeHandle(frame,
                 getBit(hView.f_hSource.m_adValue, lIndex)));
     }
 

@@ -72,7 +72,7 @@ public abstract class LongBasedBitView
     protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
         ViewHandle hView = (ViewHandle) hTarget;
 
-        return frame.assignValue(iReturn, xBit.makeHandle(
+        return frame.assignValue(iReturn, xBit.makeHandle(frame,
                 LongBasedDelegate.getBit(hView.f_hSource.m_alValue, lIndex)));
     }
 

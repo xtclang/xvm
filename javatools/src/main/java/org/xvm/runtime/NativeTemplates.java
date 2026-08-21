@@ -16,6 +16,7 @@ import org.xvm.runtime.template.maps.xListMap;
 
 import org.xvm.runtime.template.annotations.xFuture;
 
+import org.xvm.runtime.template.numbers.xBit;
 import org.xvm.runtime.template.numbers.xDec128;
 import org.xvm.runtime.template.numbers.xDec32;
 import org.xvm.runtime.template.numbers.xDec64;
@@ -284,6 +285,10 @@ public final class NativeTemplates {
 
     public xRTRandom random() {
         return get(RT_RANDOM);
+    }
+
+    public xBit bit() {
+        return get(BIT);
     }
 
     public xDec32 dec32() {
@@ -616,6 +621,9 @@ public final class NativeTemplates {
 
     private static final NativeTemplateRef<xRTRandom> RT_RANDOM =
             NativeTemplateRef.of("_native.numbers.RTRandom", xRTRandom.class);
+
+    private static final NativeTemplateRef<xBit> BIT =
+            NativeTemplateRef.of("numbers.Bit", xBit.class);
 
     private static final NativeTemplateRef<xDec32> DEC32 =
             NativeTemplateRef.of("numbers.Dec32", xDec32.class);
