@@ -654,7 +654,7 @@ public class NativeContainer
         ClassComposition clzMask         = templateNetwork.getCanonicalClass();
         ConstantPool     pool            = getConstantPool();
         MethodStructure  constructor     = templateNetwork.getStructure().findConstructor(pool.typeBoolean());
-        ObjectHandle[]   ahParams        = new ObjectHandle[] {xBoolean.makeHandle(frame, fSecure)};
+        ObjectHandle[]   ahParams        = {xBoolean.makeHandle(frame, fSecure)};
 
         switch (templateNetwork.construct(frame, constructor, clzMask, null, ahParams, Op.A_STACK)) {
         case Op.R_NEXT:
