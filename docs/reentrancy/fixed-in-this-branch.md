@@ -606,6 +606,32 @@ safe public publication boundary for natural enum values. New code that can
 surface an enum handle must use the initialized helpers or assign through
 `Utils.assignInitializedEnum`.
 
+### `xLocalClock` Process Timer
+
+Master exposed the LocalClock scheduler as a mutable public static field:
+
+```java
+public static Timer TIMER = new Timer("ecstasy:LocalClock", true);
+```
+
+That was not owner-scoped metadata, but it was still a dangerous runtime global.
+Any code in the JVM could reassign or cancel the timer, which would strand
+LocalClock alarms, NanoTimer alarms, and service wake-ups from every container.
+It also made the public API say that the `Timer` object itself was the shared
+contract, rather than the runtime operation of scheduling wake-up tasks.
+
+This branch keeps the old scheduling and caching behavior: there is still one
+daemon Java timer for these runtime wake-ups, so the change does not add one
+timer per container and does not add any per-alarm cache miss. The difference is
+that the timer is now a private `static final` process resource, and callers use
+`xLocalClock.scheduleTimer(TimerTask, long)`.
+
+This is the correct narrow fix for this site. A container-scoped timer would
+change behavior and footprint because the existing design intentionally lets
+LocalClock, NanoTimer, and service wake-ups share one daemon scheduler while the
+scheduled task itself carries the callback/container owner. The must-fix bug was
+the public non-final global reference, not the use of one scheduler.
+
 ## Supporting Edits
 
 These edits are not independent bug fixes, but they are needed to keep the
@@ -662,9 +688,11 @@ runtime/template audit. The full current list is maintained in
 and is empty on this branch.
 
 The scanned runtime-template/Utils static metadata category is also empty on
-this branch. Remaining global-state backlog now lives in the broader categories
+this branch, and `xLocalClock.TIMER` is now an encapsulated final process
+resource. Remaining global-state backlog now lives in the broader categories
 documented in [state-inventory.md](state-inventory.md), such as terminal/debug
-process resources and compiler/JIT counters/constants.
+process resources, `xOSStorage`'s watcher daemon, and compiler/JIT
+counters/constants.
 
 ## Proof Points Added By This Branch
 

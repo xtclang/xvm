@@ -119,7 +119,7 @@ public class xLocalClock
                                FunctionHandle hAlarm, BooleanHandle hKeepAlive, int iReturn) {
         Alarm alarm = new Alarm(new WeakCallback(frame, hAlarm), ldtWakeup, hKeepAlive.get());
         try {
-            TIMER.schedule(alarm.getTrigger(), cDelay);
+            scheduleTimer(alarm.getTrigger(), cDelay);
         } catch (Exception e) {
             alarm.cancel();
             return frame.raiseException(e.getMessage());
@@ -217,7 +217,7 @@ public class xLocalClock
                     // if the time is currently frozen, we have no way of knowing when it's going to
                     // be ready (how long will someone be looking at the debugger screen); so
                     // re-checking in a second seems like a reasonable compromise
-                    TIMER.schedule(m_trigger = new Trigger(this), 1000);
+                    scheduleTimer(m_trigger = new Trigger(this), 1000);
                     return;
                 }
 
@@ -230,7 +230,7 @@ public class xLocalClock
                     }
                 } else {
                     // reschedule
-                    TIMER.schedule(m_trigger = new Trigger(this), f_ldtWakeup - ldtNow);
+                    scheduleTimer(m_trigger = new Trigger(this), f_ldtWakeup - ldtNow);
                 }
             }
         }
@@ -273,7 +273,28 @@ public class xLocalClock
 
     // ----- constants and fields ------------------------------------------------------------------
 
-    public static Timer TIMER = new Timer("ecstasy:LocalClock", true);
+    /**
+     * Schedule a task on the process-wide wall-clock timer.
+     * <p/>
+     * The single daemon timer preserves the legacy scheduling behavior: LocalClock, NanoTimer, and
+     * service wake-ups all share one Java scheduler, while each task carries its own callback or
+     * container owner. Exposing only this narrow operation prevents unrelated code from rebinding or
+     * cancelling the scheduler and stranding callbacks that belong to other containers.
+     *
+     * @param task          the timer task to schedule
+     * @param cDelayMillis  the delay in milliseconds
+     */
+    public static void scheduleTimer(TimerTask task, long cDelayMillis) {
+        TIMER.schedule(task, cDelayMillis);
+    }
+
+    /**
+     * Shared daemon scheduler for runtime wall-clock wakeups. Keep this private and final; the
+     * public contract is scheduling work, not owning the Timer lifecycle. This used to be a public
+     * non-final field; making the reference private final preserves one process-wide scheduler while
+     * closing the reassignment/cancellation hole.
+     */
+    private static final Timer TIMER = new Timer("ecstasy:LocalClock", true);
 
     /**
      * Cached LocalClock handle.
