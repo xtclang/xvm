@@ -649,6 +649,8 @@ accept small opportunistic cleanup, but they are not the reason for the PR.
 | Site | Current branch state | Recommendation |
 | --- | --- | --- |
 | `xRTClassTemplate.NO_TEMPLATES` | made `public static final` | Safe to keep; pure empty array reference, but exposed mutable array contents remain a broader design smell |
+| `ClassTemplate` common native signature arrays | changed from public mutable non-final arrays to protected static final startup descriptors | Safe to keep in this PR; they are used by many template subclasses for `markNativeMethod`, and a broader signature-descriptor refactor should be separate |
+| `Op.NO_ARGS`, `StmtBlockAST.EMPTY`, `Compiler.EXPRESSION_UNREACHABLE` | made `public static final` | Safe to keep; these are literal constants, not owner-bearing runtime state |
 | `xString.StringHandle` hash/String memoization | left as the old per-handle transient cache | Keep out of this PR; replacing with `Lazy` would add two objects per string handle for a should-fix-only concern |
 | `xIntLiteral.IntNHandle` text memoization | now stores the constructor-provided text handle and otherwise creates text through its own handle owner | Keep; this preserves the old optional cache and avoids reintroducing ownerless string creation |
 
@@ -662,8 +664,7 @@ and is empty on this branch.
 The scanned runtime-template/Utils static metadata category is also empty on
 this branch. Remaining global-state backlog now lives in the broader categories
 documented in [state-inventory.md](state-inventory.md), such as terminal/debug
-process resources, `ClassTemplate`'s exposed mutable string arrays, and
-compiler/JIT counters/constants.
+process resources and compiler/JIT counters/constants.
 
 ## Proof Points Added By This Branch
 

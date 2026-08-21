@@ -2435,13 +2435,21 @@ public abstract class ClassTemplate
 
     // ----- constants and fields ------------------------------------------------------------------
 
-    public static String[] VOID    = new String[0];
-    public static String[] THIS    = new String[] {"this"};
-    public static String[] OBJECT  = new String[] {"Object"};
-    public static String[] INT     = new String[] {"numbers.Int64"};
-    public static String[] STRING  = new String[] {"text.String"};
-    public static String[] BOOLEAN = new String[] {"Boolean"};
-    public static String[] BYTES   = new String[] {"collections.Array<numbers.UInt8>"};
+    /*
+     * Common native-signature filters. "null" means wildcard; "VOID" means zero
+     * parameters or returns. These are protected instead of public because callers
+     * outside the template hierarchy should not be able to rebind or mutate shared
+     * descriptor arrays through the public API. The fields are still shared with
+     * subclasses to preserve the existing markNative* declaration style, while
+     * "final" prevents accidental reassignment of the well-known descriptors.
+     */
+    protected static final String[] VOID    = {};
+    protected static final String[] THIS    = {"this"};
+    protected static final String[] OBJECT  = {"Object"};
+    protected static final String[] INT     = {"numbers.Int64"};
+    protected static final String[] STRING  = {"text.String"};
+    protected static final String[] BOOLEAN = {"Boolean"};
+    protected static final String[] BYTES   = {"collections.Array<numbers.UInt8>"};
 
     /**
      * The container.
