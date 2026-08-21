@@ -632,6 +632,49 @@ LocalClock, NanoTimer, and service wake-ups share one daemon scheduler while the
 scheduled task itself carries the callback/container owner. The must-fix bug was
 the public non-final global reference, not the use of one scheduler.
 
+### `xOSStorage` Watch Daemon
+
+Master kept one mutable static watcher daemon:
+
+```java
+private static WatchServiceDaemon s_daemonWatch;
+```
+
+The daemon itself is reasonably process-wide: Java's `WatchService` watches OS
+paths, not XVM containers, and sharing one daemon avoids one native watch thread
+per container. The bug was that the daemon constructor also captured a
+`ConstantPool` from whichever container first called `watch(...)`:
+
+```java
+daemonWatch = s_daemonWatch = new WatchServiceDaemon(pool);
+...
+try (var ignore = ConstantPool.withPool(f_pool)) {
+    ...
+}
+```
+
+That means container B could register a path after container A created the
+daemon, but B's later file event would run under A's ambient pool. The handles
+created for event paths and event-kind values were already built from the
+watched storage handle's container; the ambient pool was the inconsistent part.
+
+This branch keeps exactly one process-wide daemon but moves ownership to a final
+synchronized holder:
+
+```java
+private static final WatchDaemonHolder WATCH_DAEMON = new WatchDaemonHolder();
+```
+
+The daemon no longer stores a `ConstantPool`. Instead, each delivered event
+looks at the registered `OSStorage` service handle, obtains that handle's
+container, and temporarily installs that container's pool only while preparing
+that event. This preserves the old process-wide watcher behavior without
+preserving the first-container-wins ambient state leak.
+
+This is a must-fix runtime race because watch events arrive on a Java daemon
+thread, outside the service fiber that registered the watch. Any ambient owner
+used there must be re-established from the watched handle for each event.
+
 ## Supporting Edits
 
 These edits are not independent bug fixes, but they are needed to keep the
@@ -691,8 +734,7 @@ The scanned runtime-template/Utils static metadata category is also empty on
 this branch, and `xLocalClock.TIMER` is now an encapsulated final process
 resource. Remaining global-state backlog now lives in the broader categories
 documented in [state-inventory.md](state-inventory.md), such as terminal/debug
-process resources, `xOSStorage`'s watcher daemon, and compiler/JIT
-counters/constants.
+process resources and compiler/JIT counters/constants.
 
 ## Proof Points Added By This Branch
 
