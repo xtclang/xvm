@@ -310,6 +310,354 @@ because:
 It is not as strong as passing the owner explicitly, because the dependency is
 still hidden and can fail only at runtime when code runs outside a bound scope.
 
+## Interpreter Runtime Scope Sketch
+
+This section sketches a possible non-JIT interpreter implementation. It is not
+implemented in this branch. The goal would be to make owner lookup and
+diagnostics feel like one familiar runtime facility instead of a pile of ad hoc
+`frame.f_context.f_container`, `frame.container()`, and static helper rewrites.
+
+The Java API name is `ScopedValue`, not `ScopeValue`; the important property is
+that the binding is lexical and automatically removed at scope exit.
+
+### API Shape
+
+The interpreter could expose one small runtime scope API:
+
+```java
+public final class RuntimeScopes {
+    private static final ScopedValue<RuntimeScope> CURRENT = ScopedValue.newInstance();
+
+    private RuntimeScopes() {
+    }
+
+    public static RuntimeScope current() {
+        return CURRENT.orElseThrow(() ->
+                new IllegalStateException("No XVM runtime scope is bound"));
+    }
+
+    public static Container container() {
+        return current().container();
+    }
+
+    public static NativeTemplates nativeTemplates() {
+        return current().nativeTemplates();
+    }
+
+    public static <T> T call(Container container, Callable<T> action) throws Exception {
+        return ScopedValue.where(CURRENT, RuntimeScope.forContainer(container))
+                .call(action);
+    }
+
+    public static void run(Container container, Runnable action) {
+        ScopedValue.where(CURRENT, RuntimeScope.forContainer(container))
+                .run(action);
+    }
+
+    public static void run(Frame frame, Runnable action) {
+        ScopedValue.where(CURRENT, RuntimeScope.forFrame(frame))
+                .run(action);
+    }
+
+    public static <T> T call(Frame frame, Callable<T> action) throws Exception {
+        return ScopedValue.where(CURRENT, RuntimeScope.forFrame(frame))
+                .call(action);
+    }
+}
+
+public record RuntimeScope(Container container,
+                           ServiceContext service,
+                           Frame frame) {
+    public RuntimeScope {
+        Objects.requireNonNull(container, "container");
+        if (service != null && service.f_container != container) {
+            throw new IllegalArgumentException("service belongs to a different container");
+        }
+        if (frame != null && frame.container() != container) {
+            throw new IllegalArgumentException("frame belongs to a different container");
+        }
+    }
+
+    public static RuntimeScope forContainer(Container container) {
+        return new RuntimeScope(container, null, null);
+    }
+
+    public static RuntimeScope forFrame(Frame frame) {
+        ServiceContext service = frame.f_context;
+        return new RuntimeScope(frame.container(), service, frame);
+    }
+
+    public ConstantPool pool() {
+        return container.getConstantPool();
+    }
+
+    public NativeTemplates nativeTemplates() {
+        return container.nativeTemplates();
+    }
+}
+```
+
+That is intentionally a context accessor, not a cache owner. The `RuntimeScope`
+record should contain final references to the active interpreter owner and
+delegate every stable lookup to owner-local state such as
+`container.nativeTemplates()`.
+
+### Binding Points
+
+Binding only around `InterpreterConnector.invoke0(...)` would not be enough.
+`ScopedValue` is per-thread. The interpreter schedules service work onto
+runtime-managed threads, and a binding on the launcher thread does not magically
+cover work later executed by a different worker.
+
+The scope would need to be bound at every interpreter entry where owner-bearing
+runtime values can be manufactured or cached:
+
+- `InterpreterConnector.start(...)` and `invoke0(...)` can bind while preparing
+  the top-level call.
+- `Container.schedule(...)` or `ServiceContext.execute(...)` must bind while a
+  service is executing on a runtime worker thread.
+- IO/native callbacks that re-enter the runtime must bind the owning
+  `Container` or `ServiceContext` before calling back into handle/template
+  helpers.
+- Any diagnostic or stress-test launcher that runs containers in the same JVM
+  can bind the scope around the executed runtime step, then still validate the
+  completed container graph explicitly after the step returns.
+
+A service wrapper would look like this:
+
+```java
+f_runtime.submitService(() -> RuntimeScopes.run(service.f_container, () -> {
+    try {
+        service.execute(true);
+    } finally {
+        f_pendingWorkCount.decrementAndGet();
+    }
+}));
+```
+
+If the scope carries a `Frame`, the binding should be refreshed at frame
+dispatch boundaries, not stored in mutable static state:
+
+```java
+int dispatch(Frame frame) throws Exception {
+    return RuntimeScopes.call(frame, () -> frame.nextOp().process(frame, frame.f_ahVar));
+}
+```
+
+The exact method names would need to match the interpreter execution loop, but
+the invariant is simple: every runtime worker that can create owner-bearing
+objects enters through one lexical owner scope.
+
+### Simplifying The Ownership Checker
+
+The current `OwnershipDiagnostics` is deliberately an offline graph validator.
+It starts from one or more completed `Container` roots, walks known owner-local
+caches, and reports:
+
+- owner-bearing objects stored below the wrong owner,
+- constants held under a container with the wrong `ConstantPool`,
+- and identities shared across containers where sharing is not allowed.
+
+A `ScopedValue` cannot replace that offline check. After a run completes there
+may be no dynamic scope active, and the point of the diagnostic is to compare
+multiple container graphs at the same time. That still requires explicit
+container roots:
+
+```java
+OwnershipDiagnostics.assertValid(containerA, containerB);
+```
+
+What a scoped runtime owner can simplify is online validation at creation and
+cache-insertion points. The ownership logic currently buried inside the dumper
+could be factored into a reusable helper:
+
+```java
+public final class RuntimeOwners {
+    public static Container ownerOf(Object value) {
+        if (value instanceof ClassTemplate template) {
+            return template.f_container;
+        }
+        if (value instanceof TypeComposition composition) {
+            return composition.getContainer();
+        }
+        if (value instanceof ObjectHandle handle) {
+            TypeComposition composition = handle.getComposition();
+            return composition == null ? null : composition.getContainer();
+        }
+        if (value instanceof ServiceContext service) {
+            return service.f_container;
+        }
+        if (value instanceof NativeTemplates templates) {
+            return templates.container();
+        }
+        return null;
+    }
+}
+```
+
+Then the scope can provide one assertion point:
+
+```java
+public record RuntimeScope(Container container,
+                           ServiceContext service,
+                           Frame frame) {
+    public <T> T requireOwner(String label, T value) {
+        Container actual = RuntimeOwners.ownerOf(value);
+        if (actual != null && actual != container && actual != container.getNativeContainer()) {
+            throw new IllegalStateException(label
+                    + " returned " + value.getClass().getName()
+                    + " owned by a different container");
+        }
+        return value;
+    }
+}
+```
+
+New or migrated helpers could use that without accepting another diagnostic
+parameter:
+
+```java
+ObjectHandle hForm = RuntimeScopes.current().requireOwner(
+        "xEnum.makeFormHandle",
+        makeFormHandle(frame, type));
+```
+
+Owner-local caches could validate values as they are inserted:
+
+```java
+ClassTemplate template = f_mapTemplatesByType.computeIfAbsent(type, key ->
+        RuntimeScopes.current().requireOwner("templatesByType", createTemplate(key)));
+```
+
+That gives earlier failures than a post-run dump. It also makes the rule easy
+for contributors: if code is running under the interpreter and creates a
+runtime handle, template, composition, or service, it can assert against the
+current runtime scope. The deep graph dump remains the regression test and
+failure artifact for "what escaped where?" after the fact.
+
+### Simplifying Transitional Owner Lookup
+
+The branch has intentionally removed many ownerless static accessors instead of
+adding another ambient lookup. That is the stronger final shape. A scoped bridge
+would still be useful where changing every call site in one PR is too wide.
+
+For example, a migrated native helper should prefer the explicit form:
+
+```java
+public static BooleanHandle trueHandle(Container container) {
+    return xBoolean.trueHandle(container);
+}
+```
+
+A legacy bridge could exist temporarily:
+
+```java
+@Deprecated
+public static BooleanHandle trueHandle() {
+    return xBoolean.trueHandle(RuntimeScopes.container());
+}
+```
+
+That bridge is much safer than `xBoolean.TRUE` because it cannot return a
+process-global handle. It either resolves through the current owner or throws
+because no runtime owner is bound. It is still weaker than the explicit API
+because a method signature no longer reveals that the call depends on a
+container.
+
+This approach could reduce noisy plumbing in code that is purely interpreter
+execution code:
+
+```java
+// Preferred when a frame is naturally available.
+return xBoolean.makeHandle(frame.container(), value);
+
+// Acceptable transitional bridge in old deep helpers that execute only
+// under a bound runtime scope.
+return xBoolean.makeHandle(value);
+```
+
+The bridge should be deprecated from day one and should delegate to the same
+owner-local `NativeTemplates` table as the explicit API. It must not allocate
+or cache anything inside `RuntimeScope`.
+
+### What This Would Simplify In This Branch
+
+A scoped interpreter owner could simplify some of the work this branch had to
+do, but it would not make the owner-local tables unnecessary.
+
+It could simplify:
+
+- old helper methods that currently had to grow a `Container`, `Frame`, or
+  `ClassTemplate` parameter only to recover the current owner,
+- repeated `frame.f_context.f_container` or `frame.container()` plumbing in
+  deeply nested interpreter-only helper paths,
+- fail-fast checks that reject null owner arguments such as unsafe
+  `makeInternalHandle(null, ...)` calls,
+- owner assertions at template/handle/composition cache insertion points,
+- and contributor ergonomics by matching the existing JIT `Ctx.Current` mental
+  model.
+
+It would not simplify:
+
+- values created during linking, loading, or constant-pool work where there may
+  be no active interpreter frame,
+- values that must remain valid after the dynamic invocation returns,
+- caches whose identity is semantically per `Container` or per `ConstantPool`,
+- cross-container validation after a same-JVM stress run,
+- constructor escape or unsafe publication,
+- or any mutable shared state that still lacks synchronization.
+
+The important distinction is whether the state is "current execution context"
+or "owned cached state". `ScopedValue` is appropriate for the former. The
+latter still belongs in final owner fields, `Lazy`, owner maps, or pool intern
+tables.
+
+### Soundness Conditions
+
+This sketch would be sound only if all of these rules hold:
+
+- `RuntimeScopes.CURRENT` is the only scoped key for interpreter ownership.
+- `RuntimeScope` is an immutable record of owner references, not a bag of
+  mutable caches.
+- Every runtime worker entry that may allocate owner-bearing objects binds a
+  scope before doing so.
+- Owner-bearing factories still prefer explicit owner parameters when the owner
+  is already available.
+- Legacy ownerless bridges fail immediately when no scope is bound.
+- Cache storage remains under `Container`, `NativeTemplates`, `ConstantPool`,
+  `ClassTemplate`, or another real owner.
+- Online scoped assertions and offline `OwnershipDiagnostics.assertValid(...)`
+  share the same `ownerOf(...)` rules so they cannot diverge silently.
+- Native-parent sharing remains a documented exception, not a blanket "any
+  native object is fine" rule.
+
+With those rules, the Java Memory Model story stays the same as in the current
+branch: final fields publish the owner references, `Lazy` and concurrent maps
+publish cached values safely, and the scoped value only chooses the owner for
+the current call tree.
+
+### Migration Plan
+
+A later PR could introduce this without changing semantics:
+
+1. Factor `OwnershipDiagnostics.ownerOf(...)` into a small package-private or
+   public diagnostic helper such as `RuntimeOwners`.
+2. Add `RuntimeScopes` and `RuntimeScope` with no runtime behavior changes.
+3. Bind `RuntimeScopes` at interpreter service/frame entry points.
+4. Add tests that ownerless bridge calls throw outside a scope and resolve to
+   the correct owner inside two different container scopes.
+5. Add online assertions at the highest-risk cache insertion points.
+6. Convert only the noisiest legacy ownerless helpers to deprecated scoped
+   bridges.
+7. Keep the explicit owner APIs and remove bridges as call sites are migrated.
+8. Keep the same-JVM sequence/parallel stress tasks running
+   `OwnershipDiagnostics.assertValid(...)` against completed containers.
+
+That would make the transitional runtime model feel familiar to contributors:
+"inside interpreter execution, `RuntimeScopes.current()` is the owner context;
+for durable cached state, use the owner table." It would not hide the preferred
+end state, which is still explicit, final, owner-local state wherever practical.
+
 ## Why These Mechanisms Were Chosen Over Alternatives
 
 The correct mechanism depends on what the state means.
