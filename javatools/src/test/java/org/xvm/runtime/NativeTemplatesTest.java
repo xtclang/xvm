@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.runtime.template._native.fs.xOSStorage;
+import org.xvm.runtime.template._native.io.xTerminalConsole;
 import org.xvm.runtime.template._native.temporal.xLocalClock;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -98,6 +99,15 @@ public class NativeTemplatesTest {
         assertFalse(Arrays.stream(clzDaemon.getDeclaredFields())
                 .anyMatch(field -> ConstantPool.class.isAssignableFrom(field.getType())),
                 "watch daemon must bind the event owner's pool, not cache a ConstantPool field");
+    }
+
+    @Test
+    public void terminalConsoleStateIsPrivateFinalHolder()
+            throws Exception {
+        assertThrows(NoSuchFieldException.class, () -> xTerminalConsole.class.getField("READER"));
+        assertThrows(NoSuchFieldException.class, () -> xTerminalConsole.class.getField("TERMINAL"));
+
+        assertPrivateStaticFinal(xTerminalConsole.class, "TERMINAL_STATE");
     }
 
     private static void assertPrivateStaticFinal(Class<?> clz, String sField)

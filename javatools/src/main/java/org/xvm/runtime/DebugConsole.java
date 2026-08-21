@@ -1,7 +1,6 @@
 package org.xvm.runtime;
 
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 
@@ -26,7 +25,6 @@ import java.util.prefs.Preferences;
 
 import org.jline.reader.LineReader;
 import org.jline.reader.UserInterruptException;
-
 import org.jline.terminal.Terminal;
 
 import org.xvm.asm.ErrorListener.ErrorInfo;
@@ -81,13 +79,8 @@ public final class DebugConsole
 
     @Override
     public synchronized int activate(Frame frame, int iPC) {
-        if (LINE_READER == null && READER == null) {
-            LINE_READER = xTerminalConsole.ensureLineReader(null);
-            READER      = xTerminalConsole.CONSOLE_IN;
-            TERMINAL    = xTerminalConsole.TERMINAL;
-
-            resizeTerminal();
-        }
+        xTerminalConsole.ensureLineReader(null);
+        resizeTerminal();
 
         frame.f_context.setDebuggerActive(true);
 
@@ -310,11 +303,12 @@ public final class DebugConsole
         while (true) {
             try {
                 String sCommand;
-                if (LINE_READER == null) {
+                LineReader lineReader = xTerminalConsole.lineReader();
+                if (lineReader == null) {
                     writer.print("\nEnter command: ");
                     writer.flush();
 
-                    sCommand = READER.readLine();
+                    sCommand = xTerminalConsole.CONSOLE_IN.readLine();
                     if (sCommand == null) {
                         // we don't have a console; ignore
                         writer.println();
@@ -323,7 +317,7 @@ public final class DebugConsole
                 } else {
                     try {
                         writer.flush();
-                        sCommand = LINE_READER.readLine("\nEnter command: ");
+                        sCommand = lineReader.readLine("\nEnter command: ");
                     } catch (UserInterruptException e) {
                         // Ctrl-C
                         System.exit(1);
@@ -1411,9 +1405,10 @@ public final class DebugConsole
     }
 
     private void resizeTerminal() {
-        if (TERMINAL != null && TERMINAL.getWidth() > 0) {
-            m_cWidth  = TERMINAL.getWidth();
-            m_cHeight = TERMINAL.getHeight();
+        Terminal terminal = xTerminalConsole.terminal();
+        if (terminal != null && terminal.getWidth() > 0) {
+            m_cWidth  = terminal.getWidth();
+            m_cHeight = terminal.getHeight();
         }
     }
 
@@ -2423,21 +2418,6 @@ public final class DebugConsole
     // ----- constants and data fields -------------------------------------------------------------
 
     public static final DebugConsole INSTANCE = new DebugConsole();
-
-    /**
-     * JLine reader, if available.
-     */
-    private static LineReader LINE_READER;
-
-    /**
-     * JLine terminal, if available.
-     */
-    private static Terminal TERMINAL;
-
-    /**
-     * Standard reader.
-     */
-    private static BufferedReader READER;
 
     /**
      * Persistent preference storage.

@@ -1033,10 +1033,11 @@ state.
 
 Known high-priority leftovers include:
 
-- Terminal/debug globals such as `xTerminalConsole.READER`, `TERMINAL`, and
-  `DebugConsole`'s equivalent process resources. These are resettable process
-  resources, not container metadata, so they need an explicit lifecycle owner
-  or synchronized holder rather than `Lazy`.
+- Terminal/debug globals are no longer on this TODO: this branch moves
+  `xTerminalConsole.READER`, `xTerminalConsole.TERMINAL`, and the equivalent
+  `DebugConsole` aliases behind one private final synchronized terminal-state
+  holder. Standard input/output and the JLine terminal remain process-wide by
+  design, but the mutable handles are no longer public or duplicated.
 - `xLocalClock.TIMER` is no longer on this TODO: this branch makes the shared
   daemon scheduler private `static final` and exposes only
   `xLocalClock.scheduleTimer(...)`, preserving the old one-timer behavior while

@@ -305,8 +305,9 @@ xTerminalConsole.CONSOLE_OUT.print(...);
 
 That is acceptable only if those console objects are intentionally process-wide
 resources with a documented lifecycle. It is not container-owned state. The
-remaining `xTerminalConsole.READER`/`TERMINAL` cleanup in the interpreter path
-therefore also matters to JIT bridge behavior.
+interpreter path now keeps the JLine reader and terminal behind one private
+final terminal-state holder, so the bridge still shares process console IO
+without depending on public mutable `READER`/`TERMINAL` globals.
 
 ## Appendix: JIT Bridge Ownership Implications
 

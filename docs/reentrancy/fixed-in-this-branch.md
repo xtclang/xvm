@@ -675,6 +675,40 @@ This is a must-fix runtime race because watch events arrive on a Java daemon
 thread, outside the service fiber that registered the watch. Any ambient owner
 used there must be re-established from the watched handle for each event.
 
+### Terminal And Debug Console Process State
+
+Master exposed JLine terminal state as public mutable process globals:
+
+```java
+public static LineReader READER;
+public static Terminal   TERMINAL;
+```
+
+`DebugConsole` then copied those same process resources into three additional
+mutable statics: `LINE_READER`, `TERMINAL`, and `READER`.
+
+The terminal itself is intentionally process-wide. `System.in`, `System.out`,
+`System.console()`, and the JLine terminal are not owned by an XVM container,
+and making one terminal per container would change behavior and could corrupt
+interactive input. The bug was the representation: unrelated code could reassign
+the public reader/terminal, and the debugger had a second mutable snapshot that
+could diverge from the console's state.
+
+This branch keeps the same process-wide console behavior but moves the mutable
+JLine handles behind one private final synchronized holder:
+
+```java
+private static final TerminalState TERMINAL_STATE = new TerminalState();
+```
+
+`xTerminalConsole.ensureLineReader(...)`, `lineReader()`, and `terminal()` are
+now the only access paths. `DebugConsole` reads through those accessors instead
+of caching duplicate static aliases. This preserves the old startup and
+performance shape: the JLine reader is still built at most once for the process,
+and plain console input still falls back to `CONSOLE_IN` when JLine is
+unavailable. The difference is that the mutable process resource is no longer a
+public API.
+
 ## Supporting Edits
 
 These edits are not independent bug fixes, but they are needed to keep the
@@ -731,10 +765,11 @@ runtime/template audit. The full current list is maintained in
 and is empty on this branch.
 
 The scanned runtime-template/Utils static metadata category is also empty on
-this branch, and `xLocalClock.TIMER` is now an encapsulated final process
-resource. Remaining global-state backlog now lives in the broader categories
-documented in [state-inventory.md](state-inventory.md), such as terminal/debug
-process resources and compiler/JIT counters/constants.
+this branch. `xLocalClock.TIMER`, `xOSStorage`'s watch daemon, and terminal
+JLine state are now encapsulated final process resources. Remaining global-state
+backlog now lives in the broader categories documented in
+[state-inventory.md](state-inventory.md), such as compiler/JIT
+counters/constants.
 
 ## Proof Points Added By This Branch
 
