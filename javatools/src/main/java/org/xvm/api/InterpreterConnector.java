@@ -84,7 +84,8 @@ public class InterpreterConnector
             throw new IllegalStateException("The container has not been started");
         }
 
-        ConstantPool   pool        = ConstantPool.getCurrentPool();
+        ConstantPool pool = m_containerMain.getConstantPool();
+        ConstantPool.assertCurrentPoolIfPresent(pool, "InterpreterConnector.invoke0");
         TypeConstant   typeStrings = pool.ensureArrayType(pool.typeString());
         ObjectHandle[] ahArg       = Utils.OBJECTS_NONE;
 

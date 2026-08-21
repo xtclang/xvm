@@ -101,7 +101,8 @@ public class NativeContainer
         f_repository = repository;
 
         ConstantPool pool = loadNativeTemplates();
-        try (var ignore = ConstantPool.withPool(pool)) {
+        try (var _ = ConstantPool.withPool(pool)) {
+            ConstantPool.assertCurrentPool(pool, "NativeContainer.initResources");
             initResources(pool);
         }
     }
@@ -149,8 +150,14 @@ public class NativeContainer
         m_moduleNative = fileRoot.getChild(NATIVE_MODULE);
 
         ConstantPool pool = fileRoot.getConstantPool();
-        ConstantPool.setCurrentPool(pool);
+        try (var _ = ConstantPool.withPool(pool)) {
+            ConstantPool.assertCurrentPool(pool, "NativeContainer.loadNativeTemplates");
+            finishNativeTemplateLoad(pool);
+        }
+        return pool;
+    }
 
+    private void finishNativeTemplateLoad(ConstantPool pool) {
         if (pool.getNakedRefType() == null) {
             ClassStructure clzNakedRef = (ClassStructure) m_moduleTurtle.getChild("NakedRef");
             pool.setNakedRefType(clzNakedRef.getFormalType());
@@ -218,9 +225,6 @@ public class NativeContainer
         }
 
         ensureServiceContext();
-
-        ConstantPool.setCurrentPool(null);
-        return pool;
     }
 
     private void scanNativeJarDirectory(String sJarFile, String sPackage, Map<String, Class> mapTemplateClasses) {

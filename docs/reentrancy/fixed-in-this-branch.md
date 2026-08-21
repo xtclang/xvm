@@ -181,6 +181,31 @@ The broader `ConstantPool` state audit is documented in
 per-pool caches, ambient owner lookup, runtime registration/adoption hazards,
 and compiler-only pool mutation paths.
 
+This branch also narrows ambient `ConstantPool` lookup at runtime boundaries:
+
+- `InterpreterConnector.invoke0(...)` uses
+  `m_containerMain.getConstantPool()` instead of
+  `ConstantPool.getCurrentPool()`. Correct callers see the same owner pool; stale
+  ambient scope is detected by `ConstantPool.assertCurrentPoolIfPresent(...)`.
+- `NativeContainer.loadNativeTemplates()` no longer mutates the current pool with
+  a raw setter and later clears it to `null`. It uses lexical
+  `withPool(...)` scopes, preserving prior ambient state and restoring it on
+  exceptional exits.
+- `ConstantPool.setCurrentPool(...)` was removed after the last runtime startup
+  caller was converted. Future code must use self-restoring scoped ownership.
+- `MainContainer.invoke0(...)`, `Container.ensureServiceContext()`,
+  `ServiceContext.drainWork()`, `xOSStorage.WatchDaemon`,
+  `xContainerControl.invokeInvoke(...)`, and `xRTServer.RequestHandler` now
+  assert that any transitional ambient scope matches the explicit container or
+  service owner already present at the boundary.
+
+The focused regression coverage is in
+`javatools/src/test/java/org/xvm/asm/ConstantPoolDiagnosticsTest.java`. It
+proves that correct scoped owners pass, explicit-owner code can run without an
+ambient pool, and wrong ambient scopes fail under assertions. This is a guard and
+ownership-visibility change, not a cache-policy change: all constants are still
+interned in the same per-owner `ConstantPool` as before.
+
 ### Constructor-Published Native Template `INSTANCE`
 
 These master sites assigned `INSTANCE = this` from constructors and now resolve

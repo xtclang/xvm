@@ -285,7 +285,7 @@ can be ignored.
 | --- | --- | --- | --- |
 | 1 | Adoption/clone validator assertions | Done in this branch wave. The shallow-clone bug is proven, dangerous, and the reusable validator catches copied handles, locks, thread locals, and owner references while later work runs stress. | `ConstantAdoptionTest` proves direct detection and opt-in `ConstantPool.register(...)` failure for a default shallow-cloned helper reference. |
 | 2 | `ConstantPool` late-mutation guard | Done in this branch wave. Hidden late mutation now becomes an immediate diagnostic instead of a stale-owner symptom when `xvm.asm.validateConstantPoolLateRegistration` is enabled. | `ConstantPoolDiagnosticsTest` proves existing constants still return after publication and new registrations fail before publication into the pool. Diagnostic same-JVM stress now identifies `ClassComposition` access-type registration as the next warmup/design target. |
-| 3 | Ambient `ConstantPool` lookup cleanup | Once late mutation is visible, remove or narrow hidden current-pool lookup at runtime boundaries. Explicit owners make the later op/cache fixes much easier to reason about. | Add tests around container/frame/runtime callbacks that assert the scoped/current pool matches the explicit owner. |
+| 3 | Ambient `ConstantPool` lookup cleanup | Done in this branch wave for runtime boundaries. `InterpreterConnector.invoke0(...)` now uses the main container's explicit pool, native startup no longer uses raw current-pool mutation, and the remaining runtime scoped bridges assert that the scoped pool matches the explicit owner. | `ConstantPoolDiagnosticsTest` covers exact scoped-owner assertions, explicit-owner calls with no ambient pool, and wrong-scope failures. Source scan now shows no runtime/API callers of raw `setCurrentPool(...)`; the method itself was removed. |
 | 4 | Runtime-executed `Op` caches | These are the most suspicious remaining runtime hot-path caches. They must either be proven method-owner confined or keyed/removed before claiming parallel containers are safe. | Run the same compiled method through two containers in one JVM and validate no op cache points at the wrong pool; add source/diagnostic checks for owner-bearing op fields. |
 | 5 | Manual lazy null caches in runtime/asm | After the obvious owner boundaries are explicit, convert the remaining owner-bearing `if (field == null) field = ...` caches to final `Lazy`, `Lazy.Owner`, owner-local tables, or `ConcurrentMap`. | For each converted cache, add or update a test that exercises two owners and verifies cache identity/owner separation and unchanged repeated-call caching. |
 | 6 | Thread-local and scoped ambient state | This is broader and should come after explicit-owner cleanup identifies the real remaining bridge points. The target is lexical scoped ownership, not another hidden global cache. | Add cleanup/scope tests for each bridge and assertions that no owner-bearing runtime value is stored in the ambient scope object. |
@@ -316,7 +316,7 @@ Required closure:
   ```java
   ConstantPool pool = container.getConstantPool();
   try (var _ = ConstantPool.withPool(pool)) {
-      assert ConstantPool.getCurrentPool() == pool;
+      ConstantPool.assertCurrentPool(pool, "Owner.boundary");
       ...
   }
   ```
@@ -325,6 +325,12 @@ Required closure:
   handle/container that scheduled the callback.
 - Candidate runtime sites are listed in
   [constant-pool-state-audit.md](constant-pool-state-audit.md).
+
+This branch also removed the raw public `ConstantPool.setCurrentPool(...)`
+setter after converting the last runtime startup caller. That is intentionally
+stricter than leaving it unused: future code now has to use a lexical
+`withPool(...)` scope, which restores the previous value on normal and
+exceptional exits.
 
 ### Shared `ConstantPool` Mutation After Runtime Publication
 
