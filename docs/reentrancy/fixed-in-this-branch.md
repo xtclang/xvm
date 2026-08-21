@@ -769,7 +769,8 @@ this branch. `xLocalClock.TIMER`, `xOSStorage`'s watch daemon, and terminal
 JLine state are now encapsulated final process resources. Remaining global-state
 backlog now lives in the broader categories documented in
 [state-inventory.md](state-inventory.md), such as compiler/JIT
-counters/constants.
+counters/constants. Those remaining counters are same-JVM compiler/tooling
+reentrancy work, not owner-bearing runtime template state.
 
 ## Proof Points Added By This Branch
 
