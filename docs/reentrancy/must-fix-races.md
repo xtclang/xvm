@@ -17,7 +17,7 @@ and lazy-publication counts are scan signals generated on branch
 | --- | --- | --- | --- | --- |
 | Must fix | Mutable native template `INSTANCE` fields | `master`: 143 mutable template `INSTANCE` fields and 139 constructor assignments. This branch fixes all 143 fields and all 139 constructor assignments. | Last writer wins across containers; constructor `this` escape | `NativeTemplates` central key table, existing container template cache, plus container/frame lookup |
 | Must fix | Static runtime-owned metadata | `master`: 151 field-shaped runtime/template static metadata fields after excluding `INSTANCE`. This branch fixes all 151 and leaves 0 in the scanned runtime-template/Utils category. | Type/composition/method/handle values from one owner reused in another owner | Owner-scoped final `Lazy`, grouped info records, or owner-owned `ConcurrentMap` |
-| Must fix | Raw enum handles returned through public/native paths | 86 raw enum accessor references, including definitions/comments and safe owner-scoped internal factories; this branch now closes the reflection helper group by returning initialized/deferred `ObjectHandle`s | Natural enum construction struct escapes as if it were the finalized enum singleton | `ensureEnumByName`, `ensureEnumByOrdinal`, or `Utils.ensureInitializedEnum` on public paths |
+| Must fix | Raw enum handles returned through public/native paths | Branch remainder: 14 raw accessor references, all protected/internal in `xEnum` or owner-local native enum factories in `xBoolean`, `xNullable`, and `xOrdered` | Natural enum construction struct escapes as if it were the finalized enum singleton | `ensureEnumByName`, `ensureEnumByOrdinal`, or `Utils.ensureInitializedEnum` on public paths |
 | Must fix | Manual lazy publication in shared runtime/asm objects | 111 strong same-field lazy-init matches in runtime/asm | Plain field read/write with no happens-before edge; duplicate, stale, partial, or wrong-owner state | Final `Lazy`, `ConcurrentMap.computeIfAbsent`, or explicit atomic/locked state |
 | Must fix | Split lifecycle state across several fields | `SingletonConstant` was the known concrete case and is fixed in this branch | Fibers see mixed handle/owner/waiter state; false recursion or missed wait | One immutable state snapshot in `AtomicReference<State>` or one lock |
 
@@ -120,8 +120,10 @@ Required replacement:
 
 ## Raw Natural-Enum Handles
 
-Status: exact defect category when a raw `EnumHandle` crosses a public/native
-boundary without `Utils.ensureInitializedEnum(...)`.
+Status: public/native publication paths are closed in this branch. This remains
+an exact defect category for any future path that lets a raw `EnumHandle` cross
+a public/native boundary without `Utils.ensureInitializedEnum(...)` or an
+`xEnum.ensure*` helper.
 
 Audit command:
 
@@ -135,12 +137,16 @@ rg -n "getEnumByName|getEnumByOrdinal" \
 Current signal:
 
 ```text
-86 raw enum accessor references, including definitions, comments, and safe
-owner-scoped internal factories
+14 raw enum accessor references: protected/internal `xEnum` lookups and
+owner-local native enum factories in xBoolean, xNullable, and xOrdered
 ```
 
 Branch-covered groups:
 
+- `xEnum.getEnumByName(...)` and `xEnum.getEnumByOrdinal(...)` are no longer
+  public. They are protected raw lookup primitives used by `xEnum` itself and
+  the owner-local native enum subclasses. `xEnum.getValues()` was removed so
+  callers cannot read the raw value list directly.
 - `xRTComponentTemplate.ensureFormatHandle(...)` returns an initialized or
   deferred `ObjectHandle`, not a raw `EnumHandle`. The helper Javadoc explains
   that natural enum lookup can produce a construction struct and must resolve
@@ -150,23 +156,30 @@ Branch-covered groups:
   `xRTTypeTemplate.ensureFormHandle(...)` follow the same rule. Public property
   and method paths assign the initialized/deferred result directly with
   `Frame.assignDeferredValue(...)` or `Frame.assignConditionalDeferredValue(...)`.
+- `xRTClassTemplate` and `xRTPropertyClassTemplate` contribution action enum
+  values use `ensureEnumByName(...)`.
+- `xService.synchronicity`, `xRTServiceControl.statusIndicator`, and
+  `xFuture.completion` publish initialized/deferred enum handles directly.
+- `xEnumValue.value` and `xEnumeration.byName` no longer read raw enum values.
+  `xEnumeration.byName` still builds the same ordinal-indexed `Map`, but it now
+  asks `xEnum` to publish each value through the singleton/deferred path instead
+  of duplicating struct-completion logic in the reflection template.
 - `xRTDelegate` and `xArray` mutability public properties use
-  `Utils.assignInitializedEnum(...)`, and `xArray` constructor arguments use
-  `ensureEnumByOrdinal(...)` plus deferred argument handling.
-- `xRTServiceControl.SERVICE_STATUS` is fixed in this branch by moving the enum
-  template to `f_templateServiceStatus`.
-- `xConst` and `xException` no longer use static metadata caches. Their helper
-  methods, hash signature, exception classes, and format method are grouped in
-  owner-scoped `Lazy` info records.
-
-High-risk groups still requiring review:
-
+  `ensureEnumByOrdinal(...)`, and `xArray` constructor arguments use the same
+  helper plus deferred argument handling.
 - `xBoolean`, `xNullable`, and `xOrdered` no longer assign static enum handles
   during `initNative()`. They keep native enum values in the owner template and
   expose owner-required factories plus pure value predicates.
-- Any remaining public/native raw `getEnumByName(...)` or
-  `getEnumByOrdinal(...)` path not listed above must be reviewed before this
-  category can be considered globally closed.
+
+Residual raw access that remains by design:
+
+- `xEnum` itself needs protected raw lookup to find the template-local handle
+  before it can resolve natural enum structs through `SingletonConstant`.
+- `xBoolean`, `xNullable`, and `xOrdered` are native enum implementations whose
+  `makeEnumHandle(...)` methods create public owner-local native handles
+  directly, not natural enum construction structs. Their public factories require
+  a `Frame` or `Container`, so they preserve the old eager cache behavior without
+  process-global handles.
 
 Why this is broken:
 
@@ -184,8 +197,8 @@ Required replacement:
 - Public/native return paths should use `ensureEnumByName(frame, name)`,
   `ensureEnumByOrdinal(frame, ordinal)`, or
   `Utils.ensureInitializedEnum(frame, hEnum)`.
-- Helpers that return raw `EnumHandle` must be internal-only and documented as
-  not crossing a public boundary.
+- Helpers that return raw `EnumHandle` must stay internal/protected and
+  documented as not crossing a public boundary.
 - Static enum-template caches must move to owner-scoped final `Lazy<xEnum>` or
   container-owned lookup.
 

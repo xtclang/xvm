@@ -165,9 +165,9 @@ public class xRTDelegate
             return getPropertyCapacity(frame, hTarget, iReturn);
 
         case "mutability":
-            return Utils.assignInitializedEnum(frame,
-                xArray.getInstance(frame).getMutabilityTemplate().
-                    getEnumByOrdinal(hDelegate.getMutability().ordinal()), iReturn);
+            return frame.assignDeferredValue(iReturn,
+                    xArray.getInstance(frame).getMutabilityTemplate().
+                            ensureEnumByOrdinal(frame, hDelegate.getMutability().ordinal()));
 
         case "size":
             return getPropertySize(frame, hTarget, iReturn);

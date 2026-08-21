@@ -350,8 +350,7 @@ public class xRTClassTemplate
         xRTClassTemplate templateClass       = NativeTemplates.get(frame).classTemplate();
         MethodStructure  methodCreateContrib = templateClass.getCreateContributionMethod();
         ObjectHandle[]  ahVar               = new ObjectHandle[methodCreateContrib.getMaxVars()];
-        ahVar[0] = Utils.ensureInitializedEnum(frame,
-                templateClass.getActionTemplate().getEnumByName(sAction));
+        ahVar[0] = templateClass.getActionTemplate().ensureEnumByName(frame, sAction);
         ahVar[1] = typeContrib.ensureTypeHandle(frame.container());
         ahVar[2] = haParams;
         ahVar[3] = hDelegatee;

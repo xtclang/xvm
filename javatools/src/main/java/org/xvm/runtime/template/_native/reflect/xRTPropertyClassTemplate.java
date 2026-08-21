@@ -173,7 +173,7 @@ public class xRTPropertyClassTemplate
             xEnum             enumAction          = templateClass.getActionTemplate();
 
             ObjectHandle[] ahVar = new ObjectHandle[methodCreateContrib.getMaxVars()];
-            ahVar[0] = Utils.ensureInitializedEnum(frameCaller, enumAction.getEnumByName(sAction));
+            ahVar[0] = enumAction.ensureEnumByName(frameCaller, sAction);
             ahVar[1] = typeContrib.ensureTypeHandle(frameCaller.container());
             ahVar[2] = hDelegatee;
             ahVar[3] = haNames;

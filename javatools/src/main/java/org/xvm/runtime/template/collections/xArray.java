@@ -373,8 +373,8 @@ public class xArray
             return frame.assignValue(iReturn, hArray.m_hDelegate);
 
         case "mutability":
-            return Utils.assignInitializedEnum(frame,
-                getMutabilityTemplate().getEnumByOrdinal(hArray.m_mutability.ordinal()), iReturn);
+            return frame.assignDeferredValue(iReturn,
+                    getMutabilityTemplate().ensureEnumByOrdinal(frame, hArray.m_mutability.ordinal()));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

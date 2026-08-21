@@ -81,7 +81,7 @@ public class xEnum
 
             xEnum templateEnum = (xEnum) getSuper();
 
-            EnumHandle hEnum = templateEnum.getEnumByConstant(constValue.getClassConstant());
+            EnumHandle hEnum = templateEnum.rawEnumByConstant(constValue.getClassConstant());
             // For natural enums, hEnum is the mutable struct until completeConstruction() returns.
             // Utils.initConstants() publishes the finalized singleton handle after construction.
 
@@ -267,7 +267,7 @@ public class xEnum
         return new EnumHandle(clz.ensureAccess(Access.STRUCT), iOrdinal);
     }
 
-    public EnumHandle getEnumByName(String sName) {
+    protected EnumHandle getEnumByName(String sName) {
         EnumInfo info = enumInfo();
         int      ix   = info.names().indexOf(sName);
         return ix >= 0 ? info.handles().get(ix) : null;
@@ -285,7 +285,7 @@ public class xEnum
                 : Utils.ensureInitializedEnum(frame, hEnum);
     }
 
-    public EnumHandle getEnumByOrdinal(int ix) {
+    protected EnumHandle getEnumByOrdinal(int ix) {
         return ix >= 0 ? enumInfo().handles().get(ix) : null;
     }
 
@@ -302,9 +302,15 @@ public class xEnum
     }
 
     /**
-     * @return an EnumHandle for the specified id
+     * Raw construction-time lookup by enum value id.
+     *
+     * This is intentionally private because natural enum entries can be mutable construction
+     * structs. Public/native publication paths must use ensureEnumByName(), ensureEnumByOrdinal(),
+     * or Utils.ensureInitializedEnum() so they can return the final singleton or a deferred handle.
+     *
+     * @return the raw EnumHandle for the specified id
      */
-    public EnumHandle getEnumByConstant(IdentityConstant id) {
+    private EnumHandle rawEnumByConstant(IdentityConstant id) {
         ClassStructure clzThis = getStructure();
 
         assert clzThis.getFormat() == Format.ENUM;
@@ -334,13 +340,6 @@ public class xEnum
      */
     public List<String> getNames() {
         return enumInfo().names();
-    }
-
-    /**
-     * @return a list of enum values
-     */
-    public List<EnumHandle> getValues() {
-        return enumInfo().handles();
     }
 
     /**
