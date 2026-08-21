@@ -114,7 +114,7 @@ public class xArray
      * @return the Array.Mutability enum template
      */
     public xEnum getMutabilityTemplate() {
-        return f_templateMutability.get();
+        return f_templateMutability.get(this);
     }
 
     @Override
@@ -1020,21 +1020,22 @@ public class xArray
     /**
      * Lazily resolved Array.Mutability enum template.
      */
-    private final Lazy<xEnum> f_templateMutability = Lazy.of(() ->
-            f_container.getEnumTemplate("collections.Array.Mutability"));
+    private final Lazy.Owner<xArray, xEnum> f_templateMutability =
+            Lazy.ofOwner(owner -> owner.container().getEnumTemplate("collections.Array.Mutability"));
 
     // This dispatch map is used while Container.getTemplate(TypeConstant) promotes Array<T> to a
     // specialized template, so it must stay separate from ArrayInfo, which resolves Array classes.
-    private final Lazy<Map<TypeConstant, xArray>> f_arrayTemplates = Lazy.of(this::createArrayTemplates);
+    private final Lazy.Owner<xArray, Map<TypeConstant, xArray>> f_arrayTemplates =
+            Lazy.ofOwner(xArray::createArrayTemplates);
 
-    private final Lazy<ArrayInfo> f_info = Lazy.of(this::createArrayInfo);
+    private final Lazy.Owner<xArray, ArrayInfo> f_info = Lazy.ofOwner(xArray::createArrayInfo);
 
     private Map<TypeConstant, xArray> arrayTemplates() {
-        return f_arrayTemplates.get();
+        return f_arrayTemplates.get(this);
     }
 
     private ArrayInfo info() {
-        return f_info.get();
+        return f_info.get(this);
     }
 
     private static ArrayInfo info(Container container) {

@@ -453,7 +453,7 @@ public class xConst
      * @return immutable owner-scoped metadata for the canonical Const template
      */
     private ConstInfo info() {
-        return f_info.get();
+        return f_info.get(this);
     }
 
     private ConstInfo createInfo() {
@@ -828,5 +828,5 @@ public class xConst
      * signatures are derived from this template's container and constant pool, so they cannot be
      * shared safely between containers.
      */
-    private final Lazy<ConstInfo> f_info = Lazy.of(this::createInfo);
+    private final Lazy.Owner<xConst, ConstInfo> f_info = Lazy.ofOwner(xConst::createInfo);
 }

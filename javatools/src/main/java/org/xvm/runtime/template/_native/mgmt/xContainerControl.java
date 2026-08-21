@@ -17,6 +17,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.NestedContainer;
 import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.OwnershipDiagnostics;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 
@@ -56,7 +57,7 @@ public class xContainerControl
 
     @Override
     public void initNative() {
-        f_clzControl.get();
+        f_clzControl.get(this);
 
         markNativeProperty("mainService");
         markNativeProperty("innerTypeSystem");
@@ -135,7 +136,16 @@ public class xContainerControl
             FunctionHandle    hFunction   = new xRTFunction.AsyncHandle(container, chain) {
                 @Override
                 protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService) {
-                    return frame.getConstHandle(constModule);
+                    ObjectHandle hModule = frame.getConstHandle(constModule);
+                    if (!Op.isDeferred(hModule)) {
+                        // Diagnostic mode: the parallel TestProps failure surfaced here when an
+                        // adopted SingletonConstant reused another container's module handle.
+                        OwnershipDiagnostics.assertHandleValidIfEnabled(
+                                frame.f_context.f_container,
+                                "mgmt.Container.invoke module target",
+                                hModule);
+                    }
+                    return hModule;
                 }
             };
             return hFunction.callT(frame, hService, ahArg, iReturn);
@@ -205,7 +215,7 @@ public class xContainerControl
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     public ObjectHandle makeHandle(Container container) {
-        return new ControlHandle(f_clzControl.get(), container);
+        return new ControlHandle(f_clzControl.get(this), container);
     }
 
     protected static class ControlHandle
@@ -227,8 +237,8 @@ public class xContainerControl
         protected final Container f_container;
     }
 
-    private final Lazy<TypeComposition> f_clzControl = Lazy.of(() -> {
-        TypeConstant typeMask = pool().ensureEcstasyTypeConstant("mgmt.Container.Control");
-        return ensureClass(f_container, getCanonicalType(), typeMask);
+    private final Lazy.Owner<xContainerControl, TypeComposition> f_clzControl = Lazy.ofOwner(owner -> {
+        TypeConstant typeMask = owner.pool().ensureEcstasyTypeConstant("mgmt.Container.Control");
+        return owner.ensureClass(owner.container(), owner.getCanonicalType(), typeMask);
     });
 }

@@ -189,34 +189,34 @@ public class xByteArray
     }
 
     private TypeComposition getInt8ArrayComposition() {
-        return f_clzInt8Array.get();
+        return f_clzInt8Array.get(this);
     }
 
     private TypeComposition getInt16ArrayComposition() {
-        return f_clzInt16Array.get();
+        return f_clzInt16Array.get(this);
     }
 
     private TypeComposition getInt64ArrayComposition() {
-        return f_clzInt64Array.get();
+        return f_clzInt64Array.get(this);
     }
 
     private TypeComposition getFloat64ArrayComposition() {
-        return f_clzFloat64Array.get();
+        return f_clzFloat64Array.get(this);
     }
 
     public static xByteArray getInstance(Container container) {
         return NativeTemplates.get(container).byteArray();
     }
 
-    private final Lazy<TypeComposition> f_clzInt8Array = Lazy.of(() ->
-            f_container.resolveClass(pool().ensureArrayType(pool().typeInt8())));
+    private final Lazy.Owner<xByteArray, TypeComposition> f_clzInt8Array = Lazy.ofOwner(owner ->
+            owner.container().resolveClass(owner.pool().ensureArrayType(owner.pool().typeInt8())));
 
-    private final Lazy<TypeComposition> f_clzInt16Array = Lazy.of(() ->
-            f_container.resolveClass(pool().ensureArrayType(pool().typeInt16())));
+    private final Lazy.Owner<xByteArray, TypeComposition> f_clzInt16Array = Lazy.ofOwner(owner ->
+            owner.container().resolveClass(owner.pool().ensureArrayType(owner.pool().typeInt16())));
 
-    private final Lazy<TypeComposition> f_clzInt64Array = Lazy.of(() ->
-            f_container.resolveClass(pool().ensureArrayType(pool().typeInt64())));
+    private final Lazy.Owner<xByteArray, TypeComposition> f_clzInt64Array = Lazy.ofOwner(owner ->
+            owner.container().resolveClass(owner.pool().ensureArrayType(owner.pool().typeInt64())));
 
-    private final Lazy<TypeComposition> f_clzFloat64Array = Lazy.of(() ->
-            f_container.resolveClass(pool().ensureArrayType(pool().typeFloat64())));
+    private final Lazy.Owner<xByteArray, TypeComposition> f_clzFloat64Array = Lazy.ofOwner(owner ->
+            owner.container().resolveClass(owner.pool().ensureArrayType(owner.pool().typeFloat64())));
 }

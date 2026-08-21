@@ -247,7 +247,8 @@ public class xRTComponentTemplate
         // The pool dependency is inside the container-owned template's Lazy field. Keeping the
         // container parameter here preserves the old cache behavior without using a process-global
         // TypeConstant from whichever container initialized last.
-        return NativeTemplates.get(container).componentTemplate().f_typeComponentArray.get();
+        xRTComponentTemplate template = NativeTemplates.get(container).componentTemplate();
+        return template.f_typeComponentArray.get(template);
     }
 
     /**
@@ -255,7 +256,7 @@ public class xRTComponentTemplate
      */
     public static TypeComposition getMultiMethodTemplateComposition(Container container) {
         xRTComponentTemplate template   = NativeTemplates.get(container).componentTemplate();
-        ClassTemplate        templateRT = template.f_templateMultiMethod.get();
+        ClassTemplate        templateRT = template.f_templateMultiMethod.get(template);
 
         ConstantPool pool         = container.getConstantPool();
         TypeConstant typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MultiMethodTemplate");
@@ -403,9 +404,10 @@ public class xRTComponentTemplate
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private final Lazy<TypeConstant> f_typeComponentArray = Lazy.of(() ->
-            pool().ensureArrayType(pool().ensureEcstasyTypeConstant("reflect.ComponentTemplate")));
+    private final Lazy.Owner<xRTComponentTemplate, TypeConstant> f_typeComponentArray =
+            Lazy.ofOwner(owner -> owner.pool().ensureArrayType(
+                    owner.pool().ensureEcstasyTypeConstant("reflect.ComponentTemplate")));
 
-    private final Lazy<ClassTemplate> f_templateMultiMethod = Lazy.of(() ->
-            f_container.getTemplate("_native.reflect.RTMultiMethodTemplate"));
+    private final Lazy.Owner<xRTComponentTemplate, ClassTemplate> f_templateMultiMethod =
+            Lazy.ofOwner(owner -> owner.container().getTemplate("_native.reflect.RTMultiMethodTemplate"));
 }

@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -17,7 +18,10 @@ import java.util.stream.Collectors;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+
+import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import org.xvm.util.Lazy;
 
@@ -30,9 +34,14 @@ import static java.util.Objects.requireNonNull;
  * <p>The default dump reports only already-computed lazy values. Use
  * {@link #dump(boolean, Container...)} with {@code forceLazy=true} only when
  * intentional cache warmup is acceptable, because that mode calls
- * {@link Lazy#get()} on deferred cells.</p>
+ * {@link Lazy#get()} or owner-aware lazy get on deferred cells.</p>
  */
 public final class OwnershipDiagnostics {
+    /**
+     * System property that enables fail-fast runtime boundary ownership checks.
+     */
+    public static final String VALIDATE_PROPERTY = "xvm.runtime.validateOwnership";
+
     private OwnershipDiagnostics() {
     }
 
@@ -102,6 +111,94 @@ public final class OwnershipDiagnostics {
      */
     public static void assertValid(boolean forceLazy, Container... containers) {
         validate(forceLazy, containers).assertValid();
+    }
+
+    /**
+     * Return the containers currently registered under the same runtime as the supplied root,
+     * including the root itself.
+     *
+     * @param root  a container in the runtime to inspect
+     *
+     * @return a stable snapshot of related containers
+     */
+    public static Set<Container> runtimeContainers(Container root) {
+        requireNonNull(root, "root");
+
+        Set<Container> containers = new LinkedHashSet<>(root.f_runtime.containers());
+        containers.add(root);
+        return Collections.unmodifiableSet(containers);
+    }
+
+    /**
+     * Validate all currently registered containers under the same runtime as the supplied root.
+     *
+     * @param root  a container in the runtime to inspect
+     *
+     * @return structured validation findings
+     */
+    public static Validation validateRuntime(Container root) {
+        return validate(runtimeContainers(root).toArray(Container[]::new));
+    }
+
+    /**
+     * Validate all currently registered containers under the same runtime as the supplied root and
+     * throw on illegal ownership.
+     *
+     * @param root  a container in the runtime to inspect
+     */
+    public static void assertRuntimeValid(Container root) {
+        validateRuntime(root).assertValid();
+    }
+
+    /**
+     * Dump all currently registered containers under the same runtime as the supplied root.
+     *
+     * @param root  a container in the runtime to inspect
+     *
+     * @return a text dump suitable for logs or test artifacts
+     */
+    public static String dumpRuntime(Container root) {
+        return dump(runtimeContainers(root).toArray(Container[]::new));
+    }
+
+    /**
+     * Validate a handle graph as if it were being used by the specified owner.
+     *
+     * @param expected  the expected owning container
+     * @param path      a diagnostic path naming the boundary being checked
+     * @param handle    the handle to inspect
+     *
+     * @return structured validation findings
+     */
+    public static Validation validateHandle(Container expected, String path, ObjectHandle handle) {
+        Dumper dumper = new Dumper(false, false);
+        dumper.scanHandle(expected, path, handle);
+        return dumper.validation();
+    }
+
+    /**
+     * Validate a handle graph and throw on illegal ownership.
+     *
+     * @param expected  the expected owning container
+     * @param path      a diagnostic path naming the boundary being checked
+     * @param handle    the handle to inspect
+     */
+    public static void assertHandleValid(Container expected, String path, ObjectHandle handle) {
+        validateHandle(expected, path, handle).assertValid();
+    }
+
+    /**
+     * Validate a handle graph when {@link #VALIDATE_PROPERTY} is enabled.
+     *
+     * @param expected  the expected owning container
+     * @param path      a diagnostic path naming the boundary being checked
+     * @param handle    the handle to inspect
+     */
+    public static void assertHandleValidIfEnabled(Container expected, String path,
+                                                 ObjectHandle handle) {
+        if (Boolean.getBoolean(VALIDATE_PROPERTY)) {
+            assertHandleValid(expected, path, handle);
+        }
     }
 
 
@@ -176,6 +273,8 @@ public final class OwnershipDiagnostics {
         private final Map<Object, Occurrence> seen = new IdentityHashMap<>();
         private final Set<Object> dumpedTemplateLazy =
                 Collections.newSetFromMap(new IdentityHashMap<>());
+        private final Set<Object> expandedValues =
+                Collections.newSetFromMap(new IdentityHashMap<>());
 
         private final List<String> ownerMismatches = new ArrayList<>();
         private final List<String> poolMismatches  = new ArrayList<>();
@@ -220,6 +319,15 @@ public final class OwnershipDiagnostics {
             }
         }
 
+        void scanHandle(Container expected, String path, ObjectHandle handle) {
+            requireNonNull(expected, "expected");
+            requireNonNull(path, "path");
+            requireNonNull(handle, "handle");
+
+            containerNames.put(expected, "C0");
+            dumpValue(path, handle, expected, 0);
+        }
+
         private void dumpContainer(int index, Container container) {
             String name = containerNames.get(container);
 
@@ -233,6 +341,7 @@ public final class OwnershipDiagnostics {
 
             record("container[" + index + "]", container, container);
 
+            dumpConstHeap(container);
             dumpNativeTemplates(container);
             // A main container can cache app-specific parameterized type keys
             // whose implementation template is the canonical native class
@@ -241,6 +350,19 @@ public final class OwnershipDiagnostics {
                     container, 1, true);
             dumpMap("compositions", readField(container, "f_mapCompositions"), container, 1);
             dumpCollection("services", readField(container, "f_setServices"), container, 1);
+        }
+
+        private void dumpConstHeap(Container container) {
+            Object heap = readField(container, "f_heap");
+            if (emitDump) {
+                out.append("  constHeap = ")
+                        .append(identity(heap))
+                        .append('\n');
+            }
+
+            // Constant handles may be canonical native-parent values, e.g. Char/Int/String/enum
+            // handles. Those are legal only for this container's own NativeContainer parent.
+            dumpMap("constHeap.entries", readField(heap, "f_mapConstants"), container, 2, true);
         }
 
         private void dumpNativeTemplates(Container container) {
@@ -258,7 +380,8 @@ public final class OwnershipDiagnostics {
             // normal Container.getTemplate(...) delegation model; still reject
             // native-template values from any other runtime owner.
             dumpLazyFields(templates, container, 2, true);
-            dumpMap("nativeTemplateKeys", readField(templates, "f_mapTemplates"), container, 2, true);
+            dumpMap("nativeTemplateKeys", readField(templates, "f_mapTemplates"),
+                    container, 2, true, templates);
         }
 
         private void dumpLazyFields(Object owner, Container expected, int indent) {
@@ -278,6 +401,9 @@ public final class OwnershipDiagnostics {
                 if (value instanceof Lazy<?> lazy) {
                     dumpLazy(field.getDeclaringClass().getSimpleName() + "." + field.getName(),
                             lazy, expected, indent + 1, allowNativeOwner);
+                } else if (value instanceof Lazy.Owner<?, ?> lazy) {
+                    dumpOwnerLazy(field.getDeclaringClass().getSimpleName() + "." + field.getName(),
+                            lazy, owner, expected, indent + 1, allowNativeOwner);
                 }
             }
         }
@@ -296,12 +422,33 @@ public final class OwnershipDiagnostics {
             }
         }
 
+        private void dumpOwnerLazy(String label, Lazy.Owner<?, ?> lazy, Object owner,
+                                   Container expected, int indent, boolean allowNativeOwner) {
+            boolean computed = lazy.isComputed();
+            line(indent, label + " = Lazy.Owner[" + (computed ? "computed" : "deferred") + "]");
+
+            if (computed || forceLazy) {
+                if (owner == null) {
+                    line(indent + 1, "value = <unavailable: missing lazy owner>");
+                    return;
+                }
+
+                dumpValue("value", getOwnerLazy(lazy, owner), expected, indent + 1,
+                        allowNativeOwner);
+            }
+        }
+
         private void dumpMap(String label, Object value, Container expected, int indent) {
             dumpMap(label, value, expected, indent, false);
         }
 
         private void dumpMap(String label, Object value, Container expected, int indent,
                              boolean allowNativeOwner) {
+            dumpMap(label, value, expected, indent, allowNativeOwner, null);
+        }
+
+        private void dumpMap(String label, Object value, Container expected, int indent,
+                             boolean allowNativeOwner, Object lazyOwner) {
             if (!(value instanceof Map<?, ?> map)) {
                 line(indent, label + " = " + describe(value, expected, allowNativeOwner));
                 return;
@@ -310,7 +457,8 @@ public final class OwnershipDiagnostics {
             line(indent, label + " size=" + map.size());
             map.entrySet().stream()
                     .sorted(Comparator.comparing(entry -> String.valueOf(entry.getKey())))
-                    .forEach(entry -> dumpMapEntry(entry, expected, indent + 1, allowNativeOwner));
+                    .forEach(entry -> dumpMapEntry(entry, expected, indent + 1,
+                            allowNativeOwner, lazyOwner));
         }
 
         private void dumpMapEntry(Map.Entry<?, ?> entry, Container expected, int indent) {
@@ -319,12 +467,20 @@ public final class OwnershipDiagnostics {
 
         private void dumpMapEntry(Map.Entry<?, ?> entry, Container expected, int indent,
                                   boolean allowNativeOwner) {
+            dumpMapEntry(entry, expected, indent, allowNativeOwner, null);
+        }
+
+        private void dumpMapEntry(Map.Entry<?, ?> entry, Container expected, int indent,
+                                  boolean allowNativeOwner, Object lazyOwner) {
             Object key   = entry.getKey();
             Object value = entry.getValue();
 
             record("key " + key, key, expected, allowNativeOwner);
             if (value instanceof Lazy<?> lazy) {
                 dumpLazy(String.valueOf(key), lazy, expected, indent, allowNativeOwner);
+            } else if (value instanceof Lazy.Owner<?, ?> lazy) {
+                dumpOwnerLazy(String.valueOf(key), lazy, lazyOwner, expected, indent,
+                        allowNativeOwner);
             } else {
                 dumpValue(String.valueOf(key), value, expected, indent, allowNativeOwner);
             }
@@ -355,6 +511,10 @@ public final class OwnershipDiagnostics {
             line(indent, label + " = " + describe(value, expected, allowNativeOwner));
             record(label, value, expected, allowNativeOwner);
 
+            if (value == null || !expandedValues.add(value)) {
+                return;
+            }
+
             Container nestedExpected = nestedExpected(expected, value, allowNativeOwner);
             if (value instanceof ClassTemplate template && dumpedTemplateLazy.add(template)) {
                 dumpLazyFields(template, nestedExpected, indent + 1, allowNativeOwner);
@@ -372,6 +532,38 @@ public final class OwnershipDiagnostics {
                 for (int i = 0; i < count; i++) {
                     dumpValue("[" + i + "]", Array.get(value, i), nestedExpected,
                             indent + 2, allowNativeOwner);
+                }
+            }
+
+            if (value instanceof ObjectHandle handle) {
+                dumpHandleFields(handle, nestedExpected, indent + 1, allowNativeOwner);
+            }
+        }
+
+        private void dumpHandleFields(ObjectHandle handle, Container expected, int indent,
+                                      boolean allowNativeOwner) {
+            if (handle instanceof GenericHandle) {
+                Object fields = safe(() -> readField(handle, "m_aFields"));
+                if (fields instanceof ObjectHandle[] ahFields) {
+                    dumpValue("handle.fields", ahFields, expected, indent, allowNativeOwner);
+                }
+
+                Container owner = safe(() -> (Container) readField(handle, "m_owner"));
+                if (owner != null) {
+                    line(indent, "handle.explicitOwner = " + describeContainer(owner));
+                }
+            }
+
+            if (handle instanceof RefHandle) {
+                Object referent = safe(() -> readField(handle, "m_hReferent"));
+                if (referent instanceof ObjectHandle hReferent) {
+                    dumpValue("ref.referentHolder", hReferent, expected, indent,
+                            allowNativeOwner);
+                }
+
+                Object property = safe(() -> readField(handle, "m_idProp"));
+                if (property instanceof Constant constant) {
+                    dumpValue("ref.property", constant, expected, indent, allowNativeOwner);
                 }
             }
         }
@@ -587,7 +779,8 @@ public final class OwnershipDiagnostics {
             for (Class<?> current = clz; current != null; current = current.getSuperclass()) {
                 for (Field field : current.getDeclaredFields()) {
                     if (!Modifier.isStatic(field.getModifiers())
-                            && Lazy.class.isAssignableFrom(field.getType())) {
+                            && (Lazy.class.isAssignableFrom(field.getType())
+                                || Lazy.Owner.class.isAssignableFrom(field.getType()))) {
                         field.setAccessible(true);
                         fields.add(field);
                     }
@@ -622,6 +815,11 @@ public final class OwnershipDiagnostics {
             } catch (IllegalAccessException e) {
                 throw new IllegalStateException(e);
             }
+        }
+
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        private static Object getOwnerLazy(Lazy.Owner lazy, Object owner) {
+            return lazy.get(owner);
         }
 
         private static <T> T safe(SupplierWithException<T> supplier) {

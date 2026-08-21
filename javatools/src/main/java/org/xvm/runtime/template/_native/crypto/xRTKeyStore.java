@@ -103,14 +103,7 @@ public class xRTKeyStore
 
     @Override
     public TypeConstant getCanonicalType() {
-        TypeConstant type = m_typeCanonical;
-        if (type == null) {
-            ConstantPool pool = pool();
-            m_typeCanonical = type = pool.ensureTerminalTypeConstant(
-                pool.ensureClassConstant(pool.ensureModuleConstant("crypto.xtclang.org"),
-                    "KeyStore"));
-        }
-        return type;
+        return f_typeCanonical.get(this);
     }
 
     /**
@@ -521,7 +514,7 @@ public class xRTKeyStore
      * @return the owner-scoped NamedPassword type used to reveal password proxies
      */
     private TypeConstant ensureNamedPasswordType() {
-        return f_typeNamedPassword.get();
+        return f_typeNamedPassword.get(this);
     }
 
 
@@ -572,17 +565,21 @@ public class xRTKeyStore
     // ----- data fields and constants -------------------------------------------------------------
 
     /**
-     * Cached canonical type.
+     * Cached canonical type for this container's crypto module.
      */
-    private TypeConstant m_typeCanonical;
+    private final Lazy.Owner<xRTKeyStore, TypeConstant> f_typeCanonical = Lazy.ofOwner(owner -> {
+        ConstantPool pool = owner.pool();
+        return pool.ensureTerminalTypeConstant(
+                pool.ensureClassConstant(pool.ensureModuleConstant("crypto.xtclang.org"), "KeyStore"));
+    });
 
     /**
      * Owner-scoped replacement for the old static NamedPassword type cache. The ConstantPool still
      * interns the type once for this owner, but the cached constant can no longer leak across
      * containers.
      */
-    private final Lazy<TypeConstant> f_typeNamedPassword = Lazy.of(() -> {
-        ConstantPool pool = pool();
+    private final Lazy.Owner<xRTKeyStore, TypeConstant> f_typeNamedPassword = Lazy.ofOwner(owner -> {
+        ConstantPool pool = owner.pool();
         return pool.ensureClassConstant(
                 pool.ensureModuleConstant("crypto.xtclang.org"), "CryptoPassword").getType();
     });

@@ -212,11 +212,11 @@ public class xBit
     }
 
     public JavaLong zeroHandle() {
-        return f_zero.get();
+        return f_zero.get(this);
     }
 
     public JavaLong oneHandle() {
-        return f_one.get();
+        return f_one.get(this);
     }
 
     public static JavaLong makeHandle(Frame frame, boolean f) {
@@ -227,6 +227,8 @@ public class xBit
         return getInstance(container).makeHandle(f);
     }
 
-    private final Lazy<JavaLong> f_zero = Lazy.of(() -> new JavaLong(getCanonicalClass(), 0));
-    private final Lazy<JavaLong> f_one  = Lazy.of(() -> new JavaLong(getCanonicalClass(), 1));
+    private final Lazy.Owner<xBit, JavaLong> f_zero =
+            Lazy.ofOwner(owner -> new JavaLong(owner.getCanonicalClass(), 0));
+    private final Lazy.Owner<xBit, JavaLong> f_one =
+            Lazy.ofOwner(owner -> new JavaLong(owner.getCanonicalClass(), 1));
 }

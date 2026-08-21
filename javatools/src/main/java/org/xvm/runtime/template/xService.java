@@ -72,14 +72,14 @@ public class xService
         if (NativeTemplates.get(this).isService(this)) {
             // since Service is an interface, we cannot annotate the properties naturally and need to do
             // an ad-hoc check (the list is to be updated)
-            f_propRemainingTime.get();
+            f_propRemainingTime.get(this);
         }
     }
 
     @Override
     protected ClassConstant getInceptionClassConstant() {
         return NativeTemplates.get(this).isService(this)
-                ? f_constInception.get()
+                ? f_constInception.get(this)
                 : (ClassConstant) super.getInceptionClassConstant();
     }
 
@@ -240,7 +240,7 @@ public class xService
             }
 
             switch (hArg.getTemplate().getPropertyValue(frame, hArg,
-                    f_propRemainingTime.get(), Op.A_STACK)) {
+                    f_propRemainingTime.get(this), Op.A_STACK)) {
             case Op.R_NEXT: {
                 long cRemains = xNanosTimer.millisFromDuration(frame.popStack());
                 frame.f_fiber.setTimeoutHandle(hArg,
@@ -338,7 +338,7 @@ public class xService
                 return frame.raiseException("Call out of context");
             }
             return frame.assignDeferredValue(iReturn,
-                    f_templateSynchronicity.get().ensureEnumByName(
+                    f_templateSynchronicity.get(this).ensureEnumByName(
                             frame, frame.getSynchronicity().name()));
         }
         }
@@ -564,8 +564,8 @@ public class xService
     /**
      * The inception class for the native rebase.
      */
-    private final Lazy<ClassConstant> f_constInception = Lazy.of(() ->
-            new NativeRebaseConstant((ClassConstant) f_struct.getIdentityConstant()));
+    private final Lazy.Owner<xService, ClassConstant> f_constInception = Lazy.ofOwner(owner ->
+            new NativeRebaseConstant((ClassConstant) owner.f_struct.getIdentityConstant()));
 
     /**
      * Pure property names; unlike template/type/method metadata, these are not container state.
@@ -576,8 +576,8 @@ public class xService
     /**
      * Property constant for "Timeout.remainingTime".
      */
-    private final Lazy<PropertyConstant> f_propRemainingTime = Lazy.of(() -> {
-        IdentityConstant idTimeout  = pool().getImplicitlyImportedIdentity("Timeout");
+    private final Lazy.Owner<xService, PropertyConstant> f_propRemainingTime = Lazy.ofOwner(owner -> {
+        IdentityConstant idTimeout  = owner.pool().getImplicitlyImportedIdentity("Timeout");
         ClassStructure   clzTimeout = (ClassStructure) idTimeout.getComponent();
         return (PropertyConstant) clzTimeout.getChild("remainingTime").getIdentityConstant();
     });
@@ -585,6 +585,6 @@ public class xService
     /**
      * Enum used by the native properties.
      */
-    private final Lazy<xEnum> f_templateSynchronicity = Lazy.of(() ->
-            f_container.getEnumTemplate("Service.Synchronicity"));
+    private final Lazy.Owner<xService, xEnum> f_templateSynchronicity = Lazy.ofOwner(owner ->
+            owner.container().getEnumTemplate("Service.Synchronicity"));
 }

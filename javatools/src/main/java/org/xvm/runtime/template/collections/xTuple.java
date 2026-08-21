@@ -50,12 +50,11 @@ public class xTuple
 
         f_constInception = new NativeRebaseConstant(
                 (ClassConstant) structure.getIdentityConstant());
-        f_hVoid = Lazy.of(() -> makeImmutableHandle(getCanonicalClass(), Utils.OBJECTS_NONE));
     }
 
     @Override
     public void initNative() {
-        f_hVoid.get();
+        f_hVoid.get(this);
 
         // Note: all interface methods and properties are implicitly native due to "NativeRebase"
     }
@@ -87,7 +86,7 @@ public class xTuple
         int c = aconst.length;
 
         if (c == 0) {
-            return frame.pushStack(f_hVoid.get());
+            return frame.pushStack(f_hVoid.get(this));
         }
 
         TypeConstant typeTuple = constTuple.getType();
@@ -673,7 +672,8 @@ public class xTuple
     }
 
     public static TupleHandle ensureEmptyTuple(Container container) {
-        return getInstance(container).f_hVoid.get();
+        xTuple template = getInstance(container);
+        return template.f_hVoid.get(template);
     }
 
     public static class TupleHandle
@@ -761,5 +761,6 @@ public class xTuple
      * Owner-scoped empty tuple handle. The handle's composition is container-owned, so the old static
      * H_VOID cache could leak one container's Tuple() into another container.
      */
-    private final Lazy<TupleHandle> f_hVoid;
+    private final Lazy.Owner<xTuple, TupleHandle> f_hVoid =
+            Lazy.ofOwner(owner -> xTuple.makeImmutableHandle(owner.getCanonicalClass(), Utils.OBJECTS_NONE));
 }

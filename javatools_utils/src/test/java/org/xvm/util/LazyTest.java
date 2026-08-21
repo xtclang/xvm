@@ -54,8 +54,8 @@ public class LazyTest {
     }
 
     @Test
-    public void testLazyOfBound() {
-        Lazy.Bound<OwnerState, String> lazy  = Lazy.ofBound(OwnerState::compute);
+    public void testLazyOfOwner() {
+        Lazy.Owner<OwnerState, String> lazy  = Lazy.ofOwner(OwnerState::compute);
         OwnerState                     owner = new OwnerState("owner");
 
         assertFalse(lazy.isComputed());
@@ -68,8 +68,8 @@ public class LazyTest {
     }
 
     @Test
-    public void testLazyOfBoundNull() {
-        Lazy.Bound<OwnerState, String> lazy  = Lazy.ofBound(owner -> null);
+    public void testLazyOfOwnerNull() {
+        Lazy.Owner<OwnerState, String> lazy  = Lazy.ofOwner(owner -> null);
         OwnerState                     owner = new OwnerState("owner");
 
         assertFalse(lazy.isComputed());
@@ -196,8 +196,8 @@ public class LazyTest {
     }
 
     @Test
-    public void testBoundThreadSafety() throws InterruptedException {
-        Lazy.Bound<OwnerState, String> lazy  = Lazy.ofBound(OwnerState::compute);
+    public void testOwnerThreadSafety() throws InterruptedException {
+        Lazy.Owner<OwnerState, String> lazy  = Lazy.ofOwner(OwnerState::compute);
         OwnerState                     owner = new OwnerState("owner");
 
         int threadCount = 10;
@@ -226,8 +226,8 @@ public class LazyTest {
     }
 
     @Test
-    public void testBoundLazyRejectsDifferentOwnerAfterComputation() {
-        Lazy.Bound<OwnerState, String> lazy = Lazy.ofBound(OwnerState::compute);
+    public void testOwnerLazyRejectsDifferentOwnerAfterComputation() {
+        Lazy.Owner<OwnerState, String> lazy = Lazy.ofOwner(OwnerState::compute);
 
         assertEquals("one:1", lazy.get(new OwnerState("one")));
         assertThrows(IllegalArgumentException.class, () -> lazy.get(new OwnerState("two")));
@@ -268,7 +268,7 @@ public class LazyTest {
     @Test
     public void testNullSupplierThrows() {
         assertThrows(NullPointerException.class, () -> Lazy.of(null));
-        assertThrows(NullPointerException.class, () -> Lazy.ofBound(null));
+        assertThrows(NullPointerException.class, () -> Lazy.ofOwner(null));
         assertThrows(NullPointerException.class, () -> Lazy.ofUnsynchronized(null));
         assertThrows(NullPointerException.class, () -> Lazy.ofNullable(null));
         assertThrows(NullPointerException.class, () -> Lazy.ofOptional(null));

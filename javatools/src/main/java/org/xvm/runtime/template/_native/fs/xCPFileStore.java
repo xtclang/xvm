@@ -59,7 +59,7 @@ public class xCPFileStore
                                         getCanonicalType(), frame.poolContext().typeFileStore());
 
             GenericHandle   hStruct = new GenericHandle(clz.ensureAccess(Access.STRUCT));
-            MethodStructure constructor = f_constructor.get();
+            MethodStructure constructor = f_constructor.get(this);
             ObjectHandle[]  ahVar       = Utils.ensureSize(Utils.OBJECTS_NONE,
                     constructor.getMaxVars());
             ahVar[0] = xString.makeHandle(frame, constStore.getPath());
@@ -161,8 +161,8 @@ public class xCPFileStore
      * MethodStructure to this template's owning ClassStructure instead of a
      * process-global static.
      */
-    private final Lazy<MethodStructure> f_constructor = Lazy.of(() -> {
-        ConstantPool pool = f_container.getConstantPool();
-        return getStructure().findConstructor(pool.typeString(), pool.typeObject());
+    private final Lazy.Owner<xCPFileStore, MethodStructure> f_constructor = Lazy.ofOwner(owner -> {
+        ConstantPool pool = owner.container().getConstantPool();
+        return owner.getStructure().findConstructor(pool.typeString(), pool.typeObject());
     });
 }

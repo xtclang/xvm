@@ -41,7 +41,7 @@ public class xRTPackageTemplate
         xRTPackageTemplate template = container.getTemplate("_native.reflect.RTPackageTemplate",
                 xRTPackageTemplate.class);
         TypeComposition clz = template.ensureClass(container,
-                template.getCanonicalType(), template.f_typePackageTemplate.get());
+                template.getCanonicalType(), template.f_typePackageTemplate.get(template));
         return new ComponentTemplateHandle(clz, pkg);
     }
 
@@ -51,8 +51,9 @@ public class xRTPackageTemplate
     /**
      * PackageTemplate is a container-owned type constant, not JVM-global metadata.
      */
-    private final Lazy<TypeConstant> f_typePackageTemplate = Lazy.of(() -> {
-        ConstantPool pool = f_container.getConstantPool();
+    private final Lazy.Owner<xRTPackageTemplate, TypeConstant> f_typePackageTemplate =
+            Lazy.ofOwner(owner -> {
+        ConstantPool pool = owner.container().getConstantPool();
         return pool.ensureEcstasyTypeConstant("reflect.PackageTemplate");
     });
 }

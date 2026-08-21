@@ -177,8 +177,9 @@ public class xRTMethodTemplate
      * @return the TypeComposition for an RTMethodTemplate
      */
     public static TypeComposition ensureMethodTemplateComposition(Container container) {
-        return container.getTemplate("_native.reflect.RTMethodTemplate", xRTMethodTemplate.class)
-                .f_compMethodTemplate.get();
+        xRTMethodTemplate template =
+                container.getTemplate("_native.reflect.RTMethodTemplate", xRTMethodTemplate.class);
+        return template.f_compMethodTemplate.get(template);
     }
 
     // ----- ObjectHandle support ------------------------------------------------------------------
@@ -201,10 +202,10 @@ public class xRTMethodTemplate
      * The old cache was process-global and reached through INSTANCE. The composition is owned by
      * the native template's container, so cache it on that template instead.
      */
-    private final Lazy<TypeComposition> f_compMethodTemplate = Lazy.of(() -> {
-        ConstantPool     pool         = pool();
+    private final Lazy.Owner<xRTMethodTemplate, TypeComposition> f_compMethodTemplate = Lazy.ofOwner(owner -> {
+        ConstantPool     pool         = owner.pool();
         TypeConstant     typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MethodTemplate");
-        TypeComposition  clz          = ensureClass(f_container, typeTemplate);
+        TypeComposition  clz          = owner.ensureClass(owner.container(), typeTemplate);
         assert clz != null;
         return clz;
     });

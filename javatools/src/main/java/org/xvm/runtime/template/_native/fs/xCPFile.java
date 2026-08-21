@@ -38,7 +38,7 @@ public class xCPFile
             TypeComposition clz    = ensureClass(frame.f_context.f_container,
                                         getCanonicalType(), frame.poolContext().typeFile());
             GenericHandle  hStruct = new GenericHandle(clz.ensureAccess(Access.STRUCT));
-            MethodStructure constructor = f_constructor.get();
+            MethodStructure constructor = f_constructor.get(this);
             ObjectHandle[]  ahVar       = Utils.ensureSize(Utils.OBJECTS_NONE,
                     constructor.getMaxVars());
             ahVar[0] = new ConstantHandle(frame.container(), constFile);
@@ -57,6 +57,6 @@ public class xCPFile
      * MethodStructure to this template's owning ClassStructure instead of a
      * process-global static.
      */
-    private final Lazy<MethodStructure> f_constructor = Lazy.of(() ->
-            getStructure().findConstructor(f_container.getConstantPool().typeObject()));
+    private final Lazy.Owner<xCPFile, MethodStructure> f_constructor = Lazy.ofOwner(owner ->
+            owner.getStructure().findConstructor(owner.container().getConstantPool().typeObject()));
 }

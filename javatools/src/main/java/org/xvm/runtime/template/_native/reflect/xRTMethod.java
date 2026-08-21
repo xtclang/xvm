@@ -351,7 +351,8 @@ public class xRTMethod
      * @return the ArrayConstant for an empty Array of Method
      */
     public static ArrayConstant ensureEmptyArrayConstant(Container container) {
-        return NativeTemplates.get(container).method().f_constEmptyArray.get();
+        xRTMethod template = NativeTemplates.get(container).method();
+        return template.f_constEmptyArray.get(template);
     }
 
     /**
@@ -386,8 +387,8 @@ public class xRTMethod
     /**
      * Empty Method[] constant derived from this template's constant pool.
      */
-    private final Lazy<ArrayConstant> f_constEmptyArray = Lazy.of(() -> {
-        ConstantPool pool = pool();
+    private final Lazy.Owner<xRTMethod, ArrayConstant> f_constEmptyArray = Lazy.ofOwner(owner -> {
+        ConstantPool pool = owner.pool();
         return new ArrayConstant(pool, Constant.Format.Array, pool.ensureArrayType(pool.typeMethod()));
     });
 }

@@ -204,7 +204,11 @@ public class PropertyComposition
             IdentityConstant idParent = idNested.getIdentityConstant();
             if (idParent.getConstantPool() != pool) {
                 idParent  = pool.register(idParent);
-                nidMethod = idParent.appendNestedIdentity(pool, idNested);
+                // The old nested identity already names a complete method path. After registering
+                // that method identity in this owner pool, use the registered identity's own
+                // relative key; appending the old key again creates paths such as
+                // value#setValue#value#setValue under parallel containers.
+                nidMethod = idParent.getNestedIdentity();
             }
         }
         return f_mapMethods.computeIfAbsent(nidMethod,

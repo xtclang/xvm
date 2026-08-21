@@ -301,7 +301,8 @@ public class xString
      */
     public static int callAppendTo(Frame frame, StringHandle hString,
                                    ObjectHandle hAppender, int iReturn) {
-        MethodStructure methodAppendTo = getInstance(frame).f_methodAppendTo.get();
+        xString         template       = getInstance(frame);
+        MethodStructure methodAppendTo = template.f_methodAppendTo.get(template);
         ObjectHandle[]  ahArg          = new ObjectHandle[methodAppendTo.getMaxVars()];
         ahArg[0] = hAppender;
 
@@ -436,15 +437,18 @@ public class xString
     }
 
     public static StringHandle emptyString(Container container) {
-        return getInstance(container).f_emptyString.get();
+        xString template = getInstance(container);
+        return template.f_emptyString.get(template);
     }
 
     public static StringHandle zero(Frame frame) {
-        return getInstance(frame).f_zero.get();
+        xString template = getInstance(frame);
+        return template.f_zero.get(template);
     }
 
     public static StringHandle one(Frame frame) {
-        return getInstance(frame).f_one.get();
+        xString template = getInstance(frame);
+        return template.f_one.get(template);
     }
 
     private static StringHandle makeHandle(StringHandle owner, char[] achValue) {
@@ -453,7 +457,7 @@ public class xString
 
     private StringHandle makeHandle(char[] achValue) {
         return achValue.length == 0
-            ? f_emptyString.get()
+            ? f_emptyString.get(this)
             : new StringHandle(getCanonicalClass(), achValue);
     }
 
@@ -476,7 +480,8 @@ public class xString
      * @return the handle for an empty Array of String
      */
     public static ArrayHandle ensureEmptyArray(Container container) {
-        return getInstance(container).f_emptyStringArray.get();
+        xString template = getInstance(container);
+        return template.f_emptyStringArray.get(template);
     }
 
     // ----- data members --------------------------------------------------------------------------
@@ -485,24 +490,24 @@ public class xString
      * Owner-local cached empty string handle. String handles carry a TypeComposition, so even the
      * common empty string must be cached by the owning container/template, not in a JVM global.
      */
-    private final Lazy<StringHandle> f_emptyString =
-            Lazy.of(() -> new StringHandle(getCanonicalClass(), new char[0]));
+    private final Lazy.Owner<xString, StringHandle> f_emptyString =
+            Lazy.ofOwner(owner -> new StringHandle(owner.getCanonicalClass(), new char[0]));
 
-    private final Lazy<StringHandle> f_zero =
-            Lazy.of(() -> makeHandle(new char[] {'0'}));
+    private final Lazy.Owner<xString, StringHandle> f_zero =
+            Lazy.ofOwner(owner -> owner.makeHandle(new char[] {'0'}));
 
-    private final Lazy<StringHandle> f_one =
-            Lazy.of(() -> makeHandle(new char[] {'1'}));
+    private final Lazy.Owner<xString, StringHandle> f_one =
+            Lazy.ofOwner(owner -> owner.makeHandle(new char[] {'1'}));
 
-    private final Lazy<MethodStructure> f_methodAppendTo = Lazy.of(() -> {
-        ConstantPool pool    = pool();
+    private final Lazy.Owner<xString, MethodStructure> f_methodAppendTo = Lazy.ofOwner(owner -> {
+        ConstantPool pool    = owner.pool();
         TypeConstant typeArg = pool.ensureClassTypeConstant(
                 pool.ensureEcstasyClassConstant("Appender"), null,
                 pool.typeChar());
 
-        return getStructure().findMethod("appendTo", 1, typeArg);
+        return owner.getStructure().findMethod("appendTo", 1, typeArg);
     });
 
-    private final Lazy<ArrayHandle> f_emptyStringArray =
-            Lazy.of(() -> xArray.makeStringArrayHandle(f_container, Utils.STRINGS_NONE));
+    private final Lazy.Owner<xString, ArrayHandle> f_emptyStringArray =
+            Lazy.ofOwner(owner -> xArray.makeStringArrayHandle(owner.container(), Utils.STRINGS_NONE));
 }

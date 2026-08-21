@@ -77,7 +77,7 @@ public class xRTNameService
 
     @Override
     public TypeConstant getCanonicalType() {
-        return f_typeCanonical.get();
+        return f_typeCanonical.get(this);
     }
 
     @Override
@@ -197,7 +197,7 @@ public class xRTNameService
     static TypeComposition ensureByteArrayArrayComposition(Container container) {
         xRTNameService template = NativeTemplates.get(container).nameService();
         return container.ensureClassComposition(
-                template.f_typeByteArrayArray.get(), xArray.getInstance(container));
+                template.f_typeByteArrayArray.get(template), xArray.getInstance(container));
     }
 
     static String[] getAllRecords(String sName)
@@ -278,14 +278,14 @@ public class xRTNameService
 
     // ----- constants and fields ------------------------------------------------------------------
 
-    private final Lazy<TypeConstant> f_typeCanonical = Lazy.of(() -> {
-        var pool = f_container.getConstantPool();
+    private final Lazy.Owner<xRTNameService, TypeConstant> f_typeCanonical = Lazy.ofOwner(owner -> {
+        var pool = owner.container().getConstantPool();
         return pool.ensureTerminalTypeConstant(pool.ensureClassConstant(
                 pool.ensureModuleConstant("net.xtclang.org"), "NameService"));
     });
 
-    private final Lazy<TypeConstant> f_typeByteArrayArray =
-            Lazy.of(() -> pool().ensureArrayType(pool().typeByteArray()));
+    private final Lazy.Owner<xRTNameService, TypeConstant> f_typeByteArrayArray =
+            Lazy.ofOwner(owner -> owner.pool().ensureArrayType(owner.pool().typeByteArray()));
 
     private static final String[] NO_RECORD_FIELDS = new String[0];
 

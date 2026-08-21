@@ -360,7 +360,7 @@ public class xException
      * @return immutable owner-scoped metadata for the canonical Exception template
      */
     private ExceptionInfo info() {
-        return f_info.get();
+        return f_info.get(this);
     }
 
     private static ExceptionInfo info(Frame frame) {
@@ -431,5 +431,6 @@ public class xException
     /**
      * Owner-scoped equivalent of the old static well-known exception class cache.
      */
-    private final Lazy<ExceptionInfo> f_info = Lazy.of(this::createExceptionInfo);
+    private final Lazy.Owner<xException, ExceptionInfo> f_info =
+            Lazy.ofOwner(xException::createExceptionInfo);
 }

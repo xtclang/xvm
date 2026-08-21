@@ -102,7 +102,7 @@ public abstract class Container
      * @return owner-local runtime helper metadata
      */
     Utils.RuntimeMetadata runtimeMetadata() {
-        return f_runtimeMetadata.get();
+        return f_runtimeMetadata.get(this);
     }
 
 
@@ -766,8 +766,8 @@ public abstract class Container
      * constant pool. This replaces Utils' old JVM-global mutable metadata fields while preserving
      * the same one-time lookup behavior for each owner.
      */
-    private final Lazy<Utils.RuntimeMetadata> f_runtimeMetadata =
-            Lazy.of(() -> Utils.createRuntimeMetadata(this));
+    private final Lazy.Owner<Container, Utils.RuntimeMetadata> f_runtimeMetadata =
+            Lazy.ofOwner(Utils::createRuntimeMetadata);
 
     /**
      * The parent container.

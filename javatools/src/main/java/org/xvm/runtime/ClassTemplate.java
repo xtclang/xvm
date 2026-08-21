@@ -143,6 +143,13 @@ public abstract class ClassTemplate
     }
 
     /**
+     * Obtain the owner container for this template.
+     */
+    public final Container container() {
+        return f_container;
+    }
+
+    /**
      * Obtain the canonical type that is represented by this {@link ClassTemplate}
      */
     public TypeConstant getCanonicalType() {

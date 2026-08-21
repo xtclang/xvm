@@ -281,14 +281,15 @@ public class xRTPropertyClassTemplate
     public static ComponentTemplateHandle makeHandle(Container container, PropertyStructure prop) {
         // note: no need to initialize the struct because there are no natural fields
         xRTPropertyClassTemplate template = NativeTemplates.get(container).propertyClassTemplate();
-        return new ComponentTemplateHandle(template.f_compPropertyClassTemplate.get(), prop);
+        return new ComponentTemplateHandle(template.f_compPropertyClassTemplate.get(template), prop);
     }
 
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private final Lazy<TypeComposition> f_compPropertyClassTemplate = Lazy.of(() -> {
-        TypeConstant typeMask = pool().ensureEcstasyTypeConstant("reflect.ClassTemplate");
-        return ensureClass(f_container, getCanonicalType(), typeMask);
+    private final Lazy.Owner<xRTPropertyClassTemplate, TypeComposition> f_compPropertyClassTemplate =
+            Lazy.ofOwner(owner -> {
+        TypeConstant typeMask = owner.pool().ensureEcstasyTypeConstant("reflect.ClassTemplate");
+        return owner.ensureClass(owner.container(), owner.getCanonicalType(), typeMask);
     });
 }

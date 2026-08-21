@@ -115,7 +115,7 @@ public class xOSDirectory
 
         NodeHandle     hStruct = new NodeHandle(clz.ensureAccess(Constants.Access.STRUCT),
                                         path.toAbsolutePath(), hOSStore);
-        MethodStructure constructor = f_constructor.get();
+        MethodStructure constructor = f_constructor.get(this);
         ObjectHandle[]  ahVar       = Utils.ensureSize(Utils.OBJECTS_NONE,
                 constructor.getMaxVars());
 
@@ -133,6 +133,6 @@ public class xOSDirectory
      * MethodStructure to this template's owning ClassStructure instead of a
      * process-global static.
      */
-    private final Lazy<MethodStructure> f_constructor = Lazy.of(() ->
-            getStructure().findConstructor());
+    private final Lazy.Owner<xOSDirectory, MethodStructure> f_constructor =
+            Lazy.ofOwner(owner -> owner.getStructure().findConstructor());
 }

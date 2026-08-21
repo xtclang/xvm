@@ -128,7 +128,7 @@ public class xListMap
      * @return structure for "construct(Key[] keys, Value[] vals)"
      */
     public MethodStructure ensureConstructor() {
-        return f_constructor.get();
+        return f_constructor.get(this);
     }
 
     public static xListMap getInstance(Container container) {
@@ -139,6 +139,6 @@ public class xListMap
      * Owner-scoped constructor cache. The MethodStructure belongs to the template structure resolved
      * by this container; keeping it static would cross containers during parallel startup.
      */
-    private final Lazy<MethodStructure> f_constructor = Lazy.of(() ->
-            getStructure().findMethod("construct", m -> m.getParamCount() == 3));
+    private final Lazy.Owner<xListMap, MethodStructure> f_constructor = Lazy.ofOwner(owner ->
+            owner.getStructure().findMethod("construct", m -> m.getParamCount() == 3));
 }

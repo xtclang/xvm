@@ -184,7 +184,7 @@ public class xRTCompiler
     }
 
     private CallChain computeGetModuleChain(Frame frame, ObjectHandle hRepo) {
-        MethodConstant idGetModule = f_idGetModule.get();
+        MethodConstant idGetModule = f_idGetModule.get(this);
         Object         nid         = idGetModule.resolveNestedIdentity(
                         frame.poolContext(), frame.getGenericsResolver(true));
 
@@ -499,8 +499,8 @@ public class xRTCompiler
      * identity is still found once for this template, but it stays tied to this container's module
      * repository metadata.
      */
-    private final Lazy<MethodConstant> f_idGetModule = Lazy.of(() -> {
-        ClassStructure structRepo = f_container.getClassStructure("mgmt.ModuleRepository");
+    private final Lazy.Owner<xRTCompiler, MethodConstant> f_idGetModule = Lazy.ofOwner(owner -> {
+        ClassStructure structRepo = owner.container().getClassStructure("mgmt.ModuleRepository");
         return structRepo.findMethod("getModule", 2).getIdentityConstant();
     });
 }
