@@ -221,6 +221,57 @@ ambient pool, and wrong ambient scopes fail under assertions. This is a guard an
 ownership-visibility change, not a cache-policy change: all constants are still
 interned in the same per-owner `ConstantPool` as before.
 
+### Handle Construction `this` Escapes
+
+This branch removes three runtime handle-construction `this` escapes:
+
+- `xRef.RefHandle(clazz, frame, iVar)` no longer writes `this` into
+  `Frame.VarInfo` from the constructor.
+- `xRef.RefHandle(clazz, name, referent)` no longer initializes the referent
+  field through constructor-time public field mutation.
+- `xOSFileNode.NodeHandle` no longer initializes the native store field through
+  constructor-time public field mutation.
+
+The replacement is the same construction rule used for `NativeContainer`:
+construct the object first, then publish or initialize owner-visible state from
+a factory. `RefHandle.createRegisterRef(...)` still reads the existing
+`Frame.VarInfo` cache, still stores the first register ref in that cache, and
+still returns a linked ref for later refs to the same register. The only timing
+change is that `infoSrc.setRef(ref)` runs after the handle constructor returns.
+
+`RefHandle.createReferentRef(...)` and `NodeHandle.create(...)` preserve the old
+field contents by writing the same initialized backing fields after construction
+returns. No runtime cache is removed; the previous frame-local ref reuse and
+file-node store association are unchanged.
+
+`javatools/src/test/java/org/xvm/runtime/template/reflect/RefHandleConstructionTest.java`
+guards the factory APIs and the two op call sites that create register refs. A
+targeted lint compile after this wave:
+
+```bash
+./gradlew :javatools:compileJava --rerun-tasks --no-build-cache \
+  -Porg.xtclang.java.lint=true \
+  -Porg.xtclang.java.warningsAsErrors=false \
+  -Porg.xtclang.java.maxWarnings=10000 \
+  -Porg.xtclang.java.maxErrors=10000 \
+  --console=plain --warning-mode=all
+```
+
+emits no `this-escape` warning for `xRef.java` or `xOSFileNode.java`. The full
+root lint tally was not rerun for this small wave.
+
+The behavior path was also exercised with the ref-heavy and file-node-heavy
+manual tests:
+
+```bash
+CI=true ./gradlew :manualTests:runDirectSequenceStress \
+  -PsameJvmIterations=1 \
+  -PsameJvmModules=TestReflection,TestFiles \
+  --console=plain --warning-mode=all --no-daemon --no-configuration-cache
+```
+
+Result: `BUILD SUCCESSFUL in 57s`.
+
 ### Runtime-Executed `Op` Frame-Constant Caches
 
 This branch removes owner-bearing frame-constant caches from runtime-executed

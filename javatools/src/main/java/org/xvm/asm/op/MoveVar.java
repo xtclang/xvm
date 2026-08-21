@@ -105,13 +105,13 @@ public class MoveVar
             }
             TypeComposition clzRef = xVar.getInstance(frame).
                     ensureParameterizedClass(frame.f_context.f_container, typeReferent);
-            hRef = new RefHandle(clzRef, frame, nFrom);
+            hRef = RefHandle.createRegisterRef(clzRef, frame, nFrom);
             if (fNextReg) {
                 frame.introduceResolvedVar(nTo, hRef.getType());
             }
         } else {
             TypeComposition clzRef = frame.getVarInfo(nTo).getType().ensureClass(frame);
-            hRef = new RefHandle(clzRef, frame, nFrom);
+            hRef = RefHandle.createRegisterRef(clzRef, frame, nFrom);
         }
 
         // the destination type must be the same as the source

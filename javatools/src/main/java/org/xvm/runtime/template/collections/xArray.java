@@ -533,7 +533,7 @@ public class xArray
 
             ClassComposition clzRef  = frame.container().ensureClassComposition(
                     typeRef, xRef.getInstance(frame));
-            RefHandle        hRef    = new RefHandle(clzRef, "delegate", hDelegate);
+            RefHandle        hRef    = RefHandle.createReferentRef(clzRef, "delegate", hDelegate);
 
             return frame.assignValue(iReturn, hRef);
         }

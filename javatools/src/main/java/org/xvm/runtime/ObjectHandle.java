@@ -428,6 +428,19 @@ public abstract class ObjectHandle
             m_aFields[iPos] = hValue;
         }
 
+        /**
+         * Initialize a regular field from a handle constructor without dispatching through the
+         * public field-access API. Constructor-time field writes must not call overridable/public
+         * methods that could observe a partially constructed handle.
+         */
+        protected final void initializeField(String sProp, ObjectHandle hValue) {
+            FieldInfo field = m_clazz.getFieldInfo(sProp);
+            if (field == null || field.isTransient()) {
+                throw new IllegalStateException("Cannot initialize field: " + sProp);
+            }
+            m_aFields[field.getIndex()] = hValue;
+        }
+
         public ObjectHandle getTransientField(Frame frame, FieldInfo field) {
             TransientId  hId    = (TransientId) m_aFields[field.getIndex()];
             ObjectHandle hValue = frame.f_context.getTransientValue(hId);
