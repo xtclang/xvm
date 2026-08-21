@@ -212,8 +212,10 @@ container, not a cached/global pool.
 
 ### Guard Adoption Copies
 
-Add a debug-only adoption validator that compares source and adopted copies and
-reports identical references for forbidden categories:
+`ConstantAdoptionValidator` now provides an opt-in adoption guard at
+`ConstantPool.register(...)` with `-Dxvm.asm.validateConstantAdoption=true`.
+It compares source and adopted copies and reports identical references for
+forbidden categories:
 
 - `ObjectHandle`
 - `Container`, `Frame`, `Fiber`, `ServiceContext`
@@ -222,6 +224,10 @@ reports identical references for forbidden categories:
 - `AtomicReference`, `AtomicInteger`, `StampedLock`
 - `ThreadLocal`, `TransientThreadLocal`
 - mutable maps/lists/sets unless allowlisted as logical immutable data
+
+The first wave keeps this diagnostic opt-in to avoid surprising normal
+runtime/compiler cost. After stress runs identify the intentional allowlist,
+specific findings should be promoted to hard assertions.
 
 This can start inside `OwnershipDiagnostics` and be called only under a system
 property, so normal runtime does not pay reflection cost.

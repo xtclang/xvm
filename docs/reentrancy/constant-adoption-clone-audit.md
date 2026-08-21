@@ -246,25 +246,31 @@ Recommended guards:
 
 - `HandleConstant.adoptedBy(...)` throws when an already-owned live
   `ObjectHandle` constant is moved to another pool.
-- `Constant.adoptedBy(...)` should optionally assert that the adopted copy does
-  not retain forbidden runtime-owner fields. A debug-only reflection validator
-  can check for `ObjectHandle`, `Container`, `Frame`, `Fiber`, `TypeHandle`,
-  mutable `Atomic*`, `StampedLock`, and `TransientThreadLocal` fields that are
-  identical between source and adopted copy unless the field is explicitly
-  allowlisted.
+- `ConstantPool.register(...)` now optionally asserts that the adopted copy
+  does not retain forbidden runtime-owner fields. The opt-in
+  `ConstantAdoptionValidator` is enabled by
+  `-Dxvm.asm.validateConstantAdoption=true` and checks for copied owner/runtime
+  references, mutable `Atomic*`, lock objects, Java references, thread-local
+  cells, and mutable collections that are identical between source and adopted
+  copy.
 - `OwnershipDiagnostics` should keep validating handles at runtime boundaries
   such as `mgmt.Container.invoke`, because that catches wrong-owner values even
   when the source is not constant adoption.
 
-The validator should be diagnostic-first. It should produce a tree that shows:
+The validator is deliberately narrow. It does not reject shared logical child
+`Constant` objects during adoption, because `ConstantPool.register(...)`
+recursively adopts those after the outer constant is constructed. It rejects
+only helper/runtime references that are never serialized constant identity.
+
+The validator reports:
 
 - source constant class and pool owner;
 - adopted constant class and pool owner;
 - same-reference transient fields copied by clone;
 - any handle/composition/container owner found under those fields.
 
-Once the diagnostic set is understood, the must-fix cases can be turned into
-hard assertions.
+Once the diagnostic set is understood for more call paths, specific findings
+can be promoted from opt-in diagnostics to hard assertions.
 
 ## Current Must-Fix Conclusion
 
@@ -285,12 +291,17 @@ Already fixed in this branch:
 - `TypeParameterConstant` recursive-comparison helper state copied by clone
   adoption;
 - cross-pool adoption of already-owned `HandleConstant` live runtime handles.
+- opt-in adoption validation at `ConstantPool.register(...)`, with a focused
+  regression test that proves a default shallow-cloned helper reference is
+  rejected when diagnostics are enabled.
 
 The focused regression test is
 `javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java`. It directly
 exercises the adoption boundary and would fail against the old shallow-clone
 behavior by observing shared helper cells or by allowing cross-pool handle
-adoption.
+adoption. The validator-specific tests are branch-side guard tests; they depend
+on the new `ConstantAdoptionValidator` class and therefore are not copied into
+old `master` unchanged.
 
 Regression evidence from 2026-08-21:
 
