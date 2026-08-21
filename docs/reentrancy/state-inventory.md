@@ -37,7 +37,7 @@ independent bug.
 | Must fix | Split mutable lifecycle state | Old `SingletonConstant` used separate handle/owner/waiter fields | Readers can observe impossible lifecycle snapshots across fibers | One immutable state snapshot in `AtomicReference`; use CAS for transitions |
 | Must fix | Natural enum construction structs escaping public paths | PR #534 enum struct mismatch | A caller can observe a construction struct where an immutable enum value is required | Public enum helpers that return initialized singletons or deferred results |
 | Must fix | Unsynchronized lazy null caches in shared runtime state | 98 field-shaped checks; 47 strong same-field lazy-init matches | Plain field read/write has no happens-before edge and can publish partial state | Final `Lazy` for immutable values; `ConcurrentMap.computeIfAbsent` for keyed caches; `AtomicReference` or a lock for lifecycle/resettable state |
-| Must fix | Non-final static runtime globals | 10 non-final static fields across runtime/asm/compiler; 14 across all Java sources | Plain static mutation is shared process state with no owner, no reset story, and no visibility guarantee | Delete, make `static final` immutable, move to owner scope, or guard resettable state with a lock/atomic holder |
+| Must fix | Non-final static runtime globals | 9 non-final static fields across runtime/asm/compiler; 13 across all Java sources | Plain static mutation is shared process state with no owner, no reset story, and no visibility guarantee | Delete, make `static final` immutable, move to owner scope, or guard resettable state with a lock/atomic holder |
 | Should fix soon | `volatile` as partial synchronization | 21 `volatile` hits in runtime/asm/compiler | `volatile` orders one variable; it does not make a group of fields or mutable map contents atomic | Keep only for independent scalar state; otherwise use immutable state snapshots, `ConcurrentMap`, or synchronized critical sections |
 | Should fix soon | Static mutable collection fields | 11 `static final` collection/resource-like fields; 0 non-final static collection/resource-like fields | `final` protects the reference, not the collection contents; global mutable maps need an update policy | `Map.of`/`Set.of`/`List.of` or `Collections.unmodifiable*` for constants; `ConcurrentMap` with documented key ownership for real caches |
 | Should fix soon | Public/protected mutable fields | 166 public/protected non-final `m_`, `s_`, or `f_` fields in runtime/asm/compiler | Any caller can mutate state without preserving invariants or synchronization | Private fields plus methods that enforce ownership, synchronization, and lifecycle invariants |
@@ -377,8 +377,8 @@ rg -n --pcre2 "^\s*(?:public|protected|private)?\s*static\s+(?!final\b)(?!class\
 Current counts:
 
 ```text
-10 runtime/asm/compiler non-final static fields
-14 all-Java non-final static fields
+9 runtime/asm/compiler non-final static fields
+13 all-Java non-final static fields
 ```
 
 Representative examples:

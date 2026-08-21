@@ -189,7 +189,7 @@ public class xOSStorage
 
             try {
                 Path pathDir = Paths.get(hPathStringDir.getStringValue());
-                ensureWatchDaemon(pool()).register(pathDir, hStorage);
+                ensureWatchDaemon().register(pathDir, hStorage);
                 return Op.R_NEXT;
             } catch (IOException|InvalidPathException e) {
                 return frame.raiseException(xException.ioException(frame, e.getMessage()));
@@ -251,28 +251,43 @@ public class xOSStorage
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    protected static synchronized WatchServiceDaemon ensureWatchDaemon(ConstantPool pool) {
-        WatchServiceDaemon daemonWatch = s_daemonWatch;
-        if (daemonWatch == null) {
-            try {
-                daemonWatch = s_daemonWatch = new WatchServiceDaemon(pool);
-                daemonWatch.start();
-            } catch (IOException e) {
-                return null;
+    protected static WatchServiceDaemon ensureWatchDaemon()
+            throws IOException {
+        return WATCH_DAEMON.ensure();
+    }
+
+    /**
+     * Owner of the single JVM watch daemon.
+     * <p/>
+     * The old static daemon field captured the ConstantPool from whichever container called
+     * "watch" first. That made later events for other containers run under the wrong ambient pool.
+     * Keep the OS watcher process-wide for the underlying Java WatchService, but make daemon
+     * creation an explicit synchronized holder and bind the ConstantPool per watched storage handle
+     * when an event is delivered.
+     */
+    protected static class WatchDaemonHolder {
+        public synchronized WatchServiceDaemon ensure()
+                throws IOException {
+            WatchServiceDaemon daemon = this.daemon;
+            if (daemon == null) {
+                daemon = new WatchServiceDaemon();
+                daemon.start();
+                this.daemon = daemon;
             }
+            return daemon;
         }
-        return daemonWatch;
+
+        private WatchServiceDaemon daemon;
     }
 
     protected static class WatchServiceDaemon
             extends Thread {
-        public WatchServiceDaemon(ConstantPool pool)
+        public WatchServiceDaemon()
                 throws IOException {
             super("WatchServiceDaemon");
 
             setDaemon(true);
 
-            f_pool       = pool;
             f_service    = FileSystems.getDefault().newWatchService();
             f_mapWatches = new ConcurrentHashMap<>();
         }
@@ -293,7 +308,7 @@ public class xOSStorage
 
         @Override
         public void run() {
-            try (var ignore = ConstantPool.withPool(f_pool)) {
+            try {
                 while (true) {
                     processKey(f_service.take());
                 }
@@ -314,27 +329,31 @@ public class xOSStorage
                 }
 
                 WatchContext context = f_mapWatches.get(key);
+                if (context == null) {
+                    continue;
+                }
 
-                Path pathDir      = context.pathDir;
-                Path pathRelative = (Path) event.context();
-                Path pathAbsolute = pathDir.resolve(pathRelative);
+                Container container = context.hStorage.f_context.f_container;
+                try (var ignore = ConstantPool.withPool(container.getConstantPool())) {
+                    Path pathDir      = context.pathDir;
+                    Path pathRelative = (Path) event.context();
+                    Path pathAbsolute = pathDir.resolve(pathRelative);
 
-                xOSStorage     templateStorage = context.hStorage.getTemplate(xOSStorage.class);
-                FunctionHandle hfnOnEvent =
-                        xRTFunction.makeInternalHandle(
-                                context.hStorage.f_context.f_container,
-                                templateStorage.ensureOnEventMethod()).
-                                bindTarget(null, context.hStorage);
+                    xOSStorage     templateStorage = context.hStorage.getTemplate(xOSStorage.class);
+                    FunctionHandle hfnOnEvent =
+                            xRTFunction.makeInternalHandle(container,
+                                    templateStorage.ensureOnEventMethod()).
+                                    bindTarget(null, context.hStorage);
 
-                Container    container = context.hStorage.f_context.f_container;
-                StringHandle hPathDir  = xString.makeHandle(container, pathDir.toString());
-                StringHandle hPathNode = xString.makeHandle(container, pathAbsolute.toString());
+                    StringHandle hPathDir  = xString.makeHandle(container, pathDir.toString());
+                    StringHandle hPathNode = xString.makeHandle(container, pathAbsolute.toString());
 
-                ObjectHandle[] ahArg = new ObjectHandle[] {
-                    hPathDir, hPathNode, xBoolean.trueHandle(container),
-                    xInt64.makeHandle(container, iKind)
-                };
-                context.hStorage.f_context.callLater(hfnOnEvent, ahArg);
+                    ObjectHandle[] ahArg = new ObjectHandle[] {
+                        hPathDir, hPathNode, xBoolean.trueHandle(container),
+                        xInt64.makeHandle(container, iKind)
+                    };
+                    context.hStorage.f_context.callLater(hfnOnEvent, ahArg);
+                }
             }
             key.reset();
         }
@@ -363,7 +382,6 @@ public class xOSStorage
 
         private record WatchContext(Path pathDir, ServiceHandle hStorage) {}
 
-        private final ConstantPool                f_pool;
         private final Map<WatchKey, WatchContext> f_mapWatches;
         private final WatchService                f_service;
     }
@@ -382,5 +400,9 @@ public class xOSStorage
         return f_methodOnEvent.get();
     }
 
-    private static WatchServiceDaemon s_daemonWatch;
+    /**
+     * Process-wide watch-service holder. This is final and ownerless by design; per-container
+     * ownership is carried by each registered storage handle and restored around event delivery.
+     */
+    private static final WatchDaemonHolder WATCH_DAEMON = new WatchDaemonHolder();
 }

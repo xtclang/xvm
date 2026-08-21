@@ -3,6 +3,7 @@ package org.xvm.runtime;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.TimerTask;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
@@ -10,8 +11,12 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.ConstantPool;
+
+import org.xvm.runtime.template._native.fs.xOSStorage;
 import org.xvm.runtime.template._native.temporal.xLocalClock;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -58,12 +63,7 @@ public class NativeTemplatesTest {
             throws Exception {
         assertThrows(NoSuchFieldException.class, () -> xLocalClock.class.getField("TIMER"));
 
-        Field field = xLocalClock.class.getDeclaredField("TIMER");
-        int   mods  = field.getModifiers();
-
-        assertTrue(Modifier.isPrivate(mods));
-        assertTrue(Modifier.isStatic(mods));
-        assertTrue(Modifier.isFinal(mods));
+        assertPrivateStaticFinal(xLocalClock.class, "TIMER");
     }
 
     @Test
@@ -79,6 +79,35 @@ public class NativeTemplatesTest {
         }, 1);
 
         assertTrue(latch.await(5, TimeUnit.SECONDS));
+    }
+
+    @Test
+    public void osStorageWatcherIsPrivateFinalHolder()
+            throws Exception {
+        assertThrows(NoSuchFieldException.class, () -> xOSStorage.class.getDeclaredField("s_daemonWatch"));
+
+        assertPrivateStaticFinal(xOSStorage.class, "WATCH_DAEMON");
+    }
+
+    @Test
+    public void osStorageWatcherDoesNotCacheFirstCallerPool()
+            throws Exception {
+        Class<?> clzDaemon = Class.forName(xOSStorage.class.getName() + "$WatchServiceDaemon");
+
+        assertThrows(NoSuchFieldException.class, () -> clzDaemon.getDeclaredField("f_pool"));
+        assertFalse(Arrays.stream(clzDaemon.getDeclaredFields())
+                .anyMatch(field -> ConstantPool.class.isAssignableFrom(field.getType())),
+                "watch daemon must bind the event owner's pool, not cache a ConstantPool field");
+    }
+
+    private static void assertPrivateStaticFinal(Class<?> clz, String sField)
+            throws NoSuchFieldException {
+        Field field = clz.getDeclaredField(sField);
+        int   mods  = field.getModifiers();
+
+        assertTrue(Modifier.isPrivate(mods));
+        assertTrue(Modifier.isStatic(mods));
+        assertTrue(Modifier.isFinal(mods));
     }
 
     private static class NullOwnerTemplate
