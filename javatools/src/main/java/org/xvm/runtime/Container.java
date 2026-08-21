@@ -310,9 +310,8 @@ public abstract class Container
             ClassTemplate temp;
             switch (structClass.getFormat()) {
             case ENUMVALUE, ENUM:
-                // These are owner-local fallback/specialized templates, not native base templates.
-                // Converted templates resolve their base instance through the container, so there is
-                // no constructor flag here that could publish this fallback object globally.
+                // Owner-local fallback/specialized templates; converted templates resolve
+                // base instances through this container, not an fInstance flag.
                 temp = new xEnum(this, structClass);
                 temp.initNative();
                 break;
@@ -324,7 +323,7 @@ public abstract class Container
                 break;
 
             case SERVICE:
-                // Owner-local fallback; do not publish via the legacy fInstance/INSTANCE path.
+                // Owner-local fallback; no legacy fInstance/INSTANCE publication.
                 temp = new xService(this, structClass);
                 break;
 
@@ -335,12 +334,12 @@ public abstract class Container
                 break;
 
             case MODULE:
-                // Owner-local fallback; do not publish via the legacy fInstance/INSTANCE path.
+                // Owner-local fallback; no legacy fInstance/INSTANCE publication.
                 temp = new xModule(this, structClass);
                 break;
 
             case PACKAGE:
-                // Owner-local fallback; do not publish via the legacy fInstance/INSTANCE path.
+                // Owner-local fallback; no legacy fInstance/INSTANCE publication.
                 temp = new xPackage(this, structClass);
                 break;
 

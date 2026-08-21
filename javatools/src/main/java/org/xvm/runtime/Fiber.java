@@ -81,14 +81,14 @@ public class Fiber
      * reference but never execute fiber logic.
      */
     Fiber() {
-        f_lId        = s_counter.getAndIncrement();
-        f_context    = null;
-        f_refCaller  = null;
-        f_iCallerId  = 0;
-        f_fnCaller   = null;
-        f_nDepth     = 0;
-        m_status     = FiberStatus.Initial;
-        m_ldtTimeout = 0L;
+        f_lId           = s_counter.getAndIncrement();
+        f_context       = null;
+        f_refCaller     = null;
+        f_iCallerId     = 0;
+        f_fnCaller      = null;
+        f_nDepth        = 0;
+        m_status        = FiberStatus.Initial;
+        m_ldtTimeout    = 0L;
         m_hTimeout      = null;
         m_mapTokens     = null;
         m_fCloneMap     = false;
