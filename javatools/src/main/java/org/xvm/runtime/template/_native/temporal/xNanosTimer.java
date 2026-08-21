@@ -113,7 +113,7 @@ public class xNanosTimer
      */
     public ObjectHandle ensureTimer(Frame frame, ObjectHandle hOpts) {
         // quite intentionally the NanoTimer service always belongs to the native container, holding
-        // onto Alarm objects that are registered with Java's Timer (xLocalClock.TIMER);
+        // onto Alarm objects that are registered with LocalClock's Java timer scheduler;
         // in turn, the Alarm holds a user-supplied function via a WeakRef, allowing the
         // corresponding container to be shut down and garbage collected
         return createServiceHandle(
@@ -313,7 +313,7 @@ public class xNanosTimer
                     }
 
                     long cDelay = (f_cNanosAlarm - m_cNanosStart - m_cNanosBurnt) / NANOS_PER_MILLI;
-                    xLocalClock.TIMER.schedule(trigger, Math.max(1, cDelay));
+                    xLocalClock.scheduleTimer(trigger, Math.max(1, cDelay));
                 } catch (Throwable e) {
                     cancelTrigger();
                 }
@@ -457,7 +457,7 @@ public class xNanosTimer
                         alarm.run();
                     } else {
                         // reschedule
-                        xLocalClock.TIMER.schedule(alarm.createTrigger(), cExtraMillis);
+                        xLocalClock.scheduleTimer(alarm.createTrigger(), cExtraMillis);
                     }
                 }
 

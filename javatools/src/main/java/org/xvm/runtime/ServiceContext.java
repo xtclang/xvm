@@ -2025,7 +2025,7 @@ public class ServiceContext {
                 }
             };
 
-            xLocalClock.TIMER.schedule(m_taskCurrent, Math.max(1, ldtWakeUp - ldtNow));
+            xLocalClock.scheduleTimer(m_taskCurrent, Math.max(1, ldtWakeUp - ldtNow));
         }
 
         private long      f_ldtScheduled; // when

@@ -1037,9 +1037,10 @@ Known high-priority leftovers include:
   `DebugConsole`'s equivalent process resources. These are resettable process
   resources, not container metadata, so they need an explicit lifecycle owner
   or synchronized holder rather than `Lazy`.
-- `xLocalClock.TIMER`. This is a real process resource; it should either be
-  made final with a documented JVM-wide lifecycle or moved behind an explicit
-  runtime/owner lifecycle.
+- `xLocalClock.TIMER` is no longer on this TODO: this branch makes the shared
+  daemon scheduler private `static final` and exposes only
+  `xLocalClock.scheduleTimer(...)`, preserving the old one-timer behavior while
+  preventing external reassignment or cancellation.
 - `xString` is no longer in this TODO: this branch moves its common handles,
   append method cache, and helper factories to owner-scoped state.
 - `xRTBuffer` is no longer in this TODO: this branch moves its `rawBytes`
