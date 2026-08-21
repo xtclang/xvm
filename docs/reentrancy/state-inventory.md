@@ -37,14 +37,14 @@ independent bug.
 | Must fix | Split mutable lifecycle state | Old `SingletonConstant` used separate handle/owner/waiter fields | Readers can observe impossible lifecycle snapshots across fibers | One immutable state snapshot in `AtomicReference`; use CAS for transitions |
 | Must fix | Natural enum construction structs escaping public paths | PR #534 enum struct mismatch | A caller can observe a construction struct where an immutable enum value is required | Public enum helpers that return initialized singletons or deferred results |
 | Must fix | Unsynchronized lazy null caches in shared runtime state | 98 field-shaped checks; 47 strong same-field lazy-init matches | Plain field read/write has no happens-before edge and can publish partial state | Final `Lazy` for immutable values; `ConcurrentMap.computeIfAbsent` for keyed caches; `AtomicReference` or a lock for lifecycle/resettable state |
-| Must fix | Non-final static runtime globals | 9 non-final static fields across runtime/asm/compiler; 13 across all Java sources | Plain static mutation is shared process state with no owner, no reset story, and no visibility guarantee | Delete, make `static final` immutable, move to owner scope, or guard resettable state with a lock/atomic holder |
+| Must fix | Non-final static runtime globals | 4 non-final static fields across runtime/asm/compiler; 8 across all Java sources | Plain static mutation is shared process state with no owner, no reset story, and no visibility guarantee | Delete, make `static final` immutable, move to owner scope, or guard resettable state with a lock/atomic holder |
 | Should fix soon | `volatile` as partial synchronization | 21 `volatile` hits in runtime/asm/compiler | `volatile` orders one variable; it does not make a group of fields or mutable map contents atomic | Keep only for independent scalar state; otherwise use immutable state snapshots, `ConcurrentMap`, or synchronized critical sections |
 | Should fix soon | Static mutable collection fields | 11 `static final` collection/resource-like fields; 0 non-final static collection/resource-like fields | `final` protects the reference, not the collection contents; global mutable maps need an update policy | `Map.of`/`Set.of`/`List.of` or `Collections.unmodifiable*` for constants; `ConcurrentMap` with documented key ownership for real caches |
 | Should fix soon | Public/protected mutable fields | 166 public/protected non-final `m_`, `s_`, or `f_` fields in runtime/asm/compiler | Any caller can mutate state without preserving invariants or synchronization | Private fields plus methods that enforce ownership, synchronization, and lifecycle invariants |
 | Should fix soon | Public/protected static arrays and exposed arrays | 42 public/protected static arrays; 75 public/protected array fields in runtime/asm/compiler | Array elements are mutable shared variables even when the array reference is final | Private `static final` arrays with defensive copies, immutable lists, or package-private documented internal constants |
 | Should fix soon | Thread-local hidden global context | 17 `ThreadLocal`/`TransientThreadLocal` hits in runtime/asm/compiler | Thread locals hide dependencies, can leak scope across pooled threads, and make reentrancy depend on cleanup discipline | Prefer explicit context parameters or owner-scoped stacks; if unavoidable, use scoped `try/finally remove()` wrappers |
 | Should fix soon | Weak/identity mutable maps | 12 `WeakHashMap`/`IdentityHashMap` construction hits in runtime/asm/compiler | These maps are not concurrent and their semantics are easy to misuse as global caches | Confine to one owner/thread, synchronize, or use the project's concurrent weak-map helper where sharing is intended |
-| Should fix | Constant-looking non-final public statics | 2 public non-final uppercase/static constant-shaped fields across runtime/asm/compiler; 5 across all Java sources | They look immutable in review but can be reassigned and are not safely published as constants | `public static final` immutable values, private owner-scoped state, or accessor methods |
+| Should fix | Constant-looking non-final public statics | 0 public non-final uppercase/static constant-shaped fields across runtime/asm/compiler; 3 across all Java sources | They look immutable in review but can be reassigned and are not safely published as constants | `public static final` immutable values, private owner-scoped state, or accessor methods |
 | Should fix | Owner-local mutable metadata fields | 181 non-final runtime/asm metadata fields of type `TypeConstant`, `TypeComposition`, `MethodStructure`, handle, template, or enum | Some are valid lifecycle fields, but many are ad hoc first-use caches with no publication story | Final eager fields, final `Lazy`, `ConcurrentMap`, or explicit lifecycle state depending on semantics |
 | Should fix | Rare non-final `f_` fields | 2 direct hits | No written naming standard was found, but source usage strongly suggests `f_` normally denotes fixed/final owner state; exceptions are review hazards | Make final if immutable; otherwise rename to `m_` and document the mutation |
 
@@ -377,15 +377,12 @@ rg -n --pcre2 "^\s*(?:public|protected|private)?\s*static\s+(?!final\b)(?!class\
 Current counts:
 
 ```text
-9 runtime/asm/compiler non-final static fields
-13 all-Java non-final static fields
+4 runtime/asm/compiler non-final static fields
+8 all-Java non-final static fields
 ```
 
 Representative examples:
 
-- `DebugConsole.LINE_READER`, `DebugConsole.TERMINAL`, and
-  `DebugConsole.READER`.
-- `xTerminalConsole.READER` and `xTerminalConsole.TERMINAL`.
 - Compiler counters such as `ConditionalStatement.s_nLabelCounter`,
   `ElseExpression.s_nCounter`, and `ElvisExpression.s_nCounter`.
 
@@ -785,15 +782,14 @@ rg -n --pcre2 "\bpublic\s+static\s+(?!final\b)[^;=()]+\s+[A-Z][A-Z0-9_]*\s*=|\bp
 Current count:
 
 ```text
-2 runtime/asm/compiler public non-final uppercase/static constant-shaped fields
-5 all-Java public non-final uppercase/static constant-shaped fields
+0 runtime/asm/compiler public non-final uppercase/static constant-shaped fields
+3 all-Java public non-final uppercase/static constant-shaped fields
 ```
 
 Representative examples:
 
 - `EnumValueBuilder.NAME`, `EnumerationBuilder.NAMES`, and
   `EnumerationBuilder.VALUES`.
-- `xTerminalConsole.READER` and `xTerminalConsole.TERMINAL`.
 
 Why this is bad design:
 

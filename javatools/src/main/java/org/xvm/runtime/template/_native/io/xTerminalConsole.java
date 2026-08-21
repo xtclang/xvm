@@ -122,7 +122,8 @@ public class xTerminalConsole
         boolean fEcho   = !xBoolean.isTrue(ahArg[1]);
 
         StringHandle hLine;
-        if (READER == null) {
+        LineReader reader = lineReader();
+        if (reader == null) {
             try {
                 if (!sPrompt.isEmpty()) {
                     CONSOLE_OUT.print(sPrompt);
@@ -145,7 +146,7 @@ public class xTerminalConsole
             }
         } else {
             try {
-                hLine = xString.makeHandle(frame, READER.readLine(sPrompt, fEcho ? null : '\0'));
+                hLine = xString.makeHandle(frame, reader.readLine(sPrompt, fEcho ? null : '\0'));
             } catch (UserInterruptException e) {
                 System.exit(0);
                 return 0; // not reachable
@@ -161,31 +162,21 @@ public class xTerminalConsole
      *               frame context name
      */
     public static LineReader ensureLineReader(Frame frame) {
-        if (READER == null) {
-            try {
-                if (CONSOLE != null) {
-                    Terminal          terminal = TerminalBuilder.builder().build();
-                    LineReaderBuilder builder  = LineReaderBuilder.builder();
+        return TERMINAL_STATE.ensureLineReader(frame);
+    }
 
-                    builder.terminal(terminal)
-                           .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
-                           .option(LineReader.Option.HISTORY_TIMESTAMPED, false);
+    /**
+     * @return the process-wide JLine reader, or null if it is unavailable
+     */
+    public static LineReader lineReader() {
+        return TERMINAL_STATE.lineReader();
+    }
 
-                    if (frame != null) {
-                        String   sTmpDir  = System.getProperty("java.io.tmpdir");
-                        String   sAppName = frame.f_context.f_container.getModule().getName();
-                        Path     pathHist = Path.of(sTmpDir,  sAppName + ".history");
-                        History  history  = new LimitedHistory(pathHist, 100);
-
-                        builder = builder.variable(LineReader.HISTORY_FILE, pathHist)
-                                         .history(history);
-                    }
-                    READER   = builder.build();
-                    TERMINAL = terminal;
-                }
-            } catch (IOException ignore) {}
-        }
-        return READER;
+    /**
+     * @return the process-wide JLine terminal, or null if it is unavailable
+     */
+    public static Terminal terminal() {
+        return TERMINAL_STATE.terminal();
     }
 
     /**
@@ -222,8 +213,7 @@ public class xTerminalConsole
     public static final BufferedReader CONSOLE_IN;
     public static final PrintWriter    CONSOLE_OUT;
     public static final ConsoleLog     CONSOLE_LOG = new ConsoleLog();
-    public static       LineReader     READER;
-    public static       Terminal       TERMINAL;
+    private static final TerminalState TERMINAL_STATE = new TerminalState();
     static {
         CONSOLE_IN  = CONSOLE == null || CONSOLE.reader() == null
                 ? new BufferedReader(new InputStreamReader(System.in))
@@ -253,4 +243,53 @@ public class xTerminalConsole
      * Cached Console handle.
      */
     private ObjectHandle m_hConsole;
+
+    /**
+     * Process-wide terminal state. Standard input/output and the JLine terminal are JVM process
+     * resources, not container-owned values. Keep the mutable handles behind one synchronized holder
+     * so unrelated code cannot replace the reader or terminal while another container is reading.
+     */
+    private static final class TerminalState {
+        private boolean    initialized;
+        private LineReader lineReader;
+        private Terminal   terminal;
+
+        synchronized LineReader ensureLineReader(Frame frame) {
+            if (!initialized) {
+                initialized = true;
+                try {
+                    if (CONSOLE != null) {
+                        Terminal          terminal = TerminalBuilder.builder().build();
+                        LineReaderBuilder builder  = LineReaderBuilder.builder();
+
+                        builder.terminal(terminal)
+                               .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
+                               .option(LineReader.Option.HISTORY_TIMESTAMPED, false);
+
+                        if (frame != null) {
+                            String   tempDir = System.getProperty("java.io.tmpdir");
+                            String   appName = frame.f_context.f_container.getModule().getName();
+                            Path     historyPath = Path.of(tempDir,  appName + ".history");
+                            History  history = new LimitedHistory(historyPath, 100);
+
+                            builder = builder.variable(LineReader.HISTORY_FILE, historyPath)
+                                             .history(history);
+                        }
+
+                        this.terminal   = terminal;
+                        this.lineReader = builder.build();
+                    }
+                } catch (IOException ignore) {}
+            }
+            return lineReader;
+        }
+
+        synchronized LineReader lineReader() {
+            return lineReader;
+        }
+
+        synchronized Terminal terminal() {
+            return terminal;
+        }
+    }
 }
