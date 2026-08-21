@@ -18,6 +18,8 @@ import java.util.stream.Collectors;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
@@ -675,6 +677,13 @@ public final class OwnershipDiagnostics {
 
             if (value instanceof JavaLong hLong) {
                 description.append(" value=").append(hLong.getValue());
+            }
+
+            if (value instanceof ObjectHandle handle) {
+                TypeConstant type = safe(handle::getType);
+                if (type != null) {
+                    description.append(" type=").append(type.getValueString());
+                }
             }
 
             return description.toString();

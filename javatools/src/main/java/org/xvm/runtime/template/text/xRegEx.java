@@ -36,6 +36,8 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xNullable;
 
+import org.xvm.util.Lazy;
+
 
 /**
  * Native implementation of RegEx.
@@ -255,15 +257,17 @@ public class xRegEx
         private final long f_nFlags;
 
         /**
-         * Cached regular expression pattern.
+         * Cached regular expression pattern. This preserves the old first-use compile behavior
+         * without publishing the Pattern through an unsynchronized nullable field.
          */
-        private Pattern m_pattern;
+        private final Lazy<Pattern> pattern;
 
         protected RegExHandle(TypeComposition clazz, String regex, long nFlags) {
             super(clazz);
 
             f_regex  = regex;
             f_nFlags = nFlags;
+            pattern  = Lazy.of(() -> Pattern.compile(regex, (int) nFlags));
         }
 
         /**
@@ -284,10 +288,7 @@ public class xRegEx
          * @return the compiled regular expression {@link Pattern}
          */
         public Pattern getPattern() {
-            if (m_pattern == null) {
-                m_pattern = Pattern.compile(f_regex, (int) f_nFlags);
-            }
-            return m_pattern;
+            return pattern.get();
         }
 
         @Override

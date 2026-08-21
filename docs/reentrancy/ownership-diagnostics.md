@@ -101,6 +101,10 @@ Owner-bearing objects currently include:
 
 Constants are described with their `ConstantPool` identity so a dump can show
 pool mismatches for values that appear under the wrong container.
+Object handles include their XTC type when it can be obtained without throwing.
+That does not change validation semantics; it exists so stress failures can say
+`type=Time`, `type=Directory`, and similar owner-relevant names instead of only
+printing Java implementation classes and object identities.
 
 ## Native Parent Ownership
 

@@ -121,7 +121,9 @@ Fix:
   the target pool, so the adopted constant starts with an empty owner-local
   `InitState` cell.
 - `FSNodeConstant.adoptedBy(...)` and `FileStoreConstant.adoptedBy(...)` clear
-  cloned transient runtime handles for the same reason.
+  cloned transient runtime handles for the same reason. `FSNodeConstant` also
+  clears its derived path-literal cache because that literal is owned by the
+  source pool once computed.
 - `OwnershipDiagnostics.assertHandleValidIfEnabled(...)` is now wired into the
   `mgmt.Container.invoke` module-target boundary used by the parallel stress
   runner, so wrong-owner handles fail structurally instead of surfacing later as
@@ -136,6 +138,9 @@ Ramifications:
   starts empty.
 - Normal single-container execution has no steady-state cache miss or extra
   handle allocation after initialization.
+- `FSNodeConstant.getPathConstant()` still caches per node. Only adopted copies
+  recompute the path in the destination pool, which is the behavior the old
+  shallow copy intended but did not enforce.
 - This avoids a broader and more expensive `xContainerLinker` file-structure
   cloning workaround; the correct owner boundary is constant adoption.
 
@@ -230,6 +235,30 @@ encoded to `m_nType` before runtime execution.
 `javatools/src/test/java/org/xvm/asm/OpRuntimeCacheTest.java` verifies that the
 condition fields are gone and guards against reintroducing the old common-type
 write-back pattern.
+
+## Manual Lazy Cache Hardening
+
+This branch also removes two concrete lazy-null cache hazards found by the
+runtime/ASM manual-lazy audit:
+
+- `xRegEx.RegExHandle` now stores its compiled `Pattern` in a final
+  `Lazy<Pattern>` instead of `m_pattern`. This preserves the old first-use
+  compilation and per-handle repeated-call caching, but publishes the cached
+  value through the `Lazy` synchronization rather than a plain nullable field.
+- `FSNodeConstant.m_constPath` is now a volatile per-node cache and adopted
+  copies clear it. The old cache could be correct inside one pool and still be
+  wrong after `Constant.adoptedBy(...)`, because the shallow clone copied the
+  already-computed source-pool path literal.
+- `_native:fs.OSFileNode.created` is no longer `@Lazy`. Native file nodes are
+  owned by the native `OSStorage` service, but the getter can execute in an
+  application container. The old lazy property cached an application-owned
+  `Time` handle inside the native file-system graph.
+
+`RegExHandleTest` verifies the regex cache remains per-handle and final-lazy.
+`ConstantAdoptionTest.adoptedFSNodeConstantDropsSourcePoolPathCache()` verifies
+that adoption preserves caching in the destination pool without reusing the
+source-pool path constant. `manualTests:runDirectSequenceStress` with
+`TestFiles` verifies the native file-node change under ownership validation.
 
 ### Constructor-Published Native Template `INSTANCE`
 

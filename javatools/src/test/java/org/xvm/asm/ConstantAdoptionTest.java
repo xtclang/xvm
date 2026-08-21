@@ -5,6 +5,8 @@ import java.lang.ref.WeakReference;
 
 import java.lang.reflect.Field;
 
+import java.nio.file.attribute.FileTime;
+
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
@@ -14,7 +16,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.constants.FSNodeConstant;
 import org.xvm.asm.constants.HandleConstant;
+import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.SignatureConstant;
@@ -156,6 +160,27 @@ public class ConstantAdoptionTest {
         IllegalStateException error = assertThrows(
                 IllegalStateException.class, () -> adopt(source, targetPool));
         assertTrue(error.getMessage().contains("live ObjectHandle"));
+    }
+
+    @Test
+    public void adoptedFSNodeConstantDropsSourcePoolPathCache() {
+        ConstantPool sourcePool = new FileStructure("source").getConstantPool();
+        ConstantPool targetPool = new FileStructure("target").getConstantPool();
+        FileTime     created    = FileTime.fromMillis(1);
+        FileTime     modified   = FileTime.fromMillis(2);
+
+        FSNodeConstant source = sourcePool.ensureFileConstant(
+                "demo.txt", created, modified, new byte[] {1, 2, 3});
+        LiteralConstant sourcePath = source.getPathConstant();
+
+        FSNodeConstant adopted = adopt(source, targetPool);
+        LiteralConstant adoptedPath = adopted.getPathConstant();
+
+        assertSame(sourcePool, sourcePath.getConstantPool());
+        assertSame(targetPool, adopted.getConstantPool());
+        assertSame(targetPool, adoptedPath.getConstantPool());
+        assertNotSame(sourcePath, adoptedPath);
+        assertSame(adoptedPath, adopted.getPathConstant());
     }
 
     @Test

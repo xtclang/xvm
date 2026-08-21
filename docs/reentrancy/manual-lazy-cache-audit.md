@@ -27,17 +27,19 @@ rg -U -n --pcre2 \
   javatools/src/main/java/org/xvm/asm
 ```
 
-Current branch result: 25 strong same-field lazy/init sites in runtime/asm.
-The same strict scan finds 45 sites across all `javatools/src/main/java`.
+Current branch result: 23 strong same-field lazy/init sites in runtime/asm.
+The same strict scan finds 43 sites across all `javatools/src/main/java`.
 
 ## Classification
 
 | Classification | Sites | Why | Required next action |
 | --- | --- | --- | --- |
 | Fixed in this branch | `asm/op/JumpCond.m_cond`, `asm/op/JumpNCond.m_cond`, runtime write-back to `asm/OpTest.m_typeCommon` and `asm/OpCondJump.m_typeCommon` | These were runtime-executed `Op` objects caching constants from a `Frame`. If the same decoded op object can run under multiple container/pool owners, the cached constant is owner-bearing and the field is a wrong-owner race. | The condition caches were removed. Common-type execution now resolves `m_nType` from the current `Frame` without writing that frame constant into the shared `Op`; `m_typeCommon` remains only an assembly-time argument field. |
+| Fixed in this branch | `runtime/template/text/xRegEx.RegExHandle.m_pattern` | `Pattern` is immutable, but the old plain lazy field had no publication edge and could duplicate compilation under concurrent handle use. It did not carry container ownership, so this was a low-risk hardening fix rather than an observed wrong-owner bug. | Replaced by a final `Lazy<Pattern>`. `RegExHandleTest` verifies repeated access returns the same compiled pattern and the old nullable field is gone. |
+| Fixed in this branch | `asm/constants/FSNodeConstant.m_constPath` | The derived path literal is owned by a `ConstantPool`. If the source node computed it before `adoptedBy(...)`, the shallow clone copied a source-pool path constant into the adopted node. | The cache is now a volatile per-node cache and `adoptedBy(...)` clears it on the adopted copy, preserving repeated-call caching while forcing recomputation in the destination pool. `ConstantAdoptionTest` covers the old failure shape. |
+| Fixed in this branch, bridge XTC lazy | `javatools_bridge/src/main/x/_native/fs/OSFileNode.x:created` | The node is owned by the native `OSStorage` service, but the `created` getter can execute in an application container. The old `@Lazy` property cached an application-owned `Time` handle inside the native file-system graph. | Removed `@Lazy` and made `created` a computed getter, matching `modified` and `accessed`. Same-JVM `TestFiles` stress no longer reports the wrong-owner `Time` handle. |
 | Must audit, not yet proven runtime owner bug | `asm/OpJump.m_opDest`, `asm/OpCondJump.m_opDest`, `asm/op/LoopEnd.m_opDest`, `asm/op/OpSwitch.m_aOpCase`, `asm/op/JumpInt.m_aOpCase`, `asm/op/GuardStart.m_aOpCatch` | These mutate decoded op address/link state. They are safe only if address resolution happens before publication or under exclusive ownership. Lazy runtime resolution would be racy. | Verify when `resolveAddresses(...)` runs. Preferred fix is eager linking before code publication, or one synchronized/atomic resolved-address state per method owner. |
-| Should fix soon, low risk | `runtime/template/text/xRegEx.RegExHandle.m_pattern` | `Pattern` is immutable, but the plain lazy field can duplicate compilation and has no publication edge. It does not appear to carry container ownership. | Replace with a final `Lazy<Pattern>` or compile eagerly in the handle constructor if regex handles are expected to be shared across fibers. |
-| Should fix / audit during asm cleanup | `asm/constants/FSNodeConstant.m_constPath`, `asm/Parameter.m_regDeref` | These are immutable derived values on ASM objects. They are not known runtime container leaks, but the plain lazy field still assumes benign races. | Use final `Lazy` where construction dependencies are available, or synchronize if the value depends on mutable method/register lifecycle. |
+| Should fix / audit during asm cleanup | `asm/Parameter.m_regDeref` | This is an immutable derived value on an ASM object. It is not a known runtime container leak, but the plain lazy field still assumes benign races. | Use final `Lazy` where construction dependencies are available, or synchronize if the value depends on mutable method/register lifecycle. |
 | Safe publication already present | `asm/constants/ChildInfo.m_infoType`, `MethodInfo.m_infoType`, `PropertyInfo.m_infoType`, `MethodBody.m_infoMethod`, `PropertyBody.m_infoProperty` | The association methods are `synchronized` and return a copy when the requested owner differs. This is not an unsynchronized lazy cache. | No PR blocker. Keep as-is unless a later refactor can make ownership explicit at construction. |
 | Thread/service/frame confined lifecycle state | `runtime/Frame.m_continuation`, `Frame.m_debug`, `runtime/DebugConsole.DebugStash.m_mapExpand`, `DebugStash.m_listWatches` | These are mutable frame/debugger lifecycle slots. They are not immutable caches, and `Lazy` would not express append/activation semantics. | No startup-race blocker. Keep private and service-thread confined; document confinement if these objects become cross-thread. |
 | Compile/write-time builder state | `asm/Scope.m_scopeChild`, `asm/Op.Prefix.m_op`, `asm/Op.ConstantRegistry.m_mapConstants`, `asm/Op.ConstantRegistry.m_aconst`, `asm/MethodStructure.Code.m_listOps`, `asm/op/Label.m_action` | These are builder/serialization/linker structures that are expected to mutate while code is being assembled. They are not owner-local runtime caches. | Not a runtime PR blocker. If same-JVM incremental compilation starts sharing these objects across worker threads, confine them to the compilation request or add builder locks. |
@@ -147,5 +149,5 @@ Recommended handling:
 2. Verify eager link ordering for `Op` address/link fields separately; if any
    runtime path lazily links after publication, move that state under a
    synchronized/atomic method-owner policy.
-3. Treat `xRegEx.m_pattern` and immutable ASM derived values as should-fix
-   cleanup unless stress testing produces a concrete cross-owner failure.
+3. Treat the remaining immutable ASM derived values as should-fix cleanup unless
+   stress testing produces a concrete cross-owner failure.

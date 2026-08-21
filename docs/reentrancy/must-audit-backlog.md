@@ -31,8 +31,8 @@ rg -U --pcre2 -c \
 ```
 
 ```text
-47 strong same-field lazy-init matches across javatools/src/main/java
-27 of those are in runtime/asm
+43 strong same-field lazy-init matches across javatools/src/main/java
+23 of those are in runtime/asm
 ```
 
 Non-final static fields across all Java sources:
