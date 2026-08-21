@@ -61,8 +61,7 @@ public class xPackage
         if (this == INSTANCE) {
             ConstantPool pool = f_container.getConstantPool();
             LIST_MAP_TYPE = pool.ensureParameterizedTypeConstant(
-                    pool.ensureEcstasyTypeConstant("maps.ListMap"),
-                    pool.typeString(), pool.typeClass());
+                    pool.typeListMap(), pool.typeString(), pool.typeClass());
             LIST_MAP_TEMPLATE = f_container.getTemplate(LIST_MAP_TYPE);
         }
     }

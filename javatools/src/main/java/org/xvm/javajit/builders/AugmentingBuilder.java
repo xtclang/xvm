@@ -274,20 +274,6 @@ public class AugmentingBuilder extends CommonBuilder {
         return super.shouldGenerate(id);
     }
 
-    @Override
-    public ClassDesc ensureClassDesc(TypeConstant type) {
-        return type.removeAutoNarrowing().removeAccess().equals(thisType.removeAccess())
-            ? model.thisClass().asSymbol()
-            : super.ensureClassDesc(type);
-    }
-
-    @Override
-    public String ensureJitClassName(TypeConstant type) {
-        return type.removeAutoNarrowing().removeAccess().equals(thisType.removeAccess())
-            ? model.thisClass().asInternalName().replace('/', '.')
-            : super.ensureJitClassName(type);
-    }
-
     /**
      * Find a FieldModel for the specified property.
      */

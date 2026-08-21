@@ -5,10 +5,14 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -101,6 +105,15 @@ public class Var_T
 
         registerArguments(m_aArgValue, registry);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildTuple(bctx, code, m_anArgValue, "");
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int[] m_anArgValue;
 

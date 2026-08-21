@@ -221,8 +221,16 @@ public abstract class OpIndex
     public void computeTypes(BuildContext bctx) {
         if (isAssignOp()) {
             TypeConstant typeFrom = bctx.getArgumentType(m_nTarget);
-            bctx.typeMatrix.assign(getAddress(), m_nRetValue,
-                    computeElementType(bctx.getTypeInfo(typeFrom)));
+            TypeConstant typeEl   = computeElementType(bctx.getTypeInfo(typeFrom));
+
+            if (typeFrom.isTuple()) {
+                // getElement() returns Object, but we can try to infer from the return type
+                TypeConstant typeDest = bctx.getArgumentType(m_nRetValue);
+                if (typeDest != null && typeDest.isA(typeEl)) {
+                    typeEl = typeDest;
+                }
+            }
+            bctx.typeMatrix.assign(getAddress(), m_nRetValue, typeEl);
         } else {
             super.computeTypes(bctx);
         }

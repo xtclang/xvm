@@ -309,6 +309,7 @@ public class NativeTypeSystem
         nativeByClass.put(pool.clzRef(),       Builder.N_nRef);
         nativeByClass.put(pool.clzService(),   Builder.N_nService);
         nativeByClass.put(pool.clzType(),      Builder.N_nType);
+        nativeByClass.put(pool.clzTuple(),     Builder.N_nTuple);
         nativeByClass.put(pool.clzVar(),       Builder.N_nRef);
 
         // various types used by native classes

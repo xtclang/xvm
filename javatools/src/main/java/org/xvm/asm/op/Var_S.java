@@ -126,6 +126,8 @@ public class Var_S
         registerArguments(m_aArgValue, registry);
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
         return buildArray(bctx, code, m_anArgValue, "");

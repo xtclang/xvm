@@ -1760,8 +1760,8 @@ public class xRTType
         if (type == null) {
             ConstantPool pool = container.getConstantPool();
 
-            type = pool.ensureEcstasyTypeConstant("maps.ListMap");
-            type = pool.ensureParameterizedTypeConstant(type, pool.typeString(), pool.typeType());
+            type = pool.ensureParameterizedTypeConstant(
+                    pool.typeListMap(), pool.typeString(), pool.typeType());
             LISTMAP_TYPE = type = pool.ensureImmutableTypeConstant(type);
         }
         return type;

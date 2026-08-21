@@ -13,6 +13,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnassignedTypeConstant;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.Builder;
 
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.runtime.Frame;
@@ -23,9 +24,12 @@ import org.xvm.runtime.template.collections.xArray;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_long;
+import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_ArrayObj;
 import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_nObject;
+import static org.xvm.javajit.Builder.CD_nTuple;
 import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 
@@ -225,7 +229,7 @@ public abstract class OpVar
                 case OP_VAR, OP_VAR_N ->
                     new UnassignedTypeConstant(bctx.getTypeConstant(m_nType));
 
-                case OP_VAR_I, OP_VAR_IN, OP_VAR_S, OP_VAR_SN ->
+                case OP_VAR_I, OP_VAR_IN, OP_VAR_S, OP_VAR_SN, OP_VAR_T, OP_VAR_TN ->
                     bctx.getTypeConstant(m_nType);
 
                 case OP_VAR_D, OP_VAR_DN ->
@@ -243,8 +247,6 @@ public abstract class OpVar
     /**
      * Build an array variable (for VAR_S, VAR_SN).
      *
-     * @param bctx        the current build context
-     * @param code        the {@link CodeBuilder} to use to generate op codes
      * @param anArgValue  the array of values to add to the new array
      * @param sName       the name of the variable, or empty string for unnamed
      */
@@ -266,6 +268,42 @@ public abstract class OpVar
             code.invokevirtual(CD_ArrayObj, "add", MethodTypeDesc.of(CD_ArrayObj, CD_Ctx, CD_Object))
                     .pop();
         }
+        reg.store(bctx, code, type);
+        return -1;
+    }
+
+    /**
+     * Build a Tuple variable (for VAR_T, VAR_TN).
+     *
+     * @param anArgValue  the array of values to add to the new array
+     * @param sName       the name of the variable, or empty string for unnamed
+     */
+    protected int buildTuple(BuildContext bctx, CodeBuilder code, int[] anArgValue, String sName) {
+        TypeConstant type = bctx.getTypeConstant(m_nType);
+        RegisterInfo reg  = bctx.introduceRegister(code, m_nVar, type, sName);
+
+        // new nTuple(ctx, type, values)
+        code.new_(CD_nTuple)
+            .dup();
+        bctx.loadCtx(code);
+        bctx.loadTypeConstant(code, type);
+        code.loadConstant(anArgValue.length)
+            .anewarray(CD_nObject);
+
+        for (int i = 0; i < anArgValue.length; i++) {
+            code.dup()
+                .loadConstant(i);
+
+            RegisterInfo arg = bctx.loadArgument(code, anArgValue[i]);
+            if (arg.flavor().isOptimized) {
+                Builder.box(code, arg);
+            } else if (arg.type().isJitInterface()) {
+                code.checkcast(CD_nObject);
+            }
+            code.aastore();
+        }
+        code.invokespecial(CD_nTuple, "<init>",
+                MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant, CD_nObject.arrayType()));
         reg.store(bctx, code, type);
         return -1;
     }

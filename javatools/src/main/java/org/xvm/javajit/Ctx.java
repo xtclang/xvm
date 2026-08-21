@@ -6,6 +6,7 @@ import java.lang.constant.MethodTypeDesc;
 import java.util.function.Function;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.ByteHashCollector;
@@ -154,6 +155,13 @@ public final class Ctx {
             loader = container.typeSystem.findOwnerLoader(className);
         }
         return loader.module.getConstantPool().getConstant(index);
+    }
+
+    /**
+     * @return the container's type system ConstantPool
+     */
+    public ConstantPool pool() {
+        return container.typeSystem.pool();
     }
 
     /**

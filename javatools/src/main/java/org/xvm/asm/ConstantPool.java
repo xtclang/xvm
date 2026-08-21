@@ -2253,9 +2253,11 @@ public class ConstantPool
     public TypeConstant      typeStringBuffer()  {TypeConstant      c = m_typeStringBuffer;  if (c == null) {m_typeStringBuffer  = c = ensureTerminalTypeConstant(clzStringBuffer()                    );} return c;}
     public TypeConstant      typeBit()           {TypeConstant      c = m_typeBit;           if (c == null) {m_typeBit           = c = ensureTerminalTypeConstant(clzBit()                             );} return c;}
     public TypeConstant      typeNibble()        {TypeConstant      c = m_typeNibble;        if (c == null) {m_typeNibble        = c = ensureTerminalTypeConstant(clzNibble()                          );} return c;}
+    public TypeConstant      typeFPConvertible() {TypeConstant      c = m_typeFPConvertible; if (c == null) {m_typeFPConvertible = c = ensureTerminalTypeConstant(clzFPConvertible()                   );} return c;}
     public TypeConstant      typeFPNumber()      {TypeConstant      c = m_typeFPNumber;      if (c == null) {m_typeFPNumber      = c = ensureTerminalTypeConstant(clzFPNumber()                        );} return c;}
     public TypeConstant      typeBinFPNumber()   {TypeConstant      c = m_typeBinFPNumber;   if (c == null) {m_typeBinFPNumber   = c = ensureTerminalTypeConstant(clzBinFPNumber()                     );} return c;}
     public TypeConstant      typeDecFPNumber()   {TypeConstant      c = m_typeDecFPNumber;   if (c == null) {m_typeDecFPNumber   = c = ensureTerminalTypeConstant(clzDecFPNumber()                     );} return c;}
+    public TypeConstant      typeIntConvertible(){TypeConstant      c = m_typeIntConvertible;if (c == null) {m_typeIntConvertible= c = ensureTerminalTypeConstant(clzIntConvertible()                  );} return c;}
     public TypeConstant      typeIntNumber()     {TypeConstant      c = m_typeIntNumber;     if (c == null) {m_typeIntNumber     = c = ensureTerminalTypeConstant(clzIntNumber()                       );} return c;}
     public TypeConstant      typeInt8()          {TypeConstant      c = m_typeInt8;          if (c == null) {m_typeInt8          = c = ensureTerminalTypeConstant(clzInt8()                            );} return c;}
     public TypeConstant      typeInt16()         {TypeConstant      c = m_typeInt16;         if (c == null) {m_typeInt16         = c = ensureTerminalTypeConstant(clzInt16()                           );} return c;}
@@ -2277,6 +2279,7 @@ public class ConstantPool
     public TypeConstant      typeFloat16()       {TypeConstant      c = m_typeFloat16;       if (c == null) {m_typeFloat16       = c = ensureTerminalTypeConstant(clzFloat16()                         );} return c;}
     public TypeConstant      typeFloat32()       {TypeConstant      c = m_typeFloat32;       if (c == null) {m_typeFloat32       = c = ensureTerminalTypeConstant(clzFloat32()                         );} return c;}
     public TypeConstant      typeFloat64()       {TypeConstant      c = m_typeFloat64;       if (c == null) {m_typeFloat64       = c = ensureTerminalTypeConstant(clzFloat64()                         );} return c;}
+    public TypeConstant      typeUniformIndexed(){ /* Just an alias */ return typeIndexed();                                                                                                                  }
     public TypeConstant      typeIndexed()       {TypeConstant      c = m_typeIndexed;       if (c == null) {m_typeIndexed       = c = ensureTerminalTypeConstant(clzIndexed()                         );} return c;}
     public TypeConstant      typeArray()         {TypeConstant      c = m_typeArray;         if (c == null) {m_typeArray         = c = ensureTerminalTypeConstant(clzArray()                           );} return c;}
     public TypeConstant      typeMatrix()        {TypeConstant      c = m_typeMatrix;        if (c == null) {m_typeMatrix        = c = ensureTerminalTypeConstant(clzMatrix()                          );} return c;}
@@ -2364,9 +2367,11 @@ public class ConstantPool
     protected ClassConstant  clzFPLiteral()     {return (ClassConstant) getImplicitlyImportedIdentity("FPLiteral"                );}
     protected ClassConstant  clzBit()           {return (ClassConstant) getImplicitlyImportedIdentity("Bit"                      );}
     protected ClassConstant  clzNibble()        {return (ClassConstant) getImplicitlyImportedIdentity("Nibble"                   );}
+    protected ClassConstant  clzFPConvertible() {return                 ensureEcstasyClassConstant   ("numbers.FPConvertible"    );}
     protected ClassConstant  clzFPNumber()      {return                 ensureEcstasyClassConstant   ("numbers.FPNumber"         );}
     protected ClassConstant  clzBinFPNumber()   {return                 ensureEcstasyClassConstant   ("numbers.BinaryFPNumber"   );}
     protected ClassConstant  clzDecFPNumber()   {return                 ensureEcstasyClassConstant   ("numbers.DecimalFPNumber"  );}
+    protected ClassConstant  clzIntConvertible(){return                 ensureEcstasyClassConstant   ("numbers.IntConvertible"   );}
     protected ClassConstant  clzIntNumber()     {return                 ensureEcstasyClassConstant   ("numbers.IntNumber"        );}
     protected ClassConstant  clzInt8()          {return (ClassConstant) getImplicitlyImportedIdentity("Int8"                     );}
     protected ClassConstant  clzInt16()         {return (ClassConstant) getImplicitlyImportedIdentity("Int16"                    );}
@@ -3807,6 +3812,8 @@ public class ConstantPool
         m_typeBitArray      = null;
         m_typeByteArray     = null;
         m_typeBinary        = null;
+        m_typeFPConvertible = null;
+        m_typeIntConvertible= null;
         m_typeInt8          = null;
         m_typeInt16         = null;
         m_typeInt32         = null;
@@ -4118,9 +4125,11 @@ public class ConstantPool
     private transient TypeConstant      m_typeBitArray;
     private transient TypeConstant      m_typeByteArray;
     private transient TypeConstant      m_typeBinary;
+    private transient TypeConstant      m_typeFPConvertible;
     private transient TypeConstant      m_typeFPNumber;
     private transient TypeConstant      m_typeBinFPNumber;
     private transient TypeConstant      m_typeDecFPNumber;
+    private transient TypeConstant      m_typeIntConvertible;
     private transient TypeConstant      m_typeIntNumber;
     private transient TypeConstant      m_typeInt8;
     private transient TypeConstant      m_typeInt16;

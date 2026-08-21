@@ -144,6 +144,8 @@ public class Var_SN
         return getName(aconst, m_constName, m_nNameId);
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
         return buildArray(bctx, code, m_anArgValue, bctx.getString(m_nNameId));

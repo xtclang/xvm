@@ -49,6 +49,7 @@ import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
 import static org.xvm.asm.Constant.Format.Int128;
+import static org.xvm.asm.Constant.Format.Tuple;
 
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
 import static org.xvm.javajit.JitFlavor.XvmPrimitive;
@@ -542,7 +543,9 @@ public abstract class Builder {
         case ArrayConstant arrayConst: {
             TypeConstant arrayType = arrayConst.getType();
             Constant[]   values    = arrayConst.getValue();
-            return loadArray(bctx, code, arrayType, values);
+            return arrayConst.getFormat() == Tuple
+                    ? loadTuple(bctx, code, arrayType, values)
+                    : loadArray(bctx, code, arrayType, values);
         }
 
         case MapConstant mapConstant: {
@@ -555,8 +558,7 @@ public abstract class Builder {
             var          constMap = mapConstant.getValue();
 
             // actual implementation is the ListMap
-            mapType = pool.ensureParameterizedTypeConstant(
-                pool.ensureEcstasyTypeConstant("maps.ListMap"), keyType, valType);
+            mapType = pool.ensureParameterizedTypeConstant(pool.typeListMap(), keyType, valType);
 
             TypeInfo       typeInfo = mapType.ensureTypeInfo();
             MethodConstant ctorId   = typeInfo.findConstructor(keysType, valsType.freeze(), pool.typeBoolean());
@@ -616,6 +618,33 @@ public abstract class Builder {
         code.invokestatic(CD_ArrayUInt8, "$fromLongs",
                 MethodTypeDesc.of(CD_ArrayUInt8, CD_Ctx, CD_long, CD_long.arrayType()));
         return new SingleSlot(bytesConstant.getType(), Specific, CD_ArrayUInt8, "");
+    }
+
+    private SingleSlot loadTuple(BuildContext bctx, CodeBuilder code, TypeConstant type,
+                                 Constant[] values) {
+        code.new_(CD_nTuple)
+            .dup();
+        loadCtx(bctx, code);
+        loadTypeConstant(bctx, code, type);
+        code.loadConstant(values.length)
+            .anewarray(CD_nObject);
+
+        for (int i = 0; i < values.length; i++) {
+            code.dup()
+                .loadConstant(i);
+
+            RegisterInfo valueReg = loadConstant(bctx, code, values[i]);
+            if (valueReg.flavor().isOptimized) {
+                box(code, valueReg);
+            } else if (valueReg.type().isJitInterface()) {
+                code.checkcast(CD_nObject);
+            }
+            code.aastore();
+        }
+
+        code.invokespecial(CD_nTuple, INIT_NAME,
+                MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant, CD_nObject.arrayType()));
+        return new SingleSlot(type, Specific, CD_nTuple, "");
     }
 
     private SingleSlot loadArray(BuildContext bctx, CodeBuilder code, TypeConstant arrayType,
@@ -1913,6 +1942,7 @@ public abstract class Builder {
     public static final String N_nRef         = "org.xtclang.ecstasy.reflect.nRef";
     public static final String N_nRangeInt64  = "org.xtclang.ecstasy.nRangeᐸInt64ᐳ";
     public static final String N_nService     = "org.xtclang.ecstasy.nService";
+    public static final String N_nTuple       = "org.xtclang.ecstasy.nTuple";
     public static final String N_nType        = "org.xtclang.ecstasy.nType";
     public static final String N_nUtil        = "org.xtclang.ecstasy.nUtil";
 
@@ -1997,6 +2027,7 @@ public abstract class Builder {
     public static final ClassDesc CD_nException          = ClassDesc.of(N_nException);
     public static final ClassDesc CD_nObject             = ClassDesc.of(N_nObj);
     public static final ClassDesc CD_nRef                = ClassDesc.of(N_nRef);
+    public static final ClassDesc CD_nTuple              = ClassDesc.of(N_nTuple);
     public static final ClassDesc CD_nType               = ClassDesc.of(N_nType);
     public static final ClassDesc CD_nUtil               = ClassDesc.of(N_nUtil);
 

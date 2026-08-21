@@ -685,19 +685,30 @@ public class BuildContext {
                     scope.startLabel, scope.endLabel);
         }
 
-        int            extraArgs  = methodDesc.getImplicitParamCount(); // e.g. $ctx, $cctx, thi$, ...
-        ClassDesc      CD_this    = builder.ensureClassDesc(thisType);
-        JitParamDesc[] params     = isOptimized ? methodDesc.optimizedParams : methodDesc.standardParams;
+        int            extraArgs = methodDesc.getImplicitParamCount(); // e.g. $ctx, $cctx, thi$, ...
+        ClassDesc      CD_this   = builder.art.CD();
+        JitParamDesc[] params    = isOptimized ? methodDesc.optimizedParams : methodDesc.standardParams;
         if (isConstructor) {
             TypeConstant structType = thisType.ensureAccess(Access.STRUCT);
-            registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, extraArgs-1, Specific, structType,
-                CD_this, "thi$"));
+            registerInfos.put(Op.A_THIS,
+                    new SingleSlot(Op.A_THIS, extraArgs-1, Specific, structType, CD_this, "thi$"));
             typeMatrix.declare(-1, Op.A_THIS, structType);
         } else if (isStatic) {
             typeMatrix.ensureMutableView(0);
         } else if (!thisType.isJitPrimitive()) {
-            registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, 0, Specific, thisType,
-                CD_this, "thi$"));
+            RegisterInfo regThis = new SingleSlot(Op.A_THIS, 0, Specific, thisType, CD_this, "thi$");
+
+            // an augmented interface (e.g. Service) can declare the method while every runtime
+            // instance is represented by the corresponding native class (nService)
+            if (thisType.isInterfaceType()) {
+                ClassDesc cdValue = builder.ensureClassDesc(thisType);
+                if (!cdValue.equals(CD_this)) {
+                    regThis = new Narrowed(Op.A_THIS, regThis.slots(), thisType, Specific, cdValue,
+                            regThis.slotCds(), "thi$", 0, regThis);
+                }
+            }
+
+            registerInfos.put(Op.A_THIS, regThis);
             typeMatrix.declare(-1, Op.A_THIS, thisType);
         }
 

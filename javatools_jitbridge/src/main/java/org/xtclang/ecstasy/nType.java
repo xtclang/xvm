@@ -119,6 +119,44 @@ public class nType
             return true;
         }
 
+        nType type1 = ((nObject) value1).$type(ctx);
+        nType type2 = ((nObject) value2).$type(ctx);
+        if ($dataType.isJitPrimitive()) {
+            if (!type1.$dataType.equals(type2.$dataType)) {
+                return false;
+            }
+            return switch (value1) {
+                case Bit n1     -> n1.$value == ((Bit)     value2).$value;
+                case Boolean b1 -> b1.$value == ((Boolean) value2).$value;
+                case Char c1    -> c1.$value == ((Char)    value2).$value;
+                case Nibble n1  -> n1.$value == ((Nibble)  value2).$value;
+                case Int8 n1    -> n1.$value == ((Int8)    value2).$value;
+                case Int16 n1   -> n1.$value == ((Int16)   value2).$value;
+                case Int32 n1   -> n1.$value == ((Int32)   value2).$value;
+                case Int64 n1   -> n1.$value == ((Int64)   value2).$value;
+                case UInt8 n1   -> n1.$value == ((UInt8)   value2).$value;
+                case UInt16 n1  -> n1.$value == ((UInt16)  value2).$value;
+                case UInt32 n1  -> n1.$value == ((UInt32)  value2).$value;
+                case UInt64 n1  -> n1.$value == ((UInt64)  value2).$value;
+
+                case Int128 n1 -> Int128.$equals(n1.$lowValue, n1.$highValue,
+                        ((Int128) value2).$lowValue, ((Int128) value2).$highValue);
+                case UInt128 n1 -> UInt128.$equals(n1.$lowValue, n1.$highValue,
+                        ((UInt128) value2).$lowValue, ((UInt128) value2).$highValue);
+
+                case Float16 n1 -> Float.compare(n1.$value, ((Float16) value2).$value) == 0;
+                case Float32 n1 -> Float.compare(n1.$value, ((Float32) value2).$value) == 0;
+                case Float64 n1 -> Double.compare(n1.$value, ((Float64) value2).$value) == 0;
+
+                case Dec32 n1 -> Dec32.$equals(n1.$bits, ((Dec32) value2).$bits);
+                case Dec64 n1 -> Dec64.$equals(n1.$bits, ((Dec64) value2).$bits);
+                case Dec128 n1 -> Dec128.$equals(n1.$lowBits, n1.$highBits,
+                        ((Dec128) value2).$lowBits, ((Dec128) value2).$highBits);
+
+                default -> throw new UnsupportedOperationException($dataType.getValueString());
+            };
+        }
+
         if (equalsMethod == null) {
             equalsMethod = ensureMethod("equals$p", 2);
         }

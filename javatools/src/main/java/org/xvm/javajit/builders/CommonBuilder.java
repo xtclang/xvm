@@ -4103,6 +4103,7 @@ public class CommonBuilder
             "org.xtclang.ecstasy.collections.List",
             "org.xtclang.ecstasy.collections.NaturalHasher",
             "org.xtclang.ecstasy.collections.Set",
+            "org.xtclang.ecstasy.collections.Tuple",
             "org.xtclang.ecstasy.collections.UniformIndexed*",
             "org.xtclang.ecstasy.collections.VirtualHasher",
 
