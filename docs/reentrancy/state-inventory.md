@@ -45,7 +45,7 @@ independent bug.
 | Should fix soon | Thread-local hidden global context | 17 `ThreadLocal`/`TransientThreadLocal` hits in runtime/asm/compiler | Thread locals hide dependencies, can leak scope across pooled threads, and make reentrancy depend on cleanup discipline | Prefer explicit context parameters or owner-scoped stacks; if unavoidable, use scoped `try/finally remove()` wrappers |
 | Should fix soon | Weak/identity mutable maps | 12 `WeakHashMap`/`IdentityHashMap` construction hits in runtime/asm/compiler | These maps are not concurrent and their semantics are easy to misuse as global caches | Confine to one owner/thread, synchronize, or use the project's concurrent weak-map helper where sharing is intended |
 | Should fix | Constant-looking non-final public statics | 0 public non-final uppercase/static constant-shaped fields across runtime/asm/compiler; 3 across all Java sources | They look immutable in review but can be reassigned and are not safely published as constants | `public static final` immutable values, private owner-scoped state, or accessor methods |
-| Should fix | Owner-local mutable metadata fields | 181 non-final runtime/asm metadata fields of type `TypeConstant`, `TypeComposition`, `MethodStructure`, handle, template, or enum | Some are valid lifecycle fields, but many are ad hoc first-use caches with no publication story | Final eager fields, final `Lazy`, `ConcurrentMap`, or explicit lifecycle state depending on semantics |
+| Should fix / must audit | Owner-local mutable metadata fields | 178 non-final runtime/asm metadata fields of type `TypeConstant`, `TypeComposition`, `MethodStructure`, handle, template, or enum in the 2026-08-21 branch audit | Some are valid lifecycle fields, but many are ad hoc first-use caches with no publication story | Final eager fields, final `Lazy`, `ConcurrentMap`, or explicit lifecycle state depending on semantics |
 | Should fix | Rare non-final `f_` fields | 2 direct hits | No written naming standard was found, but source usage strongly suggests `f_` normally denotes fixed/final owner state; exceptions are review hazards | Make final if immutable; otherwise rename to `m_` and document the mutation |
 
 `Lazy` is only one replacement. It is the right default for immutable values
@@ -428,7 +428,13 @@ Proper replacements:
   move to the container/pool/template owner, final `Lazy`, an owner-owned
   `ConcurrentMap`, or explicit lifecycle state.
 
-### Must Fix: Owner-Local Runtime Metadata Caches
+### Must Audit: Owner-Local Runtime Metadata Caches
+
+This scan is intentionally broad. A non-final field whose type looks like
+runtime metadata is not automatically a proven bug. It becomes must-fix when the
+field is shared, owner-bearing, lazily published without synchronization, or
+part of a multi-field lifecycle/cache transition. Otherwise it is still useful
+follow-up inventory because these fields are where reentrancy bugs tend to hide.
 
 Audit command:
 
@@ -441,7 +447,7 @@ rg -n --pcre2 "\bprivate\s+(?!final\b)(?:transient\s+)?(?:TypeConstant|TypeCompo
 Current count:
 
 ```text
-181 non-final runtime/asm metadata fields
+178 non-final runtime/asm metadata fields in the 2026-08-21 branch audit
 ```
 
 Representative examples:
@@ -476,6 +482,30 @@ Proper replacements:
   lock around all state fields.
 - Thread-confined compiler AST state: leave mutable only with a clear
   confinement comment.
+
+First-PR audit result:
+
+- The branch closes the confirmed static/native-template owner leaks, raw enum
+  publication paths, and the known `SingletonConstant` split lifecycle race.
+- The broad metadata-shaped instance-field scan did not produce another
+  confirmed first-PR blocker by itself.
+- Mixed parallel stress did expose a related owner/canonical-metadata bug in
+  `xException`: concrete exception subclasses were allowed to compute the
+  canonical `ExceptionInfo` lazy, and subclasses do not declare
+  `formatExceptionString`. The fix keeps `ExceptionInfo` on the owner-local
+  canonical `Exception` template and is documented in
+  [stress-discovered-runtime-issues.md](stress-discovered-runtime-issues.md).
+- Stress also exposed two non-owner-state bugs that are fixed in this branch:
+  the native compiler's exception path tried to append to an unmodifiable
+  diagnostic list, and `StringBuffer` could mix immutable committed chunks with a
+  mutable current buffer. Both are documented in
+  [stress-discovered-runtime-issues.md](stress-discovered-runtime-issues.md)
+  because they were found by the same race-hunting harness but are different
+  bug classes.
+- Concurrent outer Gradle/manual-test processes in one checkout can race on
+  generated `.xtc`, jar, and build-cache outputs. That is a verification
+  isolation caveat, not a runtime owner-state finding; future same-JVM launcher
+  stress must run inside one controlled harness or isolate outputs.
 
 ### Must Fix: Split Lifecycle State
 

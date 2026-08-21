@@ -41,6 +41,13 @@ Start here:
   Gradle plugin direct-mode executions in one JVM, validate owner separation,
   and benchmark the speedup that safe reentrant execution should unlock.
 
+The stress-discovered issue file is deliberately broader than the native
+template design. It also records branch-adjacent failures found while validating
+this work: the `StringBuffer` chunk invariant, the `xRTCompiler` unmodifiable
+diagnostic list, the `xException` canonical formatter lookup, and the concurrent
+Gradle/XTC output race that can masquerade as runtime state corruption when two
+heavy manual-test builds write the same checkout at the same time.
+
 The distinction is intentional:
 
 - Must fix: a parallel container or fiber can observe the wrong object,
