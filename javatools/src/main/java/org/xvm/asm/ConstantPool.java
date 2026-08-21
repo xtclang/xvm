@@ -146,6 +146,13 @@ public class ConstantPool
     }
 
     /**
+     * System property that enables fail-fast detection of constants registered after the pool has
+     * been marked as published to runtime execution.
+     */
+    public static final String VALIDATE_LATE_REGISTRATION_PROPERTY =
+            "xvm.asm.validateConstantPoolLateRegistration";
+
+    /**
      * Register a Constant. This is used when a new Constant is created by the ConstantPool, but it
      * can also be used directly by a consumer, and it's used during the bulk (re-)registration of
      * Constants by the {@link XvmStructure#registerConstants} method of all of the various parts
@@ -176,9 +183,10 @@ public class ConstantPool
         // which has a possibility of locking up the ConcurrentHashMap.get()
         constant = (T) constant.resolveTypedefs();
 
-        // check if the Constant is already registered
-        var mapConstants = ensureConstantLookup(constant.getFormat());
-        T   constantOld  = (T) mapConstants.get(constant);
+        // check if the Constant is already registered without creating a lookup map; if the pool
+        // is marked as runtime-published, a missing map means this is definitely a late new value.
+        Map<Constant, Constant> mapConstants = m_mapConstants.get(constant.getFormat());
+        T constantOld = mapConstants == null ? null : (T) mapConstants.get(constant);
 
         boolean fRegisterRecursively = false;
         if (constantOld == null) {
@@ -194,6 +202,11 @@ public class ConstantPool
             if (constant instanceof TypeConstant type && !type.isShared(this)) {
                 return constant;
             }
+
+            assertRegisterBeforeRuntimePublished(constant);
+            mapConstants = mapConstants == null
+                    ? ensureConstantLookup(constant.getFormat())
+                    : mapConstants;
 
             if (constant.getContaining() != this) {
                 T source = constant;
@@ -214,7 +227,8 @@ public class ConstantPool
                 // also allow the constant to be looked up by a locator
                 Object oLocator = constant.getLocator();
                 if (oLocator != null) {
-                    if (oLocator instanceof Constant constLocator && constLocator.getContaining() != this) {
+                    if (oLocator instanceof Constant constLocator
+                            && constLocator.getContaining() != this) {
                         Constant source = constLocator;
                         constLocator = constLocator.adoptedBy(this);
                         ConstantAdoptionValidator.assertValidIfEnabled(source, constLocator);
@@ -256,6 +270,55 @@ public class ConstantPool
         }
 
         return constant;
+    }
+
+    /**
+     * Mark this pool as published to runtime execution when late-registration diagnostics are
+     * enabled. Normal builds do not pay for the guard; the marker is installed only when
+     * {@link #VALIDATE_LATE_REGISTRATION_PROPERTY} is true.
+     *
+     * @param owner  short description of the runtime boundary publishing this pool
+     */
+    public void markRuntimePublishedForDiagnostics(String owner) {
+        if (Boolean.getBoolean(VALIDATE_LATE_REGISTRATION_PROPERTY)) {
+            runtimePublication = new RuntimePublication(owner, f_listConst.size(),
+                    Thread.currentThread().getName());
+        }
+    }
+
+    /**
+     * @return true iff late-registration diagnostics currently consider this pool published
+     */
+    public boolean isRuntimePublishedForDiagnostics() {
+        return runtimePublication != null;
+    }
+
+    /**
+     * Fail before publishing a new constant into a pool that diagnostics already marked as runtime
+     * visible. Existing constants are still returned normally; only new registrations are rejected.
+     *
+     * @param constant  the new constant that would be registered
+     */
+    private void assertRegisterBeforeRuntimePublished(Constant constant) {
+        RuntimePublication publication = runtimePublication;
+        if (publication != null) {
+            throw new IllegalStateException("ConstantPool registered "
+                    + describeConstantForDiagnostics(constant)
+                    + " after runtime publication by "
+                    + publication.owner()
+                    + " at size "
+                    + publication.size()
+                    + " on thread "
+                    + publication.thread());
+        }
+    }
+
+    private static String describeConstantForDiagnostics(Constant constant) {
+        try {
+            return constant.toString();
+        } catch (RuntimeException e) {
+            return constant.getClass().getName();
+        }
     }
 
     /**
@@ -4009,6 +4072,11 @@ public class ConstantPool
     private final Map<TypeConstant, TypeInfo> f_mapRefTypes = new ConcurrentHashMap<>();
 
     /**
+     * Diagnostic marker installed only when late-registration validation is enabled.
+     */
+    private volatile RuntimePublication runtimePublication;
+
+    /**
      * Thread local allowing to get the "current" ConstantPool without any context.
      */
     private static final ThreadLocal<ConstantPool[]> s_tloPool =
@@ -4204,4 +4272,13 @@ public class ConstantPool
     private transient SignatureConstant m_sigClose;
     private transient SignatureConstant m_sigValidator;
     private transient TypeInfo          m_infoPlaceholder;
+
+    /**
+     * Diagnostic publication boundary for late constant registration checks.
+     *
+     * @param owner   the runtime boundary that marked the pool
+     * @param size    the pool size when it was marked
+     * @param thread  the Java thread that marked the pool
+     */
+    private record RuntimePublication(String owner, int size, String thread) {}
 }

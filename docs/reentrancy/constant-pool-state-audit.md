@@ -31,7 +31,7 @@ The real risk categories are narrower:
 | --- | --- | --- | --- | --- |
 | Must fix | Wrong-owner runtime/helper state copied by adoption | Fixed in this branch for `SingletonConstant`, `FSNodeConstant`, `FileStoreConstant`, `TypeConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, `TypeParameterConstant`, and `HandleConstant` | `adoptedBy(...)` changes pool ownership. Shallow-copied runtime/cache/helper state can still point at the source pool/container. | Reset all non-logical state at adoption/owner-change boundaries. Throw/assert when an already-owned live handle constant is adopted into another pool. |
 | Must fix when runtime path can reach it | Ambient current pool in runtime execution | `MainContainer.invoke0`, `Container.ensureServiceContext`, `ServiceContext`, watcher/request callbacks, `xContainerControl.invokeInvoke`, type-relation helpers | A thread-local owner is hidden from signatures. Missing scope cleanup or execution on a different thread selects the wrong pool or `null`. | Prefer explicit `Frame`, `Container`, or `ConstantPool` parameters. Use a scoped owner context only as a transitional bridge. |
-| Must audit | Shared mutable pool mutation during parallel runtime | `register(...)`, `ensure*Constant(...)`, `f_listConst`, `m_mapConstants`, `m_mapLocators`, `getContained()` | Some structures are concurrent/copy-on-write; `f_listConst` itself is not a general concurrent collection. The current design assumes registration and validation reentrancy more than arbitrary parallel mutation. | Add stress tests that run two containers against the same module/pool and enable ownership diagnostics. Long term, split "frozen runtime pool" from compiler/linker mutation. |
+| Must audit | Shared mutable pool mutation during parallel runtime | `register(...)`, `ensure*Constant(...)`, `f_listConst`, `m_mapConstants`, `m_mapLocators`, `getContained()` | Some structures are concurrent/copy-on-write; `f_listConst` itself is not a general concurrent collection. The current design assumes registration and validation reentrancy more than arbitrary parallel mutation. | This branch adds `-Dxvm.asm.validateConstantPoolLateRegistration=true` to fail on new registrations after the runtime publication marker. Long term, split "frozen runtime pool" from compiler/linker mutation. |
 | Must audit | Live runtime handles embedded as constants | `HandleConstant` in `xRTTypeTemplate.resolveFormalType`, used as annotation parameter values | A live `ObjectHandle` is owner-specific and cannot become a pool-shared serialized logical constant. | This branch adds a `HandleConstant.adoptedBy(...)` guard for cross-pool movement. Diagnostics for annotated types carrying live handles remain useful. |
 | Should fix soon | Unsynchronized per-pool lazy implicit caches | `f_implicits`, `m_clz*`, `m_type*`, `m_val*`, `m_sig*`, `m_setJitPrimitives` | These are owner-local, so they are not cross-container globals. They are still plain lazy writes and can duplicate work or race under concurrent use of one pool. | Use owner-local `Lazy` or `ConcurrentMap.computeIfAbsent` for hot/shared runtime caches, or freeze/warm them before parallel runtime execution. |
 | Should fix soon | Ambient `ThreadLocal` implementation | `s_tloPool`, `getCurrentPool`, `setCurrentPool`, `withPool` | Raw `ThreadLocal` with mutable holder arrays relies on perfect manual cleanup and does not make ownership visible. | Replace with explicit parameters. Where plumbing is too broad, migrate to a small `ScopedValue<RuntimeOwner>` bridge that points to the real owner. |
@@ -229,22 +229,33 @@ The first wave keeps this diagnostic opt-in to avoid surprising normal
 runtime/compiler cost. After stress runs identify the intentional allowlist,
 specific findings should be promoted to hard assertions.
 
-This can start inside `OwnershipDiagnostics` and be called only under a system
-property, so normal runtime does not pay reflection cost.
-
 ### Guard Runtime Pool Mutation
 
-If the runtime should treat a pool as frozen after container startup, introduce
-a debug state bit:
+`ConstantPool` now has an opt-in runtime publication marker:
 
 ```java
-pool.markRuntimePublished();
+pool.markRuntimePublishedForDiagnostics("MainContainer.invoke0(main)");
 ```
 
-Then in `register(...)`, emit diagnostics when a published pool is mutated from
-more than one runtime container/fiber path. This is not a proposed immediate
-behavior change, because runtime paths still create owner-local constants
-today. It is a way to discover which `ensure*` calls remain hot after startup.
+`MainContainer.invoke0(...)` installs this marker immediately after entry setup
+and module singleton resolution, but only when
+`-Dxvm.asm.validateConstantPoolLateRegistration=true` is enabled. A later
+`register(...)` for an already-known constant still returns the existing value;
+a genuinely new registration throws before adding the constant to `f_listConst`
+or the lookup maps.
+
+This is not a normal behavior change. With the property disabled, no runtime
+publication marker is installed. The diagnostic exists to discover which
+`ensure*` calls remain hot during user-code execution so they can be warmed,
+re-keyed, or given an explicit synchronization/owner policy.
+
+The first same-JVM diagnostic stress run found exactly that kind of hot path:
+`New_1` first instantiated `TestProps:Standard` during user code, and
+`ClassComposition.<init>(...)` registered private/struct access-type constants
+for that class. The proper fix is to pre-warm class compositions/access-type
+constants before marking the pool, move non-logical composition helper state out
+of pool registration, or add a narrow allowlist only after proving the late
+registration is deterministic, owner-local, and concurrency-safe.
 
 ## ScopedValue Replacement Shape
 
