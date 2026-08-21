@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.xvm.compiler.Token;
 
@@ -66,7 +67,7 @@ public abstract class ConditionalStatement
     protected int getLabelId() {
         int n = m_nLabel;
         if (n == 0) {
-            m_nLabel = n = ++s_nLabelCounter;
+            m_nLabel = n = LABEL_COUNTER.incrementAndGet();
         }
         return n;
     }
@@ -77,6 +78,7 @@ public abstract class ConditionalStatement
     protected Token         keyword;
     protected List<AstNode> conds;
 
-    private static    int   s_nLabelCounter;
-    private transient int   m_nLabel;
+    private static final AtomicInteger LABEL_COUNTER = new AtomicInteger();
+
+    private transient int m_nLabel;
 }

@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -288,7 +290,7 @@ public class ElvisExpression
                     Assignable var = createTempVar(code, getType().ensureNullable());
                     expr1.generateAssignment(ctx, code, var, errs);
 
-                    Label labelElse = new Label("else_?:_" + (++s_nCounter));
+                    Label labelElse = new Label("else_?:_" + COUNTER.incrementAndGet());
                     code.add(new JumpNull(var.getRegister(), labelElse));
                     LVal.assign(var.getRegister(), code, errs);
                     code.add(new Jump(labelEnd));
@@ -305,7 +307,7 @@ public class ElvisExpression
     protected Label getEndLabel() {
         Label labelEnd = m_labelEnd;
         if (labelEnd == null) {
-            m_labelEnd = labelEnd = new Label("end_?:_" + (++s_nCounter));
+            m_labelEnd = labelEnd = new Label("end_?:_" + COUNTER.incrementAndGet());
         }
         return labelEnd;
     }
@@ -313,7 +315,7 @@ public class ElvisExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private static int s_nCounter;
+    private static final AtomicInteger COUNTER = new AtomicInteger();
 
     /**
      * True iff the short-circuit operator is used to convert a "(Boolean, T)" into a "T".

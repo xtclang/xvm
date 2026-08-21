@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -179,7 +180,7 @@ public class ElseExpression
         // generate a "grounding" target label for the "left side child expression"
         Label label = m_labelElse;
         if (label == null) {
-            m_nLabel    = ++s_nCounter;
+            m_nLabel    = COUNTER.incrementAndGet();
             m_labelElse = label = new Label("else_:_" + m_nLabel);
         }
         return label;
@@ -217,7 +218,8 @@ public class ElseExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private static    int                   s_nCounter;
+    private static final AtomicInteger COUNTER = new AtomicInteger();
+
     private transient int                   m_nLabel;
     private transient Label                 m_labelElse;
     private transient Map<String, Argument> m_mapElse;
