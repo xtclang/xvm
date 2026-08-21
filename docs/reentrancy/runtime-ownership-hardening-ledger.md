@@ -284,7 +284,7 @@ can be ignored.
 | Order | Commit scope | Why this order | Required test/proof |
 | --- | --- | --- | --- |
 | 1 | Adoption/clone validator assertions | Done in this branch wave. The shallow-clone bug is proven, dangerous, and the reusable validator catches copied handles, locks, thread locals, and owner references while later work runs stress. | `ConstantAdoptionTest` proves direct detection and opt-in `ConstantPool.register(...)` failure for a default shallow-cloned helper reference. |
-| 2 | `ConstantPool` late-mutation guard | Later tests depend on knowing whether a supposedly published runtime pool is still being mutated. This guard turns hidden late mutation into an immediate diagnostic instead of a stale-owner symptom. | Add a targeted `ConstantPool` test for the diagnostic/freeze boundary and run same-JVM sequence stress with the guard enabled. |
+| 2 | `ConstantPool` late-mutation guard | Done in this branch wave. Hidden late mutation now becomes an immediate diagnostic instead of a stale-owner symptom when `xvm.asm.validateConstantPoolLateRegistration` is enabled. | `ConstantPoolDiagnosticsTest` proves existing constants still return after publication and new registrations fail before publication into the pool. Diagnostic same-JVM stress now identifies `ClassComposition` access-type registration as the next warmup/design target. |
 | 3 | Ambient `ConstantPool` lookup cleanup | Once late mutation is visible, remove or narrow hidden current-pool lookup at runtime boundaries. Explicit owners make the later op/cache fixes much easier to reason about. | Add tests around container/frame/runtime callbacks that assert the scoped/current pool matches the explicit owner. |
 | 4 | Runtime-executed `Op` caches | These are the most suspicious remaining runtime hot-path caches. They must either be proven method-owner confined or keyed/removed before claiming parallel containers are safe. | Run the same compiled method through two containers in one JVM and validate no op cache points at the wrong pool; add source/diagnostic checks for owner-bearing op fields. |
 | 5 | Manual lazy null caches in runtime/asm | After the obvious owner boundaries are explicit, convert the remaining owner-bearing `if (field == null) field = ...` caches to final `Lazy`, `Lazy.Owner`, owner-local tables, or `ConcurrentMap`. | For each converted cache, add or update a test that exercises two owners and verifies cache identity/owner separation and unchanged repeated-call caching. |
@@ -339,9 +339,20 @@ Risk:
 
 Required closure:
 
-- Establish a "frozen runtime pool" boundary after linking/validation.
-- Add an opt-in diagnostic counter or assertion for `register(...)` calls after
-  container startup.
+- `ConstantPool.markRuntimePublishedForDiagnostics(...)` establishes an opt-in
+  runtime publication boundary. `MainContainer.invoke0(...)` marks the pool
+  after entry setup and module singleton resolution, immediately before the
+  user call chain is invoked.
+- `ConstantPool.register(...)` rejects new registrations after that marker when
+  `-Dxvm.asm.validateConstantPoolLateRegistration=true` is enabled; existing
+  constants are still returned normally.
+- The first diagnostic same-JVM stress run now fails on
+  `ClassComposition.<init>(...)` registering private/struct access-type
+  constants for `TestProps:Standard` during `New_1`. That is not a wrong-owner
+  leak by itself, but it proves the runtime still extends the pool after user
+  execution begins. The fix is to pre-warm those composition/access constants,
+  move non-logical helper state out of pool registration, or add a narrow
+  documented allowlist if the late registration is proven safe.
 - If runtime registration remains necessary, protect it with an explicit
   owner/synchronization policy and tests.
 - Run same-JVM direct and parallel stress with ownership diagnostics enabled.
@@ -472,7 +483,7 @@ assertion work should be explicit and opt-in first, then hardened where proven.
 | Detect cloned forbidden helper fields | Opt-in `ConstantAdoptionValidator` via `xvm.asm.validateConstantAdoption` | Catch `Atomic*`, locks, references, thread-local cells, owner/runtime references, and mutable collections copied by clone. |
 | Assert scoped pool equals explicit owner | Runtime callback/bridge sites | Catch stale or missing ambient `ConstantPool` context. |
 | Assert handle/composition owner at boundaries | `OwnershipDiagnostics` and runtime entry points | Catch cross-container values before they surface as misleading XTC-level failures. |
-| Assert no late pool registration after freeze | `ConstantPool.register(...)` diagnostic mode | Find runtime paths that mutate supposedly published pools. |
+| Assert no late pool registration after freeze | Opt-in `ConstantPool.register(...)` guard via `xvm.asm.validateConstantPoolLateRegistration` | Find runtime paths that mutate supposedly published pools. |
 | Assert op cache owner confinement | Runtime stress and diagnostics | Prove or reject decoded op graph sharing across containers. |
 
 ## Test And Proof Requirements

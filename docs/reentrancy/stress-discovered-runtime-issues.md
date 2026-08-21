@@ -155,6 +155,79 @@ enabled by `manualTests:runParallelStress`:
   --no-configuration-cache
 ```
 
+## Late Constant Registration During User Execution
+
+Status: diagnostic added; runtime warmup/design fix still open.
+
+Observed failure with the new late-registration guard:
+
+```text
+CI=true ./gradlew :manualTests:runDirectSequenceStress \
+  -PsameJvmIterations=2 \
+  -PsameJvmModules=TestProps \
+  -Dxvm.asm.validateConstantAdoption=true \
+  -Dxvm.asm.validateConstantPoolLateRegistration=true
+
+java.lang.IllegalStateException:
+ConstantPool registered private TestProps:Standard after runtime publication
+by MainContainer.invoke0(run)
+```
+
+The marker is installed at the `MainContainer.invoke0(...)` call-chain boundary:
+after method lookup, entry setup, and module singleton resolution, but before
+the user method body is invoked. That means this failure is not the module
+singleton startup work. It is a runtime class-composition path creating new
+constant-pool entries while user code is already executing.
+
+The concrete stack was:
+
+```text
+ConstantPool.register(...)
+ConstantPool.ensureAccessTypeConstant(...)
+ClassComposition.<init>(...)
+Container.ensureClassComposition(...)
+ClassTemplate.getCanonicalClass(...)
+New_1.process(...)
+testStandardProperty() (prop.x:20)
+```
+
+The second reported `StringBuffer` registration in the same run was exception
+formatting fallout after the diagnostic exception, not the root trigger.
+
+### Root Cause
+
+`ClassComposition` constructs the private and struct access views for the
+inception type in its constructor:
+
+```java
+f_typeInception = pool.ensureAccessTypeConstant(typeInception, Access.PRIVATE);
+f_typeStructure = pool.ensureAccessTypeConstant(typeInception, Access.STRUCT);
+```
+
+If a class is first instantiated during user execution, those access-type
+constants are registered during execution as well. The constants are logical
+pool-owned values, so this is not the same kind of wrong-owner leak as the old
+global `INSTANCE` fields or adopted singleton state. It is still a runtime
+publication problem: a supposedly running/published pool can keep mutating its
+constant list and lookup maps on demand.
+
+### Proper Fix Direction
+
+Do not weaken the guard by ignoring access-type constants indefinitely. Choose
+one of these explicit designs:
+
+- pre-warm class compositions and their private/struct access-type constants
+  before the pool is marked runtime-published;
+- move class-composition helper state that is not serialized constant identity
+  out of `ConstantPool` registration and into an owner-local composition table;
+- if late registration is intentionally allowed for these logical constants,
+  add a narrow allowlist with a comment that states why registration is
+  deterministic, owner-local, and safe under same-pool concurrency.
+
+The first option is the preferred runtime direction because it moves mutable
+pool extension back into startup/linking, where publication ordering is much
+easier to reason about.
+
 ## Direct Sequence Validator Native-Parent False Positive
 
 Status: fixed in the diagnostic validator.

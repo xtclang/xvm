@@ -203,15 +203,24 @@ public class MainContainer
             CallChain         chain      = clzModule.getMethodCallChain(sigMethod);
             boolean           fReturn    = sigMethod.getReturnCount() > 0;
 
-            FunctionHandle hInstantiateModuleAndRun = new NativeFunctionHandle(this, (frame, ah, iRet) -> {
-                SingletonConstant idModule = frame.poolContext().ensureSingletonConstConstant(f_idModule);
+            FunctionHandle hInstantiateModuleAndRun = new NativeFunctionHandle(this,
+                    (frame, ah, iRet) -> {
+                SingletonConstant idModule =
+                        frame.poolContext().ensureSingletonConstConstant(f_idModule);
                 ObjectHandle      hModule  = frame.getConstHandle(idModule);
                 int               iReturn  = fReturn ? Op.A_STACK : Op.A_IGNORE;
 
+                // Late constant registration during user-code execution is owner-sensitive and can
+                // hide stale same-JVM state. The marker is installed only when the diagnostic
+                // property is enabled, after entry setup and module singleton resolution.
+                Frame.Continuation invoke = frameCaller -> {
+                    ObjectHandle target = frameCaller.popStack();
+                    return invokeCall(frameCaller, target, chain, ahArg, iReturn, sMethodName);
+                };
+
                 int iResult = Op.isDeferred(hModule)
-                        ? hModule.proceed(frame, frameCaller ->
-                            chain.invoke(frameCaller, frameCaller.popStack(), ahArg, iReturn))
-                        : chain.invoke(frame, hModule, ahArg, iReturn);
+                        ? hModule.proceed(frame, invoke)
+                        : invokeCall(frame, hModule, chain, ahArg, iReturn, sMethodName);
                 switch (iResult) {
                 case Op.R_NEXT:
                     setResult(fReturn ? frame.popStack() : null);
@@ -237,6 +246,16 @@ public class MainContainer
         } catch (Exception e) {
             throw new RuntimeException("failed to run: " + f_idModule + ". Cause: " + e.getMessage());
         }
+    }
+
+    /**
+     * Mark the pool as runtime-published for diagnostics and invoke the entry call chain.
+     */
+    private static int invokeCall(Frame frame, ObjectHandle target, CallChain chain,
+                                  ObjectHandle[] args, int iReturn, String sMethodName) {
+        frame.poolContext().markRuntimePublishedForDiagnostics(
+                "MainContainer.invoke0(" + sMethodName + ')');
+        return chain.invoke(frame, target, args, iReturn);
     }
 
     /**
