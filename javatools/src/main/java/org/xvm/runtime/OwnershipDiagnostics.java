@@ -6,10 +6,13 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -57,23 +60,139 @@ public final class OwnershipDiagnostics {
         return new Dumper(forceLazy).dump(containers);
     }
 
+    /**
+     * Validate already-instantiated owner-scoped runtime state for one or more containers.
+     *
+     * @param containers  the containers to inspect
+     *
+     * @return structured validation findings
+     */
+    public static Validation validate(Container... containers) {
+        return validate(false, containers);
+    }
+
+    /**
+     * Validate owner-scoped runtime state for one or more containers.
+     *
+     * @param forceLazy   true to compute deferred lazy cells while validating
+     * @param containers  the containers to inspect
+     *
+     * @return structured validation findings
+     */
+    public static Validation validate(boolean forceLazy, Container... containers) {
+        Dumper dumper = new Dumper(forceLazy);
+        dumper.dump(containers);
+        return dumper.validation();
+    }
+
+    /**
+     * Validate already-instantiated owner-scoped runtime state and throw on illegal ownership.
+     *
+     * @param containers  the containers to inspect
+     */
+    public static void assertValid(Container... containers) {
+        validate(containers).assertValid();
+    }
+
+    /**
+     * Validate owner-scoped runtime state and throw on illegal ownership.
+     *
+     * @param forceLazy   true to compute deferred lazy cells while validating
+     * @param containers  the containers to inspect
+     */
+    public static void assertValid(boolean forceLazy, Container... containers) {
+        validate(forceLazy, containers).assertValid();
+    }
+
 
     // ----- dumper -------------------------------------------------------------------------------
 
+    /**
+     * Structured ownership validation result.
+     *
+     * @param ownerMismatches       owner-bearing objects found under the wrong inspected owner
+     * @param poolMismatches        constants found under a container with a different ConstantPool
+     * @param crossContainerShares  owner-bearing object identities shared by different containers
+     */
+    public record Validation(List<String> ownerMismatches,
+                             List<String> poolMismatches,
+                             List<String> crossContainerShares) {
+        public Validation {
+            ownerMismatches      = List.copyOf(ownerMismatches);
+            poolMismatches       = List.copyOf(poolMismatches);
+            crossContainerShares = List.copyOf(crossContainerShares);
+        }
+
+        /**
+         * @return true iff the inspected graph has no illegal owner relationship
+         */
+        public boolean isValid() {
+            return ownerMismatches.isEmpty()
+                    && poolMismatches.isEmpty()
+                    && crossContainerShares.isEmpty();
+        }
+
+        /**
+         * Throw an IllegalStateException if the inspected graph contains illegal ownership.
+         */
+        public void assertValid() {
+            if (!isValid()) {
+                throw new IllegalStateException(message());
+            }
+        }
+
+        /**
+         * @return a multi-line validation summary
+         */
+        public String message() {
+            return List.of(
+                    section("owner-mismatches", ownerMismatches),
+                    section("pool-mismatches", poolMismatches),
+                    section("cross-container-shares", crossContainerShares))
+                .stream()
+                .filter(section -> !section.isEmpty())
+                .collect(Collectors.joining("\n", "Invalid XVM runtime ownership", ""));
+        }
+
+        private static String section(String label, List<String> findings) {
+            if (findings.isEmpty()) {
+                return "";
+            }
+
+            return findings.stream()
+                    .collect(Collectors.joining("\n  - ",
+                            label + ": " + findings.size() + "\n  - ",
+                            ""));
+        }
+    }
+
     private static final class Dumper {
+        private final boolean forceLazy;
+
+        private final StringBuilder out = new StringBuilder();
+
+        private final Map<Container, String> containerNames = new IdentityHashMap<>();
+        private final Map<Object, Occurrence> seen = new IdentityHashMap<>();
+        private final Set<Object> dumpedTemplateLazy =
+                Collections.newSetFromMap(new IdentityHashMap<>());
+
+        private final List<String> ownerMismatches = new ArrayList<>();
+        private final List<String> poolMismatches  = new ArrayList<>();
+        private final List<String> crossShares     = new ArrayList<>();
+
         Dumper(boolean forceLazy) {
-            f_forceLazy = forceLazy;
+            this.forceLazy = forceLazy;
         }
 
         String dump(Container... containers) {
             requireNonNull(containers, "containers");
 
             out.append("XVM runtime ownership dump\n");
-            out.append("mode.lazy=").append(f_forceLazy ? "force" : "computed-only").append('\n');
+            out.append("mode.lazy=").append(forceLazy ? "force" : "computed-only").append('\n');
 
             for (int i = 0; i < containers.length; i++) {
                 Container container = requireNonNull(containers[i], "containers[" + i + "]");
-                f_containerNames.put(container, "C" + i);
+                containerNames.put(container, "C" + i);
             }
 
             for (int i = 0; i < containers.length; i++) {
@@ -85,7 +204,7 @@ public final class OwnershipDiagnostics {
         }
 
         private void dumpContainer(int index, Container container) {
-            String name = f_containerNames.get(container);
+            String name = containerNames.get(container);
 
             out.append('\n')
                     .append(name)
@@ -133,7 +252,7 @@ public final class OwnershipDiagnostics {
             boolean computed = lazy.isComputed();
             line(indent, label + " = Lazy[" + (computed ? "computed" : "deferred") + "]");
 
-            if (computed || f_forceLazy) {
+            if (computed || forceLazy) {
                 dumpValue("value", lazy.get(), expected, indent + 1);
             }
         }
@@ -154,6 +273,7 @@ public final class OwnershipDiagnostics {
             Object key   = entry.getKey();
             Object value = entry.getValue();
 
+            record("key " + key, key, expected);
             if (value instanceof Lazy<?> lazy) {
                 dumpLazy(String.valueOf(key), lazy, expected, indent);
             } else {
@@ -181,8 +301,7 @@ public final class OwnershipDiagnostics {
             line(indent, label + " = " + describe(value, expected));
             record(label, value, expected);
 
-            if (value instanceof ClassTemplate template && !f_dumpedTemplateLazy.containsKey(template)) {
-                f_dumpedTemplateLazy.put(template, Boolean.TRUE);
+            if (value instanceof ClassTemplate template && dumpedTemplateLazy.add(template)) {
                 dumpLazyFields(template, expected, indent + 1);
                 return;
             }
@@ -202,20 +321,24 @@ public final class OwnershipDiagnostics {
         }
 
         private void record(String path, Object value, Container expected) {
+            if (value instanceof Constant constant) {
+                recordConstantPool(path, constant, expected);
+            }
+
             if (!isOwnerScoped(value)) {
                 return;
             }
 
             Container actual = ownerOf(value);
             if (actual != null && expected != null && actual != expected) {
-                f_ownerMismatches.add(path + " expected=" + containerName(expected)
+                ownerMismatches.add(path + " expected=" + containerName(expected)
                         + " actual=" + containerName(actual)
                         + " object=" + identity(value));
             }
 
-            Occurrence previous = f_seen.putIfAbsent(value, new Occurrence(path, expected, actual));
+            Occurrence previous = seen.putIfAbsent(value, new Occurrence(path, expected, actual));
             if (previous != null && previous.expected != expected) {
-                f_crossShares.add(previous.path + " and " + path
+                crossShares.add(previous.path + " and " + path
                         + " share " + identity(value)
                         + " previousExpected=" + containerName(previous.expected)
                         + " currentExpected=" + containerName(expected)
@@ -223,10 +346,25 @@ public final class OwnershipDiagnostics {
             }
         }
 
+        private void recordConstantPool(String path, Constant constant, Container expected) {
+            if (expected == null) {
+                return;
+            }
+
+            ConstantPool actual = safe(() -> constant.getConstantPool());
+            if (actual != null && actual != expected.getConstantPool()) {
+                poolMismatches.add(path + " expected=" + containerName(expected)
+                        + " expectedPool=" + identity(expected.getConstantPool())
+                        + " actualPool=" + identity(actual)
+                        + " object=" + identity(constant));
+            }
+        }
+
         private void dumpShares() {
             out.append("\nchecks:\n");
-            appendFindings("owner-mismatches", f_ownerMismatches);
-            appendFindings("cross-container-shares", f_crossShares);
+            appendFindings("owner-mismatches", ownerMismatches);
+            appendFindings("pool-mismatches", poolMismatches);
+            appendFindings("cross-container-shares", crossShares);
         }
 
         private void appendFindings(String label, List<String> findings) {
@@ -236,10 +374,10 @@ public final class OwnershipDiagnostics {
                 return;
             }
 
-            out.append(findings.size()).append('\n');
-            for (String finding : findings) {
-                out.append("    - ").append(finding).append('\n');
-            }
+            out.append(findings.size())
+                    .append('\n')
+                    .append(findings.stream()
+                            .collect(Collectors.joining("\n    - ", "    - ", "\n")));
         }
 
         private String describe(Object value, Container expected) {
@@ -315,7 +453,7 @@ public final class OwnershipDiagnostics {
             if (container == null) {
                 return "unknown";
             }
-            return f_containerNames.computeIfAbsent(container,
+            return containerNames.computeIfAbsent(container,
                     key -> "external@" + Integer.toHexString(System.identityHashCode(key)));
         }
 
@@ -382,16 +520,9 @@ public final class OwnershipDiagnostics {
             }
         }
 
-        private final boolean f_forceLazy;
-
-        private final StringBuilder out = new StringBuilder();
-
-        private final IdentityHashMap<Container, String> f_containerNames = new IdentityHashMap<>();
-        private final IdentityHashMap<Object, Occurrence> f_seen = new IdentityHashMap<>();
-        private final IdentityHashMap<Object, Boolean> f_dumpedTemplateLazy = new IdentityHashMap<>();
-
-        private final List<String> f_ownerMismatches = new ArrayList<>();
-        private final List<String> f_crossShares     = new ArrayList<>();
+        private Validation validation() {
+            return new Validation(ownerMismatches, poolMismatches, crossShares);
+        }
     }
 
     private record Occurrence(String path, Container expected, Container actual) {}
