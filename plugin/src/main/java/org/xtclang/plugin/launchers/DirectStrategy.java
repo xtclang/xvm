@@ -99,7 +99,8 @@ public class DirectStrategy implements ExecutionStrategy {
             task.getVerbose().get(),
             runConfig.getModuleName().get(),
             task.getMethodName().getOrElse(DEFAULT_METHOD_NAME),
-            runConfig.getModuleArgs().get()
+            runConfig.getModuleArgs().get(),
+            task.getValidateRuntimeOwnership().get()
         );
     }
 

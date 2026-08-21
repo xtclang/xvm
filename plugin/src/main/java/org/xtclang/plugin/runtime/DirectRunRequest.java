@@ -10,7 +10,8 @@ public record DirectRunRequest(
         boolean verbose,
         String moduleName,
         String methodName,
-        List<String> moduleArgs) {
+        List<String> moduleArgs,
+        boolean validateRuntimeOwnership) {
 
     public DirectRunRequest {
         modulePath = List.copyOf(modulePath);
