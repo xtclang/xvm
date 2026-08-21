@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
@@ -25,6 +26,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.util.TransientThreadLocal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -156,9 +158,55 @@ public class ConstantAdoptionTest {
         assertTrue(error.getMessage().contains("live ObjectHandle"));
     }
 
+    @Test
+    public void adoptionValidatorReportsDefaultCloneCopiedHelperReference() {
+        ConstantPool sourcePool = new FileStructure("source").getConstantPool();
+        ConstantPool targetPool = new FileStructure("target").getConstantPool();
+
+        DiagnosticConstant source  = new DiagnosticConstant(sourcePool);
+        DiagnosticConstant adopted = adopt(source, targetPool);
+
+        ConstantAdoptionValidator.Validation validation =
+                ConstantAdoptionValidator.validate(source, adopted);
+
+        assertFalse(validation.isValid());
+        assertEquals(1, validation.sharedReferences().size());
+        assertTrue(validation.message().contains("DiagnosticConstant.helper"));
+        assertTrue(validation.message().contains("AtomicReference"));
+    }
+
+    @Test
+    public void registerFailsOnBadDefaultCloneWhenAdoptionValidationIsEnabled() {
+        ConstantPool sourcePool = new FileStructure("source").getConstantPool();
+        ConstantPool targetPool = new FileStructure("target").getConstantPool();
+        DiagnosticConstant source = new DiagnosticConstant(sourcePool);
+
+        withAdoptionValidation(() -> {
+            IllegalStateException error = assertThrows(IllegalStateException.class,
+                    () -> targetPool.register(source));
+            assertTrue(error.getMessage().contains("Invalid XVM constant adoption"));
+            assertTrue(error.getMessage().contains("DiagnosticConstant.helper"));
+        });
+    }
+
     @SuppressWarnings("unchecked")
     private static <T extends Constant> T adopt(T constant, ConstantPool pool) {
         return (T) constant.adoptedBy(pool);
+    }
+
+    private static void withAdoptionValidation(Runnable action) {
+        String property = ConstantAdoptionValidator.VALIDATE_PROPERTY;
+        String previous = System.getProperty(property);
+        System.setProperty(property, "true");
+        try {
+            action.run();
+        } finally {
+            if (previous == null) {
+                System.clearProperty(property);
+            } else {
+                System.setProperty(property, previous);
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -189,5 +237,39 @@ public class ConstantAdoptionTest {
             }
         }
         throw new NoSuchFieldException(String.join("/", names));
+    }
+
+    private static final class DiagnosticConstant
+            extends Constant {
+        private final AtomicReference<Object> helper = new AtomicReference<>();
+
+        private DiagnosticConstant(ConstantPool pool) {
+            super(pool);
+        }
+
+        @Override
+        public Format getFormat() {
+            return Format.IntLiteral;
+        }
+
+        @Override
+        public String getValueString() {
+            return "diagnostic";
+        }
+
+        @Override
+        public String getDescription() {
+            return "diagnostic";
+        }
+
+        @Override
+        protected int compareDetails(Constant that) {
+            return 0;
+        }
+
+        @Override
+        protected int computeHashCode() {
+            return 1;
+        }
     }
 }

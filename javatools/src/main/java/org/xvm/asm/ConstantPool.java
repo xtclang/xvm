@@ -196,7 +196,9 @@ public class ConstantPool
             }
 
             if (constant.getContaining() != this) {
+                T source = constant;
                 constant = (T) constant.adoptedBy(this);
+                ConstantAdoptionValidator.assertValidIfEnabled(source, constant);
             }
 
             synchronized (this) {
@@ -213,7 +215,9 @@ public class ConstantPool
                 Object oLocator = constant.getLocator();
                 if (oLocator != null) {
                     if (oLocator instanceof Constant constLocator && constLocator.getContaining() != this) {
+                        Constant source = constLocator;
                         constLocator = constLocator.adoptedBy(this);
+                        ConstantAdoptionValidator.assertValidIfEnabled(source, constLocator);
                         constLocator.registerConstants(this);
                         oLocator = constLocator;
                     }

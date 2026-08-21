@@ -215,13 +215,13 @@ Proof/guards:
 - `ConstantAdoptionTest` directly exercises the adoption boundary.
 - The same test copied into detached `master` failed all five cases; it passes
   on this branch.
-- Add an optional debug adoption validator in or near `OwnershipDiagnostics`:
-  compare source and adopted copies and report identical references for
-  forbidden field categories unless explicitly allowlisted.
-- Forbidden categories should include `ObjectHandle`, `Container`, `Frame`,
-  `Fiber`, `ServiceContext`, `TypeComposition`, `ClassComposition`,
-  `xRTType.TypeHandle`, `AtomicReference`, `AtomicInteger`, `StampedLock`,
-  `ThreadLocal`, `TransientThreadLocal`, and mutable collections.
+- `ConstantAdoptionValidator` now runs at `ConstantPool.register(...)` when
+  `-Dxvm.asm.validateConstantAdoption=true` is enabled. It compares source and
+  adopted copies and reports identical helper/runtime references unless they
+  are logical child `Constant` objects that the pool will recursively adopt.
+- Forbidden categories include owner/runtime references, `Atomic*` helpers,
+  lock objects, Java references, `ThreadLocal`, `TransientThreadLocal`, and
+  mutable collections.
 - Promote specific validator findings to hard assertions once the intentional
   allowlist is known.
 
@@ -283,7 +283,7 @@ can be ignored.
 
 | Order | Commit scope | Why this order | Required test/proof |
 | --- | --- | --- | --- |
-| 1 | Adoption/clone validator assertions | The shallow-clone bug is proven, dangerous, and a reusable validator will catch the same class of copied handles, locks, thread locals, and owner references while later work runs stress. | Extend `ConstantAdoptionTest` or add an `OwnershipDiagnostics` validator test that proves forbidden helper references are detected after adoption. |
+| 1 | Adoption/clone validator assertions | Done in this branch wave. The shallow-clone bug is proven, dangerous, and the reusable validator catches copied handles, locks, thread locals, and owner references while later work runs stress. | `ConstantAdoptionTest` proves direct detection and opt-in `ConstantPool.register(...)` failure for a default shallow-cloned helper reference. |
 | 2 | `ConstantPool` late-mutation guard | Later tests depend on knowing whether a supposedly published runtime pool is still being mutated. This guard turns hidden late mutation into an immediate diagnostic instead of a stale-owner symptom. | Add a targeted `ConstantPool` test for the diagnostic/freeze boundary and run same-JVM sequence stress with the guard enabled. |
 | 3 | Ambient `ConstantPool` lookup cleanup | Once late mutation is visible, remove or narrow hidden current-pool lookup at runtime boundaries. Explicit owners make the later op/cache fixes much easier to reason about. | Add tests around container/frame/runtime callbacks that assert the scoped/current pool matches the explicit owner. |
 | 4 | Runtime-executed `Op` caches | These are the most suspicious remaining runtime hot-path caches. They must either be proven method-owner confined or keyed/removed before claiming parallel containers are safe. | Run the same compiled method through two containers in one JVM and validate no op cache points at the wrong pool; add source/diagnostic checks for owner-bearing op fields. |
@@ -469,7 +469,7 @@ assertion work should be explicit and opt-in first, then hardened where proven.
 | Reject `INSTANCE = this` in constructors | Build/source scan and `-Xlint:this-escape` | Prevent early publication of partially constructed templates. |
 | Reject static owner-bearing runtime metadata fields | Build/source scan | Prevent process-global `TypeConstant`, composition, method, handle, or enum caches. |
 | Guard `HandleConstant` cross-pool adoption | `HandleConstant.adoptedBy(...)` | Prevent live runtime handles from becoming shared logical constants. |
-| Detect cloned forbidden helper fields | Debug adoption validator | Catch `Atomic*`, `StampedLock`, `ThreadLocal`, handles, compositions, containers, and mutable collections copied by clone. |
+| Detect cloned forbidden helper fields | Opt-in `ConstantAdoptionValidator` via `xvm.asm.validateConstantAdoption` | Catch `Atomic*`, locks, references, thread-local cells, owner/runtime references, and mutable collections copied by clone. |
 | Assert scoped pool equals explicit owner | Runtime callback/bridge sites | Catch stale or missing ambient `ConstantPool` context. |
 | Assert handle/composition owner at boundaries | `OwnershipDiagnostics` and runtime entry points | Catch cross-container values before they surface as misleading XTC-level failures. |
 | Assert no late pool registration after freeze | `ConstantPool.register(...)` diagnostic mode | Find runtime paths that mutate supposedly published pools. |
