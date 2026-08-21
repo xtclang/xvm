@@ -104,5 +104,5 @@ public class StmtBlockAST
         return buf.toString();
     }
 
-    public static StmtBlockAST EMPTY = new StmtBlockAST(NO_ASTS, true);
+    public static final StmtBlockAST EMPTY = new StmtBlockAST(NO_ASTS, true);
 }

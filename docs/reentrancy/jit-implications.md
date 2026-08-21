@@ -213,3 +213,127 @@ through the active `Ctx.container`.
 See [scoped-value.md](scoped-value.md) for the broader discussion of
 `ScopedValue`, `Ctx.Current`, and whether a scoped runtime struct can safely
 replace legacy ownerless static lookups.
+
+## Appendix: How JitConnector Works
+
+`org.xvm.javajit.JitConnector` is the interpreter `Connector` API backed by the
+JIT runtime. It is the entry point a launcher can use in place of the
+interpreter connector.
+
+The lifecycle is:
+
+1. Construction creates a new `org.xvm.javajit.Xvm` from the supplied
+   `ModuleRepository`.
+2. `loadModule(appName)` loads the application module from the repository.
+3. The JIT linker creates a `TypeSystem` for that module:
+
+   ```java
+   ts = xvm.createLinker().addModule(module).link();
+   ```
+
+4. `start(...)` reflectively loads `_native.mgmt.nMainInjector` from the native
+   JIT type system, constructs it with the `Xvm`, calls `addNativeResources()`,
+   and creates a JIT `Container`:
+
+   ```java
+   container = xvm.createContainer(ts, injector);
+   ```
+
+5. `invoke0(...)` binds a new `Ctx` with `ScopedValue.where(Ctx.Current, ...)`
+   and then loads the generated Java class for the application module. The
+   generated module object is constructed with that `Ctx`, and the generated
+   `run` method is called reflectively.
+
+That means `JitConnector` is a bridge between the launcher-facing connector API
+and the JIT runtime. It does not reuse interpreter `Frame`, `ObjectHandle`, or
+`NativeTemplates`; generated code works with JIT classes and `Ctx`.
+
+Important ownership point: `JitConnector` currently has one mutable `module`,
+`ts`, and `container` sequence per connector instance. That is fine for the
+normal "one connector loads one app then runs it" lifecycle. It is not a proof
+that one `JitConnector` instance can safely be reused concurrently for multiple
+modules or containers. Reentrant JIT testing should either use separate
+connector instances or explicitly define connector lifecycle synchronization.
+
+## Appendix: How The JIT Bridge Module Works
+
+`javatools_jitbridge` builds `javatools-jitbridge.jar`. Its Gradle file marks
+that jar as a native runtime blob, not a normal compile/runtime classpath
+dependency. The JIT runtime locates it by path probing:
+
+- if `javatools` is a classes directory, it looks for a sibling
+  `javatools_jitbridge` directory,
+- otherwise it looks for `javatools-jitbridge.jar` next to the `javatools` jar.
+
+`NativeTypeSystem` creates a dedicated `URLClassLoader` for that bridge jar and
+uses it through resource lookup and classfile parsing. The code comment says the
+loader must not be used with ordinary `loadClass`; the runtime reads class bytes
+with `getResourceAsStream(...)` so it can either:
+
+- use no-modification native bridge classes as-is, or
+- augment bridge classes with generated Ecstasy methods.
+
+The bridge sources live under `org.xtclang...`, not `org.xvm.runtime...`.
+Examples:
+
+- `org.xtclang._native.mgmt.nMainInjector`
+- `org.xtclang._native.mgmt.ContainerControl`
+- `org.xtclang._native.io.TerminalConsole`
+- generated/hand-written Ecstasy-shaped classes under `org.xtclang.ecstasy`
+
+`nMainInjector` is the JIT equivalent of wiring native resources into the main
+container. It keeps a map from `(TypeConstant, resourceName)` to Java supplier
+functions. Today it registers the console resource:
+
+```java
+suppliers.put(new Resource(pureType, "console"), TerminalConsole::$create);
+```
+
+Generated JIT code asks `Ctx.inject(...)`, which delegates to the active
+container's injector. This is why bridge resources are container-sensitive even
+though the bridge classes are loaded from a shared jar: the bridge class is
+shared code, but the resource lookup should go through the active `Ctx` and its
+`Container`.
+
+`TerminalConsole` is a useful example of the boundary. It is a JIT bridge class
+that implements the Ecstasy `Console` shape, but it delegates actual console IO
+to interpreter-side process globals:
+
+```java
+xTerminalConsole.CONSOLE_OUT.print(...);
+```
+
+That is acceptable only if those console objects are intentionally process-wide
+resources with a documented lifecycle. It is not container-owned state. The
+remaining `xTerminalConsole.READER`/`TERMINAL` cleanup in the interpreter path
+therefore also matters to JIT bridge behavior.
+
+## Appendix: JIT Bridge Ownership Implications
+
+The bridge jar changes where code comes from, not where ownership should live.
+
+Safe sharing:
+
+- bridge class bytecode,
+- immutable Java class metadata,
+- type-system/classloader-owned generated static constants after owner checks,
+- pure helper code that never stores container-owned values in static fields.
+
+Dangerous sharing:
+
+- bridge static fields that cache `Ctx`, `Container`, injector results, service
+  instances, or resource handles,
+- generated static `$INSTANCE` values whose semantics depend on an injector or
+  service context,
+- generated `$scN` constants initialized under the wrong active `Ctx`,
+- bridge code delegating to interpreter process globals that are actually
+  mutable runtime state.
+
+The correct rule is the same as for the interpreter fixes:
+
+- classloader/type-system state may be static only if it is immutable and really
+  belongs to that classloader/type system,
+- container/resource/service state must be reached through `Ctx.container`,
+  `Ctx.inject(...)`, or another explicit owner-scoped table,
+- and process resources must be named as process resources and protected by a
+  lifecycle/synchronization policy.
