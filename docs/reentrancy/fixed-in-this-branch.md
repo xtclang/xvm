@@ -912,6 +912,29 @@ a stale per-thread handle.
 `xRTServerTest` verifies that `SimpleKeyManager` has no thread-local field and
 that synthetic aliases resolve through explicit route state.
 
+### Runtime Container Registry
+
+`Runtime.f_containers` is a weak diagnostic registry. Keeping weak keys is the
+right lifetime policy because diagnostics must not keep completed containers
+alive. The bug was inconsistent synchronization: `registerContainer(...)` and
+`containers()` synchronized on the weak map, but `findContainer(...)` iterated
+the same `WeakHashMap` without that monitor.
+
+That is a real race because `WeakHashMap` is not concurrent and can mutate its
+internal table while expunging stale keys. A parallel registration or cleanup
+could produce missed containers or `ConcurrentModificationException` while
+diagnostics were trying to map a `ConstantPool` back to its owner container.
+
+This branch keeps the same weak registry and the same debug-only behavior, but
+puts `findContainer(...)` under the same monitor. It does not retain containers
+longer, does not allocate additional owner state, and does not change runtime
+scheduling. It only makes the existing diagnostic registry internally
+consistent.
+
+`RuntimeTest.findContainerSharesWeakRegistryMonitorWithRegistration()` exercises
+lookup while another thread attempts registration and proves the lookup path
+shares the registry monitor.
+
 ### Terminal And Debug Console Process State
 
 Master exposed JLine terminal state as public mutable process globals:

@@ -292,7 +292,7 @@ can be ignored.
 | 4 | Runtime-executed `Op` caches | Done in this branch wave for owner-bearing frame-constant caches. `JumpCond`/`JumpNCond` no longer cache `ConditionalConstant` on the op, and `OpTest`/`OpCondJump` no longer write frame type constants back to `m_typeCommon` during execution. | `OpRuntimeCacheTest` verifies the condition fields are gone and guards against the old common-type write-back pattern. Same-JVM sequence and parallel stress exercise these op paths under runtime ownership validation. |
 | 5 | Manual lazy null caches in runtime/asm | Done for the first-PR must-fix slice. `xRegEx.RegExHandle` uses a final `Lazy<Pattern>`, `FSNodeConstant` no longer carries a source-pool path literal across adoption, and `_native:fs.OSFileNode.created` no longer caches a caller-owned `Time` handle inside the native file-system graph. Remaining Java hits are still audited below as builder/linkage, frame/debug lifecycle, synchronized association helpers, or must-audit op-address/class-layout state. | `RegExHandleTest` proves the regex cache remains per-handle and cached after first use. `ConstantAdoptionTest.adoptedFSNodeConstantDropsSourcePoolPathCache()` proves the adopted path cache is recomputed in the destination pool and still cached after that. `manualTests:runDirectSequenceStress` with `TestFiles` proves the native file-node owner leak is gone. |
 | 6 | Thread-local and scoped ambient state | Done for the first-PR must-fix slice. Runtime boundary `ConstantPool` scopes were already made lexical/asserted in wave 3. This wave removes one remaining owner-bearing runtime thread-local: `xRTServer.SimpleKeyManager` no longer keeps a selected `KeyStoreHandle` on the HTTPS worker thread. Broader compiler/type recursion ambient state remains audited below. | `xRTServerTest` proves the key manager has no thread-local field and resolves TLS aliases through explicit route state. Existing `ConstantPoolDiagnosticsTest` covers scoped pool assertions. |
-| 7 | Weak/identity owner registries | These usually require lifecycle reasoning and should be handled after the core wrong-owner paths are closed. Some may be diagnostic-only, but each one needs an owner/lifetime contract. | Add concurrency or lifecycle tests for every registry that is used outside a single owner thread; document allowlisted diagnostic-only maps. |
+| 7 | Weak/identity owner registries | Done for the first-PR must-fix slice. `Runtime.f_containers` is a diagnostic weak registry and every access path now uses the same monitor; the old `findContainer(...)` iteration raced with registration and weak-map expunge. Remaining weak/identity maps are documented as service-local, metadata-audit, local traversal, or diagnostic-local state. | `RuntimeTest.findContainerSharesWeakRegistryMonitorWithRegistration()` proves lookup does not race registration. |
 
 The compiler/JIT bucket should remain separate unless an interpreter runtime
 path depends on it. The compiler counter atomics belong in their own PR from
@@ -488,6 +488,23 @@ Required closure:
 - Use owner-owned concurrent maps or immutable snapshots where shared.
 - Keep diagnostic maps in `OwnershipDiagnostics` bounded so validation does not
   create a new long-lived owner graph.
+
+Completed in this branch:
+
+- `Runtime.f_containers` remains a weak diagnostic registry so containers are
+  not kept alive only because they were observed by diagnostics. The bug was
+  inconsistent synchronization: `registerContainer(...)` and `containers()`
+  used the map monitor, while `findContainer(...)` iterated the same
+  `WeakHashMap` without it.
+- `findContainer(...)` now uses the same monitor. This does not change
+  semantics or footprint. It only prevents concurrent registration or
+  weak-map cleanup from mutating the registry while a lookup is iterating.
+- Local identity maps in `ObjectHandle`, `xTuple`, `xRTDelegate`, and
+  `TypeInfoReal` remain local visited/copy maps, not owner registries.
+- `ServiceContext` weak maps remain service-local caches and are still audited
+  by service confinement. `ConstantPool.f_setValidPools` remains under the
+  broader metadata owner audit because it is part of pool validation, not a
+  runtime container registry.
 
 ### Compiler And JIT State
 
