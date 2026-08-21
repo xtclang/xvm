@@ -19,6 +19,7 @@ and lazy-publication counts are scan signals generated on branch
 | Must fix | Static runtime-owned metadata | `master`: 151 field-shaped runtime/template static metadata fields after excluding `INSTANCE`. This branch fixes all 151 and leaves 0 in the scanned runtime-template/Utils category. | Type/composition/method/handle values from one owner reused in another owner | Owner-scoped final `Lazy`, grouped info records, or owner-owned `ConcurrentMap` |
 | Must fix | Raw enum handles returned through public/native paths | Branch remainder: 14 raw accessor references, all protected/internal in `xEnum` or owner-local native enum factories in `xBoolean`, `xNullable`, and `xOrdered` | Natural enum construction struct escapes as if it were the finalized enum singleton | `ensureEnumByName`, `ensureEnumByOrdinal`, or `Utils.ensureInitializedEnum` on public paths |
 | Must fix | Native-container startup work from constructor | Current branch fixes the three `NativeContainer` `this-escape` diagnostics by moving native-template loading to `NativeContainer.create(...)` | Canonical native templates and resource handles were installed while the owner was still under construction | Private constructor plus post-construction factory initialization before publication |
+| Must fix | Runtime handle construction publishes or mutates visible state from constructors | Current branch fixes `xRef` register/ref constructors and `xOSFileNode.NodeHandle` store initialization | A frame could observe a partially constructed `RefHandle`; constructors also called public field mutation while the handle was incomplete | Static factories construct first, then store the frame ref or initialized backing field |
 | Must audit, must fix when owner-shared | Manual lazy publication in shared runtime/asm objects | 23 strong same-field lazy-init matches in runtime/asm; 43 across all Java sources | Plain field read/write with no happens-before edge; duplicate, stale, partial, or wrong-owner state | Final `Lazy`, `ConcurrentMap.computeIfAbsent`, or explicit atomic/locked state |
 | Must fix | Split lifecycle state across several fields | `SingletonConstant` was the known concrete case and is fixed in this branch | Fibers see mixed handle/owner/waiter state; false recursion or missed wait | One immutable state snapshot in `AtomicReference<State>` or one lock |
 | Must fix | Runtime/helper state shallow-copied during constant adoption | Fixed in this branch for `SingletonConstant`, `FSNodeConstant`, `FileStoreConstant`, `TypeConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, `TypeParameterConstant`, and `HandleConstant` | A constant registered into pool B carries pool A's runtime handle/state cell, helper lock, JIT cache, or reentrancy marker | Adoption must copy only logical constant value state; transient runtime/helper state must be fresh or cleared |
@@ -165,6 +166,54 @@ Behavior and cache preservation:
   is the dedicated regression test. It starts several interpreter connectors
   concurrently, loads `ecstasy.xtclang.org`, checks that their native containers
   are distinct, and forces ownership validation over the warmed containers.
+
+## Runtime Handle Construction Escapes
+
+Status: fixed for the three concrete runtime handle sites in this branch.
+
+The strongest case was `xRef.RefHandle(clazz, frame, iVar)`: the constructor
+stored `this` in `Frame.VarInfo` before the constructor completed. Frames are
+normally fiber-local, but the API did not encode that confinement, and the
+published object was a real mutable runtime handle. If anything looked up the
+register ref reentrantly, it could observe a half-initialized handle.
+
+Two related constructor warnings were less severe but still the same bad shape:
+`xRef.RefHandle(clazz, name, referent)` and `xOSFileNode.NodeHandle` initialized
+fields by calling the public generic field API while the handle was still being
+constructed.
+
+Replacement:
+
+- `RefHandle.createRegisterRef(...)` reads `Frame.VarInfo`, constructs the
+  register-bound ref, and then stores it in the frame cache. Later refs still
+  link to the first cached ref, matching the old behavior.
+- `RefHandle.createReferentRef(...)` constructs the ref first and then writes
+  the referent backing field.
+- `NodeHandle.create(...)` constructs the node first and then writes the native
+  store backing field.
+- `GenericHandle.initializeField(...)` is a final construction helper for
+  non-transient backing-field initialization; it avoids the public field-access
+  path but does not change normal runtime `setField(...)` behavior.
+
+Behavior and cache preservation:
+
+- The frame-local register-ref cache is still present and still returns the same
+  first ref for repeated refs to a register.
+- A second register ref still delegates to the cached first ref.
+- Array delegate refs and OS file-node store refs keep the same field contents.
+- No owner-local cache is removed or made process-global.
+
+Focused coverage:
+
+- `RefHandleConstructionTest` verifies the frame-register constructor is private,
+  register refs go through `createRegisterRef(...)`, referent refs go through
+  `createReferentRef(...)`, and file/directory node templates use
+  `NodeHandle.create(...)`.
+- A targeted `:javatools:compileJava` lint run emitted no `this-escape` warning
+  for `xRef.java` or `xOSFileNode.java`.
+- `manualTests:runDirectSequenceStress` with `TestReflection,TestFiles` passes
+  in the same JVM, exercising ref-heavy reflection/property paths and
+  file-node construction.
 
 ## Raw Natural-Enum Handles
 

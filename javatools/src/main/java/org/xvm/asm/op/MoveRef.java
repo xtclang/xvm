@@ -73,7 +73,7 @@ public class MoveRef
             } else {
                 TypeComposition clzRef = xRef.getInstance(frame).ensureParameterizedClass(
                         frame.f_context.f_container, infoSrc.getType());
-                hRef    = new RefHandle(clzRef, frame, m_nFromValue);
+                hRef    = RefHandle.createRegisterRef(clzRef, frame, m_nFromValue);
                 typeReg = hRef.getType();
             }
         } else {
@@ -86,7 +86,7 @@ public class MoveRef
             ConstantPool pool = frame.poolContext();
 
             typeReg = pool.ensureParameterizedTypeConstant(pool.typeRef(), hReferent.getType());
-            hRef    = new RefHandle(typeReg.ensureClass(frame), null, hReferent);
+            hRef    = RefHandle.createReferentRef(typeReg.ensureClass(frame), null, hReferent);
         }
 
         if (fNextReg) {

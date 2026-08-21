@@ -168,7 +168,7 @@ public class xOSFile
     public int createHandle(Frame frame, ObjectHandle hOSStore, Path path, int iReturn) {
         TypeComposition clz = ensureClass(frame.f_context.f_container,
                                 getCanonicalType(), frame.poolContext().typeFile());
-        NodeHandle hStruct = new NodeHandle(clz.ensureAccess(Constants.Access.STRUCT),
+        NodeHandle hStruct = NodeHandle.create(clz.ensureAccess(Constants.Access.STRUCT),
                                 path.toAbsolutePath(), hOSStore);
         MethodStructure constructor = f_constructor.get(this);
         ObjectHandle[]  ahVar       = Utils.ensureSize(Utils.OBJECTS_NONE,

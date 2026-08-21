@@ -291,6 +291,18 @@ speedup.serial=...
 speedup.parallel=...
 ```
 
+Backlog task:
+
+- Add a controlled benchmark target that runs the same known-working manual-test
+  module sequence once through forked JVM execution and once through
+  `ExecutionMode.DIRECT` in the same Gradle task JVM.
+- Use the same compiled inputs and module list for both modes; do not run
+  unrelated Gradle tasks concurrently against the same checkout.
+- Capture the report above plus ownership-validation failures from the direct
+  run.
+- Treat the benchmark as informational until the same-JVM direct validation is
+  stable across the full known-working module set.
+
 This benchmark matters because the direct mode is not only a correctness goal.
 It is the path that can make language-server incremental compile/run loops and
 Gradle test tasks practical without starting a fresh VM for every attempt.

@@ -860,10 +860,44 @@ public class xRef
          * @param sName      an optional name
          * @param hReferent  the referent handle
          */
-        public RefHandle(TypeComposition clazz, String sName, ObjectHandle hReferent) {
-            this(clazz, sName);
+        public static RefHandle createReferentRef(TypeComposition clazz, String sName,
+                                                  ObjectHandle hReferent) {
+            RefHandle ref = new RefHandle(clazz, sName);
+            ref.initializeField(REFERENT, hReferent);
+            return ref;
+        }
 
-            setField(null, REFERENT, hReferent);
+        /**
+         * Create a RefHandle for a frame register.
+         *
+         * The first ref for a register is still cached in {@link Frame.VarInfo}, preserving the old
+         * frame-local reuse behavior. The important lifecycle detail is that the cache publication
+         * happens after the handle constructor returns, so the frame never observes a partially
+         * constructed RefHandle.
+         *
+         * @param clazz  the class of the Ref
+         * @param frame  the current frame
+         * @param iVar   the register index
+         *
+         * @return a register-bound RefHandle, or a linked RefHandle if the register already has one
+         */
+        public static RefHandle createRegisterRef(TypeComposition clazz, Frame frame, int iVar) {
+            assert frame != null;
+            assert iVar >= 0;
+
+            Frame.VarInfo infoSrc = frame.getVarInfo(iVar);
+            RefHandle     ref     = infoSrc.getRef();
+
+            // Keep the previous semantics: a second ref to the same frame register delegates to the
+            // cached first ref instead of replacing it.
+            return ref == null
+                    ? cacheRegisterRef(infoSrc, new RefHandle(clazz, frame, iVar))
+                    : new RefHandle(clazz, ref);
+        }
+
+        private static RefHandle cacheRegisterRef(Frame.VarInfo info, RefHandle ref) {
+            info.setRef(ref);
+            return ref;
         }
 
         /**
@@ -887,33 +921,20 @@ public class xRef
             m_iVar      = REF_PROPERTY;
         }
 
-        /**
-         * Create a RefHandle for a frame register.
-         *
-         * @param clazz  the class of the Ref
-         * @param frame  the current frame
-         * @param iVar   the register index
-         */
-        public RefHandle(TypeComposition clazz, Frame frame, int iVar) {
+        private RefHandle(TypeComposition clazz, Frame frame, int iVar) {
             super(clazz);
 
             m_fMutable = true;
+            m_frame    = frame;
+            m_iVar     = iVar;
+        }
 
-            assert iVar >= 0;
+        private RefHandle(TypeComposition clazz, RefHandle refCurrent) {
+            super(clazz);
 
-            Frame.VarInfo infoSrc = frame.getVarInfo(iVar);
-
-            RefHandle refCurrent = infoSrc.getRef();
-            if (refCurrent == null) {
-                infoSrc.setRef(this);
-                m_frame = frame;
-                m_iVar  = iVar;
-            } else {
-                // there is already a Ref pointing to that register;
-                // simply link to it
-                m_iVar      = REF_REF;
-                m_hReferent = refCurrent;
-            }
+            m_fMutable  = true;
+            m_iVar      = REF_REF;
+            m_hReferent = refCurrent;
         }
 
         @Override
@@ -1138,7 +1159,7 @@ public class xRef
         protected final long f_lIndex;
 
         public IndexedRefHandle(TypeComposition clazz, ObjectHandle hTarget, long lIndex) {
-            super(clazz, null);
+            super(clazz, (String) null);
 
             m_iVar      = REF_ARRAY;
             m_hReferent = hTarget;

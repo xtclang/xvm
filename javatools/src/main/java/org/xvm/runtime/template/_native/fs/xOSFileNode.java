@@ -161,12 +161,16 @@ public class xOSFileNode
 
         // TODO: lazy file channel, etc.
 
-        protected NodeHandle(TypeComposition clazz, Path path, ObjectHandle hOSStore) {
+        public static NodeHandle create(TypeComposition clazz, Path path, ObjectHandle hOSStore) {
+            NodeHandle node = new NodeHandle(clazz, path);
+            node.initializeField("store", hOSStore);
+            return node;
+        }
+
+        private NodeHandle(TypeComposition clazz, Path path) {
             super(clazz);
 
             f_path = path;
-
-            setField(null, "store", hOSStore);
         }
 
         public Path getPath() {
