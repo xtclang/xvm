@@ -857,6 +857,45 @@ lightweight containers in one process:
 ./gradlew :manualTests:runParallelStress -PstressIterations=50
 ```
 
+`manualTests:runDirectSequenceStress` is the complementary same-JVM direct-mode
+smoke. It runs selected manual modules repeatedly as separate sequential
+`Runner.run()` calls through the Gradle plugin's `ExecutionMode.DIRECT` path,
+reusing one build-scoped isolated runtime classloader:
+
+```bash
+./gradlew :manualTests:runDirectSequenceStress \
+  -PsameJvmIterations=10 \
+  -PsameJvmModules=TestArray,TestNumbers,TestReflection
+```
+
+That is the shape that used to be vulnerable to stale process-global runtime
+state such as static `VIEWS`, `INSTANCE`, and owner-derived metadata caches
+surviving from run N into run N+1.
+
+The initial branch smoke passed with:
+
+```bash
+./gradlew :manualTests:runDirectSequenceStress \
+  -PsameJvmIterations=2 \
+  -PsameJvmModules=TestArray,TestReflection \
+  --console=plain \
+  --warning-mode=all \
+  --no-daemon \
+  --no-configuration-cache
+```
+
+The default smoke also passed with two iterations of the built-in module set
+(`TestArray`, `TestNumbers`, and `TestReflection`):
+
+```bash
+./gradlew :manualTests:runDirectSequenceStress \
+  -PsameJvmIterations=2 \
+  --console=plain \
+  --warning-mode=all \
+  --no-daemon \
+  --no-configuration-cache
+```
+
 These tests do not prove the absence of every race in the runtime. They prove
 that the old pattern is concretely broken and that the new replacement has the
 intended ownership and lifecycle behavior for the most important fixed paths.
