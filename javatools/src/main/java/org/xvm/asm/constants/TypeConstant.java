@@ -1898,7 +1898,7 @@ public abstract class TypeConstant
         TypeInfo     infoObject = typeObject.getTypeInfo();
         if (infoObject == null) {
             // this is basically an inlined ensureTypeInfoInternal()
-            try (var ignore = ConstantPool.withPool(pool)) {
+            try (var _ = ConstantPool.withPool(pool)) {
                 typeObject.setTypeInfo(getConstantPool().infoPlaceholder());
                 infoObject = typeObject.buildTypeInfo(errs);
                 typeObject.setTypeInfo(infoObject);
@@ -2072,7 +2072,7 @@ public abstract class TypeConstant
     protected TypeInfo buildTypeInfo(ErrorListener errs) {
         // any newly created derivative types and various constants should be placed into the same
         // pool where this type comes from
-        try (var ignore = ConstantPool.withPool(getConstantPool())) {
+        try (var _ = ConstantPool.withPool(getConstantPool())) {
             return buildTypeInfoImpl(errs);
         }
     }
@@ -4689,7 +4689,7 @@ public abstract class TypeConstant
             mapNarrowedNids = new HashMap<>();
         }
 
-        Set<Object> setNarrowing = mapNarrowedNids.computeIfAbsent(nidBase, ignore -> new HashSet<>());
+        Set<Object> setNarrowing = mapNarrowedNids.computeIfAbsent(nidBase, _ -> new HashSet<>());
         setNarrowing.add(nidContrib);
         return mapNarrowedNids;
     }
@@ -7926,12 +7926,19 @@ public abstract class TypeConstant
 
         super.setContaining(pool);
 
-        // clear any cached constants
-        m_cInvalidations = 0;
-        m_typeinfo       = null;
-        m_mapRelations   = null;
-        m_handle         = null;
-        m_typeNormalized = null;
+        // Constant.adoptedBy() shallow-clones constants before moving them to a target pool. Only
+        // logical type value state can cross that boundary; helper cells and runtime/JIT caches
+        // must be rebuilt by the new owner.
+        m_cInvalidations  = 0;
+        m_typeinfo        = null;
+        m_cRecursiveDepth = new AtomicInteger();
+        m_mapRelations    = null;
+        m_tloInProgress   = null;
+        m_mapConsumes     = null;
+        m_mapProduces     = null;
+        m_handle          = null;
+        m_sJitName        = null;
+        m_typeNormalized  = null;
     }
 
     @Override
@@ -8233,7 +8240,7 @@ public abstract class TypeConstant
     private transient volatile TypeInfo m_typeinfo;
     private static final AtomicReferenceFieldUpdater<TypeConstant, TypeInfo> s_typeinfo =
             AtomicReferenceFieldUpdater.newUpdater(TypeConstant.class, TypeInfo.class, "m_typeinfo");
-    private final transient AtomicInteger m_cRecursiveDepth = new AtomicInteger();
+    private transient AtomicInteger m_cRecursiveDepth = new AtomicInteger();
 
     /**
      * The last time that we checked the invalidations from the ConstantPool, we cached the number

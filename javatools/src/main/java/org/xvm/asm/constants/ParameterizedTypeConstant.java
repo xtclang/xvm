@@ -1036,6 +1036,15 @@ public class ParameterizedTypeConstant
         return sb.toString();
     }
 
+    @Override
+    protected ParameterizedTypeConstant adoptedBy(ConstantPool pool) {
+        // Do not use Constant's shallow-clone adoption here: the final StampedLock and transient
+        // resolver/JIT helpers are owner-local mutable state. Reconstruct the logical value so the
+        // target-pool copy is born with fresh helper cells and the same cached type behavior.
+        return new ParameterizedTypeConstant(pool, m_constType,
+                Arrays.copyOf(m_atypeParams, m_atypeParams.length));
+    }
+
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -1116,7 +1125,7 @@ public class ParameterizedTypeConstant
     /**
      * Lock protecting {@link #m_typeResolverPrev} and {@link #m_typeResolvedPrev}
      */
-    private final StampedLock m_lockPrev = new StampedLock();
+    private final transient StampedLock m_lockPrev = new StampedLock();
 
     /**
      * Cached conversion target.

@@ -20,7 +20,8 @@ and lazy-publication counts are scan signals generated on branch
 | Must fix | Raw enum handles returned through public/native paths | Branch remainder: 14 raw accessor references, all protected/internal in `xEnum` or owner-local native enum factories in `xBoolean`, `xNullable`, and `xOrdered` | Natural enum construction struct escapes as if it were the finalized enum singleton | `ensureEnumByName`, `ensureEnumByOrdinal`, or `Utils.ensureInitializedEnum` on public paths |
 | Must audit, must fix when owner-shared | Manual lazy publication in shared runtime/asm objects | 27 strong same-field lazy-init matches in runtime/asm; 47 across all Java sources | Plain field read/write with no happens-before edge; duplicate, stale, partial, or wrong-owner state | Final `Lazy`, `ConcurrentMap.computeIfAbsent`, or explicit atomic/locked state |
 | Must fix | Split lifecycle state across several fields | `SingletonConstant` was the known concrete case and is fixed in this branch | Fibers see mixed handle/owner/waiter state; false recursion or missed wait | One immutable state snapshot in `AtomicReference<State>` or one lock |
-| Must fix | Runtime state shallow-copied during constant adoption | `SingletonConstant`, `FSNodeConstant`, and `FileStoreConstant` are fixed in this branch | A constant registered into pool B carries pool A's runtime handle/state cell | Adoption must copy only logical constant value state; transient runtime state must be fresh or cleared |
+| Must fix | Runtime/helper state shallow-copied during constant adoption | Fixed in this branch for `SingletonConstant`, `FSNodeConstant`, `FileStoreConstant`, `TypeConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, `TypeParameterConstant`, and `HandleConstant` | A constant registered into pool B carries pool A's runtime handle/state cell, helper lock, JIT cache, or reentrancy marker | Adoption must copy only logical constant value state; transient runtime/helper state must be fresh or cleared |
+| Must audit, must fix when runtime execution depends on it | Ambient current `ConstantPool` lookup | Runtime sites include `MainContainer`, `Container`, `ServiceContext`, watcher/request callbacks, `xContainerControl`, and type helpers | A hidden thread-local owner can be stale, absent, or wrong on reused Java threads and async callbacks | Add explicit owner parameters where practical; use scoped owner lookup only as a transitional boundary bridge with assertions |
 
 ## Mutable Template INSTANCE
 
@@ -234,7 +235,9 @@ separate issue with a focused reproducer and a post-fix stress command.
 ## Shallow-Cloned Constant Runtime State
 
 Status: exact defect category, fixed for the known owner-bearing constant
-runtime fields in this branch.
+runtime fields and the small runtime-relevant adoption hardening candidates in
+this branch. The broader adoption/clone audit is tracked in
+[constant-adoption-clone-audit.md](constant-adoption-clone-audit.md).
 
 `Constant.adoptedBy(...)` is the owner-transfer boundary for registering a
 constant from one `ConstantPool` into another. The base implementation uses

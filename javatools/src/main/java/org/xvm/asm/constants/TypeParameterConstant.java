@@ -209,7 +209,7 @@ public class TypeParameterConstant
             return nDif;
         }
 
-        try (var ignore = f_tloReEntry.push(true)) {
+        try (var _ = f_tloReEntry.push(true)) {
             return getParentConstant().compareTo(that.getParentConstant());
         }
     }
@@ -223,6 +223,13 @@ public class TypeParameterConstant
 
         // invalidate cached type
         m_typeConstraint = null;
+    }
+
+    @Override
+    protected TypeParameterConstant adoptedBy(ConstantPool pool) {
+        // Reconstruct the logical value instead of shallow-cloning the final reentrancy marker.
+        // The marker is only a recursive-comparison helper, and must be owner-local.
+        return new TypeParameterConstant(pool, getMethod(), getName(), f_iReg);
     }
 
     @Override
@@ -264,5 +271,5 @@ public class TypeParameterConstant
      */
     private transient TypeConstant m_typeConstraint;
 
-    private final TransientThreadLocal<Boolean> f_tloReEntry = new TransientThreadLocal<>();
+    private final transient TransientThreadLocal<Boolean> f_tloReEntry = new TransientThreadLocal<>();
 }

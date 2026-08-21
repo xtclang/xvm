@@ -245,7 +245,7 @@ input to a computation or a stable cache with an owner.
 For example, `ConstantPool.withPool(pool)` already has lexical intent:
 
 ```java
-try (var ignore = ConstantPool.withPool(pool)) {
+try (var _ = ConstantPool.withPool(pool)) {
     // resolve constants against pool
 }
 ```
@@ -255,6 +255,13 @@ in a `ThreadLocal`. A future `ScopedValue<ConstantPool>` could make the
 lifetime structurally visible and remove the need for mutable holder arrays.
 That would still be an ambient lookup for the current calculation, not a place
 to store constants.
+
+The concrete `ConstantPool` sites and the explicit-owner replacement plan are
+tracked in [constant-pool-state-audit.md](constant-pool-state-audit.md). The
+short version is: pass `Frame`, `Container`, `ServiceContext`, or
+`ConstantPool` when the caller already has one; use `ScopedValue` only at
+legacy boundary adapters where plumbing the owner through every intermediate
+call would be too broad for the current PR.
 
 ## Cameron's Proposal
 

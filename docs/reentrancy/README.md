@@ -31,6 +31,13 @@ Start here:
 - [ownership-diagnostics.md](ownership-diagnostics.md): how to dump
   container-owned runtime state during stress runs and detect owner mismatches
   or cross-container sharing.
+- [constant-adoption-clone-audit.md](constant-adoption-clone-audit.md): why
+  `Constant.adoptedBy(...)` exists, which clone/adoption sites were checked,
+  and which shallow-copied runtime-state fields this branch hardens for
+  multi-container runtime safety.
+- [constant-pool-state-audit.md](constant-pool-state-audit.md): `ConstantPool`
+  state inventory, ambient current-pool lookup sites, must-fix vs should-fix
+  classification, and recommended guards.
 - [jit-implications.md](jit-implications.md): how the separate JIT runtime
   path models containers, classloaders, generated static fields, and ownership
   risks.
