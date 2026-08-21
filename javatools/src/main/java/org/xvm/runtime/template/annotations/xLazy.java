@@ -27,7 +27,7 @@ import org.xvm.runtime.template.xException;
 public class xLazy
         extends xVar {
     public xLazy(Container container, ClassStructure structure) {
-        super(container, structure, false);
+        super(container, structure, NativeRole.DERIVED);
     }
 
     @Override

@@ -1,6 +1,8 @@
 package org.xvm.runtime.template.numbers;
 
 
+import java.util.Arrays;
+
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.Constant;
@@ -21,25 +23,19 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
  */
 public class xUInt8
         extends xUnsignedConstrainedInt {
-    public xUInt8(Container container, ClassStructure structure, boolean fInstance) {
+    public xUInt8(Container container, ClassStructure structure) {
         super(container, structure, 0, 255, 8, false);
-
-        // Temporary legacy role flag: true only for the canonical native UInt8 template.
-        // It owns the small-value cache below; replacing this boolean with an explicit
-        // canonical-template cache is a follow-up cleanup.
-        f_fInstance = fInstance;
     }
 
     @Override
     public void initNative() {
         super.initNative();
 
-        if (f_fInstance) {
-            ClassComposition clz = getCanonicalClass();
-            for (int i = 0; i < cache.length; ++i) {
-                cache[i] = new JavaLong(clz, i);
-            }
-        }
+        // No fInstance branch is needed here. UInt8 has no derived native Java template; the
+        // final owner-local byte cache remains eager and direct, matching the previous
+        // per-container handle reuse without keeping a constructor role flag.
+        ClassComposition clz = getCanonicalClass();
+        Arrays.setAll(cache, i -> new JavaLong(clz, i));
     }
 
     @Override
@@ -82,11 +78,7 @@ public class xUInt8
         return makeHandle(owner.getComposition().getContainer(), lValue);
     }
 
-    /**
-     * True only for the canonical native template; avoids a recursive NativeTemplates lookup while
-     * prebuilding this owner template's cached byte handles.
-     */
-    private final boolean f_fInstance;
+    private static final int CACHE_SIZE = 256;
 
-    private final JavaLong[] cache = new JavaLong[256];
+    private final JavaLong[] cache = new JavaLong[CACHE_SIZE];
 }

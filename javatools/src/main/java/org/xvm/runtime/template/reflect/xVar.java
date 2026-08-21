@@ -32,16 +32,22 @@ import org.xvm.util.Lazy;
 public class xVar
         extends xRef
         implements VarSupport {
-    public xVar(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure, false);
+    public xVar(Container container, ClassStructure structure) {
+        this(container, structure, NativeRole.CANONICAL);
+    }
 
-        // fInstance is true only for the canonical native Var template. Var-derived templates such
-        // as @Lazy and @Future use the base Var inception/signature metadata, matching the old
-        // static fields without leaking it across containers.
-        f_constInception = fInstance
+    protected xVar(Container container, ClassStructure structure, NativeRole role) {
+        super(container, structure, NativeRole.DERIVED);
+
+        boolean canonical = role == NativeRole.CANONICAL;
+
+        // No fInstance boolean is needed here. Var is derived from Ref, so even canonical Var uses
+        // the DERIVED Ref role; only canonical Var owns Var.set metadata, while @Lazy/@Future/
+        // @Atomic delegate that metadata back to the owner-local Var.
+        f_constInception = canonical
                 ? new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant())
                 : null;
-        f_sigSet = fInstance
+        f_sigSet = canonical
                 ? Lazy.of(this::resolveSetSignature)
                 : Lazy.of(() -> xVar.getInstance(f_container).getSetSignature());
     }

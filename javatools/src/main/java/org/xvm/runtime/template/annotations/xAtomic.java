@@ -36,7 +36,7 @@ import org.xvm.util.Lazy;
 public class xAtomic
         extends xVar {
     public xAtomic(Container container, ClassStructure structure) {
-        super(container, structure, false);
+        super(container, structure, NativeRole.DERIVED);
     }
 
     @Override

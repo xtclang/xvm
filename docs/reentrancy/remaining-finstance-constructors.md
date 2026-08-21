@@ -1,9 +1,8 @@
-# Remaining `fInstance` Constructors
+# Removed `fInstance` Constructors
 
-This note records the remaining legacy three-argument native-template
-constructors on this branch, the trivial constructors already removed, and why
-the reflective fallback in `NativeContainer.instantiateNativeTemplate(...)`
-cannot be removed yet.
+This note records the removal of the legacy three-argument native-template
+constructors on this branch and the replacements for the last five semantic
+uses.
 
 The old `boolean fInstance` shape mixed two different ideas:
 
@@ -14,11 +13,10 @@ The old `boolean fInstance` shape mixed two different ideas:
   derived/fallback template, which is still real for a small number of classes
   but should be expressed explicitly instead of as a generic boolean.
 
-In the fully migrated architecture, the runtime should not need a generic
-`fInstance` constructor parameter. Canonical native templates should be found
-through `Container.nativeTemplates()`, and any class that truly needs a role
-distinction should use an explicit role enum, a named factory, or separate
-constructors whose names and visibility explain the ownership.
+In the migrated architecture, the runtime no longer needs a generic
+`fInstance` constructor parameter. Canonical native templates are found through
+`Container.nativeTemplates()`, and the one hierarchy that still needs a role
+distinction uses an explicit `NativeRole` instead of an unlabeled boolean.
 
 ## Current Count
 
@@ -29,33 +27,36 @@ rg -n "public [A-Za-z0-9_]+\(Container container, ClassStructure structure, bool
   javatools/src/main/java/org/xvm/runtime/template -g '*.java'
 ```
 
-Result after the trivial cleanup in this branch:
+Result after the final cleanup in this branch:
 
-- 5 native-template classes still expose the three-argument constructor.
-- Those 5 still use the flag for real canonical-template behavior.
+- 0 native-template classes expose a `boolean fInstance` constructor.
+- 0 native-template classes have an `f_fInstance` field.
 - 73 ignored-flag constructors were removed and now expose only
   `(Container, ClassStructure)`.
-- No remaining constructor forwards `fInstance` to a superclass with
-  `super(container, structure, fInstance)`.
+- The reflective boolean-constructor fallback in
+  `NativeContainer.instantiateNativeTemplate(...)` has been removed.
 
-## Direct Semantic Uses
+## Final Semantic Uses
 
-These are the only remaining constructors where the flag changes behavior.
-They are not current mutable-static `INSTANCE` races, because the state selected
-by the flag is owner-local. They are still should-fix-soon architecture debt
-because a boolean constructor role is vague and easy to misuse.
+These were the last constructors where the flag changed behavior. They were not
+current mutable-static `INSTANCE` races, because the state selected by the flag
+was owner-local. They were still worth removing because a generic boolean role
+is vague, easy to misuse, and forced `NativeContainer` to keep a hidden fallback
+constructor convention.
 
-| File | What `fInstance` does today | What breaks if it is removed naively | Proper replacement |
+| File | What `fInstance` used to do | What would break if it were removed naively | Replacement in this branch |
 | --- | --- | --- | --- |
-| `reflect/xRef.java` | Marks the canonical native `Ref` template; only that template owns the native `Identity` child and its native rebased inception/get-signature metadata. Derived Ref-like templates delegate to the owner-local canonical `Ref`. | The canonical template might fail to register `Identity`, or derived templates could compute their own rebased metadata instead of delegating to the canonical owner. | Replace the boolean with an explicit role, for example `TemplateRole.CANONICAL` vs `TemplateRole.DERIVED`, or named factories such as `xRef.canonical(...)` and `xRef.derived(...)`. |
-| `reflect/xVar.java` | Marks the canonical native `Var` template; only that template owns the rebased inception/set-signature metadata. Derived Var-like templates delegate to owner-local canonical `Var`. | Derived templates such as `@Lazy`/`@Future` could get the wrong inception/signature metadata, or the canonical template could miss its native metadata. | Same explicit role/factory replacement as `xRef`; do not infer this from process-global state. |
-| `text/xChar.java` | Warms the canonical `Char` small-value cache for code points `0..127`. | `makeHandle(...)` can return null for cached values if the canonical cache is not initialized. Always warming every derived template would waste memory and may create handles of the wrong template role. | Move the small-value cache into an owner-local `Lazy<JavaLong[]>` on the canonical `xChar` template, resolved through `NativeTemplates.charTemplate()`. |
-| `numbers/xNibble.java` | Warms the canonical `Nibble` value cache for `0..15`. | `makeHandle(...)` can return null for cached nibbles if the canonical cache is not initialized. | Move the small-value cache into an owner-local final lazy cache on the canonical template. |
-| `numbers/xUInt8.java` | Warms the canonical `UInt8` value cache for `0..255`. | `makeHandle(...)` can return null for cached bytes if the canonical cache is not initialized. | Move the small-value cache into an owner-local final lazy cache on the canonical template. |
+| `reflect/xRef.java` | Marked the canonical native `Ref` template; only that template owns the native `Identity` child and its native rebased inception/get-signature metadata. Derived Ref-like templates delegate to the owner-local canonical `Ref`. | The canonical template might fail to register `Identity`, or derived templates could compute their own rebased metadata instead of delegating to the canonical owner. | `xRef.NativeRole.CANONICAL` for the public constructor and `NativeRole.DERIVED` for `@Inject`/`Var`-derived templates. The role is explicit and owner-local. |
+| `reflect/xVar.java` | Marked the canonical native `Var` template; only that template owns the rebased inception/set-signature metadata. Derived Var-like templates delegate to owner-local canonical `Var`. | Derived templates such as `@Lazy`/`@Future` could get the wrong inception/signature metadata, or the canonical template could miss its native metadata. | `xVar` uses the inherited `NativeRole`: canonical Var owns Var metadata, while every Var is still a derived Ref and never registers Ref metadata. |
+| `text/xChar.java` | Warmed the canonical `Char` small-value cache for code points `0..127`. | `makeHandle(...)` can return null for cached values if the canonical cache is not initialized. | The branch proved there is no derived native Java `xChar` role. The constructor is now ordinary two-argument owner construction, and `initNative()` eagerly fills the same private final owner-local array. |
+| `numbers/xNibble.java` | Warmed the canonical `Nibble` value cache for `0..15`. | `makeHandle(...)` can return null for cached nibbles if the canonical cache is not initialized. | Same direct final-array cache as before, with no branch. `Nibble` has no derived native Java template, so every runtime-registered instance is the canonical owner cache. |
+| `numbers/xUInt8.java` | Warmed the canonical `UInt8` value cache for `0..255`. | `makeHandle(...)` can return null for cached bytes if the canonical cache is not initialized. | Same direct final-array cache as before, with no branch. `UInt8` has no derived native Java template, so this preserves the hot one-array-index lookup. |
 
-These five are not enough reason to keep a generic reflective boolean
-convention forever. They are a reason to do the constructor cleanup deliberately
-instead of deleting the fallback in `NativeContainer` first.
+The small-value caches deliberately did not move to `Lazy<JavaLong[]>`.
+`Lazy` would be safe, but it would add a volatile read to a hot path that did
+not need it. Because those three templates have no derived Java-template role,
+the simplest behavior-preserving replacement is to keep the eager private final
+owner-local arrays and remove only the dead branch.
 
 ## Removed Dead Compatibility Signatures
 
@@ -159,47 +160,32 @@ Reflect/text/root templates with ignored flags:
 - `xNullable.java`
 - `xOrdered.java`
 
-## Why The Reflective Fallback Still Exists
+## Removed Reflective Fallback
 
-`NativeContainer.instantiateNativeTemplate(...)` currently tries:
+`NativeContainer.instantiateNativeTemplate(...)` now requires:
 
 ```java
 clz.getConstructor(Container.class, ClassStructure.class)
 ```
 
-and falls back to:
+There is no fallback to `(Container, ClassStructure, boolean)`. This makes the
+old `fInstance` convention impossible for runtime native-template startup: a
+template that needs a derived/canonical distinction must model it in its own
+type hierarchy, as `xRef`/`xVar` now do with `NativeRole`.
 
-```java
-clz.getConstructor(Container.class, ClassStructure.class, Boolean.TYPE)
-```
+## Validation
 
-Removing that fallback today would fail startup for the five direct semantic
-users, because they still expose only the three-argument constructor. Their fix
-needs an explicit replacement for "canonical native template" before the old
-boolean can go away.
+Validation for this wave has three parts:
 
-## Proper Cleanup Plan
-
-1. Replace the five semantic flag users with explicit owner-local state:
-   `xRef`/`xVar` get a role/factory API; `xChar`/`xNibble`/`xUInt8` get final
-   owner-local lazy small-value caches.
-2. Treat the small-value cache migration as low-to-moderate risk and narrow in
-   scope. It touches only `xChar`, `xNibble`, and `xUInt8`; the replacement
-   must keep the same precomputed handle identities per container, avoid
-   per-call allocation, and prove that two containers get distinct cached
-   handles.
-3. Treat the `xRef`/`xVar` role migration as moderate risk because it controls
-   native child registration and rebased metadata. The replacement should be an
-   explicit role enum or named canonical/derived factories, with tests for
-   canonical `Ref.Identity` registration and derived-template delegation.
-4. Change `NativeContainer.instantiateNativeTemplate(...)` to require only the
-   two-argument constructor.
-5. Delete the reflective three-argument fallback and the boolean import/path.
-6. Add a test or source scan assertion that no
-   `(Container, ClassStructure, boolean fInstance)` constructor remains.
-
-This is worthwhile, but it is not the same priority as the original mutable
-static `INSTANCE` bug. The must-fix race is owner-bearing data escaping through
-process-global mutable fields. The removed constructors were dead API
-compatibility; the remaining five are local role flags that should be made
-explicit for clarity and future maintenance.
+1. `NativeTemplatesTest.removedFInstanceUsersHaveExplicitOwnerState()` fails
+   if any of the five classes reintroduces an `f_fInstance` field or the legacy
+   three-argument constructor. It also verifies that the three small-value
+   caches remain private final instance arrays, not globals.
+2. `NativeTemplateOldPatternTest.derivedRefAndVarTemplatesUseOwnerBaseSignatures()`
+   models the `Ref`/`Var` metadata hazard and proves why derived templates must
+   delegate to the owner-local base template instead of computing metadata from
+   their own structures.
+3. The same-JVM direct-sequence stress task exercises actual native-template
+   startup and ownership validation across repeated interpreter runs. That is
+   the runtime-level guard that the reflective fallback removal did not break
+   startup behavior.

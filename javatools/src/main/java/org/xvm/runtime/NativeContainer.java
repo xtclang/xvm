@@ -4,7 +4,6 @@ package org.xvm.runtime;
 import java.io.File;
 import java.io.IOException;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 
 import java.net.URLDecoder;
@@ -777,17 +776,10 @@ public class NativeContainer
 
     private ClassTemplate instantiateNativeTemplate(
             Class<ClassTemplate> clz, ClassStructure structClass) throws Exception {
-        try {
-            Constructor<ClassTemplate> constructor =
-                    clz.getConstructor(Container.class, ClassStructure.class);
-            return constructor.newInstance(this, structClass);
-        } catch (NoSuchMethodException ignore) {
-            // TODO: delete this fallback after the remaining canonical-template role flags
-            // (Ref, Var, Char, Nibble, UInt8) are replaced by explicit owner-local state.
-            Constructor<ClassTemplate> constructor =
-                    clz.getConstructor(Container.class, ClassStructure.class, Boolean.TYPE);
-            return constructor.newInstance(this, structClass, Boolean.TRUE);
-        }
+        // The old boolean fInstance fallback was a hidden owner-role side channel. Native
+        // templates now expose the ordinary owner constructor; any derived/canonical distinction
+        // must be explicit inside the template hierarchy.
+        return clz.getConstructor(Container.class, ClassStructure.class).newInstance(this, structClass);
     }
 
     /**
