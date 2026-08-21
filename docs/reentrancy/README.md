@@ -36,6 +36,10 @@ Start here:
 - [stress-discovered-runtime-issues.md](stress-discovered-runtime-issues.md):
   concrete failures found by the parallel manual-test runner that are adjacent
   to, but distinct from, the Java static owner-cache work.
+- [plans/same-jvm-launcher-stress.md](plans/same-jvm-launcher-stress.md):
+  backlog plan for extending the stress harness to run repeated `Launcher` and
+  Gradle plugin direct-mode executions in one JVM, validate owner separation,
+  and benchmark the speedup that safe reentrant execution should unlock.
 
 The distinction is intentional:
 
