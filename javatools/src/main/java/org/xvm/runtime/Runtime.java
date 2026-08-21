@@ -72,9 +72,13 @@ public class Runtime {
      * @return a container that uses the specified ConstantPool; null if not found
      */
     public Container findContainer(ConstantPool pool) {
-        for (Container container : f_containers.keySet()) {
-            if (container.getConstantPool() == pool) {
-                return container;
+        synchronized (f_containers) {
+            // f_containers is a WeakHashMap used by diagnostics. WeakHashMap can mutate during
+            // expunge/iteration, so every access path has to use the same monitor.
+            for (Container container : f_containers.keySet()) {
+                if (container.getConstantPool() == pool) {
+                    return container;
+                }
             }
         }
         return null;

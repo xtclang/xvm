@@ -866,7 +866,9 @@ Current count:
 
 Representative examples:
 
-- `Runtime.f_containers = new WeakHashMap<>()`.
+- `Runtime.f_containers = new WeakHashMap<>()` was fixed in this branch by
+  synchronizing `findContainer(...)` on the same monitor used by registration
+  and snapshotting.
 - `ConstantPool.f_setValidPools =
   Collections.newSetFromMap(new IdentityHashMap<>())`.
 - `ServiceContext.m_mapTransient = new WeakHashMap<>()`.
@@ -888,6 +890,11 @@ Proper replacements:
 - Owner-owned weak state: synchronize or use a concurrent weak-map helper.
 - Identity caches: document why identity is required and keep the cache under
   the owner that defines identity.
+
+The remaining first-PR risk is not another known runtime registry race.
+`ServiceContext` weak maps are service-local and depend on the service
+scheduler's single-active-fiber invariant. `ConstantPool.f_setValidPools` is
+part of metadata validation and remains in the broader constant-pool audit.
 
 ### Should Fix: Constant-Looking Non-Final Public Statics
 
