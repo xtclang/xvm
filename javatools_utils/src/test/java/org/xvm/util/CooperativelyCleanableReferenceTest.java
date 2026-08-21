@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -14,33 +15,38 @@ public class CooperativelyCleanableReferenceTest {
     void shouldClean() {
         AtomicLong cleaned = new AtomicLong();
         while (cleaned.get() == 0) {
-            new CooperativelyCleanableReference<>(new Object(), cleaned::incrementAndGet);
+            CooperativelyCleanableReference.create(new Object(), cleaned::incrementAndGet);
             System.gc();
+        }
     }
-}
 
     @Test
     void shouldIgnoreExceptionsWhileCleaning() {
         AtomicLong cleaned = new AtomicLong();
         while (cleaned.get() == 0) {
-            new CooperativelyCleanableReference<>(new Object(), () -> {
+            CooperativelyCleanableReference.create(new Object(), () -> {
                 cleaned.incrementAndGet();
                 throw new NullPointerException();
-        });
+            });
             System.gc();
+        }
     }
-}
 
     @Test
     void shouldIgnoreAndRestoreInterruptExceptionsWhileCleaning() {
         AtomicLong cleaned = new AtomicLong();
         while (cleaned.get() == 0) {
-            new CooperativelyCleanableReference<>(new Object(), () -> {
+            CooperativelyCleanableReference.create(new Object(), () -> {
                 cleaned.incrementAndGet();
                 throw new RuntimeException(new InterruptedException());
-        });
+            });
             System.gc();
-    }
+        }
         assertTrue(Thread.interrupted());
-}
+    }
+
+    @Test
+    void shouldNotExposePublicConstructor() {
+        assertEquals(0, CooperativelyCleanableReference.class.getConstructors().length);
+    }
 }
