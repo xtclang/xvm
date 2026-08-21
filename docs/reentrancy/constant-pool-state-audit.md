@@ -30,11 +30,11 @@ The real risk categories are narrower:
 | Priority | Category | Sites | Why it matters | Proper fix or guard |
 | --- | --- | --- | --- | --- |
 | Must fix | Wrong-owner runtime/helper state copied by adoption | Fixed in this branch for `SingletonConstant`, `FSNodeConstant`, `FileStoreConstant`, `TypeConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, `TypeParameterConstant`, and `HandleConstant` | `adoptedBy(...)` changes pool ownership. Shallow-copied runtime/cache/helper state can still point at the source pool/container. | Reset all non-logical state at adoption/owner-change boundaries. Throw/assert when an already-owned live handle constant is adopted into another pool. |
-| Must fix when runtime path can reach it | Ambient current pool in runtime execution | `MainContainer.invoke0`, `Container.ensureServiceContext`, `ServiceContext`, watcher/request callbacks, `xContainerControl.invokeInvoke`, type-relation helpers | A thread-local owner is hidden from signatures. Missing scope cleanup or execution on a different thread selects the wrong pool or `null`. | Prefer explicit `Frame`, `Container`, or `ConstantPool` parameters. Use a scoped owner context only as a transitional bridge. |
+| Must fix when runtime path can reach it | Ambient current pool in runtime execution | Runtime boundary sites are narrowed in this branch; remaining deeper sites are type-relation helpers and ASM metadata helpers | A thread-local owner is hidden from signatures. Missing scope cleanup or execution on a different thread selects the wrong pool or `null`. | Prefer explicit `Frame`, `Container`, or `ConstantPool` parameters. Use a scoped owner context only as a transitional bridge with assertions. |
 | Must audit | Shared mutable pool mutation during parallel runtime | `register(...)`, `ensure*Constant(...)`, `f_listConst`, `m_mapConstants`, `m_mapLocators`, `getContained()` | Some structures are concurrent/copy-on-write; `f_listConst` itself is not a general concurrent collection. The current design assumes registration and validation reentrancy more than arbitrary parallel mutation. | This branch adds `-Dxvm.asm.validateConstantPoolLateRegistration=true` to fail on new registrations after the runtime publication marker. Long term, split "frozen runtime pool" from compiler/linker mutation. |
 | Must audit | Live runtime handles embedded as constants | `HandleConstant` in `xRTTypeTemplate.resolveFormalType`, used as annotation parameter values | A live `ObjectHandle` is owner-specific and cannot become a pool-shared serialized logical constant. | This branch adds a `HandleConstant.adoptedBy(...)` guard for cross-pool movement. Diagnostics for annotated types carrying live handles remain useful. |
 | Should fix soon | Unsynchronized per-pool lazy implicit caches | `f_implicits`, `m_clz*`, `m_type*`, `m_val*`, `m_sig*`, `m_setJitPrimitives` | These are owner-local, so they are not cross-container globals. They are still plain lazy writes and can duplicate work or race under concurrent use of one pool. | Use owner-local `Lazy` or `ConcurrentMap.computeIfAbsent` for hot/shared runtime caches, or freeze/warm them before parallel runtime execution. |
-| Should fix soon | Ambient `ThreadLocal` implementation | `s_tloPool`, `getCurrentPool`, `setCurrentPool`, `withPool` | Raw `ThreadLocal` with mutable holder arrays relies on perfect manual cleanup and does not make ownership visible. | Replace with explicit parameters. Where plumbing is too broad, migrate to a small `ScopedValue<RuntimeOwner>` bridge that points to the real owner. |
+| Should fix soon | Ambient `ThreadLocal` implementation | `s_tloPool`, `getCurrentPool`, `withPool` | Raw `ThreadLocal` with mutable holder arrays relies on perfect manual cleanup and does not make ownership visible. This branch removed the raw setter; the remaining bridge is lexical. | Replace with explicit parameters. Where plumbing is too broad, migrate to a small `ScopedValue<RuntimeOwner>` bridge that points to the real owner. |
 | Should fix | Static immutable implicit metadata maps | `s_implicits`, `s_implicitsByPath` | Class-init publication is safe, but the maps are mutable `HashMap`s held in final static fields. No code mutates them today. | Wrap with `Map.copyOf(...)` after construction. This is cleanup, not a runtime PR blocker. |
 | Compiler backlog | Destructive pool optimization and module replacement | `optimize()`, `replaceModule(...)`, disassembly/assembly paths | These mutate pool contents, positions, and caches. They are intended for serialization/compiler flows, not concurrent runtime execution. | Keep out of this PR. Incremental compiler work should isolate mutable compiler pools from frozen runtime pools. |
 
@@ -48,7 +48,7 @@ Current `ConstantPool` fields fall into these groups.
 | --- | --- | --- |
 | `s_implicits` | Should fix | Parsed once from `implicit.x`. Class initialization safely publishes the reference, but the `HashMap` is mutable. Use `Map.copyOf(...)` as cleanup. |
 | `s_implicitsByPath` | Should fix | Same as `s_implicits`. |
-| `s_tloPool` | Must audit, runtime-relevant | Ambient owner lookup. The stored value is per thread, but the owner dependency is hidden. Replace with explicit owner parameters where possible; otherwise migrate to `ScopedValue` as a bridge. |
+| `s_tloPool` | Must audit, runtime-relevant | Ambient owner lookup. The stored value is per thread, but the owner dependency is hidden. This branch removed raw `setCurrentPool(...)` mutation and leaves only lexical `withPool(...)` scopes. Replace deeper ownerless lookups with explicit parameters where possible; otherwise migrate to `ScopedValue` as a bridge. |
 
 ### Core Pool Storage
 
@@ -116,26 +116,25 @@ template `INSTANCE` because the owner is already the pool.
 Audit command:
 
 ```bash
-rg -n "ConstantPool\\.getCurrentPool|ConstantPool\\.setCurrentPool|ConstantPool\\.withPool|getCurrentPool\\(\\)|setCurrentPool\\(|withPool\\(" \
+rg -n "ConstantPool\\.getCurrentPool|ConstantPool\\.withPool|getCurrentPool\\(\\)|withPool\\(" \
   javatools/src/main/java
 ```
 
-Current sites:
+Current sites after the runtime-boundary cleanup:
 
 | Site | Category | Recommended direction |
 | --- | --- | --- |
 | `org/xvm/tool/Compiler.java:315` | Compiler/tool | Compiler rewrite backlog. Explicit pool parameter is better; not this runtime PR. |
 | `org/xvm/tool/Runner.java:227` | Runtime launch | Acceptable scoped owner setup at launch boundary. |
-| `org/xvm/api/InterpreterConnector.java:87` | Runtime API | Prefer explicit `ConstantPool`/`Container` from connector state instead of ambient lookup. |
+| `org/xvm/api/InterpreterConnector.java:87` | Runtime API | Fixed in this branch: uses `m_containerMain.getConstantPool()` and asserts any existing ambient pool matches that explicit owner. |
 | `org/xvm/compiler/Compiler.java:155,192,236,280` | Compiler | Compiler rewrite backlog. |
-| `org/xvm/runtime/MainContainer.java:193` | Runtime | Acceptable boundary scope today, but `findModuleMethod` and nested helpers should eventually receive owner explicitly. |
-| `org/xvm/runtime/Container.java:117` | Runtime | `ensureServiceContext()` already has `this`; helper paths should use `getConstantPool()` explicitly where possible. |
-| `org/xvm/runtime/NativeContainer.java:104` | Runtime startup | Acceptable startup scope, but prefer scoped `try` form consistently. |
-| `org/xvm/runtime/NativeContainer.java:152,222` | Runtime startup | `setCurrentPool`/manual clear is riskier than `withPool`. Replace with `try (var _ = ConstantPool.withPool(pool))` or future `ScopedValue`. |
-| `org/xvm/runtime/ServiceContext.java:309` | Runtime | Service has `f_pool`; keep explicit where possible and scope only legacy callees. |
-| `org/xvm/runtime/template/_native/fs/xOSStorage.java:337` | Runtime async watch thread | Runtime-relevant. The watch thread extracts the container from the storage handle and scopes that pool. Good guard would assert the storage handle owner matches the scoped container. |
-| `org/xvm/runtime/template/_native/web/xRTServer.java:653` | Runtime request thread | Runtime-relevant. Request handling has a service context and should use its explicit pool. A scoped bridge is acceptable for legacy callees. |
-| `org/xvm/runtime/template/_native/mgmt/xContainerControl.java:111` | Runtime management invoke | Runtime-relevant. It already has a container/pool; helper APIs should take explicit owners. |
+| `org/xvm/runtime/MainContainer.java:194` | Runtime | Fixed in this branch as a boundary scope with `ConstantPool.assertCurrentPool(...)`. Deeper helper APIs can still be made explicit later. |
+| `org/xvm/runtime/Container.java:118` | Runtime | Fixed in this branch as a boundary scope using `getConstantPool()` plus `ConstantPool.assertCurrentPool(...)`. |
+| `org/xvm/runtime/NativeContainer.java:104,153` | Runtime startup | Fixed in this branch: startup now uses lexical `withPool(...)` scopes and no raw setter. |
+| `org/xvm/runtime/ServiceContext.java:309` | Runtime | Fixed in this branch as a boundary scope asserting `f_pool`. |
+| `org/xvm/runtime/template/_native/fs/xOSStorage.java:338` | Runtime async watch thread | Fixed in this branch: each event derives the pool from the watched storage handle's container and asserts that scoped owner. |
+| `org/xvm/runtime/template/_native/web/xRTServer.java:653` | Runtime request thread | Fixed in this branch as a request boundary scope asserting the service context pool. |
+| `org/xvm/runtime/template/_native/mgmt/xContainerControl.java:111` | Runtime management invoke | Fixed in this branch as a management boundary scope asserting the target container pool. |
 | `org/xvm/asm/FileStructure.java:181,1004` | Assembly/linker | Not runtime-container execution, but important for incremental compiler. |
 | `org/xvm/asm/MethodStructure.java:666` | Assembly/linker | Compiler/linker backlog. |
 | `org/xvm/asm/constants/TypeConstant.java:1901,2075,6272,6352` | Type logic | Runtime-relevant type analysis. Prefer adding explicit pool parameters to the covariance/contravariance helpers that currently call `getCurrentPool()`. |
@@ -147,6 +146,32 @@ Current sites:
 | `org/xvm/asm/constants/ByteConstant.java:295,297,370,372,374,376` | Constant operations | Same as `IntConstant`. |
 | `org/xvm/javajit/NativeTypeSystem.java:108` | JIT | Documented in `jit-implications.md`; not this runtime PR. |
 | `org/xvm/javajit/JitConnector.java:64` | JIT | Documented in `jit-implications.md`; not this runtime PR. |
+
+### Runtime-Boundary Fix Completed In This Branch
+
+The runtime cleanup wave is intentionally narrow:
+
+- `InterpreterConnector.invoke0(...)` no longer asks
+  `ConstantPool.getCurrentPool()` for its owner. It uses
+  `m_containerMain.getConstantPool()`, which is the same pool used to start and
+  invoke the container.
+- `NativeContainer.loadNativeTemplates()` no longer pairs
+  `setCurrentPool(pool)` with a later `setCurrentPool(null)`. It uses
+  `try (var _ = ConstantPool.withPool(pool))`, so the previous thread value is
+  restored even when startup fails.
+- `ConstantPool.setCurrentPool(...)` was removed because no source caller
+  remained. Keeping only `withPool(...)` prevents open-ended ambient owner
+  mutation from being reintroduced accidentally.
+- `MainContainer.invoke0(...)`, `Container.ensureServiceContext()`,
+  `ServiceContext.drainWork()`, `xOSStorage.WatchDaemon`,
+  `xContainerControl.invokeInvoke(...)`, and `xRTServer.RequestHandler` now
+  assert that the scoped pool equals the explicit owner pool they already have.
+
+This does not change caching behavior. The same owner `ConstantPool` is used as
+before; the difference is that callers no longer depend on an arbitrary
+thread-local value, and scoped bridges fail under assertions if the owner is
+wrong. The focused verification lives in
+`javatools/src/test/java/org/xvm/asm/ConstantPoolDiagnosticsTest.java`.
 
 The runtime must-fix direction is not "delete all ambient lookup in this PR".
 The direction is:
@@ -194,7 +219,7 @@ owner:
 ```java
 ConstantPool pool = container.getConstantPool();
 try (var _ = ConstantPool.withPool(pool)) {
-    assert ConstantPool.getCurrentPool() == pool;
+    ConstantPool.assertCurrentPool(pool, "Owner.boundary");
     ...
 }
 ```

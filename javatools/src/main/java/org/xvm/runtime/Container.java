@@ -114,7 +114,9 @@ public abstract class Container
     public ServiceContext ensureServiceContext() {
         ServiceContext ctx = m_contextMain;
         if (ctx == null) {
-            try (var ignore = ConstantPool.withPool(getConstantPool())) {
+            ConstantPool pool = getConstantPool();
+            try (var _ = ConstantPool.withPool(pool)) {
+                ConstantPool.assertCurrentPool(pool, "Container.ensureServiceContext");
                 xService templateService = xService.getInstance(this);
                 m_contextMain = ctx = createServiceContext(getModule().getName());
                 templateService.createServiceHandle(ctx,

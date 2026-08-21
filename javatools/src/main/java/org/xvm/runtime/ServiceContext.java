@@ -306,7 +306,8 @@ public class ServiceContext {
         tloCtx[0] = this;
 
         Frame frame = null;
-        try (var ignored = ConstantPool.withPool(f_pool)) {
+        try (var _ = ConstantPool.withPool(f_pool)) {
+            ConstantPool.assertCurrentPool(f_pool, "ServiceContext.drainWork");
             while (true) {
                 frame = nextFiber();
                 if (frame == null) {

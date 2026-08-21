@@ -20,6 +20,51 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class ConstantPoolDiagnosticsTest {
     @Test
+    public void currentPoolAssertionsAcceptScopedPool() {
+        assertTrue(assertionsEnabled(), "ConstantPool scope diagnostics require -ea");
+
+        ConstantPool pool = new FileStructure("test").getConstantPool();
+
+        try (var _ = ConstantPool.withPool(pool)) {
+            ConstantPool.assertCurrentPool(pool, "unit-test");
+            ConstantPool.assertCurrentPoolIfPresent(pool, "unit-test");
+        }
+    }
+
+    @Test
+    public void currentPoolIfPresentAllowsExplicitOwnerWithoutAmbientScope() {
+        assertTrue(assertionsEnabled(), "ConstantPool scope diagnostics require -ea");
+
+        ConstantPool pool = new FileStructure("test").getConstantPool();
+
+        try (var _ = ConstantPool.withPool(null)) {
+            ConstantPool.assertCurrentPoolIfPresent(pool, "unit-test");
+
+            AssertionError error = assertThrows(AssertionError.class,
+                    () -> ConstantPool.assertCurrentPool(pool, "unit-test"));
+            assertTrue(error.getMessage().contains("unit-test"));
+        }
+    }
+
+    @Test
+    public void currentPoolAssertionsRejectWrongScopedPool() {
+        assertTrue(assertionsEnabled(), "ConstantPool scope diagnostics require -ea");
+
+        ConstantPool poolExpected = new FileStructure("expected").getConstantPool();
+        ConstantPool poolActual   = new FileStructure("actual").getConstantPool();
+
+        try (var _ = ConstantPool.withPool(poolActual)) {
+            AssertionError error = assertThrows(AssertionError.class,
+                    () -> ConstantPool.assertCurrentPool(poolExpected, "unit-test"));
+            assertTrue(error.getMessage().contains("unit-test"));
+
+            error = assertThrows(AssertionError.class,
+                    () -> ConstantPool.assertCurrentPoolIfPresent(poolExpected, "unit-test"));
+            assertTrue(error.getMessage().contains("unit-test"));
+        }
+    }
+
+    @Test
     public void publicationMarkerIsDisabledByDefault() {
         ConstantPool pool = new FileStructure("test").getConstantPool();
 
@@ -85,6 +130,12 @@ public class ConstantPoolDiagnosticsTest {
         Field field = ConstantPool.class.getDeclaredField("m_mapConstants");
         field.setAccessible(true);
         return (Map<Constant.Format, Map<Constant, Constant>>) field.get(pool);
+    }
+
+    private static boolean assertionsEnabled() {
+        boolean fEnabled = false;
+        assert fEnabled = true;
+        return fEnabled;
     }
 
     @FunctionalInterface

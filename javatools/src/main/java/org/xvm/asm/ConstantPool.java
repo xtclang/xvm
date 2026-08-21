@@ -3732,12 +3732,31 @@ public class ConstantPool
     }
 
     /**
-     * Associate the specified ConstantPool with the current thread.
+     * Assert that the ambient current pool matches the explicit owner that a caller is already using.
+     * This is a diagnostic guard for transitional runtime boundaries that still expose
+     * {@link #withPool(ConstantPool)} to older helpers.
      *
-     * @param pool  a ContextPool
+     * @param poolExpected  the explicit owner pool
+     * @param sOwner        a short description of the caller asserting the ownership boundary
      */
-    public static void setCurrentPool(ConstantPool pool) {
-        s_tloPool.get()[0] = pool;
+    public static void assertCurrentPool(ConstantPool poolExpected, String sOwner) {
+        assert poolExpected != null : sOwner + " must provide an explicit ConstantPool owner";
+        assert getCurrentPool() == poolExpected :
+                currentPoolMismatch(poolExpected, getCurrentPool(), sOwner);
+    }
+
+    /**
+     * Assert that any already-installed ambient pool matches the explicit owner. This is used by
+     * code that no longer depends on the ambient pool, but may still be called inside an older
+     * scoped bridge.
+     *
+     * @param poolExpected  the explicit owner pool
+     * @param sOwner        a short description of the caller asserting the ownership boundary
+     */
+    public static void assertCurrentPoolIfPresent(ConstantPool poolExpected, String sOwner) {
+        assert poolExpected != null : sOwner + " must provide an explicit ConstantPool owner";
+        assert isCurrentPoolIfPresent(poolExpected) :
+                currentPoolMismatch(poolExpected, getCurrentPool(), sOwner);
     }
 
     /**
@@ -3753,6 +3772,21 @@ public class ConstantPool
         ConstantPool pollPrior = poolHolder[0];
         poolHolder[0] = pool;
         return () -> poolHolder[0] = pollPrior;
+    }
+
+    private static boolean isCurrentPoolIfPresent(ConstantPool poolExpected) {
+        ConstantPool poolCurrent = getCurrentPool();
+        return poolCurrent == null || poolCurrent == poolExpected;
+    }
+
+    private static String currentPoolMismatch(ConstantPool poolExpected, ConstantPool poolCurrent,
+                                              String sOwner) {
+        return sOwner + " expected current ConstantPool " + describePool(poolExpected) +
+                ", but found " + describePool(poolCurrent);
+    }
+
+    private static String describePool(ConstantPool pool) {
+        return pool == null ? "null" : pool.getDescription();
     }
 
     /**

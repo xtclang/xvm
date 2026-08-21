@@ -334,7 +334,9 @@ public class xOSStorage
                 }
 
                 Container container = context.hStorage.f_context.f_container;
-                try (var ignore = ConstantPool.withPool(container.getConstantPool())) {
+                ConstantPool pool = container.getConstantPool();
+                try (var _ = ConstantPool.withPool(pool)) {
+                    ConstantPool.assertCurrentPool(pool, "xOSStorage.WatchDaemon");
                     Path pathDir      = context.pathDir;
                     Path pathRelative = (Path) event.context();
                     Path pathAbsolute = pathDir.resolve(pathRelative);
