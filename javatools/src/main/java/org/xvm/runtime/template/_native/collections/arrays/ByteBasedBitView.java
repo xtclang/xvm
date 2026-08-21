@@ -74,7 +74,7 @@ public abstract class ByteBasedBitView
     protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
         ViewHandle hView = (ViewHandle) hTarget;
 
-        return frame.assignValue(iReturn, xBit.makeHandle(
+        return frame.assignValue(iReturn, xBit.makeHandle(frame,
                 BitBasedDelegate.getBit(hView.f_hSource.m_abValue, lIndex)));
     }
 

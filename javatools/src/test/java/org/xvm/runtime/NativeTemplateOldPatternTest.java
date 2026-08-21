@@ -10,6 +10,7 @@ import org.xvm.util.Lazy;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -212,6 +213,35 @@ public class NativeTemplateOldPatternTest {
         assertTrue(OwnerScopedBooleans.isFalse(booleansA.makeHandle(false)));
     }
 
+    @Test
+    public void staticBitHandlesCanReturnForeignOwnerHandle() {
+        Owner ownerA = new Owner("container-A");
+        Owner ownerB = new Owner("container-B");
+
+        OldBitGlobals.init(ownerA);
+        OwnerBitHandle zeroA = OldBitGlobals.makeHandle(false);
+        assertDoesNotThrow(() -> ownerA.bitTemplate.use(zeroA));
+
+        OldBitGlobals.init(ownerB);
+
+        OwnerBitHandle zeroFromGlobal = OldBitGlobals.makeHandle(false);
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> ownerA.bitTemplate.use(zeroFromGlobal));
+        assertEquals("bit handle owner container-B used with template owner container-A",
+                e.getMessage());
+        assertTrue(OldBitGlobals.checkAssignToBitDelegate(zeroFromGlobal));
+
+        OwnerScopedBits bitsA = new OwnerScopedBits(ownerA);
+        OwnerScopedBits bitsB = new OwnerScopedBits(ownerB);
+
+        assertSame(bitsA.zeroHandle(), bitsA.makeHandle(false));
+        assertSame(bitsA.oneHandle(), bitsA.makeHandle(true));
+        assertNotSame(bitsA.zeroHandle(), bitsB.zeroHandle());
+        assertDoesNotThrow(() -> ownerA.bitTemplate.use(bitsA.makeHandle(false)));
+        assertDoesNotThrow(() -> ownerB.bitTemplate.use(bitsB.makeHandle(true)));
+        assertFalse(ownerA.bitDelegate.checkAssign(bitsB.makeHandle(false)));
+    }
+
 
     /**
      * A minimal stand-in for constructor-assigned native template INSTANCE
@@ -315,6 +345,8 @@ public class NativeTemplateOldPatternTest {
             exceptionInfo      = new OwnerExceptionInfo(id);
             stringTemplate     = new OwnerStringTemplate(id);
             booleanTemplate    = new OwnerBooleanTemplate(id);
+            bitTemplate        = new OwnerBitTemplate(id);
+            bitDelegate        = new OwnerBitDelegate(id);
             refTemplate        = new OwnerRefTemplate(id);
             refSignature       = new OwnerSignature(id);
             varSignature       = new OwnerSignature(id);
@@ -335,6 +367,8 @@ public class NativeTemplateOldPatternTest {
         private final OwnerExceptionInfo      exceptionInfo;
         private final OwnerStringTemplate     stringTemplate;
         private final OwnerBooleanTemplate    booleanTemplate;
+        private final OwnerBitTemplate        bitTemplate;
+        private final OwnerBitDelegate        bitDelegate;
         private final OwnerRefTemplate        refTemplate;
         private final OwnerSignature          refSignature;
         private final OwnerSignature          varSignature;
@@ -576,6 +610,105 @@ public class NativeTemplateOldPatternTest {
 
     private static final class OwnerEnumHandle {
         OwnerEnumHandle(String ownerId, boolean value) {
+            this.ownerId = ownerId;
+            this.value   = value;
+        }
+
+        private final String  ownerId;
+        private final boolean value;
+    }
+
+    /**
+     * A minimal stand-in for xBit's old public static ZERO/ONE handles.
+     */
+    private static final class OldBitGlobals {
+        static OwnerBitHandle ZERO;
+        static OwnerBitHandle ONE;
+
+        static void init(Owner owner) {
+            ZERO = owner.bitTemplate.zeroHandle();
+            ONE  = owner.bitTemplate.oneHandle();
+        }
+
+        static OwnerBitHandle makeHandle(boolean value) {
+            return value ? ONE : ZERO;
+        }
+
+        static boolean checkAssignToBitDelegate(OwnerBitHandle handle) {
+            return ZERO.ownerId.equals(handle.ownerId);
+        }
+    }
+
+    /**
+     * A minimal stand-in for the owner-scoped replacement: Bit handles are
+     * still cached, but the selected cache is the caller's owner.
+     */
+    private static final class OwnerScopedBits {
+        OwnerScopedBits(Owner owner) {
+            template = Lazy.of(() -> owner.bitTemplate);
+        }
+
+        OwnerBitHandle makeHandle(boolean value) {
+            return value ? oneHandle() : zeroHandle();
+        }
+
+        OwnerBitHandle zeroHandle() {
+            return template.get().zeroHandle();
+        }
+
+        OwnerBitHandle oneHandle() {
+            return template.get().oneHandle();
+        }
+
+        private final Lazy<OwnerBitTemplate> template;
+    }
+
+    private static final class OwnerBitTemplate {
+        OwnerBitTemplate(String ownerId) {
+            this.ownerId = ownerId;
+            this.hZero   = new OwnerBitHandle(ownerId, false);
+            this.hOne    = new OwnerBitHandle(ownerId, true);
+        }
+
+        OwnerBitHandle makeHandle(boolean value) {
+            return value ? hOne : hZero;
+        }
+
+        OwnerBitHandle zeroHandle() {
+            return makeHandle(false);
+        }
+
+        OwnerBitHandle oneHandle() {
+            return makeHandle(true);
+        }
+
+        void use(OwnerBitHandle handle) {
+            if (!ownerId.equals(handle.ownerId)) {
+                throw new IllegalStateException(
+                        "bit handle owner " + handle.ownerId +
+                        " used with template owner " + ownerId);
+            }
+        }
+
+        private final String         ownerId;
+        private final OwnerBitHandle hZero;
+        private final OwnerBitHandle hOne;
+    }
+
+    private static final class OwnerBitDelegate {
+        OwnerBitDelegate(String ownerId) {
+            this.ownerId = ownerId;
+        }
+
+        boolean checkAssign(OwnerBitHandle handle) {
+            return ownerId.equals(handle.ownerId);
+        }
+
+        private final String ownerId;
+    }
+
+    private static final class OwnerBitHandle {
+        OwnerBitHandle(String ownerId, boolean value) {
             this.ownerId = ownerId;
             this.value   = value;
         }

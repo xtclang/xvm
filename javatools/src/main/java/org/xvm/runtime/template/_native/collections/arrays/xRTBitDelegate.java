@@ -43,7 +43,7 @@ public class xRTBitDelegate
 
     @Override
     protected ObjectHandle makeBitHandle(boolean f) {
-        return xBit.makeHandle(f);
+        return xBit.makeHandle(f_container, f);
     }
 
     @Override
