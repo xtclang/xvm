@@ -291,7 +291,7 @@ can be ignored.
 | 3 | Ambient `ConstantPool` lookup cleanup | Done in this branch wave for runtime boundaries. `InterpreterConnector.invoke0(...)` now uses the main container's explicit pool, native startup no longer uses raw current-pool mutation, and the remaining runtime scoped bridges assert that the scoped pool matches the explicit owner. | `ConstantPoolDiagnosticsTest` covers exact scoped-owner assertions, explicit-owner calls with no ambient pool, and wrong-scope failures. Source scan now shows no runtime/API callers of raw `setCurrentPool(...)`; the method itself was removed. |
 | 4 | Runtime-executed `Op` caches | Done in this branch wave for owner-bearing frame-constant caches. `JumpCond`/`JumpNCond` no longer cache `ConditionalConstant` on the op, and `OpTest`/`OpCondJump` no longer write frame type constants back to `m_typeCommon` during execution. | `OpRuntimeCacheTest` verifies the condition fields are gone and guards against the old common-type write-back pattern. Same-JVM sequence and parallel stress exercise these op paths under runtime ownership validation. |
 | 5 | Manual lazy null caches in runtime/asm | Done for the first-PR must-fix slice. `xRegEx.RegExHandle` uses a final `Lazy<Pattern>`, `FSNodeConstant` no longer carries a source-pool path literal across adoption, and `_native:fs.OSFileNode.created` no longer caches a caller-owned `Time` handle inside the native file-system graph. Remaining Java hits are still audited below as builder/linkage, frame/debug lifecycle, synchronized association helpers, or must-audit op-address/class-layout state. | `RegExHandleTest` proves the regex cache remains per-handle and cached after first use. `ConstantAdoptionTest.adoptedFSNodeConstantDropsSourcePoolPathCache()` proves the adopted path cache is recomputed in the destination pool and still cached after that. `manualTests:runDirectSequenceStress` with `TestFiles` proves the native file-node owner leak is gone. |
-| 6 | Thread-local and scoped ambient state | This is broader and should come after explicit-owner cleanup identifies the real remaining bridge points. The target is lexical scoped ownership, not another hidden global cache. | Add cleanup/scope tests for each bridge and assertions that no owner-bearing runtime value is stored in the ambient scope object. |
+| 6 | Thread-local and scoped ambient state | Done for the first-PR must-fix slice. Runtime boundary `ConstantPool` scopes were already made lexical/asserted in wave 3. This wave removes one remaining owner-bearing runtime thread-local: `xRTServer.SimpleKeyManager` no longer keeps a selected `KeyStoreHandle` on the HTTPS worker thread. Broader compiler/type recursion ambient state remains audited below. | `xRTServerTest` proves the key manager has no thread-local field and resolves TLS aliases through explicit route state. Existing `ConstantPoolDiagnosticsTest` covers scoped pool assertions. |
 | 7 | Weak/identity owner registries | These usually require lifecycle reasoning and should be handled after the core wrong-owner paths are closed. Some may be diagnostic-only, but each one needs an owner/lifetime contract. | Add concurrency or lifecycle tests for every registry that is used outside a single owner thread; document allowlisted diagnostic-only maps. |
 
 The compiler/JIT bucket should remain separate unless an interpreter runtime
@@ -460,6 +460,19 @@ Required closure:
   real owner objects.
 - Add scope assertions at runtime boundaries.
 - Do not store templates, handles, or metadata caches inside the scoped value.
+
+Completed in this branch:
+
+- `xRTServer.SimpleKeyManager` no longer stores the selected
+  `KeyStoreHandle` in a per-thread slot after `chooseEngineServerAlias(...)`.
+  The JDK TLS callback API later asks for certificate and private-key material
+  by alias, so each route now has a stable synthetic TLS alias that encodes the
+  route identity. `getCertificateChain(...)` and `getPrivateKey(...)` resolve
+  that alias through the server's explicit `Router` state.
+- This preserves the old per-route keystore behavior without retaining an
+  owner-bearing handle in a pooled HTTPS worker thread. Removed or missing
+  routes return the normal empty/null key-manager answers instead of observing
+  whatever a previous handshake left on the same Java thread.
 
 ### Weak/Identity Owner Registries
 
