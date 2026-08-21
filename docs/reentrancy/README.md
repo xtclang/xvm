@@ -28,6 +28,9 @@ Start here:
 - [must-audit-backlog.md](must-audit-backlog.md): repository-wide state that is
   not yet proven broken but depends on unproven owner, threading, or reset
   assumptions.
+- [runtime-ownership-hardening-ledger.md](runtime-ownership-hardening-ledger.md):
+  the consolidated ledger of the concrete ownership failures, branch fixes,
+  remaining assertions, and recommended one-commit fix order.
 - [ownership-diagnostics.md](ownership-diagnostics.md): how to dump
   container-owned runtime state during stress runs and detect owner mismatches
   or cross-container sharing.
