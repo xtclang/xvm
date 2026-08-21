@@ -5,6 +5,8 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 
+import java.util.Arrays;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
@@ -42,13 +44,8 @@ import org.xvm.util.Handy;
  */
 public class xChar
         extends xConst {
-    public xChar(Container container, ClassStructure structure, boolean fInstance) {
+    public xChar(Container container, ClassStructure structure) {
         super(container, structure);
-
-        // Temporary legacy role flag: true only for the canonical native Char template.
-        // It owns the small-value cache below; replacing this boolean with an explicit
-        // canonical-template cache is a follow-up cleanup.
-        f_fInstance = fInstance;
     }
 
     @Override
@@ -59,12 +56,11 @@ public class xChar
 
         invalidateTypeInfo();
 
-        if (f_fInstance) {
-            ClassComposition clz = getCanonicalClass();
-            for (int i = 0; i < cache.length; ++i) {
-                cache[i] = new JavaLong(clz, i);
-            }
-        }
+        // No fInstance branch is needed here. Char has no derived native Java template; the
+        // runtime-registered xChar is the canonical owner template, and this cache is built from
+        // this template's canonical class without a recursive NativeTemplates lookup.
+        ClassComposition clz = getCanonicalClass();
+        Arrays.setAll(cache, i -> new JavaLong(clz, i));
     }
 
     @Override
@@ -211,11 +207,7 @@ public class xChar
         return makeHandle(owner.getComposition().getContainer(), chValue);
     }
 
-    /**
-     * True only for the canonical native template; avoids a recursive NativeTemplates lookup while
-     * prebuilding this owner template's cached ASCII handles.
-     */
-    private final boolean f_fInstance;
+    private static final int CACHE_SIZE = 128;
 
-    private final JavaLong[] cache = new JavaLong[128];
+    private final JavaLong[] cache = new JavaLong[CACHE_SIZE];
 }

@@ -64,18 +64,23 @@ import org.xvm.util.Lazy;
 public class xRef
         extends ClassTemplate
         implements VarSupport {
-    public xRef(Container container, ClassStructure structure, boolean fInstance) {
+    public xRef(Container container, ClassStructure structure) {
+        this(container, structure, NativeRole.CANONICAL);
+    }
+
+    protected xRef(Container container, ClassStructure structure, NativeRole role) {
         super(container, structure);
 
-        f_fInstance = fInstance;
+        boolean canonical = role == NativeRole.CANONICAL;
 
-        // fInstance is true only for the canonical native Ref template loaded by NativeContainer.
-        // Ref-derived templates such as @Inject inherit the base Ref inception/signature metadata;
-        // publishing that metadata from each constructor was the old process-global race.
-        f_constInception = fInstance
+        // No fInstance boolean is needed here. The public constructor is the canonical owner Ref;
+        // Ref-derived templates pass NativeRole.DERIVED and delegate get-signature lookup to that
+        // owner's canonical Ref, matching the old semantics without constructor-published static
+        // metadata or an unlabeled role flag.
+        f_constInception = canonical
                 ? new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant())
                 : null;
-        f_sigGet = fInstance
+        f_sigGet = canonical
                 ? Lazy.of(this::resolveGetSignature)
                 : Lazy.of(() -> xRef.getInstance(f_container).getGetSignature());
     }
@@ -95,9 +100,10 @@ public class xRef
 
     @Override
     public void registerNativeTemplates() {
-        // Only the canonical Ref template owns the native Identity child. The legacy
-        // implementation used "this == INSTANCE"; keep the constructor flag local instead.
-        if (f_fInstance) {
+        // Only the canonical Ref template owns the native Identity child. Using the non-null
+        // inception constant keeps that role tied to this final owner-local metadata instead of
+        // reintroducing the old "this == INSTANCE" process-global check.
+        if (f_constInception != null) {
             // register the native "Identity" template
             ClassStructure structId = (ClassStructure) f_struct.getChild("Identity");
 
@@ -1213,9 +1219,20 @@ public class xRef
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private final boolean f_fInstance;
-
     private final ClassConstant f_constInception;
 
     private final Lazy<SignatureConstant> f_sigGet;
+
+
+    // ----- helper types --------------------------------------------------------------------------
+
+    /**
+     * Explicit replacement for the old fInstance boolean. CANONICAL means this object owns the
+     * native base metadata; DERIVED means it must delegate that metadata to the owner-local base
+     * template while preserving the derived template's behavior.
+     */
+    protected enum NativeRole {
+        CANONICAL,
+        DERIVED
+    }
 }

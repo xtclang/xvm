@@ -42,7 +42,7 @@ import org.xvm.util.Lazy;
 public class xFuture
         extends xVar {
     public xFuture(Container container, ClassStructure structure) {
-        super(container, structure, false);
+        super(container, structure, NativeRole.DERIVED);
     }
 
     @Override

@@ -1,6 +1,8 @@
 package org.xvm.runtime.template.numbers;
 
 
+import java.util.Arrays;
+
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.Constant;
@@ -24,25 +26,19 @@ import org.xvm.runtime.template.text.xChar;
  */
 public class xNibble
         extends xUnsignedConstrainedInt {
-    public xNibble(Container container, ClassStructure structure, boolean fInstance) {
+    public xNibble(Container container, ClassStructure structure) {
         super(container, structure, 0, 15, 4, false);
-
-        // Temporary legacy role flag: true only for the canonical native Nibble template.
-        // It owns the small-value cache below; replacing this boolean with an explicit
-        // canonical-template cache is a follow-up cleanup.
-        f_fInstance = fInstance;
     }
 
     @Override
     public void initNative() {
         super.initNative();
 
-        if (f_fInstance) {
-            ClassComposition clz = getCanonicalClass();
-            for (int i = 0; i < cache.length; ++i) {
-                cache[i] = new JavaLong(clz, i);
-            }
-        }
+        // No fInstance branch is needed here. Nibble has no derived native Java template; the
+        // canonical owner still eagerly fills the same final small-value array, preserving cached
+        // handle identity and avoiding a Lazy/volatile read on this hot path.
+        ClassComposition clz = getCanonicalClass();
+        Arrays.setAll(cache, i -> new JavaLong(clz, i));
     }
 
     @Override
@@ -96,11 +92,7 @@ public class xNibble
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
     }
 
-    /**
-     * True only for the canonical native template; avoids a recursive NativeTemplates lookup while
-     * prebuilding this owner template's cached nibble handles.
-     */
-    private final boolean f_fInstance;
+    private static final int CACHE_SIZE = 16;
 
-    private final JavaLong[] cache = new JavaLong[16];
+    private final JavaLong[] cache = new JavaLong[CACHE_SIZE];
 }

@@ -34,7 +34,7 @@ import org.xvm.runtime.template.reflect.xRef;
 public class xInject
         extends xRef {
     public xInject(Container container, ClassStructure structure) {
-        super(container, structure, false);
+        super(container, structure, NativeRole.DERIVED);
     }
 
     @Override

@@ -422,12 +422,11 @@ the process-global exception-class cache.
 models the old failure in which a stock exception factory creates a handle with
 a class composition from another owner.
 
-The dead `boolean fInstance` compatibility signatures have been removed from
-the converted templates. Five constructors still accept the flag because it is
-currently a local canonical-template role marker, not because they publish
-mutable singleton state. See
-[remaining-finstance-constructors.md](remaining-finstance-constructors.md) for
-the exact list and cleanup plan.
+All `boolean fInstance` native-template constructors have been removed from the
+converted templates. The last five semantic uses are covered in
+[remaining-finstance-constructors.md](remaining-finstance-constructors.md):
+`xRef`/`xVar` now use an explicit role, and `xChar`/`xNibble`/`xUInt8` keep the
+same eager private final owner-local small-value arrays without a role branch.
 
 The native enum value wave closes the remaining scanned static runtime metadata
 category. On master, `xBoolean.TRUE/FALSE`, `xNullable.NULL`, and
@@ -523,11 +522,12 @@ same semantics by storing the canonical Ref/Var inception constants and
 derived templates lazily delegate back to the owner base template. Existing
 dynamic reference creation still caches through `ensureParameterizedClass(...)`;
 only the template owner source changed from `xRef.INSTANCE`/`xVar.INSTANCE` to
-`NativeTemplates.ref()`/`NativeTemplates.var()`. The `fInstance` constructor flag
-is retained as local construction state for the canonical `Ref` template to
-register its native `Identity` child without comparing against a mutable global,
-and for canonical Ref/Var metadata construction without letting derived
-templates publish replacement metadata.
+`NativeTemplates.ref()`/`NativeTemplates.var()`. The old `fInstance`
+constructor flag is gone. `xRef`/`xVar` now use an explicit `NativeRole` for
+the one remaining role distinction: the canonical owner-local base template
+owns the rebased metadata, and derived templates delegate back to that owner.
+`xRef` registers its native `Identity` child only from the canonical role,
+without comparing against a mutable global.
 
 One intentional exception is `xService`'s atomic property-name set. On `master`
 it was a mutable `static Set<String>` even though it contains only string
