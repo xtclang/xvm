@@ -37,7 +37,7 @@ independent bug.
 | Must fix | Split mutable lifecycle state | Old `SingletonConstant` used separate handle/owner/waiter fields | Readers can observe impossible lifecycle snapshots across fibers | One immutable state snapshot in `AtomicReference`; use CAS for transitions |
 | Must fix | Natural enum construction structs escaping public paths | PR #534 enum struct mismatch | A caller can observe a construction struct where an immutable enum value is required | Public enum helpers that return initialized singletons or deferred results |
 | Must fix | Unsynchronized lazy null caches in shared runtime state | 98 field-shaped checks; 47 strong same-field lazy-init matches | Plain field read/write has no happens-before edge and can publish partial state | Final `Lazy` for immutable values; `ConcurrentMap.computeIfAbsent` for keyed caches; `AtomicReference` or a lock for lifecycle/resettable state |
-| Must fix | Non-final static runtime globals | 4 non-final static fields across runtime/asm/compiler; 8 across all Java sources | Plain static mutation is shared process state with no owner, no reset story, and no visibility guarantee | Delete, make `static final` immutable, move to owner scope, or guard resettable state with a lock/atomic holder |
+| Should fix soon | Non-final static compiler/JIT globals | 4 non-final static fields across runtime/asm/compiler; 8 across all Java sources | The remaining hits are not owner-bearing runtime caches, but plain static mutation is still shared process state with no reset story and weak parallel/incremental compiler semantics | Delete, make `static final` immutable, move to the code/container owner, or guard resettable process state with a lock/atomic holder |
 | Should fix soon | `volatile` as partial synchronization | 21 `volatile` hits in runtime/asm/compiler | `volatile` orders one variable; it does not make a group of fields or mutable map contents atomic | Keep only for independent scalar state; otherwise use immutable state snapshots, `ConcurrentMap`, or synchronized critical sections |
 | Should fix soon | Static mutable collection fields | 11 `static final` collection/resource-like fields; 0 non-final static collection/resource-like fields | `final` protects the reference, not the collection contents; global mutable maps need an update policy | `Map.of`/`Set.of`/`List.of` or `Collections.unmodifiable*` for constants; `ConcurrentMap` with documented key ownership for real caches |
 | Should fix soon | Public/protected mutable fields | 166 public/protected non-final `m_`, `s_`, or `f_` fields in runtime/asm/compiler | Any caller can mutate state without preserving invariants or synchronization | Private fields plus methods that enforce ownership, synchronization, and lifecycle invariants |
@@ -360,7 +360,7 @@ The following scans go beyond PR #534 and the native-template startup race.
 They are included because the same state-management policy determines whether
 parallel containers are reviewable at all.
 
-### Must Fix: Non-Final Static Runtime Globals
+### Should Fix Soon: Non-Final Static Compiler/JIT Globals
 
 Audit commands:
 
@@ -384,29 +384,49 @@ Current counts:
 Representative examples:
 
 - Compiler counters such as `ConditionalStatement.s_nLabelCounter`,
-  `ElseExpression.s_nCounter`, and `ElvisExpression.s_nCounter`.
+  `ElseExpression.s_nCounter`, `ElvisExpression.s_nCounter`, and
+  `MethodDeclarationStatement.m_counter`.
+
+Important classification:
+
+- These remaining hits are not the same defect class as `INSTANCE`, native
+  template metadata, raw enum handles, `VIEWS`, or owner-derived handle/type
+  caches.
+- They do not carry `Container`, `ConstantPool`, `ClassTemplate`,
+  `ObjectHandle`, `TypeComposition`, service, frame, or fiber ownership.
+- They are therefore not evidence of a current multi-container runtime owner
+  leak.
+- They are still bad same-JVM compiler/tooling state. Parallel or incremental
+  compilation can race on plain `++` counters, and a static method counter makes
+  generated names depend on global compile order instead of the documented code
+  container.
 
 Why this is bad design:
 
-- It hides the owner. A static field has JVM-wide lifetime, but most runtime
-  values belong to a container, pool, frame, service, or template.
-- It hides the publication edge. A plain static write during startup is not
-  automatically visible to other startup threads.
-- It prevents clean teardown and restart. Tests that start several containers
-  in one JVM inherit state from earlier runs unless every field is manually
-  reset.
+- It is still a Java memory-model data race when multiple compiler threads
+  update the same plain static counter.
+- It makes compiler output depend on process history. Same-JVM LSP or Gradle
+  direct execution should not inherit synthetic-name state from earlier compile
+  requests.
+- It prevents clean teardown and restart for compiler/test harnesses that run
+  several compile/run cycles in one JVM.
 - It makes code review misleading. A static field looks like stable shared
-  infrastructure even when it is "last writer wins".
+  infrastructure even when the state is only valid for a method, code
+  container, compilation, or diagnostic label namespace.
 
 Proper replacements:
 
-- True process constants: `private/public static final` immutable values.
-- Container/pool/template state: final fields on the owner, final `Lazy`, or an
-  owner-owned `ConcurrentMap`.
-- Resettable process resources: a private holder protected by a lock or
-  `AtomicReference`, with explicit lifecycle methods.
-- Counters used only for diagnostics: `AtomicInteger` or owner-local counters;
-  for compiler-only thread confinement, document the confinement.
+- Label counters that are only debug names: `AtomicInteger` if preserving the
+  old process-wide namespace matters, or document compiler-thread confinement if
+  the compiler is intentionally single-threaded.
+- Counters whose comments say they are code-container or method scoped:
+  owner-local instance fields.
+- JIT or plugin counters: keep them final/atomic when they are intentionally
+  process-wide; move them to the classloader/build/runtime owner when they are
+  not.
+- Owner-bearing runtime state: this remains a must-fix category, and it should
+  move to the container/pool/template owner, final `Lazy`, an owner-owned
+  `ConcurrentMap`, or explicit lifecycle state.
 
 ### Must Fix: Owner-Local Runtime Metadata Caches
 
