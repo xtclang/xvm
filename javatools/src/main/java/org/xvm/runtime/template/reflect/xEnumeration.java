@@ -13,7 +13,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
 import org.xvm.runtime.template.maps.xListMap;
 
@@ -22,7 +21,6 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
 import org.xvm.runtime.template.text.xString;
 
 import org.xvm.runtime.template.xEnum;
-import org.xvm.runtime.template.xEnum.EnumHandle;
 
 
 /**
@@ -78,10 +76,7 @@ public class xEnumeration
 
             xEnum templateEnumeration = (xEnum) frame.f_context.f_container.getTemplate(idEnumeration);
 
-            List<String>     listNames  = templateEnumeration.getNames();
-            List<EnumHandle> listValues = templateEnumeration.getValues();
-
-            assert listNames.size() == listValues.size();
+            List<String> listNames = templateEnumeration.getNames();
 
             int            cNames = listNames.size();
             ObjectHandle[] ahName = new ObjectHandle[cNames];
@@ -91,27 +86,15 @@ public class xEnumeration
             for (int i = 0; i < cNames; i++) {
                 ahName[i] = xString.makeHandle(frame, listNames.get(i));
 
-                EnumHandle hValue = listValues.get(i);
-                if (hValue.isStruct()) {
-                    switch (hValue.getTemplate().completeConstruction(frame, hValue)) {
-                    case Op.R_NEXT:
-                        ahVal[i] = frame.popStack();
-                        break;
-
-                    case Op.R_CALL:
-                        ahVal[i] = new DeferredCallHandle(frame.m_frameNext);
-                        fDefer   = true;
-                        break;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-                } else {
-                    ahVal[i] = hValue;
-                }
+                // The old implementation read xEnum's raw value list directly, so this
+                // property had to duplicate enum-construction completion here. That made
+                // byName another public/native publication path for mutable enum structs.
+                // Keep the same ordinal-backed template cache lookup, but publish through
+                // the enum helper that returns either the final singleton or a deferred
+                // handle while SingletonConstant initialization finishes.
+                ObjectHandle hValue = templateEnumeration.ensureEnumByOrdinal(frame, i);
+                ahVal[i] = hValue;
+                fDefer |= Op.isDeferred(hValue);
             }
 
 

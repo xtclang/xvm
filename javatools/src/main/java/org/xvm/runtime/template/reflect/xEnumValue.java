@@ -9,7 +9,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xEnum;
 
@@ -68,9 +67,7 @@ public class xEnumValue
         xEnum          template       = (xEnum) frame.f_context.f_container.
                                             getTemplate(clzEnumeration.getIdentityConstant());
 
-        ObjectHandle hValue = Utils.ensureInitializedEnum(frame,
-                template.getEnumByName(idEnumValue.getName()));
-
-        return frame.assignDeferredValue(iReturn, hValue);
+        return frame.assignDeferredValue(iReturn,
+                template.ensureEnumByName(frame, idEnumValue.getName()));
     }
 }

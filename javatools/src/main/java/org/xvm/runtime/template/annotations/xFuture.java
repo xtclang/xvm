@@ -23,7 +23,6 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
-import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
@@ -104,14 +103,15 @@ public class xFuture
 
         case "completion": {
             xEnum      enumCompletion = f_templateCompletion.get();
-            EnumHandle hValue =
-                hThis.isAssigned() ?
-                    hThis.getFuture().isCompletedExceptionally() ?
-                        enumCompletion.getEnumByName("Error")  :
-                        enumCompletion.getEnumByName("Result") :
-                    enumCompletion.getEnumByName("Pending");
+            String     sCompletion    =
+                    hThis.isAssigned()
+                            ? hThis.getFuture().isCompletedExceptionally()
+                                    ? "Error"
+                                    : "Result"
+                            : "Pending";
 
-            return Utils.assignInitializedEnum(frame, hValue, iReturn);
+            return frame.assignDeferredValue(iReturn,
+                    enumCompletion.ensureEnumByName(frame, sCompletion));
         }
 
         case "notify":

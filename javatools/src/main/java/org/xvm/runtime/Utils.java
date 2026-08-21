@@ -336,8 +336,10 @@ public abstract class Utils {
     }
 
     /**
-     * A helper method for native code that needs to assign EnumHandle values retrieved
-     * via {@link xEnum#getEnumByName} or {@link xEnum#getEnumByOrdinal}.
+     * A helper method for the few internal paths that still have a raw EnumHandle.
+     * Public/native enum publication should normally use
+     * {@link xEnum#ensureEnumByName(Frame, String)} or
+     * {@link xEnum#ensureEnumByOrdinal(Frame, int)} directly.
      *
      * @param frame  the current frame
      * @param hEnum  the Enum handle
@@ -440,8 +442,10 @@ public abstract class Utils {
     }
 
     /**
-     * A helper method for native code that needs to assign EnumHandle values retrieved
-     * via {@link xEnum#getEnumByName} or {@link xEnum#getEnumByOrdinal}.
+     * A helper method for the few internal paths that still have a raw EnumHandle.
+     * Public/native enum publication should normally use
+     * {@link xEnum#ensureEnumByName(Frame, String)} or
+     * {@link xEnum#ensureEnumByOrdinal(Frame, int)} directly.
      *
      * @param frame    the current frame
      * @param hEnum    the Enum handle

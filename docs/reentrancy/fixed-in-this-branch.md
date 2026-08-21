@@ -596,12 +596,16 @@ Fixed public/native paths include:
 - `MainContainer` injectable enum values
 - `xArray` mutability construction arguments
 - `xRTClassTemplate` contribution action enum values
+- `xRTPropertyClassTemplate` contribution action enum values
 - `xRTMethod` access enum result
 - `xRTComponentTemplate` access and format enum results
 - `xRTType` access and form enum results
 - `xRTTypeTemplate` access and form enum results
+- `xService.synchronicity`, `xRTServiceControl.statusIndicator`, and
+  `xFuture.completion` property results
+- `xEnumValue.value` and `xEnumeration.byName` reflection results
 - `xRTDelegate` and `xArray` mutability property results through
-  `Utils.assignInitializedEnum`
+  `ensureEnumByOrdinal(...)`
 
 The reflection helper wave intentionally renames raw-sounding helpers from
 `make*Handle` to `ensure*Handle` and changes their return type from
@@ -611,11 +615,12 @@ corresponding `SingletonConstant` finishes initialization. A raw `EnumHandle`
 cannot represent that deferred result and, for a natural enum, may be the
 construction struct that must not cross a public/native publication boundary.
 
-This is must-fix. Raw `xEnum.getEnumByName()` and `getEnumByOrdinal()` still
-exist because some internal paths need the template-local index. They are not a
-safe public publication boundary for natural enum values. New code that can
-surface an enum handle must use the initialized helpers or assign through
-`Utils.assignInitializedEnum`.
+This is must-fix. Raw `xEnum.getEnumByName()` and `getEnumByOrdinal()` are now
+protected lookup primitives because some internal paths still need the
+template-local index before singleton resolution. `xEnum.getValues()` was
+removed so reflection code cannot read the raw handle list directly. New code
+that can surface an enum handle must use the initialized helpers or assign
+through `Utils.assignInitializedEnum`.
 
 ### `xLocalClock` Process Timer
 

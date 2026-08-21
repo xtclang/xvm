@@ -14,7 +14,6 @@ import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
@@ -101,9 +100,9 @@ public class xRTServiceControl
                     xBoolean.makeHandle(frame, hControl.getContext().isContended()));
 
         case "statusIndicator": {
-            xEnum.EnumHandle hStatus = f_templateServiceStatus.get().getEnumByName(
-                    hControl.getContext().getStatus().name());
-            return Utils.assignInitializedEnum(frame, hStatus, iReturn);
+            return frame.assignDeferredValue(iReturn,
+                    f_templateServiceStatus.get().ensureEnumByName(
+                            frame, hControl.getContext().getStatus().name()));
         }
         }
 

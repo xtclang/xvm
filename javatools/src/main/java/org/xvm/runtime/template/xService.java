@@ -27,8 +27,6 @@ import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.xEnum.EnumHandle;
-
 import org.xvm.runtime.template.reflect.xClass;
 
 import org.xvm.runtime.template.text.xString;
@@ -339,9 +337,9 @@ public class xService
             if (frame.f_context != hService.f_context) {
                 return frame.raiseException("Call out of context");
             }
-            EnumHandle hSynchronicity = f_templateSynchronicity.get().getEnumByName(
-                    frame.getSynchronicity().name());
-            return Utils.assignInitializedEnum(frame, hSynchronicity, iReturn);
+            return frame.assignDeferredValue(iReturn,
+                    f_templateSynchronicity.get().ensureEnumByName(
+                            frame, frame.getSynchronicity().name()));
         }
         }
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
