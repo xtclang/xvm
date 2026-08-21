@@ -189,7 +189,7 @@ public class xRTMethod
      */
     public int getPropertyAccess(Frame frame, MethodHandle hMethod, int iReturn) {
         Access access = hMethod.getMethodInfo().getAccess();
-        return Utils.assignInitializedEnum(frame, xRTType.makeAccessHandle(frame, access), iReturn);
+        return frame.assignDeferredValue(iReturn, xRTType.ensureAccessHandle(frame, access));
     }
 
 

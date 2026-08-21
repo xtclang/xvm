@@ -31,7 +31,6 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
-import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
@@ -251,8 +250,7 @@ public class xRTTypeTemplate
      */
     public int getPropertyForm(Frame frame, TypeTemplateHandle hType, int iReturn) {
         TypeConstant type  = hType.getDataType();
-        EnumHandle   hForm = makeFormHandle(frame, type);
-        return Utils.assignInitializedEnum(frame, hForm, iReturn);
+        return frame.assignDeferredValue(iReturn, ensureFormHandle(frame, type));
     }
 
     /**
@@ -313,8 +311,7 @@ public class xRTTypeTemplate
     public int invokeAccessSpecified(Frame frame, TypeTemplateHandle hType, int[] aiReturn) {
         TypeConstant type = hType.getDataType();
         if (type.isAccessSpecified()) {
-            ObjectHandle hEnum = Utils.ensureInitializedEnum(frame,
-                    makeAccessHandle(frame, type.getAccess()));
+            ObjectHandle hEnum = ensureAccessHandle(frame, type.getAccess());
 
             return frame.assignConditionalDeferredValue(aiReturn, hEnum);
         }
@@ -594,22 +591,26 @@ public class xRTTypeTemplate
      * @param frame   the current frame
      * @param access  an Access value
      *
-     * @return the handle to the appropriate Ecstasy {@code Access} enum value
+     * @return the initialized handle to the appropriate Ecstasy {@code Access} enum value
+     *
+     * Note: this returns {@link ObjectHandle}, not {@code EnumHandle}, because natural enum lookup
+     * can initially produce a construction struct. The public publication boundary must resolve
+     * through the enum's SingletonConstant, and that resolution can be deferred.
      */
-    public EnumHandle makeAccessHandle(Frame frame, Constants.Access access) {
+    public ObjectHandle ensureAccessHandle(Frame frame, Constants.Access access) {
         xEnum enumAccess = frame.container().getEnumTemplate("reflect.Access");
         switch (access) {
         case PUBLIC:
-            return enumAccess.getEnumByName("Public");
+            return enumAccess.ensureEnumByName(frame, "Public");
 
         case PROTECTED:
-            return enumAccess.getEnumByName("Protected");
+            return enumAccess.ensureEnumByName(frame, "Protected");
 
         case PRIVATE:
-            return enumAccess.getEnumByName("Private");
+            return enumAccess.ensureEnumByName(frame, "Private");
 
         case STRUCT:
-            return enumAccess.getEnumByName("Struct");
+            return enumAccess.ensureEnumByName(frame, "Struct");
 
         default:
             throw new IllegalStateException("unknown access value: " + access);
@@ -622,9 +623,13 @@ public class xRTTypeTemplate
      * @param frame  the current frame
      * @param type   a TypeConstant used at runtime
      *
-     * @return the handle to the appropriate Ecstasy {@code TypeTemplate.Form} enum value
+     * @return the initialized handle to the appropriate Ecstasy {@code TypeTemplate.Form} enum value
+     *
+     * Note: this returns {@link ObjectHandle}, not {@code EnumHandle}, because natural enum lookup
+     * can initially produce a construction struct. The public publication boundary must resolve
+     * through the enum's SingletonConstant, and that resolution can be deferred.
      */
-    protected EnumHandle makeFormHandle(Frame frame, TypeConstant type) {
+    protected ObjectHandle ensureFormHandle(Frame frame, TypeConstant type) {
         xEnum enumForm = frame.container().getEnumTemplate("reflect.TypeTemplate.Form");
 
         switch (type.getFormat()) {
@@ -633,7 +638,7 @@ public class xRTTypeTemplate
             if (type.isSingleDefiningConstant()) {
                 switch (type.getDefiningConstant().getFormat()) {
                 case NativeClass:
-                    return enumForm.getEnumByName("Pure");
+                    return enumForm.ensureEnumByName(frame, "Pure");
 
                 case Module:
                 case Package:
@@ -644,58 +649,58 @@ public class xRTTypeTemplate
                 case IsModule:
                 case IsClass:
                 case IsConst:
-                    return enumForm.getEnumByName("Class");
+                    return enumForm.ensureEnumByName(frame, "Class");
 
                 case Property:
-                    return enumForm.getEnumByName("FormalProperty");
+                    return enumForm.ensureEnumByName(frame, "FormalProperty");
 
                 case TypeParameter:
-                    return enumForm.getEnumByName("FormalParameter");
+                    return enumForm.ensureEnumByName(frame, "FormalParameter");
 
                 case FormalTypeChild:
-                    return enumForm.getEnumByName("FormalChild");
+                    return enumForm.ensureEnumByName(frame, "FormalChild");
 
                 default:
                     throw new IllegalStateException("unsupported format: " +
                             type.getDefiningConstant().getFormat());
                 }
             } else {
-                return enumForm.getEnumByName("Typedef");
+                return enumForm.ensureEnumByName(frame, "Typedef");
             }
 
         case ImmutableType:
-            return enumForm.getEnumByName("Immutable");
+            return enumForm.ensureEnumByName(frame, "Immutable");
 
         case AccessType:
-            return enumForm.getEnumByName("Access");
+            return enumForm.ensureEnumByName(frame, "Access");
 
         case AnnotatedType:
-            return enumForm.getEnumByName("Annotated");
+            return enumForm.ensureEnumByName(frame, "Annotated");
 
         case TurtleType:
-            return enumForm.getEnumByName("Sequence");
+            return enumForm.ensureEnumByName(frame, "Sequence");
 
         case VirtualChildType:
-            return enumForm.getEnumByName("Child");
+            return enumForm.ensureEnumByName(frame, "Child");
 
         case InnerChildType:
         case AnonymousClassType:
-            return enumForm.getEnumByName("Class");
+            return enumForm.ensureEnumByName(frame, "Class");
 
         case PropertyClassType:
-            return enumForm.getEnumByName("Property");
+            return enumForm.ensureEnumByName(frame, "Property");
 
         case UnionType:
-            return enumForm.getEnumByName("Union");
+            return enumForm.ensureEnumByName(frame, "Union");
 
         case IntersectionType:
-            return enumForm.getEnumByName("Intersection");
+            return enumForm.ensureEnumByName(frame, "Intersection");
 
         case DifferenceType:
-            return enumForm.getEnumByName("Difference");
+            return enumForm.ensureEnumByName(frame, "Difference");
 
         case RecursiveType:
-            return enumForm.getEnumByName("Typedef");
+            return enumForm.ensureEnumByName(frame, "Typedef");
 
         case UnresolvedType:
         default:

@@ -21,11 +21,9 @@ import org.xvm.runtime.NativeTemplates;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
-import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -148,7 +146,7 @@ public class xRTComponentTemplate
     protected int getPropertyAccess(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         Component component = hComponent.getComponent();
         Access    access    = component.getAccess();
-        return Utils.assignInitializedEnum(frame, xRTType.makeAccessHandle(frame, access), iReturn);
+        return frame.assignDeferredValue(iReturn, xRTType.ensureAccessHandle(frame, access));
     }
 
     /**
@@ -166,9 +164,8 @@ public class xRTComponentTemplate
      * Implements property: format.get()
      */
     protected int getPropertyFormat(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
-        Component  component = hComponent.getComponent();
-        EnumHandle hFormat   = makeFormatHandle(frame, component.getFormat());
-        return Utils.assignInitializedEnum(frame, hFormat, iReturn);
+        Component component = hComponent.getComponent();
+        return frame.assignDeferredValue(iReturn, ensureFormatHandle(frame, component.getFormat()));
     }
 
     /**
@@ -274,45 +271,50 @@ public class xRTComponentTemplate
      * @param frame   the current frame
      * @param format  a Component Format
      *
-     * @return the handle to the appropriate Ecstasy {@code ComponentTemplate.Format} enum value
+     * @return the initialized handle to the appropriate Ecstasy {@code ComponentTemplate.Format}
+     *         enum value
+     *
+     * Note: this returns {@link ObjectHandle}, not {@code EnumHandle}, because natural enum lookup
+     * can initially produce a construction struct. The public publication boundary must resolve
+     * through the enum's SingletonConstant, and that resolution can be deferred.
      */
-    protected static EnumHandle makeFormatHandle(Frame frame, Component.Format format) {
+    protected static ObjectHandle ensureFormatHandle(Frame frame, Component.Format format) {
         xEnum enumForm = frame.container().
                 getEnumTemplate("reflect.ComponentTemplate.Format");
 
         switch (format) {
         case INTERFACE:
-            return enumForm.getEnumByName("Interface");
+            return enumForm.ensureEnumByName(frame, "Interface");
         case CLASS:
-            return enumForm.getEnumByName("Class");
+            return enumForm.ensureEnumByName(frame, "Class");
         case CONST:
-            return enumForm.getEnumByName("Const");
+            return enumForm.ensureEnumByName(frame, "Const");
         case ENUM:
-            return enumForm.getEnumByName("Enum");
+            return enumForm.ensureEnumByName(frame, "Enum");
         case ENUMVALUE:
-            return enumForm.getEnumByName("EnumValue");
+            return enumForm.ensureEnumByName(frame, "EnumValue");
         case ANNOTATION:
-            return enumForm.getEnumByName("Annotation");
+            return enumForm.ensureEnumByName(frame, "Annotation");
         case MIXIN:
-            return enumForm.getEnumByName("Mixin");
+            return enumForm.ensureEnumByName(frame, "Mixin");
         case SERVICE:
-            return enumForm.getEnumByName("Service");
+            return enumForm.ensureEnumByName(frame, "Service");
         case PACKAGE:
-            return enumForm.getEnumByName("Package");
+            return enumForm.ensureEnumByName(frame, "Package");
         case MODULE:
-            return enumForm.getEnumByName("Module");
+            return enumForm.ensureEnumByName(frame, "Module");
         case TYPEDEF:
-            return enumForm.getEnumByName("TypeDef");
+            return enumForm.ensureEnumByName(frame, "TypeDef");
         case PROPERTY:
-            return enumForm.getEnumByName("Property");
+            return enumForm.ensureEnumByName(frame, "Property");
         case METHOD:
-            return enumForm.getEnumByName("Method");
+            return enumForm.ensureEnumByName(frame, "Method");
         case RSVD_D:
-            return enumForm.getEnumByName("Reserved_D");
+            return enumForm.ensureEnumByName(frame, "Reserved_D");
         case MULTIMETHOD:
-            return enumForm.getEnumByName("MultiMethod");
+            return enumForm.ensureEnumByName(frame, "MultiMethod");
         case FILE:
-            return enumForm.getEnumByName("File");
+            return enumForm.ensureEnumByName(frame, "File");
 
         default:
             throw new IllegalStateException("unsupported format: " + format);

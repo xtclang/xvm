@@ -2,6 +2,7 @@ package org.xvm.runtime;
 
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.TimerTask;
@@ -12,11 +13,19 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Component;
+import org.xvm.asm.Constants;
+
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template._native.fs.xOSStorage;
 import org.xvm.runtime.template._native.io.xTerminalConsole;
+import org.xvm.runtime.template._native.reflect.xRTComponentTemplate;
+import org.xvm.runtime.template._native.reflect.xRTType;
+import org.xvm.runtime.template._native.reflect.xRTTypeTemplate;
 import org.xvm.runtime.template._native.temporal.xLocalClock;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -110,6 +119,21 @@ public class NativeTemplatesTest {
         assertPrivateStaticFinal(xTerminalConsole.class, "TERMINAL_STATE");
     }
 
+    @Test
+    public void reflectionEnumPublicationHelpersReturnInitializedHandles()
+            throws Exception {
+        assertReturnsObjectHandle(xRTType.class.getDeclaredMethod(
+                "ensureAccessHandle", Frame.class, Constants.Access.class));
+        assertReturnsObjectHandle(xRTType.class.getDeclaredMethod(
+                "ensureFormHandle", Frame.class, TypeConstant.class));
+        assertReturnsObjectHandle(xRTTypeTemplate.class.getDeclaredMethod(
+                "ensureAccessHandle", Frame.class, Constants.Access.class));
+        assertReturnsObjectHandle(xRTTypeTemplate.class.getDeclaredMethod(
+                "ensureFormHandle", Frame.class, TypeConstant.class));
+        assertReturnsObjectHandle(xRTComponentTemplate.class.getDeclaredMethod(
+                "ensureFormatHandle", Frame.class, Component.Format.class));
+    }
+
     private static void assertPrivateStaticFinal(Class<?> clz, String sField)
             throws NoSuchFieldException {
         Field field = clz.getDeclaredField(sField);
@@ -118,6 +142,11 @@ public class NativeTemplatesTest {
         assertTrue(Modifier.isPrivate(mods));
         assertTrue(Modifier.isStatic(mods));
         assertTrue(Modifier.isFinal(mods));
+    }
+
+    private static void assertReturnsObjectHandle(Method method) {
+        assertEquals(ObjectHandle.class, method.getReturnType(),
+                method + " must publish initialized or deferred enum handles, not raw EnumHandle structs");
     }
 
     private static class NullOwnerTemplate
