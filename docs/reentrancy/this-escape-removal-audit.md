@@ -11,16 +11,18 @@ Last full forced root lint before the handle-construction wave:
 80 emitted this-escape diagnostics
 77 unique file:line locations
 
-Targeted javatools lint after the handle-construction wave:
-76 emitted this-escape diagnostics
-73 unique file:line locations
-0 xRef.java or xOSFileNode.java this-escape diagnostics
+Targeted javatools lint after the handle-construction and runtime
+constructor-assertion waves:
+74 emitted this-escape diagnostics
+71 unique file:line locations
+0 xRef.java, xOSFileNode.java, CallChain.java, or xRTMethod.java
+this-escape diagnostics
 ```
 
-The full root lint build was not rerun after the handle-construction wave to
-avoid paying for another clean build. Based on the targeted compile and the
-three removed full-root sites, the next full-root tally is expected to drop to
-77 emitted diagnostics at 74 unique locations.
+The full root lint build was not rerun after these small waves to avoid paying
+for another clean build. Based on the targeted compile and the five removed
+full-root sites, the next full-root tally is expected to drop to 75 emitted
+diagnostics at 72 unique locations.
 
 ## Decision Summary
 
@@ -29,13 +31,15 @@ three removed full-root sites, the next full-root tally is expected to drop to
 | Fixed in this branch | 61 | Owner-local runtime `Lazy.of(...)` receiver captures converted to explicit owner-lazy state. |
 | Fixed in this branch | 3 | `NativeContainer` startup loading moved out of the constructor and into a post-construction factory. |
 | Fixed in this branch | 3 | Runtime handle construction no longer publishes `RefHandle` to `Frame.VarInfo` or initializes handle fields through constructor-time public field mutation. |
+| Fixed in this branch | 2 | Runtime constructor assertions no longer call instance methods on partially constructed objects. |
 | Fixed separately, still present here | 2 | Concrete unsafe construction/publication pattern. Fixed on `lagergren/fix-utils-this-escape`; still present in this branch until that PR is merged or rebased here. |
-| Remove after small design cleanup | 27 | Constructor-time virtual predicates/assertions or utility helper calls. Usually fixable, but should be separate from the runtime-owner PR. |
-| Audit before changing | 38 | Construction publishes `this` to owner/child structures or performs owner-sensitive assembly. Needs confinement or lifecycle proof. |
+| Remove after small design cleanup | 26 | Constructor-time virtual predicates/assertions or utility helper calls. Usually fixable, but should be separate from the runtime-owner PR. |
+| Audit before changing | 37 | Construction publishes `this` to owner/child structures or performs owner-sensitive assembly. Needs confinement or lifecycle proof. |
 | Document only for this PR | 7 | JIT/tooling paths that are not part of the runtime-owner fix. |
 
-These counts add the 64 warning locations already fixed in this branch to the
-77 unique locations still emitted by the current root lint run.
+The current targeted lint run reports 71 remaining unique locations. The next
+full-root lint run is expected to report 72 remaining unique locations because
+the full root build includes one additional non-`javatools` site.
 
 ## Fixed Separately, Do Not Suppress Here
 
@@ -287,13 +291,20 @@ These publish the constructing runtime object to child/owner structures or call
 template methods during construction. They are not all wrong, but they should
 not be suppressed until the construction lifecycle is documented.
 
+Already fixed in this branch:
+
+- `CallChain.FieldAccessChain` validates the constructor argument with
+  `CallChain.isFieldChain(aMethods)` instead of calling `isField()` through the
+  partially constructed subclass.
+- `xRTMethod.MethodHandle` preserves the old debug assertion with
+  `resolveMethodInfo(typeTarget, method)` instead of calling `getMethodInfo()`
+  on a partially constructed handle.
+
 | Site | Current behavior | Seriousness | Proper refactor |
 | --- | --- | --- | --- |
-| `javatools/src/main/java/org/xvm/runtime/CallChain.java:540` | `FieldAccessChain` constructor calls inherited `isField()` in an assertion. | Should fix. Low practical risk because `isField()` only reads the final method array today, but it is still constructor-time virtual dispatch. | Make `CallChain.isField()` final, or replace the assertion with a private/static helper over `aMethods` so construction does not dispatch virtually. |
 | `javatools/src/main/java/org/xvm/runtime/ClassTemplate.java:95` | Base template constructor calls overridable `registerImplicitFields(null)`. Current overrides in `xRef` and `xConst` add static field names. | Must audit. This is in the root template hierarchy, and future subclasses could read owner/template fields before their constructor body runs. | Move implicit-field collection to explicit metadata: pass immutable implicit-field names to the base constructor, or use a post-construction template initialization hook called by the owning container before publication. |
 | `javatools/src/main/java/org/xvm/runtime/Container.java:62` | Base constructor creates `new ConstHeap(this)`. The current `ConstHeap` constructor only stores the owner and does not publish it. | Must audit. This is probably safe today but still stores a not-yet-fully-constructed owner in a child object. | Either keep a local suppression with a proof that `ConstHeap` cannot publish/callback during construction, or create `ConstHeap` from a post-construction factory before the container is registered. |
 | `javatools/src/main/java/org/xvm/runtime/Container.java:764` | Field initializer creates `new NativeTemplates(this)`. `NativeTemplates` is final and currently stores the owner plus owner-lazy cells. | Must audit. Lower risk than old static `INSTANCE`, but it still captures the owner during base construction. | Initialize `NativeTemplates` from the same post-construction owner-registration path as the heap, or suppress locally only with a final-class/no-publication proof. |
-| `javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTMethod.java:297` | `MethodHandle` constructor asserts `getMethodInfo() != null`; that calls through type info while the handle is still constructing. | Must audit. It should not publish the handle, but it can trigger owner/type metadata work from a partial handle. | Replace the assertion with a static validation helper using `typeTarget`, `method`, and identity constants directly, or perform validation in the factory before constructing the handle. |
 
 ### ASM Metadata and Owner Assembly
 
@@ -385,7 +396,7 @@ javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/nLongBasedArra
 22 Should fix: ASM Op constructor dispatch
 17 Must audit: ASM metadata/owner construction
 16 Must audit: compiler/parser/AST construction
- 5 Must audit: runtime owner/container construction
+ 3 Must audit: runtime owner/container construction
  6 Document only: JIT construction
  5 Should fix: utility cleanup
  2 Fixed separately, still present here: concrete unsafe utility construction
@@ -399,7 +410,7 @@ The least risky order after this runtime-owner branch is:
 
 1. Merge or rebase the separate `lagergren/fix-utils-this-escape` branch that
    fixes the two concrete `javatools_utils` construction defects.
-2. Audit the five remaining runtime owner-construction warnings with focused
+2. Audit the three remaining runtime owner-construction warnings with focused
    lifecycle tests.
 3. Remove the ASM `Op*` constructor predicate warnings through opcode metadata
    or final/static helpers.

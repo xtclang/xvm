@@ -294,7 +294,9 @@ public class xRTMethod
             m_fMutable   = clz.isStruct();
             f_typeTarget = typeTarget;
 
-            assert getMethodInfo() != null;
+            // Preserve the old debug validation without calling getMethodInfo()
+            // on a handle whose constructor has not completed yet.
+            assert resolveMethodInfo(typeTarget, method) != null;
         }
 
         public MethodInfo getMethodInfo() {
@@ -342,6 +344,10 @@ public class xRTMethod
         }
 
         private final TypeConstant f_typeTarget;
+    }
+
+    private static MethodInfo resolveMethodInfo(TypeConstant typeTarget, MethodStructure method) {
+        return typeTarget.ensureTypeInfo().getMethodById(method.getIdentityConstant(), true);
     }
 
 

@@ -64,38 +64,42 @@ data; it does not provide compiled Java classes.
 ## Latest Targeted Delta
 
 The full root lint build above was not rerun after the later
-handle-construction wave. To avoid paying for another clean root build, this
-branch used a targeted javatools compile:
+handle-construction and runtime constructor-assertion waves. To avoid paying
+for another clean root build, this branch used a targeted javatools compile:
 
 ```bash
 ./gradlew :javatools:compileJava --rerun-tasks --no-build-cache \
+  --no-configuration-cache \
   -Porg.xtclang.java.lint=true \
   -Porg.xtclang.java.warningsAsErrors=false \
   -Porg.xtclang.java.maxWarnings=10000 \
   -Porg.xtclang.java.maxErrors=10000 \
   --console=plain --warning-mode=all \
-  > /tmp/xvm-xref-this-escape.log 2>&1
+  > /tmp/xvm-callchain-method-this-escape.log 2>&1
 ```
 
 Result:
 
 ```text
-BUILD SUCCESSFUL in 25s
-76 emitted this-escape diagnostics in the targeted javatools compile
-73 unique file:line locations in that targeted compile
-0 xRef.java or xOSFileNode.java this-escape diagnostics
+BUILD SUCCESSFUL in 9s
+40 actionable tasks: 40 executed
+74 emitted this-escape diagnostics in the targeted javatools compile
+71 unique file:line locations in that targeted compile
+0 xRef.java, xOSFileNode.java, CallChain.java, or xRTMethod.java this-escape diagnostics
 ```
 
-The three removed full-root sites were:
+The five removed full-root sites were:
 
 ```text
+javatools/src/main/java/org/xvm/runtime/CallChain.java:540
 javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSFileNode.java:169
+javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTMethod.java:297
 javatools/src/main/java/org/xvm/runtime/template/reflect/xRef.java:866
 javatools/src/main/java/org/xvm/runtime/template/reflect/xRef.java:908
 ```
 
 The next full-root lint run is expected to drop from `80` emitted diagnostics
-at `77` unique locations to `77` emitted diagnostics at `74` unique locations.
+at `77` unique locations to `75` emitted diagnostics at `72` unique locations.
 
 ## Warning Counts
 
@@ -138,9 +142,10 @@ javatools/src/main/java/org/xvm/compiler/Parser.java:70
 | Must fix, already fixed in this branch | Runtime template `Lazy.of(...)` receiver captures | 61 unique warning locations removed in this branch; 0 remain in this category | Done for this PR | Use `Lazy.Owner<O,T>`, eager final state, or grouped owner-local metadata so field initializers do not capture a constructing receiver. |
 | Must fix, already fixed in this branch | `NativeContainer` loads native templates and resources from its constructor | 3 unique warning locations removed in this branch; 0 remain in this category | Done for this PR | Use `NativeContainer.create(...)` so owner-sensitive startup runs after construction and before the container is returned to the connector. |
 | Must fix, already fixed in this branch | Runtime handle constructors publish or mutate visible state during construction | 3 unique warning locations removed in this branch; 0 remain in this category | Done for this PR | Use `RefHandle.createRegisterRef(...)`, `RefHandle.createReferentRef(...)`, and `NodeHandle.create(...)` so construction completes before frame publication or backing-field initialization. |
+| Must fix, already fixed in this branch | Runtime constructor assertions call instance methods on partially constructed objects | 2 unique warning locations removed in this branch; 0 remain in this category | Done for this PR | Validate constructor arguments with static/private helpers so debug assertions keep their old checks without dispatching through `this`. |
 | Must fix, fixed separately | `CooperativelyCleanableReference` publishes `this` to a static set from the constructor | 1 | Done on `lagergren/fix-utils-this-escape` | Use a private constructor plus factory/registration step after construction, or another design that does not publish the object until construction has returned. |
 | Must fix, fixed separately | `AbstractConverterMap` calls overridable factory methods from the base constructor | 1 | Done on `lagergren/fix-utils-this-escape` | Make factory results final concrete nested classes that do not dispatch to subclasses during construction, or lazily initialize views after construction with synchronization. |
-| Must audit, runtime owner construction | `Container`, `CallChain`, `ClassTemplate`, and `xRTMethod` owner/child construction paths | 5 unique locations | Mixed | Prove construction confinement/publication, or split construction from owner registration/adoption. |
+| Must audit, runtime owner construction | `Container` and `ClassTemplate` owner/child construction paths | 3 unique locations | Mixed | Prove construction confinement/publication, or split construction from owner registration/adoption. |
 | Must audit, ASM owner-copy and metadata construction | `FileStructure`, `ClassStructure`, `MethodStructure`, `PropertyInfo`, `MethodInfo`, `TypeInfoReal`, `PropertyConstant`, `VersionTree` | 17 unique locations | Mixed | Prove construction is request/thread confined, or split assembly from publication so owned children are connected after the owner constructor returns. |
 | Must audit, `Op` constructor virtual predicates/asserts | `Op`, `OpCondJump`, `OpGeneral`, `OpInPlace`, `OpIndex`, `OpPropInPlace`, `OpTest`, `OpVar` | 22 unique locations | Moderate | Replace constructor-time virtual predicate calls with explicit constructor parameters, final helper methods, or subclass-independent op metadata. |
 | Must audit, compiler/parser/AST construction callbacks | `Lexer`, `Parser`, expression/statement constructors and `adopt`/parent-link calls | 16 unique locations | Mixed | For incremental/parallel compiler safety, prove AST/request confinement or separate object construction from parent/adoption callbacks. |
@@ -154,7 +159,7 @@ Current unique-location classification:
  22 Must audit: ASM Op constructor dispatch
  17 Must audit: ASM metadata/owner construction
  16 Must audit: compiler/parser/AST construction
-  5 Must audit: runtime owner/container construction
+  3 Must audit: runtime owner/container construction
   6 Must audit: JIT construction
   5 Should fix: utility cleanup
   2 Must fix, fixed separately: concrete unsafe utility construction
@@ -262,6 +267,10 @@ The migration rule should be:
 
 ## Full File Count
 
+This is the file-level count from the last full-root lint run, before the
+targeted-delta fixes above. It still includes the five fixed sites listed in
+that section.
+
 ```text
    6 javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java
    4 javatools/src/main/java/org/xvm/compiler/Parser.java
@@ -317,9 +326,9 @@ Duplicates are retained here because they are emitted diagnostics, not just
 unique source lines.
 
 This list is the last full-root output captured before the handle-construction
-wave. It therefore still contains the three `xRef`/`xOSFileNode` lines listed in
-the targeted-delta section above; those no longer appear in the targeted
-javatools lint compile.
+and runtime constructor-assertion waves. It therefore still contains the five
+removed lines listed in the targeted-delta section above; those no longer
+appear in the targeted javatools lint compile.
 
 ```text
 javatools/src/main/java/org/xvm/asm/ClassStructure.java:3769
