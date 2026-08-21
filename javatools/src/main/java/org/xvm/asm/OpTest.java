@@ -186,7 +186,9 @@ public abstract class OpTest
     protected TypeConstant calculateCommonType(Frame frame) {
         TypeConstant typeCommon = m_typeCommon;
         if (typeCommon == null) {
-            m_typeCommon = typeCommon = frame.getConstant(m_nType, TypeConstant.class);
+            // Do not cache the frame constant on the shared Op. The local-constant lookup is an
+            // indexed array read, while an Op field can pin the first runtime owner's pool.
+            typeCommon = frame.getConstant(m_nType, TypeConstant.class);
         }
         return frame.resolveType(typeCommon);
     }
@@ -472,7 +474,8 @@ public abstract class OpTest
     protected int m_nValue2;
     protected int m_nRetValue;
 
-    protected TypeConstant m_typeCommon; // the "compile time type" to use for the comparison
+    // Assembly-time type argument. Runtime execution resolves m_nType from the current Frame.
+    protected TypeConstant m_typeCommon;
     protected Argument     m_argVal1;
     protected Argument     m_argVal2;
     protected Argument     m_argReturn;

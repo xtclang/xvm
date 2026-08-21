@@ -236,10 +236,10 @@ Field-shaped lazy-null checks:
 The current branch classification is maintained in
 [manual-lazy-cache-audit.md](manual-lazy-cache-audit.md). The short version is
 that synchronized `forType(...)` association helpers and frame/debug lifecycle
-slots are not first-PR blockers, while runtime-executed `Op` caches such as
-`JumpCond.m_cond`, `JumpNCond.m_cond`, and `OpTest.m_typeCommon` are a
-follow-up must-audit slice because they can become wrong-owner caches if decoded
-op graphs are reused across container or pool owners.
+slots are not first-PR blockers. The runtime-executed `Op` caches that stored
+frame constants on shared op objects were fixed in this branch: `JumpCond` and
+`JumpNCond` no longer have condition fields, and `OpTest`/`OpCondJump` no
+longer write frame type constants back to `m_typeCommon` during execution.
 
 ```text
 javatools/src/main/java/org/xvm/asm/ConstantPool.java:3652:        if (m_typeNakedRef == null) {
@@ -274,9 +274,7 @@ javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java:117:        if (
 javatools/src/main/java/org/xvm/asm/constants/RegisterConstant.java:133:        if (m_reg == null) {
 javatools/src/main/java/org/xvm/asm/constants/TypeCollector.java:363:        if (m_FConditional == null) {
 javatools/src/main/java/org/xvm/asm/op/GuardStart.java:112:        if (m_aOpCatch == null) {
-javatools/src/main/java/org/xvm/asm/op/JumpCond.java:50:        if (m_cond == null) {
 javatools/src/main/java/org/xvm/asm/op/JumpInt.java:87:        if (m_aOpCase == null) {
-javatools/src/main/java/org/xvm/asm/op/JumpNCond.java:50:        if (m_cond == null) {
 javatools/src/main/java/org/xvm/asm/op/Label.java:143:        if (m_action == null) {
 javatools/src/main/java/org/xvm/asm/op/LoopEnd.java:39:        if (m_opDest == null) {
 javatools/src/main/java/org/xvm/asm/op/OpSwitch.java:108:        if (m_aOpCase == null) {

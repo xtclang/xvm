@@ -27,14 +27,14 @@ rg -U -n --pcre2 \
   javatools/src/main/java/org/xvm/asm
 ```
 
-Current branch result: 27 strong same-field lazy/init sites in runtime/asm.
-The same strict scan finds 47 sites across all `javatools/src/main/java`.
+Current branch result: 25 strong same-field lazy/init sites in runtime/asm.
+The same strict scan finds 45 sites across all `javatools/src/main/java`.
 
 ## Classification
 
 | Classification | Sites | Why | Required next action |
 | --- | --- | --- | --- |
-| Must audit, likely must-fix if method/op graphs are shared across containers | `asm/op/JumpCond.m_cond`, `asm/op/JumpNCond.m_cond`, `asm/OpTest.m_typeCommon` | These are runtime-executed `Op` objects caching constants from a `Frame`. If the same decoded op object can run under multiple container/pool owners, the cached constant is owner-bearing and the field is a wrong-owner race. | Prove op graphs are owner-confined, or remove the mutable cache and resolve from the current `Frame` each execution. If caching is required, key it by owner/pool in a concurrent owner-owned map. |
+| Fixed in this branch | `asm/op/JumpCond.m_cond`, `asm/op/JumpNCond.m_cond`, runtime write-back to `asm/OpTest.m_typeCommon` and `asm/OpCondJump.m_typeCommon` | These were runtime-executed `Op` objects caching constants from a `Frame`. If the same decoded op object can run under multiple container/pool owners, the cached constant is owner-bearing and the field is a wrong-owner race. | The condition caches were removed. Common-type execution now resolves `m_nType` from the current `Frame` without writing that frame constant into the shared `Op`; `m_typeCommon` remains only an assembly-time argument field. |
 | Must audit, not yet proven runtime owner bug | `asm/OpJump.m_opDest`, `asm/OpCondJump.m_opDest`, `asm/op/LoopEnd.m_opDest`, `asm/op/OpSwitch.m_aOpCase`, `asm/op/JumpInt.m_aOpCase`, `asm/op/GuardStart.m_aOpCatch` | These mutate decoded op address/link state. They are safe only if address resolution happens before publication or under exclusive ownership. Lazy runtime resolution would be racy. | Verify when `resolveAddresses(...)` runs. Preferred fix is eager linking before code publication, or one synchronized/atomic resolved-address state per method owner. |
 | Should fix soon, low risk | `runtime/template/text/xRegEx.RegExHandle.m_pattern` | `Pattern` is immutable, but the plain lazy field can duplicate compilation and has no publication edge. It does not appear to carry container ownership. | Replace with a final `Lazy<Pattern>` or compile eagerly in the handle constructor if regex handles are expected to be shared across fibers. |
 | Should fix / audit during asm cleanup | `asm/constants/FSNodeConstant.m_constPath`, `asm/Parameter.m_regDeref` | These are immutable derived values on ASM objects. They are not known runtime container leaks, but the plain lazy field still assumes benign races. | Use final `Lazy` where construction dependencies are available, or synchronize if the value depends on mutable method/register lifecycle. |
@@ -44,7 +44,7 @@ The same strict scan finds 47 sites across all `javatools/src/main/java`.
 | Must audit for owner key semantics, implementation appears synchronized | `runtime/ClassComposition.m_mapFields` | The field is `volatile` and initialized through `synchronized ensureFieldLayoutImpl(Container)`, but the method accepts a `Container`, so the cache key/owner contract needs to be explicit. | Prove a `ClassComposition` is owner-specific or that the field layout is container-independent. If not, split by owner/container. |
 | Must audit for same-JVM tooling reuse | `tool/ModuleInfo` resource/source nodes | These are tool-side source/resource caches, not runtime template state. Same-JVM Gradle direct execution and LSP reuse can still expose stale source/resource ownership if `ModuleInfo` objects are reused across requests. | Prove `ModuleInfo` is request-confined or add request-scoped invalidation/rebuild rules. |
 
-## Why The Runtime Op Caches Are The Serious Ones
+## Why The Runtime Op Caches Were Serious
 
 The native-template fixes in this branch removed static owner caches, but an
 `Op` field can create a similar problem if the `Op` object is shared. For
@@ -81,6 +81,12 @@ ConditionalConstant cond = condByPool.computeIfAbsent(
 
 The key point is that the owner is visible in the type. A plain field on a
 shared `Op` is not enough.
+
+This branch applies the no-field-cache form to `JumpCond` and `JumpNCond`.
+`OpTest` and `OpCondJump` no longer write `frame.getConstant(m_nType, ...)`
+back to `m_typeCommon` during execution. The remaining `m_typeCommon` field is
+kept for assembly-time source ops, where it is encoded to `m_nType` before
+runtime execution.
 
 ## Stress Verification Backlog
 
@@ -129,15 +135,17 @@ Remaining harness backlog is tracked in
 ## First-PR Decision
 
 The manual lazy-null audit does not currently identify a new native-template
-startup blocker comparable to the old `INSTANCE` fields. It does identify a
-follow-up must-audit slice in runtime `Op` caches, because those can become
-wrong-owner caches if op graphs are reused across container/pool owners.
+startup blocker comparable to the old `INSTANCE` fields. The owner-bearing
+runtime `Op` cache slice identified here has been handled in this branch; the
+remaining `Op` address/link fields are tracked separately because they link ops
+inside one decoded method graph rather than caching frame constants.
 
 Recommended handling:
 
-1. Keep this PR focused on native-template owner caches, enum publication, and
-   same-JVM ownership validation.
-2. Open a follow-up issue/PR for runtime `Op` cache ownership. Start with
-   `JumpCond`, `JumpNCond`, and `OpTest`.
+1. Keep this PR focused on native-template owner caches, enum publication,
+   same-JVM ownership validation, and the owner-bearing runtime `Op` cache fix.
+2. Verify eager link ordering for `Op` address/link fields separately; if any
+   runtime path lazily links after publication, move that state under a
+   synchronized/atomic method-owner policy.
 3. Treat `xRegEx.m_pattern` and immutable ASM derived values as should-fix
    cleanup unless stress testing produces a concrete cross-owner failure.
