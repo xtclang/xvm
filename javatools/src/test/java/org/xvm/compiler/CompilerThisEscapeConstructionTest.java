@@ -21,6 +21,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Source-shape tests for constructor escape patterns reported by {@code javac -Xlint:this-escape}.
  */
 public class CompilerThisEscapeConstructionTest {
+    /**
+     * Lexer construction must not dispatch to subclass whitespace hooks. That virtual call could
+     * observe subclass state before construction completes, even in a single-threaded parser setup.
+     */
     @Test
     public void lexerConstructorDoesNotDispatchToSubclassWhitespace() {
         var lexer = new HookDetectingLexer(new Source("  module Test {}"));
@@ -30,6 +34,10 @@ public class CompilerThisEscapeConstructionTest {
         assertEquals(1, lexer.whitespaceCalls);
     }
 
+    /**
+     * Parser construction must not call subclass token advancement. The old constructor-time
+     * dispatch could publish or inspect partial parser state before subclass fields existed.
+     */
     @Test
     public void parserConstructorDoesNotDispatchToSubclassNext() {
         var parser = new HookDetectingParser(new Source("module Test {}"));
@@ -40,6 +48,10 @@ public class CompilerThisEscapeConstructionTest {
         assertEquals(1, parser.nextCalls);
     }
 
+    /**
+     * The private lexer priming path must preserve whitespace behavior after removing overridable
+     * constructor dispatch.
+     */
     @Test
     public void lexerConstructorUsesPrivateWhitespacePriming() throws IOException {
         String source = source("org/xvm/compiler/Lexer.java");
@@ -50,6 +62,10 @@ public class CompilerThisEscapeConstructionTest {
         assertFalse(ctor.contains("eatWhitespace();"));
     }
 
+    /**
+     * Parser construction now avoids eager token priming through overridable paths. This verifies
+     * token state is still initialized lazily and equivalently.
+     */
     @Test
     public void parserConstructorDoesNotPrimeTokenStream() throws IOException {
         String source = source("org/xvm/compiler/Parser.java");
@@ -61,6 +77,10 @@ public class CompilerThisEscapeConstructionTest {
         assertTrue(source.contains("ensurePrimed();"));
     }
 
+    /**
+     * Synthetic AST expressions must attach metadata through factories, not partially constructed
+     * objects. This protects future incremental compiler reentry.
+     */
     @Test
     public void syntheticExpressionsAttachThroughFactories() throws IOException {
         String source = source("org/xvm/compiler/ast/SyntheticExpression.java");
@@ -77,6 +97,10 @@ public class CompilerThisEscapeConstructionTest {
         assertFactory("UnpackExpression");
     }
 
+    /**
+     * Compiler AST constructor metadata must use post-construction factories. The old shape mixed
+     * construction with owner-visible metadata attachment.
+     */
     @Test
     public void compilerAstConstructorMetadataUsesFactories() throws IOException {
         String component = source("org/xvm/compiler/ast/ComponentStatement.java");

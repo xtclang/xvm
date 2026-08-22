@@ -14,6 +14,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests for owner-explicit type relation helper APIs.
  */
 public class TypeConstantOwnerApiTest {
+    /**
+     * Type relation helpers resolve owner-scoped helper constants. The old ownerless signatures
+     * hid that dependency, so callers could compile while relying on arbitrary current-pool state.
+     */
     @Test
     public void covarianceHelpersRequireExplicitPool() throws Exception {
         Class<?>[] oldSignature = {TypeConstant.class, TypeConstant.class};
@@ -31,6 +35,10 @@ public class TypeConstantOwnerApiTest {
         assertTrue(Modifier.isPublic(contravariant.getModifiers()));
     }
 
+    /**
+     * Missing owner must fail immediately. Falling through to `getCurrentPool()` was broken even
+     * single-threaded because a nested helper could leave no pool or the wrong pool installed.
+     */
     @Test
     public void covarianceHelpersRejectMissingPool() {
         var pool = new FileStructure("test").getConstantPool();

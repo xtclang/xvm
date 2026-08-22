@@ -25,6 +25,10 @@ import static org.xvm.javajit.JitFlavor.Specific;
  * Tests for JIT constructor-time this-escape removals.
  */
 public class JitConstructorEscapeTest {
+    /**
+     * Generated method descriptors must carry the implicit Ctx parameter explicitly. Hidden static
+     * or ambient context would repeat the same owner problem the interpreter runtime is removing.
+     */
     @Test
     public void methodDescriptorUsesCtxImplicitParam() {
         var desc = new JitMethodDesc(null,
@@ -34,6 +38,10 @@ public class JitConstructorEscapeTest {
         assertEquals(MethodTypeDesc.of(CD_int, CD_Ctx, CD_String), desc.standardMD);
     }
 
+    /**
+     * Primitive receiver layout must remain compatible after making Ctx explicit. This proves the
+     * ownership cleanup does not shift existing receiver argument ordering.
+     */
     @Test
     public void primitiveReceiverStillPrecedesImplicitContext() {
         var desc = new JitMethodDesc(null,
@@ -48,6 +56,10 @@ public class JitConstructorEscapeTest {
         assertEquals(MethodTypeDesc.of(CD_int, CD_long, CD_Ctx, CD_String), desc.standardMD);
     }
 
+    /**
+     * Constructor descriptors also need the explicit implicit parameter shape. Otherwise generated
+     * class initialization could depend on hidden ambient JIT state.
+     */
     @Test
     public void constructorDescriptorUsesExplicitImplicitParamShape() {
         var target = ClassDesc.of("xtclang.test.Target");
@@ -59,6 +71,10 @@ public class JitConstructorEscapeTest {
                 CD_Ctx, CD_CtorCtx, CD_TypeConstant, target, CD_String), desc.standardMD);
     }
 
+    /**
+     * Descriptor computation should be private construction data, not overridable constructor
+     * behavior. This mirrors the non-JIT constructor-escape fixes.
+     */
     @Test
     public void descriptorComputationIsPrivateConstructorData() {
         assertFalse(hasDeclaredMethod(JitCtorDesc.class, "fillExtraClassDesc"));

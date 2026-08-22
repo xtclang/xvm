@@ -18,6 +18,11 @@ import static org.junit.jupiter.api.Assertions.assertSame;
  * Tests for owner-explicit nested identity generic resolution.
  */
 public class NestedIdentityOwnerTest {
+    /**
+     * Resolver-backed nested identities already receive an explicit output pool. The old design
+     * discarded it and resolved generic method signatures through ambient state, so a nested
+     * single-threaded call or a parallel owner could intern the signature in the wrong pool.
+     */
     @Test
     public void nestedIdentityResolutionUsesExplicitPool() throws Exception {
         var fileOwner = new FileStructure("owner");

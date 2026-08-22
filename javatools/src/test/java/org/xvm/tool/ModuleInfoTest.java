@@ -952,6 +952,10 @@ class ModuleInfoTest {
         assertEquals(outputDir.toFile().getCanonicalFile(), info.getBinaryDir());
     }
 
+    /**
+     * ModuleInfo construction must not call overridable resource-dir accessors while constructor
+     * state is partial. The explicit resource path should be stored without a `this` escape.
+     */
     @Test
     void constructorWithExplicitResourcesDoesNotCallOverridableResourceDir()
             throws IOException {

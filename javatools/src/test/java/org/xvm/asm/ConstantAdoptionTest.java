@@ -42,6 +42,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests for {@link Constant#adoptedBy(ConstantPool)} ownership handoff behavior.
  */
 public class ConstantAdoptionTest {
+    /**
+     * TypeConstant adoption must not copy owner-local helper state. A shallow clone can look fine
+     * single-threaded but later reuse source-pool recursion or cache helpers in the target pool.
+     */
     @Test
     public void adoptedTypeConstantClearsOwnerLocalHelperState()
             throws Exception {
@@ -74,6 +78,10 @@ public class ConstantAdoptionTest {
         assertNull(fieldValue(adopted, "m_typeNormalized"));
     }
 
+    /**
+     * ParameterizedTypeConstant has subclass helper state in addition to base TypeConstant state.
+     * Adoption must give the target pool fresh helpers rather than copied source-owner cells.
+     */
     @Test
     public void adoptedParameterizedTypeConstantGetsFreshSubclassHelpers()
             throws Exception {
@@ -97,6 +105,10 @@ public class ConstantAdoptionTest {
         assertNull(fieldValue(adopted, "m_typeJitCallable"));
     }
 
+    /**
+     * SignatureConstant adoption must not copy comparison or JIT helper state. Otherwise a target
+     * pool can inherit source-owner caches through the default clone path.
+     */
     @Test
     public void adoptedSignatureConstantGetsFreshComparisonAndJitHelpers()
             throws Exception {
@@ -125,6 +137,10 @@ public class ConstantAdoptionTest {
         assertTrue((Boolean) fieldValue(adopted, "m_fProperty"));
     }
 
+    /**
+     * TypeParameterConstant uses a reentry cell during comparisons. Adoption must allocate a fresh
+     * cell so recursive comparisons in one pool cannot share thread-local state with another.
+     */
     @Test
     public void adoptedTypeParameterConstantGetsFreshReentryCell()
             throws Exception {
@@ -147,6 +163,10 @@ public class ConstantAdoptionTest {
         assertNull(fieldValue(adopted, "m_typeConstraint"));
     }
 
+    /**
+     * A live ObjectHandle is owner-specific runtime state, not logical constant data. Moving an
+     * already-owned handle constant to another pool must fail instead of leaking the source owner.
+     */
     @Test
     public void ownedHandleConstantCannotMoveToAnotherPool() {
         ConstantPool sourcePool = new FileStructure("source").getConstantPool();
@@ -162,6 +182,10 @@ public class ConstantAdoptionTest {
         assertTrue(error.getMessage().contains("live ObjectHandle"));
     }
 
+    /**
+     * FSNodeConstant caches source-pool path handles. Adoption must drop those handles so a target
+     * pool cannot observe filesystem handles owned by the source pool.
+     */
     @Test
     public void adoptedFSNodeConstantDropsSourcePoolPathCache() {
         ConstantPool sourcePool = new FileStructure("source").getConstantPool();
@@ -183,6 +207,10 @@ public class ConstantAdoptionTest {
         assertSame(adoptedPath, adopted.getPathConstant());
     }
 
+    /**
+     * The adoption validator must detect the exact bad default-clone shape: a copied helper
+     * reference that still belongs to the source constant after ownership changes.
+     */
     @Test
     public void adoptionValidatorReportsDefaultCloneCopiedHelperReference() {
         ConstantPool sourcePool = new FileStructure("source").getConstantPool();
@@ -200,6 +228,10 @@ public class ConstantAdoptionTest {
         assertTrue(validation.message().contains("AtomicReference"));
     }
 
+    /**
+     * Registration with adoption validation enabled must reject bad default clones before they are
+     * published into the target pool's lookup structures.
+     */
     @Test
     public void registerFailsOnBadDefaultCloneWhenAdoptionValidationIsEnabled() {
         ConstantPool sourcePool = new FileStructure("source").getConstantPool();

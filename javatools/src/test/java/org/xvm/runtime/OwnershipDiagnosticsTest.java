@@ -32,6 +32,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests for runtime owner graph validation.
  */
 public class OwnershipDiagnosticsTest {
+    /**
+     * The validator must accept a clean synthetic owner graph. Otherwise diagnostics would be too
+     * noisy to use as a stress guard for real cross-container leaks.
+     */
     @Test
     public void cleanSyntheticContainersValidate() {
         TestContainer containerA = newContainer("DiagA");
@@ -44,6 +48,10 @@ public class OwnershipDiagnosticsTest {
         assertDoesNotThrow(() -> OwnershipDiagnostics.assertValid(containerA, containerB));
     }
 
+    /**
+     * The dump must show registry and explicit-owner helper state so hidden global ownership
+     * problems are visible when same-JVM or parallel-container stress fails.
+     */
     @Test
     public void dumpShowsRuntimeRegistryAndExplicitOwnerHelpers() {
         var runtime = new Runtime();
@@ -63,6 +71,10 @@ public class OwnershipDiagnosticsTest {
         }
     }
 
+    /**
+     * A container-owned cache must not contain a template from another owner. This is the core
+     * runtime failure mode caused by mutable static INSTANCE fields.
+     */
     @Test
     public void validatorRejectsForeignTemplateInOwnerCache() throws Exception {
         TestContainer containerA = newContainer("DiagA");
@@ -81,6 +93,10 @@ public class OwnershipDiagnosticsTest {
                 () -> OwnershipDiagnostics.assertValid(containerA, containerB));
     }
 
+    /**
+     * Root handles are owner-bearing runtime state. The validator must reject a root handle from
+     * another container before such sharing is mistaken for a valid cache hit.
+     */
     @Test
     public void validatorRejectsForeignRootHandle() {
         TestContainer containerA = newContainer("DiagA");
@@ -96,6 +112,10 @@ public class OwnershipDiagnosticsTest {
                 () -> OwnershipDiagnostics.assertHandleValid(containerA, "root", handleB));
     }
 
+    /**
+     * Ownership validation must walk handle fields, not only top-level cache entries. Wrong-owner
+     * values can hide inside object graphs created by reentrant runtime operations.
+     */
     @Test
     public void validatorWalksHandleFieldGraph() throws Exception {
         TestContainer containerA = newContainer("DiagA");

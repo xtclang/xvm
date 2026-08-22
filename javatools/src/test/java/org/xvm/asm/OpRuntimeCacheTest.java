@@ -52,12 +52,20 @@ public class OpRuntimeCacheTest {
     private static final Pattern RUNTIME_COMMON_TYPE_WRITE = Pattern.compile(
             "m_typeCommon\\s*=\\s*typeCommon\\s*=\\s*frame\\.getConstant");
 
+    /**
+     * Conditional jump ops are shared decoded method state. They must not cache frame-owned
+     * ConditionalConstant values because parallel frames can run the same op object.
+     */
     @Test
     public void conditionalJumpOpsDoNotCacheFrameConditionalConstants() {
         assertNoConditionalConstantField(JumpCond.class);
         assertNoConditionalConstantField(JumpNCond.class);
     }
 
+    /**
+     * Common-type calculation during op execution must not write frame-derived type constants back
+     * into decoded op fields. The old shape made one frame's owner state visible to later frames.
+     */
     @Test
     public void commonTypeCalculationDoesNotWriteFrameConstantsBackToOps()
             throws IOException {
@@ -65,6 +73,10 @@ public class OpRuntimeCacheTest {
         assertNoRuntimeCommonTypeWrite("org/xvm/asm/OpCondJump.java");
     }
 
+    /**
+     * Constructor cleanup for op-shape classes must preserve the binary-decoded operand layout.
+     * This proves the reentrancy fix did not alter instruction semantics.
+     */
     @Test
     public void opcodeShapeConstructorsPreserveDecodedOperandLayouts()
             throws Exception {
@@ -101,6 +113,10 @@ public class OpRuntimeCacheTest {
         assertDecodedInts(new CatchStart(input(), Constant.NO_CONSTS));
     }
 
+    /**
+     * Removing runtime caches from hot op shapes must not add replacement mutable fields. This
+     * guards the performance/shape equivalence of decoded instruction objects.
+     */
     @Test
     public void opcodeShapeCleanupDoesNotAddHotShapeFields() {
         assertNoShapeFields(OpGeneral.class);

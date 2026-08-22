@@ -17,6 +17,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests for {@link TypeConstant}'s process-wide recursion diagnostic suppression state.
  */
 public class TypeConstantRecursionDiagnosticsTest {
+    /**
+     * Recursion diagnostics are process-wide, so their suppression set must at least be concurrent.
+     * The old `HashSet` could corrupt itself when independent type checks reported recursion.
+     */
     @Test
     public void recursionDiagnosticSetIsConcurrent() throws Exception {
         var field = TypeConstant.class.getDeclaredField("s_setRecursions");

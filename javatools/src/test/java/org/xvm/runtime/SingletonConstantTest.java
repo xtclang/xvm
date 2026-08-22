@@ -37,6 +37,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests for singleton runtime initialization state.
  */
 public class SingletonConstantTest {
+    /**
+     * Singleton initialization must have exactly one owner. The old split fields could let
+     * concurrent fibers observe mixed owner/handle state.
+     */
     @Test
     public void concurrentInitializationHasSingleOwner() throws Exception {
         SingletonConstant constant = createConstant();
@@ -71,6 +75,10 @@ public class SingletonConstantTest {
         }
     }
 
+    /**
+     * Concurrent waiters must share one completion path. This proves the atomic state snapshot
+     * replacement preserves waiter behavior without split mutable fields.
+     */
     @Test
     public void concurrentWaitersShareCompletion() throws Exception {
         SingletonConstant constant = createConstant();
@@ -89,6 +97,10 @@ public class SingletonConstantTest {
         assertSame(ObjectHandle.DEFAULT, constant.getHandle());
     }
 
+    /**
+     * Same-fiber recursion should install a placeholder without creating a waiter. This preserves
+     * the legacy recursive initialization semantics while making state transitions atomic.
+     */
     @Test
     public void sameFiberRecursionInstallsPlaceholderWithoutWaiter() {
         SingletonConstant constant = createConstant();
@@ -99,6 +111,10 @@ public class SingletonConstantTest {
         assertInstanceOf(InitializingHandle.class, constant.getHandle());
     }
 
+    /**
+     * Adopting a SingletonConstant into another pool must create owner-local runtime state. A
+     * shallow clone would copy handle/waiter state from the source pool.
+     */
     @Test
     public void adoptedSingletonHasOwnerLocalRuntimeState() {
         SingletonConstant source = createConstant();
@@ -113,6 +129,10 @@ public class SingletonConstantTest {
         assertTrue(adopted.markInitializing(createFiber()));
     }
 
+    /**
+     * FS node adoption must clear owner-local handles. Filesystem handles are runtime state, not
+     * logical constant data that can be shared across pools.
+     */
     @Test
     public void adoptedFsNodeClearsOwnerLocalHandle() {
         FileStructure  sourceFile = new FileStructure("source");
@@ -133,6 +153,10 @@ public class SingletonConstantTest {
         assertNull(adopted.getHandle());
     }
 
+    /**
+     * File-store adoption must clear owner-local handles for the same reason as FS nodes: handles
+     * belong to the runtime/container owner that created them.
+     */
     @Test
     public void adoptedFileStoreClearsOwnerLocalHandles() {
         FileStructure  sourceFile = new FileStructure("source");

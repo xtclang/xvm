@@ -23,6 +23,10 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 
 
 public class RuntimeTest {
+    /**
+     * Registry lookup and registration must use the same monitor. Otherwise same-JVM container
+     * startup can race with lookup and observe a partially updated weak registry.
+     */
     @Test
     public void findContainerSharesWeakRegistryMonitorWithRegistration()
             throws Exception {
@@ -55,6 +59,10 @@ public class RuntimeTest {
         }
     }
 
+    /**
+     * Runtime registration must happen after container construction. The old constructor-time
+     * registration let the registry expose a partially constructed container.
+     */
     @Test
     public void registerContainerDoesNotObservePartiallyConstructedContainer() {
         var runtime = new ObservingRuntime();

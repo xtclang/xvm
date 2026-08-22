@@ -38,6 +38,10 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * Tests for interpreter connector startup.
  */
 public class InterpreterConnectorTest {
+    /**
+     * Separate connectors must not share native-container state through static runtime caches. The
+     * old model could look correct in one launch but fail when two owners load in the same JVM.
+     */
     @Test
     public void parallelConnectorsLoadIndependentNativeContainers() {
         assumeTrue(systemModulesAvailable(), "compiled XDK system modules are required");

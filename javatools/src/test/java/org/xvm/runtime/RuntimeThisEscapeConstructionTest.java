@@ -17,6 +17,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * completed.
  */
 public class RuntimeThisEscapeConstructionTest {
+    /**
+     * FieldAccessChain construction must validate inputs without relying on partially constructed
+     * receiver state. This keeps constructor cleanup behaviorally equivalent.
+     */
     @Test
     public void fieldAccessChainValidatesConstructorInput() throws IOException {
         var source = readString("org/xvm/runtime/CallChain.java");
@@ -27,6 +31,10 @@ public class RuntimeThisEscapeConstructionTest {
                 "FieldAccessChain must preserve field-chain validation without dispatching through this");
     }
 
+    /**
+     * MethodHandle validation must not use a partial handle from its own constructor. The test
+     * preserves validation behavior while removing construction-time publication.
+     */
     @Test
     public void methodHandleValidationDoesNotUsePartialHandle() throws IOException {
         var source = readString("org/xvm/runtime/template/_native/reflect/xRTMethod.java");
@@ -37,6 +45,10 @@ public class RuntimeThisEscapeConstructionTest {
                 "MethodHandle must preserve validation using constructor arguments");
     }
 
+    /**
+     * Implicit-field metadata is constructor data, not mutable runtime state. This checks the
+     * refactor did not change the implicit field list.
+     */
     @Test
     public void implicitFieldsAreConstructorMetadata() throws IOException {
         var classTemplate = readString("org/xvm/runtime/ClassTemplate.java");
@@ -51,6 +63,10 @@ public class RuntimeThisEscapeConstructionTest {
                 "xRef must preserve referent and outer fields as constructor metadata");
     }
 
+    /**
+     * Container constructors must not capture `this` in owner helpers before construction
+     * completes. That was unsafe for single-threaded reentry and parallel startup alike.
+     */
     @Test
     public void containerConstructorDoesNotCaptureThisInOwnerHelpers() throws IOException {
         var container = readString("org/xvm/runtime/Container.java");

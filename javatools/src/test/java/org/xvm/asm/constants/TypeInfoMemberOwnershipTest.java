@@ -42,6 +42,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests for {@link PropertyInfo}, {@link PropertyBody}, and {@link ChildInfo} ownership.
  */
 public class TypeInfoMemberOwnershipTest {
+    /**
+     * PropertyInfo and ChildInfo objects must be copied per TypeInfo owner. The old attachment
+     * model could let the first owner mutate shared source metadata and leak it to later owners.
+     */
     @Test
     public void propertyAndChildInfoHaveExclusiveOwners() {
         FileStructure  file   = new FileStructure("test");
@@ -101,6 +105,10 @@ public class TypeInfoMemberOwnershipTest {
         assertSame(child2, info2.getChildInfosByName().get("alias.Child"));
     }
 
+    /**
+     * PropertyInfo construction must not call overridable body-attachment hooks before the owner
+     * object is fully assigned. That was a construction hazard before parallelism is involved.
+     */
     @Test
     public void propertyInfoFactoryDoesNotCallOverridableBodyAttachment() {
         FileStructure  file   = new FileStructure("test");
@@ -119,6 +127,10 @@ public class TypeInfoMemberOwnershipTest {
         assertNull(body.getPropertyInfo());
     }
 
+    /**
+     * Property metadata owner lookup must not require ambient current-pool state. The duck-typed
+     * identity repair path now has a receiver-owner pool available even when no scope is bound.
+     */
     @Test
     public void propertyInfoPoolHelperUsesOwnerWithoutAmbientPool() throws Exception {
         FileStructure  file   = new FileStructure("test");
@@ -142,6 +154,10 @@ public class TypeInfoMemberOwnershipTest {
         }
     }
 
+    /**
+     * Parallel TypeInfo construction must not share mutable property or child metadata. This
+     * covers the reentrant failure mode where two owners are built from the same source graph.
+     */
     @Test
     public void typeInfoConstructionCopiesPropertyAndChildInfoInParallel()
             throws Exception {
@@ -190,6 +206,10 @@ public class TypeInfoMemberOwnershipTest {
         assertNull(child.getTypeInfo());
     }
 
+    /**
+     * The constructor-escape refactor must preserve the original parent-validation behavior for
+     * property and formal-child constants while removing overridable constructor callbacks.
+     */
     @Test
     public void propertyConstantValidationKeepsNormalAndFormalChildRules() {
         FileStructure  file   = new FileStructure("test");

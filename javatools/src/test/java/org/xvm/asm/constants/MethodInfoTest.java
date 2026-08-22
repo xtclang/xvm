@@ -39,6 +39,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests for {@link MethodInfo} and {@link MethodBody} ownership.
  */
 public class MethodInfoTest {
+    /**
+     * A MethodInfo and its MethodBody chain must be owner-exclusive. The old construction path
+     * could mutate shared source bodies, so two TypeInfo owners could accidentally share metadata.
+     */
     @Test
     public void methodInfoAndBodyHaveExclusiveOwners() {
         FileStructure  file   = new FileStructure("test");
@@ -70,6 +74,10 @@ public class MethodInfoTest {
         assertSame(method2, info2.getVirtMethods().get(sig));
     }
 
+    /**
+     * MethodInfo construction must not call overridable body-attachment hooks before final owner
+     * state is assigned. That constructor-time callback is unsafe even in single-threaded code.
+     */
     @Test
     public void methodInfoFactoryDoesNotCallOverridableBodyAttachment() {
         FileStructure  file   = new FileStructure("test");
@@ -90,6 +98,11 @@ public class MethodInfoTest {
         assertNull(body.getMethodInfo());
     }
 
+    /**
+     * Method metadata helpers must derive their pool from the receiver owner. The old helper read
+     * ambient current-pool state, so direct or nested metadata queries could crash or use a wrong
+     * pool.
+     */
     @Test
     public void metadataPoolHelpersUseOwnerWithoutAmbientPool() throws Exception {
         FileStructure  file   = new FileStructure("test");
@@ -109,6 +122,11 @@ public class MethodInfoTest {
         }
     }
 
+    /**
+     * Parallel TypeInfo construction from the same source MethodInfo must produce independent
+     * owner graphs. This proves the factory/copy path does not let the first owner claim source
+     * metadata that later owners reuse.
+     */
     @Test
     public void typeInfoConstructionCopiesMethodInfoInParallel() throws Exception {
         FileStructure  file   = new FileStructure("test");

@@ -41,6 +41,10 @@ public class RefHandleConstructionTest {
     private static final Pattern NODE_CONSTRUCTOR_CALL = Pattern.compile(
             "new\\s+NodeHandle\\s*\\(");
 
+    /**
+     * Register refs must be published to frame VarInfo after construction completes. The old
+     * constructor-side cache write could expose a partial RefHandle.
+     */
     @Test
     public void registerRefPublicationHappensAfterConstruction()
             throws NoSuchMethodException, IOException {
@@ -60,6 +64,10 @@ public class RefHandleConstructionTest {
                 "createRegisterRef() must preserve the frame-local ref cache");
     }
 
+    /**
+     * Runtime ops must use the register-ref factory so the post-construction publication rule is
+     * enforced by call sites, not just by the direct constructor test.
+     */
     @Test
     public void runtimeOpsUseRegisterRefFactory() throws IOException {
         Stream.of("org/xvm/asm/op/MoveRef.java", "org/xvm/asm/op/MoveVar.java")
@@ -73,6 +81,10 @@ public class RefHandleConstructionTest {
                 });
     }
 
+    /**
+     * File node handles must initialize backing store state through a factory. That preserves
+     * behavior while avoiding constructor-time public field mutation.
+     */
     @Test
     public void fileNodeHandlesUseFactoryForStoreField()
             throws NoSuchMethodException {

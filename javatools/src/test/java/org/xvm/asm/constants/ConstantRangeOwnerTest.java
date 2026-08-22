@@ -16,6 +16,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests for owner-local range constants produced by compile-time numeric operations.
  */
 public class ConstantRangeOwnerTest {
+    /**
+     * Byte range folding must not require an ambient pool. The old code could throw in a direct
+     * single-threaded call if no caller happened to install `ConstantPool.getCurrentPool()`.
+     */
     @Test
     public void byteRangeUsesReceiverPoolWithoutAmbientPool() {
         var pool  = new FileStructure("owner").getConstantPool();
@@ -33,6 +37,10 @@ public class ConstantRangeOwnerTest {
         }
     }
 
+    /**
+     * A wrong ambient pool must not steal a folded range. The receiver constants already identify
+     * the owner, so nested or parallel work cannot be allowed to redirect the result.
+     */
     @Test
     public void byteRangeIgnoresWrongAmbientPool() {
         var poolOwner = new FileStructure("owner").getConstantPool();
@@ -49,6 +57,10 @@ public class ConstantRangeOwnerTest {
         }
     }
 
+    /**
+     * Integer range folding has the same owner rule as byte ranges: the produced range belongs to
+     * the receiver constant's pool, not to hidden thread state.
+     */
     @Test
     public void intRangeUsesReceiverPoolWithoutAmbientPool() {
         var pool  = new FileStructure("owner").getConstantPool();

@@ -41,26 +41,46 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * Tests for the native-template owner lookup table.
  */
 public class NativeTemplatesTest {
+    /**
+     * Template lookup must always have an owner container. Accepting null would recreate the old
+     * implicit global lookup problem under a different API.
+     */
     @Test
     public void rejectsNullContainer() {
         assertThrows(NullPointerException.class, () -> NativeTemplates.get((Container) null));
     }
 
+    /**
+     * Frame-based lookup must derive the owner from a real frame. A null frame cannot safely select
+     * owner-local templates or caches.
+     */
     @Test
     public void rejectsNullFrame() {
         assertThrows(NullPointerException.class, () -> NativeTemplates.get((Frame) null));
     }
 
+    /**
+     * Template-based lookup must not accept a null template. The caller must supply an owner-bearing
+     * object so the table cannot fall back to process-global state.
+     */
     @Test
     public void rejectsNullTemplate() {
         assertThrows(NullPointerException.class, () -> NativeTemplates.get((ClassTemplate) null));
     }
 
+    /**
+     * A template without an owner is invalid for NativeTemplates lookup. This catches partial or
+     * test-only template objects before they can hide owner mistakes.
+     */
     @Test
     public void rejectsTemplateWithNullOwner() {
         assertThrows(NullPointerException.class, () -> NativeTemplates.get(new NullOwnerTemplate()));
     }
 
+    /**
+     * Throwable translation creates runtime handles and therefore needs an owner. The old ownerless
+     * static helper shape must stay removed.
+     */
     @Test
     public void throwableTranslationRequiresOwner() {
         assertThrows(NoSuchMethodException.class,
@@ -69,11 +89,19 @@ public class NativeTemplatesTest {
                 () -> Utils.translate(null, new CancellationException()));
     }
 
+    /**
+     * The table itself is owner-local. Constructing one without a container would be another
+     * process-global cache in disguise.
+     */
     @Test
     public void rejectsNullOwnerAtConstruction() {
         assertThrows(NullPointerException.class, () -> new NativeTemplates(null));
     }
 
+    /**
+     * LocalClock's timer is process-wide scheduler state, not a mutable public runtime cache. It
+     * must be private/final so callers cannot swap it during same-JVM runs.
+     */
     @Test
     public void localClockTimerIsPrivateFinalScheduler() throws Exception {
         assertThrows(NoSuchFieldException.class, () -> xLocalClock.class.getField("TIMER"));
@@ -81,6 +109,10 @@ public class NativeTemplatesTest {
         assertPrivateStaticFinal(xLocalClock.class, "TIMER");
     }
 
+    /**
+     * Making the LocalClock scheduler private/final must preserve behavior. This proves scheduled
+     * timer tasks still run after the field visibility cleanup.
+     */
     @Test
     public void localClockSchedulerRunsTimerTasks() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
@@ -95,6 +127,10 @@ public class NativeTemplatesTest {
         assertTrue(latch.await(5, TimeUnit.SECONDS));
     }
 
+    /**
+     * The OS storage watcher is process service state, but it must not be a public mutable holder.
+     * Keeping the daemon holder private/final prevents external replacement.
+     */
     @Test
     public void osStorageWatcherIsPrivateFinalHolder() throws Exception {
         assertThrows(NoSuchFieldException.class, () -> xOSStorage.class.getDeclaredField("s_daemonWatch"));
@@ -102,6 +138,10 @@ public class NativeTemplatesTest {
         assertPrivateStaticFinal(xOSStorage.class, "WATCH_DAEMON");
     }
 
+    /**
+     * The watch daemon must bind each event owner's pool, not cache the first caller's pool. A cached
+     * pool field would route later events through stale owner state.
+     */
     @Test
     public void osStorageWatcherDoesNotCacheFirstCallerPool() throws Exception {
         Class<?> clzDaemon = Class.forName(xOSStorage.class.getName() + "$WatchServiceDaemon");
@@ -112,6 +152,10 @@ public class NativeTemplatesTest {
                 "watch daemon must bind the event owner's pool, not cache a ConstantPool field");
     }
 
+    /**
+     * Terminal console process state must be hidden behind a private/final holder. Public mutable
+     * statics would make same-JVM test runs depend on external mutation order.
+     */
     @Test
     public void terminalConsoleStateIsPrivateFinalHolder() throws Exception {
         assertThrows(NoSuchFieldException.class, () -> xTerminalConsole.class.getField("READER"));
@@ -120,6 +164,10 @@ public class NativeTemplatesTest {
         assertPrivateStaticFinal(xTerminalConsole.class, "TERMINAL_STATE");
     }
 
+    /**
+     * The remaining small-value native caches must no longer depend on the legacy fInstance flag.
+     * This verifies the explicit owner/cache replacement preserves the old cache sizes.
+     */
     @Test
     public void removedFInstanceUsersHaveExplicitOwnerState() throws Exception {
         assertNoFInstanceApi(xChar.class);
@@ -133,6 +181,10 @@ public class NativeTemplatesTest {
         assertFinalCacheArray(xUInt8.class, "cache", 256);
     }
 
+    /**
+     * Reflective enum helpers must return initialized ObjectHandle values, not raw construction
+     * structs. That was the enum singleton race behind the startup fix.
+     */
     @Test
     public void reflectionEnumPublicationHelpersReturnInitializedHandles()
             throws Exception {

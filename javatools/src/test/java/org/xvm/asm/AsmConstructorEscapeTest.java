@@ -22,6 +22,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests for ASM constructor rewrites that remove construction-time callbacks.
  */
 public class AsmConstructorEscapeTest {
+    /**
+     * FileStructure construction now builds root ownership without subclass extension points. This
+     * verifies the factory-safe shape still produces the same module/file envelope.
+     */
     @Test
     public void fileStructureRemainsRootEnvelope() {
         var file = new FileStructure("test");
@@ -32,6 +36,10 @@ public class AsmConstructorEscapeTest {
         assertEquals("test", file.getModuleId().getName());
     }
 
+    /**
+     * Moving constructor-time conditional-return initialization out of overridable paths must not
+     * change the observable conditional-return metadata.
+     */
     @Test
     public void methodConstructionPreservesConditionalReturnShape() {
         var file    = new FileStructure("test");
@@ -50,6 +58,10 @@ public class AsmConstructorEscapeTest {
         assertTrue(method.getReturn(0).isConditionalReturn());
     }
 
+    /**
+     * Constructor code must not dispatch to overridable conditional-return hooks while MethodStructure
+     * is partial. That was unsafe even before adding parallel construction.
+     */
     @Test
     public void methodConstructorDoesNotCallOverridableConditionalReturn() {
         var file = new FileStructure("test");
@@ -77,6 +89,10 @@ public class AsmConstructorEscapeTest {
         assertEquals(1, method.conditionalReturnCalls);
     }
 
+    /**
+     * Property constructor cleanup must preserve the original type and var-access metadata while
+     * avoiding mutation through overridable methods during construction.
+     */
     @Test
     public void propertyConstructionPreservesTypeAndVarAccess() {
         var file = new FileStructure("test");
@@ -91,6 +107,10 @@ public class AsmConstructorEscapeTest {
         assertEquals(Constants.Access.PRIVATE, property.getVarAccess());
     }
 
+    /**
+     * Property construction must not call overridable mutators before the object is complete. A
+     * single reentrant hook could otherwise observe partially assigned property state.
+     */
     @Test
     public void propertyConstructorDoesNotCallOverridableMutators() {
         var file = new FileStructure("test");
@@ -116,6 +136,10 @@ public class AsmConstructorEscapeTest {
         assertEquals(1, property.setTypeCalls);
     }
 
+    /**
+     * Constant constructors must validate parents without overridable construction callbacks. This
+     * preserves legal property/formal-child behavior while removing `this` escape hazards.
+     */
     @Test
     public void propertyConstantConstructorsDoNotCallOverridableParentCheck() {
         var file = new FileStructure("test");
@@ -145,6 +169,10 @@ public class AsmConstructorEscapeTest {
         assertEquals(1, formalChild.checkParentCalls);
     }
 
+    /**
+     * TypeInfo placeholder construction was rewritten to avoid constructor callbacks. This verifies
+     * that the legacy string form and cached placeholder behavior remain unchanged.
+     */
     @Test
     public void typeInfoPlaceholderKeepsLegacyStringAndCacheBehavior() {
         var pool = new FileStructure("test").getConstantPool();
@@ -155,6 +183,10 @@ public class AsmConstructorEscapeTest {
         assertEquals("Placeholder", placeholder.toString());
     }
 
+    /**
+     * VersionTree construction must not call overridable `clear()` while base fields are partial.
+     * The test proves the constructor-safe path still initializes the same empty tree.
+     */
     @Test
     public void versionTreeConstructorDoesNotCallOverridableClear() {
         var tree = new ClearTrackingVersionTree<String>();

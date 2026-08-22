@@ -18,6 +18,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public class RegExHandleTest {
+    /**
+     * Compiled regex patterns should remain cached per handle. The lazy/final-field cleanup must
+     * not remove the old performance behavior.
+     */
     @Test
     public void compiledPatternIsCachedPerHandle() {
         RegExHandle handle = new RegExHandle(null, "a+", 0);
@@ -28,6 +32,10 @@ public class RegExHandleTest {
         assertTrue(pattern.matcher("aaa").matches());
     }
 
+    /**
+     * The compiled-pattern cache must be a final lazy cell, not manual mutable lazy state. That
+     * preserves per-handle caching while giving safe publication semantics.
+     */
     @Test
     public void compiledPatternCacheIsFinalLazy() throws Exception {
         Field field = RegExHandle.class.getDeclaredField("pattern");

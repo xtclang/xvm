@@ -19,6 +19,10 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 
 
 public class xRTServerTest {
+    /**
+     * TLS route key-store handles must not be stored in ambient thread state. Request handling can
+     * reuse Java workers, so a thread-local key store can leak between routes.
+     */
     @Test
     public void keyManagerDoesNotStoreRouteKeyStoreInThreadLocal() {
         assertDoesNotThrow(() -> SimpleKeyManager.class.getDeclaredField("f_hServer"));
@@ -29,6 +33,10 @@ public class xRTServerTest {
                 "key manager must resolve TLS state from routes, not ThreadLocal");
     }
 
+    /**
+     * TLS alias lookup must resolve against route data rather than ambient thread state. This keeps
+     * server behavior deterministic for nested or reused request threads.
+     */
     @Test
     public void tlsAliasesResolveRoutesWithoutAmbientThreadState() {
         Router router = new Router();

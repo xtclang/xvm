@@ -23,6 +23,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * runtime is moving away from.
  */
 public class NativeTemplateOldPatternTest {
+    /**
+     * Mutable static INSTANCE fields are last-writer-wins. This is broken even with sequential
+     * containers because the first owner later observes the second owner's template.
+     */
     @Test
     public void staticInstanceCacheIsLastWriterWinsAcrossContainers() {
         OldTemplate templateA = new OldTemplate("container-A");
@@ -35,6 +39,10 @@ public class NativeTemplateOldPatternTest {
         assertEquals("container-B", OldTemplate.ownerObservedByContainerA());
     }
 
+    /**
+     * Assigning INSTANCE from a constructor publishes a partial object. The test makes the
+     * construction window deterministic and shows metadata can be observed before initialization.
+     */
     @Test
     public void constructorAssignmentCanExposePartiallyInitializedObject()
             throws Exception {
@@ -59,6 +67,10 @@ public class NativeTemplateOldPatternTest {
         assertEquals("metadata-for-container-A", EscapingTemplate.INSTANCE.metadata);
     }
 
+    /**
+     * Splitting static metadata across fields lets owners mix even if each field is individually
+     * initialized. The owner-scoped replacement keeps template and method metadata together.
+     */
     @Test
     public void splitStaticMetadataCanMixOwnersAcrossContainers()
             throws Exception {
@@ -91,6 +103,10 @@ public class NativeTemplateOldPatternTest {
         assertDoesNotThrow(metadataB::construct);
     }
 
+    /**
+     * Static string factories can return handles owned by the most recent container. Owner-local
+     * string caches preserve caching while preventing foreign handles.
+     */
     @Test
     public void staticStringFactoryCanReturnForeignOwnerHandles() {
         Owner ownerA = new Owner("container-A");
@@ -116,6 +132,10 @@ public class NativeTemplateOldPatternTest {
         assertNotSame(stringsA.emptyString(), stringsB.emptyString());
     }
 
+    /**
+     * Static ref metadata can pair a source-owner handle with a different owner's signature cache.
+     * The owner-scoped replacement keeps referent operations under the handle owner.
+     */
     @Test
     public void staticRefSignatureCacheCanUseForeignOwner() {
         Owner ownerA = new Owner("container-A");
@@ -139,6 +159,10 @@ public class NativeTemplateOldPatternTest {
         assertDoesNotThrow(() -> refsB.getReferent(ownerB.refTemplate.makeHandle()));
     }
 
+    /**
+     * Derived Ref/Var templates must use owner base signatures, not per-template derived metadata
+     * that omits inherited get/set behavior. This preserves the legacy fast path safely.
+     */
     @Test
     public void derivedRefAndVarTemplatesUseOwnerBaseSignatures() {
         Owner owner = new Owner("container-A");
@@ -163,6 +187,10 @@ public class NativeTemplateOldPatternTest {
         assertDoesNotThrow(() -> vars.setReferent(handle));
     }
 
+    /**
+     * Exception factories are frame-owner sensitive. A static exception class cache can create
+     * handles for the wrong frame owner after another container initializes.
+     */
     @Test
     public void staticExceptionClassCacheCanUseForeignOwner() {
         Owner ownerA = new Owner("container-A");
@@ -185,6 +213,10 @@ public class NativeTemplateOldPatternTest {
         assertDoesNotThrow(() -> ownerB.raise(exceptionsB.illegalState("fourth")));
     }
 
+    /**
+     * Native enum statics such as true/false handles are owner-bearing, not JVM constants. The test
+     * proves process-global enum handles can become foreign-owner handles.
+     */
     @Test
     public void staticNativeEnumValueCanReturnForeignOwnerHandle() {
         Owner ownerA = new Owner("container-A");
@@ -213,6 +245,10 @@ public class NativeTemplateOldPatternTest {
         assertTrue(OwnerScopedBooleans.isFalse(booleansA.makeHandle(false)));
     }
 
+    /**
+     * Bit handle caches are small and hot, but still owner-bearing. Owner-local caches preserve the
+     * same hot behavior without returning handles from the most recent container.
+     */
     @Test
     public void staticBitHandlesCanReturnForeignOwnerHandle() {
         Owner ownerA = new Owner("container-A");

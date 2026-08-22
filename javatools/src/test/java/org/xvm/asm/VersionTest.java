@@ -77,6 +77,10 @@ public class VersionTest {
         assertEquals(6, tree.size());
     }
 
+    /**
+     * VersionTree equality must have a matching stable hash code. The old mismatch made map/set
+     * behavior incorrect even without parallelism, and unsafe once trees are cached or shared.
+     */
     @Test
     public void testVersionTreeHashMatchesEquality() {
         var tree1 = genTree();
