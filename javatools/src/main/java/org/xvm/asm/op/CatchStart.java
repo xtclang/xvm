@@ -65,7 +65,7 @@ public class CatchStart
      */
     public CatchStart(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, false);
     }
 
     void preWrite(ConstantRegistry registry) {

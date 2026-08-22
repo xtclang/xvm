@@ -41,7 +41,7 @@ public class GP_Neg
      */
     public GP_Neg(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, false);
     }
 
     @Override

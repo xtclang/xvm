@@ -31,8 +31,6 @@ public abstract class OpPropInPlace
     protected OpPropInPlace(PropertyConstant idProp, Argument argTarget) {
         super(idProp);
 
-        assert(!isAssignOp());
-
         m_argTarget = argTarget;
     }
 
@@ -46,8 +44,6 @@ public abstract class OpPropInPlace
     protected OpPropInPlace(PropertyConstant idProp, Argument argTarget, Argument argReturn) {
         super(idProp);
 
-        assert(isAssignOp());
-
         m_argTarget = argTarget;
         m_argReturn = argReturn;
     }
@@ -60,10 +56,26 @@ public abstract class OpPropInPlace
      */
     protected OpPropInPlace(DataInput in, Constant[] aconst)
             throws IOException {
+        this(in, aconst, true);
+    }
+
+    /**
+     * Deserialization constructor with explicit opcode shape.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     * @param assigns true iff this opcode encodes a return target
+     */
+    protected OpPropInPlace(DataInput in, Constant[] aconst, boolean assigns)
+            throws IOException {
         super(in, aconst);
 
+        // Assignment shape controls the byte-stream layout and is static opcode
+        // metadata; do not call isAssignOp() from a base constructor.
+        // Subclasses that pass false are the same non-assigning opcodes that
+        // previously overrode isAssignOp() to false.
         m_nTarget = readPackedInt(in);
-        if (isAssignOp()) {
+        if (assigns) {
             m_nRetValue = readPackedInt(in);
         }
     }

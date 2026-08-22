@@ -47,13 +47,29 @@ import static org.xvm.util.Handy.writePackedLong;
 public abstract class OpCondJump
         extends Op {
     /**
+     * The operand layout encoded by a conditional jump opcode.
+     */
+    protected enum CondJumpShape {
+        UNARY(false, false),
+        SECOND_ARGUMENT(false, true),
+        BINARY(true, true);
+
+        CondJumpShape(boolean binary, boolean secondArgument) {
+            this.binary         = binary;
+            this.secondArgument = secondArgument;
+        }
+
+        final boolean binary;
+        final boolean secondArgument;
+    }
+
+    /**
      * Construct a unary conditional JMP_ op.
      *
      * @param arg  a value Argument
      * @param op   the op to jump to
      */
     protected OpCondJump(Argument arg, Op op) {
-        assert !hasSecondArgument() && !isBinaryOp();
         m_argVal = arg;
         m_opDest = op;
     }
@@ -66,7 +82,6 @@ public abstract class OpCondJump
      * @param op    the op to jump to
      */
     protected OpCondJump(Argument arg, Argument arg2, Op op) {
-        assert hasSecondArgument() && !isBinaryOp();
         m_argVal  = arg;
         m_argVal2 = arg2;
         m_opDest  = op;
@@ -81,7 +96,6 @@ public abstract class OpCondJump
      * @param op    the op to jump to
      */
     protected OpCondJump(TypeConstant type, Argument arg, Argument arg2, Op op) {
-        assert isBinaryOp();
         m_typeCommon = type;
         m_argVal     = arg;
         m_argVal2    = arg2;
@@ -96,11 +110,27 @@ public abstract class OpCondJump
      */
     protected OpCondJump(DataInput in, Constant[] aconst)
             throws IOException {
-        if (isBinaryOp()) {
+        this(in, aconst, CondJumpShape.UNARY);
+    }
+
+    /**
+     * Deserialization constructor with explicit opcode shape.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     * @param shape   the encoded operand layout
+     */
+    protected OpCondJump(DataInput in, Constant[] aconst, CondJumpShape shape)
+            throws IOException {
+        // Shape controls the byte-stream layout. It is passed as static opcode
+        // metadata so construction never calls virtual shape predicates.
+        // The shape constants mirror the old isBinaryOp()/hasSecondArgument()
+        // results; only the construction-time dispatch is removed.
+        if (shape.binary) {
             m_nType = readPackedInt(in);
         }
         m_nArg = readPackedInt(in);
-        if (hasSecondArgument()) {
+        if (shape.secondArgument) {
             m_nArg2 = readPackedInt(in);
         }
         m_ofJmp = readPackedInt(in);

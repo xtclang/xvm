@@ -66,7 +66,7 @@ public class I_Set
      */
     public I_Set(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, false);
 
         m_nValue = readPackedInt(in);
     }

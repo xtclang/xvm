@@ -40,7 +40,6 @@ public abstract class OpGeneral
      * @param argReturn  the Argument to move the result into
      */
     protected OpGeneral(Argument argTarget, Argument argReturn) {
-        assert(!isBinaryOp());
         assert argTarget != null && argReturn != null;
 
         m_argTarget = argTarget;
@@ -55,7 +54,6 @@ public abstract class OpGeneral
      * @param argReturn  the Argument to store the result into
      */
     protected OpGeneral(Argument argTarget, Argument argValue, Argument argReturn) {
-        assert(isBinaryOp());
         assert argTarget != null && argValue != null && argReturn != null;
 
         m_argTarget = argTarget;
@@ -71,8 +69,26 @@ public abstract class OpGeneral
      */
     protected OpGeneral(DataInput in, Constant[] aconst)
             throws IOException {
+        this(in, aconst, true);
+    }
+
+    /**
+     * Deserialization constructor with explicit opcode shape.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     * @param binary  true iff this opcode encodes a second argument
+     */
+    protected OpGeneral(DataInput in, Constant[] aconst, boolean binary)
+            throws IOException {
+        // The layout controls how many packed operands are consumed. It must be
+        // supplied by the subclass as static opcode metadata; calling
+        // isBinaryOp() here would dispatch into an incompletely constructed op.
+        // Subclasses that pass false are the same unary opcodes that previously
+        // overrode isBinaryOp() to false; the serialized format and hot
+        // post-construction behavior are unchanged.
         m_nTarget = readPackedInt(in);
-        if (isBinaryOp()) {
+        if (binary) {
             m_nArgValue = readPackedInt(in);
         }
         m_nRetValue = readPackedInt(in);

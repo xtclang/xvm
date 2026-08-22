@@ -64,9 +64,10 @@ data; it does not provide compiled Java classes.
 ## Latest Targeted Delta
 
 The full root lint build above was not rerun after the later
-handle-construction, runtime constructor-assertion, and `ClassTemplate`
-implicit-field waves. To avoid paying for another clean root build, this branch
-used a targeted javatools compile:
+handle-construction, runtime constructor-assertion, `ClassTemplate`
+implicit-field, `Container`, and `Op*` constructor-shape waves. To avoid
+paying for another clean root build, this branch used a forced targeted
+javatools compile:
 
 ```bash
 ./gradlew :javatools:compileJava --rerun-tasks --no-build-cache \
@@ -76,25 +77,49 @@ used a targeted javatools compile:
   -Porg.xtclang.java.maxWarnings=10000 \
   -Porg.xtclang.java.maxErrors=10000 \
   --console=plain --warning-mode=all \
-  > /tmp/xvm-classtemplate-overrides-lint.log 2>&1
+  > /tmp/xvm-op-this-escape.log 2>&1
 ```
 
 Result:
 
 ```text
-BUILD SUCCESSFUL in 8s
+BUILD SUCCESSFUL in 10s
 40 actionable tasks: 40 executed
-71 emitted this-escape diagnostics in the targeted javatools compile
-68 unique file:line locations in that targeted compile
-0 xRef.java, xOSFileNode.java, CallChain.java, xRTMethod.java, ClassTemplate.java, or Container.java this-escape diagnostics
-0 overrides diagnostics
+49 emitted this-escape diagnostics in the targeted javatools compile
+46 unique file:line locations in that targeted compile
+0 xRef.java, xOSFileNode.java, CallChain.java, xRTMethod.java,
+  ClassTemplate.java, Container.java, or Op*.java this-escape diagnostics
 ```
 
-The six removed full-root sites were:
+The targeted-delta waves removed these full-root sites:
 
 ```text
+javatools/src/main/java/org/xvm/asm/Op.java:681
+javatools/src/main/java/org/xvm/asm/OpCondJump.java:56
+javatools/src/main/java/org/xvm/asm/OpCondJump.java:69
+javatools/src/main/java/org/xvm/asm/OpCondJump.java:84
+javatools/src/main/java/org/xvm/asm/OpCondJump.java:99
+javatools/src/main/java/org/xvm/asm/OpGeneral.java:43
+javatools/src/main/java/org/xvm/asm/OpGeneral.java:58
+javatools/src/main/java/org/xvm/asm/OpGeneral.java:75
+javatools/src/main/java/org/xvm/asm/OpInPlace.java:52
+javatools/src/main/java/org/xvm/asm/OpInPlace.java:64
+javatools/src/main/java/org/xvm/asm/OpInPlace.java:79
+javatools/src/main/java/org/xvm/asm/OpIndex.java:65
+javatools/src/main/java/org/xvm/asm/OpIndex.java:79
+javatools/src/main/java/org/xvm/asm/OpIndex.java:96
+javatools/src/main/java/org/xvm/asm/OpPropInPlace.java:34
+javatools/src/main/java/org/xvm/asm/OpPropInPlace.java:49
+javatools/src/main/java/org/xvm/asm/OpPropInPlace.java:66
+javatools/src/main/java/org/xvm/asm/OpTest.java:49
+javatools/src/main/java/org/xvm/asm/OpTest.java:62
+javatools/src/main/java/org/xvm/asm/OpTest.java:77
+javatools/src/main/java/org/xvm/asm/OpTest.java:92
+javatools/src/main/java/org/xvm/asm/OpVar.java:58
 javatools/src/main/java/org/xvm/runtime/CallChain.java:540
 javatools/src/main/java/org/xvm/runtime/ClassTemplate.java:95
+javatools/src/main/java/org/xvm/runtime/Container.java:62
+javatools/src/main/java/org/xvm/runtime/Container.java:764
 javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSFileNode.java:169
 javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTMethod.java:297
 javatools/src/main/java/org/xvm/runtime/template/reflect/xRef.java:866
@@ -102,7 +127,9 @@ javatools/src/main/java/org/xvm/runtime/template/reflect/xRef.java:908
 ```
 
 The next full-root lint run is expected to drop from `80` emitted diagnostics
-at `77` unique locations to `74` emitted diagnostics at `71` unique locations.
+at `77` unique locations to `50` emitted diagnostics at `47` unique locations.
+The difference from the targeted compile is the one remaining
+`javatools_jitbridge` warning outside `:javatools:compileJava`.
 
 ## Warning Counts
 
@@ -148,26 +175,83 @@ javatools/src/main/java/org/xvm/compiler/Parser.java:70
 | Must fix, already fixed in this branch | Runtime constructor assertions call instance methods on partially constructed objects | 2 unique warning locations removed in this branch; 0 remain in this category | Done for this PR | Validate constructor arguments with static/private helpers so debug assertions keep their old checks without dispatching through `this`. |
 | Must fix, already fixed in this branch | `ClassTemplate` constructor calls an overridable implicit-field hook | 1 unique warning location removed in this branch; 0 remain in this category | Done for this PR | Pass immutable implicit-field names as constructor metadata so the base class never dispatches into `xRef` or `xConst` while construction is incomplete. |
 | Must fix, already fixed in this branch | `Container` constructor publishes owner through helper objects and runtime debug registry | 3 constructor expressions fixed; 0 `Container.java` warnings remain | Done for this PR | Use owner-explicit `ConstHeap`, owner-lazy `NativeTemplates`, and post-construction `MainContainer`/`NestedContainer` registration. |
+| Should fix, fixed in this branch | `Op` constructor virtual predicates/asserts | 22 unique warning locations removed in this branch; 0 remain in this category | Done for this PR | Replace constructor-time virtual predicate calls with explicit constructor-only opcode-shape metadata or private helpers. Keep existing virtual shape methods only for post-construction behavior. |
 | Must fix, fixed separately | `CooperativelyCleanableReference` publishes `this` to a static set from the constructor | 1 | Done on `lagergren/fix-utils-this-escape` | Use a private constructor plus factory/registration step after construction, or another design that does not publish the object until construction has returned. |
 | Must fix, fixed separately | `AbstractConverterMap` calls overridable factory methods from the base constructor | 1 | Done on `lagergren/fix-utils-this-escape` | Make factory results final concrete nested classes that do not dispatch to subclasses during construction, or lazily initialize views after construction with synchronization. |
 | Must audit, ASM owner-copy and metadata construction | `FileStructure`, `ClassStructure`, `MethodStructure`, `PropertyInfo`, `MethodInfo`, `TypeInfoReal`, `PropertyConstant`, `VersionTree` | 17 unique locations | Mixed | Prove construction is request/thread confined, or split assembly from publication so owned children are connected after the owner constructor returns. |
-| Must audit, `Op` constructor virtual predicates/asserts | `Op`, `OpCondJump`, `OpGeneral`, `OpInPlace`, `OpIndex`, `OpPropInPlace`, `OpTest`, `OpVar` | 22 unique locations | Moderate | Replace constructor-time virtual predicate calls with explicit constructor parameters, final helper methods, or subclass-independent op metadata. |
 | Must audit, compiler/parser/AST construction callbacks | `Lexer`, `Parser`, expression/statement constructors and `adopt`/parent-link calls | 16 unique locations | Mixed | For incremental/parallel compiler safety, prove AST/request confinement or separate object construction from parent/adoption callbacks. |
 | Must audit, JIT path | `javajit` and `javatools_jitbridge` constructors | 6 unique locations | Unknown | Document in `jit-implications.md`; do not change in this runtime-owner PR without JIT-specific tests. |
 | Should fix, easy cleanup unless subclassing is intentional | `PackedInteger`, `HasherReference`, `ListSet` | 5 unique locations | Small | Replace constructor calls to overridable methods with private helpers, make classes final where appropriate, or inline construction loops. |
 | Should inspect, tooling | `ModuleInfo` | 1 unique location | Small | Confirm no subclass-visible construction callback is needed; otherwise make the constructor path final/private. |
 
-Current unique-location classification:
+Expected full-root unique-location classification after applying the targeted
+delta:
 
 ```text
- 22 Must audit: ASM Op constructor dispatch
  17 Must audit: ASM metadata/owner construction
  16 Must audit: compiler/parser/AST construction
-  2 Must audit: runtime owner/container construction
   6 Must audit: JIT construction
   5 Should fix: utility cleanup
   2 Must fix, fixed separately: concrete unsafe utility construction
   1 Should inspect: tooling
+```
+
+Current targeted remaining `:javatools:compileJava` unique locations:
+
+```text
+javatools/src/main/java/org/xvm/asm/ClassStructure.java:3769
+javatools/src/main/java/org/xvm/asm/FileStructure.java:67
+javatools/src/main/java/org/xvm/asm/FileStructure.java:137
+javatools/src/main/java/org/xvm/asm/FileStructure.java:160
+javatools/src/main/java/org/xvm/asm/MethodStructure.java:119
+javatools/src/main/java/org/xvm/asm/PropertyStructure.java:66
+javatools/src/main/java/org/xvm/asm/VersionTree.java:20
+javatools/src/main/java/org/xvm/asm/constants/MethodInfo.java:62
+javatools/src/main/java/org/xvm/asm/constants/MethodInfo.java:80
+javatools/src/main/java/org/xvm/asm/constants/PropertyConstant.java:42
+javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java:51
+javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java:61
+javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java:71
+javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java:99
+javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:138
+javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:176
+javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:269
+javatools/src/main/java/org/xvm/compiler/Lexer.java:55
+javatools/src/main/java/org/xvm/compiler/Parser.java:43
+javatools/src/main/java/org/xvm/compiler/Parser.java:53
+javatools/src/main/java/org/xvm/compiler/Parser.java:70
+javatools/src/main/java/org/xvm/compiler/ast/ConvertExpression.java:71
+javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java:104
+javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java:129
+javatools/src/main/java/org/xvm/compiler/ast/NamedTypeExpression.java:98
+javatools/src/main/java/org/xvm/compiler/ast/PackExpression.java:26
+javatools/src/main/java/org/xvm/compiler/ast/PropertyDeclarationStatement.java:79
+javatools/src/main/java/org/xvm/compiler/ast/SyntheticExpression.java:27
+javatools/src/main/java/org/xvm/compiler/ast/ToIntExpression.java:60
+javatools/src/main/java/org/xvm/compiler/ast/TraceExpression.java:31
+javatools/src/main/java/org/xvm/compiler/ast/TypeCompositionStatement.java:197
+javatools/src/main/java/org/xvm/compiler/ast/TypeCompositionStatement.java:220
+javatools/src/main/java/org/xvm/compiler/ast/UnpackExpression.java:36
+javatools/src/main/java/org/xvm/javajit/BuildContext.java:136
+javatools/src/main/java/org/xvm/javajit/BuildContext.java:167
+javatools/src/main/java/org/xvm/javajit/JitMethodDesc.java:53
+javatools/src/main/java/org/xvm/javajit/Xvm.java:47
+javatools/src/main/java/org/xvm/javajit/builders/ArrayBuilder.java:33
+javatools/src/main/java/org/xvm/tool/ModuleInfo.java:316
+javatools_utils/src/main/java/org/xvm/util/CooperativelyCleanableReference.java:80
+javatools_utils/src/main/java/org/xvm/util/HasherReference.java:26
+javatools_utils/src/main/java/org/xvm/util/ListSet.java:46
+javatools_utils/src/main/java/org/xvm/util/PackedInteger.java:64
+javatools_utils/src/main/java/org/xvm/util/PackedInteger.java:73
+javatools_utils/src/main/java/org/xvm/util/PackedInteger.java:85
+javatools_utils/src/main/java/org/xvm/util/converter/AbstractConverterMap.java:40
+```
+
+The next full-root lint run should add this non-`javatools` warning to the
+remaining list:
+
+```text
+javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/nLongBasedArray.java:52
 ```
 
 ## What Is Actually Unsafe
@@ -274,7 +358,8 @@ The migration rule should be:
 This is the file-level count from the last full-root lint run, before the
 targeted-delta fixes above. It intentionally still includes sites that are now
 fixed in this branch, including `xRef`, `xOSFileNode`, `CallChain`,
-`xRTMethod`, `ClassTemplate`, and `Container`.
+`xRTMethod`, `ClassTemplate`, `Container`, and the `Op*` constructor-shape
+group.
 
 ```text
    6 javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java

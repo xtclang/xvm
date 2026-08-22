@@ -16,6 +16,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Stack;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure.Code;
@@ -678,7 +680,7 @@ public abstract class Op {
                     Parameter param = f_method.getParam(i);
                     aReg[i] = new RegisterAST(param.getType(), param.getNameConstant());
                 }
-                init(aReg);
+                initRegisters(aReg);
             }
         }
 
@@ -753,6 +755,19 @@ public abstract class Op {
 
         @Override
         public void init(RegisterAST[] params) {
+            initRegisters(params);
+        }
+
+        /**
+         * Initialize the register list from method parameters.
+         *
+         * The constructor uses this private helper instead of calling the public
+         * {@link #init(RegisterAST[])} method, because {@code init} is part of
+         * the resolver contract and must remain overridable by convention after
+         * construction. Constructor-time dispatch is not needed here and would
+         * expose a partially initialized registry.
+         */
+        private void initRegisters(RegisterAST[] params) {
             assert params != null && Arrays.stream(params).allMatch(Objects::nonNull);
             assert m_aregParams == BinaryAST.NO_REGS || m_aregParams.length == params.length;
             assert m_stackScopes.empty();
@@ -760,7 +775,7 @@ public abstract class Op {
             m_aregParams = params;
             m_listRegs.clear();
             for (RegisterAST reg : params) {
-                register(reg);
+                registerInternal(reg);
             }
         }
 
@@ -771,7 +786,20 @@ public abstract class Op {
 
         @Override
         public void register(RegisterAST reg) {
-            assert reg != null;
+            registerInternal(reg);
+        }
+
+        /**
+         * Register a decoded register without constructor-time virtual dispatch.
+         *
+         * Public {@link #register(RegisterAST)} is part of the resolver API and
+         * can be overridden by future specializations. The constructor only needs
+         * the local register bookkeeping, so it routes through this helper and
+         * avoids publishing a partially constructed registry through an
+         * overridable callback.
+         */
+        private void registerInternal(@NotNull RegisterAST reg) {
+            reg = Objects.requireNonNull(reg, "reg");
             int regId = reg.getRegId();
             if (regId < 0) {
                 switch (regId) {

@@ -42,7 +42,7 @@ public class GP_Compl
      */
     public GP_Compl(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, false);
     }
 
     @Override

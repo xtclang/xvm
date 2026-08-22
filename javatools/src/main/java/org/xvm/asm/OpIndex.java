@@ -62,8 +62,6 @@ public abstract class OpIndex
      * @param argIndex   the index Argument
      */
     protected OpIndex(Argument argTarget, Argument argIndex) {
-        assert(!isAssignOp());
-
         m_argTarget = argTarget;
         m_argIndex  = argIndex;
     }
@@ -76,8 +74,6 @@ public abstract class OpIndex
      * @param argReturn  the Argument to store the result into
      */
     protected OpIndex(Argument argTarget, Argument argIndex, Argument argReturn) {
-        assert(isAssignOp());
-
         m_argTarget = argTarget;
         m_argIndex  = argIndex;
         m_argReturn = argReturn;
@@ -91,9 +87,25 @@ public abstract class OpIndex
      */
     protected OpIndex(DataInput in, Constant[] aconst)
             throws IOException {
+        this(in, aconst, true);
+    }
+
+    /**
+     * Deserialization constructor with explicit opcode shape.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     * @param assigns true iff this opcode encodes a return target
+     */
+    protected OpIndex(DataInput in, Constant[] aconst, boolean assigns)
+            throws IOException {
+        // Assignment shape controls the byte-stream layout and is static opcode
+        // metadata; do not call isAssignOp() from a base constructor.
+        // Subclasses that pass false are the same non-assigning opcodes that
+        // previously overrode isAssignOp() to false.
         m_nTarget = readPackedInt(in);
         m_nIndex  = readPackedInt(in);
-        if (isAssignOp()) {
+        if (assigns) {
             m_nRetValue = readPackedInt(in);
         }
     }

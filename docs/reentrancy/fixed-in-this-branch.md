@@ -483,6 +483,49 @@ source ops and is encoded to `m_nType` before runtime execution.
 condition fields are gone and guards against reintroducing the old common-type
 write-back pattern.
 
+### ASM `Op` Constructor Shape Dispatch
+
+This branch also removes the remaining `Op*.java` constructor-time virtual
+dispatch warnings. This is a different problem from the runtime-executed cache
+fix above: no container-owned value was cached here. The bug shape was that
+base opcode constructors asked subclass-overridable methods what byte-stream
+shape to read before the subclass constructor had completed.
+
+The fixed sites were:
+
+- `Op.ConstantRegistry`: constructor parameter registers are now initialized
+  through private helpers, not the public `init(RegisterAST[])` and
+  `register(RegisterAST)` resolver callbacks.
+- `OpGeneral`: deserialization receives explicit unary/binary metadata instead
+  of calling `isBinaryOp()`.
+- `OpCondJump` and `OpTest`: deserialization receives an explicit
+  `CondJumpShape` or `TestShape` for unary, second-argument, and binary forms.
+- `OpInPlace`, `OpIndex`, `OpPropInPlace`, and `OpVar`: deserialization
+  receives explicit assigning/type-aware metadata instead of calling
+  `isAssignOp()` or `isTypeAware()`.
+
+The old code usually worked because the overrides were static opcode facts, not
+fields initialized by the subclass constructor. That was still a brittle Java
+construction pattern: a later subclass could read subclass state from one of
+those predicates, and deserialization would then parse the wrong operand layout
+while the object was only partially built.
+
+The replacement keeps semantics and performance stable:
+
+- public/source constructors keep their old arity-based APIs;
+- the explicit shape values are constructor-only parameters, not per-op runtime
+  fields;
+- existing virtual methods such as `isBinaryOp()`, `hasSecondArgument()`,
+  `isAssignOp()`, and `isTypeAware()` remain available after construction for
+  formatting, register analysis, runtime behavior, and JIT paths;
+- packed operand decoding populates the same fields as master.
+
+`OpRuntimeCacheTest.opcodeShapeConstructorsPreserveDecodedOperandLayouts()`
+decodes representative unary, binary, second-argument, assigning,
+non-assigning, and type-aware opcodes and verifies their fields. The companion
+`opcodeShapeCleanupDoesNotAddHotShapeFields()` test verifies that this cleanup
+did not add per-op shape/cache fields on the hot runtime objects.
+
 ## Manual Lazy Cache Hardening
 
 This branch also removes two concrete lazy-null cache hazards found by the

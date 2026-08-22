@@ -12,19 +12,19 @@ Last full forced root lint before the handle-construction wave:
 77 unique file:line locations
 
 Forced `:javatools:compileJava` lint after the handle-construction,
-runtime constructor-assertion, `ClassTemplate` implicit-field, and
-Container-construction waves:
-71 emitted this-escape diagnostics
-68 unique file:line locations
+runtime constructor-assertion, `ClassTemplate` implicit-field, `Container`,
+and `Op*` constructor-shape waves:
+49 emitted this-escape diagnostics
+46 unique file:line locations
 0 xRef.java, xOSFileNode.java, CallChain.java, xRTMethod.java, or
 ClassTemplate.java this-escape diagnostics
-0 Container.java this-escape diagnostics
+0 Container.java or Op*.java this-escape diagnostics
 ```
 
 The full root lint build was not rerun after these waves to avoid paying for
 another clean build. Based on the forced targeted compile and the removed
 full-root sites, the next full-root tally is expected to report one additional
-non-`javatools` site.
+non-`javatools` site: the remaining `javatools_jitbridge` warning.
 
 ## Decision Summary
 
@@ -35,14 +35,15 @@ non-`javatools` site.
 | Fixed in this branch | 3 | Runtime handle construction no longer publishes `RefHandle` to `Frame.VarInfo` or initializes handle fields through constructor-time public field mutation. |
 | Fixed in this branch | 2 | Runtime constructor assertions no longer call instance methods on partially constructed objects. |
 | Fixed in this branch | 1 | `ClassTemplate` implicit fields are explicit constructor metadata instead of an overridable constructor hook. |
+| Fixed in this branch | 22 | `Op*` constructor-time virtual opcode-shape predicates are now explicit deserialization metadata or private helpers. |
 | Fixed in this branch | 3 | `Container` construction no longer captures/registers a partially constructed owner through `ConstHeap`, `NativeTemplates`, or the runtime debug registry. Two of these were visible together in javac output; the registry publication became visible after the helper captures were removed. |
 | Fixed separately, still present here | 2 | Concrete unsafe construction/publication pattern. Fixed on `lagergren/fix-utils-this-escape`; still present in this branch until that PR is merged or rebased here. |
-| Remove after small design cleanup | 26 | Constructor-time virtual predicates/assertions or utility helper calls. Usually fixable, but should be separate from the runtime-owner PR. |
-| Audit before changing | 37 | Construction publishes `this` to owner/child structures or performs owner-sensitive assembly. Needs confinement or lifecycle proof. |
+| Remove after small design cleanup | 5 | Utility helper calls that are not owner-bearing runtime state. |
+| Audit before changing | 33 | Construction publishes `this` to owner/child structures or performs owner-sensitive assembly. Needs confinement or lifecycle proof. |
 | Document only for this PR | 7 | JIT/tooling paths that are not part of the runtime-owner fix. |
 
-The current forced targeted lint run reports 68 remaining unique locations. The
-next full-root lint run is expected to report 69 remaining unique locations
+The current forced targeted lint run reports 46 remaining unique locations. The
+next full-root lint run is expected to report 47 remaining unique locations
 because the full root build includes one additional non-`javatools` site.
 
 ## Fixed Separately, Do Not Suppress Here
@@ -244,12 +245,9 @@ The focused test ran `tests="3" skipped="0" failures="0" errors="0"`. The
 targeted lint compile emitted no `this-escape` diagnostics for `xRef.java` or
 `xOSFileNode.java`.
 
-## Remove After Small Design Cleanup
+## Fixed In This Branch: ASM Op Constructor Predicates
 
-These warnings should eventually disappear, but they are best handled in
-focused cleanup commits rather than mixed into the native-template owner PR.
-
-### ASM Op Constructor Predicates
+Status: fixed in this branch.
 
 The `Op*` constructors call overridable predicates such as `isBinaryOp()`,
 `hasSecondArgument()`, and `isAssignOp()` from assertions or deserialization
@@ -261,21 +259,51 @@ The proper fix is not to suppress these warnings. The opcode shape is static
 metadata, so constructors should receive or derive that metadata without
 calling subclass-overridable methods.
 
-| Site(s) | Current behavior | Seriousness | Proper refactor |
+This branch applies that fix:
+
+- `Op.ConstantRegistry` initializes constructor parameter registers through a
+  private helper instead of calling the public `init(RegisterAST[])` contract
+  method from its constructor.
+- `OpGeneral`, `OpCondJump`, `OpTest`, `OpInPlace`, `OpIndex`,
+  `OpPropInPlace`, and `OpVar` no longer call virtual shape predicates from
+  constructors.
+- Deserialization constructors receive explicit static shape metadata:
+  binary/unary, second-argument, assigning/non-assigning, or type-aware.
+- Source constructors keep the same public API and use their argument arity as
+  the shape. The old assertion-only virtual calls are gone because they added
+  no runtime behavior and were the unsafe construction edge.
+- Existing virtual methods such as `isBinaryOp()`, `hasSecondArgument()`,
+  `isAssignOp()`, and `isTypeAware()` remain for post-construction runtime,
+  formatting, register, and JIT behavior.
+
+Performance and semantics are intentionally unchanged. The branch does not add
+per-op shape fields or owner state. The shape parameters are constructor-only
+values used while reading the packed operand stream, and the hot runtime path
+continues to call the same post-construction virtual methods as before.
+
+`OpRuntimeCacheTest.opcodeShapeConstructorsPreserveDecodedOperandLayouts()`
+decodes representative binary, unary, second-argument, assigning,
+non-assigning, and type-aware opcodes and verifies the same operand fields are
+populated. `opcodeShapeCleanupDoesNotAddHotShapeFields()` guards against
+turning the constructor-only shape into a per-op runtime cache field.
+
+| Site(s) | Old behavior | Seriousness | Replacement |
 | --- | --- | --- | --- |
-| `javatools/src/main/java/org/xvm/asm/Op.java:681` | `ConstantRegistry` calls public `init(RegisterAST[])` from its constructor. The class is non-final, so a subclass could observe an incomplete registry. | Should fix. This is not runtime container state, but it is a real constructor-time virtual call. | Make `ConstantRegistry` final if subclassing is not intended, and move constructor initialization into a private helper such as `initParameters(...)`. Keep the public `init(...)` method only for the `BinaryAST.ConstantResolver` contract after construction. |
-| `javatools/src/main/java/org/xvm/asm/OpCondJump.java:56`, `:69`, `:84`, `:99` | Constructors and deserialization branch on `isBinaryOp()` and `hasSecondArgument()`. Several concrete op subclasses override those predicates. | Should fix. Existing overrides appear to be constant opcode shape, but a future override could read subclass fields before they are initialized. | Introduce explicit constructor shape flags or an immutable opcode-shape record. The source constructors should pass the shape they already imply, and the deserialization constructor should decode shape from the op code metadata rather than virtual dispatch. |
-| `javatools/src/main/java/org/xvm/asm/OpGeneral.java:43`, `:58`, `:75` | Constructors and deserialization call overridable `isBinaryOp()`. | Should fix. Same brittle static-shape problem as conditional jumps. | Pass an explicit `binary` flag to protected base constructors, or make binary-ness final/static metadata attached to the concrete op code. |
-| `javatools/src/main/java/org/xvm/asm/OpInPlace.java:52`, `:64`, `:79` | Constructors and deserialization call overridable `isAssignOp()`. | Should fix. Existing overrides are static role markers, but the base constructor should not ask a subclass object what role it has before construction completes. | Replace `isAssignOp()` constructor checks with an explicit `assignsResult` constructor parameter or static opcode metadata; keep the virtual method for already-constructed behavior if needed. |
-| `javatools/src/main/java/org/xvm/asm/OpIndex.java:65`, `:79`, `:96` | Constructors and deserialization call overridable `isAssignOp()`. | Should fix for the same reason as `OpInPlace`. | Use the same explicit `assignsResult`/opcode metadata model as `OpInPlace`. |
-| `javatools/src/main/java/org/xvm/asm/OpPropInPlace.java:34`, `:49`, `:66` | Constructors and deserialization call overridable `isAssignOp()` after the property-base constructor. | Should fix. It is a static opcode role check, not stateful runtime behavior. | Carry the assign-role through constructor parameters or opcode metadata and avoid virtual calls until after construction. |
-| `javatools/src/main/java/org/xvm/asm/OpTest.java:49`, `:62`, `:77`, `:92` | Constructors and deserialization call overridable `isBinaryOp()` and `hasSecondArgument()`. | Should fix. Same static-shape problem as `OpCondJump`. | Use an immutable test-op shape record with `binary` and `secondArgument` bits, or pass both booleans explicitly to the base constructor. |
-| `javatools/src/main/java/org/xvm/asm/OpVar.java:58` | Deserialization calls overridable `isTypeAware()` before concrete construction has completed. | Should fix. Existing type-aware overrides are static op shape, so virtual dispatch is unnecessary. | Decode type-awareness from opcode metadata or pass a final constructor flag from each concrete op. |
+| `javatools/src/main/java/org/xvm/asm/Op.java:681` | `ConstantRegistry` called public `init(RegisterAST[])` from its constructor. The class is non-final, so a subclass could observe an incomplete registry. | Should fix. This is not runtime container state, but it is a real constructor-time virtual call. | Constructor setup now calls private `initRegisters(...)`; public `init(...)` still delegates to the helper after construction for the `BinaryAST.ConstantResolver` contract. |
+| `javatools/src/main/java/org/xvm/asm/OpCondJump.java:56`, `:69`, `:84`, `:99` | Constructors and deserialization branched on `isBinaryOp()` and `hasSecondArgument()`. Several concrete op subclasses override those predicates. | Should fix. Existing overrides are static opcode shape, but a future override could read subclass fields before initialization. | Deserialization receives `CondJumpShape`; source constructors use arity. Existing virtual predicates remain for post-construction behavior. |
+| `javatools/src/main/java/org/xvm/asm/OpGeneral.java:43`, `:58`, `:75` | Constructors and deserialization called overridable `isBinaryOp()`. | Should fix. Same brittle static-shape problem as conditional jumps. | Deserialization receives an explicit `binary` constructor parameter for the two unary exceptions; source constructors use arity. |
+| `javatools/src/main/java/org/xvm/asm/OpInPlace.java:52`, `:64`, `:79` | Constructors and deserialization called overridable `isAssignOp()`. | Should fix. Existing overrides are static role markers, but the base constructor should not ask a subclass object what role it has before construction completes. | Deserialization receives an explicit `assigns` parameter for non-assigning opcodes. |
+| `javatools/src/main/java/org/xvm/asm/OpIndex.java:65`, `:79`, `:96` | Constructors and deserialization called overridable `isAssignOp()`. | Should fix for the same reason as `OpInPlace`. | Deserialization receives an explicit `assigns` parameter; non-assigning index variants pass `false`. |
+| `javatools/src/main/java/org/xvm/asm/OpPropInPlace.java:34`, `:49`, `:66` | Constructors and deserialization called overridable `isAssignOp()` after the property-base constructor. | Should fix. It is a static opcode role check, not stateful runtime behavior. | Deserialization receives an explicit `assigns` parameter; non-assigning property variants pass `false`. |
+| `javatools/src/main/java/org/xvm/asm/OpTest.java:49`, `:62`, `:77`, `:92` | Constructors and deserialization called overridable `isBinaryOp()` and `hasSecondArgument()`. | Should fix. Same static-shape problem as `OpCondJump`. | Deserialization receives `TestShape`; source constructors use arity. |
+| `javatools/src/main/java/org/xvm/asm/OpVar.java:58` | Deserialization called overridable `isTypeAware()` before concrete construction completed. | Should fix. Existing type-aware overrides are static op shape, so virtual dispatch is unnecessary. | Deserialization receives an explicit `typeAware` parameter for `Var_C`, `Var_CN`, `CatchStart`, and `FinallyStart`. |
 
-### Utility Constructor Helpers
+## Should Fix: Utility Constructor Helpers
 
-These are small cleanup candidates. They are not owner-bearing runtime state,
-but they should not survive a future "this-escape as error" policy.
+These warnings should eventually disappear, but they are best handled in
+focused cleanup commits rather than mixed into the native-template owner PR.
+They are not owner-bearing runtime state, but they should not survive a future
+`this-escape`-as-error policy.
 
 | Site(s) | Current behavior | Seriousness | Proper refactor |
 | --- | --- | --- | --- |
@@ -433,13 +461,11 @@ javatools/src/main/java/org/xvm/tool/ModuleInfo.java:316
 javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/nLongBasedArray.java:52
 ```
 
-## Current Remaining Classification
+## Expected Full-Root Remaining Classification
 
 ```text
-22 Should fix: ASM Op constructor dispatch
 17 Must audit: ASM metadata/owner construction
 16 Must audit: compiler/parser/AST construction
- 2 Must audit: runtime owner/container construction
  6 Document only: JIT construction
  5 Should fix: utility cleanup
  2 Fixed separately, still present here: concrete unsafe utility construction
@@ -453,8 +479,7 @@ The least risky order after this runtime-owner branch is:
 
 1. Merge or rebase the separate `lagergren/fix-utils-this-escape` branch that
    fixes the two concrete `javatools_utils` construction defects.
-2. Remove the ASM `Op*` constructor predicate warnings through opcode metadata
-   or final/static helpers.
+2. Remove the remaining small utility constructor-helper warnings.
 3. Audit ASM/compiler assembly paths with
    focused lifecycle tests before changing them.
 

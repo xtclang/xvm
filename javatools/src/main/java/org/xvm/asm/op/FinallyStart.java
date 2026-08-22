@@ -51,7 +51,7 @@ public class FinallyStart
      */
     public FinallyStart(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, false);
     }
 
     @Override

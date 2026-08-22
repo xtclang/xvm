@@ -38,7 +38,7 @@ public class IIP_Dec
      */
     public IIP_Dec(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, false);
     }
 
     @Override

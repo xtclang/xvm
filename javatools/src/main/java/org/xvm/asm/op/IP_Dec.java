@@ -38,7 +38,7 @@ public class IP_Dec
      */
     public IP_Dec(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, false);
     }
 
     @Override
