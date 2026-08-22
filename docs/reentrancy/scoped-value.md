@@ -798,8 +798,8 @@ better:
 
 `ScopedValue` is worth considering for:
 
-- replacing `ConstantPool.s_tloPool` after the remaining callers can move from
-  lexical `withPool(...)` bridges to explicit owners or `ScopedValue`,
+- replacing `ConstantPool.s_tloPool` after the remaining boundary bridges can
+  move to explicit owners or a checked `ScopedValue` owner bridge,
 - replacing `MultiMethodStructure.s_tloIgnoreNative` with a lexical
   serialization scope,
 - replacing `ServiceContext.s_tloContext` if service execution has a bounded

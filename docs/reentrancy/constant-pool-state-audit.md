@@ -60,7 +60,7 @@ expanded catalog to `constant-pool-hostile-state-audit.md`.
 | Priority | Category | Sites | Why it matters | Proper fix or guard |
 | --- | --- | --- | --- | --- |
 | Must fix | Wrong-owner runtime/helper state copied by adoption | Fixed in this branch for `SingletonConstant`, `FSNodeConstant`, `FileStoreConstant`, `TypeConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, `TypeParameterConstant`, and `HandleConstant` | `adoptedBy(...)` changes pool ownership. Shallow-copied runtime/cache/helper state can still point at the source pool/container. | Reset all non-logical state at adoption/owner-change boundaries. Throw/assert when an already-owned live handle constant is adopted into another pool. |
-| Must fix when runtime path can reach it | Ambient current pool in runtime execution | Runtime boundary sites are narrowed in this branch; remaining deeper sites are type-relation helpers and ASM metadata helpers | A thread-local owner is hidden from signatures. Missing scope cleanup or execution on a different thread selects the wrong pool or `null`. | Prefer explicit `Frame`, `Container`, or `ConstantPool` parameters. Use a scoped owner context only as a transitional bridge with assertions. |
+| Done in this branch; bridge still should be restricted | Ambient current pool in runtime execution | Semantic main-code callers are fixed outside `ConstantPool` itself; boundary scopes remain | A thread-local owner is hidden from signatures. Missing scope cleanup or execution on a different thread selects the wrong pool or `null`. | Keep explicit `Frame`, `Container`, or `ConstantPool` parameters. Use scoped owner context only as a transitional boundary bridge with diagnostics. |
 | Must audit | Shared mutable pool mutation during parallel runtime | `register(...)`, `ensure*Constant(...)`, `f_listConst`, `m_mapConstants`, `m_mapLocators`, `getContained()` | Some structures are concurrent/copy-on-write; `f_listConst` itself is not a general concurrent collection. The current design assumes registration and validation reentrancy more than arbitrary parallel mutation. | This branch adds `-Dxvm.asm.validateConstantPoolLateRegistration=true` to fail on new registrations after the runtime publication marker. Long term, split "frozen runtime pool" from compiler/linker mutation. |
 | Must audit | Live runtime handles embedded as constants | `HandleConstant` in `xRTTypeTemplate.resolveFormalType`, used as annotation parameter values | A live `ObjectHandle` is owner-specific and cannot become a pool-shared serialized logical constant. | This branch adds a `HandleConstant.adoptedBy(...)` guard for cross-pool movement. Diagnostics for annotated types carrying live handles remain useful. |
 | Should fix soon | Unsynchronized per-pool lazy implicit caches | `f_implicits`, `m_clz*`, `m_type*`, `m_val*`, `m_sig*`, `m_setJitPrimitives` | These are owner-local, so they are not cross-container globals. They are still plain lazy writes and can duplicate work or race under concurrent use of one pool. | Use owner-local `Lazy` or `ConcurrentMap.computeIfAbsent` for hot/shared runtime caches, or freeze/warm them before parallel runtime execution. |
@@ -165,15 +165,15 @@ Current sites after the runtime-boundary cleanup:
 | `org/xvm/runtime/template/_native/fs/xOSStorage.java:338` | Runtime async watch thread | Fixed in this branch: each event derives the pool from the watched storage handle's container and asserts that scoped owner. |
 | `org/xvm/runtime/template/_native/web/xRTServer.java:653` | Runtime request thread | Fixed in this branch as a request boundary scope asserting the service context pool. |
 | `org/xvm/runtime/template/_native/mgmt/xContainerControl.java:111` | Runtime management invoke | Fixed in this branch as a management boundary scope asserting the target container pool. |
-| `org/xvm/asm/FileStructure.java:181,1004` | Assembly/linker | Not runtime-container execution, but important for incremental compiler. |
+| `org/xvm/asm/FileStructure.java:181` | Assembly/linker | Boundary scope only; `getErrorListener()` no longer redirects through ambient pool. |
 | `org/xvm/asm/MethodStructure.java:666` | Assembly/linker | Compiler/linker backlog. |
-| `org/xvm/asm/constants/TypeConstant.java:1901,2075,6272,6352` | Type logic | Runtime-relevant type analysis. Prefer adding explicit pool parameters to the covariance/contravariance helpers that currently call `getCurrentPool()`. |
-| `org/xvm/asm/constants/MethodInfo.java:1476` | Type/method metadata | Prefer passing pool from owning method/type info instead of ambient lookup. |
-| `org/xvm/asm/constants/MethodBody.java:693` | Type/method metadata | Prefer passing pool from owning method/body instead of ambient lookup. |
-| `org/xvm/asm/constants/IdentityConstant.java:506` | Identity/type logic | Prefer caller-supplied pool for auto-narrowing/resolution paths. |
-| `org/xvm/asm/constants/PropertyInfo.java:683` | Type/property metadata | Prefer owner pool from property/type info. |
-| `org/xvm/asm/constants/IntConstant.java:725,739,753,767` | Constant operations | Prefer an explicit output pool parameter for range-producing operations. |
-| `org/xvm/asm/constants/ByteConstant.java:295,297,370,372,374,376` | Constant operations | Same as `IntConstant`. |
+| `org/xvm/asm/constants/TypeConstant.java:1901,2075` | Type logic | Boundary scopes remain for recursive type work; covariance/contravariance semantic lookups now take explicit pools. |
+| `org/xvm/asm/constants/MethodInfo.java` | Type/method metadata | Fixed in this branch: derives pool from `TypeInfo` or method identity. |
+| `org/xvm/asm/constants/MethodBody.java` | Type/method metadata | Fixed in this branch: derives pool from method identity. |
+| `org/xvm/asm/constants/IdentityConstant.java` | Identity/type logic | Fixed in this branch: resolver-backed nested identities carry caller-supplied pool. |
+| `org/xvm/asm/constants/PropertyInfo.java` | Type/property metadata | Fixed in this branch: shared identity repair uses property/type-info owner pool. |
+| `org/xvm/asm/constants/IntConstant.java` | Constant operations | Fixed in this branch: range folding uses receiver pool. |
+| `org/xvm/asm/constants/ByteConstant.java` | Constant operations | Fixed in this branch: range folding uses receiver pool. |
 | `org/xvm/javajit/NativeTypeSystem.java:108` | JIT | Documented in `jit-implications.md`; not this runtime PR. |
 | `org/xvm/javajit/JitConnector.java:64` | JIT | Documented in `jit-implications.md`; not this runtime PR. |
 

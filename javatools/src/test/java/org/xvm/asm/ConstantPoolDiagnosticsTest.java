@@ -1,8 +1,15 @@
 package org.xvm.asm;
 
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
 import java.lang.reflect.Field;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -22,6 +29,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests for opt-in {@link ConstantPool} runtime ownership diagnostics.
  */
 public class ConstantPoolDiagnosticsTest {
+    /**
+     * Boundary scopes are still transitional API. This verifies the supported case: an explicit
+     * owner installs the matching ambient pool and the diagnostic assertions accept it.
+     */
     @Test
     public void currentPoolAssertionsAcceptScopedPool() {
         assertTrue(assertionsEnabled(), "ConstantPool scope diagnostics require -ea");
@@ -34,6 +45,10 @@ public class ConstantPoolDiagnosticsTest {
         }
     }
 
+    /**
+     * Explicit-owner code must work when no ambient pool exists. The old design made many helpers
+     * crash or guess from thread state; this verifies the "no scope is fine" guard.
+     */
     @Test
     public void currentPoolIfPresentAllowsExplicitOwnerWithoutAmbientScope() {
         assertTrue(assertionsEnabled(), "ConstantPool scope diagnostics require -ea");
@@ -49,6 +64,10 @@ public class ConstantPoolDiagnosticsTest {
         }
     }
 
+    /**
+     * A wrong ambient pool is a real owner bug, even on one Java thread with nested work. This
+     * proves the transitional assertions catch the mismatch when assertions are enabled.
+     */
     @Test
     public void currentPoolAssertionsRejectWrongScopedPool() {
         assertTrue(assertionsEnabled(), "ConstantPool scope diagnostics require -ea");
@@ -67,6 +86,10 @@ public class ConstantPoolDiagnosticsTest {
         }
     }
 
+    /**
+     * Runtime publication diagnostics must be opt-in. The guard is useful for stress/CI, but it
+     * cannot change normal compiler/runtime cache behavior when the property is not enabled.
+     */
     @Test
     public void publicationMarkerIsDisabledByDefault() {
         ConstantPool pool = new FileStructure("test").getConstantPool();
@@ -77,6 +100,10 @@ public class ConstantPoolDiagnosticsTest {
         pool.ensureStringConstant("late");
     }
 
+    /**
+     * A runtime-visible pool should not keep growing silently. This proves the opt-in guard catches
+     * late constants after publication instead of letting parallel readers observe new state.
+     */
     @Test
     public void lateRegistrationGuardRejectsNewConstantsAfterPublication()
             throws Exception {
@@ -96,6 +123,10 @@ public class ConstantPoolDiagnosticsTest {
         });
     }
 
+    /**
+     * The late-registration guard must fail without mutating lookup-map shape. Otherwise the
+     * diagnostic itself would perturb ConstantPool state while checking for unsafe mutation.
+     */
     @Test
     public void lateRegistrationGuardDoesNotCreateMissingLookupMap()
             throws Exception {
@@ -111,6 +142,11 @@ public class ConstantPoolDiagnosticsTest {
         });
     }
 
+    /**
+     * Function compatibility is an instance method on a specific pool. The old implementation
+     * still asked the ambient current pool for Tuple, so it crashed with no scope and could use the
+     * wrong owner under nested execution.
+     */
     @Test
     public void functionCompatibilityUsesReceiverPoolWithoutAmbientPool() {
         ConstantPool pool = new FileStructure("test").getConstantPool();
@@ -123,6 +159,30 @@ public class ConstantPoolDiagnosticsTest {
             assertEquals(Relation.IS_A,
                     pool.checkFunctionCompatibility(typeTupleReturn, typeVoidReturn));
         }
+    }
+
+    /**
+     * `getCurrentPool()` is now a compatibility bridge, not a semantic owner API. This source-shape
+     * guard prevents new main-code helpers from reintroducing hidden owner lookup outside
+     * `ConstantPool` itself.
+     */
+    @Test
+    public void semanticCurrentPoolLookupIsBridgeOnly() throws Exception {
+        Path sourceRoot = sourceRoot();
+        List<String> offenders;
+
+        try (var files = Files.walk(sourceRoot.resolve("org/xvm"))) {
+            offenders = files
+                    .filter(path -> path.toString().endsWith(".java"))
+                    .filter(path -> !path.endsWith("ConstantPool.java"))
+                    .filter(ConstantPoolDiagnosticsTest::usesCurrentPoolInCode)
+                    .map(sourceRoot::relativize)
+                    .map(Path::toString)
+                    .sorted()
+                    .toList();
+        }
+
+        assertEquals(List.of(), offenders);
     }
 
     private static void withLateRegistrationValidation(CheckedRunnable action)
@@ -147,6 +207,25 @@ public class ConstantPoolDiagnosticsTest {
         Field field = ConstantPool.class.getDeclaredField("m_mapConstants");
         field.setAccessible(true);
         return (Map<Constant.Format, Map<Constant, Constant>>) field.get(pool);
+    }
+
+    private static boolean usesCurrentPoolInCode(Path path) {
+        try {
+            return Files.readAllLines(path).stream()
+                    .map(String::stripLeading)
+                    .filter(line -> !line.startsWith("//") && !line.startsWith("*"))
+                    .anyMatch(line -> line.contains("getCurrentPool("));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private static Path sourceRoot() {
+        Path cwd = Path.of("").toAbsolutePath();
+        Path project = cwd.resolve("src/main/java");
+        return Files.exists(project.resolve("org/xvm/asm/ConstantPool.java"))
+                ? project
+                : cwd.resolve("javatools/src/main/java");
     }
 
     private static boolean assertionsEnabled() {

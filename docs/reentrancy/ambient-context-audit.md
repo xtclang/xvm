@@ -20,7 +20,7 @@ boundary bridge.
 
 | Mechanism | Classification | Short conclusion |
 | --- | --- | --- |
-| `ConstantPool.s_tloPool` and semantic `getCurrentPool()` calls | Must fix where semantic code depends on it; must audit at boundaries | Runtime boundary scopes are now mostly lexical and asserted, but deeper constants/type logic still manufacture owner-scoped values from a hidden thread-local pool. |
+| `ConstantPool.s_tloPool` and semantic `getCurrentPool()` calls | Semantic callers fixed in this branch; bridge must still be audited | Main-code semantic callers have been removed outside `ConstantPool` itself. The remaining risk is the compatibility bridge and future misuse. |
 | `ConstantPool.f_tlolistDeferred` | Must audit | Per-pool deferred TypeInfo recursion list. It is owner-local, but it is still hidden per-thread state and must prove cleanup on all TypeInfo paths. |
 | `ServiceContext.s_tloContext` | Must audit, should fix toward explicit context | `drainWork()` restores the value in `finally`, but helper APIs can still silently read whatever service happens to be current on the Java thread. |
 | `MultiMethodStructure.s_tloIgnoreNative` | Benign/proven today, should fix if serialization is refactored | Serialization-only flag with private scoped use and `finally` cleanup. It is not owner-bearing, but the filtering option should eventually be explicit serializer state. |
@@ -149,8 +149,9 @@ Recommended diagnostics:
 
 ### Semantic Current-Pool Lookups
 
-These sites do real work based on the hidden current pool. They are the
-remaining important ConstantPool ambient-context risk.
+These sites used to do real work based on the hidden current pool. They are
+fixed in this branch; this table remains as the audit trail and regression
+checklist.
 
 | Site | Why it is dangerous | Proper fix |
 | --- | --- | --- |
@@ -163,7 +164,11 @@ remaining important ConstantPool ambient-context risk.
 | `javatools/src/main/java/org/xvm/asm/constants/IdentityConstant.java:506` | Fixed in this branch: `resolveNestedIdentity(pool, resolver)` accepted an explicit output pool, but resolver-backed `NestedIdentity` objects discarded it and later resolved generic signatures through `ConstantPool.getCurrentPool()`. A wrong or missing ambient pool made the result depend on unrelated thread state. | Resolver-backed nested identities now carry the explicit output pool. `NestedIdentityOwnerTest` runs under a wrong ambient pool and proves generic signature resolution still interns in the requested pool. |
 | `javatools/src/main/java/org/xvm/asm/constants/MethodBody.java:694` | Fixed in this branch: private `pool()` helper hid a current-pool dependency in method-body annotation logic. | It now uses the owning `MethodConstant` pool. `MethodInfoTest.metadataPoolHelpersUseOwnerWithoutAmbientPool()` covers method-body annotation lookup with no ambient pool. |
 | `javatools/src/main/java/org/xvm/asm/constants/MethodInfo.java:1484` | Fixed in this branch: private `pool()` helper hid a current-pool dependency in method metadata merge/narrowing logic. JIT and runtime metadata can reach `MethodInfo`. | Attached method info now derives the pool from its `TypeInfo`; unowned assembly falls back to the head method identity. `MethodInfoTest.metadataPoolHelpersUseOwnerWithoutAmbientPool()` covers the no-ambient owner helper. |
-| `javatools/src/main/java/org/xvm/asm/FileStructure.java:1009` | Error listener lookup redirects through the ambient pool if it differs from the file's pool. This is compiler/linker-facing, but wrong ambient state can hide diagnostics. | Prefer explicit error listener ownership. At minimum guard null and wrong-pool cases with a real diagnostic. |
+| `javatools/src/main/java/org/xvm/asm/FileStructure.java:1009` | Fixed in this branch: error listener lookup redirected through the ambient pool if it differed from the file's pool. Wrong ambient state could hide diagnostics in another file's listener, and a missing ambient pool could crash the fallback. | `FileStructure` diagnostics are now file-owned unless a listener is explicitly set. `FileStructureTest.errorListenerIgnoresAmbientPool()` covers wrong and null ambient pools. |
+
+`ConstantPoolDiagnosticsTest.semanticCurrentPoolLookupIsBridgeOnly()` now
+guards this table by scanning Java source and failing if non-comment code
+outside `ConstantPool.java` calls `getCurrentPool()`.
 
 Classification: must fix for the small obvious receiver-pool case; must fix
 for runtime-reachable type and range creation; must audit for compiler/linker
@@ -569,13 +574,13 @@ itself becomes part of a deterministic compiler/runtime test.
 
 ## Recommended Work Order
 
-1. Fix the obvious receiver-pool bug in
-   `ConstantPool.checkFunctionCompatibility(...)`.
-2. Fix runtime-reachable semantic `ConstantPool.getCurrentPool()` uses in
-   `TypeConstant`, `ByteConstant`, and `IntConstant` by passing an explicit
-   output/owner pool.
-3. Add an allowlist source-shape test for semantic `getCurrentPool()` so new
+1. Keep the explicit-owner replacements for all fixed semantic current-pool
+   sites: function compatibility, type substitutability, numeric ranges,
+   nested identities, metadata helpers, and file diagnostics.
+2. Add an allowlist source-shape test for semantic `getCurrentPool()` so new
    ownerless calls do not appear.
+3. Deprecate or restrict `ConstantPool.getCurrentPool()` so it cannot be used
+   casually from semantic code.
 4. Add ambient owner state to `OwnershipDiagnostics`: current pool, current
    service context, optional type relation context, and JIT `Ctx` when present.
 5. Add ServiceContext restoration and stale-context tests.

@@ -1396,12 +1396,8 @@ public final class FileStructure
     @Override
     public ErrorListener getErrorListener() {
         ErrorListener errs = m_errs;
-        if (errs == null) {
-            ConstantPool poolCurrent = ConstantPool.getCurrentPool();
-            if (poolCurrent != m_pool) {
-                errs = poolCurrent.getErrorListener();
-            }
-        }
+        // Diagnostics belong to this file owner. Redirecting through the ambient current pool
+        // can send errors to another FileStructure's listener, or crash when no pool is bound.
         return errs == null ? ErrorListener.RUNTIME : errs;
     }
 

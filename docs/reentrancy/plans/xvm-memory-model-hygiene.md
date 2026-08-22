@@ -167,13 +167,17 @@ Completed wave in this branch:
   method identity, attached method info derives from its `TypeInfo`, unowned
   assembly falls back to the head method identity, and property info uses its
   existing property-info owner helper. No-ambient tests cover these paths.
+- `FileStructure.getErrorListener()` no longer redirects through the ambient
+  current pool. Diagnostics are file-owned unless a listener is explicitly set,
+  and `FileStructureTest.errorListenerIgnoresAmbientPool()` covers wrong and
+  missing ambient scopes.
 
 ### Must Fix
 
 | Item | Why it is unsafe | Proper fix |
 | --- | --- | --- |
 | Semantic `ConstantPool.getCurrentPool()` use | Hidden thread-local owner lookup can be stale, absent, or wrong on reused Java threads, nested scopes, or async callbacks. Assertions are disabled in normal production runs. | Thread explicit `ConstantPool`, `Container`, or `Frame` parameters through semantic APIs. Keep scoped lookup only as a boundary bridge with non-assert diagnostics. |
-| Remove the remaining non-bridge current-pool call | After the metadata wave, `FileStructure.getErrorListener()` is the remaining source call outside `ConstantPool`'s bridge/assert helper. It is diagnostics-facing, but still hides the diagnostic owner. | Decide the intended owner for diagnostics, add a no-ambient/wrong-ambient test, and then keep `getCurrentPool()` only inside the transitional bridge or remove it. |
+| Remove/deprecate the current-pool compatibility API | Semantic main-code callers have been removed outside `ConstantPool` itself. The remaining risk is that new code can still call `getCurrentPool()` and recreate the same hidden-owner bug. | Add a source-shape test/allowlist for `getCurrentPool()`, deprecate the getter, and replace `withPool(...)` bridges with explicit owner APIs where practical. |
 | Generic/typed API cleanup | Raw types, broad `Object` returns, and scattered casts make owner/type boundaries invisible and move failures away from the call that selected an owner. | Use existing typed helpers, add typed owner-boundary accessors where missing, and keep unavoidable unchecked casts in small documented helpers. See `generics-api-audit.md`. |
 | Runtime-published pools remain mutable by default | A container-visible pool can keep registering constants unless an opt-in diagnostic property is enabled. Parallel readers can observe growth, invalidation, or partial registration. | Freeze runtime pools after warmup or split mutable compiler/linker pools from immutable runtime pools. Make post-publication registration fail on runtime paths. |
 | Base `Constant.adoptedBy(...)` shallow clone contract | Every new owner-local helper field is copied by default unless a subclass opts out. Final locks, atomics, lazy cells, thread-local cells, handles, and JIT caches are especially dangerous. | Replace base shallow clone with explicit copy/adoption contracts by subclass. Keep and expand `ConstantAdoptionValidator` in stress/CI. |

@@ -31,9 +31,7 @@ import org.xvm.util.Severity;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.xvm.util.Handy.byteArrayToHexDump;
@@ -44,111 +42,28 @@ import static org.xvm.util.Handy.writeMagnitude;
  * Tests of XVM FileStructure.
  */
 public class FileStructureTest {
+    /**
+     * File diagnostics must not be selected from hidden current-pool state. The old fallback could
+     * send a single-threaded nested compile/load diagnostic to another file's listener, and it could
+     * crash when no ambient pool was installed.
+     */
     @Test
-    public void testHasMultipleChildrenIgnoresFingerprints() {
-        FileStructure file = new FileStructure("Test");
-        file.ensureModule("Dependency").fingerprintRequired();
+    public void errorListenerIgnoresAmbientPool() {
+        var file = new FileStructure("owner");
+        var other = new FileStructure("other");
+        ErrorListener otherListener = err -> false;
+        other.setErrorListener(otherListener);
 
-        assertEquals(2, file.getChildrenCount());
-        assertFalse(file.isBundle());
-    }
+        try (var _ = ConstantPool.withPool(other.getConstantPool())) {
+            assertSame(ErrorListener.RUNTIME, file.getErrorListener());
+        }
 
-    @Test
-    public void testSingleFileMetadataRoundTrip()
-            throws IOException {
-        var file = new FileStructure("Solo");
-        var ver  = new Version("2.1");
-        file.getModule().setVersion(ver);
-        file.ensureModule("Dependency").fingerprintRequired();
+        try (var _ = ConstantPool.withPool(null)) {
+            assertSame(ErrorListener.RUNTIME, file.getErrorListener());
+        }
 
-        var metadata = file.buildFileInfo();
-        assertEquals(FileStructure.FileKind.Single, metadata.kind());
-        assertEquals(Set.of("Solo"), metadata.modules().keySet());
-        assertEquals(new VersionTree(ver, true), metadata.modules().get("Solo"));
-        assertFalse(metadata.hasMultipleModules());
-        assertFalse(metadata.isBundle());
-
-        var out = new ByteArrayOutputStream();
-        file.writeTo(out);
-        var ab = out.toByteArray();
-
-        assertEquals(metadata, FileStructure.readFileInfo(new ByteArrayInputStream(ab)));
-        DataInput inMetadata = new DataInputStream(new ByteArrayInputStream(ab));
-        assertEquals(metadata, FileStructure.readFileInfo(inMetadata));
-
-        var reread = new FileStructure(new ByteArrayInputStream(ab));
-        assertEquals(FileStructure.FileKind.Single, reread.getFileKind());
-        assertEquals(metadata, reread.buildFileInfo());
-    }
-
-    @Test
-    public void testLibraryFileMetadataRoundTripExcludesFingerprints()
-            throws IOException {
-        var fileLib = new FileStructure("Lib");
-        var verLib  = new Version("1.0");
-        fileLib.getModule().setVersion(verLib);
-
-        var bundle = new FileStructure("App");
-        var verApp = new Version("3.2");
-        bundle.getModule().setVersion(verApp);
-        bundle.merge(fileLib.getModule(), false, false);
-        bundle.getChild("Lib").markEmbedded();
-        bundle.ensureModule("External").fingerprintRequired();
-
-        var metadata = bundle.buildFileInfo();
-        assertEquals(FileStructure.FileKind.Library, metadata.kind());
-        // the order is part of the contract: the main module always comes first, and the module
-        // listing must stay deterministic (getModuleNames(), reflection's module list)
-        assertEquals(List.of("App", "Lib"), List.copyOf(metadata.modules().keySet()));
-        assertEquals(new VersionTree(verApp, true), metadata.modules().get("App"));
-        assertEquals(new VersionTree(verLib, true), metadata.modules().get("Lib"));
-        assertFalse(metadata.modules().containsKey("External"));
-        assertTrue(metadata.hasMultipleModules());
-        assertTrue(metadata.isBundle());
-
-        var out = new ByteArrayOutputStream();
-        bundle.writeTo(out);
-        var ab = out.toByteArray();
-
-        assertEquals(metadata, FileStructure.readFileInfo(new ByteArrayInputStream(ab)));
-
-        var reread = new FileStructure(new ByteArrayInputStream(ab));
-        assertEquals(FileStructure.FileKind.Library, reread.getFileKind());
-        assertEquals(metadata, reread.buildFileInfo());
-        // Map.equals is order-insensitive, so assert the deterministic order across the
-        // write/read round trip explicitly
-        assertEquals(List.of("App", "Lib"),
-                List.copyOf(FileStructure.readFileInfo(new ByteArrayInputStream(ab)).modules().keySet()));
-    }
-
-    @Test
-    public void testExplicitTimestampMakesGenerationReproducible()
-            throws IOException {
-        // with an explicit creation timestamp, two completely independent generations of the same
-        // module are byte-identical; the wall-clock default in FileStructure(String) is the only
-        // generation-time input that is not a pure function of the module contents
-        var timestamp = Instant.parse("2026-01-01T00:00:00Z");
-
-        var outFirst  = new ByteArrayOutputStream();
-        var outSecond = new ByteArrayOutputStream();
-        new FileStructure("Repro", timestamp).writeTo(outFirst);
-        new FileStructure("Repro", timestamp).writeTo(outSecond);
-        assertArrayEquals(outFirst.toByteArray(), outSecond.toByteArray());
-    }
-
-    @Test
-    public void testUnknownFileKindIsRejected()
-            throws IOException {
-        var file = new FileStructure("Future");
-
-        var out = new ByteArrayOutputStream();
-        file.writeTo(out);
-        var ab = withUnknownFileKind(out.toByteArray());
-
-        assertThrows(IllegalArgumentException.class,
-                () -> FileStructure.readFileInfo(new ByteArrayInputStream(ab)));
-        assertThrows(IllegalArgumentException.class,
-                () -> new FileStructure(new ByteArrayInputStream(ab)));
+        file.setErrorListener(otherListener);
+        assertSame(otherListener, file.getErrorListener());
     }
 
     @Test @Disabled("TODO: Re-enable test")

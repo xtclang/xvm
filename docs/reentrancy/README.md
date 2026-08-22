@@ -83,6 +83,10 @@ finding hidden owner assumptions after they were copied across the code base.
 
 Start here:
 
+- [bad-design-decisions-reference.md](bad-design-decisions-reference.md): the
+  consolidated list of bad design decisions found in this branch, why each is
+  broken even single-threaded, how it becomes a must-fix for reentrancy, and
+  what replacement pattern is required.
 - [must-fix-races.md](must-fix-races.md): the high-priority inventory of
   patterns that are actually racy or semantically broken under parallel startup.
 - [fixed-in-this-branch.md](fixed-in-this-branch.md): the master-to-branch

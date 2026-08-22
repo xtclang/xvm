@@ -294,6 +294,19 @@ property-info pool helper. `MethodInfoTest.metadataPoolHelpersUseOwnerWithoutAmb
 and `TypeInfoMemberOwnershipTest.propertyInfoPoolHelperUsesOwnerWithoutAmbientPool()`
 cover the no-ambient case.
 
+This branch also removes ambient pool lookup from `FileStructure` diagnostics.
+On `master`, `FileStructure.getErrorListener()` returned the file listener if
+one was set, but otherwise looked at `ConstantPool.getCurrentPool()` and, if it
+was different from the file's pool, delegated to that pool's file listener.
+That is wrong even in a single-threaded tool: a nested helper can temporarily
+bind a different pool, causing diagnostics for file A to be logged to file B;
+with no ambient pool the fallback could dereference `null`. The replacement
+makes diagnostics file-owned unless a caller explicitly sets another listener
+on that file. `FileStructureTest.errorListenerIgnoresAmbientPool()` covers the
+wrong-ambient and no-ambient cases.
+`ConstantPoolDiagnosticsTest.semanticCurrentPoolLookupIsBridgeOnly()` prevents
+new semantic source calls to `getCurrentPool()` outside `ConstantPool.java`.
+
 ### Handle Construction `this` Escapes
 
 This branch removes three runtime handle-construction `this` escapes:

@@ -250,6 +250,13 @@ runtime, or diagnostic helpers that temporarily change the ambient pool.
 Receiver-owned metadata now derives the pool from its method identity,
 containing `TypeInfo`, or property-info graph instead.
 
+This branch fixed the `FileStructure` diagnostic fallback as well. The old
+`getErrorListener()` implementation used `ConstantPool.getCurrentPool()` when
+the file had no listener. That could route file A diagnostics into file B's
+listener during a nested compile/load operation, or throw when no ambient pool
+was installed. Diagnostics now belong to the `FileStructure` unless a caller
+explicitly sets another listener.
+
 ### Runtime-published pools are still mutable by default
 
 References:
