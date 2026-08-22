@@ -15,7 +15,7 @@ and editor support.
 >
 > We are actively working to improve stability and move toward a supported beta release.
 
-> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite Build Properties](../CLAUDE.md) in the project CLAUDE.md for details.
+> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite Build Properties](../AGENTS.md) in the project AGENTS.md for details.
 
 ## Enabling the Lang Build
 

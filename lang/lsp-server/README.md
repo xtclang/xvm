@@ -20,7 +20,7 @@ For the canonical cross-adapter feature matrix and current implementation status
 [`../doc/plans/PLAN_IDE_INTEGRATION.md`](../doc/plans/PLAN_IDE_INTEGRATION.md). This
 README focuses on LSP-server-specific build/runtime/configuration details.
 
-> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite Build Properties](../../CLAUDE.md) in the project CLAUDE.md for details.
+> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite Build Properties](../../AGENTS.md) in the project AGENTS.md for details.
 
 ## Adapter Architecture
 
