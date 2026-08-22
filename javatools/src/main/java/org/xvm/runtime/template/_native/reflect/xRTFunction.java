@@ -222,7 +222,8 @@ public class xRTFunction
         ObjectHandle[]  ahArg         = new ObjectHandle[methodToArray.getMaxVars()];
         ahArg[0] = hArg;
 
-        Frame frameNext = frame.createFrameN(methodToArray, null, ahArg, new int[] {Op.A_STACK, Op.A_STACK});
+        int[] aiReturn = {Op.A_STACK, Op.A_STACK};
+        Frame frameNext = frame.createFrameN(methodToArray, null, ahArg, aiReturn);
         frameNext.addContinuation(stepBind);
         return frame.callInitialized(frameNext);
     }

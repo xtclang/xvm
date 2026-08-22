@@ -11,18 +11,18 @@ Last full forced root lint before the handle-construction wave:
 80 emitted this-escape diagnostics
 77 unique file:line locations
 
-Targeted javatools lint after the handle-construction and runtime
-constructor-assertion waves:
-74 emitted this-escape diagnostics
-71 unique file:line locations
-0 xRef.java, xOSFileNode.java, CallChain.java, or xRTMethod.java
-this-escape diagnostics
+Targeted javatools lint after the handle-construction, runtime
+constructor-assertion, and `ClassTemplate` implicit-field waves:
+73 emitted this-escape diagnostics
+70 unique file:line locations
+0 xRef.java, xOSFileNode.java, CallChain.java, xRTMethod.java, or
+ClassTemplate.java this-escape diagnostics
 ```
 
 The full root lint build was not rerun after these small waves to avoid paying
 for another clean build. Based on the targeted compile and the five removed
-full-root sites, the next full-root tally is expected to drop to 75 emitted
-diagnostics at 72 unique locations.
+full-root sites, the next full-root tally is expected to drop to 74 emitted
+diagnostics at 71 unique locations.
 
 ## Decision Summary
 
@@ -32,6 +32,7 @@ diagnostics at 72 unique locations.
 | Fixed in this branch | 3 | `NativeContainer` startup loading moved out of the constructor and into a post-construction factory. |
 | Fixed in this branch | 3 | Runtime handle construction no longer publishes `RefHandle` to `Frame.VarInfo` or initializes handle fields through constructor-time public field mutation. |
 | Fixed in this branch | 2 | Runtime constructor assertions no longer call instance methods on partially constructed objects. |
+| Fixed in this branch | 1 | `ClassTemplate` implicit fields are explicit constructor metadata instead of an overridable constructor hook. |
 | Fixed separately, still present here | 2 | Concrete unsafe construction/publication pattern. Fixed on `lagergren/fix-utils-this-escape`; still present in this branch until that PR is merged or rebased here. |
 | Remove after small design cleanup | 26 | Constructor-time virtual predicates/assertions or utility helper calls. Usually fixable, but should be separate from the runtime-owner PR. |
 | Audit before changing | 37 | Construction publishes `this` to owner/child structures or performs owner-sensitive assembly. Needs confinement or lifecycle proof. |
@@ -299,10 +300,13 @@ Already fixed in this branch:
 - `xRTMethod.MethodHandle` preserves the old debug assertion with
   `resolveMethodInfo(typeTarget, method)` instead of calling `getMethodInfo()`
   on a partially constructed handle.
+- `ClassTemplate` collects implicit field names from explicit constructor
+  metadata. `xRef` passes `RefHandle.REFERENT` and `GenericHandle.OUTER`;
+  `xConst` passes `PROP_HASH`; the base still adds `GenericHandle.OUTER` for
+  instance-child structures.
 
 | Site | Current behavior | Seriousness | Proper refactor |
 | --- | --- | --- | --- |
-| `javatools/src/main/java/org/xvm/runtime/ClassTemplate.java:95` | Base template constructor calls overridable `registerImplicitFields(null)`. Current overrides in `xRef` and `xConst` add static field names. | Must audit. This is in the root template hierarchy, and future subclasses could read owner/template fields before their constructor body runs. | Move implicit-field collection to explicit metadata: pass immutable implicit-field names to the base constructor, or use a post-construction template initialization hook called by the owning container before publication. |
 | `javatools/src/main/java/org/xvm/runtime/Container.java:62` | Base constructor creates `new ConstHeap(this)`. The current `ConstHeap` constructor only stores the owner and does not publish it. | Must audit. This is probably safe today but still stores a not-yet-fully-constructed owner in a child object. | Either keep a local suppression with a proof that `ConstHeap` cannot publish/callback during construction, or create `ConstHeap` from a post-construction factory before the container is registered. |
 | `javatools/src/main/java/org/xvm/runtime/Container.java:764` | Field initializer creates `new NativeTemplates(this)`. `NativeTemplates` is final and currently stores the owner plus owner-lazy cells. | Must audit. Lower risk than old static `INSTANCE`, but it still captures the owner during base construction. | Initialize `NativeTemplates` from the same post-construction owner-registration path as the heap, or suppress locally only with a final-class/no-publication proof. |
 
@@ -396,7 +400,7 @@ javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/nLongBasedArra
 22 Should fix: ASM Op constructor dispatch
 17 Must audit: ASM metadata/owner construction
 16 Must audit: compiler/parser/AST construction
- 3 Must audit: runtime owner/container construction
+ 2 Must audit: runtime owner/container construction
  6 Document only: JIT construction
  5 Should fix: utility cleanup
  2 Fixed separately, still present here: concrete unsafe utility construction

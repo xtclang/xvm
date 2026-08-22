@@ -78,6 +78,15 @@ public class VersionTest {
     }
 
     @Test
+    public void testVersionTreeHashMatchesEquality() {
+        var tree1 = genTree();
+        var tree2 = genTree();
+
+        assertEquals(tree1, tree2);
+        assertEquals(tree1.hashCode(), tree2.hashCode());
+    }
+
+    @Test
     public void testDefaultTreeIterator() {
         VersionTree<String> tree = genTree();
         Iterator<Version> iter = tree.iterator();

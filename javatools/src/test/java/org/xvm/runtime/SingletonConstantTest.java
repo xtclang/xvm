@@ -118,12 +118,13 @@ public class SingletonConstantTest {
     @Test
     public void adoptedFsNodeClearsOwnerLocalHandle() {
         FileStructure  sourceFile = new FileStructure("source");
+        byte[]         contents   = {1, 2, 3};
         FSNodeConstant source     = new FSNodeConstant(
                 sourceFile.getConstantPool(),
                 "data.bin",
                 FileTime.fromMillis(1),
                 FileTime.fromMillis(2),
-                new byte[] {1, 2, 3});
+                contents);
         FileStructure targetFile = new FileStructure("target");
 
         source.setHandle(ObjectHandle.DEFAULT);

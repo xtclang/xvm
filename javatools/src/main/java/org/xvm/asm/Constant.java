@@ -564,7 +564,7 @@ public abstract class Constant
         //    {
         //    assert iHash == computeHashCodeInternal();
         //}
-        return iHash == 0 ? computeHashCodeInternal() : iHash;
+        return iHash == HASH_UNCACHED ? computeHashCodeInternal() : iHash;
     }
 
     /**
@@ -581,17 +581,17 @@ public abstract class Constant
      */
     protected int computeHashCodeInternal() {
         if (containsUnresolved()) {
-            return 0;
+            return HASH_UNCACHED;
         }
         int iHash = Hash.of(getClass().getName(), computeHashCode());
-        return m_iHash = iHash == 0 ? 7654211 : iHash;
+        return m_iHash = iHash == HASH_UNCACHED ? HASH_ZERO : iHash;
     }
 
     /**
      * @return true if the hash code is cached (which implies that the constant is resolved)
      */
     protected boolean isHashCached() {
-        return m_iHash != 0;
+        return m_iHash != HASH_UNCACHED;
     }
 
     @Override
@@ -977,9 +977,22 @@ public abstract class Constant
     public static final Constant[] NO_CONSTS = new Constant[0];
 
     /**
-     * Cached hashCode or {@code 0}
+     * Zero is reserved to mean "not cached yet"; see {@link #computeHashCodeInternal()}.
      */
-    private int m_iHash;
+    private static final int HASH_UNCACHED = 0;
+
+    /**
+     * Non-zero sentinel used when the real computed hash is zero.
+     */
+    private static final int HASH_ZERO = 7654211;
+
+    /**
+     * Cached non-zero hash, or {@link #HASH_UNCACHED} until the constant is resolved. The volatile
+     * write makes the benign cache race explicit: a racing reader either recomputes the same value
+     * or observes the cached value after the writer proved the constant no longer contains unresolved
+     * inputs. Do not cache mutable/unresolved constants by copying this pattern elsewhere.
+     */
+    private volatile int m_iHash;
 
     /**
      * A cached index of the location of the Constant in the pool.

@@ -709,7 +709,7 @@ public class xRTDelegate
         ConstantPool                   pool         = pool();
         Map<TypeConstant, xRTDelegate> mapDelegates = new HashMap<>();
 
-        for (TypeConstant type : new TypeConstant[] {
+        TypeConstant[] delegateTypes = {
                 pool.typeNibble(),
                 pool.typeBoolean(), pool.typeBit(),    pool.typeChar(),
                 pool.typeInt8(),    pool.typeInt16(),  pool.typeInt32(),
@@ -717,7 +717,9 @@ public class xRTDelegate
                 pool.typeUInt8(),   pool.typeUInt16(), pool.typeUInt32(),
                 pool.typeUInt64(),  pool.typeUInt128(),
                 pool.typeFloat64(), pool.typeString()
-        }) {
+        };
+
+        for (TypeConstant type : delegateTypes) {
             addDelegate(mapDelegates, type);
         }
 

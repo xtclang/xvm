@@ -2,9 +2,7 @@ package org.xvm.runtime.template.reflect;
 
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import java.util.function.ToIntFunction;
 
@@ -69,7 +67,7 @@ public class xRef
     }
 
     protected xRef(Container container, ClassStructure structure, NativeRole role) {
-        super(container, structure);
+        super(container, structure, RefHandle.REFERENT, GenericHandle.OUTER);
 
         boolean canonical = role == NativeRole.CANONICAL;
 
@@ -83,19 +81,6 @@ public class xRef
         f_sigGet = canonical
                 ? Lazy.ofOwner(xRef::resolveGetSignature)
                 : Lazy.ofOwner(owner -> xRef.getInstance(owner.container()).getGetSignature());
-    }
-
-    @Override
-    protected Set<String> registerImplicitFields(Set<String> setFields) {
-        if (setFields == null) {
-            setFields = new HashSet<>();
-        }
-
-        // Refs that represent inflated fields need two properties below
-        setFields.add(RefHandle.REFERENT);
-        setFields.add(GenericHandle.OUTER);
-
-        return super.registerImplicitFields(setFields);
     }
 
     @Override

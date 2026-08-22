@@ -75,6 +75,11 @@ public abstract class ClassTemplate
         implements OpSupport {
     // construct the template
     public ClassTemplate(Container container, ClassStructure structClass) {
+        this(container, structClass, Utils.NO_NAMES);
+    }
+
+    // construct the template with additional runtime-managed field names
+    protected ClassTemplate(Container container, ClassStructure structClass, String... asFieldsImplicit) {
         f_container = container;
         f_struct    = structClass;
         f_sName     = structClass.getIdentityConstant().getPathString();
@@ -91,26 +96,28 @@ public abstract class ClassTemplate
         }
 
         f_structSuper = structSuper;
-
-        Set<String> setFieldsImplicit = registerImplicitFields(null);
-
-        f_asFieldsImplicit = setFieldsImplicit == null
-                ? Utils.NO_NAMES
-                : setFieldsImplicit.toArray(Utils.NO_NAMES);
+        f_asFieldsImplicit = collectImplicitFields(structClass, asFieldsImplicit);
     }
 
     /**
-     * Add all implicit fields to the specified set.
+     * Collect fields managed by the runtime rather than declared by the Ecstasy class. This is
+     * constructor metadata, not subclass behavior; calling an overridable hook here would dispatch
+     * through this before the concrete template constructor has completed.
      */
-    protected Set<String> registerImplicitFields(Set<String> setFields) {
-        if (f_struct.isInstanceChild()) {
-            if (setFields == null) {
-                setFields = new HashSet<>();
-            }
+    private static String[] collectImplicitFields(ClassStructure structClass, String[] asFieldsImplicit) {
+        if (asFieldsImplicit.length == 0 && !structClass.isInstanceChild()) {
+            return Utils.NO_NAMES;
+        }
 
+        Set<String> setFields = new HashSet<>(Arrays.asList(asFieldsImplicit));
+
+        if (structClass.isInstanceChild()) {
             setFields.add(GenericHandle.OUTER);
         }
-        return setFields;
+
+        return setFields.isEmpty()
+                ? Utils.NO_NAMES
+                : setFields.toArray(Utils.NO_NAMES);
     }
 
     /**

@@ -87,7 +87,6 @@ public class InterpreterConnector
         ConstantPool pool = m_containerMain.getConstantPool();
         ConstantPool.assertCurrentPoolIfPresent(pool, "InterpreterConnector.invoke0");
         TypeConstant   typeStrings = pool.ensureArrayType(pool.typeString());
-        ObjectHandle[] ahArg       = Utils.OBJECTS_NONE;
 
         switch (method.getRequiredParamCount()) {
         case 0:
@@ -96,7 +95,8 @@ public class InterpreterConnector
                 TypeConstant typeArg = method.getParam(0).getType();
 
                 assert typeStrings.isA(typeArg);
-                ahArg = new ObjectHandle[]{xString.makeArrayHandle(m_containerMain, asArg)};
+                m_containerMain.invoke0(method.getName(), xString.makeArrayHandle(m_containerMain, asArg));
+                return;
             }
             break;
 
@@ -104,12 +104,12 @@ public class InterpreterConnector
             TypeConstant typeArg = method.getParam(0).getType();
             assert typeStrings.isA(typeArg);
             // the method requires an array that we can supply
-            ahArg = new ObjectHandle[]{xString.makeArrayHandle(m_containerMain, asArg)};
-            break;
+            m_containerMain.invoke0(method.getName(), xString.makeArrayHandle(m_containerMain, asArg));
+            return;
         }
         }
 
-        m_containerMain.invoke0(method.getName(), ahArg);
+        m_containerMain.invoke0(method.getName(), Utils.OBJECTS_NONE);
     }
 
     /**

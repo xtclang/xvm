@@ -2,11 +2,9 @@ package org.xvm.runtime.template;
 
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
@@ -61,23 +59,12 @@ import org.xvm.util.Lazy;
 public class xConst
         extends ClassTemplate {
     public xConst(Container container, ClassStructure structure) {
-        super(container, structure);
+        super(container, structure, PROP_HASH);
 
         // NativeContainer still supports the legacy reflective constructor shape
         // (Container, ClassStructure, boolean). Converted templates ignore the flag; canonical
         // template ownership and lookup now live in NativeTemplates, not in constructor-published
         // static fields.
-    }
-
-    @Override
-    protected Set<String> registerImplicitFields(Set<String> setFields) {
-        if (setFields == null) {
-            setFields = new HashSet<>();
-        }
-
-        setFields.add(PROP_HASH);
-
-        return super.registerImplicitFields(setFields);
     }
 
     @Override

@@ -4,6 +4,7 @@ package org.xvm.asm;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 import org.xvm.util.Handy;
 
@@ -443,6 +444,16 @@ public class VersionTree<V>
         }
 
         return false;
+    }
+
+    @Override
+    public int hashCode() {
+        int nHash = 0;
+        for (Version ver : this) {
+            nHash = 31 * nHash + ver.hashCode();
+            nHash = 31 * nHash + Objects.hashCode(get(ver));
+        }
+        return nHash;
     }
 
     @Override

@@ -18,8 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class RuntimeThisEscapeConstructionTest {
     @Test
-    public void fieldAccessChainValidatesConstructorInput()
-            throws IOException {
+    public void fieldAccessChainValidatesConstructorInput() throws IOException {
         var source = readString("org/xvm/runtime/CallChain.java");
 
         assertFalse(source.contains("assert isField();"),
@@ -29,8 +28,7 @@ public class RuntimeThisEscapeConstructionTest {
     }
 
     @Test
-    public void methodHandleValidationDoesNotUsePartialHandle()
-            throws IOException {
+    public void methodHandleValidationDoesNotUsePartialHandle() throws IOException {
         var source = readString("org/xvm/runtime/template/_native/reflect/xRTMethod.java");
 
         assertFalse(source.contains("assert getMethodInfo() != null;"),
@@ -39,8 +37,21 @@ public class RuntimeThisEscapeConstructionTest {
                 "MethodHandle must preserve validation using constructor arguments");
     }
 
-    private static String readString(String source)
-            throws IOException {
+    @Test
+    public void implicitFieldsAreConstructorMetadata() throws IOException {
+        var classTemplate = readString("org/xvm/runtime/ClassTemplate.java");
+        var constTemplate = readString("org/xvm/runtime/template/xConst.java");
+        var refTemplate   = readString("org/xvm/runtime/template/reflect/xRef.java");
+
+        assertFalse(classTemplate.contains("registerImplicitFields("),
+                "ClassTemplate must not call an overridable implicit-field hook from its constructor");
+        assertTrue(constTemplate.contains("super(container, structure, PROP_HASH);"),
+                "xConst must preserve the synthetic hash field as constructor metadata");
+        assertTrue(refTemplate.contains("super(container, structure, RefHandle.REFERENT, GenericHandle.OUTER);"),
+                "xRef must preserve referent and outer fields as constructor metadata");
+    }
+
+    private static String readString(String source) throws IOException {
         var path = Path.of("src/main/java", source);
         return Files.readString(Files.exists(path)
                 ? path

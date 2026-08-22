@@ -9,6 +9,8 @@ import org.xvm.asm.ast.RegisterAST;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.util.Hash;
+
 
 /**
  * A Register represents a specific, typed, machine register of the XVM.
@@ -449,6 +451,11 @@ public class Register
     }
 
     @Override
+    public int hashCode() {
+        return hashRegister(m_iArg, m_fRO, m_fEffectivelyFinal, isInPlace(), getType());
+    }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
 
@@ -466,6 +473,11 @@ public class Register
         sb.append(getIdString());
 
         return sb.toString();
+    }
+
+    private static int hashRegister(int iArg, boolean fRO, boolean fEffectivelyFinal,
+                                    boolean fInPlace, TypeConstant type) {
+        return Hash.of(type, Hash.of(fInPlace, Hash.of(fEffectivelyFinal, Hash.of(fRO, Hash.of(iArg)))));
     }
 
 
@@ -778,6 +790,11 @@ public class Register
             return obj instanceof ShadowRegister that
                     && this.getOriginalRegister().equals(that.getOriginalRegister())
                     && this.getType()            .equals(that.getType());
+        }
+
+        @Override
+        public int hashCode() {
+            return Hash.of(getType(), getOriginalRegister().hashCode());
         }
 
         /**
