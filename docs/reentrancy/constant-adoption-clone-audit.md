@@ -253,9 +253,13 @@ Recommended guards:
   does not retain forbidden runtime-owner fields. The opt-in
   `ConstantAdoptionValidator` is enabled by
   `-Dxvm.asm.validateConstantAdoption=true` and checks for copied owner/runtime
-  references, mutable `Atomic*`, lock objects, Java references, thread-local
-  cells, and mutable collections that are identical between source and adopted
-  copy.
+  references, live `ObjectHandle` values, runtime templates/compositions,
+  mutable `Atomic*`, lock objects, Java references, thread-local cells, and
+  mutable collections that are identical between source and adopted copy.
+  `HandleConstant` remains the one legacy exception: a fresh unowned
+  `HandleConstant` can still be registered once in the current pool, while a
+  second cross-pool adoption of the already-owned live handle still throws in
+  `HandleConstant.adoptedBy(...)`.
 - `OwnershipDiagnostics` should keep validating handles at runtime boundaries
   such as `mgmt.Container.invoke`, because that catches wrong-owner values even
   when the source is not constant adoption.
@@ -296,7 +300,9 @@ Already fixed in this branch:
 - cross-pool adoption of already-owned `HandleConstant` live runtime handles.
 - opt-in adoption validation at `ConstantPool.register(...)`, with a focused
   regression test that proves a default shallow-cloned helper reference is
-  rejected when diagnostics are enabled.
+  rejected when diagnostics are enabled. The validator now also rejects default
+  shallow clones that copy arbitrary live `ObjectHandle` references, while
+  preserving the existing first-registration `HandleConstant` behavior.
 
 The focused regression test is
 `javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java`. It directly

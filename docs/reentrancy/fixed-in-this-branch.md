@@ -168,6 +168,11 @@ shallow-clone helper state identified by the audit:
 - `HandleConstant.adoptedBy(...)` now allows only the first registration of a
   fresh unowned runtime handle constant. Moving an already-owned live handle
   constant to another pool throws immediately.
+- `ConstantAdoptionValidator` now treats arbitrary copied runtime handles,
+  templates, and type compositions as forbidden shared owner state. The
+  existing fresh `HandleConstant` first-registration path remains allowed, but
+  any future default-cloned constant that carries live runtime state fails
+  under `-Dxvm.asm.validateConstantAdoption=true`.
 
 These changes preserve the old cache intent: each target owner still computes
 and caches the same values locally after first use, but no owner inherits

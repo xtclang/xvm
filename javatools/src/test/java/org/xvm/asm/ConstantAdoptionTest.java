@@ -229,6 +229,44 @@ public class ConstantAdoptionTest {
     }
 
     /**
+     * Runtime handles are owner-bearing state. A default-cloned constant that carries an arbitrary
+     * ObjectHandle would move live runtime state by reference while pretending to only adopt
+     * logical constant value into a new pool.
+     */
+    @Test
+    public void adoptionValidatorRejectsDefaultCloneCopiedRuntimeHandle() {
+        var sourcePool = new FileStructure("source").getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+
+        var source  = new RuntimeHandleConstant(sourcePool, new TestHandle());
+        var adopted = adopt(source, targetPool);
+
+        var validation = ConstantAdoptionValidator.validate(source, adopted);
+
+        assertFalse(validation.isValid());
+        assertEquals(1, validation.sharedReferences().size());
+        assertTrue(validation.message().contains("RuntimeHandleConstant.handle"));
+        assertTrue(validation.message().contains("TestHandle"));
+    }
+
+    /**
+     * HandleConstant is the one legacy exception: runtime annotation construction creates a fresh
+     * unowned handle constant and immediately registers that handle in the current pool. The second
+     * adoption of the now-owned constant is still rejected by {@link HandleConstant#adoptedBy}.
+     */
+    @Test
+    public void adoptionValidatorAllowsFreshHandleConstantFirstRegistration() {
+        var targetPool = new FileStructure("target").getConstantPool();
+
+        var source  = new HandleConstant(new TestHandle());
+        var adopted = ((Constant) source).adoptedBy(targetPool);
+
+        var validation = ConstantAdoptionValidator.validate(source, adopted);
+
+        assertTrue(validation.isValid(), validation::message);
+    }
+
+    /**
      * Registration with adoption validation enabled must reject bad default clones before they are
      * published into the target pool's lookup structures.
      */
@@ -327,6 +365,48 @@ public class ConstantAdoptionTest {
         @Override
         protected int computeHashCode() {
             return 1;
+        }
+    }
+
+    private static final class RuntimeHandleConstant
+            extends Constant {
+        private final ObjectHandle handle;
+
+        private RuntimeHandleConstant(ConstantPool pool, ObjectHandle handle) {
+            super(pool);
+            this.handle = handle;
+        }
+
+        @Override
+        public Format getFormat() {
+            return Format.IntLiteral;
+        }
+
+        @Override
+        public String getValueString() {
+            return "runtime-handle";
+        }
+
+        @Override
+        public String getDescription() {
+            return getValueString();
+        }
+
+        @Override
+        protected int compareDetails(Constant that) {
+            return 0;
+        }
+
+        @Override
+        protected int computeHashCode() {
+            return 1;
+        }
+    }
+
+    private static final class TestHandle
+            extends ObjectHandle {
+        private TestHandle() {
+            super(null);
         }
     }
 }

@@ -258,11 +258,22 @@ the specific subclass overrides the behavior.
 Classification: must-audit, likely must-fix for mutable `GenericHandle`
 instances and cross-container constant-handle publication.
 
+Current branch note: this remains a larger follow-up, not a safe small patch.
+`GenericHandle.cloneAs(...)` intentionally shares its field array so public,
+private, struct, masked, and revealed views keep observing the same object
+state. Simply cloning `m_aFields` would stop the current inflated-ref `OUTER`
+rewrite from corrupting the source view, but it would also make later
+`setField(...)` calls on one view invisible to the other view. The correct fix
+needs an explicit shared backing-state/view model, or another owner-aware
+representation that gives each view the correct `OUTER` ref without losing
+write-through identity semantics.
+
 Minimum replacement: replace raw `Object.clone()` with explicit view/copy
-constructors. Either share a documented immutable backing-state object, or copy
-the field array before per-view ref rewiring. Cross-container handle movement
-should allocate owner-local wrapper state and assert that every retained handle
-is shareable with the destination container.
+constructors. For same-object views, introduce a documented shared backing
+state plus per-view inflated-ref state instead of copying the whole field array
+blindly. For true copies or cross-container movement, allocate owner-local
+wrapper state and assert that every retained handle is shareable with the
+destination container.
 
 Equivalence/performance proof: create source and target views over a mutable
 `GenericHandle`, update inflated outer refs in the clone, and assert the source

@@ -34,14 +34,19 @@ final class ConstantAdoptionValidator {
 
     private static final Set<String> FORBIDDEN_EXACT_TYPES = Set.of(
             "org.xvm.asm.ConstantPool",
+            "org.xvm.runtime.ClassTemplate",
             "org.xvm.runtime.Container",
             "org.xvm.runtime.Fiber",
             "org.xvm.runtime.Frame",
-            "org.xvm.runtime.ServiceContext");
+            "org.xvm.runtime.ObjectHandle",
+            "org.xvm.runtime.ServiceContext",
+            "org.xvm.runtime.TypeComposition");
 
     private static final Set<String> FORBIDDEN_PACKAGES = Set.of(
             "java.util.concurrent.atomic.",
             "java.util.concurrent.locks.");
+
+    private static final String HANDLE_CONSTANT = "org.xvm.asm.constants.HandleConstant";
 
     private ConstantAdoptionValidator() {
     }
@@ -75,9 +80,14 @@ final class ConstantAdoptionValidator {
             Object sourceValue  = readField(field, source);
             Object adoptedValue = readField(field, adopted);
 
-            if (sourceValue != null && sourceValue == adoptedValue
-                    && isForbiddenSharedReference(sourceValue)) {
-                findings.add(describe(field, sourceValue));
+            if (sourceValue != null && sourceValue == adoptedValue) {
+                if (isPermittedSharedReference(source, adopted, field)) {
+                    continue;
+                }
+
+                if (isForbiddenSharedReference(sourceValue)) {
+                    findings.add(describe(field, sourceValue));
+                }
             }
         }
 
@@ -158,6 +168,18 @@ final class ConstantAdoptionValidator {
         }
 
         return isMutableCollection(value);
+    }
+
+    private static boolean isPermittedSharedReference(Constant source, Constant adopted,
+                                                      Field field) {
+        // HandleConstant is the legacy runtime-only exception: a freshly constructed
+        // HandleConstant starts without a pool and its first registration records that live handle
+        // in the current pool. Moving the already-owned HandleConstant again is rejected by
+        // HandleConstant.adoptedBy(...) before this validator runs.
+        return source.getContaining() == null
+                && source.getClass().getName().equals(HANDLE_CONSTANT)
+                && adopted.getClass().getName().equals(HANDLE_CONSTANT)
+                && field.getName().equals("m_hValue");
     }
 
     private static boolean isMutableCollection(Object value) {
