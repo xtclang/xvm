@@ -140,8 +140,7 @@ public class ConstantPoolDiagnosticsTest {
 
     @FunctionalInterface
     private interface CheckedRunnable {
-        void run()
-                throws Exception;
+        void run() throws Exception;
     }
 
     private static final class DiagnosticConstant

@@ -251,8 +251,7 @@ public class xOSStorage
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    protected static WatchServiceDaemon ensureWatchDaemon()
-            throws IOException {
+    protected static WatchServiceDaemon ensureWatchDaemon() throws IOException {
         return WATCH_DAEMON.ensure();
     }
 
@@ -266,8 +265,7 @@ public class xOSStorage
      * when an event is delivered.
      */
     protected static class WatchDaemonHolder {
-        public synchronized WatchServiceDaemon ensure()
-                throws IOException {
+        public synchronized WatchServiceDaemon ensure() throws IOException {
             WatchServiceDaemon daemon = this.daemon;
             if (daemon == null) {
                 daemon = new WatchServiceDaemon();

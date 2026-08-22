@@ -61,8 +61,7 @@ public class RefHandleConstructionTest {
     }
 
     @Test
-    public void runtimeOpsUseRegisterRefFactory()
-            throws IOException {
+    public void runtimeOpsUseRegisterRefFactory() throws IOException {
         Stream.of("org/xvm/asm/op/MoveRef.java", "org/xvm/asm/op/MoveVar.java")
                 .map(RefHandleConstructionTest::sourcePath)
                 .map(RefHandleConstructionTest::readString)

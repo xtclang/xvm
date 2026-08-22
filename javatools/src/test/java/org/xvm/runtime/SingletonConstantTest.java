@@ -38,8 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class SingletonConstantTest {
     @Test
-    public void concurrentInitializationHasSingleOwner()
-            throws Exception {
+    public void concurrentInitializationHasSingleOwner() throws Exception {
         SingletonConstant constant = createConstant();
         int               cThreads = 32;
         CountDownLatch    ready    = new CountDownLatch(cThreads);
@@ -73,8 +72,7 @@ public class SingletonConstantTest {
     }
 
     @Test
-    public void concurrentWaitersShareCompletion()
-            throws Exception {
+    public void concurrentWaitersShareCompletion() throws Exception {
         SingletonConstant constant = createConstant();
 
         assertTrue(constant.markInitializing(createFiber()));
