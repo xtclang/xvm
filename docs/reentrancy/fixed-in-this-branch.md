@@ -526,6 +526,39 @@ non-assigning, and type-aware opcodes and verifies their fields. The companion
 `opcodeShapeCleanupDoesNotAddHotShapeFields()` test verifies that this cleanup
 did not add per-op shape/cache fields on the hot runtime objects.
 
+### Utility Constructor Helper Dispatch
+
+This branch removes the smaller `javatools_utils` constructor-dispatch warning
+cluster:
+
+- `PackedInteger(long)`, `PackedInteger(BigInteger)`, and
+  `PackedInteger(DataInput)` no longer call public mutable APIs from
+  constructors. They use private `initLong(...)`, `initBigInteger(...)`, and
+  `readObjectInternal(...)` helpers. The public mutators still enforce the old
+  initialized/uninitialized checks and delegate to the same helpers after
+  construction.
+- `HasherReference` construction now assigns through private `assign(...)`
+  instead of protected `reset(...)`. `reset(...)` remains available for
+  post-construction reuse, including `TransientHasherReference`.
+- `ListSet(Collection)` no longer calls `addAll(...)`, which dispatches through
+  public `add(...)`. It populates through private helpers and uses
+  `sizeInternal()` on the insertion path. A lambda was intentionally avoided
+  here because capturing `this` in the constructor reintroduces the lint
+  warning.
+
+These fixes are not runtime owner-cache changes. They are straightforward Java
+construction hygiene: no subclass should be able to run user code before the
+base object is initialized. Semantics and performance remain the same for
+normal callers. `PackedInteger` still stores the same long/BigInteger state and
+uses the same packed stream format; `HasherReference` still hashes through the
+same hasher; `ListSet` still de-duplicates and builds its hash index at the
+same threshold. Construction is slightly more direct because it bypasses public
+dispatch.
+
+`UtilityConstructorEscapeTest` verifies the behavior by constructing subclasses
+whose overrides throw if invoked during construction. It also checks the
+resulting values and `ListSet` duplicate handling.
+
 ## Manual Lazy Cache Hardening
 
 This branch also removes two concrete lazy-null cache hazards found by the

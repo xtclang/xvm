@@ -65,30 +65,31 @@ data; it does not provide compiled Java classes.
 
 The full root lint build above was not rerun after the later
 handle-construction, runtime constructor-assertion, `ClassTemplate`
-implicit-field, `Container`, and `Op*` constructor-shape waves. To avoid
-paying for another clean root build, this branch used a forced targeted
-javatools compile:
+implicit-field, `Container`, `Op*` constructor-shape, and
+utility-constructor waves. To avoid paying for another clean root build, this
+branch used a forced targeted compile graph:
 
 ```bash
-./gradlew :javatools:compileJava --rerun-tasks --no-build-cache \
+./gradlew :javatools_utils:compileJava --rerun-tasks --no-build-cache \
   --no-configuration-cache \
   -Porg.xtclang.java.lint=true \
   -Porg.xtclang.java.warningsAsErrors=false \
   -Porg.xtclang.java.maxWarnings=10000 \
   -Porg.xtclang.java.maxErrors=10000 \
   --console=plain --warning-mode=all \
-  > /tmp/xvm-op-this-escape.log 2>&1
+  > /tmp/xvm-utils-this-escape.log 2>&1
 ```
 
 Result:
 
 ```text
-BUILD SUCCESSFUL in 10s
+BUILD SUCCESSFUL in 23s
 40 actionable tasks: 40 executed
-49 emitted this-escape diagnostics in the targeted javatools compile
-46 unique file:line locations in that targeted compile
+44 emitted this-escape diagnostics in the targeted compile graph
+41 unique file:line locations in that targeted compile graph
 0 xRef.java, xOSFileNode.java, CallChain.java, xRTMethod.java,
-  ClassTemplate.java, Container.java, or Op*.java this-escape diagnostics
+  ClassTemplate.java, Container.java, Op*.java, PackedInteger.java,
+  HasherReference.java, or ListSet.java this-escape diagnostics
 ```
 
 The targeted-delta waves removed these full-root sites:
@@ -124,12 +125,17 @@ javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSFileNode.java:169
 javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTMethod.java:297
 javatools/src/main/java/org/xvm/runtime/template/reflect/xRef.java:866
 javatools/src/main/java/org/xvm/runtime/template/reflect/xRef.java:908
+javatools_utils/src/main/java/org/xvm/util/HasherReference.java:26
+javatools_utils/src/main/java/org/xvm/util/ListSet.java:46
+javatools_utils/src/main/java/org/xvm/util/PackedInteger.java:64
+javatools_utils/src/main/java/org/xvm/util/PackedInteger.java:73
+javatools_utils/src/main/java/org/xvm/util/PackedInteger.java:85
 ```
 
 The next full-root lint run is expected to drop from `80` emitted diagnostics
-at `77` unique locations to `50` emitted diagnostics at `47` unique locations.
-The difference from the targeted compile is the one remaining
-`javatools_jitbridge` warning outside `:javatools:compileJava`.
+at `77` unique locations to `45` emitted diagnostics at `42` unique locations.
+The difference from the targeted compile graph is the one remaining
+`javatools_jitbridge` warning outside this task graph.
 
 ## Warning Counts
 
@@ -176,12 +182,12 @@ javatools/src/main/java/org/xvm/compiler/Parser.java:70
 | Must fix, already fixed in this branch | `ClassTemplate` constructor calls an overridable implicit-field hook | 1 unique warning location removed in this branch; 0 remain in this category | Done for this PR | Pass immutable implicit-field names as constructor metadata so the base class never dispatches into `xRef` or `xConst` while construction is incomplete. |
 | Must fix, already fixed in this branch | `Container` constructor publishes owner through helper objects and runtime debug registry | 3 constructor expressions fixed; 0 `Container.java` warnings remain | Done for this PR | Use owner-explicit `ConstHeap`, owner-lazy `NativeTemplates`, and post-construction `MainContainer`/`NestedContainer` registration. |
 | Should fix, fixed in this branch | `Op` constructor virtual predicates/asserts | 22 unique warning locations removed in this branch; 0 remain in this category | Done for this PR | Replace constructor-time virtual predicate calls with explicit constructor-only opcode-shape metadata or private helpers. Keep existing virtual shape methods only for post-construction behavior. |
+| Should fix, fixed in this branch | Utility constructor helpers call overridable methods | `PackedInteger`, `HasherReference`, `ListSet`: 5 unique warning locations removed in this branch; 0 remain in this category | Done for this PR | Route constructors through private helpers while leaving public/protected mutation/reset APIs available after construction. |
 | Must fix, fixed separately | `CooperativelyCleanableReference` publishes `this` to a static set from the constructor | 1 | Done on `lagergren/fix-utils-this-escape` | Use a private constructor plus factory/registration step after construction, or another design that does not publish the object until construction has returned. |
 | Must fix, fixed separately | `AbstractConverterMap` calls overridable factory methods from the base constructor | 1 | Done on `lagergren/fix-utils-this-escape` | Make factory results final concrete nested classes that do not dispatch to subclasses during construction, or lazily initialize views after construction with synchronization. |
 | Must audit, ASM owner-copy and metadata construction | `FileStructure`, `ClassStructure`, `MethodStructure`, `PropertyInfo`, `MethodInfo`, `TypeInfoReal`, `PropertyConstant`, `VersionTree` | 17 unique locations | Mixed | Prove construction is request/thread confined, or split assembly from publication so owned children are connected after the owner constructor returns. |
 | Must audit, compiler/parser/AST construction callbacks | `Lexer`, `Parser`, expression/statement constructors and `adopt`/parent-link calls | 16 unique locations | Mixed | For incremental/parallel compiler safety, prove AST/request confinement or separate object construction from parent/adoption callbacks. |
 | Must audit, JIT path | `javajit` and `javatools_jitbridge` constructors | 6 unique locations | Unknown | Document in `jit-implications.md`; do not change in this runtime-owner PR without JIT-specific tests. |
-| Should fix, easy cleanup unless subclassing is intentional | `PackedInteger`, `HasherReference`, `ListSet` | 5 unique locations | Small | Replace constructor calls to overridable methods with private helpers, make classes final where appropriate, or inline construction loops. |
 | Should inspect, tooling | `ModuleInfo` | 1 unique location | Small | Confirm no subclass-visible construction callback is needed; otherwise make the constructor path final/private. |
 
 Expected full-root unique-location classification after applying the targeted
@@ -191,12 +197,11 @@ delta:
  17 Must audit: ASM metadata/owner construction
  16 Must audit: compiler/parser/AST construction
   6 Must audit: JIT construction
-  5 Should fix: utility cleanup
   2 Must fix, fixed separately: concrete unsafe utility construction
   1 Should inspect: tooling
 ```
 
-Current targeted remaining `:javatools:compileJava` unique locations:
+Current targeted remaining unique locations in the compile graph:
 
 ```text
 javatools/src/main/java/org/xvm/asm/ClassStructure.java:3769
@@ -239,11 +244,6 @@ javatools/src/main/java/org/xvm/javajit/Xvm.java:47
 javatools/src/main/java/org/xvm/javajit/builders/ArrayBuilder.java:33
 javatools/src/main/java/org/xvm/tool/ModuleInfo.java:316
 javatools_utils/src/main/java/org/xvm/util/CooperativelyCleanableReference.java:80
-javatools_utils/src/main/java/org/xvm/util/HasherReference.java:26
-javatools_utils/src/main/java/org/xvm/util/ListSet.java:46
-javatools_utils/src/main/java/org/xvm/util/PackedInteger.java:64
-javatools_utils/src/main/java/org/xvm/util/PackedInteger.java:73
-javatools_utils/src/main/java/org/xvm/util/PackedInteger.java:85
 javatools_utils/src/main/java/org/xvm/util/converter/AbstractConverterMap.java:40
 ```
 

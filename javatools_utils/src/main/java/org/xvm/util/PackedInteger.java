@@ -61,7 +61,7 @@ public class PackedInteger
      * @param lVal  the <tt>long</tt> value for the PackedInteger
      */
     public PackedInteger(long lVal) {
-        setLong(lVal);
+        initLong(lVal);
     }
 
     /**
@@ -70,7 +70,7 @@ public class PackedInteger
      * @param bigint  the <tt>BigInteger</tt> value for the PackedInteger
      */
     public PackedInteger(BigInteger bigint) {
-        setBigInteger(bigint);
+        initBigInteger(bigint);
     }
 
     /**
@@ -82,7 +82,7 @@ public class PackedInteger
      */
     public PackedInteger(DataInput in)
             throws IOException {
-        readObject(in);
+        readObjectInternal(in);
     }
 
 
@@ -224,6 +224,13 @@ public class PackedInteger
      */
     public void setLong(long lVal) {
         verifyUninitialized();
+        initLong(lVal);
+    }
+
+    /**
+     * Initialize this object with a long value without constructor-time virtual dispatch.
+     */
+    private void initLong(long lVal) {
         m_lValue       = lVal;
         m_fInitialized = true;
     }
@@ -252,7 +259,13 @@ public class PackedInteger
      */
     public void setBigInteger(BigInteger bigint) {
         verifyUninitialized();
+        initBigInteger(bigint);
+    }
 
+    /**
+     * Initialize this object with a BigInteger value without constructor-time virtual dispatch.
+     */
+    private void initBigInteger(BigInteger bigint) {
         if (bigint == null) {
             throw new IllegalArgumentException("big integer value required");
         }
@@ -549,7 +562,14 @@ public class PackedInteger
     public void readObject(DataInput in)
             throws IOException {
         verifyUninitialized();
+        readObjectInternal(in);
+    }
 
+    /**
+     * Read this object's value without calling public mutators from constructors.
+     */
+    private void readObjectInternal(DataInput in)
+            throws IOException {
         // check for large or huge format with more than 8 trailing bytes (needs BigInteger)
         final int b = in.readByte();
         if ((b & 0xE0) == 0xA0) {
@@ -569,14 +589,14 @@ public class PackedInteger
             if (cBytes > 8) {
                 final byte[] ab = new byte[cBytes];
                 in.readFully(ab);
-                setBigInteger(new BigInteger(ab));
+                initBigInteger(new BigInteger(ab));
                 return;
             }
         }
 
         // small, medium, and large (up to 8 trailing bytes) format values fit into
         // a Java long
-        setLong(readLong(in, b, false));
+        initLong(readLong(in, b, false));
     }
 
     /**
