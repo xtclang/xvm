@@ -140,6 +140,9 @@ Start here:
 - [lint-parallelism-risk-audit.md](lint-parallelism-risk-audit.md): non
   `this-escape` javac lint categories that can still hide same-JVM ownership,
   cache-key, state-machine, or erased-payload bugs.
+- [generics-api-audit.md](generics-api-audit.md): how raw types, broad
+  `Object` returns, and scattered casts hide owner/type boundaries, with
+  must-fix vs should-fix replacement guidance.
 - [stress-discovered-runtime-issues.md](stress-discovered-runtime-issues.md):
   concrete failures found by the parallel manual-test runner that are adjacent
   to, but distinct from, the Java static owner-cache work.
