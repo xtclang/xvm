@@ -3727,12 +3727,8 @@ public class ConstantPool
 
     /**
      * @return a ConstantPool associated with the current thread
-     *
-     * @deprecated owner-sensitive code must pass an explicit pool or derive it from the receiver.
-     *             This remains only for transitional boundary scopes guarded by diagnostics.
      */
-    @Deprecated(forRemoval = true)
-    public static ConstantPool getCurrentPool() {
+    private static ConstantPool getCurrentPool() {
         return s_tloPool.get()[0];
     }
 

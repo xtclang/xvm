@@ -20,7 +20,7 @@ boundary bridge.
 
 | Mechanism | Classification | Short conclusion |
 | --- | --- | --- |
-| `ConstantPool.s_tloPool` and semantic `getCurrentPool()` calls | Semantic callers fixed in this branch; bridge must still be audited | Main-code semantic callers have been removed outside `ConstantPool` itself. The remaining risk is the compatibility bridge and future misuse. |
+| `ConstantPool.s_tloPool` and semantic `getCurrentPool()` calls | Semantic callers fixed in this branch; private bridge remains | Main-code semantic callers have been removed outside `ConstantPool` itself, and `getCurrentPool()` is no longer public. The remaining risk is the scoped compatibility bridge. |
 | `ConstantPool.f_tlolistDeferred` | Must audit | Per-pool deferred TypeInfo recursion list. It is owner-local, but it is still hidden per-thread state and must prove cleanup on all TypeInfo paths. |
 | `ServiceContext.s_tloContext` | Must audit, should fix toward explicit context | `drainWork()` restores the value in `finally`, but helper APIs can still silently read whatever service happens to be current on the Java thread. |
 | `MultiMethodStructure.s_tloIgnoreNative` | Benign/proven today, should fix if serialization is refactored | Serialization-only flag with private scoped use and `finally` cleanup. It is not owner-bearing, but the filtering option should eventually be explicit serializer state. |
@@ -39,7 +39,7 @@ boundary bridge.
 
 | Site | Role |
 | --- | --- |
-| `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3729` | `getCurrentPool()` returns `s_tloPool.get()[0]`. |
+| `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3729` | Private `getCurrentPool()` returns `s_tloPool.get()[0]` for `withPool(...)` and diagnostics inside `ConstantPool`. |
 | `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3769` | `withPool(pool)` writes a new value and returns an `Auto` that restores the previous value. |
 | `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3741` | `assertCurrentPool(...)` checks that an explicit owner matches the ambient pool. |
 | `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3755` | `assertCurrentPoolIfPresent(...)` accepts no ambient pool but rejects the wrong one. |
@@ -54,6 +54,11 @@ the signature gives no clue that owner lookup is happening.
 The assertions are diagnostics, not production enforcement. With assertions
 disabled, a wrong ambient pool can still be used unless the caller no longer
 depends on `getCurrentPool()`.
+
+This branch removes that getter from the public API. The private helper still
+exists so `withPool(...)`, `assertCurrentPool(...)`, and
+`assertCurrentPoolIfPresent(...)` can implement transitional boundary checks,
+but ordinary semantic code can no longer compile against a hidden owner lookup.
 
 ### Why Thread-Local Current Pool Is Arbitrary And Dangerous
 
@@ -577,16 +582,14 @@ itself becomes part of a deterministic compiler/runtime test.
 1. Keep the explicit-owner replacements for all fixed semantic current-pool
    sites: function compatibility, type substitutability, numeric ranges,
    nested identities, metadata helpers, and file diagnostics.
-2. Add an allowlist source-shape test for semantic `getCurrentPool()` so new
-   ownerless calls do not appear.
-3. Deprecate or restrict `ConstantPool.getCurrentPool()` so it cannot be used
-   casually from semantic code.
-4. Add ambient owner state to `OwnershipDiagnostics`: current pool, current
+2. Keep the source-shape and reflection tests for `getCurrentPool()`: no
+   semantic source call sites outside `ConstantPool.java`, and no public getter.
+3. Add ambient owner state to `OwnershipDiagnostics`: current pool, current
    service context, optional type relation context, and JIT `Ctx` when present.
-5. Add ServiceContext restoration and stale-context tests.
-6. Add JIT two-container tests for generated `<clinit>`, `$scN`, and bridge
+4. Add ServiceContext restoration and stale-context tests.
+5. Add JIT two-container tests for generated `<clinit>`, `$scN`, and bridge
    `$INSTANCE` ownership.
-7. Decide whether `ConstantPool.withPool(...)` should migrate from raw
+6. Decide whether `ConstantPool.withPool(...)` should migrate from raw
    `ThreadLocal` to a single `ScopedValue<RuntimeOwner>` bridge. This is useful
    only after permanent APIs keep passing explicit owners.
 
@@ -594,8 +597,8 @@ itself becomes part of a deterministic compiler/runtime test.
 
 Before claiming ambient runtime context is safe by default:
 
-- no semantic `ConstantPool.getCurrentPool()` calls should remain outside a
-  documented boundary allowlist;
+- no semantic `ConstantPool.getCurrentPool()` calls should remain outside
+  `ConstantPool.java`, and the helper must remain private;
 - every boundary bridge should compare ambient owner against an explicit owner
   and be able to throw in stress mode without relying on `assert`;
 - same-JVM repeated runtime and parallel-container stress should run with the

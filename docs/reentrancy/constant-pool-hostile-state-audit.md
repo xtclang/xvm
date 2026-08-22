@@ -224,6 +224,12 @@ Effect: nested runtime scopes, reused worker threads, async callbacks, or
 parallel type work can select the wrong pool or `null`. The call site gives no
 static indication that owner context is required.
 
+Fix in this branch: the semantic callers listed above now derive the pool from
+an explicit `ConstantPool`, `Container`, `Frame`, file, method, property, or
+receiver constant. `ConstantPool.getCurrentPool()` is private, so new code
+cannot use it as a public owner API. The remaining `withPool(...)` bridge is
+only transitional boundary glue and is paired with current-pool assertion tests.
+
 Recommended guard/fix: remove semantic `getCurrentPool()` use from constants
 and metadata helpers by threading `ConstantPool`, `Container`, or `Frame`
 explicitly. Keep `withPool(...)` only as a temporary boundary bridge, and make

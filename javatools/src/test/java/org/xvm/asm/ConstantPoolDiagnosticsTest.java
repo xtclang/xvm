@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -183,6 +184,17 @@ public class ConstantPoolDiagnosticsTest {
         }
 
         assertEquals(List.of(), offenders);
+    }
+
+    /**
+     * The current-pool lookup is an implementation detail for `withPool(...)` and the diagnostics
+     * above. Leaving it public would make hidden owner lookup easy to reintroduce.
+     */
+    @Test
+    public void currentPoolLookupIsPrivateBridgeOnly() throws Exception {
+        var method = ConstantPool.class.getDeclaredMethod("getCurrentPool");
+
+        assertTrue(Modifier.isPrivate(method.getModifiers()));
     }
 
     private static void withLateRegistrationValidation(CheckedRunnable action)
