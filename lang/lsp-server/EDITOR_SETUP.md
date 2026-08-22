@@ -10,7 +10,7 @@ text editors like Neovim, Emacs, or VS Code -- without using the IntelliJ plugin
 - If you don't have Java 25, you can build with the regex-based mock adapter
   instead (see the build step below).
 
-> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite Build Properties](../../CLAUDE.md) in the project CLAUDE.md for details.
+> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite Build Properties](../../AGENTS.md) in the project AGENTS.md for details.
 
 ## Step 1: Build the Fat JAR
 

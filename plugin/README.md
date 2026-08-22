@@ -679,7 +679,7 @@ When modifying the plugin, follow these guidelines:
 1. **Configuration Cache First**: Always design for configuration cache compatibility
 2. **Capture Early**: Capture all configuration state in task constructors, but it's better to find a way where this doesn't matter
 3. **No Project in Actions**: Never access `Project` in `@TaskAction` methods
-4. **Newlines**: Always add newline at end of files (enforced by `CLAUDE.md`)
+4. **Newlines**: Always add newline at end of files (enforced by `AGENTS.md`)
 5. **Final State**: Fields are final if they don't MUST be anything else. Try to create all state as final during construction
 
 ### Testing
