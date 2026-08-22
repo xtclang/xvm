@@ -156,15 +156,48 @@ Start here:
 - [this-escape-removal-audit.md](this-escape-removal-audit.md): which
   remaining constructor escapes should be removed immediately, which are
   mechanical cleanup, and which need owner/confinement proof first.
+- [compiler-lexer-parser-this-escape.md](compiler-lexer-parser-this-escape.md):
+  separate compiler/lexer/parser constructor-escape cleanup notes, including
+  why those fixes belong in a compiler-focused PR instead of the runtime owner
+  branch.
 - [lint-parallelism-risk-audit.md](lint-parallelism-risk-audit.md): non
   `this-escape` javac lint categories that can still hide same-JVM ownership,
   cache-key, state-machine, or erased-payload bugs.
+- [exception-hygiene-audit.md](exception-hygiene-audit.md): broad catch,
+  swallowed exception, and runtime-exception audit for places where exception
+  handling can hide ownership/reentrancy failures or report success after a
+  broken startup path.
+- [logging-strategy.md](logging-strategy.md): background design for adding
+  disabled-by-default runtime/compiler diagnostics without allocating or
+  mutating hot-path owner state.
 - [generics-api-audit.md](generics-api-audit.md): how raw types, broad
   `Object` returns, and scattered casts hide owner/type boundaries, with
   must-fix vs should-fix replacement guidance.
+- [array-list-immutability-study.md](array-list-immutability-study.md):
+  background study of where raw Java arrays are the right hot representation
+  and where immutable `List` APIs would better express metadata ownership and
+  mutability boundaries.
+- [modern-java-syntax-audit.md](modern-java-syntax-audit.md): cleanup study
+  for replacing Java 1.x scaffolding with clearer modern Java only where it
+  preserves allocation shape, owner ordering, and runtime semantics.
+- [sealed-hierarchy-audit.md](sealed-hierarchy-audit.md): candidate Java sealed
+  hierarchies that could improve owner/state reasoning or exhaustiveness, and
+  which broad roots are too risky for a first pass.
+- [nullness-annotation-audit.md](nullness-annotation-audit.md): where existing
+  Java null guards should become `@NotNull` contracts, which nullable APIs must
+  stay nullable, and why runtime checks should remain at owner boundaries.
 - [stress-discovered-runtime-issues.md](stress-discovered-runtime-issues.md):
   concrete failures found by the parallel manual-test runner that are adjacent
   to, but distinct from, the Java static owner-cache work.
+- [plans/github-issue-breakdown.md](plans/github-issue-breakdown.md): PR and
+  GitHub issue split plan for turning this large branch into reviewable,
+  test-backed hardening changes.
+- [plans/documentation-split-guide.md](plans/documentation-split-guide.md):
+  guide for reshaping these broad investigation notes into issue templates and
+  PR-specific documentation with short before/after examples.
+- [plans/jit-xvm-owner-refactor.md](plans/jit-xvm-owner-refactor.md): separate
+  JIT `Xvm` owner-construction refactor plan, intentionally kept out of the
+  interpreter runtime PR scope.
 - [plans/same-jvm-launcher-stress.md](plans/same-jvm-launcher-stress.md):
   backlog plan for extending the stress harness to run repeated `Launcher` and
   Gradle plugin direct-mode executions in one JVM, validate owner separation,
