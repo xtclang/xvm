@@ -295,6 +295,27 @@ The broader `ConstantPool` state audit is documented in
 per-pool caches, ambient owner lookup, runtime registration/adoption hazards,
 and compiler-only pool mutation paths.
 
+This branch also fixes a focused late-registration source in
+`ClassComposition.ensureAccess(PROTECTED)`. On master, a canonical
+`ClassComposition` precomputed private and struct access type constants, but it
+created the protected access type on first protected-view request. That request
+can happen during ordinary runtime execution after
+`MainContainer.invoke0(...)` has marked the pool as published for diagnostics.
+The old pattern was bad because a runtime-hot view conversion looked like a
+cache lookup while it could still grow `ConstantPool` list/map state.
+
+The replacement prewarms private, protected, and struct access type constants
+when the canonical composition is created. It deliberately keeps the actual
+access-view compositions lazy in the existing owner-local composition cache.
+That preserves the old runtime cache shape: one more interned logical type
+constant is created during composition setup, but no protected view composition
+is allocated until it is requested. The focused regression is
+`ClassCompositionLateRegistrationTest.protectedAccessViewDoesNotRegisterAfterRuntimePublication()`.
+The broader case where the first `ClassComposition` for a type is created after
+publication is still tracked in
+[stress-discovered-runtime-issues.md](stress-discovered-runtime-issues.md) as a
+pool freeze/warmup problem.
+
 This branch also narrows ambient `ConstantPool` lookup at runtime boundaries:
 
 - `InterpreterConnector.invoke0(...)` uses

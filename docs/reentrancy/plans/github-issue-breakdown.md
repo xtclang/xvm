@@ -1265,6 +1265,9 @@ reuse another container's singleton runtime state.
 - Add `ConstantAdoptionValidator` as an opt-in diagnostic at registration.
 - Add late ConstantPool registration diagnostics as a guard, not as the full
   freeze solution.
+- Prewarm the protected access type for canonical `ClassComposition` objects so
+  `ensureAccess(PROTECTED)` does not register a new constant after runtime
+  publication. This is a fixed subcase, not the full first-composition warmup.
 - Reject accidental adoption of arbitrary runtime state copied by future
   shallow-clone fields, including handles, templates, type compositions, pools,
   threads, locks, atomics, and other owner-bearing mutable helpers.
@@ -1296,6 +1299,7 @@ Primary source areas:
 - `TypeConstant`, `ParameterizedTypeConstant`, `SignatureConstant`,
   `TypeParameterConstant`
 - `HandleConstant`
+- `ClassComposition`
 - `OwnershipDiagnostics` boundary validation where adoption failures surface
 
 ### Tests And Verification Commands
@@ -1305,6 +1309,10 @@ Primary source areas:
   --configuration-cache --console=plain --warning-mode=all
 
 ./gradlew :javatools:test --tests org.xvm.runtime.SingletonConstantTest \
+  --configuration-cache --console=plain --warning-mode=all
+
+./gradlew :javatools:test \
+  --tests org.xvm.runtime.ClassCompositionLateRegistrationTest \
   --configuration-cache --console=plain --warning-mode=all
 
 CI=true ./gradlew :manualTests:runDirectSequenceStress \

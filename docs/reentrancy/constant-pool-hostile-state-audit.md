@@ -287,6 +287,14 @@ Recommended guard/fix: split mutable compiler/linker pools from frozen runtime
 pools, or make post-publication registration a hard error on runtime paths.
 The property can remain as extra diagnostics, not as the only guard.
 
+Fixed subcase in this branch: a canonical `ClassComposition` now prewarms its
+private/protected/struct access-type constants during construction. That means
+`ClassComposition.ensureAccess(PROTECTED)` on an already-created composition no
+longer registers a new `AccessTypeConstant` after runtime publication. This is
+not the full freeze solution: if the first composition for a type is created
+after publication, the constructor can still need to intern access constants.
+That remaining path is why the category stays must-audit/must-fix.
+
 ## Must Audit
 
 ### Default adoption shallow-clones constants while changing ownership

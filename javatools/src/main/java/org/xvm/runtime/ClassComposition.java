@@ -65,6 +65,11 @@ public class ClassComposition
         f_container       = container;
         f_template        = template;
         f_typeInception   = pool.ensureAccessTypeConstant(typeInception, Access.PRIVATE);
+        // Access views are regular runtime operations. Prewarm this composition's canonical
+        // private/protected/struct type constants while the composition is created, then keep the
+        // actual view compositions lazy as before. This avoids a later protected-view request
+        // growing an already runtime-published pool.
+        f_typeProtected   = pool.ensureAccessTypeConstant(typeInception, Access.PROTECTED);
         f_typeStructure   = pool.ensureAccessTypeConstant(typeInception, Access.STRUCT);
         f_typeRevealed    = typeInception;
         f_fStruct         = typeInception.getAccess() == Access.STRUCT;
@@ -84,6 +89,7 @@ public class ClassComposition
         f_container       = clzInception.f_container;
         f_template        = clzInception.f_template;
         f_typeInception   = clzInception.f_typeInception;
+        f_typeProtected   = clzInception.f_typeProtected;
         f_typeStructure   = clzInception.f_typeStructure;
         f_typeRevealed    = typeRevealed;
         f_fStruct         = typeRevealed.getAccess() == Access.STRUCT;
@@ -223,15 +229,21 @@ public class ClassComposition
             break;
 
         case PROTECTED:
-            typeTarget = pool.ensureAccessTypeConstant(typeCurrent, Access.PROTECTED);
+            typeTarget = typeCurrent.equals(f_clzInception.f_typeRevealed)
+                    ? f_clzInception.f_typeProtected
+                    : pool.ensureAccessTypeConstant(typeCurrent, Access.PROTECTED);
             break;
 
         case PRIVATE:
-            typeTarget = pool.ensureAccessTypeConstant(typeCurrent, Access.PRIVATE);
+            typeTarget = typeCurrent.equals(f_clzInception.f_typeRevealed)
+                    ? f_clzInception.f_typeInception
+                    : pool.ensureAccessTypeConstant(typeCurrent, Access.PRIVATE);
             break;
 
         case STRUCT:
-            typeTarget = pool.ensureAccessTypeConstant(typeCurrent, Access.STRUCT);
+            typeTarget = typeCurrent.equals(f_clzInception.f_typeRevealed)
+                    ? f_clzInception.f_typeStructure
+                    : pool.ensureAccessTypeConstant(typeCurrent, Access.STRUCT);
             break;
 
         default:
@@ -880,6 +892,11 @@ public class ClassComposition
      * Note: the access of the inception type is always Access.PRIVATE.
      */
     private final TypeConstant f_typeInception;
+
+    /**
+     * The protected access type for the inception type.
+     */
+    private final TypeConstant f_typeProtected;
 
     /**
      * The structure type for the inception type.

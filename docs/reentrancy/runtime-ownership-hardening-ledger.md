@@ -287,7 +287,7 @@ can be ignored.
 | Order | Commit scope | Why this order | Required test/proof |
 | --- | --- | --- | --- |
 | 1 | Adoption/clone validator assertions | Done in this branch wave. The shallow-clone bug is proven, dangerous, and the reusable validator catches copied handles, locks, thread locals, and owner references while later work runs stress. | `ConstantAdoptionTest` proves direct detection and opt-in `ConstantPool.register(...)` failure for a default shallow-cloned helper reference. |
-| 2 | `ConstantPool` late-mutation guard | Done in this branch wave. Hidden late mutation now becomes an immediate diagnostic instead of a stale-owner symptom when `xvm.asm.validateConstantPoolLateRegistration` is enabled. | `ConstantPoolDiagnosticsTest` proves existing constants still return after publication and new registrations fail before publication into the pool. Diagnostic same-JVM stress now identifies `ClassComposition` access-type registration as the next warmup/design target. |
+| 2 | `ConstantPool` late-mutation guard | Done in this branch wave. Hidden late mutation now becomes an immediate diagnostic instead of a stale-owner symptom when `xvm.asm.validateConstantPoolLateRegistration` is enabled. One fixed subcase now prewarms `ClassComposition` protected access constants so a protected access view cannot grow an already-published pool. | `ConstantPoolDiagnosticsTest` proves existing constants still return after publication and new registrations fail before publication into the pool. `ClassCompositionLateRegistrationTest` covers the protected-view subcase. Diagnostic same-JVM stress still identifies first-time `ClassComposition` construction after publication as a broader warmup/freeze target. |
 | 3 | Ambient `ConstantPool` lookup cleanup | Done in this branch wave for runtime boundaries. `InterpreterConnector.invoke0(...)` now uses the main container's explicit pool, native startup no longer uses raw current-pool mutation, and the remaining runtime scoped bridges assert that the scoped pool matches the explicit owner. | `ConstantPoolDiagnosticsTest` covers exact scoped-owner assertions, explicit-owner calls with no ambient pool, and wrong-scope failures. Source scan now shows no runtime/API callers of raw `setCurrentPool(...)`; the method itself was removed. |
 | 4 | `NativeContainer` constructor startup escape | Done in this branch wave. Native template loading, base-template installation, resource initialization, and service-context creation no longer run from the native-container constructor. `NativeContainer.create(...)` constructs the owner first, then initializes it before handing it to `InterpreterConnector`. | `javac -Xlint:this-escape` now emits no `NativeContainer.java` diagnostics. `InterpreterConnectorTest` starts several connectors in parallel, loads `ecstasy.xtclang.org`, checks distinct native containers, and forces ownership validation over the warmed containers. Startup order is preserved because the factory still completes all native-template/resource initialization before returning the container. |
 | 5 | Runtime handle construction escapes | Done in this branch wave. `RefHandle.createRegisterRef(...)` stores register refs in `Frame.VarInfo` only after construction, `RefHandle.createReferentRef(...)` initializes referent fields after construction, and `NodeHandle.create(...)` initializes native store fields after construction. | `RefHandleConstructionTest` verifies the factory APIs and runtime op call sites. Targeted `:javatools:compileJava` lint emits no `xRef.java` or `xOSFileNode.java` `this-escape` diagnostics. Same-JVM direct stress with `TestReflection,TestFiles` passes. Existing frame-local ref caching and file-node store initialization are preserved. |
@@ -362,13 +362,19 @@ Required closure:
 - `ConstantPool.register(...)` rejects new registrations after that marker when
   `-Dxvm.asm.validateConstantPoolLateRegistration=true` is enabled; existing
   constants are still returned normally.
-- The first diagnostic same-JVM stress run now fails on
-  `ClassComposition.<init>(...)` registering private/struct access-type
-  constants for `TestProps:Standard` during `New_1`. That is not a wrong-owner
-  leak by itself, but it proves the runtime still extends the pool after user
-  execution begins. The fix is to pre-warm those composition/access constants,
-  move non-logical helper state out of pool registration, or add a narrow
-  documented allowlist if the late registration is proven safe.
+- The protected access-view subcase is fixed: canonical `ClassComposition`
+  construction now interns private/protected/struct access-type constants
+  together, while view compositions remain lazy. This preserves the previous
+  owner-local composition cache and removes a runtime-hot protected
+  `ensureAccess(...)` pool mutation.
+- The first diagnostic same-JVM stress run still proves a broader gap:
+  `ClassComposition.<init>(...)` can register access-type constants for
+  `TestProps:Standard` during `New_1` if that composition is first created
+  after publication. That is not a wrong-owner leak by itself, but it proves the
+  runtime still extends the pool after user execution begins. The fix is to
+  pre-warm those composition/access constants, move non-logical helper state
+  out of pool registration, or add a narrow documented allowlist if the late
+  registration is proven safe.
 - If runtime registration remains necessary, protect it with an explicit
   owner/synchronization policy and tests.
 - Run same-JVM direct and parallel stress with ownership diagnostics enabled.

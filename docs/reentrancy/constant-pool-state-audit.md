@@ -310,10 +310,16 @@ re-keyed, or given an explicit synchronization/owner policy.
 The first same-JVM diagnostic stress run found exactly that kind of hot path:
 `New_1` first instantiated `TestProps:Standard` during user code, and
 `ClassComposition.<init>(...)` registered private/struct access-type constants
-for that class. The proper fix is to pre-warm class compositions/access-type
-constants before marking the pool, move non-logical composition helper state out
-of pool registration, or add a narrow allowlist only after proving the late
-registration is deterministic, owner-local, and concurrency-safe.
+for that class. This branch fixes one narrower access-view subcase:
+`ClassComposition.ensureAccess(PROTECTED)` no longer registers the protected
+access type after a canonical composition already exists. The constructor now
+prewarms private/protected/struct access-type constants, while the actual view
+compositions remain in the old lazy owner-local cache.
+
+The broader fix is still to pre-warm class compositions/access-type constants
+before marking the pool, move non-logical composition helper state out of pool
+registration, or add a narrow allowlist only after proving the late registration
+is deterministic, owner-local, and concurrency-safe.
 
 ## ScopedValue Replacement Shape
 

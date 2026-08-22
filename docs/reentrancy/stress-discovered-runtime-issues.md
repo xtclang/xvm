@@ -158,11 +158,68 @@ enabled by `manualTests:runParallelStress`:
   --no-configuration-cache
 ```
 
-## Late Constant Registration During User Execution
+## ClassComposition Protected Access View Late Registration
 
-Status: diagnostic added; runtime warmup/design fix still open.
+Status: fixed for already-created canonical compositions; broader
+first-composition construction warmup remains open below.
 
-Observed failure with the new late-registration guard:
+Focused reproducer:
+
+```bash
+./gradlew :javatools:test \
+  --tests org.xvm.runtime.ClassCompositionLateRegistrationTest \
+  --configuration-cache --console=plain --warning-mode=all
+```
+
+The test creates a `ClassComposition`, marks its pool as runtime-published with
+`ConstantPool.markRuntimePublishedForDiagnostics(...)`, then asks for the
+protected view. On master-with-the-guard backported, the protected
+`AccessTypeConstant` is created by `ClassComposition.ensureAccess(PROTECTED)`
+after publication. On this branch, the protected access type is created with
+the private and struct access types during composition construction, and the
+runtime-hot view request only creates or returns the owner-local composition
+object.
+
+### Root Cause
+
+`ClassComposition` already precomputed the canonical private and struct
+`AccessTypeConstant` values for the inception type, but the protected access
+type stayed implicit. That made protected view conversion look harmless and
+cache-like while it was actually a pool mutation:
+
+```java
+typeTarget = pool.ensureAccessTypeConstant(typeCurrent, Access.PROTECTED);
+```
+
+This is unsafe after runtime publication because `ensureAccess(...)` is a
+normal execution path reached from frames, handles, reflection, and native
+templates. A pool that is visible to a running container should not grow merely
+because a handle changes access view. Parallel readers can otherwise observe
+pool growth or partial registration in code that was supposed to be past
+startup/linking.
+
+### Replacement
+
+The constructor now prewarms the canonical private, protected, and struct
+access-type constants for the inception type. It does not preallocate every
+access-view `ClassComposition`; those remain in the existing owner-local
+composition cache. That preserves the old performance shape:
+
+- one additional interned `AccessTypeConstant` per canonical runtime
+  composition, instead of late registration during execution;
+- no eager allocation of protected/private/struct view compositions;
+- repeated `ensureAccess(PROTECTED)` calls still return the cached
+  owner-local composition.
+
+The correct design is to separate logical constant interning from runtime view
+caching: constant identity is warmed before publication, while runtime helper
+objects remain owner-local and lazy.
+
+## First ClassComposition Construction After Runtime Publication
+
+Status: must-audit/must-fix; diagnostic proves the broader freeze/warmup issue.
+
+Observed failure with the late-registration guard:
 
 ```text
 CI=true ./gradlew :manualTests:runDirectSequenceStress \
@@ -207,19 +264,23 @@ f_typeInception = pool.ensureAccessTypeConstant(typeInception, Access.PRIVATE);
 f_typeStructure = pool.ensureAccessTypeConstant(typeInception, Access.STRUCT);
 ```
 
-If a class is first instantiated during user execution, those access-type
-constants are registered during execution as well. The constants are logical
-pool-owned values, so this is not the same kind of wrong-owner leak as the old
-global `INSTANCE` fields or adopted singleton state. It is still a runtime
-publication problem: a supposedly running/published pool can keep mutating its
-constant list and lookup maps on demand.
+If a class composition itself is first created during user execution, those
+access-type constants are registered during execution as well. The protected
+access fix above does not close this broader case; it prevents a later access
+view on an existing composition from adding another pool value.
+
+The constants are logical pool-owned values, so this is not the same kind of
+wrong-owner leak as the old global `INSTANCE` fields or adopted singleton
+state. It is still a runtime publication problem: a supposedly
+running/published pool can keep mutating its constant list and lookup maps on
+demand.
 
 ### Proper Fix Direction
 
 Do not weaken the guard by ignoring access-type constants indefinitely. Choose
 one of these explicit designs:
 
-- pre-warm class compositions and their private/struct access-type constants
+- pre-warm class compositions and their private/protected/struct access-type constants
   before the pool is marked runtime-published;
 - move class-composition helper state that is not serialized constant identity
   out of `ConstantPool` registration and into an owner-local composition table;
@@ -230,6 +291,28 @@ one of these explicit designs:
 The first option is the preferred runtime direction because it moves mutable
 pool extension back into startup/linking, where publication ordering is much
 easier to reason about.
+
+### Full-Gradle Guard Caveat
+
+Do not enable the late-registration property through `JAVA_TOOL_OPTIONS` for a
+full `./gradlew build` and interpret the first failure as a runtime result. That
+also turns the guard on during XTC compilation. A broad run with:
+
+```bash
+JAVA_TOOL_OPTIONS='-Dxvm.asm.validateConstantPoolLateRegistration=true' \
+CI=true ./gradlew :manualTests:runDirectSequenceStress \
+  -PsameJvmIterations=1 \
+  -PsameJvmModules=TestReflection \
+  --configuration-cache --console=plain --warning-mode=all
+```
+
+failed earlier in `:xdk:lib-ecstasy:compileXtc` with a stack repeating through
+`MethodInfo.equals(...)`, `MethodBody.equals(...)`, and `Handy.equals(...)`.
+That is a separate compiler/constant-pool equality recursion or mutation
+finding. Runtime late-registration stress should either run after required XTC
+artifacts are built without the property, or the Gradle task needs a dedicated
+runtime JVM property so compiler-side findings do not mask runtime ownership
+failures.
 
 ## Direct Sequence Validator Native-Parent False Positive
 
