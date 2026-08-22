@@ -304,6 +304,110 @@ guards both source patterns. A targeted lint compile after this wave:
 
 emits no `this-escape` warning for `CallChain.java` or `xRTMethod.java`.
 
+### `ClassTemplate` Implicit-Field Construction
+
+`ClassTemplate` had one root runtime-template constructor escape that was not a
+cache, but was still unsafe construction shape: the base constructor called the
+overridable `registerImplicitFields(null)` hook. The only current overrides
+were `xRef` and `xConst`, and both only added static implicit-field names. The
+base constructor still had no right to call subclass behavior while the
+subclass object was only partly constructed.
+
+The branch replaces the hook with explicit constructor metadata:
+
+- `ClassTemplate(Container, ClassStructure)` now delegates to the metadata
+  constructor with no implicit names.
+- `xRef` passes `RefHandle.REFERENT` and `GenericHandle.OUTER` to the base
+  constructor.
+- `xConst` passes `PROP_HASH` to the base constructor.
+- The base constructor still adds `GenericHandle.OUTER` for instance-child
+  structures, preserving the old default behavior.
+
+The final `f_asFieldsImplicit` field keeps the same immutable field-name array.
+The only construction-time allocation change is that templates with implicit
+fields build the set from explicit names rather than by running subclass code.
+Templates with no implicit fields and no instance-child role keep the shared
+empty array. No runtime lookup cache is removed.
+
+`RuntimeThisEscapeConstructionTest.implicitFieldsAreConstructorMetadata()`
+guards the `xRef` and `xConst` constructor shape, and the targeted lint compile
+emits no `ClassTemplate.java` `this-escape` diagnostic.
+
+### Structural Hash Contracts
+
+The full javac lint run also reported four `overrides` diagnostics:
+
+- `VersionTree` overrides `equals(...)` without `hashCode()`.
+- `Register` overrides `equals(...)` without `hashCode()`.
+- `Register.ShadowRegister` overrides `equals(...)` without `hashCode()`.
+- `ChildInfo` overrides `equals(...)` without `hashCode()`.
+
+This is not style-only. `HashMap` and `HashSet` choose a bucket from
+`hashCode()` before they call `equals(...)`. Two equal objects with different
+identity hashes can be stored in different buckets, so `contains`, `get`,
+`remove`, and deduplication can fail even in a single-threaded run. Parallel
+same-JVM compile/runtime work makes that failure harder to diagnose because
+request-local caches and metadata graphs can be rebuilt in different orders,
+but concurrency is not required for the contract violation.
+
+The branch implements `hashCode()` from exactly the same fields used by
+`equals(...)`:
+
+| Type | Equality meaning | Hash fix | Why it is recomputed |
+| --- | --- | --- | --- |
+| `VersionTree` | Ordered version keys plus associated values | Iterate the versions in the same order and include each value. | The tree is mutable, so a cached hash would go stale after `put`, `remove`, or `clear`. |
+| `Register` | Argument index, read-only/final flags, in-place flag, and type | Use a small allocation-free helper over those fields. | Registers mutate during compiler allocation/type-narrowing; a lazy hash would corrupt maps if the register changes after first hash. |
+| `ShadowRegister` | Original register plus narrowed type | Hash the original register and narrowed type. | Shadow registers are compiler metadata, not immutable value snapshots. |
+| `ChildInfo` | Child component, access, and identity aliases | Hash the same child/access/id-set triple. | `ChildInfo` is assembled and copied between `TypeInfo` owners; recomputation avoids stale owner/layering assumptions. |
+
+This deliberately does not use `Lazy`. A lazy cached hash is correct only when
+the object has a proven immutable or frozen lifecycle before it becomes a hash
+key. These four types are mutable assembly/compiler metadata, so the correct
+minimal fix is recomputation from the structural equality fields.
+
+The focused tests are `VersionTest.testVersionTreeHashMatchesEquality()`,
+`RegisterHashCodeTest`, and
+`TypeInfoMemberOwnershipTest.childInfoAdoptionCreatesOwnerLocalCopy()`. The
+targeted lint compile emits no remaining `overrides` diagnostics.
+
+### `Constant` Cached Hash Publication
+
+`Constant.hashCode()` already had a special cache that looked especially bad:
+`m_iHash == 0` meant "not cached yet", unresolved constants refused to cache,
+and a real computed zero hash was rewritten to the magic non-zero value
+`7654211`.
+
+The likely intent was performance and correctness for interned constants:
+
+- constant comparison and map/set lookup are hot;
+- many constants are immutable once fully resolved;
+- unresolved constants can still change what `equals(...)` observes, so caching
+  before resolution would poison hash tables;
+- Java `hashCode()` is allowed to return zero, so zero could not also be the
+  stored "cached zero" value.
+
+The branch keeps the compatible cache but makes its contract explicit:
+
+- `HASH_UNCACHED` names the zero sentinel.
+- `HASH_ZERO` names the non-zero stand-in for a real computed zero hash.
+- `m_iHash` is now `volatile`, so a racing reader either recomputes the same
+  resolved value or observes the cached value after the writer's resolution
+  check.
+
+This is a low-footprint compatibility fix. It does not add an
+`AtomicInteger`, an object `Lazy`, or an `Integer` wrapper to every constant.
+Those alternatives would add per-constant footprint and indirection without
+solving the important invariant. The proper long-term architecture is stronger:
+resolution/adoption should produce immutable or explicitly frozen constant
+snapshots, and only those frozen constants should cache a final or safely
+published hash. Until that larger change exists, unresolved constants must keep
+returning an uncached recomputed hash and adoption must clear runtime/helper
+state that is not part of the logical constant value.
+
+`ConstantHashCodeCacheTest.cachedHashIsVolatile()` guards the publication
+contract. The adoption tests remain the behavioral proof that cloned/adopted
+constants do not carry owner-local runtime/helper state into a new pool.
+
 ### Runtime-Executed `Op` Frame-Constant Caches
 
 This branch removes owner-bearing frame-constant caches from runtime-executed

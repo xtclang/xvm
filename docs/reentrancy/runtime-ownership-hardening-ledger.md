@@ -280,7 +280,7 @@ update that explains the ownership rule it enforces. Avoid bundling unrelated
 cleanup into these commits; the review needs to be able to answer "which owner
 bug did this commit close?"
 
-The ten rows below are all real hardening work. The order is about reducing
+The twelve rows below are all real hardening work. The order is about reducing
 risk and making each later fix easier to prove, not about deciding which items
 can be ignored.
 
@@ -292,10 +292,12 @@ can be ignored.
 | 4 | `NativeContainer` constructor startup escape | Done in this branch wave. Native template loading, base-template installation, resource initialization, and service-context creation no longer run from the native-container constructor. `NativeContainer.create(...)` constructs the owner first, then initializes it before handing it to `InterpreterConnector`. | `javac -Xlint:this-escape` now emits no `NativeContainer.java` diagnostics. `InterpreterConnectorTest` starts several connectors in parallel, loads `ecstasy.xtclang.org`, checks distinct native containers, and forces ownership validation over the warmed containers. Startup order is preserved because the factory still completes all native-template/resource initialization before returning the container. |
 | 5 | Runtime handle construction escapes | Done in this branch wave. `RefHandle.createRegisterRef(...)` stores register refs in `Frame.VarInfo` only after construction, `RefHandle.createReferentRef(...)` initializes referent fields after construction, and `NodeHandle.create(...)` initializes native store fields after construction. | `RefHandleConstructionTest` verifies the factory APIs and runtime op call sites. Targeted `:javatools:compileJava` lint emits no `xRef.java` or `xOSFileNode.java` `this-escape` diagnostics. Same-JVM direct stress with `TestReflection,TestFiles` passes. Existing frame-local ref caching and file-node store initialization are preserved. |
 | 6 | Runtime constructor assertion escapes | Done in this branch wave. `FieldAccessChain` validates `aMethods` with a static helper, and `MethodHandle` resolves assertion metadata from `typeTarget` and `method` directly instead of calling instance methods while the subclass constructor is still running. | `RuntimeThisEscapeConstructionTest` guards both source patterns. Targeted `:javatools:compileJava` lint emits no `CallChain.java` or `xRTMethod.java` `this-escape` diagnostics. Assertions keep their old validation semantics; normal runtime behavior is unchanged because assertions are disabled by default. |
-| 7 | Runtime-executed `Op` caches | Done in this branch wave for owner-bearing frame-constant caches. `JumpCond`/`JumpNCond` no longer cache `ConditionalConstant` on the op, and `OpTest`/`OpCondJump` no longer write frame type constants back to `m_typeCommon` during execution. | `OpRuntimeCacheTest` verifies the condition fields are gone and guards against the old common-type write-back pattern. Same-JVM sequence and parallel stress exercise these op paths under runtime ownership validation. |
-| 8 | Manual lazy null caches in runtime/asm | Done for the first-PR must-fix slice. `xRegEx.RegExHandle` uses a final `Lazy<Pattern>`, `FSNodeConstant` no longer carries a source-pool path literal across adoption, and `_native:fs.OSFileNode.created` no longer caches a caller-owned `Time` handle inside the native file-system graph. Remaining Java hits are still audited below as builder/linkage, frame/debug lifecycle, synchronized association helpers, or must-audit op-address/class-layout state. | `RegExHandleTest` proves the regex cache remains per-handle and cached after first use. `ConstantAdoptionTest.adoptedFSNodeConstantDropsSourcePoolPathCache()` proves the adopted path cache is recomputed in the destination pool and still cached after that. `manualTests:runDirectSequenceStress` with `TestFiles` proves the native file-node owner leak is gone. |
-| 9 | Thread-local and scoped ambient state | Done for the first-PR must-fix slice. Runtime boundary `ConstantPool` scopes were already made lexical/asserted in wave 3. This wave removes one remaining owner-bearing runtime thread-local: `xRTServer.SimpleKeyManager` no longer keeps a selected `KeyStoreHandle` on the HTTPS worker thread. Broader compiler/type recursion ambient state remains audited below. | `xRTServerTest` proves the key manager has no thread-local field and resolves TLS aliases through explicit route state. Existing `ConstantPoolDiagnosticsTest` covers scoped pool assertions. |
-| 10 | Weak/identity owner registries | Done for the first-PR must-fix slice. `Runtime.f_containers` is a diagnostic weak registry and every access path now uses the same monitor; the old `findContainer(...)` iteration raced with registration and weak-map expunge. Remaining weak/identity maps are documented as service-local, metadata-audit, local traversal, or diagnostic-local state. | `RuntimeTest.findContainerSharesWeakRegistryMonitorWithRegistration()` proves lookup does not race registration. |
+| 7 | `ClassTemplate` implicit-field constructor escape | Done in this branch wave. The base `ClassTemplate` constructor no longer calls the overridable `registerImplicitFields(...)` hook. `xRef` and `xConst` pass their implicit field names as explicit constructor metadata, and the base still adds `GenericHandle.OUTER` for instance-child structures. | `RuntimeThisEscapeConstructionTest.implicitFieldsAreConstructorMetadata()` guards the constructor shape. Targeted `:javatools:compileJava` lint emits no `ClassTemplate.java` `this-escape` diagnostic. Cache behavior is unchanged because `f_asFieldsImplicit` is still final constructor metadata. |
+| 8 | Structural hash contracts and `Constant` hash publication | Done in this branch wave. `VersionTree`, `Register`, `Register.ShadowRegister`, and `ChildInfo` now implement `hashCode()` from the same fields as `equals(...)`. `Constant.m_iHash` now uses named sentinels and volatile publication for its resolved-only cached hash. | `VersionTest`, `RegisterHashCodeTest`, `TypeInfoMemberOwnershipTest`, and `ConstantHashCodeCacheTest` cover the changed contracts. Targeted lint emits no `overrides` diagnostics. Mutable metadata recomputes hashes instead of using lazy caches; constants keep the old resolved-only cache behavior with explicit safe publication. |
+| 9 | Runtime-executed `Op` caches | Done in this branch wave for owner-bearing frame-constant caches. `JumpCond`/`JumpNCond` no longer cache `ConditionalConstant` on the op, and `OpTest`/`OpCondJump` no longer write frame type constants back to `m_typeCommon` during execution. | `OpRuntimeCacheTest` verifies the condition fields are gone and guards against the old common-type write-back pattern. Same-JVM sequence and parallel stress exercise these op paths under runtime ownership validation. |
+| 10 | Manual lazy null caches in runtime/asm | Done for the first-PR must-fix slice. `xRegEx.RegExHandle` uses a final `Lazy<Pattern>`, `FSNodeConstant` no longer carries a source-pool path literal across adoption, and `_native:fs.OSFileNode.created` no longer caches a caller-owned `Time` handle inside the native file-system graph. Remaining Java hits are still audited below as builder/linkage, frame/debug lifecycle, synchronized association helpers, or must-audit op-address/class-layout state. | `RegExHandleTest` proves the regex cache remains per-handle and cached after first use. `ConstantAdoptionTest.adoptedFSNodeConstantDropsSourcePoolPathCache()` proves the adopted path cache is recomputed in the destination pool and still cached after that. `manualTests:runDirectSequenceStress` with `TestFiles` proves the native file-node owner leak is gone. |
+| 11 | Thread-local and scoped ambient state | Done for the first-PR must-fix slice. Runtime boundary `ConstantPool` scopes were already made lexical/asserted in wave 3. This wave removes one remaining owner-bearing runtime thread-local: `xRTServer.SimpleKeyManager` no longer keeps a selected `KeyStoreHandle` on the HTTPS worker thread. Broader compiler/type recursion ambient state remains audited below. | `xRTServerTest` proves the key manager has no thread-local field and resolves TLS aliases through explicit route state. Existing `ConstantPoolDiagnosticsTest` covers scoped pool assertions. |
+| 12 | Weak/identity owner registries | Done for the first-PR must-fix slice. `Runtime.f_containers` is a diagnostic weak registry and every access path now uses the same monitor; the old `findContainer(...)` iteration raced with registration and weak-map expunge. Remaining weak/identity maps are documented as service-local, metadata-audit, local traversal, or diagnostic-local state. | `RuntimeTest.findContainerSharesWeakRegistryMonitorWithRegistration()` proves lookup does not race registration. |
 
 The compiler/JIT bucket should remain separate unless an interpreter runtime
 path depends on it. The compiler counter atomics belong in their own PR from
@@ -592,16 +594,36 @@ Current concrete proof points:
 
   ```bash
   ./gradlew :javatools:test \
+    --tests org.xvm.asm.ConstantHashCodeCacheTest \
+    --tests org.xvm.asm.RegisterHashCodeTest \
+    --tests org.xvm.asm.VersionTest \
+    --tests org.xvm.asm.constants.TypeInfoMemberOwnershipTest \
+    --tests org.xvm.runtime.RuntimeThisEscapeConstructionTest \
+    --tests org.xvm.asm.ConstantAdoptionTest \
+    --tests org.xvm.runtime.SingletonConstantTest \
     --tests org.xvm.api.InterpreterConnectorTest \
-    --tests org.xvm.asm.ConstantPoolDiagnosticsTest \
-    --tests org.xvm.asm.OpRuntimeCacheTest \
+    --tests org.xvm.runtime.NativeTemplatesTest \
     --console=plain
   ```
 
-  Result: build successful; `InterpreterConnectorTest` ran with
-  `tests="1" skipped="0" failures="0" errors="0"`, `ConstantPoolDiagnosticsTest`
-  ran with `tests="6" skipped="0"`, and `OpRuntimeCacheTest` ran with
-  `tests="2" skipped="0"`.
+  Result: `BUILD SUCCESSFUL in 10s`; `42 actionable tasks: 4 executed,
+  2 from cache, 36 up-to-date`.
+
+- Targeted forced lint verification after the same wave:
+
+  ```bash
+  ./gradlew :javatools:compileJava --rerun-tasks --no-build-cache \
+    --no-configuration-cache \
+    -Porg.xtclang.java.lint=true \
+    -Porg.xtclang.java.warningsAsErrors=false \
+    -Porg.xtclang.java.maxWarnings=10000 \
+    -Porg.xtclang.java.maxErrors=10000 \
+    --console=plain --warning-mode=all
+  ```
+
+  Result: `BUILD SUCCESSFUL in 8s`; `73` emitted `this-escape` diagnostics at
+  `70` unique source locations, no `overrides` diagnostics, and only the two
+  `Container.java` runtime constructor warnings remain.
 
 - The current forced root lint/build source of truth is
   `/tmp/xvm-current-this-escape.log`:

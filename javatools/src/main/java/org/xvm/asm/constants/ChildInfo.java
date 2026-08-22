@@ -11,6 +11,8 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.TypedefStructure;
 
+import org.xvm.util.Hash;
+
 
 /**
  * Represents a child class or typedef contained within a class.
@@ -188,6 +190,11 @@ public class ChildInfo {
             && Objects.equals(this.f_access, that.f_access)
             && Objects.equals(this.f_setIds, that.f_setIds)
             ;
+    }
+
+    @Override
+    public int hashCode() {
+        return Hash.of(f_setIds, Hash.of(f_access, f_child.hashCode()));
     }
 
     @Override

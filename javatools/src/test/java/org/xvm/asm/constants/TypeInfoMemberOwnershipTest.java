@@ -19,6 +19,7 @@ import org.xvm.asm.constants.TypeInfo.Progress;
 
 import org.xvm.util.ListMap;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -46,6 +47,10 @@ public class TypeInfoMemberOwnershipTest {
         ClassStructure structChild = struct.createClass(
                 Access.PUBLIC, Format.CLASS, "Child", null);
         ChildInfo child = new ChildInfo(structChild);
+        var childCopy = new ChildInfo(structChild);
+
+        assertEquals(child, childCopy);
+        assertEquals(child.hashCode(), childCopy.hashCode());
 
         TypeInfo info1 = createTypeInfo(struct, idProperty, property, child);
         TypeInfo info2 = createTypeInfo(struct, idProperty, property, child);

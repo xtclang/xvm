@@ -38,6 +38,9 @@ Start here:
   `Constant.adoptedBy(...)` exists, which clone/adoption sites were checked,
   and which shallow-copied runtime-state fields this branch hardens for
   multi-container runtime safety.
+- [clone-usage-audit.md](clone-usage-audit.md): repository-wide Java
+  `clone()`/`Cloneable` audit covering component, AST, constant-pool, runtime
+  handle, metadata-chain, and defensive-array clone sites.
 - [constant-pool-state-audit.md](constant-pool-state-audit.md): `ConstantPool`
   state inventory, ambient current-pool lookup sites, must-fix vs should-fix
   classification, and recommended guards.
@@ -60,6 +63,9 @@ Start here:
 - [this-escape-removal-audit.md](this-escape-removal-audit.md): which
   remaining constructor escapes should be removed immediately, which are
   mechanical cleanup, and which need owner/confinement proof first.
+- [lint-parallelism-risk-audit.md](lint-parallelism-risk-audit.md): non
+  `this-escape` javac lint categories that can still hide same-JVM ownership,
+  cache-key, state-machine, or erased-payload bugs.
 - [stress-discovered-runtime-issues.md](stress-discovered-runtime-issues.md):
   concrete failures found by the parallel manual-test runner that are adjacent
   to, but distinct from, the Java static owner-cache work.

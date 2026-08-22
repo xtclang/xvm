@@ -150,8 +150,10 @@ public class xRTConnector
         ArrayHandle hValues = m_hDefaultValues;
         if (hNames == null) {
             Container container = frame.container();
-            m_hDefaultNames  = hNames  = xString.makeArrayHandle(container, new String[] {"User-Agent"});
-            m_hDefaultValues = hValues = xString.makeArrayHandle(container, new String[] {f_sAgent});
+            String[]  names     = {"User-Agent"};
+            String[]  values    = {f_sAgent};
+            m_hDefaultNames  = hNames  = xString.makeArrayHandle(container, names);
+            m_hDefaultValues = hValues = xString.makeArrayHandle(container, values);
         }
 
         return frame.assignValues(aiReturn, hNames, hValues);

@@ -455,6 +455,10 @@ public class xString
         return owner.getTemplate(xString.class).makeHandle(achValue);
     }
 
+    private StringHandle makeHandle(String sValue) {
+        return makeHandle(sValue.toCharArray());
+    }
+
     private StringHandle makeHandle(char[] achValue) {
         return achValue.length == 0
             ? f_emptyString.get(this)
@@ -494,10 +498,10 @@ public class xString
             Lazy.ofOwner(owner -> new StringHandle(owner.getCanonicalClass(), new char[0]));
 
     private final Lazy.Owner<xString, StringHandle> f_zero =
-            Lazy.ofOwner(owner -> owner.makeHandle(new char[] {'0'}));
+            Lazy.ofOwner(owner -> owner.makeHandle("0"));
 
     private final Lazy.Owner<xString, StringHandle> f_one =
-            Lazy.ofOwner(owner -> owner.makeHandle(new char[] {'1'}));
+            Lazy.ofOwner(owner -> owner.makeHandle("1"));
 
     private final Lazy.Owner<xString, MethodStructure> f_methodAppendTo = Lazy.ofOwner(owner -> {
         ConstantPool pool    = owner.pool();

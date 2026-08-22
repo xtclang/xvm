@@ -103,8 +103,8 @@ public class ConstantAdoptionTest {
         ConstantPool sourcePool = new FileStructure("source").getConstantPool();
         ConstantPool targetPool = new FileStructure("target").getConstantPool();
 
-        SignatureConstant source = sourcePool.ensureSignatureConstant(
-                "demo", ConstantPool.NO_TYPES, new TypeConstant[] {sourcePool.typeString()});
+        TypeConstant[] params = {sourcePool.typeString()};
+        SignatureConstant source = sourcePool.ensureSignatureConstant("demo", ConstantPool.NO_TYPES, params);
         SignatureConstant previous = sourcePool.ensureSignatureConstant(
                 "other", ConstantPool.NO_TYPES, ConstantPool.NO_TYPES);
         Object sourceLock = fieldValue(source, "m_lockPrev");
@@ -169,8 +169,8 @@ public class ConstantAdoptionTest {
         FileTime     created    = FileTime.fromMillis(1);
         FileTime     modified   = FileTime.fromMillis(2);
 
-        FSNodeConstant source = sourcePool.ensureFileConstant(
-                "demo.txt", created, modified, new byte[] {1, 2, 3});
+        byte[] contents = {1, 2, 3};
+        FSNodeConstant source = sourcePool.ensureFileConstant("demo.txt", created, modified, contents);
         LiteralConstant sourcePath = source.getPathConstant();
 
         FSNodeConstant adopted = adopt(source, targetPool);
