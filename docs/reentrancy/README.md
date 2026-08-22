@@ -105,6 +105,9 @@ Start here:
 - [runtime-ownership-hardening-ledger.md](runtime-ownership-hardening-ledger.md):
   the consolidated ledger of the concrete ownership failures, branch fixes,
   remaining assertions, and recommended one-commit fix order.
+- [runtime-metadata-op-cache-classification.md](runtime-metadata-op-cache-classification.md):
+  focused classification of remaining runtime metadata caches, decoded `Op`
+  caches, handle view backing, and code-publication assumptions.
 - [ownership-diagnostics.md](ownership-diagnostics.md): how to dump
   container-owned runtime state during stress runs and detect owner mismatches
   or cross-container sharing.
@@ -118,6 +121,12 @@ Start here:
 - [constant-pool-state-audit.md](constant-pool-state-audit.md): `ConstantPool`
   state inventory, ambient current-pool lookup sites, must-fix vs should-fix
   classification, and recommended guards.
+- [constant-pool-must-audit-classification.md](constant-pool-must-audit-classification.md):
+  focused classification of remaining `ConstantPool` must-fix/must-audit
+  areas after the current branch fixes.
+- [test-failure-evidence.md](test-failure-evidence.md): persisted list of
+  known master failures, branch-only diagnostics tests, stress failures, and
+  guard caveats that support the reentrancy PR split.
 - [constant-pool-hostile-state-audit.md](constant-pool-hostile-state-audit.md):
   background catalog of ConstantPool/constant adoption, clone, ambient-owner,
   mutation, and cache patterns that remain hostile to reentrant execution.
@@ -125,9 +134,15 @@ Start here:
   `ThreadLocal`, `TransientThreadLocal`, `ScopedValue`, `ConstantPool`
   current-pool lookup, `ServiceContext`, `TypeConstant`, and JIT `Ctx.Current`
   ambient-owner mechanisms.
+- [ambient-registry-must-audit-classification.md](ambient-registry-must-audit-classification.md):
+  focused classification of remaining ambient context, weak/identity registry,
+  JIT `Ctx`, and bridge static owner hazards.
 - [jit-implications.md](jit-implications.md): how the separate JIT runtime
   path models containers, classloaders, generated static fields, and ownership
   risks.
+- [jit-global-owner-classification.md](jit-global-owner-classification.md):
+  focused classification of remaining JIT owner/static/global hazards and the
+  split between interpreter PR scope and JIT follow-up PRs.
 - [scoped-value.md](scoped-value.md): whether a single `ScopedValue` runtime
   scope can replace legacy mutable statics, and where it is only a bridge.
 - [remaining-finstance-constructors.md](remaining-finstance-constructors.md):
