@@ -8291,12 +8291,13 @@ public abstract class TypeConstant
     private transient TypeConstant m_typeNormalized;
 
     /**
-     * The cache of recursion pairs.
+     * Process-wide diagnostic suppression for recursion pairs. This state only prevents repeated
+     * stderr messages, but type relation checks can run concurrently across pools, so the set must
+     * not be a plain HashSet.
      */
-    private static final Set<String> s_setRecursions;
+    private static final Set<String> s_setRecursions = ConcurrentHashMap.newKeySet();
     static {
         // add well known recursions
-        s_setRecursions = new HashSet<>();
         s_setRecursions.add("left=this:class(Array); right=this:class(Hashable)");
     }
 

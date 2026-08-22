@@ -16,6 +16,46 @@ Classifications:
 - **Benign/proven owner-local**: audited pattern that already constructs fresh
   owner-local state or only keeps immutable logical value.
 
+## Fixed In This Branch
+
+### TypeConstant recursion diagnostic set
+
+References:
+
+- `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:5968`
+  through `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:5971`
+  (`s_setRecursions.add(...)`)
+- `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:8296`
+  through `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:8302`
+  (`ConcurrentHashMap.newKeySet()`)
+
+Old cause: a process-global `HashSet` suppressed repeated type-relation
+recursion diagnostics. The set was only diagnostic, but type relation checks can
+run concurrently across pools, so a plain `HashSet` could be corrupted or race
+while deciding whether to print a recursion report.
+
+Fix: the set is still one process-wide diagnostic suppression set, but it is now
+created with `ConcurrentHashMap.newKeySet()`.
+
+Why behavior is preserved:
+
+- the same seed recursion is still present;
+- the same `add(...)` result still decides whether the message prints once;
+- no semantic type relation result depends on the set;
+- there is no added per-pool or per-type footprint;
+- the only extra cost is the concurrent-set operation on an unusual diagnostic
+  recursion path.
+
+Proof: `TypeConstantRecursionDiagnosticsTest` verifies the field is backed by a
+concurrent key set, not `HashSet`, and stresses parallel diagnostic additions.
+That test would fail on `master` because the backing set is a `HashSet`.
+
+Design rule: process-global diagnostic state is still shared mutable state. If a
+diagnostic cache is updated from code that can run on runtime/compiler/JIT
+workers, it must either be immutable, concurrent, owner-local, or guarded by a
+documented single-thread phase. "It is only logging" is not a valid reason to
+use unsynchronized mutable collections.
+
 ## Must Fix
 
 ### Ambient current pool is still semantic state
@@ -85,27 +125,6 @@ The diagnostic property is useful, but it is not a structural freeze.
 Recommended guard/fix: split mutable compiler/linker pools from frozen runtime
 pools, or make post-publication registration a hard error on runtime paths.
 The property can remain as extra diagnostics, not as the only guard.
-
-### Mutable static recursion log in `TypeConstant`
-
-References:
-
-- `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:5968`
-  through `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:5971`
-  (`s_setRecursions.add(...)`)
-- `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:8296`
-  through `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:8300`
-  (`static final Set<String> s_setRecursions = new HashSet<>()`)
-
-Cause: a process-global `HashSet` is mutated during type relation recursion
-detection.
-
-Effect: concurrent type checks can corrupt the set or race while logging. It
-also creates cross-pool/process-global diagnostic memory.
-
-Recommended guard/fix: use `ConcurrentHashMap.newKeySet()` or a synchronized
-diagnostic set, and keep the seed values immutable. If the log is only
-diagnostic, consider owner-local or rate-limited logging instead.
 
 ## Must Audit
 

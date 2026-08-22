@@ -229,7 +229,9 @@ The remaining runtime/container-adjacent global state worth watching is:
   reused thread. Prefer explicit owner parameters where practical.
 - `TypeConstant.s_setRecursions`: process-global diagnostic set. It should not
   affect semantics, but it can hide repeated recursion reports across
-  containers and should stay diagnostic-only.
+  containers and must stay diagnostic-only. This branch keeps the old
+  process-wide suppression behavior but backs it with a concurrent set so
+  parallel type checks cannot corrupt a plain `HashSet`.
 - JIT-generated name caches on adopted type/signature constants are cleared or
   avoided by fresh-constructor adoption in this branch. Broader JIT policy is
   tracked in [jit-implications.md](jit-implications.md).

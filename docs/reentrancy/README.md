@@ -73,6 +73,10 @@ Start here:
   backlog plan for extending the stress harness to run repeated `Launcher` and
   Gradle plugin direct-mode executions in one JVM, validate owner separation,
   and benchmark the speedup that safe reentrant execution should unlock.
+- [plans/xvm-memory-model-hygiene.md](plans/xvm-memory-model-hygiene.md):
+  separate follow-up plan for the remaining JIT `Xvm.java` lifecycle refactor,
+  ConstantPool owner/mutation hazards, clone/copy owner bugs, ambient context,
+  and build gates needed before XVM can be treated as reentrant by default.
 
 The stress-discovered issue file is deliberately broader than the native
 template design. It also records branch-adjacent failures found while validating

@@ -222,6 +222,18 @@ ambient pool, and wrong ambient scopes fail under assertions. This is a guard an
 ownership-visibility change, not a cache-policy change: all constants are still
 interned in the same per-owner `ConstantPool` as before.
 
+This branch also fixes the `TypeConstant.s_setRecursions` diagnostic set. On
+`master`, type relation recursion logging used one process-global `HashSet`.
+The set only suppressed duplicate stderr messages, but `isA(...)` and related
+type checks can run concurrently across pools, so the old design could corrupt
+the set while deciding whether to print a diagnostic. The replacement keeps the
+same process-wide "print each recursion once" behavior with
+`ConcurrentHashMap.newKeySet()`. It does not add per-owner state, does not
+change any type relation result, and only adds concurrent-set overhead on the
+unusual diagnostic recursion path. `TypeConstantRecursionDiagnosticsTest`
+verifies that the backing set is concurrent rather than a `HashSet` and stresses
+parallel diagnostic additions.
+
 ### Handle Construction `this` Escapes
 
 This branch removes three runtime handle-construction `this` escapes:
