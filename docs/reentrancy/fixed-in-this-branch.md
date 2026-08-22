@@ -311,10 +311,24 @@ That preserves the old runtime cache shape: one more interned logical type
 constant is created during composition setup, but no protected view composition
 is allocated until it is requested. The focused regression is
 `ClassCompositionLateRegistrationTest.protectedAccessViewDoesNotRegisterAfterRuntimePublication()`.
-The broader case where the first `ClassComposition` for a type is created after
-publication is still tracked in
-[stress-discovered-runtime-issues.md](stress-discovered-runtime-issues.md) as a
-pool freeze/warmup problem.
+
+This branch also fixes the related first-composition diagnostic subcase for
+type/class constants that already exist before runtime publication. When
+`ConstantPool.markRuntimePublishedForDiagnostics(...)` is about to install the
+diagnostic marker, it prewarms private/protected/struct access-type constants
+for already-known class/type identity. That lets `ClassComposition` remain
+lazy, so object construction does not pay an eager composition allocation, but
+the logical constants that composition construction will need are already in
+the pool before the "no more runtime registrations" marker. The focused
+regression is
+`ClassCompositionLateRegistrationTest.firstClassCompositionDoesNotRegisterAfterRuntimePublication()`.
+
+The broader category is still tracked in
+[stress-discovered-runtime-issues.md](stress-discovered-runtime-issues.md) and
+[constant-pool-state-audit.md](constant-pool-state-audit.md): a real frozen
+runtime-pool design must still decide what happens to genuinely new constants
+created after publication and must not rely on an opt-in diagnostic property as
+the only guard.
 
 This branch also narrows ambient `ConstantPool` lookup at runtime boundaries:
 

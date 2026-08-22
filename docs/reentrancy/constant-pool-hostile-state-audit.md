@@ -287,13 +287,21 @@ Recommended guard/fix: split mutable compiler/linker pools from frozen runtime
 pools, or make post-publication registration a hard error on runtime paths.
 The property can remain as extra diagnostics, not as the only guard.
 
-Fixed subcase in this branch: a canonical `ClassComposition` now prewarms its
-private/protected/struct access-type constants during construction. That means
-`ClassComposition.ensureAccess(PROTECTED)` on an already-created composition no
-longer registers a new `AccessTypeConstant` after runtime publication. This is
-not the full freeze solution: if the first composition for a type is created
-after publication, the constructor can still need to intern access constants.
-That remaining path is why the category stays must-audit/must-fix.
+Fixed subcases in this branch:
+
+- A canonical `ClassComposition` now prewarms private/protected/struct
+  access-type constants during construction. That means
+  `ClassComposition.ensureAccess(PROTECTED)` on an already-created composition
+  no longer registers a new `AccessTypeConstant` after runtime publication.
+- The diagnostic publication marker now prewarms private/protected/struct
+  access-type constants for already-known class/type constants before the
+  marker is installed. That means first `ClassComposition` construction for an
+  already-known type can stay lazy without mutating the pool after the marker.
+
+This is not the full freeze solution. Runtime pools remain mutable when the
+diagnostic property is disabled, and genuinely new runtime-created constants
+still need an explicit owner/concurrency policy. That remaining path is why the
+category stays must-audit/must-fix.
 
 ## Must Audit
 

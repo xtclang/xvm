@@ -316,6 +316,15 @@ access type after a canonical composition already exists. The constructor now
 prewarms private/protected/struct access-type constants, while the actual view
 compositions remain in the old lazy owner-local cache.
 
+This branch also fixes the first-composition subcase for type/class constants
+that are already present before the diagnostic runtime publication marker is
+installed. `ConstantPool.markRuntimePublishedForDiagnostics(...)` prewarms
+private/protected/struct access-type constants for already-known class/type
+identity, then installs the marker. That preserves normal runtime behavior:
+the actual `ClassComposition` and access-view compositions are still created
+lazily in the owner-local composition cache, and the warmup runs only when
+`xvm.asm.validateConstantPoolLateRegistration` is enabled.
+
 The broader fix is still to pre-warm class compositions/access-type constants
 before marking the pool, move non-logical composition helper state out of pool
 registration, or add a narrow allowlist only after proving the late registration

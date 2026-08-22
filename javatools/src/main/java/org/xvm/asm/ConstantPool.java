@@ -281,9 +281,57 @@ public class ConstantPool
      */
     public void markRuntimePublishedForDiagnostics(String owner) {
         if (Boolean.getBoolean(VALIDATE_LATE_REGISTRATION_PROPERTY)) {
+            if (runtimePublication == null) {
+                prewarmRuntimeAccessTypeConstants();
+            }
             runtimePublication = new RuntimePublication(owner, f_listConst.size(),
                     Thread.currentThread().getName());
         }
+    }
+
+    /**
+     * Pre-intern access-type constants for class/type constants that the pool already knows before
+     * the diagnostic publication marker is installed. Runtime class composition can be lazy, but
+     * the logical private/protected/struct type constants for already-linked classes should not
+     * first appear after the pool is considered runtime-visible.
+     */
+    private void prewarmRuntimeAccessTypeConstants() {
+        int cScanned = 0;
+        while (cScanned < f_listConst.size()) {
+            // Access-type interning can append supporting constants, so keep scanning snapshots
+            // until a complete pass adds nothing new before installing the publication marker.
+            Constant[] snapshot = getConstants();
+            Arrays.stream(snapshot, cScanned, snapshot.length)
+                    .forEach(this::prewarmAccessTypeConstants);
+            cScanned = snapshot.length;
+        }
+    }
+
+    private void prewarmAccessTypeConstants(Constant constant) {
+        switch (constant) {
+        case TypeConstant type ->
+            prewarmAccessTypeConstants(type);
+
+        case IdentityConstant id when id.getComponent() instanceof ClassStructure ->
+            prewarmAccessTypeConstants(id.getType());
+
+        default -> {
+        }
+        }
+    }
+
+    private void prewarmAccessTypeConstants(TypeConstant type) {
+        if (type.isAccessSpecified() || type.containsUnresolved()) {
+            return;
+        }
+
+        if (!type.isSingleUnderlyingClass(true) && !type.isSingleDefiningConstant()) {
+            return;
+        }
+
+        ensureAccessTypeConstant(type, Access.PRIVATE);
+        ensureAccessTypeConstant(type, Access.PROTECTED);
+        ensureAccessTypeConstant(type, Access.STRUCT);
     }
 
     /**

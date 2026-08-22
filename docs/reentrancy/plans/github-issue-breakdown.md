@@ -1267,7 +1267,11 @@ reuse another container's singleton runtime state.
   freeze solution.
 - Prewarm the protected access type for canonical `ClassComposition` objects so
   `ensureAccess(PROTECTED)` does not register a new constant after runtime
-  publication. This is a fixed subcase, not the full first-composition warmup.
+  publication.
+- Prewarm private/protected/struct access-type constants for already-known
+  class/type constants before the diagnostic runtime publication marker is
+  installed. This keeps first `ClassComposition` construction lazy without
+  letting it register deterministic access constants after the marker.
 - Reject accidental adoption of arbitrary runtime state copied by future
   shallow-clone fields, including handles, templates, type compositions, pools,
   threads, locks, atomics, and other owner-bearing mutable helpers.
@@ -1276,6 +1280,9 @@ reuse another container's singleton runtime state.
 
 - Full removal of the base shallow clone adoption contract.
 - ConstantPool list/map publication atomicity and runtime pool freeze.
+- Runtime creation of genuinely new constants after publication. The
+  access-type warmup only handles constants the pool already knows before the
+  diagnostic marker.
 - Compiler `Component`, AST, `Parameter`, and `MethodStructure` clone cleanup.
 - `ObjectHandle.cloneAs(...)` redesign.
 - JIT generated static ownership.

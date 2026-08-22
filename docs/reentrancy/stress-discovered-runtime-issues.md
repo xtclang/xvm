@@ -160,8 +160,9 @@ enabled by `manualTests:runParallelStress`:
 
 ## ClassComposition Protected Access View Late Registration
 
-Status: fixed for already-created canonical compositions; broader
-first-composition construction warmup remains open below.
+Status: fixed for already-created canonical compositions. The related
+first-composition access-type subcase is covered by the diagnostic
+pre-publication warmup below; the broader frozen-pool design remains open.
 
 Focused reproducer:
 
@@ -217,7 +218,9 @@ objects remain owner-local and lazy.
 
 ## First ClassComposition Construction After Runtime Publication
 
-Status: must-audit/must-fix; diagnostic proves the broader freeze/warmup issue.
+Status: fixed for class/type constants already present before the diagnostic
+runtime publication marker is installed. The broader "runtime pools are still
+mutable by default" category remains must-audit/must-fix.
 
 Observed failure with the late-registration guard:
 
@@ -266,7 +269,7 @@ f_typeStructure = pool.ensureAccessTypeConstant(typeInception, Access.STRUCT);
 
 If a class composition itself is first created during user execution, those
 access-type constants are registered during execution as well. The protected
-access fix above does not close this broader case; it prevents a later access
+access fix above did not close this broader case; it prevented a later access
 view on an existing composition from adding another pool value.
 
 The constants are logical pool-owned values, so this is not the same kind of
@@ -275,10 +278,36 @@ state. It is still a runtime publication problem: a supposedly
 running/published pool can keep mutating its constant list and lookup maps on
 demand.
 
-### Proper Fix Direction
+### Replacement In This Branch
 
-Do not weaken the guard by ignoring access-type constants indefinitely. Choose
-one of these explicit designs:
+`ConstantPool.markRuntimePublishedForDiagnostics(...)` now prewarms access-type
+constants for class/type constants that the pool already knows before it
+installs the diagnostic publication marker. The warmup interns private,
+protected, and struct access-type constants for already-linked class/type
+identity, then marks the pool as published.
+
+That keeps the previous runtime cache behavior:
+
+- `ClassComposition` objects are still lazy and owner-local.
+- Access-view `ClassComposition` instances are still allocated only when
+  requested.
+- Normal runs with `xvm.asm.validateConstantPoolLateRegistration` disabled do
+  not execute the diagnostic warmup at all.
+- Guarded runs move deterministic logical constant interning to the
+  pre-publication side of the runtime boundary instead of allowing it to happen
+  during user execution.
+
+The warmup intentionally scans a moving snapshot of the pool. Interning an
+access type can append supporting constants, so the diagnostic path keeps
+scanning until a complete pass adds nothing new. That is why the implementation
+does not use a simple fixed-size collection iteration.
+
+### Remaining Proper Fix Direction
+
+Do not weaken the guard by ignoring access-type constants indefinitely. The
+diagnostic warmup closes the known `ClassComposition` access-type subcases for
+already-known constants, but it is not a structural freeze. The long-term
+runtime design still needs one of these explicit choices:
 
 - pre-warm class compositions and their private/protected/struct access-type constants
   before the pool is marked runtime-published;
@@ -291,6 +320,28 @@ one of these explicit designs:
 The first option is the preferred runtime direction because it moves mutable
 pool extension back into startup/linking, where publication ordering is much
 easier to reason about.
+
+### Regression Proof
+
+Focused coverage:
+
+```text
+ClassCompositionLateRegistrationTest.protectedAccessViewDoesNotRegisterAfterRuntimePublication()
+ClassCompositionLateRegistrationTest.firstClassCompositionDoesNotRegisterAfterRuntimePublication()
+```
+
+The first test covers the already-created composition case: `ensureAccess` for
+the protected view must be a view-cache operation, not a late pool mutation. The
+second test covers first composition construction for a type already present in
+the pool: diagnostic publication prewarms the needed access-type constants
+before the marker, so constructing the composition after the marker does not
+register another constant.
+
+Master does not have the late-registration diagnostics API, so the branch test
+does not compile there without backporting the guard. With the guard backported,
+the old shape throws from `ConstantPool.register(...)` on the first runtime
+composition access-type registration. That is the same failure recorded from
+the stress run above.
 
 ### Full-Gradle Guard Caveat
 
@@ -313,6 +364,14 @@ finding. Runtime late-registration stress should either run after required XTC
 artifacts are built without the property, or the Gradle task needs a dedicated
 runtime JVM property so compiler-side findings do not mask runtime ownership
 failures.
+
+The same caveat still applies after the access-type prewarm fix. A guarded
+manual stress invocation that passes `-Dxvm.asm.validateConstantPoolLateRegistration=true`
+to Gradle still enables the property during `:xdk:lib-ecstasy:compileXtc`, and
+that compiler-side stack overflow currently fails before the runtime sequence
+starts. The focused JUnit tests are therefore the proof for this slice; broader
+runtime stress with the late-registration guard needs task-level isolation of
+runtime JVM properties.
 
 ## Direct Sequence Validator Native-Parent False Positive
 

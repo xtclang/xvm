@@ -52,6 +52,33 @@ public class ClassCompositionLateRegistrationTest {
         }
     }
 
+    /**
+     * Runtime publication diagnostics prewarm access-type constants for class/type constants the
+     * pool already knows. That lets a class composition remain lazy without mutating the published
+     * pool when the first object construction asks for the composition during execution.
+     */
+    @Test
+    public void firstClassCompositionDoesNotRegisterAfterRuntimePublication() throws Exception {
+        var runtime = new Runtime();
+        try {
+            var file      = new FileStructure("LateComposition");
+            var container = new TestContainer(runtime, file);
+            var pool      = file.getConstantPool();
+            var type      = pool.typeObject();
+
+            withLateRegistrationValidation(() -> {
+                pool.markRuntimePublishedForDiagnostics("unit-test");
+
+                var clz = new ClassComposition(container, null, type);
+
+                assertSame(clz, clz.ensureAccess(Access.PUBLIC));
+                assertTrue(pool.isRuntimePublishedForDiagnostics());
+            });
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
     private static void withLateRegistrationValidation(CheckedRunnable action) throws Exception {
         String property = ConstantPool.VALIDATE_LATE_REGISTRATION_PROPERTY;
         String previous = System.getProperty(property);
