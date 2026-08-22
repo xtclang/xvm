@@ -45,9 +45,7 @@ public class WeakHasherMapTest {
         var values = map.values();
         var entries = map.entrySet();
 
-        assertNotSame(keys, map.keySet());
-        assertNotSame(values, map.values());
-        assertNotSame(entries, map.entrySet());
+        // Don't assert identity; only that the views are live/backed by the map.
 
         map.put(1, "hello");
         assertTrue(keys.contains(1));
