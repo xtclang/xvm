@@ -3726,13 +3726,6 @@ public class ConstantPool
     }
 
     /**
-     * @return a ConstantPool associated with the current thread
-     */
-    private static ConstantPool getCurrentPool() {
-        return s_tloPool.get()[0];
-    }
-
-    /**
      * Assert that the ambient current pool matches the explicit owner that a caller is already using.
      * This is a diagnostic guard for transitional runtime boundaries that still expose
      * {@link #withPool(ConstantPool)} to older helpers.
@@ -3742,8 +3735,8 @@ public class ConstantPool
      */
     public static void assertCurrentPool(ConstantPool poolExpected, String sOwner) {
         assert poolExpected != null : sOwner + " must provide an explicit ConstantPool owner";
-        assert getCurrentPool() == poolExpected :
-                currentPoolMismatch(poolExpected, getCurrentPool(), sOwner);
+        ConstantPool poolCurrent = s_tloPool.get()[0];
+        assert poolCurrent == poolExpected : currentPoolMismatch(poolExpected, poolCurrent, sOwner);
     }
 
     /**
@@ -3756,8 +3749,9 @@ public class ConstantPool
      */
     public static void assertCurrentPoolIfPresent(ConstantPool poolExpected, String sOwner) {
         assert poolExpected != null : sOwner + " must provide an explicit ConstantPool owner";
-        assert isCurrentPoolIfPresent(poolExpected) :
-                currentPoolMismatch(poolExpected, getCurrentPool(), sOwner);
+        ConstantPool poolCurrent = s_tloPool.get()[0];
+        assert poolCurrent == null || poolCurrent == poolExpected :
+                currentPoolMismatch(poolExpected, poolCurrent, sOwner);
     }
 
     /**
@@ -3770,14 +3764,9 @@ public class ConstantPool
      */
     public static Auto withPool(ConstantPool pool) {
         ConstantPool[] poolHolder = s_tloPool.get();
-        ConstantPool pollPrior = poolHolder[0];
+        ConstantPool poolPrior = poolHolder[0];
         poolHolder[0] = pool;
-        return () -> poolHolder[0] = pollPrior;
-    }
-
-    private static boolean isCurrentPoolIfPresent(ConstantPool poolExpected) {
-        ConstantPool poolCurrent = getCurrentPool();
-        return poolCurrent == null || poolCurrent == poolExpected;
+        return () -> poolHolder[0] = poolPrior;
     }
 
     private static String currentPoolMismatch(ConstantPool poolExpected, ConstantPool poolCurrent,

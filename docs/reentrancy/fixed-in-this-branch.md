@@ -274,11 +274,11 @@ This branch also narrows ambient `ConstantPool` lookup at runtime boundaries:
   exceptional exits.
 - `ConstantPool.setCurrentPool(...)` was removed after the last runtime startup
   caller was converted. Future code must use self-restoring scoped ownership.
-- `ConstantPool.getCurrentPool()` is no longer public. It remains only as a
-  private implementation detail behind `withPool(...)` and the current-pool
-  assertion helpers. This locks down the intended rule: runtime/compiler code
-  must pass an explicit owner or derive it from receiver state instead of
-  asking hidden thread state for ownership.
+- `ConstantPool.getCurrentPool()` was removed entirely. The scoped bridge still
+  reads its thread-local slot internally, but there is no callable ownerless
+  getter. This locks down the intended rule: runtime/compiler code must pass an
+  explicit owner or derive it from receiver state instead of asking hidden
+  thread state for ownership.
 - `MainContainer.invoke0(...)`, `Container.ensureServiceContext()`,
   `ServiceContext.drainWork()`, `xOSStorage.WatchDaemon`,
   `xContainerControl.invokeInvoke(...)`, and `xRTServer.RequestHandler` now
@@ -376,8 +376,8 @@ on that file. `FileStructureTest.errorListenerIgnoresAmbientPool()` covers the
 wrong-ambient and no-ambient cases.
 `ConstantPoolDiagnosticsTest.semanticCurrentPoolLookupIsBridgeOnly()` prevents
 new semantic source calls to `getCurrentPool()` outside `ConstantPool.java`.
-`ConstantPoolDiagnosticsTest.currentPoolLookupIsPrivateBridgeOnly()` prevents
-the private bridge from becoming public API again.
+`ConstantPoolDiagnosticsTest.currentPoolLookupGetterDoesNotExist()` prevents
+the getter from returning as public or private API.
 
 ### Handle Construction `this` Escapes
 

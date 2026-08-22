@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -163,9 +162,8 @@ public class ConstantPoolDiagnosticsTest {
     }
 
     /**
-     * `getCurrentPool()` is now a compatibility bridge, not a semantic owner API. This source-shape
-     * guard prevents new main-code helpers from reintroducing hidden owner lookup outside
-     * `ConstantPool` itself.
+     * `getCurrentPool()` must not return as a semantic owner API. This source-shape guard prevents
+     * new main-code helpers from reintroducing hidden owner lookup outside `ConstantPool` itself.
      */
     @Test
     public void semanticCurrentPoolLookupIsBridgeOnly() throws Exception {
@@ -187,14 +185,14 @@ public class ConstantPoolDiagnosticsTest {
     }
 
     /**
-     * The current-pool lookup is an implementation detail for `withPool(...)` and the diagnostics
-     * above. Leaving it public would make hidden owner lookup easy to reintroduce.
+     * There must be no callable current-pool getter. The scoped bridge can read its private
+     * thread-local slot internally, but exposing a getter makes hidden owner lookup easy to
+     * reintroduce.
      */
     @Test
-    public void currentPoolLookupIsPrivateBridgeOnly() throws Exception {
-        var method = ConstantPool.class.getDeclaredMethod("getCurrentPool");
-
-        assertTrue(Modifier.isPrivate(method.getModifiers()));
+    public void currentPoolLookupGetterDoesNotExist() {
+        assertThrows(NoSuchMethodException.class,
+                () -> ConstantPool.class.getDeclaredMethod("getCurrentPool"));
     }
 
     private static void withLateRegistrationValidation(CheckedRunnable action)
