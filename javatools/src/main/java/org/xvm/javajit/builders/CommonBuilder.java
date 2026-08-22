@@ -4177,8 +4177,7 @@ public class CommonBuilder
             Set.of("construct", // TODO: specialized constructor chains to unspecialized class
                    "freeze")),  // TODO: specialized return is incompatible with a conditional mixin
         Map.entry("org.xtclang.ecstasy.maps.Map",
-            Set.of("computeIfAbsent",  // TODO: RETURN_T is not implemented
-                   "defaultCollector", // TODO: virtual constructor method constant
+            Set.of("defaultCollector", // TODO: virtual constructor method constant
                    "estimateStringLength", // TODO: incompatible formal iterator result types
                    "map",              // TODO: incompatible formal result types in TypeMatrix
                    "removeAll")),      // TODO: key's formal type is tracked as Object

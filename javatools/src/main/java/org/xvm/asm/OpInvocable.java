@@ -95,6 +95,13 @@ public abstract class OpInvocable extends Op {
         return false;
     }
 
+    /**
+     * @return true iff the op packages the callee's return values into a Tuple.
+     */
+    protected boolean isTupleReturn() {
+        return false;
+    }
+
     @Override
     public void resetSimulation() {
         if (isMultiReturn()) {
@@ -345,7 +352,10 @@ public abstract class OpInvocable extends Op {
                 }
             }
         } else {
-            tmx.assign(getAddress(), m_nRetValue, atypeResult[0]);
+            TypeConstant typeResult = isTupleReturn()
+                    ? pool.ensureTupleType(atypeResult)
+                    : atypeResult[0];
+            tmx.assign(getAddress(), m_nRetValue, typeResult);
         }
     }
 
@@ -443,6 +453,16 @@ public abstract class OpInvocable extends Op {
 
         JitMethodDesc jmd        = infoMethod.getJitDesc(bctx.builder, typeInvoke);
         String        methodName = infoMethod.ensureJitMethodName(bctx.typeSystem);
+
+        if (isTupleReturn()) {
+            if (jmd.isPrimitivized() && fUnboxed) {
+                Builder.box(code, typeInvoke);
+                cdInvoke = bctx.builder.ensureClassDesc(typeInvoke);
+                fUnboxed = false;
+            }
+            jmd = jmd.standardOnly();
+        }
+
         boolean       fOptimized = jmd.isOptimized;
         boolean       fPrimitive = jmd.isPrimitivized();
         int           cReturns   = infoMethod.getSignature().getReturnCount();
@@ -479,9 +499,13 @@ public abstract class OpInvocable extends Op {
             code.invokevirtual(cdInvoke, methodName, md);
         }
 
-        if (cReturns > 0) {
-            int[] anRet = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
-            bctx.assignReturns(code, jmd, cReturns, anRet, fCond);
+        if (cReturns > 0 || isTupleReturn()) {
+            if (isTupleReturn()) {
+                bctx.assignTupleReturns(code, jmd, m_nRetValue);
+            } else {
+                int[] anRet = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
+                bctx.assignReturns(code, jmd, cReturns, anRet, fCond);
+            }
         }
     }
 

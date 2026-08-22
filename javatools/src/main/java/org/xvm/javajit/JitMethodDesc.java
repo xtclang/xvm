@@ -174,6 +174,16 @@ public class JitMethodDesc {
         return list.stream().mapToInt(i -> i).toArray();
     }
 
+    /**
+     * Obtain a descriptor that uses only the standard calling convention.
+     */
+    public JitMethodDesc standardOnly() {
+        return isOptimized
+                ? new JitMethodDesc(typeTarget, standardReturns, standardParams,
+                        null, null, isStandardStatic)
+                : this;
+    }
+
     protected MethodTypeDesc computeMethodDesc(JitParamDesc[] returns, JitParamDesc[] params) {
         int         extraCount = getImplicitParamCount();
         int         paramCount = params.length;

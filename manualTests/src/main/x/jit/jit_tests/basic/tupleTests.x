@@ -4,6 +4,9 @@ package tupleTests {
         testSimple();
         testEquals();
         testConv();
+        testCallReturns();
+        testInvokeReturns();
+        testPackedReturn();
         testConstElement();
 //        testConstSlice();
         testMultiAssign();
@@ -42,17 +45,14 @@ package tupleTests {
     }
 
     void testConv() {
-        // TODO: JIT doesn't implement CALL_0T for a void return converted to Tuple
-//        Tuple tv = getVoid();
-//        assert tv.size == 0;
+        Tuple tv = getVoid();
+        assert tv.size == 0;
 
-        // TODO: JIT doesn't implement CALL_0T for a single return converted to Tuple
-//        Tuple<Int> ti = getInt();
-//        assert ti[0] == 4;
+        Tuple<Int> ti = getInt();
+        assert ti[0] == 4;
 
-        // TODO: JIT doesn't implement CALL_0T for multiple returns converted to Tuple
-//        Tuple<String, Int> tsi = getSI();
-//        assert tsi[0] == "Hello" && tsi[1] == 4;
+        Tuple<String, Int> tsi = getSI();
+        assert tsi[0] == "Hello" && tsi[1] == 4;
 
         Tuple<String, IntLiteral> tsiT = getTupleSI();
         assert tsiT[0] == "Hello" && tsiT[1] == 4;
@@ -69,6 +69,74 @@ package tupleTests {
 
         private static Tuple<String, IntLiteral> getTupleSI() {
             return ("Hello", 4);
+        }
+    }
+
+    void testCallReturns() {
+        Tuple<String, Int> one = call1Many(1);
+        assert one[0] == "one" && one[1] == 1;
+
+        Tuple<String, Int> many = callNMany("many", 2);
+        assert many[0] == "many" && many[1] == 2;
+
+        private static (String, Int) call1Many(Int value) {
+            return "one", value;
+        }
+
+        private static (String, Int) callNMany(String text, Int value) {
+            return text, value;
+        }
+    }
+
+    void testInvokeReturns() {
+        Test test = new Test();
+
+        Tuple<String, Int> zero = test.invoke0();
+        assert zero[0] == "zero" && zero[1] == 0;
+
+        Tuple<String, Int> one = test.invoke1(1);
+        assert one[0] == "one" && one[1] == 1;
+
+        Tuple<String, Int> many = test.invokeN("many", 2);
+        assert many[0] == "many" && many[1] == 2;
+
+        class Test {
+            (String, Int) invoke0() {
+                return "zero", 0;
+            }
+
+            (String, Int) invoke1(Int value) {
+                return "one", value;
+            }
+
+            (String, Int) invokeN(String text, Int value) {
+                return text, value;
+            }
+        }
+    }
+
+    void testPackedReturn() {
+        (String text, Boolean flag) = compute(() -> "hello");
+        assert text == "hello" && flag;
+
+        Tuple<Int128, Int?, Int128?> numbers = (123, 456, 789);
+        (Int128 wide, Int? small, Int128? nullableWide) = unpackNumbers(numbers);
+        assert wide == 123 && small == 456 && nullableWide == 789;
+
+        numbers = (123, Null, Null);
+        (wide, small, nullableWide) = unpackNumbers(numbers);
+        assert wide == 123 && small == Null && nullableWide == Null;
+
+        (String, Boolean) compute(function String() compute) {
+            return process(() -> (compute(), True));
+        }
+
+        (Int128, Int?, Int128?) unpackNumbers(Tuple<Int128, Int?, Int128?> numbers) {
+            return numbers;
+        }
+
+        <Result> Result process(function Result() compute) {
+            return compute();
         }
     }
 

@@ -5,10 +5,14 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -72,6 +76,11 @@ public class Call_NT
     @Override
     public int getOpCode() {
         return OP_CALL_NT;
+    }
+
+    @Override
+    protected boolean isTupleReturn() {
+        return true;
     }
 
     @Override
@@ -161,6 +170,20 @@ public class Call_NT
     protected String getParamsString() {
         return getParamsString(m_anArgValue, m_aArgValue);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        computeCallTypes(bctx, m_anArgValue);
+    }
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildCall(bctx, code, m_anArgValue);
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int[] m_anArgValue;
 

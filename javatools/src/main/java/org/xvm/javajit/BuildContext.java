@@ -95,6 +95,7 @@ import static org.xvm.javajit.Builder.CD_nException;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.CD_nRef;
+import static org.xvm.javajit.Builder.CD_nTuple;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.OPT;
@@ -1022,6 +1023,17 @@ public class BuildContext {
      */
     public void storeToContext(CodeBuilder code, ClassDesc cd, int returnIndex) {
         Builder.storeToContext(code, cd, returnIndex, ctxSlot(code));
+    }
+
+    /**
+     * Store a range of optimized return components from the Java stack into the current context.
+     * The components are stored in reverse order to match their stack order.
+     */
+    public void storeOptReturnsToContext(CodeBuilder code, int[] returnIndexes, int first, int count) {
+        for (int i = first + count - 1; i >= first; i--) {
+            JitParamDesc retDesc = methodDesc.optimizedReturns[returnIndexes[i]];
+            storeToContext(code, retDesc.cd, retDesc.altIndex);
+        }
     }
 
     /**
@@ -2937,6 +2949,57 @@ public class BuildContext {
                 assignReturn(code, jmd, isOptimized, i, anVar[i]);
             }
         }
+    }
+
+    /**
+     * Package the return values from a standard invocation into an {@code nTuple}.
+     */
+    public void assignTupleReturns(CodeBuilder code, JitMethodDesc jmd, int regId) {
+        assert !jmd.isOptimized;
+
+        JitParamDesc[] returns     = jmd.standardReturns;
+        int            returnCount = returns.length;
+
+        if (regId == Op.A_IGNORE) {
+            if (returnCount > 0) {
+                Builder.pop(code, returns[0].cd);
+            }
+            return;
+        }
+
+        TypeConstant tupleType = getReturnType(regId);
+        assert tupleType.isTuple();
+
+        int primarySlot = returnCount == 0
+                ? -1
+                : storeTempValue(code, returns[0].cd);
+
+        code.new_(CD_nTuple)
+            .dup();
+        loadCtx(code);
+        loadTypeConstant(code, tupleType);
+        code.loadConstant(returnCount)
+            .anewarray(CD_nObject);
+
+        for (int i = 0; i < returnCount; i++) {
+            JitParamDesc ret = returns[i];
+
+            code.dup()
+                .loadConstant(i);
+            if (i == 0) {
+                Builder.load(code, ret.cd, primarySlot);
+            } else {
+                loadFromContext(code, ret.cd, ret.altIndex);
+            }
+            if (ret.type.isJitInterface()) {
+                code.checkcast(CD_nObject);
+            }
+            code.aastore();
+        }
+
+        code.invokespecial(CD_nTuple, INIT_NAME,
+                MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant, CD_nObject.arrayType()));
+        storeValue(code, regId, tupleType);
     }
 
     private void assignConditionalReturns(CodeBuilder code, JitMethodDesc jmd, int cReturns,
