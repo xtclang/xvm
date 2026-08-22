@@ -41,8 +41,13 @@ import org.xvm.util.Severity;
 
 /**
  * The fully realized "flattened" information about a type.
+ *
+ * TypeInfoReal is final because its constructors must create owner-local MethodInfo,
+ * PropertyInfo, and ChildInfo copies that point back to this TypeInfo. Subclassing would make that
+ * partially constructed owner observable. The previous anonymous placeholder subclass only changed
+ * toString(), which is handled directly by this class now.
  */
-public class TypeInfoReal
+public final class TypeInfoReal
         extends TypeInfo {
     /**
      * Construct a TypeInfo.
@@ -2086,6 +2091,11 @@ public class TypeInfoReal
 
 
     // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    public String toString() {
+        return isPlaceHolder() ? "Placeholder" : super.toString();
+    }
 
     @Override
     public String toString(boolean fRuntime) {

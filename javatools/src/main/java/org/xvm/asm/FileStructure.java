@@ -50,8 +50,13 @@ import static org.xvm.util.Handy.writeUtf8String;
  * FileStructure is generally used as a container of one module, which may have dependencies on
  * other modules, some of which may be wholly embedded into the file structure. In other words, the
  * FileStructure is the "module container".
+ *
+ * FileStructure is final because its constructors have to create the root-owned ConstantPool,
+ * root ModuleStructure, and deserialized child graph with this object as the owner. Allowing a
+ * subclass would make those owner links observable before subclass construction completed; the
+ * XvmStructure model already treats FileStructure as the root envelope, not an extension point.
  */
-public class FileStructure
+public final class FileStructure
         extends Component {
     // ----- constructors --------------------------------------------------------------------------
 

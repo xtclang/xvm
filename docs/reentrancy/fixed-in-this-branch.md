@@ -610,6 +610,62 @@ master. The existing
 `TypeInfoReal.validate()` ownership checks continue to cover real type-info
 graphs during unit tests and stress runs.
 
+### ASM Metadata Owner Assembly
+
+This branch also removes the remaining ASM metadata constructor escapes in
+`FileStructure`, `ClassStructure.SimpleTypeResolver`, `MethodStructure`,
+`PropertyStructure`, `VersionTree`, `PropertyConstant`, and `TypeInfoReal`.
+
+The old patterns were a mix of constructor-time virtual hooks and owner
+mutation:
+
+- `MethodStructure` called `setConditionalReturn(...)` from its constructor;
+- `PropertyStructure` called `setVarAccess(...)` and `setType(...)`;
+- `VersionTree` called the public `clear()` hook;
+- `PropertyConstant` called the protected `checkParent(...)` hook, which
+  `FormalTypeChildConstant` overrides;
+- `TypeInfoReal` remained subclassable because `ConstantPool.infoPlaceholder()`
+  created an anonymous placeholder subclass;
+- `MethodInfo.forType(...)`, `PropertyInfo.forType(...)`, and
+  `ChildInfo.forType(...)` mutated unowned source metadata to attach the first
+  `TypeInfoReal` owner.
+
+The first group is unsafe because subclasses can observe default fields before
+construction has completed. The last group is the real parallel-owner failure:
+two same-JVM type-info builds using the same unowned source metadata could let
+one owner claim the shared source object. Any later reuse of that source
+metadata then carried the wrong owner.
+
+The fixes are deliberately small:
+
+- root/owner assembler types that should not be externally specialized are
+  final (`FileStructure`, `ClassStructure.SimpleTypeResolver`, and
+  `TypeInfoReal`);
+- constructor behavior is expressed as static/private validation or direct
+  field initialization, preserving the old resulting flags, property type,
+  var-access value, version-tree empty state, and parent-validation rules;
+- `ConstantPool.infoPlaceholder()` still returns a cached placeholder, and
+  `TypeInfoReal.toString()` preserves the legacy `"Placeholder"` output;
+- `forType(...)` on method, property, and child metadata returns the same
+  object only for the same owner and otherwise creates an owner-local copy.
+
+This preserves the runtime and compiler cache shape. Each realized `TypeInfo`
+still has one owned method/property/child metadata graph, and the constant-pool
+placeholder remains one cached object per pool. The only extra allocation is an
+owner-local construction copy when caller-provided source metadata is reused
+across owners; that allocation replaces the old unsafe owner-stealing side
+effect and is not retained in addition to the owned graph.
+
+`AsmConstructorEscapeTest` covers the constructor-equivalence details, including
+the root envelope, conditional-return flag, property type/var access, cached
+placeholder string, and `VersionTree` construction. The parallel tests
+`MethodInfoTest.typeInfoConstructionCopiesMethodInfoInParallel()` and
+`TypeInfoMemberOwnershipTest.typeInfoConstructionCopiesPropertyAndChildInfoInParallel()`
+prove that shared source metadata remains unowned while concurrent
+`TypeInfoReal` owners receive distinct correctly back-linked copies. The
+targeted lint run at `/tmp/xvm-asm-this-escape-wave.log` reports zero warnings
+for the fixed ASM group.
+
 ## Manual Lazy Cache Hardening
 
 This branch also removes two concrete lazy-null cache hazards found by the

@@ -20,7 +20,10 @@ public class VersionTree<V>
      * Construct an empty {@link VersionTree}.
      */
     public VersionTree() {
-        clear();
+        // Avoid calling the public clear() mutation hook from the constructor; subclasses must not
+        // observe this tree before its root node exists.
+        root  = new Node<>(null, 0);
+        count = 0;
     }
 
     /**

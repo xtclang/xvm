@@ -3705,9 +3705,11 @@ public class ClassStructure
     // ----- inner class: SimpleTypeResolver -------------------------------------------------------
 
     /**
-     * Generic type resolver based on the actual parameter list.
+     * Generic type resolver based on the actual parameter list. The constructor may recursively
+     * normalize missing generic arguments through this resolver after its fields are initialized,
+     * so the resolver is final and must stay free of overridable construction-time behavior.
      */
-    public class SimpleTypeResolver
+    public final class SimpleTypeResolver
             implements GenericTypeResolver {
         /**
          * Create a TypeResolver based on the actual type list.

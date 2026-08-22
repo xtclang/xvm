@@ -45,25 +45,12 @@ public class FormalTypeChildConstant
      * @param sName        the formal child name
      */
     public FormalTypeChildConstant(ConstantPool pool, FormalConstant constParent, String sName) {
-        super(pool, constParent, sName);
+        super(pool, constParent, sName, ParentFormat.FORMAL_CHILD);
     }
 
     @Override
     protected void checkParent(IdentityConstant idParent) {
-        switch (idParent.getFormat()) {
-        case FormalTypeChild:
-        case TypeParameter:
-            break;
-
-        case Property:
-            if (((PropertyConstant) idParent).isFormalType()) {
-                break;
-            }
-            // fall through
-        default:
-            throw new IllegalArgumentException(
-                "parent does not represent a formal constant: " + idParent);
-        }
+        validateParent(ParentFormat.FORMAL_CHILD, idParent);
     }
 
 

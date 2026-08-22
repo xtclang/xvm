@@ -123,16 +123,11 @@ public class PropertyInfo
     }
 
     /**
-     * Internal: Associate this PropertyInfo with the specified TypeInfo, copying it if it already
-     * belongs to a different TypeInfo.
+     * Internal: Create a PropertyInfo for the specified TypeInfo. Do not mutate an unowned source
+     * PropertyInfo here; TypeInfoReal calls this while it is still under construction.
      */
-    synchronized PropertyInfo forType(TypeInfo infoType) {
+    final synchronized PropertyInfo forType(TypeInfo infoType) {
         assert infoType != null;
-
-        if (m_infoType == null) {
-            m_infoType = infoType;
-            return this;
-        }
 
         return m_infoType == infoType
                 ? this
@@ -1611,7 +1606,7 @@ public class PropertyInfo
     /**
      * The TypeInfo that contains this PropertyInfo, or null while it is being assembled.
      */
-    private TypeInfo m_infoType;
+    private final TypeInfo m_infoType;
 
     /**
      * The type of this Property.

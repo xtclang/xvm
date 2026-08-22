@@ -221,10 +221,18 @@ That validation is the right stress hook for the `MethodInfo.create(...)` and
 `PropertyInfo.create(...)` factory change. The focused unit tests prove that
 the old overridable body-owner attachment path is no longer used during owner
 construction; the constructors build non-virtual owned body copies instead.
-Stress runs that warm type-info graphs then exercise the real compiler/runtime
-paths: if a same-JVM or parallel run produces a split method/property body owner
-graph, `TypeInfoReal.validate()` fails immediately during type-info
-construction, before the bad graph is hidden inside a container dump.
+This branch extends that same validation boundary to `MethodInfo.forType(...)`,
+`PropertyInfo.forType(...)`, and `ChildInfo.forType(...)`: unowned source
+metadata is no longer mutated into the first `TypeInfoReal` owner; each
+different owner receives its own equivalent copy.
+
+The parallel unit tests build several `TypeInfoReal` graphs from the same
+source metadata and assert that the source remains unowned while every result
+is back-linked to its own owner. Stress runs that warm type-info graphs then
+exercise the real compiler/runtime paths: if a same-JVM or parallel run
+produces a split method/property/child owner graph, `TypeInfoReal.validate()`
+fails immediately during type-info construction, before the bad graph is hidden
+inside a container dump.
 
 ## Limitations
 

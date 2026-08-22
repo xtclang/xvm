@@ -2,7 +2,14 @@ package org.xvm.asm.constants;
 
 
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Map;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 
@@ -22,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 /**
@@ -46,6 +54,7 @@ public class MethodInfoTest {
         MethodInfo method1 = info1.getMethods().get(id);
         MethodInfo method2 = info2.getMethods().get(id);
 
+        assertNull(method.getTypeInfo());
         assertSame(info1, method1.getTypeInfo());
         assertSame(info2, method2.getTypeInfo());
         assertNotSame(method1, method2);
@@ -76,6 +85,42 @@ public class MethodInfoTest {
         assertSame(method, method.getHead().getMethodInfo());
         assertNotSame(body, method.getHead());
         assertNull(body.getMethodInfo());
+    }
+
+    @Test
+    public void typeInfoConstructionCopiesMethodInfoInParallel() throws Exception {
+        FileStructure  file   = new FileStructure("test");
+        ConstantPool   pool   = file.getConstantPool();
+        ClassStructure struct = file.getModule().createClass(
+                Access.PUBLIC, Format.CLASS, "Test", null);
+
+        SignatureConstant sig = pool.ensureSignatureConstant(
+                "test", ConstantPool.NO_TYPES, ConstantPool.NO_TYPES);
+        MethodConstant id = pool.ensureMethodConstant(struct.getIdentityConstant(), sig);
+        MethodInfo method = MethodInfo.create(new MethodBody(id, sig, Implementation.Native), 0);
+        var start = new CountDownLatch(1);
+
+        try (var executor = Executors.newFixedThreadPool(8)) {
+            var futures = IntStream.range(0, 8)
+                    .mapToObj(i -> executor.submit(() -> {
+                        start.await();
+                        return createTypeInfo(struct, id, sig, method).getMethods().get(id);
+                    }))
+                    .toList();
+
+            start.countDown();
+
+            var seen = Collections.newSetFromMap(new IdentityHashMap<MethodInfo, Boolean>());
+            for (var future : futures) {
+                MethodInfo owned = future.get(10, TimeUnit.SECONDS);
+
+                assertSame(owned, owned.getTypeInfo().getMethods().get(id));
+                assertSame(owned, owned.getHead().getMethodInfo());
+                assertTrue(seen.add(owned));
+            }
+        }
+
+        assertNull(method.getTypeInfo());
     }
 
     private TypeInfo createTypeInfo(

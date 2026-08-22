@@ -2,7 +2,14 @@ package org.xvm.asm.constants;
 
 
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Map;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 
@@ -24,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
@@ -59,6 +67,8 @@ public class TypeInfoMemberOwnershipTest {
         PropertyInfo property1 = info1.getProperties().get(idProperty);
         PropertyInfo property2 = info2.getProperties().get(idProperty);
 
+        assertNull(property.getTypeInfo());
+        assertNull(child.getTypeInfo());
         assertSame(info1, property1.getTypeInfo());
         assertSame(info2, property2.getTypeInfo());
         assertNotSame(property1, property2);
@@ -104,6 +114,70 @@ public class TypeInfoMemberOwnershipTest {
         assertSame(property, property.getHead().getPropertyInfo());
         assertNotSame(body, property.getHead());
         assertNull(body.getPropertyInfo());
+    }
+
+    @Test
+    public void typeInfoConstructionCopiesPropertyAndChildInfoInParallel()
+            throws Exception {
+        FileStructure  file   = new FileStructure("test");
+        ClassStructure struct = file.getModule().createClass(
+                Access.PUBLIC, Format.CLASS, "Test", null);
+
+        PropertyStructure structProperty = struct.createProperty(false, Access.PUBLIC,
+                Access.PUBLIC, struct.getCanonicalType(), "value");
+        PropertyConstant idProperty = structProperty.getIdentityConstant();
+        PropertyBody body = new PropertyBody(structProperty, Implementation.Native, null,
+                structProperty.getType(), true, false, false, Effect.None, Effect.None,
+                false, false, null, null);
+        PropertyInfo property = PropertyInfo.create(body, 0);
+        ChildInfo child = new ChildInfo(struct.createClass(
+                Access.PUBLIC, Format.CLASS, "Child", null));
+        var start = new CountDownLatch(1);
+
+        try (var executor = Executors.newFixedThreadPool(8)) {
+            var futures = IntStream.range(0, 8)
+                    .mapToObj(i -> executor.submit(() -> {
+                        start.await();
+                        return createTypeInfo(struct, idProperty, property, child);
+                    }))
+                    .toList();
+
+            start.countDown();
+
+            var props = Collections.newSetFromMap(new IdentityHashMap<PropertyInfo, Boolean>());
+            var children = Collections.newSetFromMap(new IdentityHashMap<ChildInfo, Boolean>());
+            for (var future : futures) {
+                TypeInfo info = future.get(10, TimeUnit.SECONDS);
+                PropertyInfo ownedProperty = info.getProperties().get(idProperty);
+                ChildInfo ownedChild = info.getChildInfosByName().get("Child");
+
+                assertSame(info, ownedProperty.getTypeInfo());
+                assertSame(ownedProperty, ownedProperty.getHead().getPropertyInfo());
+                assertSame(info, ownedChild.getTypeInfo());
+                assertSame(ownedChild, info.getChildInfosByName().get("alias.Child"));
+                assertTrue(props.add(ownedProperty));
+                assertTrue(children.add(ownedChild));
+            }
+        }
+
+        assertNull(property.getTypeInfo());
+        assertNull(child.getTypeInfo());
+    }
+
+    @Test
+    public void propertyConstantValidationKeepsNormalAndFormalChildRules() {
+        FileStructure  file   = new FileStructure("test");
+        ClassStructure struct = file.getModule().createClass(
+                Access.PUBLIC, Format.CLASS, "Test", null);
+        var pool = file.getConstantPool();
+        var formal = struct.addTypeParam("Element", pool.typeObject()).getIdentityConstant();
+        var child = pool.ensureFormalTypeChildConstant(formal, "Value");
+
+        assertSame(formal, child.getParentConstant());
+
+        var property = pool.ensurePropertyConstant(struct.getIdentityConstant(), "value");
+        assertThrows(IllegalArgumentException.class,
+                () -> pool.ensureFormalTypeChildConstant(property, "Bad"));
     }
 
     private TypeInfo createTypeInfo(

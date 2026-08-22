@@ -58,16 +58,11 @@ public class ChildInfo {
     }
 
     /**
-     * Internal: Associate this ChildInfo with the specified TypeInfo, copying it if it already
-     * belongs to a different TypeInfo.
+     * Internal: Create a ChildInfo for the specified TypeInfo. Do not mutate an unowned source
+     * ChildInfo here; TypeInfoReal calls this while it is still under construction.
      */
-    synchronized ChildInfo forType(TypeInfo infoType) {
+    final synchronized ChildInfo forType(TypeInfo infoType) {
         assert infoType != null;
-
-        if (m_infoType == null) {
-            m_infoType = infoType;
-            return this;
-        }
 
         return m_infoType == infoType
                 ? this
@@ -223,5 +218,5 @@ public class ChildInfo {
     /**
      * The TypeInfo that contains this ChildInfo, or null while it is being assembled.
      */
-    private TypeInfo m_infoType;
+    private final TypeInfo m_infoType;
 }

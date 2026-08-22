@@ -2489,6 +2489,9 @@ public class ConstantPool
     public TypeInfo infoPlaceholder() {
         TypeInfo info = m_infoPlaceholder;
         if (info == null) {
+            // Keep the placeholder as an ordinary TypeInfoReal so TypeInfoReal can remain final.
+            // The old anonymous subclass only customized toString(); TypeInfoReal now preserves
+            // that observable behavior for Progress.Building placeholders directly.
             m_infoPlaceholder = info = new TypeInfoReal(
                 typeObject(), 0, null, 0, true, Collections.emptyMap(),
                 Annotation.NO_ANNOTATIONS, Annotation.NO_ANNOTATIONS,
@@ -2496,11 +2499,7 @@ public class ConstantPool
                 Collections.emptyList(), new ListMap<>(), new ListMap<>(),
                 Collections.emptyMap(), Collections.emptyMap(),
                 Collections.emptyMap(), Collections.emptyMap(),
-                ListMap.EMPTY, null, Progress.Building) {
-                    public String toString() {
-                        return "Placeholder";
-                    }
-                };
+                ListMap.EMPTY, null, Progress.Building);
         }
         return info;
     }

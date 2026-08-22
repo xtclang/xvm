@@ -96,16 +96,11 @@ public class MethodInfo
     }
 
     /**
-     * Internal: Associate this MethodInfo with the specified TypeInfo, copying it if it already
-     * belongs to a different TypeInfo.
+     * Internal: Create a MethodInfo for the specified TypeInfo. Do not mutate an unowned source
+     * MethodInfo here; TypeInfoReal calls this while it is still under construction.
      */
-    synchronized MethodInfo forType(TypeInfo infoType) {
+    final synchronized MethodInfo forType(TypeInfo infoType) {
         assert infoType != null;
-
-        if (m_infoType == null) {
-            m_infoType = infoType;
-            return this;
-        }
 
         return m_infoType == infoType
                 ? this
@@ -1657,7 +1652,7 @@ public class MethodInfo
     /**
      * The TypeInfo that contains this MethodInfo, or null while the MethodInfo is being assembled.
      */
-    private TypeInfo m_infoType;
+    private final TypeInfo m_infoType;
 
     /**
      * This value represents a relative order of method's appearance in the containing class. It's

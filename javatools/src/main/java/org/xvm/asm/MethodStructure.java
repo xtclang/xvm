@@ -109,15 +109,11 @@ public class MethodStructure
     protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId,
             ConditionalConstant condition, Annotation[] annotations,
             Parameter[] aReturns, Parameter[] aParams, boolean fHasCode, boolean fUsesSuper) {
-        this(xsParent, nFlags, constId, condition);
+        this(xsParent, initializeConditionalReturn(nFlags, aReturns), constId, condition);
 
         m_aAnnotations = annotations;
         m_aReturns     = aReturns;
         m_aParams      = aParams;
-
-        if (aReturns.length > 0 && aReturns[0].isConditionalReturn()) {
-            setConditionalReturn(true);
-        }
 
         int cTypeParams    = 0;
         int cDefaultParams = 0;
@@ -136,6 +132,25 @@ public class MethodStructure
         m_cDefaultParams = cDefaultParams;
         m_FHasCode       = fHasCode;
         m_FUsesSuper     = fUsesSuper;
+    }
+
+    /**
+     * Fold constructor-supplied conditional-return metadata into the initial flags. The old
+     * constructor called the public mutation path, which can rewrite return parameters and is
+     * overridable. Here the return parameter already carries the conditional-return shape, so the
+     * equivalent constructor state is just the flag bit.
+     */
+    private static int initializeConditionalReturn(int nFlags, Parameter[] aReturns) {
+        if (aReturns.length == 0 || !aReturns[0].isConditionalReturn()
+                || (nFlags & COND_RET_BIT) != 0) {
+            return nFlags;
+        }
+
+        if (!aReturns[0].getType().isEcstasy("Boolean")) {
+            throw new IllegalStateException("first return value is not Boolean (" + aReturns[0] + ")");
+        }
+
+        return nFlags | COND_RET_BIT;
     }
 
 

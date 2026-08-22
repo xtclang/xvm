@@ -13,15 +13,18 @@ Last full forced root lint before the handle-construction wave:
 
 Forced targeted compile-graph lint after the handle-construction,
 runtime constructor-assertion, `ClassTemplate` implicit-field, `Container`,
-`Op*` constructor-shape, utility-constructor, and `MethodInfo`/`PropertyInfo`
-owner-body factory waves:
-36 emitted this-escape diagnostics
-35 unique file:line locations
+`Op*` constructor-shape, utility-constructor, `MethodInfo`/`PropertyInfo`
+owner-body factory, and ASM metadata owner-copy waves:
+25 emitted this-escape diagnostics
+24 unique file:line locations
 0 xRef.java, xOSFileNode.java, CallChain.java, xRTMethod.java, or
 ClassTemplate.java this-escape diagnostics
 0 Container.java, Op*.java, PackedInteger.java, HasherReference.java, or
 ListSet.java this-escape diagnostics
 0 MethodInfo.java or PropertyInfo.java this-escape diagnostics
+0 ClassStructure.java, FileStructure.java, MethodStructure.java,
+PropertyStructure.java, VersionTree.java, PropertyConstant.java, or
+TypeInfoReal.java this-escape diagnostics
 ```
 
 The full root lint build was not rerun after these waves to avoid paying for
@@ -42,12 +45,13 @@ non-`javatools` site: the remaining `javatools_jitbridge` warning.
 | Fixed in this branch | 3 | `Container` construction no longer captures/registers a partially constructed owner through `ConstHeap`, `NativeTemplates`, or the runtime debug registry. Two of these were visible together in javac output; the registry publication became visible after the helper captures were removed. |
 | Fixed in this branch | 5 | Utility constructors no longer call overridable mutation/reset APIs while the object is partially constructed. |
 | Fixed in this branch | 6 | `MethodInfo` and `PropertyInfo` no longer attach method/property body owner links from constructors. |
+| Fixed in this branch | 11 | ASM metadata owner assembly no longer calls constructor-time virtual hooks or steals unowned method/property/child metadata into the first `TypeInfoReal` owner. |
 | Fixed separately, still present here | 2 | Concrete unsafe construction/publication pattern. Fixed on `lagergren/fix-utils-this-escape`; still present in this branch until that PR is merged or rebased here. |
-| Audit before changing | 27 | Construction publishes `this` to owner/child structures or performs owner-sensitive assembly. Needs confinement or lifecycle proof. |
+| Audit before changing | 16 | Compiler/parser/AST construction publishes parent/adoption state and needs confinement or lifecycle proof before changing in this branch. |
 | Document only for this PR | 7 | JIT/tooling paths that are not part of the runtime-owner fix. |
 
-The current forced targeted lint run reports 35 remaining unique locations. The
-next full-root lint run is expected to report 36 remaining unique locations
+The current forced targeted lint run reports 24 remaining unique locations. The
+next full-root lint run is expected to report 25 remaining unique locations
 because the full root build includes one additional non-`javatools` site.
 
 ## Fixed Separately, Do Not Suppress Here
@@ -385,6 +389,83 @@ Running the direct and parallel stress tasks with runtime ownership validation
 enabled forces warmed type-info graphs through those checks; a split body owner
 graph fails structurally instead of waiting for a later language-level crash.
 
+## Fixed In This Branch: ASM Metadata Owner Assembly
+
+The next ASM wave removed these `this-escape` diagnostics:
+
+```text
+javatools/src/main/java/org/xvm/asm/ClassStructure.java:3769
+javatools/src/main/java/org/xvm/asm/FileStructure.java:67
+javatools/src/main/java/org/xvm/asm/FileStructure.java:137
+javatools/src/main/java/org/xvm/asm/FileStructure.java:160
+javatools/src/main/java/org/xvm/asm/MethodStructure.java:119
+javatools/src/main/java/org/xvm/asm/PropertyStructure.java:66
+javatools/src/main/java/org/xvm/asm/VersionTree.java:20
+javatools/src/main/java/org/xvm/asm/constants/PropertyConstant.java:42
+javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:138
+javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:176
+javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:269
+```
+
+These were more than cosmetic constructor warnings. They had two separate
+failure modes:
+
+- several constructors called public or protected methods while construction
+  was incomplete (`setConditionalReturn(...)`, `setVarAccess(...)`,
+  `setType(...)`, `clear()`, and `checkParent(...)`);
+- `TypeInfoReal` assembled owner-local method, property, and child metadata by
+  mutating a caller-supplied unowned `MethodInfo`, `PropertyInfo`, or
+  `ChildInfo` the first time it was attached to an owner.
+
+The second case is a real parallel-owner bug. If two `TypeInfoReal` instances
+were built concurrently from the same source metadata, the old `forType(...)`
+methods let the first owner mutate and claim the shared source object. The
+second owner then got a copy of already-owned metadata, while any retained
+source reference now pointed at the first owner. That violates the model that
+each realized type-info graph owns its own metadata and makes later diagnostics
+or incremental reuse see the wrong owner.
+
+The replacement keeps behavior and cache shape but removes construction-time
+publication:
+
+- `FileStructure` is now final. It is the root envelope that creates the root
+  pool and module graph with itself as owner; the codebase has no subclass
+  contract that needs to observe that root during construction.
+- `ClassStructure.SimpleTypeResolver` and `TypeInfoReal` are final. The
+  resolver can be used while generic arguments are normalized, and
+  `TypeInfoReal` must create owner-local metadata while its constructor runs.
+  The old anonymous `TypeInfoReal` placeholder subclass only changed
+  `toString()`, so that behavior is handled directly by `TypeInfoReal`.
+- `MethodStructure`, `PropertyStructure`, `VersionTree`, and `PropertyConstant`
+  now use constructor-local static/private validation or direct field
+  initialization instead of public/protected mutation hooks.
+- `MethodInfo.forType(...)`, `PropertyInfo.forType(...)`, and
+  `ChildInfo.forType(...)` never mutate unowned source metadata. They return
+  `this` only when it already belongs to the requested owner; otherwise they
+  allocate an equivalent owner-local copy.
+
+No hot cache was removed. `ConstantPool.infoPlaceholder()` still caches one
+placeholder object per pool, and `TypeInfoReal.toString()` preserves the old
+`"Placeholder"` output. Normal type-info construction still retains one owned
+method/property/child metadata graph per realized owner. The only additional
+allocation is a construction-time copy when the caller supplied shared source
+metadata; that is the intentional replacement for the old unsafe owner-stealing
+side effect, and it does not add retained footprint to normal owner graphs.
+
+`AsmConstructorEscapeTest` verifies the constructor-equivalence pieces:
+`FileStructure` remains the root envelope, conditional-return method flags are
+preserved, property type and var access are preserved, the placeholder cache and
+string output are preserved, and `VersionTree` no longer calls an overridable
+`clear()` during construction. `MethodInfoTest.typeInfoConstructionCopiesMethodInfoInParallel()`
+and
+`TypeInfoMemberOwnershipTest.typeInfoConstructionCopiesPropertyAndChildInfoInParallel()`
+construct several `TypeInfoReal` graphs concurrently from the same source
+metadata and assert that every result is owner-local, identity-distinct, and
+correctly back-linked while the source metadata remains unowned. Those tests
+would fail against the old source-mutation model. The forced lint run at
+`/tmp/xvm-asm-this-escape-wave.log` reports no remaining warning from this ASM
+group.
+
 ## Audit Before Changing
 
 These are the warnings most likely to hide real owner/lifecycle assumptions,
@@ -451,34 +532,6 @@ restoring `new ConstHeap(this)`, `new NativeTemplates(this)`, or
 `/tmp/xvm-container-this-escape.log` reports no `Container.java`
 `this-escape` diagnostics.
 
-### ASM Metadata and Owner Assembly
-
-These warnings sit in constant/file/type metadata construction. They may be
-safe if assembly is single-thread confined until publication, but that
-assumption must be documented for same-JVM incremental compile/runtime reuse.
-
-```text
-javatools/src/main/java/org/xvm/asm/ClassStructure.java:3769
-javatools/src/main/java/org/xvm/asm/FileStructure.java:67
-javatools/src/main/java/org/xvm/asm/FileStructure.java:137
-javatools/src/main/java/org/xvm/asm/FileStructure.java:160
-javatools/src/main/java/org/xvm/asm/MethodStructure.java:119
-javatools/src/main/java/org/xvm/asm/PropertyStructure.java:66
-javatools/src/main/java/org/xvm/asm/VersionTree.java:19
-javatools/src/main/java/org/xvm/asm/constants/PropertyConstant.java:42
-javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:138
-javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:176
-javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:269
-```
-
-Proper fixes:
-
-- Split object construction from registration/linking.
-- Use private construction plus factory methods where the factory can perform
-  post-construction adoption.
-- Prove deserialization and metadata assembly are not visible to other threads
-  until complete.
-
 ### Compiler and AST Parent/Adoption
 
 These constructor paths set parent/component/type state, create lexers, or
@@ -532,7 +585,6 @@ javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/nLongBasedArra
 ## Expected Full-Root Remaining Classification
 
 ```text
-11 Must audit: ASM metadata/owner construction
 16 Must audit: compiler/parser/AST construction
  6 Document only: JIT construction
  2 Fixed separately, still present here: concrete unsafe utility construction
@@ -546,8 +598,8 @@ The least risky order after this runtime-owner branch is:
 
 1. Merge or rebase the separate `lagergren/fix-utils-this-escape` branch that
    fixes the two concrete `javatools_utils` construction defects.
-2. Audit ASM/compiler assembly paths with
-   focused lifecycle tests before changing them.
+2. Audit the remaining compiler/parser/AST assembly paths with focused
+   lifecycle tests before changing them in this runtime-owner branch.
 
 ## Grouped Metadata Record Candidates
 

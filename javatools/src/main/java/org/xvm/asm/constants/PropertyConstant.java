@@ -37,9 +37,22 @@ public class PropertyConstant
      * @param sName        the property name
      */
     public PropertyConstant(ConstantPool pool, IdentityConstant constParent, String sName) {
+        this(pool, constParent, sName, ParentFormat.PROPERTY);
+    }
+
+    /**
+     * Construct a property-like formal constant with explicit parent validation. This avoids the
+     * old constructor-time virtual checkParent(...) dispatch while preserving subclass-specific
+     * parent rules and the public constructor behavior.
+     */
+    protected PropertyConstant(
+            ConstantPool     pool,
+            IdentityConstant constParent,
+            String           sName,
+            ParentFormat     format) {
         super(pool, constParent, sName);
 
-        checkParent(constParent);
+        validateParent(format, constParent);
     }
 
     /**
@@ -57,23 +70,56 @@ public class PropertyConstant
     }
 
     /**
+     * Validate the parent's format. The constructor uses the static ParentFormat route instead of
+     * the protected virtual hook below, so subclass validation remains explicit without exposing a
+     * half-constructed PropertyConstant.
+     */
+    protected static void validateParent(ParentFormat format, IdentityConstant idParent) {
+        switch (format) {
+        case PROPERTY:
+            switch (idParent.getFormat()) {
+            case Module:
+            case Package:
+            case Class:
+            case NativeClass:
+            case Property:
+            case Method:
+                return;
+
+            default:
+                throw new IllegalArgumentException("invalid parent: " + idParent.getFormat());
+            }
+
+        case FORMAL_CHILD:
+            switch (idParent.getFormat()) {
+            case FormalTypeChild:
+            case TypeParameter:
+                return;
+
+            case Property:
+                if (((PropertyConstant) idParent).isFormalType()) {
+                    return;
+                }
+                // fall through
+            default:
+                throw new IllegalArgumentException(
+                        "parent does not represent a formal constant: " + idParent);
+            }
+        }
+    }
+
+    protected enum ParentFormat {
+        PROPERTY,
+        FORMAL_CHILD
+    }
+
+    /**
      * Validate the parent's format.
      *
      * @param idParent  the parent's id
      */
     protected void checkParent(IdentityConstant idParent) {
-        switch (idParent.getFormat()) {
-        case Module:
-        case Package:
-        case Class:
-        case NativeClass:
-        case Property:
-        case Method:
-            break;
-
-        default:
-            throw new IllegalArgumentException("invalid parent: " + idParent.getFormat());
-        }
+        validateParent(ParentFormat.PROPERTY, idParent);
     }
 
     // ----- FormalConstant methods ----------------------------------------------------------------

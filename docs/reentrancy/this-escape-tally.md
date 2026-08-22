@@ -68,8 +68,9 @@ handle-construction, runtime constructor-assertion, `ClassTemplate`
 implicit-field, `Container`, `Op*` constructor-shape, and
 utility-constructor waves. A later forced targeted compile added the
 `MethodInfo`/`PropertyInfo` owner-body factory wave and the local
-`MethodInfo` fallthrough cleanup. To avoid paying for another clean root build,
-this branch used a forced targeted compile graph:
+`MethodInfo` fallthrough cleanup. The latest forced targeted compile also
+includes the ASM metadata owner-copy wave. To avoid paying for another clean
+root build, this branch used a forced targeted compile graph:
 
 ```bash
 ./gradlew :javatools:compileJava --rerun-tasks --no-build-cache \
@@ -79,19 +80,22 @@ this branch used a forced targeted compile graph:
   -Porg.xtclang.java.maxWarnings=10000 \
   -Porg.xtclang.java.maxErrors=10000 \
   --console=plain --warning-mode=all \
-  > /tmp/xvm-method-property-info-this-escape.log 2>&1
+  > /tmp/xvm-asm-this-escape-wave.log 2>&1
 ```
 
 Result:
 
 ```text
 BUILD SUCCESSFUL in 9s
-36 emitted this-escape diagnostics in the targeted compile graph
-35 unique file:line locations in that targeted compile graph
+25 emitted this-escape diagnostics in the targeted compile graph
+24 unique file:line locations in that targeted compile graph
 0 xRef.java, xOSFileNode.java, CallChain.java, xRTMethod.java,
   ClassTemplate.java, Container.java, Op*.java, PackedInteger.java,
   HasherReference.java, ListSet.java, MethodInfo.java, or PropertyInfo.java
   this-escape diagnostics
+0 ClassStructure.java, FileStructure.java, MethodStructure.java,
+  PropertyStructure.java, VersionTree.java, PropertyConstant.java, or
+  TypeInfoReal.java this-escape diagnostics
 0 MethodInfo.java fallthrough diagnostics
 ```
 
@@ -139,10 +143,21 @@ javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java:51
 javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java:61
 javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java:71
 javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java:99
+javatools/src/main/java/org/xvm/asm/ClassStructure.java:3769
+javatools/src/main/java/org/xvm/asm/FileStructure.java:67
+javatools/src/main/java/org/xvm/asm/FileStructure.java:137
+javatools/src/main/java/org/xvm/asm/FileStructure.java:160
+javatools/src/main/java/org/xvm/asm/MethodStructure.java:119
+javatools/src/main/java/org/xvm/asm/PropertyStructure.java:66
+javatools/src/main/java/org/xvm/asm/VersionTree.java:20
+javatools/src/main/java/org/xvm/asm/constants/PropertyConstant.java:42
+javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:138
+javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:176
+javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:269
 ```
 
 The next full-root lint run is expected to drop from `80` emitted diagnostics
-at `77` unique locations to `37` emitted diagnostics at `36` unique locations.
+at `77` unique locations to `26` emitted diagnostics at `25` unique locations.
 The difference from the targeted compile graph is the one remaining
 `javatools_jitbridge` warning outside this task graph.
 
@@ -193,9 +208,9 @@ javatools/src/main/java/org/xvm/compiler/Parser.java:70
 | Should fix, fixed in this branch | `Op` constructor virtual predicates/asserts | 22 unique warning locations removed in this branch; 0 remain in this category | Done for this PR | Replace constructor-time virtual predicate calls with explicit constructor-only opcode-shape metadata or private helpers. Keep existing virtual shape methods only for post-construction behavior. |
 | Should fix, fixed in this branch | Utility constructor helpers call overridable methods | `PackedInteger`, `HasherReference`, `ListSet`: 5 unique warning locations removed in this branch; 0 remain in this category | Done for this PR | Route constructors through private helpers while leaving public/protected mutation/reset APIs available after construction. |
 | Must fix, fixed in this branch | `MethodInfo`/`PropertyInfo` constructors attach child body owners before owner construction completes | 6 unique warning locations removed in this branch; 0 remain in this category | Done for this PR | Use static factories and private constructors that build non-virtual owned `MethodBody`/`PropertyBody` copies into local arrays before assigning the final owner body array. Keep existing `TypeInfoReal` ownership validation. |
+| Must fix, fixed in this branch | ASM metadata owner-copy and constructor hooks | `FileStructure`, `ClassStructure`, `MethodStructure`, `PropertyStructure`, `TypeInfoReal`, `PropertyConstant`, `VersionTree`: 11 unique locations removed | Done for this PR | Remove constructor-time virtual hooks, keep root/owner assemblers final where appropriate, and copy `MethodInfo`/`PropertyInfo`/`ChildInfo` per `TypeInfoReal` owner instead of stealing unowned source metadata. |
 | Must fix, fixed separately | `CooperativelyCleanableReference` publishes `this` to a static set from the constructor | 1 | Done on `lagergren/fix-utils-this-escape` | Use a private constructor plus factory/registration step after construction, or another design that does not publish the object until construction has returned. |
 | Must fix, fixed separately | `AbstractConverterMap` calls overridable factory methods from the base constructor | 1 | Done on `lagergren/fix-utils-this-escape` | Make factory results final concrete nested classes that do not dispatch to subclasses during construction, or lazily initialize views after construction with synchronization. |
-| Must audit, ASM owner-copy and metadata construction | `FileStructure`, `ClassStructure`, `MethodStructure`, `PropertyStructure`, `TypeInfoReal`, `PropertyConstant`, `VersionTree` | 11 unique locations | Mixed | Prove construction is request/thread confined, or split assembly from publication so owned children are connected after the owner constructor returns. |
 | Must audit, compiler/parser/AST construction callbacks | `Lexer`, `Parser`, expression/statement constructors and `adopt`/parent-link calls | 16 unique locations | Mixed | For incremental/parallel compiler safety, prove AST/request confinement or separate object construction from parent/adoption callbacks. |
 | Must audit, JIT path | `javajit` and `javatools_jitbridge` constructors | 6 unique locations | Unknown | Document in `jit-implications.md`; do not change in this runtime-owner PR without JIT-specific tests. |
 | Should inspect, tooling | `ModuleInfo` | 1 unique location | Small | Confirm no subclass-visible construction callback is needed; otherwise make the constructor path final/private. |
@@ -204,7 +219,6 @@ Expected full-root unique-location classification after applying the targeted
 delta:
 
 ```text
- 11 Must audit: ASM metadata/owner construction
  16 Must audit: compiler/parser/AST construction
   6 Must audit: JIT construction
   2 Must fix, fixed separately: concrete unsafe utility construction
@@ -214,17 +228,6 @@ delta:
 Current targeted remaining unique locations in the compile graph:
 
 ```text
-javatools/src/main/java/org/xvm/asm/ClassStructure.java:3769
-javatools/src/main/java/org/xvm/asm/FileStructure.java:67
-javatools/src/main/java/org/xvm/asm/FileStructure.java:137
-javatools/src/main/java/org/xvm/asm/FileStructure.java:160
-javatools/src/main/java/org/xvm/asm/MethodStructure.java:119
-javatools/src/main/java/org/xvm/asm/PropertyStructure.java:66
-javatools/src/main/java/org/xvm/asm/VersionTree.java:20
-javatools/src/main/java/org/xvm/asm/constants/PropertyConstant.java:42
-javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:138
-javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:176
-javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:269
 javatools/src/main/java/org/xvm/compiler/Lexer.java:55
 javatools/src/main/java/org/xvm/compiler/Parser.java:43
 javatools/src/main/java/org/xvm/compiler/Parser.java:53
@@ -362,8 +365,8 @@ The migration rule should be:
 This is the file-level count from the last full-root lint run, before the
 targeted-delta fixes above. It intentionally still includes sites that are now
 fixed in this branch, including `xRef`, `xOSFileNode`, `CallChain`,
-`xRTMethod`, `ClassTemplate`, `Container`, and the `Op*` constructor-shape
-group.
+`xRTMethod`, `ClassTemplate`, `Container`, the `Op*` constructor-shape group,
+and the ASM metadata owner-assembly group.
 
 ```text
    6 javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java
@@ -421,7 +424,7 @@ unique source lines.
 
 This list is the last full-root output captured before the handle-construction,
 runtime constructor-assertion, and `ClassTemplate` implicit-field waves. It
-therefore still contains the six removed lines listed in the targeted-delta
+therefore still contains many removed lines listed in the targeted-delta
 section above; those no longer appear in the targeted javatools lint compile.
 
 ```text

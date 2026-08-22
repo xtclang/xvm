@@ -63,11 +63,24 @@ public class PropertyStructure
                                 ConditionalConstant condition, Access access2, TypeConstant type) {
         this(xsParent, nFlags, constId, condition);
         if (access2 != null) {
-            setVarAccess(access2);
+            m_accessVar = validateVarAccess(access2, nFlags);
         }
         if (type != null) {
-            setType(type);
+            // Preserve setType(...) constructor semantics without calling the public mutation path
+            // while this PropertyStructure is still under construction.
+            m_type = type;
+            constId.invalidateCache();
         }
+    }
+
+    /**
+     * Validate constructor-supplied Var access without calling the public mutation path before this
+     * PropertyStructure has completed construction.
+     */
+    private static Access validateVarAccess(Access access, int nFlags) {
+        Access accessRef = Access.valueOf((nFlags & ACCESS_MASK) >>> ACCESS_SHIFT);
+        assert access.ordinal() >= accessRef.ordinal();
+        return access;
     }
 
 
