@@ -658,7 +658,11 @@ effect and is not retained in addition to the owned graph.
 
 `AsmConstructorEscapeTest` covers the constructor-equivalence details, including
 the root envelope, conditional-return flag, property type/var access, cached
-placeholder string, and `VersionTree` construction. The parallel tests
+placeholder string, and `VersionTree` construction. It also contains
+hook-detecting subclasses that prove the changed constructors do not call
+overridden `setConditionalReturn(...)`, `setVarAccess(...)`, `setType(...)`, or
+`checkParent(...)` before subclass construction completes, while the same hooks
+remain callable after construction. The parallel tests
 `MethodInfoTest.typeInfoConstructionCopiesMethodInfoInParallel()` and
 `TypeInfoMemberOwnershipTest.typeInfoConstructionCopiesPropertyAndChildInfoInParallel()`
 prove that shared source metadata remains unowned while concurrent

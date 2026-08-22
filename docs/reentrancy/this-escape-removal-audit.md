@@ -456,7 +456,11 @@ side effect, and it does not add retained footprint to normal owner graphs.
 `FileStructure` remains the root envelope, conditional-return method flags are
 preserved, property type and var access are preserved, the placeholder cache and
 string output are preserved, and `VersionTree` no longer calls an overridable
-`clear()` during construction. `MethodInfoTest.typeInfoConstructionCopiesMethodInfoInParallel()`
+`clear()` during construction. It also uses hook-detecting subclasses to prove
+that the changed constructors no longer dispatch to overridden
+`setConditionalReturn(...)`, `setVarAccess(...)`, `setType(...)`, or
+`checkParent(...)` before subclass construction completes, while those hooks
+still work after construction. `MethodInfoTest.typeInfoConstructionCopiesMethodInfoInParallel()`
 and
 `TypeInfoMemberOwnershipTest.typeInfoConstructionCopiesPropertyAndChildInfoInParallel()`
 construct several `TypeInfoReal` graphs concurrently from the same source
