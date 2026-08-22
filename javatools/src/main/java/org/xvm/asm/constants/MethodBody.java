@@ -692,7 +692,9 @@ public class MethodBody {
      * @return the ConstantPool
      */
     private ConstantPool pool() {
-        return ConstantPool.getCurrentPool();
+        // A MethodBody is identified by m_id; annotation lookup must use that identity's owner
+        // pool, not whichever pool a caller happened to bind around metadata traversal.
+        return m_id.getConstantPool();
     }
 
     // ----- Object methods ------------------------------------------------------------------------

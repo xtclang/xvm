@@ -1,6 +1,8 @@
 package org.xvm.asm.constants;
 
 
+import java.lang.reflect.Method;
+
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -26,6 +28,7 @@ import org.xvm.asm.constants.TypeInfo.Progress;
 import org.xvm.util.ListMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -88,6 +91,25 @@ public class MethodInfoTest {
     }
 
     @Test
+    public void metadataPoolHelpersUseOwnerWithoutAmbientPool() throws Exception {
+        FileStructure  file   = new FileStructure("test");
+        ConstantPool   pool   = file.getConstantPool();
+        ClassStructure struct = file.getModule().createClass(
+                Access.PUBLIC, Format.CLASS, "Test", null);
+
+        SignatureConstant sig = pool.ensureSignatureConstant(
+                "test", ConstantPool.NO_TYPES, ConstantPool.NO_TYPES);
+        MethodConstant id = pool.ensureMethodConstant(struct.getIdentityConstant(), sig);
+        MethodInfo method = MethodInfo.create(new MethodBody(id, sig, Implementation.Native), 0);
+
+        try (var _ = ConstantPool.withPool(null)) {
+            assertSame(pool, invokePool(method));
+            assertSame(pool, invokePool(method.getHead()));
+            assertFalse(method.isOp());
+        }
+    }
+
+    @Test
     public void typeInfoConstructionCopiesMethodInfoInParallel() throws Exception {
         FileStructure  file   = new FileStructure("test");
         ConstantPool   pool   = file.getConstantPool();
@@ -121,6 +143,12 @@ public class MethodInfoTest {
         }
 
         assertNull(method.getTypeInfo());
+    }
+
+    private static ConstantPool invokePool(Object target) throws Exception {
+        Method method = target.getClass().getDeclaredMethod("pool");
+        method.setAccessible(true);
+        return (ConstantPool) method.invoke(target);
     }
 
     private TypeInfo createTypeInfo(

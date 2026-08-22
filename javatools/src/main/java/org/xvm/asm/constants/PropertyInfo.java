@@ -690,7 +690,9 @@ public class PropertyInfo
             // allowable for interfaces
             Component parent = idProp.getNamespace().getComponent();
             if (parent == null) {
-                ConstantPool pool = ConstantPool.getCurrentPool();
+                // The property-info graph already has an owner pool. Use it to adopt shared
+                // identities instead of guessing from ambient current-pool state.
+                ConstantPool pool = pool();
                 if (idProp.isShared(pool)) {
                     idProp = pool.register(idProp);
                     parent = idProp.getNamespace().getComponent();

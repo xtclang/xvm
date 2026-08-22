@@ -1,6 +1,8 @@
 package org.xvm.asm.constants;
 
 
+import java.lang.reflect.Method;
+
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -16,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.PropertyStructure;
@@ -117,6 +120,29 @@ public class TypeInfoMemberOwnershipTest {
     }
 
     @Test
+    public void propertyInfoPoolHelperUsesOwnerWithoutAmbientPool() throws Exception {
+        FileStructure  file   = new FileStructure("test");
+        ConstantPool   pool   = file.getConstantPool();
+        ClassStructure struct = file.getModule().createClass(
+                Access.PUBLIC, Format.CLASS, "Test", null);
+
+        PropertyStructure structProperty = struct.createProperty(false, Access.PUBLIC,
+                Access.PUBLIC, struct.getCanonicalType(), "value");
+        PropertyConstant idProperty = structProperty.getIdentityConstant();
+        PropertyBody body = new PropertyBody(structProperty, Implementation.Native, null,
+                structProperty.getType(), true, false, false, Effect.None, Effect.None,
+                false, false, null, null);
+        var child = new ChildInfo(struct.createClass(Access.PUBLIC, Format.CLASS, "Child", null));
+        PropertyInfo property = createTypeInfo(struct, idProperty, PropertyInfo.create(body, 0), child)
+                .getProperties().get(idProperty);
+
+        try (var _ = ConstantPool.withPool(null)) {
+            assertSame(pool, invokePool(property));
+            assertTrue(property.isIdentityValid(idProperty));
+        }
+    }
+
+    @Test
     public void typeInfoConstructionCopiesPropertyAndChildInfoInParallel()
             throws Exception {
         FileStructure  file   = new FileStructure("test");
@@ -178,6 +204,12 @@ public class TypeInfoMemberOwnershipTest {
         var property = pool.ensurePropertyConstant(struct.getIdentityConstant(), "value");
         assertThrows(IllegalArgumentException.class,
                 () -> pool.ensureFormalTypeChildConstant(property, "Bad"));
+    }
+
+    private static ConstantPool invokePool(PropertyInfo property) throws Exception {
+        Method method = PropertyInfo.class.getDeclaredMethod("pool");
+        method.setAccessible(true);
+        return (ConstantPool) method.invoke(property);
     }
 
     private TypeInfo createTypeInfo(

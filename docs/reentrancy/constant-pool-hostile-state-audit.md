@@ -241,6 +241,15 @@ resolver-backed nested identity and uses it for `SignatureConstant` generic
 resolution. Canonical nested identities still avoid owner state, preserving the
 old cacheable key shape when no resolver is involved.
 
+This branch also fixed the method/property metadata helper cases. The old
+private `pool()` helpers in `MethodBody` and `MethodInfo`, plus the
+duck-typing repair path in `PropertyInfo.isIdentityValid(...)`, made metadata
+queries depend on hidden current-pool state. That is wrong even when execution
+is single-threaded, because metadata queries can run inside nested compiler,
+runtime, or diagnostic helpers that temporarily change the ambient pool.
+Receiver-owned metadata now derives the pool from its method identity,
+containing `TypeInfo`, or property-info graph instead.
+
 ### Runtime-published pools are still mutable by default
 
 References:

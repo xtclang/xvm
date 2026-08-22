@@ -279,6 +279,21 @@ old cache shape for common cache keys. `NestedIdentityOwnerTest` binds a wrong
 ambient pool and proves the resolver still interns the signature in the
 explicit pool.
 
+This branch also removes ambient pool lookup from method/property metadata
+helpers. On `master`, `MethodBody.pool()`, `MethodInfo.pool()`, and the
+duck-typed repair path inside `PropertyInfo.isIdentityValid(...)` used
+`ConstantPool.getCurrentPool()`. These helpers look like ordinary metadata
+queries, but they can resolve annotations, narrow signatures, or adopt shared
+property identities. The old design was not safe even for a single-threaded
+runtime: any nested compiler/runtime helper that temporarily changed or cleared
+the current pool changed the metadata owner's answer. The replacement derives
+the owner from receiver state: `MethodBody` uses its `MethodConstant`,
+attached `MethodInfo` uses its `TypeInfo`, unowned `MethodInfo` assembly falls
+back to the head method identity, and `PropertyInfo` uses its existing
+property-info pool helper. `MethodInfoTest.metadataPoolHelpersUseOwnerWithoutAmbientPool()`
+and `TypeInfoMemberOwnershipTest.propertyInfoPoolHelperUsesOwnerWithoutAmbientPool()`
+cover the no-ambient case.
+
 ### Handle Construction `this` Escapes
 
 This branch removes three runtime handle-construction `this` escapes:

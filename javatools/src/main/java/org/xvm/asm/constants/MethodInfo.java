@@ -1482,7 +1482,12 @@ public class MethodInfo
      * @return the ConstantPool
      */
     private ConstantPool pool() {
-        return ConstantPool.getCurrentPool();
+        // Attached MethodInfo belongs to its TypeInfo graph. While it is still being assembled,
+        // fall back to the head method identity. Do not consult ambient current-pool state.
+        TypeInfo infoType = m_infoType;
+        return infoType == null
+                ? getIdentity().getConstantPool()
+                : infoType.getType().getConstantPool();
     }
 
     // ----- JIT support ---------------------------------------------------------------------------
