@@ -77,8 +77,7 @@ public class CooperativelyCleanableReference<V> extends WeakReference<V> {
      * @return the registered reference
      */
     public static <V> CooperativelyCleanableReference<V> create(V referent, AutoCloseable cleaner) {
-        CooperativelyCleanableReference<V> ref = new CooperativelyCleanableReference<>(referent, cleaner);
-
+        var ref = new CooperativelyCleanableReference<V>(referent, cleaner);
         // Register only after the constructor returns. Publishing from the constructor would expose
         // a not-yet-fully-constructed reference through KEEP_ALIVE.
         KEEP_ALIVE.add(ref);
