@@ -25,6 +25,36 @@ and lazy-publication counts are scan signals generated on branch
 | Must fix | Runtime/helper state shallow-copied during constant adoption | Fixed in this branch for `SingletonConstant`, `FSNodeConstant`, `FileStoreConstant`, `TypeConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, `TypeParameterConstant`, and `HandleConstant` | A constant registered into pool B carries pool A's runtime handle/state cell, helper lock, JIT cache, or reentrancy marker | Adoption must copy only logical constant value state; transient runtime/helper state must be fresh or cleared |
 | Must audit, must fix when runtime execution depends on it | Ambient current `ConstantPool` lookup | Runtime sites include `MainContainer`, `Container`, `ServiceContext`, watcher/request callbacks, `xContainerControl`, and type helpers | A hidden thread-local owner can be stale, absent, or wrong on reused Java threads and async callbacks | Add explicit owner parameters where practical; use scoped owner lookup only as a transitional boundary bridge with assertions |
 
+## Why Single-Threaded Was Not A Good Excuse
+
+The old patterns are not merely missing parallel-runtime support. They are
+poor ownership design even if only one user program is launched at a time.
+Single-threaded code still has nested calls, callbacks, error paths, deferred
+work, class loading, compiler/runtime handoff, and partial construction. If an
+API does not say which owner it uses, a caller cannot reason locally about
+whether the value being returned belongs to the right container, pool, frame, or
+template.
+
+Cheap alternatives were available at the original design point:
+
+- `ConstantPool.getCurrentPool()` could have been an explicit
+  `ConstantPool pool` parameter on helpers that intern constants.
+- `INSTANCE = this` could have been a `Container`-owned template lookup table.
+- Constructor-side registration could have been a private constructor plus a
+  factory that publishes the object after construction completes.
+- Global mutable maps could have been final immutable maps after bootstrap.
+- Lazy first-use fields could have been final `Lazy` cells or owner-local
+  `ConcurrentMap.computeIfAbsent(...)` caches.
+- Multi-field lifecycle state could have been one immutable state record in an
+  `AtomicReference`.
+- Base `clone()` adoption could have been explicit copy/adoption methods per
+  constant subclass.
+
+Those choices do not require a parallel runtime to justify them. They make
+single-threaded code easier to inspect, they preserve Java final-field and
+safe-publication reasoning, and they make later reentrant execution the natural
+result of ordinary encapsulation instead of a risky retrofit.
+
 ## Mutable Template INSTANCE
 
 Status: exact defect category.

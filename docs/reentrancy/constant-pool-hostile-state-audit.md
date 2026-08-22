@@ -229,6 +229,18 @@ and metadata helpers by threading `ConstantPool`, `Container`, or `Frame`
 explicitly. Keep `withPool(...)` only as a temporary boundary bridge, and make
 runtime owner mismatch diagnostics independent of `assert`.
 
+This branch fixed the nested identity resolver case. The old API was especially
+misleading because `resolveNestedIdentity(pool, resolver)` already had an
+explicit `pool` parameter. Resolver-backed `NestedIdentity` objects discarded
+that parameter and later called `ConstantPool.getCurrentPool()` when comparing
+or hashing nested method signatures. That is bad even in a single-threaded
+world: a nested helper can temporarily install another pool, or no pool, and
+the resolver will silently use that hidden state instead of the owner requested
+by the caller. The replacement stores the caller's output pool in the
+resolver-backed nested identity and uses it for `SignatureConstant` generic
+resolution. Canonical nested identities still avoid owner state, preserving the
+old cacheable key shape when no resolver is involved.
+
 ### Runtime-published pools are still mutable by default
 
 References:

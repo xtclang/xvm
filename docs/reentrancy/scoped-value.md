@@ -28,6 +28,80 @@ for old call sites that cannot yet accept an owner parameter, but it should
 only point to the real owner-scoped tables. It should not become a new
 container of mutable process-global caches.
 
+## Explicit Ownership Difficulty Check
+
+The current tree does not justify replacing owner plumbing with a broad
+`ScopedValue` lookup. Most remaining ambient owner reads already have a real
+owner close by. In those cases `ScopedValue` would be a convenience mechanism
+for hiding a dependency that should be visible in the API.
+
+| Area | Difficulty | Preferred fix | Why not `ScopedValue` |
+| --- | --- | --- | --- |
+| Receiver-owned constants, such as numeric range folding | Low | Use `getConstantPool()` from the receiver constant. | The receiver already identifies the owner. A scoped lookup can be stale, absent, or from a nested operation. |
+| Receiver-owned `ConstantPool` instance methods | Low | Use `this`, for example `typeTuple0()` on the receiver pool. | An instance method asking a thread local which pool it belongs to is arbitrary and can change the answer. |
+| Type substitutability helpers | Low to medium | Require an explicit `ConstantPool` parameter and fail on `null`. | The caller knows the type-system owner; hiding it allows relation checks to manufacture helper constants in the wrong pool. |
+| Nested identity generic resolution | Low to medium | Carry the resolver/output pool in the nested identity resolver object, or derive it from the identity being resolved. | The resolved signature belongs to a specific identity/pool, not to whatever pool is currently bound to the Java thread. |
+| `MethodInfo`, `MethodBody`, and `PropertyInfo` metadata helpers | Medium | Derive the pool from owned `TypeInfo`, `MethodConstant`, `PropertyConstant`, or pass it from the caller when metadata is intentionally temporary. | These objects are part of an owner-local metadata graph. A scoped lookup makes it impossible to tell whether the graph is owned by the metadata receiver or by an outer ambient operation. |
+| Compiler, loader, and launcher boundaries | Medium to high | Keep a narrow lexical bridge while legacy internals are migrated, with explicit diagnostics that compare the ambient pool to the real file/module/container owner. | This is the only area where plumbing every intermediate call can be too wide for one PR. Even here, the scope is a boundary shim, not semantic ownership. |
+| Runtime handle/template factories | Medium to high | Prefer explicit `Container`, `Frame`, or `ClassTemplate` parameters; use owner-local tables for caches. A scoped bridge can exist only as deprecated compatibility. | Runtime values are owned by containers and services. A hidden current scope makes owner failures happen at runtime and can hide missing owner arguments during review. |
+
+The migration is therefore shallow but broad. The hard part is not performance
+or object layout; it is finding all ownerless APIs and making the call graph say
+which owner is intended. The common end state is one of:
+
+```java
+// Receiver-owned value: cheapest and safest.
+return getConstantPool().ensureRangeConstant(this, that);
+```
+
+```java
+// Caller-owned operation: owner is part of the semantic contract.
+return typeActual.isCovariantReturn(pool, typeRequired, typeContext);
+```
+
+```java
+// Transitional boundary only: checked bridge for old APIs.
+try (var _ = ConstantPool.withPool(file.getConstantPool())) {
+    return loadLegacyComponent(file);
+}
+```
+
+The last form should shrink over time. It is acceptable only when the boundary
+already has an explicit owner and diagnostics can prove that any ambient lookup
+inside the legacy call tree sees the same owner.
+
+## Why Broad Scoped Ownership Would Be An Antipattern
+
+`ScopedValue` is safer than a raw `ThreadLocal`, but it is still ambient state.
+It becomes the same class of design problem as `getCurrentPool()` when semantic
+code uses it to decide ownership. The failure moves from "mutable thread-local
+slot was wrong" to "lexically scoped owner was missing, too wide, or the wrong
+nested owner." That is better for cleanup, but it does not make the owner
+dependency visible.
+
+Problem shapes:
+
+- A helper called from two owner contexts can silently use whichever scope is
+  closest on the Java call stack, even if the helper's receiver belongs to a
+  different pool.
+- A boundary can accidentally bind a container while executing code that
+  manufactures values for the native container, or vice versa.
+- A callback or worker handoff loses the scope unless the runtime binds it
+  again at the actual execution point.
+- Generated or legacy static APIs continue to compile without an owner
+  argument, so review cannot see that ownership matters.
+- If the scoped context starts owning caches directly, it becomes a new
+  global-cache table instead of a bridge to the real `Container` or
+  `ConstantPool`.
+
+The performance argument also favors explicit ownership in the hot paths. A
+passed reference or receiver field read is no slower than a scoped lookup and is
+usually cheaper than `ThreadLocal.get()`. The expensive operations here are
+constant interning, type relation checks, metadata traversal, and handle
+creation. Passing a `ConstantPool` or `Container` does not change cache
+semantics; using the correct owner preserves the same interning/cache hit while
+removing the possibility of an accidental wrong-owner hit.
+
 ## Terminology
 
 This document uses two related but different terms.

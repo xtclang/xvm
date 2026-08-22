@@ -5,6 +5,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.List;
+import java.util.Objects;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -273,7 +274,7 @@ public abstract class IdentityConstant
         return isNested()
                 ? resolver == null
                     ? getCanonicalNestedIdentity()
-                    : new NestedIdentity(resolver)
+                    : new NestedIdentity(pool, resolver)
                 : null;
     }
 
@@ -384,10 +385,15 @@ public abstract class IdentityConstant
     public class NestedIdentity
             implements Comparable<NestedIdentity>{
         public NestedIdentity() {
-            this(null);
+            this(null, null);
         }
 
         public NestedIdentity(GenericTypeResolver resolver) {
+            this(IdentityConstant.this.getConstantPool(), resolver);
+        }
+
+        protected NestedIdentity(ConstantPool pool, GenericTypeResolver resolver) {
+            m_pool     = resolver == null ? null : Objects.requireNonNull(pool, "pool");
             m_resolver = resolver;
         }
 
@@ -503,12 +509,15 @@ public abstract class IdentityConstant
         }
 
         private Object resolve(Object element) {
-            ConstantPool pool = ConstantPool.getCurrentPool();
+            // Resolver-based nested identities are created by resolveNestedIdentity(pool, ...).
+            // Use that explicit output pool instead of the ambient current pool; nested identity
+            // comparison can run during type-info construction for multiple owners at once.
             return m_resolver != null && element instanceof SignatureConstant sig
-                    ? sig.resolveGenericTypes(pool, m_resolver)
+                    ? sig.resolveGenericTypes(m_pool, m_resolver)
                     : element;
         }
 
+        private final ConstantPool         m_pool;
         private final GenericTypeResolver m_resolver;
     }
 

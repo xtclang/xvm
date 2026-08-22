@@ -424,7 +424,7 @@ public class PropertyConstant
         return getNamespace().isNested()
                 ? resolver == null
                     ? getCanonicalNestedIdentity()
-                    : new NestedIdentity(resolver)
+                    : new NestedIdentity(pool, resolver)
                 : getName();
     }
 

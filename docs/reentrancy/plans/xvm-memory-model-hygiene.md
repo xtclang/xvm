@@ -158,6 +158,10 @@ Completed wave in this branch:
 - `ConstantPool.checkFunctionCompatibility(...)` no longer calls
   `ConstantPool.getCurrentPool()` from an instance method. It uses receiver
   `typeTuple0()` and is covered by `ConstantPoolDiagnosticsTest`.
+- `IdentityConstant.resolveNestedIdentity(pool, resolver)` no longer loses the
+  explicit output pool. Resolver-backed nested identities carry that pool and
+  are covered by `NestedIdentityOwnerTest`, which runs under a wrong ambient
+  pool and verifies the requested pool owns the resolved signature.
 
 ### Must Fix
 

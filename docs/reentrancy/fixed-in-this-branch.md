@@ -264,6 +264,21 @@ cache while removing a hidden thread-local precondition.
 `ConstantPoolDiagnosticsTest.functionCompatibilityUsesReceiverPoolWithoutAmbientPool()`
 covers the no-ambient case that would fail on `master`.
 
+This branch also removes ambient pool lookup from nested identity generic
+resolution. On `master`, `IdentityConstant.resolveNestedIdentity(pool,
+resolver)` accepted an explicit output pool and then ignored that pool inside
+resolver-backed `NestedIdentity` comparison/hashing. The old code later called
+`ConstantPool.getCurrentPool()` when resolving a nested method signature, so a
+single-threaded nested compile/type-info operation with stale ambient state
+could resolve helper signatures in the wrong owner pool. Parallel containers
+made the same hidden precondition easier to hit, but the bad design was already
+present: the method signature lied about where ownership came from. The
+replacement stores the explicit output pool in resolver-backed nested
+identities and keeps canonical no-resolver identities owner-free, preserving the
+old cache shape for common cache keys. `NestedIdentityOwnerTest` binds a wrong
+ambient pool and proves the resolver still interns the signature in the
+explicit pool.
+
 ### Handle Construction `this` Escapes
 
 This branch removes three runtime handle-construction `this` escapes:

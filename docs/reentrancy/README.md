@@ -11,6 +11,76 @@ stored in mutable globals or unsynchronized first-use fields, parallel
 containers can observe the wrong owner, a half-initialized object, or an
 impossible lifecycle state.
 
+This was not an unavoidable cost of supporting an early single-program
+compiler/runtime. Most of the broken patterns were cheaper to avoid than to
+debug later. Even in a single-threaded implementation, code is easier to reason
+about when ownership is explicit, constructors do not publish `this`, and
+constant-looking state is actually immutable. Reentrancy and concurrency fall
+out of those ordinary design choices instead of requiring a separate recovery
+effort years later.
+
+Examples of low-cost choices that would have avoided the current failure
+classes:
+
+- Pass the owner that the caller already has:
+
+  ```java
+  type.isCovariantReturn(pool, required, context);
+  ```
+
+  instead of making a pure-looking predicate call
+  `ConstantPool.getCurrentPool()` internally.
+
+- Use the receiver's owner in receiver methods:
+
+  ```java
+  return getConstantPool().ensureRangeConstant(this, that);
+  ```
+
+  instead of asking a thread-local which pool is "current".
+
+- Keep runtime templates in a `Container`-owned table:
+
+  ```java
+  NativeTemplates.get(container).booleanTemplate()
+  ```
+
+  instead of assigning `xBoolean.INSTANCE = this` from a constructor.
+
+- Construct first, then publish:
+
+  ```java
+  var ref = new RefHandle(clazz, frame, iVar);
+  info.setRef(ref);
+  return ref;
+  ```
+
+  instead of storing `this` in a frame cache from the handle constructor.
+
+- Use immutable snapshots for lifecycle state:
+
+  ```java
+  state.compareAndSet(oldState, new Initialized(handle));
+  ```
+
+  instead of spreading handle, owner, waiter, and initialization flags across
+  several mutable fields.
+
+- Use final immutable constants or immutable collections for global state:
+
+  ```java
+  private static final Map<String, Id> IDS = Map.copyOf(builder);
+  ```
+
+  instead of exposing a mutable `HashMap` because current startup happens to
+  fill it once.
+
+These choices are not slower in the normal case. Passing a `ConstantPool`,
+`Container`, or `Frame` reference is cheaper and clearer than a thread-local
+lookup, and owner-local caches keep the same cache hit behavior while removing
+wrong-owner hits. The cost we are paying now is almost entirely migration cost:
+finding hidden owner assumptions after they were copied across the code base.
+
 Start here:
 
 - [must-fix-races.md](must-fix-races.md): the high-priority inventory of

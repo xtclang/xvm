@@ -498,7 +498,7 @@ public class MethodConstant
         return getNamespace().isNested()
                 ? resolver == null
                     ? getCanonicalNestedIdentity()
-                    : new NestedIdentity(resolver)
+                    : new NestedIdentity(pool, resolver)
                 : getSignature().resolveGenericTypes(pool, resolver);
     }
 
