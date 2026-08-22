@@ -43,7 +43,7 @@ public class ListSet<E>
      */
     public ListSet(Collection<? extends E> that) {
         this(that.size());
-        addAll(that);
+        addAllInternal(that);
     }
 
 
@@ -143,6 +143,10 @@ public class ListSet<E>
 
     @Override
     public int size() {
+        return sizeInternal();
+    }
+
+    private int sizeInternal() {
         return m_iHead - m_iTail - m_cBlank;
     }
 
@@ -153,6 +157,23 @@ public class ListSet<E>
 
     @Override
     public boolean add(E e) {
+        return addElement(e);
+    }
+
+    /**
+     * Populate this set during construction without capturing {@code this} in a lambda or calling
+     * the overridable public Set API.
+     */
+    private void addAllInternal(Collection<? extends E> that) {
+        for (E e : that) {
+            addElement(e);
+        }
+    }
+
+    /**
+     * Add an element without dispatching through the public Set API from constructors.
+     */
+    private boolean addElement(E e) {
         if (m_fSuppressNull && e == null) {
             throw new IllegalArgumentException("null value is not permitted");
         }
@@ -300,7 +321,7 @@ public class ListSet<E>
         if (!m_fSuppressHash && !(o instanceof Stop)) {
             if (indexEnabled()) {
                 indexAdd(o.hashCode(), iElem);
-            } else if (size() >= INDEX_MIN) {
+            } else if (sizeInternal() >= INDEX_MIN) {
                 // the set is now large enough to start indexing at this point
                 indexInit();
             }

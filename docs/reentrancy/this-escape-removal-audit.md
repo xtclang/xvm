@@ -11,14 +11,15 @@ Last full forced root lint before the handle-construction wave:
 80 emitted this-escape diagnostics
 77 unique file:line locations
 
-Forced `:javatools:compileJava` lint after the handle-construction,
+Forced targeted compile-graph lint after the handle-construction,
 runtime constructor-assertion, `ClassTemplate` implicit-field, `Container`,
-and `Op*` constructor-shape waves:
-49 emitted this-escape diagnostics
-46 unique file:line locations
+`Op*` constructor-shape, and utility-constructor waves:
+44 emitted this-escape diagnostics
+41 unique file:line locations
 0 xRef.java, xOSFileNode.java, CallChain.java, xRTMethod.java, or
 ClassTemplate.java this-escape diagnostics
-0 Container.java or Op*.java this-escape diagnostics
+0 Container.java, Op*.java, PackedInteger.java, HasherReference.java, or
+ListSet.java this-escape diagnostics
 ```
 
 The full root lint build was not rerun after these waves to avoid paying for
@@ -37,13 +38,13 @@ non-`javatools` site: the remaining `javatools_jitbridge` warning.
 | Fixed in this branch | 1 | `ClassTemplate` implicit fields are explicit constructor metadata instead of an overridable constructor hook. |
 | Fixed in this branch | 22 | `Op*` constructor-time virtual opcode-shape predicates are now explicit deserialization metadata or private helpers. |
 | Fixed in this branch | 3 | `Container` construction no longer captures/registers a partially constructed owner through `ConstHeap`, `NativeTemplates`, or the runtime debug registry. Two of these were visible together in javac output; the registry publication became visible after the helper captures were removed. |
+| Fixed in this branch | 5 | Utility constructors no longer call overridable mutation/reset APIs while the object is partially constructed. |
 | Fixed separately, still present here | 2 | Concrete unsafe construction/publication pattern. Fixed on `lagergren/fix-utils-this-escape`; still present in this branch until that PR is merged or rebased here. |
-| Remove after small design cleanup | 5 | Utility helper calls that are not owner-bearing runtime state. |
 | Audit before changing | 33 | Construction publishes `this` to owner/child structures or performs owner-sensitive assembly. Needs confinement or lifecycle proof. |
 | Document only for this PR | 7 | JIT/tooling paths that are not part of the runtime-owner fix. |
 
-The current forced targeted lint run reports 46 remaining unique locations. The
-next full-root lint run is expected to report 47 remaining unique locations
+The current forced targeted lint run reports 41 remaining unique locations. The
+next full-root lint run is expected to report 42 remaining unique locations
 because the full root build includes one additional non-`javatools` site.
 
 ## Fixed Separately, Do Not Suppress Here
@@ -298,18 +299,23 @@ turning the constructor-only shape into a per-op runtime cache field.
 | `javatools/src/main/java/org/xvm/asm/OpTest.java:49`, `:62`, `:77`, `:92` | Constructors and deserialization called overridable `isBinaryOp()` and `hasSecondArgument()`. | Should fix. Same static-shape problem as `OpCondJump`. | Deserialization receives `TestShape`; source constructors use arity. |
 | `javatools/src/main/java/org/xvm/asm/OpVar.java:58` | Deserialization called overridable `isTypeAware()` before concrete construction completed. | Should fix. Existing type-aware overrides are static op shape, so virtual dispatch is unnecessary. | Deserialization receives an explicit `typeAware` parameter for `Var_C`, `Var_CN`, `CatchStart`, and `FinallyStart`. |
 
-## Should Fix: Utility Constructor Helpers
+## Fixed In This Branch: Utility Constructor Helpers
 
-These warnings should eventually disappear, but they are best handled in
-focused cleanup commits rather than mixed into the native-template owner PR.
-They are not owner-bearing runtime state, but they should not survive a future
-`this-escape`-as-error policy.
+These warnings were not owner-bearing runtime state, but they were still real
+constructor hazards: a subclass could observe its object before its own fields
+were initialized. This branch removes them instead of suppressing them.
 
-| Site(s) | Current behavior | Seriousness | Proper refactor |
+| Site(s) | Old behavior | Seriousness | Replacement |
 | --- | --- | --- | --- |
-| `javatools_utils/src/main/java/org/xvm/util/HasherReference.java:26` | Constructor calls protected `reset(...)`. A subclass can override it and run before its own fields are initialized. | Should fix. Probably not a runtime-owner race, but it is a classic unsafe-construction shape. | Assign `referent` and `hasher` directly in the constructor or through a private helper. Leave protected `reset(...)` for post-construction reuse. |
-| `javatools_utils/src/main/java/org/xvm/util/ListSet.java:46` | Collection constructor calls `addAll(...)`, which dispatches through overridable `add(...)`. | Should fix. A subclass can observe the not-yet-constructed `ListSet` while elements are being added. | Move population into a private insertion helper that uses the base storage directly, or make the class/fill path final if subclassing is not intended. |
-| `javatools_utils/src/main/java/org/xvm/util/PackedInteger.java:64`, `:73`, `:85` | Constructors call public mutable methods `setLong(...)`, `setBigInteger(...)`, and `readObject(...)`. | Should fix. The object is mutable by design, but constructors should not dispatch through public mutation APIs. | Extract private assignment/read helpers used by constructors and public methods. Public setters can delegate to the private helpers after construction. |
+| `javatools_utils/src/main/java/org/xvm/util/HasherReference.java:26` | Constructor called protected `reset(...)`. A subclass can override it and run before its own fields are initialized. | Should fix. Probably not a runtime-owner race, but it is a classic unsafe-construction shape. | Constructor now calls private `assign(...)`; protected `reset(...)` remains the post-construction reuse API used by `TransientHasherReference`. |
+| `javatools_utils/src/main/java/org/xvm/util/ListSet.java:46` | Collection constructor called `addAll(...)`, which dispatches through overridable `add(...)`. Its private insertion path also called public `size()`. | Should fix. A subclass can observe the not-yet-constructed `ListSet` while elements are being added. | Constructor population uses private `addAllInternal(...)`, `addElement(...)`, and `sizeInternal()`. A lambda was not used because capturing `this` in the constructor still triggers `this-escape`. |
+| `javatools_utils/src/main/java/org/xvm/util/PackedInteger.java:64`, `:73`, `:85` | Constructors called public mutable methods `setLong(...)`, `setBigInteger(...)`, and `readObject(...)`. | Should fix. The object is mutable by design, but constructors should not dispatch through public mutation APIs. | Constructors now use private `initLong(...)`, `initBigInteger(...)`, and `readObjectInternal(...)`; public mutators keep the old validation and delegate to those helpers after construction. |
+
+`UtilityConstructorEscapeTest` creates subclasses whose overrides throw if a
+constructor calls `setLong(...)`, `setBigInteger(...)`, `readObject(...)`,
+`reset(...)`, or `add(...)`. Those tests would fail on the old implementation
+and now pass while preserving normal values, duplicate handling, hash indexing,
+and post-construction mutation APIs.
 
 ## Audit Before Changing
 
@@ -467,7 +473,6 @@ javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/nLongBasedArra
 17 Must audit: ASM metadata/owner construction
 16 Must audit: compiler/parser/AST construction
  6 Document only: JIT construction
- 5 Should fix: utility cleanup
  2 Fixed separately, still present here: concrete unsafe utility construction
  1 Should inspect: tooling
 ```
@@ -479,8 +484,7 @@ The least risky order after this runtime-owner branch is:
 
 1. Merge or rebase the separate `lagergren/fix-utils-this-escape` branch that
    fixes the two concrete `javatools_utils` construction defects.
-2. Remove the remaining small utility constructor-helper warnings.
-3. Audit ASM/compiler assembly paths with
+2. Audit ASM/compiler assembly paths with
    focused lifecycle tests before changing them.
 
 ## Grouped Metadata Record Candidates

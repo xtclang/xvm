@@ -23,7 +23,7 @@ public class HasherReference<T> implements Supplier<T> {
      * @param hasher   the {@link Hasher} used to determine equality
      */
     public HasherReference(T referent, Hasher<? super T> hasher) {
-        reset(referent, hasher);
+        assign(referent, hasher);
     }
 
     /**
@@ -33,8 +33,15 @@ public class HasherReference<T> implements Supplier<T> {
      * @param hasher   the hasher
      */
     protected void reset(T referent, Hasher<? super T> hasher) {
+        assign(referent, hasher);
+    }
+
+    /**
+     * Assign the reference state without constructor-time virtual dispatch.
+     */
+    private void assign(T referent, Hasher<? super T> hasher) {
         this.referent = referent;
-        this.hasher = hasher;
+        this.hasher   = hasher;
     }
 
     /**
