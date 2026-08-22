@@ -17,15 +17,33 @@ import org.xvm.asm.constants.TypeConstant;
  */
 public class TypeMatrix {
 
-    public TypeMatrix(BuildContext bctx) {
-        MethodStructure method = bctx.methodStruct;
-
-        this.bctx  = bctx;
+    public TypeMatrix(MethodStructure method) {
         this.views = new OpView[method.hasCode() ? method.getOps().length : 0];
     }
 
-    private final BuildContext bctx;
-    private final OpView[]     views;
+    private volatile BuildContext bctx;
+    private final OpView[] views;
+
+    /**
+     * Bind the completed owner context. BuildContext cannot pass "this" to this object from its
+     * constructor; that would let future TypeMatrix changes observe a partially initialized build
+     * context. The BuildContext factories call this only after construction has returned, so the
+     * owner reference is volatile to publish that one-time post-construction binding.
+     */
+    void bind(BuildContext bctx) {
+        if (this.bctx != null) {
+            throw new IllegalStateException("TypeMatrix is already bound");
+        }
+        this.bctx = bctx;
+    }
+
+    private BuildContext bctx() {
+        BuildContext bctx = this.bctx;
+        if (bctx == null) {
+            throw new IllegalStateException("TypeMatrix is not bound to a BuildContext");
+        }
+        return bctx;
+    }
 
     public record OpView(Map<Integer, TypeConstant> types, boolean isImmutable) {
         /**
@@ -100,7 +118,7 @@ public class TypeMatrix {
         ensureMutableView(currAddr + 1).types.put(regId, type);
 
         if (regId >= 0) {
-            bctx.scope.declareRegister(regId);
+            bctx().scope.declareRegister(regId);
         }
     }
 
@@ -126,7 +144,7 @@ public class TypeMatrix {
         ComputeType:
         if (nextType == null) {
             if (regId >= 0) {
-                bctx.scope.declareRegister(regId);
+                bctx().scope.declareRegister(regId);
             }
         } else {
             if (type.equals(nextType)) {
@@ -150,7 +168,7 @@ public class TypeMatrix {
                     }
                     type = inferredType.getUnderlyingType2();
                 }
-                type = new CastTypeConstant(bctx.pool(), nextType, type);
+                type = new CastTypeConstant(bctx().pool(), nextType, type);
             }
         }
         nextView.types.put(regId, type);
@@ -176,7 +194,7 @@ public class TypeMatrix {
      */
     public void cleanupJump(int jumpAddr, int cExits) {
         if (cExits > 0 && isReached(jumpAddr)) {
-            Scope scope = bctx.scope;
+            Scope scope = bctx().scope;
             while (cExits-- > 0) {
                 scope = scope.parent;
                 assert scope != null;
@@ -270,7 +288,7 @@ public class TypeMatrix {
                     mergeType = inferredType.getUnderlyingType2();
                 }
 
-                ConstantPool pool      = bctx.pool();
+                ConstantPool pool      = bctx().pool();
                 TypeConstant unionType = currType.union(pool, mergeType);
                 types.put(regId, baseType == null // this usually means an "out-of-scope" var
                               || baseType.isEquivalent(unionType)

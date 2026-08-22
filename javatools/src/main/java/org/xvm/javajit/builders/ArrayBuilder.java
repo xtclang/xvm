@@ -30,8 +30,9 @@ public class ArrayBuilder extends AugmentingBuilder {
     public ArrayBuilder(TypeSystem typeSystem, Artifact art, ClassModel model) {
         super(typeSystem, art, model);
 
-        DELEGATE_TYPE = pool().ensureEcstasyTypeConstant("collections.Array.ArrayDelegate");
-        isObjectArray = art.type().getParamType(0).equals(typeSystem.pool().typeObject());
+        ConstantPool pool = typeSystem.pool();
+        DELEGATE_TYPE = pool.ensureEcstasyTypeConstant("collections.Array.ArrayDelegate");
+        isObjectArray = art.type().getParamType(0).equals(pool.typeObject());
     }
 
     protected final TypeConstant DELEGATE_TYPE;

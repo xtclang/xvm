@@ -41,6 +41,18 @@ public class JitMethodDesc {
             JitParamDesc[] optimizedReturns,
             JitParamDesc[] optimizedParams,
             boolean        isStatic) {
+        this(typeTarget, standardReturns, standardParams, optimizedReturns, optimizedParams,
+                isStatic, CTX_IMPLICIT_PARAMS);
+    }
+
+    protected JitMethodDesc(
+            TypeConstant   typeTarget,
+            JitParamDesc[] standardReturns,
+            JitParamDesc[] standardParams,
+            JitParamDesc[] optimizedReturns,
+            JitParamDesc[] optimizedParams,
+            boolean        isStatic,
+            ClassDesc[]    implicitParams) {
         this.typeTarget        = typeTarget;
         this.standardReturns   = standardReturns;
         this.standardParams    = standardParams;
@@ -50,9 +62,14 @@ public class JitMethodDesc {
         this.isStandardStatic  = isStatic;
         this.isOptimizedStatic = isOptimized &&
                 (isStatic || typeTarget != null && typeTarget.isJitPrimitive());
-        this.standardMD        = computeMethodDesc(standardReturns, standardParams);
+        this.implicitParamCount = implicitParams.length;
+
+        // Constructor descriptors used to call overridable hooks while the subclass was still
+        // being initialized. Keep the exact implicit parameter shape, but make it immutable input
+        // to the base constructor so descriptor construction cannot dispatch into subclass state.
+        this.standardMD        = computeMethodDesc(standardReturns, standardParams, implicitParams);
         this.optimizedMD       = isOptimized
-                ? computeMethodDesc(optimizedReturns, optimizedParams)
+                ? computeMethodDesc(optimizedReturns, optimizedParams, implicitParams)
                 : null;
     }
 
@@ -67,6 +84,8 @@ public class JitMethodDesc {
     public final boolean isOptimizedStatic;
     public final MethodTypeDesc standardMD;  // the generic "xObj" flavor
     public final MethodTypeDesc optimizedMD; // (optional) optimized primitive
+
+    private final int implicitParamCount;
 
     /**
      * @return true if this an XvmPrimitive type method.
@@ -174,8 +193,11 @@ public class JitMethodDesc {
         return list.stream().mapToInt(i -> i).toArray();
     }
 
-    protected MethodTypeDesc computeMethodDesc(JitParamDesc[] returns, JitParamDesc[] params) {
-        int         extraCount = getImplicitParamCount();
+    private static MethodTypeDesc computeMethodDesc(
+            JitParamDesc[] returns,
+            JitParamDesc[] params,
+            ClassDesc[]    implicitParams) {
+        int         extraCount = implicitParams.length;
         int         paramCount = params.length;
         ClassDesc[] paramCDs   = new ClassDesc[extraCount + paramCount];
 
@@ -185,30 +207,24 @@ public class JitMethodDesc {
             paramCDs[ix++] = params[iFirst++].cd;
         }
 
-        ix = fillExtraClassDesc(paramCDs, ix);
+        System.arraycopy(implicitParams, 0, paramCDs, ix, extraCount);
+        ix += extraCount;
 
         for (int i = iFirst; i < paramCount; i++) {
             paramCDs[ix++] = params[i].cd;
         }
 
         return MethodTypeDesc.of(returns.length == 0 ? CD_void : returns[0].cd, paramCDs);
-        }
+    }
 
     /**
      * @return the number of extra parameters
      */
-    public int getImplicitParamCount() {
-        return 1; // Ctx
+    public final int getImplicitParamCount() {
+        return implicitParamCount;
     }
 
-    /**
-     * @param ix  the index to place the next argument
-     * @return the number of added arguments
-     */
-    protected int fillExtraClassDesc(ClassDesc[] paramCDs, int ix) {
-        paramCDs[ix++] = CD_Ctx;
-        return ix;
-    }
+    private static final ClassDesc[] CTX_IMPLICIT_PARAMS = {CD_Ctx};
 
     /**
      *

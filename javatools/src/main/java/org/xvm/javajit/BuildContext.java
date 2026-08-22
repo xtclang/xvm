@@ -117,7 +117,30 @@ public class BuildContext {
     /**
      * Construct {@link BuildContext} for a "top" method in the call chain.
      */
-    public BuildContext(Builder builder, TypeInfo typeInfo, MethodInfo methodInfo, JitMethodDesc jmd) {
+    public static BuildContext forMethod(
+            Builder       builder,
+            TypeInfo      typeInfo,
+            MethodInfo    methodInfo,
+            JitMethodDesc jmd) {
+        return new BuildContext(builder, typeInfo, methodInfo, jmd).bindTypeMatrix();
+    }
+
+    /**
+     * Construct {@link BuildContext} for a property accessor.
+     */
+    public static BuildContext forProperty(
+            Builder       builder,
+            TypeInfo      typeInfo,
+            PropertyInfo  propInfo,
+            boolean       isGetter,
+            JitMethodDesc methodDesc) {
+        return new BuildContext(builder, typeInfo, propInfo, isGetter, methodDesc).bindTypeMatrix();
+    }
+
+    /**
+     * Construct {@link BuildContext} for a "top" method in the call chain.
+     */
+    private BuildContext(Builder builder, TypeInfo typeInfo, MethodInfo methodInfo, JitMethodDesc jmd) {
         this.builder       = builder;
         this.typeSystem    = builder.typeSystem;
         this.className     = builder.art.className();
@@ -133,13 +156,13 @@ public class BuildContext {
         this.isStatic      = jmd.isStandardStatic && !isConstructor;
         this.isOptimized   = jmd.optimizedMD != null;
         this.isSpecialized = jitType.isJitL2Specialized();
-        this.typeMatrix    = new TypeMatrix(this);
+        this.typeMatrix    = new TypeMatrix(methodStruct);
     }
 
     /**
      * Construct {@link BuildContext} for a property accessor.
      */
-    public BuildContext(
+    private BuildContext(
             Builder      builder,
             TypeInfo     typeInfo,
             PropertyInfo propInfo,
@@ -164,7 +187,7 @@ public class BuildContext {
         this.isConstructor = false;
         this.isOptimized   = methodDesc.optimizedMD != null;
         this.isSpecialized = jitType.isJitL2Specialized();
-        this.typeMatrix    = new TypeMatrix(this);
+        this.typeMatrix    = new TypeMatrix(methodStruct);
     }
 
     /**
@@ -188,7 +211,7 @@ public class BuildContext {
         this.isConstructor = bctx.isConstructor;
         this.isOptimized   = methodDesc.optimizedMD != null;
         this.isSpecialized = bctx.isSpecialized;
-        this.typeMatrix    = new TypeMatrix(this);
+        this.typeMatrix    = new TypeMatrix(methodStruct);
     }
 
     /**
@@ -210,7 +233,16 @@ public class BuildContext {
         this.isConstructor = bctx.isConstructor;
         this.isOptimized   = methodDesc.optimizedMD != null;
         this.isSpecialized = bctx.isSpecialized;
-        this.typeMatrix    = new TypeMatrix(this);
+        this.typeMatrix    = new TypeMatrix(methodStruct);
+    }
+
+    /**
+     * Complete the constructor-safe TypeMatrix binding. Constructors initialize all final context
+     * fields first; only then do factories publish the complete context to the matrix.
+     */
+    private BuildContext bindTypeMatrix() {
+        typeMatrix.bind(this);
+        return this;
     }
 
     public final Builder         builder;
@@ -669,6 +701,7 @@ public class BuildContext {
     /**
      * Prepare the compilation.
      */
+    @SuppressWarnings("fallthrough")
     public void enterMethod(CodeBuilder code) {
         boolean debugInfo = builder.isDebugInfo();
 
@@ -729,6 +762,8 @@ public class BuildContext {
 
             JitFlavor flavor      = paramDesc.flavor;
             boolean   withDefault = false;
+            // Defaulted optimized parameter flavors first emit/consume the default marker, then
+            // intentionally fall into the matching base-flavor slot registration.
             switch (flavor) {
             case Primitive, Specific, Widened: {
                 TypeConstant regType = flavor == Primitive ? paramDesc.type : type;
@@ -794,9 +829,9 @@ public class BuildContext {
                 }
                 code.istore(extSlot)
                     .labelBinding(ifNotDefault);
-                // fall through!
             }
 
+            // fall through
             case NullablePrimitive: {
                 int extSlot = code.parameterSlot(extraArgs + i + 1);
                 i++; // we consumed the next param
@@ -846,9 +881,9 @@ public class BuildContext {
                     .labelBinding(ifNotDefault);
                 flavor      = flavor.baseFlavor;
                 withDefault = true;
-                // fall through!
             }
 
+            // fall through
             case XvmPrimitive, NullableXvmPrimitive: {
                 ClassDesc[] cds   = JitTypeDesc.getXvmPrimitiveClasses(paramDesc.type);
                 int[]       slots = new int[cds.length];
@@ -1903,6 +1938,7 @@ public class BuildContext {
      *
      * @param typeTarget if not null, the call represents a "new" call for the specified target
      */
+    @SuppressWarnings("fallthrough")
     public void loadCallArguments(
             CodeBuilder   code,
             JitMethodDesc jmd,
@@ -1917,6 +1953,8 @@ public class BuildContext {
 
             JitFlavor dstFlavor = pd.flavor;
             if (iArg == Op.A_DEFAULT) {
+                // A defaulted Array element argument can use the element default, then intentionally
+                // fall into the unsupported-default path only when no replacement exists.
                 switch (dstFlavor) {
                 case SpecificWithDefault, WidenedWithDefault:
                     code.aconst_null();
@@ -1973,9 +2011,9 @@ public class BuildContext {
                         }
                         break;
                     }
-                    // fall through
                 }
 
+                // fall through
                 default:
                     throw new UnsupportedOperationException(
                         "Unsupported default argument for: " + dstFlavor);
@@ -3344,7 +3382,7 @@ public class BuildContext {
      * in a call chain that originates from a mixin or annotation.
      */
     public void buildSuper(String jitName, int depth) {
-        deferAssembly(new BuildContext(this, jitName, depth));
+        deferAssembly(new BuildContext(this, jitName, depth).bindTypeMatrix());
     }
 
     /**
@@ -3352,7 +3390,7 @@ public class BuildContext {
      * function that originates from a mixin, annotation or a lambda.
      */
     public void buildMethod(String jitName, MethodBody body) {
-        deferAssembly(new BuildContext(this, jitName, body));
+        deferAssembly(new BuildContext(this, jitName, body).bindTypeMatrix());
     }
 
     /**

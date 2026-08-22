@@ -3,6 +3,7 @@ package org.xvm.javajit;
 import java.lang.constant.ClassDesc;
 import org.xvm.asm.constants.TypeConstant;
 
+import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_CtorCtx;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 
@@ -20,8 +21,8 @@ public class JitCtorDesc
     /**
      * @param typeTarget  the type that contains the constructor
      * @param targetCD    pass a non-null ClassDesc to add the target type as an implicit param
-     * @param addCtorCtx  pass true to remember to add the cctx as an implicit param
-     * @param addType     pass true to remember to add a TypeConstant as an implicit param
+     * @param addCtorCtx  pass true to add the cctx as an implicit param
+     * @param addType     pass true to add a TypeConstant as an implicit param
      */
     public JitCtorDesc(
             TypeConstant   typeTarget,
@@ -32,27 +33,21 @@ public class JitCtorDesc
             JitParamDesc[] standardParams,
             JitParamDesc[] optimizedReturns,
             JitParamDesc[] optimizedParams) {
-        this.addCtorCtx = addCtorCtx;
-        this.addType    = addType;
-        this.targetCD   = targetCD;
-        super(typeTarget, standardReturns, standardParams, optimizedReturns, optimizedParams, true);
+        super(typeTarget, standardReturns, standardParams, optimizedReturns, optimizedParams, true,
+                implicitParams(targetCD, addCtorCtx, addType));
     }
 
-    protected final ClassDesc targetCD;
-    protected final boolean   addCtorCtx;
-    protected final boolean   addType;
+    private static ClassDesc[] implicitParams(
+            ClassDesc targetCD,
+            boolean   addCtorCtx,
+            boolean   addType) {
+        ClassDesc[] paramCDs = new ClassDesc[1
+                + (addCtorCtx       ? 1 : 0)
+                + (addType          ? 1 : 0)
+                + (targetCD == null ? 0 : 1)];
 
-    @Override
-    public int getImplicitParamCount() {
-        return super.getImplicitParamCount()
-            + (addCtorCtx       ? 1 : 0)
-            + (addType          ? 1 : 0)
-            + (targetCD == null ? 0 : 1);
-    }
-
-    @Override
-    protected int fillExtraClassDesc(ClassDesc[] paramCDs, int ix) {
-        ix = super.fillExtraClassDesc(paramCDs, ix);
+        int ix = 0;
+        paramCDs[ix++] = CD_Ctx;
         if (addCtorCtx) {
             paramCDs[ix++] = CD_CtorCtx;
         }
@@ -62,6 +57,6 @@ public class JitCtorDesc
         if (targetCD != null) {
             paramCDs[ix++] = targetCD;
         }
-        return ix;
+        return paramCDs;
     }
 }

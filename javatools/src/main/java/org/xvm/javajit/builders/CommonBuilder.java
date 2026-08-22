@@ -3835,7 +3835,7 @@ public class CommonBuilder
         classBuilder.withMethod(jitName, md, flags,
             methodBuilder -> {
                 if (!isAbstract) {
-                    BuildContext bctx = new BuildContext(this, typeInfo, prop, isGetter, jmd);
+                    BuildContext bctx = BuildContext.forProperty(this, typeInfo, prop, isGetter, jmd);
                     methodBuilder.withCode(code -> generateCode(md, bctx, code));
                 }
             }
@@ -3885,7 +3885,7 @@ public class CommonBuilder
             flags |= ClassFile.ACC_STATIC;
         }
 
-        BuildContext bctx = new BuildContext(this,
+        BuildContext bctx = BuildContext.forMethod(this,
                 method.isCtorOrValidator() ? structInfo : typeInfo, method, jmd);
         doAssembleMethod(classBuilder, bctx, method, jitName, md, flags);
 

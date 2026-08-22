@@ -80,6 +80,8 @@ BUILD SUCCESSFUL in 18s
 0 Lexer.java, Parser.java, or compiler/ast diagnostics
 ```
 
-The seven remaining targeted warnings are the two utility warnings fixed on the
-separate `lagergren/fix-utils-this-escape` branch and five JIT warnings that are
-documented for JIT-specific follow-up.
+This was the state immediately after the compiler/parser/AST wave. The two
+utility warnings remain fixed on the separate `lagergren/fix-utils-this-escape`
+branch. Five local JIT warnings were later fixed in this branch; the remaining
+JIT constructor warning is `Xvm` startup owner publication, documented in
+`jit-implications.md`.

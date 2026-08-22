@@ -1633,6 +1633,41 @@ exited successfully. It proves the changed interpreter owner APIs did not break
 the launcher-level JIT connector path. It does not prove JIT ownership safety;
 that remains the separate audit described in [jit-implications.md](jit-implications.md).
 
+### Local JIT Constructor Escapes
+
+The branch also removes the local JIT constructor escapes whose behavior could
+be preserved without redesigning the JIT lifecycle:
+
+- `BuildContext` now uses `forMethod(...)` and `forProperty(...)` factories.
+  Its constructors allocate `TypeMatrix` from method metadata only; the factory
+  binds the matrix to the completed context before returning. The matrix owner
+  reference is volatile because the binding occurs after construction. That
+  preserves the old live-context lookup behavior during type computation
+  without letting `TypeMatrix` observe a partially initialized `BuildContext`.
+- `JitMethodDesc` no longer calls protected descriptor hooks from its
+  constructor. `JitCtorDesc` passes the same implicit parameter sequence as
+  constructor data, so normal methods still use `[Ctx]`, constructors still use
+  `[Ctx, CtorCtx?, TypeConstant?, target?]`, and primitive receiver parameters
+  still stay before `Ctx`.
+- `ArrayBuilder` reads the constructor-supplied `TypeSystem` pool directly
+  instead of dispatching through the inherited `pool()` accessor.
+- `nLongBasedArray` initializes the packed size/mutability field directly in
+  the raw-storage constructor. A newly constructed raw-storage array has no
+  delegate, so this is equivalent to `$size(smallSize)` followed by
+  `$mut($CONSTANT)` without calling subclass-visible methods during
+  construction.
+- `BuildContext` now marks two intentional JIT switch fallthrough state
+  machines with narrow `@SuppressWarnings("fallthrough")` annotations and local
+  comments. These are not behavior changes: defaulted optimized parameter
+  flavors first emit/consume marker state and then reuse the matching
+  base-flavor registration/loading path.
+
+`JitConstructorEscapeTest` verifies the descriptor equivalence and guards
+against reintroducing constructor descriptor hooks. The forced lint compile now
+reports only one JIT `this-escape` site, `Xvm.java:47`; that remaining startup
+owner-publication issue is intentionally left to the JIT lifecycle work
+tracked in [jit-implications.md](jit-implications.md).
+
 During development, the first all-module validated run exposed a harness
 footprint problem rather than an owner mismatch: retaining every completed
 container strongly exhausted the Gradle JVM heap during `TestLambda`. The

@@ -157,10 +157,11 @@ javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:269
 javatools/src/main/java/org/xvm/tool/ModuleInfo.java:316
 ```
 
-The next full-root lint run is expected to drop from `80` emitted diagnostics
-at `77` unique locations to `25` emitted diagnostics at `24` unique locations.
-The difference from the targeted compile graph is the one remaining
-`javatools_jitbridge` warning outside this task graph.
+The raw full-root lint run below is the historical baseline that drove the
+cleanup waves. After the current branch's targeted fixes, the forced lint
+compile for `:javatools:compileJava` and `:javatools_jitbridge:compileJava`
+reports three live `this-escape` diagnostics: `Xvm.java:47` and the two utility
+sites fixed on the separate `lagergren/fix-utils-this-escape` branch.
 
 ## Warning Counts
 
@@ -212,35 +213,25 @@ javatools/src/main/java/org/xvm/compiler/Parser.java:70
 | Must fix, fixed in this branch | ASM metadata owner-copy and constructor hooks | `FileStructure`, `ClassStructure`, `MethodStructure`, `PropertyStructure`, `TypeInfoReal`, `PropertyConstant`, `VersionTree`: 11 unique locations removed | Done for this PR | Remove constructor-time virtual hooks, keep root/owner assemblers final where appropriate, and copy `MethodInfo`/`PropertyInfo`/`ChildInfo` per `TypeInfoReal` owner instead of stealing unowned source metadata. |
 | Should fix, fixed in this branch | `ModuleInfo` constructor resource-dir lookup | 1 unique location removed | Done for this PR | Use a private resource-dir cache helper during construction so explicit resource-path merging does not call the overridable `getResourceDir()` accessor before subclass construction completes. |
 | Must fix, fixed in this branch | Compiler/parser/AST construction callbacks | `Lexer`, `Parser`, expression/statement constructors and `adopt`/parent-link calls: 16 unique locations removed | Done for this PR | Separate construction from publication: private lexer helpers, lazy parser priming, synthetic AST factories, and post-construction parent/component/type linking. |
+| Must audit, fixed in this branch | Local JIT constructor hooks and helper publication | `BuildContext`/`TypeMatrix`, `JitMethodDesc`/`JitCtorDesc`, `ArrayBuilder`, and `nLongBasedArray`: 5 unique locations removed | Done for this PR | Keep descriptor shape as constructor data, bind `TypeMatrix` after `BuildContext` construction, read owner pools directly, and initialize bridge array packed state directly during construction. |
 | Must fix, fixed separately | `CooperativelyCleanableReference` publishes `this` to a static set from the constructor | 1 | Done on `lagergren/fix-utils-this-escape` | Use a private constructor plus factory/registration step after construction, or another design that does not publish the object until construction has returned. |
 | Must fix, fixed separately | `AbstractConverterMap` calls overridable factory methods from the base constructor | 1 | Done on `lagergren/fix-utils-this-escape` | Make factory results final concrete nested classes that do not dispatch to subclasses during construction, or lazily initialize views after construction with synchronization. |
-| Must audit, JIT path | `javajit` and `javatools_jitbridge` constructors | 6 unique locations | Unknown | Document in `jit-implications.md`; do not change in this runtime-owner PR without JIT-specific tests. |
+| Must audit, JIT path | `Xvm` startup owner publication | 1 unique location | Needs JIT lifecycle work | Document in `jit-implications.md`; use an explicit `Xvm` factory/owner shell with parallel JIT startup tests before changing it. |
 
 Expected full-root unique-location classification after applying the targeted
 delta:
 
 ```text
-  6 Must audit: JIT construction
+  1 Must audit: JIT XVM startup owner publication
   2 Must fix, fixed separately: concrete unsafe utility construction
 ```
 
 Current targeted remaining unique locations in the compile graph:
 
 ```text
-javatools/src/main/java/org/xvm/javajit/BuildContext.java:136
-javatools/src/main/java/org/xvm/javajit/BuildContext.java:167
-javatools/src/main/java/org/xvm/javajit/JitMethodDesc.java:53
 javatools/src/main/java/org/xvm/javajit/Xvm.java:47
-javatools/src/main/java/org/xvm/javajit/builders/ArrayBuilder.java:33
 javatools_utils/src/main/java/org/xvm/util/CooperativelyCleanableReference.java:80
 javatools_utils/src/main/java/org/xvm/util/converter/AbstractConverterMap.java:40
-```
-
-The next full-root lint run should add this non-`javatools` warning to the
-remaining list:
-
-```text
-javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/nLongBasedArray.java:52
 ```
 
 ## What Is Actually Unsafe

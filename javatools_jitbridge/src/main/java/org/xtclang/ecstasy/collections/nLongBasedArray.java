@@ -49,8 +49,12 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
         super(ctx, type);
         // TODO how do we handle huge arrays?
         $storage = data;
-        $size((int) size);
-        $mut($CONSTANT);
+        int smallSize = (int) size;
+        // During construction there is no delegate yet. Initializing the packed field directly is
+        // equivalent to calling $size(smallSize) followed by $mut($CONSTANT), but avoids invoking
+        // subclass-visible array state methods before this object is complete.
+        assert smallSize >= 0 && smallSize <= $SIZE_MASK;
+        $sizeEtc = smallSize | ($CONSTANT << $MUT_SHIFT);
     }
 
     // REVIEW: to save space, we could combine the $storage and $delegate fields into a single field, e.g.

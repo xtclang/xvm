@@ -30,10 +30,11 @@ TypeInfoReal.java this-escape diagnostics
 0 Lexer.java, Parser.java, or compiler/ast this-escape diagnostics
 ```
 
-The full root lint build was not rerun after these waves to avoid paying for
-another clean build. Based on the forced targeted compile and the removed
-full-root sites, the next full-root tally is expected to report one additional
-non-`javatools` site: the remaining `javatools_jitbridge` warning.
+The lint compile for `:javatools:compileJava` and
+`:javatools_jitbridge:compileJava` was rerun after the JIT cleanup. The current
+live `this-escape` diagnostics in that compile graph are `Xvm.java:47` and the
+two `javatools_utils` sites fixed on the separate
+`lagergren/fix-utils-this-escape` branch.
 
 ## Decision Summary
 
@@ -51,12 +52,14 @@ non-`javatools` site: the remaining `javatools_jitbridge` warning.
 | Fixed in this branch | 11 | ASM metadata owner assembly no longer calls constructor-time virtual hooks or steals unowned method/property/child metadata into the first `TypeInfoReal` owner. |
 | Fixed in this branch | 1 | `ModuleInfo` no longer calls the overridable `getResourceDir()` accessor while merging explicit resource paths in its constructor. |
 | Fixed in this branch | 16 | Compiler/parser/AST constructors no longer dispatch lexer/parser hooks or publish parent/component/type links before concrete construction completes. |
+| Fixed in this branch | 5 | Local JIT constructor warnings removed where equivalence was straightforward: `BuildContext`/`TypeMatrix`, `JitMethodDesc`/`JitCtorDesc`, `ArrayBuilder`, and `nLongBasedArray`. |
 | Fixed separately, still present here | 2 | Concrete unsafe construction/publication pattern. Fixed on `lagergren/fix-utils-this-escape`; still present in this branch until that PR is merged or rebased here. |
-| Document only for this PR | 6 | JIT paths that are not part of the runtime-owner fix. |
+| Document only for this PR | 1 | Remaining JIT `Xvm` startup owner publication, which needs a separate lifecycle factory/shell and JIT startup tests. |
 
-The current forced targeted lint run reports 7 remaining unique locations. The
-next full-root lint run is expected to report 8 remaining unique locations
-because the full root build includes one additional non-`javatools` site.
+The current forced lint run for `:javatools:compileJava` and
+`:javatools_jitbridge:compileJava` reports 3 remaining `this-escape`
+diagnostics: `Xvm.java:47` and the two utility sites fixed on the separate
+`lagergren/fix-utils-this-escape` branch.
 
 ## Fixed Separately, Do Not Suppress Here
 
@@ -616,24 +619,20 @@ factory source shape for synthetic AST nodes. The forced lint compile at
 `/tmp/xvm-compiler-this-escape.log` reports zero `Lexer.java`, `Parser.java`,
 or `compiler/ast` `this-escape` diagnostics.
 
-## Document Only For This PR
+## Remaining Document-Only JIT Site
 
-These should not be changed in the runtime-owner PR without JIT-specific tests.
-They still matter to a future lint-clean policy.
+The easy JIT constructor warnings were fixed in this branch with focused tests.
+The remaining site should not be changed without a JIT-specific startup
+lifecycle refactor and tests.
 
 ```text
-javatools/src/main/java/org/xvm/javajit/BuildContext.java:136
-javatools/src/main/java/org/xvm/javajit/BuildContext.java:167
-javatools/src/main/java/org/xvm/javajit/JitMethodDesc.java:53
 javatools/src/main/java/org/xvm/javajit/Xvm.java:47
-javatools/src/main/java/org/xvm/javajit/builders/ArrayBuilder.java:33
-javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/nLongBasedArray.java:52
 ```
 
 ## Expected Full-Root Remaining Classification
 
 ```text
- 6 Document only: JIT construction
+ 1 Document only: JIT XVM startup owner publication
  2 Fixed separately, still present here: concrete unsafe utility construction
 ```
 
@@ -644,7 +643,7 @@ The least risky order after this runtime-owner branch is:
 
 1. Merge or rebase the separate `lagergren/fix-utils-this-escape` branch that
    fixes the two concrete `javatools_utils` construction defects.
-2. Keep JIT-specific constructor warnings in the JIT documentation until that
+2. Keep `Xvm` startup owner publication in the JIT documentation until that
    code can be tested with JIT-specific lifecycle coverage.
 
 ## Grouped Metadata Record Candidates
