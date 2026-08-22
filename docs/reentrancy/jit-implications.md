@@ -161,6 +161,40 @@ ownership risks:
 | Debug/global JIT controls | `NativeNames.reservedMethodName`, `CommonBuilder.SKIP_SET`, `METHOD_SKIP_SET`, JIT lists, and connector dump lists are process-level debug/build controls | Make immutable where possible; keep mutable debug state out of correctness decisions |
 | Shared ASM metadata | JIT relies on `TypeConstant`, `TypeInfo`, `MethodInfo`, and `ConstantPool` caches | Apply the same final/atomic/concurrent ownership audit to `asm`; interpreter fixes do not cover this automatically |
 
+## Current JIT This-Escape Warnings
+
+The forced targeted lint compile for this branch reports five remaining
+`javatools/src/main/java/org/xvm/javajit/**` `this-escape` warnings. The earlier
+full-root lint run also reports one `javatools_jitbridge` warning. These are
+document-only for this PR because the JIT has different owner boundaries and
+needs JIT-specific lifecycle tests.
+
+| Site | What escapes during construction | Why it matters | Proper JIT-specific fix |
+| --- | --- | --- | --- |
+| `javatools/src/main/java/org/xvm/javajit/BuildContext.java:136` | Top-level method constructor passes `this` into `new TypeMatrix(this)`. | `TypeMatrix` stores the `BuildContext` and reads `methodStruct` during construction. Today that may only read fields already assigned, but it still publishes a partially constructed build context to another object. | Make `BuildContext` final/private-factory, or construct `TypeMatrix` from explicit immutable inputs such as `methodStruct` and `pool` instead of the whole `BuildContext`. |
+| `javatools/src/main/java/org/xvm/javajit/BuildContext.java:167` | Property-accessor constructor also passes `this` into `new TypeMatrix(this)`. | Same risk as the method constructor; a future `TypeMatrix` change could observe not-yet-assigned fields or store a half-built context into another cache. | Same as above; preferably make `TypeMatrix` depend on explicit constructor data and set the final field after all context fields are assigned. |
+| `javatools/src/main/java/org/xvm/javajit/JitMethodDesc.java:53` | Constructor calls `computeMethodDesc(...)`, a protected overridable method. | The class is non-final and the helper could be overridden to read subclass fields before they are initialized. This is likely a static descriptor calculation today, but the constructor shape is still brittle. | Make the class final, make `computeMethodDesc(...)` private/static, or move descriptor calculation into a static factory. |
+| `javatools/src/main/java/org/xvm/javajit/Xvm.java:47` | `Xvm` passes `this` to `NativeTypeSystem.create(this, repo)` from its constructor. | This is the JIT equivalent of owner publication during startup. `NativeTypeSystem` can retain the not-yet-registered `Xvm` before `nativeContainer`, loaders, and weak maps are fully assembled. | Use an `Xvm.create(...)` factory that constructs an owner shell first, then initializes native type system/container state after construction; add lifecycle tests for parallel JIT XVM/container startup. |
+| `javatools/src/main/java/org/xvm/javajit/builders/ArrayBuilder.java:33` | Constructor calls inherited/overridable `pool()` while subclass construction is incomplete. | This is probably a benign read of `typeSystem.pool()`, but the call is virtual and a future override could observe incomplete builder fields. | Read `typeSystem.pool()` directly or compute `DELEGATE_TYPE` before/through a private helper that does not dispatch through the instance. |
+| `javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/nLongBasedArray.java:52` | Constructor calls `$size(...)`, which is a visible/overridable bridge method, while initializing `$storage`. | The bridge array object can run subclass-visible size logic before its construction completes. For mutable/constant array bridges, that can mix initialization, mutability state, and subclass behavior. | Use a private size-field initializer for construction and leave `$size(...)` as the post-construction API; add bridge tests that build constant long-backed arrays under different `Ctx` owners. |
+
+None of these remaining warnings are proof that generated JIT execution is
+currently broken. They are proof that the JIT still contains construction
+patterns that would be rejected by the lint policy this branch is moving toward:
+no constructor should call overridable behavior or publish its owner before the
+object is complete.
+
+Verification state:
+
+```text
+/tmp/xvm-compiler-this-escape.log:
+  5 javajit this-escape warnings
+
+/tmp/xvm-current-this-escape.log:
+  same 5 javajit warnings plus
+  1 javatools_jitbridge nLongBasedArray warning
+```
+
 ## What This Means For This Branch
 
 The current branch's interpreter runtime changes are still correct and
