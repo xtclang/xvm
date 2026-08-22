@@ -21,8 +21,9 @@ String dump = OwnershipDiagnostics.dump(containerA, containerB);
 The default mode is non-invasive. It reports lazy cells that are already
 computed and marks deferred cells as deferred. It does not instantiate new
 templates, views, handles, or metadata just because the dump was requested.
-The owning `NativeTemplates` table itself is already a final field on
-`Container`; inspecting it does not allocate a new owner table.
+The owning `NativeTemplates` table is behind a final `Lazy.Owner` cell on
+`Container`; default inspection reports that cell as deferred or computed
+without allocating the owner table.
 
 For a deliberately complete snapshot after startup warmup:
 
@@ -88,7 +89,10 @@ targets fail at the native boundary that produced them.
 For each container, the dump includes:
 
 - the container identity, module, and constant pool identity,
-- the owner-local `NativeTemplates` table,
+- runtime debug-registry membership and registry size,
+- the owner-local `ConstHeap`, labelled as explicit-owner state because it no
+  longer retains a constructor-captured container reference,
+- the owner-local `NativeTemplates` table state,
 - computed native-template lookup entries,
 - final `Lazy` fields on `NativeTemplates` and computed template instances,
 - the container's `templatesByType` cache,

@@ -84,9 +84,9 @@ Result:
 ```text
 BUILD SUCCESSFUL in 8s
 40 actionable tasks: 40 executed
-73 emitted this-escape diagnostics in the targeted javatools compile
-70 unique file:line locations in that targeted compile
-0 xRef.java, xOSFileNode.java, CallChain.java, xRTMethod.java, or ClassTemplate.java this-escape diagnostics
+71 emitted this-escape diagnostics in the targeted javatools compile
+68 unique file:line locations in that targeted compile
+0 xRef.java, xOSFileNode.java, CallChain.java, xRTMethod.java, ClassTemplate.java, or Container.java this-escape diagnostics
 0 overrides diagnostics
 ```
 
@@ -147,9 +147,9 @@ javatools/src/main/java/org/xvm/compiler/Parser.java:70
 | Must fix, already fixed in this branch | Runtime handle constructors publish or mutate visible state during construction | 3 unique warning locations removed in this branch; 0 remain in this category | Done for this PR | Use `RefHandle.createRegisterRef(...)`, `RefHandle.createReferentRef(...)`, and `NodeHandle.create(...)` so construction completes before frame publication or backing-field initialization. |
 | Must fix, already fixed in this branch | Runtime constructor assertions call instance methods on partially constructed objects | 2 unique warning locations removed in this branch; 0 remain in this category | Done for this PR | Validate constructor arguments with static/private helpers so debug assertions keep their old checks without dispatching through `this`. |
 | Must fix, already fixed in this branch | `ClassTemplate` constructor calls an overridable implicit-field hook | 1 unique warning location removed in this branch; 0 remain in this category | Done for this PR | Pass immutable implicit-field names as constructor metadata so the base class never dispatches into `xRef` or `xConst` while construction is incomplete. |
+| Must fix, already fixed in this branch | `Container` constructor publishes owner through helper objects and runtime debug registry | 3 constructor expressions fixed; 0 `Container.java` warnings remain | Done for this PR | Use owner-explicit `ConstHeap`, owner-lazy `NativeTemplates`, and post-construction `MainContainer`/`NestedContainer` registration. |
 | Must fix, fixed separately | `CooperativelyCleanableReference` publishes `this` to a static set from the constructor | 1 | Done on `lagergren/fix-utils-this-escape` | Use a private constructor plus factory/registration step after construction, or another design that does not publish the object until construction has returned. |
 | Must fix, fixed separately | `AbstractConverterMap` calls overridable factory methods from the base constructor | 1 | Done on `lagergren/fix-utils-this-escape` | Make factory results final concrete nested classes that do not dispatch to subclasses during construction, or lazily initialize views after construction with synchronization. |
-| Must audit, runtime owner construction | `Container` owner/child construction paths | 2 unique locations | Mixed | Prove construction confinement/publication, or split construction from owner registration/adoption. |
 | Must audit, ASM owner-copy and metadata construction | `FileStructure`, `ClassStructure`, `MethodStructure`, `PropertyInfo`, `MethodInfo`, `TypeInfoReal`, `PropertyConstant`, `VersionTree` | 17 unique locations | Mixed | Prove construction is request/thread confined, or split assembly from publication so owned children are connected after the owner constructor returns. |
 | Must audit, `Op` constructor virtual predicates/asserts | `Op`, `OpCondJump`, `OpGeneral`, `OpInPlace`, `OpIndex`, `OpPropInPlace`, `OpTest`, `OpVar` | 22 unique locations | Moderate | Replace constructor-time virtual predicate calls with explicit constructor parameters, final helper methods, or subclass-independent op metadata. |
 | Must audit, compiler/parser/AST construction callbacks | `Lexer`, `Parser`, expression/statement constructors and `adopt`/parent-link calls | 16 unique locations | Mixed | For incremental/parallel compiler safety, prove AST/request confinement or separate object construction from parent/adoption callbacks. |
@@ -272,8 +272,9 @@ The migration rule should be:
 ## Full File Count
 
 This is the file-level count from the last full-root lint run, before the
-targeted-delta fixes above. It still includes the five fixed sites listed in
-that section.
+targeted-delta fixes above. It intentionally still includes sites that are now
+fixed in this branch, including `xRef`, `xOSFileNode`, `CallChain`,
+`xRTMethod`, `ClassTemplate`, and `Container`.
 
 ```text
    6 javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java

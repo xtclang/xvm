@@ -53,10 +53,11 @@ public class Runtime {
     /**
      * Register the specified container (used only for debugging)
      */
-    public void registerContainer(Container container) {
+    public <C extends Container> C registerContainer(C container) {
         synchronized (f_containers) {
             f_containers.putIfAbsent(container, null);
         }
+        return container;
     }
 
     /**

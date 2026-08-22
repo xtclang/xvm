@@ -363,13 +363,14 @@ public class xRTProperty
     public static ArrayHandle ensureEmptyArray(Container container) {
         xRTProperty   template   = getInstance(container);
         ArrayConstant constEmpty = template.f_constEmptyPropertyArray.get(template);
-        ArrayHandle   haEmpty    = (ArrayHandle) container.f_heap.getConstHandle(constEmpty);
+        var           heap       = container.getConstHeap();
+        ArrayHandle   haEmpty    = heap.getConstHandle(container, constEmpty, ArrayHandle.class);
         if (haEmpty == null) {
             ConstantPool    pool = container.getConstantPool();
             TypeComposition clz  = container.resolveClass(pool.ensureArrayType(pool.typeProperty()));
 
             haEmpty = xArray.createImmutableArray(clz, Utils.OBJECTS_NONE);
-            container.f_heap.saveConstHandle(constEmpty, haEmpty);
+            heap.saveConstHandle(container, constEmpty, haEmpty);
         }
         return haEmpty;
     }

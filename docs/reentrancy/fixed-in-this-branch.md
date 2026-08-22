@@ -68,6 +68,7 @@ actually owns the value.
 | Pure process-global data | Mutable static collection | `private static final Set.of(...)` or equivalent immutable constant | Class-init safe publication, no per-container overhead |
 | Suspendable lifecycle state | Several mutable fields | One immutable state record in `AtomicReference` | CAS publishes complete lifecycle snapshots |
 | Hot per-value memoization | Plain lazy fields on value objects | Usually unchanged in this PR unless it is a real owner/publication bug | Avoid adding per-object `Lazy` footprint for should-fix-only cleanup |
+| Container-owned helper state | Base constructor passes `this` to helpers or runtime registry | Owner-explicit `ConstHeap`, owner-lazy `NativeTemplates`, and post-construction container factories | Same per-container caches and registry membership, with no partially constructed owner publication |
 
 Passing a `Container` is part of the replacement semantics. A static helper can
 no longer read "the" process-global template or pool; it needs the caller's
@@ -332,6 +333,50 @@ empty array. No runtime lookup cache is removed.
 `RuntimeThisEscapeConstructionTest.implicitFieldsAreConstructorMetadata()`
 guards the `xRef` and `xConst` constructor shape, and the targeted lint compile
 emits no `ClassTemplate.java` `this-escape` diagnostic.
+
+### `Container` Helper And Registry Publication
+
+`Container` had three constructor-time owner escapes:
+
+- `new ConstHeap(this)` stored the owner in the heap while the concrete
+  container subclass was still under construction.
+- `new NativeTemplates(this)` built the owner-local lookup table from a field
+  initializer, before the container constructor had returned.
+- `Runtime.registerContainer(this)` published child containers into the
+  diagnostic weak registry from the base constructor. Because `registerContainer`
+  is virtual, a runtime subclass or concurrent diagnostic path could observe the
+  container before subclass fields were assigned.
+
+The replacement keeps the same observable runtime model:
+
+- `ConstHeap` remains a final heap object on each `Container`, but it no longer
+  stores an owner field. `getConstHandle(...)`, `saveConstHandle(...)`, and
+  `relocateConst(...)` now receive the owner explicitly. The same
+  `ConcurrentHashMap` cache remains on the same heap object.
+- `Container.getConstHeap()` is the public accessor, and `f_heap` is private.
+  Branch-touched call sites use a local `var heap = container.getConstHeap()`
+  for get/save pairs so the same owner-local cache is visible.
+- `NativeTemplates` remains one lookup table per container. It is now reached
+  through a final `Lazy.Owner<Container, NativeTemplates>`, so the table is
+  constructed after the owner is fully built and only if it is used.
+- `MainContainer.create(...)` and `NestedContainer.create(...)` register the
+  completed container immediately after `new ...` returns. Native containers
+  were not registered by the old base-constructor rule and remain unregistered
+  by default.
+
+This does not drop caching or add hot-path recomputation. Constant handles are
+still cached in the container heap; empty reflection arrays still check that
+heap before constructing immutable arrays; jump constant relocation still saves
+through the executing container's heap. The native-template table is deferred
+instead of eager, which can reduce cold startup footprint; warm containers still
+have exactly one table.
+
+`RuntimeTest.registerContainerDoesNotObservePartiallyConstructedContainer()`
+uses an observing `Runtime` to prove registry observation happens after
+subclass field assignment. `RuntimeThisEscapeConstructionTest` prevents the
+old constructor expressions from returning. `OwnershipDiagnosticsTest` verifies
+that dumps expose runtime registry membership, explicit-owner heap state, and
+computed/deferred `NativeTemplates` state.
 
 ### Structural Hash Contracts
 

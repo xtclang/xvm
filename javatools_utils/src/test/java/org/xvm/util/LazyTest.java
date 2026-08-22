@@ -68,6 +68,18 @@ public class LazyTest {
     }
 
     @Test
+    public void testOwnerLazyTypedGetSupportsWildcardCallers() {
+        var owner = new OwnerState("owner");
+        Lazy.Owner<OwnerState, String> typed = Lazy.ofOwner(OwnerState::compute);
+        Lazy.Owner<?, ?> wildcard = typed;
+
+        assertEquals("owner:1", wildcard.get(owner, String.class));
+        assertEquals("owner:1", wildcard.get(owner, Object.class));
+        assertThrows(ClassCastException.class, () -> wildcard.get(owner, Integer.class));
+        assertThrows(NullPointerException.class, () -> wildcard.get(owner, null));
+    }
+
+    @Test
     public void testLazyOfOwnerNull() {
         Lazy.Owner<OwnerState, String> lazy  = Lazy.ofOwner(owner -> null);
         OwnerState                     owner = new OwnerState("owner");

@@ -30,6 +30,7 @@ import org.xvm.runtime.OwnershipDiagnostics;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 
@@ -64,6 +65,10 @@ public class InterpreterConnectorTest {
             });
 
             OwnershipDiagnostics.assertValid(true, containers.toArray(Container[]::new));
+            var dump = OwnershipDiagnostics.dump(true, containers.getFirst());
+            assertTrue(dump.contains("runtimeRegistry = contains=true"));
+            assertTrue(dump.contains("nativeTemplates = Lazy.Owner["));
+            assertTrue(dump.contains("value = NativeTemplates@"));
         } finally {
             executor.shutdownNow();
         }

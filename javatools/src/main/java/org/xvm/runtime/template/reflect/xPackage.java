@@ -208,6 +208,7 @@ public class xPackage
      */
     protected int ensureConstHandle(Frame frame, IdentityConstant idPkg, TypeConstant typePkg) {
         Container         container = frame.f_context.f_container;
+        var               heap      = container.getConstHeap();
         SingletonConstant constPkg  = container.getConstantPool().ensureSingletonConstConstant(idPkg);
 
         ObjectHandle hPkg = constPkg.getHandle();
@@ -221,14 +222,14 @@ public class xPackage
         switch (createPackageHandle(frame, clazz)) {
         case Op.R_NEXT:
             constPkg.setHandle(hPkg = frame.popStack());
-            container.f_heap.saveConstHandle(constPkg, hPkg);
+            heap.saveConstHandle(container, constPkg, hPkg);
             return frame.pushStack(hPkg);
 
         case Op.R_CALL:
             frame.m_frameNext.addContinuation(frameCaller -> {
                 ObjectHandle hP = frameCaller.popStack();
                 constPkg.setHandle(hP);
-                container.f_heap.saveConstHandle(constPkg, hP);
+                heap.saveConstHandle(container, constPkg, hP);
                 return frameCaller.pushStack(hP);
             });
             return Op.R_CALL;

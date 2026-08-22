@@ -51,6 +51,31 @@ public class RuntimeThisEscapeConstructionTest {
                 "xRef must preserve referent and outer fields as constructor metadata");
     }
 
+    @Test
+    public void containerConstructorDoesNotCaptureThisInOwnerHelpers() throws IOException {
+        var container = readString("org/xvm/runtime/Container.java");
+        var heap      = readString("org/xvm/runtime/ConstHeap.java");
+        var main      = readString("org/xvm/runtime/MainContainer.java");
+        var nested    = readString("org/xvm/runtime/NestedContainer.java");
+
+        assertFalse(container.contains("new ConstHeap(this)"),
+                "Container must not pass this into ConstHeap from the base constructor");
+        assertFalse(container.contains("new NativeTemplates(this)"),
+                "Container must not construct owner-retaining NativeTemplates during construction");
+        assertFalse(container.contains("registerContainer(this)"),
+                "Container must not register itself from the base constructor");
+        assertTrue(container.contains("Lazy.ofOwner(NativeTemplates::new)"),
+                "NativeTemplates must remain owner-local and lazy after Container construction");
+        assertTrue(container.contains("private final ConstHeap f_heap;"),
+                "ConstHeap should be reached through Container.getConstHeap()");
+        assertFalse(heap.contains("f_container"),
+                "ConstHeap must not retain the owner captured during Container construction");
+        assertTrue(main.contains("runtime.registerContainer(new MainContainer"),
+                "MainContainer must register only after construction returns");
+        assertTrue(nested.contains("registerContainer(\n                new NestedContainer"),
+                "NestedContainer must register only after construction returns");
+    }
+
     private static String readString(String source) throws IOException {
         var path = Path.of("src/main/java", source);
         return Files.readString(Files.exists(path)

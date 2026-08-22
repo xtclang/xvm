@@ -581,13 +581,14 @@ public class xRTClassTemplate
      */
     public ArrayHandle ensureEmptyTypeParameterArray(Container container) {
         ArrayConstant constEmpty = f_constEmptyParameterArray.get(this);
-        ArrayHandle   haEmpty    = (ArrayHandle) container.f_heap.getConstHandle(constEmpty);
+        var           heap       = container.getConstHeap();
+        ArrayHandle   haEmpty    = heap.getConstHandle(container, constEmpty, ArrayHandle.class);
         if (haEmpty == null) {
             haEmpty = xArray.createImmutableArray(
                         container.ensureClassComposition(
                                 constEmpty.getType(), xArray.getInstance(container)),
                         Utils.OBJECTS_NONE);
-            container.f_heap.saveConstHandle(constEmpty, haEmpty);
+            heap.saveConstHandle(container, constEmpty, haEmpty);
         }
         return haEmpty;
     }

@@ -45,6 +45,25 @@ public class OwnershipDiagnosticsTest {
     }
 
     @Test
+    public void dumpShowsRuntimeRegistryAndExplicitOwnerHelpers() {
+        var runtime = new Runtime();
+        try {
+            var container = runtime.registerContainer(
+                    new TestContainer(runtime, new FileStructure("DiagRegistered")));
+
+            var dump = OwnershipDiagnostics.dump(container);
+
+            assertTrue(dump.contains("runtimeRegistry = contains=true size=1"));
+            assertTrue(dump.contains("constHeap = ConstHeap@"));
+            assertTrue(dump.contains("owner=explicit-parameter"));
+            assertTrue(dump.contains("nativeTemplates = Lazy.Owner[deferred]"));
+            assertFalse(dump.contains("nativeTemplates = Lazy.Owner[computed]"));
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
+    @Test
     public void validatorRejectsForeignTemplateInOwnerCache()
             throws Exception {
         TestContainer containerA = newContainer("DiagA");

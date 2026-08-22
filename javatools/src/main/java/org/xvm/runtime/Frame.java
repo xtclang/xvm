@@ -1350,6 +1350,13 @@ public class Frame
     }
 
     /**
+     * @return the method structure executing in this frame
+     */
+    public MethodStructure function() {
+        return f_function;
+    }
+
+    /**
      * @return an ObjectHandle for the constant (could be a DeferredCallHandle)
      */
     public ObjectHandle getConstHandle(Constant constant) {

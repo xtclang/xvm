@@ -27,6 +27,7 @@ import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.ConstHeap;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -138,8 +139,9 @@ public class JumpVal_N
 
     protected int explodeConstants(Frame frame, int iPC, ObjectHandle[] ahValue, int iRow,
                                    ObjectHandle[][] aahCases) {
-        ConstHeap    heap       = frame.f_context.f_container.f_heap;
-        ConstantPool poolTarget = frame.f_function.getConstantPool();
+        Container    container  = frame.container();
+        ConstHeap    heap       = container.getConstHeap();
+        ConstantPool poolTarget = frame.function().getConstantPool();
 
         for (int cRows = m_aofCase.length; iRow < cRows; iRow++) {
             int            cColumns     = ahValue.length;
@@ -165,7 +167,7 @@ public class JumpVal_N
                 } else {
                     // caching a constant linked to the current pool would "leak" the current container
                     if (hCase.getComposition().getConstantPool() != poolTarget) {
-                        hCase = heap.relocateConst(hCase, constCase);
+                        hCase = heap.relocateConst(container, hCase, constCase);
 
                         assert hCase != null;
                         ahCases[iC] = hCase;

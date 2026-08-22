@@ -19,6 +19,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.VersionConstant;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 
 public class RuntimeTest {
@@ -54,20 +55,45 @@ public class RuntimeTest {
         }
     }
 
+    @Test
+    public void registerContainerDoesNotObservePartiallyConstructedContainer() {
+        var runtime = new ObservingRuntime();
+        try {
+            var parent    = new TestContainer(runtime, "parent");
+            var container = runtime.registerContainer(new TestContainer(runtime, parent, "registered"));
+
+            assertSame(container, runtime.findContainer(container.getConstantPool()));
+            assertSame(container, runtime.observed);
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
     private static class TestContainer
             extends Container {
         private final CountDownLatch lookupStart;
         private final CountDownLatch writerDone;
         private final AtomicBoolean signaled;
+        private final FileStructure file;
 
         TestContainer(Runtime runtime, String name) {
             this(runtime, name, null, null, null);
         }
 
+        TestContainer(Runtime runtime, Container parent, String name) {
+            this(runtime, parent, new FileStructure(name), null, null, null);
+        }
+
         TestContainer(Runtime runtime, String name, CountDownLatch lookupStart,
                       CountDownLatch writerDone, AtomicBoolean signaled) {
-            super(runtime, null, new FileStructure(name).getModuleId());
+            this(runtime, null, new FileStructure(name), lookupStart, writerDone, signaled);
+        }
 
+        TestContainer(Runtime runtime, Container parent, FileStructure file, CountDownLatch lookupStart,
+                      CountDownLatch writerDone, AtomicBoolean signaled) {
+            super(runtime, parent, file.getModuleId());
+
+            this.file        = file;
             this.lookupStart = lookupStart;
             this.writerDone  = writerDone;
             this.signaled    = signaled;
@@ -75,6 +101,10 @@ public class RuntimeTest {
 
         @Override
         public ConstantPool getConstantPool() {
+            if (file == null) {
+                throw new IllegalStateException(
+                        "container was observed before subclass construction completed");
+            }
             if (signaled != null && signaled.compareAndSet(false, true)) {
                 lookupStart.countDown();
                 try {
@@ -111,6 +141,18 @@ public class RuntimeTest {
         public ObjectHandle getInjectable(Frame frame, String name, TypeConstant type,
                                           ObjectHandle opts) {
             return null;
+        }
+    }
+
+    private static class ObservingRuntime
+            extends Runtime {
+        private Container observed;
+
+        @Override
+        public <C extends Container> C registerContainer(C container) {
+            C registered = super.registerContainer(container);
+            observed = findContainer(container.getConstantPool());
+            return registered;
         }
     }
 }

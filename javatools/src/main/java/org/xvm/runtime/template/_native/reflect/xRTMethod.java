@@ -366,11 +366,12 @@ public class xRTMethod
      */
     public static ObjectHandle ensureEmptyArray(Container container) {
         ArrayConstant constArray = ensureEmptyArrayConstant(container);
-        ObjectHandle hArray = container.f_heap.getConstHandle(constArray);
+        var heap = container.getConstHeap();
+        ObjectHandle hArray = heap.getConstHandle(container, constArray);
         if (hArray == null) {
             TypeComposition clzArray = container.resolveClass(constArray.getType());
             hArray = xArray.createImmutableArray(clzArray, Utils.OBJECTS_NONE);
-            container.f_heap.saveConstHandle(constArray, hArray);
+            heap.saveConstHandle(container, constArray, hArray);
         }
         return hArray;
     }

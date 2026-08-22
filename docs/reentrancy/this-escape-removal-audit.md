@@ -4,25 +4,27 @@ This file classifies the remaining `javac -Xlint:this-escape` warnings by what
 should happen to them. The raw compiler tally is in
 [this-escape-tally.md](this-escape-tally.md).
 
-Current forced root-lint source of truth:
+Current forced lint source of truth:
 
 ```text
 Last full forced root lint before the handle-construction wave:
 80 emitted this-escape diagnostics
 77 unique file:line locations
 
-Targeted javatools lint after the handle-construction, runtime
-constructor-assertion, and `ClassTemplate` implicit-field waves:
-73 emitted this-escape diagnostics
-70 unique file:line locations
+Forced `:javatools:compileJava` lint after the handle-construction,
+runtime constructor-assertion, `ClassTemplate` implicit-field, and
+Container-construction waves:
+71 emitted this-escape diagnostics
+68 unique file:line locations
 0 xRef.java, xOSFileNode.java, CallChain.java, xRTMethod.java, or
 ClassTemplate.java this-escape diagnostics
+0 Container.java this-escape diagnostics
 ```
 
-The full root lint build was not rerun after these small waves to avoid paying
-for another clean build. Based on the targeted compile and the five removed
-full-root sites, the next full-root tally is expected to drop to 74 emitted
-diagnostics at 71 unique locations.
+The full root lint build was not rerun after these waves to avoid paying for
+another clean build. Based on the forced targeted compile and the removed
+full-root sites, the next full-root tally is expected to report one additional
+non-`javatools` site.
 
 ## Decision Summary
 
@@ -33,14 +35,15 @@ diagnostics at 71 unique locations.
 | Fixed in this branch | 3 | Runtime handle construction no longer publishes `RefHandle` to `Frame.VarInfo` or initializes handle fields through constructor-time public field mutation. |
 | Fixed in this branch | 2 | Runtime constructor assertions no longer call instance methods on partially constructed objects. |
 | Fixed in this branch | 1 | `ClassTemplate` implicit fields are explicit constructor metadata instead of an overridable constructor hook. |
+| Fixed in this branch | 3 | `Container` construction no longer captures/registers a partially constructed owner through `ConstHeap`, `NativeTemplates`, or the runtime debug registry. Two of these were visible together in javac output; the registry publication became visible after the helper captures were removed. |
 | Fixed separately, still present here | 2 | Concrete unsafe construction/publication pattern. Fixed on `lagergren/fix-utils-this-escape`; still present in this branch until that PR is merged or rebased here. |
 | Remove after small design cleanup | 26 | Constructor-time virtual predicates/assertions or utility helper calls. Usually fixable, but should be separate from the runtime-owner PR. |
 | Audit before changing | 37 | Construction publishes `this` to owner/child structures or performs owner-sensitive assembly. Needs confinement or lifecycle proof. |
 | Document only for this PR | 7 | JIT/tooling paths that are not part of the runtime-owner fix. |
 
-The current targeted lint run reports 71 remaining unique locations. The next
-full-root lint run is expected to report 72 remaining unique locations because
-the full root build includes one additional non-`javatools` site.
+The current forced targeted lint run reports 68 remaining unique locations. The
+next full-root lint run is expected to report 69 remaining unique locations
+because the full root build includes one additional non-`javatools` site.
 
 ## Fixed Separately, Do Not Suppress Here
 
@@ -305,10 +308,46 @@ Already fixed in this branch:
   `xConst` passes `PROP_HASH`; the base still adds `GenericHandle.OUTER` for
   instance-child structures.
 
-| Site | Current behavior | Seriousness | Proper refactor |
-| --- | --- | --- | --- |
-| `javatools/src/main/java/org/xvm/runtime/Container.java:62` | Base constructor creates `new ConstHeap(this)`. The current `ConstHeap` constructor only stores the owner and does not publish it. | Must audit. This is probably safe today but still stores a not-yet-fully-constructed owner in a child object. | Either keep a local suppression with a proof that `ConstHeap` cannot publish/callback during construction, or create `ConstHeap` from a post-construction factory before the container is registered. |
-| `javatools/src/main/java/org/xvm/runtime/Container.java:764` | Field initializer creates `new NativeTemplates(this)`. `NativeTemplates` is final and currently stores the owner plus owner-lazy cells. | Must audit. Lower risk than old static `INSTANCE`, but it still captures the owner during base construction. | Initialize `NativeTemplates` from the same post-construction owner-registration path as the heap, or suppress locally only with a final-class/no-publication proof. |
+## Fixed In This Branch: Container Owner Construction Escapes
+
+The base `Container` constructor had three owner-publication problems:
+
+- `new ConstHeap(this)` stored a not-yet-fully-constructed container in a child
+  helper object.
+- `new NativeTemplates(this)` built an owner-retaining native-template lookup
+  table from a field initializer before the container constructor returned.
+- `f_runtime.registerContainer(this)` published child containers into the
+  runtime debug weak registry from the base constructor. That call was virtual
+  through `Runtime`, so subclasses or concurrent diagnostics could observe the
+  container before the concrete container fields were assigned.
+
+The replacement keeps the same runtime behavior and cache shape:
+
+- `ConstHeap` is now ownerless. It remains one final heap per container, with
+  the same `ConcurrentHashMap` constant-handle cache, but operations receive
+  the owning `Container` explicitly. `Container.f_heap` is private and exposed
+  through `getConstHeap()`.
+- `Container.nativeTemplates()` stores a final `Lazy.Owner<Container,
+  NativeTemplates>`. This still creates at most one `NativeTemplates` table per
+  container, but construction is deferred until the owner is fully built.
+- `MainContainer.create(...)` and `NestedContainer.create(...)` register the
+  newly constructed container immediately after `new ...` returns. Native
+  containers were not registered before and remain unregistered by default.
+
+This does not remove caching. The constant-handle cache remains on the same
+container heap, and the native-template cache remains one table per container.
+The only footprint change is trading an eager `NativeTemplates` object for one
+small `Lazy.Owner` cell until the table is actually used; initialized
+containers still have one table as before.
+
+`RuntimeTest.registerContainerDoesNotObservePartiallyConstructedContainer()`
+uses an observing `Runtime` override to prove the old base-constructor
+publication would have been able to call `findContainer(...)` before subclass
+fields were assigned. `RuntimeThisEscapeConstructionTest` guards against
+restoring `new ConstHeap(this)`, `new NativeTemplates(this)`, or
+`registerContainer(this)`. The forced lint compile at
+`/tmp/xvm-container-this-escape.log` reports no `Container.java`
+`this-escape` diagnostics.
 
 ### ASM Metadata and Owner Assembly
 
@@ -414,11 +453,9 @@ The least risky order after this runtime-owner branch is:
 
 1. Merge or rebase the separate `lagergren/fix-utils-this-escape` branch that
    fixes the two concrete `javatools_utils` construction defects.
-2. Audit the three remaining runtime owner-construction warnings with focused
-   lifecycle tests.
-3. Remove the ASM `Op*` constructor predicate warnings through opcode metadata
+2. Remove the ASM `Op*` constructor predicate warnings through opcode metadata
    or final/static helpers.
-4. Audit ASM/compiler assembly paths with
+3. Audit ASM/compiler assembly paths with
    focused lifecycle tests before changing them.
 
 ## Grouped Metadata Record Candidates

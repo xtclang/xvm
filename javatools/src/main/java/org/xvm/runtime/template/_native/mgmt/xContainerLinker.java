@@ -244,7 +244,7 @@ public class xContainerLinker
 
     private int completeResolveAndLink(Frame frame, Container container,
                                        ModuleStructure moduleApp, ObjectHandle hProvider, int iReturn) {
-        NestedContainer containerNested = new NestedContainer(container,
+        NestedContainer containerNested = NestedContainer.create(container,
                 moduleApp.getIdentityConstant(), hProvider, Collections.emptyList());
         return new CollectResources(containerNested, iReturn).doNext(frame);
     }
