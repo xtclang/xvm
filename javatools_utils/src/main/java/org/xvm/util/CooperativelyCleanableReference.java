@@ -24,7 +24,7 @@ import java.util.logging.Logger;
  *
  *   public CountableObject() {
  *       COUNT.incrementAndGet(); // track the allocation
- *       new CooperativeCleanableReference(this, DECR_COUNT); // track the eventual deallocation
+ *       CooperativelyCleanableReference.create(this, DECR_COUNT); // track the eventual deallocation
  *   }
  *
  *   public static long getInstanceCount() {
@@ -69,16 +69,31 @@ public class CooperativelyCleanableReference<V> extends WeakReference<V> {
     private final AutoCloseable cleaner;
 
     /**
+     * Create and register a {@link CooperativelyCleanableReference} for a given referent.
+     *
+     * @param referent the referent to manage
+     * @param cleaner  the function to run once the referent is unreachable, this function must not reference the referent
+     *
+     * @return the registered reference
+     */
+    public static <V> CooperativelyCleanableReference<V> create(V referent, AutoCloseable cleaner) {
+        var ref = new CooperativelyCleanableReference<V>(referent, cleaner);
+        // Register only after the constructor returns. Publishing from the constructor would expose
+        // a not-yet-fully-constructed reference through KEEP_ALIVE.
+        KEEP_ALIVE.add(ref);
+        return ref;
+    }
+
+    /**
      * Construct a {@link CooperativelyCleanableReference} for a given referent.
      *
      * @param referent the referent to manage
      * @param cleaner  the function to run once the referent is unreachable, this function must not reference the referent
      */
-    public CooperativelyCleanableReference(V referent, AutoCloseable cleaner) {
+    private CooperativelyCleanableReference(V referent, AutoCloseable cleaner) {
         super(referent, clean(QUEUE[ThreadLocalRandom.current().nextInt(QUEUE.length)]));
         this.cleaner = Objects.requireNonNull(cleaner, "null cleaner");
-        KEEP_ALIVE.add(this);
-}
+    }
 
     /**
      * Perform cleanup for at least some unreachable referents in the specified queue.

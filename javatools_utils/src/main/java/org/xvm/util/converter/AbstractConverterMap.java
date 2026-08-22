@@ -16,30 +16,12 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
     private final Map<SK, SV> storage;
 
     /**
-     * The converter keySet.
-     */
-    protected final Set<K> keys;
-
-    /**
-     * The converter values.
-     */
-    protected final Collection<V> values;
-
-    /**
-     * The converter entrySet.
-     */
-    protected final Set<Entry<K, V>> entries;
-
-    /**
      * Construct a {@link AbstractConverterMap}.
      *
      * @param storage the backing store
      */
     protected AbstractConverterMap(Map<SK, SV> storage) {
         this.storage = storage;
-        keys = newKeySet();
-        values = newValues();
-        entries = newEntrySet();
     }
 
     /**
@@ -172,17 +154,17 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
 
     @Override
     public Set<K> keySet() {
-        return keys;
+        return newKeySet();
     }
 
     @Override
     public Collection<V> values() {
-        return values;
+        return newValues();
     }
 
     @Override
     public Set<Entry<K, V>> entrySet() {
-        return entries;
+        return newEntrySet();
     }
 
     @Override
