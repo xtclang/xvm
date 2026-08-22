@@ -155,6 +155,9 @@ Completed wave in this branch:
 - `ByteConstant` and `IntConstant` range folding no longer calls
   `ConstantPool.getCurrentPool()`. Folded ranges use the receiver constant's
   pool and are covered by `ConstantRangeOwnerTest`.
+- `ConstantPool.checkFunctionCompatibility(...)` no longer calls
+  `ConstantPool.getCurrentPool()` from an instance method. It uses receiver
+  `typeTuple0()` and is covered by `ConstantPoolDiagnosticsTest`.
 
 ### Must Fix
 

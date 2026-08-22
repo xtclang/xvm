@@ -8,6 +8,9 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeConstant.Relation;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -106,6 +109,20 @@ public class ConstantPoolDiagnosticsTest {
                     () -> pool.register(new DiagnosticConstant(pool)));
             assertEquals(formatsBefore, constantMaps(pool).keySet());
         });
+    }
+
+    @Test
+    public void functionCompatibilityUsesReceiverPoolWithoutAmbientPool() {
+        ConstantPool pool = new FileStructure("test").getConstantPool();
+
+        TypeConstant typeTupleReturn = pool.buildFunctionType(
+                ConstantPool.NO_TYPES, pool.typeTuple0());
+        TypeConstant typeVoidReturn  = pool.buildFunctionType(ConstantPool.NO_TYPES);
+
+        try (var _ = ConstantPool.withPool(null)) {
+            assertEquals(Relation.IS_A,
+                    pool.checkFunctionCompatibility(typeTupleReturn, typeVoidReturn));
+        }
     }
 
     private static void withLateRegistrationValidation(CheckedRunnable action)

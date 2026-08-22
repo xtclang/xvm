@@ -3468,7 +3468,9 @@ public class ConstantPool
         // the number of returns on the left must not exceed the number of returns on the right;
         // the only exception: "void f(X)" is allowed to be assigned to "Tuple<> f(x)"
         if (cLR > cRR) {
-            return cRR == 0 && cLR == 1 && typeLR.getParamType(0).equals(getCurrentPool().typeTuple0())
+            // This is an instance method on the owner pool; do not let a thread-local ambient pool
+            // decide which Tuple<> constant defines compatibility.
+            return cRR == 0 && cLR == 1 && typeLR.getParamType(0).equals(typeTuple0())
                     ? Relation.IS_A
                     : Relation.INCOMPATIBLE;
         }

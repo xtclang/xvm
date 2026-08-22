@@ -62,6 +62,13 @@ last value associated with this Java thread". That distinction is catastrophic
 for a runtime that wants same-JVM repeated execution, parallel containers,
 service callbacks, compiler workers, and JIT-generated code.
 
+This is poor design even before adding parallel execution. It creates a hidden
+global precondition: the caller must somehow know that a previous frame of code
+installed the right pool and that no nested call replaced it. The type system
+cannot express that precondition, the compiler cannot check it, and a unit test
+that happens to run under a lucky outer scope can pass while the same helper
+fails when called directly.
+
 Concrete failure modes:
 
 - A worker thread finishes work for container A with pool A in the thread-local
@@ -147,7 +154,7 @@ remaining important ConstantPool ambient-context risk.
 
 | Site | Why it is dangerous | Proper fix |
 | --- | --- | --- |
-| `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3471` | `checkFunctionCompatibility(...)` is already an instance method on a pool, but it calls `getCurrentPool().typeTuple0()`. A wrong or missing ambient pool changes the compatibility answer or throws. | Use the receiver pool directly. This should be a small must-fix. |
+| `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3471` | Fixed in this branch: `checkFunctionCompatibility(...)` is already an instance method on a pool, but it called `getCurrentPool().typeTuple0()`. A wrong or missing ambient pool changed the compatibility answer or threw. | The method now uses receiver `typeTuple0()`. `ConstantPoolDiagnosticsTest.functionCompatibilityUsesReceiverPoolWithoutAmbientPool()` covers the no-ambient failure mode. |
 | `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:6272` | Fixed in this branch: `isCovariantReturn(...)` used to resolve auto-narrowing through `ConstantPool.getCurrentPool()`. Type relation checks are runtime-relevant and can run under parallel containers. | The helper now requires an explicit `ConstantPool` parameter; old two-argument API shape is rejected by `TypeConstantOwnerApiTest`. |
 | `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:6352` | Fixed in this branch: `isContravariantParameter(...)` had the same hidden pool dependency. | Same explicit owner parameter as covariance. |
 | `javatools/src/main/java/org/xvm/asm/constants/ByteConstant.java:295,297,370,372,374,376` | Fixed in this branch: range-producing constant operations used to create the result in the ambient pool. Wrong scope registered the range constant in the wrong owner. | Numeric range folding now uses the receiver constant's pool. `ConstantRangeOwnerTest` covers missing and wrong ambient pools. |
@@ -169,6 +176,9 @@ Recommended tests:
 - `ConstantRangeOwnerTest` proves numeric range folding works with no ambient
   pool and ignores a wrong ambient pool, returning a range owned by the
   receiver's pool.
+- `ConstantPoolDiagnosticsTest.functionCompatibilityUsesReceiverPoolWithoutAmbientPool()`
+  proves function compatibility uses the receiver pool even when no ambient
+  pool exists.
 - A two-pool unit test for `ConstantPool.checkFunctionCompatibility(...)` that
   runs under a wrong ambient pool and proves the result comes from the receiver
   after the fix.

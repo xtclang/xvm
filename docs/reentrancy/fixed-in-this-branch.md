@@ -255,6 +255,15 @@ The replacement uses the receiver constant's pool, preserving the old behavior
 for correctly scoped callers while making owner selection deterministic.
 `ConstantRangeOwnerTest` verifies both the no-ambient and wrong-ambient cases.
 
+This branch also removes ambient pool lookup from
+`ConstantPool.checkFunctionCompatibility(...)`. That method already belongs to a
+specific pool, but `master` asked `ConstantPool.getCurrentPool()` for the
+`Tuple<>` helper type in one compatibility exception. The replacement uses the
+receiver pool directly, preserving the same compatibility rule and common-type
+cache while removing a hidden thread-local precondition.
+`ConstantPoolDiagnosticsTest.functionCompatibilityUsesReceiverPoolWithoutAmbientPool()`
+covers the no-ambient case that would fail on `master`.
+
 ### Handle Construction `this` Escapes
 
 This branch removes three runtime handle-construction `this` escapes:

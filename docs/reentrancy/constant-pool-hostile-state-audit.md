@@ -146,6 +146,43 @@ Design rule: if a receiver object is already owned, use that owner. Ambient
 current-pool lookup is not a substitute for a real owner parameter or an
 owner-bearing receiver.
 
+### ConstantPool function compatibility
+
+References:
+
+- `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3346`
+  (`checkFunctionCompatibility(...)`)
+- `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3471`
+  (receiver `typeTuple0()`)
+
+Old cause: `checkFunctionCompatibility(...)` is an instance method on
+`ConstantPool`, but one compatibility exception asked
+`ConstantPool.getCurrentPool().typeTuple0()` for the empty tuple type.
+
+Why this was broken: even single-threaded code can call an instance method
+outside an ambient scope, or inside a nested scope for another pool. In parallel
+or same-JVM runtime execution, the current Java thread has no inherent
+relationship to the pool whose function types are being compared.
+
+Fix: the method now uses receiver `typeTuple0()`.
+
+Why behavior is preserved:
+
+- correct old callers had this same pool installed as current;
+- the compatibility rule is unchanged;
+- no cache is removed or added; the receiver pool still interns `Tuple<>` in
+  its existing common-type cache.
+
+Proof:
+`ConstantPoolDiagnosticsTest.functionCompatibilityUsesReceiverPoolWithoutAmbientPool()`
+builds the compatibility case that reaches this rule with no ambient pool and
+expects the receiver pool to answer correctly. The old implementation would
+dereference a missing current pool.
+
+Design rule: an object method must not ignore its own owner and consult
+thread-local state for the same owner. That is a hidden global precondition, not
+an API.
+
 ## Must Fix
 
 ### Ambient current pool is still semantic state
