@@ -258,6 +258,25 @@ public class MultiMethodStructure
      */
     public MethodStructure createMethod(boolean fFunction, Access access, Annotation[] annotations,
             Parameter[] aReturns, Parameter[] aParams, boolean fHasCode, boolean fUsesSuper) {
+        return createMethod(fFunction, access, annotations, aReturns, aParams,
+                fHasCode, fUsesSuper, false);
+    }
+
+    /**
+     * Create the method with copies of the supplied parameter objects. This is for synthetic
+     * methods that intentionally copy another method's signature; they must copy the logical
+     * parameter metadata without sharing source-method Parameter helper state.
+     */
+    MethodStructure createMethodCopyingParameters(boolean fFunction, Access access,
+            Annotation[] annotations, Parameter[] aReturns, Parameter[] aParams,
+            boolean fHasCode, boolean fUsesSuper) {
+        return createMethod(fFunction, access, annotations, aReturns, aParams,
+                fHasCode, fUsesSuper, true);
+    }
+
+    private MethodStructure createMethod(boolean fFunction, Access access, Annotation[] annotations,
+            Parameter[] aReturns, Parameter[] aParams, boolean fHasCode, boolean fUsesSuper,
+            boolean fCopyParameters) {
         int nFlags   = Format.METHOD.ordinal() | access.FLAGS | (fFunction ? Component.STATIC_BIT : 0);
         int cReturns = aReturns.length;
         int cParams  = aParams.length;
@@ -299,6 +318,9 @@ public class MultiMethodStructure
                 getIdentityConstant(), getName(), aconstParams, aconstReturns);
         MethodStructure struct = new MethodStructure(this, nFlags, constId, null, annotations,
                 aReturns, aParams, fHasCode, fUsesSuper);
+        if (fCopyParameters) {
+            struct.copyParametersBeforePublication();
+        }
 
         return addChild(struct) ? struct : null;
     }

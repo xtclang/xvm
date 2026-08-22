@@ -1747,26 +1747,10 @@ public class MethodStructure
         MethodStructure that = (MethodStructure) super.cloneBody();
 
         int cReturns = getReturnCount();
-        if (cReturns > 0) {
-            Parameter[] aReturns = new Parameter[cReturns];
-            for (int i = 0; i < cReturns; i++) {
-                // Cloned parameters that need owner services must resolve through the cloned
-                // method, not the source method that replaceWithTemporary() is detaching.
-                aReturns[i] = this.m_aReturns[i].copyFor(that);
-            }
-            that.m_aReturns = aReturns;
-        }
+        that.m_aReturns = cReturns == 0 ? m_aReturns : copyParametersFor(that, m_aReturns);
 
         int cParams = getParamCount();
-        if (cParams > 0) {
-            Parameter[] aParams = new Parameter[cParams];
-            for (int i = 0; i < cParams; i++) {
-                // See the return-parameter copy above. Any transient register state rebuilt from
-                // this parameter must belong to the cloned method's owner hierarchy.
-                aParams[i] = this.m_aParams[i].copyFor(that);
-            }
-            that.m_aParams = aParams;
-        }
+        that.m_aParams = cParams == 0 ? m_aParams : copyParametersFor(that, m_aParams);
 
         if (this.m_abOps == null && this.m_code != null) {
             // m_code is a mutable object, and tied back to the MethodStructure, so explicitly clone it
@@ -1790,6 +1774,27 @@ public class MethodStructure
         }
 
         return that;
+    }
+
+    /**
+     * Replace constructor-supplied parameter arrays with copies owned by this method before the
+     * method is published as a child. This is used for synthetic delegated methods, which copy a
+     * source method's signature but must not share its mutable Parameter helper state.
+     */
+    void copyParametersBeforePublication() {
+        m_aReturns = m_aReturns.length == 0 ? m_aReturns : copyParametersFor(this, m_aReturns);
+        m_aParams  = m_aParams.length  == 0 ? m_aParams  : copyParametersFor(this, m_aParams);
+    }
+
+    /**
+     * Copy parameter metadata for the specified method owner. The source Parameter instances may
+     * be shared or already initialized; the copies preserve logical metadata and drop owner-local
+     * transient register caches.
+     */
+    private static Parameter[] copyParametersFor(MethodStructure method, Parameter[] source) {
+        Parameter[] copy = new Parameter[source.length];
+        Arrays.setAll(copy, i -> source[i].copyFor(method));
+        return copy;
     }
 
     @Override

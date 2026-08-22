@@ -214,12 +214,14 @@ Completed in this branch:
   cloned method owner, not the source method owner. Focused tests prove the
   source parameter state is preserved and copied parameters resolve through the
   clone.
+- Synthetic delegated methods no longer share `Parameter` elements with the
+  source method. `createMethodCopyingParameters(...)` copies the signature
+  metadata for the delegated method owner before publication.
 
 The remaining highest-risk clone findings are:
 
 | Item | Why it matters | Proper fix |
 | --- | --- | --- |
-| Delegated method parameter arrays | Arrays are cloned but `Parameter` elements are shared with the source method. | Deep-copy parameter elements or prove delegated parameters never create owner-sensitive deref state. |
 | `ObjectHandle.cloneAs(...)` | Runtime handles and field arrays can be shallow-copied while changing visible type/composition. | Replace hot cases with explicit view/copy constructors or add strict owner/freeze/share assertions. |
 | Default constant clone adoption | See ConstantPool project. | Explicit subclass copy/adoption contracts. |
 
@@ -327,10 +329,9 @@ Work items:
 
 1. Finish and merge the current interpreter runtime-owner PR.
 2. Merge the separate utility `this-escape` fix.
-3. Replace the remaining high-risk delegated-parameter copy path.
-4. Refactor `Xvm.java` with `XvmState`/owner binding and JIT startup tests.
-5. Start the deeper ConstantPool freeze/registration/adoption redesign.
-6. Expand same-JVM direct-mode and Gradle plugin stress so regressions are
+3. Refactor `Xvm.java` with `XvmState`/owner binding and JIT startup tests.
+4. Start the deeper ConstantPool freeze/registration/adoption redesign.
+5. Expand same-JVM direct-mode and Gradle plugin stress so regressions are
    observable before the next broad state cleanup.
 
 ## References

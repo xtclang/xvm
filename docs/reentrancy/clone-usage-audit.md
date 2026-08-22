@@ -180,6 +180,8 @@ implicit-deref metadata are copied. It removes only stale owner/cache state.
 
 ### 3. Delegated methods shallow-copy `Parameter[]` arrays and share elements
 
+Status: fixed in this branch.
+
 References:
 
 - `javatools/src/main/java/org/xvm/asm/ClassStructure.java:3006`
@@ -202,16 +204,22 @@ Container/ConstantPool/lock/cache impact: array ownership is separated, but
 element ownership is not. Any future parameter mutation or deref caching occurs
 on objects shared across two method structures.
 
-Classification: must-fix if delegated methods can call `Parameter.deref(...)`;
-otherwise must-audit until proven confined.
+Classification: must-fix, fixed.
 
-Minimum replacement: deep-copy `Parameter` elements when building delegated
-methods, using the same explicit parameter-copy API as `MethodStructure.cloneBody()`.
+Replacement: `MultiMethodStructure.createMethodCopyingParameters(...)` creates
+synthetic methods from another method's signature by copying `Parameter`
+elements for the new method owner before publishing the method as a child.
+`ClassStructure.ensureMethodDelegation(...)` now uses that factory instead of
+cloning only the array containers.
 
-Equivalence/performance proof: build a delegated method, dereference parameters
-on the original and delegated method, and assert no `Register` or containing
-method object is shared. This adds one `Parameter` allocation per parameter at
-delegation creation time only; invocation performance should be unchanged.
+Equivalence/performance proof:
+`AsmConstructorEscapeTest.delegatedMethodFactoryCopiesParameterElementsForNewOwner()`
+proves delegated returns and parameters are distinct objects owned by the
+delegated method, that logical implicit-deref metadata is preserved, and that
+the source method's cached deref register is not copied or cleared. The change
+adds one `Parameter` allocation per delegated return/parameter at synthetic
+method creation time only. The generated invocation code and runtime call path
+are unchanged.
 
 ### 4. `ObjectHandle.cloneAs(...)` shallow-copies runtime handles
 

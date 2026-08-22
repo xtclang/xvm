@@ -221,6 +221,27 @@ Regression proof lives in
 - `methodCloneAttachesCopiedParametersToClone()` proves cloned return and
   parameter objects report the cloned method as their containing structure.
 
+The follow-up delegated-method fix closes the related but separate array-copy
+bug in `ClassStructure.ensureMethodDelegation(...)`. That path did not clone a
+method body; it cloned only `Parameter[]` containers and reused the source
+method's `Parameter` elements when synthesizing a delegating method. Because a
+`Parameter` carries mutable transient helper state such as the implicit-deref
+register, the delegated method could share or overwrite source-method state.
+
+The branch adds `MultiMethodStructure.createMethodCopyingParameters(...)` for
+this synthetic-copy case. The normal `createMethod(...)` API is left unchanged:
+ordinary callers that construct fresh `Parameter` objects still get the same
+construction path as before. Delegated methods use the new factory, which
+constructs the method, copies supplied parameter elements for that new method
+owner before publication, and then adds the method as a child. Generated
+delegation code reads parameter/return metadata from the copied synthetic
+method, so code generation and ownership agree.
+
+`delegatedMethodFactoryCopiesParameterElementsForNewOwner()` proves the
+delegated method owns distinct return/parameter objects, preserves logical
+implicit-deref metadata, drops copied deref-register cache state, and leaves
+the source parameter cache intact.
+
 The broader `ConstantPool` state audit is documented in
 [constant-pool-state-audit.md](constant-pool-state-audit.md). It distinguishes
 per-pool caches, ambient owner lookup, runtime registration/adoption hazards,

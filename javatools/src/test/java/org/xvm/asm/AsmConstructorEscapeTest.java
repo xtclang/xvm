@@ -17,6 +17,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -236,18 +237,51 @@ public class AsmConstructorEscapeTest {
         assertSame(clone, clone.getParam(0).getContaining());
     }
 
+    /**
+     * Synthetic delegated methods used to clone only the parameter arrays and share the mutable
+     * `Parameter` elements with the source method. That is a real owner bug: a delegated method
+     * could observe or overwrite source-method transient deref state. The delegated-method factory
+     * must copy the elements for the new method owner before publishing the synthetic method.
+     */
+    @Test
+    public void delegatedMethodFactoryCopiesParameterElementsForNewOwner() {
+        var pool = new FileStructure("test").getConstantPool();
+        var type = pool.typeString();
+        var sourceDeref = new Register(type, "value", 0);
+        var sourceReturn = new Parameter(pool, type, "result", null, true, 0, false);
+        var sourceParam  = new Parameter(pool, type, "value", null, false, 0, false);
+        setParameterField(sourceParam, "m_fImplicitDeref", true);
+        setParameterField(sourceParam, "m_regDeref", sourceDeref);
+        var multimethod = createMultiMethod(pool, "delegated");
+
+        var delegated = multimethod.createMethodCopyingParameters(false, Constants.Access.PUBLIC,
+                null, new Parameter[] {sourceReturn}, new Parameter[] {sourceParam}, true, false);
+
+        assertNotSame(sourceReturn, delegated.getReturn(0));
+        assertNotSame(sourceParam, delegated.getParam(0));
+        assertSame(delegated, delegated.getReturn(0).getContaining());
+        assertSame(delegated, delegated.getParam(0).getContaining());
+        assertTrue(delegated.getParam(0).isImplicitDeref());
+        assertNull(getParameterField(delegated.getParam(0), "m_regDeref"));
+        assertSame(sourceDeref, getParameterField(sourceParam, "m_regDeref"));
+    }
+
     private static CloneableMethodStructure createCloneableMethod(
             ConstantPool pool, Parameter[] returns, Parameter[] params) {
-        var file = pool.getFileStructure();
-        var clz  = file.getModule().createClass(
-                Constants.Access.PUBLIC, Component.Format.CLASS, "Test", null);
-        var mm   = new MultiMethodStructure(clz, Component.Format.MULTIMETHOD.ordinal(),
-                pool.ensureMultiMethodConstant(clz.getIdentityConstant(), "method"), null);
-        var sig  = pool.ensureSignatureConstant(
+        var mm  = createMultiMethod(pool, "method");
+        var sig = pool.ensureSignatureConstant(
                 "method", toTypes(params), toTypes(returns));
         return new CloneableMethodStructure(mm, Component.Format.METHOD.ordinal()
                 | Constants.Access.PUBLIC.FLAGS, pool.ensureMethodConstant(
                         mm.getIdentityConstant(), sig), returns, params);
+    }
+
+    private static MultiMethodStructure createMultiMethod(ConstantPool pool, String name) {
+        var file = pool.getFileStructure();
+        var clz  = file.getModule().createClass(
+                Constants.Access.PUBLIC, Component.Format.CLASS, "Test", null);
+        return new MultiMethodStructure(clz, Component.Format.MULTIMETHOD.ordinal(),
+                pool.ensureMultiMethodConstant(clz.getIdentityConstant(), name), null);
     }
 
     private static TypeConstant[] toTypes(Parameter[] params) {

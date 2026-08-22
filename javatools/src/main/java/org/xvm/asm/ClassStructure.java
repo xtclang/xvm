@@ -3002,12 +3002,11 @@ public class ClassStructure
             PropertyInfo infoDelegate = infoPrivate.findProperty(sDelegate);
             TypeConstant typeDelegate = infoDelegate.getType();
 
-            Annotation[] aAnnos       = new Annotation[] {pool.ensureAnnotation(pool.clzOverride())};
-            Parameter[]  aParams      = method.getParamArray().clone();
-            Parameter[]  aReturns     = method.getReturnArray().clone();
+            Annotation[]          aAnnos      = {pool.ensureAnnotation(pool.clzOverride())};
+            MultiMethodStructure  multimethod = ensureMultiMethodStructure(method.getName());
 
-            methodDelegate = createMethod(false, method.getAccess(), aAnnos,
-                    aReturns, method.getName(), aParams, true, false);
+            methodDelegate = multimethod.createMethodCopyingParameters(false, method.getAccess(),
+                    aAnnos, method.getReturnArray(), method.getParamArray(), true, false);
             methodDelegate.setSynthetic(true);
 
             Code           code       = methodDelegate.createCode();
@@ -3019,7 +3018,8 @@ public class ClassStructure
             boolean        fAtomic    = infoDelegate.isAtomic();
 
             for (int i = 0; i < cParams; i++) {
-                aregParam[i] = new Register(aParams[i].getType(), aParams[i].getName(), i);
+                Parameter param = methodDelegate.getParam(i);
+                aregParam[i] = new Register(param.getType(), param.getName(), i);
             }
 
             Register regProp;
@@ -3074,7 +3074,7 @@ public class ClassStructure
                 break;
 
             case 1: {
-                TypeConstant typeReturn = aReturns[0].getType();
+                TypeConstant typeReturn = methodDelegate.getReturn(0).getType();
                 Register     regReturn;
                 if (fAtomic) {
                     regReturn = code.createRegister(pool.ensureFuture(typeReturn));
@@ -3104,7 +3104,7 @@ public class ClassStructure
                 Register[] aregReturn = new Register[cReturns];
 
                 for (int i = 0; i < cReturns; i++) {
-                    TypeConstant typeReturn = aReturns[i].getType();
+                    TypeConstant typeReturn = methodDelegate.getReturn(i).getType();
                     if (fAtomic) {
                         Register regReturn = code.createRegister(pool.ensureFuture(typeReturn));
                         code.add(new Var_D(regReturn));

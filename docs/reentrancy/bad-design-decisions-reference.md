@@ -179,6 +179,11 @@ attached copied parameters back to the source method. `Parameter` now uses an
 owner-explicit `copyFor(MethodStructure)` helper instead of `Object.clone()`,
 and method copies pass the cloned method as the target owner.
 
+Array cloning needs the same discipline. `ClassStructure.ensureMethodDelegation`
+used to clone only `Parameter[]` containers and share the mutable `Parameter`
+elements with the source method. The delegated-method factory now copies the
+elements for the synthetic method owner before publication.
+
 ### Manual Lazy Null Caches
 
 Bad shape:
