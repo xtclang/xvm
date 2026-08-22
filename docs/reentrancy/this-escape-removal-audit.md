@@ -13,13 +13,15 @@ Last full forced root lint before the handle-construction wave:
 
 Forced targeted compile-graph lint after the handle-construction,
 runtime constructor-assertion, `ClassTemplate` implicit-field, `Container`,
-`Op*` constructor-shape, and utility-constructor waves:
-44 emitted this-escape diagnostics
-41 unique file:line locations
+`Op*` constructor-shape, utility-constructor, and `MethodInfo`/`PropertyInfo`
+owner-body factory waves:
+36 emitted this-escape diagnostics
+35 unique file:line locations
 0 xRef.java, xOSFileNode.java, CallChain.java, xRTMethod.java, or
 ClassTemplate.java this-escape diagnostics
 0 Container.java, Op*.java, PackedInteger.java, HasherReference.java, or
 ListSet.java this-escape diagnostics
+0 MethodInfo.java or PropertyInfo.java this-escape diagnostics
 ```
 
 The full root lint build was not rerun after these waves to avoid paying for
@@ -39,12 +41,13 @@ non-`javatools` site: the remaining `javatools_jitbridge` warning.
 | Fixed in this branch | 22 | `Op*` constructor-time virtual opcode-shape predicates are now explicit deserialization metadata or private helpers. |
 | Fixed in this branch | 3 | `Container` construction no longer captures/registers a partially constructed owner through `ConstHeap`, `NativeTemplates`, or the runtime debug registry. Two of these were visible together in javac output; the registry publication became visible after the helper captures were removed. |
 | Fixed in this branch | 5 | Utility constructors no longer call overridable mutation/reset APIs while the object is partially constructed. |
+| Fixed in this branch | 6 | `MethodInfo` and `PropertyInfo` no longer attach method/property body owner links from constructors. |
 | Fixed separately, still present here | 2 | Concrete unsafe construction/publication pattern. Fixed on `lagergren/fix-utils-this-escape`; still present in this branch until that PR is merged or rebased here. |
-| Audit before changing | 33 | Construction publishes `this` to owner/child structures or performs owner-sensitive assembly. Needs confinement or lifecycle proof. |
+| Audit before changing | 27 | Construction publishes `this` to owner/child structures or performs owner-sensitive assembly. Needs confinement or lifecycle proof. |
 | Document only for this PR | 7 | JIT/tooling paths that are not part of the runtime-owner fix. |
 
-The current forced targeted lint run reports 41 remaining unique locations. The
-next full-root lint run is expected to report 42 remaining unique locations
+The current forced targeted lint run reports 35 remaining unique locations. The
+next full-root lint run is expected to report 36 remaining unique locations
 because the full root build includes one additional non-`javatools` site.
 
 ## Fixed Separately, Do Not Suppress Here
@@ -317,6 +320,71 @@ constructor calls `setLong(...)`, `setBigInteger(...)`, `readObject(...)`,
 and now pass while preserving normal values, duplicate handling, hash indexing,
 and post-construction mutation APIs.
 
+## Fixed In This Branch: MethodInfo And PropertyInfo Body Ownership
+
+`MethodInfo` and `PropertyInfo` used to attach child body owner links from the
+owner constructors:
+
+```java
+aOwned[i] = body.forMethod(this);
+aOwned[i] = body.forProperty(this);
+```
+
+That was not just a lint nuisance. `MethodBody.forMethod(...)` and
+`PropertyBody.forProperty(...)` are synchronized methods that mutate or copy the
+body so it points back to the containing `MethodInfo` or `PropertyInfo`. Passing
+`this` before the owner constructor returned allowed the body path to observe an
+owner whose final fields, rank, and body array had not yet been assigned. A
+subclass of `MethodBody` or `PropertyBody` could also run code during that
+owner construction window. In same-JVM incremental or parallel type-info
+assembly, that shape is exactly the kind of hidden parent/child publication
+that makes ownership bugs nondeterministic.
+
+The replacement makes owner construction explicit:
+
+- public constructors are replaced by `MethodInfo.create(...)` and
+  `PropertyInfo.create(...)`;
+- the private constructor builds non-virtual owned `MethodBody`/`PropertyBody`
+  copies into a local array;
+- the final owner body array is assigned only after that local array is
+  complete;
+- callers still receive `MethodInfo`/`PropertyInfo` objects with owned body
+  arrays, so existing caching and `TypeInfoReal` ownership validation semantics
+  are preserved.
+
+This shape was chosen over assigning `m_aBody` first and then filling it
+because that would make a partially filled final array visible through the
+owner during owned-body construction. It was also chosen over streams because
+`Arrays.setAll(...)` keeps the allocation direct, short, and free of extra
+collection machinery.
+
+The factory deliberately did not turn `m_aBody` into a volatile mutable field
+or make body back-pointers volatile in this wave. That was considered and
+rejected because it would widen the state model and remove the simple final
+owner-array invariant without a failing stress proof that requires it. The
+minimal fix keeps the final arrays and removes the constructor escape; any
+future publication hardening should be a separate, documented memory-model
+change.
+
+`MethodInfoTest.methodInfoFactoryDoesNotCallOverridableBodyAttachment()` and
+`TypeInfoMemberOwnershipTest.propertyInfoFactoryDoesNotCallOverridableBodyAttachment()`
+prove the old failure shape directly. They use body subclasses whose
+`forMethod(...)`/`forProperty(...)` methods read the owner rank and body-array
+length and throw if the old virtual attachment path is used during owner
+construction. Those tests would fail on master, where owner attachment happened
+before field assignment, and pass with the non-virtual copy model. The tests
+also verify that the caller-supplied body object is not mutated and that the
+returned owner has its own correctly linked body copy. The same test classes
+verify that `TypeInfoReal` still creates owner-local copies and that body
+back-pointers target the copied owner.
+
+Stress validation should exercise this through the existing type-info paths:
+`TypeInfoReal.validate()` already asserts that each `MethodBody` points to its
+owning `MethodInfo` and each `PropertyBody` points to its owning `PropertyInfo`.
+Running the direct and parallel stress tasks with runtime ownership validation
+enabled forces warmed type-info graphs through those checks; a split body owner
+graph fails structurally instead of waiting for a later language-level crash.
+
 ## Audit Before Changing
 
 These are the warnings most likely to hide real owner/lifecycle assumptions,
@@ -397,13 +465,7 @@ javatools/src/main/java/org/xvm/asm/FileStructure.java:160
 javatools/src/main/java/org/xvm/asm/MethodStructure.java:119
 javatools/src/main/java/org/xvm/asm/PropertyStructure.java:66
 javatools/src/main/java/org/xvm/asm/VersionTree.java:19
-javatools/src/main/java/org/xvm/asm/constants/MethodInfo.java:62
-javatools/src/main/java/org/xvm/asm/constants/MethodInfo.java:80
 javatools/src/main/java/org/xvm/asm/constants/PropertyConstant.java:42
-javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java:51
-javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java:61
-javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java:71
-javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java:99
 javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:138
 javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:176
 javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:269
@@ -470,7 +532,7 @@ javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/nLongBasedArra
 ## Expected Full-Root Remaining Classification
 
 ```text
-17 Must audit: ASM metadata/owner construction
+11 Must audit: ASM metadata/owner construction
 16 Must audit: compiler/parser/AST construction
  6 Document only: JIT construction
  2 Fixed separately, still present here: concrete unsafe utility construction

@@ -134,12 +134,14 @@ public class PropertyBody
     }
 
     /**
-     * Internal: Copy a PropertyBody for a new containing PropertyInfo.
+     * Internal: Copy a PropertyBody for a new containing PropertyInfo without virtual dispatch.
+     * This is the constructor-safe ownership path used by PropertyInfo; post-construction adoption
+     * uses forProperty(...).
      *
      * @param property  the containing PropertyInfo
      * @param body      the PropertyBody to copy
      */
-    private PropertyBody(PropertyInfo property, PropertyBody body) {
+    PropertyBody(PropertyInfo property, PropertyBody body) {
         m_infoProperty  = property;
         m_structProp    = body.m_structProp;
         m_impl          = body.m_impl;

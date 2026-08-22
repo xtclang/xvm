@@ -22,6 +22,7 @@ import org.xvm.util.ListMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -42,7 +43,7 @@ public class TypeInfoMemberOwnershipTest {
         PropertyBody body = new PropertyBody(structProperty, Implementation.Native, null,
                 structProperty.getType(), true, false, false, Effect.None, Effect.None,
                 false, false, null, null);
-        PropertyInfo property = new PropertyInfo(body, 0);
+        PropertyInfo property = PropertyInfo.create(body, 0);
 
         ClassStructure structChild = struct.createClass(
                 Access.PUBLIC, Format.CLASS, "Child", null);
@@ -87,6 +88,24 @@ public class TypeInfoMemberOwnershipTest {
         assertSame(child2, info2.getChildInfosByName().get("alias.Child"));
     }
 
+    @Test
+    public void propertyInfoFactoryDoesNotCallOverridableBodyAttachment() {
+        FileStructure  file   = new FileStructure("test");
+        ClassStructure struct = file.getModule().createClass(
+                Access.PUBLIC, Format.CLASS, "Test", null);
+
+        PropertyStructure structProperty = struct.createProperty(false, Access.PUBLIC,
+                Access.PUBLIC, struct.getCanonicalType(), "value");
+        var body = new OwnerInspectingPropertyBody(structProperty, 11, 1);
+        PropertyInfo property = PropertyInfo.create(body, 11);
+
+        assertEquals(11, property.getRank());
+        assertEquals(1, property.getPropertyBodies().length);
+        assertSame(property, property.getHead().getPropertyInfo());
+        assertNotSame(body, property.getHead());
+        assertNull(body.getPropertyInfo());
+    }
+
     private TypeInfo createTypeInfo(
             ClassStructure   struct,
             PropertyConstant idProperty,
@@ -103,5 +122,30 @@ public class TypeInfoMemberOwnershipTest {
                 Map.of(idProperty, property), Collections.emptyMap(),
                 Map.of(idProperty.getNestedIdentity(), property), Collections.emptyMap(),
                 children, null, Progress.Complete);
+    }
+
+    private static final class OwnerInspectingPropertyBody extends PropertyBody {
+        private final int expectedRank;
+        private final int expectedBodies;
+
+        OwnerInspectingPropertyBody(
+                PropertyStructure struct,
+                int               expectedRank,
+                int               expectedBodies) {
+            super(struct, Implementation.Native, null, struct.getType(), true, false, false,
+                    Effect.None, Effect.None, false, false, null, null);
+
+            this.expectedRank   = expectedRank;
+            this.expectedBodies = expectedBodies;
+        }
+
+        @Override
+        synchronized PropertyBody forProperty(PropertyInfo property) {
+            if (property.getRank() != expectedRank
+                    || property.getPropertyBodies().length != expectedBodies) {
+                throw new IllegalStateException("property owner was observed too early");
+            }
+            return super.forProperty(property);
+        }
     }
 }

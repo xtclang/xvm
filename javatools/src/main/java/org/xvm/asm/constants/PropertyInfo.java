@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import java.util.function.Predicate;
@@ -42,13 +43,14 @@ import org.xvm.util.Severity;
 public class PropertyInfo
         implements Constants {
     /**
-     * Create a PropertyInfo.
+     * Create a PropertyInfo. This is a factory instead of a public constructor so PropertyInfo can
+     * attach body owners without overridable construction-time callbacks.
      *
      * @param body   a PropertyBody
      * @param nRank  the property's rank
      */
-    public PropertyInfo(PropertyBody body, int nRank) {
-        this(new PropertyBody[] {body}, body.getType(), body.hasField(), false, nRank);
+    public static PropertyInfo create(PropertyBody body, int nRank) {
+        return create(new PropertyBody[] {body}, body.getType(), body.hasField(), false, nRank);
     }
 
     /**
@@ -57,18 +59,18 @@ public class PropertyInfo
      * @param that  a PropertyInfo to merge with
      * @param body  a PropertyBody to add
      */
-    public PropertyInfo(PropertyInfo that, PropertyBody body) {
-        this(Handy.prepend(that.getPropertyBodies(), body),
+    public static PropertyInfo create(PropertyInfo that, PropertyBody body) {
+        return create(Handy.prepend(that.getPropertyBodies(), body),
                 body.getType(), body.hasField(), body.isSetterBlockingSuper(), that.f_nRank);
     }
 
-    private PropertyInfo(
+    private static PropertyInfo create(
             PropertyBody[] aBody,
             TypeConstant   type,
             boolean        fRequireField,
             boolean        fSuppressVar,
             int            nRank) {
-        this(null, aBody, type, fRequireField, fSuppressVar, nRank);
+        return create(null, aBody, type, fRequireField, fSuppressVar, nRank);
     }
 
     /**
@@ -82,6 +84,16 @@ public class PropertyInfo
      * @param fSuppressVar   true iff the property does not expose Var access
      * @param nRank          the rank of the property
      */
+    private static PropertyInfo create(
+            TypeInfo       infoType,
+            PropertyBody[] aBody,
+            TypeConstant   type,
+            boolean        fRequireField,
+            boolean        fSuppressVar,
+            int            nRank) {
+        return new PropertyInfo(infoType, aBody, type, fRequireField, fSuppressVar, nRank);
+    }
+
     private PropertyInfo(
             TypeInfo       infoType,
             PropertyBody[] aBody,
@@ -90,14 +102,17 @@ public class PropertyInfo
             boolean        fSuppressVar,
             int            nRank) {
         assert aBody != null && aBody.length >= 1;
+        assert Arrays.stream(aBody).allMatch(Objects::nonNull);
 
-        int            cBodies = aBody.length;
-        PropertyBody[] aOwned  = new PropertyBody[cBodies];
-        for (int i = 0; i < cBodies; ++i) {
-            PropertyBody body = aBody[i];
-            assert body != null;
-            aOwned[i] = body.forProperty(this);
-        }
+        /*
+         * PropertyBody needs an owner link, but the old constructor called the overridable
+         * forProperty(...) attachment path while this PropertyInfo was still partially initialized.
+         * Build non-virtual owned copies into a local array instead. The final m_aBody reference is
+         * assigned only after the array is complete, preserving the old one-owned-body-per-owner
+         * shape without publishing a half-built owner.
+         */
+        PropertyBody[] aOwned = new PropertyBody[aBody.length];
+        Arrays.setAll(aOwned, i -> new PropertyBody(this, Objects.requireNonNull(aBody[i])));
 
         m_infoType       = infoType;
         m_aBody          = aOwned;
@@ -121,7 +136,7 @@ public class PropertyInfo
 
         return m_infoType == infoType
                 ? this
-                : new PropertyInfo(infoType, m_aBody, m_type, m_fRequireField, m_fSuppressVar,
+                : PropertyInfo.create(infoType, m_aBody, m_type, m_fRequireField, m_fSuppressVar,
                         f_nRank);
     }
 
@@ -351,7 +366,7 @@ public class PropertyInfo
                     getName());
         }
 
-        return new PropertyInfo(aResult, typeResult, fRequireField, fSuppressVar, that.f_nRank);
+        return PropertyInfo.create(aResult, typeResult, fRequireField, fSuppressVar, that.f_nRank);
     }
 
     /**
@@ -401,7 +416,7 @@ public class PropertyInfo
                     Effect.BlocksSuper, fRO ? Effect.None : Effect.BlocksSuper, false, false, null, null)
                 : new PropertyBody(struct, Implementation.SansCode, null, getType(), fRO, false, false,
                     Effect.None, Effect.None, !fRO, false, null, null);
-        return layerOn(new PropertyInfo(bodyNew, f_nRank), ContribSource.Regular, false, errs);
+        return layerOn(PropertyInfo.create(bodyNew, f_nRank), ContribSource.Regular, false, errs);
     }
 
     /**
@@ -463,7 +478,7 @@ public class PropertyInfo
 
         return list.isEmpty()
                 ? null
-                : new PropertyInfo(list.toArray(new PropertyBody[0]),
+                : PropertyInfo.create(list.toArray(new PropertyBody[0]),
                         m_type, m_fRequireField, m_fSuppressVar, f_nRank);
     }
 
@@ -489,7 +504,7 @@ public class PropertyInfo
         Access accessVar = getVarAccess();
         if (accessVar != null && isVar() && accessVar.isLessAccessibleThan(access)) {
             // create the Ref-only form of this property
-            return new PropertyInfo(m_aBody, m_type, m_fRequireField, true, f_nRank);
+            return PropertyInfo.create(m_aBody, m_type, m_fRequireField, true, f_nRank);
         }
 
         return this;
@@ -501,7 +516,7 @@ public class PropertyInfo
     public PropertyInfo ensureVar() {
         assert hasField() && isRefAnnotated();
         return m_fSuppressVar
-                ? new PropertyInfo(m_aBody, m_type, true, false, f_nRank)
+                ? PropertyInfo.create(m_aBody, m_type, true, false, f_nRank)
                 : this;
     }
 
@@ -534,7 +549,7 @@ public class PropertyInfo
 
         return listNew == null ? this
                 : listNew.isEmpty() ? null
-                : new PropertyInfo(listNew.toArray(new PropertyBody[0]), m_type, m_fRequireField,
+                : PropertyInfo.create(listNew.toArray(new PropertyBody[0]), m_type, m_fRequireField,
                                    m_fSuppressVar, f_nRank);
     }
 
@@ -565,7 +580,7 @@ public class PropertyInfo
 
         return listNew.isEmpty()
                 ? null
-                : new PropertyInfo(listNew.toArray(new PropertyBody[0]), m_type, m_fRequireField,
+                : PropertyInfo.create(listNew.toArray(new PropertyBody[0]), m_type, m_fRequireField,
                                    m_fSuppressVar, f_nRank);
     }
 
@@ -580,7 +595,7 @@ public class PropertyInfo
 
         aBodyNew[0] = aBodyNew[0].withInitialValue(constInit);
 
-        return new PropertyInfo(aBodyNew, m_type, m_fRequireField, m_fSuppressVar, f_nRank);
+        return PropertyInfo.create(aBodyNew, m_type, m_fRequireField, m_fSuppressVar, f_nRank);
     }
 
     /**
@@ -588,7 +603,7 @@ public class PropertyInfo
      *         specified rank
      */
     public PropertyInfo withRank(int nRank) {
-        return new PropertyInfo(m_aBody, m_type, m_fRequireField, m_fSuppressVar, nRank);
+        return PropertyInfo.create(m_aBody, m_type, m_fRequireField, m_fSuppressVar, nRank);
     }
 
     /**
