@@ -150,8 +150,8 @@ remaining important ConstantPool ambient-context risk.
 | `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3471` | `checkFunctionCompatibility(...)` is already an instance method on a pool, but it calls `getCurrentPool().typeTuple0()`. A wrong or missing ambient pool changes the compatibility answer or throws. | Use the receiver pool directly. This should be a small must-fix. |
 | `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:6272` | Fixed in this branch: `isCovariantReturn(...)` used to resolve auto-narrowing through `ConstantPool.getCurrentPool()`. Type relation checks are runtime-relevant and can run under parallel containers. | The helper now requires an explicit `ConstantPool` parameter; old two-argument API shape is rejected by `TypeConstantOwnerApiTest`. |
 | `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:6352` | Fixed in this branch: `isContravariantParameter(...)` had the same hidden pool dependency. | Same explicit owner parameter as covariance. |
-| `javatools/src/main/java/org/xvm/asm/constants/ByteConstant.java:295,297,370,372,374,376` | Range-producing constant operations create the result in the ambient pool. Wrong scope registers the range constant in the wrong owner. | Add an output `ConstantPool` parameter, or use and validate the operand pool when both operands are already registered to the same pool. |
-| `javatools/src/main/java/org/xvm/asm/constants/IntConstant.java:725,739,753,767` | Same range-producing owner issue as `ByteConstant`. | Same explicit output-pool fix. |
+| `javatools/src/main/java/org/xvm/asm/constants/ByteConstant.java:295,297,370,372,374,376` | Fixed in this branch: range-producing constant operations used to create the result in the ambient pool. Wrong scope registered the range constant in the wrong owner. | Numeric range folding now uses the receiver constant's pool. `ConstantRangeOwnerTest` covers missing and wrong ambient pools. |
+| `javatools/src/main/java/org/xvm/asm/constants/IntConstant.java:725,739,753,767` | Fixed in this branch: same range-producing owner issue as `ByteConstant`. | Same receiver-pool fix. |
 | `javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java:693` | `isIdentityValid(...)` may register a shared property constant into the ambient pool to recover its component. Wrong scope mutates the wrong pool and changes later metadata lookup. | Thread the owning pool from the property/type-info caller, or require the property identity to be adopted into the target pool before validation. |
 | `javatools/src/main/java/org/xvm/asm/constants/IdentityConstant.java:506` | Resolver helper resolves generic signatures through the ambient pool. Wrong scope can resolve to constants from another pool. | Carry the resolver/output pool in the resolver object. |
 | `javatools/src/main/java/org/xvm/asm/constants/MethodBody.java:694` | Private `pool()` helper hides a current-pool dependency in method-body metadata logic. | Store/pass the method body's owner pool or use the owning method identity. |
@@ -166,6 +166,9 @@ Recommended tests:
 
 - `TypeConstantOwnerApiTest` proves the covariance/contravariance helpers no
   longer expose the old ownerless signatures and reject a missing owner pool.
+- `ConstantRangeOwnerTest` proves numeric range folding works with no ambient
+  pool and ignores a wrong ambient pool, returning a range owned by the
+  receiver's pool.
 - A two-pool unit test for `ConstantPool.checkFunctionCompatibility(...)` that
   runs under a wrong ambient pool and proves the result comes from the receiver
   after the fix.

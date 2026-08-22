@@ -103,6 +103,49 @@ predicate unless the owner is explicit. Do not hide pool selection behind
 `ConstantPool.getCurrentPool()` just because plumbing an owner through the call
 chain is inconvenient.
 
+### Numeric range constant folding
+
+References:
+
+- `javatools/src/main/java/org/xvm/asm/constants/ByteConstant.java:295`
+  through `javatools/src/main/java/org/xvm/asm/constants/ByteConstant.java:376`
+  (range-producing byte/nibble operations)
+- `javatools/src/main/java/org/xvm/asm/constants/IntConstant.java:725`
+  through `javatools/src/main/java/org/xvm/asm/constants/IntConstant.java:767`
+  (range-producing integer operations)
+
+Old cause: numeric compile-time range operations created `RangeConstant`
+results through `ConstantPool.getCurrentPool()`.
+
+Why this was broken: a range constant is owner-scoped constant-pool state. If no
+ambient pool was installed, folding `1..3` could fail with a null current pool.
+If a stale or nested ambient pool was installed, folding a range from constants
+owned by pool A could create a `RangeConstant` in pool B. That gives later code a
+valid-looking range whose containing pool does not match its operands or caller.
+
+Fix: `ByteConstant` and `IntConstant` now create folded ranges through the
+receiver constant's `getConstantPool()`. The receiver is already an owned
+constant, so this is the narrowest explicit owner available without changing
+the entire arithmetic `Constant.apply(...)` API.
+
+Why behavior is preserved:
+
+- correct old callers had the receiver's pool installed as current; they now
+  use the same pool directly;
+- the same `RangeConstant` shape and endpoint constants are produced;
+- no cache is removed, because `ensureRangeConstant(...)` creates the same
+  non-interned range constant as before;
+- no per-owner or per-value footprint is added.
+
+Proof: `ConstantRangeOwnerTest` verifies that byte and integer range folding
+works with no ambient pool and that a wrong ambient pool is ignored. The
+no-ambient test would fail on `master`; the wrong-ambient test would produce a
+range owned by the wrong pool.
+
+Design rule: if a receiver object is already owned, use that owner. Ambient
+current-pool lookup is not a substitute for a real owner parameter or an
+owner-bearing receiver.
+
 ## Must Fix
 
 ### Ambient current pool is still semantic state

@@ -292,9 +292,9 @@ public class ByteConstant
         case "Int8^Int8":
             return validate(this.m_nVal ^ ((ByteConstant) that).m_nVal);
         case "Int8..Int8":
-            return ConstantPool.getCurrentPool().ensureRangeConstant(this, that);
+            return ensureRange(that);
         case "Int8..<Int8":
-            return ConstantPool.getCurrentPool().ensureRangeConstant(this, false, that, true);
+            return ensureRange(false, that, true);
 
         case "Int8<<Int64":
             return validate(this.m_nVal << ((IntConstant) that).getValue().and(new PackedInteger(7)).getInt());
@@ -367,13 +367,13 @@ public class ByteConstant
             return validate(this.m_nVal ^ ((ByteConstant) that).m_nVal);
         case "UInt8..UInt8":
         case "Nibble..Nibble":
-            return ConstantPool.getCurrentPool().ensureRangeConstant(this, that);
+            return ensureRange(that);
         case "UInt8..<UInt8":
-            return ConstantPool.getCurrentPool().ensureRangeConstant(this, false, that, true);
+            return ensureRange(false, that, true);
         case "UInt8>..UInt8":
-            return ConstantPool.getCurrentPool().ensureRangeConstant(this, true, that, false);
+            return ensureRange(true, that, false);
         case "UInt8>..<UInt8":
-            return ConstantPool.getCurrentPool().ensureRangeConstant(this, true, that, true);
+            return ensureRange(true, that, true);
 
         case "UInt8<<Int64":
             return validate(this.m_nVal << ((IntConstant) that).getValue().and(new PackedInteger(7)).getInt());
@@ -430,6 +430,22 @@ public class ByteConstant
         }
 
         return super.apply(op, that);
+    }
+
+    /**
+     * Range folding is owned by the receiver's pool. Do not use the ambient current pool here;
+     * constant folding can run without a scoped pool or inside a legacy scope for another owner.
+     */
+    private RangeConstant ensureRange(Constant that) {
+        return getConstantPool().ensureRangeConstant(this, that);
+    }
+
+    /**
+     * Range folding is owned by the receiver's pool. Do not use the ambient current pool here;
+     * constant folding can run without a scoped pool or inside a legacy scope for another owner.
+     */
+    private RangeConstant ensureRange(boolean fExclude1, Constant that, boolean fExclude2) {
+        return getConstantPool().ensureRangeConstant(this, fExclude1, that, fExclude2);
     }
 
     @Override

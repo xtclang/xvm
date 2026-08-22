@@ -246,6 +246,15 @@ constant interning. Correct old callers pass the same pool they previously had
 to install ambiently; no cache behavior changes. `TypeConstantOwnerApiTest`
 guards the API shape by proving the old ownerless signatures are gone.
 
+This branch also removes ambient pool lookup from numeric range constant
+folding. On `master`, `ByteConstant.apply(...)` and `IntConstant.apply(...)`
+used `ConstantPool.getCurrentPool()` for `..`, `..<`, `>..`, and `>..<`
+operations. That meant a missing ambient pool could crash compile-time folding,
+and a stale ambient pool could create a `RangeConstant` in another owner's pool.
+The replacement uses the receiver constant's pool, preserving the old behavior
+for correctly scoped callers while making owner selection deterministic.
+`ConstantRangeOwnerTest` verifies both the no-ambient and wrong-ambient cases.
+
 ### Handle Construction `this` Escapes
 
 This branch removes three runtime handle-construction `this` escapes:

@@ -152,6 +152,9 @@ Completed wave in this branch:
   `TypeConstant.isContravariantParameter(...)` no longer call
   `ConstantPool.getCurrentPool()`. They require an explicit owner pool and are
   covered by `TypeConstantOwnerApiTest`.
+- `ByteConstant` and `IntConstant` range folding no longer calls
+  `ConstantPool.getCurrentPool()`. Folded ranges use the receiver constant's
+  pool and are covered by `ConstantRangeOwnerTest`.
 
 ### Must Fix
 

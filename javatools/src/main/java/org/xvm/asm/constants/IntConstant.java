@@ -722,7 +722,7 @@ public class IntConstant
         case "UInt64..UInt64":
         case "UInt128..UInt128":
         case "UIntN..UIntN":
-            return ConstantPool.getCurrentPool().ensureRangeConstant(this, that);
+            return ensureRange(that);
 
         case "Int..<Int":
         case "UInt..<UInt":
@@ -736,7 +736,7 @@ public class IntConstant
         case "UInt64..<UInt64":
         case "UInt128..<UInt128":
         case "UIntN..<UIntN":
-            return ConstantPool.getCurrentPool().ensureRangeConstant(this, false, that, true);
+            return ensureRange(false, that, true);
 
         case "Int>..Int":
         case "UInt>..UInt":
@@ -750,7 +750,7 @@ public class IntConstant
         case "UInt64>..UInt64":
         case "UInt128>..UInt128":
         case "UIntN>..UIntN":
-            return ConstantPool.getCurrentPool().ensureRangeConstant(this, true, that, false);
+            return ensureRange(true, that, false);
 
         case "Int>..<Int":
         case "UInt>..<UInt":
@@ -764,7 +764,7 @@ public class IntConstant
         case "UInt64>..<UInt64":
         case "UInt128>..<UInt128":
         case "UIntN>..<UIntN":
-            return ConstantPool.getCurrentPool().ensureRangeConstant(this, true, that, true);
+            return ensureRange(true, that, true);
 
         case "Int<<Int":
         case "Int16<<Int64":
@@ -930,6 +930,22 @@ public class IntConstant
         }
 
         return super.apply(op, that);
+    }
+
+    /**
+     * Range folding is owned by the receiver's pool. Do not use the ambient current pool here;
+     * constant folding can run without a scoped pool or inside a legacy scope for another owner.
+     */
+    private RangeConstant ensureRange(Constant that) {
+        return getConstantPool().ensureRangeConstant(this, that);
+    }
+
+    /**
+     * Range folding is owned by the receiver's pool. Do not use the ambient current pool here;
+     * constant folding can run without a scoped pool or inside a legacy scope for another owner.
+     */
+    private RangeConstant ensureRange(boolean fExclude1, Constant that, boolean fExclude2) {
+        return getConstantPool().ensureRangeConstant(this, fExclude1, that, fExclude2);
     }
 
     @Override
