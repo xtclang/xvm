@@ -172,8 +172,7 @@ public class TypeCompositionStatement
     /**
      * Used by anonymous inner class declarations.
      */
-    public TypeCompositionStatement(
-            NewExpression              parent,
+    private TypeCompositionStatement(
             List<AnnotationExpression> annotations,
             Token                      category,
             Token                      name,
@@ -193,9 +192,25 @@ public class TypeCompositionStatement
         this.args         = args;
         this.body         = body;
         this.m_fAnon      = true;
+    }
 
-        setParent(parent);
-        introduceParentage();
+    public static TypeCompositionStatement forAnonymousInnerClass(
+            NewExpression              parent,
+            List<AnnotationExpression> annotations,
+            Token                      category,
+            Token                      name,
+            List<Parameter>            typeParams,
+            List<CompositionNode>      compositions,
+            List<Expression>           args,
+            StatementBlock             body,
+            long                       lStartPos,
+            long                       lEndPos) {
+        // Parent publication recurses into child AST nodes, so keep it outside the constructor.
+        TypeCompositionStatement stmt = new TypeCompositionStatement(annotations, category, name,
+                typeParams, compositions, args, body, lStartPos, lEndPos);
+        stmt.setParent(parent);
+        stmt.introduceParentage();
+        return stmt;
     }
 
     /**
@@ -206,7 +221,7 @@ public class TypeCompositionStatement
      * @param source  the source code for the child
      * @param type    the child node to resolve
      */
-    public TypeCompositionStatement(ModuleStructure module, Source source, TypeExpression type) {
+    private TypeCompositionStatement(ModuleStructure module, Source source, TypeExpression type) {
         super(0,0);
 
         this.source    = source;
@@ -216,10 +231,17 @@ public class TypeCompositionStatement
                 .map(s -> new Token(0, 0, Id.IDENTIFIER, s))
                 .collect(Collectors.toCollection(ArrayList::new));
         this.typeArgs  = new ArrayList<>(List.of(type));
+    }
 
-        introduceParentage();
-        setComponent(module);
-        setStage(Stage.Emitted);
+    public static TypeCompositionStatement forModule(ModuleStructure module, Source source,
+                                                     TypeExpression type) {
+        // The runtime resolver still gets the same fake emitted-module owner, but the child type is
+        // attached after this statement object is complete.
+        TypeCompositionStatement stmt = new TypeCompositionStatement(module, source, type);
+        stmt.introduceParentage();
+        stmt.setComponent(module);
+        stmt.setStage(Stage.Emitted);
+        return stmt;
     }
 
 

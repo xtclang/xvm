@@ -76,7 +76,6 @@ public class PropertyDeclarationStatement
             if (typeNext instanceof AnnotatedTypeExpression typeAnno) {
                 // remove the annotation from the type chain, and add it to the list of annotations
                 AnnotationExpression anno = typeAnno.getAnnotation();
-                anno.setParent(this);
                 if (annotations == null || annotations.isEmpty()) {
                     annotations = new ArrayList<>();
                 }
@@ -750,7 +749,7 @@ public class PropertyDeclarationStatement
      * @return a synthetic {@link MethodDeclarationStatement} for the property initializer
      */
     private MethodDeclarationStatement createAstNodeFor(MethodStructure methodInit) {
-        return adopt(new MethodDeclarationStatement(methodInit, value));
+        return adopt(MethodDeclarationStatement.forInitializer(methodInit, value));
     }
 
     /**

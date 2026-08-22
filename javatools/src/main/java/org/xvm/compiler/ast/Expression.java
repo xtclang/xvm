@@ -437,7 +437,7 @@ public abstract class Expression
         int cTypesRequired = atypeRequired == null ? 0 : atypeRequired.length;
         if (cTypesRequired > 1) {
             if (!getParent().allowsConditional(this)) {
-                return new UnpackExpression(this, null).validateMulti(ctx, atypeRequired, errs);
+                return UnpackExpression.create(this, null).validateMulti(ctx, atypeRequired, errs);
             }
 
             // the parent requires more than one type (conditionally), but this expression can only
@@ -601,7 +601,7 @@ public abstract class Expression
         // if we found an @Auto conversion, then create an expression that does the conversion work
         return idConv == null
                 ? this
-                : new ConvertExpression(this, new MethodConstant[]{idConv}, errs);
+                : ConvertExpression.create(this, new MethodConstant[]{idConv}, errs);
     }
 
     /**
@@ -808,7 +808,9 @@ public abstract class Expression
                         if (constConv == null) {
                             // there is no compile-time conversion available; continue with run-time
                             // conversion
-                            // TODO GG: remove the soft assert below
+                            // TODO: this stderr soft assert is not a compiler diagnostic. Replace
+                            //       it with structured compiler logging/diagnostics when the
+                            //       constant-folding conversion path is cleaned up.
                             System.err.println("No conversion found for " + constVal);
                         } else {
                             if (fCloneActual) {
@@ -855,7 +857,7 @@ public abstract class Expression
         // data types
         return aIdConv == null
                 ? this
-                : new ConvertExpression(this, aIdConv, errs);
+                : ConvertExpression.create(this, aIdConv, errs);
     }
 
     /**
@@ -1089,7 +1091,7 @@ public abstract class Expression
         }
 
         AstNode         parent    = getParent();
-        TraceExpression exprTrace = new TraceExpression(this);
+        TraceExpression exprTrace = TraceExpression.create(this);
         parent.replaceChild(this, exprTrace);
         this.setParent(exprTrace);
         return exprTrace;

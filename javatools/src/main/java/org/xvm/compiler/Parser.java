@@ -66,8 +66,8 @@ public class Parser {
         m_errorListener = errs;
         m_lexer         = lexer;
 
-        // prime the token stream
-        next();
+        // Do not prime with next() from the constructor. Subclasses can override token handling, so
+        // the first token is pulled lazily after construction completes.
     }
 
 
@@ -5293,6 +5293,8 @@ public class Parser {
      * @return the current token
      */
     protected Token peek() {
+        ensurePrimed();
+
         Token token = m_tokenPutBack == null ? m_token : m_tokenPutBack;
         if (token == null) {
             // pretend there's one more closing curly brace
@@ -5341,6 +5343,8 @@ public class Parser {
      * @return the next token (which is now the "current" token)
      */
     protected Token next() {
+        m_fPrimed = true;
+
         if (m_tokenPutBack != null) {
             m_tokenPutBack = null;
             return m_token;
@@ -5376,6 +5380,12 @@ public class Parser {
         throw new CompilerException("unexpected EOF");
     }
 
+    private void ensurePrimed() {
+        if (!m_fPrimed) {
+            next();
+        }
+    }
+
     /**
      * Rewind one token. This cannot be used to rewind more than one token; if more than one step
      * of look-ahead is required, use mark() and restore().
@@ -5404,6 +5414,7 @@ public class Parser {
         Token   lastMatch;
         Token   doc;
         boolean noRec;
+        boolean primed;
     }
 
     protected Mark mark() {
@@ -5414,6 +5425,7 @@ public class Parser {
         mark.lastMatch = m_tokenPrev    == null ? null : m_tokenPrev   .clone();
         mark.doc       = m_doc;
         mark.noRec     = m_fAvoidRecovery;
+        mark.primed    = m_fPrimed;
         return mark;
     }
 
@@ -5424,6 +5436,7 @@ public class Parser {
         m_tokenPrev      = mark.lastMatch;
         m_doc            = mark.doc;
         m_fAvoidRecovery = mark.noRec;
+        m_fPrimed        = mark.primed;
     }
 
     /**
@@ -5810,6 +5823,11 @@ public class Parser {
      * The current token.
      */
     private Token m_token;
+
+    /**
+     * True iff the token stream has been advanced to the first token.
+     */
+    private boolean m_fPrimed;
 
     /**
      * The most recent doc comment.

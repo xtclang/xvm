@@ -45,7 +45,7 @@ public class ConvertExpression
      * @param aidConv  the conversion methods (some can have nulls, indicating no-conversion)
      * @param errs     the ErrorListener to log errors to
      */
-    public ConvertExpression(Expression expr, MethodConstant[] aidConv, ErrorListener errs) {
+    private ConvertExpression(Expression expr, MethodConstant[] aidConv) {
         super(expr);
 
         assert aidConv != null && aidConv.length >= 1;
@@ -60,6 +60,11 @@ public class ConvertExpression
         }
 
         m_aidConv = aidConv;
+    }
+
+    public static ConvertExpression create(Expression expr, MethodConstant[] aidConv, ErrorListener errs) {
+        ConvertExpression exprConv = new ConvertExpression(expr, aidConv);
+        exprConv.adoptSyntheticExpression();
 
         if (expr.isSingle()) {
             assert aidConv.length == 1 && aidConv[0] != null;
@@ -68,10 +73,10 @@ public class ConvertExpression
             Constant     val  = null;
             if (expr.isConstant()) {
                 // determine if compile-time conversion is supported
-                val = convertConstant(expr.toConstant(), type);
+                val = convertConstantValue(expr.toConstant(), type);
             }
 
-            finishValidation(null, null, type, expr.getTypeFit().addConversion(), val, errs);
+            exprConv.finishValidation(null, null, type, expr.getTypeFit().addConversion(), val, errs);
         } else {
             Constant[]     aVal  = null;
             TypeConstant[] aType = expr.getTypes().clone();
@@ -87,11 +92,15 @@ public class ConvertExpression
                 for (int i = 0, c = aType.length; i < c; i++) {
                     MethodConstant idConv = aidConv[i];
                     if (idConv != null) {
-                        Constant constNew = convertConstant(aVal[i], aType[i]);
+                        Constant constNew = convertConstantValue(aVal[i], aType[i]);
                         if (constNew == null) {
                             // there is no compile-time conversion available; continue with run-time
                             // conversion
-                            // TODO GG: remove the soft assert below
+                            // TODO: this stderr soft assert is not a compiler diagnostic. Replace
+                            //       it with structured compiler logging/diagnostics when the
+                            //       constant-folding conversion path is cleaned up. This preserves
+                            //       the legacy partial Constant[] behavior; clearing aVal here is a
+                            //       separate compiler-semantics change that needs focused tests.
                             System.err.println("No conversion found for " + aVal[i]);
                         }
                         aVal[i] = constNew;
@@ -99,8 +108,10 @@ public class ConvertExpression
                 }
             }
 
-            finishValidations(null, null, aType, expr.getTypeFit().addConversion(), aVal, errs);
+            exprConv.finishValidations(null, null, aType, expr.getTypeFit().addConversion(), aVal, errs);
         }
+
+        return exprConv;
     }
 
 
@@ -349,6 +360,28 @@ public class ConvertExpression
                 }
             }
             return sb.append(')').toString();
+        }
+    }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Constructor-time constant conversion cannot call the inherited instance helper; that helper
+     * is overridable, and this expression is not fully constructed yet. A null result means only
+     * that the constant was not folded; the required runtime conversion remains in {@link
+     * #m_aidConv}.
+     */
+    private static Constant convertConstantValue(Constant constIn, TypeConstant typeOut) {
+        TypeConstant typeIn = constIn.getType();
+        if (typeIn.isA(typeOut)) {
+            return constIn;
+        }
+
+        try {
+            return constIn.convertTo(typeOut);
+        } catch (ArithmeticException _) {
+            return null;
         }
     }
 

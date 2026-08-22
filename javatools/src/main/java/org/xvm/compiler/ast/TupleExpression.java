@@ -378,7 +378,7 @@ public class TupleExpression
             Expression exprNew = finishValidation(ctx, typeRequired, typeResult, TypeFit.Fit, constVal, errs);
             if (!fMultiplexing) {
                 assert this == exprNew;
-                exprNew = new UnpackExpression(this, errs);
+                exprNew = UnpackExpression.create(this, errs);
             }
             return exprNew;
         }

@@ -1150,7 +1150,7 @@ public class CaseManager<CookieType> {
                     || !exprCond.getType().isA(pool().typeInt64()))) {
                 // either the offset is non-zero of the type is non-int; either way, convert it to a
                 // zero-based Int
-                exprCond = new ToIntExpression(exprCond, getJmpIntOffset(), errs);
+                exprCond = ToIntExpression.create(exprCond, getJmpIntOffset(), errs);
             }
 
             // don't use stack

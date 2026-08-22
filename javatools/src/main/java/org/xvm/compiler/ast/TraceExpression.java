@@ -23,13 +23,19 @@ public class TraceExpression
      *
      * @param expr  the expression to trace
      */
-    public TraceExpression(Expression expr) {
+    private TraceExpression(Expression expr) {
         super(expr);
+    }
+
+    public static TraceExpression create(Expression expr) {
+        TraceExpression exprTrace = new TraceExpression(expr);
+        exprTrace.adoptSyntheticExpression();
 
         assert expr.isValidated();
 
-        finishValidations(null, null, expr.getTypes(), expr.getTypeFit(), expr.toConstants(),
-                ErrorListener.BLACKHOLE);
+        exprTrace.finishValidations(null, null, expr.getTypes(), expr.getTypeFit(),
+                expr.toConstants(), ErrorListener.BLACKHOLE);
+        return exprTrace;
     }
 
 

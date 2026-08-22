@@ -177,7 +177,7 @@ public class CmpChainExpression
                 for (int i = 0; i < cExprs; ++i) {
                     MethodConstant method = aConvMethod[i];
                     if (method != null) {
-                        listExprs.set(i, new ConvertExpression(listExprs.get(i),
+                        listExprs.set(i, ConvertExpression.create(listExprs.get(i),
                                                 new MethodConstant[]{method}, errs));
                     }
                 }

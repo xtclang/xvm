@@ -691,6 +691,39 @@ resource path is still present. The targeted lint run at
 `/tmp/xvm-moduleinfo-this-escape.log` reports zero `ModuleInfo.java`
 `this-escape` diagnostics.
 
+### Compiler, Lexer, and Parser Constructor Escapes
+
+The compiler-side wave removes the remaining `javatools/src/main/java/org/xvm/compiler/**`
+`this-escape` diagnostics. These were not runtime template globals, but they
+still mattered for same-JVM and incremental compiler work: lexer/parser hooks,
+AST parent links, component links, stage state, and validation metadata could
+be published while the concrete node was still under construction.
+
+The fix keeps the old semantics while separating construction from publication:
+
+- `Lexer` preserves initial whitespace priming, but uses private static source
+  helpers instead of constructor-time `eatWhitespace()` dispatch.
+- `Parser` preserves the primed token-stream behavior lazily; `mark()` and
+  `restore()` now save the primed flag so speculative parsing remains
+  equivalent.
+- Synthetic expression and statement nodes use private constructors plus
+  factories that attach parent/component/type state after the object is fully
+  initialized.
+- `ConvertExpression` preserves the old constant-folding fallback. If
+  `Constant.convertTo(...)` throws `ArithmeticException`, the expression is
+  not folded into a compile-time constant while `m_aidConv` still emits the
+  runtime conversion. The old stderr soft-assert and multi-value partial-null
+  behavior are deliberately left in place for behavior preservation, but both
+  conversion-folding sites now carry TODOs to replace that path with structured
+  compiler logging/diagnostics.
+
+`CompilerThisEscapeConstructionTest` uses hook-detecting `Lexer` and `Parser`
+subclasses that would fail if the old constructors dispatched to overrides
+before subclass construction completed. It also guards the factory source shape
+for synthetic AST nodes. The forced lint run at
+`/tmp/xvm-compiler-this-escape.log` reports zero `Lexer.java`, `Parser.java`,
+or `compiler/ast` `this-escape` diagnostics.
+
 ## Manual Lazy Cache Hardening
 
 This branch also removes two concrete lazy-null cache hazards found by the

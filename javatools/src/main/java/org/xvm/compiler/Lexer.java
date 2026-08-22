@@ -52,7 +52,9 @@ public class Lexer
         m_source        = source;
         m_errorListener = errorListener;
 
-        eatWhitespace();
+        // Constructors must not dispatch through overridable tokenization hooks; subclasses are
+        // still incomplete here. Keep the old leading-whitespace priming through a private helper.
+        m_fWhitespace   = eatInitialWhitespace(source, errorListener);
     }
 
     /**
@@ -299,17 +301,7 @@ public class Lexer
      * terminator. Whitespace does not include comments.
      */
     protected boolean eatWhitespace() {
-        boolean fWhitespace = false;
-        Source source = m_source;
-        while (source.hasNext()) {
-            if (isWhitespace(nextChar())) {
-                fWhitespace = true;
-            } else {
-                // put back the non-whitespace character
-                source.rewind();
-                break;
-            }
-        }
+        boolean fWhitespace = eatInitialWhitespace(m_source, m_errorListener);
         m_fWhitespace = fWhitespace;
         return fWhitespace;
     }
@@ -2609,6 +2601,43 @@ public class Lexer
         //   U+2028   8232   LS     Line Separator
         //   U+2029   8233   PS     Paragraph Separator
         return ch == 0x0085 | ch == 0x2028 | ch == 0x2029;
+    }
+
+    /**
+     * Eat leading whitespace without calling overridable lexer methods during construction.
+     */
+    private static boolean eatInitialWhitespace(Source source, ErrorListener errorListener) {
+        boolean fWhitespace = false;
+        while (source.hasNext()) {
+            if (isWhitespace(nextSourceChar(source, errorListener))) {
+                fWhitespace = true;
+            } else {
+                // put back the non-whitespace character
+                source.rewind();
+                break;
+            }
+        }
+        return fWhitespace;
+    }
+
+    /**
+     * Read the next source character and report the same illegal embedded EOF diagnostic as the
+     * instance lexer path.
+     */
+    private static char nextSourceChar(Source source, ErrorListener errorListener) {
+        char ch = source.next();
+        if (ch == EOF && source.hasNext()) {
+            long lPos = source.getPosition();
+            source.rewind();
+            long lStartPos = source.getPosition();
+            source.setPosition(lPos);
+
+            if (errorListener.log(Severity.ERROR, UNEXPECTED_EOF, null, source, lStartPos,
+                    source.getPosition())) {
+                throw new CompilerException("error list is full: " + errorListener);
+            }
+        }
+        return ch;
     }
 
     /**

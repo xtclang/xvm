@@ -98,20 +98,23 @@ public class MethodDeclarationStatement
      *                compile into
      * @param expr    the Expression that the resulting method must evaluate as its one return value
      */
-    public MethodDeclarationStatement(MethodStructure struct, Expression expr) {
-        super(expr.getStartPosition(), expr.getEndPosition());
-
-        // store off the method structure that we will generate code into
-        setComponent(struct);
+    private MethodDeclarationStatement(MethodStructure struct, Expression expr) {
+        super(expr.getStartPosition(), expr.getEndPosition(), struct);
 
         // turn "<expr>" into the statement block "{ return <expr>; }"
         Token fakeReturn = new Token(expr.getStartPosition(), expr.getStartPosition(), Id.RETURN);
         ReturnStatement stmt = new ReturnStatement(fakeReturn, expr);
-        stmt.adopt(expr);
         body = new StatementBlock(Collections.singletonList(stmt), expr.getStartPosition(), expr.getEndPosition());
-        body.adopt(stmt);
+    }
 
-        adopt(body);
+    /**
+     * Create the synthetic initializer AST with component and child parentage assigned only after
+     * the method statement itself has finished construction.
+     */
+    public static MethodDeclarationStatement forInitializer(MethodStructure struct, Expression expr) {
+        MethodDeclarationStatement stmtMethod = new MethodDeclarationStatement(struct, expr);
+        stmtMethod.introduceParentage();
+        return stmtMethod;
     }
 
     /**
@@ -123,12 +126,9 @@ public class MethodDeclarationStatement
      * @param body    the StatementBlock that the resulting method must use
      */
     public MethodDeclarationStatement(MethodStructure struct, StatementBlock body) {
-        super(body.getStartPosition(), body.getEndPosition());
+        super(body.getStartPosition(), body.getEndPosition(), struct);
 
         this.body = body;
-
-        setComponent(struct);
-        adopt(body);
     }
 
 

@@ -14,9 +14,10 @@ Last full forced root lint before the handle-construction wave:
 Forced targeted compile-graph lint after the handle-construction,
 runtime constructor-assertion, `ClassTemplate` implicit-field, `Container`,
 `Op*` constructor-shape, utility-constructor, `MethodInfo`/`PropertyInfo`
-owner-body factory, ASM metadata owner-copy, and `ModuleInfo` tooling waves:
-24 emitted this-escape diagnostics
-23 unique file:line locations
+owner-body factory, ASM metadata owner-copy, `ModuleInfo` tooling, and
+compiler/parser/AST constructor waves:
+7 emitted this-escape diagnostics
+7 unique file:line locations
 0 xRef.java, xOSFileNode.java, CallChain.java, xRTMethod.java, or
 ClassTemplate.java this-escape diagnostics
 0 Container.java, Op*.java, PackedInteger.java, HasherReference.java, or
@@ -26,6 +27,7 @@ ListSet.java this-escape diagnostics
 PropertyStructure.java, VersionTree.java, PropertyConstant.java, or
 TypeInfoReal.java this-escape diagnostics
 0 ModuleInfo.java this-escape diagnostics
+0 Lexer.java, Parser.java, or compiler/ast this-escape diagnostics
 ```
 
 The full root lint build was not rerun after these waves to avoid paying for
@@ -48,12 +50,12 @@ non-`javatools` site: the remaining `javatools_jitbridge` warning.
 | Fixed in this branch | 6 | `MethodInfo` and `PropertyInfo` no longer attach method/property body owner links from constructors. |
 | Fixed in this branch | 11 | ASM metadata owner assembly no longer calls constructor-time virtual hooks or steals unowned method/property/child metadata into the first `TypeInfoReal` owner. |
 | Fixed in this branch | 1 | `ModuleInfo` no longer calls the overridable `getResourceDir()` accessor while merging explicit resource paths in its constructor. |
+| Fixed in this branch | 16 | Compiler/parser/AST constructors no longer dispatch lexer/parser hooks or publish parent/component/type links before concrete construction completes. |
 | Fixed separately, still present here | 2 | Concrete unsafe construction/publication pattern. Fixed on `lagergren/fix-utils-this-escape`; still present in this branch until that PR is merged or rebased here. |
-| Audit before changing | 16 | Compiler/parser/AST construction publishes parent/adoption state and needs confinement or lifecycle proof before changing in this branch. |
 | Document only for this PR | 6 | JIT paths that are not part of the runtime-owner fix. |
 
-The current forced targeted lint run reports 23 remaining unique locations. The
-next full-root lint run is expected to report 24 remaining unique locations
+The current forced targeted lint run reports 7 remaining unique locations. The
+next full-root lint run is expected to report 8 remaining unique locations
 because the full root build includes one additional non-`javatools` site.
 
 ## Fixed Separately, Do Not Suppress Here
@@ -568,10 +570,12 @@ that the override is still called normally after construction.
 
 ### Compiler and AST Parent/Adoption
 
-These constructor paths set parent/component/type state, create lexers, or
-consume input immediately. They are likely safe only if parser/compiler objects
-are request-confined. That confinement is exactly the kind of assumption that
-incremental and parallel compilation can invalidate.
+This branch removes the compiler/parser/AST constructor escapes:
+
+These constructor paths used to set parent/component/type state, create lexers,
+or consume input immediately. They were likely safe only if parser/compiler
+objects were request-confined. That confinement is exactly the kind of
+assumption that incremental and parallel compilation can invalidate.
 
 ```text
 javatools/src/main/java/org/xvm/compiler/Lexer.java:55
@@ -592,14 +596,25 @@ javatools/src/main/java/org/xvm/compiler/ast/TypeCompositionStatement.java:220
 javatools/src/main/java/org/xvm/compiler/ast/UnpackExpression.java:36
 ```
 
-Proper fixes:
+The fixes keep construction and publication separate:
 
-- Prove parser/AST construction is request-confined and never published before
-  completion, then document it.
-- Prefer construction without callbacks, followed by explicit adoption/linking
-  after all object fields are initialized.
-- For incremental compiler work, move mutable caches/adoption state into an
-  explicit compilation request/context owner.
+- `Lexer` consumes leading whitespace through a private static helper instead
+  of constructor-time `eatWhitespace()` dispatch.
+- `Parser` defers token priming until first use and records the primed state in
+  `mark()`/`restore()`, preserving speculative parse behavior.
+- Synthetic expressions use private constructors plus `create(...)` factories
+  that attach the wrapper and finish validation after subclass fields exist.
+- Synthetic method/type/module statements pass immutable metadata into
+  constructors and run parentage/component/stage linking through factories.
+- The annotated-property constructor no longer assigns the parent directly to
+  extracted annotations; normal AST parentage introduction owns that linkage.
+
+`CompilerThisEscapeConstructionTest` includes hook-detecting `Lexer` and
+`Parser` subclasses that throw if the super-constructor dispatches to an
+override before subclass construction completes. The same test guards the new
+factory source shape for synthetic AST nodes. The forced lint compile at
+`/tmp/xvm-compiler-this-escape.log` reports zero `Lexer.java`, `Parser.java`,
+or `compiler/ast` `this-escape` diagnostics.
 
 ## Document Only For This PR
 
@@ -618,7 +633,6 @@ javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/nLongBasedArra
 ## Expected Full-Root Remaining Classification
 
 ```text
-16 Must audit: compiler/parser/AST construction
  6 Document only: JIT construction
  2 Fixed separately, still present here: concrete unsafe utility construction
 ```
@@ -630,8 +644,8 @@ The least risky order after this runtime-owner branch is:
 
 1. Merge or rebase the separate `lagergren/fix-utils-this-escape` branch that
    fixes the two concrete `javatools_utils` construction defects.
-2. Audit the remaining compiler/parser/AST assembly paths with focused
-   lifecycle tests before changing them in this runtime-owner branch.
+2. Keep JIT-specific constructor warnings in the JIT documentation until that
+   code can be tested with JIT-specific lifecycle coverage.
 
 ## Grouped Metadata Record Candidates
 

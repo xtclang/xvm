@@ -23,6 +23,12 @@ public abstract class ComponentStatement
         this.lEndPos   = lEndPos;
     }
 
+    protected ComponentStatement(long lStartPos, long lEndPos, Component component) {
+        this.lStartPos  = lStartPos;
+        this.lEndPos    = lEndPos;
+        this.component  = component;
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -36,7 +42,7 @@ public abstract class ComponentStatement
         return component;
     }
 
-    protected void setComponent(Component component) {
+    protected final void setComponent(Component component) {
         this.component = component;
     }
 

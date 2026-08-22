@@ -85,7 +85,7 @@ public class NamedTypeExpression
     /**
      * Construct a synthetic validated NamedTypeExpression.
      */
-    public NamedTypeExpression(Expression exprSource, TypeConstant type) {
+    private NamedTypeExpression(Expression exprSource, TypeConstant type) {
         this.left       = null;
         this.immutable  = null;
         this.access     = null;
@@ -95,9 +95,14 @@ public class NamedTypeExpression
         this.lEndPos    = exprSource.getEndPosition();
         this.names      = Collections.singletonList(new Token(lStartPos, lEndPos,
                             Token.Id.IDENTIFIER, type.getValueString())); // used for "toString" only
-        setTypeConstant(type);
-        setStage(Stage.Validated);
-        setParent(exprSource);
+    }
+
+    public static NamedTypeExpression forValidatedType(Expression exprSource, TypeConstant type) {
+        NamedTypeExpression exprType = new NamedTypeExpression(exprSource, type);
+        exprType.setTypeConstant(type);
+        exprType.setStage(Stage.Validated);
+        exprType.setParent(exprSource);
+        return exprType;
     }
 
     /**

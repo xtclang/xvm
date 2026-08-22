@@ -20,17 +20,23 @@ public class PackExpression
         extends SyntheticExpression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public PackExpression(Expression expr, ErrorListener errs) {
+    private PackExpression(Expression expr) {
         super(expr);
+    }
 
-        ConstantPool pool = pool();
+    public static PackExpression create(Expression expr, ErrorListener errs) {
+        PackExpression exprPack = new PackExpression(expr);
+        exprPack.adoptSyntheticExpression();
+
+        ConstantPool pool = expr.pool();
         TypeConstant type = pool.ensureTupleType(expr.getTypes());
         Constant     val  = null;
         if (expr.isConstant()) {
             type = pool.ensureImmutableTypeConstant(type);
             val  = pool.ensureTupleConstant(type, expr.toConstants());
         }
-        finishValidation(null, null, type, expr.getTypeFit().addPack(), val, errs);
+        exprPack.finishValidation(null, null, type, expr.getTypeFit().addPack(), val, errs);
+        return exprPack;
     }
 
 

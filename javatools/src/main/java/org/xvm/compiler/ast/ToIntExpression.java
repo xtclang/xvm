@@ -44,8 +44,15 @@ public class ToIntExpression
      * @param pintOffset  the (optional) value to add to the expression being converted
      * @param errs        the error list to log to
      */
-    public ToIntExpression(Expression expr, PackedInteger pintOffset, ErrorListener errs) {
+    private ToIntExpression(Expression expr, PackedInteger pintOffset) {
         super(expr);
+
+        m_pintOffset = pintOffset;
+    }
+
+    public static ToIntExpression create(Expression expr, PackedInteger pintOffset, ErrorListener errs) {
+        ToIntExpression exprToInt = new ToIntExpression(expr, pintOffset);
+        exprToInt.adoptSyntheticExpression();
 
         assert expr.getType().isIntConvertible();
 
@@ -57,11 +64,12 @@ public class ToIntExpression
             if (pintOffset != null) {
                 pintVal = pintVal.sub(pintOffset);
             }
-            val = pool().ensureIntConstant(pintVal);
+            val = expr.pool().ensureIntConstant(pintVal);
         }
 
-        m_pintOffset = pintOffset;
-        finishValidation(null, null, expr.pool().typeInt64(), expr.getTypeFit().addConversion(), val, errs);
+        exprToInt.finishValidation(null, null, expr.pool().typeInt64(),
+                expr.getTypeFit().addConversion(), val, errs);
+        return exprToInt;
     }
 
 

@@ -29,12 +29,18 @@ public class UnpackExpression
         extends SyntheticExpression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public UnpackExpression(Expression exprTuple, ErrorListener errs) {
+    private UnpackExpression(Expression exprTuple) {
         super(exprTuple);
+    }
+
+    public static UnpackExpression create(Expression exprTuple, ErrorListener errs) {
+        UnpackExpression exprUnpack = new UnpackExpression(exprTuple);
+        exprUnpack.adoptSyntheticExpression();
 
         if (exprTuple.isValidated()) {
-            adoptValidation(null, exprTuple, errs);
+            exprUnpack.adoptValidation(null, exprTuple, errs);
         }
+        return exprUnpack;
     }
 
 

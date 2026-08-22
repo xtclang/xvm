@@ -425,7 +425,7 @@ public class AssignmentStatement
                 TypeFit fit = rvalue.testFitMulti(ctxInfer, atypeTest, false, null);
 
                 if (!fit.isFit() && cLeft > 1) {
-                    Expression exprUnpack = new UnpackExpression(rvalue, null);
+                    Expression exprUnpack = UnpackExpression.create(rvalue, null);
 
                     fit = exprUnpack.testFitMulti(ctxInfer, atypeTest, false, null);
                     if (fit.isFit()) {

@@ -1124,7 +1124,7 @@ public class NewExpression
             // until we create the actual inner class composition, we need to avoid destroying
             // the virgin AST nodes
             assert m_purposeCurrent == AnonPurpose.None;
-            anon = adopt(new TypeCompositionStatement(
+            anon = TypeCompositionStatement.forAnonymousInnerClass(
                     this,
                     clone(inner.getAnnotations()),
                     inner.getCategory(),
@@ -1134,13 +1134,13 @@ public class NewExpression
                     clone(args),
                     (StatementBlock) body.clone(),
                     type.getStartPosition(),
-                    body.getEndPosition()));
+                    body.getEndPosition());
             break;
 
         case Actual:
             // at this point, we are creating the inner class composition that will ultimately
             // generate the final code
-            anon = adopt(new TypeCompositionStatement(
+            anon = TypeCompositionStatement.forAnonymousInnerClass(
                     this,
                     inner.getAnnotations(),
                     inner.getCategory(),
@@ -1150,7 +1150,7 @@ public class NewExpression
                     args,
                     body,
                     type.getStartPosition(),
-                    body.getEndPosition()));
+                    body.getEndPosition());
             break;
 
         case CaptureAnalysis:

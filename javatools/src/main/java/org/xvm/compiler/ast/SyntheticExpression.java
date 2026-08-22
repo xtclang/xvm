@@ -23,7 +23,14 @@ public abstract class SyntheticExpression
 
     public SyntheticExpression(Expression expr) {
         this.expr = expr;
+    }
 
+    /**
+     * Publish the synthetic wrapper into the tree after the concrete subclass has initialized its
+     * fields. Doing this in the base constructor used to expose a half-built expression through the
+     * parent and child links.
+     */
+    protected final void adoptSyntheticExpression() {
         expr.getParent().adopt(this);
         this.adopt(expr);
     }
