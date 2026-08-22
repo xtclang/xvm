@@ -1592,15 +1592,15 @@ public class TerminalTypeConstant
     }
 
     @Override
-    public boolean isContravariantParameter(TypeConstant typeBase, TypeConstant typeCtx) {
-        if (super.isContravariantParameter(typeBase, typeCtx)) {
+    public boolean isContravariantParameter(ConstantPool pool, TypeConstant typeBase, TypeConstant typeCtx) {
+        if (super.isContravariantParameter(pool, typeBase, typeCtx)) {
             return true;
         }
 
         if (!isSingleDefiningConstant()) {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().isContravariantParameter(typeBase, typeCtx);
+            return constId.getReferredToType().isContravariantParameter(pool, typeBase, typeCtx);
         }
 
         if (!typeBase.isSingleDefiningConstant() || typeBase.isParamsSpecified()) {

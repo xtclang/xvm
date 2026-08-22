@@ -56,6 +56,53 @@ workers, it must either be immutable, concurrent, owner-local, or guarded by a
 documented single-thread phase. "It is only logging" is not a valid reason to
 use unsynchronized mutable collections.
 
+### TypeConstant covariance and contravariance owner lookup
+
+References:
+
+- `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:6268`
+  (`isCovariantReturn(ConstantPool, TypeConstant, TypeConstant)`)
+- `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:6352`
+  (`isContravariantParameter(ConstantPool, TypeConstant, TypeConstant)`)
+- `javatools/src/main/java/org/xvm/asm/constants/SignatureConstant.java:447`
+  and `javatools/src/main/java/org/xvm/compiler/ast/AstNode.java:1576`
+  (callers pass an explicit owner pool)
+
+Old cause: these helpers looked like pure type predicates, but when the simple
+answer was not available they called `ConstantPool.getCurrentPool()` to resolve
+auto-narrowing and generic helper constants. That meant the answer depended on
+whatever pool had been installed in the current Java thread by an outer caller.
+
+Why this was broken: with more than one container or compiler/runtime activity
+in the same JVM, there is no process-wide "current" pool. A reused worker
+thread, nested runtime call, async callback, or stale scoped bridge could make a
+type relation check manufacture helper constants in the wrong pool or fail with
+no pool at all. The method signature did not communicate that dependency, so
+callers could not audit it locally.
+
+Fix: both helpers now require an explicit `ConstantPool` owner parameter. The
+implementation rejects `null` and uses that owner for auto-narrowing and generic
+resolution. Direct call sites in `SignatureConstant`, `TerminalTypeConstant`,
+and compiler return-fit checking now pass the pool they already own.
+
+Why behavior is preserved:
+
+- correct old callers already had the same pool installed in the ambient scope;
+  they now pass it directly;
+- helper constants are still interned in the same owner pool;
+- no new cache is added and no existing cache is removed;
+- the only runtime cost is one null check on a relation path that already does
+  type analysis.
+
+Proof: `TypeConstantOwnerApiTest` verifies that the old two-argument method
+signatures are gone, the new signatures require a `ConstantPool`, and a missing
+owner fails immediately instead of falling through to ambient thread state.
+
+Design rule: a method that resolves or interns type metadata is not a pure
+predicate unless the owner is explicit. Do not hide pool selection behind
+`ConstantPool.getCurrentPool()` just because plumbing an owner through the call
+chain is inconvenient.
+
 ## Must Fix
 
 ### Ambient current pool is still semantic state

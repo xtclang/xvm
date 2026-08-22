@@ -47,6 +47,10 @@ Start here:
 - [constant-pool-hostile-state-audit.md](constant-pool-hostile-state-audit.md):
   background catalog of ConstantPool/constant adoption, clone, ambient-owner,
   mutation, and cache patterns that remain hostile to reentrant execution.
+- [ambient-context-audit.md](ambient-context-audit.md): focused audit of
+  `ThreadLocal`, `TransientThreadLocal`, `ScopedValue`, `ConstantPool`
+  current-pool lookup, `ServiceContext`, `TypeConstant`, and JIT `Ctx.Current`
+  ambient-owner mechanisms.
 - [jit-implications.md](jit-implications.md): how the separate JIT runtime
   path models containers, classloaders, generated static fields, and ownership
   risks.

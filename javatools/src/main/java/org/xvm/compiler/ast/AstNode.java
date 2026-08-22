@@ -1568,11 +1568,12 @@ public abstract class AstNode
             }
         }
 
+        ConstantPool pool = pool();
         for (int i = 0; i < cReturns; i++) {
             TypeConstant typeReturn       = atypeReturn[i];
             TypeConstant typeMethodReturn = atypeMethodReturn[i];
 
-            if (!typeMethodReturn.isCovariantReturn(typeReturn, typeCtx)) {
+            if (!typeMethodReturn.isCovariantReturn(pool, typeReturn, typeCtx)) {
                 if (typeMethodReturn.getConverterTo(typeReturn) != null) {
                     fit = fit.addConversion();
                 } else {
@@ -1582,7 +1583,7 @@ public abstract class AstNode
                     //    Tuple t = f();
                     if (fCall && cReturns == 1 && cMethodReturns == 1
                         && typeReturn.isTuple() && typeReturn.getParamsCount() <= 1
-                        && typeMethodReturn.isCovariantReturn(typeReturn.getParamType(0), typeCtx)) {
+                        && typeMethodReturn.isCovariantReturn(pool, typeReturn.getParamType(0), typeCtx)) {
                         return TypeFit.Pack;
                     }
 

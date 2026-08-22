@@ -148,6 +148,10 @@ Completed wave in this branch:
   `HashSet`. The replacement preserves the old diagnostic suppression behavior
   with `ConcurrentHashMap.newKeySet()` and is covered by
   `TypeConstantRecursionDiagnosticsTest`.
+- `TypeConstant.isCovariantReturn(...)` and
+  `TypeConstant.isContravariantParameter(...)` no longer call
+  `ConstantPool.getCurrentPool()`. They require an explicit owner pool and are
+  covered by `TypeConstantOwnerApiTest`.
 
 ### Must Fix
 
@@ -194,6 +198,8 @@ the target, and prove no owner-local helper state is shared.
 ## Project 4: Runtime And JIT Ambient Context
 
 Status: must-audit, must-fix when runtime code depends on it.
+Detailed site classification lives in
+[../ambient-context-audit.md](../ambient-context-audit.md).
 
 Remaining owner context mechanisms include:
 

@@ -6261,18 +6261,22 @@ public abstract class TypeConstant
      *
      * Determine whether M2 could be invoked via a signature of M1, and M2 could then "super" to M1.
      *
+     * @param pool      the owner pool used to resolve generic and auto-narrowing helper constants
      * @param typeBase  the type to determine the covariance with
      * @param typeCtx   (optional) the type within which context the covariance is to be determined
      */
-    public boolean isCovariantReturn(TypeConstant typeBase, TypeConstant typeCtx) {
+    public boolean isCovariantReturn(ConstantPool pool, TypeConstant typeBase, TypeConstant typeCtx) {
+        Objects.requireNonNull(pool, "pool");
+
         if (this.isA(typeBase)) {
             return true;
         }
 
-        ConstantPool pool = ConstantPool.getCurrentPool();
+        // Do not use ConstantPool.getCurrentPool() here. Substitutability checks can run inside
+        // compiler, linker, runtime, and JIT contexts; the owner pool is part of the API contract.
         if (typeCtx instanceof UnionTypeConstant typeUnion) {
             if (this.containsAutoNarrowing(true) || typeBase.containsAutoNarrowing(true)) {
-                boolean fCovariant = isCovariantReturn(typeBase, pool.ensureIntersectionTypeConstant(
+                boolean fCovariant = isCovariantReturn(pool, typeBase, pool.ensureIntersectionTypeConstant(
                         typeUnion.getUnderlyingType(), typeUnion.getUnderlyingType2()));
                 if (fCovariant) {
                     return true;
@@ -6298,7 +6302,7 @@ public abstract class TypeConstant
             // (TODO need to make this algorithm more precise)
             typeBaseR = typeBase.resolveGenerics(pool, typeCtx);
             if (typeBaseR != typeBase && typeBaseR.getTypeDepth() == typeBase.getTypeDepth()) {
-                return isCovariantReturn(typeBaseR, typeCtx);
+                return isCovariantReturn(pool, typeBaseR, typeCtx);
             }
         }
 
@@ -6341,15 +6345,19 @@ public abstract class TypeConstant
      * <p/>
      * Note: despite the name this method also handling the auto-narrowing covariance.
      *
+     * @param pool      the owner pool used to resolve generic and auto-narrowing helper constants
      * @param typeBase  the type to determine the contravariance with
      * @param typeCtx   (optional) the type within which context the covariance is to be determined
      */
-    public boolean isContravariantParameter(TypeConstant typeBase, TypeConstant typeCtx) {
+    public boolean isContravariantParameter(ConstantPool pool, TypeConstant typeBase, TypeConstant typeCtx) {
+        Objects.requireNonNull(pool, "pool");
+
         if (typeBase.isA(this)) {
             return true;
         }
 
-        ConstantPool pool = ConstantPool.getCurrentPool();
+        // Do not use ConstantPool.getCurrentPool() here. Substitutability checks can run inside
+        // compiler, linker, runtime, and JIT contexts; the owner pool is part of the API contract.
 
         TypeConstant typeThisR = this.containsAutoNarrowing(true)
                 ? this.resolveAutoNarrowing(pool, false, typeCtx, null)
@@ -6368,7 +6376,7 @@ public abstract class TypeConstant
             typeBaseR = typeBase.resolveGenerics(pool, typeCtx);
             if (typeBaseR != typeBase &&
                     typeBaseR.getTypeDepth() == typeBase.getTypeDepth()) {
-                return isContravariantParameter(typeBaseR, typeCtx);
+                return isContravariantParameter(pool, typeBaseR, typeCtx);
             }
         }
         return false;

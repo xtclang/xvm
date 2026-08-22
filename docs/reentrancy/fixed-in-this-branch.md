@@ -234,6 +234,18 @@ unusual diagnostic recursion path. `TypeConstantRecursionDiagnosticsTest`
 verifies that the backing set is concurrent rather than a `HashSet` and stresses
 parallel diagnostic additions.
 
+This branch also removes ambient pool lookup from `TypeConstant` covariance and
+contravariance helpers. On `master`, `isCovariantReturn(...)` and
+`isContravariantParameter(...)` looked like ordinary type predicates, but they
+called `ConstantPool.getCurrentPool()` when resolving auto-narrowing and generic
+helper constants. In a same-JVM runtime with more than one container, that makes
+the result depend on whichever pool a previous boundary happened to install on
+the Java thread. The replacement requires an explicit `ConstantPool` parameter
+and rejects `null`, so callers must name the owner pool used for helper
+constant interning. Correct old callers pass the same pool they previously had
+to install ambiently; no cache behavior changes. `TypeConstantOwnerApiTest`
+guards the API shape by proving the old ownerless signatures are gone.
+
 ### Handle Construction `this` Escapes
 
 This branch removes three runtime handle-construction `this` escapes:

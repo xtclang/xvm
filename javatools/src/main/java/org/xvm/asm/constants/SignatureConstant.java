@@ -440,10 +440,11 @@ public class SignatureConstant
             return false;
         }
 
+        ConstantPool pool = getConstantPool();
         TypeConstant[] aR1 = that.getRawReturns();
         TypeConstant[] aR2 = this.getRawReturns();
         for (int i = 0, c = Math.min(cR1, cR2); i < c; i++) {
-            if (!aR2[i].isCovariantReturn(aR1[i], typeCtx)) {
+            if (!aR2[i].isCovariantReturn(pool, aR1[i], typeCtx)) {
                 return false;
             }
         }
@@ -451,7 +452,7 @@ public class SignatureConstant
         TypeConstant[] aP1 = that.getRawParams();
         TypeConstant[] aP2 = this.getRawParams();
         for (int i = 0; i < cP1; i++) {
-            if (!aP2[i].isContravariantParameter(aP1[i], typeCtx)) {
+            if (!aP2[i].isContravariantParameter(pool, aP1[i], typeCtx)) {
                 return false;
             }
         }
