@@ -587,6 +587,14 @@ public abstract class ObjectHandle
 
             Container       ownerOrig = getOwner();
             TypeComposition clzAs;
+            if (owner != ownerOrig && !isShared(owner, null)) {
+                // cloneAs() creates another access view of the same runtime object; it is not an
+                // ownership-transfer mechanism. A cross-owner mask is safe only when the whole
+                // handle graph is already shared with the target container. Non-core objects use the
+                // proxy path above instead of sharing the handle graph directly.
+                return null;
+            }
+
             if (owner == ownerOrig || typeAs.isShared(ownerOrig.getConstantPool())) {
                 clzAs = getComposition().maskAs(typeAs);
             } else {

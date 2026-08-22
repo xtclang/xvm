@@ -43,7 +43,7 @@ make reviewers reconstruct the design from discovery-order commits.
 | 8 | Add same-JVM stress and ownership diagnostics | Adds the proof harness for repeated direct execution and parallel container validation. | PR 1 through PR 7 |
 | 9 | Remove semantic ambient `ConstantPool` lookup | Replaces `getCurrentPool()` semantic owner selection with explicit owners. | PR 8 useful for stress, otherwise independent |
 | 10 | Harden constant adoption owner transfer | Prevents shallow-cloned constants from carrying runtime/helper state across pools. | PR 5 and PR 8 recommended |
-| 11 | Fix method and parameter owner-copy hazards | Repairs method/parameter/delegated copies while leaving handle view-copy redesign separate. | PR 10 |
+| 11 | Fix method, parameter, and handle owner-copy hazards | Repairs method/parameter/delegated copies and constrains direct cross-owner handle masks while leaving handle view-backing redesign separate. | PR 10 |
 | 12 | Keep compiler reentrancy cleanup separate | Moves lexer/parser/AST constructor and compiler-owner work out of runtime review. | Independent after shared ASM API changes |
 | 13 | Keep JIT ownership cleanup separate | Keeps JIT lifecycle, generated static fields, and `Ctx.Current` review separate from interpreter runtime. | PR 9/10 for shared ASM safety |
 | 14 | Add build, lint, and source-shape gates | Turns fixed patterns into regressions that fail early. | After the relevant patterns are clean |
@@ -56,7 +56,7 @@ Use this as the first pass when preparing actual PR branches from `master`.
 | --- | --- | --- |
 | Ambient current-pool removal | `be0270e0d`, `e856d85ce`, `d58ebfea0`, `5d5773979`, `5fce7b9ae`, `4c6521dd9`, `c93b5ad61`, `2716435f1`, `84fa61534` | Constant adoption, clone/copy fixes, JIT `Ctx.Current` policy |
 | Constant adoption hardening | `09f244211`, `e569d27db`, `e6f78a210`, `d1d0683e3`, `a0c1fe936` | Parameter/method clone fixes and `ObjectHandle.cloneAs(...)` design |
-| Parameter and method owner-copy fixes | `7f82e0a1e`, `ed7220bee` | Constant adoption validator, broad compiler clone cleanup |
+| Parameter, method, and cross-owner handle-copy fixes | `7f82e0a1e`, `ed7220bee`, and the `GenericHandle.maskAs(...)` cross-owner guard slice | Constant adoption validator, broad compiler clone cleanup, same-owner `cloneAs(...)` backing-state redesign |
 | Constructor-escape removal in shared ASM/runtime | `1249e2a0f`, `47d7ab30e`, `93189541f`, `16915ebe7`, `7b7fc2036`, `70bf202ef` where source areas match | JIT constructor escapes and compiler/parser-only cleanup |
 | JIT ownership cleanup | `36c24a974`, `cb81116cb` plus the separate JIT plan work | Interpreter runtime template ownership |
 | Documentation-only hardening studies | `f0a6a71b1` and any uncommitted plan/audit docs | Source changes unless the PR is explicitly mixed for review proof |
@@ -1366,11 +1366,11 @@ Should land after PR 5 if enum singleton behavior is split separately, and
 after PR 8 if stress proof is expected in the same PR. This PR should land
 before remaining clone/copy cleanup in PR 11.
 
-## PR 11: Fix Method And Parameter Owner-Copy Hazards
+## PR 11: Fix Method, Parameter, And Handle Owner-Copy Hazards
 
 ### PR Title
 
-Fix method and parameter owner-copy hazards
+Fix method, parameter, and handle owner-copy hazards
 
 ### Reviewer-Facing Problem Statement
 
@@ -1382,7 +1382,9 @@ the first runtime-owner PR. The highest-risk findings are:
   method owner.
 - Delegated methods cloned only `Parameter[]` containers and shared mutable
   `Parameter` elements.
-- `ObjectHandle.cloneAs(...)` shallow-copies runtime handles and field arrays.
+- `ObjectHandle.cloneAs(...)` shallow-copies runtime handles and field arrays;
+  the direct cross-owner `GenericHandle.maskAs(...)` path could use that access
+  view as if it were owner transfer.
 - The default `Constant.adoptedBy(...)` shallow clone remains a bad default for
   future owner-local fields.
 
@@ -1393,6 +1395,8 @@ the first runtime-owner PR. The highest-risk findings are:
   by the cloned method.
 - Deep-copy delegated method parameters so owner-sensitive deref state cannot
   be shared through an array clone.
+- Reject direct cross-owner `GenericHandle.maskAs(...)` unless the handle graph
+  is already shared with the target container.
 - Add focused owner-copy tests for method/parameter clone paths.
 - Keep `ObjectHandle.cloneAs(...)` as its own follow-up design PR unless the
   branch also introduces explicit shared backing-state semantics for handle
@@ -1427,7 +1431,9 @@ Future source areas:
 - `Parameter`
 - `MethodStructure`
 - `ClassStructure.ensureMethodDelegation(...)`
-- `ObjectHandle` and relevant handle subclasses for the later design PR
+- `ObjectHandle.GenericHandle.maskAs(...)`
+- `ObjectHandle` and relevant handle subclasses for the later view-backing
+  design PR
 - `Constant.adoptedBy(...)` only for a later adoption-contract redesign
 
 ### Tests And Verification Commands
@@ -1436,6 +1442,9 @@ Focused tests:
 
 ```bash
 ./gradlew :javatools:test --tests org.xvm.asm.AsmConstructorEscapeTest \
+  --configuration-cache --console=plain --warning-mode=all
+
+./gradlew :javatools:test --tests org.xvm.runtime.OwnershipDiagnosticsTest \
   --configuration-cache --console=plain --warning-mode=all
 ```
 
@@ -1450,6 +1459,9 @@ Required proof shapes:
 - For the later handle view-copy PR, prove clone ref rewiring does not mutate
   the source field array or refs, and prove that view write-through semantics
   still match master.
+- For the cross-owner mask guard, use a non-shared synthetic handle whose
+  `cloneAs(...)` throws if reached; the fixed path must return `null` before
+  any shallow clone.
 
 ### Semantic / Performance Equivalence Notes
 
@@ -1459,6 +1471,9 @@ Required proof shapes:
 - Invocation/runtime hot paths should not gain per-use locks or deep copies.
   The current parameter fixes allocate while constructing copied metadata,
   which is the same phase that already allocated the clone.
+- The `GenericHandle.maskAs(...)` guard only runs when the caller asks to mask a
+  handle into a different owner. Same-owner masks and reveals preserve the old
+  cheap access-view behavior.
 - Immutable logical arrays can remain shared when the API documents that they
   are immutable and owner-free.
 

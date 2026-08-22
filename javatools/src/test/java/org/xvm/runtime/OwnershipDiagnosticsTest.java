@@ -24,6 +24,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -132,6 +133,27 @@ public class OwnershipDiagnosticsTest {
         assertFalse(validation.ownerMismatches().isEmpty());
     }
 
+    /**
+     * A masked/revealed {@code GenericHandle} is an access view of the same runtime object, not a
+     * deep owner-transfer copy. The old path could reach {@code cloneAs(...)} for a different
+     * container even when the handle graph was not shared with that target owner. That shallow clone
+     * copied live runtime fields and then rewrote the owner, which is exactly the kind of
+     * cross-container leak that made same-JVM execution unstable. The guard must reject the mask
+     * before cloning.
+     */
+    @Test
+    public void crossOwnerMaskRejectsNonSharedHandleBeforeClone() {
+        TestContainer target = newContainer("MaskTarget");
+        TestContainer source = newContainer("MaskSource");
+
+        var clzTarget = new TestComposition(target);
+        var clzSource = new TestComposition(source, clzTarget);
+        var handle    = new NonSharedHandle(clzSource);
+
+        assertNull(handle.maskAs(target, source.getConstantPool().typeObject()));
+        assertTrue(handle.wasSharedChecked());
+    }
+
     @SuppressWarnings("unchecked")
     private static void cacheTemplate(Container container, ClassTemplate template)
             throws Exception {
@@ -210,7 +232,12 @@ public class OwnershipDiagnosticsTest {
     private static final class TestComposition
             implements TypeComposition {
         private TestComposition(Container container) {
+            this(container, null);
+        }
+
+        private TestComposition(Container container, TypeComposition clzMask) {
             this.container = container;
+            this.clzMask   = clzMask;
         }
 
         @Override
@@ -245,7 +272,7 @@ public class OwnershipDiagnosticsTest {
 
         @Override
         public TypeComposition maskAs(TypeConstant type) {
-            return null;
+            return clzMask;
         }
 
         @Override
@@ -339,5 +366,37 @@ public class OwnershipDiagnosticsTest {
         }
 
         private final Container container;
+        private final TypeComposition clzMask;
+    }
+
+    private static final class NonSharedHandle
+            extends GenericHandle {
+        private NonSharedHandle(TypeComposition clazz) {
+            super(clazz);
+        }
+
+        @Override
+        public boolean isService() {
+            // Skip the unrelated non-core proxy branch so this test exercises the inherited
+            // cross-owner direct-mask guard.
+            return true;
+        }
+
+        @Override
+        public ObjectHandle cloneAs(TypeComposition clazz) {
+            throw new IllegalStateException("non-shared cross-owner masks must not clone");
+        }
+
+        @Override
+        public boolean isShared(Container container, Map<ObjectHandle, Boolean> visited) {
+            checked = true;
+            return false;
+        }
+
+        private boolean wasSharedChecked() {
+            return checked;
+        }
+
+        private boolean checked;
     }
 }

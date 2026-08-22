@@ -247,6 +247,49 @@ delegated method owns distinct return/parameter objects, preserves logical
 implicit-deref metadata, drops copied deref-register cache state, and leaves
 the source parameter cache intact.
 
+### Cross-Owner GenericHandle Masking
+
+What was wrong:
+
+- `GenericHandle.maskAs(...)` could use `cloneAs(...)` while changing the
+  apparent owner container.
+- `cloneAs(...)` is a same-object access-view operation, not an ownership
+  transfer. It shallow-copies subclass state and `GenericHandle` views share
+  live field storage.
+- If the handle graph was not already shared with the target container, direct
+  cross-owner masking could retain source-owner handles and refs while making
+  the clone appear to belong to the target owner.
+
+Replacement:
+
+- Non-core objects still take the existing proxy path.
+- Direct cross-owner `GenericHandle.maskAs(...)` now first requires
+  `isShared(targetOwner, null)`.
+- If the graph is not shared, masking returns `null` before `cloneAs(...)` can
+  shallow-copy live runtime state.
+
+Behavior and performance:
+
+- Same-owner masks and reveals keep the old cheap access-view behavior.
+- Valid cross-owner masks for already shared graphs keep the old path.
+- Invalid cross-owner direct sharing now fails early instead of manufacturing a
+  wrong-owner view. That is an intentional hardening of an invalid state, not a
+  cache or hot-path performance change.
+
+Regression proof:
+
+- `OwnershipDiagnosticsTest.crossOwnerMaskRejectsNonSharedHandleBeforeClone()`
+  builds a synthetic non-shared handle whose `cloneAs(...)` throws if reached.
+  The fixed path checks sharing and returns `null`; the old path would continue
+  into the shallow clone.
+
+Remaining work:
+
+- `GenericHandle.cloneAs(...)` still needs an explicit shared backing-state/view
+  model for same-owner views. Blindly cloning the field array would break
+  write-through identity semantics, so that design remains separate from this
+  cross-owner guard.
+
 The broader `ConstantPool` state audit is documented in
 [constant-pool-state-audit.md](constant-pool-state-audit.md). It distinguishes
 per-pool caches, ambient owner lookup, runtime registration/adoption hazards,

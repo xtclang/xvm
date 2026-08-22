@@ -255,18 +255,32 @@ when moving constant handles into another container. The target composition is
 changed, but backing fields, handles, and ref owners can remain shared unless
 the specific subclass overrides the behavior.
 
-Classification: must-audit, likely must-fix for mutable `GenericHandle`
-instances and cross-container constant-handle publication.
+Classification: partially constrained in this branch; still must-audit for the
+remaining same-owner view-backing design.
 
-Current branch note: this remains a larger follow-up, not a safe small patch.
-`GenericHandle.cloneAs(...)` intentionally shares its field array so public,
-private, struct, masked, and revealed views keep observing the same object
-state. Simply cloning `m_aFields` would stop the current inflated-ref `OUTER`
-rewrite from corrupting the source view, but it would also make later
-`setField(...)` calls on one view invisible to the other view. The correct fix
-needs an explicit shared backing-state/view model, or another owner-aware
-representation that gives each view the correct `OUTER` ref without losing
-write-through identity semantics.
+Current branch fix: `GenericHandle.maskAs(...)` now rejects direct cross-owner
+masking when the handle graph is not already shared with the target container.
+That closes the most dangerous misuse: treating `cloneAs(...)` as an ownership
+transfer primitive. A masked/revealed `GenericHandle` is an access view of the
+same runtime object; it is not a deep copy and it cannot make owner-local
+fields safe for another container. Non-core objects still use the existing
+proxy path instead of direct sharing.
+
+`OwnershipDiagnosticsTest.crossOwnerMaskRejectsNonSharedHandleBeforeClone()`
+proves the guard. The synthetic handle reports `isShared(...) == false` and
+throws if `cloneAs(...)` is reached; the fixed path returns `null` after the
+shared-graph check. The old path would continue into `cloneAs(...)` for the
+same setup.
+
+Remaining branch note: the local view behavior remains a larger follow-up, not
+a safe small patch. `GenericHandle.cloneAs(...)` intentionally shares its field
+array so public, private, struct, masked, and revealed views keep observing the
+same object state. Simply cloning `m_aFields` would stop the current inflated-
+ref `OUTER` rewrite from corrupting the source view, but it would also make
+later `setField(...)` calls on one view invisible to the other view. The
+correct fix needs an explicit shared backing-state/view model, or another
+owner-aware representation that gives each view the correct `OUTER` ref
+without losing write-through identity semantics.
 
 Minimum replacement: replace raw `Object.clone()` with explicit view/copy
 constructors. For same-object views, introduce a documented shared backing
@@ -653,8 +667,9 @@ Must-fix:
 
 Must-audit:
 
-- Replace or constrain `ObjectHandle.cloneAs(...)`, especially for mutable
-  `GenericHandle` field arrays and cross-container constant handles.
+- Finish the `ObjectHandle.cloneAs(...)` view-backing redesign for mutable
+  `GenericHandle` field arrays. The direct cross-owner `GenericHandle.maskAs(...)`
+  subcase is now constrained by a target-owner `isShared(...)` guard.
 - Continue moving `Constant.adoptedBy(...)` away from default shallow cloning.
 - Give AST/component clone paths explicit owner/context/copy contracts before
   treating compiler/linker structures as reentrant-safe.
