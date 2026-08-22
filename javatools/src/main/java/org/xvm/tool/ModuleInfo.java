@@ -313,7 +313,9 @@ public class ModuleInfo {
             }
 
             // merge the resource directory lists, with the specified ones having priority
-            final var dftResDirs = getResourceDir().getLocations();
+            // Use the private helper here instead of getResourceDir(); subclasses must not be
+            // observable while this ModuleInfo constructor is still assembling the path state.
+            final var dftResDirs = ensureResourceDir().getLocations();
             final var allResDirs = new ArrayList<>(resourceSpecs);
             if (!dftResDirs.isEmpty()) {
                 allResDirs.addAll(dftResDirs);
@@ -477,10 +479,17 @@ public class ModuleInfo {
      * @return the ResourceDir object representing the root resource directory
      */
     public ResourceDir getResourceDir() {
+        return ensureResourceDir();
+    }
+
+    /**
+     * Compute and cache the default resource directory without constructor-time virtual dispatch.
+     */
+    private ResourceDir ensureResourceDir() {
         if (resourceDir == null) {
-            File sourceFile = getSourceFile();
-            resourceDir = sourceFile.exists()
-                        ? ResourceDir.forSource(sourceFile, deduce)
+            File fileSrc = sourceFile;
+            resourceDir = fileSrc != null && fileSrc.exists()
+                        ? ResourceDir.forSource(fileSrc, deduce)
                         : NoResources;
         }
 

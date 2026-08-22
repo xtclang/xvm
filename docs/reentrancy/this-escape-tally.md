@@ -80,15 +80,15 @@ root build, this branch used a forced targeted compile graph:
   -Porg.xtclang.java.maxWarnings=10000 \
   -Porg.xtclang.java.maxErrors=10000 \
   --console=plain --warning-mode=all \
-  > /tmp/xvm-asm-this-escape-wave.log 2>&1
+  > /tmp/xvm-moduleinfo-this-escape.log 2>&1
 ```
 
 Result:
 
 ```text
-BUILD SUCCESSFUL in 9s
-25 emitted this-escape diagnostics in the targeted compile graph
-24 unique file:line locations in that targeted compile graph
+BUILD SUCCESSFUL in 14s
+24 emitted this-escape diagnostics in the targeted compile graph
+23 unique file:line locations in that targeted compile graph
 0 xRef.java, xOSFileNode.java, CallChain.java, xRTMethod.java,
   ClassTemplate.java, Container.java, Op*.java, PackedInteger.java,
   HasherReference.java, ListSet.java, MethodInfo.java, or PropertyInfo.java
@@ -96,6 +96,7 @@ BUILD SUCCESSFUL in 9s
 0 ClassStructure.java, FileStructure.java, MethodStructure.java,
   PropertyStructure.java, VersionTree.java, PropertyConstant.java, or
   TypeInfoReal.java this-escape diagnostics
+0 ModuleInfo.java this-escape diagnostics
 0 MethodInfo.java fallthrough diagnostics
 ```
 
@@ -154,10 +155,11 @@ javatools/src/main/java/org/xvm/asm/constants/PropertyConstant.java:42
 javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:138
 javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:176
 javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java:269
+javatools/src/main/java/org/xvm/tool/ModuleInfo.java:316
 ```
 
 The next full-root lint run is expected to drop from `80` emitted diagnostics
-at `77` unique locations to `26` emitted diagnostics at `25` unique locations.
+at `77` unique locations to `25` emitted diagnostics at `24` unique locations.
 The difference from the targeted compile graph is the one remaining
 `javatools_jitbridge` warning outside this task graph.
 
@@ -209,11 +211,11 @@ javatools/src/main/java/org/xvm/compiler/Parser.java:70
 | Should fix, fixed in this branch | Utility constructor helpers call overridable methods | `PackedInteger`, `HasherReference`, `ListSet`: 5 unique warning locations removed in this branch; 0 remain in this category | Done for this PR | Route constructors through private helpers while leaving public/protected mutation/reset APIs available after construction. |
 | Must fix, fixed in this branch | `MethodInfo`/`PropertyInfo` constructors attach child body owners before owner construction completes | 6 unique warning locations removed in this branch; 0 remain in this category | Done for this PR | Use static factories and private constructors that build non-virtual owned `MethodBody`/`PropertyBody` copies into local arrays before assigning the final owner body array. Keep existing `TypeInfoReal` ownership validation. |
 | Must fix, fixed in this branch | ASM metadata owner-copy and constructor hooks | `FileStructure`, `ClassStructure`, `MethodStructure`, `PropertyStructure`, `TypeInfoReal`, `PropertyConstant`, `VersionTree`: 11 unique locations removed | Done for this PR | Remove constructor-time virtual hooks, keep root/owner assemblers final where appropriate, and copy `MethodInfo`/`PropertyInfo`/`ChildInfo` per `TypeInfoReal` owner instead of stealing unowned source metadata. |
+| Should fix, fixed in this branch | `ModuleInfo` constructor resource-dir lookup | 1 unique location removed | Done for this PR | Use a private resource-dir cache helper during construction so explicit resource-path merging does not call the overridable `getResourceDir()` accessor before subclass construction completes. |
 | Must fix, fixed separately | `CooperativelyCleanableReference` publishes `this` to a static set from the constructor | 1 | Done on `lagergren/fix-utils-this-escape` | Use a private constructor plus factory/registration step after construction, or another design that does not publish the object until construction has returned. |
 | Must fix, fixed separately | `AbstractConverterMap` calls overridable factory methods from the base constructor | 1 | Done on `lagergren/fix-utils-this-escape` | Make factory results final concrete nested classes that do not dispatch to subclasses during construction, or lazily initialize views after construction with synchronization. |
 | Must audit, compiler/parser/AST construction callbacks | `Lexer`, `Parser`, expression/statement constructors and `adopt`/parent-link calls | 16 unique locations | Mixed | For incremental/parallel compiler safety, prove AST/request confinement or separate object construction from parent/adoption callbacks. |
 | Must audit, JIT path | `javajit` and `javatools_jitbridge` constructors | 6 unique locations | Unknown | Document in `jit-implications.md`; do not change in this runtime-owner PR without JIT-specific tests. |
-| Should inspect, tooling | `ModuleInfo` | 1 unique location | Small | Confirm no subclass-visible construction callback is needed; otherwise make the constructor path final/private. |
 
 Expected full-root unique-location classification after applying the targeted
 delta:
@@ -222,7 +224,6 @@ delta:
  16 Must audit: compiler/parser/AST construction
   6 Must audit: JIT construction
   2 Must fix, fixed separately: concrete unsafe utility construction
-  1 Should inspect: tooling
 ```
 
 Current targeted remaining unique locations in the compile graph:
@@ -249,7 +250,6 @@ javatools/src/main/java/org/xvm/javajit/BuildContext.java:167
 javatools/src/main/java/org/xvm/javajit/JitMethodDesc.java:53
 javatools/src/main/java/org/xvm/javajit/Xvm.java:47
 javatools/src/main/java/org/xvm/javajit/builders/ArrayBuilder.java:33
-javatools/src/main/java/org/xvm/tool/ModuleInfo.java:316
 javatools_utils/src/main/java/org/xvm/util/CooperativelyCleanableReference.java:80
 javatools_utils/src/main/java/org/xvm/util/converter/AbstractConverterMap.java:40
 ```

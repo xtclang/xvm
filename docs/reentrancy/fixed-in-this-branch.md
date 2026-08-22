@@ -670,6 +670,27 @@ prove that shared source metadata remains unowned while concurrent
 targeted lint run at `/tmp/xvm-asm-this-escape-wave.log` reports zero warnings
 for the fixed ASM group.
 
+### ModuleInfo ResourceDir Constructor Escape
+
+The tooling `ModuleInfo` constructor also had a single `this-escape` warning in
+the explicit resource path branch. It called the public `getResourceDir()`
+accessor while the constructor was still merging source, binary, and resource
+path state. A subclass override could therefore observe the object before those
+fields were fully assembled.
+
+The fix keeps the same cache and lookup behavior but routes constructor-time
+resource-dir discovery through a private `ensureResourceDir()` helper. Public
+callers still use `getResourceDir()`, and explicit resource paths still take
+priority over the discovered defaults.
+
+`ModuleInfoTest.constructorWithExplicitResourcesDoesNotCallOverridableResourceDir()`
+uses a subclass override that would throw if the old constructor called
+`getResourceDir()` before subclass construction completed. It also verifies
+that the override remains callable after construction and that the explicit
+resource path is still present. The targeted lint run at
+`/tmp/xvm-moduleinfo-this-escape.log` reports zero `ModuleInfo.java`
+`this-escape` diagnostics.
+
 ## Manual Lazy Cache Hardening
 
 This branch also removes two concrete lazy-null cache hazards found by the

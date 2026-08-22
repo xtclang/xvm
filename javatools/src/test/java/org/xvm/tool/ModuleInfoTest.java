@@ -952,6 +952,21 @@ class ModuleInfoTest {
         assertEquals(outputDir.toFile().getCanonicalFile(), info.getBinaryDir());
     }
 
+    @Test
+    void constructorWithExplicitResourcesDoesNotCallOverridableResourceDir()
+            throws IOException {
+        var sourceFile = createModuleSource("MyModule");
+        var resourceDir = Files.createDirectories(tempDir.resolve("resources"));
+        Files.writeString(resourceDir.resolve("config.txt"), "config");
+
+        var info = new HookDetectingModuleInfo(
+                sourceFile.toFile(), false, List.of(resourceDir.toFile()), null);
+
+        assertEquals(0, info.resourceDirCalls);
+        assertTrue(info.getResourceDir().getLocations().contains(resourceDir.toFile()));
+        assertEquals(1, info.resourceDirCalls);
+    }
+
     /**
      * 4-arg constructor with multiple resource directories.
      */
@@ -1514,5 +1529,29 @@ class ModuleInfoTest {
 
         assertThrows(IllegalArgumentException.class,
                 () -> new ModuleInfo(sourceFile.toFile(), false, null, invalidParent.toFile()));
+    }
+
+    private static final class HookDetectingModuleInfo extends ModuleInfo {
+        HookDetectingModuleInfo(
+                File        fileSpec,
+                boolean     deduce,
+                List<File>  resourceSpecs,
+                File        binarySpec) {
+            super(fileSpec, deduce, resourceSpecs, binarySpec);
+        }
+
+        @Override
+        public ResourceDir getResourceDir() {
+            if (!constructed) {
+                throw new IllegalStateException(
+                        "getResourceDir called before subclass construction");
+            }
+
+            ++resourceDirCalls;
+            return super.getResourceDir();
+        }
+
+        private boolean constructed = true;
+        private int resourceDirCalls;
     }
 }

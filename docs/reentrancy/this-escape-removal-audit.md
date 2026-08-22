@@ -14,9 +14,9 @@ Last full forced root lint before the handle-construction wave:
 Forced targeted compile-graph lint after the handle-construction,
 runtime constructor-assertion, `ClassTemplate` implicit-field, `Container`,
 `Op*` constructor-shape, utility-constructor, `MethodInfo`/`PropertyInfo`
-owner-body factory, and ASM metadata owner-copy waves:
-25 emitted this-escape diagnostics
-24 unique file:line locations
+owner-body factory, ASM metadata owner-copy, and `ModuleInfo` tooling waves:
+24 emitted this-escape diagnostics
+23 unique file:line locations
 0 xRef.java, xOSFileNode.java, CallChain.java, xRTMethod.java, or
 ClassTemplate.java this-escape diagnostics
 0 Container.java, Op*.java, PackedInteger.java, HasherReference.java, or
@@ -25,6 +25,7 @@ ListSet.java this-escape diagnostics
 0 ClassStructure.java, FileStructure.java, MethodStructure.java,
 PropertyStructure.java, VersionTree.java, PropertyConstant.java, or
 TypeInfoReal.java this-escape diagnostics
+0 ModuleInfo.java this-escape diagnostics
 ```
 
 The full root lint build was not rerun after these waves to avoid paying for
@@ -46,12 +47,13 @@ non-`javatools` site: the remaining `javatools_jitbridge` warning.
 | Fixed in this branch | 5 | Utility constructors no longer call overridable mutation/reset APIs while the object is partially constructed. |
 | Fixed in this branch | 6 | `MethodInfo` and `PropertyInfo` no longer attach method/property body owner links from constructors. |
 | Fixed in this branch | 11 | ASM metadata owner assembly no longer calls constructor-time virtual hooks or steals unowned method/property/child metadata into the first `TypeInfoReal` owner. |
+| Fixed in this branch | 1 | `ModuleInfo` no longer calls the overridable `getResourceDir()` accessor while merging explicit resource paths in its constructor. |
 | Fixed separately, still present here | 2 | Concrete unsafe construction/publication pattern. Fixed on `lagergren/fix-utils-this-escape`; still present in this branch until that PR is merged or rebased here. |
 | Audit before changing | 16 | Compiler/parser/AST construction publishes parent/adoption state and needs confinement or lifecycle proof before changing in this branch. |
-| Document only for this PR | 7 | JIT/tooling paths that are not part of the runtime-owner fix. |
+| Document only for this PR | 6 | JIT paths that are not part of the runtime-owner fix. |
 
-The current forced targeted lint run reports 24 remaining unique locations. The
-next full-root lint run is expected to report 25 remaining unique locations
+The current forced targeted lint run reports 23 remaining unique locations. The
+next full-root lint run is expected to report 24 remaining unique locations
 because the full root build includes one additional non-`javatools` site.
 
 ## Fixed Separately, Do Not Suppress Here
@@ -536,6 +538,34 @@ restoring `new ConstHeap(this)`, `new NativeTemplates(this)`, or
 `/tmp/xvm-container-this-escape.log` reports no `Container.java`
 `this-escape` diagnostics.
 
+### ModuleInfo Resource Directory Construction
+
+`ModuleInfo` had one tooling-side constructor escape. When explicit resource
+paths were passed to the four-argument constructor, the constructor merged
+those paths with the default resource directory by calling the public
+`getResourceDir()` accessor:
+
+```java
+final var dftResDirs = getResourceDir().getLocations();
+```
+
+That accessor is overridable, so a subclass could observe the partially
+constructed `ModuleInfo` before binary/source/resource path fields were fully
+assembled. This is not a runtime container owner bug, but it is the same Java
+construction hazard and should not remain once the warning is known.
+
+The replacement moves the lazy cache body behind a private
+`ensureResourceDir()` helper. The constructor uses the helper directly, while
+the public accessor remains unchanged for callers. The cache remains one
+`ResourceDir` per `ModuleInfo`, explicit resource paths still take priority,
+and default resource discovery still happens lazily for instances that do not
+receive an explicit resource path.
+
+`ModuleInfoTest.constructorWithExplicitResourcesDoesNotCallOverridableResourceDir()`
+uses a subclass whose `getResourceDir()` override throws if it is called during
+construction. That test would fail on master and passes here; it also verifies
+that the override is still called normally after construction.
+
 ### Compiler and AST Parent/Adoption
 
 These constructor paths set parent/component/type state, create lexers, or
@@ -573,8 +603,8 @@ Proper fixes:
 
 ## Document Only For This PR
 
-These should not be changed in the runtime-owner PR without JIT/tool-specific
-tests. They still matter to a future lint-clean policy.
+These should not be changed in the runtime-owner PR without JIT-specific tests.
+They still matter to a future lint-clean policy.
 
 ```text
 javatools/src/main/java/org/xvm/javajit/BuildContext.java:136
@@ -582,7 +612,6 @@ javatools/src/main/java/org/xvm/javajit/BuildContext.java:167
 javatools/src/main/java/org/xvm/javajit/JitMethodDesc.java:53
 javatools/src/main/java/org/xvm/javajit/Xvm.java:47
 javatools/src/main/java/org/xvm/javajit/builders/ArrayBuilder.java:33
-javatools/src/main/java/org/xvm/tool/ModuleInfo.java:316
 javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/nLongBasedArray.java:52
 ```
 
@@ -592,7 +621,6 @@ javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/nLongBasedArra
 16 Must audit: compiler/parser/AST construction
  6 Document only: JIT construction
  2 Fixed separately, still present here: concrete unsafe utility construction
- 1 Should inspect: tooling
 ```
 
 ## First Follow-Up Recommendation
