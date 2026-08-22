@@ -25,7 +25,6 @@ declarations found are:
 - `javatools_jitbridge/src/main/java/org/xtclang/ecstasy/collections/nLongBasedArray.java:39`
 - `javatools/src/main/java/org/xvm/asm/Component.java:107`
 - `javatools/src/main/java/org/xvm/asm/Component.java:2573`
-- `javatools/src/main/java/org/xvm/asm/Parameter.java:30`
 - `javatools/src/main/java/org/xvm/asm/MethodStructure.java:2761`
 - `javatools/src/main/java/org/xvm/asm/Constant.java:73`
 
@@ -96,6 +95,8 @@ The proof should be in tests, not only comments:
 
 ### 1. `Parameter.cloneBody()` mutates the source and preserves copied mutable state
 
+Status: fixed in this branch.
+
 References:
 
 - `javatools/src/main/java/org/xvm/asm/Parameter.java:369`
@@ -119,18 +120,22 @@ Container/ConstantPool/lock/cache impact: the copied `Register` is method-owned
 state. It can point at the wrong method after method/component cloning, and the
 source object's deref cache can be erased by a read-like clone operation.
 
-Classification: must-fix.
+Classification: must-fix, fixed.
 
-Minimum replacement: stop using `Object.clone()` here. Add an explicit
-`Parameter` copy constructor or `copyFor(MethodStructure owner)` helper that
-copies only logical parameter fields, sets the intended owner, and initializes
-`m_fImplicitDeref = false` and `m_regDeref = null` on the copy.
+Replacement: `Parameter` no longer implements `Cloneable` and no longer uses
+`Object.clone()`. `Parameter.copyFor(MethodStructure owner)` constructs an
+owner-explicit copy. It preserves logical parameter metadata, including the
+implicit-deref flag, and intentionally drops `m_regDeref` because that cached
+register is method-owned transient state.
 
-Equivalence/performance proof: clone a method with implicitly dereferenced
-parameters, call `deref(...)` on source and copy, and assert that the two
-registers are distinct and owned by their respective methods. The replacement
-should allocate no more than the old clone plus the already-required fresh
-`Register` on first dereference.
+Equivalence/performance proof:
+`AsmConstructorEscapeTest.methodClonePreservesSourceDerefStateAndGetsFreshCloneState()`
+sets up the old failure shape directly. It proves that copying a method leaves
+the source parameter's implicit-deref metadata and cached register intact, while
+the copied parameter starts with no copied deref register. The replacement has
+the same allocation shape for normal method cloning: one `Parameter` copy per
+parameter/return and no extra synchronization. The first dereference on the copy
+still builds the same register lazily, but under the cloned method owner.
 
 ### 2. `MethodStructure.cloneBody()` assigns cloned parameters to the original method
 
@@ -159,16 +164,19 @@ method parameters that still resolve `getConstantPool()` through the original
 method. Combined with `Parameter.m_regDeref`, a clone can retain method-local
 register state from the wrong owner.
 
-Classification: must-fix.
+Classification: must-fix, fixed.
 
-Minimum replacement: make the parameter copy API accept the target method and
-set the cloned parameter's owner to `that`. This should be done together with
-the `Parameter.cloneBody()` fix so transient deref state is not carried over.
+Replacement: `MethodStructure.cloneBody()` now calls
+`Parameter.copyFor(that)` for both return and parameter arrays. The target
+method owner is therefore part of the copy API, and no cloned parameter is ever
+assigned back to the source method as an intermediate state.
 
-Equivalence/performance proof: clone a method body and assert every return and
-parameter reports the cloned method as containing structure. Compile/load a
-component that exercises cloned method metadata in two independent pools and
-assert no parameter resolves its constant pool through the source method.
+Equivalence/performance proof:
+`AsmConstructorEscapeTest.methodCloneAttachesCopiedParametersToClone()` clones a
+method body and asserts every copied return and parameter reports the cloned
+method as its containing structure. The fix preserves the old logical method
+copy: the same return/parameter types, names, defaults, default marker, and
+implicit-deref metadata are copied. It removes only stale owner/cache state.
 
 ### 3. Delegated methods shallow-copy `Parameter[]` arrays and share elements
 

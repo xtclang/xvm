@@ -1750,9 +1750,9 @@ public class MethodStructure
         if (cReturns > 0) {
             Parameter[] aReturns = new Parameter[cReturns];
             for (int i = 0; i < cReturns; i++) {
-                Parameter param = this.m_aReturns[i].cloneBody();
-                param.setContaining(this);
-                aReturns[i] = param;
+                // Cloned parameters that need owner services must resolve through the cloned
+                // method, not the source method that replaceWithTemporary() is detaching.
+                aReturns[i] = this.m_aReturns[i].copyFor(that);
             }
             that.m_aReturns = aReturns;
         }
@@ -1761,9 +1761,9 @@ public class MethodStructure
         if (cParams > 0) {
             Parameter[] aParams = new Parameter[cParams];
             for (int i = 0; i < cParams; i++) {
-                Parameter param = this.m_aParams[i].cloneBody();
-                param.setContaining(this);
-                aParams[i] = param;
+                // See the return-parameter copy above. Any transient register state rebuilt from
+                // this parameter must belong to the cloned method's owner hierarchy.
+                aParams[i] = this.m_aParams[i].copyFor(that);
             }
             that.m_aParams = aParams;
         }

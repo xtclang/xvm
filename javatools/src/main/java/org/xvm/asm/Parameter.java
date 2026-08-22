@@ -6,6 +6,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import java.util.Objects;
+
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -26,8 +28,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * invocation parameter, and a return value.
  */
 public class Parameter
-        extends XvmStructure
-        implements Cloneable {
+        extends XvmStructure {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -362,21 +363,31 @@ public class Parameter
     }
 
     /**
-     * Clone this Parameter.
+     * Copy this Parameter for a cloned MethodStructure.
      *
-     * @return a clone of this Parameter
+     * @param method  the cloned method that will own the copied parameter
+     *
+     * @return a Parameter copy owned by the specified method
      */
-    protected Parameter cloneBody() {
-        Parameter that;
-        try {
-            that = (Parameter) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new IllegalStateException(e);
-        }
+    protected Parameter copyFor(MethodStructure method) {
+        return new Parameter(this, Objects.requireNonNull(method, "method"));
+    }
 
-        m_fImplicitDeref = false;
-        m_regDeref       = null;
-        return that;
+    /**
+     * Copy constructor for method-body cloning. Logical parameter metadata is preserved, but the
+     * cached deref register is intentionally not copied because it is method-owner state.
+     */
+    private Parameter(Parameter source, MethodStructure method) {
+        super(method);
+
+        m_aAnnotations   = source.m_aAnnotations;
+        m_constType      = source.m_constType;
+        m_constName      = source.m_constName;
+        m_constDefault   = source.m_constDefault;
+        f_iParam         = source.f_iParam;
+        f_fOrdinary      = source.f_fOrdinary;
+        m_fHasDefault    = source.m_fHasDefault;
+        m_fImplicitDeref = source.m_fImplicitDeref;
     }
 
 

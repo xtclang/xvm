@@ -172,6 +172,13 @@ Replacement:
 - diagnostics must assert that adopted constants do not carry source-owner
   runtime state.
 
+The same rule applies to method/parameter copies. This branch fixed a
+single-threaded bug where `Parameter.cloneBody()` mutated the source parameter
+while copying it, and a separate owner bug where `MethodStructure.cloneBody()`
+attached copied parameters back to the source method. `Parameter` now uses an
+owner-explicit `copyFor(MethodStructure)` helper instead of `Object.clone()`,
+and method copies pass the cloned method as the target owner.
+
 ### Manual Lazy Null Caches
 
 Bad shape:

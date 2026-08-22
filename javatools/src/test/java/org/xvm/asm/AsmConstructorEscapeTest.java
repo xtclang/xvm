@@ -1,7 +1,10 @@
 package org.xvm.asm;
 
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+
+import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +17,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -181,6 +185,111 @@ public class AsmConstructorEscapeTest {
         assertSame(placeholder, pool.infoPlaceholder());
         assertEquals("Placeholder", placeholder.toString());
         assertEquals("Placeholder", placeholder.toString());
+    }
+
+    /**
+     * Method cloning used to corrupt both sides of the copy: `Parameter.cloneBody()` cleared the
+     * source parameter's implicit-deref flag and copied the source method's cached deref register
+     * into the clone. That was broken even on one thread because replacing a method temporarily
+     * changed the original method's parameter semantics. It is also hostile to reentrant owners
+     * because the clone can keep a register allocated by the source method. The copy must preserve
+     * logical parameter metadata while dropping method-owned transient register state.
+     */
+    @Test
+    public void methodClonePreservesSourceDerefStateAndGetsFreshCloneState() {
+        var pool  = new FileStructure("test").getConstantPool();
+        var type  = pool.typeString();
+        var param = new Parameter(pool, type, "value", null, false, 0, false);
+        var sourceDeref = new Register(type, "value", 0);
+        setParameterField(param, "m_fImplicitDeref", true);
+        setParameterField(param, "m_regDeref", sourceDeref);
+
+        Parameter[] params = {param};
+        var method     = createCloneableMethod(pool, Parameter.NO_PARAMS, params);
+        var clone      = method.cloneForTest();
+        var cloneParam = clone.getParam(0);
+
+        assertTrue(param.isImplicitDeref());
+        assertSame(sourceDeref, getParameterField(param, "m_regDeref"));
+        assertTrue(cloneParam.isImplicitDeref());
+        assertNull(getParameterField(cloneParam, "m_regDeref"));
+    }
+
+    /**
+     * `MethodStructure.cloneBody()` copied parameters but assigned their containing structure back
+     * to the source method. Any later owner-sensitive parameter helper would therefore resolve
+     * through the wrong method hierarchy after a temporary replacement. The cloned parameters and
+     * returns must be owned by the cloned method.
+     */
+    @Test
+    public void methodCloneAttachesCopiedParametersToClone() {
+        var pool = new FileStructure("test").getConstantPool();
+        Parameter[] returns = {
+                new Parameter(pool, pool.typeString(), "result", null, true, 0, false)};
+        Parameter[] params  = {
+                new Parameter(pool, pool.typeString(), "value", null, false, 0, false)};
+        var method = createCloneableMethod(pool, returns, params);
+
+        var clone = method.cloneForTest();
+
+        assertSame(clone, clone.getReturn(0).getContaining());
+        assertSame(clone, clone.getParam(0).getContaining());
+    }
+
+    private static CloneableMethodStructure createCloneableMethod(
+            ConstantPool pool, Parameter[] returns, Parameter[] params) {
+        var file = pool.getFileStructure();
+        var clz  = file.getModule().createClass(
+                Constants.Access.PUBLIC, Component.Format.CLASS, "Test", null);
+        var mm   = new MultiMethodStructure(clz, Component.Format.MULTIMETHOD.ordinal(),
+                pool.ensureMultiMethodConstant(clz.getIdentityConstant(), "method"), null);
+        var sig  = pool.ensureSignatureConstant(
+                "method", toTypes(params), toTypes(returns));
+        return new CloneableMethodStructure(mm, Component.Format.METHOD.ordinal()
+                | Constants.Access.PUBLIC.FLAGS, pool.ensureMethodConstant(
+                        mm.getIdentityConstant(), sig), returns, params);
+    }
+
+    private static TypeConstant[] toTypes(Parameter[] params) {
+        return Arrays.stream(params)
+                .map(Parameter::getType)
+                .toArray(TypeConstant[]::new);
+    }
+
+    private static void setParameterField(Parameter param, String name, Object value) {
+        try {
+            Field field = Parameter.class.getDeclaredField(name);
+            field.setAccessible(true);
+            field.set(param, value);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private static Object getParameterField(Parameter param, String name) {
+        try {
+            Field field = Parameter.class.getDeclaredField(name);
+            field.setAccessible(true);
+            return field.get(param);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private static final class CloneableMethodStructure extends MethodStructure {
+        CloneableMethodStructure(
+                XvmStructure    parent,
+                int             flags,
+                MethodConstant  id,
+                Parameter[]     returns,
+                Parameter[]     params) {
+            super(parent, flags, id, null, Annotation.NO_ANNOTATIONS, returns, params,
+                    true, false);
+        }
+
+        MethodStructure cloneForTest() {
+            return (MethodStructure) cloneBody();
+        }
     }
 
     /**

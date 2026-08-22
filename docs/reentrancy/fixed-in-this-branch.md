@@ -182,6 +182,45 @@ explains why adoption exists, why it should preserve only logical constant
 value state, and how this branch hardens the remaining runtime-relevant
 shallow-copied helper/runtime fields.
 
+### Method Parameter Clone Ownership
+
+The clone audit found two separate method-copy bugs that were not
+`Constant.adoptedBy(...)` issues:
+
+- `Parameter.cloneBody()` used `Object.clone()`, then cleared
+  `m_fImplicitDeref` and `m_regDeref` on the source `Parameter` instead of the
+  copy. A temporary method clone could therefore change the source method's
+  parameter semantics and keep a deref `Register` allocated for the source
+  method on the copy.
+- `MethodStructure.cloneBody()` copied return and parameter objects, then called
+  `param.setContaining(this)`. The cloned method's parameter arrays could
+  therefore contain parameters whose owner was still the source method.
+
+The replacement keeps those two issues separate:
+
+- `Parameter` no longer implements `Cloneable` and no longer uses
+  `Object.clone()`. It has an owner-explicit `copyFor(MethodStructure)` helper
+  that copies logical metadata and drops only the method-owned deref-register
+  cache.
+- `MethodStructure.cloneBody()` passes the cloned method (`that`) into
+  `copyFor(...)` for every return and parameter, so copied parameters resolve
+  through the cloned method from birth.
+
+Behavior and performance are preserved: method cloning still allocates exactly
+one `Parameter` copy per source return/parameter, and the first dereference on a
+copied implicit-ref parameter still computes the same cached register lazily in
+the copied method. The branch only removes accidental source mutation and stale
+method-owner cache sharing.
+
+Regression proof lives in
+`javatools/src/test/java/org/xvm/asm/AsmConstructorEscapeTest.java`:
+
+- `methodClonePreservesSourceDerefStateAndGetsFreshCloneState()` proves a method
+  copy leaves the source implicit-deref state and source cached register intact,
+  while the copy starts with no copied deref register.
+- `methodCloneAttachesCopiedParametersToClone()` proves cloned return and
+  parameter objects report the cloned method as their containing structure.
+
 The broader `ConstantPool` state audit is documented in
 [constant-pool-state-audit.md](constant-pool-state-audit.md). It distinguishes
 per-pool caches, ambient owner lookup, runtime registration/adoption hazards,
