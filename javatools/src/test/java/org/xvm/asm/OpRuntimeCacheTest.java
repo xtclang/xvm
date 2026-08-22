@@ -15,11 +15,13 @@ import java.nio.file.Path;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.CatchStart;
 import org.xvm.asm.op.Cmp;
@@ -32,11 +34,15 @@ import org.xvm.asm.op.IsType;
 import org.xvm.asm.op.JumpCond;
 import org.xvm.asm.op.JumpEq;
 import org.xvm.asm.op.JumpNCond;
+import org.xvm.asm.op.JumpVal;
+import org.xvm.asm.op.JumpVal_N;
 import org.xvm.asm.op.JumpType;
 import org.xvm.asm.op.PIP_Inc;
 import org.xvm.asm.op.PIP_PreInc;
 import org.xvm.asm.op.Var_C;
 import org.xvm.asm.op.Var_I;
+
+import org.xvm.runtime.ObjectHandle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -71,6 +77,17 @@ public class OpRuntimeCacheTest {
             throws IOException {
         assertNoRuntimeCommonTypeWrite("org/xvm/asm/OpTest.java");
         assertNoRuntimeCommonTypeWrite("org/xvm/asm/OpCondJump.java");
+    }
+
+    /**
+     * Switch ops are shared decoded instruction objects. Their first-execution switch tables can
+     * contain frame/container-owned handles and type constants, so the tables must live under the
+     * executing container instead of on the op.
+     */
+    @Test
+    public void switchOpsDoNotCacheOwnerValuesOnDecodedOps() {
+        assertNoOwnerBearingRuntimeCacheFields(JumpVal.class);
+        assertNoOwnerBearingRuntimeCacheFields(JumpVal_N.class);
     }
 
     /**
@@ -144,6 +161,33 @@ public class OpRuntimeCacheTest {
 
         assertFalse(RUNTIME_COMMON_TYPE_WRITE.matcher(text).find(),
                 source + " must not cache frame constants on runtime Op instances");
+    }
+
+    private static void assertNoOwnerBearingRuntimeCacheFields(Class<?> clazz) {
+        var fields = Arrays.stream(clazz.getDeclaredFields())
+                .filter(field -> !Modifier.isStatic(field.getModifiers()))
+                .filter(OpRuntimeCacheTest::isOwnerBearingRuntimeCacheField)
+                .map(Field::getName)
+                .toList();
+
+        assertEquals(List.of(), fields, clazz.getName()
+                + " must keep frame-owned switch caches out of decoded Op fields");
+    }
+
+    private static boolean isOwnerBearingRuntimeCacheField(Field field) {
+        Class<?> type = baseComponentType(field.getType());
+        return ObjectHandle.class.isAssignableFrom(type)
+                || TypeConstant.class.isAssignableFrom(type)
+                || Map.class.isAssignableFrom(type)
+                || List.class.isAssignableFrom(type)
+                || type.getSimpleName().equals("Algorithm");
+    }
+
+    private static Class<?> baseComponentType(Class<?> type) {
+        while (type.isArray()) {
+            type = type.getComponentType();
+        }
+        return type;
     }
 
     private static DataInputStream input(int... values) throws IOException {

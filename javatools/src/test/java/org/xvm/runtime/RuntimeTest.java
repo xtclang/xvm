@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.FileStructure;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -20,6 +21,7 @@ import org.xvm.asm.constants.VersionConstant;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 
 public class RuntimeTest {
@@ -72,6 +74,42 @@ public class RuntimeTest {
 
             assertSame(container, runtime.findContainer(container.getConstantPool()));
             assertSame(container, runtime.observed);
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
+    /**
+     * Runtime op caches hold owner-bearing values such as switch case handles and type constants.
+     * The cache key must therefore include the executing container, not only the decoded op object.
+     */
+    @Test
+    public void runtimeOpCacheIsContainerLocalAndTyped() {
+        var runtime = new Runtime();
+        try {
+            var left           = new TestContainer(runtime, "left");
+            var right          = new TestContainer(runtime, "right");
+            var op             = new TestOp();
+            var leftCache      = new TestCache("left");
+            var duplicateCache = new TestCache("duplicate");
+            var rightCache     = new TestCache("right");
+
+            assertNull(left.getRuntimeOpCache(op, RuntimeCacheCategory.SWITCH, TestCache.class));
+            assertSame(leftCache, left.putRuntimeOpCacheIfAbsent(
+                    op, RuntimeCacheCategory.SWITCH, leftCache, TestCache.class));
+            assertSame(leftCache, left.putRuntimeOpCacheIfAbsent(
+                    op, RuntimeCacheCategory.SWITCH, duplicateCache, TestCache.class));
+            assertSame(leftCache, left.getRuntimeOpCache(
+                    op, RuntimeCacheCategory.SWITCH, TestCache.class));
+
+            assertNull(right.getRuntimeOpCache(op, RuntimeCacheCategory.SWITCH, TestCache.class));
+            assertSame(rightCache, right.putRuntimeOpCacheIfAbsent(
+                    op, RuntimeCacheCategory.SWITCH, rightCache, TestCache.class));
+            assertSame(rightCache, right.getRuntimeOpCache(
+                    op, RuntimeCacheCategory.SWITCH, TestCache.class));
+
+            assertThrows(ClassCastException.class,
+                    () -> left.getRuntimeOpCache(op, RuntimeCacheCategory.SWITCH, String.class));
         } finally {
             runtime.shutdownXVM();
         }
@@ -161,6 +199,23 @@ public class RuntimeTest {
             C registered = super.registerContainer(container);
             observed = findContainer(container.getConstantPool());
             return registered;
+        }
+    }
+
+    private record TestCache(String owner) {}
+
+    private enum RuntimeCacheCategory {SWITCH}
+
+    private static class TestOp
+            extends Op {
+        @Override
+        public int getOpCode() {
+            return 0;
+        }
+
+        @Override
+        public int process(Frame frame, int iPC) {
+            return iPC + 1;
         }
     }
 }

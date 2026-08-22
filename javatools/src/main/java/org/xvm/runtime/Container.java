@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.xvm.asm.ClassStructure;
@@ -98,6 +99,49 @@ public abstract class Container
      */
     public NativeTemplates nativeTemplates() {
         return f_nativeTemplates.get(this);
+    }
+
+    /**
+     * Look up container-owned runtime cache state for a decoded op.
+     *
+     * Runtime op graphs can be shared by repeated executions and by multiple containers. Any cache
+     * that contains handles, type constants resolved through a frame, or other owner-bearing values
+     * must live under the executing owner instead of on the shared op object.
+     *
+     * @param op        the decoded op
+     * @param category  the op-specific cache category
+     * @param type      the expected cache type
+     *
+     * @return the cached value, or null
+     */
+    public <T> T getRuntimeOpCache(Op op, Enum<?> category, Class<T> type) {
+        Map<Enum<?>, Object> byCategory = f_mapRuntimeOpCache.get(op);
+        return byCategory == null
+                ? null
+                : type.cast(byCategory.get(category));
+    }
+
+    /**
+     * Publish container-owned runtime cache state for a decoded op.
+     *
+     * If another fiber in the same container wins the first-build race, its cache is reused. This
+     * preserves the old "build once, then hit the cache" behavior without letting the first
+     * executing container install owner-bearing state on the shared op.
+     *
+     * @param op        the decoded op
+     * @param category  the op-specific cache category
+     * @param cache     the newly built cache value
+     * @param type      the expected cache type
+     *
+     * @return the published cache value
+     */
+    public <T> T putRuntimeOpCacheIfAbsent(Op op, Enum<?> category, T cache, Class<T> type) {
+        ConcurrentMap<Enum<?>, Object> byCategory = f_mapRuntimeOpCache.computeIfAbsent(op,
+                key -> new ConcurrentHashMap<>());
+        // One op can have several unrelated cache categories, so storage is erased here; callers
+        // recover the concrete type at the boundary with the Class<T> token.
+        Object current = byCategory.putIfAbsent(category, cache);
+        return type.cast(current == null ? cache : current);
     }
 
     /**
@@ -767,6 +811,13 @@ public abstract class Container
      */
     private final Lazy.Owner<Container, NativeTemplates> f_nativeTemplates =
             Lazy.ofOwner(NativeTemplates::new);
+
+    /**
+     * Container-local runtime cache state for decoded ops that would otherwise store frame-derived
+     * owner state on shared instruction objects.
+     */
+    private final ConcurrentMap<Op, ConcurrentMap<Enum<?>, Object>> f_mapRuntimeOpCache =
+            new ConcurrentHashMap<>();
 
     /**
      * Runtime helper metadata derived from this container's template registry, structures, and

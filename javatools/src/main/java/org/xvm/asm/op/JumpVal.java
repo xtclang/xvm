@@ -117,13 +117,15 @@ public class JumpVal
         }
     }
 
-    protected int ensureJumpMap(Frame frame, int iPC, ObjectHandle hValue) {
-        return m_algorithm == null
+    private int ensureJumpMap(Frame frame, int iPC, ObjectHandle hValue) {
+        SwitchCache cache = frame.container().getRuntimeOpCache(this, CacheCategory.SWITCH,
+                SwitchCache.class);
+        return cache == null
                 ? explodeConstants(frame, iPC, hValue)
-                : complete(frame, iPC, hValue);
+                : complete(frame, iPC, hValue, cache);
     }
 
-    protected int explodeConstants(Frame frame, int iPC, ObjectHandle hValue) {
+    private int explodeConstants(Frame frame, int iPC, ObjectHandle hValue) {
         ObjectHandle[] ahCase = new ObjectHandle[m_aofCase.length];
         for (int iRow = 0, cRows = m_aofCase.length; iRow < cRows; iRow++) {
             ahCase[iRow] = frame.getConstHandle(m_anConstCase[iRow]);
@@ -131,21 +133,21 @@ public class JumpVal
 
         if (Op.anyDeferred(ahCase)) {
             Frame.Continuation stepNext = frameCaller -> {
-                buildJumpMap(frameCaller, ahCase);
-                return complete(frameCaller, iPC, hValue);
+                SwitchCache cache = buildJumpMap(frameCaller, ahCase);
+                return complete(frameCaller, iPC, hValue, cache);
             };
             return new Utils.GetArguments(ahCase, stepNext).doNext(frame);
         }
 
-        buildJumpMap(frame, ahCase);
-        return complete(frame, iPC, hValue);
+        SwitchCache cache = buildJumpMap(frame, ahCase);
+        return complete(frame, iPC, hValue, cache);
     }
 
-    protected int complete(Frame frame, int iPC, ObjectHandle hValue) {
-        Map<ObjectHandle, Integer> mapJump = m_mapJump;
+    protected int complete(Frame frame, int iPC, ObjectHandle hValue, SwitchCache cache) {
+        Map<ObjectHandle, Integer> mapJump = cache.jumpMap();
         Integer Index;
 
-        switch (m_algorithm) {
+        switch (cache.algorithm()) {
         case NativeSimple:
             Index = mapJump.get(hValue);
             break;
@@ -157,9 +159,8 @@ public class JumpVal
             if (!hValue.isNativeEqual()) {
                 break; // REVIEW: should we assert instead?
             }
-            List<Object[]> listRanges = m_listRanges;
-            for (Object[] ao : listRanges) {
-                int index = (Integer) ao[2];
+            for (RangeMatch range : cache.ranges()) {
+                int index = range.encodedIndex();
                 boolean fLoEx = (index & LO_EX) != 0;
                 boolean fHiEx = (index & HI_EX) != 0;
 
@@ -168,11 +169,8 @@ public class JumpVal
                 // we only need to compare the range if there is a chance that it can impact
                 // the result (the range case precedes the exact match case)
                 if (Index == null || Index.intValue() > index) {
-                    ObjectHandle hLow  = (ObjectHandle) ao[0];
-                    ObjectHandle hHigh = (ObjectHandle) ao[1];
-
-                    int nCmpLo = hValue.compareTo(hLow);
-                    int nCmpHi = hValue.compareTo(hHigh);
+                    int nCmpLo = hValue.compareTo(range.lower());
+                    int nCmpHi = hValue.compareTo(range.upper());
 
                     if ((fLoEx ? nCmpLo > 0 : nCmpLo >= 0) &&
                         (fHiEx ? nCmpHi < 0 : nCmpHi <= 0)) {
@@ -184,7 +182,7 @@ public class JumpVal
         }
 
         default:
-            return findNatural(frame, iPC, hValue, 0);
+            return findNatural(frame, iPC, hValue, 0, cache);
         }
 
         return Index == null
@@ -197,15 +195,16 @@ public class JumpVal
      *
      * @return one of Op.R_NEXT, Op.R_CALL, Op.R_EXCEPTION or the next iPC value
      */
-    protected int findNatural(Frame frame, int iPC, ObjectHandle hValue, int iCase) {
-        ObjectHandle[] ahCase = m_ahCase;
+    private int findNatural(Frame frame, int iPC, ObjectHandle hValue, int iCase,
+                            SwitchCache cache) {
+        ObjectHandle[] ahCase = cache.cases();
         int            cCases = ahCase.length;
 
         for (; iCase < cCases; iCase++) {
             ObjectHandle hCase    = ahCase[iCase];
             int          iCurrent = iCase; // effectively final
 
-            switch (m_algorithm) {
+            switch (cache.algorithm()) {
             case NaturalRange: {
                 if (hCase.getType().isA(frame.poolContext().typeRange())) {
                     GenericHandle hRange = (GenericHandle) hCase;
@@ -215,9 +214,9 @@ public class JumpVal
                     BooleanHandle hHiEx  = (BooleanHandle) hRange.getField(null, "upperExclusive");
 
                     Frame.Continuation stepNext =
-                        frameCaller -> findNatural(frameCaller, iPC, hValue, iCurrent + 1);
+                        frameCaller -> findNatural(frameCaller, iPC, hValue, iCurrent + 1, cache);
 
-                    switch (checkRange(frame, m_typeCond, hValue, hLo, hHi,
+                    switch (checkRange(frame, cache.conditionType(), hValue, hLo, hHi,
                                 hLoEx.get(), hHiEx.get(), true, stepNext)) {
                     case Op.R_NEXT:
                         if (xBoolean.isTrue(frame.popStack())) {
@@ -230,7 +229,7 @@ public class JumpVal
                         frame.m_frameNext.addContinuation(frameCaller ->
                             xBoolean.isTrue(frameCaller.popStack())
                                 ? jump(frameCaller, iPC + m_aofCase[iCurrent], m_acExits[iCurrent])
-                                : findNatural(frameCaller, iPC, hValue, iCurrent + 1));
+                                : findNatural(frameCaller, iPC, hValue, iCurrent + 1, cache));
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -244,7 +243,7 @@ public class JumpVal
             }
 
             case NaturalSimple: {
-                switch (m_typeCond.callEquals(frame, hValue, hCase, Op.A_STACK)) {
+                switch (cache.conditionType().callEquals(frame, hValue, hCase, Op.A_STACK)) {
                 case Op.R_NEXT:
                     if (xBoolean.isTrue(frame.popStack())) {
                         // it's a match
@@ -256,7 +255,7 @@ public class JumpVal
                     frame.m_frameNext.addContinuation(frameCaller ->
                         xBoolean.isTrue(frameCaller.popStack())
                             ? jump(frameCaller, iPC + m_aofCase[iCurrent], m_acExits[iCurrent])
-                            : findNatural(frameCaller, iPC, hValue, iCurrent + 1));
+                            : findNatural(frameCaller, iPC, hValue, iCurrent + 1, cache));
                     return Op.R_CALL;
 
                 case Op.R_EXCEPTION:
@@ -272,17 +271,10 @@ public class JumpVal
         return jump(frame, iPC + m_ofDefault, m_cDefaultExits);
     }
 
-    /**
-     * This method is synchronized because it needs to update three different values atomically.
-     */
-    private synchronized void buildJumpMap(Frame frame, ObjectHandle[] ahCase) {
-        if (m_algorithm != null) {
-            // the jump map was built concurrently
-            return;
-        }
-
+    private SwitchCache buildJumpMap(Frame frame, ObjectHandle[] ahCase) {
         int                        cCases  = ahCase.length;
         Map<ObjectHandle, Integer> mapJump = new HashMap<>(cCases);
+        List<RangeMatch>           ranges  = new ArrayList<>();
 
         Algorithm    algorithm  = Algorithm.NativeSimple;
         TypeConstant typeCond   = frame.getLocalType(m_nArgCond, null);
@@ -311,7 +303,7 @@ public class JumpVal
                 if (hCase.isNativeEqual()) {
                     mapJump.put(hCase, Integer.valueOf(iCase));
                 } else if (fRange) {
-                    if (addRange((GenericHandle) hCase, iCase)) {
+                    if (addRange((GenericHandle) hCase, iCase, ranges)) {
                         algorithm = Algorithm.NativeRange;
                     } else {
                         algorithm = Algorithm.NaturalRange;
@@ -323,7 +315,7 @@ public class JumpVal
                 if (fRange) {
                     algorithm = Algorithm.NaturalRange;
 
-                    addRange((GenericHandle) hCase, iCase);
+                    addRange((GenericHandle) hCase, iCase, ranges);
                 } else {
                     algorithm = algorithm.worstOf(Algorithm.NaturalSimple);
 
@@ -332,10 +324,10 @@ public class JumpVal
             }
         }
 
-        m_ahCase    = ahCase;
-        m_mapJump   = mapJump;
-        m_algorithm = algorithm;
-        m_typeCond  = typeCond;
+        SwitchCache cache = new SwitchCache(ahCase, Map.copyOf(mapJump), algorithm, typeCond,
+                List.copyOf(ranges));
+        return frame.container().putRuntimeOpCacheIfAbsent(this, CacheCategory.SWITCH, cache,
+                SwitchCache.class);
     }
 
     /**
@@ -346,18 +338,13 @@ public class JumpVal
      *
      * @return true iff the range element is native
      */
-    private boolean addRange(GenericHandle hRange, int index) {
+    private boolean addRange(GenericHandle hRange, int index, List<RangeMatch> ranges) {
         ObjectHandle  hLo   = hRange.getField(null, "lowerBound");
         ObjectHandle  hHi   = hRange.getField(null, "upperBound");
         BooleanHandle hLoEx = (BooleanHandle) hRange.getField(null, "lowerExclusive");
         BooleanHandle hHiEx = (BooleanHandle) hRange.getField(null, "upperExclusive");
 
         // TODO: if the range is small and sequential (an interval), replace it with the exact hits for native values
-        List<Object[]> list = m_listRanges;
-        if (list == null) {
-            list = m_listRanges = new ArrayList<>();
-        }
-
         assert (index & EXCLUDE_MASK) == 0;
         if (hLoEx.get()) {
             index |= LO_EX;
@@ -366,7 +353,7 @@ public class JumpVal
             index |= HI_EX;
         }
 
-        list.add(new Object[]{hLo, hHi, Integer.valueOf(index)});
+        ranges.add(new RangeMatch(hLo, hHi, index));
         return hLo.isNativeEqual();
     }
 
@@ -759,32 +746,16 @@ public class JumpVal
     private   Argument m_argCond;
 
     /**
-     * Cached array of case constant values.
+     * Owner-local first-execution switch table. These handles and type constants come from a
+     * concrete frame/container, so they must not be stored on the shared decoded op.
      */
-    protected transient ObjectHandle[] m_ahCase;
+    protected record SwitchCache(ObjectHandle[] cases, Map<ObjectHandle, Integer> jumpMap,
+                                  Algorithm algorithm, TypeConstant conditionType,
+                                  List<RangeMatch> ranges) {}
 
-    /**
-     * Cached jump map. The Integer represents the matching case.
-     */
-    private transient Map<ObjectHandle, Integer> m_mapJump;
+    private record RangeMatch(ObjectHandle lower, ObjectHandle upper, int encodedIndex) {}
 
-    /**
-     * Cached algorithm value.
-     */
-    private transient Algorithm m_algorithm;
-
-    /**
-     * Cached condition type
-     */
-    private transient TypeConstant m_typeCond;
-
-    /**
-     * A list of ranges;
-     *  a[0] - lower bound (ObjectHandle);
-     *  a[1] - upper bound (ObjectHandle);
-     *  a[2] - the case index (Integer) masked by the exclusivity bits
-     */
-    private transient List<Object[]> m_listRanges;
+    private enum CacheCategory {SWITCH}
 
     private static final int EXCLUDE_MASK = 0xC000_0000;
     private static final int LO_EX        = 0x8000_0000;

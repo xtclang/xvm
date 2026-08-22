@@ -718,6 +718,43 @@ source ops and is encoded to `m_nType` before runtime execution.
 condition fields are gone and guards against reintroducing the old common-type
 write-back pattern.
 
+The same fix category now covers `JumpVal`, `JumpIsA`, and `JumpVal_N`. Those
+ops used to build first-execution switch tables from `Frame` state and store
+them directly on the decoded op object:
+
+- `JumpVal` stored case `ObjectHandle` values, a jump map keyed by those
+  handles, range metadata, the selected comparison algorithm, and the
+  frame-derived condition `TypeConstant`.
+- `JumpIsA` read `JumpVal`'s cached case-handle array directly.
+- `JumpVal_N` stored row/column case handles, per-column type constants, small
+  jump maps, wildcard masks, range lists, per-column algorithms, and the global
+  switch algorithm.
+
+That was not decoded bytecode metadata. It was owner-bearing runtime data
+created through one `Frame`/`Container`. Synchronizing the build made only the
+first field update atomic; it still let the first executing owner install
+handles and type constants that later containers could reuse.
+
+The replacement keeps the same switch-table representation and cache-hit
+behavior, but moves publication to `Container.f_mapRuntimeOpCache` behind
+typed `getRuntimeOpCache(...)` and `putRuntimeOpCacheIfAbsent(...)` helpers.
+The runtime key is the shared decoded op identity plus an op-local cache
+category, under the executing container. The hot path still uses a cached
+`ObjectHandle` map/array table after first execution in that container. The
+only intentional footprint change is that two containers now build two switch
+tables, which is the safe equivalent because their handles and type constants
+are owner-scoped. In one-container execution the table contents and matching
+logic are the same shape as before, with one container cache entry replacing
+the old op fields.
+
+`OpRuntimeCacheTest.switchOpsDoNotCacheOwnerValuesOnDecodedOps()` fails on
+master because the owner-bearing switch-table fields still exist on
+`JumpVal`/`JumpVal_N`, and passes here because decoded ops no longer carry
+those values. `RuntimeTest.runtimeOpCacheIsContainerLocalAndTyped()` proves the
+new cache API itself is owner-local: a second put in the same container reuses
+the first value, a different container gets a separate value for the same op,
+and a wrong type token fails at the cache boundary.
+
 ### ASM `Op` Constructor Shape Dispatch
 
 This branch also removes the remaining `Op*.java` constructor-time virtual

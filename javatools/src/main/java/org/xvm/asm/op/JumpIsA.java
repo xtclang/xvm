@@ -66,8 +66,8 @@ public class JumpIsA
     }
 
     @Override
-    protected int complete(Frame frame, int iPC, ObjectHandle hValue) {
-        ObjectHandle[] ahCase  = m_ahCase;
+    protected int complete(Frame frame, int iPC, ObjectHandle hValue, SwitchCache cache) {
+        ObjectHandle[] ahCase  = cache.cases();
         TypeConstant   typeVal = hValue.getUnsafeType();
         for (int i = 0, c = ahCase.length; i < c; ++i) {
             if (typeVal.isA(((TypeHandle) ahCase[i]).getDataType())) {
