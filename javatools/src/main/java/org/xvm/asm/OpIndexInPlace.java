@@ -48,7 +48,7 @@ public abstract class OpIndexInPlace
      */
     protected OpIndexInPlace(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, false);
 
         m_nValue = readPackedInt(in);
     }

@@ -36,7 +36,7 @@ public class PIP_Dec
      */
     public PIP_Dec(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, false);
     }
 
     @Override

@@ -38,7 +38,7 @@ public class IIP_Inc
      */
     public IIP_Inc(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, false);
     }
 
     @Override

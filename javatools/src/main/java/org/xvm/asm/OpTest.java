@@ -40,13 +40,29 @@ import static org.xvm.util.Handy.writePackedLong;
 public abstract class OpTest
         extends Op {
     /**
+     * The operand layout encoded by a test opcode.
+     */
+    protected enum TestShape {
+        UNARY(false, false),
+        SECOND_ARGUMENT(false, true),
+        BINARY(true, true);
+
+        TestShape(boolean binary, boolean secondArgument) {
+            this.binary         = binary;
+            this.secondArgument = secondArgument;
+        }
+
+        final boolean binary;
+        final boolean secondArgument;
+    }
+
+    /**
      * Construct a unary IS_ op.
      *
      * @param arg        the value Argument
      * @param argReturn  the location to store the test result
      */
     protected OpTest(Argument arg, Argument argReturn) {
-        assert !isBinaryOp() && !hasSecondArgument();
         m_argVal1   = arg;
         m_argReturn = argReturn;
     }
@@ -59,7 +75,6 @@ public abstract class OpTest
      * @param argReturn  the location to store the test result
      */
     protected OpTest(Argument arg1, Argument arg2, Argument argReturn) {
-        assert hasSecondArgument() && !isBinaryOp();
         m_argVal1   = arg1;
         m_argVal2   = arg2;
         m_argReturn = argReturn;
@@ -74,7 +89,6 @@ public abstract class OpTest
      * @param argReturn  the location to store the test result
      */
     protected OpTest(TypeConstant type, Argument arg1, Argument arg2, Argument argReturn) {
-        assert isBinaryOp();
         m_typeCommon = type;
         m_argVal1    = arg1;
         m_argVal2    = arg2;
@@ -89,11 +103,27 @@ public abstract class OpTest
      */
     protected OpTest(DataInput in, Constant[] aconst)
             throws IOException {
-        if (isBinaryOp()) {
+        this(in, aconst, TestShape.UNARY);
+    }
+
+    /**
+     * Deserialization constructor with explicit opcode shape.
+     *
+     * @param in      the DataInput to read from
+     * @param aconst  an array of constants used within the method
+     * @param shape   the encoded operand layout
+     */
+    protected OpTest(DataInput in, Constant[] aconst, TestShape shape)
+            throws IOException {
+        // Shape controls the byte-stream layout. It is passed as static opcode
+        // metadata so construction never calls virtual shape predicates.
+        // The shape constants mirror the old isBinaryOp()/hasSecondArgument()
+        // results; only the construction-time dispatch is removed.
+        if (shape.binary) {
             m_nType = readPackedInt(in);
         }
         m_nValue1 = readPackedInt(in);
-        if (hasSecondArgument()) {
+        if (shape.secondArgument) {
             m_nValue2 = readPackedInt(in);
         }
         m_nRetValue = readPackedInt(in);

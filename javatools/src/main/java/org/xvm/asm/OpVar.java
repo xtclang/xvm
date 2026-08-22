@@ -55,7 +55,23 @@ public abstract class OpVar
      */
     protected OpVar(DataInput in, Constant[] aconst)
             throws IOException {
-        if (isTypeAware()) {
+        this(in, aconst, true);
+    }
+
+    /**
+     * Deserialization constructor with explicit opcode shape.
+     *
+     * @param in         the DataInput to read from
+     * @param aconst     an array of constants used within the method
+     * @param typeAware  true iff this opcode encodes type information
+     */
+    protected OpVar(DataInput in, Constant[] aconst, boolean typeAware)
+            throws IOException {
+        // Type-awareness controls the byte-stream layout and is static opcode
+        // metadata; do not call isTypeAware() from a base constructor.
+        // Subclasses that pass false are the same untyped opcodes that
+        // previously overrode isTypeAware() to false.
+        if (typeAware) {
             m_nType = readPackedInt(in);
         }
     }

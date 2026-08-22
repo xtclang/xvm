@@ -42,7 +42,7 @@ public class JumpType
      */
     public JumpType(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, CondJumpShape.SECOND_ARGUMENT);
     }
 
     @Override
