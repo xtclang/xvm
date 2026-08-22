@@ -41,8 +41,25 @@ interface ModuleTemplate
     }
 
     /**
-     * Indicates whether this template has been "resolved", which means that it is ready to answer
-     * all questions about the module's content (children, contributions, etc.)
+     * Indicates whether this ModuleTemplate is a module fingerprint.
+     *
+     * A module fingerprint is a ModuleTemplate containing only the subset of the identities within
+     * that module that is depended upon by other modules within a FileTemplate, and thus required
+     * for linking to. This structure is called a "module fingerprint", because it represents only
+     * the outline of the module, and multiple versions of that module may be able to match
+     * (fulfill the requirements of) that same fingerprint. As part of the linking process, a module
+     * fingerprint that is depended upon is replaced with an actual, complete module definition that
+     * matches the fingerprint.
+     *
+     * A module with `fingerprint == True` must be `resolved == False`.
+     */
+    @RO Boolean fingerprint;
+
+    /**
+     * Indicates whether this ModuleTemplate has been linked, for example by [FileTemplate.resolve].
+     *
+     * An unresolved module may be a [fingerprint] module. A `resolved` module is never a
+     * [fingerprint] module.
      */
     @RO Boolean resolved;
 

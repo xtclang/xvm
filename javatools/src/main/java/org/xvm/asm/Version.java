@@ -220,7 +220,7 @@ public class Version
                     sb.append('.');
                 }
                 sb.append(part);
-            } else if (part >= -PREFIX.length) {
+            } else if (part >= -5) {
                 fGA = false;
                 switch (c - i) {
                 case 1:
@@ -244,7 +244,7 @@ public class Version
                 if (i > 0) {
                     sb.append('-');
                 }
-                sb.append(PREFIX[part + PREFIX.length]);
+                sb.append(TEXT[part + TEXT.length - 1]);
             } else {
                 sb.append(".illegal(")
                   .append(i)
@@ -267,8 +267,23 @@ public class Version
         }
     }
 
+    /**
+     * Internal: Construct a versionless version that can be used as a non-null marker.
+     */
+    private Version() {
+        // this is technically an illegal, unconstructable version
+        this.ints    = new int[] {1 - TEXT.length};
+        this.literal = TEXT[0];
+    }
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * Detecting the special "non-version" version.
+     */
+    boolean unversioned() {
+        return this == NONE;
+    }
 
     /**
      * @return true iff the version number indicates a generally available release; false if the
@@ -281,11 +296,13 @@ public class Version
                 return false;
             }
         }
+
         return true;
     }
 
     /**
-     * @return a value between -5 and 0, representing "dev", "ci", "alpha", "beta", "rc", or "ga"
+     * @return a value between -7 and 0, representing "unversioned", "CI", "Dev", "QC", "alpha",
+     *         "beta", "rc", or "ga"
      */
     public int getReleaseCategory() {
         for (int part : getIntArray()) {
@@ -293,15 +310,15 @@ public class Version
                 return part;
             }
         }
+
         return 0;
     }
 
     /**
-     * @return one of "dev", "ci", "alpha", "beta", "rc", or "ga"
+     * @return one of "unversioned", "CI", "Dev", "QC", "alpha", "beta", "rc", or "ga"
      */
     public String getReleaseCategoryString() {
-        int n = getReleaseCategory();
-        return n < 0 ? PREFIX[n + PREFIX.length] : "ga";
+        return TEXT[getReleaseCategory() + TEXT.length - 1];
     }
 
     /**
@@ -346,7 +363,7 @@ public class Version
             return true;
         }
 
-        // check all of the shared version parts (except for the last shared version part) to make
+        // check each shared version part (except for the last shared version part) to make
         // sure that they are identical; for example, when comparing "1.2.3" and "1.2.4", this would
         // compare both the "1" and the "2" parts, but when comparing "1.2.3" and "1.2", this would
         // only check the "1" part.
@@ -538,7 +555,6 @@ public class Version
         return build == null ? this : new Version(ints, null);
     }
 
-
     // ----- Comparable methods --------------------------------------------------------------------
 
     @Override
@@ -555,7 +571,6 @@ public class Version
         return nDefault;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -570,9 +585,8 @@ public class Version
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof Version && literal.equals(((Version) obj).literal);
+        return obj instanceof Version that && this.literal.equals(that.literal);
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 
@@ -595,10 +609,11 @@ public class Version
         return ints;
     }
 
-
     // ----- fields --------------------------------------------------------------------------------
 
-    private static final String[] PREFIX = {"CI", "Dev", "QC", "alpha", "beta", "rc"};
+    private static final String[] TEXT = {"unversioned", "CI", "Dev", "QC", "alpha", "beta", "rc", "ga"};
+
+    public static final Version NONE = new Version();
 
     protected String literal;
     protected int[]  ints;

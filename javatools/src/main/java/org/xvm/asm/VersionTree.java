@@ -15,10 +15,33 @@ public class VersionTree<V>
         implements Iterable<Version> {
     // ----- constructors --------------------------------------------------------------------------
 
+    /**
+     * Construct an empty {@link VersionTree}.
+     */
     public VersionTree() {
         clear();
     }
 
+    /**
+     * Copy construct a {@link VersionTree}.
+     *
+     * @param orig  a VersionTree to copy
+     */
+    public VersionTree(VersionTree<V> orig) {
+        this();
+        putAll(orig);
+    }
+
+    /**
+     * Construct a VersionTree with a single element.
+     *
+     * @param ver    the version key for the single element
+     * @param value  the value of the single element
+     */
+    public VersionTree(Version ver, V value) {
+        this();
+        put(ver, value);
+    }
 
     // ----- VersionTree API -----------------------------------------------------------------------
 
@@ -108,7 +131,8 @@ public class VersionTree<V>
      * @return true iff the version exists in this tree
      */
     public boolean contains(Version ver) {
-        return findNode(ver) != null;
+        Node<V> node = findNode(ver);
+        return node != null && node.isPresent();
     }
 
     /**
@@ -188,6 +212,36 @@ public class VersionTree<V>
     }
 
     /**
+     * Select the best version to use.
+     *
+     * @param ver     the desired version
+     * @param fExact  `true` iff the exact desired version is required
+     *
+     * @return the version to use, or `null` if no acceptable version exists in this VersionTree
+     */
+    public Version selectVersion(Version ver, boolean fExact) {
+        if (ver == null) {
+            ver = Version.NONE;
+        }
+
+        if (contains(ver)) {
+            return ver;
+        }
+
+        Version closest = findClosestVersion(ver);
+        if (closest == null) {
+            return null;
+        }
+
+        if (fExact) {
+            // use the closest version iff it's the same as this version (except for .0 etc.)
+            return ver.isSubstitutableFor(closest) ? closest : null;
+        }
+
+        return closest;
+    }
+
+    /**
      * Retrieve the lowest version in the tree.
      *
      * @return the lowest version, or null
@@ -222,12 +276,33 @@ public class VersionTree<V>
     }
 
     /**
+     * Make the VersionTree into a read-only data structure, preventing any future modifications.
+     *
+     * @return this VersionTree, but marked as read-only
+     */
+    public VersionTree<V> ensureReadOnly() {
+        readOnly = true;
+        return this;
+    }
+
+    /**
+     * @return this VersionTree if it is not read-only, or a new clone of this VersionTree if this
+     *         VersionTree if it is read-only
+     */
+    public VersionTree<V> ensureMutable() {
+        return readOnly ? new VersionTree<>(this) : this;
+    }
+
+    /**
      * Store the specified value for the specified version.
      *
      * @param ver    the version
      * @param value  the value to store for that version
+     *
+     * @return this VersionTree with the change applied
      */
-    public void put(Version ver, V value) {
+    public VersionTree<V> put(Version ver, V value) {
+        verifyMutable();
         if (value == null) {
             throw new IllegalArgumentException("value cannot be null");
         }
@@ -237,25 +312,33 @@ public class VersionTree<V>
             ++count;
         }
         node.value = value;
+
+        return this;
     }
 
     /**
      * Copy all of the data from that tree into this tree.
      *
      * @param that  another version tree with the same associated value type
+     *
+     * @return this VersionTree with the change applied
      */
-    public void putAll(VersionTree<V> that) {
+    public VersionTree<V> putAll(VersionTree<V> that) {
         for (Version ver : that) {
             put(ver, that.get(ver));
         }
+        return this;
     }
 
     /**
      * Remove the specified version and its associated value from this tree.
      *
      * @param ver  the version to remove
+     *
+     * @return this VersionTree with the change applied
      */
-    public void remove(Version ver) {
+    public VersionTree<V> remove(Version ver) {
+        verifyMutable();
         Node<V> node = findNode(ver);
         if (node != null) {
             if (node.isPresent()) {
@@ -264,25 +347,31 @@ public class VersionTree<V>
 
             node.remove();
         }
+        return this;
     }
 
     /**
      * Remove all of the version in the specified tree from this tree.
      *
      * @param that  the VersionTree of versions to remove; the values in the tree are ignored
+     *
+     * @return this VersionTree with the change applied
      */
-    public void removeAll(VersionTree<?> that) {
+    public VersionTree<V> removeAll(VersionTree<?> that) {
         for (Version ver : that) {
             remove(ver);
         }
+        return this;
     }
 
     /**
      * Retain only the versions in this tree that exist in the specified tree.
      *
      * @param that  the VersionTree of versions to retain; the values in the tree are ignored
+     *
+     * @return this VersionTree with the change applied
      */
-    public void retainAll(VersionTree<?> that) {
+    public VersionTree<V> retainAll(VersionTree<?> that) {
         // first, collect a list of versions to remove, so that removal (in the middle of our
         // iteration) does not cause instability in the iterator
         ArrayList<Version> listRemove = null;
@@ -299,14 +388,19 @@ public class VersionTree<V>
                 remove(ver);
             }
         }
+        return this;
     }
 
     /**
      * Clear the tree entirely.
+     *
+     * @return this VersionTree with the change applied
      */
-    public void clear() {
+    public VersionTree<V> clear() {
+        verifyMutable();
         root  = new Node<>(null, 0);
         count = 0;
+        return this;
     }
 
     /**
@@ -339,7 +433,8 @@ public class VersionTree<V>
                         iterThis.hasNext(); ) {
                     Version verThis = iterThis.next();
                     Version verThat = iterThat.next();
-                    if (!verThis.equals(verThat) || !Handy.equals(this.get(verThis), that.get(verThat))) {
+                    if (!verThis.withoutBuildString().equals(verThat.withoutBuildString())
+                            || !Handy.equals(this.get(verThis), that.get(verThat))) {
                         return false;
                     }
                 }
@@ -358,8 +453,13 @@ public class VersionTree<V>
         return sb.toString();
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
+
+    private void verifyMutable() {
+        if (readOnly) {
+            throw new IllegalStateException("VersionTree is read-only");
+        }
+    }
 
     /**
      * Find the node corresponding to the specified version. Only used internally.
@@ -393,7 +493,6 @@ public class VersionTree<V>
         node.version = ver;
         return node;
     }
-
 
     // ----- inner class: Node ---------------------------------------------------------------------
 
@@ -927,7 +1026,7 @@ public class VersionTree<V>
         /**
          * The parent of this node; all nodes have a parent, except for the root node.
          */
-        Node    parent;
+        Node parent;
 
         /**
          * The cached version (the key) of this node. The root node does not have a version.
@@ -937,23 +1036,22 @@ public class VersionTree<V>
         /**
          * The version part that this node represents. The root node does not have a version part.
          */
-        int     part;
+        int part;
 
         /**
          * The value that this node holds, if the version for this node is associated with a value.
          * The root node does not have a value. Nodes without values are used for hierarchical
          * organization of the tree, but are not considered to be "present" in the tree.
          */
-        V       value;
+        V value;
 
         /**
          * The child nodes of this node. May be null, which indicates no children. May contain
          * nulls, but the non-null child references always start at index zero and occur in order
          * of the version part represented by each child.
          */
-        Node[]  kids;
+        Node[] kids;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -965,5 +1063,10 @@ public class VersionTree<V>
     /**
      * The number of values in the tree.
      */
-    int     count;
+    int count;
+
+    /**
+     * If `true` then content changes are not permitted.
+     */
+    boolean readOnly;
 }

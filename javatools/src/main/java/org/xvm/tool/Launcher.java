@@ -25,6 +25,7 @@ import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.compiler.BuildRepository;
 
+import org.xvm.tool.LauncherOptions.BundlerOptions;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.LauncherOptions.DisassemblerOptions;
 import org.xvm.tool.LauncherOptions.InitializerOptions;
@@ -88,6 +89,7 @@ public abstract class Launcher<T extends LauncherOptions>
     public static final String CMD_RUN    = "run";
     public static final String CMD_TEST   = "test";
     public static final String CMD_DISASS = "disass";
+    public static final String CMD_BUNDLE = "bundle";
 
     /**
      * Registry of available commands. Each entry maps a command name to a handler that parses
@@ -102,7 +104,8 @@ public abstract class Launcher<T extends LauncherOptions>
             CMD_INIT,   (args, console, err) -> launch(InitializerOptions.parse(args), console, err),
             CMD_RUN,    (args, console, err) -> launch(RunnerOptions.parse(args), console, err),
             CMD_TEST,   (args, console, err) -> launch(TestRunnerOptions.parse(args), console, err),
-            CMD_DISASS, (args, console, err) -> launch(DisassemblerOptions.parse(args), console, err)
+            CMD_DISASS, (args, console, err) -> launch(DisassemblerOptions.parse(args), console, err),
+            CMD_BUNDLE, (args, console, err) -> launch(BundlerOptions.parse(args), console, err)
     );
 
     private static final Locale DEFAULT_LOCALE = Locale.getDefault();
@@ -260,6 +263,7 @@ public abstract class Launcher<T extends LauncherOptions>
                 run      Execute an Ecstasy module (alias: xec)
                 test     Run tests in an Ecstasy module using xunit
                 disass   Disassemble a compiled Ecstasy module
+                bundle   Merge compiled modules into a single multi-module .xtc file
 
             Options:
                 --version   Display the Ecstasy runtime version
@@ -300,6 +304,7 @@ public abstract class Launcher<T extends LauncherOptions>
             case final TestRunnerOptions opts   -> new TestRunner(opts, console, errListener);
             case final RunnerOptions opts       -> new Runner(opts, console, errListener);
             case final DisassemblerOptions opts -> new Disassembler(opts, console, errListener);
+            case final BundlerOptions opts      -> new Bundler(opts, console, errListener);
             default -> {
                 console.log(ERROR, "Unknown options type: {}", options.getClass().getName());
                 yield null;

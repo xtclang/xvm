@@ -84,6 +84,15 @@ public class xCoreRepository
             ModuleRepository repo   = f_container.getModuleRepository();
             ModuleStructure  module = repo.loadModule(sName);
 
+            if (module != null && !module.isMainModule()
+                    && module.getFileStructure().isBundle()) {
+                // a non-main module served out of a multi-module container ("bundle") is handed
+                // out as a detached copy, so that reflection anchored on its file structure (such
+                // as "template.parent.resolve(repo).mainModule" in getResolvedModule) behaves
+                // exactly as if the module had been loaded from its own single-module file
+                module = module.detachedCopy();
+            }
+
             return module == null
                 ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
                 : frame.assignValues(aiReturn, xBoolean.TRUE,

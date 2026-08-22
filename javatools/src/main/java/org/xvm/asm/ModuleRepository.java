@@ -29,8 +29,8 @@ public interface ModuleRepository {
     }
 
     /**
-     * For a specified domain name, obtain a set of qualified module names
-     * that are known by this repository.
+     * For a specified domain name, obtain a set of qualified module names that are known by this
+     * repository.
      *
      * @param sDomain  a domain name
      *
@@ -47,8 +47,7 @@ public interface ModuleRepository {
     }
 
     /**
-     * Obtain a set of all of the qualified module names known by this
-     * repository.
+     * Obtain a set of all qualified module names known by this repository.
      *
      * @return a set of qualified module names
      */
@@ -59,9 +58,8 @@ public interface ModuleRepository {
      *
      * @param sModule  a fully qualified module name
      *
-     * @return a non-null set of versions available for the specified module;
-     *         note that the set may contain a null value, indicating a
-     *         versionless module; or null if the module does not exist
+     * @return a VersionTree containing the available versions; an empty VersionTree indicates that
+     *         a versionless module is available; null indicates no such module
      */
     default VersionTree<Boolean> getAvailableVersions(String sModule) {
         ModuleStructure module = loadModule(sModule);
@@ -69,7 +67,8 @@ public interface ModuleRepository {
     }
 
     /**
-     * Load the specified module.
+     * Load the specified module. If the module is loaded from an .xtc bundle, the ModuleStructure
+     * may contain multiple versions.
      *
      * @param sModule  a fully qualified module name
      *
@@ -82,45 +81,26 @@ public interface ModuleRepository {
      *
      * @param sModule  a fully qualified module name
      * @param version  a version number, or null to specify a versionless module
-     * @param fExact   true to specify that exact version number; false to allow
-     *                 more updated versions to be substituted
+     * @param fExact   true to specify that exact version number; false to allow more updated
+     *                 versions to be substituted
      *
      * @return a ModuleStructure, or null if the specified module is unavailable
      */
     default ModuleStructure loadModule(String sModule, Version version, boolean fExact) {
         ModuleStructure module = loadModule(sModule);
-        if (module == null || version == null) {
-            return module;
+        if (module == null) {
+            return null;
         }
 
-        Version useVersion = null;
-        if (module.containsVersion(version)) {
-            useVersion = version;
-        } else {
-            // check each version in the module to see if it would work; keep the most appropriate one
-            for (Version possibleVer : module.getVersions()) {
-                if (possibleVer.isSubstitutableFor(version)) {
-                    if (version.isSubstitutableFor(possibleVer)) {
-                        // use that version; it's the same as this version (except for .0 etc.)
-                        useVersion = possibleVer;
-                        break;
-                    }
-
-                    if (!fExact) {
-                        if (useVersion == null || useVersion.isSubstitutableFor(possibleVer)) {
-                            // use the oldest available version that matches
-                            useVersion = possibleVer;
-                        }
-                    }
-                }
-            }
-
-            if (useVersion == null) {
-                return null;
-            }
+        if (version == null) {
+            version = Version.NONE;
         }
 
-        return module.extractVersion(useVersion);
+        Version useVersion = module.containsVersion(version)
+                ? version
+                : module.getVersions().selectVersion(version, fExact);
+
+        return useVersion == null ? null : module.extractVersion(useVersion);
     }
 
     /**
@@ -128,13 +108,11 @@ public interface ModuleRepository {
      *
      * @param module  a ModuleStructure to store in the repository
      *
-     * @throws IOException  various IO exceptions could be thrown to
-     *         indicate that the repository is read-only, that the specified
-     *         module won't be stored in the repository, etc.
+     * @throws IOException  various IO exceptions could be thrown to indicate that the repository is
+     *         read-only, that the specified module won't be stored in the repository, etc.
      */
     void storeModule(ModuleStructure module)
             throws IOException;
-
 
     // ----- constants -----------------------------------------------------------------------------
 

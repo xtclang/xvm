@@ -113,6 +113,17 @@ public abstract class LauncherOptions {
             .desc("Print only the fully qualified name of the module, then exit").get());
 
     /**
+     * Apache Commons CLI Options schema for the bundler.
+     */
+    private static final Options BUNDLER_OPTIONS = copyOptions(COMMON_OPTIONS)
+        .addOption(builder("o").longOpt("output").argName("file").hasArg()
+            .desc("File (or directory) to write the bundle to; defaults to <main>.bundle.xtc").get())
+        .addOption(builder().longOpt("main").argName("module").hasArg()
+            .desc("Qualified name of the module to use as the bundle's main module").get())
+        .addOption(builder().longOpt("include-system")
+            .desc("Also bundle system (xtclang.org) modules when selecting from the module path").get());
+
+    /**
      * Apache Commons CLI Options schema for the initializer.
      */
     private static final Options INITIALIZER_OPTIONS = copyOptions(COMMON_OPTIONS)
@@ -1645,6 +1656,144 @@ public abstract class LauncherOptions {
              */
             public DisassemblerOptions build() {
                 return DisassemblerOptions.parse(args.toArray(String[]::new));
+            }
+        }
+    }
+
+
+    // ----- BundlerOptions ------------------------------------------------------------------------
+
+    /**
+     * Options for the bundler ("xtc bundle"), which merges compiled modules from a module path
+     * into a single multi-module .xtc file.
+     */
+    public static class BundlerOptions extends LauncherOptions {
+
+        BundlerOptions(final CommandLine commandLine) {
+            super(commandLine, BUNDLER_OPTIONS, "bundle");
+        }
+
+        /**
+         * Parse command-line arguments into BundlerOptions.
+         */
+        public static BundlerOptions parse(final String[] args) {
+            return new BundlerOptions(parseCommandLine(BUNDLER_OPTIONS, args));
+        }
+
+        /**
+         * Create a builder for programmatically constructing BundlerOptions.
+         */
+        public static Builder builder() {
+            return new Builder();
+        }
+
+        @Override
+        protected String buildUsageLine(final String cmdName) {
+            return cmdName + " [options] [<module_name_or_file> ...]";
+        }
+
+        /**
+         * @return the file (or directory) to write the bundle to, if specified
+         */
+        public Optional<File> getOutputFile() {
+            return optionValue("o").map(File::new);
+        }
+
+        /**
+         * @return the qualified name of the module to make the bundle's main module, if specified
+         */
+        public Optional<String> getMainModule() {
+            return optionValue("main");
+        }
+
+        /**
+         * @return the explicitly selected modules (names or .xtc files); empty means "bundle every
+         *         non-system module found on the module path"
+         */
+        public List<String> getModuleSelection() {
+            return getTrailingArgs();
+        }
+
+        /**
+         * @return true iff system (xtclang.org) modules should also be bundled when selecting
+         *         implicitly from the module path
+         */
+        public boolean isIncludeSystem() {
+            return hasOption("include-system");
+        }
+
+        @Override
+        public String[] toCommandLine() {
+            final List<String> args = new ArrayList<>();
+            Collections.addAll(args, super.toCommandLine());
+            getOutputFile().ifPresent(file -> args.addAll(List.of("-o", file.getPath())));
+            getMainModule().ifPresent(main -> args.addAll(List.of("--main", main)));
+            if (isIncludeSystem()) {
+                args.add("--include-system");
+            }
+            args.addAll(getModuleSelection());
+            return args.toArray(String[]::new);
+        }
+
+        /**
+         * Create BundlerOptions from JSON string.
+         *
+         * @param jsonString the JSON configuration
+         * @return BundlerOptions instance
+         */
+        public static BundlerOptions fromJson(final String jsonString) {
+            return BundlerOptions.parse(jsonToArgs(jsonString, BUNDLER_OPTIONS));
+        }
+
+        /**
+         * Builder for constructing BundlerOptions programmatically.
+         * Builds a synthetic command-line array and parses it.
+         */
+        public static class Builder extends AbstractBuilder<Builder> {
+
+            /**
+             * Set the file (or directory) to write the bundle to.
+             *
+             * @param file the output file or directory
+             */
+            public Builder setOutputFile(final File file) {
+                args.addAll(List.of("-o", file.getPath()));
+                return this;
+            }
+
+            /**
+             * Set the qualified name of the module to make the bundle's main module.
+             *
+             * @param module the qualified module name
+             */
+            public Builder setMainModule(final String module) {
+                args.addAll(List.of("--main", module));
+                return this;
+            }
+
+            /**
+             * Add an explicit module (name or .xtc file path) to the selection.
+             *
+             * @param nameOrFile a module name or an .xtc file path
+             */
+            public Builder addModule(final String nameOrFile) {
+                args.add(nameOrFile);
+                return this;
+            }
+
+            /**
+             * Also bundle system (xtclang.org) modules when selecting from the module path.
+             */
+            public Builder includeSystem() {
+                args.add("--include-system");
+                return this;
+            }
+
+            /**
+             * Build the BundlerOptions by parsing the accumulated arguments.
+             */
+            public BundlerOptions build() {
+                return BundlerOptions.parse(args.toArray(String[]::new));
             }
         }
     }

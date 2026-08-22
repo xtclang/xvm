@@ -27,11 +27,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -1424,6 +1426,51 @@ public final class Handy {
     }
 
     /**
+     * The Ecstasy source file extension.
+     */
+    public static final String SOURCE_EXTENSION = ".x";
+
+    /**
+     * The Ecstasy compiled module file extension.
+     */
+    public static final String BINARY_EXTENSION = ".xtc";
+
+    /**
+     * Determine if the passed file name has the Ecstasy source file extension.
+     *
+     * @param sFile  the file name
+     *
+     * @return true iff the passed file name ends with {@link #SOURCE_EXTENSION}
+     */
+    public static boolean hasSourceExtension(String sFile) {
+        return sFile != null && sFile.endsWith(SOURCE_EXTENSION);
+    }
+
+    /**
+     * Remove the Ecstasy source file extension from the passed file name, if present.
+     *
+     * @param sFile  the file name
+     *
+     * @return the file name without {@link #SOURCE_EXTENSION}, or the original file name
+     */
+    public static String removeSourceExtension(String sFile) {
+        return hasSourceExtension(sFile)
+                ? sFile.substring(0, sFile.length() - SOURCE_EXTENSION.length())
+                : sFile;
+    }
+
+    /**
+     * Determine if the passed file name has the Ecstasy compiled module file extension.
+     *
+     * @param sFile  the file name
+     *
+     * @return true iff the passed file name ends with {@link #BINARY_EXTENSION}
+     */
+    public static boolean hasBinaryExtension(String sFile) {
+        return sFile != null && sFile.endsWith(BINARY_EXTENSION);
+    }
+
+    /**
      * If the passed file  has a "dot extension" such as ".x" or ".xtc" extension, then return the
      * extension, such as "x" or "xtc"
      *
@@ -2168,8 +2215,84 @@ public final class Handy {
      *
      * @return a Set, never null
      */
-    public static <K, V> Map<K, V> lazyMap(Map<K,V> map) {
+    public static <K, V> Map<K, V> lazyMap(Map<K, V> map) {
         return map == null ? Collections.emptyMap() : map;
+    }
+
+    /**
+     * Add a key/value pair to an unmodifiable copy of the passed map.This provides persistent-map
+     * semantics by producing an unmodifiable copy rather than modifying the supplied map.
+     *
+     * @param map    a map that may be unmodifiable
+     * @param key    a key to "add" to a copy of the map
+     * @param value  a value to "add" to a copy of the map
+     *
+     * @return an unmodifiable map containing the passed key and value
+     */
+    public static <K, V> Map<K, V> copyPut(Map<K, V> map, K key, V value) {
+        if (map.containsKey(key)) {
+            // optimize for no change
+            if (Objects.equals(map.get(key), value)) {
+                return Map.copyOf(map);
+            }
+
+            return map.entrySet().stream().collect(Collectors.toUnmodifiableMap(
+                    Entry::getKey,
+                    e -> Objects.equals(e.getKey(), key) ? value : e.getValue()));
+        } else {
+            return Stream.concat(map.entrySet().stream(), Stream.of(Map.entry(key, value)))
+                    .collect(Collectors.toUnmodifiableMap(Entry::getKey, Entry::getValue));
+        }
+    }
+
+    /**
+     * Remove a key from an unmodifiable copy of the passed map. This provides persistent-map
+     * semantics by producing an unmodifiable copy rather than modifying the supplied map.
+     *
+     * @param map  a map that may be unmodifiable
+     * @param key  a key to "remove" from a copy of the map
+     *
+     * @return an unmodifiable map not containing the passed key
+     */
+    public static <K, V> Map<K, V> copyRemove(Map<K, V> map, K key) {
+        return map.containsKey(key)
+                ? map.entrySet().stream()
+                        .filter(e -> !Objects.equals(e.getKey(), key))
+                        .collect(Collectors.toUnmodifiableMap(Entry::getKey, Entry::getValue))
+                : Map.copyOf(map);
+    }
+
+    /**
+     * Remap a key/value pair by changing its key in an unmodifiable copy of the passed map. If the
+     * passed map does not contain the oldKey, then the contents of the returned map will be the
+     * same as the contents of the passed map. This provides persistent-map semantics by producing
+     * an unmodifiable copy rather than modifying the supplied map.
+     *
+     * @param map     a map that may be unmodifiable
+     * @param oldKey  a key to remap in a copy of the map
+     * @param newKey  the key to use in place of the `oldKey` in the copy of the map
+     *
+     * @return an unmodifiable map containing the specified key change
+     */
+    public static <K, V> Map<K, V> copyRemap(Map<K, V> map, K oldKey, K newKey) {
+        if (newKey == oldKey || !map.containsKey(oldKey)) {
+            return Map.copyOf(map);
+        }
+
+        if (!Objects.equals(oldKey, newKey) && map.containsKey(newKey)) {
+            // we have to remove the old key and replace the k/v pair for the new key
+            V oldValue = map.get(oldKey);
+            return map.entrySet().stream()
+                    .filter(e -> !Objects.equals(e.getKey(), oldKey))
+                    .collect(Collectors.toUnmodifiableMap(
+                            e -> Objects.equals(e.getKey(), newKey) ? newKey : e.getKey(),
+                            e -> Objects.equals(e.getKey(), newKey) ? oldValue : e.getValue()));
+        }
+
+        // swap the new key "in place" during the copy
+        return map.entrySet().stream().collect(Collectors.toUnmodifiableMap(
+                e -> Objects.equals(e.getKey(), oldKey) ? newKey : e.getKey(),
+                Entry::getValue));
     }
 
     // ----- hashing & equality --------------------------------------------------------------------

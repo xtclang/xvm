@@ -17,6 +17,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -139,6 +140,11 @@ public class DirRepository
             return;
         }
 
+        Optional.ofNullable(m_dir.listFiles(ModulesOnly))
+                .ifPresentOrElse(this::rebuildCache, this::clearCache);
+    }
+
+    private void rebuildCache(File[] files) {
         Map<File, ModuleInfo> oldModulesByFile = modulesByFile;
         boolean               fWriteCache      = false;
         if (oldModulesByFile.isEmpty()) {
@@ -155,7 +161,6 @@ public class DirRepository
         modulesByFile = newModulesByFile;
         modulesByName.clear();
 
-        File[] files = m_dir.listFiles(ModulesOnly);
         fWriteCache |= files.length != oldModulesByFile.size();
         for (File file : files) {
             ModuleInfo info = oldModulesByFile.get(file);
@@ -175,6 +180,12 @@ public class DirRepository
         if (fWriteCache) {
             writeCache();
         }
+    }
+
+    private void clearCache() {
+        modulesByFile.clear();
+        modulesByName.clear();
+        lastScan = System.currentTimeMillis();
     }
 
     /**
@@ -283,10 +294,16 @@ public class DirRepository
             // a persistent cache is only a performance aid
         } finally {
             if (pathTemp != null) {
-                try {
-                    Files.deleteIfExists(pathTemp);
-                } catch (IOException ignore) {}
+                deleteTempCacheFile(pathTemp);
             }
+        }
+    }
+
+    private static void deleteTempCacheFile(Path path) {
+        try {
+            Files.deleteIfExists(path);
+        } catch (IOException _) {
+            path.toFile().deleteOnExit();
         }
     }
 
