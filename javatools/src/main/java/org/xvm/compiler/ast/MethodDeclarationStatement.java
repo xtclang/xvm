@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
@@ -289,7 +290,7 @@ public class MethodDeclarationStatement
 
     @Override
     protected int getCodeContainerCounter() {
-        return m_counter++;
+        return COUNTER.getAndIncrement();
     }
 
     // ----- compile phases ------------------------------------------------------------------------
@@ -1259,10 +1260,7 @@ public class MethodDeclarationStatement
     // complementary statement for the constructor points to the finalizer and vice versa
     private transient MethodDeclarationStatement m_stmtComplement;
 
-    /**
-     * A unique counter with the context of this method.
-     */
-    static protected int m_counter;
+    private static final AtomicInteger COUNTER = new AtomicInteger();
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(MethodDeclarationStatement.class,
             "condition", "annotations", "typeParams", "returns", "redundant", "params", "body");
