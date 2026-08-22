@@ -325,10 +325,13 @@ public class xModule
     public static ArrayHandle ensureEmptyArray(Container container) {
         xModule       template   = template(container);
         ArrayConstant constEmpty = template.f_constEmptyModuleArray.get(template);
-        ArrayHandle   haEmpty    = (ArrayHandle) container.f_heap.getConstHandle(constEmpty);
+        // Keep the owner heap local: this is shorter than repeated accessor chains and makes the
+        // get/save pair visibly use the same owner-local cache.
+        var           heap       = container.getConstHeap();
+        ArrayHandle   haEmpty    = heap.getConstHandle(container, constEmpty, ArrayHandle.class);
         if (haEmpty == null) {
             haEmpty = xArray.createImmutableArray(ensureArrayComposition(container), Utils.OBJECTS_NONE);
-            container.f_heap.saveConstHandle(constEmpty, haEmpty);
+            heap.saveConstHandle(container, constEmpty, haEmpty);
         }
         return haEmpty;
     }

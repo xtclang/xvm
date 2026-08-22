@@ -1748,10 +1748,11 @@ public class xRTType
     public static ArrayHandle ensureEmptyTypeArray(Container container) {
         xRTType      templateType = NativeTemplates.get(container).type();
         ArrayConstant constEmpty  = templateType.f_constEmptyTypeArray.get(templateType);
-        ArrayHandle   haEmpty     = (ArrayHandle) container.f_heap.getConstHandle(constEmpty);
+        var           heap        = container.getConstHeap();
+        ArrayHandle   haEmpty     = heap.getConstHandle(container, constEmpty, ArrayHandle.class);
         if (haEmpty == null) {
             haEmpty = xArray.createImmutableArray(ensureTypeArrayComposition(container), Utils.OBJECTS_NONE);
-            container.f_heap.saveConstHandle(constEmpty, haEmpty);
+            heap.saveConstHandle(container, constEmpty, haEmpty);
         }
         return haEmpty;
     }

@@ -37,8 +37,14 @@ public class NestedContainer
      * @param hProvider        a resource provider supplied by the parent container
      * @param listShared       a list ids for shared modules
      */
-    public NestedContainer(Container containerParent, ModuleConstant idModule,
-                           ObjectHandle hProvider, List<ModuleConstant> listShared) {
+    public static NestedContainer create(Container containerParent, ModuleConstant idModule,
+                                         ObjectHandle hProvider, List<ModuleConstant> listShared) {
+        return containerParent.f_runtime.registerContainer(
+                new NestedContainer(containerParent, idModule, hProvider, listShared));
+    }
+
+    private NestedContainer(Container containerParent, ModuleConstant idModule,
+                            ObjectHandle hProvider, List<ModuleConstant> listShared) {
         super(containerParent.f_runtime, containerParent, idModule);
 
         f_hProvider  = hProvider;

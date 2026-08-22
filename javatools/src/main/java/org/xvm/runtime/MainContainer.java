@@ -34,7 +34,12 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle
  */
 public class MainContainer
         extends Container {
-    public MainContainer(Runtime runtime, NativeContainer containerNative, ModuleConstant idModule) {
+    public static MainContainer create(Runtime runtime, NativeContainer containerNative,
+                                       ModuleConstant idModule) {
+        return runtime.registerContainer(new MainContainer(runtime, containerNative, idModule));
+    }
+
+    private MainContainer(Runtime runtime, NativeContainer containerNative, ModuleConstant idModule) {
         super(runtime, containerNative, idModule);
     }
 

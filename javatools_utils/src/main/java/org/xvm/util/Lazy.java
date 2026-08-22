@@ -346,6 +346,22 @@ public abstract class Lazy<T> implements Supplier<T> {
         }
 
         /**
+         * Gets the lazily computed value and verifies the result type. This overload is intended
+         * for reflective or wildcard callers that naturally hold a {@code Lazy.Owner<?, ?>}; normal
+         * typed code should prefer {@link #get(Object)}.
+         *
+         * @param owner the owner used to compute the value on first access
+         * @param clz   the expected result type
+         * @param <R>   the requested result type
+         *
+         * @return the value as the requested type
+         */
+        public <R> R get(Object owner, Class<R> clz) {
+            requireNonNull(clz, "clz");
+            return clz.cast(getOwner(owner));
+        }
+
+        /**
          * Returns true if the value has been computed.
          *
          * @return true if already computed, false if still deferred
@@ -360,6 +376,11 @@ public abstract class Lazy<T> implements Supplier<T> {
                 throw new IllegalArgumentException(
                         "Owner lazy value already belongs to a different owner");
             }
+        }
+
+        @SuppressWarnings("unchecked")
+        private T getOwner(Object owner) {
+            return get((O) owner);
         }
     }
 

@@ -34,6 +34,7 @@ import org.xvm.javajit.Builder;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.ConstHeap;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -286,8 +287,9 @@ public class JumpVal
         Algorithm    algorithm  = Algorithm.NativeSimple;
         TypeConstant typeCond   = frame.getLocalType(m_nArgCond, null);
         TypeConstant typeRange  = frame.poolContext().typeRange();
-        ConstHeap    heap       = frame.f_context.f_container.f_heap;
-        ConstantPool poolTarget = frame.f_function.getConstantPool();
+        Container    container  = frame.container();
+        ConstHeap    heap       = container.getConstHeap();
+        ConstantPool poolTarget = frame.function().getConstantPool();
 
         for (int iCase = 0; iCase < cCases; iCase++ ) {
             ObjectHandle hCase = ahCase[iCase];
@@ -296,7 +298,7 @@ public class JumpVal
 
             // caching a constant linked to the current pool would "leak" the current container
             if (hCase.getComposition().getConstantPool() != poolTarget) {
-                hCase = heap.relocateConst(hCase, frame.getConstant(m_anConstCase[iCase]));
+                hCase = heap.relocateConst(container, hCase, frame.getConstant(m_anConstCase[iCase]));
 
                 assert hCase != null;
                 ahCase[iCase] = hCase;

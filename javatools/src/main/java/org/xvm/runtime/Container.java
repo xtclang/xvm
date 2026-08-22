@@ -59,13 +59,8 @@ public abstract class Container
     protected Container(Runtime runtime, Container containerParent, ModuleConstant idModule) {
         f_runtime  = runtime;
         f_parent   = containerParent;
-        f_heap     = new ConstHeap(this);
+        f_heap     = new ConstHeap();
         f_idModule = idModule;
-
-        // don't register the native container
-        if (containerParent != null) {
-            f_runtime.registerContainer(this);
-        }
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -92,10 +87,17 @@ public abstract class Container
     }
 
     /**
+     * @return the owner-local constant-handle cache for this container
+     */
+    public ConstHeap getConstHeap() {
+        return f_heap;
+    }
+
+    /**
      * @return the owner-local native-template lookup table for this container
      */
     public NativeTemplates nativeTemplates() {
-        return f_nativeTemplates;
+        return f_nativeTemplates.get(this);
     }
 
     /**
@@ -247,7 +249,7 @@ public abstract class Container
      * Could be overridden by Container implementations to use container-specific heaps.
      */
     public ObjectHandle ensureConstHandle(Frame frame, Constant constValue) {
-        return f_heap.ensureConstHandle(frame, constValue);
+        return f_heap.ensureConstHandle(this, frame, constValue);
     }
 
     /**
@@ -756,12 +758,15 @@ public abstract class Container
     /**
      * The constant heap.
      */
-    public final ConstHeap f_heap;
+    private final ConstHeap f_heap;
 
     /**
-     * Lazily resolved native template references for this container.
+     * Lazily resolved native template references for this container. The table owns a container
+     * reference, so construct it after Container construction instead of passing "this" to a child
+     * object from the base constructor.
      */
-    private final NativeTemplates f_nativeTemplates = new NativeTemplates(this);
+    private final Lazy.Owner<Container, NativeTemplates> f_nativeTemplates =
+            Lazy.ofOwner(NativeTemplates::new);
 
     /**
      * Runtime helper metadata derived from this container's template registry, structures, and

@@ -53,7 +53,7 @@ public class InterpreterConnector
             throw new IllegalStateException("Unable to load module \"" + idMissing.getName() + "\"");
         }
 
-        m_containerMain = new MainContainer(f_runtime, f_containerNative, structApp.getModuleId());
+        m_containerMain = MainContainer.create(f_runtime, f_containerNative, structApp.getModuleId());
     }
 
     @Override

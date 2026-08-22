@@ -5,6 +5,8 @@ import java.util.Map;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import static java.util.Objects.requireNonNull;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
@@ -22,14 +24,17 @@ import org.xvm.runtime.template.annotations.xLazy;
 
 /**
  * The heap of Constant handles.
+ *
+ * <p>A heap is stored on a {@link Container}, but it deliberately does not retain that owner.
+ * {@link Container}'s base constructor creates the heap before subclass construction is complete;
+ * keeping the owner explicit avoids a constructor-time {@code this} escape while preserving the
+ * same per-container cache map.</p>
  */
 public class ConstHeap {
     /**
-     * Create a constant heap for the specified Container.
+     * Create an ownerless constant heap. Callers pass the owner container to each operation.
      */
-    public ConstHeap(Container container) {
-        f_container = container;
-    }
+    public ConstHeap() {}
 
     /**
      * Return a handle for the specified constant (could be DeferredCallHandle).
@@ -38,14 +43,16 @@ public class ConstHeap {
      *
      * @return an ObjectHandle (could be DeferredCallHandle representing a call or an exception)
      */
-    protected ObjectHandle ensureConstHandle(Frame frame, Constant constValue) {
+    protected ObjectHandle ensureConstHandle(Container container, Frame frame, Constant constValue) {
+        Container owner = requireNonNull(container, "container");
+
         if (constValue instanceof FrameDependentConstant constFrame) {
             return constFrame.getHandle(frame);
         }
 
         // NOTE: we cannot use computeIfAbsent, since createConstHandle can be recursive,
         // and ConcurrentHashMap is not recursion friendly
-        ObjectHandle hValue = getConstHandle(constValue);
+        ObjectHandle hValue = getConstHandle(owner, constValue);
         if (hValue != null) {
             return hValue;
         }
@@ -63,7 +70,7 @@ public class ConstHeap {
                     case Op.R_CALL: {
                         Frame frameNext = frame.m_frameNext;
                         frameNext.addContinuation(frameCaller -> {
-                            saveConstHandle(constValue, frameCaller.peekStack());
+                            saveConstHandle(owner, constValue, frameCaller.peekStack());
                             return Op.R_NEXT;
                         });
                         return new DeferredCallHandle(frameNext);
@@ -76,19 +83,19 @@ public class ConstHeap {
                         throw new IllegalStateException();
                     }
                 }
-                return saveConstHandle(constValue, hValue);
+                return saveConstHandle(owner, constValue, hValue);
             }
 
             // make sure we don't leak a singleton handle into the parent's container pool
             ConstantPool pooThis = frame.poolContext();
             if (constSingle.getConstantPool() != pooThis) {
-                Container containerThis = frame.f_context.f_container;
+                Container containerThis = frame.container();
                 Container containerOrig = containerThis.getOriginContainer(constSingle);
 
                 constSingle = containerOrig.getConstantPool().register(constSingle);
                 hValue      = constSingle.getHandle();
                 if (hValue != null) {
-                    return saveConstHandle(constSingle, hValue);
+                    return saveConstHandle(owner, constSingle, hValue);
                 }
             }
 
@@ -104,14 +111,14 @@ public class ConstHeap {
                 idProp = pooThis.register(idProp);
             }
 
-            return saveConstHandle(constValue, new DeferredPropertyHandle(idProp));
+            return saveConstHandle(owner, constValue, new DeferredPropertyHandle(idProp));
         }
 
-        switch (f_container.getTemplate(constValue).createConstHandle(frame, constValue)) {
+        switch (owner.getTemplate(constValue).createConstHandle(frame, constValue)) {
         case Op.R_NEXT: {
             hValue = frame.popStack();
             return constValue.isValueCacheable()
-                ? saveConstHandle(constValue, hValue)
+                ? saveConstHandle(owner, constValue, hValue)
                 : hValue;
         }
 
@@ -119,7 +126,7 @@ public class ConstHeap {
             Frame frameNext = frame.m_frameNext;
             if (constValue.isValueCacheable()) {
                 frameNext.addContinuation(frameCaller -> {
-                    saveConstHandle(constValue, frameCaller.peekStack());
+                    saveConstHandle(owner, constValue, frameCaller.peekStack());
                     return Op.R_NEXT;
                 });
             }
@@ -136,21 +143,31 @@ public class ConstHeap {
     /**
      * @return saved handle or null
      */
-    public ObjectHandle getConstHandle(Constant constValue) {
+    public ObjectHandle getConstHandle(Container container, Constant constValue) {
+        Container owner  = requireNonNull(container, "container");
         ObjectHandle hValue = f_mapConstants.get(constValue);
         if (hValue == null) {
-            Container containerParent = f_container.f_parent;
+            Container containerParent = owner.f_parent;
             if (containerParent != null) {
-                hValue = containerParent.f_heap.getConstHandle(constValue);
+                hValue = containerParent.getConstHeap().getConstHandle(containerParent, constValue);
 
                 // there is a chance that both our child and our parent do "know" that value's type,
                 // but it's not a part of our type system
-                if (hValue != null && hValue.isShared(f_container, null)) {
-                    saveConstHandle(constValue, hValue);
+                if (hValue != null && hValue.isShared(owner, null)) {
+                    saveConstHandle(owner, constValue, hValue);
                 }
             }
         }
         return hValue;
+    }
+
+    /**
+     * @return saved handle of the requested type, or null
+     */
+    public <H extends ObjectHandle> H getConstHandle(
+            Container container, Constant constValue, Class<H> clzHandle) {
+        ObjectHandle hValue = getConstHandle(container, constValue);
+        return hValue == null ? null : clzHandle.cast(hValue);
     }
 
     /**
@@ -161,7 +178,9 @@ public class ConstHeap {
      *
      * @return the actual handle
      */
-    public ObjectHandle saveConstHandle(Constant constValue, ObjectHandle hValue) {
+    public ObjectHandle saveConstHandle(Container container, Constant constValue, ObjectHandle hValue) {
+        Container owner = requireNonNull(container, "container");
+
         if (hValue instanceof InitializingHandle hInit) {
             ObjectHandle hConst = hInit.getInitialized();
             if (hConst == null) {
@@ -169,7 +188,7 @@ public class ConstHeap {
             }
             hValue = hConst;
         }
-        ConstantPool pool = f_container.getConstantPool();
+        ConstantPool pool = owner.getConstantPool();
         if (constValue.getConstantPool() != pool) {
             constValue = pool.register(constValue);
         }
@@ -188,32 +207,32 @@ public class ConstHeap {
      *
      * @return the relocated handle or null if cannot be relocated
      */
-    public ObjectHandle relocateConst(ObjectHandle hConst, Constant constant) {
-        Container parent = f_container.f_parent;
+    public ObjectHandle relocateConst(Container container, ObjectHandle hConst, Constant constant) {
+        Container owner  = requireNonNull(container, "container");
+        Container parent = owner.f_parent;
         if (parent != null && hConst.isShared(parent, null)) {
-            ObjectHandle hNew = parent.f_heap.relocateConst(hConst, constant);
+            ObjectHandle hNew = parent.getConstHeap().relocateConst(parent, hConst, constant);
 
             // we could also re-insert it right away (after re-registering the constant)
             f_mapConstants.remove(constant);
             return hNew;
         }
 
-        ObjectHandle hPrev = getConstHandle(constant);
+        ObjectHandle hPrev = getConstHandle(owner, constant);
         if (hPrev != null) {
             // we have it; no need to do anything
             return hPrev;
         }
 
-        ConstantPool pool = f_container.getConstantPool();
+        ConstantPool pool = owner.getConstantPool();
         if (constant.getConstantPool() != pool) {
             constant = pool.register(constant);
         }
 
         return f_mapConstants.computeIfAbsent(constant, c -> {
-            ObjectHandle hNew = hConst.getComposition().getContainer() == f_container
+            ObjectHandle hNew = hConst.getComposition().getContainer() == owner
                 ? hConst
-                : hConst.cloneAs(
-                    hConst.getTemplate().ensureClass(f_container, hConst.getType()));
+                : hConst.cloneAs(hConst.getTemplate().ensureClass(owner, hConst.getType()));
 
             if (c instanceof SingletonConstant constSingleton) {
                 constSingleton.setHandle(hNew);
@@ -224,11 +243,6 @@ public class ConstHeap {
 
 
     // ----- data fields ---------------------------------------------------------------------------
-
-    /**
-     * The container this heap belongs to.
-     */
-    protected final Container f_container;
 
     /**
      * The cached constants.

@@ -1505,10 +1505,11 @@ public class xRTFunction
     public static ArrayHandle ensureEmptyArray(Container container) {
         xRTFunction   template   = template(container);
         ArrayConstant constEmpty = template.f_constEmptyFunctionArray.get(template);
-        ArrayHandle   haEmpty    = (ArrayHandle) container.f_heap.getConstHandle(constEmpty);
+        var           heap       = container.getConstHeap();
+        ArrayHandle   haEmpty    = heap.getConstHandle(container, constEmpty, ArrayHandle.class);
         if (haEmpty == null) {
             haEmpty = xArray.createImmutableArray(ensureArrayComposition(container), Utils.OBJECTS_NONE);
-            container.f_heap.saveConstHandle(constEmpty, haEmpty);
+            heap.saveConstHandle(container, constEmpty, haEmpty);
         }
         return haEmpty;
     }

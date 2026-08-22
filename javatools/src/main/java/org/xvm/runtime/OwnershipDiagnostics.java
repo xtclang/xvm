@@ -12,6 +12,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -343,6 +344,7 @@ public final class OwnershipDiagnostics {
 
             record("container[" + index + "]", container, container);
 
+            dumpRuntimeRegistry(container);
             dumpConstHeap(container);
             dumpNativeTemplates(container);
             // A main container can cache app-specific parameterized type keys
@@ -354,11 +356,22 @@ public final class OwnershipDiagnostics {
             dumpCollection("services", readField(container, "f_setServices"), container, 1);
         }
 
+        private void dumpRuntimeRegistry(Container container) {
+            if (!emitDump) {
+                return;
+            }
+
+            Set<Container> containers = container.f_runtime.containers();
+            line(1, "runtimeRegistry = contains=" + containers.contains(container)
+                    + " size=" + containers.size());
+        }
+
         private void dumpConstHeap(Container container) {
-            Object heap = readField(container, "f_heap");
+            ConstHeap heap = container.getConstHeap();
             if (emitDump) {
                 out.append("  constHeap = ")
                         .append(identity(heap))
+                        .append(" owner=explicit-parameter")
                         .append('\n');
             }
 
@@ -368,10 +381,22 @@ public final class OwnershipDiagnostics {
         }
 
         private void dumpNativeTemplates(Container container) {
-            NativeTemplates templates = container.nativeTemplates();
+            Object lazy = readField(container, "f_nativeTemplates");
+            if (!(lazy instanceof Lazy.Owner<?, ?> ownerLazy)) {
+                line(1, "nativeTemplates = " + describe(lazy, container));
+                return;
+            }
 
+            boolean computed = ownerLazy.isComputed();
+            line(1, "nativeTemplates = Lazy.Owner[" + (computed ? "computed" : "deferred") + "]");
+            if (!computed && !forceLazy) {
+                return;
+            }
+
+            NativeTemplates templates = withOwnerPool(container,
+                    () -> ownerLazy.get(container, NativeTemplates.class));
             if (emitDump) {
-                out.append("  nativeTemplates = ")
+                out.append("    value = ")
                         .append(describe(templates, container))
                         .append('\n');
             }
@@ -437,8 +462,8 @@ public final class OwnershipDiagnostics {
                 }
 
                 Container ownerContainer = ownerOf(owner);
-                Container scopedOwner    = ownerContainer == null ? expected : ownerContainer;
-                dumpValue("value", withOwnerPool(scopedOwner, () -> getOwnerLazy(lazy, owner)),
+                Container scopedOwner    = Objects.requireNonNullElse(ownerContainer, expected);
+                dumpValue("value", withOwnerPool(scopedOwner, () -> lazy.get(owner, Object.class)),
                         expected, indent + 1, allowNativeOwner);
             }
         }
@@ -827,11 +852,6 @@ public final class OwnershipDiagnostics {
             } catch (IllegalAccessException e) {
                 throw new IllegalStateException(e);
             }
-        }
-
-        @SuppressWarnings({"rawtypes", "unchecked"})
-        private static Object getOwnerLazy(Lazy.Owner lazy, Object owner) {
-            return lazy.get(owner);
         }
 
         private static <T> T withOwnerPool(Container owner, SupplierWithException<T> supplier) {

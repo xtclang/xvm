@@ -298,6 +298,7 @@ can be ignored.
 | 10 | Manual lazy null caches in runtime/asm | Done for the first-PR must-fix slice. `xRegEx.RegExHandle` uses a final `Lazy<Pattern>`, `FSNodeConstant` no longer carries a source-pool path literal across adoption, and `_native:fs.OSFileNode.created` no longer caches a caller-owned `Time` handle inside the native file-system graph. Remaining Java hits are still audited below as builder/linkage, frame/debug lifecycle, synchronized association helpers, or must-audit op-address/class-layout state. | `RegExHandleTest` proves the regex cache remains per-handle and cached after first use. `ConstantAdoptionTest.adoptedFSNodeConstantDropsSourcePoolPathCache()` proves the adopted path cache is recomputed in the destination pool and still cached after that. `manualTests:runDirectSequenceStress` with `TestFiles` proves the native file-node owner leak is gone. |
 | 11 | Thread-local and scoped ambient state | Done for the first-PR must-fix slice. Runtime boundary `ConstantPool` scopes were already made lexical/asserted in wave 3. This wave removes one remaining owner-bearing runtime thread-local: `xRTServer.SimpleKeyManager` no longer keeps a selected `KeyStoreHandle` on the HTTPS worker thread. Broader compiler/type recursion ambient state remains audited below. | `xRTServerTest` proves the key manager has no thread-local field and resolves TLS aliases through explicit route state. Existing `ConstantPoolDiagnosticsTest` covers scoped pool assertions. |
 | 12 | Weak/identity owner registries | Done for the first-PR must-fix slice. `Runtime.f_containers` is a diagnostic weak registry and every access path now uses the same monitor; the old `findContainer(...)` iteration raced with registration and weak-map expunge. Remaining weak/identity maps are documented as service-local, metadata-audit, local traversal, or diagnostic-local state. | `RuntimeTest.findContainerSharesWeakRegistryMonitorWithRegistration()` proves lookup does not race registration. |
+| 13 | `Container` constructor owner publication | Done in this branch wave. `ConstHeap` no longer stores a constructor-captured `Container`; heap operations take an explicit owner and `Container.f_heap` is private behind `getConstHeap()`. `NativeTemplates` is a final owner-lazy cell on `Container`, so the table is still one per owner but is created only after construction. `MainContainer.create(...)` and `NestedContainer.create(...)` register completed containers instead of calling `Runtime.registerContainer(this)` from the base constructor. | `RuntimeThisEscapeConstructionTest.containerConstructorDoesNotCaptureThisInOwnerHelpers()` guards the source shape. `RuntimeTest.registerContainerDoesNotObservePartiallyConstructedContainer()` proves registry observation happens after subclass fields are assigned. `OwnershipDiagnosticsTest.dumpShowsRuntimeRegistryAndExplicitOwnerHelpers()` verifies the dump exposes runtime registry membership and explicit-owner heap state. Forced lint at `/tmp/xvm-container-this-escape.log` reports no `Container.java` `this-escape` diagnostics. |
 
 The compiler/JIT bucket should remain separate unless an interpreter runtime
 path depends on it. The compiler counter atomics belong in their own PR from
@@ -621,11 +622,11 @@ Current concrete proof points:
     --console=plain --warning-mode=all
   ```
 
-  Result: `BUILD SUCCESSFUL in 8s`; `73` emitted `this-escape` diagnostics at
-  `70` unique source locations, no `overrides` diagnostics, and only the two
+  Result: `BUILD SUCCESSFUL`; `71` emitted `this-escape` diagnostics at
+  `68` unique source locations, no `overrides` diagnostics, and no
   `Container.java` runtime constructor warnings remain.
 
-- The current forced root lint/build source of truth is
+- The older forced root lint/build baseline is
   `/tmp/xvm-current-this-escape.log`:
 
   ```bash
@@ -647,8 +648,8 @@ Current concrete proof points:
   `80` emitted `this-escape` warnings at `77` unique source locations, and no
   `NativeContainer.java` `this-escape` diagnostics.
 
-- The later handle-construction wave was checked with a targeted javatools
-  lint compile rather than another full clean root build:
+- The later runtime-owner waves were checked with targeted forced javatools
+  lint compiles rather than another full clean root build:
 
   ```bash
   ./gradlew :javatools:compileJava --rerun-tasks --no-build-cache \
@@ -683,6 +684,35 @@ Current concrete proof points:
   Result: the focused test passed. The lint compile passed in `9s` with
   `40 actionable tasks: 40 executed` and emitted no `CallChain.java` or
   `xRTMethod.java` `this-escape` diagnostics.
+
+- The Container owner-publication wave was checked with focused runtime tests,
+  `Lazy.Owner` utility tests, and forced javatools lint:
+
+  ```bash
+  ./gradlew :javatools_utils:test --tests org.xvm.util.LazyTest --console=plain
+
+  ./gradlew :javatools:test \
+    --tests org.xvm.runtime.RuntimeThisEscapeConstructionTest \
+    --tests org.xvm.runtime.RuntimeTest \
+    --tests org.xvm.runtime.OwnershipDiagnosticsTest \
+    --tests org.xvm.runtime.NativeTemplatesTest \
+    --tests org.xvm.api.InterpreterConnectorTest \
+    --tests org.xvm.asm.ConstantAdoptionTest \
+    --console=plain
+
+  ./gradlew :javatools:compileJava --rerun-tasks --no-build-cache \
+    --no-configuration-cache \
+    -Porg.xtclang.java.lint=true \
+    -Porg.xtclang.java.warningsAsErrors=false \
+    -Porg.xtclang.java.maxWarnings=10000 \
+    -Porg.xtclang.java.maxErrors=10000 \
+    --console=plain --warning-mode=all \
+    > /tmp/xvm-container-this-escape.log 2>&1
+  ```
+
+  Result: both test runs passed. The forced lint compile passed with `71`
+  emitted `this-escape` diagnostics at `68` unique source locations, zero
+  `overrides` diagnostics, and zero `Container.java` diagnostics.
 
 - Narrow same-JVM and parallel runtime stress also passed without a new clean or
   lint rerun:
