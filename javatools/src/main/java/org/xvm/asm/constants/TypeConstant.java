@@ -3872,10 +3872,10 @@ public abstract class TypeConstant
 
                 if (prop.isNative()) {
                     // replace the entire chain with a native body
-                    infoGet = new MethodInfo(new MethodBody(idGet, idGet.getSignature(),
+                    infoGet = MethodInfo.create(new MethodBody(idGet, idGet.getSignature(),
                                                             Implementation.Native), nRank);
                     if (infoSet != null) {
-                        infoSet = new MethodInfo(new MethodBody(idSet, idSet.getSignature(),
+                        infoSet = MethodInfo.create(new MethodBody(idSet, idSet.getSignature(),
                                                                 Implementation.Native), nRank+1);
                     }
                 } else {
@@ -3888,11 +3888,11 @@ public abstract class TypeConstant
                         throw new IllegalStateException("Missing getter for " +
                                 idGet.getValueString() + " at " + this.getValueString());
                     }
-                    infoGet = infoGet.layerOn(new MethodInfo(new MethodBody(idGet,
+                    infoGet = infoGet.layerOn(MethodInfo.create(new MethodBody(idGet,
                             idGet.getSignature(), Implementation.Implicit), nRank), false, errs);
 
                     if (infoSet != null) {
-                        infoSet = infoSet.layerOn(new MethodInfo(new MethodBody(idSet,
+                        infoSet = infoSet.layerOn(MethodInfo.create(new MethodBody(idSet,
                                 idSet.getSignature(), Implementation.Implicit), nRank+1), false, errs);
                     }
                 }
@@ -4117,7 +4117,7 @@ public abstract class TypeConstant
                     head.isRO(), head.isRW(), /*fCustom*/ false,
                     Effect.BlocksSuper, head.isRO() ? Effect.None : Effect.BlocksSuper,
                     /*fReqField*/ false, /*fConstant*/ false, null, null);
-            propResult = new PropertyInfo(propResult, bodyDelegate);
+            propResult = PropertyInfo.create(propResult, bodyDelegate);
         }
 
         // check if there's supposed to be a property by this same identity
@@ -4618,7 +4618,7 @@ public abstract class TypeConstant
                     if (idMethod.isTopLevel()) {
                         MethodBody bodyDelegate = new MethodBody(idMethod, head.getSignature(),
                                 Implementation.Delegating, idDelegate);
-                        methodResult = new MethodInfo(Handy.prepend(methodResult.getChain(),
+                        methodResult = MethodInfo.create(Handy.prepend(methodResult.getChain(),
                                 bodyDelegate), methodResult.getRank());
                     }
                 }
@@ -4716,7 +4716,7 @@ public abstract class TypeConstant
                 listBodies.add(body);
             }
         }
-        return new MethodInfo(listBodies.toArray(MethodBody.NO_BODIES), methodResult.getRank());
+        return MethodInfo.create(listBodies.toArray(MethodBody.NO_BODIES), methodResult.getRank());
     }
 
     /**
@@ -4994,7 +4994,7 @@ public abstract class TypeConstant
                 if (prop.isGenericTypeParameter()) {
                     PropertyConstant id = prop.getIdentityConstant();
 
-                    mapProps.put(id, new PropertyInfo(new PropertyBody(prop,
+                    mapProps.put(id, PropertyInfo.create(new PropertyBody(prop,
                             mapTypeParams.get(id.getName())), nRank++));
                 }
             }
@@ -5132,7 +5132,7 @@ public abstract class TypeConstant
                     fHasAbstract             ? Implementation.Abstract :
                     fHasNoCode               ? Implementation.SansCode :
                                                Implementation.Explicit);
-            MethodInfo infoNew = new MethodInfo(body, nBaseMethRank + mapMethods.size());
+            MethodInfo infoNew = MethodInfo.create(body, nBaseMethRank + mapMethods.size());
             mapMethods.put(idResolved, infoNew);
         } else if (structContrib instanceof PropertyStructure prop) {
             if (prop.isGenericTypeParameter()) {
@@ -5165,7 +5165,7 @@ public abstract class TypeConstant
                 PropertyConstant idParam   = pool.ensurePropertyConstant(id, "Referent");
                 Object           nidParam  = idParam.resolveNestedIdentity(pool, this);
                 ParamInfo        param     = new ParamInfo(nidParam, "Referent", pool.typeObject(), info.getType());
-                PropertyInfo     propParam = new PropertyInfo(new PropertyBody(null, param), nRank + 1);
+                PropertyInfo     propParam = PropertyInfo.create(new PropertyBody(null, param), nRank + 1);
                 mapTypeParams.put(nidParam, param);
                 mapProps.put(idParam, propParam);
             } else if (info.isOverride() && info.isVirtual()) {
@@ -5564,7 +5564,7 @@ public abstract class TypeConstant
 
         TypeConstant typeProp = prop.getType().resolveGenerics(pool, this);
 
-        return new PropertyInfo(new PropertyBody(prop, impl, null, typeProp, fRO, fRW,
+        return PropertyInfo.create(new PropertyBody(prop, impl, null, typeProp, fRO, fRW,
                 cCustomMethods > 0, effectGet, effectSet,  fField, fConstant, prop.getInitialValue(),
                 methodInit == null ? null : methodInit.getIdentityConstant()), nRank);
     }

@@ -108,12 +108,14 @@ public class MethodBody {
     }
 
     /**
-     * Internal: Copy a MethodBody for a new containing MethodInfo.
+     * Internal: Copy a MethodBody for a new containing MethodInfo without virtual dispatch. This
+     * is the constructor-safe ownership path used by MethodInfo; post-construction adoption uses
+     * forMethod(...).
      *
      * @param method  the containing MethodInfo
      * @param body    the MethodBody to copy
      */
-    private MethodBody(MethodInfo method, MethodBody body) {
+    MethodBody(MethodInfo method, MethodBody body) {
         m_infoMethod   = method;
         m_id           = body.m_id;
         m_sig          = body.m_sig;

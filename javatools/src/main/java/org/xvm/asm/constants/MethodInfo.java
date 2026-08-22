@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import java.util.function.Predicate;
@@ -43,13 +44,15 @@ import static org.xvm.util.Handy.startList;
 public class MethodInfo
         implements Constants {
     /**
-     * Construct a MethodInfo for a method body.
+     * Construct a MethodInfo for a method body. This is a factory instead of a public
+     * constructor so MethodInfo can attach body owners without overridable construction-time
+     * callbacks.
      *
      * @param body   the initial method body
      * @param nRank  the rank of the method
      */
-    public MethodInfo(MethodBody body, int nRank) {
-        this(new MethodBody[] {body}, nRank);
+    public static MethodInfo create(MethodBody body, int nRank) {
+        return create(new MethodBody[] {body}, nRank);
     }
 
     /**
@@ -58,8 +61,8 @@ public class MethodInfo
      * @param aBody  the array of method bodies that make up the method chain
      * @param nRank  the rank of the method
      */
-    protected MethodInfo(MethodBody[] aBody, int nRank) {
-        this(null, aBody, nRank);
+    public static MethodInfo create(MethodBody[] aBody, int nRank) {
+        return create(null, aBody, nRank);
     }
 
     /**
@@ -69,16 +72,23 @@ public class MethodInfo
      * @param aBody     the array of method bodies that make up the method chain
      * @param nRank     the rank of the method
      */
+    private static MethodInfo create(TypeInfo infoType, MethodBody[] aBody, int nRank) {
+        return new MethodInfo(infoType, aBody, nRank);
+    }
+
     private MethodInfo(TypeInfo infoType, MethodBody[] aBody, int nRank) {
         assert aBody != null && aBody.length >= 1;
+        assert Arrays.stream(aBody).allMatch(Objects::nonNull);
 
-        int          cBodies = aBody.length;
-        MethodBody[] aOwned  = new MethodBody[cBodies];
-        for (int i = 0; i < cBodies; ++i) {
-            MethodBody body = aBody[i];
-            assert body != null;
-            aOwned[i] = body.forMethod(this);
-        }
+        /*
+         * MethodBody needs an owner link, but the old constructor called the overridable
+         * forMethod(...) attachment path while this MethodInfo was still partially initialized.
+         * Build non-virtual owned copies into a local array instead. The final m_aBody reference is
+         * assigned only after the array is complete, preserving the old one-owned-body-per-owner
+         * shape without publishing a half-built owner.
+         */
+        MethodBody[] aOwned = new MethodBody[aBody.length];
+        Arrays.setAll(aOwned, i -> new MethodBody(this, Objects.requireNonNull(aBody[i])));
 
         m_infoType = infoType;
         m_aBody    = aOwned;
@@ -99,7 +109,7 @@ public class MethodInfo
 
         return m_infoType == infoType
                 ? this
-                : new MethodInfo(infoType, m_aBody, f_nRank);
+                : create(infoType, m_aBody, f_nRank);
     }
 
     /**
@@ -140,7 +150,7 @@ public class MethodInfo
         aNew[0] = new MethodBody(idThis, sigThis, Implementation.Capped, nidThat);
         System.arraycopy(aOld, 0, aNew, 1, cOld);
 
-        return new MethodInfo(aNew, f_nRank);
+        return create(aNew, f_nRank);
     }
 
     /**
@@ -301,7 +311,7 @@ public class MethodInfo
         }
 
         Collections.addAll(listMerge, aBase);
-        return new MethodInfo(listMerge.toArray(MethodBody.NO_BODIES), f_nRank);
+        return MethodInfo.create(listMerge.toArray(MethodBody.NO_BODIES), f_nRank);
     }
 
     /**
@@ -340,7 +350,7 @@ public class MethodInfo
         }
 
         Collections.addAll(listMerge, aBase);
-        return new MethodInfo(listMerge.toArray(MethodBody.NO_BODIES), f_nRank);
+        return MethodInfo.create(listMerge.toArray(MethodBody.NO_BODIES), f_nRank);
     }
 
     /**
@@ -374,7 +384,7 @@ public class MethodInfo
         System.arraycopy(aThat, 0, aNew, 0, cThat);
         System.arraycopy(aThis, 0, aNew, cThat, cThis);
 
-        return new MethodInfo(aNew, f_nRank);
+        return MethodInfo.create(aNew, f_nRank);
     }
 
     /**
@@ -419,7 +429,7 @@ public class MethodInfo
         }
 
         Collections.addAll(listMerge, aBase);
-        return new MethodInfo(listMerge.toArray(MethodBody.NO_BODIES), f_nRank);
+        return MethodInfo.create(listMerge.toArray(MethodBody.NO_BODIES), f_nRank);
     }
 
     /**
@@ -470,7 +480,7 @@ public class MethodInfo
 
         MethodBody bodyResult = new MethodBody(bodyFirstNonDefault.getIdentity(),
                 bodyFirstNonDefault.getSignature(), Implementation.Native);
-        return layerOn(new MethodInfo(bodyResult, f_nRank), true, errs);
+        return layerOn(MethodInfo.create(bodyResult, f_nRank), true, errs);
     }
 
     /**
@@ -491,7 +501,7 @@ public class MethodInfo
         MethodBody[] chainNew = getChain().clone();
         chainNew[0] = new MethodBody(bodyCap.getIdentity(), bodyCap.getSignature(),
                                      Implementation.Capped, nidTarget);
-        return new MethodInfo(chainNew, f_nRank);
+        return MethodInfo.create(chainNew, f_nRank);
     }
 
     /**
@@ -523,7 +533,7 @@ public class MethodInfo
 
         return listNew == null ? this
                 : listNew.isEmpty() ? null
-                : new MethodInfo(listNew.toArray(MethodBody.NO_BODIES), f_nRank);
+                : MethodInfo.create(listNew.toArray(MethodBody.NO_BODIES), f_nRank);
     }
 
     /**
@@ -552,7 +562,7 @@ public class MethodInfo
 
             if (head.isUnion()) {
                 MethodBody into = new MethodBody(head.getIdentity(), head.getSignature(), Implementation.FromInto, this);
-                return new MethodInfo(new MethodBody[]{into}, f_nRank);
+                return MethodInfo.create(new MethodBody[] {into}, f_nRank);
             }
         }
 
@@ -566,9 +576,9 @@ public class MethodInfo
 //                if (isCapped()) {
 //                    getHead().g
 //                    MethodBody cap = new MethodBody()
-//                    return new MethodInfo(new MethodBody[]{into}, f_nRank);
+//                    return MethodInfo.create(new MethodBody[] {into}, f_nRank);
 //                }
-                return new MethodInfo(new MethodBody[]{into}, f_nRank);
+                return MethodInfo.create(new MethodBody[] {into}, f_nRank);
             }
         }
         return null;
@@ -585,7 +595,7 @@ public class MethodInfo
         MethodBody   tail     = aBodyNew[cBodies-1];
         assert tail.isInto();
         aBodyNew[cBodies-1] = new MethodBody(tail.getIdentity(), tail.getSignature(), Implementation.SansCode);
-        return new MethodInfo(aBodyNew, f_nRank);
+        return MethodInfo.create(aBodyNew, f_nRank);
     }
 
     /**
@@ -607,7 +617,7 @@ public class MethodInfo
         assert getHead().isConstructor();
         MethodBody   bodyOld  = m_aBody[0];
         MethodBody   bodyNew  = new MethodBody(bodyOld.getIdentity(), bodyOld.getSignature(), Implementation.Implicit, this);
-        return new MethodInfo(new MethodBody[] {bodyNew}, f_nRank);
+        return MethodInfo.create(new MethodBody[] {bodyNew}, f_nRank);
     }
 
     /**
@@ -1194,7 +1204,11 @@ public class MethodInfo
                         }
                         break;
                     }
-                    // fall through
+                    if (listNew == null) {
+                        listNew = startList(chain, i);
+                    }
+                    break;
+
                 case Implicit:
                 case Declared:
                 case Abstract:

@@ -559,6 +559,57 @@ dispatch.
 whose overrides throw if invoked during construction. It also checks the
 resulting values and `ListSet` duplicate handling.
 
+### MethodInfo And PropertyInfo Body Owner Factories
+
+This branch also removes the ASM metadata constructor escape in
+`MethodInfo`/`MethodBody` and `PropertyInfo`/`PropertyBody`.
+
+The old constructors attached body owner links while the owner was still under
+construction:
+
+```java
+aOwned[i] = body.forMethod(this);
+aOwned[i] = body.forProperty(this);
+```
+
+Those calls are not harmless bookkeeping. The `forMethod(...)` and
+`forProperty(...)` paths mutate or copy body objects so each body points back to
+its containing metadata owner. Calling them from the owner constructor allowed
+the body path to observe a `MethodInfo` or `PropertyInfo` before its final body
+array, rank, and other fields had been assigned.
+
+The replacement uses static factories:
+
+- `MethodInfo.create(...)` and `PropertyInfo.create(...)` are the only public
+  construction entry points;
+- private constructors build owned body copies through package-private
+  non-virtual `MethodBody(MethodInfo, MethodBody)` and
+  `PropertyBody(PropertyInfo, PropertyBody)` copy constructors;
+- the owned copies are filled into a local array, and the final owner body
+  array is assigned only after that array is complete.
+
+This preserves behavior and cache shape. Callers still get a metadata owner
+whose body array contains owner-linked bodies, and `TypeInfoReal` still creates
+owner-local copies when the same method/property info is reused across type
+owners. The caller-supplied body object is no longer mutated as a construction
+side effect; the returned owner contains an equivalent owned copy instead. That
+keeps the retained graph size the same as before for normal use, while avoiding
+the unsafe construction callback.
+
+The branch deliberately keeps the owner body arrays final. A broader
+volatile-publication rewrite for body arrays or body back-pointers was
+considered but not kept in this PR because it would change the state model
+without a failing stress proof; the final implementation removes the
+constructor escape while preserving the old final-field structure.
+
+`MethodInfoTest.methodInfoFactoryDoesNotCallOverridableBodyAttachment()` and
+`TypeInfoMemberOwnershipTest.propertyInfoFactoryDoesNotCallOverridableBodyAttachment()`
+prove the timing fix with body subclasses that fail if the old overridable
+owner-attachment path runs during construction. Those tests would fail against
+master. The existing
+`TypeInfoReal.validate()` ownership checks continue to cover real type-info
+graphs during unit tests and stress runs.
+
 ## Manual Lazy Cache Hardening
 
 This branch also removes two concrete lazy-null cache hazards found by the

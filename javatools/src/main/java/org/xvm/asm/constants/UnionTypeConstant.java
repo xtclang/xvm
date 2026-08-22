@@ -592,7 +592,7 @@ public class UnionTypeConstant
                         if (body2.getIdentity().equals(id1)) {
                             // for now, we use just one body; may need to take a full chain
                             // (e.g. Arrays.copyOfRange(abody1, i1, c1))
-                            map.put(id1, new PropertyInfo(body1, prop1.getRank()));
+                            map.put(id1, PropertyInfo.create(body1, prop1.getRank()));
                             continue NextEntry;
                         }
                     }
@@ -631,7 +631,7 @@ public class UnionTypeConstant
                             null, type1, /*fRO*/ false, /*fRO*/ true, /*fCustom*/ false,
                             Effect.None, Effect.None, /*fReqField*/ false, /*fConst*/ false, null, null);
                     }
-                    map.put(propSynth.getIdentityConstant(), new PropertyInfo(bodySynth, 0));
+                    map.put(propSynth.getIdentityConstant(), PropertyInfo.create(bodySynth, 0));
                 }
             }
         }
@@ -673,7 +673,7 @@ public class UnionTypeConstant
                 infoMerge = method1;
             } else if (method1.isFunction() == method2.isFunction()) {
                 idMerge   = pool.ensureMethodConstant(idThis, sig);
-                infoMerge = new MethodInfo(new MethodBody[]{
+                infoMerge = MethodInfo.create(new MethodBody[] {
                         new MethodBody(idMerge, sig, method1, method2)}, method1.getRank());
             }
 
@@ -735,7 +735,7 @@ public class UnionTypeConstant
                   typesOf(typeReturn));
         MethodConstant         idFn            = pool.ensureMethodConstant(idThis, sigFn);
         typeValue.resolve(new TypeParameterConstant(pool, idFn, "CompileType", 0).getType());
-        mapMethods.put(idFn, new MethodInfo(new MethodBody(idFn, sigFn, Implementation.Native), iRank));
+        mapMethods.put(idFn, MethodInfo.create(new MethodBody(idFn, sigFn, Implementation.Native), iRank));
         return idFn;
     }
 

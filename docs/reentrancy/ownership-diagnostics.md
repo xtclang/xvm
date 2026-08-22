@@ -204,6 +204,28 @@ debugging: a high-level XTC state failure can be downstream of an owner leak in
 a handle graph. When a parallel-only failure looks impossible at the language
 level, enable ownership validation and check the first wrong-owner boundary.
 
+## TypeInfo Body Ownership
+
+The runtime ownership dump focuses on containers, templates, compositions, and
+handles. ASM type metadata has an additional owner graph that is validated at
+construction time by `TypeInfoReal.validate()`:
+
+- every `MethodInfo` in a `TypeInfoReal` must point back to that `TypeInfo`;
+- every `MethodBody` in that method chain must point back to its owning
+  `MethodInfo`;
+- every `PropertyInfo` in a `TypeInfoReal` must point back to that `TypeInfo`;
+- every `PropertyBody` in that property chain must point back to its owning
+  `PropertyInfo`.
+
+That validation is the right stress hook for the `MethodInfo.create(...)` and
+`PropertyInfo.create(...)` factory change. The focused unit tests prove that
+the old overridable body-owner attachment path is no longer used during owner
+construction; the constructors build non-virtual owned body copies instead.
+Stress runs that warm type-info graphs then exercise the real compiler/runtime
+paths: if a same-JVM or parallel run produces a split method/property body owner
+graph, `TypeInfoReal.validate()` fails immediately during type-info
+construction, before the bad graph is hidden inside a container dump.
+
 ## Limitations
 
 The dump is an observation tool, not a proof by itself. It can prove that an

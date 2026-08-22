@@ -631,7 +631,7 @@ public class TypeInfoReal
         MethodBody        body      = method.getHead();
         MethodBody        bodyNew   = new MethodBody(idNew, sigNew, body.getImplementation(), null);
         bodyNew.setMethodStructure(body.getMethodStructure());
-        MethodInfo        methodNew = new MethodInfo(bodyNew, method.getRank());
+        MethodInfo        methodNew = MethodInfo.create(bodyNew, method.getRank());
 
         // we intentionally add absolutely nothing except the "get" method
         Map<MethodConstant, MethodInfo> mapMethods = new HashMap<>(1);
@@ -2211,8 +2211,8 @@ public class TypeInfoReal
                 if (fRuntime) {
                     MethodBody[] chain = method.ensureOptimizedMethodChain(this);
                     method = chain.length == 0
-                        ? new MethodInfo(new MethodBody(method.getHead(), Implementation.Native), 0)
-                        : new MethodInfo(chain, 0);
+                        ? MethodInfo.create(new MethodBody(method.getHead(), Implementation.Native), 0)
+                        : MethodInfo.create(chain, 0);
                 }
                 sb.append(entry.getKey())
                   .append("=")
