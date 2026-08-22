@@ -75,16 +75,14 @@ public class NativeTemplatesTest {
     }
 
     @Test
-    public void localClockTimerIsPrivateFinalScheduler()
-            throws Exception {
+    public void localClockTimerIsPrivateFinalScheduler() throws Exception {
         assertThrows(NoSuchFieldException.class, () -> xLocalClock.class.getField("TIMER"));
 
         assertPrivateStaticFinal(xLocalClock.class, "TIMER");
     }
 
     @Test
-    public void localClockSchedulerRunsTimerTasks()
-            throws Exception {
+    public void localClockSchedulerRunsTimerTasks() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
 
         xLocalClock.scheduleTimer(new TimerTask() {
@@ -98,16 +96,14 @@ public class NativeTemplatesTest {
     }
 
     @Test
-    public void osStorageWatcherIsPrivateFinalHolder()
-            throws Exception {
+    public void osStorageWatcherIsPrivateFinalHolder() throws Exception {
         assertThrows(NoSuchFieldException.class, () -> xOSStorage.class.getDeclaredField("s_daemonWatch"));
 
         assertPrivateStaticFinal(xOSStorage.class, "WATCH_DAEMON");
     }
 
     @Test
-    public void osStorageWatcherDoesNotCacheFirstCallerPool()
-            throws Exception {
+    public void osStorageWatcherDoesNotCacheFirstCallerPool() throws Exception {
         Class<?> clzDaemon = Class.forName(xOSStorage.class.getName() + "$WatchServiceDaemon");
 
         assertThrows(NoSuchFieldException.class, () -> clzDaemon.getDeclaredField("f_pool"));
@@ -117,8 +113,7 @@ public class NativeTemplatesTest {
     }
 
     @Test
-    public void terminalConsoleStateIsPrivateFinalHolder()
-            throws Exception {
+    public void terminalConsoleStateIsPrivateFinalHolder() throws Exception {
         assertThrows(NoSuchFieldException.class, () -> xTerminalConsole.class.getField("READER"));
         assertThrows(NoSuchFieldException.class, () -> xTerminalConsole.class.getField("TERMINAL"));
 
@@ -126,8 +121,7 @@ public class NativeTemplatesTest {
     }
 
     @Test
-    public void removedFInstanceUsersHaveExplicitOwnerState()
-            throws Exception {
+    public void removedFInstanceUsersHaveExplicitOwnerState() throws Exception {
         assertNoFInstanceApi(xChar.class);
         assertNoFInstanceApi(xNibble.class);
         assertNoFInstanceApi(xUInt8.class);

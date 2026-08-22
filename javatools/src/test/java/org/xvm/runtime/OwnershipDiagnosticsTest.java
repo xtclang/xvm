@@ -64,8 +64,7 @@ public class OwnershipDiagnosticsTest {
     }
 
     @Test
-    public void validatorRejectsForeignTemplateInOwnerCache()
-            throws Exception {
+    public void validatorRejectsForeignTemplateInOwnerCache() throws Exception {
         TestContainer containerA = newContainer("DiagA");
         TestContainer containerB = newContainer("DiagB");
 
@@ -98,8 +97,7 @@ public class OwnershipDiagnosticsTest {
     }
 
     @Test
-    public void validatorWalksHandleFieldGraph()
-            throws Exception {
+    public void validatorWalksHandleFieldGraph() throws Exception {
         TestContainer containerA = newContainer("DiagA");
         TestContainer containerB = newContainer("DiagB");
         GenericHandle handleA = newHandle(containerA, "RootHandle");
