@@ -58,6 +58,13 @@ public class VersionMatchesCondition
     }
 
     @Override
+    protected VersionMatchesCondition copyForAdoption(AdoptionContext context) {
+        // Module + version are the serialized link-time predicate. Reconstruct the leaf so adoption
+        // does not copy ConditionalConstant's transient brute-force test slot.
+        return new VersionMatchesCondition(context.pool(), m_constStruct, m_constVer);
+    }
+
+    @Override
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 

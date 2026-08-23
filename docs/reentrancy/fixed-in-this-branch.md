@@ -199,6 +199,12 @@ shallow-clone helper state identified by the audit:
   bind-target descriptor from method identity, and `FrameDependentConstant` no
   longer grants default shallow-clone adoption to every frame-dependent
   subclass.
+- `AllCondition`, `AnyCondition`, `NamedCondition`, `NotCondition`,
+  `PresentCondition`, `VersionMatchesCondition`, and `VersionedCondition` now
+  reconstruct logical link-time predicates during adoption. The old
+  `ConditionalConstant` family opt-in to shallow clone copied the transient
+  `iTest` brute-force simulation slot; the branch makes that slot private and
+  ensures adopted condition leaves start with clean simulation state.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration
   of a fresh unowned runtime handle constant by constructing a target-owned
   wrapper. Moving an already-owned live handle constant to another pool throws

@@ -56,6 +56,13 @@ public class PresentCondition
     }
 
     @Override
+    protected PresentCondition copyForAdoption(AdoptionContext context) {
+        // The tested structure is logical link-time identity. Reconstruct the leaf so adoption does
+        // not copy ConditionalConstant's transient brute-force test slot.
+        return new PresentCondition(context.pool(), m_constStruct);
+    }
+
+    @Override
     protected void resolveConstants() {
         m_constStruct = getConstantPool().getConstant(m_iStruct);
         assert     m_constStruct instanceof ModuleConstant

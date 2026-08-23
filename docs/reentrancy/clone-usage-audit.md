@@ -411,10 +411,11 @@ contains an explicit review/TODO near the clone path and does not link the false
 component as a sibling at the clone site.
 
 Container/ConstantPool/lock/cache impact: component clones retain identity and
-condition constants until registration; child ownership is fixed by later
-`setContaining(...)`; method parameter ownership currently is not. Component
-clone semantics also cross the `XvmStructure` design rule that parentage is
-fixed after construction (`javatools/src/main/java/org/xvm/asm/XvmStructure.java:41`,
+condition constants until registration; condition constants now have explicit
+logical adoption hooks, but component clone still depends on later registration
+to re-own the graph. Component clone semantics also cross the `XvmStructure`
+design rule that parentage is fixed after construction
+(`javatools/src/main/java/org/xvm/asm/XvmStructure.java:41`,
 `javatools/src/main/java/org/xvm/asm/XvmStructure.java:120`).
 
 Classification: must-audit, with the `MethodStructure` and `Parameter` subcases

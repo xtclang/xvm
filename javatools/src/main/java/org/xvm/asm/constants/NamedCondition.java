@@ -55,6 +55,13 @@ public class NamedCondition
     }
 
     @Override
+    protected NamedCondition copyForAdoption(AdoptionContext context) {
+        // The condition name is the serialized identity. Reconstructing the leaf avoids copying the
+        // transient brute-force test slot from a previous simulated-linker evaluation.
+        return new NamedCondition(context.pool(), m_constName);
+    }
+
+    @Override
     protected void resolveConstants() {
         m_constName = getConstantPool().getConstant(m_iName, StringConstant.class);
     }

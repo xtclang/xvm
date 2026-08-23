@@ -63,6 +63,13 @@ public class VersionedCondition
     }
 
     @Override
+    protected VersionedCondition copyForAdoption(AdoptionContext context) {
+        // The version constant is the serialized identity. Reconstruct the leaf so adoption does not
+        // copy ConditionalConstant's transient brute-force test slot.
+        return new VersionedCondition(context.pool(), m_constVer);
+    }
+
+    @Override
     protected void resolveConstants() {
         m_constVer = getConstantPool().getConstant(m_iVer, VersionConstant.class);
     }

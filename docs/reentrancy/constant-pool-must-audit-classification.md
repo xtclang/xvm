@@ -154,6 +154,10 @@ Done in this branch:
 - `javatools/src/main/java/org/xvm/asm/constants/MethodBindingConstant.java`
   reconstructs adoption from method identity, allowing `FrameDependentConstant`
   to fail closed instead of granting shallow clone to future subclasses.
+- The `ConditionalConstant` family no longer opts into default clone. Concrete
+  condition leaves reconstruct logical predicates from name/module/version/child
+  state, and the transient `iTest` simulation slot is private scratch state that
+  is not adopted.
 
 ## 2. `ConstantPool.register(...)` Publishes Before Recursive Registration Completes
 

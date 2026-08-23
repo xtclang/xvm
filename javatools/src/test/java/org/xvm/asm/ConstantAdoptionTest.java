@@ -17,6 +17,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.constants.AllCondition;
+import org.xvm.asm.constants.AnyCondition;
+import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.FSNodeConstant;
 import org.xvm.asm.constants.FileStoreConstant;
@@ -25,13 +28,18 @@ import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodBindingConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.NamedCondition;
+import org.xvm.asm.constants.NotCondition;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
+import org.xvm.asm.constants.PresentCondition;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
+import org.xvm.asm.constants.VersionMatchesCondition;
+import org.xvm.asm.constants.VersionedCondition;
 
 import org.xvm.runtime.ObjectHandle;
 
@@ -382,6 +390,54 @@ public class ConstantAdoptionTest {
     }
 
     /**
+     * ConditionalConstant carries a transient brute-force simulation slot that is not part of the
+     * serialized predicate. A shallow adoption clone copied that warmed scratch value into a new pool;
+     * explicit leaf reconstruction preserves the condition name and starts with clean simulation
+     * state.
+     */
+    @Test
+    public void adoptedConditionLeafDropsSimulatedLinkerScratchState() throws Exception {
+        var sourcePool = new FileStructure("source").getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var source     = sourcePool.ensureNamedCondition("debug");
+
+        setField(source, "iTest", 23);
+
+        var adopted = adopt(source, targetPool);
+
+        assertSame(targetPool, adopted.getConstantPool());
+        assertEquals(source.getName(), adopted.getName());
+        assertEquals(0, testIndex(adopted));
+    }
+
+    /**
+     * Multi-condition adoption must also rebuild the child graph through the target pool. This proves
+     * the recursive registration path preserves the same predicate text while no terminal condition
+     * keeps the source pool or the source's simulated-linker scratch values.
+     */
+    @Test
+    public void registeredConditionGraphAdoptsChildrenAndDropsSimulationScratch()
+            throws Exception {
+        var sourcePool = new FileStructure("source").getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var left       = sourcePool.ensureNamedCondition("debug");
+        var right      = sourcePool.ensureNamedCondition("trace");
+        var source     = sourcePool.ensureAllCondition(left, sourcePool.ensureNotCondition(right));
+
+        source.terminalInfluences();
+        setField(left, "iTest", 31);
+        setField(right, "iTest", -32);
+
+        var registered = targetPool.register(source);
+
+        assertSame(targetPool, registered.getConstantPool());
+        assertEquals(source.getValueString(), registered.getValueString());
+        assertTrue(registered.terminals().stream()
+                .allMatch(cond -> cond.getConstantPool() == targetPool && testIndex(cond) == 0));
+        assertTrue(registered.terminals().stream().noneMatch(cond -> cond == left || cond == right));
+    }
+
+    /**
      * A live ObjectHandle is owner-specific runtime state, not logical constant data. Moving an
      * already-owned handle constant to another pool must fail instead of leaking the source owner.
      */
@@ -453,19 +509,26 @@ public class ConstantAdoptionTest {
 
         assertTrue(Modifier.isFinal(adoptedBy.getModifiers()));
 
-        Set.of(FSNodeConstant.class,
+        Set.of(AllCondition.class,
+               AnyCondition.class,
+               FSNodeConstant.class,
                DynamicFormalConstant.class,
                FileStoreConstant.class,
                FormalTypeChildConstant.class,
                HandleConstant.class,
                MethodBindingConstant.class,
                MethodConstant.class,
+               NamedCondition.class,
+               NotCondition.class,
                ParameterizedTypeConstant.class,
+               PresentCondition.class,
                PropertyConstant.class,
                RegisterConstant.class,
                SignatureConstant.class,
                SingletonConstant.class,
-               TypeParameterConstant.class)
+               TypeParameterConstant.class,
+               VersionMatchesCondition.class,
+               VersionedCondition.class)
                 .forEach(clz -> {
                     assertDoesNotThrow(() -> clz.getDeclaredMethod(
                             "copyForAdoption", Constant.AdoptionContext.class));
@@ -554,6 +617,14 @@ public class ConstantAdoptionTest {
     @SuppressWarnings("unchecked")
     private static <T extends Constant> T adopt(T constant, ConstantPool pool) {
         return (T) constant.adoptedBy(pool);
+    }
+
+    private static int testIndex(ConditionalConstant condition) {
+        try {
+            return fieldValue(condition, "iTest");
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private static void withAdoptionValidation(Runnable action) {

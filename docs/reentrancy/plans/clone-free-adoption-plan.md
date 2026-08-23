@@ -144,10 +144,10 @@ Risk buckets:
 | `AbstractDependantChildTypeConstant` | `AbstractDependantTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `AbstractDependantTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `AccessTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
-| `AllCondition` | `MultiCondition` | family default-clone policy | P3 logical condition array |
+| `AllCondition` | `MultiCondition` | explicit clone-free hook | P3 logical condition array; simulation scratch fixed in this branch |
 | `AnnotatedTypeConstant` | `TypeConstant` | family default-clone policy | P1 annotation children and type cache reset |
 | `AnonymousClassTypeConstant` | `AbstractDependantChildTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
-| `AnyCondition` | `MultiCondition` | family default-clone policy | P3 logical condition array |
+| `AnyCondition` | `MultiCondition` | explicit clone-free hook | P3 logical condition array; simulation scratch fixed in this branch |
 | `ArrayConstant` | `ValueConstant` | family default-clone policy | P3 logical value array |
 | `BFloat16Constant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
 | `ByteConstant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
@@ -155,7 +155,7 @@ Risk buckets:
 | `CharConstant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
 | `ChildClassConstant` | `PseudoConstant` | family default-clone policy | P2 logical identity/path |
 | `ClassConstant` | `NamedConstant` | family default-clone policy | P2 logical identity/path |
-| `ConditionalConstant` | `Constant` | family default-clone policy | P3 condition family base |
+| `ConditionalConstant` | `Constant` | fails closed; concrete leaves explicit | P3 condition family base; private simulation scratch |
 | `DecimalAutoConstant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
 | `DecimalConstant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
 | `DecoratedClassConstant` | `IdentityConstant` | family default-clone policy | P2 logical identity/path |
@@ -190,17 +190,17 @@ Risk buckets:
 | `MethodBindingConstant` | `FrameDependentConstant` | explicit clone-free hook | P4 serialized frame-dependent constant fixed in this branch |
 | `MethodConstant` | `IdentityConstant` | explicit clone-free hook | P1 JIT-name/type cache owner policy fixed in this branch |
 | `ModuleConstant` | `IdentityConstant` | family default-clone policy | P2 logical identity/path |
-| `MultiCondition` | `ConditionalConstant` | family default-clone policy | P3 condition-family base |
+| `MultiCondition` | `ConditionalConstant` | abstract helper for explicit condition hooks | P3 condition-family base |
 | `MultiMethodConstant` | `NamedConstant` | family default-clone policy | P2 logical identity/path |
-| `NamedCondition` | `ConditionalConstant` | family default-clone policy | P3 logical condition |
+| `NamedCondition` | `ConditionalConstant` | explicit clone-free hook | P3 logical condition; simulation scratch fixed in this branch |
 | `NamedConstant` | `IdentityConstant` | family default-clone policy | P2 named identity-family base |
 | `NativeRebaseConstant` | `ClassConstant` | family default-clone policy | P2 logical identity/path |
-| `NotCondition` | `ConditionalConstant` | family default-clone policy | P3 logical condition |
+| `NotCondition` | `ConditionalConstant` | explicit clone-free hook | P3 logical condition; simulation scratch fixed in this branch |
 | `PackageConstant` | `NamedConstant` | family default-clone policy | P2 logical identity/path |
 | `ParameterizedTypeConstant` | `TypeConstant` | explicit override | P0 helper lock/JIT cache |
 | `ParentClassConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical identity |
 | `PendingTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
-| `PresentCondition` | `ConditionalConstant` | family default-clone policy | P3 logical condition |
+| `PresentCondition` | `ConditionalConstant` | explicit clone-free hook | P3 logical condition; simulation scratch fixed in this branch |
 | `PropertyClassTypeConstant` | `AbstractDependantTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `PropertyConstant` | `FormalConstant` | explicit clone-free hook | P1 JIT-name/type/property-info cache owner policy fixed in this branch |
 | `PseudoConstant` | `Constant` | family default-clone policy | P2 pseudo-family base |
@@ -226,8 +226,8 @@ Risk buckets:
 | `UnresolvedTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `ValueConstant` | `Constant` | family default-clone policy | P3 value-family base |
 | `VersionConstant` | `LiteralConstant` | family default-clone policy | P3 immutable logical version |
-| `VersionMatchesCondition` | `ConditionalConstant` | family default-clone policy | P3 logical condition |
-| `VersionedCondition` | `ConditionalConstant` | family default-clone policy | P3 logical condition |
+| `VersionMatchesCondition` | `ConditionalConstant` | explicit clone-free hook | P3 logical condition; simulation scratch fixed in this branch |
+| `VersionedCondition` | `ConditionalConstant` | explicit clone-free hook | P3 logical condition; simulation scratch fixed in this branch |
 | `VirtualChildTypeConstant` | `AbstractDependantChildTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 
 ## Clone Uses That Are Dangerous For Runtime Reentrancy
@@ -596,6 +596,14 @@ Scope:
 - convert `ConditionalConstant`, `MultiCondition`, and condition leaves;
 - use `Arrays.copyOf(...)` or immutable containers where array ownership must be
   explicit.
+
+Current branch note: condition constants are already converted in the
+integration branch. `ConditionalConstant` no longer opts into default shallow
+clone, the concrete condition leaves reconstruct name/module/version/child
+predicate state through `copyForAdoption(...)`, and
+`ConstantAdoptionTest` proves warmed `iTest` simulation scratch is not copied
+into a target pool. Value constants remain in the transitional default-clone
+bucket unless they have a separate explicit hook.
 
 Review goal: replace low-risk default clone users with explicit logical-value
 copy code and remove the largest remaining fallback population.

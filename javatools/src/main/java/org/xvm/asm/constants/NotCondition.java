@@ -65,6 +65,13 @@ public class NotCondition
     }
 
     @Override
+    protected NotCondition copyForAdoption(AdoptionContext context) {
+        // The logical value is just the negated child condition; recomputing through target
+        // registration keeps any ConditionalConstant simulation scratch state out of the copy.
+        return new NotCondition(context.pool(), m_constCond);
+    }
+
+    @Override
     protected void resolveConstants() {
         m_constCond = getConstantPool().getConstant(m_iCond, ConditionalConstant.class);
     }

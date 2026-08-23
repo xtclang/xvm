@@ -99,14 +99,6 @@ public abstract class ConditionalConstant
                 : (n & (1L << iTest)) != 0;
     }
 
-    @Override
-    protected boolean allowsDefaultAdoptionClone() {
-        // Transitional policy: condition constants represent serialized link-time predicates.
-        // They do not carry runtime handles or pool-owner helper cells today. Keep this explicit
-        // until condition constants get clone-free copy constructors.
-        return true;
-    }
-
     /**
      * Determine the set of terminal conditions that make up this ConditionalConstant.
      *
@@ -879,7 +871,8 @@ public abstract class ConditionalConstant
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * Used by SimulatedLinkerContext.
+     * Scratch slot used only while {@link #terminalInfluences()} brute-forces condition inputs. It is
+     * not serialized logical value and must never be copied during constant-pool adoption.
      */
-    public transient int iTest;
+    private transient int iTest;
 }

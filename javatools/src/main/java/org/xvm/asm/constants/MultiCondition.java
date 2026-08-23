@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -53,6 +54,16 @@ public abstract class MultiCondition
         }
 
         m_aconstCond = aconstCond;
+    }
+
+    /**
+     * Construct an adopted MultiCondition from its logical child condition array.
+     *
+     * @param context     the destination pool owner
+     * @param aconstCond  an array of underlying conditions to evaluate
+     */
+    protected MultiCondition(AdoptionContext context, ConditionalConstant[] aconstCond) {
+        this(context.pool(), Arrays.copyOf(aconstCond, aconstCond.length));
     }
 
     /**

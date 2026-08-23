@@ -51,8 +51,19 @@ public class AllCondition
         super(acond[0].getConstantPool(), acond);
     }
 
+    private AllCondition(AdoptionContext context, ConditionalConstant[] acond) {
+        super(context, acond);
+    }
+
 
     // ----- ConditionalConstant methods -----------------------------------------------------------
+
+    @Override
+    protected AllCondition copyForAdoption(AdoptionContext context) {
+        // Adoption must copy only the logical condition graph. The base condition class has a
+        // transient brute-force scratch slot, so this family cannot use shallow clone safely.
+        return new AllCondition(context, m_aconstCond);
+    }
 
     @Override
     public boolean evaluate(LinkerContext ctx) {

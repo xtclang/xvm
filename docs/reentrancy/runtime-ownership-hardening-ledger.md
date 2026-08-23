@@ -233,6 +233,10 @@ Branch fix:
 - `MethodBindingConstant.copyForAdoption(...)` reconstructs the serialized
   bind-target descriptor from method identity, and `FrameDependentConstant` no
   longer grants shallow-clone adoption to every frame-dependent subclass.
+- `ConditionalConstant` no longer grants shallow-clone adoption to the condition
+  family. Each concrete condition reconstructs its logical link-time predicate,
+  and the transient `iTest` brute-force simulation slot is private scratch state
+  that is not copied across pools.
 - `HandleConstant.copyForAdoption(...)` allows first registration of a fresh
   unowned runtime handle constant by constructing a target-owned wrapper, but
   throws if an already-owned live handle constant is moved to another pool.
@@ -241,8 +245,8 @@ Proof/guards:
 
 - `ConstantAdoptionTest` directly exercises the adoption boundary.
 - The same test copied into detached `master` fails the adoption cases by
-  retaining copied helper, runtime, compiler-register, or cache state; it passes
-  on this branch.
+  retaining copied helper, runtime, compiler-register, condition-simulation, or
+  cache state; it passes on this branch.
 - `ConstantAdoptionValidator` now runs at `ConstantPool.register(...)` when
   `-Dxvm.asm.validateConstantAdoption=true` is enabled. It compares source and
   adopted copies and reports identical helper/runtime references unless they

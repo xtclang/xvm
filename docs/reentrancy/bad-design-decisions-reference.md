@@ -181,6 +181,10 @@ Why it was bad in a single-threaded world:
 - Adding any new helper field to a constant silently made it part of adoption.
 - Final locks, lazy cells, JIT caches, thread-local reentrancy markers, and
   runtime handles were copied unless every subclass remembered to opt out.
+- Even small non-runtime scratch fields were copied. For example,
+  `ConditionalConstant.iTest` is only brute-force link-condition simulation state,
+  but shallow clone treated a warmed test index as if it were serialized predicate
+  value.
 
 Replacement:
 
@@ -190,6 +194,11 @@ Replacement:
 - owner-local helper/runtime fields must be fresh, cleared, or rejected;
 - diagnostics must assert that adopted constants do not carry source-owner
   runtime state.
+
+The condition family demonstrates the desired low-risk end state: each concrete
+condition now reconstructs the logical predicate from name/module/version/child
+fields, target registration adopts child constants as before, and transient
+simulation scratch is private and not copied.
 
 The same rule applies to method/parameter copies. This branch fixed a
 single-threaded bug where `Parameter.cloneBody()` mutated the source parameter

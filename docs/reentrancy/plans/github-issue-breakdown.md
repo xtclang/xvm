@@ -1434,6 +1434,11 @@ separately.
   - `TypeParameterConstant`;
   - `MethodConstant`.
 
+- Reconstruct `AllCondition`, `AnyCondition`, `NamedCondition`, `NotCondition`,
+  `PresentCondition`, `VersionMatchesCondition`, and `VersionedCondition` from
+  logical predicate fields if this slice includes the condition-family
+  clone-free wave. Otherwise keep that wave as the condition half of the later
+  value/condition adoption PR.
 - Reject moving an already-owned live `HandleConstant` to another pool.
 - Reject `DynamicFormalConstant` adoption when its register type is not shared
   with the destination pool, because the target pool cannot safely own or share
@@ -1481,6 +1486,7 @@ Commits:
 - `d1d0683e3 Guard late constant pool registration`
 - related `0aa9a86cd Harden owner-sensitive lazy caches`
 - `a0c1fe936 Harden constant adoption runtime-state validation`
+- `Make condition adoption clone-free` condition-family wave
 
 Primary source areas:
 
@@ -1490,6 +1496,7 @@ Primary source areas:
 - `TypeConstant`, `ParameterizedTypeConstant`, `SignatureConstant`,
   `TypeParameterConstant`, `DynamicFormalConstant`, `RegisterConstant`,
   `MethodBindingConstant`
+- `ConditionalConstant`, `MultiCondition`, and condition leaves if bundled
 - `HandleConstant`
 - `ClassComposition`
 - `OwnershipDiagnostics` boundary validation where adoption failures surface
@@ -1545,6 +1552,9 @@ appropriate:
 - `MethodBindingConstant` keeps the same descriptor and recursive method
   identity registration behavior, but no frame-dependent subclass now receives
   shallow-clone adoption by inheritance.
+- Condition constants keep the same link-time predicate behavior. Adoption still
+  interns the target-owned child constants through normal registration, but the
+  transient `iTest` brute-force simulation slot is not copied.
 - The validator is diagnostic coverage, not a complete architectural fix.
 - The validator is off unless explicitly enabled, so normal constant interning
   and runtime cache performance is unchanged.
