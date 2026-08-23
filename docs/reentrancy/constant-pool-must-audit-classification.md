@@ -151,6 +151,9 @@ Done in this branch:
 - `javatools/src/main/java/org/xvm/asm/constants/RegisterConstant.java`
   reconstructs adoption from serialized register index and rejects unknown
   registers, instead of shallow-cloning the transient compiler `Register`.
+- `javatools/src/main/java/org/xvm/asm/constants/MethodBindingConstant.java`
+  reconstructs adoption from method identity, allowing `FrameDependentConstant`
+  to fail closed instead of granting shallow clone to future subclasses.
 
 ## 2. `ConstantPool.register(...)` Publishes Before Recursive Registration Completes
 
@@ -667,6 +670,9 @@ Existing reproducer, test, or diagnostic:
 - `javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java` covers
   `RegisterConstant` adoption for allocated registers and proves that unknown
   moving registers fail at the adoption boundary.
+- `javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java` covers
+  `MethodBindingConstant` adoption and proves target registration adopts the
+  method identity into the destination pool.
 - `javatools/src/test/java/org/xvm/asm/constants/MethodInfoTest.java:126`
   through `javatools/src/test/java/org/xvm/asm/constants/MethodInfoTest.java:164`
   covers parallel `MethodInfo` ownership construction.

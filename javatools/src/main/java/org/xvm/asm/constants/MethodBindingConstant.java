@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Objects;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
@@ -127,6 +129,14 @@ public class MethodBindingConstant
     @Override
     public boolean containsUnresolved() {
         return !isHashCached() && m_idMethod.containsUnresolved();
+    }
+
+    @Override
+    protected MethodBindingConstant copyForAdoption(AdoptionContext context) {
+        // The logical bind-target value is only the method identity. Reconstruct it so the
+        // frame-dependent family has no shallow-clone adoption fallback.
+        return new MethodBindingConstant(
+                context.pool(), Objects.requireNonNull(m_idMethod, "method"));
     }
 
     @Override

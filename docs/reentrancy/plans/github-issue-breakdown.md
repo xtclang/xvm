@@ -1429,6 +1429,7 @@ separately.
   - `ParameterizedTypeConstant`;
   - `PropertyConstant`;
   - `RegisterConstant`;
+  - `MethodBindingConstant`;
   - `SignatureConstant`;
   - `TypeParameterConstant`;
   - `MethodConstant`.
@@ -1440,6 +1441,8 @@ separately.
 - Reject `RegisterConstant` adoption when the compiler register has not been
   allocated yet; otherwise the target pool would either share a moving source
   register or freeze an unstable index.
+- Remove the `FrameDependentConstant` default-clone opt-in once
+  `MethodBindingConstant` also reconstructs its descriptor explicitly.
 - Add `ConstantAdoptionValidator` as an opt-in diagnostic at registration.
 - Add source-shape coverage proving the high-risk constants use the hook instead
   of ad-hoc `adoptedBy(...)` overrides.
@@ -1485,7 +1488,8 @@ Primary source areas:
 - `SingletonConstant`
 - `FSNodeConstant`, `FileStoreConstant`
 - `TypeConstant`, `ParameterizedTypeConstant`, `SignatureConstant`,
-  `TypeParameterConstant`, `DynamicFormalConstant`, `RegisterConstant`
+  `TypeParameterConstant`, `DynamicFormalConstant`, `RegisterConstant`,
+  `MethodBindingConstant`
 - `HandleConstant`
 - `ClassComposition`
 - `OwnershipDiagnostics` boundary validation where adoption failures surface
@@ -1538,6 +1542,9 @@ appropriate:
 - `RegisterConstant` keeps the same runtime/deserialized behavior: adopted
   constants use the register index only. Compile-time type convenience from the
   source `Register` is deliberately not copied across pools.
+- `MethodBindingConstant` keeps the same descriptor and recursive method
+  identity registration behavior, but no frame-dependent subclass now receives
+  shallow-clone adoption by inheritance.
 - The validator is diagnostic coverage, not a complete architectural fix.
 - The validator is off unless explicitly enabled, so normal constant interning
   and runtime cache performance is unchanged.

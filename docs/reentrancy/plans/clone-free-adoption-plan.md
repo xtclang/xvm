@@ -98,14 +98,14 @@ Current branch inventory:
 | Abstract family bases in that set | 13 |
 | Concrete constant classes in that set | 75 |
 | Classes currently overriding `adoptedBy(...)` | 0 |
-| Classes currently overriding `copyForAdoption(...)` | 12 |
-| Classes relying on an explicit family default-clone policy somewhere in the hierarchy | 76 |
+| Classes currently overriding `copyForAdoption(...)` | 13 |
+| Classes relying on an explicit family default-clone policy somewhere in the hierarchy | 75 |
 
 The migration is broad but not conceptually deep. The direct source blast radius
 for a complete clone-free adoption model is likely:
 
 - `Constant`, `ConstantPool`, and adoption tests;
-- all 12 high-risk hook classes, already converted to `copyForAdoption(...)` in
+- all 13 high-risk hook classes, already converted to `copyForAdoption(...)` in
   this branch;
 - 13 abstract family bases, to place shared family adoption rules where useful;
 - up to 75 concrete leaf constants, either by explicit copy/adoption
@@ -176,7 +176,7 @@ Risk buckets:
 | `FloatConstant` | `ValueConstant` | family default-clone policy | P3 float-family base |
 | `FormalConstant` | `NamedConstant` | family default-clone policy | P2 formal logical identity |
 | `FormalTypeChildConstant` | `PropertyConstant` | explicit clone-free hook | P2/P1 property metadata cache inheritance fixed in this branch |
-| `FrameDependentConstant` | `Constant` | family default-clone policy | P4 frame-dependent family base |
+| `FrameDependentConstant` | `Constant` | fails closed; no default clone | P4 frame-dependent family base |
 | `HandleConstant` | `FrameDependentConstant` | explicit clone-free guard override | P0 live runtime handle |
 | `IdentityConstant` | `Constant` | family default-clone policy | P2 identity-family base |
 | `ImmutableTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
@@ -187,7 +187,7 @@ Risk buckets:
 | `LiteralConstant` | `ValueConstant` | family default-clone policy | P3 logical literal value |
 | `MapConstant` | `ValueConstant` | family default-clone policy | P3 logical map arrays |
 | `MatchAnyConstant` | `ValueConstant` | family default-clone policy | P3 logical sentinel |
-| `MethodBindingConstant` | `FrameDependentConstant` | family default-clone policy | P4 serialized frame-dependent constant |
+| `MethodBindingConstant` | `FrameDependentConstant` | explicit clone-free hook | P4 serialized frame-dependent constant fixed in this branch |
 | `MethodConstant` | `IdentityConstant` | explicit clone-free hook | P1 JIT-name/type cache owner policy fixed in this branch |
 | `ModuleConstant` | `IdentityConstant` | family default-clone policy | P2 logical identity/path |
 | `MultiCondition` | `ConditionalConstant` | family default-clone policy | P3 condition-family base |
@@ -531,14 +531,14 @@ Scope:
 - migrate `SingletonConstant`, `FSNodeConstant`, `FileStoreConstant`,
   `DynamicFormalConstant`, `FormalTypeChildConstant`, `HandleConstant`, `MethodConstant`,
   `ParameterizedTypeConstant`, `PropertyConstant`, `SignatureConstant`, and
-  `TypeParameterConstant`, and `RegisterConstant` from ad-hoc overrides to the
-  new adoption hook;
+  `TypeParameterConstant`, `RegisterConstant`, and `MethodBindingConstant` from
+  ad-hoc overrides to the new adoption hook;
 - keep current branch tests as equivalence tests.
 
 Current branch note: `FSNodeConstant`, `FileStoreConstant`,
 `DynamicFormalConstant`, `FormalTypeChildConstant`, `HandleConstant`,
-`MethodConstant`, `PropertyConstant`, and `RegisterConstant` already use
-clone-free construction inside
+`MethodBindingConstant`, `MethodConstant`, `PropertyConstant`, and
+`RegisterConstant` already use clone-free construction inside
 `copyForAdoption(...)`; the other P0/P1 special cases use the same hook for
 fresh helper/runtime state. The later API migration should preserve that
 behavior while broadening it to family bases.
@@ -608,8 +608,9 @@ Scope:
 - keep the `RegisterConstant.copyForAdoption(...)` branch fix, which records
   serialized register identity, rejects unknown moving compiler registers, and
   drops the transient compiler `Register`;
-- document/encode why `MethodBindingConstant` is a serialized logical
-  frame-dependent constant, not a live runtime handle;
+- keep the `MethodBindingConstant.copyForAdoption(...)` branch fix, which
+  reconstructs the serialized logical method-binding descriptor and lets target
+  registration adopt the method identity;
 - make second adoption of live runtime values impossible without an explicit
   owner-local representation.
 

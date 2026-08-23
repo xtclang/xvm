@@ -34,11 +34,4 @@ public abstract class FrameDependentConstant
      */
     public abstract ObjectHandle getHandle(Frame frame);
 
-    @Override
-    protected boolean allowsDefaultAdoptionClone() {
-        // Transitional policy: MethodBindingConstant is a serialized frame-dependent descriptor.
-        // RegisterConstant has a hook because it can carry a transient compiler Register, and
-        // HandleConstant has a guard because it wraps a live ObjectHandle.
-        return true;
-    }
 }

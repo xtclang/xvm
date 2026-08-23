@@ -195,6 +195,10 @@ shallow-clone helper state identified by the audit:
   `Register`. Unknown registers are rejected because their index can still move
   during allocation; cloning that object into another pool would either leak
   compiler state or freeze the wrong value.
+- `MethodBindingConstant.copyForAdoption(...)` reconstructs the serialized
+  bind-target descriptor from method identity, and `FrameDependentConstant` no
+  longer grants default shallow-clone adoption to every frame-dependent
+  subclass.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration
   of a fresh unowned runtime handle constant by constructing a target-owned
   wrapper. Moving an already-owned live handle constant to another pool throws

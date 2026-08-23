@@ -59,7 +59,7 @@ expanded catalog to `constant-pool-hostile-state-audit.md`.
 
 | Priority | Category | Sites | Why it matters | Proper fix or guard |
 | --- | --- | --- | --- | --- |
-| Must fix | Wrong-owner runtime/helper state copied by adoption | Fixed in this branch for `SingletonConstant`, `FSNodeConstant`, `FileStoreConstant`, `TypeConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, `TypeParameterConstant`, `MethodConstant`, `PropertyConstant`, `FormalTypeChildConstant`, `DynamicFormalConstant`, `RegisterConstant`, and `HandleConstant` | `adoptedBy(...)` changes pool ownership. Shallow-copied runtime/cache/helper state can still point at the source pool/container, compiler method/register owner, or JIT owner. | Reset or reconstruct all non-logical state at adoption/owner-change boundaries. Throw/assert when live handles, moving compiler registers, or non-shared foreign register types are adopted into another pool. |
+| Must fix | Wrong-owner runtime/helper state copied by adoption | Fixed in this branch for `SingletonConstant`, `FSNodeConstant`, `FileStoreConstant`, `TypeConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, `TypeParameterConstant`, `MethodConstant`, `PropertyConstant`, `FormalTypeChildConstant`, `DynamicFormalConstant`, `RegisterConstant`, `MethodBindingConstant`, and `HandleConstant` | `adoptedBy(...)` changes pool ownership. Shallow-copied runtime/cache/helper state can still point at the source pool/container, compiler method/register owner, frame descriptor owner, or JIT owner. | Reset or reconstruct all non-logical state at adoption/owner-change boundaries. Throw/assert when live handles, moving compiler registers, or non-shared foreign register types are adopted into another pool. |
 | Done in this branch; scoped bridge remains | Ambient current pool in runtime execution | Semantic main-code callers are fixed and `getCurrentPool()` has been removed; boundary scopes remain through `withPool(...)` | A thread-local owner is hidden from signatures. Missing scope cleanup or execution on a different thread selects the wrong pool or `null`. | Keep explicit `Frame`, `Container`, or `ConstantPool` parameters. Use scoped owner context only as a transitional boundary bridge with diagnostics. |
 | Must audit | Shared mutable pool mutation during parallel runtime | `register(...)`, `ensure*Constant(...)`, `f_listConst`, `m_mapConstants`, `m_mapLocators`, `getContained()` | Some structures are concurrent/copy-on-write; `f_listConst` itself is not a general concurrent collection. The current design assumes registration and validation reentrancy more than arbitrary parallel mutation. | This branch adds `-Dxvm.asm.validateConstantPoolLateRegistration=true` to fail on new registrations after the runtime publication marker. Long term, split "frozen runtime pool" from compiler/linker mutation. |
 | Must audit | Live runtime handles embedded as constants | `HandleConstant` in `xRTTypeTemplate.resolveFormalType`, used as annotation parameter values | A live `ObjectHandle` is owner-specific and cannot become a pool-shared serialized logical constant. | This branch adds a `HandleConstant.copyForAdoption(...)` guard for cross-pool movement. Diagnostics for annotated types carrying live handles remain useful. |
@@ -243,8 +243,9 @@ fresh frame-local handle constant and registers it in the current pool. The
 guard rejects the dangerous second adoption to another pool. This does not ban
 `RegisterConstant` or `MethodBindingConstant`; they are real frame-dependent
 constant forms. `RegisterConstant` still has its own adoption hook because its
-compile-time form can carry a transient `Register`; the live-handle guard
-belongs specifically on `HandleConstant`.
+compile-time form can carry a transient `Register`, and `MethodBindingConstant`
+has an explicit descriptor hook so the frame-dependent base fails closed. The
+live-handle guard belongs specifically on `HandleConstant`.
 
 ### Guard Runtime Current-Pool Scopes
 

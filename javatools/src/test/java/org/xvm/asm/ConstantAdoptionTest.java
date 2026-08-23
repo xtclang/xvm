@@ -23,6 +23,7 @@ import org.xvm.asm.constants.FileStoreConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.LiteralConstant;
+import org.xvm.asm.constants.MethodBindingConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -354,6 +355,33 @@ public class ConstantAdoptionTest {
     }
 
     /**
+     * MethodBindingConstant is a serialized frame-dependent descriptor, not a live runtime handle.
+     * Adoption should reconstruct the method-binding value and let target registration adopt the
+     * method identity, closing the old FrameDependentConstant default-clone fallback.
+     */
+    @Test
+    public void adoptedMethodBindingConstantPreservesMethodIdentity() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var targetPool = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+        var struct     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Owner", null);
+        var sig        = sourcePool.ensureSignatureConstant(
+                "method", ConstantPool.NO_TYPES, ConstantPool.NO_TYPES);
+        var method     = sourcePool.ensureMethodConstant(struct.getIdentityConstant(), sig);
+        var source     = new MethodBindingConstant(sourcePool, method);
+
+        var adopted = adopt(source, targetPool);
+        var registered = targetPool.register(source);
+
+        assertSame(targetPool, adopted.getConstantPool());
+        assertEquals(method.getName(), adopted.getMethodConstant().getName());
+        assertSame(targetPool, registered.getConstantPool());
+        assertSame(targetPool, registered.getMethodConstant().getConstantPool());
+        assertEquals(method.getName(), registered.getMethodConstant().getName());
+    }
+
+    /**
      * A live ObjectHandle is owner-specific runtime state, not logical constant data. Moving an
      * already-owned handle constant to another pool must fail instead of leaking the source owner.
      */
@@ -430,6 +458,7 @@ public class ConstantAdoptionTest {
                FileStoreConstant.class,
                FormalTypeChildConstant.class,
                HandleConstant.class,
+               MethodBindingConstant.class,
                MethodConstant.class,
                ParameterizedTypeConstant.class,
                PropertyConstant.class,
