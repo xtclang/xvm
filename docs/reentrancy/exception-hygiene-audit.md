@@ -115,7 +115,7 @@ been logged and the task code treats the non-zero code as failure.
 
 | Priority | Site | Classification | Risk | Recommended fix |
 | --- | --- | --- | --- | --- |
-| P0 | `javatools/src/main/java/org/xvm/javajit/JitConnector.java:143` | Must-fix | `InvocationTargetException` for an unhandled XTC exception is printed at `JitConnector.java:150`, but no exception is thrown and `result` remains the default zero. JIT/direct execution can report success after an unhandled language exception. | Preserve language exception semantics: set a non-zero result or throw a typed `JitUnhandledException`/`LauncherException` with the cause. Keep the printable XTC exception text, but do not let `join()` return success. |
+| P0 | `javatools/src/main/java/org/xvm/javajit/JitConnector.java:143` | Must-fix, fixed in branch | `InvocationTargetException` for an unhandled XTC exception was printed at `JitConnector.java:150`, but no exception was thrown and `result` could remain zero from a previous successful invocation. JIT/direct execution could report success after an unhandled language exception. | Fixed by explicitly restoring the connector's non-zero failure result in the generated-XTC-exception branch. The printable XTC exception text remains diagnostic, but `join()` no longer reports success after the generated code threw. |
 | P0 | `javatools_jitbridge/src/main/java/org/xtclang/ecstasy/nType.java:130`, `:187`, `:231` | Must-fix | Reflective `equals`, `compare`, and `hashCode` catch `InvocationTargetException` and convert every failure to `$unsupported`. If the invoked method threw an XTC `nException`, the language exception is lost. | Catch `InvocationTargetException`, unwrap `getCause()`, rethrow `nException`, and only translate reflection/signature failures to `$unsupported` or type mismatch. |
 | P0 | `javatools/src/main/java/org/xvm/runtime/MainContainer.java:253` | Must-fix, fixed in branch | Startup/invocation setup failures are wrapped as `new RuntimeException("failed to run... Cause: " + e.getMessage())` with no cause. This cuts off module load, injection, owner, and stack information before the launcher sees it. | Fixed by throwing `new RuntimeException("failed to run: " + f_idModule, e)`. The launcher still gets module context, and diagnostics keep the original cause and stack. A typed startup exception remains a later cleanup option. |
 | P0 | `javatools/src/main/java/org/xvm/runtime/Container.java:168` and `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:324` | Must-fix, fixed in branch | Unexpected service scheduling/execution failure was printed and swallowed. Pending work was decremented, the service could be terminated, and `join()` could return normal completion. This hid parallelism, ownership, and runtime defects. | Fixed by adding a container terminal-failure slot observed by `InterpreterConnector.join()`. The first unexpected `Throwable` is stored with safe publication, later failures are suppressed evidence, and stderr remains secondary diagnostics. |
@@ -275,7 +275,8 @@ These are not required everywhere, but they would make intended propagation clea
 
 P0:
 
-1. Fix JIT unhandled XTC exception propagation in `JitConnector.invoke0Impl()`.
+1. DONE in this branch: fix JIT unhandled XTC exception propagation in
+   `JitConnector.invoke0Impl()`.
 2. Unwrap and rethrow `nException` in JIT bridge reflective dispatch (`nType`).
 3. DONE in this branch: preserve cause in `MainContainer.invoke0()`
    startup/invocation failure.
@@ -448,3 +449,33 @@ secondary diagnostic, but success/failure no longer depends on someone watching
 the terminal output. `RuntimeFailurePropagationTest` guards the source shapes
 that were broken on master: print-only worker catches and a `join()` boundary
 that never observes recorded runtime failures.
+
+## Fixed In This Branch: JIT Unhandled Exception Result
+
+`JitConnector.invoke0Impl(...)` detects generated XTC exceptions through
+reflection. Master printed the natural exception text but then returned from the
+catch block without throwing and without setting a failure result:
+
+```java
+System.out.println("\nUnhandled exception: " +
+    cause.getClass().getField("exception").get(cause));
+```
+
+The connector field starts at `1`, matching the interpreter convention that a
+main invocation has failed until successful completion stores `0` or the returned
+integer. The bug appears after a reused connector or a path that has already
+stored zero: the generated XTC exception branch could print an error and still
+let `join()` return success.
+
+The branch keeps the existing JIT behavior of printing the natural exception
+text, but it makes the boundary result explicit:
+
+```java
+this.result = 1;
+```
+
+The fallback catch around exception rendering was also narrowed from
+`catch (Throwable ignore)` to reflection/runtime failures. It is acceptable for
+diagnostic rendering to fail, but it should not swallow arbitrary VM failures.
+`JitFailurePropagationTest` is a red-on-master source-shape guard for both
+properties.

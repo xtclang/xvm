@@ -145,11 +145,15 @@ public class JitConnector
             if (name.startsWith(TypeSystem.ClassfileShape.Exception.prefix) ||
                 name.charAt(0) == TypeSystem.NO_MOD) {
 
+                // Match the interpreter connector result contract: an unhandled natural exception
+                // keeps the default non-zero result. Printing the exception is diagnostic only; the
+                // host boundary must not report success after generated XTC code threw.
+                this.result = 1;
                 try {
                     // TODO: add the service info; see Utils.log()
                     System.out.println("\nUnhandled exception: " +
                         cause.getClass().getField("exception").get(cause));
-                } catch (Throwable ignore) {}
+                } catch (ReflectiveOperationException | RuntimeException _) {}
             } else {
                 if (cause instanceof VerifyError) {
                     dumpNames.add(extractVerifyErrorClassName(cause.getMessage()));

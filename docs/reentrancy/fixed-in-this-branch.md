@@ -2502,6 +2502,25 @@ The fix does not add hot-path per-op allocation. The slot is one reference per
 container and is only populated on failure. Successful scheduling and service
 draining use the same execution paths as before.
 
+### JIT Unhandled Exceptions Return Failure
+
+The JIT connector already initialized its `result` field to `1`, matching the
+interpreter convention that an invocation is failed until successful completion
+sets an actual result. Master broke that contract for generated XTC exceptions:
+it detected the generated exception, printed the natural exception text, and then
+returned without restoring a non-zero result. If the connector had previously
+stored zero, `join()` could report success after an unhandled JIT exception.
+
+This branch keeps the existing printed exception diagnostic, but explicitly sets
+`this.result = 1` in the generated-XTC-exception branch. The diagnostic fallback
+catch was narrowed from `Throwable` to reflection/runtime failures so it cannot
+hide arbitrary VM failures while trying to render an exception message.
+
+This is a host-boundary correctness fix, not a JIT owner-model rewrite. It does
+not change successful JIT execution or generated class caching. The only changed
+observable behavior is that an unhandled generated XTC exception cannot be
+reported as a successful exit.
+
 ### `xOSStorage` Watch Daemon
 
 Master kept one mutable static watcher daemon:
