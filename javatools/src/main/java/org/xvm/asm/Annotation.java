@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
@@ -60,7 +61,9 @@ public class Annotation
         }
 
         m_constClass = constClass;
-        m_aParams    = aconstParam == null ? Constant.NO_CONSTS : aconstParam;
+        m_aParams    = aconstParam == null
+                ? Constant.NO_CONSTS
+                : Arrays.copyOf(aconstParam, aconstParam.length);
     }
 
     /**
@@ -181,7 +184,7 @@ public class Annotation
                 return getConstantPool().ensureAnnotation(getAnnotationClass(), aParams);
             }
 
-            m_aParams = aParams;
+            m_aParams = Arrays.copyOf(aParams, aParams.length);
         }
         return this;
     }
@@ -212,11 +215,28 @@ public class Annotation
     }
 
     @Override
-    protected boolean allowsDefaultAdoptionClone() {
-        // Transitional policy: annotations are serialized logical metadata. registerConstants(...)
-        // adopts the class and parameter constants into the target pool. Runtime annotation values
-        // that wrap live handles are guarded separately by HandleConstant.adoptedBy(...).
-        return true;
+    protected Annotation copyForAdoption(AdoptionContext context) {
+        var pool = context.pool();
+
+        // Annotation params are logical constant values, but the array container is mutable and live
+        // handle params are runtime owner state. Validate before the annotation is published.
+        var constClass = getAnnotationClass();
+        if (constClass instanceof ClassConstant idClass && !idClass.isShared(pool)) {
+            throw new IllegalStateException(
+                    "cannot adopt annotation with foreign class: " + this);
+        }
+        for (var param : m_aParams) {
+            if (param instanceof TypeConstant type && !type.isShared(pool)) {
+                throw new IllegalStateException(
+                        "cannot adopt annotation with foreign type parameter: " + this);
+            }
+            if (param instanceof HandleConstant && param.getContaining() != null) {
+                throw new IllegalStateException(
+                        "cannot adopt annotation with live handle parameter: " + this);
+            }
+        }
+
+        return new Annotation(pool, constClass, m_aParams);
     }
 
     /**

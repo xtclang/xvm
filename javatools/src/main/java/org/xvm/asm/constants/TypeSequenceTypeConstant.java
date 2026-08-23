@@ -271,6 +271,13 @@ public class TypeSequenceTypeConstant
     }
 
     @Override
+    protected TypeSequenceTypeConstant copyForAdoption(AdoptionContext context) {
+        // The formal type-sequence marker has no child state; reconstructing it makes that explicit
+        // and avoids inheriting the type-family shallow clone for a stateless value.
+        return new TypeSequenceTypeConstant(context.pool());
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
     }
 

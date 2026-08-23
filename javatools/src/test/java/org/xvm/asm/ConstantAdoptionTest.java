@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.xvm.asm.constants.AllCondition;
 import org.xvm.asm.constants.AnyCondition;
 import org.xvm.asm.constants.AccessTypeConstant;
+import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.AnonymousClassTypeConstant;
 import org.xvm.asm.constants.BFloat16Constant;
@@ -56,6 +57,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.NamedCondition;
 import org.xvm.asm.constants.NotCondition;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
+import org.xvm.asm.constants.PendingTypeConstant;
 import org.xvm.asm.constants.PresentCondition;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
@@ -70,9 +72,12 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
+import org.xvm.asm.constants.TypeSequenceTypeConstant;
 import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UInt8ArrayConstant;
 import org.xvm.asm.constants.UnionTypeConstant;
+import org.xvm.asm.constants.UnresolvedNameConstant;
+import org.xvm.asm.constants.UnresolvedTypeConstant;
 import org.xvm.asm.constants.VersionConstant;
 import org.xvm.asm.constants.VersionMatchesCondition;
 import org.xvm.asm.constants.VersionedCondition;
@@ -458,6 +463,143 @@ public class ConstantAdoptionTest {
         var error = assertThrows(IllegalStateException.class, () -> adopt(source, targetPool));
 
         assertTrue(error.getMessage().contains("foreign typedef"));
+    }
+
+    /**
+     * Annotation parameters are part of immutable logical constant identity. Constructors and
+     * resolveParams(...) must not keep caller arrays that can rewrite hash/equality state later.
+     */
+    @Test
+    public void annotationParameterInputsAreDefensivelyCopied() {
+        var sourceFile  = new FileStructure("source");
+        var sourcePool  = sourceFile.getConstantPool();
+        var annoClass   = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.ANNOTATION, "Anno", null);
+        var original    = sourcePool.ensureStringConstant("original");
+        var replacement = sourcePool.ensureStringConstant("replacement");
+        var params      = new Constant[] {original};
+        var annotation  = new Annotation(sourcePool, classId(annoClass), params);
+
+        params[0] = replacement;
+
+        assertSame(original, annotation.getParams()[0]);
+
+        var resolvedParams = new Constant[] {replacement};
+        annotation.resolveParams(resolvedParams);
+        resolvedParams[0] = original;
+
+        assertSame(replacement, annotation.getParams()[0]);
+    }
+
+    /**
+     * Annotated types carry annotation and underlying type identity. Adoption must register both in
+     * the destination pool while dropping the derived annotation-type cache from the source owner.
+     */
+    @Test
+    public void registeredAnnotatedTypeAdoptsAnnotationIntoTargetPool() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var annoClass  = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.ANNOTATION, "Anno", null);
+        var target     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Target", null);
+        var targetPool = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+        var value      = sourcePool.ensureStringConstant("value");
+        var source     = sourcePool.ensureAnnotatedTypeConstant(
+                classId(annoClass), new Constant[] {value}, target.getIdentityConstant().getType());
+
+        var registered = targetPool.register(source);
+
+        assertNotSame(source, registered);
+        assertSame(targetPool, registered.getConstantPool());
+        assertSame(targetPool, registered.getUnderlyingType().getConstantPool());
+        assertSame(targetPool, registered.getAnnotation().getConstantPool());
+        assertSame(targetPool, registered.getAnnotationClass().getConstantPool());
+        assertSame(targetPool, registered.getAnnotationParams()[0].getConstantPool());
+        assertEquals(source.getValueString(), registered.getValueString());
+    }
+
+    /**
+     * Annotation adoption copies the parameter array before target registration rewrites child
+     * constants. Mutating the source annotation's legacy raw params array cannot mutate the adopted
+     * annotation's logical value container.
+     */
+    @Test
+    public void registeredAnnotationAdoptionDoesNotShareParameterArray() {
+        var sourceFile  = new FileStructure("source");
+        var sourcePool  = sourceFile.getConstantPool();
+        var annoClass   = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.ANNOTATION, "Anno", null);
+        var targetPool  = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+        var original    = sourcePool.ensureStringConstant("original");
+        var replacement = sourcePool.ensureStringConstant("replacement");
+        var source      = new Annotation(sourcePool, classId(annoClass), new Constant[] {original});
+
+        var registered = targetPool.register(source);
+
+        source.getParams()[0] = replacement;
+
+        assertSame(targetPool, registered.getConstantPool());
+        assertSame(targetPool, registered.getParams()[0].getConstantPool());
+        assertEquals("original", ((StringConstant) registered.getParams()[0]).getValue());
+    }
+
+    /**
+     * A live handle annotation parameter is runtime owner state, not serializable annotation identity.
+     * Adoption now rejects it before publishing the annotation into the target pool.
+     */
+    @Test
+    public void annotationRejectsOwnedRuntimeHandleParamDuringAdoption() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var annoClass  = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.ANNOTATION, "Anno", null);
+        var targetPool = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+        var handle     = adopt(new HandleConstant(ObjectHandle.DEFAULT), sourcePool);
+        var source     = new Annotation(sourcePool, classId(annoClass), new Constant[] {handle});
+
+        var error = assertThrows(IllegalStateException.class, () -> adopt(source, targetPool));
+
+        assertTrue(error.getMessage().contains("live handle parameter"));
+    }
+
+    /**
+     * TypeSequenceTypeConstant is a stateless formal tuple marker. Explicit reconstruction preserves
+     * the same interning behavior without inheriting the type-family shallow clone.
+     */
+    @Test
+    public void registeredTypeSequenceReconstructsStatelessMarkerInTargetPool() {
+        var sourcePool = new FileStructure("source").getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var source     = sourcePool.ensureTypeSequenceTypeConstant();
+
+        var registered = targetPool.register(source);
+
+        assertNotSame(source, registered);
+        assertSame(targetPool, registered.getConstantPool());
+        assertSame(registered, targetPool.ensureTypeSequenceTypeConstant());
+        assertEquals(source.getValueString(), registered.getValueString());
+    }
+
+    /**
+     * Pending and unresolved type constants are mutable compiler placeholders. They are not completed
+     * pool metadata and must be resolved before any owner-transfer path can publish them.
+     */
+    @Test
+    public void pendingAndUnresolvedTypesRejectAdoptionBeforeResolution() {
+        var sourcePool = new FileStructure("source").getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var pending    = new PendingTypeConstant(sourcePool, sourcePool.typeObject());
+        var unresolved = new UnresolvedTypeConstant(
+                sourcePool, new UnresolvedNameConstant(sourcePool, "Missing"));
+
+        var pendingError = assertThrows(IllegalStateException.class,
+                () -> adopt(pending, targetPool));
+        var unresolvedError = assertThrows(IllegalStateException.class,
+                () -> adopt(unresolved, targetPool));
+
+        assertTrue(pendingError.getMessage().contains("pending type"));
+        assertTrue(unresolvedError.getMessage().contains("unresolved type"));
     }
 
     /**
@@ -1150,7 +1292,9 @@ public class ConstantAdoptionTest {
 
         assertTrue(Modifier.isFinal(adoptedBy.getModifiers()));
 
-        Set.of(AllCondition.class,
+        Set.of(Annotation.class,
+               AllCondition.class,
+               AnnotatedTypeConstant.class,
                AnyCondition.class,
                AccessTypeConstant.class,
                ArrayConstant.class,
@@ -1186,6 +1330,7 @@ public class ConstantAdoptionTest {
                NamedCondition.class,
                NotCondition.class,
                ParameterizedTypeConstant.class,
+               PendingTypeConstant.class,
                PresentCondition.class,
                PropertyConstant.class,
                PropertyClassTypeConstant.class,
@@ -1199,8 +1344,10 @@ public class ConstantAdoptionTest {
                StringConstant.class,
                TerminalTypeConstant.class,
                TypeParameterConstant.class,
+               TypeSequenceTypeConstant.class,
                UInt8ArrayConstant.class,
                UnionTypeConstant.class,
+               UnresolvedTypeConstant.class,
                VersionConstant.class,
                VersionMatchesCondition.class,
                VersionedCondition.class,

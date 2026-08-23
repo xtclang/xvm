@@ -246,6 +246,20 @@ Branch fix:
   subclass explicitly. This avoids the subtle subclass loss that would occur if
   it inherited terminal-type reconstruction, and rejects unrelated foreign
   typedefs before publication.
+- `Annotation.copyForAdoption(...)` constructs a fresh target-owned annotation
+  and copies the parameter array. The old constructor and shallow clone path
+  could share a mutable `Constant[]` container that participates in annotation
+  hash/equality. Runtime `HandleConstant` params are rejected once already
+  pool-owned, because they wrap live `ObjectHandle` state.
+- `AnnotatedTypeConstant.copyForAdoption(...)` reconstructs the annotated type
+  shell and lets the target pool adopt/intern the annotation and underlying
+  type. The derived annotation-type cache is owner-local and starts empty.
+- `PendingTypeConstant.copyForAdoption(...)` and
+  `UnresolvedTypeConstant.copyForAdoption(...)` fail closed. These are mutable
+  compiler/name-resolution placeholders, not completed runtime-pool metadata.
+- `TypeSequenceTypeConstant.copyForAdoption(...)` reconstructs the stateless
+  formal marker explicitly, removing another concrete type from inherited
+  shallow clone without changing cache or interning behavior.
 - `ConditionalConstant` no longer grants shallow-clone adoption to the condition
   family. Each concrete condition reconstructs its logical link-time predicate,
   and the transient `iTest` brute-force simulation slot is private scratch state
@@ -263,7 +277,8 @@ Proof/guards:
 - `ConstantAdoptionTest` directly exercises the adoption boundary.
 - The same test copied into detached `master` fails the adoption cases by
   retaining copied helper, runtime, compiler-register, condition-simulation,
-  byte-array backing, or cache state; it passes on this branch.
+  byte-array backing, annotation-array, placeholder, or cache state; it passes
+  on this branch.
 - `ConstantAdoptionValidator` now runs at `ConstantPool.register(...)` when
   `-Dxvm.asm.validateConstantAdoption=true` is enabled. It compares source and
   adopted copies and reports identical helper/runtime references unless they

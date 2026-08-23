@@ -1479,6 +1479,16 @@ separately.
 - Reconstruct `RecursiveTypeConstant` from its typedef identity if this slice
   includes the recursive-type wave, because inheriting terminal-type adoption
   would silently lose recursive typedef behavior.
+- Reconstruct `Annotation` and `AnnotatedTypeConstant` if this slice includes
+  the annotation-type wave. Annotation parameter arrays must be copied at
+  construction/adoption time, already-owned runtime handle params must be
+  rejected, and annotated type shells must drop the derived annotation-type
+  cache so the destination pool recomputes it.
+- Reconstruct `TypeSequenceTypeConstant`, and fail closed for
+  `PendingTypeConstant` and `UnresolvedTypeConstant`, if this slice includes the
+  transient-type wave. The sequence marker is stateless; pending and unresolved
+  constants are mutable compiler/name-resolution placeholders, not completed
+  pool metadata.
 - Reject `CastTypeConstant` adoption in that wave because it is a transient
   compiler/JIT marker and cannot be assembled into a pool.
 - Reject moving an already-owned live `HandleConstant` to another pool.
@@ -1533,6 +1543,8 @@ Commits:
 - `Make scalar value adoption clone-free` immutable scalar value wave
 - `Make composite value adoption clone-free` array/map/range value wave
 - `Make parsed value adoption clone-free` literal/version/decimal-auto wave
+- `Make dependant type adoption clone-free` dependant/recursive type wave
+- `Make annotation type adoption clone-free` annotation/transient type wave
 
 Primary source areas:
 
@@ -1544,6 +1556,8 @@ Primary source areas:
   `MethodBindingConstant`
 - `ConditionalConstant`, `MultiCondition`, and condition leaves if bundled
 - `UInt8ArrayConstant`, `FPNConstant`, and `Float128Constant` if bundled
+- `Annotation`, `AnnotatedTypeConstant`, `TypeSequenceTypeConstant`,
+  `PendingTypeConstant`, and `UnresolvedTypeConstant` if bundled
 - `HandleConstant`
 - `ClassComposition`
 - `OwnershipDiagnostics` boundary validation where adoption failures surface
@@ -1639,6 +1653,16 @@ appropriate:
   adoption now throws in all modes. Transient cast-type adoption also throws,
   matching the existing `assemble(...)` invariant that cast markers are not pool
   storage.
+- Annotation constants keep the same logical annotation class and parameter
+  values. The copy now happens at construction/adoption time instead of relying
+  on a shared array container; there is no added per-read clone on the legacy
+  raw `getParams()` API. Annotated type adoption still interns the annotation
+  class, params, and underlying type through the destination pool, while the
+  derived annotation-type cache is recomputed locally.
+- The type-sequence marker has no child/cache state and is reconstructed with
+  the same allocation/interner shape as shallow clone. Pending and unresolved
+  types already cannot be valid assembled runtime metadata, so fail-closed
+  adoption removes an invalid path rather than changing valid runtime behavior.
 - The validator is diagnostic coverage, not a complete architectural fix.
 - The validator is off unless explicitly enabled, so normal constant interning
   and runtime cache performance is unchanged.

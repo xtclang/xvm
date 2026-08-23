@@ -218,6 +218,13 @@ public class PendingTypeConstant
     }
 
     @Override
+    protected PendingTypeConstant copyForAdoption(AdoptionContext context) {
+        // Pending types are compiler placeholders. They are intentionally unassembled and must be
+        // resolved before any owner-transfer path can publish a completed type constant.
+        throw new IllegalStateException("cannot adopt pending type before resolution: " + this);
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         throw new IllegalStateException();
     }

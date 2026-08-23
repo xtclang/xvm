@@ -261,6 +261,27 @@ shallow-clone helper state identified by the audit:
   preserves the concrete recursive subclass behavior while still letting the
   target pool adopt and intern the typedef identity; unrelated foreign typedefs
   fail before publication.
+- `Annotation` now copies parameter arrays at construction and during
+  `resolveParams(...)`, and its adoption hook constructs a fresh target-owned
+  annotation value. The old code treated annotation params as immutable logical
+  value state while storing caller-owned or shallow-copied `Constant[]`
+  containers that could later rewrite hash/equality identity. The branch does
+  not add a per-read clone to the legacy raw `getParams()` API; the extra copy
+  happens at construction/adoption where the old code already allocated the
+  annotation object.
+- `AnnotatedTypeConstant` now reconstructs its annotation and underlying type
+  shell instead of inheriting the type-family shallow clone. Target registration
+  still interns the annotation class, annotation params, and underlying type in
+  the destination pool exactly as before, but the derived annotation-type cache
+  starts empty and is recomputed by the target owner.
+- `PendingTypeConstant` and `UnresolvedTypeConstant` now reject adoption before
+  publication. They are mutable compiler/name-resolution placeholders, already
+  unassemblable or unresolved, so moving them into another pool as completed
+  metadata was never valid runtime behavior.
+- `TypeSequenceTypeConstant` now reconstructs its stateless formal marker in
+  the destination pool. This has the same allocation and interning shape as the
+  old shallow clone, but removes another concrete type from the inherited
+  fallback.
 - `CastTypeConstant` now rejects adoption because it is a transient compiler/JIT
   marker and its own `assemble(...)` method already rejects pool storage.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration

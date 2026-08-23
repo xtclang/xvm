@@ -198,6 +198,17 @@ Done in this branch:
   structure and property-info caches are rebuilt locally.
 - `RecursiveTypeConstant` now reconstructs the recursive typedef shell
   explicitly so clone-free terminal adoption cannot erase the recursive subclass.
+- `Annotation` now copies parameter arrays at construction/adoption time and
+  rejects already-owned runtime handle params. Annotation params participate in
+  immutable logical identity, so caller-owned or shallow-cloned arrays were not
+  acceptable owner-transfer state.
+- `AnnotatedTypeConstant` now reconstructs the annotation/underlying-type shell
+  explicitly and drops the derived annotation-type cache so the destination
+  owner recomputes it.
+- `TypeSequenceTypeConstant` now reconstructs its stateless marker explicitly.
+- `PendingTypeConstant` and `UnresolvedTypeConstant` now reject adoption because
+  they are mutable compiler/name-resolution placeholders, not completed pool
+  metadata.
 - `CastTypeConstant` now rejects adoption because it is a transient compiler/JIT
   marker and already cannot be assembled into a pool.
 
@@ -206,9 +217,11 @@ Remaining linked finding:
 - The `MatchAnyConstant` shell and foreign-key boundary are closed, but its
   locator is still a `TypeConstant`. Terminal, single-child type wrappers,
   storable relational shells, dependant child/property shells, and recursive
-  typedef shells are closed. Shared/adoptable annotated, pending, sequence, and
-  unresolved type keys still rely on the remaining type-family default clone.
-  Keep clone-free reconstruction of those type classes with the type-family PR.
+  typedef shells are closed. Annotated type shells, the stateless sequence
+  marker, and pending/unresolved placeholders are also closed by this branch.
+  Remaining type-family clone-free work is now the reviewed abstract/base
+  fallback plus any identity/pseudo/value leaves that still intentionally opt in
+  to the transitional clone helper.
 
 ## 2. `ConstantPool.register(...)` Publishes Before Recursive Registration Completes
 

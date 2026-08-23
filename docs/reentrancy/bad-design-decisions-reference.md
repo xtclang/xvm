@@ -189,6 +189,10 @@ Why it was bad in a single-threaded world:
   `UInt8ArrayConstant`, `FPNConstant`, and `Float128Constant` used final `byte[]`
   fields as immutable hash/equality value, but construction/adoption could share
   the mutable array with caller code or another pool owner.
+- Annotation constants had the same bug with `Constant[]` parameter containers.
+  The array is part of immutable annotation identity, but the old constructor
+  and adoption path could share the mutable container with a caller or source
+  owner. A `final Constant[]` reference is not an immutable annotation value.
 
 Replacement:
 
@@ -209,6 +213,13 @@ copy the byte sequence once, preserving logical value and cache behavior without
 letting another owner mutate the backing array. The remaining raw `getValue()`
 array API is tracked as array-immutability design debt, not as proof that adoption
 may share storage.
+
+Annotations now follow the same rule. `Annotation` copies parameter arrays at
+construction/adoption time, rejects already-owned runtime handle params during
+owner transfer, and `AnnotatedTypeConstant` reconstructs the shell so the
+derived annotation-type cache is recomputed by the destination owner. The legacy
+raw `getParams()` API is still a mutability debt, but this branch avoids adding
+hot-path per-read clones while fixing the owner-transfer bug.
 
 `MatchAnyConstant` shows why a value shell must not hide an owner decision made
 by one of its children. The wildcard object itself is just logical sentinel
@@ -243,6 +254,12 @@ are rebuilt from their logical child types and registered in the target owner.
 `CastTypeConstant` is not a storable relational value; it is a transient
 compiler/JIT marker, and its `assemble(...)` method already rejects pool storage.
 Failing adoption for that class makes the existing invariant enforceable.
+
+The other transient type markers are now explicit. `TypeSequenceTypeConstant`
+is a stateless formal marker and is reconstructed directly. `PendingTypeConstant`
+and `UnresolvedTypeConstant` are mutable compiler/name-resolution placeholders;
+adopting them into another pool would publish unfinished compiler state as if it
+were completed runtime metadata, so adoption fails closed.
 
 Immutable scalar values are now explicit too. `ByteConstant`, `IntConstant`,
 `StringConstant`, `RegExConstant`, the fixed decimal value, and the fixed-size

@@ -366,6 +366,15 @@ those pieces exactly as before, while child-structure and `PropertyInfo` caches
 start empty in the target owner. `RecursiveTypeConstant` has its own hook because
 it is a `TerminalTypeConstant` subclass whose recursive typedef behavior would be
 lost if terminal adoption rebuilt it as a plain terminal type.
+`Annotation` and `AnnotatedTypeConstant` are also off the default path.
+Annotation parameter arrays are copied at construction/adoption time because
+they are part of immutable hash/equality identity, not an owner-local scratch
+container. The annotated type shell still registers annotation class, params,
+and underlying type through the target pool; only the derived annotation-type
+cache is dropped and recomputed by the destination owner.
+`TypeSequenceTypeConstant` reconstructs its stateless marker explicitly, while
+`PendingTypeConstant` and `UnresolvedTypeConstant` fail closed because they are
+mutable compiler placeholders rather than completed pool metadata.
 
 Container/ConstantPool/lock/cache impact: `ConstantPool.register(...)` uses this
 path for foreign constants and locator constants. The validator is opt-in through

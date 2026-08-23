@@ -483,6 +483,14 @@ public class UnresolvedTypeConstant
         return this == that ? 0 : -1;
     }
 
+    @Override
+    protected UnresolvedTypeConstant copyForAdoption(AdoptionContext context) {
+        // Unresolved types are mutable compiler placeholders whose resolved target can be installed
+        // later by name resolution. Moving that state to another pool would publish an unfinished
+        // compiler object as if it were immutable constant metadata.
+        throw new IllegalStateException("cannot adopt unresolved type before resolution: " + this);
+    }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

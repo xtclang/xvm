@@ -652,6 +652,16 @@ public class AnnotatedTypeConstant
     }
 
     @Override
+    protected AnnotatedTypeConstant copyForAdoption(AdoptionContext context) {
+        var pool = requireSharedAdoptionPool(
+                context, "annotated type with foreign underlying type or annotation class");
+
+        // Annotation type shells carry logical annotation + underlying type identity. The derived
+        // annotation type cache is owner-local and must be recomputed by the destination pool.
+        return new AnnotatedTypeConstant(pool, pool.register(m_annotation), m_constType);
+    }
+
+    @Override
     protected int compareDetails(Constant obj) {
         if (!(obj instanceof AnnotatedTypeConstant that)) {
             return -1;
