@@ -121,6 +121,17 @@ exist because the old caches looked idempotent but had no Java memory-model
 publication edge, and because `PropertyInfo` accepted nested ids while caching
 only one top-level slot.
 
+`TypeInfoMemberOwnershipTest.derivedTypeInfoCachesAreSafelyPublishedInParallel()`
+covers the related `TypeInfoReal` cache wave. It fails the master source-shape
+requirements because `m_mapPropertiesByName`, `m_mapMethodsBySignature`,
+`m_delegates`, `m_fCacheReady`, and `m_fChildrenChecked` are not volatile on
+master. It also proves parallel first access observes one immutable name map,
+one immutable signature map, one delegate view, and one safely published
+abstractness cache. The unit deliberately does not drive the full virtual-child
+`isNewable()` pool-registration path, because a hand-built test `TypeInfoReal`
+is not a registered pool owner. That path remains covered by runtime stress and
+late-registration diagnostics.
+
 ## Review Rule
 
 When splitting this branch into smaller PRs, each PR should cite one of:

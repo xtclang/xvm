@@ -575,49 +575,61 @@ public final class TypeInfoReal
     public TypeInfo asDelegates() {
         TypeInfoReal info = m_delegates;
         if (info == null) {
-            ConstantPool                        pool         = pool();
-            Map<PropertyConstant, PropertyInfo> mapProps     = new HashMap<>();
-            Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
-            for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet()) {
-                PropertyConstant id   = entry.getKey();
-                PropertyInfo     prop = entry.getValue();
+            synchronized (this) {
+                info = m_delegates;
+                if (info == null) {
+                    /*
+                     * Delegate-only TypeInfo is owner metadata. The old plain lazy write could
+                     * publish a partially visible TypeInfoReal or build multiple owner graphs.
+                     * Preserve the old rule that only complete TypeInfo caches the delegate view.
+                     */
+                    info = buildDelegateInfo();
+                    if (f_progress == Progress.Complete) {
+                        m_delegates = info;
 
-                // skip non-virtual properties
-                if (prop.isVirtual()) {
-                    mapProps.put(id, prop);
-                    mapVirtProps.put(id.resolveNestedIdentity(pool, null), prop);
+                        // cache the result on itself, so it doesn't have to build its own view
+                        info.m_delegates = info;
+                    }
                 }
-            }
-
-            Map<MethodConstant, MethodInfo> mapMethods     = new HashMap<>();
-            Map<Object        , MethodInfo> mapVirtMethods = new HashMap<>();
-            for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet()) {
-                MethodConstant id     = entry.getKey();
-                MethodInfo     method = entry.getValue();
-
-                // skip non-virtual methods
-                if (method.isVirtual()) {
-                    mapMethods.put(id, method);
-                    mapVirtMethods.put(id.resolveNestedIdentity(pool, null), method);
-                }
-            }
-
-            info = new TypeInfoReal(f_type, f_cInvalidations, f_struct, f_cDepth, true,
-                    f_mapTypeParams, f_aannoClass, f_aannoMixin,
-                    f_typeExtends, f_typeRebases, f_typeInto,
-                    f_listProcess, f_listmapClassChain, f_listmapDefaultChain,
-                    mapProps, mapMethods, mapVirtProps, mapVirtMethods,
-                    f_mapChildren, f_setDepends, f_progress);
-
-            if (f_progress == Progress.Complete) {
-                // cache the result
-                m_delegates = info;
-
-                // cache the result on the result itself, so it doesn't have to build its own "into"
-                info.m_delegates = info;
             }
         }
         return info;
+    }
+
+    private TypeInfoReal buildDelegateInfo() {
+        ConstantPool                        pool         = pool();
+        Map<PropertyConstant, PropertyInfo> mapProps     = new HashMap<>();
+        Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
+        for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet()) {
+            PropertyConstant id   = entry.getKey();
+            PropertyInfo     prop = entry.getValue();
+
+            // skip non-virtual properties
+            if (prop.isVirtual()) {
+                mapProps.put(id, prop);
+                mapVirtProps.put(id.resolveNestedIdentity(pool, null), prop);
+            }
+        }
+
+        Map<MethodConstant, MethodInfo> mapMethods     = new HashMap<>();
+        Map<Object        , MethodInfo> mapVirtMethods = new HashMap<>();
+        for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet()) {
+            MethodConstant id     = entry.getKey();
+            MethodInfo     method = entry.getValue();
+
+            // skip non-virtual methods
+            if (method.isVirtual()) {
+                mapMethods.put(id, method);
+                mapVirtMethods.put(id.resolveNestedIdentity(pool, null), method);
+            }
+        }
+
+        return new TypeInfoReal(f_type, f_cInvalidations, f_struct, f_cDepth, true,
+                f_mapTypeParams, f_aannoClass, f_aannoMixin,
+                f_typeExtends, f_typeRebases, f_typeInto,
+                f_listProcess, f_listmapClassChain, f_listmapDefaultChain,
+                mapProps, mapMethods, mapVirtProps, mapVirtMethods,
+                f_mapChildren, f_setDepends, f_progress);
     }
 
     @Override
@@ -821,33 +833,61 @@ public final class TypeInfoReal
             return false;
         }
 
-        if (!m_fChildrenChecked && !f_mapChildren.isEmpty()) {
-            ConstantPool pool = pool();
-
-            for (ChildInfo infoChild : f_mapChildren.values()) {
-                if (infoChild.isVirtualClass()) {
-                    // the parent's type parameters are known (may or may not be formal), but the
-                    // child's could have any
-                    ClassStructure clz  = (ClassStructure) infoChild.getComponent();
-                    TypeConstant   type = pool.ensureVirtualChildTypeConstant(f_type, clz.getName());
-                    if (clz.isParameterized()) {
-                        type = pool.ensureParameterizedTypeConstant(type,
-                            clz.getFormalType().getParamTypesArray());
-                    }
-
-                    TypeInfo info = type.ensureTypeInfo(errs);
-                    if (!info.isExplicitlyAbstract() && info.isAbstract()) {
-                        return false;
-                    }
-                }
-            }
-            m_fChildrenChecked = true;
+        if (!ensureVirtualChildrenNewable(errs)) {
+            return false;
         }
 
         // make sure the struct is buildable
         TypeConstant typeStruct = pool().ensureAccessTypeConstant(f_type, Access.STRUCT);
         typeStruct.ensureTypeInfo(errs);
         return !errs.hasSeriousErrors();
+    }
+
+    private boolean ensureVirtualChildrenNewable(ErrorListener errs) {
+        if (m_fChildrenChecked || f_mapChildren.isEmpty()) {
+            return true;
+        }
+
+        synchronized (this) {
+            if (m_fChildrenChecked) {
+                return true;
+            }
+
+            /*
+             * The old flag cached only a successful virtual-child check; a failing check returned
+             * false and could be retried later with a different ErrorListener/progress state. Keep
+             * that semantic, but make the successful publication visible to other runtime threads.
+             */
+            if (!checkVirtualChildrenNewable(errs)) {
+                return false;
+            }
+            m_fChildrenChecked = true;
+            return true;
+        }
+    }
+
+    private boolean checkVirtualChildrenNewable(ErrorListener errs) {
+        ConstantPool pool = pool();
+
+        for (ChildInfo infoChild : f_mapChildren.values()) {
+            if (infoChild.isVirtualClass()) {
+                // the parent's type parameters are known (may or may not be formal), but the
+                // child's could have any
+                ClassStructure clz  = (ClassStructure) infoChild.getComponent();
+                TypeConstant   type = pool.ensureVirtualChildTypeConstant(f_type, clz.getName());
+                if (clz.isParameterized()) {
+                    type = pool.ensureParameterizedTypeConstant(type,
+                        clz.getFormalType().getParamTypesArray());
+                }
+
+                TypeInfo info = type.ensureTypeInfo(errs);
+                if (!info.isExplicitlyAbstract() && info.isAbstract()) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     @Override
@@ -1044,23 +1084,37 @@ public final class TypeInfoReal
         Map<String, PropertyInfo> map = m_mapPropertiesByName;
 
         if (map == null) {
-            map = new HashMap<>();
-            for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet()) {
-                PropertyConstant id   = entry.getKey();
-                PropertyInfo     prop = entry.getValue();
-
-                // only include the non-nested properties
-                if (id.isTopLevel()) {
-                    // have to pick one that is more visible than the other
-                    map.compute(prop.getName(), (sName, propPrev) ->
-                        propPrev == null ? prop : selectVisible(prop, propPrev));
+            synchronized (this) {
+                map = m_mapPropertiesByName;
+                if (map == null) {
+                    /*
+                     * This name index is derived runtime metadata. Publish an immutable snapshot
+                     * once; callers only read it, and a mutable HashMap escaping here made parallel
+                     * first lookup depend on unsafely published table internals.
+                     */
+                    m_mapPropertiesByName = map = buildPropertiesByName();
                 }
             }
-
-            m_mapPropertiesByName = map;
         }
 
         return map;
+    }
+
+    private Map<String, PropertyInfo> buildPropertiesByName() {
+        Map<String, PropertyInfo> map = new HashMap<>();
+        for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet()) {
+            PropertyConstant id   = entry.getKey();
+            PropertyInfo     prop = entry.getValue();
+
+            // only include the non-nested properties
+            if (id.isTopLevel()) {
+                // have to pick one that is more visible than the other
+                map.compute(prop.getName(), (sName, propPrev) ->
+                    propPrev == null ? prop : selectVisible(prop, propPrev));
+            }
+        }
+
+        return Map.copyOf(map);
     }
 
     private PropertyInfo selectVisible(PropertyInfo prop1, PropertyInfo prop2) {
@@ -1322,20 +1376,29 @@ public final class TypeInfoReal
         Map<SignatureConstant, MethodInfo> map = m_mapMethodsBySignature;
 
         if (map == null) {
-            map = new HashMap<>();
-            for (Map.Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet()) {
-                MethodConstant idMethod = entry.getKey();
-
-                // only include the non-nested Methods
-                if (idMethod.isTopLevel()) {
-                    map.put(idMethod.getSignature(), entry.getValue());
+            synchronized (this) {
+                map = m_mapMethodsBySignature;
+                if (map == null) {
+                    m_mapMethodsBySignature = map = buildMethodsBySignature();
                 }
             }
-
-            m_mapMethodsBySignature = map;
         }
 
         return map;
+    }
+
+    private Map<SignatureConstant, MethodInfo> buildMethodsBySignature() {
+        Map<SignatureConstant, MethodInfo> map = new HashMap<>();
+        for (Map.Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet()) {
+            MethodConstant idMethod = entry.getKey();
+
+            // only include the non-nested Methods
+            if (idMethod.isTopLevel()) {
+                map.put(idMethod.getSignature(), entry.getValue());
+            }
+        }
+
+        return Map.copyOf(map);
     }
 
     @Override
@@ -2455,7 +2518,7 @@ public final class TypeInfoReal
      * The properties of the type, indexed by name. This will not include nested properties, such
      * as those nested within a property or method. Lazily initialized
      */
-    private transient Map<String, PropertyInfo> m_mapPropertiesByName;
+    private transient volatile Map<String, PropertyInfo> m_mapPropertiesByName;
 
     /**
      * The methods of the type, indexed by MethodConstant. Functions, private methods, and other
@@ -2490,15 +2553,15 @@ public final class TypeInfoReal
      * The methods of the type, indexed by signature. This will not include nested methods, such
      * as those nested within a property or method. Lazily initialized
      */
-    private transient Map<SignatureConstant, MethodInfo> m_mapMethodsBySignature;
+    private transient volatile Map<SignatureConstant, MethodInfo> m_mapMethodsBySignature;
 
     private       boolean                         m_fHasErrors;
-    private       boolean                         m_fCacheReady;
-    private       boolean                         m_fChildrenChecked;
+    private       volatile boolean                m_fCacheReady;
+    private       volatile boolean                m_fChildrenChecked;
     private final Map<MethodConstant, MethodInfo> f_cacheById;
     private final Map<Object, MethodInfo>         f_cacheByNid;
 
-    private transient          TypeInfoReal                                     m_delegates;
+    private transient volatile TypeInfoReal                                     m_delegates;
     private transient          Set<MethodInfo>                                  m_setAuto;
     private transient          Set<MethodInfo>                                  m_setOps;
     private transient          TypeConstant                                     m_typeAuto;

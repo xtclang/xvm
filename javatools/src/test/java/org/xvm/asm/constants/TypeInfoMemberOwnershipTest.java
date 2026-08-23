@@ -271,6 +271,96 @@ public class TypeInfoMemberOwnershipTest {
     }
 
     /**
+     * TypeInfoReal derived lookup caches are runtime metadata. The old implementation published
+     * mutable HashMaps, delegate TypeInfo graphs, and readiness booleans through plain fields. The
+     * first parallel lookup must publish immutable snapshots and completed state through a memory
+     * edge while preserving the same per-TypeInfo cache identity.
+     */
+    @Test
+    public void derivedTypeInfoCachesAreSafelyPublishedInParallel() throws Exception {
+        var propsField    = TypeInfoReal.class.getDeclaredField("m_mapPropertiesByName");
+        var methodsField  = TypeInfoReal.class.getDeclaredField("m_mapMethodsBySignature");
+        var delegates     = TypeInfoReal.class.getDeclaredField("m_delegates");
+        var cacheReady    = TypeInfoReal.class.getDeclaredField("m_fCacheReady");
+        var childrenReady = TypeInfoReal.class.getDeclaredField("m_fChildrenChecked");
+        assertTrue(Modifier.isVolatile(propsField.getModifiers()));
+        assertTrue(Modifier.isVolatile(methodsField.getModifiers()));
+        assertTrue(Modifier.isVolatile(delegates.getModifiers()));
+        assertTrue(Modifier.isVolatile(cacheReady.getModifiers()));
+        assertTrue(Modifier.isVolatile(childrenReady.getModifiers()));
+        propsField.setAccessible(true);
+        methodsField.setAccessible(true);
+        delegates.setAccessible(true);
+        cacheReady.setAccessible(true);
+        childrenReady.setAccessible(true);
+
+        var file   = new FileStructure("test");
+        var pool   = file.getConstantPool();
+        var struct = file.getModule().createClass(
+                Access.PUBLIC, Format.CLASS, "Test", null);
+
+        var structProperty = struct.createProperty(false, Access.PUBLIC,
+                Access.PUBLIC, struct.getCanonicalType(), "value");
+        var idProperty = structProperty.getIdentityConstant();
+        var bodyProperty = new PropertyBody(structProperty, Implementation.Native, null,
+                structProperty.getType(), true, false, false, Effect.None, Effect.None,
+                false, false, null, null);
+        var property = PropertyInfo.create(bodyProperty, 0);
+        var sig = pool.ensureSignatureConstant(
+                "run", ConstantPool.NO_TYPES, ConstantPool.NO_TYPES);
+        var idMethod = pool.ensureMethodConstant(struct.getIdentityConstant(), sig);
+        var method = MethodInfo.create(new MethodBody(idMethod, sig, Implementation.Native), 0);
+        var info = createTypeInfo(struct, idProperty, property, null, idMethod, sig, method);
+        var start = new CountDownLatch(1);
+        record DerivedCaches(
+                Map<String, PropertyInfo> props,
+                Map<SignatureConstant, MethodInfo> methods,
+                TypeInfo delegates,
+                boolean abstractType) {}
+
+        try (var executor = Executors.newFixedThreadPool(8)) {
+            var futures = IntStream.range(0, 8)
+                    .mapToObj(i -> executor.submit(() -> {
+                        start.await();
+                        return new DerivedCaches(
+                                info.ensurePropertiesByName(),
+                                info.ensureMethodsBySignature(),
+                                info.asDelegates(),
+                                info.isAbstract());
+                    }))
+                    .toList();
+
+            start.countDown();
+
+            DerivedCaches first = null;
+            for (var future : futures) {
+                var caches = future.get(10, TimeUnit.SECONDS);
+                if (first == null) {
+                    first = caches;
+                } else {
+                    assertSame(first.props(), caches.props());
+                    assertSame(first.methods(), caches.methods());
+                    assertSame(first.delegates(), caches.delegates());
+                    assertEquals(first.abstractType(), caches.abstractType());
+                }
+            }
+
+            assertSame(first.props(), propsField.get(info));
+            assertSame(first.methods(), methodsField.get(info));
+            assertSame(first.delegates(), delegates.get(info));
+            assertTrue(cacheReady.getBoolean(info));
+            assertFalse(childrenReady.getBoolean(info));
+            assertSame(info.getProperties().get(idProperty), first.props().get("value"));
+            assertSame(info.getMethods().get(idMethod), first.methods().get(sig));
+            var firstCaches = first;
+            assertThrows(UnsupportedOperationException.class,
+                    () -> firstCaches.props().put("other", property));
+            assertThrows(UnsupportedOperationException.class,
+                    () -> firstCaches.methods().put(sig, method));
+        }
+    }
+
+    /**
      * The constructor-escape refactor must preserve the original parent-validation behavior for
      * property and formal-child constants while removing overridable constructor callbacks.
      */
@@ -296,21 +386,41 @@ public class TypeInfoMemberOwnershipTest {
         return (ConstantPool) method.invoke(property);
     }
 
-    private TypeInfo createTypeInfo(
+    private TypeInfoReal createTypeInfo(
             ClassStructure   struct,
             PropertyConstant idProperty,
             PropertyInfo     property,
             ChildInfo        child) {
+        return createTypeInfo(struct, idProperty, property, child, null, null, null);
+    }
+
+    private TypeInfoReal createTypeInfo(
+            ClassStructure    struct,
+            PropertyConstant  idProperty,
+            PropertyInfo      property,
+            ChildInfo         child,
+            MethodConstant    idMethod,
+            SignatureConstant sig,
+            MethodInfo        method) {
         ListMap<String, ChildInfo> children = new ListMap<>();
-        children.put("Child", child);
-        children.put("alias.Child", child);
+        if (child != null) {
+            children.put("Child", child);
+            children.put("alias.Child", child);
+        }
+
+        Map<MethodConstant, MethodInfo> methods = idMethod == null
+                ? Collections.emptyMap()
+                : Map.of(idMethod, method);
+        Map<Object, MethodInfo> virtualMethods = sig == null
+                ? Collections.emptyMap()
+                : Map.of(sig, method);
 
         return new TypeInfoReal(
                 struct.getCanonicalType(), 0, struct, 0, false,
                 Collections.emptyMap(), Annotation.NO_ANNOTATIONS, Annotation.NO_ANNOTATIONS,
                 null, null, null, Collections.emptyList(), new ListMap<>(), new ListMap<>(),
-                Map.of(idProperty, property), Collections.emptyMap(),
-                Map.of(idProperty.getNestedIdentity(), property), Collections.emptyMap(),
+                Map.of(idProperty, property), methods,
+                Map.of(idProperty.getNestedIdentity(), property), virtualMethods,
                 children, null, Progress.Complete);
     }
 

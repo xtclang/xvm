@@ -812,6 +812,10 @@ sets.
 - Safely publish optimized `MethodInfo` and `PropertyInfo` runtime chains,
   preserving the existing top-level cache shape while preventing partially
   built arrays and nested-property-id cache poisoning.
+- Safely publish `TypeInfoReal` derived runtime metadata caches: immutable
+  property-name and method-signature snapshots, synchronized/volatile delegate
+  view publication, volatile abstractness readiness, and synchronized successful
+  child-newability publication.
 
 ### Explicit Out Of Scope
 
@@ -848,6 +852,7 @@ Primary source areas:
 - `Constant`
 - `TypeConstant`
 - `MethodInfo`, `PropertyInfo`
+- `TypeInfoReal`
 
 ### Tests And Verification Commands
 
@@ -909,6 +914,12 @@ the hash-contract fixes are gone.
   setter caches with no new map allocation per property. Non-null nested ids no
   longer write into the unkeyed slots; if nested ids become hot, a separate
   keyed owner-local cache is the correct follow-up.
+- `TypeInfoReal` keeps the old one-cache-per-type-info shape for name lookups,
+  signature lookups, delegate views, abstractness readiness, and successful
+  child-newability validation. The maps become immutable snapshots; callers
+  were read-only already, and mutation would have corrupted owner metadata.
+- Failed virtual-child newability checks remain retryable, matching master.
+  Only successful completion is cached and published.
 
 ### Documentation Updates Included
 
@@ -921,7 +932,8 @@ the hash-contract fixes are gone.
 - Update [../constant-pool-hostile-state-audit.md](../constant-pool-hostile-state-audit.md)
   TypeConstant diagnostic status.
 - Update [../runtime-metadata-op-cache-classification.md](../runtime-metadata-op-cache-classification.md)
-  for optimized method/property chain cache publication.
+  for optimized method/property chain cache publication and `TypeInfoReal`
+  derived-cache publication.
 
 ### Review Checklist / Acceptance Criteria
 
@@ -933,6 +945,8 @@ the hash-contract fixes are gone.
 - Constant hash publication is explicit and low footprint.
 - Optimized method/property chain first publication has a Java memory-model
   edge and preserves the old hot cache behavior.
+- `TypeInfoReal` derived caches publish immutable/completed state and keep the
+  old cache identity and retry semantics.
 - Tests would fail or source-shape checks would detect the old cache/write-back
   pattern.
 

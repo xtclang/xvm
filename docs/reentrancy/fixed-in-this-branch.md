@@ -1174,6 +1174,69 @@ fully built optimized chain.
 does the same for `m_chainGet` and `m_chainSet`, while checking that the
 generated field-access body shape is preserved.
 
+### Safely Published TypeInfoReal Derived Caches
+
+This branch also hardens the derived metadata caches in `TypeInfoReal`:
+
+- `m_mapPropertiesByName`;
+- `m_mapMethodsBySignature`;
+- `m_delegates`;
+- `m_fCacheReady`;
+- `m_fChildrenChecked`.
+
+These fields are owned by one `TypeInfoReal`, but they are runtime-reachable
+through reflection, type unions/intersections/differences, method lookup,
+conversion lookup, `xRTType.isNewable(...)`, and other same-JVM metadata paths.
+On master, the two map caches built mutable `HashMap` instances and assigned
+them to plain fields. That was not safe publication: another thread could see
+the map reference without a happens-before edge for the map's internal table.
+It also let callers receive mutable implementation maps even though no caller
+is supposed to mutate these indexes.
+
+`asDelegates()` had the same publication problem for a larger object graph. It
+can construct a delegate-only `TypeInfoReal` that owns copied method/property/
+child metadata. Publishing that through a plain field made the first thread's
+partially visible owner graph available to other lookups. The replacement
+synchronizes first construction and publishes the completed delegate view
+through a volatile field. It preserves the old caching rule: complete
+`TypeInfoReal` instances cache the delegate view, while incomplete type-info
+objects still rebuild instead of caching.
+
+`ensureCaches()` already attempted double-checked locking for the abstractness
+cache, but `m_fCacheReady` was not volatile. That is a Java memory-model bug:
+a reader could observe the ready flag without being guaranteed to observe the
+preceding `m_fImplicitAbstract` write. The branch makes the ready flag volatile
+so the existing lock/fast-path pattern has a real publication edge.
+
+`m_fChildrenChecked` now follows the same rule. The old code cached only a
+successful virtual-child newability check; if a child check failed, it returned
+`false` and retried on later calls. This branch preserves that behavior. The
+successful check is synchronized and then published through a volatile flag, so
+later readers can skip it safely. The full virtual-child path still belongs in
+runtime/late-registration stress because fake unit `TypeInfoReal` objects are
+not registered in the pool and cannot safely drive `ensureVirtualChildTypeInfo`
+without tripping unrelated placeholder assumptions.
+
+The performance shape is the same or better:
+
+- one name-index map per `TypeInfoReal`;
+- one signature-index map per `TypeInfoReal`;
+- one cached delegate view per complete `TypeInfoReal`;
+- one abstractness readiness bit and one successful child-newability bit;
+- no added per-entry wrapper objects or owner maps;
+- steady-state reads are volatile reads and immutable map lookups.
+
+The intentional semantic tightening is that callers now receive immutable
+lookup-map snapshots. No production callers mutate the returned maps; source
+scans show read-only use through `get(...)` and `entrySet()` iteration. A caller
+that mutates these maps would be corrupting owner metadata and should fail.
+
+`TypeInfoMemberOwnershipTest.derivedTypeInfoCachesAreSafelyPublishedInParallel()`
+checks the volatile source shape, runs parallel first access to the name map,
+signature map, delegate view, and abstractness cache, verifies that every
+thread observes the same cache identities, and asserts that the returned maps
+are immutable snapshots.
+
 ### ASM Metadata Owner Assembly
 
 This branch also removes the remaining ASM metadata constructor escapes in
