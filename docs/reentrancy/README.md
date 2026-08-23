@@ -172,6 +172,9 @@ Start here:
   swallowed exception, and runtime-exception audit for places where exception
   handling can hide ownership/reentrancy failures or report success after a
   broken startup path.
+- [logging-diagnostics-audit.md](logging-diagnostics-audit.md): ErrorListener,
+  logging, stderr/stdout, swallowed diagnostics, and mutable reproducer
+  practices that block stable reentrant runtime/compiler debugging.
 - [logging-strategy.md](logging-strategy.md): background design for adding
   disabled-by-default runtime/compiler diagnostics without allocating or
   mutating hot-path owner state.
