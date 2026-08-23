@@ -283,12 +283,77 @@ Regression proof:
   The fixed path checks sharing and returns `null`; the old path would continue
   into the shallow clone.
 
-Remaining work:
+### Same-Owner GenericHandle Access Views
 
-- `GenericHandle.cloneAs(...)` still needs an explicit shared backing-state/view
-  model for same-owner views. Blindly cloning the field array would break
-  write-through identity semantics, so that design remains separate from this
-  cross-owner guard.
+What was wrong:
+
+- `ObjectHandle.cloneAs(...)` uses `Object.clone()`. That preserves the dynamic
+  Java subtype cheaply, but it is a shallow copy and bypasses constructors.
+- `GenericHandle` stores runtime field values in a final `ObjectHandle[]`.
+  A shallow clone therefore creates a second Java handle view that shares the
+  same mutable field array as the source view.
+- Sharing that array is intentional for regular fields. A revealed view and a
+  struct view represent the same logical runtime object, so a regular field
+  write through either view must be visible through the other.
+- The old code then rewrote inflated `RefHandle.$outer` values inside that
+  shared array when cloning between struct and non-struct views. That mixed two
+  incompatible concepts in one slot: shared object storage and view-specific
+  holder state.
+
+Why `clone()` was tempting but wrong here:
+
+- It avoided writing view constructors for every `ObjectHandle` subtype.
+- It preserved the Java subclass, existing cached subtype fields, and regular
+  field-array sharing with very little code.
+- Those are convenience wins, not correctness guarantees. In owner-bearing
+  runtime objects, a shallow clone silently shares final reference fields,
+  mutable helper cells, locks, arrays, and caches. If clone-time code then
+  mutates any object behind those shared references, it mutates the source view
+  too. That is already broken in one thread and becomes nondeterministic when
+  two containers or fibers reveal/mask the same object concurrently.
+
+Replacement:
+
+- `GenericHandle.cloneAs(...)` keeps the old shared `m_aFields` backing for
+  regular values.
+- When a struct/revealed view needs a different inflated-ref `$outer`, the clone
+  creates a shallow ref view and stores it in a sparse copy-on-write
+  `m_aFieldOverrides` array on that view only.
+- Field reads first consult the sparse override; the common no-override path is
+  still a direct read from `m_aFields`.
+- Field writes go to the shared backing unless that exact view has an override
+  for the slot. For inflated refs, referent writes still go through the shared
+  ref backing, while `$outer` stays view-local.
+- `OwnershipDiagnostics.dump(...)` now prints both the effective field view and
+  the sparse override array when overrides exist, so stress failures do not hide
+  this view-local state.
+
+Behavior and performance:
+
+- Same-owner masks and reveals still allocate a cheap access view; they do not
+  deep-copy the object graph.
+- Existing regular field write-through semantics are preserved.
+- Existing inflated ref referent state is preserved and shared as before.
+- Only the holder/`$outer` edge is view-local.
+- Handles that never need view-local inflated refs pay no extra per-access
+  allocation and keep the original direct field-array path.
+- A struct/revealed transition allocates at most one sparse override array for
+  the cloned view plus one ref view per inflated field that already had an
+  outer. That is bounded by the object's field layout, not by the reachable
+  handle graph.
+
+Regression proof:
+
+- `GenericHandleCloneAsTest.sameOwnerCloneKeepsInflatedRefOuterViewLocal()`
+  constructs a synthetic same-owner struct/revealed clone with an inflated ref
+  and a regular field. The test is intentionally written without branch-only
+  production factories so it can be copied to `master`.
+- On `master`, the test fails because creating the clone rewrites the source
+  ref's `$outer` to the clone.
+- On this branch, the source ref still points at the source, the clone's ref
+  points at the clone, referent writes through the clone's ref are visible
+  through the source ref, and regular field writes through the clone are visible
+  through the source handle.
 
 The broader `ConstantPool` state audit is documented in
 [constant-pool-state-audit.md](constant-pool-state-audit.md). It distinguishes

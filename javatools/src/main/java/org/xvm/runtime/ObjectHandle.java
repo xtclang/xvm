@@ -371,7 +371,7 @@ public abstract class ObjectHandle
         }
 
         public ObjectHandle[] getFields() {
-            return m_aFields;
+            return fieldView();
         }
 
 
@@ -405,7 +405,7 @@ public abstract class ObjectHandle
         public ObjectHandle getField(Frame frame, FieldInfo field) {
             return field.isTransient()
                     ? getTransientField(frame, field)
-                    : m_aFields[field.getIndex()];
+                    : fieldValue(field.getIndex());
         }
 
         public void setField(Frame frame, PropertyConstant idProp, ObjectHandle hValue) {
@@ -413,7 +413,7 @@ public abstract class ObjectHandle
             if (field.isTransient()) {
                 setTransientField(frame, field.getIndex(), hValue);
             } else {
-                m_aFields[field.getIndex()] = hValue;
+                setFieldValue(field.getIndex(), hValue);
             }
         }
 
@@ -422,7 +422,7 @@ public abstract class ObjectHandle
             if (field.isTransient()) {
                 setTransientField(frame, field.getIndex(), hValue);
             } else {
-                m_aFields[field.getIndex()] = hValue;
+                setFieldValue(field.getIndex(), hValue);
             }
         }
 
@@ -433,11 +433,11 @@ public abstract class ObjectHandle
         // ----- index-based field access ----------------------------------------------------------
 
         public ObjectHandle getField(int iPos) {
-            return m_aFields[iPos];
+            return fieldValue(iPos);
         }
 
         public void setField(int iPos, ObjectHandle hValue) {
-            m_aFields[iPos] = hValue;
+            setFieldValue(iPos, hValue);
         }
 
         /**
@@ -479,7 +479,7 @@ public abstract class ObjectHandle
         }
 
         public boolean containsMutableFields() {
-            for (ObjectHandle hField : m_aFields) {
+            for (ObjectHandle hField : fieldView()) {
                 if (hField != null && hField.isMutable()) {
                     return true;
                 }
@@ -507,21 +507,25 @@ public abstract class ObjectHandle
 
         @Override
         public ObjectHandle cloneAs(TypeComposition clazz) {
-            // when we clone a struct into a non-struct, we need to update the inflated
-            // RefHandles to point to a non-struct parent handle;
-            // when we clone a non-struct to a struct, we need to do the opposite
+            // cloneAs() creates another access view of the same object. The field array therefore
+            // remains shared for regular values, but inflated RefHandles need a view-local $outer:
+            // mutating the shared RefHandle would make the source view suddenly point at the new
+            // view, which breaks revealed/struct view semantics under single-threaded use and
+            // becomes a race when multiple containers or fibers reveal/mask the same object.
             boolean fUpdateOuter = isStruct() || clazz.isStruct();
 
-            GenericHandle  hClone  = (GenericHandle) super.cloneAs(clazz);
-            ObjectHandle[] aFields = m_aFields;
+            GenericHandle hClone = (GenericHandle) super.cloneAs(clazz);
+            hClone.m_aFieldOverrides = m_aFieldOverrides;
 
-            if (fUpdateOuter && aFields != null) {
+            if (fUpdateOuter) {
                 for (FieldInfo field : clazz.getFieldLayout().values()) {
                     if (field.isInflated() && !field.isTransient()) {
-                        RefHandle    hValue = (RefHandle) aFields[field.getIndex()];
-                        ObjectHandle hOuter = hValue.getField(null, OUTER);
-                        if (hOuter != null) {
-                            hValue.setField(null, OUTER, hClone);
+                        ObjectHandle hValue = fieldValue(field.getIndex());
+                        if (hValue instanceof RefHandle hRef &&
+                                hRef.getField(null, OUTER) != null) {
+                            RefHandle hRefClone = (RefHandle) hRef.cloneAs(hRef.getComposition());
+                            ((GenericHandle) hRefClone).overrideField(OUTER, hClone);
+                            hClone.overrideField(field.getIndex(), hRefClone);
                         }
                     }
                 }
@@ -536,7 +540,7 @@ public abstract class ObjectHandle
             if (aFields != null) {
                 TypeComposition clazz = getComposition();
                 for (FieldInfo field : clazz.getFieldLayout().values()) {
-                    ObjectHandle hValue = aFields[field.getIndex()];
+                    ObjectHandle hValue = fieldValue(field.getIndex());
                     if (hValue == null) {
                         if (!field.isAllowedUnassigned()) {
                             if (listUnassigned == null) {
@@ -556,7 +560,7 @@ public abstract class ObjectHandle
             if (m_fMutable) {
                 // mark ourselves as immutable to prevent an infinite recursion
                 m_fMutable = false;
-                if (getComposition().makeStructureImmutable(m_aFields)) {
+                if (getComposition().makeStructureImmutable(fieldView())) {
                     return true;
                 }
                 // the structure could not be made mutable
@@ -649,16 +653,84 @@ public abstract class ObjectHandle
             }
 
             if (mapVisited.put(this, Boolean.TRUE) != null ||
-                    areShared(m_aFields, container, mapVisited)) {
+                    areShared(fieldView(), container, mapVisited)) {
                 return true;
             }
             return false;
+        }
+
+        ObjectHandle[] getFieldViewForDiagnostics() {
+            return fieldView();
+        }
+
+        ObjectHandle[] getFieldOverridesForDiagnostics() {
+            return m_aFieldOverrides;
+        }
+
+        private ObjectHandle fieldValue(int iPos) {
+            ObjectHandle[] aOverrides = m_aFieldOverrides;
+            ObjectHandle   hOverride  = aOverrides == null ? null : aOverrides[iPos];
+            return hOverride == null ? m_aFields[iPos] : hOverride;
+        }
+
+        private void setFieldValue(int iPos, ObjectHandle hValue) {
+            if (hasFieldOverride(iPos)) {
+                overrideField(iPos, hValue);
+            } else {
+                m_aFields[iPos] = hValue;
+            }
+        }
+
+        private boolean hasFieldOverride(int iPos) {
+            ObjectHandle[] aOverrides = m_aFieldOverrides;
+            return aOverrides != null && aOverrides[iPos] != null;
+        }
+
+        private ObjectHandle[] fieldView() {
+            ObjectHandle[] aOverrides = m_aFieldOverrides;
+            if (aOverrides == null) {
+                return m_aFields;
+            }
+
+            ObjectHandle[] aView = m_aFields.clone();
+            for (int i = 0, c = aView.length; i < c; ++i) {
+                ObjectHandle hOverride = aOverrides[i];
+                if (hOverride != null) {
+                    aView[i] = hOverride;
+                }
+            }
+            return aView;
+        }
+
+        private void overrideField(String sProp, ObjectHandle hValue) {
+            FieldInfo field = getComposition().getFieldInfo(sProp);
+            if (field == null || field.isTransient()) {
+                throw new IllegalStateException("Cannot override field: " + sProp);
+            }
+            overrideField(field.getIndex(), hValue);
+        }
+
+        private void overrideField(int iPos, ObjectHandle hValue) {
+            ObjectHandle[] aCurrent = m_aFieldOverrides;
+            ObjectHandle[] aUpdated = aCurrent == null
+                    ? new ObjectHandle[m_aFields.length]
+                    : aCurrent.clone();
+            aUpdated[iPos] = hValue;
+            m_aFieldOverrides = aUpdated;
         }
 
         /**
          * The array of field values indexed according to the ClassComposition's field layout.
          */
         private final ObjectHandle[] m_aFields;
+
+        /**
+         * Optional access-view overrides layered over {@link #m_aFields}. This is intentionally
+         * sparse and copy-on-write: the common path still reads the original field array directly,
+         * while struct/revealed view clones can give inflated property refs a view-local $outer
+         * without deep-copying all regular fields or mutating the source view's shared ref.
+         */
+        private volatile ObjectHandle[] m_aFieldOverrides;
 
         /**
          * The "m_owner" field is most commonly not set, unless this object is a service, a module,

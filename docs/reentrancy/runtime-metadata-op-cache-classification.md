@@ -40,12 +40,13 @@ Status labels:
    definition describe "first time execution reaches this op" semantics. The
    owner key therefore remains the decoded op, but the state is now a final
    `AtomicBoolean` so concurrent first execution has exactly one winner.
-3. Same-owner `GenericHandle` access-view backing is `MUST FIX` separately from the already-fixed
-   cross-owner guard. `GenericHandle.cloneAs(...)` shallow-clones the handle, shares the final field
-   array, and rewires inflated `RefHandle.OUTER` entries in that shared array
-   (`ObjectHandle.java:62`, `ObjectHandle.java:497`, `ObjectHandle.java:503`,
-   `ObjectHandle.java:512`, `ObjectHandle.java:649`). This can mutate the source view while creating
-   another same-owner view.
+3. Same-owner `GenericHandle` access-view backing is fixed in this branch. The old
+   `GenericHandle.cloneAs(...)` shallow-cloned the handle, shared the final field array, and rewired
+   inflated `RefHandle.OUTER` entries in that shared array (`ObjectHandle.java:62`,
+   `ObjectHandle.java:497`, `ObjectHandle.java:503`, `ObjectHandle.java:512`,
+   `ObjectHandle.java:649`). That meant creating one same-owner access view could mutate the source
+   view. The replacement keeps the shared field array for regular values and adds sparse per-view
+   overrides only for inflated refs whose `$outer` is view-specific.
 4. Pure `Op` address/link fields are not runtime-lazy, but they are not yet proven safe by eager
    linking before publication. `Code` resolves addresses in the constructor and during reassembly
    (`MethodStructure.java:2188`, `MethodStructure.java:2192`,
@@ -60,7 +61,7 @@ Status labels:
 | Status | Cache/source | Owner, key, invalidation | Thread-safety and reachability | Failure mode, required proof, and proper fix |
 | --- | --- | --- | --- | --- |
 | `DONE` | Cross-owner direct masking guard in `GenericHandle.maskAs(...)` (`ObjectHandle.java:563`, `ObjectHandle.java:576`, `ObjectHandle.java:578`, `ObjectHandle.java:600`). | Owner is the source handle graph and target `Container`; key is `(target owner, mask type)`. No invalidation; masking is an access-view operation. | Guard checks `owner != ownerOrig && !isShared(owner, null)` before `cloneAs(...)`. Runtime reachable. | Fixed highest-risk cross-owner clone path. Keep `OwnershipDiagnosticsTest.crossOwnerMaskRejectsNonSharedHandleBeforeClone()` (`OwnershipDiagnosticsTest.java:145`) and owner diagnostics that fail if a non-shared handle graph is shallow-cloned across owners. |
-| `MUST FIX` | Same-owner `GenericHandle.cloneAs(...)` view backing and `RefHandle.OUTER` rewiring (`ObjectHandle.java:497`, `ObjectHandle.java:503`, `ObjectHandle.java:506`, `ObjectHandle.java:512`, `ObjectHandle.java:649`). | Owner is the same `Container`; key is the view `TypeComposition` and access mode. No invalidation. The field backing must represent one runtime object across multiple access views. | Base `ObjectHandle.cloneAs(...)` is a shallow clone (`ObjectHandle.java:62`). `GenericHandle.m_aFields` is final, so cloned views share the same array. Inflated `RefHandle` entries in that shared array are mutated when a struct/non-struct view is created. Runtime reachable through `ClassComposition.ensureAccess`, `PropertyComposition.ensureAccess`, `CanonicalizedTypeComposition.ensureAccess`, `xRef.maskAs`, and `GenericHandle.maskAs`. | Practical failure: creating a same-owner access view can rewrite inflated refs in the source view, so a previously obtained `Ref` can report the wrong holder or mutate through the wrong view. Proper fix is explicit shared backing plus per-view inflated-ref state. Do not deep-copy the whole field array as the primary fix, because regular field writes must still be visible through all same-owner views. Required tests: source view and clone have independent inflated `OUTER` holders; regular `setField` through one view is visible through the other; existing refs remain attached to their original view; struct-to-revealed and revealed-to-struct transitions both work. Performance proof: mask/reveal stays cheap, with no recursive deep-copy of the handle graph and at most lazy or bounded per-inflated-ref view wrapper allocation. |
+| `DONE` | Same-owner `GenericHandle.cloneAs(...)` view backing and `RefHandle.OUTER` rewiring (`ObjectHandle.java:497`, `ObjectHandle.java:503`, `ObjectHandle.java:506`, `ObjectHandle.java:512`, `ObjectHandle.java:649`). | Owner is the same `Container`; key is the view `TypeComposition` and access mode. No invalidation. The field backing represents one runtime object across multiple access views. | Base `ObjectHandle.cloneAs(...)` remains a shallow view primitive, but `GenericHandle` no longer mutates inflated refs in the shared array. The common path still reads and writes `m_aFields` directly. Struct/revealed view clones install a copy-on-write sparse override array only for inflated refs that need a view-local `$outer`. Runtime reachable through `ClassComposition.ensureAccess`, `PropertyComposition.ensureAccess`, `CanonicalizedTypeComposition.ensureAccess`, `xRef.maskAs`, and `GenericHandle.maskAs`. | Fixed. The old practical failure was that creating a same-owner access view rewrote refs in the source view, so a previously obtained `Ref` could report the wrong holder. Deep-copying the whole field array was rejected because regular field writes must remain visible through all same-owner views. The regression `GenericHandleCloneAsTest.sameOwnerCloneKeepsInflatedRefOuterViewLocal()` fails on master by observing the source ref's `$outer` change to the clone, and passes here while also proving referent and regular-field write-through behavior. Performance shape is preserved: no recursive graph copy, no per-handle allocation for the no-inflated-ref/no-view-override case, and at most one sparse override array plus one ref view per affected inflated field. |
 | `MUST AUDIT` | Base `ObjectHandle.cloneAs(TypeComposition)` and clone overrides (`ObjectHandle.java:62`, `Proxy.java:424`, `CanonicalizedTypeComposition.java:74`, `PropertyComposition.java:123`). | Owner/key depend on subclass. For `GenericHandle`, key is access view. For immutable/native handles, clone may be only a type view. Invalidation is none. | Shallow clone has no synchronization and copies all subclass fields unless overridden. Runtime reachable from access-view paths and constant relocation. | Audit every override and owner-bearing subclass field. Proper fix is to restrict base `cloneAs` to immutable/view-only subclasses by contract, and require explicit view-backing or owner-rekey logic for mutable or owner-bearing handles. Required diagnostic: reflective clone audit that flags non-final owner-bearing fields copied by `Object.clone()` without an override. |
 | `MUST AUDIT` | `ConstHeap.relocateConst(...)` fallback clone (`ConstHeap.java:212`, `ConstHeap.java:232`, `ConstHeap.java:235`). | Owner is the target `ConstHeap`/`Container`; key is the target-pool `Constant`. Invalidation is map removal when a shared parent heap owns the constant. | `ConcurrentHashMap.computeIfAbsent` protects heap insertion, but the fallback uses `cloneAs(...)` when the constant handle composition belongs to another container. Runtime reachable through constant relocation, including switch-cache paths. | Safe only if every relocated handle is immutable/shared and `cloneAs` is a view relabel, not owner transfer. Proper fix is to either prove relocated constants contain no mutable owner-bearing graph, or introduce a real const relocation/copy path. Required stress: relocate a const with inflated refs or nested handles across parent/child containers under ownership validation. |
 | `DONE` | `RefHandle.createRegisterRef(...)` construction lifecycle (`xRef.java:848`, `xRef.java:869`, `xRef.java:883`). | Owner is the current `Frame.VarInfo`; key is register index. Invalidation is frame lifetime. | First register ref is cached only after constructor return. Second ref delegates to cached first ref. Frame-local reachability only. | Construction escape fixed. Keep shape test that `Frame.VarInfo` cannot observe a partially constructed `RefHandle`. This does not solve same-owner inflated-ref view backing. |
@@ -137,10 +138,10 @@ To close this as `DONE`, one of these proofs is required:
 If none of those proofs is accepted, the proper classification should be promoted from `MUST AUDIT`
 to `MUST FIX` for the code publication cell, not for every individual op field.
 
-## Same-Owner View Equivalence Requirements
+## Same-Owner View Equivalence Proof
 
-The cross-owner guard is already fixed and tested. The remaining same-owner work needs a behavioral
-and performance proof before it can move out of `MUST FIX`:
+The cross-owner guard and same-owner view backing are both fixed and tested. The important invariant
+is that `cloneAs(...)` is an access-view operation, not an object copy:
 
 * Behavior: a source handle and each access-view clone share regular field storage; writes through
   either view are visible through the other.
@@ -153,6 +154,16 @@ and performance proof before it can move out of `MUST FIX`:
 * Performance: the fix must not turn access masking into a deep copy of the full handle graph.
   Acceptable designs include a small shared backing object plus lazy per-view inflated-ref wrappers,
   or another representation with equivalent asymptotic behavior.
-* Performance: add a micro/stress check for repeated mask/reveal over an object with regular fields
-  and inflated refs; compare allocation count and time against the current shallow-view shape, with a
-  documented acceptable overhead bound.
+`GenericHandleCloneAsTest.sameOwnerCloneKeepsInflatedRefOuterViewLocal()` covers those semantics
+directly using synthetic runtime handles. The test is intentionally written without branch-only
+factory APIs so it can be copied onto master; on master it fails because the source ref's `$outer` is
+rewritten to the clone. The fixed branch passes and also asserts that referent writes and regular
+field writes still flow through the shared backing.
+
+The chosen implementation is performance-equivalent to the old hot path:
+
+* Handles with no access-view override still read and write the original final `m_aFields` array.
+* Same-owner views still share regular field storage, so masking/revealing is not a deep copy of the
+  full handle graph.
+* Extra allocation is bounded by the number of inflated refs that actually need a different
+  `$outer`, not by the total object graph size.

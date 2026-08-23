@@ -246,25 +246,34 @@ What is cloned: arbitrary `ObjectHandle` subclasses via `super.clone()`,
 usually to reveal, mask, or move a visible `TypeComposition`.
 
 Hazard: subclass fields are shallow-copied. For `GenericHandle`, the
-`ObjectHandle[] m_aFields` array is not cloned before inflated `RefHandle`
-objects can be rewired to point at the new handle. That can make a view clone
-and its source share a mutable field array and mutable `RefHandle` objects.
+`ObjectHandle[] m_aFields` array is intentionally shared so public, private,
+struct, masked, and revealed access views keep observing the same object state.
+The old clone path then rewired inflated `RefHandle` objects in that same
+shared array to point at the new handle. That made the source view's existing
+ref holder change merely because another access view was created.
 
 Container/ConstantPool/lock/cache impact: `ConstHeap` can call `cloneAs(...)`
 when moving constant handles into another container. The target composition is
 changed, but backing fields, handles, and ref owners can remain shared unless
 the specific subclass overrides the behavior.
 
-Classification: partially constrained in this branch; still must-audit for the
-remaining same-owner view-backing design.
+Classification: fixed for the two proven `GenericHandle` hazards in this
+branch; still must-audit for other `ObjectHandle` subclasses and relocation
+paths that inherit the base shallow clone.
 
-Current branch fix: `GenericHandle.maskAs(...)` now rejects direct cross-owner
-masking when the handle graph is not already shared with the target container.
-That closes the most dangerous misuse: treating `cloneAs(...)` as an ownership
-transfer primitive. A masked/revealed `GenericHandle` is an access view of the
-same runtime object; it is not a deep copy and it cannot make owner-local
-fields safe for another container. Non-core objects still use the existing
-proxy path instead of direct sharing.
+Current branch fixes:
+
+1. `GenericHandle.maskAs(...)` rejects direct cross-owner masking when the
+   handle graph is not already shared with the target container. That closes
+   the most dangerous misuse: treating `cloneAs(...)` as an ownership-transfer
+   primitive. A masked/revealed `GenericHandle` is an access view of the same
+   runtime object; it is not a deep copy and it cannot make owner-local fields
+   safe for another container. Non-core objects still use the existing proxy
+   path instead of direct sharing.
+2. `GenericHandle.cloneAs(...)` now separates shared object backing from
+   view-specific inflated-ref holder state. The regular field array remains
+   shared. Only inflated refs that need a different `$outer` are represented by
+   sparse per-view overrides on the cloned view.
 
 `OwnershipDiagnosticsTest.crossOwnerMaskRejectsNonSharedHandleBeforeClone()`
 proves the guard. The synthetic handle reports `isShared(...) == false` and
@@ -272,28 +281,32 @@ throws if `cloneAs(...)` is reached; the fixed path returns `null` after the
 shared-graph check. The old path would continue into `cloneAs(...)` for the
 same setup.
 
-Remaining branch note: the local view behavior remains a larger follow-up, not
-a safe small patch. `GenericHandle.cloneAs(...)` intentionally shares its field
-array so public, private, struct, masked, and revealed views keep observing the
-same object state. Simply cloning `m_aFields` would stop the current inflated-
-ref `OUTER` rewrite from corrupting the source view, but it would also make
-later `setField(...)` calls on one view invisible to the other view. The
-correct fix needs an explicit shared backing-state/view model, or another
-owner-aware representation that gives each view the correct `OUTER` ref
-without losing write-through identity semantics.
+`GenericHandleCloneAsTest.sameOwnerCloneKeepsInflatedRefOuterViewLocal()` proves
+the same-owner view backing fix. It constructs a source view with an inflated
+ref and a regular field, clones it to another access view, and asserts:
 
-Minimum replacement: replace raw `Object.clone()` with explicit view/copy
-constructors. For same-object views, introduce a documented shared backing
-state plus per-view inflated-ref state instead of copying the whole field array
-blindly. For true copies or cross-container movement, allocate owner-local
-wrapper state and assert that every retained handle is shareable with the
-destination container.
+- the source ref still has the source handle as `$outer`;
+- the clone ref has the clone handle as `$outer`;
+- referent writes through the clone ref are visible through the source ref;
+- regular field writes through the clone are visible through the source handle.
 
-Equivalence/performance proof: create source and target views over a mutable
-`GenericHandle`, update inflated outer refs in the clone, and assert the source
-field array and refs are not rewritten. For immutable value handles, assert the
-replacement keeps the old cheap wrapper/view allocation and does not deep-copy
-the immutable payload.
+Copied to master, that test fails at the first holder assertion because the old
+clone path rewrites the shared ref to point at the clone.
+
+Minimum replacement rule going forward: do not use raw `Object.clone()` as an
+owner-transfer or mutable-runtime-copy primitive. For same-object views, keep a
+documented shared backing state and represent only view-specific state in the
+view. For true copies or cross-container movement, allocate owner-local wrapper
+state and assert that every retained handle is shareable with the destination
+container.
+
+Equivalence/performance proof: the fixed `GenericHandle` path does not clone
+the full field array or reachable handle graph. Handles with no view-local
+overrides keep direct `m_aFields` access. A struct/revealed transition allocates
+at most one sparse override array plus one ref view per affected inflated
+field. For immutable value handles and other subclasses, the remaining audit
+must either prove that the shallow view is a pure type relabel or replace it
+with an explicit owner-aware copy/view API.
 
 ### 5. Default `Constant.adoptedBy(...)` still shallow-clones across pool ownership
 

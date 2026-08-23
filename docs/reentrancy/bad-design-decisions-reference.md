@@ -184,6 +184,14 @@ used to clone only `Parameter[]` containers and share the mutable `Parameter`
 elements with the source method. The delegated-method factory now copies the
 elements for the synthetic method owner before publication.
 
+The same problem showed up in runtime handles. `GenericHandle.cloneAs(...)`
+needed to create a cheap access view, so sharing the final field array was the
+right performance shape for regular fields. The old code then rewrote inflated
+`RefHandle.$outer` values inside that shared array. That was broken even without
+parallel execution: constructing one view changed the refs observed through an
+existing view. The branch keeps the shared regular field backing and moves only
+the view-specific inflated refs into sparse per-view overrides.
+
 ### Manual Lazy Null Caches
 
 Bad shape:

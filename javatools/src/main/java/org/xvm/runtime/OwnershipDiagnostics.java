@@ -572,10 +572,14 @@ public final class OwnershipDiagnostics {
 
         private void dumpHandleFields(ObjectHandle handle, Container expected, int indent,
                                       boolean allowNativeOwner) {
-            if (handle instanceof GenericHandle) {
-                Object fields = safe(() -> readField(handle, "m_aFields"));
-                if (fields instanceof ObjectHandle[] ahFields) {
-                    dumpValue("handle.fields", ahFields, expected, indent, allowNativeOwner);
+            if (handle instanceof GenericHandle generic) {
+                dumpValue("handle.fields", generic.getFieldViewForDiagnostics(), expected,
+                        indent, allowNativeOwner);
+
+                ObjectHandle[] ahOverrides = generic.getFieldOverridesForDiagnostics();
+                if (ahOverrides != null) {
+                    dumpValue("handle.fieldOverrides", ahOverrides, expected, indent,
+                            allowNativeOwner);
                 }
 
                 Container owner = safe(() -> (Container) readField(handle, "m_owner"));

@@ -43,7 +43,7 @@ make reviewers reconstruct the design from discovery-order commits.
 | 8 | Add same-JVM stress and ownership diagnostics | Adds the proof harness for repeated direct execution and parallel container validation. | PR 1 through PR 7 |
 | 9 | Remove semantic ambient `ConstantPool` lookup | Replaces `getCurrentPool()` semantic owner selection with explicit owners. | PR 8 useful for stress, otherwise independent |
 | 10 | Harden constant adoption owner transfer | Prevents shallow-cloned constants from carrying runtime/helper state across pools. | PR 5 and PR 8 recommended |
-| 11 | Fix method, parameter, and handle owner-copy hazards | Repairs method/parameter/delegated copies and constrains direct cross-owner handle masks while leaving handle view-backing redesign separate. | PR 10 |
+| 11 | Fix method, parameter, and handle owner-copy hazards | Repairs method/parameter/delegated copies, constrains direct cross-owner handle masks, and fixes same-owner `GenericHandle` inflated-ref view backing. | PR 10 |
 | 12 | Keep compiler reentrancy cleanup separate | Moves lexer/parser/AST constructor and compiler-owner work out of runtime review. | Independent after shared ASM API changes |
 | 13 | Keep JIT ownership cleanup separate | Keeps JIT lifecycle, generated static fields, and `Ctx.Current` review separate from interpreter runtime. | PR 9/10 for shared ASM safety |
 | 14 | Add build, lint, and source-shape gates | Turns fixed patterns into regressions that fail early. | After the relevant patterns are clean |
@@ -56,7 +56,7 @@ Use this as the first pass when preparing actual PR branches from `master`.
 | --- | --- | --- |
 | Ambient current-pool removal | `be0270e0d`, `e856d85ce`, `d58ebfea0`, `5d5773979`, `5fce7b9ae`, `4c6521dd9`, `c93b5ad61`, `2716435f1`, `84fa61534` | Constant adoption, clone/copy fixes, JIT `Ctx.Current` policy |
 | Constant adoption hardening | `09f244211`, `e569d27db`, `e6f78a210`, `d1d0683e3`, `a0c1fe936` | Parameter/method clone fixes and `ObjectHandle.cloneAs(...)` design |
-| Parameter, method, and cross-owner handle-copy fixes | `7f82e0a1e`, `ed7220bee`, and the `GenericHandle.maskAs(...)` cross-owner guard slice | Constant adoption validator, broad compiler clone cleanup, same-owner `cloneAs(...)` backing-state redesign |
+| Parameter, method, and handle-copy fixes | `7f82e0a1e`, `ed7220bee`, the `GenericHandle.maskAs(...)` cross-owner guard slice, and the same-owner `GenericHandle.cloneAs(...)` inflated-ref backing slice | Constant adoption validator, broad compiler clone cleanup, base `ObjectHandle.cloneAs(...)` subclass audit |
 | Constructor-escape removal in shared ASM/runtime | `1249e2a0f`, `47d7ab30e`, `93189541f`, `16915ebe7`, `7b7fc2036`, `70bf202ef` where source areas match | JIT constructor escapes and compiler/parser-only cleanup |
 | JIT ownership cleanup | `36c24a974`, `cb81116cb` plus the separate JIT plan work | Interpreter runtime template ownership |
 | Documentation-only hardening studies | `f0a6a71b1` and any uncommitted plan/audit docs | Source changes unless the PR is explicitly mixed for review proof |
@@ -1420,6 +1420,10 @@ the first runtime-owner PR. The highest-risk findings are:
 - `ObjectHandle.cloneAs(...)` shallow-copies runtime handles and field arrays;
   the direct cross-owner `GenericHandle.maskAs(...)` path could use that access
   view as if it were owner transfer.
+- The same shallow `GenericHandle.cloneAs(...)` path shared the final field
+  array and then rewrote inflated `RefHandle.$outer` entries inside that shared
+  backing, so creating a same-owner struct/revealed view could mutate refs
+  visible through the source view.
 - The default `Constant.adoptedBy(...)` shallow clone remains a bad default for
   future owner-local fields.
 
@@ -1432,10 +1436,12 @@ the first runtime-owner PR. The highest-risk findings are:
   be shared through an array clone.
 - Reject direct cross-owner `GenericHandle.maskAs(...)` unless the handle graph
   is already shared with the target container.
+- Keep same-owner `GenericHandle` access views sharing regular field storage,
+  but store view-specific inflated refs in sparse copy-on-write overrides so
+  `$outer` rebinding cannot corrupt the source view.
 - Add focused owner-copy tests for method/parameter clone paths.
-- Keep `ObjectHandle.cloneAs(...)` as its own follow-up design PR unless the
-  branch also introduces explicit shared backing-state semantics for handle
-  views.
+- Keep the base `ObjectHandle.cloneAs(...)` subclass and relocation audit as a
+  follow-up; this PR fixes the proven `GenericHandle` access-view defects.
 
 ### Explicit Out Of Scope
 
@@ -1448,7 +1454,7 @@ the first runtime-owner PR. The highest-risk findings are:
 
 Part of this is already fixed in the branch. The safe review shape is a
 method/parameter owner-copy PR, followed later by a separate handle view-copy
-design PR.
+subclass/relocation clone audit.
 
 Commits:
 
@@ -1467,8 +1473,9 @@ Future source areas:
 - `MethodStructure`
 - `ClassStructure.ensureMethodDelegation(...)`
 - `ObjectHandle.GenericHandle.maskAs(...)`
-- `ObjectHandle` and relevant handle subclasses for the later view-backing
-  design PR
+- `ObjectHandle.GenericHandle.cloneAs(...)`
+- `OwnershipDiagnostics` view/override dump support
+- `ObjectHandle` and relevant handle subclasses for the later base clone audit
 - `Constant.adoptedBy(...)` only for a later adoption-contract redesign
 
 ### Tests And Verification Commands
@@ -1491,9 +1498,9 @@ Required proof shapes:
   method as containing structure.
 - Build delegated methods and prove no `Parameter`, deref register, or owner
   state is shared with the original.
-- For the later handle view-copy PR, prove clone ref rewiring does not mutate
-  the source field array or refs, and prove that view write-through semantics
-  still match master.
+- For same-owner handle views, prove clone ref rebinding does not mutate the
+  source view, and prove that referent/regular-field write-through semantics
+  still match master's intended access-view behavior.
 - For the cross-owner mask guard, use a non-shared synthetic handle whose
   `cloneAs(...)` throws if reached; the fixed path must return `null` before
   any shallow clone.
@@ -1509,6 +1516,11 @@ Required proof shapes:
 - The `GenericHandle.maskAs(...)` guard only runs when the caller asks to mask a
   handle into a different owner. Same-owner masks and reveals preserve the old
   cheap access-view behavior.
+- The same-owner `GenericHandle.cloneAs(...)` fix preserves regular field-array
+  sharing. Handles without inflated-ref view overrides still use direct
+  `m_aFields` access. A struct/revealed transition allocates at most one sparse
+  override array plus one ref view per affected inflated field; it is not a
+  deep copy of the handle graph.
 - Immutable logical arrays can remain shared when the API documents that they
   are immutable and owner-free.
 
