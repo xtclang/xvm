@@ -237,6 +237,10 @@ Branch fix:
   family. Each concrete condition reconstructs its logical link-time predicate,
   and the transient `iTest` brute-force simulation slot is private scratch state
   that is not copied across pools.
+- `UInt8ArrayConstant`, `FPNConstant`, and `Float128Constant` defensively copy
+  constructor input arrays and reconstruct adopted constants with fresh byte
+  storage. This preserves the same logical byte values without sharing mutable
+  hash/equality backing arrays across caller code or pool owners.
 - `HandleConstant.copyForAdoption(...)` allows first registration of a fresh
   unowned runtime handle constant by constructing a target-owned wrapper, but
   throws if an already-owned live handle constant is moved to another pool.
@@ -245,8 +249,8 @@ Proof/guards:
 
 - `ConstantAdoptionTest` directly exercises the adoption boundary.
 - The same test copied into detached `master` fails the adoption cases by
-  retaining copied helper, runtime, compiler-register, condition-simulation, or
-  cache state; it passes on this branch.
+  retaining copied helper, runtime, compiler-register, condition-simulation,
+  byte-array backing, or cache state; it passes on this branch.
 - `ConstantAdoptionValidator` now runs at `ConstantPool.register(...)` when
   `-Dxvm.asm.validateConstantAdoption=true` is enabled. It compares source and
   adopted copies and reports identical helper/runtime references unless they

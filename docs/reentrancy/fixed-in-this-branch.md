@@ -205,6 +205,12 @@ shallow-clone helper state identified by the audit:
   `ConditionalConstant` family opt-in to shallow clone copied the transient
   `iTest` brute-force simulation slot; the branch makes that slot private and
   ensures adopted condition leaves start with clean simulation state.
+- `UInt8ArrayConstant`, `FPNConstant`, and `Float128Constant` now defensively copy
+  byte-array constructor inputs and reconstruct adoption with fresh byte storage.
+  The old value objects claimed immutable hash/equality semantics while holding
+  caller-owned or shallow-cloned `byte[]` references. This fixes the
+  cross-owner/input-sharing defect without adding a per-read copy on the legacy
+  raw `getValue()` path.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration
   of a fresh unowned runtime handle constant by constructing a target-owned
   wrapper. Moving an already-owned live handle constant to another pool throws

@@ -164,10 +164,10 @@ Risk buckets:
 | `DynamicFormalConstant` | `FormalConstant` | explicit clone-free hook | P1/P2 compiler register state fixed in this branch |
 | `EnumValueConstant` | `SingletonConstant` | inherits explicit singleton adoption | P0 singleton runtime-state family |
 | `ExpressionConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical value |
-| `FPNConstant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
+| `FPNConstant` | `ValueConstant` | explicit clone-free hook | P3 byte-array-backed value fixed in this branch |
 | `FSNodeConstant` | `ValueConstant` | explicit clone-free override | P0 runtime handle/path cache |
 | `FileStoreConstant` | `ValueConstant` | explicit clone-free override | P0 runtime handle |
-| `Float128Constant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
+| `Float128Constant` | `ValueConstant` | explicit clone-free hook | P3 byte-array-backed value fixed in this branch |
 | `Float16Constant` | `FloatConstant` | family default-clone policy | P3 primitive/logical value |
 | `Float32Constant` | `FloatConstant` | family default-clone policy | P3 primitive/logical value |
 | `Float64Constant` | `ValueConstant` | family default-clone policy | P3 primitive/logical value |
@@ -220,7 +220,7 @@ Risk buckets:
 | `TypeParameterConstant` | `FormalConstant` | explicit override | P0 reentrancy helper cell |
 | `TypeSequenceTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `TypedefConstant` | `NamedConstant` | family default-clone policy | P2 logical identity/path |
-| `UInt8ArrayConstant` | `ValueConstant` | family default-clone policy | P3 immutable byte-array value |
+| `UInt8ArrayConstant` | `ValueConstant` | explicit clone-free hook | P3 byte-array-backed value fixed in this branch |
 | `UnionTypeConstant` | `RelationalTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `UnresolvedNameConstant` | `PseudoConstant` | family default-clone policy | P2 unresolved logical name |
 | `UnresolvedTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
@@ -597,13 +597,16 @@ Scope:
 - use `Arrays.copyOf(...)` or immutable containers where array ownership must be
   explicit.
 
-Current branch note: condition constants are already converted in the
-integration branch. `ConditionalConstant` no longer opts into default shallow
-clone, the concrete condition leaves reconstruct name/module/version/child
-predicate state through `copyForAdoption(...)`, and
+Current branch note: condition constants and the byte-array-backed scalar values
+are already converted in the integration branch. `ConditionalConstant` no longer
+opts into default shallow clone, the concrete condition leaves reconstruct
+name/module/version/child predicate state through `copyForAdoption(...)`, and
 `ConstantAdoptionTest` proves warmed `iTest` simulation scratch is not copied
-into a target pool. Value constants remain in the transitional default-clone
-bucket unless they have a separate explicit hook.
+into a target pool. `UInt8ArrayConstant`, `FPNConstant`, and
+`Float128Constant` also copy constructor/adoption byte arrays so immutable
+hash/equality value is not shared across callers or pool owners. Other value
+constants remain in the transitional default-clone bucket unless they have a
+separate explicit hook.
 
 Review goal: replace low-risk default clone users with explicit logical-value
 copy code and remove the largest remaining fallback population.

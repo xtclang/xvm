@@ -21,8 +21,10 @@ import org.xvm.asm.constants.AllCondition;
 import org.xvm.asm.constants.AnyCondition;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.DynamicFormalConstant;
+import org.xvm.asm.constants.FPNConstant;
 import org.xvm.asm.constants.FSNodeConstant;
 import org.xvm.asm.constants.FileStoreConstant;
+import org.xvm.asm.constants.Float128Constant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.LiteralConstant;
@@ -38,6 +40,7 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
+import org.xvm.asm.constants.UInt8ArrayConstant;
 import org.xvm.asm.constants.VersionMatchesCondition;
 import org.xvm.asm.constants.VersionedCondition;
 
@@ -45,6 +48,7 @@ import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.util.TransientThreadLocal;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -438,6 +442,61 @@ public class ConstantAdoptionTest {
     }
 
     /**
+     * Array-backed constants participate in hash/equality and pool lookup, so their byte storage is
+     * logical immutable value. Keeping the caller's byte[] lets ordinary single-threaded code mutate
+     * an already-registered constant after construction.
+     */
+    @Test
+    public void arrayBackedValueConstructorsDefensivelyCopyInputBytes() {
+        var pool         = new FileStructure("source").getConstantPool();
+        var byteStringIn = new byte[] {1, 2, 3};
+        var floatNIn     = new byte[] {4, 5};
+        var float128In   = new byte[16];
+
+        float128In[0] = 6;
+
+        var byteString = new UInt8ArrayConstant(pool, byteStringIn);
+        var floatN     = new FPNConstant(pool, Constant.Format.FloatN, floatNIn);
+        var float128   = new Float128Constant(pool, float128In);
+
+        byteStringIn[0] = 31;
+        floatNIn[0]     = 32;
+        float128In[0]   = 33;
+
+        assertArrayEquals(new byte[] {1, 2, 3}, byteString.getValue());
+        assertArrayEquals(new byte[] {4, 5}, floatN.getValue());
+        assertEquals(6, float128.getValue()[0]);
+    }
+
+    /**
+     * Shallow adoption cloned the constant object but shared the final byte[] backing store. The
+     * target-pool copy must have the same bytes and independent storage so source mutation cannot
+     * change target hash/equality value after adoption.
+     */
+    @Test
+    public void adoptedArrayBackedValueConstantsDoNotShareByteStorage() {
+        var sourcePool = new FileStructure("source").getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var byteString = sourcePool.ensureByteStringConstant(new byte[] {1, 2, 3});
+        var floatN     = sourcePool.ensureFloatNConstant(new byte[] {4, 5});
+        var float128   = sourcePool.ensureFloat128Constant(new byte[16]);
+
+        float128.getValue()[0] = 6;
+
+        var adoptedByteString = adopt(byteString, targetPool);
+        var adoptedFloatN     = adopt(floatN, targetPool);
+        var adoptedFloat128   = adopt(float128, targetPool);
+
+        byteString.getValue()[0] = 31;
+        floatN.getValue()[0]     = 32;
+        float128.getValue()[0]   = 33;
+
+        assertArrayEquals(new byte[] {1, 2, 3}, adoptedByteString.getValue());
+        assertArrayEquals(new byte[] {4, 5}, adoptedFloatN.getValue());
+        assertEquals(6, adoptedFloat128.getValue()[0]);
+    }
+
+    /**
      * A live ObjectHandle is owner-specific runtime state, not logical constant data. Moving an
      * already-owned handle constant to another pool must fail instead of leaking the source owner.
      */
@@ -513,7 +572,9 @@ public class ConstantAdoptionTest {
                AnyCondition.class,
                FSNodeConstant.class,
                DynamicFormalConstant.class,
+               FPNConstant.class,
                FileStoreConstant.class,
+               Float128Constant.class,
                FormalTypeChildConstant.class,
                HandleConstant.class,
                MethodBindingConstant.class,
@@ -527,6 +588,7 @@ public class ConstantAdoptionTest {
                SignatureConstant.class,
                SingletonConstant.class,
                TypeParameterConstant.class,
+               UInt8ArrayConstant.class,
                VersionMatchesCondition.class,
                VersionedCondition.class)
                 .forEach(clz -> {

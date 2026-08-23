@@ -313,10 +313,17 @@ performance regression and a memory regression because primitive values would
 box. The better cleanup is:
 
 - keep primitive arrays private;
-- return `clone()`/`Arrays.copyOf(...)` when exposing payloads;
+- return `Arrays.copyOf(...)` when exposing payloads;
 - document whether a returned empty array is shared;
 - use immutable collections only for metadata around the payload, not the
   payload itself.
+
+Concrete branch fix: `UInt8ArrayConstant`, `FPNConstant`, and
+`Float128Constant` now copy byte arrays at construction and adoption boundaries.
+Those constants still expose the legacy raw `getValue()` array for existing hot
+read paths, so the remaining follow-up is an API cleanup: add a defensive-copy
+accessor or immutable byte view and migrate callers that do not need direct
+storage.
 
 ### Binary Serialization And Payload Boundaries
 
@@ -1010,7 +1017,7 @@ Keep primitive arrays, but copy at boundaries:
 
 ```java
 public byte[] bytes() {
-    return bytes.clone();
+    return Arrays.copyOf(bytes, bytes.length);
 }
 ```
 

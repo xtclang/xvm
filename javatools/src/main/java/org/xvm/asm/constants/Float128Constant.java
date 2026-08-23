@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Arrays;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -49,7 +51,14 @@ public class Float128Constant
         if (abVal == null || abVal.length != 16) {
             throw new ArithmeticException("Float128Constant requires an array of 16 bytes");
         }
-        m_abVal = abVal;
+        m_abVal = Arrays.copyOf(abVal, abVal.length);
+    }
+
+    @Override
+    protected Float128Constant copyForAdoption(AdoptionContext context) {
+        // The logical value is the encoded 128-bit float. Shallow adoption would share the final
+        // mutable byte[] between pools; reconstructing keeps each owner insulated.
+        return new Float128Constant(context.pool(), m_abVal);
     }
 
 

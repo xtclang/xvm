@@ -1439,6 +1439,10 @@ separately.
   logical predicate fields if this slice includes the condition-family
   clone-free wave. Otherwise keep that wave as the condition half of the later
   value/condition adoption PR.
+- Reconstruct `UInt8ArrayConstant`, `FPNConstant`, and `Float128Constant` with
+  fresh byte arrays if this slice includes the byte-array-backed value wave.
+  Otherwise keep that wave as the array-backed-value part of the later
+  value/condition adoption PR.
 - Reject moving an already-owned live `HandleConstant` to another pool.
 - Reject `DynamicFormalConstant` adoption when its register type is not shared
   with the destination pool, because the target pool cannot safely own or share
@@ -1487,6 +1491,7 @@ Commits:
 - related `0aa9a86cd Harden owner-sensitive lazy caches`
 - `a0c1fe936 Harden constant adoption runtime-state validation`
 - `Make condition adoption clone-free` condition-family wave
+- `Make array-backed value adoption clone-free` byte-array value wave
 
 Primary source areas:
 
@@ -1497,6 +1502,7 @@ Primary source areas:
   `TypeParameterConstant`, `DynamicFormalConstant`, `RegisterConstant`,
   `MethodBindingConstant`
 - `ConditionalConstant`, `MultiCondition`, and condition leaves if bundled
+- `UInt8ArrayConstant`, `FPNConstant`, and `Float128Constant` if bundled
 - `HandleConstant`
 - `ClassComposition`
 - `OwnershipDiagnostics` boundary validation where adoption failures surface
@@ -1555,6 +1561,10 @@ appropriate:
 - Condition constants keep the same link-time predicate behavior. Adoption still
   interns the target-owned child constants through normal registration, but the
   transient `iTest` brute-force simulation slot is not copied.
+- Byte-array-backed value constants keep the same logical bytes and constant-pool
+  interning behavior. The defensive copy moves from `ensureByteStringConstant(...)`
+  into the constructor, so that path still performs one copy; adoption adds the
+  copy that shallow clone used to skip.
 - The validator is diagnostic coverage, not a complete architectural fix.
 - The validator is off unless explicitly enabled, so normal constant interning
   and runtime cache performance is unchanged.

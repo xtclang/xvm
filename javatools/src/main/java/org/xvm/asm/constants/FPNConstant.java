@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Arrays;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.util.Hash;
@@ -62,7 +64,14 @@ public class FPNConstant
         }
 
         m_fmt   = format;
-        m_abVal = abVal;
+        m_abVal = Arrays.copyOf(abVal, abVal.length);
+    }
+
+    @Override
+    protected FPNConstant copyForAdoption(AdoptionContext context) {
+        // The logical value is the format plus encoded bytes. Shallow adoption would share the final
+        // mutable byte[] between pools; reconstructing keeps each owner insulated.
+        return new FPNConstant(context.pool(), m_fmt, m_abVal);
     }
 
     /**

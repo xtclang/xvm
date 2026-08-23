@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Arrays;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.util.Hash;
@@ -41,8 +43,8 @@ public class UInt8ArrayConstant
     }
 
     /**
-     * Construct a constant whose value is an octet string. Note that this constructor does not make
-     * a copy of the passed {@code byte[]}.
+     * Construct a constant whose value is an octet string. The array is copied so the constant's
+     * hash/equality value cannot be changed by later caller mutation.
      *
      * @param pool   the ConstantPool that will contain this Constant
      * @param abVal  the octet string value
@@ -51,7 +53,14 @@ public class UInt8ArrayConstant
         super(pool);
 
         assert abVal != null;
-        m_abVal = abVal;
+        m_abVal = Arrays.copyOf(abVal, abVal.length);
+    }
+
+    @Override
+    protected UInt8ArrayConstant copyForAdoption(AdoptionContext context) {
+        // The logical value is the byte sequence. Shallow adoption would share the final mutable
+        // byte[] between pools; reconstructing keeps each owner insulated with identical contents.
+        return new UInt8ArrayConstant(context.pool(), m_abVal);
     }
 
 

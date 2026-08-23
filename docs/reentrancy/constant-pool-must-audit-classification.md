@@ -158,6 +158,10 @@ Done in this branch:
   condition leaves reconstruct logical predicates from name/module/version/child
   state, and the transient `iTest` simulation slot is private scratch state that
   is not adopted.
+- `UInt8ArrayConstant`, `FPNConstant`, and `Float128Constant` now copy byte-array
+  constructor inputs and reconstruct adopted values with fresh arrays, so caller
+  mutation or source-pool mutation cannot rewrite the target-pool constant's
+  hash/equality backing bytes.
 
 ## 2. `ConstantPool.register(...)` Publishes Before Recursive Registration Completes
 

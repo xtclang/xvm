@@ -527,7 +527,7 @@ public class ConstantPool
      * @return a ByteStringConstant for the passed byte array value
      */
     public UInt8ArrayConstant ensureByteStringConstant(byte[] ab) {
-        return register(new UInt8ArrayConstant(this, ab.clone()));
+        return register(new UInt8ArrayConstant(this, ab));
     }
 
     /**

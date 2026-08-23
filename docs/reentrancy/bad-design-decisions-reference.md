@@ -185,6 +185,10 @@ Why it was bad in a single-threaded world:
   `ConditionalConstant.iTest` is only brute-force link-condition simulation state,
   but shallow clone treated a warmed test index as if it were serialized predicate
   value.
+- Array-backed constants had the same problem in a more ordinary form:
+  `UInt8ArrayConstant`, `FPNConstant`, and `Float128Constant` used final `byte[]`
+  fields as immutable hash/equality value, but construction/adoption could share
+  the mutable array with caller code or another pool owner.
 
 Replacement:
 
@@ -199,6 +203,12 @@ The condition family demonstrates the desired low-risk end state: each concrete
 condition now reconstructs the logical predicate from name/module/version/child
 fields, target registration adopts child constants as before, and transient
 simulation scratch is private and not copied.
+
+The array-backed value constants follow the same rule. Constructors and adoption
+copy the byte sequence once, preserving logical value and cache behavior without
+letting another owner mutate the backing array. The remaining raw `getValue()`
+array API is tracked as array-immutability design debt, not as proof that adoption
+may share storage.
 
 The same rule applies to method/parameter copies. This branch fixed a
 single-threaded bug where `Parameter.cloneBody()` mutated the source parameter
