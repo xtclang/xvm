@@ -94,6 +94,40 @@ These are the current adoption sites in runtime/asm source.
 | `javatools/src/main/java/org/xvm/asm/constants/TypeParameterConstant.java` | Branch override that reconstructs the logical register type parameter for the target pool. | Fixed hardening site. Keeps the final reentrancy helper owner-local. |
 | `javatools/src/main/java/org/xvm/asm/constants/HandleConstant.java` | Branch guard for live runtime handles. | Fixed must-fix guard. Allows first registration of a fresh unowned runtime handle constant, but rejects moving an already-owned live handle into another pool. |
 
+## Default-Adoption Subclass Inventory
+
+This inventory was generated from the current tree by scanning constant
+subclasses and whether they override `adoptedBy(...)`. The exact command shape
+is:
+
+```bash
+for f in javatools/src/main/java/org/xvm/asm/constants/*.java \
+         javatools/src/main/java/org/xvm/asm/Constant.java; do
+  # strip comments, read "class X extends Y", then check for adoptedBy(...)
+done
+```
+
+The important result is not that every default clone is currently a proven
+runtime failure. The important result is that the base contract still makes a
+future subclass unsafe by default. Every class below either relies on
+logical-value-only fields, a common owner-change reset, or a later
+`registerConstants(...)` cleanup.
+
+| Group | Classes | Current assessment |
+| --- | --- | --- |
+| Explicit adoption override | `FSNodeConstant`, `FileStoreConstant`, `HandleConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, `SingletonConstant`, `TypeParameterConstant` | Fixed or guarded in this branch. These were the known runtime/helper-state cases where base shallow clone was not acceptable. |
+| Type constants using common `TypeConstant.setContaining(...)` reset | `AbstractDependantChildTypeConstant`, `AbstractDependantTypeConstant`, `AccessTypeConstant`, `AnnotatedTypeConstant`, `AnonymousClassTypeConstant`, `CastTypeConstant`, `DifferenceTypeConstant`, `ImmutableTypeConstant`, `InnerChildTypeConstant`, `IntersectionTypeConstant`, `PendingTypeConstant`, `PropertyClassTypeConstant`, `RecursiveTypeConstant`, `RelationalTypeConstant`, `ServiceTypeConstant`, `TerminalTypeConstant`, `TypeSequenceTypeConstant`, `UnionTypeConstant`, `UnresolvedTypeConstant`, `VirtualChildTypeConstant` | Common type-info, relation, recursion, normalized-type, and JIT-name caches are cleared by `TypeConstant.setContaining(...)`. Subclass transient fields are mostly disassembly indexes. `AnnotatedTypeConstant.m_typeAnno` is cleared by `registerConstants(...)`, which is acceptable only if registration remains single-owner or becomes transactionally published. |
+| Identity, named, and pseudo constants inheriting base clone | `ChildClassConstant`, `ClassConstant`, `DecoratedClassConstant`, `DeferredValueConstant`, `DynamicFormalConstant`, `ExpressionConstant`, `FormalConstant`, `FormalTypeChildConstant`, `KeywordConstant`, `MethodConstant`, `ModuleConstant`, `MultiMethodConstant`, `NamedConstant`, `NativeRebaseConstant`, `PackageConstant`, `ParentClassConstant`, `PropertyConstant`, `PureIdentityConstant`, `ThisClassConstant`, `TypedefConstant`, `UnresolvedNameConstant` | Mostly logical owner/path identity. `MethodConstant.m_type` and `PropertyConstant` metadata caches are cleared during registration, but `MethodConstant.m_sJitName` and `PropertyConstant.m_sJitName` remain JIT-owner caches that should be cleared or keyed by JIT `TypeSystem` in the JIT ownership PR. |
+| Value and condition constants inheriting base clone | `AllCondition`, `AnyCondition`, `ArrayConstant`, `BFloat16Constant`, `ByteConstant`, `CharConstant`, `ConditionalConstant`, `DecimalAutoConstant`, `DecimalConstant`, `FPNConstant`, `Float128Constant`, `Float16Constant`, `Float32Constant`, `Float64Constant`, `Float8e4Constant`, `Float8e5Constant`, `FloatConstant`, `IntConstant`, `LiteralConstant`, `MapConstant`, `MatchAnyConstant`, `MultiCondition`, `NamedCondition`, `NotCondition`, `PresentCondition`, `RangeConstant`, `RegExConstant`, `StringConstant`, `UInt8ArrayConstant`, `ValueConstant`, `VersionConstant`, `VersionMatchesCondition`, `VersionedCondition` | Current fields are logical values plus transient disassembly indexes or derived primitive arrays. They appear owner-logical under the branch validator, but the default remains brittle because adding one runtime/helper field silently changes adoption behavior. |
+| Frame-dependent constants | `RegisterConstant`, `MethodBindingConstant`, plus guarded `HandleConstant` | `RegisterConstant` and `MethodBindingConstant` are serialized logical frame-dependent forms and do not wrap live runtime handles. `HandleConstant` is the exception; it is guarded because it wraps a live `ObjectHandle`. |
+| Not a constant adoption target | `TypeInfoReal` | It appears in the scan only because it extends `TypeInfo`, not `Constant`. It is tracked in the TypeInfo owner-copy audit instead. |
+
+Proper long-term fix: remove "safe unless proven otherwise" from the adoption
+contract. Either make `Constant.adoptedBy(...)` abstract, or require an
+explicit marker/override for subclasses whose fields are logical-value-only.
+Until then, keep `ConstantAdoptionValidator` in stress/CI and treat every new
+non-logical field on a `Constant` subclass as a mandatory adoption review.
+
 ## Runtime-Relevant Adoption Risks
 
 These are the adoption-related sites that matter for parallel runtime or
