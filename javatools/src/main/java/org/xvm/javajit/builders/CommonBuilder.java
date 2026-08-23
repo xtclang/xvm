@@ -3327,9 +3327,13 @@ public class CommonBuilder
                 return;
             }
 
-//            JitParamDesc[] dstReturns = jmdDst.standardReturns;
-//            TypeConstant   srcRetType = srcReturns[0].type;
-//            TypeConstant   dstRetType = dstReturns[0].type;
+            JitParamDesc[] dstReturns = jmdDst.standardReturns;
+            TypeConstant   srcRetType = srcReturns[0].type;
+            TypeConstant   dstRetType = dstReturns[0].type;
+
+            if (!dstRetType.isJitAssignableTo(srcRetType)) {
+                generateCheckCast(code, srcRetType);
+            }
 
             // the natural return is at the top of the stack now;
             // TODO TEMPORARY: assume the same Ctx positions for returns

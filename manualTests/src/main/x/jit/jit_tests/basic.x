@@ -28,6 +28,7 @@ package basic {
                 passed &= runTest(() -> exceptionTests.run());
                 passed &= runTest(() -> stringTests.run());
                 passed &= runTest(() -> literalTests.run());
+                passed &= runTest(() -> mapTests.run());
                 passed &= runTest(() -> tupleTests.run());
             } catch (IllegalState e) {
                 console.print(e);

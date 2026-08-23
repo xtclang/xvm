@@ -7272,6 +7272,21 @@ public abstract class TypeConstant
     }
 
     /**
+     * @return true iff the assignment of a value of this type to a value of the specified type
+     *         requires a "checkcast"
+     */
+    public boolean isJitAssignableTo(TypeConstant that) {
+        TypeConstant typeThisJit = getCallableJitType();
+        TypeConstant typeThatJit = that.getCallableJitType();
+
+        // Let's say C = ListMap<K,V>; M = ListMapIndex<K,V>
+        // Ecstasy: M --into--> C, so M.isA(C), but
+        // Java:    C --implements--> M, so M -> C requires a checkcast
+        return typeThisJit.equals(typeThatJit) ||
+                !isJitL2Specialized() && typeThisJit.isA(typeThatJit);
+    }
+
+    /**
      * @return true iff the specified type is represented by the Java interface and needs to be
      *         cast explicitly to {@code nObject} class to invoke its methods
      */

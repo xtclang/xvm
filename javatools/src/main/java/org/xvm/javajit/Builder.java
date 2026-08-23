@@ -915,7 +915,7 @@ public abstract class Builder {
 
         TypeConstant jitType = jitInfo.getType();
         TypeConstant xvmType = xvmInfo.getType();
-        if (!isJitAssignable(jitType, xvmType)) {
+        if (!jitType.isJitAssignableTo(xvmType)) {
             code.checkcast(ensureClassDesc(xvmType));
         }
         return xvmInfo;
@@ -1768,18 +1768,6 @@ public abstract class Builder {
      */
     public static ClassDesc getShapeDesc(String className, ClassfileShape shape) {
         return ClassDesc.of(getShapeName(className, shape));
-    }
-
-    /**
-     * Check if the assignment of the variable of the `srcType` to the variable of `dstType`
-     * requires a "checkcast".
-     *
-     * @return true iff the assignment is JIT-valid, false if the "checkcast" opcode is necessary
-     */
-    public static boolean isJitAssignable(TypeConstant srcType, TypeConstant dstType) {
-        return srcType.isA(dstType) ||
-                !srcType.isJitL2Specialized() &&
-                srcType.getCallableJitType().isA(dstType.getCallableJitType());
     }
 
     /**

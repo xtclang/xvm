@@ -1766,7 +1766,7 @@ public class BuildContext {
         }
 
         if (!typeFrom.isA(typeTo)) {
-            if (!Builder.isJitAssignable(typeFrom, typeTo) && regFrom.flavor() != NullablePrimitive) {
+            if (!typeFrom.isJitAssignableTo(typeTo) && regFrom.flavor() != NullablePrimitive) {
                 assert allowUpcast;
                 if (cdFrom.isPrimitive()) {
                     // this can only be caused by a dead/unreachable code
@@ -2028,7 +2028,7 @@ public class BuildContext {
             JitFlavor    srcFlavor = srcReg.flavor();
             if (srcFlavor == dstFlavor) {
                 if (srcFlavor == Specific && !srcReg.cd().equals(pd.cd) &&
-                        !Builder.isJitAssignable(srcReg.type(), pd.type)) {
+                        !srcReg.type().isJitAssignableTo(pd.type)) {
                     generateCheckCast(code, pd.type);
                 }
                 continue;
@@ -2087,7 +2087,7 @@ public class BuildContext {
                  "XvmPrimitive->SpecificWithDefault",
                  "XvmPrimitive->Widened",
                  "XvmPrimitive->WidenedWithDefault":
-                assert Builder.isJitAssignable(srcReg.type(), pd.type);
+                assert srcReg.type().isJitAssignableTo(pd.type);
                 Builder.box(code, srcReg.type());
                 continue;
 
@@ -2722,7 +2722,7 @@ public class BuildContext {
 
             case "Widened->Specific" -> {
                 TypeConstant dstType = propInfo.getType();
-                if (!Builder.isJitAssignable(srcType, dstType)) {
+                if (!srcType.isJitAssignableTo(dstType)) {
                     code.checkcast(builder.ensureClassDesc(dstType));
                 }
             }
