@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
 
@@ -195,18 +196,19 @@ final class ConstantAdoptionValidator {
     }
 
     private static boolean nameMatches(Class<?> type, Predicate<String> predicate) {
-        for (Class<?> current = type; current != null; current = current.getSuperclass()) {
-            if (predicate.test(current.getName())) {
-                return true;
-            }
+        return classHierarchy(type)
+                .anyMatch(current -> predicate.test(current.getName())
+                        || interfaceHierarchy(current)
+                                .anyMatch(iface -> predicate.test(iface.getName())));
+    }
 
-            for (Class<?> iface : current.getInterfaces()) {
-                if (nameMatches(iface, predicate)) {
-                    return true;
-                }
-            }
-        }
-        return false;
+    private static Stream<Class<?>> classHierarchy(Class<?> type) {
+        return Stream.iterate(type, current -> current != null, Class::getSuperclass);
+    }
+
+    private static Stream<Class<?>> interfaceHierarchy(Class<?> type) {
+        return Stream.of(type.getInterfaces())
+                .flatMap(iface -> Stream.concat(Stream.of(iface), interfaceHierarchy(iface)));
     }
 
     private static boolean isForbiddenPackage(String name) {
