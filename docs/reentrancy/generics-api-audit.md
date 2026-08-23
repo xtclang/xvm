@@ -136,6 +136,25 @@ The examples below are representative, not exhaustive. They were selected
 because the API shape itself forces casts, hides the owner/type contract, or
 encodes a closed set of states as `Object`.
 
+Use this section as a reviewer-facing source-level argument. A response such as
+"the bytecode is the same after erasure" misses the point. These APIs are bad
+because the source permits impossible calls, forces humans to remember hidden
+contracts, and moves owner/type validation away from the boundary that has the
+context to diagnose it. The proposed replacements are valuable even if the JVM
+instructions are similar: they make wrong code fail at compile time, make
+callers shorter, and make later refactors local instead of search-and-cast
+exercises.
+
+Each finding also includes split guidance:
+
+- `Safe separate PR` means the change is mostly API cleanup with focused tests
+  and should not be bundled into the current constant-adoption work.
+- `Separate PR, high priority` means the topic is runtime/owner-sensitive and
+  should be fixed independently, but still not mixed with unrelated source/test
+  changes.
+- `Needs design PR` means the right fix changes a state model or public-ish
+  internal contract and should start with a narrow design/adapter commit.
+
 ### Must Fix: Service Responses Erase Future Payload Shape
 
 Examples:
@@ -203,6 +222,10 @@ sendManyResponse(..., CompletableFuture<ObjectHandle[]> future);
 Classification: must-fix runtime/reentrancy risk. This crosses service and
 fiber boundaries. A typed design would make a single-handle response impossible
 to complete with `ObjectHandle[]` without an explicit conversion method.
+
+PR split: separate PR, high priority. This should not be mixed with constant
+adoption changes; it needs service/future tests that exercise zero, one, tuple,
+and multi-return paths.
 
 ### Must Fix: Op-Info Cache Uses Object Values And Raw Enum Keys
 
@@ -274,6 +297,10 @@ but it stores owner-bearing runtime metadata for ops. A typed key would prevent
 wrong category/value pairings at compile time and centralize any unavoidable
 runtime check.
 
+PR split: separate PR, high priority. This is a good typed-cache migration on
+its own because the first compatibility layer can keep the existing storage
+while changing call sites to `OpInfoKey<T>`.
+
 ### Must Fix: Fiber Pending Requests Encode A Union As Object
 
 Examples:
@@ -334,6 +361,9 @@ Classification: must-fix runtime/reentrancy risk if service scheduling remains
 multi-fiber and cross-service. The current code can compile with any object in
 the field; a sealed or wrapper API would make the legal states explicit and
 remove repeated unchecked map casts.
+
+PR split: separate PR, high priority if touching service scheduling; otherwise
+safe separate PR as a wrapper-only refactor with no scheduling behavior change.
 
 ### Must Fix: ConstantPool Locator Tables Erase Format/Key/Value Contracts
 
@@ -406,6 +436,11 @@ The current generic `register(T)` helps at the outer API, but the internal
 tables immediately erase the type. A typed locator table would make wrong
 format/value pairings fail at compile time or at one central checked boundary.
 
+PR split: needs design PR. This touches central constant-pool storage and should
+be split from both constant adoption and runtime-template work. A first PR can
+add typed locator wrappers for a few high-traffic formats while preserving the
+underlying maps.
+
 ### Must Fix: Native Template Loading Uses Raw Class
 
 Examples:
@@ -460,6 +495,10 @@ Classification: must-fix runtime/reentrancy risk. The code constructs
 owner-bearing templates. Using `asSubclass(ClassTemplate.class)` would reject
 wrong classes at the owner boundary and remove the unchecked raw-class path.
 
+PR split: safe separate PR. This is a narrow startup-boundary cleanup:
+parameterize the maps, use `Class<? extends ClassTemplate>`, and add a native
+template discovery test for a non-template class rejection if practical.
+
 ### Must Fix: TypeConstant Updaters And Recursive State Lose Generic Detail
 
 Examples:
@@ -503,6 +542,10 @@ private static final AtomicReferenceFieldUpdater<TypeConstant, InProgressTypes>
 Classification: must-audit, likely should-fix soon. Java's updater API often
 forces awkward shapes, but the unsafe edge should be boxed into a named type or
 small helper so the recursive type-state payload is not raw.
+
+PR split: safe separate PR if limited to a named holder/helper and existing
+type-recursion tests. Avoid bundling with broader `TypeConstant` relation-cache
+or invalidation behavior changes.
 
 ### Should Fix Soon: JIT Reflection Erases Generated Runtime Types
 
@@ -555,6 +598,10 @@ array factory, string constructor target, and immutable array.
 Classification: should-fix soon. This is JIT/classloader work, not the
 interpreter native-template PR, but it is the same source-level design problem:
 the owner/type fact exists and should be checked once at the boundary.
+
+PR split: separate JIT PR. The interpreter reentrancy work should only cite it;
+the implementation belongs with generated-class bridge tests and classloader
+coverage.
 
 ### Should Fix Soon: MethodBody Stores Target Variants As Object
 
@@ -612,6 +659,10 @@ Classification: should-fix soon. This is a closed hierarchy hiding behind
 metadata construction mistakes into runtime `ClassCastException` instead of
 compile-time errors.
 
+PR split: needs design PR. Start by introducing sealed target records beside the
+existing constructor paths, then migrate the `Implementation` cases one at a
+time with metadata equality tests.
+
 ### Should Fix Soon: ClassComposition Field Identity Is A Commented Union
 
 Example:
@@ -646,6 +697,10 @@ record NestedIdentityField(NestedIdentity identity) implements FieldIdentity {}
 Classification: should-fix soon. This is owner-bearing runtime composition
 metadata. A sealed identity type would document the legal variants and remove
 scattered `instanceof`/cast logic.
+
+PR split: safe separate PR if it only wraps `String`, `PropertyConstant`, and
+`NestedIdentity` in a sealed `FieldIdentity` and keeps serialized/runtime
+behavior unchanged.
 
 ### Should Fix: Token Values And Source Resources Use Object
 
@@ -695,6 +750,9 @@ Classification: should-fix readability/API safety. This is not a known
 parallel runtime bug, but it is a clear example of `Object` making code longer
 and less readable. A bad grammar assumption would fail at the token boundary
 with a useful message instead of a generic cast failure later.
+
+PR split: safe separate compiler PR. Keep it away from runtime reentrancy fixes;
+it can be validated with parser/token tests and no runtime behavior changes.
 
 ### Should Fix: ValueConstant Base Type Loses The Value Type
 
@@ -760,6 +818,78 @@ Classification: should-fix readability/API safety. The JIT builder and case
 manager are not automatically wrong, but the current API forces them to prove
 value shape manually even when the source object already knows it.
 
+PR split: needs design PR if changing `ValueConstant<V>` broadly. A safe first
+PR can add typed helper/visitor methods for decimal values and update only the
+JIT builder casts.
+
+### Should Fix: Native Argument APIs Force Same-Line Casts
+
+Examples:
+
+- `javatools/src/main/java/org/xvm/runtime/template/_native/web/xRTServer.java:244`
+  to `:246` casts adjacent native arguments to `StringHandle` and `JavaLong`.
+- `javatools/src/main/java/org/xvm/runtime/template/_native/web/xRTServer.java:336`
+  to `:340` repeats the same pattern for route arguments, including
+  `ServiceHandle` and `KeyStoreHandle`.
+- `javatools/src/main/java/org/xvm/runtime/template/_native/collections/arrays/ByteBasedDelegate.java:51`
+  casts each array element to `JavaLong` while building byte storage.
+- `javatools/src/main/java/org/xvm/runtime/template/_native/collections/arrays/ByteBasedDelegate.java:135`
+  and `:144` repeat same-line `JavaLong` casts for assignment and insertion.
+- `javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java:216`
+  to `:224` casts arguments and the delegate template before wrapping a byte
+  buffer.
+
+Why it is bad:
+
+The native method registration already knows the expected XTC signature. The
+Java body then repeats that signature as casts on `ObjectHandle[]`, often on
+the same line as value extraction. This is verbose and opaque: the reader has
+to map `ahArg[2]` to a method signature by hand, and a wrong index/type pairing
+compiles. The failure becomes a runtime `ClassCastException` inside a native
+method instead of a compile-time error in the Java binding.
+
+Before:
+
+```java
+String sBindAddr  = ((StringHandle)   ahArg[1]).getStringValue();
+int    nHttpPort  = (int) ((JavaLong) ahArg[2]).getValue();
+int    nHttpsPort = (int) ((JavaLong) ahArg[3]).getValue();
+```
+
+After sketch:
+
+```java
+record ServerBindArgs(ObjectHandle binding, String bindAddress,
+        int httpPort, int httpsPort) {}
+
+ServerBindArgs args = frame.args(ahArg, ServerBindArgs.class);
+```
+
+Or a smaller helper that does not require generated binders:
+
+```java
+String sBindAddr  = args.string(1);
+int    nHttpPort  = args.int64(2).toIntExact();
+int    nHttpsPort = args.int64(3).toIntExact();
+```
+
+For delegates:
+
+```java
+JavaLong hElement = args.handle(0, JavaLong.class);
+ByteBasedDelegate template = hDelegate.getTemplate(ByteBasedDelegate.class);
+```
+
+Classification: should-fix soon for native APIs that sit on service, file,
+network, crypto, or collection mutation boundaries. This is not automatically a
+reentrancy race, but it is a runtime boundary where a typed Java binding would
+turn wrong handle shapes into compile-time failures or one checked argument
+decode with native-method context.
+
+PR split: safe separate native-binding PR. Start with helper accessors and a
+few high-cast templates; generated or record-based binders can be a later
+design PR.
+
 ### Should Fix: Compiler AST Raw Collections Hide Element Types
 
 Examples:
@@ -815,6 +945,9 @@ Classification: should-fix. This is mostly compile-time readability debt, but
 it is the same pattern: the code knows the legal variants and asks comments,
 assertions, and casts to enforce them after the fact.
 
+PR split: safe separate compiler AST PR. It should not be coupled to runtime
+owner work; parser/AST clone tests are enough for a first pass.
+
 ### Should Fix: Nested Identity APIs Return Object
 
 Examples:
@@ -861,6 +994,10 @@ record ResolvedNestedIdentity(ConstantPool owner,
 Classification: should-fix soon where nested identities cross type-info or
 constant-pool owner boundaries. The existing explicit-pool fix is good; the
 next step is making the returned identity shape carry that owner contract.
+
+PR split: separate PR, medium priority. This is adjacent to owner fixes but
+should be staged after the explicit-pool APIs are stable, with nested identity
+owner tests proving no ambient pool is used.
 
 ## Recommended Replacements
 
