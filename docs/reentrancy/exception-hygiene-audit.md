@@ -123,7 +123,7 @@ been logged and the task code treats the non-zero code as failure.
 | P0 | `javatools/src/main/java/org/xvm/runtime/template/_native/temporal/xLocalClock.java:121` | Must-fix, fixed in branch | `Alarm` registers keep-alive in the constructor before `scheduleTimer()`. The catch calls `alarm.cancel()`, but an unscheduled trigger may not unregister. Startup/schedule failure can leak callback ownership. | Fixed by moving registration out of construction and adding `cancelAfterScheduleFailure()`, which unregisters from the stored owner independently of `TimerTask.cancel()` result. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/template/_native/web/xRTServer.java:280` and `:287` | Must-fix, fixed in branch | Server startup registers a native callback, then creates contexts. If a post-registration startup step throws, the catch terminates the service context but does not unregister the callback. `join()` can hang on callback count. | Fixed by tracking registration and running `rollbackBind(...)` before raising the XTC I/O exception. Rollback unregisters the callback, stops partial Java servers, shuts down the executor, clears routes, and clears the native handle. |
 | P1 | `javatools/src/main/java/org/xvm/tool/Compiler.java:471` | Must-fix | Code generation catches `Throwable`, logs, and continues. This can absorb `Error` subclasses and keep compiling after corrupted compiler state. | Catch `RuntimeException` or a compiler-specific exception for recoverable compiler bugs. Rethrow `Error`. Include compiler/module/phase context in the propagated exception. |
-| P1 | `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:556` | Must-fix | Each op execution catches `Throwable`, prints stack, and raises a generic XTC `"Run-time error"` exception. Java VM defects and ownership assertions can become user-catchable language exceptions. | Rethrow `Error`. For runtime bugs, use a runtime-failure channel or a non-user-catchable fatal path. If translating to XTC, include a diagnostic tag/cause and mark it as native runtime failure. |
+| P1 | `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:556` | Must-fix, fixed in branch | Each op execution caught `Throwable`, printed stack, and raised a generic XTC `"Run-time error"` exception. Java VM defects and ownership assertions could become user-catchable language exceptions. | Fixed by catching only unchecked Java `RuntimeException`/`Error` at the central op boundary. Natural XTC exceptions are returned by op implementations as `R_EXCEPTION`; VM/runtime defects are wrapped with op/frame context and published through the host failure channel. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java:229` | Must-fix | `scheduleIO(task); // don't wait` discards the returned `CompletableFuture`; any write failure completes an unobserved future while the method returns OK. | Return or store a future, or make the API explicitly fire-and-forget with an error sink. For channel writes, propagate completion/failure to the caller. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java:491` and `:497` | Must-fix | `CompletableFuture.allOf(...).whenComplete` says `cfThis.get()`/`cfThat.get()` "must not happen" and only asserts on `Throwable`. If interruption or a race occurs, `hAnd` may be completed with nulls or never completed correctly. | Complete `hAnd` exceptionally through `Utils.translate(...)`, and restore interrupt status for `InterruptedException`. |
 | P1 | `lib_jsondb/src/main/x/jsondb/Client.x:1425` and `:1430` | Must-fix | Commit failure is logged and downgraded to `DatabaseError`; rollback failure is ignored. A failed rollback after a failed commit is exactly the state that should surface in DB health/recovery. | Log and retain rollback failure as suppressed/secondary failure. Consider returning a richer commit result that carries both commit and rollback exceptions. |
@@ -288,8 +288,8 @@ P0:
 
 P1:
 
-1. Stop catching `Throwable` in compiler code generation and op execution unless
-   fatal `Error` is rethrown.
+1. DONE in this branch for op execution: stop catching `Throwable` in the
+   runtime op loop. Compiler code generation remains separate.
 2. Fix unobserved async write failure in `xRawOSFileChannel.invokeSubmit()`.
 3. Complete futures exceptionally instead of asserting in `xFuture.and` "must not
    happen" paths.
@@ -450,6 +450,46 @@ secondary diagnostic, but success/failure no longer depends on someone watching
 the terminal output. `RuntimeFailurePropagationTest` guards the source shapes
 that were broken on master: print-only worker catches and a `join()` boundary
 that never observes recorded runtime failures.
+
+## Fixed In This Branch: Op Execution Does Not Catch VM Defects As XTC
+
+The interpreter op loop used to protect every opcode invocation with one broad
+catch:
+
+```java
+catch (Throwable e) {
+    e.printStackTrace(System.err);
+    System.err.println(frame.getStackTrace());
+    iPC = frame.raiseException("Run-time error: " + e);
+}
+```
+
+That hid the actual contract. `Op.process(...)` does not declare checked
+language exceptions. Opcode and native helper implementations already translate
+natural XTC exceptions into `R_EXCEPTION` or return a deferred call. An unchecked
+Java `RuntimeException` or `Error` escaping the central opcode boundary
+therefore indicates a VM/runtime defect, ownership assertion, invalid decoded-op
+state, or other host-side failure.
+
+The old catch was unsafe because it turned the second category into a generic
+user-catchable XTC `"Run-time error"`. That can hide the exact invariant that
+same-JVM stress is trying to prove. A bad owner assertion should not be caught
+by user code as if it were an ordinary language exception.
+
+The branch escalates the defect path:
+
+```java
+catch (RuntimeException | Error e) {
+    throw unexpectedOpFailure(frame, op, iPCLast, e);
+}
+```
+
+`unexpectedOpFailure(...)` adds service name, pc, op, and frame-stack context,
+then lets `drainWork()` publish the Java failure through
+`Container.recordRuntimeFailure(...)`. Successful op execution is unchanged, and
+there is no hot-path allocation beyond one local `op` reference. The only
+behavior change is that Java VM/runtime defects no longer become ordinary
+catchable XTC exceptions.
 
 ## Fixed In This Branch: JIT Unhandled Exception Result
 

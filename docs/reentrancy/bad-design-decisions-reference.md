@@ -47,6 +47,7 @@ That makes the code brittle even before multiple Java threads enter it.
 | Non-transactional keep-alive registration | Code incremented owner-visible callback counts before the operation that made the callback live had completed. | Failed scheduling/startup can strand callback counts and make containers look busy forever. | Fixed for LocalClock, NanoTimer, and xRTServer bind failure paths. |
 | Message-only exception wrapping | Code threw new failures using only `e.getMessage()`. | Owner, pool, module, and stack evidence disappears before the launcher or stress harness can report it. | Fixed for `MainContainer.invoke0(...)`; broader exception hygiene remains tracked. |
 | Print-only worker failures | Worker threads caught runtime defects, printed to stderr, and continued. | Host APIs can observe idle state and report success after a scheduler/service runtime defect. | Fixed for `Container.schedule(...)`, `ServiceContext.drainWork()`, and `InterpreterConnector.join()`. |
+| VM defects converted to language exceptions | The op loop caught every `Throwable` and raised generic XTC `"Run-time error"`. | Ownership assertions and VM defects become user-catchable and can hide runtime corruption. | Fixed for `ServiceContext.execute(...)` op processing. |
 | Print-only JIT language failures | JIT detected generated unhandled exceptions, printed them, and returned without setting failure state. | Direct/JIT launch can report success after generated code failed. | Fixed for `JitConnector.invoke0Impl(...)`; broader JIT owner work remains separate. |
 | Collapsed reflective language exceptions | Reflection wrapper exceptions were caught with access failures and converted to generic Unsupported. | A generated XTC `nException` can be replaced by the wrong language exception type. | Fixed for `nType` `equals`, `compare`, and `hashCode` dispatch. |
 
@@ -238,6 +239,36 @@ The owner container now owns the failure state. The first unexpected Java
 failure is published through an atomic slot, later failures are retained as
 suppressed evidence, and `join()` checks the slot before reporting completion.
 Natural XTC exceptions still use the normal fiber exception path.
+
+### VM Defects Converted To Language Exceptions
+
+Bad shape:
+
+```java
+catch (Throwable e) {
+    iPC = frame.raiseException("Run-time error: " + e);
+}
+```
+
+Why it was bad in a single-threaded world:
+
+- A natural XTC exception and a Java VM/runtime defect are not the same thing.
+- Ownership assertions, invalid decoded-op state, and Java `Error` subclasses
+  can become catchable by user code.
+- The launcher and diagnostics lose the Java cause as a host failure and have to
+  infer what happened from printed stack text.
+
+Replacement:
+
+```java
+catch (RuntimeException | Error e) {
+    throw unexpectedOpFailure(frame, op, pc, e);
+}
+```
+
+Opcode/native helper implementations already return natural language exceptions
+as `R_EXCEPTION` or deferred calls. VM/runtime defects escaping the central loop
+move to the host failure boundary with op and frame context.
 
 ### Print-Only JIT Language Failures
 

@@ -99,13 +99,14 @@ Examples:
   prints an `isA()` recursion rejection with only left/right type strings. There
   is no pool id, relation cache owner, module, or correlation with the caller
   that requested the assignability check.
-- `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:554` catches
-  `Throwable`, prints two strings, and raises a generic XTC exception. A Java
-  assertion proving wrong ownership can become a normal language exception that
-  user code may catch.
-- `javatools/src/main/java/org/xvm/javajit/JitConnector.java:142` handles an
-  unhandled XTC exception by printing to stdout and leaving the default result
-  path available. That can make a failed run look successful.
+- Master `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:554`
+  caught `Throwable`, printed two strings, and raised a generic XTC exception.
+  A Java assertion proving wrong ownership could become a normal language
+  exception that user code may catch. This branch fixes the op-loop policy.
+- Master `javatools/src/main/java/org/xvm/javajit/JitConnector.java:142`
+  handled an unhandled XTC exception by printing to stdout and leaving the
+  default result path available. That could make a failed run look successful.
+  This branch fixes the connector result boundary.
 
 Incremental compilation and LSP have a different version of the same problem.
 They need diagnostics that are stable values: URI, range, code, severity,
@@ -251,13 +252,14 @@ case: use the SLF4J 2.x API already present in the build, keep standalone
 `javatools` on a no-op provider by default, and require explicit guards around
 disabled trace/debug paths.
 
-The current production source still has direct output and one-off debug prints.
-Representative examples:
+The code base still has direct output and one-off debug prints. Some
+representative master findings are fixed in this branch; the remaining rows are
+still open:
 
 | Site | Current behavior | Why it is bad design |
 | --- | --- | --- |
 | `javatools/src/main/java/org/xvm/tool/Compiler.java:471` | Catches `Throwable`, prints "Failed to generate code..." to stderr, prints the stack, then logs a message with `{}` parameters. | Two reporting paths compete, one is unstructured, and the catch continues the compiler after a possible VM/compiler defect. |
-| `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:554` | Catches `Throwable`, prints Java stack, prints XTC frame stack, then raises `"Run-time error: " + e`. | The owner/fiber/container evidence is lost as machine data, and Java defects can become user-catchable language exceptions. |
+| `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:554` | Master caught `Throwable`, printed Java stack, printed XTC frame stack, then raised `"Run-time error: " + e`; fixed in this branch. | The owner/fiber/container evidence was lost as machine data, and Java defects could become user-catchable language exceptions. |
 | `javatools/src/main/java/org/xvm/compiler/ast/ConvertExpression.java:104` | Prints `No conversion found for ...` while preserving legacy constant-folding behavior. | A compiler decision about constant conversion is neither an `ErrorListener` diagnostic nor a trace event; tests cannot assert the conversion decision. |
 | `javatools/src/main/java/org/xvm/compiler/ast/Expression.java:814` | Same `No conversion found` stderr path during fit/validation. | This should be correlated with required type, actual type, expression, source span, and conversion method search. |
 | `javatools/src/main/java/org/xvm/runtime/ClassComposition.java:322` and `:334` | Prints "Foreign method chain" and "Foreign nested method", with TODO remove. | This is owner/pool evidence. Printing and moving on makes the important fact easy to miss. |
@@ -312,8 +314,8 @@ Must-fix exception/logging boundaries:
 
 | Site | Failure mode | Why it is Must-fix |
 | --- | --- | --- |
-| `javatools/src/main/java/org/xvm/javajit/JitConnector.java:142` | Unhandled XTC exceptions are printed at `:150`; the catch does not throw on that path. | A failed program can report success after a printed exception. |
-| `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:554` | Every `Throwable` from op execution is printed and translated to a generic XTC runtime error. | Java `Error`, ownership assertion failures, and runtime defects can become normal language exceptions. |
+| `javatools/src/main/java/org/xvm/javajit/JitConnector.java:142` | Master printed unhandled XTC exceptions at `:150`; fixed in this branch by keeping a non-zero result. | A failed program could report success after a printed exception. |
+| `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:554` | Master printed every `Throwable` from op execution and translated it to a generic XTC runtime error; fixed in this branch. | Java `Error`, ownership assertion failures, and runtime defects could become normal language exceptions. |
 | `javatools/src/main/java/org/xvm/tool/Compiler.java:471` | Code generation catches `Throwable`, prints, logs, and keeps looping. | A compiler defect can be downgraded to console noise and later phases can run on corrupted state. |
 | `javatools/src/main/java/org/xvm/asm/MethodStructure.java:2077` | Method op assembly failure is printed and the method still writes its op byte count. | This can produce or persist a broken module while the build path only saw stderr. |
 | `javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java:497` | A "must not happen" async failure only asserts false inside a callback. | With assertions disabled, the code can continue with null values or incomplete failure propagation. |
@@ -482,8 +484,8 @@ after failure, or make ownership/reentrancy bugs unobservable.
 
 | Area | Sites | Required outcome |
 | --- | --- | --- |
-| Runtime op boundary | `ServiceContext.java:554` | Do not catch all `Throwable` and translate runtime defects into generic catchable XTC exceptions. Preserve Java cause and owner/frame context. |
-| JIT host boundary | `JitConnector.java:142` | Unhandled XTC exceptions must produce a non-zero result or typed thrown failure. Printing is secondary. |
+| Runtime op boundary | `ServiceContext.java:554` | Done in this branch: do not catch all `Throwable` and translate runtime defects into generic catchable XTC exceptions. Preserve Java cause and owner/frame context. |
+| JIT host boundary | `JitConnector.java:142` | Done in this branch: unhandled XTC exceptions produce a non-zero result. Printing is secondary. |
 | Compiler codegen boundary | `Compiler.java:471` | Do not continue after `Throwable`. Rethrow fatal errors, preserve cause, and attach compiler/module/phase context. |
 | Method assembly | `MethodStructure.java:2077` | Do not print and assemble through unsupported op generation. Fail the module assembly with method context. |
 | Async future callback | `xFuture.java:497` | Do not rely on `assert false` for impossible async failure. Complete exceptionally or route through runtime failure diagnostics. |
@@ -563,8 +565,9 @@ Goal: fix boundaries that can hide failure.
 
 Scope:
 
-- fix `JitConnector` unhandled exception status propagation,
-- fix `ServiceContext` `Throwable` translation policy,
+- keep branch fixes for `JitConnector` unhandled exception status propagation,
+  `nType` reflective exception unwrapping, and `ServiceContext` op-loop
+  runtime-defect propagation,
 - fix compiler codegen `Throwable` catch,
 - fix `MethodStructure` assembly print-and-continue,
 - preserve Java cause plus owner/module/frame context,

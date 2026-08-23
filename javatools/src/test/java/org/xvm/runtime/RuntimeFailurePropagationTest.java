@@ -71,6 +71,26 @@ public class RuntimeFailurePropagationTest {
                 "join must check before waiting and before returning the result");
     }
 
+    /**
+     * Op implementations return natural XTC exceptions as R_EXCEPTION; unchecked Java defects
+     * thrown through the central loop are runtime failures. Master made every Throwable a
+     * user-catchable XTC "Run-time error".
+     */
+    @Test
+    public void opLoopDoesNotTranslateVmDefectsToXtcRunTimeError() throws IOException {
+        var service = readString("org/xvm/runtime/ServiceContext.java");
+        var opLoop  = sourceBetween(service, "while (true) { // main loop", "case Op.R_RETURN_CALL");
+
+        assertTrue(opLoop.contains("catch (RuntimeException | Error e)"),
+                "unchecked Java defects must be caught separately from natural XTC results");
+        assertTrue(opLoop.contains("throw unexpectedOpFailure("),
+                "Java runtime defects must be sent to the host failure boundary");
+        assertFalse(opLoop.contains("catch (Throwable"),
+                "op execution must not catch every Throwable");
+        assertFalse(opLoop.contains("frame.raiseException(\"Run-time error: \""),
+                "VM defects must not become generic user-catchable XTC exceptions");
+    }
+
     private static String readString(String source) throws IOException {
         var path = Path.of("src/main/java", source);
         return Files.readString(Files.exists(path)

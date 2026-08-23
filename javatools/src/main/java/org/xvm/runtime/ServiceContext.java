@@ -546,15 +546,18 @@ public class ServiceContext {
                     return frame;
                 }
 
+                iPCLast = iPC;
+                var op = aOp[iPC];
                 try {
-                    iPC = aOp[iPC].process(frame, iPCLast = iPC);
+                    iPC = op.process(frame, iPCLast);
                     if (iPC == Op.R_NEXT) {
                         iPC = iPCLast + 1;
                     }
-                } catch (Throwable e) {
-                    e.printStackTrace(System.err);
-                    System.err.println(frame.getStackTrace());
-                    iPC = frame.raiseException("Run-time error: " + e);
+                } catch (RuntimeException | Error e) {
+                    // Op.process() does not declare natural XTC exceptions. Op implementations
+                    // convert those to R_EXCEPTION themselves; unchecked Java failures here are
+                    // VM/runtime defects that must reach the host failure boundary.
+                    throw unexpectedOpFailure(frame, op, iPCLast, e);
                 }
             }
 
@@ -726,6 +729,18 @@ public class ServiceContext {
                 throw new IllegalStateException("Invalid code: " + iPC);
             }
         }
+    }
+
+    /**
+     * Create a Java runtime failure for an unexpected Op defect.
+     *
+     * Natural XTC exceptions from Op implementations are returned as {@link Op#R_EXCEPTION}.
+     * Anything unchecked thrown through this boundary is a VM/runtime failure and must reach the
+     * host failure boundary, not user code.
+     */
+    private RuntimeException unexpectedOpFailure(Frame frame, Op op, int iPC, Throwable e) {
+        return new IllegalStateException("Unexpected op execution failure in " + f_sName
+                + " at pc=" + iPC + ", op=" + op + '\n' + frame.getStackTrace(), e);
     }
 
     /**

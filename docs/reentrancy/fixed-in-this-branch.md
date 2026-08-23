@@ -2502,6 +2502,25 @@ The fix does not add hot-path per-op allocation. The slot is one reference per
 container and is only populated on failure. Successful scheduling and service
 draining use the same execution paths as before.
 
+### Op Runtime Defects Are Not XTC `Run-time error`
+
+Master's interpreter op loop caught every `Throwable`, printed Java and XTC
+stack text, and raised a generic XTC `"Run-time error"`. That made a VM defect,
+ownership assertion, or invalid decoded-op state look like an ordinary
+user-catchable language exception.
+
+This branch relies on the actual opcode contract. `Op.process(...)` does not
+declare checked language exceptions; opcode/native helper implementations return
+natural exceptions as `R_EXCEPTION` or deferred calls. Java `RuntimeException`
+and `Error` escaping the central op boundary are therefore VM/runtime defects.
+They are wrapped with service, pc, op, and frame-stack context, then thrown to
+`drainWork()`, which publishes the failure through the container failure slot
+observed by `join()`.
+
+Successful execution is unchanged. The loop keeps the same decoded-op execution
+and adds only a local `op` reference so exceptional diagnostics can name the
+failing instruction. No cache behavior or hot-path allocation policy changes.
+
 ### JIT Unhandled Exceptions Return Failure
 
 The JIT connector already initialized its `result` field to `1`, matching the
