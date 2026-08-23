@@ -104,7 +104,6 @@ public class ClassComposition
         m_cRegularFields  = f_clzInception.m_cRegularFields;
         m_fHasOuter       = f_clzInception.m_fHasOuter;
         m_fHasSpecial     = f_clzInception.m_fHasSpecial;
-        m_methodInit      = f_clzInception.m_methodInit;
     }
 
     /**
@@ -261,15 +260,29 @@ public class ClassComposition
 
     @Override
     public MethodStructure ensureAutoInitializer() {
+        if (!isInception()) {
+            return f_clzInception.ensureAutoInitializer();
+        }
+
         if (m_mapFields.isEmpty()) {
             return null;
         }
 
         MethodStructure method = m_methodInit;
         if (method == null) {
-            ConstantPool pool = getContainer().getConstantPool();
-            m_methodInit = method =
-                f_template.getStructure().createInitializer(pool, f_typeStructure, m_mapFields);
+            synchronized (this) {
+                method = m_methodInit;
+                if (method == null) {
+                    /*
+                     * The synthetic structure initializer is owner-pool metadata, not decoded
+                     * class identity. All access views share the inception composition's field
+                     * layout, so publish one completed initializer from that owner.
+                     */
+                    ConstantPool pool = getContainer().getConstantPool();
+                    m_methodInit = method = f_template.getStructure().createInitializer(
+                            pool, f_typeStructure, m_mapFields);
+                }
+            }
         }
         return method.isAbstract() ? null : method;
     }
@@ -431,23 +444,42 @@ public class ClassComposition
 
     @Override
     public StringHandle[] getFieldNameArray() {
+        if (!isInception()) {
+            return f_clzInception.getFieldNameArray();
+        }
+
         StringHandle[] ashNames = m_ashFieldNames;
         if (ashNames == null) {
-            ashNames = new StringHandle[m_cRegularFields];
-
-            int i = 0;
-            for (Map.Entry<Object, FieldInfo> entry : getFieldLayout().entrySet()) {
-                Object    enid  = entry.getKey();
-                FieldInfo field = entry.getValue();
-
-                if (!(enid instanceof NestedIdentity) && field.isRegular()) {
-                    ashNames[i++] = xString.makeHandle(getContainer(), field.getName());
+            synchronized (this) {
+                ashNames = m_ashFieldNames;
+                if (ashNames == null) {
+                    /*
+                     * These StringHandles carry this composition's container. The old plain lazy
+                     * write could publish a partially filled owner-bearing array, and access-view
+                     * clones could race separate duplicate arrays. Keep the API's cached array
+                     * behavior but publish exactly one inception-owned array safely.
+                     */
+                    m_ashFieldNames = ashNames = buildFieldNameArray();
                 }
             }
-            assert i == m_cRegularFields;
-
-            m_ashFieldNames = ashNames;
         }
+        return ashNames;
+    }
+
+    private StringHandle[] buildFieldNameArray() {
+        StringHandle[] ashNames = new StringHandle[m_cRegularFields];
+
+        int i = 0;
+        for (Map.Entry<Object, FieldInfo> entry : getFieldLayout().entrySet()) {
+            Object    enid  = entry.getKey();
+            FieldInfo field = entry.getValue();
+
+            if (!(enid instanceof NestedIdentity) && field.isRegular()) {
+                ashNames[i++] = xString.makeHandle(getContainer(), field.getName());
+            }
+        }
+        assert i == m_cRegularFields;
+
         return ashNames;
     }
 
@@ -967,10 +999,10 @@ public class ClassComposition
     private final Map<PropertyConstant, CallChain> f_mapSetters;
 
     // cached array of field name handles
-    private StringHandle[] m_ashFieldNames;
+    private volatile StringHandle[] m_ashFieldNames;
 
     // cached auto-generated structure initializer
-    private MethodStructure m_methodInit;
+    private volatile MethodStructure m_methodInit;
 
     /**
      * Marker for a cached null {@link CallChain}.

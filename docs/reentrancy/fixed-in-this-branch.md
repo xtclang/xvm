@@ -439,6 +439,59 @@ runtime-pool design must still decide what happens to genuinely new constants
 created after publication and must not rely on an opt-in diagnostic property as
 the only guard.
 
+### ClassComposition Runtime Helper Caches
+
+This branch also fixes two owner-bearing lazy cells on `ClassComposition`:
+
+- `m_ashFieldNames`, the cached `StringHandle[]` used by native Stringable
+  support for const classes.
+- `m_methodInit`, the cached synthetic structure initializer created from the
+  class field layout.
+
+Both were plain lazy fields on a runtime object that is reachable from handles
+and access-view conversion. The field-name array is not just text metadata: each
+`StringHandle` carries a `TypeComposition` from the owning container. Publishing
+that array with a plain write could expose a partially filled array or an array
+whose element handles had no happens-before edge from the producing thread. The
+auto initializer is owner-pool metadata; racing first access could create
+duplicate transient `MethodStructure` objects and let the last plain write win.
+
+Access-view clones made the shape worse. Field-name arrays were clone-local, so
+each view could build a duplicate owner-bearing `StringHandle[]`. The synthetic
+initializer cell was copied from the inception composition at clone construction
+time, so a view created before first initialization could also build a duplicate
+initializer. The owner, field layout, and structure type are the same for all
+views, so view-local helper caches were unnecessary timing-dependent state.
+
+The replacement makes the inception composition the single cache owner:
+
+- access views delegate `getFieldNameArray()` and `ensureAutoInitializer()` to
+  `f_clzInception`;
+- the inception `m_ashFieldNames` and `m_methodInit` cells are `volatile`;
+- first construction is synchronized on the inception composition;
+- classes with no fields still return `null` for the auto initializer without
+  allocating anything.
+
+This preserves apparent behavior and performance:
+
+- field names are still cached as one `StringHandle[]` and returned by identity
+  from the API, so no per-call defensive copy or per-call handle creation was
+  added;
+- the synthetic initializer remains lazy and is not created for fieldless
+  classes;
+- access views now share the inception cache consistently instead of sometimes
+  duplicating it, so normal footprint is the same or smaller than the old
+  timing-dependent behavior;
+- no extra constant-pool entries are introduced by this change beyond the same
+  field-name handles and initializer constants the old first-access path already
+  created.
+
+`ClassCompositionSafePublicationTest.accessViewsShareSafelyPublishedInceptionRuntimeCaches()`
+races canonical and protected access views through the two APIs, verifies that
+all callers observe one field-name array identity, verifies that the field-name
+handle belongs to the native container that created it, and checks that the
+initializer cell is volatile and owner-published on the inception composition.
+
 This branch also narrows ambient `ConstantPool` lookup at runtime boundaries:
 
 - `InterpreterConnector.invoke0(...)` uses
