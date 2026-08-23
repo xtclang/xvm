@@ -39,11 +39,10 @@ boundary bridge.
 
 | Site | Role |
 | --- | --- |
-| `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3729` | `assertCurrentPool(...)` reads `s_tloPool.get()[0]` only to compare an ambient bridge against an explicit owner. |
-| `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3769` | `withPool(pool)` writes a new value and returns an `Auto` that restores the previous value. |
-| `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3741` | `assertCurrentPool(...)` checks that an explicit owner matches the ambient pool. |
-| `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3755` | `assertCurrentPoolIfPresent(...)` accepts no ambient pool but rejects the wrong one. |
-| `javatools/src/main/java/org/xvm/asm/ConstantPool.java:4115` | Static `ThreadLocal<ConstantPool[]> s_tloPool`. |
+| `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3784` | `assertCurrentPool(...)` checks that an explicit owner matches the ambient pool. |
+| `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3798` | `assertCurrentPoolIfPresent(...)` accepts no ambient pool but rejects the wrong one. |
+| `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3813` | `withPool(pool)` writes a new value and returns an `Auto` that restores the previous value. |
+| `javatools/src/main/java/org/xvm/asm/ConstantPool.java:4154` | Static `ThreadLocal<ConstantPool[]> s_tloPool`. |
 
 The current `withPool(...)` shape is much better than the old open-ended
 setter because nested scopes restore the previous value. It is still raw
@@ -53,7 +52,10 @@ the signature gives no clue that owner lookup is happening.
 
 The assertions are diagnostics, not production enforcement. With assertions
 disabled, a wrong ambient pool can still be used unless the caller no longer
-depends on `getCurrentPool()`.
+depends on `getCurrentPool()`. This branch adds
+`xvm.asm.validateConstantPoolCurrentScope` so stress runs can promote current
+pool assertion failures to normal `IllegalStateException` failures without
+requiring `-ea`.
 
 This branch removes that getter entirely. `withPool(...)`,
 `assertCurrentPool(...)`, and `assertCurrentPoolIfPresent(...)` still read the
@@ -132,6 +134,14 @@ owner and install an ambient pool only for older helper code.
 | `javatools/src/main/java/org/xvm/runtime/template/_native/mgmt/xContainerControl.java:108` | Uses the target container's pool and asserts at line 112. | Benign/proven for management invoke. |
 | `javatools/src/main/java/org/xvm/api/InterpreterConnector.java:87` | Does not install a pool; it asserts any existing ambient pool matches the main container at line 88. | Benign/proven, with assertion-only caveat. |
 | `javatools/src/main/java/org/xvm/tool/Runner.java:226` | Launch boundary around method lookup. | Acceptable bridge, should eventually be explicit all the way down. |
+| `javatools/src/main/java/org/xvm/tool/Compiler.java:315` | Scopes the turtle module pool while injecting the native `NakedRef` type into build modules. | Acceptable compiler/linker bridge; should eventually pass the build owner explicitly. |
+| `javatools/src/main/java/org/xvm/compiler/Compiler.java:155,192,236,280` | Scopes the file's pool around compiler phases that still call older ASM helpers. | Acceptable compiler bridge; must not leak into runtime owner selection. |
+| `javatools/src/main/java/org/xvm/asm/FileStructure.java:186` | Scopes the target file pool while merging cloned modules and registering fingerprint constants. | Acceptable assembly bridge; keep registration-phase confinement. |
+| `javatools/src/main/java/org/xvm/asm/MethodStructure.java:681` | Scopes the method pool while decoding serialized AST through `BinaryAST.readAST(...)`. | Acceptable decode bridge; should become explicit resolver state. |
+| `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:1901,2075` | Scopes the type's owner pool while building TypeInfo and object placeholder metadata. | Must audit until TypeInfo construction takes explicit owner state throughout. |
+| `javatools/src/main/java/org/xvm/runtime/OwnershipDiagnostics.java:862` | Scopes the inspected container's pool only while forcing a lazy owner value for diagnostics. | Diagnostic-only bridge; keep outside semantic runtime paths. |
+| `javatools/src/main/java/org/xvm/javajit/NativeTypeSystem.java:108` | Scopes the JIT native type-system pool while loading native resources. | JIT bridge; out of interpreter PR, but must be covered by the JIT owner lifecycle plan. |
+| `javatools/src/main/java/org/xvm/javajit/JitConnector.java:64` | Scopes the JIT native pool during connector startup. | JIT bridge; out of interpreter PR, but keep in JIT two-container testing. |
 
 Failure modes if the bridge is wrong:
 
@@ -147,8 +157,9 @@ Recommended diagnostics:
 - Extend `OwnershipDiagnostics` to dump the current ambient pool, explicit
   frame/container/service pool, and the boundary owner name when a mismatch is
   detected.
-- Promote the boundary checks to a diagnostic method that can throw without
-  requiring `-ea` in stress mode.
+- Run stress and same-JVM launcher validation with
+  `xvm.asm.validateConstantPoolCurrentScope=true` so wrong scoped owners fail
+  without relying on Java assertions.
 - Keep `javatools/src/test/java/org/xvm/asm/ConstantPoolDiagnosticsTest.java`
   as the focused unit coverage and add a stress-mode variant that runs with
   assertions disabled but ownership validation enabled.

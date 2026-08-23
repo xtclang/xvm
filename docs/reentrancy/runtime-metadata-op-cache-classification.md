@@ -138,6 +138,15 @@ To close this as `DONE`, one of these proofs is required:
 If none of those proofs is accepted, the proper classification should be promoted from `MUST AUDIT`
 to `MUST FIX` for the code publication cell, not for every individual op field.
 
+Current audit result: this branch deliberately does not apply a one-field
+`volatile m_code` patch. `MethodStructure.Code` publication is tied to
+`m_abOps`, `m_registry`, `m_cVars`, `m_cScopes`, `createCode()`,
+`resetRuntimeInfo()`, `setAbstract()`, `cloneBody()`, and assembly/reassembly
+paths. A correct fix needs either a phase proof that runtime code is already
+linked before publication, or a dedicated immutable `ResolvedCode` snapshot
+published through one safe owner cell. Patching only `m_code` would leave the
+rest of the lifecycle and reset paths unproven.
+
 ## Same-Owner View Equivalence Proof
 
 The cross-owner guard and same-owner view backing are both fixed and tested. The important invariant

@@ -152,7 +152,7 @@ public class Compiler {
             return null;
         }
 
-        try (var ignore = ConstantPool.withPool(m_structFile.getConstantPool())) {
+        try (var _ = ConstantPool.withPool(m_structFile.getConstantPool())) {
             // first time through, load any module dependencies
             setStage(Stage.Loading);
             ModuleConstant idMissing = m_structFile.linkModules(repo, false);
@@ -189,7 +189,7 @@ public class Compiler {
             return true;
         }
 
-        try (var ignore = ConstantPool.withPool(m_structFile.getConstantPool())) {
+        try (var _ = ConstantPool.withPool(m_structFile.getConstantPool())) {
             // recursively resolve all of the unresolved global names, and if anything couldn't get done
             // in one pass, then store it off in a list to tackle next time
             if (!alreadyReached(Stage.Resolving)) {
@@ -233,7 +233,7 @@ public class Compiler {
             return true;
         }
 
-        try (var ignored = ConstantPool.withPool(m_structFile.getConstantPool())) {
+        try (var _ = ConstantPool.withPool(m_structFile.getConstantPool())) {
             // recursively resolve all of the unresolved global names, and if anything couldn't get done
             // in one pass, the manager will keep track of what remains to be done
             if (!alreadyReached(Stage.Validating)) {
@@ -277,7 +277,7 @@ public class Compiler {
             return true;
         }
 
-        try (var ignored = ConstantPool.withPool(m_structFile.getConstantPool())) {
+        try (var _ = ConstantPool.withPool(m_structFile.getConstantPool())) {
             // recursively resolve all of the unresolved global names, and if anything couldn't get done
             // in one pass, then store it off in a list to tackle next time
             if (!alreadyReached(Stage.Emitting)) {

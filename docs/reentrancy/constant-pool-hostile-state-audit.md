@@ -183,46 +183,33 @@ Design rule: an object method must not ignore its own owner and consult
 thread-local state for the same owner. That is a hidden global precondition, not
 an API.
 
-## Must Fix
+## Fixed Semantic Lookup; Must Audit Remaining Scoped Bridge
 
-### Ambient current pool is still semantic state
+### Ambient current pool is no longer a semantic owner API
 
 References:
 
-- `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3730`
-  (`getCurrentPool()`)
-- `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3770`
+- `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3784`
+  (`assertCurrentPool(...)`)
+- `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3798`
+  (`assertCurrentPoolIfPresent(...)`)
+- `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3813`
   (`withPool(...)`)
-- `javatools/src/main/java/org/xvm/asm/ConstantPool.java:4116`
+- `javatools/src/main/java/org/xvm/asm/ConstantPool.java:4154`
   (`ThreadLocal<ConstantPool[]> s_tloPool`)
-- `javatools/src/main/java/org/xvm/asm/ConstantPool.java:3472`
-  (`getCurrentPool().typeTuple0()`)
-- `javatools/src/main/java/org/xvm/asm/constants/ByteConstant.java:295`
-  and `javatools/src/main/java/org/xvm/asm/constants/ByteConstant.java:370`
-  (range constants from current pool)
-- `javatools/src/main/java/org/xvm/asm/constants/IntConstant.java:725`
-  through `javatools/src/main/java/org/xvm/asm/constants/IntConstant.java:767`
-  (range constants from current pool)
-- `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:6272`
-  and `javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java:6352`
-  (covariant/contravariant type helpers)
-- `javatools/src/main/java/org/xvm/asm/constants/IdentityConstant.java:506`
-  (generic signature resolver)
-- `javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java:683`
-  (duck-type identity repair)
-- `javatools/src/main/java/org/xvm/asm/constants/MethodInfo.java:1475`
-  and `javatools/src/main/java/org/xvm/asm/constants/MethodBody.java:692`
-  (private `pool()` helpers)
 
 Cause: the owner pool is pulled from hidden thread state instead of being passed
-as an explicit argument. `assertCurrentPool(...)` and
-`assertCurrentPoolIfPresent(...)` are also Java assertions
-(`ConstantPool.java:3742`, `ConstantPool.java:3756`), so normal production runs
-do not enforce the owner check.
+as an explicit argument. That was the old `getCurrentPool()` API shape. This
+branch removes that getter and leaves only `withPool(...)` plus assertion
+helpers for transitional bridge scopes.
 
 Effect: nested runtime scopes, reused worker threads, async callbacks, or
 parallel type work can select the wrong pool or `null`. The call site gives no
-static indication that owner context is required.
+static indication that owner context is required. After this branch, ordinary
+semantic code cannot compile against the hidden lookup, but bridge scopes still
+need auditing because `assertCurrentPool(...)` and
+`assertCurrentPoolIfPresent(...)` are Java assertions and therefore disabled in
+normal production runs.
 
 Fix in this branch: the semantic callers listed above now derive the pool from
 an explicit `ConstantPool`, `Container`, `Frame`, file, method, property, or
@@ -230,10 +217,11 @@ receiver constant. `ConstantPool.getCurrentPool()` has been removed, so new code
 cannot use it as an owner API. The remaining `withPool(...)` bridge is only
 transitional boundary glue and is paired with current-pool assertion tests.
 
-Recommended guard/fix: remove semantic `getCurrentPool()` use from constants
-and metadata helpers by threading `ConstantPool`, `Container`, or `Frame`
-explicitly. Keep `withPool(...)` only as a temporary boundary bridge, and make
-runtime owner mismatch diagnostics independent of `assert`.
+Recommended guard/fix: keep deleting scoped bridge callers by threading
+`ConstantPool`, `Container`, or `Frame` explicitly through the few remaining
+legacy boundaries. Where a bridge remains necessary during migration, pair it
+with `xvm.asm.validateConstantPoolCurrentScope=true` in stress mode so wrong
+owners throw independently of Java assertions.
 
 This branch fixed the nested identity resolver case. The old API was especially
 misleading because `resolveNestedIdentity(pool, resolver)` already had an
@@ -262,6 +250,13 @@ the file had no listener. That could route file A diagnostics into file B's
 listener during a nested compile/load operation, or throw when no ambient pool
 was installed. Diagnostics now belong to the `FileStructure` unless a caller
 explicitly sets another listener.
+
+Current source status: production references to `getCurrentPool(` are comments
+that explain why not to use it. The source-shape guard
+`ConstantPoolDiagnosticsTest.currentPoolLookupGetterDoesNotExist()` fails if
+the getter returns, and
+`ConstantPoolDiagnosticsTest.semanticCurrentPoolLookupIsBridgeOnly()` fails if
+new non-comment code outside the bridge tries to call it.
 
 ### Runtime-published pools are still mutable by default
 

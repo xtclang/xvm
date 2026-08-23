@@ -61,7 +61,7 @@ explicit owner APIs, and typed runtime accessors.
 | `org.xvm.api.InterpreterConnectorTest` | `OwnershipDiagnostics` and connector diagnostic-container access. |
 | `org.xvm.asm.AsmConstructorEscapeTest` | `MultiMethodStructure.createMethodCopyingParameters(...)`. |
 | `org.xvm.asm.ConstantAdoptionTest` | `ConstantAdoptionValidator` and its validation property. |
-| `org.xvm.asm.ConstantPoolDiagnosticsTest` | Current-pool assertion/removal APIs and late-registration diagnostics. |
+| `org.xvm.asm.ConstantPoolDiagnosticsTest` | Current-pool assertion/removal APIs, `xvm.asm.validateConstantPoolCurrentScope`, and late-registration diagnostics. |
 | `org.xvm.asm.constants.MethodInfoTest` | `MethodInfo.create(...)` factory and owned-body model. |
 | `org.xvm.asm.constants.TypeConstantOwnerApiTest` | Explicit-pool covariance/contravariance APIs. |
 | `org.xvm.asm.constants.TypeInfoMemberOwnershipTest` | `PropertyInfo.create(...)` factory and owner-copy model. |

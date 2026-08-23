@@ -475,9 +475,12 @@ This branch also narrows ambient `ConstantPool` lookup at runtime boundaries:
 The focused regression coverage is in
 `javatools/src/test/java/org/xvm/asm/ConstantPoolDiagnosticsTest.java`. It
 proves that correct scoped owners pass, explicit-owner code can run without an
-ambient pool, and wrong ambient scopes fail under assertions. This is a guard and
-ownership-visibility change, not a cache-policy change: all constants are still
-interned in the same per-owner `ConstantPool` as before.
+ambient pool, and wrong ambient scopes fail under assertions. It also verifies
+`xvm.asm.validateConstantPoolCurrentScope=true`, which promotes those bridge
+checks to normal `IllegalStateException` failures for stress and launcher runs
+that do not enable Java assertions. This is a guard and ownership-visibility
+change, not a cache-policy change: all constants are still interned in the same
+per-owner `ConstantPool` as before.
 
 This branch also fixes the `TypeConstant.s_setRecursions` diagnostic set. On
 `master`, type relation recursion logging used one process-global `HashSet`.

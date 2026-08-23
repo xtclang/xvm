@@ -226,9 +226,7 @@ public final class FileStructure
 
         ConstantPool pool = m_pool;
 
-        var fileSource = module.getFileStructure();
-
-        try (var ignore = ConstantPool.withPool(pool)) {
+        try (var _ = ConstantPool.withPool(pool)) {
             // add fingerprints
             fileSource.children().stream()
                     .filter(child -> child.isFingerprint() && getModule(child.getIdentityConstant()) == null)

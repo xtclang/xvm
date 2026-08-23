@@ -72,8 +72,8 @@ public class ConstantPoolDiagnosticsTest {
     public void currentPoolAssertionsRejectWrongScopedPool() {
         assertTrue(assertionsEnabled(), "ConstantPool scope diagnostics require -ea");
 
-        ConstantPool poolExpected = new FileStructure("expected").getConstantPool();
-        ConstantPool poolActual   = new FileStructure("actual").getConstantPool();
+        var poolExpected = new FileStructure("expected").getConstantPool();
+        var poolActual   = new FileStructure("actual").getConstantPool();
 
         try (var _ = ConstantPool.withPool(poolActual)) {
             AssertionError error = assertThrows(AssertionError.class,
@@ -84,6 +84,42 @@ public class ConstantPoolDiagnosticsTest {
                     () -> ConstantPool.assertCurrentPoolIfPresent(poolExpected, "unit-test"));
             assertTrue(error.getMessage().contains("unit-test"));
         }
+    }
+
+    /**
+     * Stress and launcher tests often run without Java assertions. The diagnostic property must
+     * still make a wrong scoped owner fail as a normal exception, because hidden wrong-pool state is
+     * exactly the class of bug the same-JVM reentrancy work is trying to expose.
+     */
+    @Test
+    public void currentPoolValidationPropertyRejectsWrongScopedPool()
+            throws Exception {
+        var poolExpected = new FileStructure("expected").getConstantPool();
+        var poolActual   = new FileStructure("actual").getConstantPool();
+
+        withCurrentPoolValidation(() -> {
+            try (var _ = ConstantPool.withPool(poolActual)) {
+                var error = assertThrows(IllegalStateException.class,
+                        () -> ConstantPool.assertCurrentPool(poolExpected, "unit-test"));
+                assertTrue(error.getMessage().contains("unit-test"));
+                assertTrue(error.getMessage().contains("expected current ConstantPool"));
+            }
+        });
+    }
+
+    /**
+     * Transitional bridge code must already know the explicit owner it is asserting. A null owner
+     * used to disappear when assertions were disabled; the validation property turns that into a
+     * fail-fast diagnostic for stress runs.
+     */
+    @Test
+    public void currentPoolValidationPropertyRejectsMissingExplicitOwner()
+            throws Exception {
+        withCurrentPoolValidation(() -> {
+            var error = assertThrows(IllegalStateException.class,
+                    () -> ConstantPool.assertCurrentPool(null, "unit-test"));
+            assertTrue(error.getMessage().contains("must provide an explicit ConstantPool owner"));
+        });
     }
 
     /**
@@ -197,8 +233,17 @@ public class ConstantPoolDiagnosticsTest {
 
     private static void withLateRegistrationValidation(CheckedRunnable action)
             throws Exception {
-        String property = ConstantPool.VALIDATE_LATE_REGISTRATION_PROPERTY;
-        String previous = System.getProperty(property);
+        withBooleanProperty(ConstantPool.VALIDATE_LATE_REGISTRATION_PROPERTY, action);
+    }
+
+    private static void withCurrentPoolValidation(CheckedRunnable action)
+            throws Exception {
+        withBooleanProperty(ConstantPool.VALIDATE_CURRENT_POOL_PROPERTY, action);
+    }
+
+    private static void withBooleanProperty(String property, CheckedRunnable action)
+            throws Exception {
+        var previous = System.getProperty(property);
         System.setProperty(property, "true");
         try {
             action.run();

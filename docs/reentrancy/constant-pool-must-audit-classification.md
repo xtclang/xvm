@@ -23,7 +23,7 @@ in the API.
 | SHOULD FIX, becomes MUST AUDIT when a pool is shared concurrently | Per-pool implicit/core lazy caches | Owner is local to the pool, but writes are plain lazy field writes and can register constants after runtime publication. |
 | MUST AUDIT | Owner-derived helper caches on constant subclasses | `TypeConstant`, identity/member constants, and JIT helpers mix concurrent and plain caches. Adoption clears several, but same-owner parallel publication is not fully proven. |
 | MUST AUDIT, MUST FIX if reachable on runtime pools | Destructive `optimize()`, `replaceModule(...)`, and disassembly mutations | These reorder positions, clear maps, and rewrite pool contents. They must remain compiler/serialization-only or be guarded out of runtime pools. |
-| DONE IN THIS BRANCH for semantic getter removal; MUST AUDIT for remaining bridges | Ambient current-pool effects inside constants | `getCurrentPool()` is gone and source-shape tests guard it. `TypeConstant` still opens scoped pool bridges while building TypeInfo. |
+| DONE IN THIS BRANCH for semantic getter removal; MUST AUDIT for remaining bridges | Ambient current-pool effects inside constants | `getCurrentPool()` is gone and source-shape tests guard it. Remaining `withPool(...)` scopes are transitional bridge boundaries and must keep explicit owner assertions until they are replaced by explicit owner APIs. |
 | SHOULD FIX | Static mutable metadata maps | Static final `HashMap`/`HashSet` references are initialized safely but remain mutable process-wide state. |
 
 ## 1. Base `Constant.adoptedBy(...)` Shallow Clone Contract

@@ -153,6 +153,14 @@ public class ConstantPool
             "xvm.asm.validateConstantPoolLateRegistration";
 
     /**
+     * System property that promotes transitional current-pool bridge assertions to normal runtime
+     * exceptions. Stress runs use this because Java assertions are usually disabled in production
+     * launch shapes, but a wrong ambient pool is still an ownership bug.
+     */
+    public static final String VALIDATE_CURRENT_POOL_PROPERTY =
+            "xvm.asm.validateConstantPoolCurrentScope";
+
+    /**
      * Register a Constant. This is used when a new Constant is created by the ConstantPool, but it
      * can also be used directly by a consumer, and it's used during the bulk (re-)registration of
      * Constants by the {@link XvmStructure#registerConstants} method of all of the various parts
@@ -3782,9 +3790,14 @@ public class ConstantPool
      * @param sOwner        a short description of the caller asserting the ownership boundary
      */
     public static void assertCurrentPool(ConstantPool poolExpected, String sOwner) {
-        assert poolExpected != null : sOwner + " must provide an explicit ConstantPool owner";
+        if (!validateCurrentPool(poolExpected != null,
+                sOwner + " must provide an explicit ConstantPool owner")) {
+            return;
+        }
+
         ConstantPool poolCurrent = s_tloPool.get()[0];
-        assert poolCurrent == poolExpected : currentPoolMismatch(poolExpected, poolCurrent, sOwner);
+        validateCurrentPool(poolCurrent == poolExpected,
+                currentPoolMismatch(poolExpected, poolCurrent, sOwner));
     }
 
     /**
@@ -3796,10 +3809,14 @@ public class ConstantPool
      * @param sOwner        a short description of the caller asserting the ownership boundary
      */
     public static void assertCurrentPoolIfPresent(ConstantPool poolExpected, String sOwner) {
-        assert poolExpected != null : sOwner + " must provide an explicit ConstantPool owner";
+        if (!validateCurrentPool(poolExpected != null,
+                sOwner + " must provide an explicit ConstantPool owner")) {
+            return;
+        }
+
         ConstantPool poolCurrent = s_tloPool.get()[0];
-        assert poolCurrent == null || poolCurrent == poolExpected :
-                currentPoolMismatch(poolExpected, poolCurrent, sOwner);
+        validateCurrentPool(poolCurrent == null || poolCurrent == poolExpected,
+                currentPoolMismatch(poolExpected, poolCurrent, sOwner));
     }
 
     /**
@@ -3821,6 +3838,16 @@ public class ConstantPool
                                               String sOwner) {
         return sOwner + " expected current ConstantPool " + describePool(poolExpected) +
                 ", but found " + describePool(poolCurrent);
+    }
+
+    private static boolean validateCurrentPool(boolean valid, String message) {
+        if (!valid) {
+            if (Boolean.getBoolean(VALIDATE_CURRENT_POOL_PROPERTY)) {
+                throw new IllegalStateException(message);
+            }
+            assert false : message;
+        }
+        return valid;
     }
 
     private static String describePool(ConstantPool pool) {

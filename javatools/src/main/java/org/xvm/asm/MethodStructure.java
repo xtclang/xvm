@@ -678,7 +678,7 @@ public class MethodStructure
 
             ConstantResolver res = new ConstantRegistry(this, pool);
             DataInput        in  = new DataInputStream(new ByteArrayInputStream(abAst));
-            try (var ignore = ConstantPool.withPool(pool)) {
+            try (var _ = ConstantPool.withPool(pool)) {
                 return m_ast = BinaryAST.readAST(in, res);
             } catch (IOException e) {
                 throw new RuntimeException(e);
