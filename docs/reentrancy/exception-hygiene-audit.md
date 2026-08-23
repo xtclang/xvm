@@ -122,7 +122,7 @@ been logged and the task code treats the non-zero code as failure.
 | P0 | `javatools/src/main/java/org/xvm/runtime/template/_native/temporal/xNanosTimer.java:310` | Must-fix, fixed in branch | `Alarm.start()` registers `nativeCallback` before scheduling the timer, catches `Throwable`, and only calls `cancelTrigger()`. If scheduling fails after registration, the callback count can remain positive and keep the container non-idle forever. | Fixed with an explicit rollback guard: the alarm stores the exact registered container, unregisters it on schedule failure, no longer swallows `Throwable`, and removes the alarm from the set if startup fails. |
 | P0 | `javatools/src/main/java/org/xvm/runtime/template/_native/temporal/xLocalClock.java:121` | Must-fix, fixed in branch | `Alarm` registers keep-alive in the constructor before `scheduleTimer()`. The catch calls `alarm.cancel()`, but an unscheduled trigger may not unregister. Startup/schedule failure can leak callback ownership. | Fixed by moving registration out of construction and adding `cancelAfterScheduleFailure()`, which unregisters from the stored owner independently of `TimerTask.cancel()` result. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/template/_native/web/xRTServer.java:280` and `:287` | Must-fix, fixed in branch | Server startup registers a native callback, then creates contexts. If a post-registration startup step throws, the catch terminates the service context but does not unregister the callback. `join()` can hang on callback count. | Fixed by tracking registration and running `rollbackBind(...)` before raising the XTC I/O exception. Rollback unregisters the callback, stops partial Java servers, shuts down the executor, clears routes, and clears the native handle. |
-| P1 | `javatools/src/main/java/org/xvm/tool/Compiler.java:471` | Must-fix | Code generation catches `Throwable`, logs, and continues. This can absorb `Error` subclasses and keep compiling after corrupted compiler state. | Catch `RuntimeException` or a compiler-specific exception for recoverable compiler bugs. Rethrow `Error`. Include compiler/module/phase context in the propagated exception. |
+| P1 | `javatools/src/main/java/org/xvm/tool/Compiler.java:471` | Must-fix, fixed in branch | Code generation caught `Throwable`, printed to stderr, logged, and continued. This could absorb `Error` subclasses and keep compiling after corrupted compiler state. | Fixed by rethrowing `Error` directly and treating unchecked code-generation defects as fatal launcher failures with the original cause attached. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:556` | Must-fix, fixed in branch | Each op execution caught `Throwable`, printed stack, and raised a generic XTC `"Run-time error"` exception. Java VM defects and ownership assertions could become user-catchable language exceptions. | Fixed by catching only unchecked Java `RuntimeException`/`Error` at the central op boundary. Natural XTC exceptions are returned by op implementations as `R_EXCEPTION`; VM/runtime defects are wrapped with op/frame context and published through the host failure channel. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java:229` | Must-fix, fixed in branch | `scheduleIO(task); // don't wait` discarded the returned `CompletableFuture`; any write failure completed an unobserved future while the method returned OK. | Fixed by preserving `submit()` as a non-blocking queue operation while attaching a completion observer. Queued write failures are recorded through the container failure channel instead of being dropped. |
 | P1 | `javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java:491` and `:497` | Must-fix, fixed in branch | `CompletableFuture.allOf(...).whenComplete` said `cfThis.get()`/`cfThat.get()` "must not happen" and only asserted on `Throwable`. If interruption or an impossible-but-real completion race occurred, `hAnd` could be completed with nulls or never completed correctly. The already-complete fast path also read `cfThis` twice and ignored `cfThat`. | Fixed by reading `cfThat` on the fast path, completing `hAnd` with `Utils.translate(...)` on async get failure, and restoring interrupt status for `InterruptedException`. |
@@ -288,8 +288,8 @@ P0:
 
 P1:
 
-1. DONE in this branch for op execution: stop catching `Throwable` in the
-   runtime op loop. Compiler code generation remains separate.
+1. DONE in this branch for op execution and compiler code generation: stop
+   catching `Throwable` at mutation-heavy execution/codegen boundaries.
 2. DONE in this branch: fix unobserved async write failure in
    `xRawOSFileChannel.invokeSubmit()`.
 3. DONE in this branch: complete futures exceptionally instead of asserting in
@@ -538,6 +538,41 @@ The branch fixes both without changing successful behavior:
 There is no new cache or persistent footprint. The only added work is on the
 exceptional async path. `FutureCompletionSafetyTest` is the red-on-master guard
 for the fast-path input mixup and the assert-only failure handling.
+
+## Fixed In This Branch: Compiler Codegen Does Not Continue After Defects
+
+`Compiler.generateCode(...)` is a mutation-heavy phase. It resolves deferred
+work, emits method bodies, and can trigger constant-pool updates before the
+module is written. Master caught every `Throwable` around each module compiler,
+printed the failure to stderr, logged an error, and then continued the retry
+loop:
+
+```java
+catch (Throwable e) {
+    System.err.println("Failed to generate code for " + compiler);
+    e.printStackTrace(System.err);
+    log(ERROR, ...);
+}
+```
+
+That was not recoverable error handling. It could catch `Error`, ownership
+assertions, or unchecked compiler defects after the compiler had already
+partially mutated module state. Continuing after that point risks running later
+passes over corrupted state or leaving the launcher/Gradle/LSP host with only
+stderr text as evidence.
+
+The branch makes unchecked code-generation defects terminal:
+
+- `Error` is rethrown directly and is not turned into a compiler diagnostic;
+- `RuntimeException` goes through `log(FATAL, e, ...)`, preserving the cause in
+  the launcher exception;
+- the fallback rethrow keeps the original unchecked exception visible if errors
+  are deliberately suspended.
+
+Successful code generation and normal retry behavior are unchanged. Only the
+previously undefined unchecked-defect path changes. `CompilerCodegenFailureTest`
+guards the source shape that matters for master compatibility: no catch-all
+`Throwable`, no ad hoc stderr reporting, and cause-preserving fatal propagation.
 
 ## Fixed In This Branch: Raw File Submit Observes Queued Write Failure
 

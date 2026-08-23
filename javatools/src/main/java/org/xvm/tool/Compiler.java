@@ -468,10 +468,14 @@ public class Compiler extends Launcher<CompilerOptions> {
                     if (compiler.isAbortDesired()) {
                         return;
                     }
-                } catch (Throwable e) {
-                    System.err.println("Failed to generate code for " + compiler);
-                    e.printStackTrace(System.err);
-                    log(ERROR, "Failed to generate code for {} due to exception: {}", compiler, e);
+                } catch (Error e) {
+                    throw e;
+                } catch (RuntimeException e) {
+                    // Code generation mutates module state. Continuing after an unchecked compiler
+                    // defect can persist corrupted bytecode or mask an ownership failure as a normal
+                    // diagnostic, so route it through the fatal launcher path with the cause intact.
+                    log(FATAL, e, "Failed to generate code for {}", compiler);
+                    throw e; // reachable only if error reporting is deliberately suspended
                 }
             }
             if (fDone) {

@@ -52,6 +52,8 @@ That makes the code brittle even before multiple Java threads enter it.
 | Discarded async futures | Code scheduled async work and ignored the returned `CompletableFuture`. | Worker failure disappears after the caller receives success. | Fixed for `RawOSFileChannel.submit`; broader async audit remains. |
 | Print-only JIT language failures | JIT detected generated unhandled exceptions, printed them, and returned without setting failure state. | Direct/JIT launch can report success after generated code failed. | Fixed for `JitConnector.invoke0Impl(...)`; broader JIT owner work remains separate. |
 | Collapsed reflective language exceptions | Reflection wrapper exceptions were caught with access failures and converted to generic Unsupported. | A generated XTC `nException` can be replaced by the wrong language exception type. | Fixed for `nType` `equals`, `compare`, and `hashCode` dispatch. |
+| Diagnostics as stdout/stderr side effects | Compiler/runtime decisions were written as text instead of emitted as typed events. | Parallel runs interleave evidence, embedders cannot assert outcomes, and LSP cannot attach decisions to document versions. | Audit documented; compiler codegen, `ServiceContext`, JIT, future, and raw-channel failure paths fixed where they affected correctness. |
+| Scratch-file reproducers instead of stable tests | Bug reproducers lived in mutable manual modules such as `TestSimple.x`. | The project loses proof of the failure and cannot protect incremental/reentrant behavior from regression. | Documented as must-fix process and harness work. |
 
 ## Examples And Replacements
 
@@ -712,6 +714,92 @@ ArrayHandle array = container.getConstHeap()
 Typed owner-boundary helpers do not remove all runtime checks, but they put the
 check in one place that can attach owner diagnostics.
 
+### Diagnostics As Output Side Effects
+
+Bad shape:
+
+```java
+System.err.println("No conversion found for " + constant);
+```
+
+or:
+
+```java
+catch (Throwable e) {
+    e.printStackTrace(System.err);
+    continue;
+}
+```
+
+Why it was bad in a single-threaded world:
+
+- The compiler/runtime decision is not part of the API result.
+- The output has no stable code, owner, phase, module, source span, request id,
+  or Java cause.
+- Tests cannot assert the decision without parsing human text.
+- A host cannot distinguish "expected failed probe" from "compiler/runtime
+  defect was printed and execution continued".
+
+Why it becomes must-fix:
+
+- Same-JVM direct execution and parallel-container stress can interleave output
+  from unrelated owners.
+- Worker-thread failures can be printed and then lost before `join()` reports
+  success.
+- Incremental compilation and LSP need diagnostics attached to the active
+  document version. Free-form output cannot be reconciled with later edits.
+
+Replacement:
+
+```java
+diagnostics.emit(new DiagnosticEvent(
+        severity,
+        code,
+        kind,
+        context,
+        spans,
+        attributes,
+        cause));
+```
+
+Console printing, SLF4J logging, LSP publication, golden-test serialization,
+and ownership dumps should be subscribers to structured events, not the primary
+representation of compiler/runtime decisions.
+
+### Scratch Reproducers Instead Of Regression Tests
+
+Bad shape:
+
+```text
+manualTests/src/main/x/TestSimple.x
+    overwritten for each bug hunt
+```
+
+Why it was bad in a single-threaded world:
+
+- The smallest failing source is lost after the next investigation.
+- Reviewers cannot see that the test fails on master and passes after the fix.
+- A compiler/type-system change cannot be judged against a stable diagnostic
+  expectation.
+
+Why it becomes must-fix:
+
+- Same-process runtime and incremental compiler bugs often depend on repeated
+  execution order, owner snapshots, or stale state. A mutable manual source file
+  cannot preserve that evidence.
+- Reentrancy fixes need red-on-master proof or at least source-shape proof. A
+  scratch module provides neither.
+
+Replacement:
+
+```text
+javatools/src/test/resources/repro/<area>/<issue>.x
+javatools/src/test/java/org/xvm/<area>/<Issue>Test.java
+```
+
+The scratch module can remain as a discovery tool. The final fix must move the
+reproducer into a named regression with structured assertions.
+
 ## Tracked Work
 
 Must-fix details and branch fixes are tracked in:
@@ -731,3 +819,4 @@ Supporting audits:
 - [manual-lazy-cache-audit.md](manual-lazy-cache-audit.md)
 - [this-escape-tally.md](this-escape-tally.md)
 - [generics-api-audit.md](generics-api-audit.md)
+- [logging-diagnostics-audit.md](logging-diagnostics-audit.md)

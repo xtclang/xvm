@@ -52,6 +52,7 @@ smaller PR.
 | `org.xvm.runtime.template.annotations.FutureCompletionSafetyTest` | `Future.and` reads `cfThis` twice on the fast path and uses `assert false` for async get failure. | Combined futures can use the wrong input or hide async completion failure when assertions are disabled. |
 | `org.xvm.runtime.template._native.fs.RawOSFileChannelSubmitTest` | `RawOSFileChannel.submit` discards the `CompletableFuture` returned by `scheduleIO(task)`. | Async write failure can disappear after the native method has already returned OK. |
 | `org.xvm.runtime.template.text.RegExHandleTest` | Compiled regex cache field shape is the old mutable cache. | Lazy regex cache publication was not final/lazy-safe. |
+| `org.xvm.tool.CompilerCodegenFailureTest` | `Compiler.generateCode(...)` catches `Throwable`, prints to stderr, logs, and continues the retry loop. | Code generation can continue after an unchecked compiler defect or VM error while mutating module/constant-pool state. |
 | `org.xvm.tool.ModuleInfoTest` | Explicit-resource constructor calls overridable `getResourceDir()`. | Tool metadata constructor escaped through virtual dispatch. |
 | `org.xvm.util.UtilityConstructorEscapeTest` | `PackedInteger`, `ListSet`, and `HasherReference` constructor guards fail. | Utility constructors called public/protected helpers while subclass construction was incomplete. |
 

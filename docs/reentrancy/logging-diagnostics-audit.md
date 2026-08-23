@@ -50,6 +50,23 @@ rg -n "TestSimple|negative|should fail|compile.*fail|diagnostic|golden" \
   --glob '!**/build/**'
 ```
 
+Focused production-scale scans on this branch found:
+
+- 67 direct `System.out`, `System.err`, or `printStackTrace(...)` sites in
+  `javatools/src/main/java`, `javatools_jitbridge/src/main/java`, and
+  `plugin/src/main/java`;
+- 112 broad `Throwable`, `Exception`, or `RuntimeException` catch sites in the
+  same Java production/plugin areas;
+- 62 ignored or empty catch sites in the inspected Java/XTC production areas
+  (`javatools`, bridge code, `lib_jsondb`, `lib_web`, and `lib_ecstasy`).
+
+The counts are not themselves the must-fix list. Parser lookahead,
+authentication failure, debug rendering, and cleanup best-effort catches can be
+legitimate. The counts show why the project needs a diagnostic policy and
+source-shape gates: the risky patterns are widespread enough that fixing only
+the latest crash site will not prevent the next hidden owner or failure-channel
+bug.
+
 ## Executive Finding
 
 The tree has several partial diagnostic systems:
@@ -113,6 +130,257 @@ They need diagnostics that are stable values: URI, range, code, severity,
 message, document version, module, phase, and related context. A printed string
 from a compiler branch or a swallowed `BLACKHOLE` error cannot be turned into a
 reliable editor diagnostic.
+
+## Concrete Architecture Failures
+
+These are not complaints about cosmetics or console style. They are API and
+process failures that make the compiler/runtime impossible to embed reliably.
+
+### `ErrorListener` Is Not A Diagnostic System
+
+`ErrorListener` describes source and XVM-structure errors. It does not describe
+compiler/runtime events.
+
+Concrete shape:
+
+- `javatools/src/main/java/org/xvm/asm/ErrorListener.java:36` is one
+  functional `log(ErrorInfo)` sink.
+- `javatools/src/main/java/org/xvm/asm/ErrorListener.java:53` and `:72`
+  construct `ErrorInfo` from either source positions or one `XvmStructure`.
+- `javatools/src/main/java/org/xvm/asm/ErrorListener.java:85` creates a
+  branch, but the branch has no phase id, owner id, speculative-attempt id, or
+  correlation id.
+- `javatools/src/main/java/org/xvm/asm/ErrorListener.java:223` stores one
+  `XvmStructure`; the TODO at `:228` admits structure diagnostics still cannot
+  ask the structure for source and location.
+- `javatools/src/main/java/org/xvm/asm/ErrorListener.java:168` renders runtime
+  errors to a string, throws `IllegalStateException` for errors, and prints
+  non-errors to stdout at `:173`.
+- `javatools/src/main/java/org/xvm/asm/ErrorListener.java:433` exposes
+  `BLACKHOLE`, which makes diagnostic suppression indistinguishable from a
+  deliberate speculative probe unless the caller documents the reason.
+
+That means the same compiler run can have structured source errors, silent
+speculative errors, stderr conversion traces, stdout runtime warnings, and
+thrown Java exceptions with no shared identity. A host cannot ask "what did the
+compiler decide during method lookup?" or "which container owned the type-info
+graph that produced this diagnostic?" because no event model exists for those
+questions.
+
+This is broken even in one thread. Compiler phases are iterative and
+speculative. If branch A suppresses diagnostics with `BLACKHOLE`, branch B
+prints a conversion miss, and branch C finally emits an `ErrorInfo`, the host
+sees three unrelated channels for one decision. In an LSP, that becomes
+unusable: diagnostics must be attached to a URI, document version, source
+range, compiler phase, and request id. A mutable text stream cannot be
+reconciled with the current editor document after the next incremental compile
+has already started.
+
+Proper shape:
+
+```java
+record DiagnosticEvent(
+        Severity severity,
+        String code,
+        DiagnosticKind kind,
+        DiagnosticContext context,
+        List<SourceSpan> spans,
+        Map<String, ?> attributes,
+        Throwable cause) {
+}
+```
+
+`ErrorListener` should be one bridge that emits `DiagnosticEvent` values for
+source/compiler errors. Runtime ownership checks, type-relation traces,
+constant-pool registration, module loading, and native callback lifecycle
+should emit the same event shape through explicit sinks. Rendering to console,
+SLF4J, LSP, golden-test JSON, or ownership dumps should be subscribers.
+
+### Compiler Decisions Are Printed Instead Of Emitted
+
+Two conversion paths currently print a compiler decision:
+
+- `javatools/src/main/java/org/xvm/compiler/ast/ConvertExpression.java:104`
+  prints `No conversion found for ...`.
+- `javatools/src/main/java/org/xvm/compiler/ast/Expression.java:814` prints
+  the same message from required-type fitting.
+
+The current branch keeps legacy behavior and marks the print with TODOs because
+changing constant-folding semantics is a separate compiler change. The design
+failure is still real: a conversion decision needs at least expression source,
+required type, actual type, conversion method, whether this was constant
+folding or runtime fallback, and the compile phase. None of that is present in
+the text. A regression test cannot assert why the conversion path was selected
+without parsing stderr and guessing which expression printed the line.
+
+This directly blocks incremental compilation. A type-system change that affects
+`@Auto` conversion or constant folding should be testable as a stable decision
+trace. Today, if a developer edits `TestSimple.x`, reads stderr, and then
+rewrites the file for the next bug, the decision evidence disappears.
+
+Proper shape:
+
+```java
+if (diagnostics.isTraceEnabled(DiagnosticArea.CONVERSION)) {
+    diagnostics.emit(ConversionDecision.runtimeFallback(
+            expression.sourceSpan(),
+            typeActual,
+            typeRequired,
+            idConversion,
+            "constant-folding conversion returned null"));
+}
+```
+
+That event is disabled by default. When enabled it is structured, owner-aware,
+and assertable.
+
+### Assembly And Code Generation Can Print And Continue
+
+Two production sites are especially dangerous:
+
+- Master `javatools/src/main/java/org/xvm/tool/Compiler.java:471` caught
+  `Throwable`, prints `"Failed to generate code..."`, prints the Java stack,
+  logs a formatted message, and continues the retry loop.
+- `javatools/src/main/java/org/xvm/asm/MethodStructure.java:2077` catches
+  `UnsupportedOperationException` from op assembly, prints a method name, and
+  continues to write the method with whatever op bytes are present.
+
+These are must-fix because they make failure non-transactional. Code generation
+and method assembly are not optional trace points; they publish artifacts. A
+compiler that continues after a VM `Error`, an ownership assertion, or an
+unsupported op-generation path can write an invalid `.xtc` or leave the caller
+with a successful build plus stderr. That is bad in one thread and catastrophic
+for same-process incremental compilation, where stale compiler state and stale
+artifacts can be reused for later runs.
+
+This branch fixes the compiler code-generation boundary by rethrowing `Error`
+directly and routing unchecked compiler defects through the fatal launcher path
+with the cause intact. Method assembly remains open because it needs its own
+artifact-assembly exception contract.
+
+Proper shape:
+
+```java
+try {
+    method.code().ensureAssembled(registry);
+} catch (UnsupportedOperationException e) {
+    throw new CodeAssemblyException(
+            "failed to assemble method ops",
+            AssemblyContext.of(method, registry),
+            e);
+}
+```
+
+The compiler boundary should decide whether this is a user diagnostic or an
+internal compiler defect. The assembly method itself must not print and then
+pretend the artifact is still valid.
+
+### Repository And Module Loading Collapse Causes Into Text
+
+Representative sites:
+
+- `javatools/src/main/java/org/xvm/asm/FileRepository.java:206` prints
+  `"Error loading module from file..."` and returns `null`.
+- `javatools/src/main/java/org/xvm/asm/DirRepository.java:371` prints the same
+  shape and returns `null`.
+- `javatools/src/main/java/org/xvm/asm/LinkedRepository.java:109` and `:130`
+  print module-load errors to stderr.
+- `javatools/src/main/java/org/xvm/runtime/MainContainer.java:203` prints a
+  missing method and returns from invocation setup.
+
+Best-effort repository scans may need to skip broken candidates. Requested
+module loads do not. A host launching one named module must be able to tell the
+difference between "not found", "bad module bytes", "wrong repository",
+"module belongs to a different constant-pool owner", and "loader bug". Text on
+stdout is neither an exception contract nor a diagnostic contract.
+
+Proper shape:
+
+```java
+sealed interface ModuleLoadResult {
+    record Loaded(ModuleStructure module) implements ModuleLoadResult {}
+    record NotFound(String moduleName) implements ModuleLoadResult {}
+    record Failed(ModuleLoadContext context, Throwable cause) implements ModuleLoadResult {}
+}
+```
+
+The launcher can render this as one line. The LSP and plugin can keep the cause,
+module path, repository id, and request id.
+
+### Runtime And JIT Boundaries Used Text As Control Flow
+
+The branch already fixes several instances, but they are worth listing here
+because they show the pattern:
+
+- Master `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:554`
+  caught every `Throwable`, printed Java/XTC stacks, and converted the defect
+  to a generic XTC `"Run-time error"`.
+- Master `javatools/src/main/java/org/xvm/javajit/JitConnector.java:142`
+  printed an unhandled generated XTC exception and could leave the connector
+  result as success.
+- Master `javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java:497`
+  treated async completion failure as impossible and relied on `assert false`.
+- Master `javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java:229`
+  discarded the `CompletableFuture` returned by `scheduleIO(task)`.
+
+These bugs all have the same root: text output or debug assertions were used
+where the owner boundary needed a machine-visible failure channel. A stress
+test cannot prove reentrancy if a worker thread can fail, print something, and
+let `join()` return success.
+
+Proper shape:
+
+```java
+container.recordRuntimeFailure(
+        RuntimeFailure.unexpectedWorkerFailure(container, service, operation, cause));
+connector.join(); // throws if the owner recorded a terminal failure
+```
+
+Language exceptions remain language exceptions. Java VM/runtime defects remain
+host failures with owner context.
+
+### Manual Reproducers Are Not Regression Tests
+
+The tree contains real test infrastructure, but the bug-hunting workflow still
+leans on mutable scratch modules:
+
+- `manualTests/src/main/x/TestSimple.x:1` is the current scratch module. Today
+  it performs live DNS/network lookups against `welcome.xqizit.cloud` and
+  `xqizit.cloud`.
+- `manualTests/build.gradle.kts:123` says several files are meant to be
+  compiled and run manually and should be moved elsewhere.
+- `manualTests/build.gradle.kts:133` excludes `TestSimple.x` from the source
+  set.
+- `manualTests/src/main/x/compiler.x:16` explicitly compiles
+  `src/main/x/TestSimple.x`.
+- `manualTests/build.gradle.kts:592` to `:594` document that one test is
+  failing, the runner swallows/prints exceptions, and negative/positive tests
+  need real integration.
+
+That is a process-level architecture bug. A scratch file is fine for discovery.
+It is not acceptable as the final carrier of a compiler/runtime regression. If
+the reproducer is overwritten after the fix, the project loses the proof that
+the bug existed, the proof that the fix addresses it, and the guard against a
+future regression.
+
+Proper workflow:
+
+```text
+manualTests/src/main/x/TestSimple.x
+    discovery scratch only, never final proof
+
+javatools/src/test/resources/repro/<area>/<issue-name>.x
+    stable source fixture
+
+javatools/src/test/java/org/xvm/<area>/<IssueName>Test.java
+    compiles/runs the fixture and asserts structured result
+
+manualTests/build/reports/reentrancy/<run-id>.json
+    optional stress evidence with ownership snapshots
+```
+
+No fix for a compiler/runtime bug should land with only "I changed
+`TestSimple.x` and saw the right stdout" as evidence.
 
 ## `ErrorListener` Audit
 
@@ -258,7 +526,7 @@ still open:
 
 | Site | Current behavior | Why it is bad design |
 | --- | --- | --- |
-| `javatools/src/main/java/org/xvm/tool/Compiler.java:471` | Catches `Throwable`, prints "Failed to generate code..." to stderr, prints the stack, then logs a message with `{}` parameters. | Two reporting paths compete, one is unstructured, and the catch continues the compiler after a possible VM/compiler defect. |
+| `javatools/src/main/java/org/xvm/tool/Compiler.java:471` | Master caught `Throwable`, printed "Failed to generate code..." to stderr, printed the stack, logged a message with `{}` parameters, and continued; fixed in this branch. | Two reporting paths competed, one was unstructured, and the catch continued the compiler after a possible VM/compiler defect. |
 | `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:554` | Master caught `Throwable`, printed Java stack, printed XTC frame stack, then raised `"Run-time error: " + e`; fixed in this branch. | The owner/fiber/container evidence was lost as machine data, and Java defects could become user-catchable language exceptions. |
 | `javatools/src/main/java/org/xvm/compiler/ast/ConvertExpression.java:104` | Prints `No conversion found for ...` while preserving legacy constant-folding behavior. | A compiler decision about constant conversion is neither an `ErrorListener` diagnostic nor a trace event; tests cannot assert the conversion decision. |
 | `javatools/src/main/java/org/xvm/compiler/ast/Expression.java:814` | Same `No conversion found` stderr path during fit/validation. | This should be correlated with required type, actual type, expression, source span, and conversion method search. |
@@ -316,7 +584,7 @@ Must-fix exception/logging boundaries:
 | --- | --- | --- |
 | `javatools/src/main/java/org/xvm/javajit/JitConnector.java:142` | Master printed unhandled XTC exceptions at `:150`; fixed in this branch by keeping a non-zero result. | A failed program could report success after a printed exception. |
 | `javatools/src/main/java/org/xvm/runtime/ServiceContext.java:554` | Master printed every `Throwable` from op execution and translated it to a generic XTC runtime error; fixed in this branch. | Java `Error`, ownership assertion failures, and runtime defects could become normal language exceptions. |
-| `javatools/src/main/java/org/xvm/tool/Compiler.java:471` | Code generation catches `Throwable`, prints, logs, and keeps looping. | A compiler defect can be downgraded to console noise and later phases can run on corrupted state. |
+| `javatools/src/main/java/org/xvm/tool/Compiler.java:471` | Master code generation caught `Throwable`, printed, logged, and kept looping; fixed in this branch. | A compiler defect could be downgraded to console noise and later phases could run on corrupted state. |
 | `javatools/src/main/java/org/xvm/asm/MethodStructure.java:2077` | Method op assembly failure is printed and the method still writes its op byte count. | This can produce or persist a broken module while the build path only saw stderr. |
 | `javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java:497` | Master used a "must not happen" async failure path that only asserted false inside a callback; fixed in this branch. | With assertions disabled, the code could continue with null values or incomplete failure propagation. |
 | `javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java:229` | Master discarded the `CompletableFuture` returned by `scheduleIO(task)` for queued writes; fixed in this branch. | Async IO failure could disappear after the native method returned OK. |
@@ -487,7 +755,7 @@ after failure, or make ownership/reentrancy bugs unobservable.
 | --- | --- | --- |
 | Runtime op boundary | `ServiceContext.java:554` | Done in this branch: do not catch all `Throwable` and translate runtime defects into generic catchable XTC exceptions. Preserve Java cause and owner/frame context. |
 | JIT host boundary | `JitConnector.java:142` | Done in this branch: unhandled XTC exceptions produce a non-zero result. Printing is secondary. |
-| Compiler codegen boundary | `Compiler.java:471` | Do not continue after `Throwable`. Rethrow fatal errors, preserve cause, and attach compiler/module/phase context. |
+| Compiler codegen boundary | `Compiler.java:471` | Done in this branch: do not continue after `Throwable`. Rethrow fatal errors, preserve cause, and attach compiler/module/phase context through the launcher failure path. |
 | Method assembly | `MethodStructure.java:2077` | Do not print and assemble through unsupported op generation. Fail the module assembly with method context. |
 | Async future callback | `xFuture.java:497` | Done in this branch for `Future.and`: do not rely on `assert false` for impossible async failure. Complete exceptionally or route through runtime failure diagnostics. |
 | Discarded async IO future | `xRawOSFileChannel.java:229` | Done in this branch for `submit`: retain the scheduled write future and route late failure through the container failure channel. |
@@ -570,7 +838,7 @@ Scope:
 - keep branch fixes for `JitConnector` unhandled exception status propagation,
   `nType` reflective exception unwrapping, and `ServiceContext` op-loop
   runtime-defect propagation,
-- fix compiler codegen `Throwable` catch,
+- keep the branch fix for compiler codegen `Throwable` catch,
 - fix `MethodStructure` assembly print-and-continue,
 - preserve Java cause plus owner/module/frame context,
 - add tests proving failures do not report success.

@@ -2560,6 +2560,39 @@ This is intentionally a minimal fix. A future raw-channel queue redesign should
 still address write ordering, back-pressure, and durable completion semantics
 explicitly.
 
+### Compiler Code Generation Defects Are Terminal
+
+Master treated unchecked compiler code-generation failure as a recoverable
+retry-loop event:
+
+```java
+catch (Throwable e) {
+    System.err.println("Failed to generate code for " + compiler);
+    e.printStackTrace(System.err);
+    log(ERROR, "Failed to generate code for {} due to exception: {}", compiler, e);
+}
+```
+
+That is unsafe even for a single compiler invocation. Code generation mutates
+module structures, method bodies, and constant pools. If an ownership assertion,
+unchecked compiler bug, or VM `Error` escapes that path, continuing the loop can
+leave later phases running on partially mutated compiler state and can still
+emit or cache corrupted artifacts. The stderr text is not a contract that an
+embedder, Gradle task, LSP, or same-JVM stress harness can use to fail the run.
+
+This branch makes that boundary terminal:
+
+- `Error` is rethrown directly;
+- `RuntimeException` is reported through the launcher's fatal path with the
+  original cause attached;
+- the fallback `throw e` keeps the old unchecked failure visible if launcher
+  error reporting is deliberately suspended.
+
+The normal successful retry behavior is unchanged. The change only affects a
+path that was already an unchecked compiler defect. `CompilerCodegenFailureTest`
+is the source-shape guard: it fails on master's catch/print/continue pattern and
+passes here by requiring fatal cause-preserving propagation.
+
 ### JIT Unhandled Exceptions Return Failure
 
 The JIT connector already initialized its `result` field to `1`, matching the

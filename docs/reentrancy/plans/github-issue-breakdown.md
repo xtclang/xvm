@@ -14,6 +14,8 @@ Primary source documents:
 - [../master-container-isolation-bug-reports.md](../master-container-isolation-bug-reports.md)
 - [../constant-pool-hostile-state-audit.md](../constant-pool-hostile-state-audit.md)
 - [../constant-adoption-clone-audit.md](../constant-adoption-clone-audit.md)
+- [../logging-diagnostics-audit.md](../logging-diagnostics-audit.md)
+- [../logging-strategy.md](../logging-strategy.md)
 - [../this-escape-tally.md](../this-escape-tally.md)
 - [xvm-memory-model-hygiene.md](xvm-memory-model-hygiene.md)
 
@@ -56,6 +58,7 @@ semantics, and clear owner/performance reasoning.
 | 12 | Keep compiler reentrancy cleanup separate | Moves lexer/parser/AST constructor and compiler-owner work out of runtime review. | Independent after shared ASM API changes |
 | 13 | Keep JIT ownership cleanup separate | Keeps JIT lifecycle, generated static fields, and `Ctx.Current` review separate from interpreter runtime. | PR 9/10 for shared ASM safety |
 | 14 | Add build, lint, and source-shape gates | Turns fixed patterns into regressions that fail early. | After the relevant patterns are clean |
+| 15 | Add structured diagnostics and logging discipline | Replaces stdout/stderr compiler/runtime decisions with typed diagnostics, guarded trace logging, and stable repro fixtures. | Independent; stronger after PR 8 and PR 8b |
 
 ### Commit Folding Guidance
 
@@ -2357,6 +2360,115 @@ enabled. If clean is needed, run it alone first.
 Land after each pattern category is clean enough for the gate to be useful.
 This is the final hardening PR for the current sequence, but individual cheap
 source-shape tests can land earlier with the PR that fixes that pattern.
+
+## PR 15: Add Structured Diagnostics And Logging Discipline
+
+### PR Title
+
+Add structured compiler/runtime diagnostics and logging discipline
+
+### Reviewer-Facing Problem Statement
+
+The current tree has several partial output channels: `ErrorListener`,
+`Console`, stdout/stderr prints, direct stack traces, `BLACKHOLE` speculative
+diagnostics, ownership dumps, and manual Gradle stress output. They do not form
+one diagnostic contract. Compiler decisions such as constant conversion can be
+printed to stderr, runtime defects can be converted to user-catchable language
+exceptions, and manual reproducer modules can be overwritten after the bug is
+found.
+
+This is bad even without parallelism because a host cannot reliably distinguish
+"expected speculative probe failed" from "compiler/runtime defect printed and
+execution continued". It blocks same-JVM direct execution, parallel containers,
+incremental compilation, and LSP because diagnostics need stable owner,
+request, phase, source, and document-version identity.
+
+### Exact Scope Included
+
+- Introduce a structured `DiagnosticEvent`/`DiagnosticContext` model or an
+  equivalent minimal first slice.
+- Add an `ErrorListener` bridge that preserves the existing source diagnostic
+  API while exposing structured events to embedders and tests.
+- Add guarded SLF4J developer trace categories for compiler/type/runtime owner
+  decisions, without changing normal output or forcing disabled-path
+  allocation.
+- Convert one or two low-risk direct print sites to the new model as examples.
+- Add a source-shape test that prevents new production
+  `System.err.println(...)`, `System.out.println(...)`, or `printStackTrace()`
+  calls in compiler/runtime/JIT code outside approved console/test boundaries.
+- Add a stable reproducer fixture policy for bugs currently discovered through
+  `manualTests/src/main/x/TestSimple.x`.
+
+### Explicit Out Of Scope
+
+- Rewriting all compiler diagnostics in one PR.
+- Changing user-facing compiler error text.
+- Turning every trace into a logged event.
+- Making stress tasks mandatory in CI.
+- Changing constant-folding semantics while migrating the conversion print
+  sites.
+
+### Source Areas / Branch Commits
+
+Primary source areas:
+
+- `javatools/src/main/java/org/xvm/asm/ErrorListener.java`
+- `javatools/src/main/java/org/xvm/tool/Launcher.java`
+- `javatools/src/main/java/org/xvm/tool/Compiler.java`
+- compiler AST conversion/type-fitting paths
+- runtime/JIT host boundaries that currently print stack traces
+- `manualTests/build.gradle.kts`
+- stable repro fixtures under `javatools/src/test/resources`
+
+Documentation sources:
+
+- [../logging-diagnostics-audit.md](../logging-diagnostics-audit.md)
+- [../logging-strategy.md](../logging-strategy.md)
+- [../exception-hygiene-audit.md](../exception-hygiene-audit.md)
+
+### Tests And Verification Commands
+
+```bash
+./gradlew :javatools:test --tests '*Diagnostics*' \
+  --configuration-cache --console=plain --warning-mode=all
+
+./gradlew :javatools:test --tests '*Launcher*' \
+  --configuration-cache --console=plain --warning-mode=all
+```
+
+Run the production print source-shape test and a focused compiler fixture test
+for any migrated diagnostic site. If the PR changes Gradle logging or
+dependencies, also run the relevant task with `--configuration-cache`.
+
+### Semantic / Performance Equivalence Notes
+
+- Disabled trace/debug logging must be one static logger lookup plus an
+  explicit level check. It must not allocate, build strings, call `toString()`,
+  compute type names, mutate MDC, or force lazy diagnostics when disabled.
+- `ErrorListener` display text and severity behavior must remain compatible
+  unless the PR explicitly documents a user-facing change.
+- Runtime failure propagation changes belong in PR 8b; this PR should focus on
+  diagnostic representation and logging discipline.
+- Reproducer migration should add tests without changing runtime semantics.
+
+### Documentation Updates Included
+
+- Update [../logging-diagnostics-audit.md](../logging-diagnostics-audit.md)
+  with every migrated print/catch site and the replacement event.
+- Update [../logging-strategy.md](../logging-strategy.md) if logger categories
+  or dependency shape changes.
+- Update [../bad-design-decisions-reference.md](../bad-design-decisions-reference.md)
+  if new output-side failure categories are discovered.
+
+### Review Checklist / Acceptance Criteria
+
+- New diagnostics carry owner/request/phase/source context where that context
+  exists at the call site.
+- New logging is disabled-cost safe and does not introduce ambient owner state.
+- No production compiler/runtime failure is reported only by stdout/stderr.
+- `TestSimple.x` remains a scratch tool only; final reproducers become named
+  stable tests.
+- Tests assert structured values, not free-form console text, wherever possible.
 
 ## Cross-PR Review Checklist
 
