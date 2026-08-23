@@ -27,14 +27,51 @@ rg -U -n --pcre2 \
   javatools/src/main/java/org/xvm/asm
 ```
 
-Current branch result: 23 strong same-field lazy/init sites in runtime/asm.
-The same strict scan finds 43 sites across all `javatools/src/main/java`.
+Current branch result: 20 strong same-field lazy/init sites in runtime/asm.
+The same strict scan finds 40 sites across all `javatools/src/main/java`.
+
+Current runtime/ASM strong matches:
+
+```text
+javatools/src/main/java/org/xvm/asm/MethodStructure.java:2523:m_listOps
+javatools/src/main/java/org/xvm/asm/Op.java:484:m_op
+javatools/src/main/java/org/xvm/asm/Op.java:710:m_mapConstants
+javatools/src/main/java/org/xvm/asm/Op.java:971:m_aconst
+javatools/src/main/java/org/xvm/asm/OpCondJump.java:167:m_opDest
+javatools/src/main/java/org/xvm/asm/OpJump.java:53:m_opDest
+javatools/src/main/java/org/xvm/asm/Parameter.java:353:m_regDeref
+javatools/src/main/java/org/xvm/asm/Scope.java:36:m_scopeChild
+javatools/src/main/java/org/xvm/asm/constants/MethodBody.java:134:m_infoMethod
+javatools/src/main/java/org/xvm/asm/constants/PropertyBody.java:170:m_infoProperty
+javatools/src/main/java/org/xvm/asm/op/GuardStart.java:112:m_aOpCatch
+javatools/src/main/java/org/xvm/asm/op/JumpInt.java:87:m_aOpCase
+javatools/src/main/java/org/xvm/asm/op/Label.java:143:m_action
+javatools/src/main/java/org/xvm/asm/op/LoopEnd.java:39:m_opDest
+javatools/src/main/java/org/xvm/asm/op/OpSwitch.java:108:m_aOpCase
+javatools/src/main/java/org/xvm/runtime/ClassComposition.java:567:m_mapFields
+javatools/src/main/java/org/xvm/runtime/DebugConsole.java:2240:m_mapExpand
+javatools/src/main/java/org/xvm/runtime/DebugConsole.java:2257:m_listWatches
+javatools/src/main/java/org/xvm/runtime/Frame.java:1848:m_continuation
+javatools/src/main/java/org/xvm/runtime/Frame.java:2009:m_debug
+```
+
+These are all design smells, but they are not all immediate bugs. A mutable
+lazy field becomes `must fix` when the receiver can be shared by runtime
+containers, fibers, compilation workers, or same-JVM executions and the cached
+value is owner-bearing, lifecycle-coupled, or semantically supplied by the
+current execution. It remains `should fix` when the state is ugly but currently
+thread-confined or build-phase confined. The proper replacement is not always
+`Lazy`: immutable owner-derived metadata should use final `Lazy` or eager final
+state; keyed owner caches should use an owner-owned `ConcurrentMap`; lifecycle
+or append state should use one explicit state object under a lock or atomic
+cell; builder state should be request-confined and documented.
 
 ## Classification
 
 | Classification | Sites | Why | Required next action |
 | --- | --- | --- | --- |
 | Fixed in this branch | `asm/op/JumpCond.m_cond`, `asm/op/JumpNCond.m_cond`, runtime write-back to `asm/OpTest.m_typeCommon` and `asm/OpCondJump.m_typeCommon` | These were runtime-executed `Op` objects caching constants from a `Frame`. If the same decoded op object can run under multiple container/pool owners, the cached constant is owner-bearing and the field is a wrong-owner race. | The condition caches were removed. Common-type execution now resolves `m_nType` from the current `Frame` without writing that frame constant into the shared `Op`; `m_typeCommon` remains only an assembly-time argument field. |
+| Fixed in this branch | `asm/op/JumpNSample.m_nEvery` | This was not a null-cache shape, but it was the same shared decoded-op design mistake. `assert:rnd` delivers the interval as a runtime `JavaLong` handle from the current `Frame`; caching the first clamped interval on the decoded op makes later invocations use the first caller's sample rate. | The field was removed. `JumpNSample` now derives the clamped interval from the current handle on each execution. This preserves legal runtime-constant semantics, removes a wrong first-writer-wins cache, and is guarded by `OpRuntimeCacheTest.jumpNSampleDoesNotCacheRuntimeOperandOnDecodedOp()`. |
 | Fixed in this branch | `runtime/template/text/xRegEx.RegExHandle.m_pattern` | `Pattern` is immutable, but the old plain lazy field had no publication edge and could duplicate compilation under concurrent handle use. It did not carry container ownership, so this was a low-risk hardening fix rather than an observed wrong-owner bug. | Replaced by a final `Lazy<Pattern>`. `RegExHandleTest` verifies repeated access returns the same compiled pattern and the old nullable field is gone. |
 | Fixed in this branch | `asm/constants/FSNodeConstant.m_constPath` | The derived path literal is owned by a `ConstantPool`. If the source node computed it before `adoptedBy(...)`, the shallow clone copied a source-pool path constant into the adopted node. | The cache is now a volatile per-node cache and `adoptedBy(...)` clears it on the adopted copy, preserving repeated-call caching while forcing recomputation in the destination pool. `ConstantAdoptionTest` covers the old failure shape. |
 | Fixed in this branch, bridge XTC lazy | `javatools_bridge/src/main/x/_native/fs/OSFileNode.x:created` | The node is owned by the native `OSStorage` service, but the `created` getter can execute in an application container. The old `@Lazy` property cached an application-owned `Time` handle inside the native file-system graph. | Removed `@Lazy` and made `created` a computed getter, matching `modified` and `accessed`. Same-JVM `TestFiles` stress no longer reports the wrong-owner `Time` handle. |

@@ -885,6 +885,25 @@ field shape and sequential fall-through/skip behavior.
 parallel callers against the same decoded op and proves exactly one caller sees
 the first-execution path.
 
+`JumpNSample` is another decoded-op state case, but unlike `JumpNFirst` it was
+not legitimate per-op state. It implements `assert:rnd`; the compiler validates
+the sample interval expression as a runtime constant, but the opcode still
+receives the interval as a `JavaLong` handle from the current `Frame`. The old
+`m_nEvery` field cached the first clamped runtime operand on the decoded op. If
+one invocation reached the op first with interval `1`, later invocations using
+the same decoded op with interval `100` could still sample every time because
+the first value had won. That is wrong even in a single container; parallel
+execution simply makes the winning interval nondeterministic.
+
+The fix removes `m_nEvery` and derives the clamped interval from the current
+handle each time `completeUnaryOp(...)` runs. This keeps the old verifier-facing
+behavior for legal runtime constants, keeps the old clamping of illegal values
+until the verifier rejects them, and removes only a one-cast/one-clamp shortcut
+that could never be safely shared. There is no lost hot cache: the old field
+cached an execution operand, not a decoded bytecode structure or owner-local
+table. `OpRuntimeCacheTest.jumpNSampleDoesNotCacheRuntimeOperandOnDecodedOp()`
+fails on master because `m_nEvery` exists and passes here.
+
 ### ASM `Op` Constructor Shape Dispatch
 
 This branch also removes the remaining `Op*.java` constructor-time virtual

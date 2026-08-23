@@ -791,6 +791,10 @@ sets.
   fields into executing-container cache state.
 - Make `JumpNFirst`'s deliberate decoded-op `assert:once` state atomic so
   concurrent first execution has exactly one winner.
+- Remove `JumpNSample`'s runtime interval operand cache from the shared decoded
+  op. The current `Frame` still supplies the interval handle; the fixed op just
+  clamps that value per execution instead of letting the first invocation
+  determine every later sample rate.
 - Keep assembly-time op metadata behavior intact.
 - Replace high-risk manual lazy null caches identified in this branch:
 
@@ -830,6 +834,7 @@ Primary source areas:
 - `asm/op/JumpCond`, `asm/op/JumpNCond`
 - `asm/op/JumpVal`, `asm/op/JumpIsA`, `asm/op/JumpVal_N`
 - `asm/op/JumpNFirst`
+- `asm/op/JumpNSample`
 - `runtime/Container`
 - `OpTest`, `OpCondJump`
 - `xRegEx`

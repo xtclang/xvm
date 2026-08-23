@@ -42,7 +42,7 @@ independent bug.
 | Must fix | Shallow-copied transient runtime/helper state during constant adoption | Fixed in this branch for `SingletonConstant`, `FSNodeConstant`, `FileStoreConstant`, `TypeConstant`, `ParameterizedTypeConstant`, `SignatureConstant`, `TypeParameterConstant`, and `HandleConstant` | A constant adopted into a different pool can carry runtime state, helper locks, JIT caches, reentrancy markers, or live handles owned by the source pool | Override adoption to construct fresh owner-local helper state, or clear cloned transient fields at the owner boundary |
 | Must audit, must fix when runtime execution depends on it | Ambient current `ConstantPool` lookup | Runtime sites and `ConstantPool` fields are enumerated in `constant-pool-state-audit.md` | Hidden thread-local owner lookup can select a stale, absent, or wrong pool on reused Java threads and async callbacks | Add explicit `Frame`/`Container`/`ServiceContext`/`ConstantPool` parameters where practical; use scoped owner lookup only as a transitional boundary bridge with assertions |
 | Must fix | Natural enum construction structs escaping public paths | PR #534 enum struct mismatch | A caller can observe a construction struct where an immutable enum value is required | Public enum helpers that return initialized singletons or deferred results |
-| Must audit, must fix when owner-shared | Unsynchronized lazy null caches in shared runtime or compiler state | 94 field-shaped checks; 43 strong same-field lazy-init matches across `javatools/src/main/java`; 23 in runtime/asm | Plain field read/write has no happens-before edge and can publish partial, duplicate, stale, or wrong-owner state | Final `Lazy` for immutable values; `ConcurrentMap.computeIfAbsent` for keyed caches; `AtomicReference` or a lock for lifecycle/resettable state |
+| Must audit, must fix when owner-shared | Unsynchronized lazy null caches in shared runtime or compiler state | 91 field-shaped checks; 40 strong same-field lazy-init matches across `javatools/src/main/java`; 20 in runtime/asm | Plain field read/write has no happens-before edge and can publish partial, duplicate, stale, or wrong-owner state | Final `Lazy` for immutable values; `ConcurrentMap.computeIfAbsent` for keyed caches; `AtomicReference` or a lock for lifecycle/resettable state |
 | Should fix soon | Non-final static compiler/JIT globals | 4 non-final static fields across runtime/asm/compiler; 8 across all Java sources | The remaining hits are not owner-bearing runtime caches, but plain static mutation is still shared process state with no reset story and weak parallel/incremental compiler semantics | Delete, make `static final` immutable, move to the code/container owner, or guard resettable process state with a lock/atomic holder |
 | Should fix soon | `volatile` as partial synchronization | 21 `volatile` hits in runtime/asm/compiler | `volatile` orders one variable; it does not make a group of fields or mutable map contents atomic | Keep only for independent scalar state; otherwise use immutable state snapshots, `ConcurrentMap`, or synchronized critical sections |
 | Should fix soon | Static mutable collection fields | 11 `static final` collection/resource-like fields; 0 non-final static collection/resource-like fields | `final` protects the reference, not the collection contents; global mutable maps need an update policy | `Map.of`/`Set.of`/`List.of` or `Collections.unmodifiable*` for constants; `ConcurrentMap` with documented key ownership for real caches |
@@ -216,9 +216,9 @@ rg -U --pcre2 -c "if\s*\(\s*((?:this\.)?(?:m_|s_|f_)[A-Za-z][A-Za-z0-9_]*)\s*==\
 Current counts:
 
 ```text
-3119 broad null-equality checks
-94 field-shaped lazy-null checks
-43 strong same-field lazy-initialization matches
+3131 broad null-equality checks
+91 field-shaped lazy-null checks
+40 strong same-field lazy-initialization matches
 ```
 
 The broad count includes many ordinary local null checks. The field-shaped

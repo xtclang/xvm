@@ -31,8 +31,8 @@ rg -U --pcre2 -c \
 ```
 
 ```text
-43 strong same-field lazy-init matches across javatools/src/main/java
-23 of those are in runtime/asm
+40 strong same-field lazy-init matches across javatools/src/main/java
+20 of those are in runtime/asm
 ```
 
 Non-final static fields across all Java sources:
@@ -87,7 +87,7 @@ runtime publication.
 | Done in this branch | Remove `MethodInfo`/`PropertyInfo` body owner constructor escapes | `this-escape-removal-audit.md`, `fixed-in-this-branch.md` | Method/property owners passed partially constructed `this` into `MethodBody.forMethod(...)` and `PropertyBody.forProperty(...)`, so child metadata could observe default owner state. | Keep static factories, non-virtual owned body copies, final body arrays, focused constructor-escape tests, and `TypeInfoReal` ownership validation. |
 | Done in this branch | Remove ASM metadata owner-copy constructor escapes | `this-escape-removal-audit.md`, `fixed-in-this-branch.md`, `ownership-diagnostics.md` | `FileStructure`, `MethodStructure`, `PropertyStructure`, `VersionTree`, `PropertyConstant`, and `TypeInfoReal` used constructor-time virtual hooks or mutable source metadata owner assignment. Parallel `TypeInfoReal` construction could let one owner steal shared unowned method/property/child metadata. | Keep final root/owner assembler types, static/private constructor validation, per-owner `forType(...)` copies, focused constructor-equivalence tests, and parallel `TypeInfoReal` ownership tests. |
 | Done in this branch | Remove `ModuleInfo` resource-dir constructor escape | `this-escape-removal-audit.md`, `fixed-in-this-branch.md` | The explicit-resource constructor path called overridable `getResourceDir()` before source/binary/resource fields were fully assembled. | Keep private `ensureResourceDir()` for constructor-time cache initialization and `ModuleInfoTest` hook coverage. |
-| Done in this branch | Remove runtime-executed owner-bearing `Op` caches | `manual-lazy-cache-audit.md`, `fixed-in-this-branch.md`, `runtime-metadata-op-cache-classification.md` | Shared decoded op graphs could cache `Frame` constants or owner-bearing switch tables from one owner and reuse them in another. | Keep frame-local resolution for condition/common-type constants, container-owned runtime-op switch caches for `JumpVal`/`JumpVal_N`, and `OpRuntimeCacheTest`. |
+| Done in this branch | Remove runtime-executed owner-bearing `Op` caches | `manual-lazy-cache-audit.md`, `fixed-in-this-branch.md`, `runtime-metadata-op-cache-classification.md` | Shared decoded op graphs could cache `Frame` constants, runtime operands, or owner-bearing switch tables from one owner and reuse them in another. | Keep frame-local resolution for condition/common-type constants, per-execution `JumpNSample` interval handling, container-owned runtime-op switch caches for `JumpVal`/`JumpVal_N`, and `OpRuntimeCacheTest`. |
 | Done in this branch | `JumpNFirst.m_fVisited` runtime state on decoded op | `runtime-metadata-op-cache-classification.md`, `fixed-in-this-branch.md` | `assert:once` is deliberately keyed by the decoded op, but the old plain boolean made concurrent first execution a data race. | Keep the final `AtomicBoolean` and `OpRuntimeCacheTest` sequential/concurrent once-state tests. |
 | Done in this branch | Fix first-PR manual lazy null cache hazards | `manual-lazy-cache-audit.md`, `fixed-in-this-branch.md` | Regex, FS path, and native file-node creation caches had real publication or owner-transfer hazards. | Keep final `Lazy` where safe, adoption cache clearing, and file owner validation. |
 | Done in this branch | Fix weak registry monitor mismatch | `runtime-ownership-hardening-ledger.md` | `Runtime.findContainer(...)` could iterate a weak registry while another path registered/expunged containers under a different monitor. | Keep common monitor access and `RuntimeTest`. |

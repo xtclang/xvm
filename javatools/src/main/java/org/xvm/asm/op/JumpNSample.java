@@ -53,18 +53,16 @@ public class JumpNSample
 
     @Override
     protected int completeUnaryOp(Frame frame, int iPC, ObjectHandle hValue) {
-        int nEvery = m_nEvery;
-        if (nEvery == 0) {
-            long lEvery = ((JavaLong) hValue).getValue();
+        long lEvery = ((JavaLong) hValue).getValue();
 
-            // ignore illegal values (assume that the verifier will eventually flag those)
-            m_nEvery = nEvery = Math.max(1, Math.min(Integer.MAX_VALUE, (int) lEvery));
-        }
-
+        // The operand arrives as a runtime handle, even though AssertStatement validates that the
+        // source interval is a runtime constant. Do not cache it on this decoded Op: the same Op
+        // object can be shared by multiple invocations/owners, and the first runtime value would
+        // then silently control all later samples. Keep the historical clamping behavior and let the
+        // verifier/compile-time validation reject illegal values.
+        int nEvery = Math.max(1, Math.min(Integer.MAX_VALUE, (int) lEvery));
         return f_rnd.nextInt(nEvery) == 0 ? iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);
     }
 
     private static final ThreadLocalRandom f_rnd = ThreadLocalRandom.current();
-
-    private transient int m_nEvery;
 }

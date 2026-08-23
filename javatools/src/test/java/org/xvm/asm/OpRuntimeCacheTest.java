@@ -41,9 +41,10 @@ import org.xvm.asm.op.JumpCond;
 import org.xvm.asm.op.JumpEq;
 import org.xvm.asm.op.JumpNCond;
 import org.xvm.asm.op.JumpNFirst;
+import org.xvm.asm.op.JumpNSample;
+import org.xvm.asm.op.JumpType;
 import org.xvm.asm.op.JumpVal;
 import org.xvm.asm.op.JumpVal_N;
-import org.xvm.asm.op.JumpType;
 import org.xvm.asm.op.PIP_Inc;
 import org.xvm.asm.op.PIP_PreInc;
 import org.xvm.asm.op.Var_C;
@@ -146,6 +147,28 @@ public class OpRuntimeCacheTest {
         } finally {
             executor.shutdownNow();
         }
+    }
+
+    /**
+     * {@code assert:rnd} intervals are runtime operands. Caching the first interval on the decoded
+     * op makes later invocations inherit the first caller's sampling rate, even when the current
+     * frame supplies a different runtime-constant handle.
+     */
+    @Test
+    public void jumpNSampleDoesNotCacheRuntimeOperandOnDecodedOp()
+            throws IOException {
+        var runtimeFields = Arrays.stream(JumpNSample.class.getDeclaredFields())
+                .filter(field -> !Modifier.isStatic(field.getModifiers()))
+                .map(Field::getName)
+                .toList();
+
+        assertEquals(List.of(), runtimeFields,
+                "JMP_NSAMPLE must read the current interval handle");
+
+        var source = Files.readString(
+                sourcePath("org/xvm/asm/op/JumpNSample.java"));
+        assertFalse(source.contains("m_nEvery"),
+                "the decoded op must not store the first runtime interval");
     }
 
     /**
