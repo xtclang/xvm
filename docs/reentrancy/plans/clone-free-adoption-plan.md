@@ -98,14 +98,14 @@ Current branch inventory:
 | Abstract family bases in that set | 13 |
 | Concrete constant classes in that set | 75 |
 | Classes currently overriding `adoptedBy(...)` | 0 |
-| Classes currently overriding `copyForAdoption(...)` | 42 |
-| Concrete classes still relying on an explicit family default-clone policy | 33 |
+| Classes currently overriding `copyForAdoption(...)` | 43 |
+| Concrete classes still relying on an explicit family default-clone policy | 32 |
 
 The migration is broad but not conceptually deep. The direct source blast radius
 for a complete clone-free adoption model is likely:
 
 - `Constant`, `ConstantPool`, and adoption tests;
-- all 42 current hook classes, already converted to `copyForAdoption(...)` in
+- all 43 current hook classes, already converted to `copyForAdoption(...)` in
   this branch;
 - 13 abstract family bases, to place shared family adoption rules where useful;
 - up to 75 concrete leaf constants, either by explicit copy/adoption
@@ -214,7 +214,7 @@ Risk buckets:
 | `SignatureConstant` | `PseudoConstant` | explicit override | P0 helper lock/JIT cache |
 | `SingletonConstant` | `ValueConstant` | explicit override | P0 runtime singleton lifecycle state |
 | `StringConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
-| `TerminalTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `TerminalTypeConstant` | `TypeConstant` | explicit clone-free hook | P1 type leaf fixed in this branch |
 | `ThisClassConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical identity |
 | `TypeConstant` | `Constant` | family default-clone policy plus owner reset in `setContaining(...)` | P1 type-family base |
 | `TypeParameterConstant` | `FormalConstant` | explicit override | P0 reentrancy helper cell |
@@ -557,9 +557,11 @@ Scope:
   `CastTypeConstant`, `DifferenceTypeConstant`, `ImmutableTypeConstant`,
   `InnerChildTypeConstant`, `IntersectionTypeConstant`, `PendingTypeConstant`,
   `PropertyClassTypeConstant`, `RecursiveTypeConstant`,
-  `RelationalTypeConstant`, `ServiceTypeConstant`, `TerminalTypeConstant`,
-  `TypeSequenceTypeConstant`, `UnionTypeConstant`, `UnresolvedTypeConstant`,
-  and `VirtualChildTypeConstant`;
+  `RelationalTypeConstant`, `ServiceTypeConstant`, `TypeSequenceTypeConstant`,
+  `UnionTypeConstant`, `UnresolvedTypeConstant`, and
+  `VirtualChildTypeConstant`;
+- keep the `TerminalTypeConstant` branch fix, which reconstructs the type leaf
+  from its defining identity and rejects unrelated foreign identities;
 - preserve existing cache reset behavior exactly.
 
 Review goal: remove the largest owner-cache family from shallow clone fallback.
@@ -618,7 +620,7 @@ constants become target-owned yet; type-family adoption is a separate PR 3
 problem. `MatchAnyConstant` now rebuilds the wildcard shell instead of cloning
 it. It accepts shared type keys through normal target registration and rejects
 unrelated foreign type keys before publication; clone-free reconstruction of the
-shared type key itself remains part of the type-family PR. `LiteralConstant`,
+remaining composed type keys remains part of the type-family PR. `LiteralConstant`,
 `VersionConstant`, and `DecimalAutoConstant` are converted as the
 parsed/delegated value wave: literal adoption drops transient parsed caches,
 version adoption preserves the concrete subclass, and decimal-auto target

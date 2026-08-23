@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import java.util.function.Consumer;
@@ -1989,6 +1990,19 @@ public class TerminalTypeConstant
     @Override
     public Format getFormat() {
         return Format.TerminalType;
+    }
+
+    @Override
+    protected TerminalTypeConstant copyForAdoption(AdoptionContext context) {
+        var pool = context.pool();
+        if (!isShared(pool)) {
+            throw new IllegalStateException("cannot adopt terminal type with foreign identity: " + this);
+        }
+
+        // Rebuild the type shell instead of shallow-cloning it. TypeConstant owner caches are not
+        // logical type value; the defining identity is registered by the destination pool below.
+        var constId = Objects.requireNonNull(ensureResolvedConstant(), "defining constant");
+        return new TerminalTypeConstant(pool, constId);
     }
 
     @Override

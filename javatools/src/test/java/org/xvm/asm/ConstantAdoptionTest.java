@@ -56,6 +56,7 @@ import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
+import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
 import org.xvm.asm.constants.UInt8ArrayConstant;
@@ -119,6 +120,46 @@ public class ConstantAdoptionTest {
         assertNull(fieldValue(adopted, "m_mapProduces"));
         assertNull(fieldValue(adopted, "m_sJitName"));
         assertNull(fieldValue(adopted, "m_typeNormalized"));
+    }
+
+    /**
+     * Terminal type adoption must rebuild the type shell and register the defining identity through
+     * the destination pool. Shallow clone relied on TypeConstant.setContaining(...) to clear caches
+     * after copying the whole object, which was too easy to break by adding another helper field.
+     */
+    @Test
+    public void registeredTerminalTypeConstantAdoptsSharedIdentityIntoTargetPool() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var struct     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Owner", null);
+        var targetPool = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+        var source     = (TerminalTypeConstant) struct.getIdentityConstant().getType();
+
+        var registered = (TerminalTypeConstant) targetPool.register(source);
+
+        assertNotSame(source, registered);
+        assertSame(targetPool, registered.getConstantPool());
+        assertSame(targetPool, registered.getDefiningConstant().getConstantPool());
+        assertEquals(source.getValueString(), registered.getValueString());
+        assertSame(registered, targetPool.ensureTerminalTypeConstant(registered.getDefiningConstant()));
+    }
+
+    /**
+     * A terminal type that names an unrelated module-local identity is not target-owned logical value.
+     * Direct adoption now fails in all modes instead of depending on an assertion in setContaining().
+     */
+    @Test
+    public void terminalTypeRejectsForeignIdentityDuringAdoption() {
+        var sourceFile = new FileStructure("source");
+        var targetPool = new FileStructure("target").getConstantPool();
+        var struct     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Owner", null);
+        var source     = (TerminalTypeConstant) struct.getIdentityConstant().getType();
+
+        var error = assertThrows(IllegalStateException.class, () -> adopt(source, targetPool));
+
+        assertTrue(error.getMessage().contains("foreign identity"));
     }
 
     /**
@@ -848,6 +889,7 @@ public class ConstantAdoptionTest {
                SignatureConstant.class,
                SingletonConstant.class,
                StringConstant.class,
+               TerminalTypeConstant.class,
                TypeParameterConstant.class,
                UInt8ArrayConstant.class,
                VersionConstant.class,

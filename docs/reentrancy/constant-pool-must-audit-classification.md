@@ -179,13 +179,17 @@ Done in this branch:
   the value-class clone smell, rejects unrelated foreign type keys before the
   value is published, and keeps clone-free type reconstruction in the
   type-family work where it belongs.
+- `TerminalTypeConstant` now reconstructs the type leaf explicitly from its
+  defining identity. Shared identities still register through the destination
+  pool, while unrelated foreign identities fail in all modes instead of relying
+  on `TypeConstant.setContaining(...)` assertions.
 
 Remaining linked finding:
 
 - The `MatchAnyConstant` shell and foreign-key boundary are closed, but its
   locator is still a `TypeConstant`. Shared/adoptable type keys still rely on the
-  type-family default clone, so keep clone-free type reconstruction with the
-  type-family PR.
+  remaining type-family default clone for composed type shapes. Keep clone-free
+  reconstruction of those type classes with the type-family PR.
 
 ## 2. `ConstantPool.register(...)` Publishes Before Recursive Registration Completes
 

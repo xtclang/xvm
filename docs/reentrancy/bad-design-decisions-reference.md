@@ -218,6 +218,12 @@ is still passed through target registration. The remaining type-family work is
 to make that shared/adoptable type reconstruction clone-free too. Shallow clone
 made all of these boundaries invisible.
 
+`TerminalTypeConstant` is the first type leaf moved to the same model. The
+logical value is the defining identity, not the inherited relation/type-info/JIT
+helper caches. Rebuilding the shell from that identity keeps the same
+constant-pool interning behavior for shared identities and fails closed for
+unrelated foreign identities.
+
 Immutable scalar values are now explicit too. `ByteConstant`, `IntConstant`,
 `StringConstant`, `RegExConstant`, the fixed decimal value, and the fixed-size
 binary float values do not currently carry owner-local caches. That is exactly

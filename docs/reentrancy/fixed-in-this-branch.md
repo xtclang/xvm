@@ -236,6 +236,10 @@ shallow-clone helper state identified by the audit:
   shape for shareable types and deliberately tightens unrelated foreign type-key
   behavior from assertion-only or silent wrong-owner publication to an immediate
   `IllegalStateException`.
+- `TerminalTypeConstant` now reconstructs the type shell from its defining
+  identity instead of shallow-cloning all `TypeConstant` helper state. Shared
+  identities are still adopted and interned by the destination pool; unrelated
+  foreign identities fail before an adopted type shell can be published.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration
   of a fresh unowned runtime handle constant by constructing a target-owned
   wrapper. Moving an already-owned live handle constant to another pool throws

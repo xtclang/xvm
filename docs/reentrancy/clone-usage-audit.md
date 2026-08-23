@@ -345,6 +345,9 @@ immutable scalars, composite value containers, parsed/delegated values, and the
 separate type-family problem because its lookup key is a `TypeConstant`; the
 shell no longer clones, unrelated foreign type keys are rejected, and shared
 type keys still rely on the remaining type-family clone-free adoption work.
+`TerminalTypeConstant` is also no longer on that default path: it reconstructs
+the type leaf from the defining identity, registers shared identities in the
+target owner, and rejects unrelated foreign identities before publication.
 
 Container/ConstantPool/lock/cache impact: `ConstantPool.register(...)` uses this
 path for foreign constants and locator constants. The validator is opt-in through

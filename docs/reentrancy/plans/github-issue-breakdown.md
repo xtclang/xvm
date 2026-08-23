@@ -1457,6 +1457,10 @@ separately.
   this slice includes the type-keyed sentinel wave. Reject unrelated foreign
   type keys before the value is published; the shared/adoptable type key's own
   clone-free reconstruction remains under the type-family PR.
+- Reconstruct `TerminalTypeConstant` from its defining identity if this slice
+  includes the terminal-type leaf wave. Shared identities keep the same
+  destination-pool interning behavior; unrelated foreign identities fail before
+  publication instead of relying on `TypeConstant.setContaining(...)` assertions.
 - Reject moving an already-owned live `HandleConstant` to another pool.
 - Reject `DynamicFormalConstant` adoption when its register type is not shared
   with the destination pool, because the target pool cannot safely own or share
@@ -1603,6 +1607,9 @@ appropriate:
   non-shared types, this slice intentionally tightens behavior: registration now
   throws before publication in all modes instead of relying on an assertion-only
   failure under `-ea` or silent wrong-owner state without assertions.
+- Terminal type leaves keep the same logical defining identity and constant-pool
+  cache behavior for shared identities. Direct foreign-identity adoption now
+  throws in all modes instead of depending on an assertion-only owner check.
 - The validator is diagnostic coverage, not a complete architectural fix.
 - The validator is off unless explicitly enabled, so normal constant interning
   and runtime cache performance is unchanged.
