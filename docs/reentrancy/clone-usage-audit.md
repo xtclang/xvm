@@ -352,6 +352,12 @@ The same rule now applies to the one-child type wrappers
 `AccessTypeConstant`, `ImmutableTypeConstant`, and `ServiceTypeConstant`: the
 logical modifier is reconstructed, the child type is adopted by target
 registration, and unrelated foreign child types fail before publication.
+For two-child relational types, `UnionTypeConstant`, `IntersectionTypeConstant`,
+and `DifferenceTypeConstant` rebuild the storable relational shell and let target
+registration adopt both children. `CastTypeConstant` is intentionally different:
+it is a transient compiler/JIT marker whose `assemble(...)` method already
+rejects storage, so adoption now fails closed instead of pretending it can be
+pooled.
 
 Container/ConstantPool/lock/cache impact: `ConstantPool.register(...)` uses this
 path for foreign constants and locator constants. The validator is opt-in through

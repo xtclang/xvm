@@ -187,14 +187,21 @@ Done in this branch:
   reconstruct their logical single-child wrappers explicitly. Shared child types
   still register through the destination pool; unrelated foreign child types fail
   before the wrapper can be published.
+- `UnionTypeConstant`, `IntersectionTypeConstant`, and `DifferenceTypeConstant`
+  now reconstruct their logical two-child relational shells explicitly. Shared
+  child types still register through the destination pool; unrelated foreign
+  child types fail before publication.
+- `CastTypeConstant` now rejects adoption because it is a transient compiler/JIT
+  marker and already cannot be assembled into a pool.
 
 Remaining linked finding:
 
 - The `MatchAnyConstant` shell and foreign-key boundary are closed, but its
   locator is still a `TypeConstant`. Terminal and single-child type wrappers are
-  closed, but shared/adoptable composed type keys still rely on the remaining
-  type-family default clone. Keep clone-free reconstruction of those type
-  classes with the type-family PR.
+  closed, and the storable relational type shells are closed. Shared/adoptable
+  dependant, annotated, pending, sequence, unresolved, and virtual-child type
+  keys still rely on the remaining type-family default clone. Keep clone-free
+  reconstruction of those type classes with the type-family PR.
 
 ## 2. `ConstantPool.register(...)` Publishes Before Recursive Registration Completes
 

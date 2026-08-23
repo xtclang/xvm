@@ -230,6 +230,13 @@ plus one modifier bit of meaning. Rebuilding those wrappers is as cheap as a
 shallow clone, preserves the same pool lookup behavior, and removes the inherited
 helper-cache copy from the ownership transfer path.
 
+Storable relational type expressions follow the same pattern with two children:
+`UnionTypeConstant`, `IntersectionTypeConstant`, and `DifferenceTypeConstant`
+are rebuilt from their logical child types and registered in the target owner.
+`CastTypeConstant` is not a storable relational value; it is a transient
+compiler/JIT marker, and its `assemble(...)` method already rejects pool storage.
+Failing adoption for that class makes the existing invariant enforceable.
+
 Immutable scalar values are now explicit too. `ByteConstant`, `IntConstant`,
 `StringConstant`, `RegExConstant`, the fixed decimal value, and the fixed-size
 binary float values do not currently carry owner-local caches. That is exactly

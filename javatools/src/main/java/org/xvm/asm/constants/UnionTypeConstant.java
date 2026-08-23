@@ -82,6 +82,15 @@ public class UnionTypeConstant
     }
 
     @Override
+    protected UnionTypeConstant copyForAdoption(AdoptionContext context) {
+        var pool = requireSharedAdoptionPool(context, "union type with foreign child type");
+
+        // Rebuild the relational shell instead of shallow-cloning inherited TypeConstant helper
+        // state; registerConstants(...) still interns both child types in the destination pool.
+        return new UnionTypeConstant(pool, m_constType1, m_constType2);
+    }
+
+    @Override
     protected TypeConstant cloneRelational(ConstantPool pool, TypeConstant type1, TypeConstant type2) {
         return pool.ensureUnionTypeConstant(type1, type2);
     }

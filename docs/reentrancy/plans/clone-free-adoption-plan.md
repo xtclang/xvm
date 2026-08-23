@@ -98,14 +98,14 @@ Current branch inventory:
 | Abstract family bases in that set | 13 |
 | Concrete constant classes in that set | 75 |
 | Classes currently overriding `adoptedBy(...)` | 0 |
-| Classes currently overriding `copyForAdoption(...)` | 46 |
-| Concrete classes still relying on an explicit family default-clone policy | 29 |
+| Classes currently overriding `copyForAdoption(...)` | 50 |
+| Concrete classes still relying on an explicit family default-clone policy | 25 |
 
 The migration is broad but not conceptually deep. The direct source blast radius
 for a complete clone-free adoption model is likely:
 
 - `Constant`, `ConstantPool`, and adoption tests;
-- all 46 current hook classes, already converted to `copyForAdoption(...)` in
+- all 50 current hook classes, already converted to `copyForAdoption(...)` in
   this branch;
 - 13 abstract family bases, to place shared family adoption rules where useful;
 - up to 75 concrete leaf constants, either by explicit copy/adoption
@@ -151,7 +151,7 @@ Risk buckets:
 | `ArrayConstant` | `ValueConstant` | explicit clone-free hook | P3 composite value container fixed in this branch |
 | `BFloat16Constant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `ByteConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
-| `CastTypeConstant` | `IntersectionTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `CastTypeConstant` | `IntersectionTypeConstant` | explicit fail-closed hook | P1 transient compiler/JIT type marker |
 | `CharConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `ChildClassConstant` | `PseudoConstant` | family default-clone policy | P2 logical identity/path |
 | `ClassConstant` | `NamedConstant` | family default-clone policy | P2 logical identity/path |
@@ -160,7 +160,7 @@ Risk buckets:
 | `DecimalConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `DecoratedClassConstant` | `IdentityConstant` | family default-clone policy | P2 logical identity/path |
 | `DeferredValueConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical value |
-| `DifferenceTypeConstant` | `RelationalTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `DifferenceTypeConstant` | `RelationalTypeConstant` | explicit clone-free hook | P1 relational type fixed in this branch |
 | `DynamicFormalConstant` | `FormalConstant` | explicit clone-free hook | P1/P2 compiler register state fixed in this branch |
 | `EnumValueConstant` | `SingletonConstant` | inherits explicit singleton adoption | P0 singleton runtime-state family |
 | `ExpressionConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical value |
@@ -182,7 +182,7 @@ Risk buckets:
 | `ImmutableTypeConstant` | `TypeConstant` | explicit clone-free hook | P1 single-child type wrapper fixed in this branch |
 | `InnerChildTypeConstant` | `AbstractDependantChildTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `IntConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
-| `IntersectionTypeConstant` | `RelationalTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `IntersectionTypeConstant` | `RelationalTypeConstant` | explicit clone-free hook | P1 relational type fixed in this branch |
 | `KeywordConstant` | `PseudoConstant` | family default-clone policy | P2 pseudo/logical value |
 | `LiteralConstant` | `ValueConstant` | explicit clone-free hook | P3 parsed literal cache fixed in this branch |
 | `MapConstant` | `ValueConstant` | explicit clone-free hook | P3 composite value container fixed in this branch |
@@ -221,7 +221,7 @@ Risk buckets:
 | `TypeSequenceTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `TypedefConstant` | `NamedConstant` | family default-clone policy | P2 logical identity/path |
 | `UInt8ArrayConstant` | `ValueConstant` | explicit clone-free hook | P3 byte-array-backed value fixed in this branch |
-| `UnionTypeConstant` | `RelationalTypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
+| `UnionTypeConstant` | `RelationalTypeConstant` | explicit clone-free hook | P1 relational type fixed in this branch |
 | `UnresolvedNameConstant` | `PseudoConstant` | family default-clone policy | P2 unresolved logical name |
 | `UnresolvedTypeConstant` | `TypeConstant` | family default-clone policy | P1 type-family cache/reset contract |
 | `ValueConstant` | `Constant` | family default-clone policy | P3 value-family base |
@@ -554,16 +554,19 @@ Scope:
 - convert type-family classes:
   `AbstractDependantChildTypeConstant`, `AbstractDependantTypeConstant`,
   `AnnotatedTypeConstant`, `AnonymousClassTypeConstant`,
-  `CastTypeConstant`, `DifferenceTypeConstant`,
-  `InnerChildTypeConstant`, `IntersectionTypeConstant`, `PendingTypeConstant`,
-  `PropertyClassTypeConstant`, `RecursiveTypeConstant`,
-  `RelationalTypeConstant`, `TypeSequenceTypeConstant`, `UnionTypeConstant`,
+  `InnerChildTypeConstant`, `PendingTypeConstant`, `PropertyClassTypeConstant`,
+  `RecursiveTypeConstant`, `RelationalTypeConstant`, `TypeSequenceTypeConstant`,
   `UnresolvedTypeConstant`, and `VirtualChildTypeConstant`;
 - keep the `TerminalTypeConstant` branch fix, which reconstructs the type leaf
   from its defining identity and rejects unrelated foreign identities;
 - keep the `AccessTypeConstant`, `ImmutableTypeConstant`, and
   `ServiceTypeConstant` branch fixes, which reconstruct logical single-child
   wrappers and reject unrelated foreign child types;
+- keep the `UnionTypeConstant`, `IntersectionTypeConstant`, and
+  `DifferenceTypeConstant` branch fixes, which reconstruct logical relational
+  type expressions and reject unrelated foreign children;
+- keep the `CastTypeConstant` branch guard, which rejects adoption because cast
+  types are transient compiler/JIT markers that cannot be assembled into a pool;
 - preserve existing cache reset behavior exactly.
 
 Review goal: remove the largest owner-cache family from shallow clone fallback.
@@ -630,6 +633,11 @@ registration adopts the delegated decimal child.
 `AccessTypeConstant`, `ImmutableTypeConstant`, and `ServiceTypeConstant` are
 also converted: each rebuilds one logical modifier around a shared child type,
 and target registration still interns that child exactly as before.
+`UnionTypeConstant`, `IntersectionTypeConstant`, and `DifferenceTypeConstant`
+rebuild two-child relational shells and still intern both children through target
+registration. `CastTypeConstant` is different: it is documented in source as a
+transient compiler/JIT marker and `assemble(...)` rejects storing it, so adoption
+now fails closed instead of inheriting a storable intersection copy path.
 
 Review goal: replace low-risk default clone users with explicit logical-value
 copy code and remove the largest remaining fallback population.

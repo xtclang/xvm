@@ -57,6 +57,15 @@ public class DifferenceTypeConstant
     }
 
     @Override
+    protected DifferenceTypeConstant copyForAdoption(AdoptionContext context) {
+        var pool = requireSharedAdoptionPool(context, "difference type with foreign child type");
+
+        // Rebuild the relational shell instead of shallow-cloning inherited TypeConstant helper
+        // state; registerConstants(...) still interns both child types in the destination pool.
+        return new DifferenceTypeConstant(pool, m_constType1, m_constType2);
+    }
+
+    @Override
     protected TypeConstant cloneRelational(ConstantPool pool, TypeConstant type1, TypeConstant type2) {
         return pool.ensureDifferenceTypeConstant(type1, type2);
     }

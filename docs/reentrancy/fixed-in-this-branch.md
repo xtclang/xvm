@@ -244,6 +244,12 @@ shallow-clone helper state identified by the audit:
   reconstruct their logical single-child wrappers instead of shallow-cloning
   inherited type helper state. Shared child types keep the same target-pool
   interning behavior; unrelated foreign child types fail before publication.
+- `UnionTypeConstant`, `IntersectionTypeConstant`, and `DifferenceTypeConstant`
+  now reconstruct their two-child relational shells instead of shallow-cloning
+  inherited type helper state. Shared child types keep the same target-pool
+  interning behavior; unrelated foreign child types fail before publication.
+- `CastTypeConstant` now rejects adoption because it is a transient compiler/JIT
+  marker and its own `assemble(...)` method already rejects pool storage.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration
   of a fresh unowned runtime handle constant by constructing a target-owned
   wrapper. Moving an already-owned live handle constant to another pool throws

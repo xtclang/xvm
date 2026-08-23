@@ -24,10 +24,12 @@ import org.xvm.asm.constants.AccessTypeConstant;
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.BFloat16Constant;
 import org.xvm.asm.constants.ByteConstant;
+import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.CharConstant;
 import org.xvm.asm.constants.DecimalAutoConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.DecimalConstant;
+import org.xvm.asm.constants.DifferenceTypeConstant;
 import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.FPNConstant;
 import org.xvm.asm.constants.FSNodeConstant;
@@ -41,6 +43,7 @@ import org.xvm.asm.constants.Float8e5Constant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.ImmutableTypeConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MapConstant;
@@ -63,6 +66,7 @@ import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
 import org.xvm.asm.constants.UInt8ArrayConstant;
+import org.xvm.asm.constants.UnionTypeConstant;
 import org.xvm.asm.constants.VersionConstant;
 import org.xvm.asm.constants.VersionMatchesCondition;
 import org.xvm.asm.constants.VersionedCondition;
@@ -215,6 +219,87 @@ public class ConstantAdoptionTest {
 
                     assertTrue(error.getMessage().contains("foreign child type"));
                 });
+    }
+
+    /**
+     * Relational types are logical two-child type expressions. Adoption must rebuild the expression
+     * shell and let target registration intern both child types, preserving the old cache shape
+     * without copying inherited TypeConstant helper state.
+     */
+    @Test
+    public void registeredRelationalTypesAdoptSharedChildrenIntoTargetPool() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var left       = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Left", null);
+        var right      = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Right", null);
+        var targetPool = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+        var typeLeft   = left.getIdentityConstant().getType();
+        var typeRight  = right.getIdentityConstant().getType();
+
+        List.of(sourcePool.ensureUnionTypeConstant(typeLeft, typeRight),
+                sourcePool.ensureIntersectionTypeConstant(typeLeft, typeRight),
+                sourcePool.ensureDifferenceTypeConstant(typeLeft, typeRight))
+                .forEach(source -> {
+                    var registered = targetPool.register(source);
+
+                    assertNotSame(source, registered);
+                    assertSame(targetPool, registered.getConstantPool());
+                    assertSame(targetPool, registered.getUnderlyingType().getConstantPool());
+                    assertSame(targetPool, registered.getUnderlyingType2().getConstantPool());
+                    assertEquals(source.getFormat(), registered.getFormat());
+                    assertEquals(source.getValueString(), registered.getValueString());
+                });
+    }
+
+    /**
+     * A relational type cannot turn unrelated source-owner children into target-owned type state.
+     * Direct adoption now fails before publication instead of copying two foreign child references.
+     */
+    @Test
+    public void relationalTypesRejectForeignChildrenDuringAdoption() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var targetPool = new FileStructure("target").getConstantPool();
+        var left       = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Left", null);
+        var right      = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Right", null);
+        var typeLeft   = left.getIdentityConstant().getType();
+        var typeRight  = right.getIdentityConstant().getType();
+
+        List.of(sourcePool.ensureUnionTypeConstant(typeLeft, typeRight),
+                sourcePool.ensureIntersectionTypeConstant(typeLeft, typeRight),
+                sourcePool.ensureDifferenceTypeConstant(typeLeft, typeRight))
+                .forEach(source -> {
+                    var error = assertThrows(IllegalStateException.class,
+                            () -> adopt(source, targetPool));
+
+                    assertTrue(error.getMessage().contains("foreign child type"));
+                });
+    }
+
+    /**
+     * CastTypeConstant is a transient compiler/JIT marker; the class cannot be assembled into a pool.
+     * Adoption must therefore fail instead of inheriting IntersectionTypeConstant's storable copy.
+     */
+    @Test
+    public void castTypeCannotBeAdoptedBecauseItIsTransient() {
+        var sourceFile = new FileStructure("source");
+        var targetPool = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+        var left       = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Left", null);
+        var right      = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Right", null);
+        var source     = new CastTypeConstant(
+                sourceFile.getConstantPool(),
+                left.getIdentityConstant().getType(),
+                right.getIdentityConstant().getType());
+
+        var error = assertThrows(IllegalStateException.class, () -> adopt(source, targetPool));
+
+        assertTrue(error.getMessage().contains("transient cast type"));
     }
 
     /**
@@ -913,9 +998,11 @@ public class ConstantAdoptionTest {
                ArrayConstant.class,
                BFloat16Constant.class,
                ByteConstant.class,
+               CastTypeConstant.class,
                CharConstant.class,
                DecimalAutoConstant.class,
                DecimalConstant.class,
+               DifferenceTypeConstant.class,
                FSNodeConstant.class,
                DynamicFormalConstant.class,
                FPNConstant.class,
@@ -929,6 +1016,7 @@ public class ConstantAdoptionTest {
                FormalTypeChildConstant.class,
                HandleConstant.class,
                IntConstant.class,
+               IntersectionTypeConstant.class,
                ImmutableTypeConstant.class,
                LiteralConstant.class,
                MapConstant.class,
@@ -950,6 +1038,7 @@ public class ConstantAdoptionTest {
                TerminalTypeConstant.class,
                TypeParameterConstant.class,
                UInt8ArrayConstant.class,
+               UnionTypeConstant.class,
                VersionConstant.class,
                VersionMatchesCondition.class,
                VersionedCondition.class)

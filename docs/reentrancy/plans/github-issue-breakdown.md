@@ -1466,6 +1466,13 @@ separately.
   includes the single-child type-wrapper wave. Shared child types keep the same
   destination-pool interning behavior; unrelated foreign child types fail before
   publication.
+- Reconstruct `UnionTypeConstant`, `IntersectionTypeConstant`, and
+  `DifferenceTypeConstant` from their two logical child types if this slice
+  includes the relational-type wave. Shared child types keep the same
+  destination-pool interning behavior; unrelated foreign child types fail before
+  publication.
+- Reject `CastTypeConstant` adoption in that wave because it is a transient
+  compiler/JIT marker and cannot be assembled into a pool.
 - Reject moving an already-owned live `HandleConstant` to another pool.
 - Reject `DynamicFormalConstant` adoption when its register type is not shared
   with the destination pool, because the target pool cannot safely own or share
@@ -1619,6 +1626,11 @@ appropriate:
   constant-pool cache behavior for shared child types. Direct foreign-child
   adoption now throws in all modes instead of depending on an assertion-only
   owner check.
+- Storable relational type shells keep the same logical two-child value and
+  constant-pool cache behavior for shared child types. Direct foreign-child
+  adoption now throws in all modes. Transient cast-type adoption also throws,
+  matching the existing `assemble(...)` invariant that cast markers are not pool
+  storage.
 - The validator is diagnostic coverage, not a complete architectural fix.
 - The validator is off unless explicitly enabled, so normal constant interning
   and runtime cache performance is unchanged.

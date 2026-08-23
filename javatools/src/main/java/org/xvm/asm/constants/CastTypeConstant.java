@@ -111,6 +111,13 @@ public class CastTypeConstant
     }
 
     @Override
+    protected CastTypeConstant copyForAdoption(AdoptionContext context) {
+        // CastTypeConstant is a transient compiler/JIT marker and assemble(...) rejects storing it.
+        // Adoption would make that temporary shape look like serialized pool-owned type state.
+        throw new IllegalStateException("cannot adopt transient cast type: " + this);
+    }
+
+    @Override
     protected void assemble(DataOutput out) {
         throw new IllegalStateException();
     }
