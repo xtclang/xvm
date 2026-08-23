@@ -16,7 +16,13 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 
@@ -34,6 +40,7 @@ import org.xvm.asm.op.IsType;
 import org.xvm.asm.op.JumpCond;
 import org.xvm.asm.op.JumpEq;
 import org.xvm.asm.op.JumpNCond;
+import org.xvm.asm.op.JumpNFirst;
 import org.xvm.asm.op.JumpVal;
 import org.xvm.asm.op.JumpVal_N;
 import org.xvm.asm.op.JumpType;
@@ -88,6 +95,57 @@ public class OpRuntimeCacheTest {
     public void switchOpsDoNotCacheOwnerValuesOnDecodedOps() {
         assertNoOwnerBearingRuntimeCacheFields(JumpVal.class);
         assertNoOwnerBearingRuntimeCacheFields(JumpVal_N.class);
+    }
+
+    /**
+     * {@code assert:once} is intentionally keyed by the decoded op, but concurrent first execution
+     * still needs exactly one winner. A plain boolean preserves neither Java memory-model
+     * publication nor one-winner behavior under parallel execution.
+     */
+    @Test
+    public void jumpNFirstUsesAtomicDecodedOpState()
+            throws Exception {
+        Field field = JumpNFirst.class.getDeclaredField("m_fVisited");
+        assertEquals(AtomicBoolean.class, field.getType());
+        assertTrue(Modifier.isFinal(field.getModifiers()),
+                "decoded-op once state must be a final atomic cell");
+
+        var op = new JumpNFirst(input(2), Constant.NO_CONSTS);
+        assertEquals(11, op.process(null, 10));
+        assertEquals(12, op.process(null, 10));
+    }
+
+    /**
+     * Parallel callers racing the first {@code assert:once} execution must produce exactly one
+     * fall-through and route every other caller to the skip target.
+     */
+    @Test
+    public void jumpNFirstConcurrentFirstExecutionHasOneWinner()
+            throws Exception {
+        var op       = new JumpNFirst(input(2), Constant.NO_CONSTS);
+        int attempts = 32;
+        var start    = new CountDownLatch(1);
+        var executor = Executors.newFixedThreadPool(attempts);
+
+        try {
+            var futures = IntStream.range(0, attempts)
+                    .mapToObj(i -> executor.submit(() -> {
+                        start.await();
+                        return op.process(null, 10);
+                    }))
+                    .toList();
+
+            start.countDown();
+
+            var results = futures.stream()
+                    .map(OpRuntimeCacheTest::getFuture)
+                    .toList();
+
+            assertEquals(1, results.stream().filter(result -> result == 11).count());
+            assertEquals(attempts - 1, results.stream().filter(result -> result == 12).count());
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     /**
@@ -188,6 +246,17 @@ public class OpRuntimeCacheTest {
             type = type.getComponentType();
         }
         return type;
+    }
+
+    private static <T> T getFuture(Future<T> future) {
+        try {
+            return future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError(e);
+        } catch (ExecutionException e) {
+            throw new AssertionError(e.getCause());
+        }
     }
 
     private static DataInputStream input(int... values) throws IOException {

@@ -745,6 +745,8 @@ sets.
   shared decoded op objects.
 - Move runtime switch tables for `JumpVal`/`JumpVal_N` from shared decoded op
   fields into executing-container cache state.
+- Make `JumpNFirst`'s deliberate decoded-op `assert:once` state atomic so
+  concurrent first execution has exactly one winner.
 - Keep assembly-time op metadata behavior intact.
 - Replace high-risk manual lazy null caches identified in this branch:
 
@@ -783,6 +785,7 @@ Primary source areas:
 
 - `asm/op/JumpCond`, `asm/op/JumpNCond`
 - `asm/op/JumpVal`, `asm/op/JumpIsA`, `asm/op/JumpVal_N`
+- `asm/op/JumpNFirst`
 - `runtime/Container`
 - `OpTest`, `OpCondJump`
 - `xRegEx`
@@ -829,6 +832,10 @@ the hash-contract fixes are gone.
   behavior, with one container cache entry replacing the old op fields.
   Multi-container execution intentionally keeps one table per container because
   the handles and type constants are owner-bearing and cannot be shared safely.
+- `JumpNFirst` intentionally remains keyed by the decoded op because it backs
+  `assert:once`. Moving it to a container cache would make the assertion run
+  once per container. The branch changes only the race mechanics: one final
+  `AtomicBoolean` replaces one plain boolean.
 - Hash codes for mutable metadata are recomputed rather than cached to avoid
   stale hashes after mutation.
 - `Constant.hashCode()` keeps the old resolved-only cache behavior without

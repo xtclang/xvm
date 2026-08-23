@@ -755,6 +755,24 @@ new cache API itself is owner-local: a second put in the same container reuses
 the first value, a different container gets a separate value for the same op,
 and a wrong type token fails at the cache boundary.
 
+`JumpNFirst` is a separate decoded-op state case. It is not owner-bearing
+cache data; it implements `assert:once`, whose compiler and opcode definitions
+say the assertion is evaluated only the first time execution reaches that
+instruction. Moving this state to a container cache would make the assertion
+run once per container and would change behavior. The old implementation still
+used a plain transient boolean, so two fibers racing the first execution could
+both fall through or could observe stale state under the Java memory model. The
+fix keeps the same decoded-op owner key but changes the field to a final
+`AtomicBoolean` and uses `compareAndSet(false, true)`. That preserves
+single-threaded behavior, keeps the same one-cell footprint, and makes
+parallel first execution exact.
+
+`OpRuntimeCacheTest.jumpNFirstUsesAtomicDecodedOpState()` verifies the atomic
+field shape and sequential fall-through/skip behavior.
+`OpRuntimeCacheTest.jumpNFirstConcurrentFirstExecutionHasOneWinner()` runs
+parallel callers against the same decoded op and proves exactly one caller sees
+the first-execution path.
+
 ### ASM `Op` Constructor Shape Dispatch
 
 This branch also removes the remaining `Op*.java` constructor-time virtual

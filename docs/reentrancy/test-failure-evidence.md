@@ -34,7 +34,7 @@ smaller PR.
 | --- | --- | --- |
 | `org.xvm.asm.ConstantHashCodeCacheTest` | `Constant.m_iHash` is not `volatile`. | Cached hash publication was an unexplained plain-field race shape. |
 | `org.xvm.asm.FileStructureTest` | Error listener lookup returns the wrong ambient pool listener. | Diagnostics depended on `ConstantPool.getCurrentPool()` instead of file ownership. |
-| `org.xvm.asm.OpRuntimeCacheTest` | Runtime `Op` condition/common-type cache fields still exist, and `JumpVal`/`JumpVal_N` still expose owner-bearing switch-table fields. | Shared decoded op graphs could retain frame-owned constants, handles, type constants, and maps from one execution/container. |
+| `org.xvm.asm.OpRuntimeCacheTest` | Runtime `Op` condition/common-type cache fields still exist, `JumpVal`/`JumpVal_N` still expose owner-bearing switch-table fields, and `JumpNFirst` still uses a plain boolean for `assert:once` state. | Shared decoded op graphs could retain frame-owned constants, handles, type constants, and maps from one execution/container; parallel `assert:once` execution had no exact one-winner guarantee. |
 | `org.xvm.asm.RegisterHashCodeTest` | Equal register metadata objects have different hashes. | Hash/equality contract was broken for ordinary map/set use. |
 | `org.xvm.asm.VersionTest` | Equal `VersionTree` values have different hashes. | Hash/equality contract was broken for version metadata. |
 | `org.xvm.asm.constants.ConstantRangeOwnerTest` | No ambient pool throws; wrong ambient pool returns wrong owner. | Numeric range folding used hidden current-pool ownership. |

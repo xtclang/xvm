@@ -4,6 +4,8 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpJump;
@@ -43,8 +45,7 @@ public class JumpNFirst
 
     @Override
     public int process(Frame frame, int iPC) {
-        if (!m_fVisited) {
-            m_fVisited = true;
+        if (m_fVisited.compareAndSet(false, true)) {
             return iPC + 1;
         }
 
@@ -66,5 +67,11 @@ public class JumpNFirst
         return false;
     }
 
-    private transient boolean m_fVisited = false;
+    /**
+     * Deliberately process-wide decoded-op state for {@code assert:once}. The compiler emits this
+     * opcode for assertions that should run only the first time execution reaches this instruction.
+     * A container-local cache would change that behavior; a plain boolean made concurrent first
+     * execution racy. Atomic publication preserves the old owner key while making one winner exact.
+     */
+    private final transient AtomicBoolean m_fVisited = new AtomicBoolean();
 }
