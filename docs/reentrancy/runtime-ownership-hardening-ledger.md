@@ -271,6 +271,19 @@ Branch fix:
   `UnresolvedNameConstant` fail closed. They are unresolved compiler/AST
   placeholders, and `UnresolvedNameConstant` also now copies caller-owned name
   arrays that participate in temporary identity.
+- `ModuleConstant`, `PackageConstant`, `ClassConstant`, `MultiMethodConstant`,
+  and `TypedefConstant` rebuild named identity shells with target-owned parents
+  before publication. This keeps the same logical path/version identity while
+  avoiding copied identity-family helper state. `TypedefConstant` also starts
+  with a fresh resolved-recursion state instead of inheriting
+  `m_fInitialized` from the source owner.
+- `DecoratedClassConstant` and `PureIdentityConstant` rebuild type-backed
+  identity shells from target-owned type keys. They reject foreign type keys
+  before publication because a destination pool cannot safely own an identity
+  whose defining type graph is not shared/adoptable.
+- `NativeRebaseConstant` fails closed during adoption. It is a runtime-only
+  native facade documented as not registered with a pool, so shallow-cloning it
+  into serialized metadata was invalid behavior, not a cache to preserve.
 - `ConditionalConstant` no longer grants shallow-clone adoption to the condition
   family. Each concrete condition reconstructs its logical link-time predicate,
   and the transient `iTest` brute-force simulation slot is private scratch state

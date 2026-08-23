@@ -105,6 +105,14 @@ public class TypedefConstant
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
+    protected TypedefConstant copyForAdoption(AdoptionContext context) {
+        // Typedef identity is a logical parent+name path. Rebuilding also drops m_fInitialized,
+        // which is derived recursion-resolution state from one owner graph.
+        var pool = context.pool();
+        return new TypedefConstant(pool, pool.register(getParentConstant()), getName());
+    }
+
+    @Override
     public Format getFormat() {
         return Format.Typedef;
     }

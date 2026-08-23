@@ -271,6 +271,20 @@ resolution callbacks, AST pointers, or temporary name/hash state. This branch
 also copies unresolved-name input arrays because a caller-owned `String[]` is not
 an immutable unresolved-name value.
 
+Named identity constants now follow the same explicit rule. `ModuleConstant`,
+`PackageConstant`, `ClassConstant`, `MultiMethodConstant`, and
+`TypedefConstant` are logical path identities, so adoption rebuilds the target
+shell from the target-owned parent plus name/version. This preserves the same
+pool interning behavior while dropping owner-derived helper state such as
+`TypedefConstant.m_fInitialized`. `DecoratedClassConstant` and
+`PureIdentityConstant` are type-keyed artificial identities; adoption rebuilds
+them only when the type graph is shared/adoptable into the target pool, so the
+target shell is born with target-owned type constants. `NativeRebaseConstant`
+is the opposite case: it is a runtime-only facade around a native rebase
+interface and is documented as never registered with a pool. Adoption now fails
+closed instead of shallow-cloning that runtime identity into serialized pool
+metadata.
+
 Immutable scalar values are now explicit too. `ByteConstant`, `IntConstant`,
 `StringConstant`, `RegExConstant`, the fixed decimal value, and the fixed-size
 binary float values do not currently carry owner-local caches. That is exactly

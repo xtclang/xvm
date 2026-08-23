@@ -72,6 +72,13 @@ public class MultiMethodConstant
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
+    protected MultiMethodConstant copyForAdoption(AdoptionContext context) {
+        // Multimethod identity is a logical parent+name path; rebuild it with a target-owned parent.
+        var pool = context.pool();
+        return new MultiMethodConstant(pool, pool.register(getParentConstant()), getName());
+    }
+
+    @Override
     public Format getFormat() {
         return Format.MultiMethod;
     }

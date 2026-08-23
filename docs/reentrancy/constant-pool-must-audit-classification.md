@@ -218,19 +218,29 @@ Done in this branch:
 - `DeferredValueConstant`, `ExpressionConstant`, and `UnresolvedNameConstant`
   now reject adoption because they are unresolved compiler/AST placeholders.
   `UnresolvedNameConstant` also copies caller name arrays at construction.
+- `ModuleConstant`, `PackageConstant`, `ClassConstant`, `MultiMethodConstant`,
+  and `TypedefConstant` now reconstruct named identity shells with target-owned
+  parents before publication. `TypedefConstant` drops `m_fInitialized` because
+  that is resolved recursion state, not logical identity.
+- `DecoratedClassConstant` and `PureIdentityConstant` now reconstruct
+  type-backed identity shells with target-owned shared/adoptable type keys and
+  reject foreign type keys before publication.
+- `NativeRebaseConstant` now rejects adoption because it is a runtime-only
+  native facade that should not be registered in a `ConstantPool`.
 - `CastTypeConstant` now rejects adoption because it is a transient compiler/JIT
   marker and already cannot be assembled into a pool.
 
 Remaining linked finding:
 
-- The `MatchAnyConstant` shell and foreign-key boundary are closed, but its
-  locator is still a `TypeConstant`. Terminal, single-child type wrappers,
-  storable relational shells, dependant child/property shells, and recursive
-  typedef shells are closed. Annotated type shells, pseudo path constants, the
-  stateless sequence marker, and pending/unresolved placeholders are also closed
-  by this branch. Remaining clone-free work is now the reviewed abstract/base
-  fallback plus the eight identity/path leaves that still intentionally opt in
-  to the transitional clone helper.
+- The concrete constant leaves in this audit no longer rely on inherited
+  default clone adoption. The remaining clone-free work is the reviewed
+  abstract/base fallback (`IdentityConstant`, `TypeConstant`, and
+  `ValueConstant`) and non-constant clone families such as component/parameter
+  and runtime-handle view copies. Type-keyed value shells such as
+  `MatchAnyConstant`, type leaves/wrappers, relational shells, dependant
+  child/property shells, recursive typedef shells, annotated type shells,
+  pseudo path constants, named/type-backed identities, the stateless sequence
+  marker, and pending/unresolved placeholders are closed by this branch.
 
 ## 2. `ConstantPool.register(...)` Publishes Before Recursive Registration Completes
 

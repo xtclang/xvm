@@ -137,6 +137,19 @@ public class DecoratedClassConstant
     }
 
     @Override
+    protected DecoratedClassConstant copyForAdoption(AdoptionContext context) {
+        var pool = context.pool();
+        if (!m_type.isShared(pool)) {
+            throw new IllegalStateException(
+                    "cannot adopt decorated class identity with foreign type: " + this);
+        }
+
+        // The decorated identity is keyed by a class type. Rebuild the shell with the target-pool
+        // type so identity caches/JIT names are not copied from the source owner.
+        return new DecoratedClassConstant(pool, pool.register(m_type));
+    }
+
+    @Override
     protected int compareDetails(Constant that) {
         if (!(that instanceof DecoratedClassConstant)) {
             return -1;

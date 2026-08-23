@@ -98,21 +98,23 @@ Current branch inventory:
 | Abstract family bases in that set | 13 |
 | Concrete constant classes in that set | 75 |
 | Classes currently overriding `adoptedBy(...)` | 0 |
-| Classes currently overriding `copyForAdoption(...)` | 66 |
-| Concrete classes still relying on an explicit family default-clone policy | 8 |
+| Classes currently overriding `copyForAdoption(...)` | 74 |
+| Concrete classes still relying on an explicit family default-clone policy | 0 |
 
 The migration is broad but not conceptually deep. The direct source blast radius
 for a complete clone-free adoption model is likely:
 
 - `Constant`, `ConstantPool`, and adoption tests;
-- all 66 current hook classes, already converted to `copyForAdoption(...)` in
+- all 74 current hook classes, already converted to `copyForAdoption(...)` in
   this branch;
 - `Annotation`, which is a `Constant` subclass outside the
   `org.xvm.asm.constants` package and now also uses an explicit hook;
 - 13 abstract family bases, to place shared family adoption rules where useful;
 - up to 75 concrete leaf constants, either by explicit copy/adoption
   implementation or by inheriting a reviewed family implementation;
-- remaining identity/formal copy policy for low-risk logical path constants;
+- the three remaining abstract family defaults (`IdentityConstant`,
+  `TypeConstant`, and `ValueConstant`), which are now transitional scaffolding
+  rather than concrete leaf behavior;
 - stress/validator tests and a source-shape test that prevents fallback clone
   from returning.
 
@@ -156,11 +158,11 @@ Risk buckets:
 | `CastTypeConstant` | `IntersectionTypeConstant` | explicit fail-closed hook | P1 transient compiler/JIT type marker |
 | `CharConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
 | `ChildClassConstant` | `PseudoConstant` | explicit clone-free hook | P2 pseudo path fixed in this branch |
-| `ClassConstant` | `NamedConstant` | family default-clone policy | P2 logical identity/path |
+| `ClassConstant` | `NamedConstant` | explicit clone-free hook | P2 logical identity/path fixed in this branch |
 | `ConditionalConstant` | `Constant` | fails closed; concrete leaves explicit | P3 condition family base; private simulation scratch |
 | `DecimalAutoConstant` | `ValueConstant` | explicit clone-free hook | P3 delegated decimal value fixed in this branch |
 | `DecimalConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
-| `DecoratedClassConstant` | `IdentityConstant` | family default-clone policy | P2 logical identity/path |
+| `DecoratedClassConstant` | `IdentityConstant` | explicit clone-free hook | P2 type-backed identity fixed in this branch |
 | `DeferredValueConstant` | `PseudoConstant` | explicit fail-closed hook | P2 unresolved compiler placeholder fixed in this branch |
 | `DifferenceTypeConstant` | `RelationalTypeConstant` | explicit clone-free hook | P1 relational type fixed in this branch |
 | `DynamicFormalConstant` | `FormalConstant` | explicit clone-free hook | P1/P2 compiler register state fixed in this branch |
@@ -191,14 +193,14 @@ Risk buckets:
 | `MatchAnyConstant` | `ValueConstant` | explicit clone-free hook | P3 type-keyed sentinel shell fixed in this branch |
 | `MethodBindingConstant` | `FrameDependentConstant` | explicit clone-free hook | P4 serialized frame-dependent constant fixed in this branch |
 | `MethodConstant` | `IdentityConstant` | explicit clone-free hook | P1 JIT-name/type cache owner policy fixed in this branch |
-| `ModuleConstant` | `IdentityConstant` | family default-clone policy | P2 logical identity/path |
+| `ModuleConstant` | `IdentityConstant` | explicit clone-free hook | P2 logical identity/path fixed in this branch |
 | `MultiCondition` | `ConditionalConstant` | abstract helper for explicit condition hooks | P3 condition-family base |
-| `MultiMethodConstant` | `NamedConstant` | family default-clone policy | P2 logical identity/path |
+| `MultiMethodConstant` | `NamedConstant` | explicit clone-free hook | P2 logical identity/path fixed in this branch |
 | `NamedCondition` | `ConditionalConstant` | explicit clone-free hook | P3 logical condition; simulation scratch fixed in this branch |
 | `NamedConstant` | `IdentityConstant` | family default-clone policy | P2 named identity-family base |
-| `NativeRebaseConstant` | `ClassConstant` | family default-clone policy | P2 logical identity/path |
+| `NativeRebaseConstant` | `ClassConstant` | explicit fail-closed hook | P2 runtime-only identity facade fixed in this branch |
 | `NotCondition` | `ConditionalConstant` | explicit clone-free hook | P3 logical condition; simulation scratch fixed in this branch |
-| `PackageConstant` | `NamedConstant` | family default-clone policy | P2 logical identity/path |
+| `PackageConstant` | `NamedConstant` | explicit clone-free hook | P2 logical identity/path fixed in this branch |
 | `ParameterizedTypeConstant` | `TypeConstant` | explicit override | P0 helper lock/JIT cache |
 | `ParentClassConstant` | `PseudoConstant` | explicit clone-free hook | P2 pseudo path fixed in this branch |
 | `PendingTypeConstant` | `TypeConstant` | explicit fail-closed hook | P1 mutable compiler placeholder fixed in this branch |
@@ -206,7 +208,7 @@ Risk buckets:
 | `PropertyClassTypeConstant` | `AbstractDependantTypeConstant` | explicit clone-free hook | P1 property type metadata cache fixed in this branch |
 | `PropertyConstant` | `FormalConstant` | explicit clone-free hook | P1 JIT-name/type/property-info cache owner policy fixed in this branch |
 | `PseudoConstant` | `Constant` | fails closed; concrete leaves explicit | P2 pseudo-family base |
-| `PureIdentityConstant` | `IdentityConstant` | family default-clone policy | P2 logical identity/path |
+| `PureIdentityConstant` | `IdentityConstant` | explicit clone-free hook | P2 type-backed identity fixed in this branch |
 | `RangeConstant` | `ValueConstant` | explicit clone-free hook | P3 composite value endpoints fixed in this branch |
 | `RecursiveTypeConstant` | `TerminalTypeConstant` | explicit clone-free hook | P1 recursive typedef subclass fixed in this branch |
 | `RegExConstant` | `ValueConstant` | explicit clone-free hook | P3 immutable scalar value fixed in this branch |
@@ -221,7 +223,7 @@ Risk buckets:
 | `TypeConstant` | `Constant` | family default-clone policy plus owner reset in `setContaining(...)` | P1 type-family base |
 | `TypeParameterConstant` | `FormalConstant` | explicit override | P0 reentrancy helper cell |
 | `TypeSequenceTypeConstant` | `TypeConstant` | explicit clone-free hook | P1 stateless formal marker fixed in this branch |
-| `TypedefConstant` | `NamedConstant` | family default-clone policy | P2 logical identity/path |
+| `TypedefConstant` | `NamedConstant` | explicit clone-free hook | P2 logical identity/path plus resolved-state cache fixed in this branch |
 | `UInt8ArrayConstant` | `ValueConstant` | explicit clone-free hook | P3 byte-array-backed value fixed in this branch |
 | `UnionTypeConstant` | `RelationalTypeConstant` | explicit clone-free hook | P1 relational type fixed in this branch |
 | `UnresolvedNameConstant` | `PseudoConstant` | explicit fail-closed hook | P2 unresolved compiler placeholder fixed in this branch |
@@ -615,6 +617,17 @@ Scope:
   and `UnresolvedNameConstant` fail closed because they are unresolved
   compiler/AST placeholders. `UnresolvedNameConstant` also copies caller name
   arrays at construction.
+- keep the named-identity branch fixes. `ModuleConstant`, `PackageConstant`,
+  `ClassConstant`, `MultiMethodConstant`, and `TypedefConstant` rebuild their
+  logical parent/name or name/version shells with target-owned parents before
+  publication. `TypedefConstant` intentionally starts with unresolved
+  recursion state in the target owner instead of copying `m_fInitialized`.
+- keep the type-backed identity branch fixes. `DecoratedClassConstant` and
+  `PureIdentityConstant` rebuild with a target-owned shared/adoptable type key
+  and reject foreign type keys before publication.
+- keep the `NativeRebaseConstant` guard. Native rebase identities are
+  runtime-only facades and are documented as not registered with a
+  `ConstantPool`, so adoption fails closed.
 
 Review goal: make identity/path adoption explicit and remove hidden JIT-name
 owner coupling.

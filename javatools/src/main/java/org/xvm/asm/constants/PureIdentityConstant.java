@@ -143,6 +143,19 @@ public class PureIdentityConstant
     }
 
     @Override
+    protected PureIdentityConstant copyForAdoption(AdoptionContext context) {
+        var pool = context.pool();
+        if (!m_type.isShared(pool)) {
+            throw new IllegalStateException(
+                    "cannot adopt pure identity with foreign type: " + this);
+        }
+
+        // Pure identities are type-keyed artificial identities. Rebuild with the target-pool type so
+        // owner-derived identity caches are recomputed locally.
+        return new PureIdentityConstant(pool, pool.register(m_type));
+    }
+
+    @Override
     protected int compareDetails(Constant that) {
         if (!(that instanceof PureIdentityConstant)) {
             return -1;

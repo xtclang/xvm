@@ -297,6 +297,17 @@ shallow-clone helper state identified by the audit:
   placeholders, not completed constant-pool metadata. `UnresolvedNameConstant`
   also copies caller-provided name arrays because those names participate in
   temporary hash/equality identity.
+- `ModuleConstant`, `PackageConstant`, `ClassConstant`, `MultiMethodConstant`,
+  and `TypedefConstant` now reconstruct named identity shells with target-owned
+  parents before publication. This preserves the old path/version value and
+  interning behavior, but no longer copies identity-family helper state or
+  `TypedefConstant.m_fInitialized` resolved recursion state across owners.
+- `DecoratedClassConstant` and `PureIdentityConstant` now reconstruct
+  type-backed identity shells with target-owned shared/adoptable type keys. A
+  foreign type key fails before publication instead of becoming a wrong-owner
+  identity.
+- `NativeRebaseConstant` now rejects adoption because it is a runtime-only
+  native facade and is documented as never registered with a `ConstantPool`.
 - `CastTypeConstant` now rejects adoption because it is a transient compiler/JIT
   marker and its own `assemble(...)` method already rejects pool storage.
 - `HandleConstant.copyForAdoption(...)` now allows only the first registration
@@ -321,6 +332,11 @@ focused regression test is
 `javatools/src/test/java/org/xvm/asm/ConstantAdoptionTest.java`; copied into a
 detached `master` worktree, the adoption cases fail by retaining copied helper,
 runtime, compiler-register, or cache state.
+
+The identity-adoption tests also prove behavior equivalence for the new wave:
+named path constants, decorated class identities, and pure type identities keep
+their value strings and target-pool interning shape, while `NativeRebaseConstant`
+now fails closed because adopting it was never valid serialized metadata.
 
 The broader owner-transfer audit is documented in
 [constant-adoption-clone-audit.md](constant-adoption-clone-audit.md). That file

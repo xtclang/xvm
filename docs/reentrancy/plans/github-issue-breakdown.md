@@ -1496,6 +1496,14 @@ separately.
   `ExpressionConstant`, and `UnresolvedNameConstant` fail closed before
   unresolved compiler/AST placeholder state can be copied. Copy unresolved-name
   input arrays at construction.
+- Reconstruct named and type-backed identity constants if this slice includes
+  the identity-family wave: `ModuleConstant`, `PackageConstant`,
+  `ClassConstant`, `MultiMethodConstant`, and `TypedefConstant` rebuild
+  target-owned parent/name or name/version shells before publication;
+  `TypedefConstant` drops resolved recursion state; `DecoratedClassConstant`
+  and `PureIdentityConstant` rebuild only for target-shareable type keys; and
+  `NativeRebaseConstant` fails closed because it is a runtime-only facade, not
+  serialized pool metadata.
 - Reject `CastTypeConstant` adoption in that wave because it is a transient
   compiler/JIT marker and cannot be assembled into a pool.
 - Reject moving an already-owned live `HandleConstant` to another pool.
@@ -1553,6 +1561,7 @@ Commits:
 - `Make dependant type adoption clone-free` dependant/recursive type wave
 - `Make annotation type adoption clone-free` annotation/transient type wave
 - `Make pseudo constant adoption clone-free` pseudo path/placeholder wave
+- `Make identity constant adoption clone-free` identity path/type-backed wave
 
 Primary source areas:
 
@@ -1569,6 +1578,9 @@ Primary source areas:
 - `PseudoConstant`, `ThisClassConstant`, `ParentClassConstant`,
   `ChildClassConstant`, `KeywordConstant`, `DeferredValueConstant`,
   `ExpressionConstant`, and `UnresolvedNameConstant` if bundled
+- `ModuleConstant`, `PackageConstant`, `ClassConstant`, `MultiMethodConstant`,
+  `TypedefConstant`, `DecoratedClassConstant`, `PureIdentityConstant`, and
+  `NativeRebaseConstant` if bundled
 - `HandleConstant`
 - `ClassComposition`
 - `OwnershipDiagnostics` boundary validation where adoption failures surface
@@ -1681,6 +1693,16 @@ appropriate:
   expression, and unresolved-name constants already represent unfinished
   compiler state, so fail-closed adoption removes an invalid path rather than
   changing valid runtime behavior.
+- Named identity constants keep the same logical path/version value and
+  constant-pool interning behavior. The difference is that parent identities
+  are registered in the destination pool before the shell is published, so a
+  copied identity cannot retain a source-owner parent through deferred recursive
+  registration. `TypedefConstant` intentionally recomputes resolved recursion
+  state in the destination owner. Type-backed identity constants keep the same
+  logical type key for shared/adoptable type graphs, but now fail before
+  publication for foreign keys. `NativeRebaseConstant` adoption now fails in
+  all modes because valid code should not register that runtime-only facade in
+  a pool.
 - The validator is diagnostic coverage, not a complete architectural fix.
 - The validator is off unless explicitly enabled, so normal constant interning
   and runtime cache performance is unchanged.

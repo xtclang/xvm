@@ -386,6 +386,13 @@ fail closed because they are unresolved compiler/AST placeholders.
 `UnresolvedNameConstant` also copies caller name arrays so temporary
 hash/equality identity cannot be mutated by the caller.
 
+Named and type-backed identity constants are also off the inherited clone path.
+`ModuleConstant`, `PackageConstant`, `ClassConstant`, `MultiMethodConstant`, and
+`TypedefConstant` reconstruct target-owned path identities before publication;
+`TypedefConstant` deliberately drops resolved recursion state. `DecoratedClassConstant`
+and `PureIdentityConstant` reconstruct only for shared/adoptable type keys, and
+`NativeRebaseConstant` fails closed because it is runtime-only facade state.
+
 Container/ConstantPool/lock/cache impact: `ConstantPool.register(...)` uses this
 path for foreign constants and locator constants. The validator is opt-in through
 `xvm.asm.validateConstantAdoption`, so normal execution does not fail closed.

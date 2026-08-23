@@ -251,6 +251,13 @@ public class ModuleConstant
     }
 
     @Override
+    protected ModuleConstant copyForAdoption(AdoptionContext context) {
+        // Module identity is logical name+version data. Rebuild it so identity adoption no longer
+        // copies cached component/JIT helper state by inheritance.
+        return new ModuleConstant(context.pool(), getName(), getVersion());
+    }
+
+    @Override
     protected int compareDetails(Constant that) {
         if (!(that instanceof ModuleConstant idThat)) {
             return -1;

@@ -33,6 +33,7 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DecimalAutoConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.DecimalConstant;
+import org.xvm.asm.constants.DecoratedClassConstant;
 import org.xvm.asm.constants.DeferredValueConstant;
 import org.xvm.asm.constants.DifferenceTypeConstant;
 import org.xvm.asm.constants.DynamicFormalConstant;
@@ -58,7 +59,10 @@ import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.MatchAnyConstant;
 import org.xvm.asm.constants.MethodBindingConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.NamedCondition;
+import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.NotCondition;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.ParentClassConstant;
@@ -67,6 +71,8 @@ import org.xvm.asm.constants.PresentCondition;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PseudoConstant;
+import org.xvm.asm.constants.PackageConstant;
+import org.xvm.asm.constants.PureIdentityConstant;
 import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.RegExConstant;
 import org.xvm.asm.constants.RegisterConstant;
@@ -695,6 +701,97 @@ public class ConstantAdoptionTest {
         names[1] = "Mutated";
 
         assertEquals("pkg.Name", unresolved.getName());
+    }
+
+    /**
+     * Named identity constants are logical module/package/class/member paths. Adoption must rebuild
+     * the path using target-owned parents and must drop derived helper state such as typedef init.
+     */
+    @Test
+    public void namedIdentityConstantsAdoptIntoTargetPool() throws ReflectiveOperationException {
+        var sourceFile   = new FileStructure("source");
+        var sourcePool   = sourceFile.getConstantPool();
+        var sourceModule = ModuleConstant.class.cast(sourceFile.getModule().getIdentityConstant());
+        var sourcePkg    = sourcePool.ensurePackageConstant(sourceModule, "pkg");
+        var sourceClass  = sourcePool.ensureClassConstant(sourcePkg, "Thing");
+        var sourceMethod = sourcePool.ensureMultiMethodConstant(sourceClass, "run");
+        var sourceType   = sourcePool.ensureTypedefConstant(sourceClass, "Alias");
+        var targetPool   = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+
+        setField(sourceType, "m_fInitialized", true);
+
+        var targetModule = adopt(sourceModule, targetPool);
+        var targetPkg    = adopt(sourcePkg, targetPool);
+        var targetClass  = adopt(sourceClass, targetPool);
+        var targetMethod = adopt(sourceMethod, targetPool);
+        var targetType   = adopt(sourceType, targetPool);
+
+        assertSame(targetPool, targetModule.getConstantPool());
+        assertSame(targetPool, targetPkg.getParentConstant().getConstantPool());
+        assertSame(targetPool, targetClass.getParentConstant().getConstantPool());
+        assertSame(targetPool, targetMethod.getParentConstant().getConstantPool());
+        assertSame(targetPool, targetType.getParentConstant().getConstantPool());
+        assertFalse((Boolean) fieldValue(targetType, "m_fInitialized"));
+        assertEquals(sourceModule.getValueString(), targetModule.getValueString());
+        assertEquals(sourcePkg.getValueString(), targetPkg.getValueString());
+        assertEquals(sourceClass.getValueString(), targetClass.getValueString());
+        assertEquals(sourceMethod.getValueString(), targetMethod.getValueString());
+        assertEquals(sourceType.getValueString(), targetType.getValueString());
+    }
+
+    /**
+     * Type-backed artificial identities are keyed by TypeConstant values. Adoption must register the
+     * type in the destination pool before publishing the identity shell.
+     */
+    @Test
+    public void typeBackedIdentityConstantsAdoptTargetOwnedTypes() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var annoClass  = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.ANNOTATION, "Anno", null);
+        var target     = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Target", null);
+        var left       = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Left", null);
+        var right      = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.CLASS, "Right", null);
+        var annotated  = sourcePool.ensureAnnotatedTypeConstant(
+                classId(annoClass), Constant.NO_CONSTS, target.getIdentityConstant().getType());
+        var decorated  = (DecoratedClassConstant) sourcePool.ensureClassConstant(annotated);
+        var leftType   = left.getIdentityConstant().getType();
+        var rightType  = right.getIdentityConstant().getType();
+        var pure       = sourcePool.ensurePureIdentityConstant(
+                sourcePool.ensureUnionTypeConstant(leftType, rightType));
+        var targetPool = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+
+        var targetDecorated = adopt(decorated, targetPool);
+        var targetPure      = adopt(pure, targetPool);
+
+        assertSame(targetPool, targetDecorated.getConstantPool());
+        assertSame(targetPool, targetDecorated.getType().getConstantPool());
+        assertSame(targetPool, targetPure.getConstantPool());
+        assertSame(targetPool, targetPure.getType().getConstantPool());
+        assertEquals(decorated.getValueString(), targetDecorated.getValueString());
+        assertEquals(pure.getValueString(), targetPure.getValueString());
+    }
+
+    /**
+     * Native rebase identities are runtime-only facades. They must not be adopted as normal class
+     * identity metadata because that would erase the NativeClass subclass semantics.
+     */
+    @Test
+    public void nativeRebaseIdentityRejectsAdoption() {
+        var sourceFile = new FileStructure("source");
+        var sourcePool = sourceFile.getConstantPool();
+        var iface      = sourceFile.getModule().createClass(
+                Component.Access.PUBLIC, Component.Format.INTERFACE, "Iface", null);
+        var targetPool = new FileStructure(sourceFile.getModule(), false).getConstantPool();
+        var source     = new NativeRebaseConstant(classId(iface));
+
+        var error = assertThrows(IllegalStateException.class, () -> adopt(source, targetPool));
+
+        assertSame(sourcePool, source.getConstantPool());
+        assertTrue(error.getMessage().contains("runtime-only native rebase"));
     }
 
     /**
@@ -1401,6 +1498,8 @@ public class ConstantAdoptionTest {
                CastTypeConstant.class,
                CharConstant.class,
                ChildClassConstant.class,
+               ClassConstant.class,
+               DecoratedClassConstant.class,
                DecimalAutoConstant.class,
                DecimalConstant.class,
                DeferredValueConstant.class,
@@ -1428,14 +1527,19 @@ public class ConstantAdoptionTest {
                MatchAnyConstant.class,
                MethodBindingConstant.class,
                MethodConstant.class,
+               ModuleConstant.class,
+               MultiMethodConstant.class,
                NamedCondition.class,
+               NativeRebaseConstant.class,
                NotCondition.class,
                ParameterizedTypeConstant.class,
                ParentClassConstant.class,
                PendingTypeConstant.class,
                PresentCondition.class,
+               PackageConstant.class,
                PropertyConstant.class,
                PropertyClassTypeConstant.class,
+               PureIdentityConstant.class,
                RangeConstant.class,
                RegExConstant.class,
                RegisterConstant.class,
@@ -1448,6 +1552,7 @@ public class ConstantAdoptionTest {
                ThisClassConstant.class,
                TypeParameterConstant.class,
                TypeSequenceTypeConstant.class,
+               TypedefConstant.class,
                UInt8ArrayConstant.class,
                UnionTypeConstant.class,
                UnresolvedNameConstant.class,

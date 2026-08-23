@@ -68,6 +68,13 @@ public class NativeRebaseConstant
     }
 
     @Override
+    protected NativeRebaseConstant copyForAdoption(AdoptionContext context) {
+        // Native rebase identities are runtime-only facades over an interface and are documented as
+        // never registered with a ConstantPool. Do not adopt them as serialized identity metadata.
+        throw new IllegalStateException("cannot adopt runtime-only native rebase identity: " + this);
+    }
+
+    @Override
     protected int compareDetails(Constant that) {
         if (!(that instanceof NativeRebaseConstant)) {
             return -1;

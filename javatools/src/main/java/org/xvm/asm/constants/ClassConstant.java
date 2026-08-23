@@ -294,6 +294,14 @@ public class ClassConstant
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
+    protected ClassConstant copyForAdoption(AdoptionContext context) {
+        // Class identity is a logical parent+name path. Register the parent in the target pool before
+        // publishing this shell so later component/JIT caches are rebuilt by the target owner.
+        var pool = context.pool();
+        return new ClassConstant(pool, pool.register(getParentConstant()), getName());
+    }
+
+    @Override
     public Format getFormat() {
         return Format.Class;
     }
