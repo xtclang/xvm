@@ -56,8 +56,7 @@ public class NativeNames {
         reservedMethodName.put("collections.Array.FreezableArray/freeze/1", "freeze");
         reservedMethodName.put("collections.Collection/reify/0", "reify");
         reservedMethodName.put("collections.Hashable/hashCode/2", "hashCode");
-        reservedMethodName.put("collections.UniformIndexed/getElement/1", "getElement");
-        reservedMethodName.put("collections.Tuple/add/1",         "add");
+        reservedMethodName.put("collections.Tuple/add/2",         "add");
         reservedMethodName.put("collections.Tuple/addAll/1",      "addAll");
         reservedMethodName.put("collections.Tuple/elementAt/1",   "elementAt");
         reservedMethodName.put("collections.Tuple/equals/2",      "equals");
@@ -68,6 +67,7 @@ public class NativeNames {
         reservedMethodName.put("collections.Tuple/replace/2",     "replace");
         reservedMethodName.put("collections.Tuple/slice/1",       "slice");
 
+        reservedMethodName.put("collections.UniformIndexed/getElement/1", "getElement");
         reservedMethodName.put("Range/getElement/1",       "getElement");
         reservedMethodName.put("text.String/getElement/1", "getElement");
 

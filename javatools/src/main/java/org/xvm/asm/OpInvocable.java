@@ -355,6 +355,14 @@ public abstract class OpInvocable extends Op {
             TypeConstant typeResult = isTupleReturn()
                     ? pool.ensureTupleType(atypeResult)
                     : atypeResult[0];
+            if (typeResult.isTuple()) {
+                // a Tuple method can declare Tuple!<> while the compiler infers a more precise
+                // type for the destination register
+                TypeConstant typeDest = bctx.getArgumentType(m_nRetValue);
+                if (typeDest != null && typeDest.isA(typeResult)) {
+                    typeResult = typeDest;
+                }
+            }
             tmx.assign(getAddress(), m_nRetValue, typeResult);
         }
     }

@@ -10,7 +10,7 @@ package tupleTests {
         testConstElement();
         testConstSlice();
         testMultiAssign();
-//        testMutability();
+        testMutability();
     }
 
     void testSimple() {
@@ -161,22 +161,21 @@ package tupleTests {
         assert s == "hello" && i == 3;
     }
 
-    // TODO: nTuple.add() retains its randomized JIT name
-//    void testMutability() {
-//        Tuple<Int, String, Char> tuple1 = (1, "big", '?');
-//        Tuple tuple1a = ().add(Int:1).add("big").add('?');
-//        assert tuple1a == tuple1;
-//
-//        Tuple<Int, String, Char> tuple2 = tuple1.replace(1, "small");
-//        assert tuple2 == (1, "small", '?');
-//
-//        Tuple<String, Char> tuple3 = tuple2[1..2];
-//        assert tuple3 == ("small", '?');
-//
-//        Tuple tuple4 = tuple2.slice(1..2);
-//        assert tuple4 == tuple3;
-//
-//        Tuple tuple5 = (1.toInt(),).addAll(tuple4);
-//        assert tuple5 == tuple2;
-//    }
+    void testMutability() {
+        Tuple<Int, String, Char> tuple1 = (1, "big", '?');
+        Tuple tuple1a = ().add(Int:1).add("big").add('?');
+        assert tuple1a == tuple1;
+
+        Tuple<Int, String, Char> tuple2 = tuple1.replace(1, "small");
+        assert tuple2 == (1, "small", '?');
+
+        Tuple<String, Char> tuple3 = tuple2[1..2];
+        assert tuple3 == ("small", '?');
+
+        Tuple tuple4 = tuple2.slice(1..2);
+        assert tuple4 == tuple3;
+
+        Tuple tuple5 = (1.toInt(),).addAll(tuple4);
+        assert tuple5 == tuple2;
+    }
 }
