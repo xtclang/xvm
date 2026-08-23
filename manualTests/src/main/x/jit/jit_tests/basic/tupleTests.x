@@ -8,7 +8,7 @@ package tupleTests {
         testInvokeReturns();
         testPackedReturn();
         testConstElement();
-//        testConstSlice();
+        testConstSlice();
         testMultiAssign();
 //        testMutability();
     }
@@ -148,14 +148,13 @@ package tupleTests {
         assert num == 3;
     }
 
-    // TODO: nType.equals$p cannot route boxed String equality
-//    void testConstSlice() {
-//        Tuple<Int, String> blind = (3, "blind", "mice", "!")[0..1];
-//        assert blind == (3, "blind");
-//
-//        Tuple<String, Int> blind2 = (3, "blind", "mice", "!")[1..0];
-//        assert blind2 == ("blind", 3);
-//    }
+    void testConstSlice() {
+        Tuple<Int, String> blind = (3, "blind", "mice", "!")[0..1];
+        assert blind == (3, "blind");
+
+        Tuple<String, Int> blind2 = (3, "blind", "mice", "!")[1..0];
+        assert blind2 == ("blind", 3);
+    }
 
     void testMultiAssign() {
         (String s, Int i) = ("hello", 3);

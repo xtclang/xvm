@@ -275,32 +275,55 @@ public class nType
 
     private Method ensureMethod(java.lang.String methodName, int valueCount) {
         TypeSystem       typeSystem = $ctx.container.typeSystem;
-        java.lang.String clzName    = $dataType.ensureJitClassName(typeSystem);
-        java.lang.Class  clz        = $xvmClass($ctx).getClass();
-        java.lang.Class  valueClass;
+        java.lang.String className  = $dataType.ensureJitClassName(typeSystem);
+        java.lang.Class  targetClass;
         try {
-            valueClass = typeSystem.loader.loadClass(clzName);
+            targetClass = typeSystem.loader.loadClass(className);
         } catch (ClassNotFoundException e) {
-            throw Exception.$unsupported($ctx, "No such class " + clzName);
+            throw Exception.$unsupported($ctx, "No such class " + className);
         }
 
-        java.lang.Class[] paramClasses = new java.lang.Class[2 + valueCount];
-        paramClasses[0] = Ctx.class;
-        paramClasses[1] = nType.class;
-        for (int i = 2; i < paramClasses.length; i++) {
-            paramClasses[i] = valueClass;
-        }
+        int paramCount   = 2 + valueCount;
+        var paramClasses = new java.lang.Class[paramCount];
+        paramClasses[0]  = Ctx.class;
+        paramClasses[1]  = nType.class;
 
-        while (true) {
+        // native classes can provide the concrete funky implementation directly; walk the target
+        // hierarchy to account for an implementation inherited from a native Ecstasy superclass
+        java.lang.Class valueClass = targetClass;
+        do {
+            for (int i = 2; i < paramCount; i++) {
+                paramClasses[i] = valueClass;
+            }
+
             try {
-                return clz.getDeclaredMethod(methodName, paramClasses);
-            } catch (NoSuchMethodException e) {
-                clz = clz.getSuperclass();
-                if (clz == null) {
-                    throw Exception.$unsupported($ctx,
-                        "No method " + methodName + " on class " + $dataType.getValueString());
-                }
+                return valueClass.getDeclaredMethod(methodName, paramClasses);
+            } catch (NoSuchMethodException ignore) {
+                valueClass = valueClass.getSuperclass();
+            }
+        } while (valueClass != null);
+
+        // fall through to the class-of-class routing method; its value parameters use the funky
+        // declaration types rather than the concrete target type represented by paramClasses
+        java.lang.Class classOfClass = $xvmClass($ctx).getClass();
+        for (Method method : classOfClass.getDeclaredMethods()) {
+            if (!method.getName().equals(methodName) ||
+                    method.getParameterCount() != paramCount) {
+                continue;
+            }
+
+            java.lang.Class[] methodParams = method.getParameterTypes();
+            boolean           matches      = methodParams[0].equals(Ctx.class) &&
+                                             methodParams[1].equals(nType.class);
+            for (int i = 2; matches && i < methodParams.length; i++) {
+                matches = methodParams[i].isAssignableFrom(targetClass);
+            }
+            if (matches) {
+                return method;
             }
         }
+
+        throw Exception.$unsupported($ctx,
+            "No method " + methodName + " on class " + $dataType.getValueString());
     }
 }
